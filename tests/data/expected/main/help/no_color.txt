@@ -76,8 +76,10 @@ Options:
   --schema-version SCHEMA_VERSION
                         Schema version. Valid values depend on input type:
                         JsonSchema: auto, draft-04, draft-06, draft-07,
-                        2019-09, 2020-12. OpenAPI: auto, 3.0, 3.1. (default:
-                        auto - detected from $schema or openapi field)
+                        2019-09, 2020-12. OpenAPI: auto, 3.0, 3.1. XMLSchema:
+                        auto, 1.0, 1.1. (default: auto - detected from
+                        $schema, openapi field, or XML Schema versioning
+                        attributes)
   --schema-version-mode {lenient,strict}
                         Schema version validation mode. 'lenient': accept all
                         features regardless of version (default). 'strict':

@@ -13,12 +13,41 @@ from datamodel_code_generator.reference import FieldNameResolver
         ("3a", "field_3a"),
         ("$in", "field_in"),
         ("field", "field"),
+        ("ำ62", "field_ue33_62"),
     ],
 )
 def test_get_valid_field_name(name: str, expected_resolved: str) -> None:
     """Test field name resolution to valid Python identifiers."""
     resolver = FieldNameResolver()
     assert expected_resolved == resolver.get_valid_name(name)
+
+
+def test_get_valid_field_name_alias_for_unicode_ncname() -> None:
+    """Keep the source name as an alias when XML NCName is not a Python identifier."""
+    resolver = FieldNameResolver()
+    field_name, alias = resolver.get_valid_field_name_and_alias("ำ62")
+    assert field_name == "field_ue33_62"
+    assert alias == "ำ62"
+
+
+def test_get_valid_field_name_upper_camel_unicode_ncname() -> None:
+    """Apply stable fallback names before upper-camel conversion."""
+    resolver = FieldNameResolver()
+    assert resolver.get_valid_name("ำ62", upper_camel=True) == "FieldUe3362"
+
+
+def test_get_valid_field_name_enum_unicode_ncname() -> None:
+    """Apply stable fallback names before enum member capitalization."""
+    resolver = FieldNameResolver(capitalise_enum_members=True)
+    assert resolver.get_valid_name("ำ62") == "FIELD_UE33_62"
+
+
+def test_ascii_identifier_fallback_prefixes_empty_and_numeric_names() -> None:
+    """Generate stable fallback names for values that cannot stand as identifiers."""
+    resolver = FieldNameResolver()
+    assert resolver._ascii_identifier_fallback("") == "field_"
+    assert resolver._ascii_identifier_fallback("1") == "field_1"
+    assert resolver._ascii_identifier_fallback("aำ") == "a_ue33_"
 
 
 def test_hierarchical_flat_alias() -> None:

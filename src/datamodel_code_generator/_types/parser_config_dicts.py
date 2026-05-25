@@ -28,6 +28,7 @@ if TYPE_CHECKING:
         StrictTypes,
         TargetPydanticVersion,
         VersionMode,
+        XMLSchemaVersion,
     )
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
     from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
@@ -191,7 +192,17 @@ class OpenAPIParserConfigDict(JSONSchemaParserConfigDict, closed=True):
     openapi_version: NotRequired[OpenAPIVersion | None]
 
 
-ModelDict: TypeAlias = ParserConfigDict | GraphQLParserConfigDict | JSONSchemaParserConfigDict | OpenAPIParserConfigDict
+class XMLSchemaParserConfigDict(JSONSchemaParserConfigDict, closed=True):
+    xmlschema_version: NotRequired[XMLSchemaVersion | None]
+
+
+ModelDict: TypeAlias = (
+    ParserConfigDict
+    | GraphQLParserConfigDict
+    | JSONSchemaParserConfigDict
+    | OpenAPIParserConfigDict
+    | XMLSchemaParserConfigDict
+)
 
 
 class ModelValidatorsDict(TypedDict):

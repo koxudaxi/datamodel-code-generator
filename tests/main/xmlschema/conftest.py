@@ -3,20 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
 
 from tests.conftest import create_assert_file_content
 from tests.main.conftest import EXPECTED_XML_SCHEMA_PATH
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
 assert_file_content = create_assert_file_content(EXPECTED_XML_SCHEMA_PATH)
 
 XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
-    "coverage": (
+    "constructs_matrix": (
         "class IncludedCode(RootModel[constr(pattern=r'[A-Z]+', min_length=3, max_length=3)]):",
         "class TokenList(RootModel[list[str]]):",
         "class InlineTokenList(RootModel[list[InlineTokenListEnum]]):",
@@ -52,6 +48,7 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
     "edge_cases": (
         "class EmptyRestriction(RootModel[str]):",
         "class NotAPythonType(RootModel[str]):",
+        "class SelfRestricted(RootModel[constr(pattern=r'[A-Z]+')]):",
         "class NoSimpleChild(BaseModel):",
         "value: str",
         "class Loose(BaseModel):",
@@ -66,6 +63,7 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
         "localGrouped: str | None = Field(None, description='Grouped attr')",
         "plain: str",
         "loose: Loose",
+        "selfRestricted: SelfRestricted",
     ),
     "single_root_item": (
         "class Item(BaseModel):",
@@ -105,9 +103,9 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
         "class SharedType(BaseModel):",
         "name: str",
         "class SharedElement(RootModel[LocalThing]):",
+        "root: LocalThing = Field(..., title='SharedElement')",
         "class Holder(BaseModel):",
         "Shared: SharedElement",
-        "Shared: LocalThing",
     ),
     "advanced_constructs": (
         "class Cat(Animal):",
@@ -148,6 +146,24 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
         "typed: ItemType",
         "Item: ItemElement",
     ),
+    "versioning": (
+        "class Versioned(BaseModel):",
+        "modern: str",
+        "invalidVersion: str",
+    ),
+    "versioning_xsd10": (
+        "class Versioned(BaseModel):",
+        "legacy: str",
+        "invalidVersion: str",
+    ),
+    "versioning_include": (
+        "class VersionedInclude(BaseModel):",
+        "modern: str",
+    ),
+    "versioning_include_xsd10": (
+        "class VersionedInclude(BaseModel):",
+        "legacy: str",
+    ),
     "model_groups_and_wildcards": (
         "class SearchToken(RootModel[str | conint(ge=-2147483648, le=2147483647)]):",
         "class EventLog(BaseModel):",
@@ -160,6 +176,36 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
         "kind: Literal['audit']",
         "search: SearchToken | None = None",
         "inlineSearch: str | conint(ge=-2147483648, le=2147483647) | None = None",
+    ),
+    "spec_constructs": (
+        "from pydantic import AwareDatetime, BaseModel, Field, RootModel, conint, constr",
+        "class IdList(RootModel[list[str]]):",
+        "class StampRange(RootModel[AwareDatetime]):",
+        "class StampInclusiveRange(RootModel[AwareDatetime]):",
+        "class AllParticleType(BaseModel):",
+        "first: str",
+        "maybe: conint(ge=-2147483648, le=2147483647) | None = None",
+        "class RestrictedAllType(BaseModel):",
+        "restrictedAttr: Literal[False] = False",
+        "class AnonymousComplex(BaseModel):",
+        "value: float",
+        "flag: bool | None = True",
+        "class TextWithLanguage(BaseModel):",
+        "value: str",
+        "lang: str",
+        "globalCode: Literal['fixedCode'] = 'fixedCode'",
+        "class ScopedTypes(BaseModel):",
+        "anonymousSimple: constr(pattern=r'[a-z]{2}')",
+        "anonymousComplex: AnonymousComplex",
+        "text: TextWithLanguage",
+        "ids: IdList | None = None",
+        "stamp: StampRange | None = None",
+        "inclusiveStamp: StampInclusiveRange | None = None",
+        "class Catalog(BaseModel):",
+        "scoped: ScopedTypes",
+        "allParticle: AllParticleType | None = None",
+        "restrictedAll: RestrictedAllType | None = None",
+        "globalCode: str",
     ),
     "schema_composition": (
         "class ChameleonType(BaseModel):",
@@ -230,7 +276,7 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
 }
 
 XMLSCHEMA_ABSENT_SNIPPETS: dict[str, tuple[str, ...]] = {
-    "coverage": (
+    "constructs_matrix": (
         "class BlockedGroup",
         "blockedElement",
         "blockedGroupElement",
@@ -249,6 +295,10 @@ XMLSCHEMA_ABSENT_SNIPPETS: dict[str, tuple[str, ...]] = {
         "class ClosedOpen(BaseModel):\n    model_config",
         "class EmptyDefaultClosed(BaseModel):\n    model_config",
     ),
+    "versioning": ("legacy: str",),
+    "versioning_xsd10": ("modern: str",),
+    "versioning_include": ("legacy: str",),
+    "versioning_include_xsd10": ("modern: str",),
 }
 
 
@@ -256,15 +306,14 @@ def assert_xmlschema_snippets(
     output_file: Path,
     expected_name: str | Path | None = None,
     encoding: str = "utf-8",
-    transform: Callable[[str], str] | None = None,
+    transform: object = None,
 ) -> None:
     """Assert generated XML Schema output contains the snippets for a fixture."""
     __tracebackhide__ = True
+    assert transform is None
     if expected_name is None:  # pragma: no cover
         pytest.fail("expected_name is required for XML Schema snippet assertions")
     content = output_file.read_text(encoding=encoding)
-    if transform is not None:
-        content = transform(content)
     key = Path(expected_name).stem
     expected_snippets = XMLSCHEMA_SNIPPETS.get(key)
     if expected_snippets is None:  # pragma: no cover

@@ -13,6 +13,12 @@
 
   <xs:simpleType name="not-a-python-type"/>
 
+  <xs:simpleType name="SelfRestricted">
+    <xs:restriction base="SelfRestricted">
+      <xs:pattern value="[A-Z]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
   <xs:group name="optionalGroup">
     <xs:sequence>
       <xs:element name="optionalGrouped" type="xs:string"/>
@@ -86,4 +92,5 @@
 
   <xs:element name="plain" type="xs:string"/>
   <xs:element name="loose" type="Loose"/>
+  <xs:element name="selfRestricted" type="SelfRestricted"/>
 </xs:schema>

@@ -2147,6 +2147,14 @@ def test_generate_with_dict_graphql_raises_error() -> None:
         generate(graphql_error_dict, input_file_type=InputFileType.GraphQL)
 
 
+def test_generate_with_dict_xmlschema_raises_error() -> None:
+    """Test generate() with dict input + XML Schema raises error."""
+    from tests.data.dict_input import auto_error_dict
+
+    with pytest.raises(Error, match="Dict input is not supported for xmlschema"):
+        generate(auto_error_dict, input_file_type=InputFileType.XMLSchema)
+
+
 def test_generate_with_dict_openapi_validation_warns() -> None:
     """Test generate() with dict input + validation skips validation with warning."""
     import warnings

@@ -14,10 +14,6 @@ if TYPE_CHECKING:
     import pytest
 
 
-def _identity(content: str) -> str:
-    return content
-
-
 def test_main_xmlschema_purchase_order(output_file: Path) -> None:
     """Generate models from an XML Schema document."""
     run_main_and_assert(
@@ -39,15 +35,14 @@ def test_main_xmlschema_infer_input_file_type(output_file: Path) -> None:
     )
 
 
-def test_main_xmlschema_coverage_constructs(output_file: Path) -> None:
+def test_main_xmlschema_supported_constructs(output_file: Path) -> None:
     """Generate models for supported XML Schema constructs."""
     run_main_and_assert(
-        input_path=XML_SCHEMA_DATA_PATH / "coverage.xsd",
+        input_path=XML_SCHEMA_DATA_PATH / "constructs_matrix.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
         assert_func=assert_xmlschema_snippets,
-        expected_file="coverage.py",
-        transform=_identity,
+        expected_file="constructs_matrix.py",
     )
 
 
@@ -194,6 +189,259 @@ def test_main_xmlschema_model_groups_and_wildcards(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_spec_constructs(output_file: Path) -> None:
+    """Generate models for additional XML Schema 1.0 declaration and particle constructs."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "spec_constructs.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_xmlschema_snippets,
+        expected_file="spec_constructs.py",
+    )
+
+
+def test_main_xmlschema_utf16_input(tmp_path: Path, output_file: Path) -> None:
+    """Generate models from XML Schema files that rely on XML encoding detection."""
+    input_path = tmp_path / "utf16_schema.xsd"
+    input_path.write_text(
+        """<?xml version="1.0" encoding="UTF-16"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="utf16Item">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="value" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
+""",
+        encoding="utf-16",
+    )
+
+    def assert_utf16_output(
+        generated_output: Path,
+        expected_name: str | Path | None = None,
+        encoding: str = "utf-8",
+        transform: object = None,
+    ) -> None:
+        assert expected_name == "xmlschema_utf16_input.py"
+        assert transform is None
+        content = generated_output.read_text(encoding=encoding)
+        assert "class Utf16Item(BaseModel):" in content
+        assert "value: str" in content
+
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_utf16_output,
+    )
+
+
+def test_main_xmlschema_unicode_ncname_alias(tmp_path: Path, output_file: Path) -> None:
+    """Generate aliases for XML NCName values that are not valid Python identifiers."""
+    input_path = tmp_path / "unicode_ncname_schema.xsd"
+    input_path.write_text(
+        """<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="root">
+    <xs:complexType>
+      <xs:attribute name="ำ62" type="xs:integer"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+
+    def assert_unicode_output(
+        generated_output: Path,
+        expected_name: str | Path | None = None,
+        encoding: str = "utf-8",
+        transform: object = None,
+    ) -> None:
+        assert expected_name == "xmlschema_unicode_ncname_alias.py"
+        assert transform is None
+        content = generated_output.read_text(encoding=encoding)
+        assert "from pydantic import BaseModel, Field" in content
+        assert "field_ue33_62: int | None = Field(None, alias='ำ62')" in content
+
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_unicode_output,
+    )
+
+
+def test_main_xmlschema_unsupported_xsd_pattern_importable(tmp_path: Path, output_file: Path) -> None:
+    """Skip XSD regex facets that Python/Pydantic cannot compile at import time."""
+    input_path = tmp_path / "unsupported_xsd_pattern.xsd"
+    input_path.write_text(
+        """<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="NameToken">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\\i\\c*"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="BrokenPattern">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="("/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="root" type="NameToken"/>
+  <xs:element name="broken" type="BrokenPattern"/>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+
+    def assert_unsupported_pattern_output(
+        generated_output: Path,
+        expected_name: str | Path | None = None,
+        encoding: str = "utf-8",
+        transform: object = None,
+    ) -> None:
+        assert expected_name == "xmlschema_unsupported_xsd_pattern_importable.py"
+        assert transform is None
+        content = generated_output.read_text(encoding=encoding)
+        assert "class NameToken(RootModel[str]):" in content
+        assert "class BrokenPattern(RootModel[str]):" in content
+        assert "pattern=" not in content
+
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_unsupported_pattern_output,
+    )
+
+
+def test_main_xmlschema_self_extension_without_redefine_importable(tmp_path: Path, output_file: Path) -> None:
+    """Emit the local content for a self-extension when no redefined base exists."""
+    input_path = tmp_path / "self_extension_without_redefine.xsd"
+    input_path.write_text(
+        """<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="Node">
+    <xs:complexContent>
+      <xs:extension base="Node">
+        <xs:sequence>
+          <xs:element name="child" type="xs:string"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="root" type="Node"/>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+
+    def assert_self_extension_output(
+        generated_output: Path,
+        expected_name: str | Path | None = None,
+        encoding: str = "utf-8",
+        transform: object = None,
+    ) -> None:
+        assert expected_name == "xmlschema_self_extension_without_redefine_importable.py"
+        assert transform is None
+        content = generated_output.read_text(encoding=encoding)
+        assert "class Node(BaseModel):" in content
+        assert "class Node(Node):" not in content
+        assert "child: str" in content
+
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_self_extension_output,
+    )
+
+
+def test_main_xmlschema_redefine_self_references_importable(tmp_path: Path, output_file: Path) -> None:
+    """Resolve self-references inside xs:redefine against the original definition."""
+    (tmp_path / "base.xsd").write_text(
+        """<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:redefine" xmlns="urn:redefine">
+  <xs:group name="group">
+    <xs:sequence>
+      <xs:element name="base" type="xs:string"/>
+    </xs:sequence>
+  </xs:group>
+  <xs:attributeGroup name="attrs">
+    <xs:attribute name="baseAttr" type="xs:string"/>
+  </xs:attributeGroup>
+  <xs:complexType name="Container">
+    <xs:group ref="group"/>
+    <xs:attributeGroup ref="attrs"/>
+  </xs:complexType>
+  <xs:element name="root" type="Container"/>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+    input_path = tmp_path / "redefine_self_reference.xsd"
+    input_path.write_text(
+        """<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:redefine" xmlns="urn:redefine">
+  <xs:redefine schemaLocation="base.xsd">
+    <xs:group name="group">
+      <xs:sequence>
+        <xs:element name="before" type="xs:string"/>
+        <xs:group ref="group"/>
+        <xs:element name="after" type="xs:string"/>
+      </xs:sequence>
+    </xs:group>
+    <xs:attributeGroup name="attrs">
+      <xs:attributeGroup ref="attrs"/>
+      <xs:attribute name="addedAttr" type="xs:string"/>
+    </xs:attributeGroup>
+    <xs:attributeGroup name="newAttrs">
+      <xs:attribute name="newAttr" type="xs:string"/>
+    </xs:attributeGroup>
+    <xs:complexType name="Container">
+      <xs:complexContent>
+        <xs:extension base="Container">
+          <xs:sequence>
+            <xs:element name="tail" type="xs:string"/>
+          </xs:sequence>
+        </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+  </xs:redefine>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+
+    def assert_redefine_output(
+        generated_output: Path,
+        expected_name: str | Path | None = None,
+        encoding: str = "utf-8",
+        transform: object = None,
+    ) -> None:
+        assert expected_name == "xmlschema_redefine_self_references_importable.py"
+        assert transform is None
+        content = generated_output.read_text(encoding=encoding)
+        assert "class Container(BaseModel):" in content
+        assert "class Container(Container):" not in content
+        assert "before: str" in content
+        assert "base: str" in content
+        assert "after: str" in content
+        assert "tail: str" in content
+        assert "baseAttr: str | None = None" in content
+        assert "addedAttr: str | None = None" in content
+
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_redefine_output,
+    )
+
+
 def test_main_xmlschema_schema_composition(output_file: Path) -> None:
     """Generate models from include, redefine, override, and chameleon schemas."""
     run_main_and_assert(
@@ -213,6 +461,52 @@ def test_main_xmlschema_xsd11_constructs(output_file: Path) -> None:
         input_file_type="xmlschema",
         assert_func=assert_xmlschema_snippets,
         expected_file="xsd11_constructs.py",
+    )
+
+
+def test_main_xmlschema_versioning_auto(output_file: Path) -> None:
+    """Apply XSD 1.1 conditional inclusion when auto-detection sees versioning attributes."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "versioning.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_xmlschema_snippets,
+        expected_file="versioning.py",
+    )
+
+
+def test_main_xmlschema_versioning_xsd10(output_file: Path) -> None:
+    """Apply XSD 1.0 conditional inclusion when requested through --schema-version."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "versioning.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        extra_args=["--schema-version", "1.0"],
+        assert_func=assert_xmlschema_snippets,
+        expected_file="versioning_xsd10.py",
+    )
+
+
+def test_main_xmlschema_versioning_auto_from_include(output_file: Path) -> None:
+    """Detect XSD 1.1 versioning attributes from included schemas in auto mode."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "versioning_include.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_xmlschema_snippets,
+        expected_file="versioning_include.py",
+    )
+
+
+def test_main_xmlschema_versioning_include_xsd10(output_file: Path) -> None:
+    """Keep included XSD versioning conditional on an explicit XSD 1.0 processor version."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "versioning_include.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        extra_args=["--schema-version", "1.0"],
+        assert_func=assert_xmlschema_snippets,
+        expected_file="versioning_include_xsd10.py",
     )
 
 

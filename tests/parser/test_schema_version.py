@@ -8,16 +8,18 @@ import pytest
 from inline_snapshot import snapshot
 
 import datamodel_code_generator
-from datamodel_code_generator.enums import JsonSchemaVersion, OpenAPIVersion, VersionMode
+from datamodel_code_generator.enums import JsonSchemaVersion, OpenAPIVersion, VersionMode, XMLSchemaVersion
 from datamodel_code_generator.parser.schema_version import (
     JsonSchemaFeatures,
     OpenAPISchemaFeatures,
     detect_jsonschema_version,
     detect_openapi_version,
 )
+from datamodel_code_generator.parser.xmlschema import detect_xmlschema_version
 
 # Path to test data
 JSON_SCHEMA_DATA_PATH = Path(__file__).parent.parent / "data" / "jsonschema"
+XML_SCHEMA_DATA_PATH = Path(__file__).parent.parent / "data" / "xmlschema"
 
 
 def test_detect_jsonschema_version_draft4() -> None:
@@ -102,6 +104,28 @@ def test_detect_openapi_version_fallback() -> None:
 def test_detect_openapi_version_non_string() -> None:
     """Test handling of non-string openapi value."""
     assert detect_openapi_version({"openapi": 3.0}) == snapshot(OpenAPIVersion.V31)
+
+
+def test_detect_xmlschema_version_10() -> None:
+    """Test fallback to XML Schema 1.0 when no XSD 1.1 signal is present."""
+    assert detect_xmlschema_version("<xs:schema xmlns:xs='http://www.w3.org/2001/XMLSchema'/>") == snapshot(
+        XMLSchemaVersion.V10
+    )
+
+
+def test_detect_xmlschema_version_11_from_versioning_attributes() -> None:
+    """Test XML Schema 1.1 detection from vc:minVersion."""
+    assert detect_xmlschema_version(
+        "<xs:schema xmlns:xs='http://www.w3.org/2001/XMLSchema' "
+        "xmlns:vc='http://www.w3.org/2007/XMLSchema-versioning' vc:minVersion='1.1'/>"
+    ) == snapshot(XMLSchemaVersion.V11)
+
+
+def test_detect_xmlschema_version_11_from_construct() -> None:
+    """Test XML Schema 1.1 detection from XSD 1.1 elements."""
+    assert detect_xmlschema_version(
+        "<xs:schema xmlns:xs='http://www.w3.org/2001/XMLSchema'><xs:assert test='true()'/></xs:schema>"
+    ) == snapshot(XMLSchemaVersion.V11)
 
 
 def test_jsonschema_features_draft4() -> None:
@@ -311,6 +335,12 @@ def test_lazy_import_detect_openapi_version() -> None:
     assert detect_func({"openapi": "3.1.0"}) == snapshot(OpenAPIVersion.V31)
 
 
+def test_lazy_import_detect_xmlschema_version() -> None:
+    """Test that detect_xmlschema_version can be imported from main module."""
+    detect_func = datamodel_code_generator.detect_xmlschema_version
+    assert detect_func("<xs:schema xmlns:xs='http://www.w3.org/2001/XMLSchema'/>") == snapshot(XMLSchemaVersion.V10)
+
+
 def test_lazy_import_jsonschema_version_enum() -> None:
     """Test that JsonSchemaVersion is exported from main module."""
     assert datamodel_code_generator.JsonSchemaVersion is JsonSchemaVersion
@@ -319,6 +349,11 @@ def test_lazy_import_jsonschema_version_enum() -> None:
 def test_lazy_import_openapi_version_enum() -> None:
     """Test that OpenAPIVersion is exported from main module."""
     assert datamodel_code_generator.OpenAPIVersion is OpenAPIVersion
+
+
+def test_lazy_import_xmlschema_version_enum() -> None:
+    """Test that XMLSchemaVersion is exported from main module."""
+    assert datamodel_code_generator.XMLSchemaVersion is XMLSchemaVersion
 
 
 def test_lazy_import_version_mode_enum() -> None:
@@ -1041,6 +1076,75 @@ def test_cli_schema_version_openapi_parametrized(openapi_version: str) -> None:
 
 
 @pytest.mark.parametrize(
+    ("xmlschema_version", "expected", "unexpected"),
+    [("1.0", "legacy: str", "modern: str"), ("1.1", "modern: str", "legacy: str")],
+    ids=["xmlschema-1.0", "xmlschema-1.1"],
+)
+def test_cli_schema_version_xmlschema_parametrized(
+    xmlschema_version: str,
+    expected: str,
+    unexpected: str,
+) -> None:
+    """Test --schema-version option with different XML Schema versions."""
+    from datamodel_code_generator import generate
+
+    result = generate(
+        XML_SCHEMA_DATA_PATH / "versioning.xsd",
+        input_file_type=datamodel_code_generator.InputFileType.XMLSchema,
+        schema_version=xmlschema_version,
+        disable_timestamp=True,
+    )
+    assert result is not None
+    assert expected in result
+    assert unexpected not in result
+
+
+def test_xmlschema_strict_warning_for_xsd11_construct() -> None:
+    """Test strict mode warning for XSD 1.1 constructs under XML Schema 1.0."""
+    from datamodel_code_generator import generate
+
+    with pytest.warns(UserWarning, match="XSD 1.1 construct"):
+        generate(
+            XML_SCHEMA_DATA_PATH / "xsd11_constructs.xsd",
+            input_file_type=datamodel_code_generator.InputFileType.XMLSchema,
+            schema_version="1.0",
+            schema_version_mode=VersionMode.Strict,
+            disable_timestamp=True,
+        )
+
+
+def test_xmlschema_strict_warning_for_versioning_attributes() -> None:
+    """Test strict mode warning for XSD 1.1 versioning attributes under XML Schema 1.0."""
+    from datamodel_code_generator import generate
+
+    with pytest.warns(UserWarning, match="versioning attributes"):
+        generate(
+            XML_SCHEMA_DATA_PATH / "versioning.xsd",
+            input_file_type=datamodel_code_generator.InputFileType.XMLSchema,
+            schema_version="1.0",
+            schema_version_mode=VersionMode.Strict,
+            disable_timestamp=True,
+        )
+
+
+def test_xmlschema_strict_xsd10_without_xsd11_features_does_not_warn() -> None:
+    """Test strict XML Schema 1.0 mode for a plain XSD 1.0 schema."""
+    import warnings
+
+    from datamodel_code_generator import generate
+
+    with warnings.catch_warnings(record=True) as warning_records:
+        generate(
+            XML_SCHEMA_DATA_PATH / "single_root_item.xsd",
+            input_file_type=datamodel_code_generator.InputFileType.XMLSchema,
+            schema_version="1.0",
+            schema_version_mode=VersionMode.Strict,
+            disable_timestamp=True,
+        )
+    assert warning_records == []
+
+
+@pytest.mark.parametrize(
     "version_mode",
     [VersionMode.Lenient, VersionMode.Strict],
     ids=["lenient", "strict"],
@@ -1113,6 +1217,20 @@ def test_invalid_openapi_version_error() -> None:
             schema_version="invalid-version",
         )
     assert "Invalid OpenAPI version" in str(exc_info.value)
+    assert "invalid-version" in str(exc_info.value)
+
+
+def test_invalid_xmlschema_version_error() -> None:
+    """Test that invalid XML Schema version raises Error."""
+    from datamodel_code_generator import Error, generate
+
+    with pytest.raises(Error) as exc_info:
+        generate(
+            XML_SCHEMA_DATA_PATH / "single_root_item.xsd",
+            input_file_type=datamodel_code_generator.InputFileType.XMLSchema,
+            schema_version="invalid-version",
+        )
+    assert "Invalid XML Schema version" in str(exc_info.value)
     assert "invalid-version" in str(exc_info.value)
 
 

@@ -265,6 +265,17 @@ class OpenAPIVersion(Enum):
     Auto = "auto"
 
 
+class XMLSchemaVersion(Enum):
+    """XML Schema specification versions.
+
+    Auto: Auto-detect from XML Schema versioning attributes and XSD 1.1 constructs (default).
+    """
+
+    V10 = "1.0"
+    V11 = "1.1"
+    Auto = "auto"
+
+
 class VersionMode(Enum):
     """Schema version validation mode.
 
@@ -303,4 +314,5 @@ __all__ = [
     "TargetPydanticVersion",
     "UnionMode",
     "VersionMode",
+    "XMLSchemaVersion",
 ]

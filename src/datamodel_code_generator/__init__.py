@@ -52,6 +52,7 @@ from datamodel_code_generator.enums import (
     ReuseScope,
     TargetPydanticVersion,
     VersionMode,
+    XMLSchemaVersion,
 )
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
@@ -71,6 +72,7 @@ if TYPE_CHECKING:
         JSONSchemaParserConfigDict,
         OpenAPIParserConfigDict,
         ParserConfigDict,
+        XMLSchemaParserConfigDict,
     )
     from datamodel_code_generator._types.generate_config_dict import GenerateConfigDict
     from datamodel_code_generator.config import GenerateConfig, ParserConfig
@@ -604,6 +606,10 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         msg = "Dict input is not supported for GraphQL. GraphQL requires text input (SDL format)."
         raise Error(msg)
 
+    if isinstance(input_, Mapping) and input_file_type == InputFileType.XMLSchema:
+        msg = "Dict input is not supported for xmlschema. Provide XSD text, file path, or URL input."
+        raise Error(msg)
+
     if isinstance(input_, Mapping) and input_file_type in {
         InputFileType.Json,
         InputFileType.Yaml,
@@ -773,6 +779,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     # Convert schema_version string to appropriate enum based on input type
     jsonschema_version: JsonSchemaVersion | None = None
     openapi_version: OpenAPIVersion | None = None
+    xmlschema_version: XMLSchemaVersion | None = None
     if config.schema_version and config.schema_version != "auto":
         if input_file_type == InputFileType.OpenAPI:
             try:
@@ -780,6 +787,13 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             except ValueError:
                 valid = [v.value for v in OpenAPIVersion]
                 msg = f"Invalid OpenAPI version: {config.schema_version}. Valid values: {valid}"
+                raise Error(msg) from None
+        elif input_file_type == InputFileType.XMLSchema:
+            try:
+                xmlschema_version = XMLSchemaVersion(config.schema_version)
+            except ValueError:
+                valid = [v.value for v in XMLSchemaVersion]
+                msg = f"Invalid XML Schema version: {config.schema_version}. Valid values: {valid}"
                 raise Error(msg) from None
         elif input_file_type == InputFileType.GraphQL:
             msg = f"--schema-version is not supported for {input_file_type.value}"
@@ -807,13 +821,14 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         parser_config = _create_parser_config(OpenAPIParserConfig, config, openapi_additional_options)
         parser = OpenAPIParser(source=source, config=parser_config)  # ty: ignore
     elif input_file_type == InputFileType.XMLSchema:
+        from datamodel_code_generator.config import XMLSchemaParserConfig  # noqa: PLC0415
         from datamodel_code_generator.parser.xmlschema import XMLSchemaParser  # noqa: PLC0415
 
-        xmlschema_additional_options: JSONSchemaParserConfigDict = {
-            "jsonschema_version": jsonschema_version,
+        xmlschema_additional_options: XMLSchemaParserConfigDict = {
+            "xmlschema_version": xmlschema_version,
             **additional_options,
         }
-        parser_config = _create_parser_config(JSONSchemaParserConfig, config, xmlschema_additional_options)
+        parser_config = _create_parser_config(XMLSchemaParserConfig, config, xmlschema_additional_options)
         parser = XMLSchemaParser(source=source, config=parser_config)  # ty: ignore
     elif input_file_type == InputFileType.GraphQL:
         from datamodel_code_generator.parser.graphql import GraphQLParser  # noqa: PLC0415
@@ -1019,6 +1034,15 @@ inferred_message = (
 )
 
 
+def detect_xmlschema_version(source: Any) -> XMLSchemaVersion:
+    """Detect XML Schema version from XSD 1.1 versioning attributes and constructs."""
+    from datamodel_code_generator.parser.xmlschema import (  # noqa: PLC0415
+        detect_xmlschema_version as _detect_xmlschema_version,
+    )
+
+    return _detect_xmlschema_version(source)
+
+
 _LAZY_IMPORTS = {
     "clear_dynamic_models_cache": "datamodel_code_generator.dynamic",
     "detect_jsonschema_version": "datamodel_code_generator.parser.schema_version",
@@ -1073,9 +1097,11 @@ __all__ = [
     "SchemaParseError",
     "TargetPydanticVersion",
     "VersionMode",
+    "XMLSchemaVersion",
     "clear_dynamic_models_cache",  # noqa: F822
     "detect_jsonschema_version",  # noqa: F822
     "detect_openapi_version",  # noqa: F822
+    "detect_xmlschema_version",
     "generate",
     "generate_dynamic_models",  # noqa: F822
 ]

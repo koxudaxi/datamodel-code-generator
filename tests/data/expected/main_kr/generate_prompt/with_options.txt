@@ -263,8 +263,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --schema-version SCHEMA_VERSION
                         Schema version. Valid values depend on input type:
                         JsonSchema: auto, draft-04, draft-06, draft-07,
-                        2019-09, 2020-12. OpenAPI: auto, 3.0, 3.1. (default:
-                        auto - detected from $schema or openapi field)
+                        2019-09, 2020-12. OpenAPI: auto, 3.0, 3.1. XMLSchema:
+                        auto, 1.0, 1.1. (default: auto - detected from
+                        $schema, openapi field, or XML Schema versioning
+                        attributes)
   --schema-version-mode {lenient,strict}
                         Schema version validation mode. 'lenient': accept all
                         features regardless of version (default). 'strict':
@@ -743,4 +745,3 @@ appropriate CLI options for the use case. Consider:
 2. Option descriptions and their purposes
 3. Potential conflicts between options
 4. Best practices for the target output format
-

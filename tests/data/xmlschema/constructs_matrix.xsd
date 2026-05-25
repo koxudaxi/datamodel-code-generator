@@ -6,8 +6,8 @@
 >
   <xs:include/>
   <xs:include schemaLocation="missing.xsd"/>
-  <xs:include schemaLocation="coverage_included.xsd"/>
-  <xs:include schemaLocation="coverage_included.xsd"/>
+  <xs:include schemaLocation="constructs_matrix_included.xsd"/>
+  <xs:include schemaLocation="constructs_matrix_included.xsd"/>
 
   <xs:simpleType name="TextAlias">
     <xs:annotation>
