@@ -2258,6 +2258,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if len(filtered_enum) != len(schema_dict["enum"]):
                 schema_dict["enum"] = filtered_enum
                 cls._drop_enum_metadata(schema_dict)
+            cls._drop_null_type_when_enum_excludes_null(schema_dict, filtered_enum)
         if "const" in schema_dict and not cls._json_value_matches_schema_constraints(schema_dict["const"], schema_dict):
             cls._raise_allof_literal_conflict()
 
@@ -2269,6 +2270,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if any(key in schema_dict for key in unsupported_null_constraints):
             return
         cls._collapse_raw_nullable_schema_to_null(schema_dict)
+
+    @classmethod
+    def _drop_null_type_when_enum_excludes_null(cls, schema_dict: dict[Any, Any], enum_values: list[Any]) -> None:
+        if any(cls._json_schema_values_equal(enum_value, None) for enum_value in enum_values):
+            return
+        type_values = cls._type_values(schema_dict.get("type"))
+        if type_values is None or "null" not in type_values:
+            return
+        non_null_types = cls._simplify_type_values(type_values - {"null"})
+        if not non_null_types:
+            return
+        schema_dict["type"] = next(iter(non_null_types)) if len(non_null_types) == 1 else sorted(non_null_types)
 
     @classmethod
     def _normalize_raw_schema_literal_constraints(  # noqa: PLR0912

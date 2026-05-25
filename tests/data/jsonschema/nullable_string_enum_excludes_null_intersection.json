@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NullableStringEnumExcludesNullIntersection",
+  "type": "object",
+  "properties": {
+    "value": {
+      "type": ["string", "null"],
+      "enum": ["x", 1]
+    }
+  },
+  "required": ["value"]
+}

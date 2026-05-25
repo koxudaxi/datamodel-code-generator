@@ -4876,6 +4876,52 @@ def test_main_jsonschema_nullable_integer_enum_null_only_intersection(output_fil
     )
 
 
+def test_main_jsonschema_nullable_string_enum_excludes_null_intersection(output_file: Path) -> None:
+    """Test nullable string enums that exclude null drop nullable fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_string_enum_excludes_null_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_string_enum_excludes_null_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_string_enum_excludes_null_intersection",
+        model_name="NullableStringEnumExcludesNullIntersection",
+        valid_json='{"value":"x"}',
+        invalid_json='{"value":null}',
+        expected_error_type="enum",
+        expected_attribute_path=("value", "value"),
+        expected_attribute_value="x",
+    )
+
+
+def test_main_jsonschema_nullable_integer_enum_excludes_null_intersection(output_file: Path) -> None:
+    """Test nullable integer enums that exclude null drop nullable fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_integer_enum_excludes_null_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_integer_enum_excludes_null_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_integer_enum_excludes_null_intersection",
+        model_name="NullableIntegerEnumExcludesNullIntersection",
+        valid_json='{"value":2}',
+        invalid_json='{"value":null}',
+        expected_error_type="enum",
+        expected_attribute_path=("value", "value"),
+        expected_attribute_value=2,
+    )
+
+
 def test_main_jsonschema_integer_open_interval_conflict(output_file: Path) -> None:
     """Test integer open intervals with no integer candidates are rejected."""
     run_main_and_assert(
