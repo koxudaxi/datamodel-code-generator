@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PrefixItemsFixedTailSchema",
+  "type": "object",
+  "properties": {
+    "values": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "integer"
+        }
+      ],
+      "items": {
+        "type": "string"
+      },
+      "minItems": 3,
+      "maxItems": 3
+    }
+  },
+  "required": [
+    "values"
+  ]
+}
