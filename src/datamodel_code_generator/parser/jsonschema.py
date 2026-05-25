@@ -3679,10 +3679,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 pattern=merged_pattern,
             )
             if isinstance(property_names, JsonSchemaObject):
-                pattern_schema = self.SCHEMA_OBJECT_TYPE(type="string", pattern=merged_pattern)
-                key_type = self._parse_property_name_key_schema(
-                    self._merge_primitive_schemas([property_names, pattern_schema])
+                merged_property_names = property_names.model_copy(deep=True)
+                merged_property_names.type = "string"
+                merged_property_names.pattern = (
+                    merged_pattern
+                    if merged_property_names.pattern is None
+                    else self._intersect_constraint("pattern", merged_property_names.pattern, merged_pattern)
                 )
+                key_type = self._parse_property_name_key_schema(merged_property_names)
             data_types.append(
                 self.data_type(
                     data_types=[value_type],

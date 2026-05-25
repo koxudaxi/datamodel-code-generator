@@ -4369,7 +4369,7 @@ def test_main_jsonschema_property_names_pattern_properties_intersection(output_f
         module_name="property_names_pattern_properties_intersection",
         model_name="PropertyNamesPatternPropertiesIntersection",
         valid_json='{"scores":{"x_ok":1}}',
-        invalid_json='{"scores":{"x":1}}',
+        invalid_json='{"scores":{"x_":1}}',
         expected_error_type="string_too_short",
         expected_attribute_path=("scores",),
         expected_attribute_value={"x_ok": 1},
