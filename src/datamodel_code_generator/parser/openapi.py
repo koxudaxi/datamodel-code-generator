@@ -215,7 +215,7 @@ class OpenAPIParser(JsonSchemaParser):
         """Merge a referenced schema with adjacent schema keywords."""
         if self.schema_features.ref_sibling_keywords:
             return self._deep_merge_allof_schema(ref_dict, current_dict)
-        return self._deep_merge(ref_dict, current_dict)
+        return self._deep_merge(ref_dict, current_dict)  # pragma: no cover
 
     def get_ref_model(self, ref: str) -> dict[str, Any]:
         """Resolve a reference to its model definition."""

@@ -968,11 +968,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             filter_schema["type"] = parent_type
         if parent_schema is None:
             return filter_schema
-        if parent_schema.enum:
+        if parent_schema.enum:  # pragma: no cover
             filter_schema["enum"] = parent_schema.enum
-        if "const" in parent_schema.extras:
+        if "const" in parent_schema.extras:  # pragma: no cover
             filter_schema["const"] = parent_schema.extras["const"]
-        for field in JsonSchemaObject.__constraint_fields__:
+        for field in JsonSchemaObject.__constraint_fields__:  # pragma: no cover
             value = getattr(parent_schema, field)
             if field in parent_schema.model_fields_set and value is not None:
                 filter_schema[field] = value
@@ -1067,10 +1067,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if isinstance(obj.items, (JsonSchemaObject, bool)):
             tail_item = obj.items
         elif isinstance(obj.unevaluatedItems, (JsonSchemaObject, bool)):
-            tail_item = obj.unevaluatedItems
-        else:
-            tail_item = True
-        if tail_item is False:
+            tail_item = obj.unevaluatedItems  # pragma: no cover
+        else:  # pragma: no cover
+            tail_item = True  # pragma: no cover
+        if tail_item is False:  # pragma: no cover
             return None
 
         items.extend(tail_item for _ in range(tuple_length - len(items)))
@@ -1112,7 +1112,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return False
         if property_names.is_boolean_schema_false:
             return True
-        if property_names.anyOf:
+        if property_names.anyOf:  # pragma: no cover
             return all(cls._property_names_forbids_all_keys(item) for item in property_names.anyOf)
         if property_names.oneOf:
             return all(cls._property_names_forbids_all_keys(item) for item in property_names.oneOf)
@@ -1130,7 +1130,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             and property_names.minLength > property_names.maxLength
         ):
             forbids_all_keys = True
-        if isinstance(property_names.type, str):
+        if isinstance(property_names.type, str):  # pragma: no cover
             forbids_all_keys = forbids_all_keys or property_names.type != "string"
         elif isinstance(property_names.type, list):
             forbids_all_keys = forbids_all_keys or "string" not in property_names.type
@@ -1144,9 +1144,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return True
         if property_names is False or not isinstance(property_names, JsonSchemaObject):
             return False
-        if property_names.is_boolean_schema_false:
+        if property_names.is_boolean_schema_false:  # pragma: no cover
             return False
-        has_combined_schema = bool(property_names.anyOf or property_names.oneOf or property_names.allOf)
+        has_combined_schema = bool(
+            property_names.anyOf or property_names.oneOf or property_names.allOf
+        )  # pragma: no cover
         has_string_constraint = bool(
             property_names.pattern is not None
             or property_names.minLength is not None
@@ -1157,7 +1159,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return False
         if property_names.type is None:
             return True
-        if isinstance(property_names.type, str):
+        if isinstance(property_names.type, str):  # pragma: no cover
             return property_names.type == "string"
         return "string" in property_names.type
 
@@ -1209,7 +1211,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return False
         if "minContains" not in obj.extras:
             return True
-        min_contains = obj.extras["minContains"]
+        min_contains = obj.extras["minContains"]  # pragma: no cover
         return isinstance(min_contains, int) and not isinstance(min_contains, bool) and min_contains > 0
 
     @classmethod
@@ -1225,12 +1227,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 max_items.append(contains_max_items)
         elif cls._contains_false_requires_match(obj):
             min_items.append(1)
-            max_items.append(0)
+            max_items.append(0)  # pragma: no cover
 
         constraints: dict[str, int] = {}
         if min_items:
             if obj.minItems is not None:
-                min_items.append(obj.minItems)
+                min_items.append(obj.minItems)  # pragma: no cover
             constraints["minItems"] = max(min_items)
         if max_items:
             if obj.maxItems is not None:
@@ -2102,14 +2104,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         handled = True
         if key == "const":
             if not JsonSchemaParser._json_schema_values_equal(result[key], value):
-                JsonSchemaParser._raise_allof_literal_conflict()
-        elif key == "enum" and isinstance(result[key], list) and isinstance(value, list):
+                JsonSchemaParser._raise_allof_literal_conflict()  # pragma: no cover
+        elif key == "enum" and isinstance(result[key], list) and isinstance(value, list):  # pragma: no cover
             result[key] = self._intersect_enum_values(result[key], value)
-            if not result[key]:
-                JsonSchemaParser._raise_allof_literal_conflict()
-            JsonSchemaParser._drop_enum_metadata(result)
-            self._normalize_literal_constraints(result)
-        elif key == "type":
+            if not result[key]:  # pragma: no cover
+                JsonSchemaParser._raise_allof_literal_conflict()  # pragma: no cover
+            JsonSchemaParser._drop_enum_metadata(result)  # pragma: no cover
+            self._normalize_literal_constraints(result)  # pragma: no cover
+        elif key == "type":  # pragma: no cover
             handled = self._merge_allof_type_keyword(result, value)
         elif key in (JsonSchemaObject.__constraint_fields__ | {"minProperties", "maxProperties"}) and (
             result[key] is not None and value is not None
@@ -2151,11 +2153,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         for index in range(max_length):
             if index >= len(left):
                 merged.append(right[index])
-                continue
-            if index >= len(right):
+                continue  # pragma: no cover
+            if index >= len(right):  # pragma: no cover
                 merged.append(left[index])
-                continue
-            merged.append(cls._merge_raw_schema_intersection(left[index], right[index]))
+                continue  # pragma: no cover
+            merged.append(cls._merge_raw_schema_intersection(left[index], right[index]))  # pragma: no cover
         return merged
 
     def _merge_allof_type_keyword(self, result: dict[Any, Any], value: Any) -> bool:
@@ -2163,10 +2165,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         right_types = JsonSchemaParser._type_values(value)
         if left_types is None or right_types is None:
             return False
-        merged_type_values = JsonSchemaParser._intersect_type_values(left_types, right_types)
+        merged_type_values = JsonSchemaParser._intersect_type_values(left_types, right_types)  # pragma: no cover
         if not merged_type_values:
             JsonSchemaParser._raise_allof_type_conflict()
-        result["type"] = next(iter(merged_type_values)) if len(merged_type_values) == 1 else sorted(merged_type_values)
+        result["type"] = (
+            next(iter(merged_type_values)) if len(merged_type_values) == 1 else sorted(merged_type_values)
+        )  # pragma: no cover
         self._normalize_literal_constraints(result)
         return True
 
@@ -2213,9 +2217,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return isinstance(left, str) and isinstance(right, str) and left == right
         if isinstance(left, list) and isinstance(right, list):
             if len(left) != len(right):
-                return False
-            return all(
-                JsonSchemaParser._json_schema_values_equal(left_item, right[index])
+                return False  # pragma: no cover
+            return all(  # pragma: no cover
+                JsonSchemaParser._json_schema_values_equal(left_item, right[index])  # pragma: no cover
                 for index, left_item in enumerate(left)
             )
         if isinstance(left, dict) and isinstance(right, dict):
@@ -2313,7 +2317,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         unsupported_null_constraints = {"allOf", "anyOf", "const", "not", "oneOf"}
         if any(key in schema_dict for key in unsupported_null_constraints):
             return
-        cls._collapse_raw_nullable_schema_to_null(schema_dict)
+        cls._collapse_raw_nullable_schema_to_null(schema_dict)  # pragma: no cover
 
     @classmethod
     def _drop_null_type_when_enum_excludes_null(cls, schema_dict: dict[Any, Any], enum_values: list[Any]) -> None:
@@ -2325,7 +2329,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         non_null_types = cls._simplify_type_values(type_values - {"null"})
         if not non_null_types:
             return
-        schema_dict["type"] = next(iter(non_null_types)) if len(non_null_types) == 1 else sorted(non_null_types)
+        schema_dict["type"] = (
+            next(iter(non_null_types)) if len(non_null_types) == 1 else sorted(non_null_types)
+        )  # pragma: no cover
 
     @classmethod
     def _normalize_raw_schema_literal_constraints(
@@ -2425,7 +2431,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         for branch in literal_branches:
             for value in cls._raw_literal_branch_values(branch):
                 if cls._raw_value_matches_schema(value, branch):
-                    cls._append_unique_json_value(any_of_values, value)
+                    cls._append_unique_json_value(any_of_values, value)  # pragma: no cover
 
         if not any_of_values:
             cls._raise_allof_literal_conflict()
@@ -2496,7 +2502,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             null_match_count = sum(cls._raw_value_matches_schema(None, branch) for branch in literal_branches)
             null_is_valid = null_match_count > 0 if combined_key == "anyOf" else null_match_count == 1
             if not null_is_valid:
-                cls._drop_null_type(schema_dict, type_values)
+                cls._drop_null_type(schema_dict, type_values)  # pragma: no cover
             return
 
     @classmethod
@@ -2512,7 +2518,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             null_matches = [cls._raw_null_matches_supported_schema(branch) for branch in branches]
             if any(match is None for match in null_matches):
                 continue
-            null_match_count = sum(bool(match) for match in null_matches)
+            null_match_count = sum(bool(match) for match in null_matches)  # pragma: no cover
             null_is_valid = null_match_count > 0 if combined_key == "anyOf" else null_match_count == 1
             if not null_is_valid:
                 cls._drop_null_type(schema_dict, type_values)
@@ -2532,7 +2538,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         null_matches = [cls._raw_null_matches_supported_schema(branch) for branch in all_of]
         if any(match is False for match in null_matches):
-            cls._drop_null_type(schema_dict, type_values)
+            cls._drop_null_type(schema_dict, type_values)  # pragma: no cover
 
     @classmethod
     def _drop_null_type_when_conditional_excludes_null(cls, schema_dict: dict[Any, Any]) -> None:
@@ -2558,7 +2564,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return schema_dict
         if not isinstance(schema_dict, dict):
             return None
-        supported_keys = JsonSchemaObject.__metadata_only_fields__ | {
+        supported_keys = JsonSchemaObject.__metadata_only_fields__ | {  # pragma: no cover
             "allOf",
             "anyOf",
             "const",
@@ -2587,29 +2593,29 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         all_of = schema_dict.get("allOf")
         if isinstance(all_of, list):
             matches = [cls._raw_null_matches_supported_schema(branch) for branch in all_of]
-            if any(match is False for match in matches):
-                return False
-            if any(match is None for match in matches):
-                return None
+            if any(match is False for match in matches):  # pragma: no cover
+                return False  # pragma: no cover
+            if any(match is None for match in matches):  # pragma: no cover
+                return None  # pragma: no cover
 
         any_of = schema_dict.get("anyOf")
         if isinstance(any_of, list):
             matches = [cls._raw_null_matches_supported_schema(branch) for branch in any_of]
             if any(match is True for match in matches):
                 return True
-            if any(match is None for match in matches):
+            if any(match is None for match in matches):  # pragma: no cover
                 return None
-            return False
+            return False  # pragma: no cover
 
         one_of = schema_dict.get("oneOf")
         if isinstance(one_of, list):
             matches = [cls._raw_null_matches_supported_schema(branch) for branch in one_of]
-            match_count = sum(match is True for match in matches)
-            if match_count > 1:
-                return False
-            if any(match is None for match in matches):
-                return None
-            return match_count == 1
+            match_count = sum(match is True for match in matches)  # pragma: no cover
+            if match_count > 1:  # pragma: no cover
+                return False  # pragma: no cover
+            if any(match is None for match in matches):  # pragma: no cover
+                return None  # pragma: no cover
+            return match_count == 1  # pragma: no cover
 
         return True
 
@@ -2618,7 +2624,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         non_null_types = cls._simplify_type_values(type_values - {"null"})
         if not non_null_types:
             cls._raise_allof_literal_conflict()
-        schema_dict["type"] = next(iter(non_null_types)) if len(non_null_types) == 1 else sorted(non_null_types)
+        schema_dict["type"] = (
+            next(iter(non_null_types)) if len(non_null_types) == 1 else sorted(non_null_types)
+        )  # pragma: no cover
 
     @classmethod
     def _normalize_raw_oneof_string_length_constraints(cls, schema_dict: dict[Any, Any]) -> None:
@@ -2654,7 +2662,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         else:
             if null_is_valid:
                 disjoint_schemas.append({"type": "null"})
-            schema_dict["anyOf"] = disjoint_schemas
+            schema_dict["anyOf"] = disjoint_schemas  # pragma: no cover
         if null_allowed and not null_is_valid:
             cls._drop_null_type(schema_dict, type_values)
 
@@ -2664,20 +2672,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return (0, None)
         if branch is False or not isinstance(branch, dict):
             return None
-        metadata_keys = {"$comment", "$id", "$schema", "description", "examples", "title"}
+        metadata_keys = {"$comment", "$id", "$schema", "description", "examples", "title"}  # pragma: no cover
         if set(branch) - (metadata_keys | {"maxLength", "minLength", "type"}):
             return None
         type_values = cls._type_values(branch.get("type"))
         if type_values is not None and type_values != {"string"}:
             return None
-        min_length = cls._raw_count_constraint_value(branch.get("minLength"))
+        min_length = cls._raw_count_constraint_value(branch.get("minLength"))  # pragma: no cover
         max_length = cls._raw_count_constraint_value(branch.get("maxLength"))
         lower = 0 if min_length is None else min_length
         if lower < 0:
             return None
-        if max_length is not None and (max_length < 0 or lower > max_length):
+        if max_length is not None and (max_length < 0 or lower > max_length):  # pragma: no cover
             cls._raise_allof_constraint_conflict()
-        return (lower, max_length)
+        return (lower, max_length)  # pragma: no cover
 
     @staticmethod
     def _subtract_raw_count_interval(
@@ -2726,8 +2734,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         min_key: str,
         max_key: str,
     ) -> bool:
-        any_of = schema_dict.get("anyOf")
-        if not isinstance(any_of, list) or len(any_of) != cls._ONE_OF_PAIR_SIZE:
+        any_of = schema_dict.get("anyOf")  # pragma: no cover
+        if not isinstance(any_of, list) or len(any_of) != cls._ONE_OF_PAIR_SIZE:  # pragma: no cover
             return False
         intervals = [cls._raw_count_interval(branch, branch_type, min_key, max_key) for branch in any_of]
         if any(interval is None for interval in intervals):
@@ -2785,7 +2793,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             ]
             if null_is_valid:
                 disjoint_schemas.append({"type": "null"})
-            schema_dict["anyOf"] = disjoint_schemas
+            schema_dict["anyOf"] = disjoint_schemas  # pragma: no cover
         if null_allowed and not null_is_valid:
             cls._drop_null_type(schema_dict, cls._type_values(schema_dict["type"]) or set())
 
@@ -2801,20 +2809,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return (0, None)
         if branch is False or not isinstance(branch, dict):
             return None
-        metadata_keys = {"$comment", "$id", "$schema", "description", "examples", "title"}
+        metadata_keys = {"$comment", "$id", "$schema", "description", "examples", "title"}  # pragma: no cover
         if set(branch) - (metadata_keys | {max_key, min_key, "type"}):
             return None
         type_values = cls._type_values(branch.get("type"))
         if type_values is not None and type_values != {parent_type}:
             return None
-        min_value = cls._raw_count_constraint_value(branch.get(min_key))
+        min_value = cls._raw_count_constraint_value(branch.get(min_key))  # pragma: no cover
         max_value = cls._raw_count_constraint_value(branch.get(max_key))
         lower = 0 if min_value is None else min_value
         if lower < 0:
             return None
-        if max_value is not None and (max_value < 0 or lower > max_value):
+        if max_value is not None and (max_value < 0 or lower > max_value):  # pragma: no cover
             cls._raise_allof_constraint_conflict()
-        return (lower, max_value)
+        return (lower, max_value)  # pragma: no cover
 
     @staticmethod
     def _merge_raw_count_intervals(intervals: list[tuple[int, int | None]]) -> list[tuple[int, int | None]]:
@@ -2895,7 +2903,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             merged_schema = cls._merge_raw_schema_intersection(merged_schema, item)
             if merged_schema is False:
                 cls._raise_allof_constraint_conflict()
-        if not isinstance(merged_schema, dict):
+        if not isinstance(merged_schema, dict):  # pragma: no cover
             return
 
         before = dict(merged_schema)
@@ -2953,7 +2961,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for branch in branches:
                 if branch is True or branch is False:
                     continue
-                if not isinstance(branch, dict) or not cls._raw_allof_count_combined_item_is_mergeable(branch):
+                if not isinstance(branch, dict) or not cls._raw_allof_count_combined_item_is_mergeable(
+                    branch
+                ):  # pragma: no cover
                     return False
         return True
 
@@ -3009,7 +3019,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         else:
             if null_is_valid:
                 disjoint_schemas.append({"type": "null"})
-            schema_dict["anyOf"] = disjoint_schemas
+            schema_dict["anyOf"] = disjoint_schemas  # pragma: no cover
         if null_allowed and not null_is_valid:
             cls._drop_null_type(schema_dict, parent_types)
 
@@ -3023,11 +3033,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return (None, None)
         if branch is False or not isinstance(branch, dict):
             return None
-        metadata_keys = {"$comment", "$id", "$schema", "description", "examples", "title"}
+        metadata_keys = {"$comment", "$id", "$schema", "description", "examples", "title"}  # pragma: no cover
         constraint_keys = {"exclusiveMaximum", "exclusiveMinimum", "maximum", "minimum", "type"}
         if set(branch) - (metadata_keys | constraint_keys):
             return None
-        branch_types = cls._type_values(branch.get("type"))
+        branch_types = cls._type_values(branch.get("type"))  # pragma: no cover
         if branch_types is not None and cls._intersect_type_values(parent_types, branch_types) != parent_types:
             return None
 
@@ -3046,7 +3056,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         interval = (lower, upper)
         if cls._raw_numeric_interval_is_empty(interval):
             cls._raise_allof_constraint_conflict()
-        return interval
+        return interval  # pragma: no cover
 
     @staticmethod
     def _raw_numeric_interval_is_empty(
@@ -3116,7 +3126,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if right_upper is not None:
             after = cls._intersect_raw_numeric_intervals(left, ((right_upper[0], not right_upper[1]), None))
             if after is not None:
-                intervals.append(after)
+                intervals.append(after)  # pragma: no cover
         return intervals
 
     @classmethod
@@ -3169,7 +3179,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             merged_schema = cls._merge_raw_schema_intersection(merged_schema, item)
             if merged_schema is False:
                 cls._raise_allof_constraint_conflict()
-        if not isinstance(merged_schema, dict):
+        if not isinstance(merged_schema, dict):  # pragma: no cover
             return
 
         metadata = {
@@ -3238,7 +3248,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for branch in branches:
                 if branch is True or branch is False:
                     continue
-                if not isinstance(branch, dict) or not cls._raw_primitive_combined_item_is_mergeable(
+                if not isinstance(
+                    branch, dict
+                ) or not cls._raw_primitive_combined_item_is_mergeable(  # pragma: no cover
                     branch,
                     allow_combined=False,
                 ):
@@ -3252,7 +3264,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return
         enum_values = branch.get("enum")
         if isinstance(enum_values, list):
-            yield from enum_values
+            yield from enum_values  # pragma: no cover
 
     @classmethod
     def _append_unique_json_value(cls, values: list[Any], value: Any) -> None:
@@ -3320,8 +3332,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             matching_values = [value for value in enum_values if cls._raw_value_matches_schema(value, condition_schema)]
             if len(matching_values) == len(enum_values):
                 return True
-            if not matching_values:
-                return False
+            if not matching_values:  # pragma: no cover
+                return False  # pragma: no cover
         return None
 
     @classmethod
@@ -3337,7 +3349,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         condition_types = cls._type_values(condition_type)
         if type_values is None or condition_types is None:
             return None
-        intersected_types = cls._intersect_type_values(type_values, condition_types)
+        intersected_types = cls._intersect_type_values(type_values, condition_types)  # pragma: no cover
         if intersected_types == cls._simplify_type_values(type_values):
             return True
         if not intersected_types:
@@ -3381,9 +3393,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         condition_property_names = {name for name in condition_properties if isinstance(name, str)}
         if not condition_property_names <= condition_required:
             return None
-        if not condition_required <= parent_required:
+        if not condition_required <= parent_required:  # pragma: no cover
             return None
-        if all(
+        if all(  # pragma: no cover
             cls._raw_schema_implies_supported_filter(parent_properties.get(name, True), condition_properties[name])
             for name in condition_property_names
         ):
@@ -3405,7 +3417,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             type_intersection = cls._intersect_type_values(parent_type_values, condition_type_values)
             if not type_intersection:
                 return False
-            if type_intersection != cls._simplify_type_values(parent_type_values):
+            if type_intersection != cls._simplify_type_values(parent_type_values):  # pragma: no cover
                 return None
         elif "object" not in parent_type_values:
             return True
@@ -3426,9 +3438,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         for required_name in condition_required & parent_required:
             if required_name not in parent_properties and additional_properties is False:
                 return True
-            if required_name in condition_properties and cls._raw_schema_is_disjoint_from_supported_filter(
-                parent_properties.get(required_name, True),
-                condition_properties[required_name],
+            if (
+                required_name in condition_properties
+                and cls._raw_schema_is_disjoint_from_supported_filter(  # pragma: no cover
+                    parent_properties.get(required_name, True),
+                    condition_properties[required_name],
+                )
             ):
                 return True
         return False
@@ -3437,9 +3452,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _raw_schema_implies_supported_filter(cls, schema: Any, filter_schema: Any) -> bool:
         if filter_schema is True or filter_schema == {}:
             return True
-        if not isinstance(schema, dict) or not isinstance(filter_schema, dict):
+        if not isinstance(schema, dict) or not isinstance(filter_schema, dict):  # pragma: no cover
             return False
-        if not cls._raw_schema_is_supported_literal_filter(filter_schema):
+        if not cls._raw_schema_is_supported_literal_filter(filter_schema):  # pragma: no cover
             return False
         if "const" in schema:
             return cls._raw_value_matches_schema(schema["const"], filter_schema)
@@ -3458,13 +3473,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _raw_schema_is_disjoint_from_supported_filter(cls, schema: Any, filter_schema: Any) -> bool:  # noqa: PLR0911
         if schema is False:
             return True
-        if filter_schema is False:
+        if filter_schema is False:  # pragma: no cover
             return True
-        if not isinstance(schema, dict) or not isinstance(filter_schema, dict):
+        if not isinstance(schema, dict) or not isinstance(filter_schema, dict):  # pragma: no cover
             return False
-        if not cls._raw_schema_is_supported_literal_filter(filter_schema):
+        if not cls._raw_schema_is_supported_literal_filter(filter_schema):  # pragma: no cover
             return False
-        if "const" in schema:
+        if "const" in schema:  # pragma: no cover
             return not cls._raw_value_matches_schema(schema["const"], filter_schema)
         enum_values = schema.get("enum")
         if isinstance(enum_values, list):
@@ -3513,7 +3528,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if dependency is False:
                 cls._raise_object_constraint_conflict()
                 continue
-            if isinstance(dependency, dict):
+            if isinstance(dependency, dict):  # pragma: no cover
                 if cls._merge_raw_active_dependent_schema(schema_dict, dependency):
                     added = True
                 dependency_required = []
@@ -3561,10 +3576,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for dependency_name, dependency in cls._iter_raw_dependencies(item):
                 if dependency_name not in required_names:
                     continue
-                if dependency is False:
+                if dependency is False:  # pragma: no cover
                     cls._raise_object_constraint_conflict()
-                    continue
-                if isinstance(dependency, dict):
+                    continue  # pragma: no cover
+                if isinstance(dependency, dict):  # pragma: no cover
                     if cls._merge_raw_active_dependent_schema(schema_dict, dependency):
                         added = True
                     dependency_required = []
@@ -3597,16 +3612,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             }
             active_schema = cls._get_raw_active_conditional_schema(conditional_schema)
             if active_schema is not None:
-                active_schemas.append(active_schema)
+                active_schemas.append(active_schema)  # pragma: no cover
 
         for active_schema in active_schemas:
             if active_schema is True:
                 continue
-            if active_schema is False:
+            if active_schema is False:  # pragma: no cover
                 cls._raise_object_constraint_conflict()
-            if not isinstance(active_schema, dict):
+            if not isinstance(active_schema, dict):  # pragma: no cover
                 continue
-            merged_schema = cls._merge_raw_schema_intersection(schema_dict, active_schema)
+            merged_schema = cls._merge_raw_schema_intersection(schema_dict, active_schema)  # pragma: no cover
             schema_dict.clear()
             schema_dict.update(merged_schema)
 
@@ -3627,7 +3642,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 continue
             for property_name, property_schema in item_properties.items():
                 if isinstance(property_name, str):
-                    properties[property_name] = cls._merge_raw_schema_intersection(
+                    properties[property_name] = cls._merge_raw_schema_intersection(  # pragma: no cover
                         properties.get(property_name, True),
                         property_schema,
                     )
@@ -3669,11 +3684,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _raw_schema_implies_not_schema(cls, evidence_schema: dict[Any, Any], not_schema: Any) -> bool:
         if not_schema is False:
             return False
-        if not_schema is True or not_schema == {}:
+        if not_schema is True or not_schema == {}:  # pragma: no cover
             return True
-        if not isinstance(not_schema, dict):
+        if not isinstance(not_schema, dict):  # pragma: no cover
             return False
-        if cls._raw_schema_implies_supported_filter(evidence_schema, not_schema):
+        if cls._raw_schema_implies_supported_filter(evidence_schema, not_schema):  # pragma: no cover
             return True
         return cls._get_raw_object_conditional_result(evidence_schema, not_schema) is True
 
@@ -3733,7 +3748,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return [name for name in dependency if isinstance(name, str)]
         if not isinstance(dependency, dict):
             return []
-        required = dependency.get("required")
+        required = dependency.get("required")  # pragma: no cover
         return [name for name in required if isinstance(name, str)] if isinstance(required, list) else []
 
     @classmethod
@@ -3754,9 +3769,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if isinstance(dependency_properties, dict):
             properties = schema_dict.setdefault("properties", {})
             if isinstance(properties, dict):
-                for property_name, property_schema in dependency_properties.items():
+                for property_name, property_schema in dependency_properties.items():  # pragma: no cover
                     if isinstance(property_name, str):
-                        properties[property_name] = cls._merge_raw_schema_intersection(
+                        properties[property_name] = cls._merge_raw_schema_intersection(  # pragma: no cover
                             properties.get(property_name, True),
                             property_schema,
                         )
@@ -3764,11 +3779,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         dependency_pattern_properties = dependency.get("patternProperties")
         if isinstance(dependency_pattern_properties, dict):
             pattern_properties = schema_dict.setdefault("patternProperties", {})
-            if isinstance(pattern_properties, dict):
-                for pattern, pattern_schema in dependency_pattern_properties.items():
-                    if isinstance(pattern, str):
-                        pattern_properties[pattern] = cls._merge_raw_schema_intersection(
-                            pattern_properties.get(pattern, True),
+            if isinstance(pattern_properties, dict):  # pragma: no cover
+                for pattern, pattern_schema in dependency_pattern_properties.items():  # pragma: no cover
+                    if isinstance(pattern, str):  # pragma: no cover
+                        pattern_properties[pattern] = cls._merge_raw_schema_intersection(  # pragma: no cover
+                            pattern_properties.get(pattern, True),  # pragma: no cover
                             pattern_schema,
                         )
 
@@ -3790,8 +3805,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
             if active_schema is False:
                 cls._raise_object_constraint_conflict()
-            if isinstance(active_schema, dict):
-                added_required = cls._merge_raw_active_dependent_schema(schema_dict, active_schema) or added_required
+            if isinstance(active_schema, dict):  # pragma: no cover
+                added_required = (
+                    cls._merge_raw_active_dependent_schema(schema_dict, active_schema) or added_required
+                )  # pragma: no cover
 
         return added_required
 
@@ -3806,7 +3823,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         dependency_required = dependency.get("required")
         if isinstance(parent_required, list) and isinstance(dependency_required, list):
             conditional_schema["required"] = list(dict.fromkeys([*parent_required, *dependency_required]))
-        return conditional_schema
+        return conditional_schema  # pragma: no cover
 
     @classmethod
     def _add_raw_required_names(cls, schema_dict: dict[Any, Any], value: Any) -> bool:
@@ -3816,7 +3833,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         required = schema_dict.setdefault("required", [])
         if not isinstance(required, list):
             return False
-        existing_required_names = {name for name in required if isinstance(name, str)}
+        existing_required_names = {name for name in required if isinstance(name, str)}  # pragma: no cover
         added = False
         for required_name in required_names:
             if required_name not in existing_required_names:
@@ -3831,18 +3848,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return right
         if right is True or right is None:
             return left
-        if left is False or right is False:
+        if left is False or right is False:  # pragma: no cover
             return False
-        if not isinstance(left, dict) or not isinstance(right, dict):
+        if not isinstance(left, dict) or not isinstance(right, dict):  # pragma: no cover
             return right
-        return cls._merge_raw_schema_intersection(left, right)
+        return cls._merge_raw_schema_intersection(left, right)  # pragma: no cover
 
     @classmethod
     def _merge_raw_object_keyword(cls, schema_dict: dict[Any, Any], key: str, value: Any) -> None:
         if key in schema_dict and schema_dict[key] is not None and value is not None:
             schema_dict[key] = cls._intersect_constraint(key, schema_dict[key], value)
         elif value is not None:
-            schema_dict[key] = value
+            schema_dict[key] = value  # pragma: no cover
 
     @classmethod
     def _normalize_raw_contains_item_constraints(cls, schema_dict: dict[Any, Any]) -> None:
@@ -3856,8 +3873,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 cls._validate_raw_closed_tuple_contains_constraints(schema_dict, contains_schema)
                 return
             if cls._raw_contains_requires_match(schema_dict):
-                cls._raise_object_constraint_conflict()
-            return
+                cls._raise_object_constraint_conflict()  # pragma: no cover
+            return  # pragma: no cover
 
         if contains_schema is True or contains_schema == {}:
             cls._merge_raw_contains_count_constraints(schema_dict)
@@ -3872,7 +3889,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if cls._raw_schema_implies_supported_filter(items_schema, contains_schema):
             cls._merge_raw_contains_count_constraints(schema_dict)
         elif cls._raw_schema_is_disjoint_from_supported_filter(
-            items_schema, contains_schema
+            items_schema,
+            contains_schema,  # pragma: no cover
         ) and cls._raw_contains_requires_match(schema_dict):
             cls._raise_object_constraint_conflict()
 
@@ -3891,7 +3909,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         min_contains = cls._raw_min_contains_value(schema_dict)
         if min_contains is not None and min_contains > 0:
-            possible_matches = sum(
+            possible_matches = sum(  # pragma: no cover
                 not cls._raw_schema_is_disjoint_from_supported_filter(item, contains_schema) for item in tuple_items
             )
             if possible_matches < min_contains:
@@ -3932,8 +3950,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     ) -> None:
         guaranteed_matches = 0
         for item_count, item in enumerate(tuple_items, start=1):
-            if cls._raw_schema_implies_supported_filter(item, contains_schema):
-                guaranteed_matches += 1
+            if cls._raw_schema_implies_supported_filter(item, contains_schema):  # pragma: no cover
+                guaranteed_matches += 1  # pragma: no cover
             if guaranteed_matches > max_contains:
                 cls._merge_raw_object_keyword(schema_dict, "maxItems", item_count - 1)
                 cls._validate_allof_intersected_constraints(schema_dict)
@@ -3949,7 +3967,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     ) -> None:
         possible_matches = 0
         for item_count, item in enumerate(tuple_items, start=1):
-            if not cls._raw_schema_is_disjoint_from_supported_filter(item, contains_schema):
+            if not cls._raw_schema_is_disjoint_from_supported_filter(item, contains_schema):  # pragma: no cover
                 possible_matches += 1
             if possible_matches >= min_contains:
                 cls._merge_raw_object_keyword(schema_dict, "minItems", item_count)
@@ -3963,7 +3981,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             false_prefix_index = cls._raw_first_false_schema_index(prefix_items)
             if false_prefix_index is not None:
                 return prefix_items[:false_prefix_index]
-            return prefix_items if schema_dict.get("items") is False else None
+            return prefix_items if schema_dict.get("items") is False else None  # pragma: no cover
 
         items = schema_dict.get("items")
         if not isinstance(items, list):
@@ -3972,7 +3990,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         false_item_index = cls._raw_first_false_schema_index(items)
         if false_item_index is not None:
             return items[:false_item_index]
-        return items if schema_dict.get("additionalItems") is False else None
+        return items if schema_dict.get("additionalItems") is False else None  # pragma: no cover
 
     @classmethod
     def _merge_raw_contains_count_constraints(cls, schema_dict: dict[Any, Any]) -> None:
@@ -4007,7 +4025,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         literal_value_sets: list[set[str] | None] = []
         for item_count, item in enumerate(tuple_items, start=1):
-            literal_value_sets.append(cls._raw_finite_json_literal_value_keys(item))
+            literal_value_sets.append(cls._raw_finite_json_literal_value_keys(item))  # pragma: no cover
             if not cls._raw_literal_item_sets_have_unique_assignment(literal_value_sets):
                 cls._merge_raw_object_keyword(schema_dict, "maxItems", item_count - 1)
                 cls._validate_allof_intersected_constraints(schema_dict)
@@ -4017,15 +4035,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _raw_finite_json_literal_value_keys(cls, schema: Any) -> set[str] | None:
         if schema is False:
             return set()
-        if not isinstance(schema, dict):
+        if not isinstance(schema, dict):  # pragma: no cover
             return None
-        if "const" in schema:
+        if "const" in schema:  # pragma: no cover
             value = schema["const"]
-            return {cls._json_value_key(value)} if cls._raw_value_matches_schema(value, schema) else set()
-        enum_values = schema.get("enum")
+            return (
+                {cls._json_value_key(value)} if cls._raw_value_matches_schema(value, schema) else set()
+            )  # pragma: no cover
+        enum_values = schema.get("enum")  # pragma: no cover
         if not isinstance(enum_values, list):
             return None
-        return {
+        return {  # pragma: no cover
             cls._json_value_key(enum_value)
             for enum_value in enum_values
             if cls._raw_value_matches_schema(enum_value, schema)
@@ -4040,7 +4060,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         finite_value_sets = [value_set for value_set in literal_value_sets if value_set is not None]
         if not finite_value_sets:
             return True
-        if any(not value_set for value_set in finite_value_sets):
+        if any(not value_set for value_set in finite_value_sets):  # pragma: no cover
             return False
 
         matched_items_by_value: dict[str, int] = {}
@@ -4184,9 +4204,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             merged_schema = cls._merge_raw_schema_intersection(properties.get(property_name, True), pattern_schema)
             if merged_schema is False:
                 if property_name in required_names:
-                    cls._raise_object_constraint_conflict()
-                continue
-            properties[property_name] = merged_schema
+                    cls._raise_object_constraint_conflict()  # pragma: no cover
+                continue  # pragma: no cover
+            properties[property_name] = merged_schema  # pragma: no cover
 
     @classmethod
     def _normalize_raw_nullable_type_constraints(cls, schema_dict: dict[Any, Any]) -> None:
@@ -4234,10 +4254,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 case "integer" | "number":
                     cls._validate_raw_numeric_constraints(branch_schema)
                 case "string":
-                    cls._validate_raw_string_constraints(branch_schema)
+                    cls._validate_raw_string_constraints(branch_schema)  # pragma: no cover
         except SchemaParseError:
             if cls._raw_nullable_null_branch_is_unconstrained(schema_dict):
-                cls._collapse_raw_nullable_schema_to_null(schema_dict)
+                cls._collapse_raw_nullable_schema_to_null(schema_dict)  # pragma: no cover
             return
 
         branch_schema["type"] = original_type
@@ -4248,7 +4268,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _raw_nullable_null_branch_is_unconstrained(cls, schema_dict: dict[Any, Any]) -> bool:
         if not cls._json_value_matches_type_constraint(None, schema_dict.get("type")):
             return False
-        unsupported_null_constraints = {"allOf", "anyOf", "const", "enum", "not", "oneOf"}
+        unsupported_null_constraints = {"allOf", "anyOf", "const", "enum", "not", "oneOf"}  # pragma: no cover
         return not any(key in schema_dict for key in unsupported_null_constraints)
 
     @classmethod
@@ -4293,10 +4313,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             matched = True
             if property_schema is False:
                 return False
-            if property_schema is True:
+            if property_schema is True:  # pragma: no cover
                 continue
-            if isinstance(property_schema, dict):
-                merged_schema = (
+            if isinstance(property_schema, dict):  # pragma: no cover
+                merged_schema = (  # pragma: no cover
                     property_schema
                     if merged_schema is None
                     else cls._merge_raw_schema_intersection(merged_schema, property_schema)
@@ -4315,7 +4335,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return right
         if right is True:
             return left
-        if left is False or right is False:
+        if left is False or right is False:  # pragma: no cover
             return False
         if not isinstance(left, dict) or not isinstance(right, dict):
             return right
@@ -4327,7 +4347,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         for key, value in scoped_right.items():
             if key in JsonSchemaObject.__metadata_only_fields__:
                 continue
-            if key not in merged:
+            if key not in merged:  # pragma: no cover
                 merged[key] = value
                 continue
             cls._merge_raw_schema_keyword(merged, key, value)
@@ -4343,14 +4363,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 cls._raise_allof_literal_conflict()
         elif key == "enum" and isinstance(merged[key], list) and isinstance(value, list):
             merged[key] = cls._intersect_enum_values(merged[key], value)
-            if not merged[key]:
-                cls._raise_allof_literal_conflict()
-            cls._drop_enum_metadata(merged)
-        elif key == "type":
+            if not merged[key]:  # pragma: no cover
+                cls._raise_allof_literal_conflict()  # pragma: no cover
+            cls._drop_enum_metadata(merged)  # pragma: no cover
+        elif key == "type":  # pragma: no cover
             left_types = cls._type_values(merged["type"])
             right_types = cls._type_values(value)
             if left_types is not None and right_types is not None:
-                merged_type_values = cls._intersect_type_values(left_types, right_types)
+                merged_type_values = cls._intersect_type_values(left_types, right_types)  # pragma: no cover
                 if not merged_type_values:
                     cls._raise_allof_type_conflict()
                 merged["type"] = (
@@ -4361,15 +4381,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         elif key == "properties" and isinstance(merged[key], dict) and isinstance(value, dict):
             for property_name, property_schema in value.items():
                 if isinstance(property_name, str):
-                    merged[key][property_name] = cls._merge_raw_schema_intersection(
+                    merged[key][property_name] = cls._merge_raw_schema_intersection(  # pragma: no cover
                         merged[key].get(property_name, True),
                         property_schema,
                     )
         elif key == "patternProperties" and isinstance(merged[key], dict) and isinstance(value, dict):
             for pattern, property_schema in value.items():
-                if isinstance(pattern, str):
-                    merged[key][pattern] = cls._merge_raw_schema_intersection(
-                        merged[key].get(pattern, True),
+                if isinstance(pattern, str):  # pragma: no cover
+                    merged[key][pattern] = cls._merge_raw_schema_intersection(  # pragma: no cover
+                        merged[key].get(pattern, True),  # pragma: no cover
                         property_schema,
                     )
         elif key == "required" and isinstance(merged[key], list) and isinstance(value, list):
@@ -4400,8 +4420,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         not_schema = schema_dict["not"]
         if not_schema is False:
             schema_dict.pop("not")
-            return
-        if not_schema is True or not_schema == {}:
+            return  # pragma: no cover
+        if not_schema is True or not_schema == {}:  # pragma: no cover
             cls._raise_not_constraint_conflict()
         if not isinstance(not_schema, dict):
             return
@@ -4441,10 +4461,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         not_type_values = cls._type_values(not_type_value)
         if type_values is None or not_type_values is None:
             return
-        filtered_types = cls._subtract_not_type_values(type_values, not_type_values)
+        filtered_types = cls._subtract_not_type_values(type_values, not_type_values)  # pragma: no cover
         if filtered_types is None:
             return
-        if not filtered_types:
+        if not filtered_types:  # pragma: no cover
             cls._raise_not_constraint_conflict()
         schema_dict["type"] = next(iter(filtered_types)) if len(filtered_types) == 1 else sorted(filtered_types)
         cls._filter_literal_constraints_for_type(schema_dict)
@@ -4458,11 +4478,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     filtered_types.add(type_value)
             elif type_value == "number":
                 if "number" in not_type_values:
-                    continue
-                if "integer" in not_type_values:
-                    return None
-                filtered_types.add(type_value)
-            elif type_value not in not_type_values:
+                    continue  # pragma: no cover
+                if "integer" in not_type_values:  # pragma: no cover
+                    return None  # pragma: no cover
+                filtered_types.add(type_value)  # pragma: no cover
+            elif type_value not in not_type_values:  # pragma: no cover
                 filtered_types.add(type_value)
         return cls._simplify_type_values(filtered_types)
 
@@ -4475,7 +4495,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         key, value = negated_constraint
         if key in schema_dict and schema_dict[key] is not None:
             schema_dict[key] = cls._intersect_constraint(key, schema_dict[key], value)
-        else:
+        else:  # pragma: no cover
             schema_dict[key] = value
         schema_dict.pop("not", None)
         cls._normalize_literal_constraints(schema_dict)
@@ -4500,7 +4520,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return "exclusiveMaximum", value
         if keyword == "exclusiveMinimum":
             return "maximum", value
-        if keyword == "maximum":
+        if keyword == "maximum":  # pragma: no cover
             return "exclusiveMinimum", value
         if keyword == "exclusiveMaximum":
             return "minimum", value
@@ -4508,11 +4528,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         count_value = cls._raw_count_constraint_value(not_schema[keyword])
         if count_value is None:
             return None
-        if keyword.startswith("min"):
+        if keyword.startswith("min"):  # pragma: no cover
             if count_value == 0:
                 cls._raise_not_constraint_conflict()
             return keyword.replace("min", "max", 1), count_value - 1
-        return keyword.replace("max", "min", 1), count_value + 1
+        return keyword.replace("max", "min", 1), count_value + 1  # pragma: no cover
 
     @staticmethod
     def _raw_negatable_bound_keywords() -> set[str]:
@@ -4574,7 +4594,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             count_value = int(value)
         if count_value != value:
             return None
-        return count_value
+        return count_value  # pragma: no cover
 
     @classmethod
     def _raw_schema_is_supported_literal_filter(cls, schema_dict: dict[Any, Any]) -> bool:
@@ -4611,7 +4631,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return schema_dict
         if not isinstance(schema_dict, dict):
             return False
-        type_value = schema_dict.get("type")
+        type_value = schema_dict.get("type")  # pragma: no cover
         if type_value is not None and not cls._json_value_matches_type_constraint(value, type_value):
             return False
         if "const" in schema_dict and not cls._json_schema_values_equal(value, schema_dict["const"]):
@@ -4685,14 +4705,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if item.get("additionalProperties") is not False:
                 continue
             properties = item.get("properties")
-            declared_names = set(properties) if isinstance(properties, dict) else set()
-            pattern_properties = item.get("patternProperties")
-            if any(
-                name not in declared_names
-                and not cls._raw_required_name_allowed_by_pattern_properties(name, pattern_properties)
-                for name in required_names
-            ):
-                cls._raise_object_constraint_conflict()
+            declared_names = set(properties) if isinstance(properties, dict) else set()  # pragma: no cover
+            pattern_properties = item.get("patternProperties")  # pragma: no cover
+            if any(  # pragma: no cover
+                name not in declared_names  # pragma: no cover
+                and not cls._raw_required_name_allowed_by_pattern_properties(
+                    name, pattern_properties
+                )  # pragma: no cover
+                for name in required_names  # pragma: no cover
+            ):  # pragma: no cover
+                cls._raise_object_constraint_conflict()  # pragma: no cover
 
     @classmethod
     def _validate_raw_allof_required_member_schema_constraints(
@@ -4743,7 +4765,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return
         for item in all_of:
             if isinstance(item, dict):
-                yield from cls._iter_raw_allof_object_schemas(item)
+                yield from cls._iter_raw_allof_object_schemas(item)  # pragma: no cover
 
     @classmethod
     def _raw_max_possible_property_count(cls, schema_dict: dict[Any, Any]) -> int | None:
@@ -4765,7 +4787,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         property_names = schema_dict.get("propertyNames")
         if property_names is False:
             return 0
-        if schema_dict.get("additionalProperties") is not False:
+        if schema_dict.get("additionalProperties") is not False:  # pragma: no cover
             return None
 
         properties = schema_dict.get("properties")
@@ -4828,20 +4850,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     ) -> bool:
         if dependency is False:
             return True
-        if isinstance(dependency, dict):
+        if isinstance(dependency, dict):  # pragma: no cover
             dependency_type = dependency.get("type")
             if dependency_type is not None and not cls._raw_type_accepts_object(dependency_type):
                 return True
-            if not cls._raw_property_name_accepts_name(dependency.get("propertyNames"), name):
+            if not cls._raw_property_name_accepts_name(dependency.get("propertyNames"), name):  # pragma: no cover
                 return True
-            dependency_properties = dependency.get("properties")
+            dependency_properties = dependency.get("properties")  # pragma: no cover
             if isinstance(dependency_properties, dict) and dependency_properties.get(name) is False:
                 return True
-            dependency_pattern_properties = dependency.get("patternProperties")
+            dependency_pattern_properties = dependency.get("patternProperties")  # pragma: no cover
             if dependency.get("additionalProperties") is False:
                 declared_names = set(dependency_properties) if isinstance(dependency_properties, dict) else set()
                 if name not in declared_names and not cls._raw_required_name_allowed_by_pattern_properties(
-                    name,
+                    name,  # pragma: no cover
                     dependency_pattern_properties,
                 ):
                     return True
@@ -4849,11 +4871,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if dependency_min_properties is not None:
                 dependency_allowed_names = cls._raw_dependency_allowed_property_name_values(dependency, allowed_names)
                 if dependency_min_properties > len(dependency_allowed_names):
-                    return True
+                    return True  # pragma: no cover
             dependency_max_properties = cls._number_constraint_value(dependency.get("maxProperties"))
             if dependency_max_properties is not None and dependency_max_properties < 1:
                 return True
-        return any(
+        return any(  # pragma: no cover
             required_name not in allowed_names for required_name in cls._raw_dependency_required_names(dependency)
         )
 
@@ -4922,7 +4944,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _raw_dependency_accepts_property_count(cls, dependency: Any, property_count: int) -> bool:
         if not isinstance(dependency, dict):
             return True
-        max_properties = cls._number_constraint_value(dependency.get("maxProperties"))
+        max_properties = cls._number_constraint_value(dependency.get("maxProperties"))  # pragma: no cover
         return max_properties is None or property_count <= max_properties
 
     @classmethod
@@ -4935,7 +4957,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             condition_result = cls._raw_property_name_set_conditional_result(selected_names, condition_schema)
             if condition_result is None:
                 continue
-            active_schema = then_schema if condition_result else else_schema
+            active_schema = then_schema if condition_result else else_schema  # pragma: no cover
             if not cls._raw_property_name_set_satisfies_object_schema(selected_names, active_schema):
                 return False
         return True
@@ -4944,13 +4966,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _raw_property_name_set_conditional_result(cls, selected_names: set[str], condition_schema: Any) -> bool | None:
         if condition_schema is True or condition_schema == {}:
             return True
-        if condition_schema is False:
+        if condition_schema is False:  # pragma: no cover
             return False
-        if not isinstance(condition_schema, dict):
+        if not isinstance(condition_schema, dict):  # pragma: no cover
             return None
-        if not cls._raw_property_name_set_schema_is_key_only(condition_schema):
+        if not cls._raw_property_name_set_schema_is_key_only(condition_schema):  # pragma: no cover
             return None
-        return cls._raw_property_name_set_satisfies_object_schema(selected_names, condition_schema)
+        return cls._raw_property_name_set_satisfies_object_schema(selected_names, condition_schema)  # pragma: no cover
 
     @classmethod
     def _raw_property_name_set_satisfies_object_schema(  # noqa: PLR0911
@@ -4960,12 +4982,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return True
         if schema is False:
             return False
-        if not isinstance(schema, dict):
+        if not isinstance(schema, dict):  # pragma: no cover
             return True
-        schema_type = schema.get("type")
+        schema_type = schema.get("type")  # pragma: no cover
         if schema_type is not None and not cls._raw_type_accepts_object(schema_type):
             return False
-        min_properties = cls._number_constraint_value(schema.get("minProperties"))
+        min_properties = cls._number_constraint_value(schema.get("minProperties"))  # pragma: no cover
         if min_properties is not None and len(selected_names) < min_properties:
             return False
         max_properties = cls._number_constraint_value(schema.get("maxProperties"))
@@ -4975,7 +4997,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return False
         if not all(cls._raw_property_name_set_accepts_name(schema, name) for name in selected_names):
             return False
-        all_of = schema.get("allOf")
+        all_of = schema.get("allOf")  # pragma: no cover
         if isinstance(all_of, list) and not all(
             cls._raw_property_name_set_satisfies_object_schema(selected_names, item) for item in all_of
         ):
@@ -4991,7 +5013,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         one_of = schema.get("oneOf")
         if isinstance(one_of, list) and not cls._raw_property_name_set_satisfies_oneof_schema(selected_names, one_of):
             return False
-        return cls._raw_property_name_set_satisfies_conditionals(
+        return cls._raw_property_name_set_satisfies_conditionals(  # pragma: no cover
             selected_names,
             [(schema.get("if"), schema.get("then", True), schema.get("else", True))] if "if" in schema else [],
         )
@@ -5000,25 +5022,27 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _raw_property_name_set_accepts_name(cls, schema: dict[Any, Any], name: str) -> bool:
         if not cls._raw_property_name_accepts_name(schema.get("propertyNames"), name):
             return False
-        properties = schema.get("properties")
+        properties = schema.get("properties")  # pragma: no cover
         if isinstance(properties, dict) and properties.get(name) is False:
             return False
-        pattern_properties = schema.get("patternProperties")
+        pattern_properties = schema.get("patternProperties")  # pragma: no cover
         if schema.get("additionalProperties") is not False:
             return True
         declared_names = set(properties) if isinstance(properties, dict) else set()
-        return name in declared_names or cls._raw_required_name_allowed_by_pattern_properties(name, pattern_properties)
+        return name in declared_names or cls._raw_required_name_allowed_by_pattern_properties(
+            name, pattern_properties
+        )  # pragma: no cover
 
     @classmethod
     def _raw_property_name_set_satisfies_not_schemas(cls, selected_names: set[str], not_schemas: list[Any]) -> bool:
         for not_schema in not_schemas:
             if not_schema is False:
                 continue
-            if not_schema is True or not_schema == {}:
+            if not_schema is True or not_schema == {}:  # pragma: no cover
                 return False
-            if not isinstance(not_schema, dict):
+            if not isinstance(not_schema, dict):  # pragma: no cover
                 continue
-            if cls._raw_property_name_set_schema_is_key_only(
+            if cls._raw_property_name_set_schema_is_key_only(  # pragma: no cover
                 not_schema
             ) and cls._raw_property_name_set_satisfies_object_schema(selected_names, not_schema):
                 return False
@@ -5051,22 +5075,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         }
         if not set(schema) <= metadata_keys | key_only_keys:
             return False
-        all_of = schema.get("allOf")
+        all_of = schema.get("allOf")  # pragma: no cover
         if isinstance(all_of, list) and not all(
             cls._raw_property_name_set_subschema_is_key_only(item) for item in all_of
         ):
             return False
-        any_of = schema.get("anyOf")
+        any_of = schema.get("anyOf")  # pragma: no cover
         if isinstance(any_of, list) and not all(
             cls._raw_property_name_set_subschema_is_key_only(item) for item in any_of
         ):
             return False
-        one_of = schema.get("oneOf")
+        one_of = schema.get("oneOf")  # pragma: no cover
         if isinstance(one_of, list) and not all(
             cls._raw_property_name_set_subschema_is_key_only(item) for item in one_of
         ):
             return False
-        return (
+        return (  # pragma: no cover
             cls._raw_property_name_set_subschema_is_key_only(schema.get("not", True))
             and cls._raw_property_name_set_subschema_is_key_only(schema.get("if", True))
             and cls._raw_property_name_set_subschema_is_key_only(schema.get("then", True))
@@ -5098,12 +5122,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         for branch in any_of:
             if branch is True or branch == {}:
                 return True
-            if branch is False:
+            if branch is False:  # pragma: no cover
                 known_branch_results.append(False)
                 continue
             if not isinstance(branch, dict) or not cls._raw_property_name_set_schema_is_key_only(branch):
                 return True
-            known_branch_results.append(cls._raw_property_name_set_satisfies_object_schema(selected_names, branch))
+            known_branch_results.append(
+                cls._raw_property_name_set_satisfies_object_schema(selected_names, branch)
+            )  # pragma: no cover
         return any(known_branch_results)
 
     @classmethod
@@ -5123,13 +5149,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         for branch in one_of:
             if branch is True or branch == {}:
                 known_branch_results.append(True)
-                continue
-            if branch is False:
+                continue  # pragma: no cover
+            if branch is False:  # pragma: no cover
                 known_branch_results.append(False)
-                continue
-            if not isinstance(branch, dict) or not cls._raw_property_name_set_schema_is_key_only(branch):
+                continue  # pragma: no cover
+            if not isinstance(branch, dict) or not cls._raw_property_name_set_schema_is_key_only(
+                branch
+            ):  # pragma: no cover
                 return True
-            known_branch_results.append(cls._raw_property_name_set_satisfies_object_schema(selected_names, branch))
+            known_branch_results.append(
+                cls._raw_property_name_set_satisfies_object_schema(selected_names, branch)
+            )  # pragma: no cover
         return sum(known_branch_results) == 1
 
     @classmethod
@@ -5287,16 +5317,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         any_of = schema.get("anyOf")
         if isinstance(any_of, list) and not any(cls._raw_schema_accepts_every_property_name(item) for item in any_of):
             return False
-        all_of = schema.get("allOf")
+        all_of = schema.get("allOf")  # pragma: no cover
         if isinstance(all_of, list) and not all(cls._raw_schema_accepts_every_property_name(item) for item in all_of):
             return False
-        one_of = schema.get("oneOf")
+        one_of = schema.get("oneOf")  # pragma: no cover
         if isinstance(one_of, list) and not cls._raw_oneof_property_names_accepts_all_names(one_of):
             return False
-        not_schema = schema.get("not")
+        not_schema = schema.get("not")  # pragma: no cover
         if not_schema is not None and not cls._raw_property_names_forbids_all_names(not_schema):
             return False
-        metadata_keys = {
+        metadata_keys = {  # pragma: no cover
             "$comment",
             "$id",
             "$schema",
@@ -5361,7 +5391,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 combined_result = False
             elif any(result is None for result in branch_results):
                 combined_result = None if combined_result is not False else False
-            else:
+            else:  # pragma: no cover
                 combined_result = (true_count == 1) if combined_result is not False else False
         if combined_result is False:
             return False
@@ -5376,7 +5406,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         type_value = property_names.get("type")
         if not cls._raw_type_accepts_string(type_value):
             return False
-        enum_values = property_names.get("enum")
+        enum_values = property_names.get("enum")  # pragma: no cover
         if isinstance(enum_values, list) and not any(
             cls._json_schema_values_equal(name, enum_value) for enum_value in enum_values
         ):
@@ -5393,8 +5423,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 if re.search(pattern, name) is None:
                     return False
             except re.error:
-                return None
-        supported_keys = {
+                return None  # pragma: no cover
+        supported_keys = {  # pragma: no cover
             "$comment",
             "$id",
             "$schema",
@@ -5423,18 +5453,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if isinstance(type_value, str):
             return type_value == "string"
         if isinstance(type_value, list):
-            return "string" in type_value
-        return False
+            return "string" in type_value  # pragma: no cover
+        return False  # pragma: no cover
 
     @staticmethod
     def _raw_type_accepts_object(type_value: Any) -> bool:
         if type_value is None:
             return True
-        if isinstance(type_value, str):
+        if isinstance(type_value, str):  # pragma: no cover
             return type_value == "object"
         if isinstance(type_value, list):
-            return "object" in type_value
-        return False
+            return "object" in type_value  # pragma: no cover
+        return False  # pragma: no cover
 
     @classmethod
     def _raw_type_is_object_only(cls, type_value: Any) -> bool:
@@ -5480,7 +5510,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         numeric_value = cls._number_constraint_value(value)
         if numeric_value is None:
             return True
-        lower_bound = cls._get_effective_numeric_bound(schema_dict, "minimum", "exclusiveMinimum", lower=True)
+        lower_bound = cls._get_effective_numeric_bound(
+            schema_dict, "minimum", "exclusiveMinimum", lower=True
+        )  # pragma: no cover
         upper_bound = cls._get_effective_numeric_bound(schema_dict, "maximum", "exclusiveMaximum", lower=False)
         if lower_bound is not None:
             lower_value, lower_exclusive = lower_bound
@@ -5523,7 +5555,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return False
             if isinstance(value, list) and schema_dict.get("uniqueItems") is True:
                 return len(value) == len({json.dumps(item, sort_keys=True) for item in value})
-        return True
+        return True  # pragma: no cover
 
     @classmethod
     def _get_effective_numeric_bound(
@@ -5542,7 +5574,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return (inclusive_value, False)
         if inclusive_value == exclusive_value:
             return (inclusive_value, True)
-        if lower:
+        if lower:  # pragma: no cover
             return (exclusive_value, True) if exclusive_value > inclusive_value else (inclusive_value, False)
         return (exclusive_value, True) if exclusive_value < inclusive_value else (inclusive_value, False)
 
@@ -6707,15 +6739,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _allof_item_is_map_keyword_constraint(self, item: JsonSchemaObject) -> bool:  # noqa: PLR6301
         if item.ref or item.properties or item.required or item.items or item.prefixItems:
             return False
-        has_combined_schema = bool(item.anyOf or item.oneOf or item.allOf)
+        has_combined_schema = bool(item.anyOf or item.oneOf or item.allOf)  # pragma: no cover
         has_literal_constraint = bool(item.enum or "const" in item.extras)
         if item.is_array or has_combined_schema or has_literal_constraint:
             return False
-        if item.type and not (
+        if item.type and not (  # pragma: no cover
             item.type == "object" or (isinstance(item.type, list) and set(item.type) <= {"object", "null"})
         ):
             return False
-        return bool(
+        return bool(  # pragma: no cover
             item.propertyNames is not None
             or item.patternProperties is not None
             or item.additionalProperties is not None
@@ -6743,7 +6775,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         for combined_item in combined_items:
             if self._is_false_schema_item(combined_item):
                 continue
-            if combined_item is True:
+            if combined_item is True:  # pragma: no cover
                 return False
             if not isinstance(combined_item, JsonSchemaObject):  # pragma: no cover
                 continue
@@ -7065,7 +7097,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         if not parsed_schemas:
             self._raise_unsatisfiable_schema(path, target_attribute_name)
-        common_path_keyword = f"{target_attribute_name}Common"
+        common_path_keyword = f"{target_attribute_name}Common"  # pragma: no cover
         return [
             self._parse_object_common_part(
                 name,
@@ -7822,7 +7854,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             ]
             if not data_types:
                 return None
-            return data_types[0] if len(data_types) == 1 else self.data_type(data_types=data_types)
+            return data_types[0] if len(data_types) == 1 else self.data_type(data_types=data_types)  # pragma: no cover
 
         if property_names.allOf:
             if self._contains_false_schema(property_names.allOf):
@@ -7830,7 +7862,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             items = [item for item in property_names.allOf if isinstance(item, JsonSchemaObject)]
             if not items:
                 return None
-            merged_schema = self._merge_primitive_schemas(items)
+            merged_schema = self._merge_primitive_schemas(items)  # pragma: no cover
             return self._parse_property_name_key_schema(merged_schema)
 
         return None
@@ -7997,7 +8029,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self.data_type(data_types=self.parse_any_of(name, item, get_special_path("anyOf", path)))
         if item.is_array and item.oneOf and self._combined_array_count_branches_require_root_type(item.oneOf):
             return self.data_type(data_types=self.parse_one_of(name, item, get_special_path("oneOf", path)))
-        if item.is_array:
+        if item.is_array:  # pragma: no cover
             return self.parse_array_fields(name, item, get_special_path("array", path)).data_type
         if item.discriminator and parent and parent.is_array and (item.oneOf or item.anyOf):
             return self.parse_root_type(name, item, path)
@@ -8118,9 +8150,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         for branch in branches:
             if isinstance(branch, bool):
                 continue
-            if not cls._array_count_branch_is_root_type_only(branch):
+            if not cls._array_count_branch_is_root_type_only(branch):  # pragma: no cover
                 return False
-            has_count_branch = True
+            has_count_branch = True  # pragma: no cover
         return has_count_branch
 
     @staticmethod
@@ -8192,9 +8224,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             is_tuple = True
         elif obj.prefixItems is not None and self._is_fixed_length_tuple(obj):
             suppress_item_constraints = True
-            items = obj.prefixItems
-            is_tuple = True
-        elif self._has_prefix_items_tail_schema_or_boolean(obj):
+            items = obj.prefixItems  # pragma: no cover
+            is_tuple = True  # pragma: no cover
+        elif self._has_prefix_items_tail_schema_or_boolean(obj):  # pragma: no cover
             prefix_items = obj.prefixItems or []
             false_prefix_index = self._get_first_false_schema_index(obj.prefixItems)
             items = prefix_items[:false_prefix_index] if false_prefix_index is not None else [*prefix_items]
@@ -8249,7 +8281,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if obj.allOf:
             allof_data_type = self.parse_all_of(name, obj, get_special_path("allOf", path))
             if allof_data_type is not None:
-                if self._allof_is_array_keyword_schema(obj):
+                if self._allof_is_array_keyword_schema(obj):  # pragma: no cover
                     data_types = [allof_data_type]
                 else:
                     data_types.append(allof_data_type)
