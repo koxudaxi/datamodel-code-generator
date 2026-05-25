@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="https://example.com/symbols"
+  targetNamespace="https://example.com/symbols"
+  elementFormDefault="qualified">
+
+  <xs:complexType name="Item">
+    <xs:sequence>
+      <xs:element name="value" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="Item">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="code" type="xs:int"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="document">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="typed" type="tns:Item"/>
+        <xs:element ref="tns:Item"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

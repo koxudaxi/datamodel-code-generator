@@ -33,6 +33,7 @@ INTERNAL_OCCURS_ARRAY = "x-xsd-occurs-array"
 
 JsonSchema = dict[str, Any]
 QNameKey = tuple[str | None, str]
+DefinitionKey = tuple[str, str | None, str]
 PYTHON_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
@@ -193,10 +194,10 @@ class _XMLSchemaConverter:
         self.local_elements: set[QNameKey] = set()
         self._loaded_locations: set[tuple[Path, str | None]] = set()
         self._element_namespaces: dict[int, dict[str, str]] = {}
-        self._building_definitions: set[QNameKey] = set()
-        self._built_definitions: dict[QNameKey, JsonSchema] = {}
+        self._building_definitions: set[DefinitionKey] = set()
+        self._built_definitions: dict[DefinitionKey, JsonSchema] = {}
         self._definitions: dict[str, JsonSchema] = {}
-        self._definition_names: dict[QNameKey, str] = {}
+        self._definition_names: dict[DefinitionKey, str] = {}
 
     def convert(self, source: Source) -> dict[str, YamlValue]:
         root = self._parse_schema(source.text, self.base_path / source.path)
@@ -216,12 +217,24 @@ class _XMLSchemaConverter:
         if len(global_elements) == 1:
             root_key, root_element = global_elements[0]
             root_name = root_element.get("name") or "Model"
-            root_type_name = _local_name(root_element.get("type", ""))
-            root_definition_name = self._definition_name(root_key)
-            if root_type_name == root_name and root_definition_name in self._definitions:
+            root_type = root_element.get("type")
+            root_type_key = (
+                self._resolve_key(root_type, self.simple_types, self.complex_types, element=root_element)
+                if root_type
+                else None
+            )
+            root_definition_key = (
+                self._type_definition_key(root_type_key) if root_type_key else self._element_definition_key(root_key)
+            )
+            root_definition_name = self._definition_name(root_definition_key)
+            if (
+                root_type is not None
+                and _local_name(root_type) == root_name
+                and root_definition_name in self._definitions
+            ):
                 schema = _copy_schema(self._definitions[root_definition_name])
                 schema.setdefault("title", _to_class_title(root_name))
-                if not self._has_definition_ref(root_key):
+                if not self._has_definition_ref(root_definition_key):
                     self._definitions.pop(root_definition_name)
             else:
                 schema = self._convert_global_element_as_root(root_element, root_name)
@@ -308,9 +321,14 @@ class _XMLSchemaConverter:
             load_key = (location, child_namespace_override)
             if load_key not in self._loaded_locations:
                 self._loaded_locations.add(load_key)
-                self._collect_schema(included_root, location, namespace_override=child_namespace_override)
+                self._collect_schema(
+                    included_root,
+                    location,
+                    is_root=is_root and _local_name(child.tag) in {"include", "redefine", "override"},
+                    namespace_override=child_namespace_override,
+                )
             if _is_xsd_element(child, "redefine", "override"):
-                self._collect_schema_declarations(child, schema_namespace, replace=True)
+                self._collect_schema_declarations(child, schema_namespace, replace=True, is_root=is_root)
 
         for child in root:
             if _namespace(child.tag) != XML_SCHEMA_NAMESPACE:
@@ -320,10 +338,17 @@ class _XMLSchemaConverter:
             if _is_xsd_element(child, "element") and (ref := child.get("ref")):
                 self.referenced_elements.add(self._qname_key(ref, child))
 
-    def _collect_schema_declarations(self, owner: ET.Element, schema_namespace: str | None, *, replace: bool) -> None:
+    def _collect_schema_declarations(
+        self,
+        owner: ET.Element,
+        schema_namespace: str | None,
+        *,
+        replace: bool,
+        is_root: bool = False,
+    ) -> None:
         for child in owner:
             if _namespace(child.tag) == XML_SCHEMA_NAMESPACE:
-                self._collect_schema_declaration(child, schema_namespace, replace=replace)
+                self._collect_schema_declaration(child, schema_namespace, replace=replace, is_root=is_root)
 
     def _collect_schema_declaration(
         self,
@@ -365,16 +390,24 @@ class _XMLSchemaConverter:
             registry.setdefault(key, child)
 
     def _prepare_definition_names(self) -> None:
-        keys = set(self.simple_types) | set(self.complex_types) | set(self.elements)
-        keys_by_local: dict[str, list[QNameKey]] = {}
+        keys = {self._type_definition_key(key) for key in set(self.simple_types) | set(self.complex_types)}
+        keys.update(self._element_definition_key(key) for key in self._resolved_referenced_elements())
+        keys_by_local: dict[str, list[DefinitionKey]] = {}
         for key in keys:
-            keys_by_local.setdefault(key[1], []).append(key)
+            keys_by_local.setdefault(key[2], []).append(key)
 
         used_names: set[str] = set()
         for local, local_keys in sorted(keys_by_local.items()):
-            sorted_keys = sorted(local_keys, key=self._sort_key)
+            sorted_keys = sorted(local_keys, key=self._definition_sort_key)
+            namespaces = {key[1] for key in sorted_keys}
             for key in sorted_keys:
-                name = local if len(sorted_keys) == 1 else f"{self._namespace_name(key[0])}{_to_class_title(local)}"
+                same_qname_count = sum(candidate[1:] == key[1:] for candidate in sorted_keys)
+                if len(sorted_keys) == 1:
+                    name = local
+                else:
+                    namespace_name = self._namespace_name(key[1]) if len(namespaces) > 1 else ""
+                    kind_name = _to_class_title(key[0]) if same_qname_count > 1 else ""
+                    name = f"{namespace_name}{_to_class_title(local)}{kind_name}"
                 candidate = name
                 suffix = 2
                 while candidate in used_names:
@@ -386,31 +419,36 @@ class _XMLSchemaConverter:
     def _build_definitions(self) -> dict[str, JsonSchema]:
         definitions: dict[str, JsonSchema] = {}
         for key in sorted(self.simple_types, key=self._sort_key):
-            definitions[self._definition_name(key)] = self._build_definition(key)
+            definition_key = self._type_definition_key(key)
+            definitions[self._definition_name(definition_key)] = self._build_definition(definition_key)
         for key in sorted(self.complex_types, key=self._sort_key):
-            definitions[self._definition_name(key)] = self._build_definition(key)
+            definition_key = self._type_definition_key(key)
+            definitions[self._definition_name(definition_key)] = self._build_definition(definition_key)
         for key in sorted(self._resolved_referenced_elements(), key=self._sort_key):
-            name = self._definition_name(key)
-            if name not in definitions:
-                definitions[name] = self._build_definition(key)
+            definition_key = self._element_definition_key(key)
+            definitions[self._definition_name(definition_key)] = self._build_definition(definition_key)
         return definitions
 
-    def _build_definition(self, key: QNameKey) -> JsonSchema:
+    def _build_definition(self, key: DefinitionKey) -> JsonSchema:
         if key in self._built_definitions:
             return self._built_definitions[key]
         if key in self._building_definitions:  # pragma: no cover
-            return {"$ref": self._ref_for_key(key)}
+            return {"$ref": self._ref_for_definition_key(key)}
         self._building_definitions.add(key)
-        simple_type = self.simple_types.get(key)
-        complex_type = self.complex_types.get(key)
-        element = self.elements.get(key)
-        if simple_type is not None:
-            schema = self._convert_simple_type(simple_type)
-        elif complex_type is not None:
-            schema = self._convert_complex_type(complex_type)
-        elif element is not None:
-            schema = self._convert_element(element)
-        else:  # pragma: no cover
+        qname_key = self._qname_from_definition_key(key)
+        if key[0] == "element":
+            element = self.elements.get(qname_key)
+            schema = self._convert_element(element) if element is not None else {}
+        else:
+            simple_type = self.simple_types.get(qname_key)
+            complex_type = self.complex_types.get(qname_key)
+            if simple_type is not None:
+                schema = self._convert_simple_type(simple_type)
+            elif complex_type is not None:
+                schema = self._convert_complex_type(complex_type)
+            else:  # pragma: no cover
+                schema = {}
+        if schema is None:  # pragma: no cover
             schema = {}
         name = self._definition_name(key)
         schema.setdefault("title", _to_class_title(name))
@@ -419,8 +457,8 @@ class _XMLSchemaConverter:
         self._definitions[name] = schema
         return schema
 
-    def _has_definition_ref(self, key: QNameKey) -> bool:
-        ref = self._ref_for_key(key)
+    def _has_definition_ref(self, key: DefinitionKey) -> bool:
+        ref = self._ref_for_definition_key(key)
         return any(self._contains_ref(schema, ref) for schema in self._definitions.values())
 
     def _contains_ref(self, value: Any, ref: str) -> bool:
@@ -449,7 +487,7 @@ class _XMLSchemaConverter:
     def _convert_element(self, element: ET.Element) -> JsonSchema:
         if ref := element.get("ref"):
             key = self._resolve_key(ref, self.elements, element=element)
-            schema = self._schema_for_substitution_group(key) or {"$ref": self._ref_for_key(key)}
+            schema = self._schema_for_substitution_group(key) or {"$ref": self._ref_for_element_key(key)}
         elif type_name := element.get("type"):
             schema = self._schema_for_qname(type_name, element)
         elif (simple_type := _first_xsd_child(element, "simpleType")) is not None:
@@ -903,8 +941,8 @@ class _XMLSchemaConverter:
         schemas = []
         head_element = self.elements.get(head_key)
         if head_element is not None and head_element.get("abstract") != "true":
-            schemas.append({"$ref": self._ref_for_key(head_key)})
-        schemas.extend({"$ref": self._ref_for_key(key)} for key in sorted(member_keys, key=self._sort_key))
+            schemas.append({"$ref": self._ref_for_element_key(head_key)})
+        schemas.extend({"$ref": self._ref_for_element_key(key)} for key in sorted(member_keys, key=self._sort_key))
         return {"anyOf": schemas} if len(schemas) > 1 else schemas[0]
 
     @staticmethod
@@ -967,12 +1005,12 @@ class _XMLSchemaConverter:
         local = _local_name(qname)
         namespace = self._qname_namespace(qname, element)
         is_unprefixed_builtin = namespace is None and local in BUILTIN_TYPE_SCHEMAS
-        key = self._resolve_key(qname, self.simple_types, self.complex_types, self.elements, element=element)
-        is_user_defined = key in self.simple_types or key in self.complex_types or key in self.elements
+        key = self._resolve_key(qname, self.simple_types, self.complex_types, element=element)
+        is_user_defined = key in self.simple_types or key in self.complex_types
         if namespace == XML_SCHEMA_NAMESPACE or (is_unprefixed_builtin and not is_user_defined):
             return _copy_schema(BUILTIN_TYPE_SCHEMAS.get(local, STRING_SCHEMA))
         if is_user_defined:
-            return {"$ref": self._ref_for_key(key)}
+            return {"$ref": self._ref_for_type_key(key)}
         return _copy_schema(BUILTIN_TYPE_SCHEMAS.get(local, {}))
 
     def _qname_namespace(self, qname: str, element: ET.Element | None = None) -> str | None:
@@ -1007,10 +1045,28 @@ class _XMLSchemaConverter:
             resolved.update(self.substitution_groups.get(ref, set()))
         return resolved
 
-    def _definition_name(self, key: QNameKey) -> str:
-        return self._definition_names.get(key, key[1])
+    @staticmethod
+    def _type_definition_key(key: QNameKey) -> DefinitionKey:
+        return ("type", key[0], key[1])
 
-    def _ref_for_key(self, key: QNameKey) -> str:
+    @staticmethod
+    def _element_definition_key(key: QNameKey) -> DefinitionKey:
+        return ("element", key[0], key[1])
+
+    @staticmethod
+    def _qname_from_definition_key(key: DefinitionKey) -> QNameKey:
+        return key[1], key[2]
+
+    def _definition_name(self, key: DefinitionKey) -> str:
+        return self._definition_names.get(key, key[2])
+
+    def _ref_for_type_key(self, key: QNameKey) -> str:
+        return self._ref_for_definition_key(self._type_definition_key(key))
+
+    def _ref_for_element_key(self, key: QNameKey) -> str:
+        return self._ref_for_definition_key(self._element_definition_key(key))
+
+    def _ref_for_definition_key(self, key: DefinitionKey) -> str:
         return self._definition_ref(self._definition_name(key))
 
     def _namespaces_for(self, element: ET.Element | None) -> dict[str, str]:
@@ -1029,6 +1085,11 @@ class _XMLSchemaConverter:
     def _sort_key(key: QNameKey) -> tuple[str, str]:
         namespace, local = key
         return namespace or "", local
+
+    @staticmethod
+    def _definition_sort_key(key: DefinitionKey) -> tuple[str, str, str]:
+        kind, namespace, local = key
+        return namespace or "", local, kind
 
     @staticmethod
     def _definition_ref(name: str) -> str:

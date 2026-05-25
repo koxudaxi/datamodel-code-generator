@@ -161,6 +161,28 @@ def test_main_xmlschema_multiple_substitution_groups(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_include_local_elements(output_file: Path) -> None:
+    """Treat included global elements as local root candidates."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "include_local_elements.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_xmlschema_snippets,
+        expected_file="include_local_elements.py",
+    )
+
+
+def test_main_xmlschema_type_element_symbol_spaces(output_file: Path) -> None:
+    """Keep same-name type definitions and element declarations distinct."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "type_element_symbol_spaces.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_xmlschema_snippets,
+        expected_file="type_element_symbol_spaces.py",
+    )
+
+
 def test_main_xmlschema_model_groups_and_wildcards(output_file: Path) -> None:
     """Generate models for repeating model groups, defaults, fixed values, and wildcards."""
     run_main_and_assert(
