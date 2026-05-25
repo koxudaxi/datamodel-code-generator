@@ -3568,6 +3568,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 continue
             if dependency is False:
                 cls._raise_object_constraint_conflict()
+                continue
             if isinstance(dependency, dict):
                 if cls._merge_raw_active_dependent_schema(schema_dict, dependency):
                     added = True
@@ -3618,6 +3619,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     continue
                 if dependency is False:
                     cls._raise_object_constraint_conflict()
+                    continue
                 if isinstance(dependency, dict):
                     if cls._merge_raw_active_dependent_schema(schema_dict, dependency):
                         added = True
