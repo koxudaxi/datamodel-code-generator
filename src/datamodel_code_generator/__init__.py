@@ -612,10 +612,6 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         msg = "Dict input is not supported for xmlschema. Provide XSD text, file path, or URL input."
         raise Error(msg)
 
-    if isinstance(input_, Mapping) and input_file_type == InputFileType.Avro:
-        msg = "Dict input is not supported for avro. Provide Avro schema text, file path, or URL input."
-        raise Error(msg)
-
     if isinstance(input_, Mapping) and input_file_type in {
         InputFileType.Json,
         InputFileType.Yaml,
@@ -1045,6 +1041,11 @@ def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911
             return InputFileType.JsonSchema
         return InputFileType.Json
     if isinstance(data, list):
+        from datamodel_code_generator.parser.avro import is_avro_schema_data  # noqa: PLC0415
+
+        if is_avro_schema_data(data):
+            return InputFileType.Avro
+    if isinstance(data, str):
         from datamodel_code_generator.parser.avro import is_avro_schema_data  # noqa: PLC0415
 
         if is_avro_schema_data(data):

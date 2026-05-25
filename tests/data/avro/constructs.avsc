@@ -12,7 +12,8 @@
         "logicalType": "uuid"
       },
       "doc": "Stable identifier",
-      "aliases": ["userId"]
+      "aliases": ["userId"],
+      "order": "ignore"
     },
     {
       "name": "active",
@@ -98,12 +99,39 @@
       }
     },
     {
+      "name": "traceId",
+      "type": {
+        "type": "fixed",
+        "name": "TraceId",
+        "size": 16,
+        "logicalType": "uuid"
+      }
+    },
+    {
       "name": "price",
       "type": {
         "type": "bytes",
         "logicalType": "decimal",
         "precision": 8,
         "scale": 2
+      }
+    },
+    {
+      "name": "tax",
+      "type": {
+        "type": "fixed",
+        "name": "TaxDecimal",
+        "size": 8,
+        "logicalType": "decimal",
+        "precision": 8,
+        "scale": 2
+      }
+    },
+    {
+      "name": "flexibleAmount",
+      "type": {
+        "type": "bytes",
+        "logicalType": "big-decimal"
       }
     },
     {
@@ -142,10 +170,31 @@
       }
     },
     {
+      "name": "processedAt",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-nanos"
+      }
+    },
+    {
       "name": "localCreatedAt",
       "type": {
         "type": "long",
         "logicalType": "local-timestamp-millis"
+      }
+    },
+    {
+      "name": "localUpdatedAt",
+      "type": {
+        "type": "long",
+        "logicalType": "local-timestamp-micros"
+      }
+    },
+    {
+      "name": "localProcessedAt",
+      "type": {
+        "type": "long",
+        "logicalType": "local-timestamp-nanos"
       }
     },
     {
@@ -161,6 +210,13 @@
       "name": "choice",
       "type": ["null", "string", "long"],
       "default": null
+    },
+    {
+      "name": "rawDecimalText",
+      "type": {
+        "type": "string",
+        "logicalType": "decimal"
+      }
     }
   ]
 }

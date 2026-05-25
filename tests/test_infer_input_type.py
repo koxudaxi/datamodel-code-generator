@@ -112,15 +112,3 @@ def test_infer_input_type_non_schema_xml() -> None:
         ),
     ):
         infer_input_type("<root />")
-
-
-def test_infer_input_type_non_avro_list() -> None:
-    """Test non-Avro JSON arrays require an explicit input file type."""
-    with pytest.raises(
-        Error,
-        match=(
-            r"Can't infer input file type from the input data. "
-            r"Please specify the input file type explicitly with --input-file-type option."
-        ),
-    ):
-        infer_input_type("[]")

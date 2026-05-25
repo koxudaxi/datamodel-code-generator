@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "BrokenValue",
+  "fields": [
+    {
+      "name": "bad",
+      "type": 1
+    }
+  ]
+}

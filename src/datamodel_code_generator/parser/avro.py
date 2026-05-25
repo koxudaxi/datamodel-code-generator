@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any, NamedTuple, cast
 from typing_extensions import Unpack
 
 from datamodel_code_generator import Error, YamlValue, load_yaml
-from datamodel_code_generator.parser.base import Source, title_to_class_name
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
 if TYPE_CHECKING:
@@ -22,6 +21,7 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator._types import AvroParserConfigDict
     from datamodel_code_generator.config import AvroParserConfig
+    from datamodel_code_generator.parser.base import Source
 
 JsonSchema = dict[str, Any]
 
@@ -113,25 +113,12 @@ def is_avro_schema_data(data: YamlValue) -> bool:  # noqa: PLR0911
     return type_value not in COMPLEX_TYPES and "." in type_value
 
 
-def is_avro_schema_text(text: str) -> bool:
-    """Return whether text appears to contain an Avro JSON schema."""
-    from datamodel_code_generator.util import get_yaml_parse_errors  # noqa: PLC0415
-
-    try:
-        data = load_yaml(text)
-    except get_yaml_parse_errors():
-        return False
-    return is_avro_schema_data(data)
-
-
 def _copy_schema(schema: JsonSchema) -> JsonSchema:
     return copy.deepcopy(schema)
 
 
 def _to_class_title(name: str) -> str:
-    if PYTHON_NAME_PATTERN.match(name):
-        return f"{name[:1].upper()}{name[1:]}"
-    return title_to_class_name(name)
+    return f"{name[:1].upper()}{name[1:]}"
 
 
 def _namespace_name(namespace: str | None) -> str:
@@ -154,8 +141,6 @@ class _AvroSchemaConverter:
         self._collect_named_schemas(raw_obj)
         self._prepare_definition_names()
         schema = self._convert_schema(raw_obj, namespace=None, root=True)
-        if "$ref" in schema:
-            schema = {"title": "Model", **schema}
         schema.setdefault("title", "Model")
         if self.definitions:
             schema["definitions"] = self.definitions
@@ -300,7 +285,34 @@ class _AvroSchemaConverter:
         return {"$ref": self._ref(fullname)}
 
     def _convert_union(self, union: list[YamlValue], namespace: str | None) -> JsonSchema:
+        self._validate_union(union)
         return {"anyOf": [self._convert_schema(item, namespace) for item in union]}
+
+    @staticmethod
+    def _validate_union(union: list[YamlValue]) -> None:
+        seen_unnamed_types: set[str] = set()
+        for item in union:
+            if isinstance(item, list):
+                msg = "Avro unions may not immediately contain other unions"
+                raise Error(msg)
+            if isinstance(item, str):
+                union_type = item if item in PRIMITIVE_TYPES else None
+            elif isinstance(item, dict):
+                type_value = item.get("type")
+                if isinstance(type_value, list):
+                    msg = "Avro unions may not immediately contain other unions"
+                    raise Error(msg)
+                union_type = type_value if isinstance(type_value, str) and type_value not in NAMED_TYPES else None
+            else:
+                msg = f"Unsupported Avro union value: {item!r}"
+                raise Error(msg)
+
+            if union_type is None or union_type in NAMED_TYPES:
+                continue
+            if union_type in seen_unnamed_types:
+                msg = f"Avro unions may not contain duplicate unnamed type: {union_type}"
+                raise Error(msg)
+            seen_unnamed_types.add(union_type)
 
     def _ensure_definition(self, fullname: str) -> None:
         definition_key = self.definition_names.get(fullname)
@@ -311,8 +323,6 @@ class _AvroSchemaConverter:
 
     def _build_definition(self, fullname: str, *, as_root: bool = False) -> JsonSchema:
         definition_key = self.definition_names.get(fullname)
-        if definition_key is not None and definition_key in self.definitions and not as_root:
-            return self.definitions[definition_key]
         raw_schema = self.named_schemas.get(fullname)
         if raw_schema is None:
             msg = f"Unknown Avro named type reference: {fullname}"
@@ -338,9 +348,6 @@ class _AvroSchemaConverter:
     def _convert_record(self, schema: JsonSchema, fullname: str) -> JsonSchema:
         name_info = self.names[fullname]
         fields = schema.get("fields", [])
-        if not isinstance(fields, list):
-            msg = f"Avro record fields must be a list: {fullname}"
-            raise Error(msg)
 
         properties: dict[str, JsonSchema] = {}
         required: list[str] = []
@@ -416,7 +423,11 @@ class _AvroSchemaConverter:
         match logical_type:
             case "decimal" if avro_type in {"bytes", "fixed"}:
                 updates = self._decimal_schema(source)
-            case "uuid" if avro_type == "string":
+                updates["x-avro-logicalType"] = logical_type
+            case "big-decimal" if avro_type == "bytes":
+                updates = self._decimal_schema(source)
+                updates["x-avro-logicalType"] = logical_type
+            case "uuid" if avro_type in {"string", "fixed"}:
                 updates = {"type": "string", "format": "uuid", "x-avro-logicalType": logical_type}
             case "date" if avro_type == "int":
                 updates = {"type": "string", "format": "date", "x-avro-logicalType": logical_type}
@@ -447,9 +458,7 @@ class _AvroSchemaConverter:
 
     def _fullname_from_named_schema(self, schema: JsonSchema, namespace: str | None) -> str:
         name = schema.get("name")
-        if not isinstance(name, str):
-            msg = f"Avro {schema.get('type')} schema requires a string name"
-            raise Error(msg)
+        assert isinstance(name, str)
         return self._make_name(name, schema.get("namespace"), namespace).fullname
 
     @staticmethod
@@ -478,7 +487,13 @@ class _AvroSchemaConverter:
 
 
 class AvroParser(JsonSchemaParser):
-    """Parse Apache Avro schemas by converting them to JSON Schema first."""
+    """Parse Apache Avro schemas with the existing JSON Schema model builder.
+
+    Avro is converted before parsing, but the generated models still rely on
+    JsonSchemaParser's reference resolution, model construction, formatting,
+    and configuration surface. The Avro-specific state is kept in a short-lived
+    converter per source so named type resolution cannot leak between inputs.
+    """
 
     _config_class_name = "AvroParserConfig"
 
@@ -508,4 +523,4 @@ class AvroParser(JsonSchemaParser):
         self._generate_forced_base_models()
 
 
-__all__ = ["AvroParser", "is_avro_schema_data", "is_avro_schema_text"]
+__all__ = ["AvroParser", "is_avro_schema_data"]
