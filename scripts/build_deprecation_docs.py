@@ -27,10 +27,10 @@ from datamodel_code_generator.deprecations import (  # noqa: E402
 
 def build_docs(*, check: bool) -> int:
     """Generate or check the deprecation documentation page."""
-    content = render_deprecations_markdown()
+    content = render_deprecations_markdown().rstrip() + "\n"
 
     if check:
-        if not DOCS_PATH.exists() or DOCS_PATH.read_text(encoding="utf-8") != content:
+        if not DOCS_PATH.exists() or DOCS_PATH.read_text(encoding="utf-8").rstrip() + "\n" != content:
             print("Deprecation docs are out of date.", file=sys.stderr)
             print("Run 'python scripts/build_deprecation_docs.py' to update.", file=sys.stderr)
             return 1

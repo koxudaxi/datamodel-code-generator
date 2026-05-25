@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import warnings
 from argparse import ArgumentTypeError, Namespace
 from typing import TYPE_CHECKING
@@ -126,7 +127,8 @@ def test_list_deprecations_json(capsys: pytest.CaptureFixture[str]) -> None:
     run_main_with_args(["--list-deprecations", "json"])
     captured = capsys.readouterr()
 
-    assert '"id": "cli.parent-scoped-naming"' in captured.out
+    deprecations = json.loads(captured.out)
+    assert any(item["id"] == "cli.parent-scoped-naming" for item in deprecations)
     assert not captured.err
 
 

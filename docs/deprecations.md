@@ -11,7 +11,7 @@ This page lists deprecations and scheduled breaking changes.
 | `behavior.remote-ref-default` | behavior | `Remote $ref fetching without --allow-remote-refs` | 0.56.0 | TBD | Pass --allow-remote-refs or --no-allow-remote-refs explicitly. |
 | `cli.allow-extra-fields` | cli-option | `--allow-extra-fields` | 0.31.0 | TBD | --extra-fields=allow |
 | `cli.parent-scoped-naming` | cli-option | `--parent-scoped-naming` | 0.48.0 | TBD | --naming-strategy parent-prefixed |
-| `cli.validation` | cli-option | `--validation` | 0.24.0 | TBD | Use a dedicated OpenAPI validation tool. |
+| `cli.validation` | cli-option | `--validation` | 0.24.0 | TBD | --field-constraints |
 | `config.yaml-non-lowercase-bool` | config | `YAML bool values True, False, TRUE, FALSE` | 0.48.0 | TBD | Use lowercase true or false. |
 | `python-api.python-version-has-type-alias` | python-api | `PythonVersion.has_type_alias` | 0.52.1 | TBD | - |
 | `schema.jsonschema-items-array` | schema | `JSON Schema Draft 2020-12 items array tuple validation` | 0.53.0 | TBD | Use prefixItems. |
@@ -85,9 +85,9 @@ The replacement supports allow, forbid, and ignore modes.
 - **Warning since:** 0.24.0
 - **Planned removal:** TBD
 - **Warning category:** `DeprecationWarning`
-- **Replacement:** Use a dedicated OpenAPI validation tool.
+- **Replacement:** --field-constraints
 
-The `--validation` option is deprecated and will be removed in a future release.
+The `--validation` option is deprecated and will be removed in a future release. Use --field-constraints instead.
 
 ### `config.yaml-non-lowercase-bool`
 

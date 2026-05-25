@@ -52,10 +52,13 @@ DEPRECATIONS: dict[str, Deprecation] = {
         id="cli.validation",
         kind="cli-option",
         target="--validation",
-        message="The `--validation` option is deprecated and will be removed in a future release.",
+        message=(
+            "The `--validation` option is deprecated and will be removed in a future release. "
+            "Use --field-constraints instead."
+        ),
         warning_since="0.24.0",
         removal_version=None,
-        replacement="Use a dedicated OpenAPI validation tool.",
+        replacement="--field-constraints",
     ),
     "behavior.pydantic-v2-use-annotated-default": Deprecation(
         id="behavior.pydantic-v2-use-annotated-default",
