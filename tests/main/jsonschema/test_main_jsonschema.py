@@ -12276,7 +12276,30 @@ def test_main_jsonschema_contains_tuple_max_contains_limit(output_file: Path) ->
         invalid_json='{"values":["a","a"]}',
         expected_error_type="too_long",
         expected_attribute_path=("values",),
-        expected_attribute_value=["a"],
+        expected_attribute_value=("a",),
+    )
+
+
+def test_main_jsonschema_contains_tuple_min_contains_limit(output_file: Path) -> None:
+    """Test tuple items before the first possible contains match are rejected."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "contains_tuple_min_contains_limit.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="contains_tuple_min_contains_limit.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="contains_tuple_min_contains_limit",
+        model_name="ContainsTupleMinContainsLimit",
+        valid_json='{"values":["b","a"]}',
+        invalid_json='{"values":["b"]}',
+        expected_error_type="too_short",
+        expected_attribute_path=("values",),
+        expected_attribute_value=["b", "a"],
     )
 
 

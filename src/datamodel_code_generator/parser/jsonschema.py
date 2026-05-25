@@ -3839,6 +3839,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
             if possible_matches < min_contains:
                 cls._raise_object_constraint_conflict()
+            cls._merge_raw_closed_tuple_min_contains_items_constraint(
+                schema_dict,
+                tuple_items,
+                contains_schema,
+                min_contains,
+            )
 
         max_contains = schema_dict.get("maxContains")
         if not isinstance(max_contains, int) or isinstance(max_contains, bool):
@@ -3873,6 +3879,23 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 guaranteed_matches += 1
             if guaranteed_matches > max_contains:
                 cls._merge_raw_object_keyword(schema_dict, "maxItems", item_count - 1)
+                cls._validate_allof_intersected_constraints(schema_dict)
+                return
+
+    @classmethod
+    def _merge_raw_closed_tuple_min_contains_items_constraint(
+        cls,
+        schema_dict: dict[Any, Any],
+        tuple_items: list[Any],
+        contains_schema: dict[Any, Any],
+        min_contains: int,
+    ) -> None:
+        possible_matches = 0
+        for item_count, item in enumerate(tuple_items, start=1):
+            if not cls._raw_schema_is_disjoint_from_supported_filter(item, contains_schema):
+                possible_matches += 1
+            if possible_matches >= min_contains:
+                cls._merge_raw_object_keyword(schema_dict, "minItems", item_count)
                 cls._validate_allof_intersected_constraints(schema_dict)
                 return
 

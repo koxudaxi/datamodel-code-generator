@@ -267,12 +267,60 @@ def _schema_implies_supported_literal_filter(schema: Any, filter_schema: Any) ->
         return True
     if not isinstance(schema, dict) or not isinstance(filter_schema, dict):
         return False
+    if not _is_supported_literal_filter(filter_schema):
+        return False
     if "const" in schema:
         return _json_literal_matches_schema(schema["const"], filter_schema)
     enum_values = schema.get("enum")
     if isinstance(enum_values, list):
         return all(_json_literal_matches_schema(enum_value, filter_schema) for enum_value in enum_values)
     return _schema_implies_type_filter(schema, filter_schema)
+
+
+def _schema_is_disjoint_from_supported_literal_filter(schema: Any, filter_schema: Any) -> bool:
+    if schema is False or filter_schema is False:
+        return True
+    if not isinstance(schema, dict) or not isinstance(filter_schema, dict):
+        return False
+    if not _is_supported_literal_filter(filter_schema):
+        return False
+    if "const" in schema:
+        return not _json_literal_matches_schema(schema["const"], filter_schema)
+    enum_values = schema.get("enum")
+    if isinstance(enum_values, list):
+        return not any(_json_literal_matches_schema(enum_value, filter_schema) for enum_value in enum_values)
+    schema_types = _type_values(schema.get("type"))
+    filter_types = _type_values(filter_schema.get("type"))
+    return schema_types is not None and filter_types is not None and not _type_intersection(schema_types, filter_types)
+
+
+def _is_supported_literal_filter(schema: dict[str, Any]) -> bool:
+    metadata_keys = {
+        "$comment",
+        "$id",
+        "$schema",
+        "description",
+        "examples",
+        "title",
+    }
+    supported_filter_keys = {
+        "const",
+        "enum",
+        "exclusiveMaximum",
+        "exclusiveMinimum",
+        "maximum",
+        "maxItems",
+        "maxLength",
+        "maxProperties",
+        "minimum",
+        "minItems",
+        "minLength",
+        "minProperties",
+        "multipleOf",
+        "type",
+        "uniqueItems",
+    }
+    return set(schema) <= metadata_keys | supported_filter_keys
 
 
 def _closed_tuple_items(schema: dict[str, Any]) -> list[Any] | None:
@@ -289,6 +337,25 @@ def _closed_tuple_items(schema: dict[str, Any]) -> list[Any] | None:
     if false_item_index is not None:
         return items[:false_item_index]
     return items if schema.get("additionalItems") is False else None
+
+
+def _closed_tuple_min_contains_item_requirement(schema: dict[str, Any]) -> int | None:
+    contains = schema.get("contains")
+    min_contains = schema.get("minContains", 1)
+    if not isinstance(contains, dict) or not isinstance(min_contains, int) or isinstance(min_contains, bool):
+        return None
+    if min_contains <= 0:
+        return None
+    tuple_items = _closed_tuple_items(schema)
+    if tuple_items is None:
+        return None
+    possible_matches = 0
+    for item_count, item in enumerate(tuple_items, start=1):
+        if not _schema_is_disjoint_from_supported_literal_filter(item, contains):
+            possible_matches += 1
+        if possible_matches >= min_contains:
+            return item_count
+    return None
 
 
 def _closed_tuple_max_contains_item_limit(schema: dict[str, Any]) -> int | None:
@@ -1597,7 +1664,16 @@ def _rewrite_contains(schema: dict[str, Any]) -> None:
                 schema["maxItems"] = min(schema.get("maxItems", max_contains), max_contains)
 
 
-def _rewrite_closed_tuple_contains_max(schema: dict[str, Any]) -> None:
+def _rewrite_closed_tuple_contains_counts(schema: dict[str, Any]) -> None:
+    item_requirement = _closed_tuple_min_contains_item_requirement(schema)
+    if item_requirement is not None:
+        min_items = schema.get("minItems")
+        schema["minItems"] = (
+            max(min_items, item_requirement)
+            if isinstance(min_items, int) and not isinstance(min_items, bool)
+            else item_requirement
+        )
+
     item_limit = _closed_tuple_max_contains_item_limit(schema)
     if item_limit is None:
         return
@@ -1621,7 +1697,7 @@ def _schema_for_payload_generation(value: Any) -> Any:
             _collapse_nullable_impossible_branch_for_payload_generation(schema)
             if schema.get("$schema") == "https://json-schema.org/draft/2020-12/schema":
                 schema["$schema"] = "http://json-schema.org/draft-07/schema#"
-            _rewrite_closed_tuple_contains_max(schema)
+            _rewrite_closed_tuple_contains_counts(schema)
             _rewrite_prefix_items(schema)
             _rewrite_contains(schema)
             _set_payload_format_enum(schema)
