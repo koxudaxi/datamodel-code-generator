@@ -2391,6 +2391,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             cls._validate_raw_allof_object_member_constraints(normalized)
             cls._normalize_raw_known_property_constraints(normalized)
             cls._normalize_raw_contains_item_constraints(normalized)
+            cls._normalize_raw_unique_items_constraints(normalized)
             cls._normalize_raw_nullable_type_constraints(normalized)
             cls._validate_raw_numeric_constraints(normalized)
             cls._validate_raw_object_constraints(normalized)
@@ -3938,6 +3939,68 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _raw_contains_requires_match(cls, schema_dict: dict[Any, Any]) -> bool:
         min_contains = cls._raw_min_contains_value(schema_dict)
         return min_contains is not None and min_contains > 0
+
+    @classmethod
+    def _normalize_raw_unique_items_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        if not cls._raw_type_is_array_only(schema_dict.get("type")) or schema_dict.get("uniqueItems") is not True:
+            return
+
+        tuple_items = cls._raw_closed_tuple_items(schema_dict)
+        if tuple_items is None:
+            return
+
+        literal_value_sets: list[set[str] | None] = []
+        for item_count, item in enumerate(tuple_items, start=1):
+            literal_value_sets.append(cls._raw_finite_json_literal_value_keys(item))
+            if not cls._raw_literal_item_sets_have_unique_assignment(literal_value_sets):
+                cls._merge_raw_object_keyword(schema_dict, "maxItems", item_count - 1)
+                cls._validate_allof_intersected_constraints(schema_dict)
+                return
+
+    @classmethod
+    def _raw_finite_json_literal_value_keys(cls, schema: Any) -> set[str] | None:
+        if schema is False:
+            return set()
+        if not isinstance(schema, dict):
+            return None
+        if "const" in schema:
+            value = schema["const"]
+            return {cls._json_value_key(value)} if cls._raw_value_matches_schema(value, schema) else set()
+        enum_values = schema.get("enum")
+        if not isinstance(enum_values, list):
+            return None
+        return {
+            cls._json_value_key(enum_value)
+            for enum_value in enum_values
+            if cls._raw_value_matches_schema(enum_value, schema)
+        }
+
+    @staticmethod
+    def _json_value_key(value: Any) -> str:
+        return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+    @classmethod
+    def _raw_literal_item_sets_have_unique_assignment(cls, literal_value_sets: list[set[str] | None]) -> bool:
+        finite_value_sets = [value_set for value_set in literal_value_sets if value_set is not None]
+        if not finite_value_sets:
+            return True
+        if any(not value_set for value_set in finite_value_sets):
+            return False
+
+        matched_items_by_value: dict[str, int] = {}
+
+        def assign(item_index: int, seen_values: set[str]) -> bool:
+            for value in sorted(finite_value_sets[item_index]):
+                if value in seen_values:
+                    continue
+                seen_values.add(value)
+                matched_item_index = matched_items_by_value.get(value)
+                if matched_item_index is None or assign(matched_item_index, seen_values):
+                    matched_items_by_value[value] = item_index
+                    return True
+            return False
+
+        return all(assign(item_index, set()) for item_index in range(len(finite_value_sets)))
 
     @classmethod
     def _validate_raw_array_constraints(cls, schema_dict: dict[Any, Any]) -> None:

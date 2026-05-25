@@ -12303,6 +12303,38 @@ def test_main_jsonschema_contains_tuple_min_contains_limit(output_file: Path) ->
     )
 
 
+def test_main_jsonschema_unique_items_tuple_finite_limit(output_file: Path) -> None:
+    """Test tuple item finite domains limit unique array length."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unique_items_tuple_finite_limit.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unique_items_tuple_finite_limit.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_tuple_finite_limit",
+        model_name="UniqueItemsTupleFiniteLimit",
+        valid_json='{"values":["a","b"]}',
+        invalid_json='{"values":["a","b","a"]}',
+        expected_error_type="too_long",
+    )
+
+
+def test_main_jsonschema_unique_items_tuple_required_conflict(output_file: Path) -> None:
+    """Test required tuple items with too few finite unique values are rejected."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unique_items_tuple_required_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_numeric_multiple_of_bounds(output_file: Path) -> None:
     """Test multipleOf and numeric bounds keep only satisfiable constrained values."""
     run_main_and_assert(

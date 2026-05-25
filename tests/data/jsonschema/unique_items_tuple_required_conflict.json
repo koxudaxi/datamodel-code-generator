@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UniqueItemsTupleRequiredConflict",
+  "type": "object",
+  "properties": {
+    "values": {
+      "type": "array",
+      "minItems": 3,
+      "prefixItems": [
+        {
+          "enum": ["a", "b"]
+        },
+        {
+          "enum": ["a", "b"]
+        },
+        {
+          "enum": ["a", "b"]
+        }
+      ],
+      "items": false,
+      "uniqueItems": true
+    }
+  },
+  "required": ["values"]
+}

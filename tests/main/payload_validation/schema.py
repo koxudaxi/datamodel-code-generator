@@ -375,6 +375,64 @@ def _closed_tuple_max_contains_item_limit(schema: dict[str, Any]) -> int | None:
     return None
 
 
+def _closed_tuple_unique_items_limit(schema: dict[str, Any]) -> int | None:
+    if schema.get("uniqueItems") is not True:
+        return None
+    tuple_items = _closed_tuple_items(schema)
+    if tuple_items is None:
+        return None
+
+    literal_value_sets: list[set[str] | None] = []
+    for item_count, item in enumerate(tuple_items, start=1):
+        literal_value_sets.append(_finite_json_literal_value_keys(item))
+        if not _literal_item_sets_have_unique_assignment(literal_value_sets):
+            return item_count - 1
+    return None
+
+
+def _finite_json_literal_value_keys(schema: Any) -> set[str] | None:
+    if schema is False:
+        return set()
+    if not isinstance(schema, dict):
+        return None
+    if "const" in schema:
+        value = schema["const"]
+        return {_json_value_key(value)} if _json_literal_matches_schema(value, schema) else set()
+    enum_values = schema.get("enum")
+    if not isinstance(enum_values, list):
+        return None
+    return {
+        _json_value_key(enum_value) for enum_value in enum_values if _json_literal_matches_schema(enum_value, schema)
+    }
+
+
+def _json_value_key(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def _literal_item_sets_have_unique_assignment(literal_value_sets: list[set[str] | None]) -> bool:
+    finite_value_sets = [value_set for value_set in literal_value_sets if value_set is not None]
+    if not finite_value_sets:
+        return True
+    if any(not value_set for value_set in finite_value_sets):
+        return False
+
+    matched_items_by_value: dict[str, int] = {}
+
+    def assign(item_index: int, seen_values: set[str]) -> bool:
+        for value in sorted(finite_value_sets[item_index]):
+            if value in seen_values:
+                continue
+            seen_values.add(value)
+            matched_item_index = matched_items_by_value.get(value)
+            if matched_item_index is None or assign(matched_item_index, seen_values):
+                matched_items_by_value[value] = item_index
+                return True
+        return False
+
+    return all(assign(item_index, set()) for item_index in range(len(finite_value_sets)))
+
+
 def _has_unsatisfiable_closed_tuple_contains_max(value: Any) -> bool:
     def has_unsatisfiable_closed_tuple_contains_max(schema: dict[str, Any]) -> bool:
         if not _type_is_array_only(schema.get("type")):
@@ -386,6 +444,19 @@ def _has_unsatisfiable_closed_tuple_contains_max(value: Any) -> bool:
         return item_limit is not None and min_items > item_limit
 
     return _any_schema_node(value, has_unsatisfiable_closed_tuple_contains_max)
+
+
+def _has_unsatisfiable_closed_tuple_unique_items(value: Any) -> bool:
+    def has_unsatisfiable_closed_tuple_unique_items(schema: dict[str, Any]) -> bool:
+        if not _type_is_array_only(schema.get("type")):
+            return False
+        min_items = schema.get("minItems")
+        if not isinstance(min_items, int) or isinstance(min_items, bool):
+            return False
+        item_limit = _closed_tuple_unique_items_limit(schema)
+        return item_limit is not None and min_items > item_limit
+
+    return _any_schema_node(value, has_unsatisfiable_closed_tuple_unique_items)
 
 
 def _fraction_value(value: Any) -> Fraction | None:
@@ -1323,6 +1394,8 @@ def _schema_exclusion_reason(schema: dict[str, Any], *, is_openapi: bool = False
         return "contains minContains/maxContains bounds have no valid array payloads"
     if _has_unsatisfiable_closed_tuple_contains_max(schema):
         return "closed tuple contains maxContains bounds have no valid array payloads"
+    if _has_unsatisfiable_closed_tuple_unique_items(schema):
+        return "closed tuple uniqueItems bounds have no valid array payloads"
     if _has_unsatisfiable_integer_bounds(schema):
         return "integer bounds have no valid payloads"
     if _has_unsatisfiable_numeric_multiple_bounds(schema):
@@ -1680,6 +1753,13 @@ def _rewrite_closed_tuple_contains_counts(schema: dict[str, Any]) -> None:
     schema["maxItems"] = min(schema.get("maxItems", item_limit), item_limit)
 
 
+def _rewrite_closed_tuple_unique_items(schema: dict[str, Any]) -> None:
+    item_limit = _closed_tuple_unique_items_limit(schema)
+    if item_limit is None:
+        return
+    schema["maxItems"] = min(schema.get("maxItems", item_limit), item_limit)
+
+
 def _set_payload_format_enum(schema: dict[str, Any]) -> None:
     if schema.get("type") == "string" and isinstance(
         format_enum := PAYLOAD_FORMAT_ENUMS.get(schema.get("format")),
@@ -1698,6 +1778,7 @@ def _schema_for_payload_generation(value: Any) -> Any:
             if schema.get("$schema") == "https://json-schema.org/draft/2020-12/schema":
                 schema["$schema"] = "http://json-schema.org/draft-07/schema#"
             _rewrite_closed_tuple_contains_counts(schema)
+            _rewrite_closed_tuple_unique_items(schema)
             _rewrite_prefix_items(schema)
             _rewrite_contains(schema)
             _set_payload_format_enum(schema)
