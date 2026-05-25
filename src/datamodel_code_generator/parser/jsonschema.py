@@ -1003,7 +1003,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if len(items) == tuple_length:
             return items
 
-        tail_item: JsonSchemaObject | bool = obj.items if isinstance(obj.items, (JsonSchemaObject, bool)) else True
+        if isinstance(obj.items, (JsonSchemaObject, bool)):
+            tail_item: JsonSchemaObject | bool = obj.items
+        elif isinstance(obj.unevaluatedItems, (JsonSchemaObject, bool)):
+            tail_item = obj.unevaluatedItems
+        else:
+            tail_item = True
         if tail_item is False:  # pragma: no cover
             return None
 
