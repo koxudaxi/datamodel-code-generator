@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AllOfCombinedCountConstraints",
+  "type": "object",
+  "properties": {
+    "arrayAny": {
+      "allOf": [
+        {
+          "type": "array"
+        },
+        {
+          "anyOf": [
+            {
+              "minItems": 1
+            },
+            {
+              "minItems": 2
+            }
+          ]
+        }
+      ]
+    },
+    "objectOne": {
+      "allOf": [
+        {
+          "type": "object"
+        },
+        {
+          "oneOf": [
+            {
+              "maxProperties": 1
+            },
+            {
+              "maxProperties": 2
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "required": ["arrayAny", "objectOne"]
+}

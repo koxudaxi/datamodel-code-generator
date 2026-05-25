@@ -4018,6 +4018,35 @@ def test_main_jsonschema_combined_count_constraints(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_allof_combined_count_constraints(output_file: Path) -> None:
+    """Test allOf nested anyOf/oneOf count constraints collapse to exact ranges."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_combined_count_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_combined_count_constraints.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_combined_count_constraints",
+        model_name="AllOfCombinedCountConstraints",
+        valid_json='{"arrayAny":[1],"objectOne":{"a":1,"b":2}}',
+        invalid_json='{"arrayAny":[],"objectOne":{"a":1,"b":2}}',
+        expected_error_type="too_short",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_combined_count_constraints",
+        model_name="AllOfCombinedCountConstraints",
+        valid_json='{"arrayAny":[1,2],"objectOne":{"a":1,"b":2}}',
+        invalid_json='{"arrayAny":[1],"objectOne":{"a":1}}',
+        expected_error_type="too_short",
+    )
+
+
 def test_main_jsonschema_oneof_const_enum_literal(output_file: Path) -> None:
     """Test oneOf with const values as Literal type."""
     run_main_and_assert(
