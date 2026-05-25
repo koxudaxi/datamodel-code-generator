@@ -177,6 +177,24 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
         "inlineComplexAlternative: InlineComplexAlternative",
         "emptyAlternative: Any",
     ),
+    "datatypes_and_mixed_content": (
+        "from datetime import timedelta",
+        "from pydantic import AnyUrl, AwareDatetime, BaseModel",
+        "class DatatypeSample(BaseModel):",
+        "notation: str | None = None",
+        "timestamp: AwareDatetime",
+        "yearMonth: timedelta | None = None",
+        "dayTime: timedelta | None = None",
+        "atomic: Any | None = None",
+        "class ParagraphBase(BaseModel):",
+        "emphasis: list[str] | None = None",
+        "class MixedExtension(ParagraphBase):",
+        "link: AnyUrl | None = None",
+        "value: str | None = None",
+        "class Sample(BaseModel):",
+        "content: MixedExtension",
+        "datatypes: DatatypeSample",
+    ),
 }
 
 XMLSCHEMA_ABSENT_SNIPPETS: dict[str, tuple[str, ...]] = {

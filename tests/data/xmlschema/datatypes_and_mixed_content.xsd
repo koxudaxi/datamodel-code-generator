@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="https://example.com/datatypes"
+  targetNamespace="https://example.com/datatypes"
+>
+  <xs:notation name="png" public="image/png" system="image/png"/>
+
+  <xs:complexType name="ParagraphBase">
+    <xs:sequence>
+      <xs:element name="emphasis" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="MixedExtension">
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:ParagraphBase">
+        <xs:sequence>
+          <xs:element name="link" type="xs:anyURI" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="DatatypeSample">
+    <xs:sequence>
+      <xs:element name="notation" type="xs:NOTATION" minOccurs="0"/>
+      <xs:element name="timestamp" type="xs:dateTimeStamp"/>
+      <xs:element name="yearMonth" type="xs:yearMonthDuration" minOccurs="0"/>
+      <xs:element name="dayTime" type="xs:dayTimeDuration" minOccurs="0"/>
+      <xs:element name="atomic" type="xs:anyAtomicType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="sample">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="content" type="tns:MixedExtension"/>
+        <xs:element name="datatypes" type="tns:DatatypeSample"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

@@ -53,6 +53,7 @@ DEFAULT_OCCURRENCE = _OccurrenceContext()
 
 BUILTIN_TYPE_SCHEMAS: dict[str, JsonSchema] = {
     "anySimpleType": {},
+    "anyAtomicType": {},
     "anyType": {},
     "anyURI": {"type": "string", "format": "uri"},
     "base64Binary": {"type": "string", "format": "byte"},
@@ -63,6 +64,7 @@ BUILTIN_TYPE_SCHEMAS: dict[str, JsonSchema] = {
     "decimal": NUMBER_SCHEMA,
     "double": NUMBER_SCHEMA,
     "duration": {"type": "string", "format": "duration"},
+    "dayTimeDuration": {"type": "string", "format": "duration"},
     "ENTITIES": {"type": "array", "items": STRING_SCHEMA},
     "ENTITY": STRING_SCHEMA,
     "float": NUMBER_SCHEMA,
@@ -87,6 +89,7 @@ BUILTIN_TYPE_SCHEMAS: dict[str, JsonSchema] = {
     "nonNegativeInteger": {"type": "integer", "minimum": 0},
     "nonPositiveInteger": {"type": "integer", "maximum": 0},
     "normalizedString": STRING_SCHEMA,
+    "NOTATION": STRING_SCHEMA,
     "positiveInteger": {"type": "integer", "minimum": 1},
     "QName": STRING_SCHEMA,
     "short": {"type": "integer", "minimum": -32768, "maximum": 32767},
@@ -97,6 +100,8 @@ BUILTIN_TYPE_SCHEMAS: dict[str, JsonSchema] = {
     "unsignedInt": {"type": "integer", "minimum": 0, "maximum": 4294967295},
     "unsignedLong": {"type": "integer", "minimum": 0, "maximum": 18446744073709551615},
     "unsignedShort": {"type": "integer", "minimum": 0, "maximum": 65535},
+    "yearMonthDuration": {"type": "string", "format": "duration"},
+    "dateTimeStamp": {"type": "string", "format": "date-time"},
 }
 
 
@@ -643,7 +648,7 @@ class _XMLSchemaConverter:
         self._apply_open_content(child, schema)
         self._apply_model_group(child, schema)
         self._apply_attributes(child, schema)
-        self._apply_mixed_content(owner, schema)
+        self._apply_mixed_content(complex_content, schema, owner)
         if _local_name(child.tag) == "extension" and (base := child.get("base")):
             return {"allOf": [self._schema_for_qname(base, child), schema]}
         return schema
@@ -873,8 +878,13 @@ class _XMLSchemaConverter:
         if (attribute.get("use") or source_attribute.get("use")) == "required":
             schema.setdefault("required", []).append(name)
 
-    def _apply_mixed_content(self, owner: ET.Element, schema: JsonSchema) -> None:  # noqa: PLR6301
-        if owner.get("mixed") != "true":
+    @staticmethod
+    def _apply_mixed_content(
+        owner: ET.Element,
+        schema: JsonSchema,
+        *additional_owners: ET.Element,
+    ) -> None:
+        if not any(candidate.get("mixed") == "true" for candidate in (owner, *additional_owners)):
             return
         schema.setdefault("properties", {}).setdefault("value", _copy_schema(STRING_SCHEMA))
 
