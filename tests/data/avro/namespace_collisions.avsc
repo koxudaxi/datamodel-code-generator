@@ -1,0 +1,35 @@
+{
+  "type": "record",
+  "name": "Envelope",
+  "namespace": "com.example",
+  "fields": [
+    {
+      "name": "billing",
+      "type": {
+        "type": "record",
+        "name": "Address",
+        "namespace": "com.example.billing",
+        "fields": [
+          {
+            "name": "line1",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "shipping",
+      "type": {
+        "type": "record",
+        "name": "Address",
+        "namespace": "com.example.shipping",
+        "fields": [
+          {
+            "name": "line1",
+            "type": "string"
+          }
+        ]
+      }
+    }
+  ]
+}

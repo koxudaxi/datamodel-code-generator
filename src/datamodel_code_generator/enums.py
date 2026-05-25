@@ -39,6 +39,7 @@ class InputFileType(Enum):
     OpenAPI = "openapi"
     JsonSchema = "jsonschema"
     XMLSchema = "xmlschema"
+    Avro = "avro"
     Json = "json"
     Yaml = "yaml"
     Dict = "dict"

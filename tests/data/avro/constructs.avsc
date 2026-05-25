@@ -1,0 +1,166 @@
+{
+  "type": "record",
+  "name": "User",
+  "namespace": "com.example.avro",
+  "doc": "User record",
+  "aliases": ["Account"],
+  "fields": [
+    {
+      "name": "id",
+      "type": {
+        "type": "string",
+        "logicalType": "uuid"
+      },
+      "doc": "Stable identifier",
+      "aliases": ["userId"]
+    },
+    {
+      "name": "active",
+      "type": "boolean",
+      "default": true
+    },
+    {
+      "name": "age",
+      "type": "int",
+      "default": 0
+    },
+    {
+      "name": "visits",
+      "type": "long"
+    },
+    {
+      "name": "score",
+      "type": "float"
+    },
+    {
+      "name": "rating",
+      "type": "double"
+    },
+    {
+      "name": "payload",
+      "type": "bytes"
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "Status",
+        "symbols": ["ACTIVE", "INACTIVE"],
+        "default": "ACTIVE"
+      },
+      "default": "ACTIVE"
+    },
+    {
+      "name": "tags",
+      "type": {
+        "type": "array",
+        "items": "string"
+      },
+      "default": []
+    },
+    {
+      "name": "attributes",
+      "type": {
+        "type": "map",
+        "values": "string"
+      },
+      "default": {}
+    },
+    {
+      "name": "address",
+      "type": {
+        "type": "record",
+        "name": "Address",
+        "fields": [
+          {
+            "name": "street",
+            "type": "string"
+          },
+          {
+            "name": "zip",
+            "type": ["null", "string"],
+            "default": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "previous",
+      "type": ["null", "User"],
+      "default": null
+    },
+    {
+      "name": "hash",
+      "type": {
+        "type": "fixed",
+        "name": "MD5",
+        "size": 16
+      }
+    },
+    {
+      "name": "price",
+      "type": {
+        "type": "bytes",
+        "logicalType": "decimal",
+        "precision": 8,
+        "scale": 2
+      }
+    },
+    {
+      "name": "birthDate",
+      "type": {
+        "type": "int",
+        "logicalType": "date"
+      }
+    },
+    {
+      "name": "startTime",
+      "type": {
+        "type": "int",
+        "logicalType": "time-millis"
+      }
+    },
+    {
+      "name": "endTime",
+      "type": {
+        "type": "long",
+        "logicalType": "time-micros"
+      }
+    },
+    {
+      "name": "createdAt",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      }
+    },
+    {
+      "name": "updatedAt",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      }
+    },
+    {
+      "name": "localCreatedAt",
+      "type": {
+        "type": "long",
+        "logicalType": "local-timestamp-millis"
+      }
+    },
+    {
+      "name": "duration",
+      "type": {
+        "type": "fixed",
+        "name": "Duration",
+        "size": 12,
+        "logicalType": "duration"
+      }
+    },
+    {
+      "name": "choice",
+      "type": ["null", "string", "long"],
+      "default": null
+    }
+  ]
+}

@@ -68,6 +68,7 @@ from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 
 if TYPE_CHECKING:
     from datamodel_code_generator._types import (
+        AvroParserConfigDict,
         GraphQLParserConfigDict,
         JSONSchemaParserConfigDict,
         OpenAPIParserConfigDict,
@@ -498,6 +499,7 @@ def _create_parser_config(
     config_class: type[_ConfigT],
     generate_config: GenerateConfig,
     additional_options: ParserConfigDict
+    | AvroParserConfigDict
     | JSONSchemaParserConfigDict
     | OpenAPIParserConfigDict
     | GraphQLParserConfigDict,
@@ -525,7 +527,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     """Generate Python data models from schema definitions or structured data.
 
     This is the main entry point for code generation. Supports OpenAPI, JSON Schema,
-    GraphQL, XML Schema, and raw data formats (JSON, YAML, Dict, CSV) as input.
+    GraphQL, XML Schema, Avro, and raw data formats (JSON, YAML, Dict, CSV) as input.
 
     Args:
         input_: The input source (file path, string content, URL, or dict).
@@ -608,6 +610,10 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
 
     if isinstance(input_, Mapping) and input_file_type == InputFileType.XMLSchema:
         msg = "Dict input is not supported for xmlschema. Provide XSD text, file path, or URL input."
+        raise Error(msg)
+
+    if isinstance(input_, Mapping) and input_file_type == InputFileType.Avro:
+        msg = "Dict input is not supported for avro. Provide Avro schema text, file path, or URL input."
         raise Error(msg)
 
     if isinstance(input_, Mapping) and input_file_type in {
@@ -795,6 +801,9 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
                 valid = [v.value for v in XMLSchemaVersion]
                 msg = f"Invalid XML Schema version: {config.schema_version}. Valid values: {valid}"
                 raise Error(msg) from None
+        elif input_file_type == InputFileType.Avro:
+            msg = "--schema-version is not supported for avro because Avro schemas do not carry a version marker"
+            raise Error(msg)
         elif input_file_type == InputFileType.GraphQL:
             msg = f"--schema-version is not supported for {input_file_type.value}"
             raise Error(msg)
@@ -830,6 +839,16 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         }
         parser_config = _create_parser_config(XMLSchemaParserConfig, config, xmlschema_additional_options)
         parser = XMLSchemaParser(source=source, config=parser_config)  # ty: ignore
+    elif input_file_type == InputFileType.Avro:
+        from datamodel_code_generator.config import AvroParserConfig  # noqa: PLC0415
+        from datamodel_code_generator.parser.avro import AvroParser  # noqa: PLC0415
+
+        avro_additional_options: AvroParserConfigDict = {
+            "apply_default_values_for_required_fields": True,
+            **additional_options,
+        }
+        parser_config = _create_parser_config(AvroParserConfig, config, avro_additional_options)
+        parser = AvroParser(source=source, config=parser_config)  # ty: ignore
     elif input_file_type == InputFileType.GraphQL:
         from datamodel_code_generator.parser.graphql import GraphQLParser  # noqa: PLC0415
 
@@ -1001,7 +1020,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     return None
 
 
-def infer_input_type(text: str) -> InputFileType:
+def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911
     """Automatically detect the input file type from text content."""
     from datamodel_code_generator.util import get_yaml_parse_errors  # noqa: PLC0415
 
@@ -1018,9 +1037,18 @@ def infer_input_type(text: str) -> InputFileType:
     if isinstance(data, dict):
         if is_openapi(data):
             return InputFileType.OpenAPI
+        from datamodel_code_generator.parser.avro import is_avro_schema_data  # noqa: PLC0415
+
+        if is_avro_schema_data(data):
+            return InputFileType.Avro
         if is_schema(data):
             return InputFileType.JsonSchema
         return InputFileType.Json
+    if isinstance(data, list):
+        from datamodel_code_generator.parser.avro import is_avro_schema_data  # noqa: PLC0415
+
+        if is_avro_schema_data(data):
+            return InputFileType.Avro
     msg = (
         "Can't infer input file type from the input data. "
         "Please specify the input file type explicitly with --input-file-type option."

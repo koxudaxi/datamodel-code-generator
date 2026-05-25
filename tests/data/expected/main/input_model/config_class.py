@@ -76,6 +76,7 @@ InputFileType: TypeAlias = Literal[
     'openapi',
     'jsonschema',
     'xmlschema',
+    'avro',
     'json',
     'yaml',
     'dict',
