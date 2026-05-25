@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="https://example.com/order"
+  targetNamespace="https://example.com/order"
+  elementFormDefault="qualified"
+>
+  <xs:simpleType name="CountryCode">
+    <xs:restriction base="xs:string">
+      <xs:length value="2"/>
+      <xs:pattern value="[A-Z]{2}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="AddressType">
+    <xs:sequence>
+      <xs:element name="street" type="xs:string"/>
+      <xs:element name="city" type="xs:string"/>
+      <xs:element name="country" type="tns:CountryCode" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

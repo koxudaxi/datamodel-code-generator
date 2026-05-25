@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning">
+  <xs:complexType name="VersionedInclude">
+    <xs:sequence>
+      <xs:element name="legacy" type="xs:string" vc:maxVersion="1.1"/>
+      <xs:element name="modern" type="xs:string" vc:minVersion="1.1"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

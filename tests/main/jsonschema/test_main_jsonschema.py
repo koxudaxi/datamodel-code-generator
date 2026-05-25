@@ -2474,7 +2474,7 @@ def test_main_strict_types_all_with_field_constraints(output_file: Path) -> None
 def test_main_strict_types_with_constraints(output_file: Path) -> None:
     """Test strict int/float with constraints generates conint/confloat with strict=True, and decimal format."""
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "strict_types_coverage.json",
+        input_path=JSON_SCHEMA_DATA_PATH / "strict_types_matrix.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
@@ -2487,7 +2487,7 @@ def test_main_strict_types_with_constraints(output_file: Path) -> None:
 def test_main_hostname_strict_field_constraints(output_file: Path) -> None:
     """Test hostname with --strict-types str and --field-constraints returns StrictStr."""
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "strict_types_coverage.json",
+        input_path=JSON_SCHEMA_DATA_PATH / "strict_types_matrix.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
@@ -5042,6 +5042,16 @@ def test_main_null(output_file: Path) -> None:
     """Test null type handling."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "null.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
+def test_main_type_array_only_null(output_file: Path) -> None:
+    """Test a JSON Schema type array containing only null."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_array_only_null.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
@@ -7997,6 +8007,29 @@ def test_main_jsonschema_contains_true_max_contains_zero(output_file: Path) -> N
         expected_error_type="too_long",
         expected_attribute_path=("values",),
         expected_attribute_value=[],
+    )
+
+
+def test_main_jsonschema_contains_true_default_min_contains(output_file: Path) -> None:
+    """Test contains true defaults minContains to one."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "contains_true_default_min_contains.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="contains_true_default_min_contains.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="contains_true_default_min_contains",
+        model_name="ContainsTrueDefaultMinContains",
+        valid_json='{"values":["x"]}',
+        invalid_json='{"values":[]}',
+        expected_error_type="too_short",
+        expected_attribute_path=("values",),
+        expected_attribute_value=["x"],
     )
 
 
