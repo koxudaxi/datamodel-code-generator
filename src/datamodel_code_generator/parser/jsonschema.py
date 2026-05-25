@@ -2573,30 +2573,33 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     @classmethod
     def _normalize_raw_count_combined_constraints(cls, schema_dict: dict[Any, Any]) -> None:
         type_values = cls._type_values(schema_dict.get("type"))
-        if type_values == {"array"}:
+        if type_values in ({"array"}, {"array", "null"}):
+            branch_type = "array"
             min_key, max_key = "minItems", "maxItems"
-        elif type_values == {"object"}:
+        elif type_values in ({"object"}, {"object", "null"}):
+            branch_type = "object"
             min_key, max_key = "minProperties", "maxProperties"
         else:
             return
         if min_key in schema_dict or max_key in schema_dict:
             return
 
-        if cls._normalize_raw_anyof_count_constraints(schema_dict, min_key, max_key):
+        if cls._normalize_raw_anyof_count_constraints(schema_dict, branch_type, min_key, max_key):
             return
-        cls._normalize_raw_oneof_count_constraints(schema_dict, min_key, max_key)
+        cls._normalize_raw_oneof_count_constraints(schema_dict, branch_type, min_key, max_key)
 
     @classmethod
     def _normalize_raw_anyof_count_constraints(
         cls,
         schema_dict: dict[Any, Any],
+        branch_type: str,
         min_key: str,
         max_key: str,
     ) -> bool:
         any_of = schema_dict.get("anyOf")
         if not isinstance(any_of, list) or len(any_of) != cls._ONE_OF_PAIR_SIZE:
             return False
-        intervals = [cls._raw_count_interval(branch, schema_dict["type"], min_key, max_key) for branch in any_of]
+        intervals = [cls._raw_count_interval(branch, branch_type, min_key, max_key) for branch in any_of]
         if any(interval is None for interval in intervals):
             return False
 
@@ -2612,13 +2615,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _normalize_raw_oneof_count_constraints(
         cls,
         schema_dict: dict[Any, Any],
+        branch_type: str,
         min_key: str,
         max_key: str,
     ) -> None:
         one_of = schema_dict.get("oneOf")
         if not isinstance(one_of, list) or len(one_of) != cls._ONE_OF_PAIR_SIZE:
             return
-        intervals = [cls._raw_count_interval(branch, schema_dict["type"], min_key, max_key) for branch in one_of]
+        intervals = [cls._raw_count_interval(branch, branch_type, min_key, max_key) for branch in one_of]
         if any(interval is None for interval in intervals):
             return
 
@@ -2634,6 +2638,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         schema_dict.pop("oneOf", None)
         schema_dict.update(cls._raw_count_schema_from_interval(disjoint_intervals[0], min_key, max_key))
+        if "null" in (cls._type_values(schema_dict.get("type")) or set()):
+            null_match_count = sum(cls._raw_value_matches_schema(None, branch) for branch in one_of)
+            if null_match_count != 1:
+                cls._drop_null_type(schema_dict, cls._type_values(schema_dict["type"]) or set())
 
     @classmethod
     def _raw_count_interval(
@@ -2694,14 +2702,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return schema
 
     @classmethod
-    def _normalize_raw_allof_count_combined_constraints(cls, schema_dict: dict[Any, Any]) -> None:  # noqa: PLR0911
+    def _normalize_raw_allof_count_combined_constraints(cls, schema_dict: dict[Any, Any]) -> None:  # noqa: PLR0911, PLR0912
         all_of = schema_dict.get("allOf")
         if not isinstance(all_of, list):
             return
-        if set(schema_dict) - (JsonSchemaObject.__metadata_only_fields__ | {"allOf"}):
+        if set(schema_dict) - (JsonSchemaObject.__metadata_only_fields__ | {"allOf", "type"}):
+            return
+        parent_types = cls._type_values(schema_dict.get("type"))
+        if parent_types is not None and not parent_types <= {"array", "object", "null"}:
             return
 
         mergeable_items: list[dict[Any, Any]] = []
+        parent_schema = {key: value for key, value in schema_dict.items() if key != "allOf"}
+        if set(parent_schema) - JsonSchemaObject.__metadata_only_fields__:
+            mergeable_items.append(parent_schema)
         has_combined = False
         for item in all_of:
             if item is True:
@@ -2772,7 +2786,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if set(schema_dict) - supported_keys:
             return False
         type_values = cls._type_values(schema_dict.get("type"))
-        if type_values is not None and not type_values <= {"array", "object"}:
+        if type_values is not None and not type_values <= {"array", "object", "null"}:
             return False
         for combined_key in ("anyOf", "oneOf"):
             branches = schema_dict.get(combined_key)

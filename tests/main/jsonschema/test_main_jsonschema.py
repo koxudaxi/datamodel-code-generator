@@ -4076,6 +4076,35 @@ def test_main_jsonschema_nullable_array_count_constraints(output_file: Path) -> 
     )
 
 
+def test_main_jsonschema_nullable_combined_count_constraints(output_file: Path) -> None:
+    """Test nullable count-only anyOf/oneOf keeps JSON Schema null semantics."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_combined_count_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_combined_count_constraints.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_combined_count_constraints",
+        model_name="NullableCombinedCountConstraints",
+        valid_json='{"oneOfArray":[1],"allOfAnyArray":null}',
+        invalid_json='{"oneOfArray":null,"allOfAnyArray":null}',
+        expected_error_type="list_type",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_combined_count_constraints",
+        model_name="NullableCombinedCountConstraints",
+        valid_json='{"oneOfArray":[1],"allOfAnyArray":[1]}',
+        invalid_json='{"oneOfArray":[1],"allOfAnyArray":[]}',
+        expected_error_type="too_short",
+    )
+
+
 def test_main_jsonschema_oneof_const_enum_literal(output_file: Path) -> None:
     """Test oneOf with const values as Literal type."""
     run_main_and_assert(
