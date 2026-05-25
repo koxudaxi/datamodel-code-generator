@@ -170,6 +170,8 @@ class _XMLSchemaConverter:
         self.attributes: dict[QNameKey, ET.Element] = {}
         self.groups: dict[QNameKey, ET.Element] = {}
         self.attribute_groups: dict[QNameKey, ET.Element] = {}
+        self.substitution_groups: dict[QNameKey, set[QNameKey]] = {}
+        self.substitution_members: set[QNameKey] = set()
         self.referenced_elements: set[QNameKey] = set()
         self.local_elements: set[QNameKey] = set()
         self._loaded_locations: set[Path] = set()
@@ -188,7 +190,10 @@ class _XMLSchemaConverter:
         global_elements = [
             (key, element)
             for key, element in self.elements.items()
-            if key in self.local_elements and element.get("name")
+            if key in self.local_elements
+            and element.get("name")
+            and element.get("abstract") != "true"
+            and key not in self.substitution_members
         ]
 
         if len(global_elements) == 1:
@@ -288,6 +293,10 @@ class _XMLSchemaConverter:
                     self.elements.setdefault(key, child)
                     if is_root:
                         self.local_elements.add(key)
+                    if substitution_group := child.get("substitutionGroup"):
+                        head_key = self._qname_key(substitution_group, child)
+                        self.substitution_groups.setdefault(head_key, set()).add(key)
+                        self.substitution_members.add(key)
                 case "attribute":
                     self.attributes.setdefault(key, child)
                 case "group":
@@ -384,7 +393,8 @@ class _XMLSchemaConverter:
 
     def _convert_element(self, element: ET.Element) -> JsonSchema:
         if ref := element.get("ref"):
-            schema = {"$ref": self._ref_for_key(self._resolve_key(ref, self.elements, element=element))}
+            key = self._resolve_key(ref, self.elements, element=element)
+            schema = self._schema_for_substitution_group(key) or {"$ref": self._ref_for_key(key)}
         elif type_name := element.get("type"):
             schema = self._schema_for_qname(type_name, element)
         elif (simple_type := _first_xsd_child(element, "simpleType")) is not None:
@@ -406,6 +416,8 @@ class _XMLSchemaConverter:
             schema["const"] = self._parse_literal(str(element.get("fixed")), schema)
         if element.get("nillable") == "true":
             schema["nullable"] = True
+        if element.get("abstract") == "true":
+            schema["x-xsd-abstract"] = True
         return schema
 
     def _apply_occurs(self, element: ET.Element, schema: JsonSchema) -> JsonSchema:  # noqa: PLR6301
@@ -531,6 +543,7 @@ class _XMLSchemaConverter:
         schema: JsonSchema = {"type": "object", "properties": {}}
         self._apply_model_group(complex_type, schema)
         self._apply_attributes(complex_type, schema)
+        self._apply_mixed_content(complex_type, schema)
         if documentation := _documentation(complex_type):
             schema["description"] = documentation
         return schema
@@ -543,6 +556,7 @@ class _XMLSchemaConverter:
         schema: JsonSchema = {"type": "object", "properties": {}}
         self._apply_model_group(child, schema)
         self._apply_attributes(child, schema)
+        self._apply_mixed_content(owner, schema)
         if _local_name(child.tag) == "extension" and (base := child.get("base")):
             return {"allOf": [self._schema_for_qname(base, child), schema]}
         return schema
@@ -551,6 +565,7 @@ class _XMLSchemaConverter:
         schema: JsonSchema = {"type": "object", "properties": {}}
         self._apply_model_group(complex_type, schema)
         self._apply_attributes(complex_type, schema)
+        self._apply_mixed_content(complex_type, schema)
         return schema
 
     def _convert_simple_content(self, simple_content: ET.Element, owner: ET.Element) -> JsonSchema:
@@ -580,9 +595,10 @@ class _XMLSchemaConverter:
         particle_required = (
             parent_required and particle.get("minOccurs", "1") != "0" and _local_name(particle.tag) != "choice"
         )
+        repeating = self._is_repeating(particle)
         for child in particle:
             if _is_xsd_element(child, "element"):
-                self._add_property_from_element(child, schema, required=particle_required)
+                self._add_property_from_element(child, schema, required=particle_required, repeating=repeating)
             elif _is_xsd_element(child, "sequence", "all", "choice"):
                 self._apply_particle(child, schema, parent_required=particle_required)
             elif _is_xsd_element(child, "group"):
@@ -599,12 +615,22 @@ class _XMLSchemaConverter:
         if target is not None:
             self._apply_model_group(target, schema, parent_required=parent_required)
 
-    def _add_property_from_element(self, element: ET.Element, schema: JsonSchema, *, required: bool) -> None:
+    def _add_property_from_element(
+        self,
+        element: ET.Element,
+        schema: JsonSchema,
+        *,
+        required: bool,
+        repeating: bool,
+    ) -> None:
         name = element.get("name") or _local_name(element.get("ref", ""))
         if not name:
             return
         properties = schema.setdefault("properties", {})
-        properties[name] = self._convert_element(element)
+        property_schema = self._convert_element(element)
+        if repeating and property_schema.get("type") != "array":
+            property_schema = {"type": "array", "items": property_schema}
+        properties[name] = property_schema
         if required and element.get("minOccurs", "1") != "0":
             schema.setdefault("required", []).append(name)
 
@@ -656,6 +682,27 @@ class _XMLSchemaConverter:
         if (attribute.get("use") or source_attribute.get("use")) == "required":
             schema.setdefault("required", []).append(name)
 
+    def _apply_mixed_content(self, owner: ET.Element, schema: JsonSchema) -> None:  # noqa: PLR6301
+        if owner.get("mixed") != "true":
+            return
+        schema.setdefault("properties", {}).setdefault("value", _copy_schema(STRING_SCHEMA))
+
+    def _schema_for_substitution_group(self, head_key: QNameKey) -> JsonSchema | None:
+        member_keys = self.substitution_groups.get(head_key)
+        if not member_keys:
+            return None
+        schemas = []
+        head_element = self.elements.get(head_key)
+        if head_element is not None and head_element.get("abstract") != "true":
+            schemas.append({"$ref": self._ref_for_key(head_key)})
+        schemas.extend({"$ref": self._ref_for_key(key)} for key in sorted(member_keys, key=self._sort_key))
+        return {"anyOf": schemas} if len(schemas) > 1 else schemas[0]
+
+    @staticmethod
+    def _is_repeating(element: ET.Element) -> bool:
+        max_occurs = element.get("maxOccurs")
+        return max_occurs is not None and max_occurs != "1"
+
     def _schema_for_qname(self, qname: str | None, element: ET.Element | None = None) -> JsonSchema:
         if not qname:  # pragma: no cover
             return {}
@@ -697,7 +744,10 @@ class _XMLSchemaConverter:
         return key
 
     def _resolved_referenced_elements(self) -> set[QNameKey]:
-        return {self._resolve_key(ref, self.elements) for ref in self.referenced_elements}
+        resolved = {self._resolve_key(ref, self.elements) for ref in self.referenced_elements}
+        for ref in tuple(resolved):
+            resolved.update(self.substitution_groups.get(ref, set()))
+        return resolved
 
     def _definition_name(self, key: QNameKey) -> str:
         return self._definition_names.get(key, key[1])

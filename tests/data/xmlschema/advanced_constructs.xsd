@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="https://example.com/advanced"
+  targetNamespace="https://example.com/advanced"
+  elementFormDefault="qualified"
+>
+  <xs:include schemaLocation="advanced_constructs_included.xsd"/>
+
+  <xs:element name="animal" type="tns:Animal" abstract="true"/>
+
+  <xs:complexType name="Animal" abstract="true">
+    <xs:attribute name="id" type="xs:ID" use="required"/>
+  </xs:complexType>
+
+  <xs:element name="cat" substitutionGroup="tns:animal">
+    <xs:complexType>
+      <xs:complexContent>
+        <xs:extension base="tns:Animal">
+          <xs:sequence>
+            <xs:element name="lives" type="xs:positiveInteger"/>
+          </xs:sequence>
+        </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="dog" substitutionGroup="tns:animal">
+    <xs:complexType>
+      <xs:complexContent>
+        <xs:extension base="tns:Animal">
+          <xs:sequence>
+            <xs:element name="breed" type="xs:string"/>
+          </xs:sequence>
+        </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="Paragraph" mixed="true">
+    <xs:sequence minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="emphasis" type="xs:string"/>
+    </xs:sequence>
+    <xs:attribute name="lang" type="xs:language"/>
+  </xs:complexType>
+
+  <xs:element name="zoo">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tns:animal" maxOccurs="unbounded"/>
+        <xs:element ref="tns:vehicle" minOccurs="0"/>
+        <xs:element name="description" type="tns:Paragraph" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+    <xs:unique name="animalId">
+      <xs:selector xpath="tns:animal"/>
+      <xs:field xpath="@id"/>
+    </xs:unique>
+  </xs:element>
+</xs:schema>

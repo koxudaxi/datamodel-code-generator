@@ -99,6 +99,24 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
         "class Holder(BaseModel):",
         "Shared_1: Shared = Field(..., alias='Shared')",
     ),
+    "advanced_constructs": (
+        "class Cat(Animal):",
+        "lives: conint(ge=1)",
+        "class Dog(Animal):",
+        "breed: str",
+        "class Vehicle1(BaseModel):",
+        "vin: str",
+        "class Car(Vehicle1):",
+        "doors: conint(ge=1)",
+        "class Paragraph(BaseModel):",
+        "value: str | None = None",
+        "emphasis: list[str] | None = None",
+        "lang: str | None = None",
+        "class Zoo(BaseModel):",
+        "animal: list[Cat | Dog]",
+        "vehicle: Vehicle | Car | None = None",
+        "description: Paragraph | None = None",
+    ),
 }
 
 

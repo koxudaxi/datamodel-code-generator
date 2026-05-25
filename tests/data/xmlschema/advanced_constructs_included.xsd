@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="https://example.com/advanced"
+  targetNamespace="https://example.com/advanced"
+>
+  <xs:element name="vehicle" type="tns:Vehicle"/>
+
+  <xs:complexType name="Vehicle">
+    <xs:attribute name="vin" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <xs:element name="car" substitutionGroup="tns:vehicle">
+    <xs:complexType>
+      <xs:complexContent>
+        <xs:extension base="tns:Vehicle">
+          <xs:sequence>
+            <xs:element name="doors" type="xs:positiveInteger"/>
+          </xs:sequence>
+        </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
