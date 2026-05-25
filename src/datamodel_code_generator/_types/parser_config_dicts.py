@@ -184,6 +184,10 @@ class JSONSchemaParserConfigDict(ParserConfigDict):
     schema_version_mode: NotRequired[VersionMode | None]
 
 
+class AvroParserConfigDict(JSONSchemaParserConfigDict, closed=True):
+    pass
+
+
 class OpenAPIParserConfigDict(JSONSchemaParserConfigDict, closed=True):
     openapi_scopes: NotRequired[list[OpenAPIScope] | None]
     include_path_parameters: NotRequired[bool]
@@ -205,6 +209,7 @@ ModelDict: TypeAlias = (
     ParserConfigDict
     | GraphQLParserConfigDict
     | JSONSchemaParserConfigDict
+    | AvroParserConfigDict
     | OpenAPIParserConfigDict
     | ProtobufParserConfigDict
     | XMLSchemaParserConfigDict

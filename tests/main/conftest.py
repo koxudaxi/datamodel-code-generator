@@ -31,7 +31,17 @@ from tests.conftest import (
 )
 
 InputFileTypeLiteral = Literal[
-    "auto", "openapi", "jsonschema", "xmlschema", "protobuf", "json", "yaml", "dict", "csv", "graphql"
+    "auto",
+    "openapi",
+    "jsonschema",
+    "xmlschema",
+    "protobuf",
+    "avro",
+    "json",
+    "yaml",
+    "dict",
+    "csv",
+    "graphql",
 ]
 CopyFilesMapping = Sequence[tuple[Path, Path]]
 
@@ -69,6 +79,7 @@ JSON_SCHEMA_DATA_PATH: Path = DATA_PATH / "jsonschema"
 GRAPHQL_DATA_PATH: Path = DATA_PATH / "graphql"
 XML_SCHEMA_DATA_PATH: Path = DATA_PATH / "xmlschema"
 PROTOBUF_DATA_PATH: Path = DATA_PATH / "protobuf"
+AVRO_DATA_PATH: Path = DATA_PATH / "avro"
 JSON_DATA_PATH: Path = DATA_PATH / "json"
 CSV_DATA_PATH: Path = DATA_PATH / "csv"
 YAML_DATA_PATH: Path = DATA_PATH / "yaml"
@@ -80,6 +91,7 @@ EXPECTED_JSON_SCHEMA_PATH: Path = EXPECTED_MAIN_PATH / "jsonschema"
 EXPECTED_GRAPHQL_PATH: Path = EXPECTED_MAIN_PATH / "graphql"
 EXPECTED_XML_SCHEMA_PATH: Path = EXPECTED_MAIN_PATH / "xmlschema"
 EXPECTED_PROTOBUF_PATH: Path = EXPECTED_MAIN_PATH / "protobuf"
+EXPECTED_AVRO_PATH: Path = EXPECTED_MAIN_PATH / "avro"
 EXPECTED_JSON_PATH: Path = EXPECTED_MAIN_PATH / "json"
 EXPECTED_CSV_PATH: Path = EXPECTED_MAIN_PATH / "csv"
 

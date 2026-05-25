@@ -77,6 +77,7 @@ InputFileType: TypeAlias = Literal[
     'jsonschema',
     'xmlschema',
     'protobuf',
+    'avro',
     'json',
     'yaml',
     'dict',

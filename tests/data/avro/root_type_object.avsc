@@ -1,0 +1,6 @@
+{
+  "type": {
+    "type": "string",
+    "logicalType": "uuid"
+  }
+}

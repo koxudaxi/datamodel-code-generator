@@ -356,6 +356,10 @@ class JSONSchemaParserConfig(ParserConfig):
     schema_version_mode: VersionMode | None = None
 
 
+class AvroParserConfig(JSONSchemaParserConfig):
+    """Configuration model for AvroParser.__init__()."""
+
+
 class OpenAPIParserConfig(JSONSchemaParserConfig):
     """Configuration model for OpenAPIParser.__init__()."""
 

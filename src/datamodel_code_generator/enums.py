@@ -40,6 +40,7 @@ class InputFileType(Enum):
     JsonSchema = "jsonschema"
     XMLSchema = "xmlschema"
     Protobuf = "protobuf"
+    Avro = "avro"
     Json = "json"
     Yaml = "yaml"
     Dict = "dict"
