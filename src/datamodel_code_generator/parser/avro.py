@@ -50,18 +50,16 @@ PRIMITIVE_SCHEMAS: dict[str, JsonSchema] = {
 def _is_avro_union_item(item: YamlValue) -> bool:
     match item:
         case str() as type_name:
-            result = type_name in PRIMITIVE_TYPES or "." in type_name
+            return type_name in PRIMITIVE_TYPES or "." in type_name
         case [*_] as union:
-            result = _is_avro_union(union)
+            return _is_avro_union(union)
         case {"type": [*_] as union}:
-            result = _is_avro_union(union)
+            return _is_avro_union(union)
         case {"type": dict() as nested_schema}:
-            result = _is_avro_union_item(nested_schema)
+            return _is_avro_union_item(nested_schema)
         case {"type": str() as type_name}:
-            result = _is_avro_typed_schema(item, type_name) or "." in type_name
-        case _:
-            result = False
-    return result
+            return _is_avro_typed_schema(item, type_name) or "." in type_name
+    return False
 
 
 def _is_avro_union(union: list[YamlValue]) -> bool:
@@ -69,22 +67,23 @@ def _is_avro_union(union: list[YamlValue]) -> bool:
 
 
 def _is_avro_typed_schema(schema: JsonSchema, type_name: str) -> bool:
+    if type_name in PRIMITIVE_TYPES:
+        return True
+
     match type_name:
-        case type_name if type_name in PRIMITIVE_TYPES:
-            result = True
         case "record":
-            result = isinstance(schema.get("name"), str) and isinstance(schema.get("fields"), list)
+            required_key, required_type = "fields", list
         case "enum":
-            result = isinstance(schema.get("name"), str) and isinstance(schema.get("symbols"), list)
+            required_key, required_type = "symbols", list
         case "fixed":
-            result = isinstance(schema.get("name"), str) and isinstance(schema.get("size"), int)
+            required_key, required_type = "size", int
         case "array":
-            result = "items" in schema
+            return "items" in schema
         case "map":
-            result = "values" in schema
+            return "values" in schema
         case _:
-            result = False
-    return result
+            return False
+    return isinstance(schema.get("name"), str) and isinstance(schema.get(required_key), required_type)
 
 
 class _Name(NamedTuple):
@@ -104,21 +103,20 @@ def is_avro_schema_data(data: YamlValue) -> bool:
             return _is_avro_schema_object(schema)
         case _:
             return False
+    return False
 
 
 def _is_avro_schema_object(schema: JsonSchema) -> bool:
     match schema.get("type"):
         case [*_]:
-            result = False
+            return False
         case dict() as nested_schema:
-            result = is_avro_schema_data(nested_schema)
+            return is_avro_schema_data(nested_schema)
         case str() as type_name if type_name in PRIMITIVE_TYPES:
-            result = any(key in schema for key in ("logicalType", "namespace", "aliases"))
+            return any(key in schema for key in ("logicalType", "namespace", "aliases"))
         case str() as type_name:
-            result = _is_avro_typed_schema(schema, type_name) or (type_name not in COMPLEX_TYPES and "." in type_name)
-        case _:
-            result = False
-    return result
+            return _is_avro_typed_schema(schema, type_name) or (type_name not in COMPLEX_TYPES and "." in type_name)
+    return False
 
 
 def _copy_schema(schema: JsonSchema) -> JsonSchema:
@@ -247,11 +245,18 @@ class _AvroSchemaConverter:
             case [*_] as union:
                 return self._convert_union(union, namespace)
             case dict() as schema:
-                pass
-            case _:
-                msg = f"Unsupported Avro schema value: {schema!r}"
-                raise Error(msg)
+                return self._convert_schema_dict(schema, namespace, root=root)
 
+        msg = f"Unsupported Avro schema value: {schema!r}"
+        raise Error(msg)
+
+    def _convert_schema_dict(
+        self,
+        schema: JsonSchema,
+        namespace: str | None,
+        *,
+        root: bool,
+    ) -> JsonSchema:
         match schema.get("type"):
             case [*_] as union:
                 converted = self._convert_union(union, namespace)
@@ -297,8 +302,7 @@ class _AvroSchemaConverter:
                 }
                 self._copy_common_metadata(schema, converted)
                 return converted
-            case _:
-                return self._convert_type_name(type_name, namespace)
+        return self._convert_type_name(type_name, namespace)
 
     def _convert_type_name(self, name: str, namespace: str | None) -> JsonSchema:
         if name in PRIMITIVE_TYPES:
