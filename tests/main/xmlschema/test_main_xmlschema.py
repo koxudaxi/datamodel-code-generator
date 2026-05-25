@@ -170,6 +170,7 @@ def test_main_xmlschema_parse_error(capsys: pytest.CaptureFixture[str], output_f
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Invalid XML Schema document",
+        file_should_not_exist=output_file,
     )
 
 
@@ -182,6 +183,7 @@ def test_main_xmlschema_wrong_root_error(capsys: pytest.CaptureFixture[str], out
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="XML Schema root element must be xs:schema",
+        file_should_not_exist=output_file,
     )
 
 
@@ -193,6 +195,7 @@ def test_main_xmlschema_auto_broken_xml_error(capsys: pytest.CaptureFixture[str]
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Can't infer input file type",
+        file_should_not_exist=output_file,
     )
 
 
@@ -204,4 +207,5 @@ def test_main_xmlschema_auto_wrong_root_error(capsys: pytest.CaptureFixture[str]
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Can't infer input file type",
+        file_should_not_exist=output_file,
     )
