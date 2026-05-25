@@ -10,13 +10,25 @@ from typing import Literal
 DeprecationKind = Literal["cli-option", "python-api", "config", "behavior", "schema"]
 DeprecationStatus = Literal["active", "scheduled"]
 DeprecationFormat = Literal["table", "json", "markdown"]
+DeprecationId = Literal[
+    "behavior.pydantic-v2-use-annotated-default",
+    "behavior.remote-ref-default",
+    "cli.allow-extra-fields",
+    "cli.parent-scoped-naming",
+    "cli.validation",
+    "config.yaml-non-lowercase-bool",
+    "format.default-formatters",
+    "python-api.python-version-has-type-alias",
+    "schema.jsonschema-items-array",
+    "schema.openapi-nullable",
+]
 
 
 @dataclass(frozen=True)
 class Deprecation:
     """Structured metadata for a deprecation entry."""
 
-    id: str
+    id: DeprecationId
     kind: DeprecationKind
     target: str
     message: str
@@ -28,7 +40,7 @@ class Deprecation:
     note: str | None = None
 
 
-DEPRECATIONS: dict[str, Deprecation] = {
+DEPRECATIONS: dict[DeprecationId, Deprecation] = {
     "cli.allow-extra-fields": Deprecation(
         id="cli.allow-extra-fields",
         kind="cli-option",
@@ -145,12 +157,12 @@ def iter_deprecations() -> tuple[Deprecation, ...]:
     return tuple(sorted(DEPRECATIONS.values(), key=lambda item: (item.removal_version or "", item.kind, item.target)))
 
 
-def get_deprecation(deprecation_id: str) -> Deprecation:
+def get_deprecation(deprecation_id: DeprecationId) -> Deprecation:
     """Return a registered deprecation by id."""
     return DEPRECATIONS[deprecation_id]
 
 
-def warn_deprecated(deprecation_id: str, *, stacklevel: int = 2, details: str | None = None) -> None:
+def warn_deprecated(deprecation_id: DeprecationId, *, stacklevel: int = 2, details: str | None = None) -> None:
     """Emit a warning from the central registry."""
     deprecation = get_deprecation(deprecation_id)
     message = deprecation.message if details is None else f"{deprecation.message} {details}"
@@ -161,7 +173,7 @@ def warn_deprecated(deprecation_id: str, *, stacklevel: int = 2, details: str | 
     )
 
 
-def deprecation_message(deprecation_id: str) -> str:
+def deprecation_message(deprecation_id: DeprecationId) -> str:
     """Return the user-facing message for a deprecation."""
     return get_deprecation(deprecation_id).message
 
