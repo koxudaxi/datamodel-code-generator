@@ -5131,6 +5131,27 @@ def test_main_jsonschema_dependent_schema_property_names_intersection(output_fil
     )
 
 
+def test_main_jsonschema_dependent_schema_conditional_required_intersection(output_file: Path) -> None:
+    """Test active dependent schemas merge statically active conditional requirements."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dependent_schema_conditional_required_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="dependent_schema_conditional_required_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="dependent_schema_conditional_required_intersection",
+        model_name="DependentSchemaConditionalRequiredIntersection",
+        valid_json='{"a":"x","b":"y","c":"z"}',
+        invalid_json='{"a":"x","b":"y"}',
+        expected_error_type="missing",
+    )
+
+
 def test_main_jsonschema_conditional_schema_intersection(output_file: Path) -> None:
     """Test statically true conditional schemas intersect generated object constraints."""
     run_main_and_assert(

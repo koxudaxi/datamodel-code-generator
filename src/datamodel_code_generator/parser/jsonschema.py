@@ -3509,8 +3509,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if dependency is False:
                 cls._raise_object_constraint_conflict()
             if isinstance(dependency, dict):
-                cls._merge_raw_active_dependent_schema(schema_dict, dependency)
-            dependency_required = cls._raw_dependency_required_names(dependency)
+                if cls._merge_raw_active_dependent_schema(schema_dict, dependency):
+                    added = True
+                dependency_required = []
+            else:
+                dependency_required = cls._raw_dependency_required_names(dependency)
             for required_name in dependency_required:
                 if required_name not in required_names:
                     required.append(required_name)
@@ -3556,8 +3559,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 if dependency is False:
                     cls._raise_object_constraint_conflict()
                 if isinstance(dependency, dict):
-                    cls._merge_raw_active_dependent_schema(schema_dict, dependency)
-                for required_name in cls._raw_dependency_required_names(dependency):
+                    if cls._merge_raw_active_dependent_schema(schema_dict, dependency):
+                        added = True
+                    dependency_required = []
+                else:
+                    dependency_required = cls._raw_dependency_required_names(dependency)
+                for required_name in dependency_required:
                     if required_name not in required_names:
                         required.append(required_name)
                         required_names.add(required_name)
@@ -3726,7 +3733,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     @classmethod
     def _merge_raw_active_dependent_schema(  # noqa: PLR0912
         cls, schema_dict: dict[Any, Any], dependency: dict[Any, Any]
-    ) -> None:
+    ) -> bool:
+        added_required = cls._add_raw_required_names(schema_dict, dependency.get("required"))
+
         dependency_type = dependency.get("type")
         if dependency_type is not None and not cls._raw_type_accepts_object(dependency_type):
             cls._raise_object_constraint_conflict()
@@ -3768,6 +3777,47 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 schema_dict.get("additionalProperties", True),
                 dependency["additionalProperties"],
             )
+
+        if "if" in dependency:
+            active_schema = cls._get_raw_active_conditional_schema(
+                cls._raw_active_dependent_conditional_schema(schema_dict, dependency)
+            )
+            if active_schema is False:
+                cls._raise_object_constraint_conflict()
+            if isinstance(active_schema, dict):
+                added_required = cls._merge_raw_active_dependent_schema(schema_dict, active_schema) or added_required
+
+        return added_required
+
+    @classmethod
+    def _raw_active_dependent_conditional_schema(
+        cls,
+        schema_dict: dict[Any, Any],
+        dependency: dict[Any, Any],
+    ) -> dict[Any, Any]:
+        conditional_schema = {**schema_dict, **dependency}
+        parent_required = schema_dict.get("required")
+        dependency_required = dependency.get("required")
+        if isinstance(parent_required, list) and isinstance(dependency_required, list):
+            conditional_schema["required"] = list(dict.fromkeys([*parent_required, *dependency_required]))
+        return conditional_schema
+
+    @classmethod
+    def _add_raw_required_names(cls, schema_dict: dict[Any, Any], value: Any) -> bool:
+        required_names = cls._raw_dependency_required_names({"required": value})
+        if not required_names:
+            return False
+        required = schema_dict.setdefault("required", [])
+        if not isinstance(required, list):
+            return False
+        existing_required_names = {name for name in required if isinstance(name, str)}
+        added = False
+        for required_name in required_names:
+            if required_name not in existing_required_names:
+                required.append(required_name)
+                existing_required_names.add(required_name)
+                added = True
+        return added
 
     @classmethod
     def _merge_raw_property_names_intersection(cls, left: Any, right: Any) -> Any:
