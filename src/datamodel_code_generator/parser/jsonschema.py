@@ -3639,6 +3639,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         name: str,
         pattern_properties: dict[str, JsonSchemaObject | bool],
         path: list[str],
+        *,
+        property_names: JsonSchemaObject | bool | None = None,
     ) -> DataType:
         """Parse patternProperties into a dict data type with regex keys."""
         pattern_value_pairs: list[tuple[str, DataType]] = []
@@ -3672,20 +3674,62 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         data_types: list[DataType] = []
         for patterns, value_type in groups.values():
             merged_pattern = patterns[0] if len(patterns) == 1 else "|".join(patterns)
+            key_type = self.data_type_manager.get_data_type(
+                Types.string,
+                pattern=merged_pattern,
+            )
+            if isinstance(property_names, JsonSchemaObject):
+                merged_property_names = property_names.model_copy(deep=True)
+                merged_property_names.type = "string"
+                merged_property_names.pattern = (
+                    merged_pattern
+                    if merged_property_names.pattern is None
+                    else self._intersect_constraint("pattern", merged_property_names.pattern, merged_pattern)
+                )
+                if merged_property_names.ref:
+                    merged_property_names = self._merge_ref_with_schema(merged_property_names)
+                key_type = self._parse_property_name_key_schema(merged_property_names)
             data_types.append(
                 self.data_type(
                     data_types=[value_type],
                     is_dict=True,
-                    dict_key=self.data_type_manager.get_data_type(
-                        Types.string,
-                        pattern=merged_pattern,
-                    ),
+                    dict_key=key_type,
                 )
             )
 
         return self.data_type(data_types=data_types)
 
-    def parse_property_names(  # noqa: PLR0912
+    def _parse_property_name_key_schema(  # noqa: PLR0911
+        self,
+        property_names: JsonSchemaObject | bool,  # noqa: FBT001
+    ) -> DataType:
+        if isinstance(property_names, bool):
+            return self.data_type_manager.get_data_type(Types.string)
+        if property_names.ref:
+            return self.get_ref_data_type(property_names.ref)
+        if property_names.enum:
+            string_enums = [value for value in property_names.enum if isinstance(value, str)]
+            if string_enums:
+                return self.data_type(literals=string_enums)
+            return self.data_type_manager.get_data_type(Types.string)
+        if isinstance(property_names.extras.get("const"), str):
+            return self.data_type(literals=[property_names.extras["const"]])
+        if (
+            property_names.pattern is not None
+            or property_names.minLength is not None
+            or property_names.maxLength is not None
+        ):
+            kwargs: dict[str, Any] = {}
+            if property_names.pattern:
+                kwargs["pattern"] = property_names.pattern
+            if property_names.minLength is not None:
+                kwargs["minLength"] = property_names.minLength
+            if property_names.maxLength is not None:
+                kwargs["maxLength"] = property_names.maxLength
+            return self.data_type_manager.get_data_type(Types.string, **kwargs)
+        return self.data_type_manager.get_data_type(Types.string)
+
+    def parse_property_names(
         self,
         name: str,
         property_names: JsonSchemaObject | bool,  # noqa: FBT001
@@ -3715,50 +3759,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         else:
             value_type = self.data_type_manager.get_data_type(Types.any)
 
-        if isinstance(property_names, bool):
-            key_type = self.data_type_manager.get_data_type(Types.string)
-        # Case 1: $ref -> resolve reference directly (most common case for refs)
-        elif property_names.ref:
-            key_type = self.get_ref_data_type(property_names.ref)
-        # Case 2: composite types (anyOf/oneOf/allOf) -> delegate to parse_item
-        elif property_names.anyOf or property_names.oneOf or property_names.allOf:
+        if isinstance(property_names, JsonSchemaObject) and (
+            property_names.anyOf or property_names.oneOf or property_names.allOf
+        ):
             key_type = self.parse_item(
                 name,
                 property_names,
                 get_special_path("propertyNames/key", path),
             )
-        # Case 3: enum constraint -> Literal type
-        elif property_names.enum:
-            # Filter to only string values (property names must be strings)
-            string_enums = [e for e in property_names.enum if isinstance(e, str)]
-            if string_enums:
-                key_type = self.data_type(literals=string_enums)
-            else:
-                key_type = self.data_type_manager.get_data_type(Types.string)
-        # Case 4: const string constraint -> Literal key type
-        elif isinstance(property_names.extras.get("const"), str):
-            key_type = self.data_type(literals=[property_names.extras["const"]])
-        # Case 5: pattern/minLength/maxLength constraints -> constr type
-        elif (
-            property_names.pattern is not None
-            or property_names.minLength is not None
-            or property_names.maxLength is not None
-        ):
-            kwargs: dict[str, Any] = {}
-            if property_names.pattern:
-                kwargs["pattern"] = property_names.pattern
-            if property_names.minLength is not None:
-                kwargs["minLength"] = property_names.minLength
-            if property_names.maxLength is not None:
-                kwargs["maxLength"] = property_names.maxLength
-
-            key_type = self.data_type_manager.get_data_type(
-                Types.string,
-                **kwargs,
-            )
-        # Case 6: No specific constraints -> plain str
         else:
-            key_type = self.data_type_manager.get_data_type(Types.string)
+            key_type = self._parse_property_name_key_schema(property_names)
 
         dict_flags: dict[str, bool] = {"is_dict": True}
         if parent_obj:  # pragma: no branch
@@ -3939,7 +3949,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return self.parse_object(name, item, object_path, singular_name=singular_name)
             if item.patternProperties:
                 # support only single key dict.
-                return self.parse_pattern_properties(name, item.patternProperties, object_path)
+                return self.parse_pattern_properties(
+                    name, item.patternProperties, object_path, property_names=item.propertyNames
+                )
             if item.propertyNames is not None:
                 return self.parse_property_names(
                     name, item.propertyNames, item.additionalProperties, object_path, parent_obj=item
@@ -4202,7 +4214,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if data_type is None:  # pragma: no cover
                 data_type = self.data_type_manager.get_data_type(Types.any)
         elif obj.patternProperties:
-            data_type = self.parse_pattern_properties(name, obj.patternProperties, path)
+            data_type = self.parse_pattern_properties(
+                name, obj.patternProperties, path, property_names=obj.propertyNames
+            )
         elif obj.propertyNames is not None:
             data_type = self.parse_property_names(
                 name, obj.propertyNames, obj.additionalProperties, path, parent_obj=obj

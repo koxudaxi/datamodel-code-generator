@@ -4353,6 +4353,68 @@ def test_main_jsonschema_property_names_pattern_field_constraints(output_file: P
     )
 
 
+def test_main_jsonschema_property_names_pattern_properties_intersection(output_file: Path) -> None:
+    """Test propertyNames constraints also apply to patternProperties keys."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_pattern_properties_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_pattern_properties_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_pattern_properties_intersection",
+        model_name="PropertyNamesPatternPropertiesIntersection",
+        valid_json='{"scores":{"x_ok":1}}',
+        invalid_json='{"scores":{"x_":1}}',
+        expected_error_type="string_too_short",
+        expected_attribute_path=("scores",),
+        expected_attribute_value={"x_ok": 1},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_pattern_properties_intersection",
+        model_name="PropertyNamesPatternPropertiesIntersection",
+        valid_json='{"scores":{"x_ok":1}}',
+        invalid_json='{"scores":{"y_ok":1}}',
+        expected_error_type="string_pattern_mismatch",
+    )
+
+
+def test_main_jsonschema_property_names_ref_pattern_properties_intersection(output_file: Path) -> None:
+    """Test referenced propertyNames constraints also apply to patternProperties keys."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_ref_pattern_properties_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_ref_pattern_properties_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_ref_pattern_properties_intersection",
+        model_name="PropertyNamesRefPatternPropertiesIntersection",
+        valid_json='{"scores":{"x_ok":1}}',
+        invalid_json='{"scores":{"x_":1}}',
+        expected_error_type="string_too_short",
+        expected_attribute_path=("scores",),
+        expected_attribute_value={"x_ok": 1},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_ref_pattern_properties_intersection",
+        model_name="PropertyNamesRefPatternPropertiesIntersection",
+        valid_json='{"scores":{"x_ok":1}}',
+        invalid_json='{"scores":{"y_ok":1}}',
+        expected_error_type="string_pattern_mismatch",
+    )
+
+
 def test_main_jsonschema_property_names_enum(output_file: Path) -> None:
     """Test propertyNames with enum constraint generates dict with Literal key."""
     run_main_and_assert(
