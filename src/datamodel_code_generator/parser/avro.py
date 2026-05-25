@@ -28,6 +28,7 @@ JsonSchema = dict[str, Any]
 PRIMITIVE_TYPES = frozenset({"null", "boolean", "int", "long", "float", "double", "bytes", "string"})
 NAMED_TYPES = frozenset({"record", "enum", "fixed"})
 COMPLEX_TYPES = NAMED_TYPES | {"array", "map"}
+JSON_SCHEMA_MARKER_KEYS = frozenset({"$schema", "$defs", "definitions", "properties", "allOf", "anyOf", "oneOf"})
 
 STRING_SCHEMA: JsonSchema = {"type": "string"}
 NULL_SCHEMA: JsonSchema = {"type": "null"}
@@ -46,34 +47,44 @@ PRIMITIVE_SCHEMAS: dict[str, JsonSchema] = {
 }
 
 
-def _is_avro_union_item(item: YamlValue) -> bool:  # noqa: PLR0911
-    if isinstance(item, str):
-        return item in PRIMITIVE_TYPES or "." in item
-    if isinstance(item, list):
-        return bool(item) and all(_is_avro_union_item(child) for child in item)
-    if not isinstance(item, dict):
-        return False
+def _is_avro_union_item(item: YamlValue) -> bool:
+    match item:
+        case str() as type_name:
+            result = type_name in PRIMITIVE_TYPES or "." in type_name
+        case [*_] as union:
+            result = _is_avro_union(union)
+        case {"type": [*_] as union}:
+            result = _is_avro_union(union)
+        case {"type": dict() as nested_schema}:
+            result = _is_avro_union_item(nested_schema)
+        case {"type": str() as type_name}:
+            result = _is_avro_typed_schema(item, type_name) or "." in type_name
+        case _:
+            result = False
+    return result
 
-    type_value = item.get("type")
-    if isinstance(type_value, list):
-        return bool(type_value) and all(_is_avro_union_item(child) for child in type_value)
-    if isinstance(type_value, dict):
-        return _is_avro_union_item(type_value)
-    if not isinstance(type_value, str):
-        return False
-    if type_value in PRIMITIVE_TYPES:
-        return True
-    if type_value == "record":
-        return isinstance(item.get("name"), str) and isinstance(item.get("fields"), list)
-    if type_value == "enum":
-        return isinstance(item.get("name"), str) and isinstance(item.get("symbols"), list)
-    if type_value == "fixed":
-        return isinstance(item.get("name"), str) and isinstance(item.get("size"), int)
-    if type_value == "array":
-        return "items" in item
-    if type_value == "map":
-        return "values" in item
-    return "." in type_value
+
+def _is_avro_union(union: list[YamlValue]) -> bool:
+    return bool(union) and all(_is_avro_union_item(child) for child in union)
+
+
+def _is_avro_typed_schema(schema: JsonSchema, type_name: str) -> bool:
+    match type_name:
+        case type_name if type_name in PRIMITIVE_TYPES:
+            result = True
+        case "record":
+            result = isinstance(schema.get("name"), str) and isinstance(schema.get("fields"), list)
+        case "enum":
+            result = isinstance(schema.get("name"), str) and isinstance(schema.get("symbols"), list)
+        case "fixed":
+            result = isinstance(schema.get("name"), str) and isinstance(schema.get("size"), int)
+        case "array":
+            result = "items" in schema
+        case "map":
+            result = "values" in schema
+        case _:
+            result = False
+    return result
 
 
 class _Name(NamedTuple):
@@ -82,34 +93,32 @@ class _Name(NamedTuple):
     name: str
 
 
-def is_avro_schema_data(data: YamlValue) -> bool:  # noqa: PLR0911
+def is_avro_schema_data(data: YamlValue) -> bool:
     """Return whether loaded data appears to be an Avro schema."""
-    if isinstance(data, list):
-        return bool(data) and all(_is_avro_union_item(item) for item in data)
-    if not isinstance(data, dict):
-        return isinstance(data, str) and data in PRIMITIVE_TYPES
+    match data:
+        case [*_] as union:
+            return _is_avro_union(union)
+        case str() as type_name:
+            return type_name in PRIMITIVE_TYPES
+        case dict() as schema if not any(key in schema for key in JSON_SCHEMA_MARKER_KEYS):
+            return _is_avro_schema_object(schema)
+        case _:
+            return False
 
-    if any(key in data for key in ("$schema", "$defs", "definitions", "properties", "allOf", "anyOf", "oneOf")):
-        return False
 
-    type_value = data.get("type")
-    if isinstance(type_value, list):
-        return False
-    if isinstance(type_value, dict):
-        return is_avro_schema_data(type_value)
-    if not isinstance(type_value, str):
-        return False
-    if type_value == "record":
-        return isinstance(data.get("name"), str) and isinstance(data.get("fields"), list)
-    if type_value == "enum":
-        return isinstance(data.get("name"), str) and isinstance(data.get("symbols"), list)
-    if type_value == "fixed":
-        return isinstance(data.get("name"), str) and isinstance(data.get("size"), int)
-    if type_value == "map":
-        return "values" in data
-    if type_value in PRIMITIVE_TYPES:
-        return any(key in data for key in ("logicalType", "namespace", "aliases"))
-    return type_value not in COMPLEX_TYPES and "." in type_value
+def _is_avro_schema_object(schema: JsonSchema) -> bool:
+    match schema.get("type"):
+        case [*_]:
+            result = False
+        case dict() as nested_schema:
+            result = is_avro_schema_data(nested_schema)
+        case str() as type_name if type_name in PRIMITIVE_TYPES:
+            result = any(key in schema for key in ("logicalType", "namespace", "aliases"))
+        case str() as type_name:
+            result = _is_avro_typed_schema(schema, type_name) or (type_name not in COMPLEX_TYPES and "." in type_name)
+        case _:
+            result = False
+    return result
 
 
 def _copy_schema(schema: JsonSchema) -> JsonSchema:
@@ -146,51 +155,62 @@ class _AvroSchemaConverter:
         schema.setdefault("$schema", "http://json-schema.org/draft-07/schema#")
         return cast("dict[str, YamlValue]", schema)
 
-    def _collect_named_schemas(self, schema: YamlValue, namespace: str | None = None) -> None:  # noqa: PLR0912
-        if isinstance(schema, str):
-            return
-        if isinstance(schema, list):
-            for item in schema:
-                self._collect_named_schemas(item, namespace)
-            return
-        if not isinstance(schema, dict):
-            return
+    def _collect_named_schemas(self, schema: YamlValue, namespace: str | None = None) -> None:
+        match schema:
+            case [*_] as union:
+                self._collect_schema_items(union, namespace)
+                return
+            case dict() as schema:
+                pass
+            case _:
+                return
 
         type_value = schema.get("type")
-        if isinstance(type_value, list):
-            self._collect_named_schemas(type_value, namespace)
-            return
-        if isinstance(type_value, dict):
-            self._collect_named_schemas(type_value, namespace)
-            return
+        match type_value:
+            case [*_] as union:
+                self._collect_schema_items(union, namespace)
+                return
+            case dict() as nested_schema:
+                self._collect_named_schemas(nested_schema, namespace)
+                return
+            case str() as type_name:
+                child_namespace = self._register_named_schema(schema, type_name, namespace)
+                self._collect_schema_children(schema, type_name, child_namespace)
 
-        child_namespace = namespace
-        if isinstance(type_value, str) and type_value in NAMED_TYPES:
-            name = schema.get("name")
-            if not isinstance(name, str):
-                msg = f"Avro {type_value} schema requires a string name"
-                raise Error(msg)
-            name_info = self._make_name(name, schema.get("namespace"), namespace)
-            existing = self.named_schemas.get(name_info.fullname)
-            if existing is not None and existing is not schema:
-                msg = f"Duplicate Avro named type: {name_info.fullname}"
-                raise Error(msg)
-            self.named_schemas[name_info.fullname] = schema
-            self.names[name_info.fullname] = name_info
-            child_namespace = name_info.namespace
+    def _collect_schema_items(self, schemas: list[YamlValue], namespace: str | None) -> None:
+        for schema in schemas:
+            self._collect_named_schemas(schema, namespace)
 
-        if type_value == "record":
-            fields = schema.get("fields", [])
-            if not isinstance(fields, list):
-                msg = f"Avro record fields must be a list: {schema.get('name')}"
-                raise Error(msg)
-            for field in fields:
-                if isinstance(field, dict):
-                    self._collect_named_schemas(field.get("type"), child_namespace)
-        elif type_value == "array":
-            self._collect_named_schemas(schema.get("items"), child_namespace)
-        elif type_value == "map":
-            self._collect_named_schemas(schema.get("values"), child_namespace)
+    def _register_named_schema(self, schema: JsonSchema, type_name: str, namespace: str | None) -> str | None:
+        if type_name not in NAMED_TYPES:
+            return namespace
+
+        name = schema.get("name")
+        if not isinstance(name, str):
+            msg = f"Avro {type_name} schema requires a string name"
+            raise Error(msg)
+        name_info = self._make_name(name, schema.get("namespace"), namespace)
+        if (existing := self.named_schemas.get(name_info.fullname)) is not None and existing is not schema:
+            msg = f"Duplicate Avro named type: {name_info.fullname}"
+            raise Error(msg)
+        self.named_schemas[name_info.fullname] = schema
+        self.names[name_info.fullname] = name_info
+        return name_info.namespace
+
+    def _collect_schema_children(self, schema: JsonSchema, type_name: str, namespace: str | None) -> None:
+        match type_name:
+            case "record":
+                fields = schema.get("fields", [])
+                if not isinstance(fields, list):
+                    msg = f"Avro record fields must be a list: {schema.get('name')}"
+                    raise Error(msg)
+                for field in fields:
+                    if isinstance(field, dict):
+                        self._collect_named_schemas(field.get("type"), namespace)
+            case "array":
+                self._collect_named_schemas(schema.get("items"), namespace)
+            case "map":
+                self._collect_named_schemas(schema.get("values"), namespace)
 
     def _prepare_definition_names(self) -> None:
         fullnames_by_local: dict[str, list[str]] = {}
@@ -201,10 +221,11 @@ class _AvroSchemaConverter:
         for local, fullnames in sorted(fullnames_by_local.items()):
             for fullname in sorted(fullnames):
                 name_info = self.names[fullname]
-                if len(fullnames) == 1:
-                    name = _to_class_title(local)
-                else:
-                    name = f"{_namespace_name(name_info.namespace)}{_to_class_title(local)}"
+                name = (
+                    _to_class_title(local)
+                    if len(fullnames) == 1
+                    else f"{_namespace_name(name_info.namespace)}{_to_class_title(local)}"
+                )
                 candidate = name
                 suffix = 2
                 while candidate in used_names:
@@ -213,68 +234,71 @@ class _AvroSchemaConverter:
                 self.definition_names[fullname] = candidate
                 used_names.add(candidate)
 
-    def _convert_schema(  # noqa: PLR0911, PLR0912
+    def _convert_schema(
         self,
         schema: YamlValue,
         namespace: str | None,
         *,
         root: bool = False,
     ) -> JsonSchema:
-        if isinstance(schema, str):
-            return self._convert_type_name(schema, namespace)
-        if isinstance(schema, list):
-            return self._convert_union(schema, namespace)
-        if not isinstance(schema, dict):
-            msg = f"Unsupported Avro schema value: {schema!r}"
-            raise Error(msg)
+        match schema:
+            case str() as type_name:
+                return self._convert_type_name(type_name, namespace)
+            case [*_] as union:
+                return self._convert_union(union, namespace)
+            case dict() as schema:
+                pass
+            case _:
+                msg = f"Unsupported Avro schema value: {schema!r}"
+                raise Error(msg)
 
-        type_value = schema.get("type")
-        if isinstance(type_value, list):
-            converted = self._convert_union(type_value, namespace)
-            self._copy_common_metadata(schema, converted)
-            return converted
-        if isinstance(type_value, dict):
-            converted = self._convert_schema(type_value, namespace, root=root)
-            self._copy_common_metadata(schema, converted)
-            return converted
-        if not isinstance(type_value, str):
-            msg = f"Avro schema object requires a string, object, or union type: {schema!r}"
-            raise Error(msg)
+        match schema.get("type"):
+            case [*_] as union:
+                converted = self._convert_union(union, namespace)
+                self._copy_common_metadata(schema, converted)
+                return converted
+            case dict() as nested_schema:
+                converted = self._convert_schema(nested_schema, namespace, root=root)
+                self._copy_common_metadata(schema, converted)
+                return converted
+            case str() as type_name:
+                return self._convert_schema_object(schema, type_name, namespace, root=root)
+            case _:
+                msg = f"Avro schema object requires a string, object, or union type: {schema!r}"
+                raise Error(msg)
 
-        if type_value in PRIMITIVE_TYPES:
-            converted = _copy_schema(PRIMITIVE_SCHEMAS[type_value])
-            self._copy_common_metadata(schema, converted)
-            return self._apply_logical_type(schema, converted, avro_type=type_value)
-        if type_value == "record":
-            fullname = self._fullname_from_named_schema(schema, namespace)
-            if root:
-                return self._build_definition(fullname, as_root=True)
-            self._ensure_definition(fullname)
-            return {"$ref": self._ref(fullname)}
-        if type_value == "enum":
-            fullname = self._fullname_from_named_schema(schema, namespace)
-            if root:
-                return self._build_definition(fullname, as_root=True)
-            self._ensure_definition(fullname)
-            return {"$ref": self._ref(fullname)}
-        if type_value == "array":
-            converted = {"type": "array", "items": self._convert_schema(schema.get("items"), namespace)}
-            self._copy_common_metadata(schema, converted)
-            return converted
-        if type_value == "map":
-            converted = {
-                "type": "object",
-                "additionalProperties": self._convert_schema(schema.get("values"), namespace),
-            }
-            self._copy_common_metadata(schema, converted)
-            return converted
-        if type_value == "fixed":
-            fullname = self._fullname_from_named_schema(schema, namespace)
-            if root:
-                return self._build_definition(fullname, as_root=True)
-            self._ensure_definition(fullname)
-            return {"$ref": self._ref(fullname)}
-        return self._convert_type_name(type_value, namespace)
+    def _convert_schema_object(
+        self,
+        schema: JsonSchema,
+        type_name: str,
+        namespace: str | None,
+        *,
+        root: bool,
+    ) -> JsonSchema:
+        match type_name:
+            case type_name if type_name in PRIMITIVE_TYPES:
+                converted = _copy_schema(PRIMITIVE_SCHEMAS[type_name])
+                self._copy_common_metadata(schema, converted)
+                return self._apply_logical_type(schema, converted, avro_type=type_name)
+            case "record" | "enum" | "fixed":
+                fullname = self._fullname_from_named_schema(schema, namespace)
+                if root:
+                    return self._build_definition(fullname, as_root=True)
+                self._ensure_definition(fullname)
+                return {"$ref": self._ref(fullname)}
+            case "array":
+                converted = {"type": "array", "items": self._convert_schema(schema.get("items"), namespace)}
+                self._copy_common_metadata(schema, converted)
+                return converted
+            case "map":
+                converted = {
+                    "type": "object",
+                    "additionalProperties": self._convert_schema(schema.get("values"), namespace),
+                }
+                self._copy_common_metadata(schema, converted)
+                return converted
+            case _:
+                return self._convert_type_name(type_name, namespace)
 
     def _convert_type_name(self, name: str, namespace: str | None) -> JsonSchema:
         if name in PRIMITIVE_TYPES:
@@ -405,12 +429,12 @@ class _AvroSchemaConverter:
 
     @staticmethod
     def _copy_common_metadata(source: JsonSchema, target: JsonSchema) -> None:
-        if isinstance(source.get("doc"), str):
-            target["description"] = source["doc"]
+        if isinstance(doc := source.get("doc"), str):
+            target["description"] = doc
         if "aliases" in source:
             target["x-avro-aliases"] = source["aliases"]
-        if isinstance(source.get("logicalType"), str):
-            target["x-avro-logicalType"] = source["logicalType"]
+        if isinstance(logical_type := source.get("logicalType"), str):
+            target["x-avro-logicalType"] = logical_type
 
     def _apply_logical_type(self, source: JsonSchema, target: JsonSchema, *, avro_type: str) -> JsonSchema:
         logical_type = source.get("logicalType")
@@ -474,10 +498,8 @@ class _AvroSchemaConverter:
             return name
         if "." in name:
             return name
-        if namespace:
-            namespaced = f"{namespace}.{name}"
-            if namespaced in self.named_schemas:
-                return namespaced
+        if namespace and (namespaced := f"{namespace}.{name}") in self.named_schemas:
+            return namespaced
         return name
 
     def _ref(self, fullname: str) -> str:
