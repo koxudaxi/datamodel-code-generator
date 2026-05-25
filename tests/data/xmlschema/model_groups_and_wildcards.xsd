@@ -13,7 +13,7 @@
 
   <xs:group name="tagGroup">
     <xs:sequence>
-      <xs:element name="tag" type="xs:string"/>
+      <xs:element name="tag" type="xs:string" maxOccurs="3"/>
     </xs:sequence>
   </xs:group>
 
@@ -29,6 +29,9 @@
             <xs:element name="message" type="xs:string" default="ready" nillable="true"/>
             <xs:group ref="tns:metricGroup"/>
           </xs:choice>
+        </xs:sequence>
+        <xs:sequence minOccurs="2" maxOccurs="3">
+          <xs:element name="segment" type="xs:string" minOccurs="2" maxOccurs="4"/>
         </xs:sequence>
         <xs:group ref="tns:tagGroup" minOccurs="0" maxOccurs="2"/>
         <xs:element name="status" type="xs:string" default="open" nillable="true" minOccurs="0"/>

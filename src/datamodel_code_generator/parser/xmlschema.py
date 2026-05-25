@@ -10,7 +10,7 @@ import copy
 import io
 import re
 from pathlib import Path  # noqa: TC003 - used by runtime path resolution
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, NamedTuple, cast
 from xml.etree import ElementTree as ET  # noqa: S405
 
 from typing_extensions import Unpack
@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 XML_SCHEMA_NAMESPACE = "http://www.w3.org/2001/XMLSchema"
 XML_SCHEMA_TAG = f"{{{XML_SCHEMA_NAMESPACE}}}schema"
 UNBOUNDED = "unbounded"
+INTERNAL_OCCURS_ARRAY = "x-xsd-occurs-array"
 
 JsonSchema = dict[str, Any]
 QNameKey = tuple[str | None, str]
@@ -39,6 +40,16 @@ STRING_SCHEMA: JsonSchema = {"type": "string"}
 INTEGER_SCHEMA: JsonSchema = {"type": "integer"}
 NUMBER_SCHEMA: JsonSchema = {"type": "number"}
 BOOLEAN_SCHEMA: JsonSchema = {"type": "boolean"}
+
+
+class _OccurrenceContext(NamedTuple):
+    required: bool = True
+    repeating: bool = False
+    min_items: int | None = None
+    max_items: int | None = None
+
+
+DEFAULT_OCCURRENCE = _OccurrenceContext()
 
 BUILTIN_TYPE_SCHEMAS: dict[str, JsonSchema] = {
     "anySimpleType": {},
@@ -223,6 +234,7 @@ class _XMLSchemaConverter:
         if self._definitions:
             schema["definitions"] = self._definitions
         schema.setdefault("$schema", "http://json-schema.org/draft-07/schema#")
+        self._strip_internal_metadata(schema)
         return schema
 
     def _parse_schema(self, text: str, source_path: Path) -> ET.Element:
@@ -444,6 +456,7 @@ class _XMLSchemaConverter:
             max_items = _safe_int(max_occurs)
             if max_items is not None:
                 array_schema["maxItems"] = max_items
+        array_schema[INTERNAL_OCCURS_ARRAY] = True
         return array_schema
 
     def _convert_simple_type(self, simple_type: ET.Element) -> JsonSchema:
@@ -600,26 +613,20 @@ class _XMLSchemaConverter:
         owner: ET.Element,
         schema: JsonSchema,
         *,
-        parent_required: bool = True,
-        parent_repeating: bool = False,
-        parent_max_items: int | None = None,
+        occurrence: _OccurrenceContext = DEFAULT_OCCURRENCE,
     ) -> None:
         for child in owner:
             if _is_xsd_element(child, "sequence", "all", "choice"):
                 self._apply_particle(
                     child,
                     schema,
-                    parent_required=parent_required,
-                    parent_repeating=parent_repeating,
-                    parent_max_items=parent_max_items,
+                    occurrence=occurrence,
                 )
             elif _is_xsd_element(child, "group"):
                 self._apply_group(
                     child,
                     schema,
-                    parent_required=parent_required,
-                    parent_repeating=parent_repeating,
-                    parent_max_items=parent_max_items,
+                    occurrence=occurrence,
                 )
 
     def _apply_particle(
@@ -627,40 +634,45 @@ class _XMLSchemaConverter:
         particle: ET.Element,
         schema: JsonSchema,
         *,
-        parent_required: bool,
-        parent_repeating: bool,
-        parent_max_items: int | None,
+        occurrence: _OccurrenceContext,
     ) -> None:
-        particle_required = (
-            parent_required and particle.get("minOccurs", "1") != "0" and _local_name(particle.tag) != "choice"
-        )
+        is_choice = _local_name(particle.tag) == "choice"
+        particle_required = occurrence.required and particle.get("minOccurs", "1") != "0" and not is_choice
         particle_repeating = self._is_repeating(particle)
-        repeating = parent_repeating or particle_repeating
-        max_items = self._combine_max_items(parent_max_items, particle.get("maxOccurs") if particle_repeating else None)
+        repeating = occurrence.repeating or particle_repeating
+        min_items = self._combine_min_items(
+            occurrence.min_items,
+            particle.get("minOccurs") if occurrence.min_items is not None or particle_repeating else None,
+        )
+        child_min_items = min_items if particle_required and not is_choice else None
+        max_items = self._combine_max_items(
+            occurrence.max_items,
+            particle.get("maxOccurs") if particle_repeating else None,
+        )
+        child_occurrence = _OccurrenceContext(
+            required=particle_required,
+            repeating=repeating,
+            min_items=child_min_items,
+            max_items=max_items,
+        )
         for child in particle:
             if _is_xsd_element(child, "element"):
                 self._add_property_from_element(
                     child,
                     schema,
-                    required=particle_required,
-                    repeating=repeating,
-                    max_items=max_items,
+                    occurrence=child_occurrence,
                 )
             elif _is_xsd_element(child, "sequence", "all", "choice"):
                 self._apply_particle(
                     child,
                     schema,
-                    parent_required=particle_required,
-                    parent_repeating=repeating,
-                    parent_max_items=max_items,
+                    occurrence=child_occurrence,
                 )
             elif _is_xsd_element(child, "group"):
                 self._apply_group(
                     child,
                     schema,
-                    parent_required=particle_required,
-                    parent_repeating=repeating,
-                    parent_max_items=max_items,
+                    occurrence=child_occurrence,
                 )
             elif _is_xsd_element(child, "any"):
                 schema["additionalProperties"] = True
@@ -670,22 +682,29 @@ class _XMLSchemaConverter:
         group: ET.Element,
         schema: JsonSchema,
         *,
-        parent_required: bool,
-        parent_repeating: bool,
-        parent_max_items: int | None,
+        occurrence: _OccurrenceContext,
     ) -> None:
-        group_required = parent_required and group.get("minOccurs", "1") != "0"
+        group_required = occurrence.required and group.get("minOccurs", "1") != "0"
         group_repeating = self._is_repeating(group)
-        repeating = parent_repeating or group_repeating
-        max_items = self._combine_max_items(parent_max_items, group.get("maxOccurs") if group_repeating else None)
+        repeating = occurrence.repeating or group_repeating
+        min_items = self._combine_min_items(
+            occurrence.min_items,
+            group.get("minOccurs") if occurrence.min_items is not None or group_repeating else None,
+        )
+        child_min_items = min_items if group_required else None
+        max_items = self._combine_max_items(occurrence.max_items, group.get("maxOccurs") if group_repeating else None)
+        child_occurrence = _OccurrenceContext(
+            required=group_required,
+            repeating=repeating,
+            min_items=child_min_items,
+            max_items=max_items,
+        )
         ref = group.get("ref")
         if not ref:
             self._apply_particle(
                 group,
                 schema,
-                parent_required=group_required,
-                parent_repeating=repeating,
-                parent_max_items=max_items,
+                occurrence=child_occurrence,
             )
             return
         target = self.groups.get(self._resolve_key(ref, self.groups, element=group))
@@ -693,9 +712,7 @@ class _XMLSchemaConverter:
             self._apply_model_group(
                 target,
                 schema,
-                parent_required=group_required,
-                parent_repeating=repeating,
-                parent_max_items=max_items,
+                occurrence=child_occurrence,
             )
 
     def _add_property_from_element(
@@ -703,21 +720,21 @@ class _XMLSchemaConverter:
         element: ET.Element,
         schema: JsonSchema,
         *,
-        required: bool,
-        repeating: bool,
-        max_items: int | None,
+        occurrence: _OccurrenceContext,
     ) -> None:
         name = element.get("name") or _local_name(element.get("ref", ""))
         if not name:
             return
         properties = schema.setdefault("properties", {})
         property_schema = self._convert_element(element)
-        if repeating and property_schema.get("type") != "array":
-            property_schema = {"type": "array", "items": property_schema}
-            if max_items is not None:
-                property_schema["maxItems"] = max_items
+        if occurrence.repeating:
+            property_schema = self._repeat_property_schema(
+                property_schema,
+                min_items=occurrence.min_items,
+                max_items=occurrence.max_items,
+            )
         properties[name] = property_schema
-        if required and element.get("minOccurs", "1") != "0":
+        if occurrence.required and element.get("minOccurs", "1") != "0":
             schema.setdefault("required", []).append(name)
 
     def _apply_attributes(self, owner: ET.Element, schema: JsonSchema) -> None:
@@ -798,6 +815,45 @@ class _XMLSchemaConverter:
         if max_items is None:
             return parent_max_items
         return parent_max_items * max_items if parent_max_items is not None else max_items
+
+    def _combine_min_items(self, parent_min_items: int | None, min_occurs: str | None) -> int | None:  # noqa: PLR6301
+        if min_occurs is None:
+            return parent_min_items
+        min_items = _safe_int(min_occurs)
+        if min_items is None:
+            return parent_min_items
+        return parent_min_items * min_items if parent_min_items is not None else min_items
+
+    def _repeat_property_schema(
+        self,
+        schema: JsonSchema,
+        *,
+        min_items: int | None,
+        max_items: int | None,
+    ) -> JsonSchema:
+        if schema.get("type") != "array" or not schema.get(INTERNAL_OCCURS_ARRAY):
+            array_schema: JsonSchema = {"type": "array", "items": schema, INTERNAL_OCCURS_ARRAY: True}
+        else:
+            array_schema = _copy_schema(schema)
+        if min_items is not None:
+            self._set_repeated_bound(array_schema, "minItems", min_items)
+        if max_items is not None:
+            self._set_repeated_bound(array_schema, "maxItems", max_items)
+        return array_schema
+
+    @staticmethod
+    def _set_repeated_bound(schema: JsonSchema, key: str, value: int) -> None:
+        current = schema.get(key)
+        schema[key] = current * value if isinstance(current, int) else value
+
+    def _strip_internal_metadata(self, value: Any) -> None:
+        if isinstance(value, dict):
+            value.pop(INTERNAL_OCCURS_ARRAY, None)
+            for item in value.values():
+                self._strip_internal_metadata(item)
+        elif isinstance(value, list):
+            for item in value:
+                self._strip_internal_metadata(item)
 
     def _schema_for_qname(self, qname: str | None, element: ET.Element | None = None) -> JsonSchema:
         if not qname:  # pragma: no cover

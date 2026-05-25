@@ -44,7 +44,7 @@
     <xs:sequence minOccurs="0">
       <xs:group ref="optionalGroup"/>
     </xs:sequence>
-    <xs:sequence maxOccurs="2">
+    <xs:sequence minOccurs="bad" maxOccurs="2">
       <xs:group ref="badOccursGroup" maxOccurs="bad"/>
     </xs:sequence>
     <xs:sequence>
