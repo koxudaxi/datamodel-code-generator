@@ -619,35 +619,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         "patternProperties",
         "properties",
     )
-    _RAW_SCHEMA_DIRECT_NORMALIZATION_KEYS: ClassVar[frozenset[str]] = frozenset({
-        "additionalItems",
-        "allOf",
-        "anyOf",
-        "const",
-        "dependencies",
-        "dependentRequired",
-        "dependentSchemas",
-        "enum",
-        "exclusiveMaximum",
-        "exclusiveMinimum",
-        "maximum",
-        "maxContains",
-        "maxItems",
-        "maxLength",
-        "maxProperties",
-        "minimum",
-        "minContains",
-        "minItems",
-        "minLength",
-        "minProperties",
-        "multipleOf",
-        "nullable",
-        "oneOf",
-        "pattern",
-        "prefixItems",
-        "uniqueItems",
-    })
-
     COMPATIBLE_PYTHON_TYPES: ClassVar[dict[str, frozenset[str]]] = {
         "string": frozenset({"str", "String"}),
         "integer": frozenset({"int", "Integer"}),
@@ -2357,15 +2328,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         schema_dict["type"] = next(iter(non_null_types)) if len(non_null_types) == 1 else sorted(non_null_types)
 
     @classmethod
-    def _normalize_raw_schema_literal_constraints(  # noqa: PLR0912
+    def _normalize_raw_schema_literal_constraints(
         cls,
         raw: YamlValue,
         *,
         false_on_unsatisfiable: bool = False,
     ) -> YamlValue:
         if isinstance(raw, bool) or not isinstance(raw, dict):
-            return raw
-        if not cls._raw_schema_tree_needs_normalization(raw):
             return raw
 
         normalized = dict(raw)
@@ -2437,20 +2406,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             raise
 
         return normalized
-
-    @classmethod
-    def _raw_schema_tree_needs_normalization(cls, raw: YamlValue) -> bool:
-        if isinstance(raw, bool) or not isinstance(raw, dict):
-            return False
-        if cls._RAW_SCHEMA_DIRECT_NORMALIZATION_KEYS.intersection(raw):
-            return True
-
-        for key in cls._RAW_SCHEMA_CHILD_MAPPING_KEYS:
-            if isinstance(value := raw.get(key), dict) and any(
-                cls._raw_schema_tree_needs_normalization(child_value) for child_value in value.values()
-            ):
-                return True
-        return False
 
     @classmethod
     def _normalize_raw_anyof_literal_constraints(cls, schema_dict: dict[Any, Any]) -> None:
