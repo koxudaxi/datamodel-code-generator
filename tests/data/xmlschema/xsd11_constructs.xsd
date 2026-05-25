@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="https://example.com/xsd11"
+  targetNamespace="https://example.com/xsd11"
+>
+  <xs:defaultOpenContent mode="interleave">
+    <xs:any namespace="##other" processContents="lax"/>
+  </xs:defaultOpenContent>
+
+  <xs:complexType name="DefaultOpen">
+    <xs:sequence>
+      <xs:element name="known" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ClosedOpen">
+    <xs:openContent mode="none"/>
+    <xs:sequence>
+      <xs:element name="closedKnown" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ExplicitOpen">
+    <xs:openContent mode="suffix">
+      <xs:any namespace="##any" processContents="skip"/>
+    </xs:openContent>
+    <xs:sequence>
+      <xs:element name="explicitKnown" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="AlphaPayload">
+    <xs:sequence>
+      <xs:element name="alpha" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="BetaPayload">
+    <xs:sequence>
+      <xs:element name="beta" type="xs:int"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="document">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="defaultOpen" type="tns:DefaultOpen"/>
+        <xs:element name="closedOpen" type="tns:ClosedOpen"/>
+        <xs:element name="explicitOpen" type="tns:ExplicitOpen"/>
+        <xs:element name="payload">
+          <xs:alternative test="@kind = 'alpha'" type="tns:AlphaPayload"/>
+          <xs:alternative type="tns:BetaPayload"/>
+        </xs:element>
+        <xs:element name="typedAlternative" type="xs:string">
+          <xs:alternative test="@kind = 'alpha'" type="tns:AlphaPayload"/>
+        </xs:element>
+        <xs:element name="inlineSimpleAlternative">
+          <xs:alternative>
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="inline"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:alternative>
+        </xs:element>
+        <xs:element name="inlineComplexAlternative">
+          <xs:alternative>
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="inlineComplexValue" type="xs:string"/>
+              </xs:sequence>
+            </xs:complexType>
+          </xs:alternative>
+        </xs:element>
+        <xs:element name="emptyAlternative">
+          <xs:alternative/>
+        </xs:element>
+      </xs:sequence>
+      <xs:assert test="count(payload) = 1"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

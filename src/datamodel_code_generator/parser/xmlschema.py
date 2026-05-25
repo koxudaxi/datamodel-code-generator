@@ -181,6 +181,7 @@ class _XMLSchemaConverter:
         self.attributes: dict[QNameKey, ET.Element] = {}
         self.groups: dict[QNameKey, ET.Element] = {}
         self.attribute_groups: dict[QNameKey, ET.Element] = {}
+        self.default_open_content: ET.Element | None = None
         self.substitution_groups: dict[QNameKey, set[QNameKey]] = {}
         self.substitution_members: set[QNameKey] = set()
         self.referenced_elements: set[QNameKey] = set()
@@ -327,32 +328,32 @@ class _XMLSchemaConverter:
         is_root: bool = False,
         replace: bool = False,
     ) -> None:
+        if _is_xsd_element(child, "defaultOpenContent"):
+            self.default_open_content = child
+            return
         name = child.get("name")
         if not name:
             return
         key = (schema_namespace, name)
-        registry: dict[QNameKey, ET.Element] | None = None
-        match _local_name(child.tag):
-            case "simpleType":
-                registry = self.simple_types
-            case "complexType":
-                registry = self.complex_types
-            case "element":
-                registry = self.elements
-                if is_root:
-                    self.local_elements.add(key)
-                if substitution_group := child.get("substitutionGroup"):
-                    head_key = self._qname_key(substitution_group, child)
-                    self.substitution_groups.setdefault(head_key, set()).add(key)
-                    self.substitution_members.add(key)
-            case "attribute":
-                registry = self.attributes
-            case "group":
-                registry = self.groups
-            case "attributeGroup":
-                registry = self.attribute_groups
-            case _:
-                return
+        name_to_registry = {
+            "simpleType": self.simple_types,
+            "complexType": self.complex_types,
+            "element": self.elements,
+            "attribute": self.attributes,
+            "group": self.groups,
+            "attributeGroup": self.attribute_groups,
+        }
+        local_name = _local_name(child.tag)
+        registry = name_to_registry.get(local_name)
+        if registry is None:
+            return
+        if local_name == "element":
+            if is_root:
+                self.local_elements.add(key)
+            if substitution_group := child.get("substitutionGroup"):
+                head_key = self._qname_key(substitution_group, child)
+                self.substitution_groups.setdefault(head_key, set()).add(key)
+                self.substitution_members.add(key)
         if replace:
             registry[key] = child
         else:
@@ -453,8 +454,31 @@ class _XMLSchemaConverter:
         else:
             schema = {}
 
+        if alternative_schema := self._schema_for_alternatives(element, schema):
+            schema = alternative_schema
         schema = self._apply_common_element_metadata(element, _copy_schema(schema))
         return self._apply_occurs(element, schema)
+
+    def _schema_for_alternatives(self, element: ET.Element, fallback_schema: JsonSchema) -> JsonSchema | None:
+        schemas = [
+            schema
+            for alternative in _xsd_children(element, "alternative")
+            if (schema := self._convert_alternative(alternative))
+        ]
+        if not schemas:
+            return None
+        if fallback_schema and fallback_schema not in schemas:
+            schemas.append(fallback_schema)
+        return schemas[0] if len(schemas) == 1 else {"anyOf": schemas}
+
+    def _convert_alternative(self, alternative: ET.Element) -> JsonSchema:
+        if type_name := alternative.get("type"):
+            return self._schema_for_qname(type_name, alternative)
+        if (simple_type := _first_xsd_child(alternative, "simpleType")) is not None:
+            return self._convert_simple_type(simple_type)
+        if (complex_type := _first_xsd_child(alternative, "complexType")) is not None:
+            return self._convert_complex_type(complex_type)
+        return {}
 
     def _apply_common_element_metadata(self, element: ET.Element, schema: JsonSchema) -> JsonSchema:
         if documentation := _documentation(element):
@@ -602,6 +626,7 @@ class _XMLSchemaConverter:
             return self._convert_simple_content(simple_content, complex_type)
 
         schema: JsonSchema = {"type": "object", "properties": {}}
+        self._apply_open_content(complex_type, schema)
         self._apply_model_group(complex_type, schema)
         self._apply_attributes(complex_type, schema)
         self._apply_mixed_content(complex_type, schema)
@@ -615,6 +640,7 @@ class _XMLSchemaConverter:
             return self._convert_complex_type_without_content(owner)
 
         schema: JsonSchema = {"type": "object", "properties": {}}
+        self._apply_open_content(child, schema)
         self._apply_model_group(child, schema)
         self._apply_attributes(child, schema)
         self._apply_mixed_content(owner, schema)
@@ -624,10 +650,20 @@ class _XMLSchemaConverter:
 
     def _convert_complex_type_without_content(self, complex_type: ET.Element) -> JsonSchema:
         schema: JsonSchema = {"type": "object", "properties": {}}
+        self._apply_open_content(complex_type, schema)
         self._apply_model_group(complex_type, schema)
         self._apply_attributes(complex_type, schema)
         self._apply_mixed_content(complex_type, schema)
         return schema
+
+    def _apply_open_content(self, owner: ET.Element, schema: JsonSchema) -> None:
+        open_content = _first_xsd_child(owner, "openContent")
+        if open_content is not None:
+            if open_content.get("mode", "interleave") != "none" and _first_xsd_child(open_content, "any") is not None:
+                schema["additionalProperties"] = True
+            return
+        if self.default_open_content is not None and _first_xsd_child(self.default_open_content, "any") is not None:
+            schema["additionalProperties"] = True
 
     def _convert_simple_content(self, simple_content: ET.Element, owner: ET.Element) -> JsonSchema:
         child = _first_xsd_child(simple_content, "extension", "restriction")

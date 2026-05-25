@@ -172,6 +172,17 @@ def test_main_xmlschema_schema_composition(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_xsd11_constructs(output_file: Path) -> None:
+    """Generate models from XML Schema 1.1 open content and alternatives."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "xsd11_constructs.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_xmlschema_snippets,
+        expected_file="xsd11_constructs.py",
+    )
+
+
 def test_main_xmlschema_parse_error(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Report invalid XML Schema syntax through the CLI."""
     run_main_and_assert(

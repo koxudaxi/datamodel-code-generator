@@ -151,6 +151,32 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
         "overrideValue: OverriddenType",
         "newAttr: conint(ge=-2147483648, le=2147483647) | None = None",
     ),
+    "xsd11_constructs": (
+        "class DefaultOpen(BaseModel):",
+        "extra='allow'",
+        "known: str",
+        "class ClosedOpen(BaseModel):",
+        "closedKnown: str",
+        "class ExplicitOpen(BaseModel):",
+        "explicitKnown: str",
+        "class AlphaPayload(BaseModel):",
+        "alpha: str",
+        "class BetaPayload(BaseModel):",
+        "beta: conint(ge=-2147483648, le=2147483647)",
+        "class InlineSimpleAlternative(Enum):",
+        "inline = 'inline'",
+        "class InlineComplexAlternative(BaseModel):",
+        "inlineComplexValue: str",
+        "class Document(BaseModel):",
+        "defaultOpen: DefaultOpen",
+        "closedOpen: ClosedOpen",
+        "explicitOpen: ExplicitOpen",
+        "payload: AlphaPayload | BetaPayload",
+        "typedAlternative: AlphaPayload | str",
+        "inlineSimpleAlternative: InlineSimpleAlternative",
+        "inlineComplexAlternative: InlineComplexAlternative",
+        "emptyAlternative: Any",
+    ),
 }
 
 XMLSCHEMA_ABSENT_SNIPPETS: dict[str, tuple[str, ...]] = {
@@ -169,6 +195,7 @@ XMLSCHEMA_ABSENT_SNIPPETS: dict[str, tuple[str, ...]] = {
         "oldValue",
         "class HttpsExampleComSchemaCompositionChameleonType",
     ),
+    "xsd11_constructs": ("class ClosedOpen(BaseModel):\n    model_config",),
 }
 
 
