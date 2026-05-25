@@ -2501,10 +2501,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     @classmethod
     def _normalize_raw_oneof_string_length_constraints(cls, schema_dict: dict[Any, Any]) -> None:
-        if cls._type_values(schema_dict.get("type")) != {"string"} or any(
+        type_values = cls._type_values(schema_dict.get("type"))
+        if type_values not in ({"string"}, {"string", "null"}) or any(
             key in schema_dict for key in ("minLength", "maxLength")
         ):
             return
+        null_allowed = "null" in type_values
 
         one_of = schema_dict.get("oneOf")
         if not isinstance(one_of, list) or len(one_of) != cls._ONE_OF_PAIR_SIZE:
@@ -2523,10 +2525,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         schema_dict.pop("oneOf", None)
         disjoint_schemas = [cls._raw_string_length_schema_from_interval(interval) for interval in disjoint_intervals]
+        null_is_valid = null_allowed and sum(cls._raw_value_matches_schema(None, branch) for branch in one_of) == 1
         if len(disjoint_schemas) == 1:
             schema_dict.update(disjoint_schemas[0])
+            if null_is_valid:
+                schema_dict["type"] = sorted(type_values)
         else:
+            if null_is_valid:
+                disjoint_schemas.append({"type": "null"})
             schema_dict["anyOf"] = disjoint_schemas
+        if null_allowed and not null_is_valid:
+            cls._drop_null_type(schema_dict, type_values)
 
     @classmethod
     def _raw_string_length_interval(cls, branch: Any) -> tuple[int, int | None] | None:
@@ -2812,15 +2821,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     @classmethod
     def _normalize_raw_oneof_numeric_bounds_constraints(cls, schema_dict: dict[Any, Any]) -> None:
         parent_types = cls._type_values(schema_dict.get("type"))
-        if parent_types not in ({"integer"}, {"number"}) or any(
-            key in schema_dict for key in ("exclusiveMaximum", "exclusiveMinimum", "maximum", "minimum")
-        ):
+        if parent_types in ({"integer"}, {"integer", "null"}):
+            numeric_types = {"integer"}
+        elif parent_types in ({"number"}, {"number", "null"}):
+            numeric_types = {"number"}
+        else:
             return
+        if any(key in schema_dict for key in ("exclusiveMaximum", "exclusiveMinimum", "maximum", "minimum")):
+            return
+        null_allowed = "null" in parent_types
 
         one_of = schema_dict.get("oneOf")
         if not isinstance(one_of, list) or len(one_of) != cls._ONE_OF_PAIR_SIZE:
             return
-        intervals = [cls._raw_numeric_bounds_interval(branch, parent_types) for branch in one_of]
+        intervals = [cls._raw_numeric_bounds_interval(branch, numeric_types) for branch in one_of]
         if any(interval is None for interval in intervals):
             return
 
@@ -2833,14 +2847,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             cls._raise_allof_literal_conflict()
 
         schema_dict.pop("oneOf", None)
-        numeric_type = next(iter(parent_types))
+        numeric_type = next(iter(numeric_types))
         disjoint_schemas = [
             cls._raw_numeric_bounds_schema_from_interval(interval, numeric_type) for interval in disjoint_intervals
         ]
+        null_is_valid = null_allowed and sum(cls._raw_value_matches_schema(None, branch) for branch in one_of) == 1
         if len(disjoint_schemas) == 1:
             schema_dict.update(disjoint_schemas[0])
+            if null_is_valid:
+                schema_dict["type"] = sorted(parent_types)
         else:
+            if null_is_valid:
+                disjoint_schemas.append({"type": "null"})
             schema_dict["anyOf"] = disjoint_schemas
+        if null_allowed and not null_is_valid:
+            cls._drop_null_type(schema_dict, parent_types)
 
     @classmethod
     def _raw_numeric_bounds_interval(
@@ -4283,7 +4304,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return set(schema_dict) <= metadata_keys | supported_filter_keys
 
     @classmethod
-    def _raw_value_matches_schema(cls, value: Any, schema_dict: dict[Any, Any]) -> bool:
+    def _raw_value_matches_schema(cls, value: Any, schema_dict: Any) -> bool:
+        if isinstance(schema_dict, bool):
+            return schema_dict
+        if not isinstance(schema_dict, dict):
+            return False
         type_value = schema_dict.get("type")
         if type_value is not None and not cls._json_value_matches_type_constraint(value, type_value):
             return False

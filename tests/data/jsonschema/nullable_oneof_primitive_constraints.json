@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NullableOneOfPrimitiveConstraints",
+  "type": "object",
+  "properties": {
+    "exactString": {
+      "type": ["string", "null"],
+      "oneOf": [
+        {
+          "minLength": 1
+        },
+        {
+          "minLength": 2
+        }
+      ]
+    },
+    "outsideString": {
+      "type": ["string", "null"],
+      "oneOf": [
+        {
+          "minLength": 1
+        },
+        {
+          "maxLength": 2
+        }
+      ]
+    },
+    "nullOrEmptyString": {
+      "type": ["string", "null"],
+      "oneOf": [
+        true,
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "boundedInteger": {
+      "type": ["integer", "null"],
+      "oneOf": [
+        {
+          "minimum": 0
+        },
+        {
+          "minimum": 10
+        }
+      ]
+    },
+    "outsideInteger": {
+      "type": ["integer", "null"],
+      "oneOf": [
+        {
+          "minimum": 1
+        },
+        {
+          "maximum": 3
+        }
+      ]
+    },
+    "nullOrSmallInteger": {
+      "type": ["integer", "null"],
+      "oneOf": [
+        true,
+        {
+          "type": "integer",
+          "minimum": 1
+        }
+      ]
+    }
+  },
+  "required": [
+    "exactString",
+    "outsideString",
+    "nullOrEmptyString",
+    "boundedInteger",
+    "outsideInteger",
+    "nullOrSmallInteger"
+  ]
+}

@@ -84,6 +84,9 @@ EXCLUDED_FILES: dict[str, str] = {
 }
 EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/all_of_any_of_base_class_ref.json": "hypothesis-jsonschema cannot satisfy the allOf/anyOf constraints",
+    "jsonschema/nullable_oneof_primitive_constraints.json": (
+        "hypothesis-jsonschema cannot satisfy several required overlapping oneOf primitive constraints together"
+    ),
     "jsonschema/typed_dict_allof_constraint_extra_items.json": (
         "TypedDict-only e2e fixture intentionally emits a generator warning; Pydantic payload validation "
         "uses the same schema corpus but does not target this output mode"

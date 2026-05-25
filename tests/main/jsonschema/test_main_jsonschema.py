@@ -3935,6 +3935,86 @@ def test_main_jsonschema_oneof_integer_bound_exclusive_ranges(output_file: Path)
     )
 
 
+def test_main_jsonschema_nullable_oneof_primitive_constraints(output_file: Path) -> None:
+    """Test nullable primitive oneOf overlaps keep exact JSON Schema null semantics."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_oneof_primitive_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_oneof_primitive_constraints.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    valid_json = (
+        '{"exactString":"a","outsideString":"","nullOrEmptyString":null,'
+        '"boundedInteger":5,"outsideInteger":0,"nullOrSmallInteger":null}'
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_oneof_primitive_constraints",
+        model_name="NullableOneOfPrimitiveConstraints",
+        valid_json=valid_json,
+        invalid_json='{"exactString":null,"outsideString":"","nullOrEmptyString":null,'
+        '"boundedInteger":5,"outsideInteger":0,"nullOrSmallInteger":null}',
+        expected_error_type="string_type",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_oneof_primitive_constraints",
+        model_name="NullableOneOfPrimitiveConstraints",
+        valid_json=valid_json,
+        invalid_json='{"exactString":"ab","outsideString":"","nullOrEmptyString":null,'
+        '"boundedInteger":5,"outsideInteger":0,"nullOrSmallInteger":null}',
+        expected_error_type="string_too_long",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_oneof_primitive_constraints",
+        model_name="NullableOneOfPrimitiveConstraints",
+        valid_json=valid_json,
+        invalid_json='{"exactString":"a","outsideString":"a","nullOrEmptyString":null,'
+        '"boundedInteger":5,"outsideInteger":0,"nullOrSmallInteger":null}',
+        expected_error_type="string_too_short",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_oneof_primitive_constraints",
+        model_name="NullableOneOfPrimitiveConstraints",
+        valid_json=valid_json,
+        invalid_json='{"exactString":"a","outsideString":"","nullOrEmptyString":"x",'
+        '"boundedInteger":5,"outsideInteger":0,"nullOrSmallInteger":null}',
+        expected_error_type="string_too_long",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_oneof_primitive_constraints",
+        model_name="NullableOneOfPrimitiveConstraints",
+        valid_json=valid_json,
+        invalid_json='{"exactString":"a","outsideString":"","nullOrEmptyString":null,'
+        '"boundedInteger":10,"outsideInteger":0,"nullOrSmallInteger":null}',
+        expected_error_type="less_than",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_oneof_primitive_constraints",
+        model_name="NullableOneOfPrimitiveConstraints",
+        valid_json=valid_json,
+        invalid_json='{"exactString":"a","outsideString":"","nullOrEmptyString":null,'
+        '"boundedInteger":5,"outsideInteger":2,"nullOrSmallInteger":null}',
+        expected_error_type="greater_than",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_oneof_primitive_constraints",
+        model_name="NullableOneOfPrimitiveConstraints",
+        valid_json=valid_json,
+        invalid_json='{"exactString":"a","outsideString":"","nullOrEmptyString":null,'
+        '"boundedInteger":5,"outsideInteger":0,"nullOrSmallInteger":1}',
+        expected_error_type="less_than",
+    )
+
+
 def test_main_jsonschema_allof_combined_primitive_intersection(output_file: Path) -> None:
     """Test primitive allOf branches keep nested anyOf/oneOf constraints."""
     run_main_and_assert(
