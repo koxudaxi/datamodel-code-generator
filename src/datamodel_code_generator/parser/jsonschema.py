@@ -2252,11 +2252,23 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             ]
             if not filtered_enum:
                 cls._raise_allof_literal_conflict()
+            if len(filtered_enum) == 1 and cls._json_schema_values_equal(filtered_enum[0], None):
+                cls._collapse_raw_nullable_literal_schema_to_null(schema_dict)
+                return
             if len(filtered_enum) != len(schema_dict["enum"]):
                 schema_dict["enum"] = filtered_enum
                 cls._drop_enum_metadata(schema_dict)
         if "const" in schema_dict and not cls._json_value_matches_schema_constraints(schema_dict["const"], schema_dict):
             cls._raise_allof_literal_conflict()
+
+    @classmethod
+    def _collapse_raw_nullable_literal_schema_to_null(cls, schema_dict: dict[Any, Any]) -> None:
+        if not cls._json_value_matches_type_constraint(None, schema_dict.get("type")):
+            return
+        unsupported_null_constraints = {"allOf", "anyOf", "const", "not", "oneOf"}
+        if any(key in schema_dict for key in unsupported_null_constraints):
+            return
+        cls._collapse_raw_nullable_schema_to_null(schema_dict)
 
     @classmethod
     def _normalize_raw_schema_literal_constraints(  # noqa: PLR0912
