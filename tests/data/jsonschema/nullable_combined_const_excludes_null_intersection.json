@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NullableCombinedConstExcludesNullIntersection",
+  "type": "object",
+  "properties": {
+    "oneOfValue": {
+      "type": ["string", "null"],
+      "oneOf": [
+        {
+          "const": "on"
+        },
+        {
+          "const": "off"
+        }
+      ]
+    },
+    "anyOfValue": {
+      "type": ["string", "null"],
+      "anyOf": [
+        {
+          "const": "red"
+        },
+        {
+          "const": "blue"
+        }
+      ]
+    }
+  },
+  "required": ["oneOfValue", "anyOfValue"]
+}

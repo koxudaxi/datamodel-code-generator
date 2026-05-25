@@ -934,8 +934,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             case list():
                 non_null_types = [t for t in parent_type if t != "null"]
                 final_type = non_null_types[0] if non_null_types else inferred_type
-                if "null" in parent_type:
-                    nullable = True
             case _:
                 final_type = inferred_type
 
@@ -2364,6 +2362,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         try:
             cls._normalize_raw_anyof_literal_constraints(normalized)
             cls._normalize_raw_oneof_literal_constraints(normalized)
+            cls._drop_null_type_when_combined_literals_exclude_null(normalized)
             cls._normalize_raw_allof_dependent_constraints(normalized)
             cls._normalize_raw_allof_conditional_constraints(normalized)
             cls._normalize_raw_allof_not_constraints(normalized)
@@ -2456,6 +2455,32 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return None
             literal_branches.append(branch)
         return literal_branches
+
+    @classmethod
+    def _drop_null_type_when_combined_literals_exclude_null(cls, schema_dict: dict[Any, Any]) -> None:
+        type_values = cls._type_values(schema_dict.get("type"))
+        if type_values is None or "null" not in type_values:
+            return
+
+        for combined_key in ("anyOf", "oneOf"):
+            branches = schema_dict.get(combined_key)
+            if not isinstance(branches, list):
+                continue
+            literal_branches = cls._raw_literal_combined_branches(branches)
+            if literal_branches is None or not literal_branches:
+                continue
+            null_match_count = sum(cls._raw_value_matches_schema(None, branch) for branch in literal_branches)
+            null_is_valid = null_match_count > 0 if combined_key == "anyOf" else null_match_count == 1
+            if not null_is_valid:
+                cls._drop_null_type(schema_dict, type_values)
+            return
+
+    @classmethod
+    def _drop_null_type(cls, schema_dict: dict[Any, Any], type_values: set[str]) -> None:
+        non_null_types = cls._simplify_type_values(type_values - {"null"})
+        if not non_null_types:
+            cls._raise_allof_literal_conflict()
+        schema_dict["type"] = next(iter(non_null_types)) if len(non_null_types) == 1 else sorted(non_null_types)
 
     @staticmethod
     def _raw_literal_branch_values(branch: dict[Any, Any]) -> Iterator[Any]:

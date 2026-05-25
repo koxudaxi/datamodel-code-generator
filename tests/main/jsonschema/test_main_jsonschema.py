@@ -3834,13 +3834,46 @@ def test_main_jsonschema_oneof_const_enum_int(output_file: Path) -> None:
 
 
 def test_main_jsonschema_oneof_const_enum_type_list(output_file: Path) -> None:
-    """Test oneOf with const values and type list (nullable)."""
+    """Test oneOf with const values and nullable type lists that exclude null."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_type_list.yaml",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="oneof_const_enum_type_list.py",
+    )
+
+
+def test_main_jsonschema_nullable_combined_const_excludes_null_intersection(output_file: Path) -> None:
+    """Test nullable const anyOf/oneOf fields drop null when no branch accepts it."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_combined_const_excludes_null_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_combined_const_excludes_null_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_combined_const_excludes_null_intersection",
+        model_name="NullableCombinedConstExcludesNullIntersection",
+        valid_json='{"oneOfValue":"on","anyOfValue":"red"}',
+        invalid_json='{"oneOfValue":null,"anyOfValue":"red"}',
+        expected_error_type="enum",
+        expected_attribute_path=("oneOfValue", "value"),
+        expected_attribute_value="on",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_combined_const_excludes_null_intersection",
+        model_name="NullableCombinedConstExcludesNullIntersection",
+        valid_json='{"oneOfValue":"off","anyOfValue":"blue"}',
+        invalid_json='{"oneOfValue":"off","anyOfValue":null}',
+        expected_error_type="enum",
+        expected_attribute_path=("anyOfValue", "value"),
+        expected_attribute_value="blue",
     )
 
 
