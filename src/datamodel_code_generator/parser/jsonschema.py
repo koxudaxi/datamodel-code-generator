@@ -2365,6 +2365,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             cls._normalize_raw_oneof_literal_constraints(normalized)
             cls._normalize_raw_oneof_string_length_constraints(normalized)
             cls._normalize_raw_oneof_numeric_bounds_constraints(normalized)
+            cls._normalize_raw_count_combined_constraints(normalized)
             cls._drop_null_type_when_combined_literals_exclude_null(normalized)
             cls._normalize_raw_allof_primitive_combined_constraints(normalized)
             cls._normalize_raw_allof_dependent_constraints(normalized)
@@ -2556,6 +2557,129 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if left_max is None or after_min <= left_max:
                 intervals.append((max(left_min, after_min), left_max))
         return intervals
+
+    @classmethod
+    def _normalize_raw_count_combined_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        type_values = cls._type_values(schema_dict.get("type"))
+        if type_values == {"array"}:
+            min_key, max_key = "minItems", "maxItems"
+        elif type_values == {"object"}:
+            min_key, max_key = "minProperties", "maxProperties"
+        else:
+            return
+        if min_key in schema_dict or max_key in schema_dict:
+            return
+
+        if cls._normalize_raw_anyof_count_constraints(schema_dict, min_key, max_key):
+            return
+        cls._normalize_raw_oneof_count_constraints(schema_dict, min_key, max_key)
+
+    @classmethod
+    def _normalize_raw_anyof_count_constraints(
+        cls,
+        schema_dict: dict[Any, Any],
+        min_key: str,
+        max_key: str,
+    ) -> bool:
+        any_of = schema_dict.get("anyOf")
+        if not isinstance(any_of, list) or len(any_of) != cls._ONE_OF_PAIR_SIZE:
+            return False
+        intervals = [cls._raw_count_interval(branch, schema_dict["type"], min_key, max_key) for branch in any_of]
+        if any(interval is None for interval in intervals):
+            return False
+
+        merged_intervals = cls._merge_raw_count_intervals(intervals)  # type: ignore[arg-type]
+        if len(merged_intervals) != 1:
+            return False
+
+        schema_dict.pop("anyOf", None)
+        schema_dict.update(cls._raw_count_schema_from_interval(merged_intervals[0], min_key, max_key))
+        return True
+
+    @classmethod
+    def _normalize_raw_oneof_count_constraints(
+        cls,
+        schema_dict: dict[Any, Any],
+        min_key: str,
+        max_key: str,
+    ) -> None:
+        one_of = schema_dict.get("oneOf")
+        if not isinstance(one_of, list) or len(one_of) != cls._ONE_OF_PAIR_SIZE:
+            return
+        intervals = [cls._raw_count_interval(branch, schema_dict["type"], min_key, max_key) for branch in one_of]
+        if any(interval is None for interval in intervals):
+            return
+
+        left, right = intervals
+        disjoint_intervals = [
+            *cls._subtract_raw_count_interval(left, right),  # type: ignore[arg-type]
+            *cls._subtract_raw_count_interval(right, left),  # type: ignore[arg-type]
+        ]
+        if not disjoint_intervals:
+            cls._raise_allof_constraint_conflict()
+        if len(disjoint_intervals) != 1:
+            return
+
+        schema_dict.pop("oneOf", None)
+        schema_dict.update(cls._raw_count_schema_from_interval(disjoint_intervals[0], min_key, max_key))
+
+    @classmethod
+    def _raw_count_interval(
+        cls,
+        branch: Any,
+        parent_type: str,
+        min_key: str,
+        max_key: str,
+    ) -> tuple[int, int | None] | None:
+        if branch is True:
+            return (0, None)
+        if branch is False or not isinstance(branch, dict):
+            return None
+        metadata_keys = {"$comment", "$id", "$schema", "description", "examples", "title"}
+        if set(branch) - (metadata_keys | {max_key, min_key, "type"}):
+            return None
+        type_values = cls._type_values(branch.get("type"))
+        if type_values is not None and type_values != {parent_type}:
+            return None
+        min_value = cls._raw_count_constraint_value(branch.get(min_key))
+        max_value = cls._raw_count_constraint_value(branch.get(max_key))
+        lower = 0 if min_value is None else min_value
+        if lower < 0:
+            return None
+        if max_value is not None and (max_value < 0 or lower > max_value):
+            cls._raise_allof_constraint_conflict()
+        return (lower, max_value)
+
+    @staticmethod
+    def _merge_raw_count_intervals(intervals: list[tuple[int, int | None]]) -> list[tuple[int, int | None]]:
+        sorted_intervals = sorted(intervals)
+        merged: list[tuple[int, int | None]] = []
+        for interval in sorted_intervals:
+            if not merged:
+                merged.append(interval)
+                continue
+            current_min, current_max = merged[-1]
+            next_min, next_max = interval
+            if current_max is None:
+                continue
+            if next_min <= current_max + 1:
+                merged[-1] = (
+                    current_min,
+                    None if next_max is None else max(current_max, next_max),
+                )
+                continue
+            merged.append(interval)
+        return merged
+
+    @staticmethod
+    def _raw_count_schema_from_interval(interval: tuple[int, int | None], min_key: str, max_key: str) -> dict[str, int]:
+        min_value, max_value = interval
+        schema: dict[str, int] = {}
+        if min_value > 0:
+            schema[min_key] = min_value
+        if max_value is not None:
+            schema[max_key] = max_value
+        return schema
 
     @staticmethod
     def _raw_string_length_schema_from_interval(interval: tuple[int, int | None]) -> dict[str, Any]:

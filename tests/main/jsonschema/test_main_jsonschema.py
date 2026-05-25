@@ -3972,6 +3972,52 @@ def test_main_jsonschema_allof_combined_primitive_intersection(output_file: Path
     )
 
 
+def test_main_jsonschema_combined_count_constraints(output_file: Path) -> None:
+    """Test anyOf/oneOf array and object count constraints collapse to exact ranges."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "combined_count_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="combined_count_constraints.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    valid_json = '{"arrayAny":[1],"arrayOne":[1],"objectAny":{"a":1},"objectOne":{"a":1,"b":2}}'
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="combined_count_constraints",
+        model_name="CombinedCountConstraints",
+        valid_json=valid_json,
+        invalid_json='{"arrayAny":[],"arrayOne":[1],"objectAny":{"a":1},"objectOne":{"a":1,"b":2}}',
+        expected_error_type="too_short",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="combined_count_constraints",
+        model_name="CombinedCountConstraints",
+        valid_json=valid_json,
+        invalid_json='{"arrayAny":[1],"arrayOne":[1,2],"objectAny":{"a":1},"objectOne":{"a":1,"b":2}}',
+        expected_error_type="too_long",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="combined_count_constraints",
+        model_name="CombinedCountConstraints",
+        valid_json=valid_json,
+        invalid_json='{"arrayAny":[1],"arrayOne":[1],"objectAny":{"a":1,"b":2,"c":3},"objectOne":{"a":1,"b":2}}',
+        expected_error_type="too_long",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="combined_count_constraints",
+        model_name="CombinedCountConstraints",
+        valid_json=valid_json,
+        invalid_json='{"arrayAny":[1],"arrayOne":[1],"objectAny":{"a":1},"objectOne":{"a":1}}',
+        expected_error_type="too_short",
+    )
+
+
 def test_main_jsonschema_oneof_const_enum_literal(output_file: Path) -> None:
     """Test oneOf with const values as Literal type."""
     run_main_and_assert(
