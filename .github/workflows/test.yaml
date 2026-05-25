@@ -211,6 +211,34 @@ jobs:
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
 
+  apache-avro-schema-pass-e2e:
+    name: Apache Avro schema pass e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - name: Install tox
+        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
+      - name: Setup Apache Avro schema pass e2e suite
+        run: tox r -vv --notest --skip-missing-interpreters false -e apache-avro-schema-pass-e2e
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Checkout Apache Avro
+        run: |
+          git clone --filter=blob:none https://github.com/apache/avro.git .tox/apache-avro
+          git -C .tox/apache-avro checkout 9110c693767c1dde2665b2b57939333478b12036
+      - name: Run Apache Avro schema pass e2e suite
+        run: |
+          tox run --skip-uv-sync --skip-pkg-install -e apache-avro-schema-pass-e2e -- \
+            .tox/apache-avro/lang/c/tests/schema_tests/pass \
+            --expected-schemas 28
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+
   test-gate:
     name: test-gate
     if: always()
@@ -220,6 +248,7 @@ jobs:
       - coverage
       - check
       - w3c-xmlschema-e2e
+      - apache-avro-schema-pass-e2e
     steps:
       - name: Fail if any test workflow job failed
         run: |
@@ -227,13 +256,16 @@ jobs:
           coverage_result='${{ needs.coverage.result }}'
           check_result='${{ needs.check.result }}'
           w3c_xmlschema_e2e_result='${{ needs.w3c-xmlschema-e2e.result }}'
+          apache_avro_schema_pass_e2e_result='${{ needs.apache-avro-schema-pass-e2e.result }}'
 
           echo "test: ${test_result}"
           echo "coverage: ${coverage_result}"
           echo "check: ${check_result}"
           echo "w3c xmlschema e2e: ${w3c_xmlschema_e2e_result}"
+          echo "apache avro schema pass e2e: ${apache_avro_schema_pass_e2e_result}"
 
           [ "${test_result}" = "success" ] || exit 1
           [ "${coverage_result}" = "success" ] || exit 1
           [ "${check_result}" = "success" ] || exit 1
           [ "${w3c_xmlschema_e2e_result}" = "success" ] || exit 1
+          [ "${apache_avro_schema_pass_e2e_result}" = "success" ] || exit 1
