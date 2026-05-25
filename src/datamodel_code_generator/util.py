@@ -25,10 +25,6 @@ def load_toml(path: Path) -> dict[str, Any]:
 
 _YAML_1_2_BOOL_PATTERN = re.compile(r"^(?:true|false|True|False|TRUE|FALSE)$")
 _YAML_DEPRECATED_BOOL_VALUES = {"True", "False", "TRUE", "FALSE"}
-_YAML_DEPRECATED_BOOL_TOKEN_PATTERN = re.compile(
-    r"^\s*(?:-\s*)?(?:[^#:\n]+:\s*)?(True|False|TRUE|FALSE)\s*(?:#.*)?$",
-    re.MULTILINE,
-)
 # Pattern for scientific notation without decimal point (e.g., 1e-5, 1E+10)
 # Standard YAML only matches floats with decimal points, missing patterns like "1e-5"
 _YAML_SCIENTIFIC_NOTATION_PATTERN = re.compile(r"^[-+]?[0-9][0-9_]*[eE][-+]?[0-9]+$")
@@ -44,18 +40,6 @@ def _construct_yaml_bool_with_warning(loader: Any, node: Any) -> bool:
             stacklevel=6,
         )
     return value in {"true", "True", "TRUE"}
-
-
-def warn_deprecated_yaml_bool_values(text: str) -> None:
-    """Warn when a YAML backend would otherwise accept deprecated bool spellings silently."""
-    for match in _YAML_DEPRECATED_BOOL_TOKEN_PATTERN.finditer(text):
-        value = match.group(1)
-        warnings.warn(
-            f"YAML bool '{value}' is deprecated. Use lowercase 'true' or 'false' instead. "
-            f"In a future version, only lowercase booleans will be recognized.",
-            DeprecationWarning,
-            stacklevel=3,
-        )
 
 
 @lru_cache(maxsize=1)

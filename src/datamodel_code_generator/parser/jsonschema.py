@@ -598,25 +598,38 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     SCHEMA_OBJECT_TYPE: ClassVar[type[JsonSchemaObject]] = JsonSchemaObject
     _MAX_EXACT_PROPERTY_NAME_DEPENDENCY_COUNT: ClassVar[int] = 12
     _ONE_OF_PAIR_SIZE: ClassVar[int] = 2
-    _RAW_SCHEMA_NORMALIZATION_KEYS: ClassVar[frozenset[str]] = frozenset({
-        "$defs",
-        "additionalItems",
+    _RAW_SCHEMA_CHILD_SCHEMA_KEYS: ClassVar[tuple[str, ...]] = (
         "additionalProperties",
+        "contains",
+        "contentSchema",
+        "else",
+        "if",
+        "items",
+        "not",
+        "propertyNames",
+        "then",
+        "unevaluatedItems",
+        "unevaluatedProperties",
+    )
+    _RAW_SCHEMA_CHILD_LIST_KEYS: ClassVar[tuple[str, ...]] = ("anyOf", "oneOf", "prefixItems")
+    _RAW_SCHEMA_CHILD_MAPPING_KEYS: ClassVar[tuple[str, ...]] = (
+        "$defs",
+        "definitions",
+        "dependentSchemas",
+        "patternProperties",
+        "properties",
+    )
+    _RAW_SCHEMA_DIRECT_NORMALIZATION_KEYS: ClassVar[frozenset[str]] = frozenset({
+        "additionalItems",
         "allOf",
         "anyOf",
         "const",
-        "contains",
-        "contentSchema",
-        "definitions",
         "dependencies",
         "dependentRequired",
         "dependentSchemas",
-        "else",
         "enum",
         "exclusiveMaximum",
         "exclusiveMinimum",
-        "if",
-        "items",
         "maximum",
         "maxContains",
         "maxItems",
@@ -628,28 +641,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         "minLength",
         "minProperties",
         "multipleOf",
-        "not",
         "nullable",
         "oneOf",
         "pattern",
-        "patternProperties",
         "prefixItems",
-        "properties",
-        "propertyNames",
-        "then",
-        "unevaluatedItems",
-        "unevaluatedProperties",
         "uniqueItems",
     })
-    _RAW_SCHEMA_STRUCTURAL_NORMALIZATION_KEYS: ClassVar[frozenset[str]] = frozenset({
-        "$defs",
-        "definitions",
-        "patternProperties",
-        "properties",
-    })
-    _RAW_SCHEMA_DIRECT_NORMALIZATION_KEYS: ClassVar[frozenset[str]] = (
-        _RAW_SCHEMA_NORMALIZATION_KEYS - _RAW_SCHEMA_STRUCTURAL_NORMALIZATION_KEYS
-    )
 
     COMPATIBLE_PYTHON_TYPES: ClassVar[dict[str, frozenset[str]]] = {
         "string": frozenset({"str", "String"}),
@@ -2360,7 +2357,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         schema_dict["type"] = next(iter(non_null_types)) if len(non_null_types) == 1 else sorted(non_null_types)
 
     @classmethod
-    def _normalize_raw_schema_literal_constraints(  # noqa: PLR0912, PLR0915
+    def _normalize_raw_schema_literal_constraints(  # noqa: PLR0912
         cls,
         raw: YamlValue,
         *,
@@ -2382,55 +2379,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return False
             raise
 
-        for key in (
-            "additionalProperties",
-            "contains",
-            "contentSchema",
-            "else",
-            "if",
-            "items",
-            "not",
-            "propertyNames",
-            "then",
-            "unevaluatedItems",
-            "unevaluatedProperties",
-        ):
-            value = normalized.get(key)
-            if isinstance(value, (bool, dict)):
+        for key in cls._RAW_SCHEMA_CHILD_SCHEMA_KEYS:
+            if isinstance(value := normalized.get(key), (bool, dict)):
                 normalized[key] = cls._normalize_raw_schema_literal_constraints(
                     value,
                     false_on_unsatisfiable=True,
                 )
 
-        value = normalized.get("allOf")
-        if isinstance(value, list):
+        if isinstance(value := normalized.get("allOf"), list):
             normalized["allOf"] = [cls._normalize_raw_schema_literal_constraints(item) for item in value]
 
-        for key in ("anyOf", "oneOf", "prefixItems"):
-            value = normalized.get(key)
-            if isinstance(value, list):
+        for key in cls._RAW_SCHEMA_CHILD_LIST_KEYS:
+            if isinstance(value := normalized.get(key), list):
                 normalized[key] = [
                     cls._normalize_raw_schema_literal_constraints(item, false_on_unsatisfiable=True) for item in value
                 ]
 
-        for key in (
-            "$defs",
-            "definitions",
-            "dependentSchemas",
-        ):
-            value = normalized.get(key)
-            if isinstance(value, dict):
-                normalized[key] = {
-                    child_key: cls._normalize_raw_schema_literal_constraints(
-                        child_value,
-                        false_on_unsatisfiable=True,
-                    )
-                    for child_key, child_value in value.items()
-                }
-
-        for key in ("patternProperties", "properties"):
-            value = normalized.get(key)
-            if isinstance(value, dict):
+        for key in cls._RAW_SCHEMA_CHILD_MAPPING_KEYS:
+            if isinstance(value := normalized.get(key), dict):
                 normalized[key] = {
                     child_key: cls._normalize_raw_schema_literal_constraints(
                         child_value,
@@ -2479,9 +2445,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if cls._RAW_SCHEMA_DIRECT_NORMALIZATION_KEYS.intersection(raw):
             return True
 
-        for key in cls._RAW_SCHEMA_STRUCTURAL_NORMALIZATION_KEYS:
-            value = raw.get(key)
-            if isinstance(value, dict) and any(
+        for key in cls._RAW_SCHEMA_CHILD_MAPPING_KEYS:
+            if isinstance(value := raw.get(key), dict) and any(
                 cls._raw_schema_tree_needs_normalization(child_value) for child_value in value.values()
             ):
                 return True
@@ -4273,15 +4238,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         type_values = cls._type_values(schema_dict.get("type"))
         if type_values is not None:
             type_values = cls._simplify_type_values(type_values)
-        if type_values == {"object", "null"}:
-            cls._normalize_raw_nullable_branch_constraints(schema_dict, "object")
-        elif type_values == {"array", "null"}:
-            cls._normalize_raw_nullable_branch_constraints(schema_dict, "array")
-        elif type_values in ({"integer", "null"}, {"number", "null"}):
-            branch_type = "number" if "number" in type_values else "integer"
-            cls._normalize_raw_nullable_branch_constraints(schema_dict, branch_type)
-        elif type_values == {"string", "null"}:
-            cls._normalize_raw_nullable_branch_constraints(schema_dict, "string")
+        match type_values:
+            case values if values == {"object", "null"}:
+                branch_type = "object"
+            case values if values == {"array", "null"}:
+                branch_type = "array"
+            case values if values == {"number", "null"}:
+                branch_type = "number"
+            case values if values == {"integer", "null"}:
+                branch_type = "integer"
+            case values if values == {"string", "null"}:
+                branch_type = "string"
+            case _:
+                return
+        cls._normalize_raw_nullable_branch_constraints(schema_dict, branch_type)
 
     @classmethod
     def _normalize_raw_nullable_branch_constraints(
@@ -4294,21 +4264,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         branch_schema["type"] = branch_type
 
         try:
-            if branch_type == "object":
-                cls._normalize_raw_allof_dependent_constraints(branch_schema)
-                cls._normalize_raw_allof_conditional_constraints(branch_schema)
-                cls._normalize_raw_dependent_constraints(branch_schema)
-                cls._normalize_raw_conditional_constraints(branch_schema)
-                cls._validate_raw_allof_object_member_constraints(branch_schema)
-                cls._normalize_raw_known_property_constraints(branch_schema)
-                cls._validate_raw_object_constraints(branch_schema)
-            elif branch_type == "array":
-                cls._normalize_raw_contains_item_constraints(branch_schema)
-                cls._validate_raw_array_constraints(branch_schema)
-            elif branch_type in {"integer", "number"}:
-                cls._validate_raw_numeric_constraints(branch_schema)
-            elif branch_type == "string":
-                cls._validate_raw_string_constraints(branch_schema)
+            match branch_type:
+                case "object":
+                    cls._normalize_raw_allof_dependent_constraints(branch_schema)
+                    cls._normalize_raw_allof_conditional_constraints(branch_schema)
+                    cls._normalize_raw_dependent_constraints(branch_schema)
+                    cls._normalize_raw_conditional_constraints(branch_schema)
+                    cls._validate_raw_allof_object_member_constraints(branch_schema)
+                    cls._normalize_raw_known_property_constraints(branch_schema)
+                    cls._validate_raw_object_constraints(branch_schema)
+                case "array":
+                    cls._normalize_raw_contains_item_constraints(branch_schema)
+                    cls._validate_raw_array_constraints(branch_schema)
+                case "integer" | "number":
+                    cls._validate_raw_numeric_constraints(branch_schema)
+                case "string":
+                    cls._validate_raw_string_constraints(branch_schema)
         except SchemaParseError:
             if cls._raw_nullable_null_branch_is_unconstrained(schema_dict):
                 cls._collapse_raw_nullable_schema_to_null(schema_dict)
