@@ -5048,6 +5048,16 @@ def test_main_null(output_file: Path) -> None:
     )
 
 
+def test_main_type_array_only_null(output_file: Path) -> None:
+    """Test a JSON Schema type array containing only null."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_array_only_null.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
 def test_main_const_null(output_file: Path) -> None:
     """Test null const handling."""
     run_main_and_assert(

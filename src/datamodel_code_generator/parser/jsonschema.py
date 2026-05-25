@@ -1556,9 +1556,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
 
         if isinstance(obj.type, list):
-            return self.data_type(
-                data_types=[_get_data_type(t, obj.format or "default") for t in obj.type if t != "null"],
-                is_optional="null" in obj.type,
+            data_types = [_get_data_type(t, obj.format or "default") for t in obj.type if t != "null"]
+            return (
+                self.data_type(
+                    data_types=data_types,
+                    is_optional=len(data_types) != len(obj.type),
+                )
+                if data_types
+                else self.data_type_manager.get_data_type(Types.null)
             )
         data_type = _get_data_type(obj.type, obj.format or "default")
         if self.strict_nullable and obj.nullable:
