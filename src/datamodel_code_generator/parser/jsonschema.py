@@ -4250,56 +4250,41 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if type_values is not None:
             type_values = cls._simplify_type_values(type_values)
         if type_values == {"object", "null"}:
-            cls._normalize_raw_nullable_branch_constraints(
-                schema_dict,
-                "object",
-                (
-                    cls._normalize_raw_allof_dependent_constraints,
-                    cls._normalize_raw_allof_conditional_constraints,
-                    cls._normalize_raw_dependent_constraints,
-                    cls._normalize_raw_conditional_constraints,
-                    cls._validate_raw_allof_object_member_constraints,
-                    cls._normalize_raw_known_property_constraints,
-                    cls._validate_raw_object_constraints,
-                ),
-            )
+            cls._normalize_raw_nullable_branch_constraints(schema_dict, "object")
         elif type_values == {"array", "null"}:
-            cls._normalize_raw_nullable_branch_constraints(
-                schema_dict,
-                "array",
-                (
-                    cls._normalize_raw_contains_item_constraints,
-                    cls._validate_raw_array_constraints,
-                ),
-            )
+            cls._normalize_raw_nullable_branch_constraints(schema_dict, "array")
         elif type_values in ({"integer", "null"}, {"number", "null"}):
             branch_type = "number" if "number" in type_values else "integer"
-            cls._normalize_raw_nullable_branch_constraints(
-                schema_dict,
-                branch_type,
-                (cls._validate_raw_numeric_constraints,),
-            )
+            cls._normalize_raw_nullable_branch_constraints(schema_dict, branch_type)
         elif type_values == {"string", "null"}:
-            cls._normalize_raw_nullable_branch_constraints(
-                schema_dict,
-                "string",
-                (cls._validate_raw_string_constraints,),
-            )
+            cls._normalize_raw_nullable_branch_constraints(schema_dict, "string")
 
     @classmethod
     def _normalize_raw_nullable_branch_constraints(
         cls,
         schema_dict: dict[Any, Any],
         branch_type: str,
-        normalizers: Iterable[Callable[[dict[Any, Any]], None]],
     ) -> None:
         original_type = schema_dict.get("type")
         branch_schema = deepcopy(schema_dict)
         branch_schema["type"] = branch_type
 
         try:
-            for normalizer in normalizers:
-                normalizer(branch_schema)
+            if branch_type == "object":
+                cls._normalize_raw_allof_dependent_constraints(branch_schema)
+                cls._normalize_raw_allof_conditional_constraints(branch_schema)
+                cls._normalize_raw_dependent_constraints(branch_schema)
+                cls._normalize_raw_conditional_constraints(branch_schema)
+                cls._validate_raw_allof_object_member_constraints(branch_schema)
+                cls._normalize_raw_known_property_constraints(branch_schema)
+                cls._validate_raw_object_constraints(branch_schema)
+            elif branch_type == "array":
+                cls._normalize_raw_contains_item_constraints(branch_schema)
+                cls._validate_raw_array_constraints(branch_schema)
+            elif branch_type in {"integer", "number"}:
+                cls._validate_raw_numeric_constraints(branch_schema)
+            elif branch_type == "string":
+                cls._validate_raw_string_constraints(branch_schema)
         except SchemaParseError:
             if cls._raw_nullable_null_branch_is_unconstrained(schema_dict):
                 cls._collapse_raw_nullable_schema_to_null(schema_dict)
