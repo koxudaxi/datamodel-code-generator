@@ -641,6 +641,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         "unevaluatedProperties",
         "uniqueItems",
     })
+    _RAW_SCHEMA_STRUCTURAL_NORMALIZATION_KEYS: ClassVar[frozenset[str]] = frozenset({
+        "$defs",
+        "definitions",
+        "patternProperties",
+        "properties",
+    })
+    _RAW_SCHEMA_DIRECT_NORMALIZATION_KEYS: ClassVar[frozenset[str]] = (
+        _RAW_SCHEMA_NORMALIZATION_KEYS - _RAW_SCHEMA_STRUCTURAL_NORMALIZATION_KEYS
+    )
 
     COMPATIBLE_PYTHON_TYPES: ClassVar[dict[str, frozenset[str]]] = {
         "string": frozenset({"str", "String"}),
@@ -2359,7 +2368,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     ) -> YamlValue:
         if isinstance(raw, bool) or not isinstance(raw, dict):
             return raw
-        if not cls._RAW_SCHEMA_NORMALIZATION_KEYS.intersection(raw):
+        if not cls._raw_schema_tree_needs_normalization(raw):
             return raw
 
         normalized = dict(raw)
@@ -2462,6 +2471,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             raise
 
         return normalized
+
+    @classmethod
+    def _raw_schema_tree_needs_normalization(cls, raw: YamlValue) -> bool:
+        if isinstance(raw, bool) or not isinstance(raw, dict):
+            return False
+        if cls._RAW_SCHEMA_DIRECT_NORMALIZATION_KEYS.intersection(raw):
+            return True
+
+        for key in cls._RAW_SCHEMA_STRUCTURAL_NORMALIZATION_KEYS:
+            value = raw.get(key)
+            if isinstance(value, dict) and any(
+                cls._raw_schema_tree_needs_normalization(child_value) for child_value in value.values()
+            ):
+                return True
+        return False
 
     @classmethod
     def _normalize_raw_anyof_literal_constraints(cls, schema_dict: dict[Any, Any]) -> None:
