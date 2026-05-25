@@ -180,6 +180,7 @@ MANUAL_OPTION_DESCRIPTIONS = {
     "--profile": "Use a named profile from pyproject.toml",
     "--no-color": "Disable colorized output",
     "--generate-prompt": "Generate a prompt for consulting LLMs about CLI options",
+    "--list-deprecations": "List registered deprecations and scheduled breaking changes",
 }
 
 # Regex pattern for detecting MkDocs Material admonitions in docstrings

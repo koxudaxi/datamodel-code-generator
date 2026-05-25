@@ -13,6 +13,7 @@ from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+from datamodel_code_generator.deprecations import deprecation_message
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
@@ -261,7 +262,7 @@ base_options.add_argument(
 # ======================================================================================
 extra_fields_model_options.add_argument(
     "--allow-extra-fields",
-    help="Deprecated: Allow passing extra fields. This flag is deprecated. Use `--extra-fields=allow` instead.",
+    help=f"Deprecated: {deprecation_message('cli.allow-extra-fields')}",
     action="store_true",
     default=None,
 )
@@ -485,7 +486,7 @@ model_options.add_argument(
 )
 model_options.add_argument(
     "--parent-scoped-naming",
-    help="[Deprecated: use --naming-strategy parent-prefixed] Set name of models defined inline from the parent model",
+    help=f"Deprecated: {deprecation_message('cli.parent-scoped-naming')}",
     action="store_true",
     default=None,
 )
@@ -1084,8 +1085,7 @@ openapi_options.add_argument(
 )
 openapi_options.add_argument(
     "--validation",
-    help="Deprecated: Enable validation (Only OpenAPI). this option is deprecated. it will be removed in future "
-    "releases",
+    help=f"Deprecated: {deprecation_message('cli.validation')}",
     action="store_true",
     default=None,
 )
@@ -1155,6 +1155,15 @@ general_options.add_argument(
     "--disable-warnings",
     help="disable warnings",
     action="store_true",
+    default=None,
+)
+general_options.add_argument(
+    "--list-deprecations",
+    help="List registered deprecations and scheduled breaking changes, then exit.",
+    nargs="?",
+    const="table",
+    choices=["table", "json", "markdown"],
+    metavar="{table,json,markdown}",
     default=None,
 )
 general_options.add_argument(

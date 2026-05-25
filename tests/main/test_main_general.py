@@ -109,6 +109,28 @@ def test_show_help_when_no_input(mocker: MockerFixture) -> None:
 
 
 @pytest.mark.allow_direct_assert
+def test_list_deprecations(capsys: pytest.CaptureFixture[str]) -> None:
+    """List registered deprecations without requiring an input schema."""
+    run_main_with_args(["--list-deprecations"])
+    captured = capsys.readouterr()
+
+    assert "cli.parent-scoped-naming" in captured.out
+    assert "--parent-scoped-naming" in captured.out
+    assert "Removal" in captured.out
+    assert not captured.err
+
+
+@pytest.mark.allow_direct_assert
+def test_list_deprecations_json(capsys: pytest.CaptureFixture[str]) -> None:
+    """List registered deprecations as JSON."""
+    run_main_with_args(["--list-deprecations", "json"])
+    captured = capsys.readouterr()
+
+    assert '"id": "cli.parent-scoped-naming"' in captured.out
+    assert not captured.err
+
+
+@pytest.mark.allow_direct_assert
 def test_no_args_has_default(monkeypatch: pytest.MonkeyPatch) -> None:
     """No argument should have a default value set because it would override pyproject.toml values.
 

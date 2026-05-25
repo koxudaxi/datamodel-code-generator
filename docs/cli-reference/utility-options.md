@@ -7,6 +7,7 @@
 | [`--debug`](#debug) | Show debug messages during code generation |
 | [`--generate-prompt`](#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](#help) | Show help message and exit |
+| [`--list-deprecations`](#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--no-color`](#no-color) | Disable colorized output |
 | [`--profile`](#profile) | Use a named profile from pyproject.toml |
 | [`--version`](#version) | Show program version and exit |
@@ -103,6 +104,21 @@ Displays all available command-line options with their descriptions and default 
       --input INPUT         Input file path (default: stdin)
       ...
     ```
+
+---
+
+## `--list-deprecations` {#list-deprecations}
+
+List registered deprecations and scheduled breaking changes, then exit.
+
+The option reads from the central deprecation registry used by runtime warnings,
+generated documentation, and release-note snippets.
+
+```bash
+datamodel-codegen --list-deprecations
+datamodel-codegen --list-deprecations json
+datamodel-codegen --list-deprecations markdown
+```
 
 ---
 

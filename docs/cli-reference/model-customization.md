@@ -4034,7 +4034,7 @@ The `--parent-scoped-naming` flag prefixes model names with their parent scope
 (operation/path/parameter) to prevent name collisions when the same model name
 appears in different contexts within an OpenAPI specification.
 
-**Deprecated:** Use --naming-strategy parent-prefixed instead.
+**Deprecated:** --parent-scoped-naming is deprecated. Use --naming-strategy parent-prefixed instead.
 
 !!! tip "Usage"
 

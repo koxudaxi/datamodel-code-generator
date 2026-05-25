@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import re
-import warnings
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Literal
+
+from datamodel_code_generator.deprecations import warn_deprecated
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -33,10 +34,9 @@ _YAML_SCIENTIFIC_NOTATION_PATTERN = re.compile(r"^[-+]?[0-9][0-9_]*[eE][-+]?[0-9
 def _construct_yaml_bool_with_warning(loader: Any, node: Any) -> bool:
     value = loader.construct_scalar(node)
     if value in _YAML_DEPRECATED_BOOL_VALUES:  # pragma: no cover
-        warnings.warn(
-            f"YAML bool '{value}' is deprecated. Use lowercase 'true' or 'false' instead. "
-            f"In a future version, only lowercase booleans will be recognized.",
-            DeprecationWarning,
+        warn_deprecated(
+            "config.yaml-non-lowercase-bool",
+            details=f"Got {value!r}. In a future version, only lowercase booleans will be recognized.",
             stacklevel=6,
         )
     return value in {"true", "True", "TRUE"}
