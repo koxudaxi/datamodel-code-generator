@@ -594,11 +594,14 @@ class _XMLSchemaConverter:
 
     def _convert_simple_content(self, simple_content: ET.Element, owner: ET.Element) -> JsonSchema:
         child = _first_xsd_child(simple_content, "extension", "restriction")
-        value_schema = (
-            self._schema_for_qname(child.get("base"), child)
-            if child is not None and child.get("base")
-            else _copy_schema(STRING_SCHEMA)
-        )
+        if child is None:
+            value_schema = _copy_schema(STRING_SCHEMA)
+        elif base := child.get("base"):
+            value_schema = self._schema_for_qname(base, child)
+        elif (simple_type := _first_xsd_child(child, "simpleType")) is not None:
+            value_schema = self._convert_simple_type(simple_type)
+        else:
+            value_schema = _copy_schema(STRING_SCHEMA)
         if child is not None and _local_name(child.tag) == "restriction":
             value_schema = self._apply_restriction_facets(child, value_schema)
 

@@ -132,6 +132,20 @@
     </xs:simpleContent>
   </xs:complexType>
 
+  <xs:complexType name="InlineRestrictedText">
+    <xs:simpleContent>
+      <xs:restriction>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="2"/>
+          </xs:restriction>
+        </xs:simpleType>
+        <xs:maxLength value="6"/>
+        <xs:attribute name="code" type="xs:string" use="required"/>
+      </xs:restriction>
+    </xs:simpleContent>
+  </xs:complexType>
+
   <xs:complexType name="TextWithAttrs">
     <xs:simpleContent>
       <xs:extension>
@@ -141,6 +155,7 @@
   </xs:complexType>
 
   <xs:element name="first" type="tns:ExtendedType"/>
+  <xs:element name="inlineRestrictedText" type="tns:InlineRestrictedText"/>
   <xs:element name="second">
     <xs:complexType>
       <xs:sequence>
