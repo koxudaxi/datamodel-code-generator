@@ -11,6 +11,12 @@
     </xs:sequence>
   </xs:group>
 
+  <xs:group name="tagGroup">
+    <xs:sequence>
+      <xs:element name="tag" type="xs:string"/>
+    </xs:sequence>
+  </xs:group>
+
   <xs:simpleType name="SearchToken">
     <xs:union memberTypes="xs:string xs:int"/>
   </xs:simpleType>
@@ -24,6 +30,7 @@
             <xs:group ref="tns:metricGroup"/>
           </xs:choice>
         </xs:sequence>
+        <xs:group ref="tns:tagGroup" minOccurs="0" maxOccurs="2"/>
         <xs:element name="status" type="xs:string" default="open" nillable="true" minOccurs="0"/>
         <xs:element name="kind" type="xs:string" fixed="audit"/>
         <xs:element name="search" type="tns:SearchToken" nillable="true" minOccurs="0"/>

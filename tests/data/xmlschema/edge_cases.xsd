@@ -19,6 +19,12 @@
     </xs:sequence>
   </xs:group>
 
+  <xs:group name="badOccursGroup">
+    <xs:sequence>
+      <xs:element name="badGrouped" type="xs:string"/>
+    </xs:sequence>
+  </xs:group>
+
   <xs:complexType name="NoSimpleChild">
     <xs:simpleContent/>
   </xs:complexType>
@@ -37,6 +43,9 @@
     </xs:group>
     <xs:sequence minOccurs="0">
       <xs:group ref="optionalGroup"/>
+    </xs:sequence>
+    <xs:sequence maxOccurs="2">
+      <xs:group ref="badOccursGroup" maxOccurs="bad"/>
     </xs:sequence>
     <xs:sequence>
       <xs:annotation/>

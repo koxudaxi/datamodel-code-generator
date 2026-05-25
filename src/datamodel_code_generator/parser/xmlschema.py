@@ -602,12 +602,25 @@ class _XMLSchemaConverter:
         *,
         parent_required: bool = True,
         parent_repeating: bool = False,
+        parent_max_items: int | None = None,
     ) -> None:
         for child in owner:
             if _is_xsd_element(child, "sequence", "all", "choice"):
-                self._apply_particle(child, schema, parent_required=parent_required, parent_repeating=parent_repeating)
+                self._apply_particle(
+                    child,
+                    schema,
+                    parent_required=parent_required,
+                    parent_repeating=parent_repeating,
+                    parent_max_items=parent_max_items,
+                )
             elif _is_xsd_element(child, "group"):
-                self._apply_group(child, schema, parent_required=parent_required, parent_repeating=parent_repeating)
+                self._apply_group(
+                    child,
+                    schema,
+                    parent_required=parent_required,
+                    parent_repeating=parent_repeating,
+                    parent_max_items=parent_max_items,
+                )
 
     def _apply_particle(
         self,
@@ -616,18 +629,39 @@ class _XMLSchemaConverter:
         *,
         parent_required: bool,
         parent_repeating: bool,
+        parent_max_items: int | None,
     ) -> None:
         particle_required = (
             parent_required and particle.get("minOccurs", "1") != "0" and _local_name(particle.tag) != "choice"
         )
-        repeating = parent_repeating or self._is_repeating(particle)
+        particle_repeating = self._is_repeating(particle)
+        repeating = parent_repeating or particle_repeating
+        max_items = self._combine_max_items(parent_max_items, particle.get("maxOccurs") if particle_repeating else None)
         for child in particle:
             if _is_xsd_element(child, "element"):
-                self._add_property_from_element(child, schema, required=particle_required, repeating=repeating)
+                self._add_property_from_element(
+                    child,
+                    schema,
+                    required=particle_required,
+                    repeating=repeating,
+                    max_items=max_items,
+                )
             elif _is_xsd_element(child, "sequence", "all", "choice"):
-                self._apply_particle(child, schema, parent_required=particle_required, parent_repeating=repeating)
+                self._apply_particle(
+                    child,
+                    schema,
+                    parent_required=particle_required,
+                    parent_repeating=repeating,
+                    parent_max_items=max_items,
+                )
             elif _is_xsd_element(child, "group"):
-                self._apply_group(child, schema, parent_required=particle_required, parent_repeating=repeating)
+                self._apply_group(
+                    child,
+                    schema,
+                    parent_required=particle_required,
+                    parent_repeating=repeating,
+                    parent_max_items=max_items,
+                )
             elif _is_xsd_element(child, "any"):
                 schema["additionalProperties"] = True
 
@@ -638,14 +672,31 @@ class _XMLSchemaConverter:
         *,
         parent_required: bool,
         parent_repeating: bool,
+        parent_max_items: int | None,
     ) -> None:
+        group_required = parent_required and group.get("minOccurs", "1") != "0"
+        group_repeating = self._is_repeating(group)
+        repeating = parent_repeating or group_repeating
+        max_items = self._combine_max_items(parent_max_items, group.get("maxOccurs") if group_repeating else None)
         ref = group.get("ref")
         if not ref:
-            self._apply_particle(group, schema, parent_required=parent_required, parent_repeating=parent_repeating)
+            self._apply_particle(
+                group,
+                schema,
+                parent_required=group_required,
+                parent_repeating=repeating,
+                parent_max_items=max_items,
+            )
             return
         target = self.groups.get(self._resolve_key(ref, self.groups, element=group))
         if target is not None:
-            self._apply_model_group(target, schema, parent_required=parent_required, parent_repeating=parent_repeating)
+            self._apply_model_group(
+                target,
+                schema,
+                parent_required=group_required,
+                parent_repeating=repeating,
+                parent_max_items=max_items,
+            )
 
     def _add_property_from_element(
         self,
@@ -654,6 +705,7 @@ class _XMLSchemaConverter:
         *,
         required: bool,
         repeating: bool,
+        max_items: int | None,
     ) -> None:
         name = element.get("name") or _local_name(element.get("ref", ""))
         if not name:
@@ -662,6 +714,8 @@ class _XMLSchemaConverter:
         property_schema = self._convert_element(element)
         if repeating and property_schema.get("type") != "array":
             property_schema = {"type": "array", "items": property_schema}
+            if max_items is not None:
+                property_schema["maxItems"] = max_items
         properties[name] = property_schema
         if required and element.get("minOccurs", "1") != "0":
             schema.setdefault("required", []).append(name)
@@ -734,6 +788,16 @@ class _XMLSchemaConverter:
     def _is_repeating(element: ET.Element) -> bool:
         max_occurs = element.get("maxOccurs")
         return max_occurs is not None and max_occurs != "1"
+
+    def _combine_max_items(self, parent_max_items: int | None, max_occurs: str | None) -> int | None:  # noqa: PLR6301
+        if max_occurs is None:
+            return parent_max_items
+        if max_occurs == UNBOUNDED:
+            return None
+        max_items = _safe_int(max_occurs)
+        if max_items is None:
+            return parent_max_items
+        return parent_max_items * max_items if parent_max_items is not None else max_items
 
     def _schema_for_qname(self, qname: str | None, element: ET.Element | None = None) -> JsonSchema:
         if not qname:  # pragma: no cover
