@@ -3686,6 +3686,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     if merged_property_names.pattern is None
                     else self._intersect_constraint("pattern", merged_property_names.pattern, merged_pattern)
                 )
+                if merged_property_names.ref:
+                    merged_property_names = self._merge_ref_with_schema(merged_property_names)
                 key_type = self._parse_property_name_key_schema(merged_property_names)
             data_types.append(
                 self.data_type(
