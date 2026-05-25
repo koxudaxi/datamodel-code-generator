@@ -28,7 +28,6 @@ JsonSchema = dict[str, Any]
 PRIMITIVE_TYPES = frozenset({"null", "boolean", "int", "long", "float", "double", "bytes", "string"})
 NAMED_TYPES = frozenset({"record", "enum", "fixed"})
 COMPLEX_TYPES = NAMED_TYPES | {"array", "map"}
-PYTHON_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 STRING_SCHEMA: JsonSchema = {"type": "string"}
 NULL_SCHEMA: JsonSchema = {"type": "null"}
@@ -322,7 +321,6 @@ class _AvroSchemaConverter:
             self._build_definition(fullname)
 
     def _build_definition(self, fullname: str, *, as_root: bool = False) -> JsonSchema:
-        definition_key = self.definition_names.get(fullname)
         raw_schema = self.named_schemas.get(fullname)
         if raw_schema is None:
             msg = f"Unknown Avro named type reference: {fullname}"
