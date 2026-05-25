@@ -16,7 +16,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 
 ## ✨ What it does
 
-- 📄 Converts **OpenAPI 3**, **JSON Schema**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
+- 📄 Converts **OpenAPI 3**, **JSON Schema**, **XML Schema**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
 - 🐍 Generates from **existing Python types** (Pydantic, dataclass, TypedDict) via `--input-model`
 - 🎯 Generates **Pydantic v2**, **Pydantic v2 dataclass**, **dataclasses**, **TypedDict**, or **msgspec** output
 - 🔗 Handles complex schemas: `$ref`, `allOf`, `oneOf`, `anyOf`, enums, and nested types
@@ -101,6 +101,7 @@ datamodel-codegen --input pet.json --input-file-type jsonschema --output-model-t
 |------------|------------|---------|
 | 📘 [OpenAPI 3](openapi.md) | `.yaml`, `.json` | API specifications |
 | 📋 [JSON Schema](jsonschema.md) | `.json` | Data validation schemas |
+| 🧾 XML Schema | `.xsd` | XML document schemas |
 | 🔷 [GraphQL](graphql.md) | `.graphql` | GraphQL type definitions |
 | 📊 [JSON/YAML Data](jsondata.md) | `.json`, `.yaml` | Infer schema from data |
 | 🐍 [Python Models](python-model.md) | `.py` | Pydantic, dataclass, TypedDict |
@@ -25323,6 +25324,7 @@ This code generator supports the following input formats:
 
 - OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types));
 - JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html) /[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html));
+- XML Schema (XSD);
 - JSON/YAML Data (it will be converted to JSON Schema);
 - Python dictionary (it will be converted to JSON Schema);
 - GraphQL schema ([GraphQL Schemas and Types](https://graphql.org/learn/schema/));
