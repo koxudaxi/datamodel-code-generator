@@ -27,7 +27,7 @@ formatters = ["builtin"]
 builtin-format-line-length = 100
 ```
 
-`builtin-format-line-length` is used only by the built-in formatter, and only for wrapping `from ... import ...` statements.
+`builtin-format-line-length` is used only by the built-in formatter. It controls wrapping for `from ... import ...` statements and generated model statements.
 
 If it is not set, the built-in formatter reads existing formatter settings in this order:
 

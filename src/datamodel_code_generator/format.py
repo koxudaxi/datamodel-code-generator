@@ -219,6 +219,10 @@ TYPE_ALIAS_INLINE_ARGUMENT_COUNT = 2
 STRING_PREFIX_PATTERN = re.compile(r"(?i)^([rubf]*)(\"\"\"|'''|\"|')")
 
 
+def _is_valid_builtin_line_length(line_length: Any) -> TypeGuard[int]:
+    return isinstance(line_length, int) and not isinstance(line_length, bool) and line_length > 0
+
+
 def _find_pyproject_toml(settings_path: Path) -> Path | None:
     for path in (settings_path, *settings_path.parents):
         pyproject_toml = path / "pyproject.toml"
@@ -229,7 +233,7 @@ def _find_pyproject_toml(settings_path: Path) -> Path | None:
 
 def _get_builtin_line_length(settings_path: Path, explicit_line_length: int | None = None) -> int:
     if explicit_line_length is not None:
-        return explicit_line_length
+        return explicit_line_length if _is_valid_builtin_line_length(explicit_line_length) else DEFAULT_LINE_LENGTH
 
     pyproject_toml_path = _find_pyproject_toml(settings_path)
     if pyproject_toml_path is None:
@@ -247,7 +251,7 @@ def _get_builtin_line_length(settings_path: Path, explicit_line_length: int | No
         black_config.get("line-length"),
         isort_config.get("line_length"),
     ):
-        if isinstance(line_length, int):
+        if _is_valid_builtin_line_length(line_length):
             return line_length
     return DEFAULT_LINE_LENGTH
 

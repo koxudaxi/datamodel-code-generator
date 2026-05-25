@@ -163,6 +163,32 @@ def test_format_code_builtin_formatter_uses_explicit_line_length(
     )
 
 
+def test_format_code_builtin_formatter_ignores_invalid_explicit_line_length(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatter ignores invalid explicit line length values."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+        builtin_format_line_length=0,
+    )
+
+    formatted_code = formatter.format_code(
+        "from module import Zed, ExtremelyLongGeneratedTypeName, AnotherLongGeneratedTypeName, "
+        "GeneratedTypeNameThatDoesNotFitWithinDefaultLineLength\n"
+    )
+
+    assert formatted_code == (
+        "from module import (\n"
+        "    AnotherLongGeneratedTypeName,\n"
+        "    ExtremelyLongGeneratedTypeName,\n"
+        "    GeneratedTypeNameThatDoesNotFitWithinDefaultLineLength,\n"
+        "    Zed,\n"
+        ")\n"
+    )
+
+
 def test_format_code_builtin_formatter_uses_datamodel_codegen_line_length(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -250,13 +276,13 @@ def test_format_code_builtin_formatter_reads_black_skip_string_normalization(
 def test_format_code_builtin_formatter_ignores_non_integer_line_lengths(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Test built-in formatter ignores non-integer line length configuration."""
+    """Test built-in formatter ignores invalid line length configuration."""
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
         "[tool.datamodel-codegen]\n"
-        'builtin-format-line-length = "140"\n'
+        "builtin_format_line_length = -1\n"
         "[tool.ruff]\n"
-        'line-length = "140"\n'
+        "line-length = false\n"
         "[tool.black]\n"
         'line-length = "140"\n'
         "[tool.isort]\n"

@@ -92,7 +92,7 @@ formatters = []
 
 Formatters read their configuration from `pyproject.toml`. The effective search path starts from the output path directory, or the current working directory when no output path is available, and then checks parent directories.
 
-The built-in formatter uses line length only for import wrapping. Its precedence is:
+The built-in formatter uses line length for import wrapping and generated model statement wrapping. Its precedence is:
 
 1. API `builtin_format_line_length`
 2. `[tool.datamodel-codegen].builtin-format-line-length`
