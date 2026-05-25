@@ -7964,6 +7964,29 @@ def test_main_jsonschema_contains_true_max_contains_zero(output_file: Path) -> N
     )
 
 
+def test_main_jsonschema_contains_true_default_min_contains(output_file: Path) -> None:
+    """Test contains true defaults minContains to one."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "contains_true_default_min_contains.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="contains_true_default_min_contains.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="contains_true_default_min_contains",
+        model_name="ContainsTrueDefaultMinContains",
+        valid_json='{"values":["x"]}',
+        invalid_json='{"values":[]}',
+        expected_error_type="too_short",
+        expected_attribute_path=("values",),
+        expected_attribute_value=["x"],
+    )
+
+
 def test_main_jsonschema_contains_true_count_constraints(output_file: Path) -> None:
     """Test contains true count constraints are generated as array length constraints."""
     run_main_and_assert(

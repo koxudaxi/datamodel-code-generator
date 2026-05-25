@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "ContainsTrueMaxContainsZero",
+  "title": "ContainsTrueDefaultMinContains",
   "type": "object",
   "properties": {
     "values": {
@@ -8,9 +8,7 @@
       "items": {
         "type": "string"
       },
-      "contains": true,
-      "minContains": 0,
-      "maxContains": 0
+      "contains": true
     }
   },
   "required": [
