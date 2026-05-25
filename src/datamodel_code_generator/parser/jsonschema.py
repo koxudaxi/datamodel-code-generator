@@ -3749,6 +3749,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         Returns:
             DataType representing dict with constrained keys
         """
+        if (
+            isinstance(property_names, JsonSchemaObject)
+            and property_names.has_ref_with_schema_keywords
+            and not property_names.is_ref_with_nullable_only
+        ):
+            property_names = self._merge_ref_with_schema(property_names)
+
         # Determine value type from additionalProperties
         if isinstance(additional_properties, JsonSchemaObject):
             value_type = self.parse_item(
