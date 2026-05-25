@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="https://example.com/model-groups"
+  targetNamespace="https://example.com/model-groups"
+>
+  <xs:group name="metricGroup">
+    <xs:sequence>
+      <xs:element name="count" type="xs:int" fixed="1"/>
+      <xs:any namespace="##other" processContents="skip" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:group>
+
+  <xs:simpleType name="SearchToken">
+    <xs:union memberTypes="xs:string xs:int"/>
+  </xs:simpleType>
+
+  <xs:element name="eventLog">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:sequence minOccurs="0" maxOccurs="unbounded">
+          <xs:choice>
+            <xs:element name="message" type="xs:string" default="ready" nillable="true"/>
+            <xs:group ref="tns:metricGroup"/>
+          </xs:choice>
+        </xs:sequence>
+        <xs:element name="status" type="xs:string" default="open" nillable="true" minOccurs="0"/>
+        <xs:element name="kind" type="xs:string" fixed="audit"/>
+        <xs:element name="search" type="tns:SearchToken" nillable="true" minOccurs="0"/>
+        <xs:element name="inlineSearch" nillable="true" minOccurs="0">
+          <xs:simpleType>
+            <xs:union memberTypes="xs:string xs:int"/>
+          </xs:simpleType>
+        </xs:element>
+      </xs:sequence>
+      <xs:anyAttribute namespace="##other" processContents="lax"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

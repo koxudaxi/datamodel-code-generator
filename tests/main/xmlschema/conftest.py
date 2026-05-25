@@ -23,7 +23,7 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
         "class BooleanFacet(Enum):",
         "class ArrayFacet(RootModel[list[str]]):",
         "class BaseType(BaseModel):",
-        "sharedElement: list[SharedElement] | None = Field(None, max_length=2)",
+        "sharedElement: list[SharedElement | None] | None = Field(None, max_length=2)",
         "left: str | None = None",
         "fromGroup: str | None = None",
         "localNumber: conint(ge=-2147483648, le=2147483647) | None = 1",
@@ -116,6 +116,17 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
         "animal: list[Cat | Dog]",
         "vehicle: Vehicle | Car | None = None",
         "description: Paragraph | None = None",
+    ),
+    "model_groups_and_wildcards": (
+        "class SearchToken(RootModel[str | conint(ge=-2147483648, le=2147483647)]):",
+        "class EventLog(BaseModel):",
+        "extra='allow'",
+        "message: list[str | None] | None = None",
+        "count: list[Literal[1]] | None = None",
+        "status: str | None = 'open'",
+        "kind: Literal['audit']",
+        "search: SearchToken | None = None",
+        "inlineSearch: str | conint(ge=-2147483648, le=2147483647) | None = None",
     ),
 }
 

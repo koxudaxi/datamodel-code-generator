@@ -415,10 +415,21 @@ class _XMLSchemaConverter:
         if "fixed" in element.attrib:
             schema["const"] = self._parse_literal(str(element.get("fixed")), schema)
         if element.get("nillable") == "true":
-            schema["nullable"] = True
+            schema = self._make_nullable(schema)
         if element.get("abstract") == "true":
             schema["x-xsd-abstract"] = True
         return schema
+
+    def _make_nullable(self, schema: JsonSchema) -> JsonSchema:  # noqa: PLR6301
+        schema = _copy_schema(schema)
+        schema_type = schema.get("type")
+        if isinstance(schema_type, str):
+            schema["type"] = [schema_type, "null"]
+            return schema
+        if "anyOf" in schema:
+            schema["anyOf"] = [*schema["anyOf"], {"type": "null"}]
+            return schema
+        return {"anyOf": [schema, {"type": "null"}]}
 
     def _apply_occurs(self, element: ET.Element, schema: JsonSchema) -> JsonSchema:  # noqa: PLR6301
         min_occurs_value = element.get("minOccurs")
@@ -584,36 +595,57 @@ class _XMLSchemaConverter:
             self._apply_attributes(child, schema)
         return schema
 
-    def _apply_model_group(self, owner: ET.Element, schema: JsonSchema, *, parent_required: bool = True) -> None:
+    def _apply_model_group(
+        self,
+        owner: ET.Element,
+        schema: JsonSchema,
+        *,
+        parent_required: bool = True,
+        parent_repeating: bool = False,
+    ) -> None:
         for child in owner:
             if _is_xsd_element(child, "sequence", "all", "choice"):
-                self._apply_particle(child, schema, parent_required=parent_required)
+                self._apply_particle(child, schema, parent_required=parent_required, parent_repeating=parent_repeating)
             elif _is_xsd_element(child, "group"):
-                self._apply_group(child, schema, parent_required=parent_required)
+                self._apply_group(child, schema, parent_required=parent_required, parent_repeating=parent_repeating)
 
-    def _apply_particle(self, particle: ET.Element, schema: JsonSchema, *, parent_required: bool) -> None:
+    def _apply_particle(
+        self,
+        particle: ET.Element,
+        schema: JsonSchema,
+        *,
+        parent_required: bool,
+        parent_repeating: bool,
+    ) -> None:
         particle_required = (
             parent_required and particle.get("minOccurs", "1") != "0" and _local_name(particle.tag) != "choice"
         )
-        repeating = self._is_repeating(particle)
+        repeating = parent_repeating or self._is_repeating(particle)
         for child in particle:
             if _is_xsd_element(child, "element"):
                 self._add_property_from_element(child, schema, required=particle_required, repeating=repeating)
             elif _is_xsd_element(child, "sequence", "all", "choice"):
-                self._apply_particle(child, schema, parent_required=particle_required)
+                self._apply_particle(child, schema, parent_required=particle_required, parent_repeating=repeating)
             elif _is_xsd_element(child, "group"):
-                self._apply_group(child, schema, parent_required=particle_required)
+                self._apply_group(child, schema, parent_required=particle_required, parent_repeating=repeating)
             elif _is_xsd_element(child, "any"):
                 schema["additionalProperties"] = True
 
-    def _apply_group(self, group: ET.Element, schema: JsonSchema, *, parent_required: bool) -> None:
+    def _apply_group(
+        self,
+        group: ET.Element,
+        schema: JsonSchema,
+        *,
+        parent_required: bool,
+        parent_repeating: bool,
+    ) -> None:
         ref = group.get("ref")
         if not ref:
-            self._apply_particle(group, schema, parent_required=parent_required)
+            self._apply_particle(group, schema, parent_required=parent_required, parent_repeating=parent_repeating)
             return
         target = self.groups.get(self._resolve_key(ref, self.groups, element=group))
         if target is not None:
-            self._apply_model_group(target, schema, parent_required=parent_required)
+            self._apply_model_group(target, schema, parent_required=parent_required, parent_repeating=parent_repeating)
 
     def _add_property_from_element(
         self,
