@@ -355,7 +355,7 @@ class _XMLSchemaConverter:
         if local_name == "element":
             if is_root:
                 self.local_elements.add(key)
-            if substitution_group := child.get("substitutionGroup"):
+            for substitution_group in (child.get("substitutionGroup") or "").split():
                 head_key = self._qname_key(substitution_group, child)
                 self.substitution_groups.setdefault(head_key, set()).add(key)
                 self.substitution_members.add(key)

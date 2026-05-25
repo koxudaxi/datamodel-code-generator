@@ -125,6 +125,13 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
         "vehicle: Vehicle | Car | None = None",
         "description: Paragraph | None = None",
     ),
+    "multiple_substitution_groups": (
+        "class ConcreteThing(BaseThing):",
+        "label: str",
+        "class Document(BaseModel):",
+        "thing: ConcreteThing",
+        "namedThing: ConcreteThing | None = None",
+    ),
     "model_groups_and_wildcards": (
         "class SearchToken(RootModel[str | conint(ge=-2147483648, le=2147483647)]):",
         "class EventLog(BaseModel):",

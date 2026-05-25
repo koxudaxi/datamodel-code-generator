@@ -150,6 +150,17 @@ def test_main_xmlschema_advanced_constructs(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_multiple_substitution_groups(output_file: Path) -> None:
+    """Generate models for elements affiliated with multiple substitution groups."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "multiple_substitution_groups.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_xmlschema_snippets,
+        expected_file="multiple_substitution_groups.py",
+    )
+
+
 def test_main_xmlschema_model_groups_and_wildcards(output_file: Path) -> None:
     """Generate models for repeating model groups, defaults, fixed values, and wildcards."""
     run_main_and_assert(
