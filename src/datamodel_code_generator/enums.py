@@ -37,6 +37,7 @@ class InputFileType(Enum):
 
     Auto = "auto"
     OpenAPI = "openapi"
+    AsyncAPI = "asyncapi"
     JsonSchema = "jsonschema"
     XMLSchema = "xmlschema"
     Json = "json"
@@ -265,6 +266,17 @@ class OpenAPIVersion(Enum):
     Auto = "auto"
 
 
+class AsyncAPIVersion(Enum):
+    """AsyncAPI specification versions.
+
+    Auto: Auto-detect from asyncapi field (default).
+    """
+
+    V2 = "2.0"
+    V3 = "3.0"
+    Auto = "auto"
+
+
 class XMLSchemaVersion(Enum):
     """XML Schema specification versions.
 
@@ -295,6 +307,7 @@ __all__ = [
     "AllExportsScope",
     "AllOfClassHierarchy",
     "AllOfMergeMode",
+    "AsyncAPIVersion",
     "ClassNameAffixScope",
     "CollapseRootModelsNameStrategy",
     "DataModelType",

@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.enums import (
         AllOfClassHierarchy,
         AllOfMergeMode,
+        AsyncAPIVersion,
         ClassNameAffixScope,
         CollapseRootModelsNameStrategy,
         DataclassArguments,
@@ -183,13 +184,17 @@ class JSONSchemaParserConfigDict(ParserConfigDict):
     schema_version_mode: NotRequired[VersionMode | None]
 
 
-class OpenAPIParserConfigDict(JSONSchemaParserConfigDict, closed=True):
+class OpenAPIParserConfigDict(JSONSchemaParserConfigDict):
     openapi_scopes: NotRequired[list[OpenAPIScope] | None]
     include_path_parameters: NotRequired[bool]
     use_status_code_in_response_name: NotRequired[bool]
     openapi_include_paths: NotRequired[list[str] | None]
     openapi_include_info_version: NotRequired[bool]
     openapi_version: NotRequired[OpenAPIVersion | None]
+
+
+class AsyncAPIParserConfigDict(OpenAPIParserConfigDict, closed=True):
+    asyncapi_version: NotRequired[AsyncAPIVersion | None]
 
 
 class XMLSchemaParserConfigDict(JSONSchemaParserConfigDict, closed=True):
@@ -201,6 +206,7 @@ ModelDict: TypeAlias = (
     | GraphQLParserConfigDict
     | JSONSchemaParserConfigDict
     | OpenAPIParserConfigDict
+    | AsyncAPIParserConfigDict
     | XMLSchemaParserConfigDict
 )
 

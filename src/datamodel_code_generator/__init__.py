@@ -35,6 +35,7 @@ from datamodel_code_generator.enums import (
     AllExportsScope,
     AllOfClassHierarchy,
     AllOfMergeMode,
+    AsyncAPIVersion,
     ClassNameAffixScope,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
@@ -68,6 +69,7 @@ from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 
 if TYPE_CHECKING:
     from datamodel_code_generator._types import (
+        AsyncAPIParserConfigDict,
         GraphQLParserConfigDict,
         JSONSchemaParserConfigDict,
         OpenAPIParserConfigDict,
@@ -282,6 +284,11 @@ def chdir(path: Path | None) -> Iterator[None]:
 def is_openapi(data: Mapping[str, Any]) -> bool:
     """Check if the data dict is an OpenAPI specification."""
     return "openapi" in data
+
+
+def is_asyncapi(data: Mapping[str, Any]) -> bool:
+    """Check if the data dict is an AsyncAPI specification."""
+    return "asyncapi" in data
 
 
 JSON_SCHEMA_URLS: tuple[str, ...] = (
@@ -500,6 +507,7 @@ def _create_parser_config(
     additional_options: ParserConfigDict
     | JSONSchemaParserConfigDict
     | OpenAPIParserConfigDict
+    | AsyncAPIParserConfigDict
     | GraphQLParserConfigDict,
 ) -> _ConfigT:
     """Create a parser config from GenerateConfig with additional options.
@@ -525,7 +533,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     """Generate Python data models from schema definitions or structured data.
 
     This is the main entry point for code generation. Supports OpenAPI, JSON Schema,
-    GraphQL, XML Schema, and raw data formats (JSON, YAML, Dict, CSV) as input.
+    AsyncAPI, GraphQL, XML Schema, and raw data formats (JSON, YAML, Dict, CSV) as input.
 
     Args:
         input_: The input source (file path, string content, URL, or dict).
@@ -734,6 +742,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     defer_formatting = config.output is not None and not config.output.suffix
 
     from datamodel_code_generator.config import (  # noqa: PLC0415
+        AsyncAPIParserConfig,
         GraphQLParserConfig,
         JSONSchemaParserConfig,
         OpenAPIParserConfig,
@@ -779,6 +788,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     # Convert schema_version string to appropriate enum based on input type
     jsonschema_version: JsonSchemaVersion | None = None
     openapi_version: OpenAPIVersion | None = None
+    asyncapi_version: AsyncAPIVersion | None = None
     xmlschema_version: XMLSchemaVersion | None = None
     if config.schema_version and config.schema_version != "auto":
         if input_file_type == InputFileType.OpenAPI:
@@ -787,6 +797,13 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             except ValueError:
                 valid = [v.value for v in OpenAPIVersion]
                 msg = f"Invalid OpenAPI version: {config.schema_version}. Valid values: {valid}"
+                raise Error(msg) from None
+        elif input_file_type == InputFileType.AsyncAPI:
+            try:
+                asyncapi_version = AsyncAPIVersion(config.schema_version)
+            except ValueError:
+                valid = [v.value for v in AsyncAPIVersion]
+                msg = f"Invalid AsyncAPI version: {config.schema_version}. Valid values: {valid}"
                 raise Error(msg) from None
         elif input_file_type == InputFileType.XMLSchema:
             try:
@@ -820,6 +837,20 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         }
         parser_config = _create_parser_config(OpenAPIParserConfig, config, openapi_additional_options)
         parser = OpenAPIParser(source=source, config=parser_config)  # ty: ignore
+    elif input_file_type == InputFileType.AsyncAPI:
+        from datamodel_code_generator.parser.asyncapi import AsyncAPIParser  # noqa: PLC0415
+
+        asyncapi_additional_options: AsyncAPIParserConfigDict = {
+            "openapi_scopes": config.openapi_scopes,
+            "include_path_parameters": config.include_path_parameters,
+            "use_status_code_in_response_name": config.use_status_code_in_response_name,
+            "openapi_include_paths": config.openapi_include_paths,
+            "openapi_include_info_version": config.openapi_include_info_version,
+            "asyncapi_version": asyncapi_version,
+            **additional_options,
+        }
+        parser_config = _create_parser_config(AsyncAPIParserConfig, config, asyncapi_additional_options)
+        parser = AsyncAPIParser(source=source, config=parser_config)  # ty: ignore
     elif input_file_type == InputFileType.XMLSchema:
         from datamodel_code_generator.config import XMLSchemaParserConfig  # noqa: PLC0415
         from datamodel_code_generator.parser.xmlschema import XMLSchemaParser  # noqa: PLC0415
@@ -1016,6 +1047,8 @@ def infer_input_type(text: str) -> InputFileType:
     except get_yaml_parse_errors():
         return InputFileType.CSV
     if isinstance(data, dict):
+        if is_asyncapi(data):
+            return InputFileType.AsyncAPI
         if is_openapi(data):
             return InputFileType.OpenAPI
         if is_schema(data):
@@ -1071,6 +1104,7 @@ __all__ = [
     "AllExportsScope",
     "AllOfClassHierarchy",
     "AllOfMergeMode",
+    "AsyncAPIVersion",
     "ClassNameAffixScope",
     "CollapseRootModelsNameStrategy",
     "DateClassType",

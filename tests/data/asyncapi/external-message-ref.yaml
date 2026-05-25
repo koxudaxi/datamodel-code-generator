@@ -1,0 +1,9 @@
+asyncapi: 3.0.0
+info:
+  title: External message reference
+  version: 1.0.0
+channels:
+  user/events:
+    messages:
+      userCreated:
+        $ref: './external-messages.yaml#/components/messages/UserCreated'

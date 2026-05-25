@@ -86,6 +86,8 @@ def test_infer_input_type() -> None:  # noqa: PLR0912
             assert_invalid_infer_input_type(file)
             continue
         assert_infer_input_type(file, InputFileType.OpenAPI)
+    for file in (DATA_PATH / "asyncapi").rglob("*"):
+        assert_infer_input_type(file, InputFileType.AsyncAPI)
 
     xmlschema_files = list((DATA_PATH / "xmlschema").rglob("*.xsd"))
     assert xmlschema_files, "XML Schema fixtures are required for input type inference tests."

@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 import pydantic
 from pydantic import BaseModel
 
-from datamodel_code_generator import Error, generate, is_openapi
+from datamodel_code_generator import Error, generate, is_asyncapi, is_openapi
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.enums import DataModelType, InputFileType
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
@@ -167,6 +167,15 @@ def _make_cache_key(schema: Mapping[str, Any], config: GenerateConfig) -> str | 
         return None
 
 
+def _detect_schema_input_file_type(input_: Mapping[str, Any]) -> InputFileType:
+    """Detect schema input type for dynamic model generation."""
+    if is_asyncapi(input_):
+        return InputFileType.AsyncAPI
+    if is_openapi(input_):
+        return InputFileType.OpenAPI
+    return InputFileType.JsonSchema
+
+
 def generate_dynamic_models(
     input_: Mapping[str, Any],
     *,
@@ -213,19 +222,12 @@ def generate_dynamic_models(
     GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
 
     if config is None:
-        if is_openapi(input_):
-            config = GenerateConfig(
-                input_file_type=InputFileType.OpenAPI,
-                output_model_type=DataModelType.PydanticV2BaseModel,
-            )
-        else:
-            config = GenerateConfig(
-                input_file_type=InputFileType.JsonSchema,
-                output_model_type=DataModelType.PydanticV2BaseModel,
-            )
+        config = GenerateConfig(
+            input_file_type=_detect_schema_input_file_type(input_),
+            output_model_type=DataModelType.PydanticV2BaseModel,
+        )
     elif config.input_file_type == InputFileType.Auto:
-        detected_type = InputFileType.OpenAPI if is_openapi(input_) else InputFileType.JsonSchema
-        config = config.model_copy(update={"input_file_type": detected_type})
+        config = config.model_copy(update={"input_file_type": _detect_schema_input_file_type(input_)})
 
     cache_key = _make_cache_key(input_, config)
     use_cache = cache_size > 0 and cache_key is not None
