@@ -185,7 +185,7 @@ class _XMLSchemaConverter:
         self.substitution_members: set[QNameKey] = set()
         self.referenced_elements: set[QNameKey] = set()
         self.local_elements: set[QNameKey] = set()
-        self._loaded_locations: set[Path] = set()
+        self._loaded_locations: set[tuple[Path, str | None]] = set()
         self._element_namespaces: dict[int, dict[str, str]] = {}
         self._building_definitions: set[QNameKey] = set()
         self._built_definitions: dict[QNameKey, JsonSchema] = {}
@@ -275,51 +275,88 @@ class _XMLSchemaConverter:
             self.target_namespace = target_namespace
         return root
 
-    def _collect_schema(self, root: ET.Element, source_path: Path, *, is_root: bool = False) -> None:  # noqa: PLR0912
+    def _collect_schema(
+        self,
+        root: ET.Element,
+        source_path: Path,
+        *,
+        is_root: bool = False,
+        namespace_override: str | None = None,
+    ) -> None:
         source_dir = source_path.parent if source_path.name else self.base_path
-        for child in _xsd_children(root, "include", "import", "redefine"):
+        schema_namespace = root.get("targetNamespace") or namespace_override
+        for child in _xsd_children(root, "include", "import", "redefine", "override"):
             schema_location = child.get("schemaLocation")
             if not schema_location:
                 continue
             location = (source_dir / schema_location).resolve()
-            if location in self._loaded_locations or not location.is_file():
+            if not location.is_file():
                 continue
-            self._loaded_locations.add(location)
             included_root = self._parse_schema(location.read_text(encoding=self.encoding), location)
-            self._collect_schema(included_root, location)
+            child_namespace_override = (
+                schema_namespace
+                if _local_name(child.tag) in {"include", "redefine", "override"}
+                and included_root.get("targetNamespace") is None
+                else None
+            )
+            load_key = (location, child_namespace_override)
+            if load_key not in self._loaded_locations:
+                self._loaded_locations.add(load_key)
+                self._collect_schema(included_root, location, namespace_override=child_namespace_override)
+            if _is_xsd_element(child, "redefine", "override"):
+                self._collect_schema_declarations(child, schema_namespace, replace=True)
 
-        schema_namespace = root.get("targetNamespace")
         for child in root:
-            name = child.get("name")
-            if not name:
-                continue
-            key = (schema_namespace, name)
             if _namespace(child.tag) != XML_SCHEMA_NAMESPACE:
                 continue
-            match _local_name(child.tag):
-                case "simpleType":
-                    self.simple_types.setdefault(key, child)
-                case "complexType":
-                    self.complex_types.setdefault(key, child)
-                case "element":
-                    self.elements.setdefault(key, child)
-                    if is_root:
-                        self.local_elements.add(key)
-                    if substitution_group := child.get("substitutionGroup"):
-                        head_key = self._qname_key(substitution_group, child)
-                        self.substitution_groups.setdefault(head_key, set()).add(key)
-                        self.substitution_members.add(key)
-                case "attribute":
-                    self.attributes.setdefault(key, child)
-                case "group":
-                    self.groups.setdefault(key, child)
-                case "attributeGroup":
-                    self.attribute_groups.setdefault(key, child)
-                case _:  # pragma: no cover
-                    pass
+            self._collect_schema_declaration(child, schema_namespace, is_root=is_root)
         for child in root.iter():
             if _is_xsd_element(child, "element") and (ref := child.get("ref")):
                 self.referenced_elements.add(self._qname_key(ref, child))
+
+    def _collect_schema_declarations(self, owner: ET.Element, schema_namespace: str | None, *, replace: bool) -> None:
+        for child in owner:
+            if _namespace(child.tag) == XML_SCHEMA_NAMESPACE:
+                self._collect_schema_declaration(child, schema_namespace, replace=replace)
+
+    def _collect_schema_declaration(
+        self,
+        child: ET.Element,
+        schema_namespace: str | None,
+        *,
+        is_root: bool = False,
+        replace: bool = False,
+    ) -> None:
+        name = child.get("name")
+        if not name:
+            return
+        key = (schema_namespace, name)
+        registry: dict[QNameKey, ET.Element] | None = None
+        match _local_name(child.tag):
+            case "simpleType":
+                registry = self.simple_types
+            case "complexType":
+                registry = self.complex_types
+            case "element":
+                registry = self.elements
+                if is_root:
+                    self.local_elements.add(key)
+                if substitution_group := child.get("substitutionGroup"):
+                    head_key = self._qname_key(substitution_group, child)
+                    self.substitution_groups.setdefault(head_key, set()).add(key)
+                    self.substitution_members.add(key)
+            case "attribute":
+                registry = self.attributes
+            case "group":
+                registry = self.groups
+            case "attributeGroup":
+                registry = self.attribute_groups
+            case _:
+                return
+        if replace:
+            registry[key] = child
+        else:
+            registry.setdefault(key, child)
 
     def _prepare_definition_names(self) -> None:
         keys = set(self.simple_types) | set(self.complex_types) | set(self.elements)

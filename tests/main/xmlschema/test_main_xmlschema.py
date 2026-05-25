@@ -161,6 +161,17 @@ def test_main_xmlschema_model_groups_and_wildcards(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_schema_composition(output_file: Path) -> None:
+    """Generate models from include, redefine, override, and chameleon schemas."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "schema_composition.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_xmlschema_snippets,
+        expected_file="schema_composition.py",
+    )
+
+
 def test_main_xmlschema_parse_error(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Report invalid XML Schema syntax through the CLI."""
     run_main_and_assert(

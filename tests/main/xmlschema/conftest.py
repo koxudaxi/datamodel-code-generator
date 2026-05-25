@@ -138,6 +138,19 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
         "search: SearchToken | None = None",
         "inlineSearch: str | conint(ge=-2147483648, le=2147483647) | None = None",
     ),
+    "schema_composition": (
+        "class ChameleonType(BaseModel):",
+        "chameleonValue: str",
+        "class RedefinedCode(RootModel[constr(min_length=4)]):",
+        "class OverriddenType(BaseModel):",
+        "newValue: str",
+        "class Container(BaseModel):",
+        "chameleon: ChameleonType",
+        "code: RedefinedCode",
+        "newGroupElement: str",
+        "overrideValue: OverriddenType",
+        "newAttr: conint(ge=-2147483648, le=2147483647) | None = None",
+    ),
 }
 
 XMLSCHEMA_ABSENT_SNIPPETS: dict[str, tuple[str, ...]] = {
@@ -149,6 +162,12 @@ XMLSCHEMA_ABSENT_SNIPPETS: dict[str, tuple[str, ...]] = {
         "class GlobalFlag",
         "class NamedAttributes",
         "class NamedGroup",
+    ),
+    "schema_composition": (
+        "oldGroupElement",
+        "oldAttr",
+        "oldValue",
+        "class HttpsExampleComSchemaCompositionChameleonType",
     ),
 }
 

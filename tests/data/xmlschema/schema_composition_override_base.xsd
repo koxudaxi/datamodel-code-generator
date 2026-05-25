@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="https://example.com/schema-composition"
+  targetNamespace="https://example.com/schema-composition"
+>
+  <xs:complexType name="OverriddenType">
+    <xs:sequence>
+      <xs:element name="oldValue" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

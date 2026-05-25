@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="https://example.com/schema-composition"
+  xmlns:other="https://example.com/metadata"
+  targetNamespace="https://example.com/schema-composition"
+>
+  <xs:notation name="textFile" public="text/plain"/>
+  <xs:include schemaLocation="schema_composition_chameleon.xsd"/>
+  <xs:redefine schemaLocation="schema_composition_redefine_base.xsd">
+    <other:metadata/>
+    <xs:simpleType name="RedefinedCode">
+      <xs:restriction base="xs:string">
+        <xs:minLength value="4"/>
+      </xs:restriction>
+    </xs:simpleType>
+    <xs:group name="RedefinedGroup">
+      <xs:sequence>
+        <xs:element name="newGroupElement" type="xs:string"/>
+      </xs:sequence>
+    </xs:group>
+    <xs:attributeGroup name="RedefinedAttrs">
+      <xs:attribute name="newAttr" type="xs:int"/>
+    </xs:attributeGroup>
+  </xs:redefine>
+  <xs:override schemaLocation="schema_composition_override_base.xsd">
+    <xs:complexType name="OverriddenType">
+      <xs:sequence>
+        <xs:element name="newValue" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:override>
+
+  <xs:complexType name="Container">
+    <xs:sequence>
+      <xs:element name="chameleon" type="tns:ChameleonType"/>
+      <xs:element name="code" type="tns:RedefinedCode"/>
+      <xs:group ref="tns:RedefinedGroup"/>
+      <xs:element name="overrideValue" type="tns:OverriddenType"/>
+    </xs:sequence>
+    <xs:attributeGroup ref="tns:RedefinedAttrs"/>
+  </xs:complexType>
+
+  <xs:element name="container" type="tns:Container"/>
+</xs:schema>
