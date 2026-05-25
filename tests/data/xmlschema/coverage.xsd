@@ -78,11 +78,16 @@
     </xs:annotation>
     <xs:sequence minOccurs="0">
       <xs:element ref="tns:sharedElement" minOccurs="0" maxOccurs="2" nillable="true" default="x"/>
+      <xs:sequence maxOccurs="0">
+        <xs:element name="blockedParticleElement" type="xs:string"/>
+      </xs:sequence>
       <xs:choice>
         <xs:element name="left" type="xs:string"/>
         <xs:element name="right" type="xs:string"/>
       </xs:choice>
       <xs:group ref="tns:namedGroup"/>
+      <xs:element name="blockedElement" type="xs:string" maxOccurs="0"/>
+      <xs:group ref="tns:blockedGroup" maxOccurs="0"/>
       <xs:any/>
     </xs:sequence>
     <xs:attribute name="localNumber" type="xs:int" default="1"/>
@@ -150,6 +155,7 @@
     <xs:simpleContent>
       <xs:extension>
         <xs:attribute name="kind" fixed="plain"/>
+        <xs:attribute name="emptyFixed" fixed=""/>
       </xs:extension>
     </xs:simpleContent>
   </xs:complexType>
@@ -169,4 +175,10 @@
       </xs:sequence>
     </xs:complexType>
   </xs:element>
+
+  <xs:group name="blockedGroup">
+    <xs:sequence>
+      <xs:element name="blockedGroupElement" type="xs:string"/>
+    </xs:sequence>
+  </xs:group>
 </xs:schema>

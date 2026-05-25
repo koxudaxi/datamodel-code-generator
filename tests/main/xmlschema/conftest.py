@@ -29,6 +29,7 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
         "localNumber: conint(ge=-2147483648, le=2147483647) | None = 1",
         "inlineAttribute: constr(max_length=8) | None = None",
         "globalFlag: Literal[True]",
+        "emptyDefault: str | None = ''",
         "class ExtendedType(BaseType):",
         "extra: list[str] | None = Field(None, max_length=3)",
         "class RestrictedType(BaseModel):",
@@ -42,6 +43,7 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
         "code: str",
         "class TextWithAttrs(BaseModel):",
         "kind: Literal['plain'] = 'plain'",
+        "emptyFixed: Literal[''] = ''",
         "first: ExtendedType",
         "inlineRestrictedText: InlineRestrictedText",
         "class Second(BaseModel):",
@@ -138,6 +140,18 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
     ),
 }
 
+XMLSCHEMA_ABSENT_SNIPPETS: dict[str, tuple[str, ...]] = {
+    "coverage": (
+        "class BlockedGroup",
+        "blockedElement",
+        "blockedGroupElement",
+        "blockedParticleElement",
+        "class GlobalFlag",
+        "class NamedAttributes",
+        "class NamedGroup",
+    ),
+}
+
 
 def assert_xmlschema_snippets(
     output_file: Path,
@@ -159,3 +173,6 @@ def assert_xmlschema_snippets(
     missing = [snippet for snippet in expected_snippets if snippet not in content]
     if missing:  # pragma: no cover
         pytest.fail("Generated XML Schema output is missing snippets:\n" + "\n\n".join(missing))
+    unexpected = [snippet for snippet in XMLSCHEMA_ABSENT_SNIPPETS.get(key, ()) if snippet in content]
+    if unexpected:  # pragma: no cover
+        pytest.fail("Generated XML Schema output contains unexpected snippets:\n" + "\n\n".join(unexpected))

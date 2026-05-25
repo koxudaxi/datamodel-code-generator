@@ -15,6 +15,7 @@
   </xs:simpleType>
 
   <xs:attribute name="globalFlag" type="xs:boolean" fixed="true"/>
+  <xs:attribute name="emptyDefault" type="xs:string" default=""/>
 
   <xs:group name="namedGroup">
     <xs:sequence>
@@ -24,5 +25,6 @@
 
   <xs:attributeGroup name="namedAttributes">
     <xs:attribute ref="tns:globalFlag"/>
+    <xs:attribute ref="tns:emptyDefault"/>
   </xs:attributeGroup>
 </xs:schema>

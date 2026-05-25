@@ -318,7 +318,7 @@ class _XMLSchemaConverter:
                 case _:  # pragma: no cover
                     pass
         for child in root.iter():
-            if _namespace(child.tag) == XML_SCHEMA_NAMESPACE and (ref := child.get("ref")):
+            if _is_xsd_element(child, "element") and (ref := child.get("ref")):
                 self.referenced_elements.add(self._qname_key(ref, child))
 
     def _prepare_definition_names(self) -> None:
@@ -367,7 +367,7 @@ class _XMLSchemaConverter:
             schema = self._convert_complex_type(complex_type)
         elif element is not None:
             schema = self._convert_element(element)
-        else:
+        else:  # pragma: no cover
             schema = {}
         name = self._definition_name(key)
         schema.setdefault("title", _to_class_title(name))
@@ -639,6 +639,8 @@ class _XMLSchemaConverter:
         *,
         occurrence: _OccurrenceContext,
     ) -> None:
+        if particle.get("maxOccurs") == "0":
+            return
         is_choice = _local_name(particle.tag) == "choice"
         particle_required = occurrence.required and particle.get("minOccurs", "1") != "0" and not is_choice
         particle_repeating = self._is_repeating(particle)
@@ -677,7 +679,7 @@ class _XMLSchemaConverter:
                     schema,
                     occurrence=child_occurrence,
                 )
-            elif _is_xsd_element(child, "any"):
+            elif _is_xsd_element(child, "any") and child.get("maxOccurs") != "0":
                 schema["additionalProperties"] = True
 
     def _apply_group(
@@ -687,6 +689,8 @@ class _XMLSchemaConverter:
         *,
         occurrence: _OccurrenceContext,
     ) -> None:
+        if group.get("maxOccurs") == "0":
+            return
         group_required = occurrence.required and group.get("minOccurs", "1") != "0"
         group_repeating = self._is_repeating(group)
         repeating = occurrence.repeating or group_repeating
@@ -725,6 +729,8 @@ class _XMLSchemaConverter:
         *,
         occurrence: _OccurrenceContext,
     ) -> None:
+        if element.get("maxOccurs") == "0":
+            return
         name = element.get("name") or _local_name(element.get("ref", ""))
         if not name:
             return
@@ -780,9 +786,15 @@ class _XMLSchemaConverter:
         attribute_schema = _copy_schema(attribute_schema)
         if documentation := _documentation(attribute) or _documentation(source_attribute):
             attribute_schema["description"] = documentation
-        if default := attribute.get("default") or source_attribute.get("default"):
+        default = attribute.get("default")
+        if default is None and "default" not in attribute.attrib:
+            default = source_attribute.get("default")
+        if default is not None:
             attribute_schema["default"] = self._parse_literal(default, attribute_schema)
-        if fixed := attribute.get("fixed") or source_attribute.get("fixed"):
+        fixed = attribute.get("fixed")
+        if fixed is None and "fixed" not in attribute.attrib:
+            fixed = source_attribute.get("fixed")
+        if fixed is not None:
             attribute_schema["const"] = self._parse_literal(fixed, attribute_schema)
         schema.setdefault("properties", {})[name] = attribute_schema
         if (attribute.get("use") or source_attribute.get("use")) == "required":
