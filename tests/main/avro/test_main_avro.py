@@ -2,23 +2,30 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import PythonVersion, is_supported_in_black
-from tests.main.avro.conftest import assert_avro_snippets
-from tests.main.conftest import AVRO_DATA_PATH, CURRENT_PYTHON_VERSION, get_current_version_args, run_main_and_assert
+from tests.main.avro.conftest import assert_file_content
+from tests.main.conftest import (
+    AVRO_DATA_PATH,
+    CURRENT_PYTHON_VERSION,
+    LEGACY_BLACK_SKIP,
+    get_current_version_args,
+    run_main_and_assert,
+)
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
-_CURRENT_PY_VERSION = PythonVersion(CURRENT_PYTHON_VERSION)
+_CURRENT_PYTHON_VERSION = PythonVersion(CURRENT_PYTHON_VERSION)
 _SKIP_BLACK = pytest.mark.skipif(
-    not is_supported_in_black(_CURRENT_PY_VERSION),
+    not is_supported_in_black(_CURRENT_PYTHON_VERSION),
     reason=f"Installed black doesn't support Python {CURRENT_PYTHON_VERSION}",
 )
+
+
+def _expected_file(expected_file: str) -> str:
+    return f"py{CURRENT_PYTHON_VERSION.replace('.', '')}/{expected_file}"
 
 
 @_SKIP_BLACK
@@ -28,8 +35,8 @@ def test_main_avro_constructs(output_file: Path) -> None:
         input_path=AVRO_DATA_PATH / "constructs.avsc",
         output_path=output_file,
         input_file_type="avro",
-        assert_func=assert_avro_snippets,
-        expected_file="constructs.py",
+        assert_func=assert_file_content,
+        expected_file=_expected_file("constructs.py"),
         extra_args=get_current_version_args("--use-field-description"),
         force_exec_validation=True,
     )
@@ -41,8 +48,8 @@ def test_main_avro_infer_input_file_type(output_file: Path) -> None:
     run_main_and_assert(
         input_path=AVRO_DATA_PATH / "constructs.avsc",
         output_path=output_file,
-        assert_func=assert_avro_snippets,
-        expected_file="constructs.py",
+        assert_func=assert_file_content,
+        expected_file=_expected_file("constructs.py"),
         extra_args=get_current_version_args("--use-field-description"),
         force_exec_validation=True,
     )
@@ -55,8 +62,8 @@ def test_main_avro_namespace_collisions(output_file: Path) -> None:
         input_path=AVRO_DATA_PATH / "namespace_collisions.avsc",
         output_path=output_file,
         input_file_type="avro",
-        assert_func=assert_avro_snippets,
-        expected_file="namespace_collisions.py",
+        assert_func=assert_file_content,
+        expected_file=_expected_file("namespace_collisions.py"),
         extra_args=get_current_version_args(),
         force_exec_validation=True,
     )
@@ -69,9 +76,23 @@ def test_main_avro_official_spec_long_list(output_file: Path) -> None:
         input_path=AVRO_DATA_PATH / "official_long_list.avsc",
         output_path=output_file,
         input_file_type="avro",
-        assert_func=assert_avro_snippets,
-        expected_file="official_long_list.py",
+        assert_func=assert_file_content,
+        expected_file=_expected_file("official_long_list.py"),
         extra_args=get_current_version_args(),
+        force_exec_validation=True,
+    )
+
+
+@_SKIP_BLACK
+def test_main_avro_spec_matrix(output_file: Path) -> None:
+    """Generate models for Avro specification schema forms and edge-case attributes."""
+    run_main_and_assert(
+        input_path=AVRO_DATA_PATH / "spec_matrix.avsc",
+        output_path=output_file,
+        input_file_type="avro",
+        assert_func=assert_file_content,
+        expected_file=_expected_file("spec_matrix.py"),
+        extra_args=get_current_version_args("--use-field-description"),
         force_exec_validation=True,
     )
 
@@ -87,7 +108,7 @@ def test_main_avro_official_spec_long_list(output_file: Path) -> None:
         ("root_enum.avsc", True),
         ("root_fixed.avsc", True),
         ("root_fixed_uuid.avsc", True),
-        ("root_union_named.avsc", False),
+        pytest.param("root_union_named.avsc", False, marks=LEGACY_BLACK_SKIP),
         ("name_suffix_collision.avsc", True),
         ("namespace_null_collision.avsc", True),
     ],
@@ -99,6 +120,8 @@ def test_main_avro_schema_declaration_forms(output_file: Path, fixture_name: str
         input_path=AVRO_DATA_PATH / fixture_name,
         output_path=output_file,
         input_file_type="avro" if explicit_type else None,
+        assert_func=assert_file_content,
+        expected_file=_expected_file(f"schema_declaration_forms/{Path(fixture_name).stem}.py"),
         extra_args=get_current_version_args(),
         force_exec_validation=True,
     )
@@ -115,6 +138,8 @@ def test_main_avro_official_c_schema_pass_corpus(output_file: Path, fixture_path
         input_path=fixture_path,
         output_path=output_file,
         input_file_type="avro",
+        assert_func=assert_file_content,
+        expected_file=_expected_file(f"official_schema_pass/{fixture_path.stem}.py"),
         extra_args=get_current_version_args(),
         force_exec_validation=True,
     )
@@ -148,7 +173,14 @@ def test_main_avro_schema_version_not_supported(output_file: Path, capsys: pytes
         ("invalid_schema_simple_ref.avsc", "Unknown Avro named type reference"),
         ("invalid_schema_unknown_simple_ref_in_namespace.avsc", "Unknown Avro named type reference"),
         ("invalid_schema_bad_enum_symbols.avsc", "Avro enum symbols must be a list of strings"),
+        ("invalid_schema_duplicate_enum_symbol.avsc", "Duplicate Avro enum symbol"),
+        ("invalid_schema_bad_enum_symbol_name.avsc", "Invalid Avro enum symbol"),
         ("invalid_schema_bad_fixed_size.avsc", "Avro fixed size must be an integer"),
+        ("invalid_schema_duplicate_field_name.avsc", "Duplicate Avro record field name"),
+        ("invalid_schema_bad_named_type_name.avsc", "Invalid Avro record name"),
+        ("invalid_schema_bad_namespace.avsc", "Invalid Avro namespace"),
+        ("invalid_schema_bad_field_name.avsc", "Invalid Avro record field name"),
+        ("invalid_schema_primitive_name_reuse.avsc", "Avro primitive type names may not be redefined"),
         ("invalid_schema_union_bad_value.avsc", "Unsupported Avro union value"),
         ("invalid_schema_union_nested.avsc", "Avro unions may not immediately contain other unions"),
         ("invalid_schema_union_type_list.avsc", "Avro unions may not immediately contain other unions"),

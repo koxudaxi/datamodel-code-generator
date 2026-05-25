@@ -402,6 +402,21 @@ def run_generate_file_and_assert(
     assert_func(output_path, expected_file, transform=transform)
 
 
+def run_generate_and_assert(
+    *,
+    input_: Any,
+    expected_file: Path,
+    **generate_kwargs: Any,
+) -> None:
+    """Execute generate(output=None) and assert the returned text output."""
+    __tracebackhide__ = True
+
+    result = generate(input_=input_, **generate_kwargs)
+    if not isinstance(result, str):  # pragma: no cover
+        pytest.fail(f"Expected generate() to return str, got {type(result).__name__}")
+    assert_output(result, expected_file)
+
+
 def run_main_and_assert(  # noqa: PLR0912
     *,
     input_path: Path | None = None,
@@ -415,6 +430,7 @@ def run_main_and_assert(  # noqa: PLR0912
     expected_output: str | None = None,
     expected_directory: Path | None = None,
     output_to_expected: Sequence[tuple[str, str | Path]] | None = None,
+    assert_output_path_not_exists: bool = False,
     file_should_not_exist: Path | None = None,
     # Verification options
     ignore_whitespace: bool = False,
@@ -457,6 +473,7 @@ def run_main_and_assert(  # noqa: PLR0912
         expected_output: Compare with string directly
         expected_directory: Compare entire directory
         output_to_expected: Compare multiple files
+        assert_output_path_not_exists: Assert output_path does NOT exist
         file_should_not_exist: Assert a file does NOT exist
 
     Verification modifiers:
@@ -511,8 +528,33 @@ def run_main_and_assert(  # noqa: PLR0912
         assert_no_stderr=assert_no_stderr,
     )
 
+    output_verification_modes = (
+        int(assert_func is not None and output_to_expected is None)
+        + int(expected_output is not None)
+        + int(expected_directory is not None)
+        + int(output_to_expected is not None)
+        + int(assert_output_path_not_exists)
+        + int(file_should_not_exist is not None)
+    )
+    if output_verification_modes > 1:  # pragma: no cover
+        pytest.fail(
+            "Output verification options are mutually exclusive; use exactly one of "
+            "standalone assert_func, expected_output, expected_directory, output_to_expected, "
+            "assert_output_path_not_exists, or file_should_not_exist"
+        )
+
+    if assert_output_path_not_exists:
+        if output_path is None:  # pragma: no cover
+            pytest.fail("output_path is required when using assert_output_path_not_exists")
+        if output_path.exists():  # pragma: no cover
+            pytest.fail(f"Output path should not exist: {output_path}")
+    if file_should_not_exist is not None and file_should_not_exist.exists():  # pragma: no cover
+        pytest.fail(f"File should not exist: {file_should_not_exist}")
+
     # Skip output verification if expected_exit is not OK
     if expected_exit != Exit.OK:
+        return
+    if assert_output_path_not_exists or file_should_not_exist is not None:  # pragma: no cover
         return
 
     # Output verification
@@ -538,9 +580,6 @@ def run_main_and_assert(  # noqa: PLR0912
                 )
         elif actual_output != expected_output:  # pragma: no cover
             pytest.fail(f"Output mismatch\nExpected:\n{expected_output}\n\nActual:\n{actual_output}")
-    elif file_should_not_exist is not None:
-        if file_should_not_exist.exists():  # pragma: no cover
-            pytest.fail(f"File should not exist: {file_should_not_exist}")
     elif assert_func is not None:
         if output_path is None:  # pragma: no cover
             pytest.fail("output_path is required when using assert_func")
