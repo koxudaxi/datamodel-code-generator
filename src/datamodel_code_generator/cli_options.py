@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
 
+from datamodel_code_generator.deprecations import deprecation_message
+
 
 class OptionCategory(str, Enum):
     """Categories for organizing CLI options in documentation."""
@@ -52,6 +54,7 @@ MANUAL_DOCS: frozenset[str] = frozenset({
     "--profile",
     "--no-color",
     "--generate-prompt",
+    "--list-deprecations",
 })
 
 # Backward compatibility alias
@@ -116,7 +119,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
         name="--parent-scoped-naming",
         category=OptionCategory.MODEL,
         deprecated=True,
-        deprecated_message="Use --naming-strategy parent-prefixed instead.",
+        deprecated_message=deprecation_message("cli.parent-scoped-naming"),
     ),
     "--naming-strategy": CLIOptionMeta(name="--naming-strategy", category=OptionCategory.MODEL),
     "--duplicate-name-suffix": CLIOptionMeta(name="--duplicate-name-suffix", category=OptionCategory.MODEL),
@@ -261,7 +264,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
         name="--validation",
         category=OptionCategory.OPENAPI,
         deprecated=True,
-        deprecated_message="Use --field-constraints instead",
+        deprecated_message=deprecation_message("cli.validation"),
     ),
     # ==========================================================================
     # GraphQL-only Options

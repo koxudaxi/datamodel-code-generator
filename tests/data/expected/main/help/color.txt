@@ -285,8 +285,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Generate __all__ in __init__.py with re-exports.
                         'children': export from direct child modules only.
                         'recursive': export from all descendant modules.
-  --allow-extra-fields  Deprecated: Allow passing extra fields. This flag is
-                        deprecated. Use `--extra-fields=allow` instead.
+  --allow-extra-fields  Deprecated: --allow-extra-fields is deprecated. Use
+                        --extra-fields=allow instead.
   --allow-population-by-field-name
                         Allow population by field name
   --class-name CLASS_NAME
@@ -374,9 +374,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         datetime. Each output model has its default mapping
                         (for example pydantic: datetime, dataclass: str, ...)
   --parent-scoped-naming
-                        [Deprecated: use --naming-strategy parent-prefixed]
-                        Set name of models defined inline from the parent
-                        model
+                        Deprecated: --parent-scoped-naming is deprecated. Use
+                        --naming-strategy parent-prefixed instead.
   --reuse-model         Reuse models on the field when a module has the model
                         with the same content
   --reuse-scope {module,tree}
@@ -500,9 +499,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Include HTTP status code in response model names
                         (e.g., ResourceGetResponse200,
                         ResourceGetResponseDefault)
-  --validation          Deprecated: Enable validation (Only OpenAPI). this
-                        option is deprecated. it will be removed in future
-                        releases
+  --validation          Deprecated: The `--validation` option is deprecated
+                        and will be removed in a future release. Use --field-
+                        constraints instead.
 
 [36;1mGraphQL-only options[0m:
   --graphql-no-typename
@@ -531,6 +530,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Generate pyproject.toml configuration from the
                         provided CLI arguments and exit
   --ignore-pyproject    Ignore pyproject.toml configuration
+  --list-deprecations [{table,json,markdown}]
+                        List registered deprecations and scheduled breaking
+                        changes, then exit.
   --no-color            disable colorized output
   --profile PROFILE     Use a named profile from pyproject.toml
                         [tool.datamodel-codegen.profiles.<name>]

@@ -251,11 +251,11 @@ This documentation is auto-generated from test cases.
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
 | ⚙️ [General Options](general-options.md) | 17 | Utilities and meta options |
-| 📝 [Utility Options](utility-options.md) | 6 | Help, version, debug options |
+| 📝 [Utility Options](utility-options.md) | 7 | Help, version, debug options |
 
 ## All Options
 
-**Jump to:** [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [K](#k) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
+**Jump to:** [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [K](#k) · [L](#l) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
 
 
 ### A {#a}
@@ -358,6 +358,10 @@ This documentation is auto-generated from test cases.
 
 - [`--keep-model-order`](model-customization.md#keep-model-order)
 - [`--keyword-only`](model-customization.md#keyword-only)
+
+### L {#l}
+
+- [`--list-deprecations`](utility-options.md#list-deprecations)
 
 ### M {#m}
 
@@ -5270,7 +5274,7 @@ The `--parent-scoped-naming` flag prefixes model names with their parent scope
 (operation/path/parameter) to prevent name collisions when the same model name
 appears in different contexts within an OpenAPI specification.
 
-**Deprecated:** Use --naming-strategy parent-prefixed instead.
+**Deprecated:** --parent-scoped-naming is deprecated. Use --naming-strategy parent-prefixed instead.
 
 !!! tip "Usage"
 
@@ -21918,7 +21922,7 @@ Enable validation constraints (deprecated, use --field-constraints).
 
 The `--validation` flag configures the code generation behavior.
 
-**Deprecated:** Use --field-constraints instead
+**Deprecated:** The `--validation` option is deprecated and will be removed in a future release. Use --field-constraints instead.
 
 **See also:** [Field Constraints](../field-constraints.md), [OpenAPI-Specific Options](../openapi-options.md)
 
@@ -24486,6 +24490,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/utility-opti
 | [`--debug`](#debug) | Show debug messages during code generation |
 | [`--generate-prompt`](#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](#help) | Show help message and exit |
+| [`--list-deprecations`](#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--no-color`](#no-color) | Disable colorized output |
 | [`--profile`](#profile) | Use a named profile from pyproject.toml |
 | [`--version`](#version) | Show program version and exit |
@@ -24582,6 +24587,19 @@ Displays all available command-line options with their descriptions and default 
       --input INPUT         Input file path (default: stdin)
       ...
     ```
+
+---
+
+## `--list-deprecations` {#list-deprecations}
+
+List registered deprecations and scheduled breaking changes, then exit.
+
+The option reads from the central deprecation registry used by runtime warnings,
+generated documentation, and release-note snippets.
+
+    datamodel-codegen --list-deprecations
+    datamodel-codegen --list-deprecations json
+    datamodel-codegen --list-deprecations markdown
 
 ---
 
@@ -24896,6 +24914,7 @@ datamodel-codegen [OPTIONS]
 | [`--debug`](utility-options.md#debug) | Show debug messages during code generation |
 | [`--generate-prompt`](utility-options.md#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](utility-options.md#help) | Show help message and exit |
+| [`--list-deprecations`](utility-options.md#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--no-color`](utility-options.md#no-color) | Disable colorized output |
 | [`--profile`](utility-options.md#profile) | Use a named profile from pyproject.toml |
 | [`--version`](utility-options.md#version) | Show program version and exit |
@@ -24977,6 +24996,7 @@ All options sorted alphabetically:
 - [`--input-model-ref-strategy`](base-options.md#input-model-ref-strategy) - Strategy for referenced types when using --input-model.
 - [`--keep-model-order`](model-customization.md#keep-model-order) - Keep generated model order deterministic while respecting de...
 - [`--keyword-only`](model-customization.md#keyword-only) - Generate dataclasses with keyword-only fields (Python 3.10+)...
+- [`--list-deprecations`](utility-options.md#list-deprecations) - List registered deprecations and scheduled breaking changes
 - [`--model-extra-keys`](model-customization.md#model-extra-keys) - Add model-level schema extensions to ConfigDict json_schema_...
 - [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix) - Strip x- prefix from model-level schema extensions and add t...
 - [`--module-split-mode`](general-options.md#module-split-mode) - Split generated models into separate files, one per model cl...
@@ -25275,6 +25295,23 @@ to clipboard for web-based LLM chats.
     datamodel-codegen --generate-prompt | xclip -selection clipboard  # Linux
     datamodel-codegen --generate-prompt | clip.exe    # WSL2
     ```
+
+---
+
+# List Deprecations
+
+Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/manual/list-deprecations/
+
+## `--list-deprecations` {#list-deprecations}
+
+List registered deprecations and scheduled breaking changes, then exit.
+
+The option reads from the central deprecation registry used by runtime warnings,
+generated documentation, and release-note snippets.
+
+    datamodel-codegen --list-deprecations
+    datamodel-codegen --list-deprecations json
+    datamodel-codegen --list-deprecations markdown
 
 ---
 
@@ -31354,6 +31391,146 @@ datamodel-codegen \
 1. **Be specific** - Include a clear question to get more relevant recommendations
 2. **Show context** - Add your current options so the LLM understands your setup
 3. **Iterate** - Use the suggestions, then ask follow-up questions if needed
+
+---
+
+# Deprecations
+
+Source: https://datamodel-code-generator.koxudaxi.dev/deprecations/
+
+<!-- Generated by scripts/build_deprecation_docs.py. Do not edit manually. -->
+
+This page lists deprecations and scheduled breaking changes.
+
+| ID | Kind | Target | Warning since | Removal | Replacement |
+|----|------|--------|---------------|---------|-------------|
+| `format.default-formatters` | behavior | `Default formatters` | 0.52.0 | TBD | Set formatters explicitly, for example ruff-format and ruff-check. |
+| `behavior.pydantic-v2-use-annotated-default` | behavior | `Pydantic v2 default for --use-annotated` | 0.52.1 | TBD | Explicitly pass --use-annotated or --no-use-annotated. |
+| `behavior.remote-ref-default` | behavior | `Remote $ref fetching without --allow-remote-refs` | 0.56.0 | TBD | Pass --allow-remote-refs or --no-allow-remote-refs explicitly. |
+| `cli.allow-extra-fields` | cli-option | `--allow-extra-fields` | 0.31.0 | TBD | --extra-fields=allow |
+| `cli.parent-scoped-naming` | cli-option | `--parent-scoped-naming` | 0.48.0 | TBD | --naming-strategy parent-prefixed |
+| `cli.validation` | cli-option | `--validation` | 0.24.0 | TBD | --field-constraints |
+| `config.yaml-non-lowercase-bool` | config | `YAML bool values True, False, TRUE, FALSE` | 0.48.0 | TBD | Use lowercase true or false. |
+| `python-api.python-version-has-type-alias` | python-api | `PythonVersion.has_type_alias` | 0.52.1 | TBD | - |
+| `schema.jsonschema-items-array` | schema | `JSON Schema Draft 2020-12 items array tuple validation` | 0.53.0 | TBD | Use prefixItems. |
+| `schema.openapi-nullable` | schema | `OpenAPI 3.1 nullable keyword` | 0.53.0 | TBD | Use type arrays such as type: ["string", "null"]. |
+
+## Details
+
+### `format.default-formatters`
+
+- **Kind:** behavior
+- **Target:** `Default formatters`
+- **Warning since:** 0.52.0
+- **Planned removal:** TBD
+- **Warning category:** `FutureWarning`
+- **Replacement:** Set formatters explicitly, for example ruff-format and ruff-check.
+
+The default formatters (black, isort) will be replaced by ruff in a future version.
+
+### `behavior.pydantic-v2-use-annotated-default`
+
+- **Kind:** behavior
+- **Target:** `Pydantic v2 default for --use-annotated`
+- **Warning since:** 0.52.1
+- **Planned removal:** TBD
+- **Warning category:** `DeprecationWarning`
+- **Replacement:** Explicitly pass --use-annotated or --no-use-annotated.
+
+Pydantic v2 with --use-annotated is recommended for correct type annotations. In a future version, --use-annotated will be enabled by default for Pydantic v2.
+
+### `behavior.remote-ref-default`
+
+- **Kind:** behavior
+- **Target:** `Remote $ref fetching without --allow-remote-refs`
+- **Warning since:** 0.56.0
+- **Planned removal:** TBD
+- **Warning category:** `FutureWarning`
+- **Replacement:** Pass --allow-remote-refs or --no-allow-remote-refs explicitly.
+
+Remote $ref fetching without --allow-remote-refs is deprecated.
+
+The current default allows remote fetching for compatibility; the scheduled default is disabled.
+
+### `cli.allow-extra-fields`
+
+- **Kind:** cli-option
+- **Target:** `--allow-extra-fields`
+- **Warning since:** 0.31.0
+- **Planned removal:** TBD
+- **Warning category:** `DeprecationWarning`
+- **Replacement:** --extra-fields=allow
+
+--allow-extra-fields is deprecated. Use --extra-fields=allow instead.
+
+The replacement supports allow, forbid, and ignore modes.
+
+### `cli.parent-scoped-naming`
+
+- **Kind:** cli-option
+- **Target:** `--parent-scoped-naming`
+- **Warning since:** 0.48.0
+- **Planned removal:** TBD
+- **Warning category:** `DeprecationWarning`
+- **Replacement:** --naming-strategy parent-prefixed
+
+--parent-scoped-naming is deprecated. Use --naming-strategy parent-prefixed instead.
+
+### `cli.validation`
+
+- **Kind:** cli-option
+- **Target:** `--validation`
+- **Warning since:** 0.24.0
+- **Planned removal:** TBD
+- **Warning category:** `DeprecationWarning`
+- **Replacement:** --field-constraints
+
+The `--validation` option is deprecated and will be removed in a future release. Use --field-constraints instead.
+
+### `config.yaml-non-lowercase-bool`
+
+- **Kind:** config
+- **Target:** `YAML bool values True, False, TRUE, FALSE`
+- **Warning since:** 0.48.0
+- **Planned removal:** TBD
+- **Warning category:** `DeprecationWarning`
+- **Replacement:** Use lowercase true or false.
+
+Non-lowercase YAML bool values are deprecated. Use lowercase true or false instead.
+
+### `python-api.python-version-has-type-alias`
+
+- **Kind:** python-api
+- **Target:** `PythonVersion.has_type_alias`
+- **Warning since:** 0.52.1
+- **Planned removal:** TBD
+- **Warning category:** `DeprecationWarning`
+
+has_type_alias is deprecated and will be removed in a future version.
+
+The project minimum Python version already supports TypeAlias.
+
+### `schema.jsonschema-items-array`
+
+- **Kind:** schema
+- **Target:** `JSON Schema Draft 2020-12 items array tuple validation`
+- **Warning since:** 0.53.0
+- **Planned removal:** TBD
+- **Warning category:** `UserWarning`
+- **Replacement:** Use prefixItems.
+
+items as array tuple validation is deprecated in Draft 2020-12. Use prefixItems instead.
+
+### `schema.openapi-nullable`
+
+- **Kind:** schema
+- **Target:** `OpenAPI 3.1 nullable keyword`
+- **Warning since:** 0.53.0
+- **Planned removal:** TBD
+- **Warning category:** `DeprecationWarning`
+- **Replacement:** Use type arrays such as type: ["string", "null"].
+
+nullable keyword is deprecated in OpenAPI 3.1, use type: ["string", "null"] instead.
 
 ---
 

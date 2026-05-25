@@ -27,6 +27,7 @@ from datamodel_code_generator import (
     load_data,
     snooper_to_methods,
 )
+from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.enums import OpenAPIVersion, VersionMode
 from datamodel_code_generator.parser.base import Result, get_special_path
 from datamodel_code_generator.parser.jsonschema import (
@@ -287,11 +288,7 @@ class OpenAPIParser(JsonSchemaParser):
             else:
                 # OpenAPI 3.1+: nullable is deprecated, still process but warn in Strict mode
                 if self.config.schema_version_mode == VersionMode.Strict:
-                    warn(
-                        'nullable keyword is deprecated in OpenAPI 3.1, use type: ["string", "null"] instead',
-                        DeprecationWarning,
-                        stacklevel=2,
-                    )
+                    warn_deprecated("schema.openapi-nullable", stacklevel=2)
                 # Still convert to type array for compatibility
                 if self.strict_nullable and isinstance(obj.type, str):
                     obj.type = [obj.type, "null"]
@@ -778,11 +775,7 @@ class OpenAPIParser(JsonSchemaParser):
         """Parse OpenAPI specification including schemas, paths, and operations."""
         for source, path_parts in self._get_context_source_path_parts():
             if self.validation:
-                warn(
-                    "Deprecated: `--validation` option is deprecated. the option will be removed in a future "
-                    "release. please use another tool to validate OpenAPI.\n",
-                    stacklevel=2,
-                )
+                warn_deprecated("cli.validation", stacklevel=2)
 
                 if source.raw_data is not None:
                     warn(
