@@ -2294,7 +2294,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         schema_dict["type"] = next(iter(non_null_types)) if len(non_null_types) == 1 else sorted(non_null_types)
 
     @classmethod
-    def _normalize_raw_schema_literal_constraints(  # noqa: PLR0912
+    def _normalize_raw_schema_literal_constraints(  # noqa: PLR0912, PLR0915
         cls,
         raw: YamlValue,
         *,
@@ -2378,6 +2378,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             cls._normalize_raw_oneof_numeric_bounds_constraints(normalized)
             cls._normalize_raw_count_combined_constraints(normalized)
             cls._drop_null_type_when_combined_literals_exclude_null(normalized)
+            cls._drop_null_type_when_combined_branches_exclude_null(normalized)
             cls._normalize_raw_allof_count_combined_constraints(normalized)
             cls._normalize_raw_allof_primitive_combined_constraints(normalized)
             cls._normalize_raw_allof_dependent_constraints(normalized)
@@ -2491,6 +2492,50 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if not null_is_valid:
                 cls._drop_null_type(schema_dict, type_values)
             return
+
+    @classmethod
+    def _drop_null_type_when_combined_branches_exclude_null(cls, schema_dict: dict[Any, Any]) -> None:
+        type_values = cls._type_values(schema_dict.get("type"))
+        if type_values is None or "null" not in type_values:
+            return
+
+        for combined_key in ("anyOf", "oneOf"):
+            branches = schema_dict.get(combined_key)
+            if not isinstance(branches, list) or not branches:
+                continue
+            if any(not cls._raw_null_match_is_supported(branch) for branch in branches):
+                continue
+            null_match_count = sum(cls._raw_value_matches_schema(None, branch) for branch in branches)
+            null_is_valid = null_match_count > 0 if combined_key == "anyOf" else null_match_count == 1
+            if not null_is_valid:
+                cls._drop_null_type(schema_dict, type_values)
+            return
+
+    @classmethod
+    def _raw_null_match_is_supported(cls, schema_dict: Any) -> bool:
+        if isinstance(schema_dict, bool):
+            return True
+        if not isinstance(schema_dict, dict):
+            return False
+        supported_keys = JsonSchemaObject.__metadata_only_fields__ | {
+            "const",
+            "enum",
+            "exclusiveMaximum",
+            "exclusiveMinimum",
+            "maxItems",
+            "maxLength",
+            "maxProperties",
+            "maximum",
+            "minItems",
+            "minLength",
+            "minProperties",
+            "minimum",
+            "multipleOf",
+            "pattern",
+            "type",
+            "uniqueItems",
+        }
+        return not set(schema_dict) - supported_keys
 
     @classmethod
     def _drop_null_type(cls, schema_dict: dict[Any, Any], type_values: set[str]) -> None:

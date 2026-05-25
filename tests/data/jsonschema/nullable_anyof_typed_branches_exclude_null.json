@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NullableAnyOfTypedBranchesExcludeNull",
+  "type": "object",
+  "properties": {
+    "stringValue": {
+      "type": ["string", "null"],
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 0
+        },
+        {
+          "type": "string",
+          "minLength": 3
+        }
+      ]
+    },
+    "integerValue": {
+      "type": ["integer", "null"],
+      "anyOf": [
+        {
+          "type": "integer",
+          "maximum": 0
+        },
+        {
+          "type": "integer",
+          "minimum": 3
+        }
+      ]
+    },
+    "arrayValue": {
+      "type": ["array", "null"],
+      "anyOf": [
+        {
+          "type": "array",
+          "maxItems": 0
+        },
+        {
+          "type": "array",
+          "minItems": 3
+        }
+      ]
+    },
+    "objectValue": {
+      "type": ["object", "null"],
+      "anyOf": [
+        {
+          "type": "object",
+          "maxProperties": 0
+        },
+        {
+          "type": "object",
+          "minProperties": 3
+        }
+      ]
+    }
+  },
+  "required": ["stringValue", "integerValue", "arrayValue", "objectValue"]
+}

@@ -4284,6 +4284,52 @@ def test_main_jsonschema_anyof_count_disjoint_ranges(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_nullable_anyof_typed_branches_exclude_null(output_file: Path) -> None:
+    """Test nullable anyOf drops null when every typed branch excludes null."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_anyof_typed_branches_exclude_null.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_anyof_typed_branches_exclude_null.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    valid_json = '{"stringValue":"","integerValue":0,"arrayValue":[],"objectValue":{}}'
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_anyof_typed_branches_exclude_null",
+        model_name="NullableAnyOfTypedBranchesExcludeNull",
+        valid_json=valid_json,
+        invalid_json='{"stringValue":null,"integerValue":0,"arrayValue":[],"objectValue":{}}',
+        expected_error_type="string_type",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_anyof_typed_branches_exclude_null",
+        model_name="NullableAnyOfTypedBranchesExcludeNull",
+        valid_json=valid_json,
+        invalid_json='{"stringValue":"","integerValue":null,"arrayValue":[],"objectValue":{}}',
+        expected_error_type="int_type",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_anyof_typed_branches_exclude_null",
+        model_name="NullableAnyOfTypedBranchesExcludeNull",
+        valid_json=valid_json,
+        invalid_json='{"stringValue":"","integerValue":0,"arrayValue":null,"objectValue":{}}',
+        expected_error_type="list_type",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_anyof_typed_branches_exclude_null",
+        model_name="NullableAnyOfTypedBranchesExcludeNull",
+        valid_json=valid_json,
+        invalid_json='{"stringValue":"","integerValue":0,"arrayValue":[],"objectValue":null}',
+        expected_error_type="dict_type",
+    )
+
+
 def test_main_jsonschema_oneof_const_enum_literal(output_file: Path) -> None:
     """Test oneOf with const values as Literal type."""
     run_main_and_assert(

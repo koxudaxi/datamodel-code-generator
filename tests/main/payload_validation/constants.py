@@ -90,6 +90,9 @@ EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/nullable_oneof_primitive_constraints.json": (
         "hypothesis-jsonschema cannot satisfy several required overlapping oneOf primitive constraints together"
     ),
+    "jsonschema/nullable_anyof_typed_branches_exclude_null.json": (
+        "hypothesis-jsonschema cannot satisfy several required disjoint anyOf constraints together"
+    ),
     "jsonschema/oneof_count_exclusive_ranges.json": (
         "hypothesis-jsonschema cannot satisfy several required overlapping oneOf count constraints together"
     ),
