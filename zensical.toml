@@ -35,6 +35,7 @@ nav = [
     { "Input Formats" = [
       { "OpenAPI" = "openapi.md" },
       { "JSON Schema" = "jsonschema.md" },
+      { "Apache Avro" = "avro.md" },
       { "JSON Data" = "jsondata.md" },
       { "GraphQL" = "graphql.md" },
       { "Python Models" = "python-model.md" }

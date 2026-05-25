@@ -16,7 +16,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 
 ## ✨ What it does
 
-- 📄 Converts **OpenAPI 3**, **JSON Schema**, **XML Schema**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
+- 📄 Converts **OpenAPI 3**, **JSON Schema**, **Apache Avro**, **XML Schema**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
 - 🐍 Generates from **existing Python types** (Pydantic, dataclass, TypedDict) via `--input-model`
 - 🎯 Generates **Pydantic v2**, **Pydantic v2 dataclass**, **dataclasses**, **TypedDict**, or **msgspec** output
 - 🔗 Handles complex schemas: `$ref`, `allOf`, `oneOf`, `anyOf`, enums, and nested types
@@ -101,6 +101,7 @@ datamodel-codegen --input pet.json --input-file-type jsonschema --output-model-t
 |------------|------------|---------|
 | 📘 [OpenAPI 3](openapi.md) | `.yaml`, `.json` | API specifications |
 | 📋 [JSON Schema](jsonschema.md) | `.json` | Data validation schemas |
+| 🪶 [Apache Avro](avro.md) | `.avsc`, `.json` | Avro schemas |
 | 🧾 XML Schema | `.xsd` | XML document schemas |
 | 🔷 [GraphQL](graphql.md) | `.graphql` | GraphQL type definitions |
 | 📊 [JSON/YAML Data](jsondata.md) | `.json`, `.yaml` | Infer schema from data |
@@ -25383,11 +25384,11 @@ Below are the data types and features recognized by datamodel-code-generator for
 
 Source: https://datamodel-code-generator.koxudaxi.dev/supported_formats/
 
-This document describes the JSON Schema and OpenAPI versions supported by datamodel-code-generator.
+This document describes the JSON Schema, OpenAPI, Apache Avro, and XML Schema versions supported by datamodel-code-generator.
 
 ## Overview
 
-datamodel-code-generator supports multiple versions of JSON Schema and OpenAPI specifications. By default, the tool operates in **Lenient mode**, accepting all features regardless of version declarations. This ensures maximum compatibility with real-world schemas that often mix features from different versions.
+datamodel-code-generator supports multiple schema formats including JSON Schema, OpenAPI, Apache Avro, and XML Schema. By default, the tool operates in **Lenient mode**, accepting all features regardless of version declarations for formats that carry version information. This ensures maximum compatibility with real-world schemas that often mix features from different versions.
 
 ## JSON Schema Version Support
 
@@ -25475,6 +25476,45 @@ datamodel-code-generator detects the OpenAPI version from the `openapi` field:
 - `openapi: "3.0.x"` -> OpenAPI 3.0
 - `openapi: "3.1.x"` -> OpenAPI 3.1
 - No `openapi` field -> Fallback to OpenAPI 3.1
+
+## Apache Avro Schema Support
+
+JSON-encoded Apache Avro schemas are supported with `--input-file-type avro`. The parser accepts `.avsc` files and Avro schema JSON.
+
+### Supported Schema Forms
+
+| Avro construct | Status | Notes |
+|----------------|--------|-------|
+| Primitive types | ✅ Supported | `null`, `boolean`, `int`, `long`, `float`, `double`, `bytes`, `string` |
+| `record` | ✅ Supported | Generates Python model classes |
+| `enum` | ✅ Supported | Generates enum classes |
+| `array` | ✅ Supported | Generates list fields or root list models |
+| `map` | ✅ Supported | Generates dict fields or root dict models |
+| `fixed` | ✅ Supported | Generates fixed-length binary string models |
+| `union` | ✅ Supported | Generates union types; nullable unions become optional fields |
+| Named type resolution | ✅ Supported | Handles `name`, `namespace`, fullnames, nested named types, and references |
+| Record field metadata | ✅ Supported | Preserves `doc`, `default`, `aliases`, and `order` where applicable |
+| Logical types | ✅ Supported | Maps current Avro logical types to Python-friendly formats where possible |
+
+### Logical Types
+
+| Avro logical type | Python-oriented format |
+|-------------------|------------------------|
+| `decimal`, `big-decimal` | Decimal |
+| `uuid` | UUID |
+| `date` | Date |
+| `time-millis`, `time-micros` | Time |
+| `timestamp-millis`, `timestamp-micros`, `timestamp-nanos` | Date-time |
+| `local-timestamp-millis`, `local-timestamp-micros`, `local-timestamp-nanos` | Local date-time |
+| `duration` | Timedelta/duration |
+
+### Version Detection
+
+Apache Avro schemas do not include an in-schema version marker equivalent to JSON Schema's `$schema`, OpenAPI's `openapi`, or XML Schema versioning attributes. For that reason, `--schema-version` does not select an Avro specification version. The Avro parser follows the currently implemented Apache Avro schema rules and logical types.
+
+### Avro Limitations
+
+datamodel-code-generator generates Python model definitions from Avro schemas. It does not implement Avro runtime validation, binary encoding, decoding, or serialization.
 
 <!-- BEGIN AUTO-GENERATED SUPPORTED FEATURES -->
 ### Supported Features (from code)
@@ -25603,6 +25643,14 @@ The following features are tracked in the codebase with their implementation sta
 | Request body `required` | OAS 3.0 | ⚠️ Partial | Affects field optionality |
 | Header/Cookie parameters | OAS 3.0 | ⚠️ Partial | Generated but not validated |
 
+### Apache Avro - Unsupported Features
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Runtime validation | ❌ Not supported | Generated models are Python models, not an Avro validator |
+| Avro binary serialization | ❌ Not supported | Encoding and decoding are outside model generation scope |
+| Avro container files | ❌ Not supported | Input is schema JSON / `.avsc`, not Avro data files |
+
 ### GraphQL - Unsupported Features
 
 | Feature | Spec | Status | Notes |
@@ -25635,6 +25683,7 @@ In **Strict mode** (`--schema-version-mode strict`), warnings are emitted for ve
 - [Supported Data Types](./supported-data-types.md) - Complete data type support
 - [JSON Schema Guide](./jsonschema.md) - JSON Schema usage examples
 - [OpenAPI Guide](./openapi.md) - OpenAPI usage examples
+- [Apache Avro Guide](./avro.md) - Avro schema usage examples
 
 ---
 
@@ -26152,6 +26201,138 @@ This allows you to set a default base class with `--base-class`, override specif
 - 🏷️ [CLI Reference: Field Customization](cli-reference/field-customization.md) - Field naming and constraint options
 - 📊 [Supported Data Types](supported-data-types.md) - JSON Schema data type support
 - 🏗️ [CLI Reference: Model Customization](cli-reference/model-customization.md) - Base class and model customization options
+
+---
+
+# Generate from Apache Avro Schema
+
+Source: https://datamodel-code-generator.koxudaxi.dev/avro/
+
+Generate Python models from JSON-encoded Apache Avro schemas (`.avsc`).
+
+## 🚀 Quick Start
+
+```bash
+datamodel-codegen \
+    --input user.avsc \
+    --input-file-type avro \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
+```
+
+## 📝 Example
+
+**user.avsc**
+```json
+{
+  "type": "record",
+  "name": "User",
+  "namespace": "example.avro",
+  "doc": "A user record.",
+  "fields": [
+    {
+      "name": "id",
+      "type": {
+        "type": "string",
+        "logicalType": "uuid"
+      }
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "doc": "Display name"
+    },
+    {
+      "name": "email",
+      "type": ["null", "string"],
+      "default": null
+    },
+    {
+      "name": "roles",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "enum",
+          "name": "Role",
+          "symbols": ["admin", "member"]
+        }
+      },
+      "default": []
+    }
+  ]
+}
+```
+
+**✨ Generated model.py**
+```python
+from __future__ import annotations
+
+from enum import Enum
+from typing import Optional
+from uuid import UUID
+
+from pydantic import BaseModel, Field
+
+
+class Role(Enum):
+    admin = 'admin'
+    member = 'member'
+
+
+class User(BaseModel):
+    id: UUID
+    name: str = Field(..., description='Display name')
+    email: Optional[str] = None
+    roles: list[Role] = []
+```
+
+## Supported Avro Schema Features
+
+The Avro parser supports the schema constructs needed to generate Python models:
+
+| Avro construct | Model generation behavior |
+|----------------|---------------------------|
+| `record` | Generates a Python model class with fields |
+| `enum` | Generates an enum class |
+| `array` | Generates a list field or root list model |
+| `map` | Generates a dict field or root dict model |
+| `fixed` | Generates a fixed-length binary string model |
+| `union` | Generates union types; nullable unions such as `["null", "string"]` become optional fields |
+| Named types | Resolves `name`, `namespace`, fullnames, nested named types, and references |
+| Field metadata | Preserves `doc`, `default`, `aliases`, and `order` where applicable |
+| Logical types | Maps Avro logical types to Python-friendly formats where possible |
+
+Supported primitive types are `null`, `boolean`, `int`, `long`, `float`, `double`, `bytes`, and `string`.
+
+## Logical Types
+
+Avro logical types are mapped through the generator's normal type handling:
+
+| Avro logical type | Typical generated Python type |
+|-------------------|-------------------------------|
+| `decimal`, `big-decimal` | `Decimal` |
+| `uuid` | `UUID` |
+| `date` | `date` |
+| `time-millis`, `time-micros` | `time` |
+| `timestamp-millis`, `timestamp-micros`, `timestamp-nanos` | `datetime` |
+| `local-timestamp-millis`, `local-timestamp-micros`, `local-timestamp-nanos` | local date-time format |
+| `duration` | `timedelta` |
+
+Avro-specific metadata is preserved in generated JSON Schema extensions such as `x-avro-fullname`, `x-avro-namespace`, `x-avro-aliases`, and `x-avro-logicalType` before model generation.
+
+## Schema Version
+
+Apache Avro schemas do not include an in-schema version marker equivalent to JSON Schema's `$schema`, OpenAPI's `openapi`, or XML Schema versioning attributes. For that reason, `--schema-version` does not select an Avro specification version. The Avro parser follows the currently implemented Apache Avro schema rules and logical types.
+
+## Limitations
+
+datamodel-code-generator uses Avro schemas to generate Python model definitions. It does not implement Avro runtime validation, binary encoding, decoding, or serialization.
+
+## 📖 See Also
+
+- 🖥️ [CLI Reference](cli-reference/index.md) - Complete CLI options reference
+- 📊 [Supported Data Types](supported-data-types.md) - Data type support details
+- 📋 [Generate from JSON Schema](jsonschema.md) - JSON Schema input documentation
 
 ---
 
@@ -30308,6 +30489,7 @@ Each parser type has its own config class:
 |--------|-------------|
 | `JsonSchemaParser` | `JSONSchemaParserConfig` |
 | `OpenAPIParser` | `OpenAPIParserConfig` |
+| `AvroParser` | `AvroParserConfig` |
 | `GraphQLParser` | `GraphQLParserConfig` |
 
 All config classes inherit from `ParserConfig` and include additional parser-specific options.
@@ -30833,7 +31015,7 @@ By default, the action runs in **check mode** (`--check`), which validates that 
 |-------|----------|---------|-------------|
 | `input` | Yes | - | Input schema file or directory |
 | `output` | Yes | - | Output file or directory |
-| `input-file-type` | Yes | - | Input file type (`openapi`, `jsonschema`, `json`, `yaml`, `csv`, `graphql`) |
+| `input-file-type` | Yes | - | Input file type (`openapi`, `jsonschema`, `xmlschema`, `avro`, `json`, `yaml`, `csv`, `graphql`) |
 | `output-model-type` | Yes | - | Output model type (`pydantic_v2.BaseModel`, `pydantic_v2.dataclass`, `dataclasses.dataclass`, `typing.TypedDict`, `msgspec.Struct`) |
 | `check` | No | `true` | Validate that existing output is up to date (no generation) |
 | `working-directory` | No | `.` | Working directory (where `pyproject.toml` is located) |
@@ -30934,6 +31116,17 @@ For GraphQL schemas, use the `extras` input to install the required dependency:
     input-file-type: graphql
     output-model-type: pydantic_v2.BaseModel
     extras: 'graphql'
+```
+
+### Example: Apache Avro Schema
+
+```yaml
+- uses: koxudaxi/datamodel-code-generator@0.44.0
+  with:
+    input: schema.avsc
+    output: src/models.py
+    input-file-type: avro
+    output-model-type: pydantic_v2.BaseModel
 ```
 
 ### Example: Multiple Extras
