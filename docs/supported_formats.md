@@ -1,10 +1,10 @@
 # Schema Version Support
 
-This document describes the JSON Schema and OpenAPI versions supported by datamodel-code-generator.
+This document describes the JSON Schema, OpenAPI, Apache Avro, and XML Schema versions supported by datamodel-code-generator.
 
 ## Overview
 
-datamodel-code-generator supports multiple versions of JSON Schema and OpenAPI specifications. By default, the tool operates in **Lenient mode**, accepting all features regardless of version declarations. This ensures maximum compatibility with real-world schemas that often mix features from different versions.
+datamodel-code-generator supports multiple schema formats including JSON Schema, OpenAPI, Apache Avro, and XML Schema. By default, the tool operates in **Lenient mode**, accepting all features regardless of version declarations for formats that carry version information. This ensures maximum compatibility with real-world schemas that often mix features from different versions.
 
 ## JSON Schema Version Support
 
@@ -92,6 +92,45 @@ datamodel-code-generator detects the OpenAPI version from the `openapi` field:
 - `openapi: "3.0.x"` -> OpenAPI 3.0
 - `openapi: "3.1.x"` -> OpenAPI 3.1
 - No `openapi` field -> Fallback to OpenAPI 3.1
+
+## Apache Avro Schema Support
+
+JSON-encoded Apache Avro schemas are supported with `--input-file-type avro`. The parser accepts `.avsc` files and Avro schema JSON.
+
+### Supported Schema Forms
+
+| Avro construct | Status | Notes |
+|----------------|--------|-------|
+| Primitive types | ✅ Supported | `null`, `boolean`, `int`, `long`, `float`, `double`, `bytes`, `string` |
+| `record` | ✅ Supported | Generates Python model classes |
+| `enum` | ✅ Supported | Generates enum classes |
+| `array` | ✅ Supported | Generates list fields or root list models |
+| `map` | ✅ Supported | Generates dict fields or root dict models |
+| `fixed` | ✅ Supported | Generates fixed-length binary string models |
+| `union` | ✅ Supported | Generates union types; nullable unions become optional fields |
+| Named type resolution | ✅ Supported | Handles `name`, `namespace`, fullnames, nested named types, and references |
+| Record field metadata | ✅ Supported | Preserves `doc`, `default`, `aliases`, and `order` where applicable |
+| Logical types | ✅ Supported | Maps current Avro logical types to Python-friendly formats where possible |
+
+### Logical Types
+
+| Avro logical type | Python-oriented format |
+|-------------------|------------------------|
+| `decimal`, `big-decimal` | Decimal |
+| `uuid` | UUID |
+| `date` | Date |
+| `time-millis`, `time-micros` | Time |
+| `timestamp-millis`, `timestamp-micros`, `timestamp-nanos` | Date-time |
+| `local-timestamp-millis`, `local-timestamp-micros`, `local-timestamp-nanos` | Local date-time |
+| `duration` | Timedelta/duration |
+
+### Version Detection
+
+Apache Avro schemas do not include an in-schema version marker equivalent to JSON Schema's `$schema`, OpenAPI's `openapi`, or XML Schema versioning attributes. For that reason, `--schema-version` does not select an Avro specification version. The Avro parser follows the currently implemented Apache Avro schema rules and logical types.
+
+### Avro Limitations
+
+datamodel-code-generator generates Python model definitions from Avro schemas. It does not implement Avro runtime validation, binary encoding, decoding, or serialization.
 
 <!-- BEGIN AUTO-GENERATED SUPPORTED FEATURES -->
 ### Supported Features (from code)
@@ -220,6 +259,14 @@ The following features are tracked in the codebase with their implementation sta
 | Request body `required` | OAS 3.0 | ⚠️ Partial | Affects field optionality |
 | Header/Cookie parameters | OAS 3.0 | ⚠️ Partial | Generated but not validated |
 
+### Apache Avro - Unsupported Features
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Runtime validation | ❌ Not supported | Generated models are Python models, not an Avro validator |
+| Avro binary serialization | ❌ Not supported | Encoding and decoding are outside model generation scope |
+| Avro container files | ❌ Not supported | Input is schema JSON / `.avsc`, not Avro data files |
+
 ### GraphQL - Unsupported Features
 
 | Feature | Spec | Status | Notes |
@@ -252,3 +299,4 @@ In **Strict mode** (`--schema-version-mode strict`), warnings are emitted for ve
 - [Supported Data Types](./supported-data-types.md) - Complete data type support
 - [JSON Schema Guide](./jsonschema.md) - JSON Schema usage examples
 - [OpenAPI Guide](./openapi.md) - OpenAPI usage examples
+- [Apache Avro Guide](./avro.md) - Avro schema usage examples
