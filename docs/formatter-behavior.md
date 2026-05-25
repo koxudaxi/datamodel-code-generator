@@ -27,7 +27,9 @@ Available formatter names are:
 | `ruff-check` | Runs `ruff check --fix`. |
 | `ruff-format` | Runs `ruff format`. |
 
-Formatters run in the order passed to `--formatters`.
+External formatters run in the order passed to `--formatters`.
+The built-in formatter is an alternative to external formatting, not a pre-formatter.
+If `builtin` is passed together with `black`, `isort`, `ruff-check`, or `ruff-format`, `builtin` is ignored.
 
 ## Built-in formatter scope
 
@@ -46,6 +48,7 @@ It covers the generated-code patterns that matter for model modules:
 - Sorts imports inside a top-level `if TYPE_CHECKING:` block when that block contains only imports.
 - Keeps two blank lines before a top-level `class`, `def`, or `async def` after the import block.
 - Wraps generated model statements for common long `Field(...)`, `Annotated[...]`, and `ConfigDict(...)` lines.
+- Normalizes simple generated string quotes to double quotes when `--use-double-quotes` is passed or `[tool.black].skip-string-normalization = false`.
 
 If the generated code cannot be parsed as Python, the built-in formatter only applies whitespace cleanup and returns the code.
 
@@ -53,12 +56,13 @@ The built-in formatter does not currently format:
 
 - General expressions inside classes or functions.
 - List, dict, tuple, or arbitrary call argument layout outside the generated model patterns listed above.
-- Quote style.
-- String wrapping.
+- General quote style rewrites outside simple generated strings.
+- String wrapping outside supported generated call arguments.
 - Comment placement beyond preserving commented import lines.
 - Import section rules beyond the simple groups listed above.
 
 For exact Black, isort, or Ruff behavior, continue to pass those formatters explicitly.
+The built-in formatter is not run before external formatters.
 
 ## Line length
 
@@ -83,6 +87,15 @@ When `builtin-format-line-length` is not set, the built-in formatter reuses exis
 This fallback only reads configuration values. It does not require Ruff, Black, or isort to be installed.
 
 An explicit API value always wins over `pyproject.toml`.
+
+## String normalization
+
+The built-in formatter keeps single quotes by default. It normalizes simple generated string literals to double quotes when either condition is true:
+
+1. `--use-double-quotes` is passed.
+2. `[tool.black].skip-string-normalization = false` is set in `pyproject.toml`.
+
+The built-in formatter only reads this Black setting when `builtin` is selected without an external formatter.
 
 ## API usage
 

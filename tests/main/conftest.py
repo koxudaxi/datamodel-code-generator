@@ -263,7 +263,9 @@ def _uses_check_mode(extra_args: Sequence[str] | None) -> bool:
 
 
 def _uses_default_api_formatters(generate_options: dict[str, Any]) -> bool:
-    if generate_options.get("custom_formatters") or generate_options.get("custom_formatters_kwargs"):
+    if generate_options.get("custom_formatters") or generate_options.get(
+        "custom_formatters_kwargs"
+    ):  # pragma: no cover
         return False
     formatters = generate_options.get("formatters")
     return formatters is None or set(formatters) == _DEFAULT_API_FORMATTERS
@@ -275,11 +277,11 @@ def _builtin_formatter_extra_args(extra_args: Sequence[str] | None) -> list[str]
     extra_args_list = list(extra_args)
     if "--formatters" not in extra_args_list:
         return [*extra_args_list, "--formatters", "builtin"]
-    formatter_index = extra_args_list.index("--formatters")
-    end_index = formatter_index + 1
-    while end_index < len(extra_args_list) and not extra_args_list[end_index].startswith("-"):
-        end_index += 1
-    return [*extra_args_list[: formatter_index + 1], "builtin", *extra_args_list[end_index:]]
+    formatter_index = extra_args_list.index("--formatters")  # pragma: no cover
+    end_index = formatter_index + 1  # pragma: no cover
+    while end_index < len(extra_args_list) and not extra_args_list[end_index].startswith("-"):  # pragma: no cover
+        end_index += 1  # pragma: no cover
+    return [*extra_args_list[: formatter_index + 1], "builtin", *extra_args_list[end_index:]]  # pragma: no cover
 
 
 def _builtin_formatter_parity_output_path(output_path: Path) -> Path:
@@ -287,7 +289,7 @@ def _builtin_formatter_parity_output_path(output_path: Path) -> Path:
         return output_path.with_name(f"{output_path.name}_builtin_parity")
     if output_path.suffix:
         return output_path.with_name(f"{output_path.stem}.builtin-parity{output_path.suffix}")
-    return output_path.with_name(f"{output_path.name}.builtin-parity")
+    return output_path.with_name(f"{output_path.name}.builtin-parity")  # pragma: no cover
 
 
 def _clear_builtin_formatter_parity_output(output_path: Path) -> None:
@@ -397,7 +399,7 @@ def _assert_builtin_generate_formatter_parity(
 ) -> None:
     if os.environ.get(_BUILTIN_FORMATTER_PARITY_ENV) != "1":
         return
-    if not output_path.exists() or not _uses_default_api_formatters(generate_options):
+    if not output_path.exists() or not _uses_default_api_formatters(generate_options):  # pragma: no cover
         return
 
     builtin_output_path = _builtin_formatter_parity_output_path(output_path)

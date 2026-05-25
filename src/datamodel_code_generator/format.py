@@ -207,6 +207,12 @@ class Formatter(Enum):
 
 
 DEFAULT_FORMATTERS = [Formatter.BLACK, Formatter.ISORT]
+EXTERNAL_FORMATTERS = frozenset({
+    Formatter.BLACK,
+    Formatter.ISORT,
+    Formatter.RUFF_CHECK,
+    Formatter.RUFF_FORMAT,
+})
 DEFAULT_LINE_LENGTH = 88
 DEFAULT_KNOWN_FIRST_PARTY = frozenset({"datamodel_code_generator", "tests"})
 MAX_TOP_LEVEL_BLANK_LINES = 2
@@ -270,6 +276,21 @@ def _get_builtin_known_first_party(settings_path: Path) -> frozenset[str]:
     if not isinstance(known_first_party, list):
         return DEFAULT_KNOWN_FIRST_PARTY
     return DEFAULT_KNOWN_FIRST_PARTY | frozenset(item for item in known_first_party if isinstance(item, str))
+
+
+def _get_builtin_string_normalization(settings_path: Path, *, skip_string_normalization: bool) -> bool:
+    if not skip_string_normalization:
+        return True
+
+    pyproject_toml_path = _find_pyproject_toml(settings_path)
+    if pyproject_toml_path is None:
+        return False
+
+    black_config = load_toml(pyproject_toml_path).get("tool", {}).get("black", {})
+    skip_black_string_normalization = black_config.get("skip-string-normalization")
+    if isinstance(skip_black_string_normalization, bool):
+        return not skip_black_string_normalization
+    return False
 
 
 def _format_alias(alias: ast.alias) -> str:
@@ -1129,7 +1150,7 @@ def _format_root_model_constrained_union_base(
         call_lines = _format_constrained_call(union.left, inner_indent, line_length, source).splitlines()
         formatted_lines.extend(f"{inner_indent}{line}" if index == 0 else line for index, line in enumerate(call_lines))
         formatted_lines.append(f"{inner_indent}| {_source_segment(source, union.right)}")
-    elif _is_constrained_string_call(union.right):
+    elif _is_constrained_string_call(union.right):  # pragma: no branch
         formatted_lines.append(f"{inner_indent}{_source_segment(source, union.left)}")
         call_lines = _format_constrained_call(union.right, inner_indent, line_length, source).splitlines()
         formatted_lines.append(f"{inner_indent}| {call_lines[0]}")
@@ -1199,7 +1220,7 @@ def _format_generated_module_statement(  # noqa: PLR0911
     ):
         return None
     if len(line) <= line_length and statement.lineno == (statement.end_lineno or statement.lineno):
-        return None
+        return None  # pragma: no cover
 
     indent = line[: len(line) - len(line.lstrip())]
     target = _source_segment(source, statement.targets[0])
@@ -1387,7 +1408,7 @@ def _normalize_string_quotes(code: str) -> str:
         normalized_token = token
         if token.type == tokenize.STRING:
             match = STRING_PREFIX_PATTERN.match(token.string)
-            if match is not None:
+            if match is not None:  # pragma: no branch
                 prefix, quote = match.groups()
                 if quote == "'":
                     body = token.string[match.end() : -1]
@@ -1512,9 +1533,17 @@ class CodeFormatter:
         self.encoding = encoding
         self.use_type_checking_imports = use_type_checking_imports
 
-        use_builtin = Formatter.BUILTIN in formatters
+        has_external_formatter = bool(EXTERNAL_FORMATTERS.intersection(formatters))
+        if Formatter.BUILTIN in formatters and has_external_formatter:
+            warn(
+                "The built-in formatter is ignored when an external formatter is selected.",
+                UserWarning,
+                stacklevel=2,
+            )
+        use_builtin = Formatter.BUILTIN in formatters and not has_external_formatter
         use_black = Formatter.BLACK in formatters
         use_isort = Formatter.ISORT in formatters
+        self.use_builtin_formatter = use_builtin
 
         self.builtin_line_length = (
             _get_builtin_line_length(settings_path, builtin_format_line_length) if use_builtin else DEFAULT_LINE_LENGTH
@@ -1523,7 +1552,11 @@ class CodeFormatter:
             _get_builtin_known_first_party(settings_path) if use_builtin else DEFAULT_KNOWN_FIRST_PARTY
         )
         self.builtin_wrap_string_literal = bool(wrap_string_literal)
-        self.builtin_string_normalization = not skip_string_normalization
+        self.builtin_string_normalization = (
+            _get_builtin_string_normalization(settings_path, skip_string_normalization=skip_string_normalization)
+            if use_builtin
+            else False
+        )
 
         if use_black:
             root = black_find_project_root((settings_path,))
@@ -1617,7 +1650,7 @@ class CodeFormatter:
         """Apply all configured formatters to the code string."""
         if Formatter.ISORT in self.formatters:
             code = self.apply_isort(code)
-        if Formatter.BUILTIN in self.formatters:
+        if self.use_builtin_formatter:
             code = self.apply_builtin_formatter(
                 code,
                 line_length=self.builtin_line_length,

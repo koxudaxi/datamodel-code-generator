@@ -13,11 +13,16 @@ import isort
 import pytest
 
 from datamodel_code_generator.format import (
+    DEFAULT_KNOWN_FIRST_PARTY,
     CodeFormatter,
     Formatter,
     PythonVersion,
     PythonVersionMin,
+    _format_constrained_call,
     _format_import_node,
+    _get_builtin_known_first_party,
+    _normalize_string_quotes,
+    _split_escaped_string_literal,
     _warn_default_formatters_deprecation,
     apply_builtin_formatter,
     resolve_use_type_checking_imports,
@@ -111,6 +116,30 @@ def test_format_code_builtin_formatter(tmp_path: Path, monkeypatch: pytest.Monke
     )
 
 
+def test_format_code_ignores_builtin_when_external_formatter_selected(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatting does not add work before external formatters."""
+
+    def fail_get_builtin_line_length(*_args: object, **_kwargs: object) -> int:
+        pytest.fail("built-in formatter configuration should not be read")  # pragma: no cover
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "datamodel_code_generator.format._get_builtin_line_length",
+        fail_get_builtin_line_length,
+    )
+
+    with pytest.warns(UserWarning, match="built-in formatter is ignored"):
+        formatter = CodeFormatter(
+            PythonVersionMin,
+            formatters=[Formatter.BUILTIN, Formatter.BLACK],
+        )
+
+    assert not formatter.use_builtin_formatter
+    assert formatter.format_code("x=1\n") == "x = 1\n"
+
+
 def test_format_code_builtin_formatter_uses_explicit_line_length(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -179,6 +208,44 @@ def test_format_code_builtin_formatter_falls_back_to_ruff_line_length(
         formatted_code == "from module import AnotherLongGeneratedTypeName, ExtremelyLongGeneratedTypeName, "
         "GeneratedTypeNameThatFitsWithinConfiguredLineLength, Zed\n"
     )
+
+
+@pytest.mark.parametrize(
+    ("black_config", "skip_string_normalization", "expected_alias"),
+    [
+        ("skip-string-normalization = false\n", True, '"mapViewMode"'),
+        ("skip-string-normalization = true\n", True, "'mapViewMode'"),
+        ("", True, "'mapViewMode'"),
+        ("skip-string-normalization = true\n", False, '"mapViewMode"'),
+    ],
+)
+def test_format_code_builtin_formatter_reads_black_skip_string_normalization(
+    black_config: str,
+    skip_string_normalization: bool,
+    expected_alias: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test built-in formatter reuses Black string normalization config."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(f"[tool.black]\n{black_config}", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+        skip_string_normalization=skip_string_normalization,
+    )
+
+    formatted_code = formatter.format_code(
+        "from typing import Literal\n"
+        "from pydantic import BaseModel, Field\n"
+        "\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    mode: Literal['MODE_2D'] = Field(..., alias='mapViewMode')\n"
+    )
+
+    assert f"alias={expected_alias}" in formatted_code
 
 
 def test_format_code_builtin_formatter_ignores_non_integer_line_lengths(
@@ -750,6 +817,156 @@ def test_apply_builtin_formatter_wraps_msgspec_field_default_factory() -> None:
         "            type=list[Foo_1],\n"
         "        )\n"
         "    )\n"
+    )
+
+
+def test_apply_builtin_formatter_handles_remaining_generated_edges() -> None:
+    """Test generated formatting branches that are less common but supported."""
+    code = (
+        "class Model:\n"
+        "    very_long_attribute_name: VeryLongPlainAnnotation = DEFAULT_VALUE\n"
+        "    empty_value_with_long_name: VeryLongPlainAnnotation\n"
+        "\n"
+        "    data: dict[str, type] = {**BASE_FIELDS, 'id': str, 'name': str}\n"
+        "\n"
+        "class LeftRoot(RootModel[constr(pattern='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') | None]):\n"
+        "    pass\n"
+        "\n"
+        "class RightRoot(RootModel[None | constr(pattern='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')]):\n"
+        "    pass\n"
+        "\n"
+        "class UnionModel:\n"
+        "    right_annotated: VeryLongPlainTypeName | "
+        "Annotated[VeryLongAnnotatedTypeName, Field(description='x')] = DEFAULT\n"
+        "    simple_union: VeryLongPlainTypeName | OtherVeryLongPlainTypeName | None = DEFAULT\n"
+        "\n"
+        "Alias = TypeAliasType('Alias', Union[str, int], **OPTIONS)\n"
+    )
+
+    assert apply_builtin_formatter(code, line_length=40, string_normalization=True) == (
+        "class Model:\n"
+        "    very_long_attribute_name: VeryLongPlainAnnotation = (\n"
+        "        DEFAULT_VALUE\n"
+        "    )\n"
+        "    empty_value_with_long_name: VeryLongPlainAnnotation\n"
+        "\n"
+        "    data: dict[str, type] = {\n"
+        "        **BASE_FIELDS,\n"
+        '        "id": str,\n'
+        '        "name": str,\n'
+        "    }\n"
+        "\n"
+        "class LeftRoot(\n"
+        "    RootModel[\n"
+        "        constr(\n"
+        '            pattern="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"\n'
+        "        )\n"
+        "        | None\n"
+        "    ]\n"
+        "):\n"
+        "    pass\n"
+        "\n"
+        "class RightRoot(\n"
+        "    RootModel[\n"
+        "        None\n"
+        "        | constr(\n"
+        '            pattern="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"\n'
+        "        )\n"
+        "    ]\n"
+        "):\n"
+        "    pass\n"
+        "\n"
+        "class UnionModel:\n"
+        "    right_annotated: (\n"
+        "        VeryLongPlainTypeName\n"
+        '        | Annotated[VeryLongAnnotatedTypeName, Field(description="x")]\n'
+        "    ) = DEFAULT\n"
+        "    simple_union: (\n"
+        "        VeryLongPlainTypeName | OtherVeryLongPlainTypeName | None\n"
+        "    ) = DEFAULT\n"
+        "\n"
+        "Alias = TypeAliasType(\n"
+        '    "Alias",\n'
+        "    Union[\n"
+        "        str,\n"
+        "        int,\n"
+        "    ],\n"
+        "    **OPTIONS,\n"
+        ")\n"
+    )
+
+
+def test_apply_builtin_formatter_handles_no_import_string_normalization_and_spacing() -> None:
+    """Test quote normalization and blank-line normalization without imports."""
+    code = (
+        "class Model:\n"
+        '    """Doc."""\n'
+        "\n"
+        "\n"
+        "\n"
+        "    value: str\n"
+        "\n"
+        "    def very_long_generated_method_name_without_arguments():\n"
+        "        pass\n"
+        "\n"
+        "    def very_long_generated_method_name_with_arguments(value: str):\n"
+        "        pass\n"
+        "\n"
+        "def very_long_generated_function_name_without_arguments():\n"
+        "    pass\n"
+        "\n"
+        "def very_long_generated_function_name_with_arguments(value: str):\n"
+        "    pass\n"
+        "\n"
+        "class VeryLongGeneratedClassNameWithoutAnyBaseClass:\n"
+        "    value = 'x'\n"
+        "\n"
+        "class VeryLongGeneratedClassNameWithPlainBase(VeryLongPlainBase):\n"
+        '    value = "x"\n'
+    )
+
+    assert apply_builtin_formatter(code, line_length=40, string_normalization=True) == (
+        "class Model:\n"
+        '    """Doc."""\n'
+        "\n"
+        "    value: str\n"
+        "\n"
+        "    def very_long_generated_method_name_without_arguments():\n"
+        "        pass\n"
+        "\n"
+        "    def very_long_generated_method_name_with_arguments(\n"
+        "        value: str\n"
+        "    ):\n"
+        "        pass\n"
+        "\n"
+        "def very_long_generated_function_name_without_arguments():\n"
+        "    pass\n"
+        "\n"
+        "def very_long_generated_function_name_with_arguments(value: str):\n"
+        "    pass\n"
+        "\n"
+        "class VeryLongGeneratedClassNameWithoutAnyBaseClass:\n"
+        '    value = "x"\n'
+        "\n"
+        "class VeryLongGeneratedClassNameWithPlainBase(VeryLongPlainBase):\n"
+        '    value = "x"\n'
+    )
+
+
+def test_builtin_formatter_private_edge_helpers(tmp_path: Path) -> None:
+    """Test small helper branches used by generated-code formatting."""
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.isort]\nknown_first_party = "not-a-list"\n',
+        encoding="utf-8",
+    )
+    call = ast.parse("constr()").body[0].value
+
+    assert _get_builtin_known_first_party(tmp_path) == DEFAULT_KNOWN_FIRST_PARTY
+    assert _split_escaped_string_literal("abc\\def", 4) == ["abc", "\\def"]
+    assert _split_escaped_string_literal("abcdef", 4) == ["abcd", "ef"]
+    assert _format_constrained_call(call, "", 88, "constr()") == "constr()"
+    assert _normalize_string_quotes("a = \"ok\"\nb = 'has \" quote'\nc = 'abc\\\\'\nd = 'ok'\n") == (
+        'a = "ok"\nb = \'has " quote\'\nc = \'abc\\\\\'\nd = "ok"\n'
     )
 
 
