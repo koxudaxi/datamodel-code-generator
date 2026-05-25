@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  targetNamespace="https://example.com/common/shipping"
+>
+  <xs:simpleType name="Code">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

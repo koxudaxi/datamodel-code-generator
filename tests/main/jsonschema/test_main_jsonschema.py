@@ -2474,7 +2474,7 @@ def test_main_strict_types_all_with_field_constraints(output_file: Path) -> None
 def test_main_strict_types_with_constraints(output_file: Path) -> None:
     """Test strict int/float with constraints generates conint/confloat with strict=True, and decimal format."""
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "strict_types_coverage.json",
+        input_path=JSON_SCHEMA_DATA_PATH / "strict_types_matrix.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
@@ -2487,7 +2487,7 @@ def test_main_strict_types_with_constraints(output_file: Path) -> None:
 def test_main_hostname_strict_field_constraints(output_file: Path) -> None:
     """Test hostname with --strict-types str and --field-constraints returns StrictStr."""
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "strict_types_coverage.json",
+        input_path=JSON_SCHEMA_DATA_PATH / "strict_types_matrix.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,

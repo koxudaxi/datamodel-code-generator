@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="https://example.com/order"
+  targetNamespace="https://example.com/order"
+  elementFormDefault="qualified"
+>
+  <xs:include schemaLocation="common.xsd"/>
+
+  <xs:simpleType name="OrderStatus">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="draft"/>
+      <xs:enumeration value="paid"/>
+      <xs:enumeration value="shipped"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="Money">
+    <xs:simpleContent>
+      <xs:extension base="xs:decimal">
+        <xs:attribute name="currency" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="LineItemType">
+    <xs:sequence>
+      <xs:element name="sku" type="xs:string"/>
+      <xs:element name="quantity" type="xs:positiveInteger"/>
+      <xs:element name="note" type="xs:string" minOccurs="0"/>
+      <xs:element name="price" type="tns:Money"/>
+    </xs:sequence>
+    <xs:attribute name="lineNumber" type="xs:unsignedInt" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="ExpressLineItemType">
+    <xs:complexContent>
+      <xs:extension base="tns:LineItemType">
+        <xs:sequence>
+          <xs:element name="trackingCode" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="PurchaseOrderType">
+    <xs:sequence>
+      <xs:element name="orderId" type="xs:string"/>
+      <xs:element name="status" type="tns:OrderStatus"/>
+      <xs:element name="shippingAddress" type="tns:AddressType"/>
+      <xs:element name="item" type="tns:LineItemType" maxOccurs="unbounded"/>
+      <xs:element name="expressItem" type="tns:ExpressLineItemType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="priority" type="xs:boolean" default="false"/>
+  </xs:complexType>
+
+  <xs:element name="purchaseOrder" type="tns:PurchaseOrderType"/>
+</xs:schema>

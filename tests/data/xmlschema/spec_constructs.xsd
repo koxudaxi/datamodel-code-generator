@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="https://example.com/spec-constructs"
+  targetNamespace="https://example.com/spec-constructs"
+  elementFormDefault="qualified"
+  attributeFormDefault="unqualified"
+>
+  <xs:annotation>
+    <xs:appinfo source="https://example.com/spec-constructs">ignored by model generation</xs:appinfo>
+    <xs:documentation>Schema-level documentation is accepted.</xs:documentation>
+  </xs:annotation>
+
+  <xs:attribute name="globalCode" type="xs:NCName" default="item"/>
+
+  <xs:simpleType name="IdList">
+    <xs:list itemType="xs:IDREF"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="StampRange">
+    <xs:restriction base="xs:dateTimeStamp">
+      <xs:minExclusive value="1998-01-01T12:00:00.123+09:00"/>
+      <xs:maxExclusive value="1999-01-01T12:00:00.123+09:00"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="StampInclusiveRange">
+    <xs:restriction base="xs:dateTimeStamp">
+      <xs:minInclusive value="1998-01-01T12:00:00.123+09:00"/>
+      <xs:maxInclusive value="1999-01-01T12:00:00.123+09:00"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="TextWithLanguage">
+    <xs:simpleContent>
+      <xs:extension base="xs:normalizedString">
+        <xs:attribute name="lang" type="xs:language" use="required"/>
+        <xs:attribute ref="tns:globalCode" fixed="fixedCode"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="AllParticleType">
+    <xs:all>
+      <xs:element name="first" type="xs:string"/>
+      <xs:element name="maybe" type="xs:int" minOccurs="0"/>
+    </xs:all>
+  </xs:complexType>
+
+  <xs:complexType name="RestrictedAllType">
+    <xs:complexContent>
+      <xs:restriction base="tns:AllParticleType">
+        <xs:all>
+          <xs:element name="first" type="xs:string"/>
+        </xs:all>
+        <xs:attribute name="restrictedAttr" type="xs:boolean" fixed="false"/>
+      </xs:restriction>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="ScopedTypes">
+    <xs:sequence>
+      <xs:element name="anonymousSimple">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:pattern value="[a-z]{2}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="anonymousComplex">
+        <xs:complexType>
+          <xs:all>
+            <xs:element name="value" type="xs:decimal"/>
+          </xs:all>
+          <xs:attribute name="flag" type="xs:boolean" default="true"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="text" type="tns:TextWithLanguage"/>
+      <xs:element name="ids" type="tns:IdList" minOccurs="0"/>
+      <xs:element name="stamp" type="tns:StampRange" minOccurs="0"/>
+      <xs:element name="inclusiveStamp" type="tns:StampInclusiveRange" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="catalog" block="#all" final="#all">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="scoped" type="tns:ScopedTypes"/>
+        <xs:element name="allParticle" type="tns:AllParticleType" minOccurs="0"/>
+        <xs:element name="restrictedAll" type="tns:RestrictedAllType" minOccurs="0"/>
+      </xs:all>
+      <xs:attribute ref="tns:globalCode" use="required"/>
+    </xs:complexType>
+    <xs:unique name="scopedCode">
+      <xs:selector xpath="tns:scoped"/>
+      <xs:field xpath="@globalCode"/>
+    </xs:unique>
+    <xs:key name="scopedKey">
+      <xs:selector xpath="tns:scoped"/>
+      <xs:field xpath="tns:anonymousSimple"/>
+    </xs:key>
+    <xs:keyref name="scopedKeyRef" refer="tns:scopedKey">
+      <xs:selector xpath="tns:scoped"/>
+      <xs:field xpath="tns:anonymousSimple"/>
+    </xs:keyref>
+  </xs:element>
+</xs:schema>

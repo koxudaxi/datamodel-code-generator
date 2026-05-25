@@ -155,7 +155,7 @@ instead of generating duplicate classes from external schema files.
 Specify the input schema file path.
 
 The `--input` flag specifies the path to the schema file (JSON Schema,
-OpenAPI, GraphQL, etc.). Multiple input files can be specified to merge
+OpenAPI, XML Schema, GraphQL, etc.). Multiple input files can be specified to merge
 schemas. Required unless using `--url` to fetch schema from a URL.
 
 !!! tip "Usage"
@@ -217,7 +217,7 @@ The `--input-file-type` flag explicitly sets the input format.
 
 **Important distinction:**
 
-- Use `jsonschema`, `openapi`, or `graphql` for **schema definition files**
+- Use `jsonschema`, `openapi`, `graphql`, or `xmlschema` for **schema definition files**
 - Use `json`, `yaml`, or `csv` for **raw sample data** to automatically infer a schema
 
 For example, if you have a JSON Schema written in YAML format, use `--input-file-type jsonschema`,

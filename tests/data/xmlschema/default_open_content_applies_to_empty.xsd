@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="https://example.com/default-open"
+  targetNamespace="https://example.com/default-open"
+>
+  <xs:defaultOpenContent appliesToEmpty="true">
+    <xs:any namespace="##other" processContents="lax"/>
+  </xs:defaultOpenContent>
+
+  <xs:complexType name="EmptyDefaultOpen"/>
+
+  <xs:element name="container">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="empty" type="tns:EmptyDefaultOpen"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
