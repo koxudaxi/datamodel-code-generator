@@ -2366,6 +2366,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             cls._normalize_raw_oneof_string_length_constraints(normalized)
             cls._normalize_raw_oneof_numeric_bounds_constraints(normalized)
             cls._drop_null_type_when_combined_literals_exclude_null(normalized)
+            cls._normalize_raw_allof_primitive_combined_constraints(normalized)
             cls._normalize_raw_allof_dependent_constraints(normalized)
             cls._normalize_raw_allof_conditional_constraints(normalized)
             cls._normalize_raw_allof_not_constraints(normalized)
@@ -2724,6 +2725,112 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     @staticmethod
     def _raw_fraction_schema_value(value: Fraction) -> int | float:
         return value.numerator if value.denominator == 1 else float(value)
+
+    @classmethod
+    def _normalize_raw_allof_primitive_combined_constraints(cls, schema_dict: dict[Any, Any]) -> None:  # noqa: PLR0911
+        all_of = schema_dict.get("allOf")
+        if not isinstance(all_of, list):
+            return
+        if set(schema_dict) - (JsonSchemaObject.__metadata_only_fields__ | {"allOf"}):
+            return
+
+        mergeable_items: list[dict[Any, Any]] = []
+        has_combined = False
+        for item in all_of:
+            if item is True:
+                continue
+            if item is False:
+                return
+            if not isinstance(item, dict) or not cls._raw_allof_primitive_combined_item_is_mergeable(item):
+                return
+            if set(item) <= JsonSchemaObject.__metadata_only_fields__:
+                return
+            has_combined = has_combined or "anyOf" in item or "oneOf" in item
+            mergeable_items.append(item)
+
+        if not has_combined or len(mergeable_items) < cls._ONE_OF_PAIR_SIZE:
+            return
+
+        merged_schema: Any = True
+        for item in mergeable_items:
+            merged_schema = cls._merge_raw_schema_intersection(merged_schema, item)
+            if merged_schema is False:
+                cls._raise_allof_constraint_conflict()
+        if not isinstance(merged_schema, dict):
+            return
+
+        metadata = {
+            key: value for key, value in schema_dict.items() if key in JsonSchemaObject.__metadata_only_fields__
+        }
+        schema_dict.clear()
+        schema_dict.update(metadata)
+        schema_dict.update(merged_schema)
+        cls._normalize_raw_oneof_literal_constraints(schema_dict)
+        cls._normalize_raw_oneof_string_length_constraints(schema_dict)
+        cls._normalize_raw_oneof_numeric_bounds_constraints(schema_dict)
+
+    @classmethod
+    def _raw_allof_primitive_combined_item_is_mergeable(cls, schema_dict: dict[Any, Any]) -> bool:
+        return cls._raw_primitive_combined_item_is_mergeable(schema_dict, allow_combined=True)
+
+    @classmethod
+    def _raw_primitive_combined_item_is_mergeable(
+        cls,
+        schema_dict: dict[Any, Any],
+        *,
+        allow_combined: bool,
+    ) -> bool:
+        unsupported_keys = {
+            "$ref",
+            "additionalProperties",
+            "allOf",
+            "dependentSchemas",
+            "if",
+            "else",
+            "items",
+            "not",
+            "patternProperties",
+            "properties",
+            "propertyNames",
+            "then",
+        }
+        if unsupported_keys & set(schema_dict):
+            return False
+        combined_keys = {"anyOf", "oneOf"} if allow_combined else set()
+        supported_keys = (
+            JsonSchemaObject.__metadata_only_fields__
+            | combined_keys
+            | {
+                "const",
+                "enum",
+                "exclusiveMaximum",
+                "exclusiveMinimum",
+                "maximum",
+                "maxLength",
+                "minimum",
+                "minLength",
+                "multipleOf",
+                "type",
+            }
+        )
+        if set(schema_dict) - supported_keys:
+            return False
+        type_values = cls._type_values(schema_dict.get("type"))
+        if type_values is not None and not type_values <= {"integer", "number", "string"}:
+            return False
+        for combined_key in combined_keys:
+            branches = schema_dict.get(combined_key)
+            if not isinstance(branches, list):
+                continue
+            for branch in branches:
+                if branch is True or branch is False:
+                    continue
+                if not isinstance(branch, dict) or not cls._raw_primitive_combined_item_is_mergeable(
+                    branch,
+                    allow_combined=False,
+                ):
+                    return False
+        return True
 
     @staticmethod
     def _raw_literal_branch_values(branch: dict[Any, Any]) -> Iterator[Any]:

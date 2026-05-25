@@ -3935,6 +3935,43 @@ def test_main_jsonschema_oneof_integer_bound_exclusive_ranges(output_file: Path)
     )
 
 
+def test_main_jsonschema_allof_combined_primitive_intersection(output_file: Path) -> None:
+    """Test primitive allOf branches keep nested anyOf/oneOf constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_combined_primitive_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_combined_primitive_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_combined_primitive_intersection",
+        model_name="AllOfCombinedPrimitiveIntersection",
+        valid_json='{"stringValue":"","integerValue":0,"oneOfValue":0}',
+        invalid_json='{"stringValue":"a","integerValue":0,"oneOfValue":0}',
+        expected_error_type="string_too_short",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_combined_primitive_intersection",
+        model_name="AllOfCombinedPrimitiveIntersection",
+        valid_json='{"stringValue":"ab","integerValue":3,"oneOfValue":4}',
+        invalid_json='{"stringValue":"ab","integerValue":1,"oneOfValue":4}',
+        expected_error_type="greater_than_equal",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_combined_primitive_intersection",
+        model_name="AllOfCombinedPrimitiveIntersection",
+        valid_json='{"stringValue":"abc","integerValue":4,"oneOfValue":-1}',
+        invalid_json='{"stringValue":"abc","integerValue":4,"oneOfValue":1}',
+        expected_error_type="greater_than",
+    )
+
+
 def test_main_jsonschema_oneof_const_enum_literal(output_file: Path) -> None:
     """Test oneOf with const values as Literal type."""
     run_main_and_assert(

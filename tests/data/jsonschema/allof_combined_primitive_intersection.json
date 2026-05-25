@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AllOfCombinedPrimitiveIntersection",
+  "type": "object",
+  "properties": {
+    "stringValue": {
+      "allOf": [
+        {
+          "type": "string"
+        },
+        {
+          "anyOf": [
+            {
+              "minLength": 2
+            },
+            {
+              "maxLength": 0
+            }
+          ]
+        }
+      ]
+    },
+    "integerValue": {
+      "allOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "anyOf": [
+            {
+              "minimum": 3
+            },
+            {
+              "maximum": 0
+            }
+          ]
+        }
+      ]
+    },
+    "oneOfValue": {
+      "allOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "oneOf": [
+            {
+              "minimum": 1
+            },
+            {
+              "maximum": 3
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "required": ["stringValue", "integerValue", "oneOfValue"]
+}
