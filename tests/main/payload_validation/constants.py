@@ -87,6 +87,9 @@ EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/nullable_oneof_primitive_constraints.json": (
         "hypothesis-jsonschema cannot satisfy several required overlapping oneOf primitive constraints together"
     ),
+    "jsonschema/oneof_count_exclusive_ranges.json": (
+        "hypothesis-jsonschema cannot satisfy several required overlapping oneOf count constraints together"
+    ),
     "jsonschema/typed_dict_allof_constraint_extra_items.json": (
         "TypedDict-only e2e fixture intentionally emits a generator warning; Pydantic payload validation "
         "uses the same schema corpus but does not target this output mode"

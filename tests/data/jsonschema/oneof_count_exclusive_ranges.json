@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OneOfCountExclusiveRanges",
+  "type": "object",
+  "properties": {
+    "arrayOutside": {
+      "type": "array",
+      "oneOf": [
+        {
+          "minItems": 1
+        },
+        {
+          "maxItems": 2
+        }
+      ]
+    },
+    "objectOutside": {
+      "type": "object",
+      "oneOf": [
+        {
+          "minProperties": 1
+        },
+        {
+          "maxProperties": 2
+        }
+      ]
+    },
+    "nullableArrayOutside": {
+      "type": ["array", "null"],
+      "oneOf": [
+        {
+          "minItems": 1
+        },
+        {
+          "maxItems": 2
+        }
+      ]
+    },
+    "nullOrEmptyObject": {
+      "type": ["object", "null"],
+      "oneOf": [
+        true,
+        {
+          "type": "object",
+          "minProperties": 1
+        }
+      ]
+    }
+  },
+  "required": ["arrayOutside", "objectOutside", "nullableArrayOutside", "nullOrEmptyObject"]
+}

@@ -4185,6 +4185,54 @@ def test_main_jsonschema_nullable_combined_count_constraints(output_file: Path) 
     )
 
 
+def test_main_jsonschema_oneof_count_exclusive_ranges(output_file: Path) -> None:
+    """Test oneOf array/object count overlaps are split into exclusive ranges."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_count_exclusive_ranges.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_count_exclusive_ranges.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    valid_json = '{"arrayOutside":[],"objectOutside":{},"nullableArrayOutside":[1,2,3],"nullOrEmptyObject":null}'
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="oneof_count_exclusive_ranges",
+        model_name="OneOfCountExclusiveRanges",
+        valid_json=valid_json,
+        invalid_json='{"arrayOutside":[1],"objectOutside":{},"nullableArrayOutside":[1,2,3],"nullOrEmptyObject":null}',
+        expected_error_type="too_short",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="oneof_count_exclusive_ranges",
+        model_name="OneOfCountExclusiveRanges",
+        valid_json=valid_json,
+        invalid_json='{"arrayOutside":[],"objectOutside":{"a":1},'
+        '"nullableArrayOutside":[1,2,3],"nullOrEmptyObject":null}',
+        expected_error_type="too_short",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="oneof_count_exclusive_ranges",
+        model_name="OneOfCountExclusiveRanges",
+        valid_json=valid_json,
+        invalid_json='{"arrayOutside":[],"objectOutside":{},"nullableArrayOutside":null,"nullOrEmptyObject":null}',
+        expected_error_type="list_type",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="oneof_count_exclusive_ranges",
+        model_name="OneOfCountExclusiveRanges",
+        valid_json=valid_json,
+        invalid_json='{"arrayOutside":[],"objectOutside":{},'
+        '"nullableArrayOutside":[1,2,3],"nullOrEmptyObject":{"a":1}}',
+        expected_error_type="too_long",
+    )
+
+
 def test_main_jsonschema_oneof_const_enum_literal(output_file: Path) -> None:
     """Test oneOf with const values as Literal type."""
     run_main_and_assert(

@@ -11,7 +11,7 @@ import importlib
 import json
 import re
 from collections import defaultdict
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager, suppress
 from copy import deepcopy
 from fractions import Fraction
@@ -2642,15 +2642,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         ]
         if not disjoint_intervals:
             cls._raise_allof_constraint_conflict()
-        if len(disjoint_intervals) != 1:
-            return
 
         schema_dict.pop("oneOf", None)
-        schema_dict.update(cls._raw_count_schema_from_interval(disjoint_intervals[0], min_key, max_key))
-        if "null" in (cls._type_values(schema_dict.get("type")) or set()):
-            null_match_count = sum(cls._raw_value_matches_schema(None, branch) for branch in one_of)
-            if null_match_count != 1:
-                cls._drop_null_type(schema_dict, cls._type_values(schema_dict["type"]) or set())
+        null_allowed = "null" in (cls._type_values(schema_dict.get("type")) or set())
+        null_is_valid = null_allowed and sum(cls._raw_value_matches_schema(None, branch) for branch in one_of) == 1
+        if len(disjoint_intervals) == 1:
+            schema_dict.update(cls._raw_count_schema_from_interval(disjoint_intervals[0], min_key, max_key))
+        else:
+            disjoint_schemas = [
+                cls._raw_count_branch_schema_from_interval(interval, branch_type, min_key, max_key)
+                for interval in disjoint_intervals
+            ]
+            if null_is_valid:
+                disjoint_schemas.append({"type": "null"})
+            schema_dict["anyOf"] = disjoint_schemas
+        if null_allowed and not null_is_valid:
+            cls._drop_null_type(schema_dict, cls._type_values(schema_dict["type"]) or set())
 
     @classmethod
     def _raw_count_interval(
@@ -2708,6 +2715,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             schema[min_key] = min_value
         if max_value is not None:
             schema[max_key] = max_value
+        return schema
+
+    @classmethod
+    def _raw_count_branch_schema_from_interval(
+        cls,
+        interval: tuple[int, int | None],
+        branch_type: str,
+        min_key: str,
+        max_key: str,
+    ) -> dict[str, Any]:
+        schema: dict[str, Any] = {"type": branch_type}
+        schema.update(cls._raw_count_schema_from_interval(interval, min_key, max_key))
         return schema
 
     @classmethod
@@ -7682,6 +7701,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self.get_ref_data_type(item.ref)
         if item.custom_type_path:  # pragma: no cover
             return self.data_type_manager.get_data_type_from_full_path(item.custom_type_path, is_custom_type=True)
+        if parent and not item.enum and self._combined_container_count_branch_requires_root_type(item, parent):
+            root_type_path = get_special_path("array" if item.is_array else "object", path)
+            return self.parse_root_type(
+                self.model_resolver.add(
+                    root_type_path,
+                    name,
+                    class_name=True,
+                    singular_name=singular_name,
+                ).name,
+                item,
+                root_type_path,
+            )
+        if item.is_array and item.anyOf and self._combined_array_count_branches_require_root_type(item.anyOf):
+            return self.data_type(data_types=self.parse_any_of(name, item, get_special_path("anyOf", path)))
+        if item.is_array and item.oneOf and self._combined_array_count_branches_require_root_type(item.oneOf):
+            return self.data_type(data_types=self.parse_one_of(name, item, get_special_path("oneOf", path)))
         if item.is_array:
             return self.parse_array_fields(name, item, get_special_path("array", path)).data_type
         if item.discriminator and parent and parent.is_array and (item.oneOf or item.anyOf):
@@ -7780,6 +7815,50 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return self.parse_enum_as_literal(item)
             return self.parse_enum(name, item, get_special_path("enum", path), singular_name=singular_name)
         return self.get_data_type(item)
+
+    @classmethod
+    def _combined_container_count_branch_requires_root_type(
+        cls,
+        item: JsonSchemaObject,
+        parent: JsonSchemaObject,
+    ) -> bool:
+        if not (parent.anyOf or parent.oneOf):
+            return False
+        if item.is_array:
+            return cls._array_count_branch_is_root_type_only(item)
+        return bool(
+            item.is_object
+            and not item.properties
+            and not item.patternProperties
+            and item.propertyNames is None
+            and not isinstance(item.additionalProperties, JsonSchemaObject)
+            and (item.minProperties is not None or item.maxProperties is not None)
+        )
+
+    @classmethod
+    def _combined_array_count_branches_require_root_type(
+        cls,
+        branches: Sequence[JsonSchemaObject | bool],
+    ) -> bool:
+        has_count_branch = False
+        for branch in branches:
+            if isinstance(branch, bool):
+                continue
+            if not cls._array_count_branch_is_root_type_only(branch):
+                return False
+            has_count_branch = True
+        return has_count_branch
+
+    @staticmethod
+    def _array_count_branch_is_root_type_only(item: JsonSchemaObject) -> bool:
+        return bool(
+            item.is_array
+            and item.items is None
+            and item.prefixItems is None
+            and item.uniqueItems is None
+            and not item.extras
+            and (item.minItems is not None or item.maxItems is not None)
+        )
 
     def parse_list_item(
         self,
