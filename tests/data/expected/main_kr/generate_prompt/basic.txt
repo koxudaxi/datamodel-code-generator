@@ -681,7 +681,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         (e.g., ResourceGetResponse200,
                         ResourceGetResponseDefault)
   --validation          Deprecated: The `--validation` option is deprecated
-                        and will be removed in a future release.
+                        and will be removed in a future release. Use --field-
+                        constraints instead.
 
 [36;1mGraphQL-only options[0m:
   --graphql-no-typename
