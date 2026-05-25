@@ -4368,6 +4368,36 @@ def test_main_jsonschema_nullable_allof_anyof_typed_branches_exclude_null(output
     )
 
 
+def test_main_jsonschema_nullable_conditional_excludes_null(output_file: Path) -> None:
+    """Test nullable conditionals drop null when the selected branch rejects it."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_conditional_excludes_null.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_conditional_excludes_null.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    valid_json = '{"objectValue":{},"stringValue":"","nullAllowed":null}'
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_conditional_excludes_null",
+        model_name="NullableConditionalExcludesNull",
+        valid_json=valid_json,
+        invalid_json='{"objectValue":null,"stringValue":"","nullAllowed":null}',
+        expected_error_type="dict_type",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_conditional_excludes_null",
+        model_name="NullableConditionalExcludesNull",
+        valid_json=valid_json,
+        invalid_json='{"objectValue":{},"stringValue":null,"nullAllowed":null}',
+        expected_error_type="string_type",
+    )
+
+
 def test_main_jsonschema_oneof_const_enum_literal(output_file: Path) -> None:
     """Test oneOf with const values as Literal type."""
     run_main_and_assert(

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NullableConditionalExcludesNull",
+  "type": "object",
+  "properties": {
+    "objectValue": {
+      "type": ["object", "null"],
+      "if": {
+        "type": "null"
+      },
+      "then": false
+    },
+    "stringValue": {
+      "type": ["string", "null"],
+      "if": {
+        "type": "string"
+      },
+      "else": false
+    },
+    "nullAllowed": {
+      "type": ["string", "null"],
+      "if": {
+        "type": "string"
+      },
+      "then": {
+        "minLength": 2
+      }
+    }
+  },
+  "required": ["objectValue", "stringValue", "nullAllowed"]
+}

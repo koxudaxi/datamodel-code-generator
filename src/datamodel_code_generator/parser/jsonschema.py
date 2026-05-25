@@ -2380,6 +2380,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             cls._drop_null_type_when_combined_literals_exclude_null(normalized)
             cls._drop_null_type_when_combined_branches_exclude_null(normalized)
             cls._drop_null_type_when_allof_branches_exclude_null(normalized)
+            cls._drop_null_type_when_conditional_excludes_null(normalized)
             cls._normalize_raw_allof_count_combined_constraints(normalized)
             cls._normalize_raw_allof_primitive_combined_constraints(normalized)
             cls._normalize_raw_allof_dependent_constraints(normalized)
@@ -2527,6 +2528,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         null_matches = [cls._raw_null_matches_supported_schema(branch) for branch in all_of]
         if any(match is False for match in null_matches):
+            cls._drop_null_type(schema_dict, type_values)
+
+    @classmethod
+    def _drop_null_type_when_conditional_excludes_null(cls, schema_dict: dict[Any, Any]) -> None:
+        type_values = cls._type_values(schema_dict.get("type"))
+        if type_values is None or "null" not in type_values:
+            return
+
+        if_schema = schema_dict.get("if")
+        if if_schema is None:
+            return
+        if_match = cls._raw_null_matches_supported_schema(if_schema)
+        if if_match is None:
+            return
+
+        branch = schema_dict.get("then" if if_match else "else", True)
+        branch_match = cls._raw_null_matches_supported_schema(branch)
+        if branch_match is False:
             cls._drop_null_type(schema_dict, type_values)
 
     @classmethod
