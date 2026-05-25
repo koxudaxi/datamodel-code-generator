@@ -25,7 +25,8 @@ nav = [
       { "Debug" = "cli-reference/manual/debug.md" },
       { "Profile" = "cli-reference/manual/profile.md" },
       { "No Color" = "cli-reference/manual/no-color.md" },
-      { "Generate Prompt" = "cli-reference/manual/generate-prompt.md" }
+      { "Generate Prompt" = "cli-reference/manual/generate-prompt.md" },
+      { "List Deprecations" = "cli-reference/manual/list-deprecations.md" }
     ]}
   ]},
   { "Support data types" = "supported-data-types.md" },
@@ -66,6 +67,7 @@ nav = [
       { "LLM Integration" = "llm-integration.md" }
     ]}
   ]},
+  { "Deprecations" = "deprecations.md" },
   { "FAQ" = "faq.md" },
   { "Development-Contributing" = "development-contributing.md" }
 ]

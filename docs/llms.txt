@@ -24,6 +24,7 @@
 - [Profile](https://datamodel-code-generator.koxudaxi.dev/cli-reference/manual/profile/)
 - [No Color](https://datamodel-code-generator.koxudaxi.dev/cli-reference/manual/no-color/)
 - [Generate Prompt](https://datamodel-code-generator.koxudaxi.dev/cli-reference/manual/generate-prompt/)
+- [List Deprecations](https://datamodel-code-generator.koxudaxi.dev/cli-reference/manual/list-deprecations/)
 
 
 - [Supported Input Formats](https://datamodel-code-generator.koxudaxi.dev/supported-data-types/): This code generator supports the following input formats:
@@ -69,6 +70,7 @@
 - [LLM Integration](https://datamodel-code-generator.koxudaxi.dev/llm-integration/): The `--generate-prompt` option generates a formatted prompt that you can use to consult Large Language Models (LLMs) about datamodel-code-generator...
 
 
+- [Deprecations](https://datamodel-code-generator.koxudaxi.dev/deprecations/): This page lists deprecations and scheduled breaking changes.
 ## Optional
 
 - [Frequently Asked Questions](https://datamodel-code-generator.koxudaxi.dev/faq/)

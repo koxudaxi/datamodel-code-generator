@@ -220,6 +220,7 @@ filterwarnings = [
   "error",
   "ignore:^.*Pydantic v2 with --use-annotated is recommended.*:DeprecationWarning",
   "ignore:^.*`--validation` option is deprecated.*",
+  "ignore:^.*--allow-extra-fields is deprecated.*:DeprecationWarning",
   "ignore:^.*--parent-scoped-naming is deprecated.*",
   "ignore:^.*Field name `name` is duplicated on Pet.*",
   "ignore:^.*format of 'unknown-type' not understood for 'string' - using default.*",

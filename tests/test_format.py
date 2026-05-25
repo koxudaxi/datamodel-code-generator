@@ -23,7 +23,6 @@ from datamodel_code_generator.format import (
     _get_builtin_known_first_party,
     _normalize_string_quotes,
     _split_escaped_string_literal,
-    _warn_default_formatters_deprecation,
     apply_builtin_formatter,
     resolve_use_type_checking_imports,
 )
@@ -1561,11 +1560,9 @@ def test_generate_with_ruff_batch_formatting_and_explicit_type_checking_imports(
 def test_code_formatter_warns_when_formatters_is_none(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that FutureWarning is emitted when formatters is None (default)."""
     monkeypatch.chdir(tmp_path)
-    _warn_default_formatters_deprecation.cache_clear()
     with pytest.warns(FutureWarning, match="external formatters"):
         CodeFormatter(PythonVersionMin)
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
+    with pytest.warns(FutureWarning, match="dependency-free formatting"):
         CodeFormatter(PythonVersionMin)
 
 

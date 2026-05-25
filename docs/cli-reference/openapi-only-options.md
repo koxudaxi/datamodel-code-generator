@@ -1723,7 +1723,7 @@ Enable validation constraints (deprecated, use --field-constraints).
 
 The `--validation` flag configures the code generation behavior.
 
-**Deprecated:** Use --field-constraints instead
+**Deprecated:** The `--validation` option is deprecated and will be removed in a future release. Use --field-constraints instead.
 
 **See also:** [Field Constraints](../field-constraints.md), [OpenAPI-Specific Options](../openapi-options.md)
 

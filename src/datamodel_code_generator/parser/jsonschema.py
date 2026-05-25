@@ -43,6 +43,7 @@ from datamodel_code_generator import (
     load_data_from_path,
     snooper_to_methods,
 )
+from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.format import (
     DatetimeClassType,
 )
@@ -4552,13 +4553,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     )
                     raise Error(msg)
                 if self.allow_remote_refs is None:
-                    import warnings  # noqa: PLC0415
-
-                    warnings.warn(
-                        f"Fetching remote $ref without --allow-remote-refs: {resolved_ref}\n"
-                        "In a future version, remote $ref fetching will be disabled by default. "
-                        "Pass --allow-remote-refs explicitly to silence this warning.",
-                        FutureWarning,
+                    warn_deprecated(
+                        "behavior.remote-ref-default",
+                        details=f"Reference: {resolved_ref}",
                         stacklevel=2,
                     )
             return self._get_ref_body_from_url(resolved_ref)
@@ -4927,9 +4924,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         # Check items as array usage (deprecated in Draft 2020-12)
         if isinstance(obj.items, list) and self.schema_features.prefix_items:
-            warn(
-                f"items as array (tuple validation) is deprecated in Draft 2020-12. "
-                f"Use prefixItems instead. Schema path: {'/'.join(path)}",
+            warn_deprecated(
+                "schema.jsonschema-items-array",
+                details=f"Schema path: {'/'.join(path)}",
                 stacklevel=4,
             )
 

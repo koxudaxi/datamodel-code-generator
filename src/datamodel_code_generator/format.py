@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeGuard
 from warnings import warn
 
+from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.util import load_toml
 
 if TYPE_CHECKING:
@@ -122,11 +123,7 @@ class PythonVersion(Enum):
         .. deprecated::
             This property is unused and will be removed in a future version.
         """
-        warn(
-            "has_type_alias is deprecated and will be removed in a future version.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
+        warn_deprecated("python-api.python-version-has-type-alias", stacklevel=2)
         return self._is_py_310_or_later
 
     @property
@@ -220,17 +217,6 @@ MAX_SHORT_DEFAULT_OVERFLOW = 13
 LONG_TARGET_PREFIX_LENGTH = 30
 TYPE_ALIAS_INLINE_ARGUMENT_COUNT = 2
 STRING_PREFIX_PATTERN = re.compile(r"(?i)^([rubf]*)(\"\"\"|'''|\"|')")
-
-
-@lru_cache(maxsize=1)
-def _warn_default_formatters_deprecation() -> None:
-    warn(
-        "The default external formatters (black, isort) will become opt-in in a future version. "
-        "To keep the current behavior, specify formatters=[Formatter.BLACK, Formatter.ISORT]. "
-        "To prepare for dependency-free formatting, use formatters=[Formatter.BUILTIN].",
-        FutureWarning,
-        stacklevel=3,
-    )
 
 
 def _find_pyproject_toml(settings_path: Path) -> Path | None:
@@ -1512,7 +1498,15 @@ class CodeFormatter:
     ) -> None:
         """Initialize code formatter with configuration for black, isort, ruff, and custom formatters."""
         if formatters is None:
-            _warn_default_formatters_deprecation()
+            warn_deprecated(
+                "format.default-formatters",
+                details=(
+                    "To keep the current behavior, specify formatters=[Formatter.BLACK, Formatter.ISORT]. "
+                    "To prepare for dependency-free formatting, use formatters=[Formatter.BUILTIN]. "
+                    "To suppress this warning, specify formatters explicitly."
+                ),
+                stacklevel=2,
+            )
             formatters = list(DEFAULT_FORMATTERS)
 
         if not settings_path:

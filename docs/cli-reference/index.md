@@ -16,11 +16,11 @@ This documentation is auto-generated from test cases.
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
 | ⚙️ [General Options](general-options.md) | 17 | Utilities and meta options |
-| 📝 [Utility Options](utility-options.md) | 6 | Help, version, debug options |
+| 📝 [Utility Options](utility-options.md) | 7 | Help, version, debug options |
 
 ## All Options
 
-**Jump to:** [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [K](#k) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
+**Jump to:** [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [K](#k) · [L](#l) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
 
 
 ### A {#a}
@@ -123,6 +123,10 @@ This documentation is auto-generated from test cases.
 
 - [`--keep-model-order`](model-customization.md#keep-model-order)
 - [`--keyword-only`](model-customization.md#keyword-only)
+
+### L {#l}
+
+- [`--list-deprecations`](utility-options.md#list-deprecations)
 
 ### M {#m}
 
