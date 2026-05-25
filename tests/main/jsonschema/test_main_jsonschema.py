@@ -4330,6 +4330,44 @@ def test_main_jsonschema_nullable_anyof_typed_branches_exclude_null(output_file:
     )
 
 
+def test_main_jsonschema_nullable_allof_anyof_typed_branches_exclude_null(output_file: Path) -> None:
+    """Test nullable allOf drops null when a typed anyOf child excludes null."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_allof_anyof_typed_branches_exclude_null.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_allof_anyof_typed_branches_exclude_null.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    valid_json = '{"stringValue":"","integerValue":0}'
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_allof_anyof_typed_branches_exclude_null",
+        model_name="NullableAllOfAnyOfTypedBranchesExcludeNull",
+        valid_json=valid_json,
+        invalid_json='{"stringValue":null,"integerValue":0}',
+        expected_error_type="string_type",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_allof_anyof_typed_branches_exclude_null",
+        model_name="NullableAllOfAnyOfTypedBranchesExcludeNull",
+        valid_json=valid_json,
+        invalid_json='{"stringValue":"","integerValue":null}',
+        expected_error_type="int_type",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_allof_anyof_typed_branches_exclude_null",
+        model_name="NullableAllOfAnyOfTypedBranchesExcludeNull",
+        valid_json=valid_json,
+        invalid_json='{"stringValue":"a","integerValue":0}',
+        expected_error_type="string_too_long",
+    )
+
+
 def test_main_jsonschema_oneof_const_enum_literal(output_file: Path) -> None:
     """Test oneOf with const values as Literal type."""
     run_main_and_assert(
