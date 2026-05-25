@@ -4854,6 +4854,40 @@ def test_main_jsonschema_property_names_ref_enum(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_property_names_ref_with_constraints(output_file: Path) -> None:
+    """Test propertyNames $ref with sibling constraints merges both key constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_ref_with_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_ref_with_constraints.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_ref_with_constraints",
+        model_name="PropertyNamesRefWithConstraints",
+        valid_json='{"x_ok":1}',
+        invalid_json='{"x_":1}',
+        expected_error_type="string_too_short",
+        expected_attribute_path=("root",),
+        expected_attribute_value={"x_ok": 1},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_ref_with_constraints",
+        model_name="PropertyNamesRefWithConstraints",
+        valid_json='{"x_ok":1}',
+        invalid_json='{"y_ok":1}',
+        expected_error_type="string_pattern_mismatch",
+    )
+
+
 def test_main_jsonschema_property_names_anyof_ref(output_file: Path) -> None:
     """Test propertyNames with anyOf containing $refs uses union of enum types as dict key."""
     run_main_and_assert(
