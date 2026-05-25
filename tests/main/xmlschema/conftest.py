@@ -155,6 +155,8 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
         "class DefaultOpen(BaseModel):",
         "extra='allow'",
         "known: str",
+        "class EmptyDefaultClosed(BaseModel):",
+        "pass",
         "class ClosedOpen(BaseModel):",
         "closedKnown: str",
         "class ExplicitOpen(BaseModel):",
@@ -169,6 +171,7 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
         "inlineComplexValue: str",
         "class Document(BaseModel):",
         "defaultOpen: DefaultOpen",
+        "emptyDefaultClosed: EmptyDefaultClosed",
         "closedOpen: ClosedOpen",
         "explicitOpen: ExplicitOpen",
         "payload: AlphaPayload | BetaPayload",
@@ -176,6 +179,12 @@ XMLSCHEMA_SNIPPETS: dict[str, tuple[str, ...]] = {
         "inlineSimpleAlternative: InlineSimpleAlternative",
         "inlineComplexAlternative: InlineComplexAlternative",
         "emptyAlternative: Any",
+    ),
+    "default_open_content_applies_to_empty": (
+        "class EmptyDefaultOpen(BaseModel):",
+        "extra='allow'",
+        "class Container(BaseModel):",
+        "empty: EmptyDefaultOpen",
     ),
     "datatypes_and_mixed_content": (
         "from datetime import timedelta",
@@ -213,7 +222,10 @@ XMLSCHEMA_ABSENT_SNIPPETS: dict[str, tuple[str, ...]] = {
         "oldValue",
         "class HttpsExampleComSchemaCompositionChameleonType",
     ),
-    "xsd11_constructs": ("class ClosedOpen(BaseModel):\n    model_config",),
+    "xsd11_constructs": (
+        "class ClosedOpen(BaseModel):\n    model_config",
+        "class EmptyDefaultClosed(BaseModel):\n    model_config",
+    ),
 }
 
 

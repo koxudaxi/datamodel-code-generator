@@ -14,6 +14,8 @@
     </xs:sequence>
   </xs:complexType>
 
+  <xs:complexType name="EmptyDefaultClosed"/>
+
   <xs:complexType name="ClosedOpen">
     <xs:openContent mode="none"/>
     <xs:sequence>
@@ -46,6 +48,7 @@
     <xs:complexType>
       <xs:sequence>
         <xs:element name="defaultOpen" type="tns:DefaultOpen"/>
+        <xs:element name="emptyDefaultClosed" type="tns:EmptyDefaultClosed"/>
         <xs:element name="closedOpen" type="tns:ClosedOpen"/>
         <xs:element name="explicitOpen" type="tns:ExplicitOpen"/>
         <xs:element name="payload">

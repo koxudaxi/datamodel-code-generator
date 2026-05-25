@@ -183,6 +183,17 @@ def test_main_xmlschema_xsd11_constructs(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_default_open_content_applies_to_empty(output_file: Path) -> None:
+    """Apply defaultOpenContent to empty complex content only when requested."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "default_open_content_applies_to_empty.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_xmlschema_snippets,
+        expected_file="default_open_content_applies_to_empty.py",
+    )
+
+
 def test_main_xmlschema_datatypes_and_mixed_content(output_file: Path) -> None:
     """Generate models from XSD built-in datatypes and complexContent mixed content."""
     run_main_and_assert(

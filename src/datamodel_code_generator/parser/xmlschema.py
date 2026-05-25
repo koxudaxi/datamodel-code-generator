@@ -667,8 +667,16 @@ class _XMLSchemaConverter:
             if open_content.get("mode", "interleave") != "none" and _first_xsd_child(open_content, "any") is not None:
                 schema["additionalProperties"] = True
             return
-        if self.default_open_content is not None and _first_xsd_child(self.default_open_content, "any") is not None:
+        if (
+            self.default_open_content is not None
+            and _first_xsd_child(self.default_open_content, "any") is not None
+            and (self._has_explicit_content(owner) or self.default_open_content.get("appliesToEmpty") in {"true", "1"})
+        ):
             schema["additionalProperties"] = True
+
+    @staticmethod
+    def _has_explicit_content(owner: ET.Element) -> bool:
+        return _first_xsd_child(owner, "sequence", "all", "choice", "group") is not None
 
     def _convert_simple_content(self, simple_content: ET.Element, owner: ET.Element) -> JsonSchema:
         child = _first_xsd_child(simple_content, "extension", "restriction")
