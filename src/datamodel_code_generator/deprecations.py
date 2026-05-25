@@ -21,7 +21,7 @@ class Deprecation:
     target: str
     message: str
     warning_since: str
-    removal_version: str
+    removal_version: str | None
     replacement: str | None = None
     status: DeprecationStatus = "active"
     warning_category: str = "DeprecationWarning"
@@ -35,7 +35,7 @@ DEPRECATIONS: dict[str, Deprecation] = {
         target="--allow-extra-fields",
         message="--allow-extra-fields is deprecated. Use --extra-fields=allow instead.",
         warning_since="0.31.0",
-        removal_version="1.0.0",
+        removal_version=None,
         replacement="--extra-fields=allow",
         note="The replacement supports allow, forbid, and ignore modes.",
     ),
@@ -45,7 +45,7 @@ DEPRECATIONS: dict[str, Deprecation] = {
         target="--parent-scoped-naming",
         message="--parent-scoped-naming is deprecated. Use --naming-strategy parent-prefixed instead.",
         warning_since="0.48.0",
-        removal_version="1.0.0",
+        removal_version=None,
         replacement="--naming-strategy parent-prefixed",
     ),
     "cli.validation": Deprecation(
@@ -54,7 +54,7 @@ DEPRECATIONS: dict[str, Deprecation] = {
         target="--validation",
         message="The `--validation` option is deprecated and will be removed in a future release.",
         warning_since="0.24.0",
-        removal_version="1.0.0",
+        removal_version=None,
         replacement="Use a dedicated OpenAPI validation tool.",
     ),
     "behavior.pydantic-v2-use-annotated-default": Deprecation(
@@ -66,7 +66,7 @@ DEPRECATIONS: dict[str, Deprecation] = {
             "In a future version, --use-annotated will be enabled by default for Pydantic v2."
         ),
         warning_since="0.52.1",
-        removal_version="1.0.0",
+        removal_version=None,
         replacement="Explicitly pass --use-annotated or --no-use-annotated.",
     ),
     "behavior.remote-ref-default": Deprecation(
@@ -75,7 +75,7 @@ DEPRECATIONS: dict[str, Deprecation] = {
         target="Remote $ref fetching without --allow-remote-refs",
         message="Remote $ref fetching without --allow-remote-refs is deprecated.",
         warning_since="0.56.0",
-        removal_version="1.0.0",
+        removal_version=None,
         replacement="Pass --allow-remote-refs or --no-allow-remote-refs explicitly.",
         warning_category="FutureWarning",
         note="The current default allows remote fetching for compatibility; the scheduled default is disabled.",
@@ -86,7 +86,7 @@ DEPRECATIONS: dict[str, Deprecation] = {
         target="Default formatters",
         message="The default formatters (black, isort) will be replaced by ruff in a future version.",
         warning_since="0.52.0",
-        removal_version="1.0.0",
+        removal_version=None,
         replacement="Set formatters explicitly, for example ruff-format and ruff-check.",
         warning_category="FutureWarning",
     ),
@@ -96,7 +96,7 @@ DEPRECATIONS: dict[str, Deprecation] = {
         target="YAML bool values True, False, TRUE, FALSE",
         message="Non-lowercase YAML bool values are deprecated. Use lowercase true or false instead.",
         warning_since="0.48.0",
-        removal_version="1.0.0",
+        removal_version=None,
         replacement="Use lowercase true or false.",
     ),
     "python-api.python-version-has-type-alias": Deprecation(
@@ -105,7 +105,7 @@ DEPRECATIONS: dict[str, Deprecation] = {
         target="PythonVersion.has_type_alias",
         message="has_type_alias is deprecated and will be removed in a future version.",
         warning_since="0.52.1",
-        removal_version="1.0.0",
+        removal_version=None,
         replacement=None,
         note="The project minimum Python version already supports TypeAlias.",
     ),
@@ -115,7 +115,7 @@ DEPRECATIONS: dict[str, Deprecation] = {
         target="OpenAPI 3.1 nullable keyword",
         message='nullable keyword is deprecated in OpenAPI 3.1, use type: ["string", "null"] instead.',
         warning_since="0.53.0",
-        removal_version="1.0.0",
+        removal_version=None,
         replacement='Use type arrays such as type: ["string", "null"].',
     ),
     "schema.jsonschema-items-array": Deprecation(
@@ -124,7 +124,7 @@ DEPRECATIONS: dict[str, Deprecation] = {
         target="JSON Schema Draft 2020-12 items array tuple validation",
         message="items as array tuple validation is deprecated in Draft 2020-12. Use prefixItems instead.",
         warning_since="0.53.0",
-        removal_version="1.0.0",
+        removal_version=None,
         replacement="Use prefixItems.",
         warning_category="UserWarning",
     ),
@@ -139,7 +139,7 @@ _WARNING_CATEGORIES: dict[str, type[Warning]] = {
 
 def iter_deprecations() -> tuple[Deprecation, ...]:
     """Return all deprecations in stable display order."""
-    return tuple(sorted(DEPRECATIONS.values(), key=lambda item: (item.removal_version, item.kind, item.target)))
+    return tuple(sorted(DEPRECATIONS.values(), key=lambda item: (item.removal_version or "", item.kind, item.target)))
 
 
 def get_deprecation(deprecation_id: str) -> Deprecation:
@@ -161,6 +161,11 @@ def warn_deprecated(deprecation_id: str, *, stacklevel: int = 2, details: str | 
 def deprecation_message(deprecation_id: str) -> str:
     """Return the user-facing message for a deprecation."""
     return get_deprecation(deprecation_id).message
+
+
+def _format_removal_version(deprecation: Deprecation) -> str:
+    """Return the display value for a removal version."""
+    return deprecation.removal_version or "TBD"
 
 
 def deprecation_as_dict(deprecation: Deprecation) -> dict[str, str | None]:
@@ -194,7 +199,7 @@ def render_deprecations_table() -> str:
                 deprecation.kind,
                 deprecation.target,
                 deprecation.warning_since,
-                deprecation.removal_version,
+                _format_removal_version(deprecation),
                 deprecation.replacement or "-",
             ]
             for deprecation in iter_deprecations()
@@ -229,7 +234,7 @@ def render_deprecations_markdown(*, include_header: bool = True) -> str:
         replacement = deprecation.replacement or "-"
         lines.append(
             f"| `{deprecation.id}` | {deprecation.kind} | `{deprecation.target}` | "
-            f"{deprecation.warning_since} | {deprecation.removal_version} | {replacement} |"
+            f"{deprecation.warning_since} | {_format_removal_version(deprecation)} | {replacement} |"
         )
     lines.extend(("", "## Details", ""))
     for deprecation in iter_deprecations():
@@ -239,7 +244,7 @@ def render_deprecations_markdown(*, include_header: bool = True) -> str:
             f"- **Kind:** {deprecation.kind}",
             f"- **Target:** `{deprecation.target}`",
             f"- **Warning since:** {deprecation.warning_since}",
-            f"- **Planned removal:** {deprecation.removal_version}",
+            f"- **Planned removal:** {_format_removal_version(deprecation)}",
             f"- **Warning category:** `{deprecation.warning_category}`",
         ])
         if deprecation.replacement:
@@ -272,7 +277,7 @@ def render_release_note_deprecations(version: str) -> str:
     if warning_started:
         lines.extend(["## Deprecations", ""])
         lines.extend(
-            f"- `{item.target}` now emits `{item.warning_category}`. Planned removal: {item.removal_version}. "
+            f"- `{item.target}` now emits `{item.warning_category}`. Planned removal: {_format_removal_version(item)}. "
             f"{item.message}"
             for item in warning_started
         )

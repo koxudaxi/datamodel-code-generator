@@ -31408,16 +31408,16 @@ This page lists deprecations and scheduled breaking changes.
 
 | ID | Kind | Target | Warning since | Removal | Replacement |
 |----|------|--------|---------------|---------|-------------|
-| `format.default-formatters` | behavior | `Default formatters` | 0.52.0 | 1.0.0 | Set formatters explicitly, for example ruff-format and ruff-check. |
-| `behavior.pydantic-v2-use-annotated-default` | behavior | `Pydantic v2 default for --use-annotated` | 0.52.1 | 1.0.0 | Explicitly pass --use-annotated or --no-use-annotated. |
-| `behavior.remote-ref-default` | behavior | `Remote $ref fetching without --allow-remote-refs` | 0.56.0 | 1.0.0 | Pass --allow-remote-refs or --no-allow-remote-refs explicitly. |
-| `cli.allow-extra-fields` | cli-option | `--allow-extra-fields` | 0.31.0 | 1.0.0 | --extra-fields=allow |
-| `cli.parent-scoped-naming` | cli-option | `--parent-scoped-naming` | 0.48.0 | 1.0.0 | --naming-strategy parent-prefixed |
-| `cli.validation` | cli-option | `--validation` | 0.24.0 | 1.0.0 | Use a dedicated OpenAPI validation tool. |
-| `config.yaml-non-lowercase-bool` | config | `YAML bool values True, False, TRUE, FALSE` | 0.48.0 | 1.0.0 | Use lowercase true or false. |
-| `python-api.python-version-has-type-alias` | python-api | `PythonVersion.has_type_alias` | 0.52.1 | 1.0.0 | - |
-| `schema.jsonschema-items-array` | schema | `JSON Schema Draft 2020-12 items array tuple validation` | 0.53.0 | 1.0.0 | Use prefixItems. |
-| `schema.openapi-nullable` | schema | `OpenAPI 3.1 nullable keyword` | 0.53.0 | 1.0.0 | Use type arrays such as type: ["string", "null"]. |
+| `format.default-formatters` | behavior | `Default formatters` | 0.52.0 | TBD | Set formatters explicitly, for example ruff-format and ruff-check. |
+| `behavior.pydantic-v2-use-annotated-default` | behavior | `Pydantic v2 default for --use-annotated` | 0.52.1 | TBD | Explicitly pass --use-annotated or --no-use-annotated. |
+| `behavior.remote-ref-default` | behavior | `Remote $ref fetching without --allow-remote-refs` | 0.56.0 | TBD | Pass --allow-remote-refs or --no-allow-remote-refs explicitly. |
+| `cli.allow-extra-fields` | cli-option | `--allow-extra-fields` | 0.31.0 | TBD | --extra-fields=allow |
+| `cli.parent-scoped-naming` | cli-option | `--parent-scoped-naming` | 0.48.0 | TBD | --naming-strategy parent-prefixed |
+| `cli.validation` | cli-option | `--validation` | 0.24.0 | TBD | Use a dedicated OpenAPI validation tool. |
+| `config.yaml-non-lowercase-bool` | config | `YAML bool values True, False, TRUE, FALSE` | 0.48.0 | TBD | Use lowercase true or false. |
+| `python-api.python-version-has-type-alias` | python-api | `PythonVersion.has_type_alias` | 0.52.1 | TBD | - |
+| `schema.jsonschema-items-array` | schema | `JSON Schema Draft 2020-12 items array tuple validation` | 0.53.0 | TBD | Use prefixItems. |
+| `schema.openapi-nullable` | schema | `OpenAPI 3.1 nullable keyword` | 0.53.0 | TBD | Use type arrays such as type: ["string", "null"]. |
 
 ## Details
 
@@ -31426,7 +31426,7 @@ This page lists deprecations and scheduled breaking changes.
 - **Kind:** behavior
 - **Target:** `Default formatters`
 - **Warning since:** 0.52.0
-- **Planned removal:** 1.0.0
+- **Planned removal:** TBD
 - **Warning category:** `FutureWarning`
 - **Replacement:** Set formatters explicitly, for example ruff-format and ruff-check.
 
@@ -31437,7 +31437,7 @@ The default formatters (black, isort) will be replaced by ruff in a future versi
 - **Kind:** behavior
 - **Target:** `Pydantic v2 default for --use-annotated`
 - **Warning since:** 0.52.1
-- **Planned removal:** 1.0.0
+- **Planned removal:** TBD
 - **Warning category:** `DeprecationWarning`
 - **Replacement:** Explicitly pass --use-annotated or --no-use-annotated.
 
@@ -31448,7 +31448,7 @@ Pydantic v2 with --use-annotated is recommended for correct type annotations. In
 - **Kind:** behavior
 - **Target:** `Remote $ref fetching without --allow-remote-refs`
 - **Warning since:** 0.56.0
-- **Planned removal:** 1.0.0
+- **Planned removal:** TBD
 - **Warning category:** `FutureWarning`
 - **Replacement:** Pass --allow-remote-refs or --no-allow-remote-refs explicitly.
 
@@ -31461,7 +31461,7 @@ The current default allows remote fetching for compatibility; the scheduled defa
 - **Kind:** cli-option
 - **Target:** `--allow-extra-fields`
 - **Warning since:** 0.31.0
-- **Planned removal:** 1.0.0
+- **Planned removal:** TBD
 - **Warning category:** `DeprecationWarning`
 - **Replacement:** --extra-fields=allow
 
@@ -31474,7 +31474,7 @@ The replacement supports allow, forbid, and ignore modes.
 - **Kind:** cli-option
 - **Target:** `--parent-scoped-naming`
 - **Warning since:** 0.48.0
-- **Planned removal:** 1.0.0
+- **Planned removal:** TBD
 - **Warning category:** `DeprecationWarning`
 - **Replacement:** --naming-strategy parent-prefixed
 
@@ -31485,7 +31485,7 @@ The replacement supports allow, forbid, and ignore modes.
 - **Kind:** cli-option
 - **Target:** `--validation`
 - **Warning since:** 0.24.0
-- **Planned removal:** 1.0.0
+- **Planned removal:** TBD
 - **Warning category:** `DeprecationWarning`
 - **Replacement:** Use a dedicated OpenAPI validation tool.
 
@@ -31496,7 +31496,7 @@ The `--validation` option is deprecated and will be removed in a future release.
 - **Kind:** config
 - **Target:** `YAML bool values True, False, TRUE, FALSE`
 - **Warning since:** 0.48.0
-- **Planned removal:** 1.0.0
+- **Planned removal:** TBD
 - **Warning category:** `DeprecationWarning`
 - **Replacement:** Use lowercase true or false.
 
@@ -31507,7 +31507,7 @@ Non-lowercase YAML bool values are deprecated. Use lowercase true or false inste
 - **Kind:** python-api
 - **Target:** `PythonVersion.has_type_alias`
 - **Warning since:** 0.52.1
-- **Planned removal:** 1.0.0
+- **Planned removal:** TBD
 - **Warning category:** `DeprecationWarning`
 
 has_type_alias is deprecated and will be removed in a future version.
@@ -31519,7 +31519,7 @@ The project minimum Python version already supports TypeAlias.
 - **Kind:** schema
 - **Target:** `JSON Schema Draft 2020-12 items array tuple validation`
 - **Warning since:** 0.53.0
-- **Planned removal:** 1.0.0
+- **Planned removal:** TBD
 - **Warning category:** `UserWarning`
 - **Replacement:** Use prefixItems.
 
@@ -31530,7 +31530,7 @@ items as array tuple validation is deprecated in Draft 2020-12. Use prefixItems 
 - **Kind:** schema
 - **Target:** `OpenAPI 3.1 nullable keyword`
 - **Warning since:** 0.53.0
-- **Planned removal:** 1.0.0
+- **Planned removal:** TBD
 - **Warning category:** `DeprecationWarning`
 - **Replacement:** Use type arrays such as type: ["string", "null"].
 

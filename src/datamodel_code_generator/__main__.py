@@ -75,7 +75,7 @@ from datamodel_code_generator import (
     generate,
 )
 from datamodel_code_generator.arguments import DEFAULT_ENCODING, arg_parser, namespace
-from datamodel_code_generator.deprecations import DeprecationFormat, render_deprecations, warn_deprecated
+from datamodel_code_generator.deprecations import render_deprecations, warn_deprecated
 from datamodel_code_generator.format import (
     DateClassType,
     DatetimeClassType,
@@ -277,7 +277,8 @@ class Config(BaseModel):  # noqa: PLR0904
         return values
 
     @model_validator(mode="before")  # ty: ignore
-    def validate_naming_strategy_migration(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+    @classmethod
+    def validate_naming_strategy_migration(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Migrate deprecated --parent-scoped-naming to --naming-strategy."""
         if values.get("parent_scoped_naming") and not values.get("naming_strategy"):
             values["naming_strategy"] = NamingStrategy.ParentPrefixed
@@ -285,7 +286,8 @@ class Config(BaseModel):  # noqa: PLR0904
         return values
 
     @model_validator(mode="before")  # ty: ignore
-    def validate_allow_extra_fields_migration(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+    @classmethod
+    def validate_allow_extra_fields_migration(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Migrate deprecated --allow-extra-fields to --extra-fields."""
         if values.get("allow_extra_fields") and not values.get("extra_fields"):
             values["extra_fields"] = "allow"
@@ -1090,7 +1092,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         return Exit.ERROR
 
     if config.list_deprecations:
-        print(render_deprecations(cast("DeprecationFormat", config.list_deprecations)), end="")  # noqa: T201
+        print(render_deprecations(cast("Any", config.list_deprecations)), end="")  # noqa: T201
         return Exit.OK
 
     if not config.input and not config.url and not config.input_model and sys.stdin.isatty():

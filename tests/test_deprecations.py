@@ -24,7 +24,6 @@ def test_deprecation_registry_has_stable_required_metadata() -> None:
         assert deprecation.target
         assert deprecation.message
         assert deprecation.warning_since
-        assert deprecation.removal_version
         assert deprecation.warning_category in {"DeprecationWarning", "FutureWarning", "UserWarning"}
 
     assert len(ids) == len(DEPRECATIONS)
@@ -37,6 +36,7 @@ def test_deprecation_json_output_is_machine_readable() -> None:
     assert isinstance(payload, list)
     assert {entry["id"] for entry in payload} == set(DEPRECATIONS)
     assert all("removal_version" in entry for entry in payload)
+    assert any(entry["removal_version"] is None for entry in payload)
 
 
 def test_deprecation_markdown_output_includes_details() -> None:
@@ -44,6 +44,7 @@ def test_deprecation_markdown_output_includes_details() -> None:
     output = render_deprecations("markdown")
 
     assert "| ID | Kind | Target | Warning since | Removal | Replacement |" in output
+    assert "TBD" in output
     assert "## Details" in output
     assert "cli.parent-scoped-naming" in output
 

@@ -36,7 +36,9 @@ def _construct_yaml_bool_with_warning(loader: Any, node: Any) -> bool:
     if value in _YAML_DEPRECATED_BOOL_VALUES:  # pragma: no cover
         warn_deprecated(
             "config.yaml-non-lowercase-bool",
-            details=f"Got {value!r}. In a future version, only lowercase booleans will be recognized.",
+            details=(
+                f"YAML bool {value!r} is deprecated. In a future version, only lowercase booleans will be recognized."
+            ),
             stacklevel=6,
         )
     return value in {"true", "True", "TRUE"}
