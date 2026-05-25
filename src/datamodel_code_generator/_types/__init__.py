@@ -5,6 +5,7 @@ from __future__ import annotations
 from datamodel_code_generator._types.generate_config_dict import GenerateConfigDict
 from datamodel_code_generator._types.parse_config_dict import ParseConfigDict
 from datamodel_code_generator._types.parser_config_dicts import (
+    AvroParserConfigDict,
     GraphQLParserConfigDict,
     JSONSchemaParserConfigDict,
     ModelDict,
@@ -14,6 +15,7 @@ from datamodel_code_generator._types.parser_config_dicts import (
 )
 
 __all__ = [
+    "AvroParserConfigDict",
     "GenerateConfigDict",
     "GraphQLParserConfigDict",
     "JSONSchemaParserConfigDict",

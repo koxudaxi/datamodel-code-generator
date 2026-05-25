@@ -1,0 +1,5 @@
+{
+  "type": "record",
+  "name": "BrokenFieldItem",
+  "fields": [1]
+}

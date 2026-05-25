@@ -30,7 +30,18 @@ from tests.conftest import (
     validate_generated_code,
 )
 
-InputFileTypeLiteral = Literal["auto", "openapi", "jsonschema", "xmlschema", "json", "yaml", "dict", "csv", "graphql"]
+InputFileTypeLiteral = Literal[
+    "auto",
+    "openapi",
+    "jsonschema",
+    "xmlschema",
+    "avro",
+    "json",
+    "yaml",
+    "dict",
+    "csv",
+    "graphql",
+]
 CopyFilesMapping = Sequence[tuple[Path, Path]]
 
 MSGSPEC_LEGACY_BLACK_SKIP = pytest.mark.skipif(
@@ -66,6 +77,7 @@ OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
 JSON_SCHEMA_DATA_PATH: Path = DATA_PATH / "jsonschema"
 GRAPHQL_DATA_PATH: Path = DATA_PATH / "graphql"
 XML_SCHEMA_DATA_PATH: Path = DATA_PATH / "xmlschema"
+AVRO_DATA_PATH: Path = DATA_PATH / "avro"
 JSON_DATA_PATH: Path = DATA_PATH / "json"
 CSV_DATA_PATH: Path = DATA_PATH / "csv"
 YAML_DATA_PATH: Path = DATA_PATH / "yaml"
@@ -76,6 +88,7 @@ EXPECTED_OPENAPI_PATH: Path = EXPECTED_MAIN_PATH / "openapi"
 EXPECTED_JSON_SCHEMA_PATH: Path = EXPECTED_MAIN_PATH / "jsonschema"
 EXPECTED_GRAPHQL_PATH: Path = EXPECTED_MAIN_PATH / "graphql"
 EXPECTED_XML_SCHEMA_PATH: Path = EXPECTED_MAIN_PATH / "xmlschema"
+EXPECTED_AVRO_PATH: Path = EXPECTED_MAIN_PATH / "avro"
 EXPECTED_JSON_PATH: Path = EXPECTED_MAIN_PATH / "json"
 EXPECTED_CSV_PATH: Path = EXPECTED_MAIN_PATH / "csv"
 
