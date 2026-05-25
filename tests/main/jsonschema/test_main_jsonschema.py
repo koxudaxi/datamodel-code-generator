@@ -3877,6 +3877,64 @@ def test_main_jsonschema_nullable_combined_const_excludes_null_intersection(outp
     )
 
 
+def test_main_jsonschema_oneof_string_length_exclusive_ranges(output_file: Path) -> None:
+    """Test oneOf string length overlaps are split into exclusive ranges."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_string_length_exclusive_ranges.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_string_length_exclusive_ranges.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="oneof_string_length_exclusive_ranges",
+        model_name="OneOfStringLengthExclusiveRanges",
+        valid_json='{"value":""}',
+        invalid_json='{"value":"a"}',
+        expected_error_type="string_too_short",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="oneof_string_length_exclusive_ranges",
+        model_name="OneOfStringLengthExclusiveRanges",
+        valid_json='{"value":"abc"}',
+        invalid_json='{"value":"ab"}',
+        expected_error_type="string_too_short",
+    )
+
+
+def test_main_jsonschema_oneof_integer_bound_exclusive_ranges(output_file: Path) -> None:
+    """Test oneOf numeric bound overlaps are split into exclusive ranges."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_integer_bound_exclusive_ranges.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_integer_bound_exclusive_ranges.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="oneof_integer_bound_exclusive_ranges",
+        model_name="OneOfIntegerBoundExclusiveRanges",
+        valid_json='{"value":0}',
+        invalid_json='{"value":1}',
+        expected_error_type="greater_than",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="oneof_integer_bound_exclusive_ranges",
+        model_name="OneOfIntegerBoundExclusiveRanges",
+        valid_json='{"value":4}',
+        invalid_json='{"value":3}',
+        expected_error_type="greater_than",
+    )
+
+
 def test_main_jsonschema_oneof_const_enum_literal(output_file: Path) -> None:
     """Test oneOf with const values as Literal type."""
     run_main_and_assert(

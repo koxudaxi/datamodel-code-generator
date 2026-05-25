@@ -597,6 +597,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     SCHEMA_PATHS: ClassVar[list[str]] = ["#/definitions", "#/$defs"]
     SCHEMA_OBJECT_TYPE: ClassVar[type[JsonSchemaObject]] = JsonSchemaObject
     _MAX_EXACT_PROPERTY_NAME_DEPENDENCY_COUNT: ClassVar[int] = 12
+    _ONE_OF_PAIR_SIZE: ClassVar[int] = 2
 
     COMPATIBLE_PYTHON_TYPES: ClassVar[dict[str, frozenset[str]]] = {
         "string": frozenset({"str", "String"}),
@@ -2362,6 +2363,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         try:
             cls._normalize_raw_anyof_literal_constraints(normalized)
             cls._normalize_raw_oneof_literal_constraints(normalized)
+            cls._normalize_raw_oneof_string_length_constraints(normalized)
+            cls._normalize_raw_oneof_numeric_bounds_constraints(normalized)
             cls._drop_null_type_when_combined_literals_exclude_null(normalized)
             cls._normalize_raw_allof_dependent_constraints(normalized)
             cls._normalize_raw_allof_conditional_constraints(normalized)
@@ -2481,6 +2484,246 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if not non_null_types:
             cls._raise_allof_literal_conflict()
         schema_dict["type"] = next(iter(non_null_types)) if len(non_null_types) == 1 else sorted(non_null_types)
+
+    @classmethod
+    def _normalize_raw_oneof_string_length_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        if cls._type_values(schema_dict.get("type")) != {"string"} or any(
+            key in schema_dict for key in ("minLength", "maxLength")
+        ):
+            return
+
+        one_of = schema_dict.get("oneOf")
+        if not isinstance(one_of, list) or len(one_of) != cls._ONE_OF_PAIR_SIZE:
+            return
+        intervals = [cls._raw_string_length_interval(branch) for branch in one_of]
+        if any(interval is None for interval in intervals):
+            return
+
+        left, right = intervals
+        disjoint_intervals = [
+            *cls._subtract_raw_count_interval(left, right),  # type: ignore[arg-type]
+            *cls._subtract_raw_count_interval(right, left),  # type: ignore[arg-type]
+        ]
+        if not disjoint_intervals:
+            cls._raise_allof_literal_conflict()
+
+        schema_dict.pop("oneOf", None)
+        disjoint_schemas = [cls._raw_string_length_schema_from_interval(interval) for interval in disjoint_intervals]
+        if len(disjoint_schemas) == 1:
+            schema_dict.update(disjoint_schemas[0])
+        else:
+            schema_dict["anyOf"] = disjoint_schemas
+
+    @classmethod
+    def _raw_string_length_interval(cls, branch: Any) -> tuple[int, int | None] | None:
+        if branch is True:
+            return (0, None)
+        if branch is False or not isinstance(branch, dict):
+            return None
+        metadata_keys = {"$comment", "$id", "$schema", "description", "examples", "title"}
+        if set(branch) - (metadata_keys | {"maxLength", "minLength", "type"}):
+            return None
+        type_values = cls._type_values(branch.get("type"))
+        if type_values is not None and type_values != {"string"}:
+            return None
+        min_length = cls._raw_count_constraint_value(branch.get("minLength"))
+        max_length = cls._raw_count_constraint_value(branch.get("maxLength"))
+        lower = 0 if min_length is None else min_length
+        if lower < 0:
+            return None
+        if max_length is not None and (max_length < 0 or lower > max_length):
+            cls._raise_allof_constraint_conflict()
+        return (lower, max_length)
+
+    @staticmethod
+    def _subtract_raw_count_interval(
+        left: tuple[int, int | None],
+        right: tuple[int, int | None],
+    ) -> list[tuple[int, int | None]]:
+        left_min, left_max = left
+        right_min, right_max = right
+        if (left_max is not None and left_max < right_min) or (right_max is not None and right_max < left_min):
+            return [left]
+
+        intervals: list[tuple[int, int | None]] = []
+        before_max = right_min - 1
+        if left_min <= before_max:
+            intervals.append((left_min, before_max if left_max is None else min(left_max, before_max)))
+
+        if right_max is not None:
+            after_min = right_max + 1
+            if left_max is None or after_min <= left_max:
+                intervals.append((max(left_min, after_min), left_max))
+        return intervals
+
+    @staticmethod
+    def _raw_string_length_schema_from_interval(interval: tuple[int, int | None]) -> dict[str, Any]:
+        min_length, max_length = interval
+        schema: dict[str, Any] = {"type": "string"}
+        if min_length > 0:
+            schema["minLength"] = min_length
+        if max_length is not None:
+            schema["maxLength"] = max_length
+        return schema
+
+    @classmethod
+    def _normalize_raw_oneof_numeric_bounds_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        parent_types = cls._type_values(schema_dict.get("type"))
+        if parent_types not in ({"integer"}, {"number"}) or any(
+            key in schema_dict for key in ("exclusiveMaximum", "exclusiveMinimum", "maximum", "minimum")
+        ):
+            return
+
+        one_of = schema_dict.get("oneOf")
+        if not isinstance(one_of, list) or len(one_of) != cls._ONE_OF_PAIR_SIZE:
+            return
+        intervals = [cls._raw_numeric_bounds_interval(branch, parent_types) for branch in one_of]
+        if any(interval is None for interval in intervals):
+            return
+
+        left, right = intervals
+        disjoint_intervals = [
+            *cls._subtract_raw_numeric_interval(left, right),  # type: ignore[arg-type]
+            *cls._subtract_raw_numeric_interval(right, left),  # type: ignore[arg-type]
+        ]
+        if not disjoint_intervals:
+            cls._raise_allof_literal_conflict()
+
+        schema_dict.pop("oneOf", None)
+        numeric_type = next(iter(parent_types))
+        disjoint_schemas = [
+            cls._raw_numeric_bounds_schema_from_interval(interval, numeric_type) for interval in disjoint_intervals
+        ]
+        if len(disjoint_schemas) == 1:
+            schema_dict.update(disjoint_schemas[0])
+        else:
+            schema_dict["anyOf"] = disjoint_schemas
+
+    @classmethod
+    def _raw_numeric_bounds_interval(
+        cls,
+        branch: Any,
+        parent_types: set[str],
+    ) -> tuple[tuple[Fraction, bool] | None, tuple[Fraction, bool] | None] | None:
+        if branch is True:
+            return (None, None)
+        if branch is False or not isinstance(branch, dict):
+            return None
+        metadata_keys = {"$comment", "$id", "$schema", "description", "examples", "title"}
+        constraint_keys = {"exclusiveMaximum", "exclusiveMinimum", "maximum", "minimum", "type"}
+        if set(branch) - (metadata_keys | constraint_keys):
+            return None
+        branch_types = cls._type_values(branch.get("type"))
+        if branch_types is not None and cls._intersect_type_values(parent_types, branch_types) != parent_types:
+            return None
+
+        lower = cls._get_effective_numeric_fraction_bound(
+            branch,
+            "minimum",
+            "exclusiveMinimum",
+            lower=True,
+        )
+        upper = cls._get_effective_numeric_fraction_bound(
+            branch,
+            "maximum",
+            "exclusiveMaximum",
+            lower=False,
+        )
+        interval = (lower, upper)
+        if cls._raw_numeric_interval_is_empty(interval):
+            cls._raise_allof_constraint_conflict()
+        return interval
+
+    @staticmethod
+    def _raw_numeric_interval_is_empty(
+        interval: tuple[tuple[Fraction, bool] | None, tuple[Fraction, bool] | None],
+    ) -> bool:
+        lower, upper = interval
+        if lower is None or upper is None:
+            return False
+        lower_value, lower_exclusive = lower
+        upper_value, upper_exclusive = upper
+        return lower_value > upper_value or (lower_value == upper_value and (lower_exclusive or upper_exclusive))
+
+    @classmethod
+    def _intersect_raw_numeric_intervals(
+        cls,
+        left: tuple[tuple[Fraction, bool] | None, tuple[Fraction, bool] | None],
+        right: tuple[tuple[Fraction, bool] | None, tuple[Fraction, bool] | None],
+    ) -> tuple[tuple[Fraction, bool] | None, tuple[Fraction, bool] | None] | None:
+        lower = cls._max_raw_numeric_lower_bound(left[0], right[0])
+        upper = cls._min_raw_numeric_upper_bound(left[1], right[1])
+        interval = (lower, upper)
+        return None if cls._raw_numeric_interval_is_empty(interval) else interval
+
+    @staticmethod
+    def _max_raw_numeric_lower_bound(
+        left: tuple[Fraction, bool] | None,
+        right: tuple[Fraction, bool] | None,
+    ) -> tuple[Fraction, bool] | None:
+        if left is None:
+            return right
+        if right is None:
+            return left
+        if left[0] != right[0]:
+            return left if left[0] > right[0] else right
+        return (left[0], left[1] or right[1])
+
+    @staticmethod
+    def _min_raw_numeric_upper_bound(
+        left: tuple[Fraction, bool] | None,
+        right: tuple[Fraction, bool] | None,
+    ) -> tuple[Fraction, bool] | None:
+        if left is None:
+            return right
+        if right is None:
+            return left
+        if left[0] != right[0]:
+            return left if left[0] < right[0] else right
+        return (left[0], left[1] or right[1])
+
+    @classmethod
+    def _subtract_raw_numeric_interval(
+        cls,
+        left: tuple[tuple[Fraction, bool] | None, tuple[Fraction, bool] | None],
+        right: tuple[tuple[Fraction, bool] | None, tuple[Fraction, bool] | None],
+    ) -> list[tuple[tuple[Fraction, bool] | None, tuple[Fraction, bool] | None]]:
+        if cls._intersect_raw_numeric_intervals(left, right) is None:
+            return [left]
+
+        intervals: list[tuple[tuple[Fraction, bool] | None, tuple[Fraction, bool] | None]] = []
+        right_lower = right[0]
+        if right_lower is not None:
+            before = cls._intersect_raw_numeric_intervals(left, (None, (right_lower[0], not right_lower[1])))
+            if before is not None:
+                intervals.append(before)
+
+        right_upper = right[1]
+        if right_upper is not None:
+            after = cls._intersect_raw_numeric_intervals(left, ((right_upper[0], not right_upper[1]), None))
+            if after is not None:
+                intervals.append(after)
+        return intervals
+
+    @classmethod
+    def _raw_numeric_bounds_schema_from_interval(
+        cls,
+        interval: tuple[tuple[Fraction, bool] | None, tuple[Fraction, bool] | None],
+        numeric_type: str,
+    ) -> dict[str, Any]:
+        lower, upper = interval
+        schema: dict[str, Any] = {"type": numeric_type}
+        if lower is not None:
+            key = "exclusiveMinimum" if lower[1] else "minimum"
+            schema[key] = cls._raw_fraction_schema_value(lower[0])
+        if upper is not None:
+            key = "exclusiveMaximum" if upper[1] else "maximum"
+            schema[key] = cls._raw_fraction_schema_value(upper[0])
+        return schema
+
+    @staticmethod
+    def _raw_fraction_schema_value(value: Fraction) -> int | float:
+        return value.numerator if value.denominator == 1 else float(value)
 
     @staticmethod
     def _raw_literal_branch_values(branch: dict[Any, Any]) -> Iterator[Any]:
