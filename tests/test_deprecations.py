@@ -8,8 +8,10 @@ import pytest
 
 from datamodel_code_generator.deprecations import (
     DEPRECATIONS,
+    Deprecation,
     deprecation_message,
     render_deprecations,
+    render_deprecations_markdown,
     render_release_note_deprecations,
     warn_deprecated,
 )
@@ -49,6 +51,14 @@ def test_deprecation_markdown_output_includes_details() -> None:
     assert "cli.parent-scoped-naming" in output
 
 
+def test_deprecation_markdown_output_can_omit_header() -> None:
+    """Generated snippets can omit the page-level heading."""
+    output = render_deprecations_markdown(include_header=False)
+
+    assert not output.startswith("# Deprecations")
+    assert output.startswith("| ID | Kind | Target | Warning since | Removal | Replacement |")
+
+
 def test_release_note_output_filters_by_version() -> None:
     """Release-note snippets include entries that start warning in the requested version."""
     output = render_release_note_deprecations("0.56.0")
@@ -56,6 +66,27 @@ def test_release_note_output_filters_by_version() -> None:
     assert "## Deprecations" in output
     assert "Remote $ref fetching" in output
     assert "behavior.remote-ref-default" not in output
+
+
+def test_release_note_output_includes_scheduled_removals(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Release-note snippets include entries that are scheduled for removal."""
+    monkeypatch.setitem(
+        DEPRECATIONS,
+        "test.scheduled-removal",
+        Deprecation(
+            id="test.scheduled-removal",
+            kind="behavior",
+            target="Scheduled removal",
+            message="Scheduled removal is no longer available.",
+            warning_since="8.0.0",
+            removal_version="9.0.0",
+        ),
+    )
+
+    output = render_release_note_deprecations("9.0.0")
+
+    assert "## Removed Deprecated Features" in output
+    assert "Scheduled removal" in output
 
 
 def test_warn_deprecated_uses_registered_message() -> None:
