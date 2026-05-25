@@ -10,6 +10,7 @@ from datamodel_code_generator._types.parser_config_dicts import (
     ModelDict,
     OpenAPIParserConfigDict,
     ParserConfigDict,
+    ProtobufParserConfigDict,
     XMLSchemaParserConfigDict,
 )
 
@@ -21,5 +22,6 @@ __all__ = [
     "OpenAPIParserConfigDict",
     "ParseConfigDict",
     "ParserConfigDict",
+    "ProtobufParserConfigDict",
     "XMLSchemaParserConfigDict",
 ]

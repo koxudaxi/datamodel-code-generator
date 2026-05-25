@@ -39,6 +39,7 @@ class InputFileType(Enum):
     OpenAPI = "openapi"
     JsonSchema = "jsonschema"
     XMLSchema = "xmlschema"
+    Protobuf = "protobuf"
     Json = "json"
     Yaml = "yaml"
     Dict = "dict"
@@ -276,6 +277,17 @@ class XMLSchemaVersion(Enum):
     Auto = "auto"
 
 
+class ProtobufVersion(Enum):
+    """Protocol Buffers schema syntax versions.
+
+    Auto: Auto-detect from each file's syntax declaration. Files without a syntax declaration are proto2.
+    """
+
+    Proto2 = "proto2"
+    Proto3 = "proto3"
+    Auto = "auto"
+
+
 class VersionMode(Enum):
     """Schema version validation mode.
 
@@ -308,6 +320,7 @@ __all__ = [
     "NamingStrategy",
     "OpenAPIScope",
     "OpenAPIVersion",
+    "ProtobufVersion",
     "ReadOnlyWriteOnlyModelType",
     "ReuseScope",
     "StrictTypes",

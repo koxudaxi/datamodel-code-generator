@@ -1,10 +1,10 @@
 # Schema Version Support
 
-This document describes the JSON Schema and OpenAPI versions supported by datamodel-code-generator.
+This document describes the JSON Schema, OpenAPI, XML Schema, and Protocol Buffers versions supported by datamodel-code-generator.
 
 ## Overview
 
-datamodel-code-generator supports multiple versions of JSON Schema and OpenAPI specifications. By default, the tool operates in **Lenient mode**, accepting all features regardless of version declarations. This ensures maximum compatibility with real-world schemas that often mix features from different versions.
+datamodel-code-generator supports multiple versions of JSON Schema, OpenAPI, XML Schema, and Protocol Buffers specifications. By default, the tool operates in **Lenient mode**, accepting all features regardless of version declarations. This ensures maximum compatibility with real-world schemas that often mix features from different versions.
 
 ## JSON Schema Version Support
 
@@ -92,6 +92,23 @@ datamodel-code-generator detects the OpenAPI version from the `openapi` field:
 - `openapi: "3.0.x"` -> OpenAPI 3.0
 - `openapi: "3.1.x"` -> OpenAPI 3.1
 - No `openapi` field -> Fallback to OpenAPI 3.1
+
+## Protocol Buffers Version Support
+
+### Supported Versions
+
+| Version | Spec URL | Notes |
+|---------|----------|-------|
+| proto2 | [protobuf.dev/reference/protobuf/proto2-spec](https://protobuf.dev/reference/protobuf/proto2-spec/) | `required`, `optional`, `repeated`, defaults, extensions |
+| proto3 | [protobuf.dev/reference/protobuf/proto3-spec](https://protobuf.dev/reference/protobuf/proto3-spec/) | implicit field defaults, `optional`, maps, services |
+
+### Version Detection
+
+datamodel-code-generator detects Protocol Buffers syntax from each compiled `.proto` descriptor:
+
+- `syntax = "proto3";` -> proto3
+- `syntax = "proto2";` or no syntax declaration -> proto2
+- `--schema-version proto2` or `--schema-version proto3` can override auto-detection
 
 <!-- BEGIN AUTO-GENERATED SUPPORTED FEATURES -->
 ### Supported Features (from code)

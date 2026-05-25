@@ -23,6 +23,7 @@ if TYPE_CHECKING:
         NamingStrategy,
         OpenAPIScope,
         OpenAPIVersion,
+        ProtobufVersion,
         ReadOnlyWriteOnlyModelType,
         ReuseScope,
         StrictTypes,
@@ -192,6 +193,10 @@ class OpenAPIParserConfigDict(JSONSchemaParserConfigDict, closed=True):
     openapi_version: NotRequired[OpenAPIVersion | None]
 
 
+class ProtobufParserConfigDict(JSONSchemaParserConfigDict, closed=True):
+    protobuf_version: NotRequired[ProtobufVersion | None]
+
+
 class XMLSchemaParserConfigDict(JSONSchemaParserConfigDict, closed=True):
     xmlschema_version: NotRequired[XMLSchemaVersion | None]
 
@@ -201,6 +206,7 @@ ModelDict: TypeAlias = (
     | GraphQLParserConfigDict
     | JSONSchemaParserConfigDict
     | OpenAPIParserConfigDict
+    | ProtobufParserConfigDict
     | XMLSchemaParserConfigDict
 )
 
