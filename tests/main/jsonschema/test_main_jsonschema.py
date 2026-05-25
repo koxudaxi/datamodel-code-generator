@@ -4047,6 +4047,35 @@ def test_main_jsonschema_allof_combined_count_constraints(output_file: Path) -> 
     )
 
 
+def test_main_jsonschema_nullable_array_count_constraints(output_file: Path) -> None:
+    """Test nullable array fields keep array length constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_array_count_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_array_count_constraints.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_array_count_constraints",
+        model_name="NullableArrayCountConstraints",
+        valid_json='{"value":null}',
+        invalid_json='{"value":[1]}',
+        expected_error_type="too_short",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_array_count_constraints",
+        model_name="NullableArrayCountConstraints",
+        valid_json='{"value":[1,2]}',
+        invalid_json='{"value":[1,2,3,4]}',
+        expected_error_type="too_long",
+    )
+
+
 def test_main_jsonschema_oneof_const_enum_literal(output_file: Path) -> None:
     """Test oneOf with const values as Literal type."""
     run_main_and_assert(

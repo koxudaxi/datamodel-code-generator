@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NullableArrayCountConstraints",
+  "type": "object",
+  "properties": {
+    "value": {
+      "type": ["array", "null"],
+      "minItems": 2,
+      "maxItems": 3
+    }
+  },
+  "required": ["value"]
+}

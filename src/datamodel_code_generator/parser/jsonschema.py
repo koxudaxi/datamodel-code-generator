@@ -1539,7 +1539,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 data_model_type_class,
             )
 
-    def get_object_field(  # noqa: PLR0913
+    def get_object_field(  # noqa: PLR0912, PLR0913
         self,
         *,
         field_name: str | None,
@@ -1578,11 +1578,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 and all(data_type.is_dict or data_type.is_mapping for data_type in container_type.data_types)
             )
         )
+        container_is_list = bool(
+            container_type.is_list
+            or (container_type.data_types and all(data_type.is_list for data_type in container_type.data_types))
+        )
         if container_is_dict:
             property_count_constraints = self._get_property_count_constraints(field)
             if property_count_constraints:
                 constraints = constraints or {}
                 constraints.update(property_count_constraints)
+        if container_is_list:
+            if field.minItems is not None:
+                constraints = constraints or {}
+                constraints["minItems"] = field.minItems
+            if field.maxItems is not None:
+                constraints = constraints or {}
+                constraints["maxItems"] = field.maxItems
         array_items_constraints = self._get_array_items_constraints(field)
         if array_items_constraints:
             constraints = constraints or {}
