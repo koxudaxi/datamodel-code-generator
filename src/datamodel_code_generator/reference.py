@@ -239,6 +239,17 @@ class FieldNameResolver:
         """Check if a field name is valid. Subclasses may override."""
         return True
 
+    def _ascii_identifier_fallback(self, name: str) -> str:
+        fallback = "".join(
+            character if character == "_" or (character.isascii() and character.isalnum()) else f"_u{ord(character):x}_"
+            for character in name
+        )
+        if fallback.startswith("_"):
+            fallback = f"{self.special_field_name_prefix}{fallback}"
+        elif not fallback or fallback[0].isnumeric():
+            fallback = f"{self.special_field_name_prefix}_{fallback}"
+        return fallback
+
     def get_valid_name(  # noqa: PLR0912
         self,
         name: str,
@@ -285,6 +296,16 @@ class FieldNameResolver:
             or (excludes and new_name in excludes)
             or not self._validate_field_name(new_name)
         ):
+            if not new_name.isidentifier() and not new_name.isascii():
+                name = self._ascii_identifier_fallback(name)
+                count = 1
+                if upper_camel:
+                    new_name = snake_to_upper_camel(name)
+                elif self.capitalise_enum_members:
+                    new_name = name.upper()
+                else:
+                    new_name = name
+                continue
             new_name = f"{name}{count}" if upper_camel else f"{name}_{count}"
             count += 1
         return new_name

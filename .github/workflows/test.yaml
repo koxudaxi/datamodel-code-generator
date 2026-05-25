@@ -182,6 +182,35 @@ jobs:
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
 
+  w3c-xmlschema-e2e:
+    name: W3C XML Schema e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - name: Install tox
+        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
+      - name: Setup W3C XML Schema e2e suite
+        run: tox r -vv --notest --skip-missing-interpreters false -e w3c-xmlschema-e2e
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Checkout W3C XML Schema Test Suite
+        run: |
+          git clone --filter=blob:none https://github.com/w3c/xsdtests.git .tox/w3c-xsdtests
+          git -C .tox/w3c-xsdtests checkout 7bc3365c652a322f3d762021b3879eb92dae7e30
+      - name: Run W3C XML Schema e2e suite
+        run: |
+          tox run --skip-uv-sync --skip-pkg-install -e w3c-xmlschema-e2e -- \
+            .tox/w3c-xsdtests \
+            --expected-documents 5284 \
+            --expected-unique-documents 5283
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+
   test-gate:
     name: test-gate
     if: always()
@@ -190,17 +219,21 @@ jobs:
       - test
       - coverage
       - check
+      - w3c-xmlschema-e2e
     steps:
       - name: Fail if any test workflow job failed
         run: |
           test_result='${{ needs.test.result }}'
           coverage_result='${{ needs.coverage.result }}'
           check_result='${{ needs.check.result }}'
+          w3c_xmlschema_e2e_result='${{ needs.w3c-xmlschema-e2e.result }}'
 
           echo "test: ${test_result}"
           echo "coverage: ${coverage_result}"
           echo "check: ${check_result}"
+          echo "w3c xmlschema e2e: ${w3c_xmlschema_e2e_result}"
 
           [ "${test_result}" = "success" ] || exit 1
           [ "${coverage_result}" = "success" ] || exit 1
           [ "${check_result}" = "success" ] || exit 1
+          [ "${w3c_xmlschema_e2e_result}" = "success" ] || exit 1

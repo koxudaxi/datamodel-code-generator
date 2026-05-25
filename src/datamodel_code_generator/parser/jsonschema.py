@@ -1057,7 +1057,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         min_contains = obj.extras.get("minContains")
         max_contains = obj.extras.get("maxContains")
-        min_items = min_contains if isinstance(min_contains, int) and not isinstance(min_contains, bool) else None
+        min_items = (
+            min_contains
+            if isinstance(min_contains, int) and not isinstance(min_contains, bool) and min_contains > 0
+            else 1
+            if "minContains" not in obj.extras
+            else None
+        )
         max_items = max_contains if isinstance(max_contains, int) and not isinstance(max_contains, bool) else None
         return min_items, max_items
 
@@ -1556,9 +1562,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
 
         if isinstance(obj.type, list):
-            return self.data_type(
-                data_types=[_get_data_type(t, obj.format or "default") for t in obj.type if t != "null"],
-                is_optional="null" in obj.type,
+            data_types = [_get_data_type(t, obj.format or "default") for t in obj.type if t != "null"]
+            return (
+                self.data_type(
+                    data_types=data_types,
+                    is_optional=len(data_types) != len(obj.type),
+                )
+                if data_types
+                else self.data_type_manager.get_data_type(Types.null)
             )
         data_type = _get_data_type(obj.type, obj.format or "default")
         if self.strict_nullable and obj.nullable:

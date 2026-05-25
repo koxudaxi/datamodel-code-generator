@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  targetNamespace="https://example.com/main"
+>
+  <xs:complexType name="LocalThing">
+    <xs:sequence>
+      <xs:element name="value" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="Shared">
+    <xs:sequence>
+      <xs:element name="name" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="Shared" type="LocalThing"/>
+  <xs:element name="holder">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Shared"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="https://example.com/xsd"
+  targetNamespace="https://example.com/xsd"
+>
+  <xs:simpleType name="IncludedCode">
+    <xs:annotation>
+      <xs:documentation>Included code docs</xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:length value="3"/>
+      <xs:pattern value="[A-Z]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:attribute name="globalFlag" type="xs:boolean" fixed="true"/>
+  <xs:attribute name="emptyDefault" type="xs:string" default=""/>
+
+  <xs:group name="namedGroup">
+    <xs:sequence>
+      <xs:element name="fromGroup" type="xs:string"/>
+    </xs:sequence>
+  </xs:group>
+
+  <xs:attributeGroup name="namedAttributes">
+    <xs:attribute ref="tns:globalFlag"/>
+    <xs:attribute ref="tns:emptyDefault"/>
+  </xs:attributeGroup>
+</xs:schema>

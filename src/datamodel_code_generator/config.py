@@ -31,6 +31,7 @@ from datamodel_code_generator.enums import (
     ReuseScope,
     TargetPydanticVersion,
     VersionMode,
+    XMLSchemaVersion,
 )
 from datamodel_code_generator.format import (
     DateClassType,
@@ -363,6 +364,12 @@ class OpenAPIParserConfig(JSONSchemaParserConfig):
     openapi_include_paths: list[str] | None = None
     openapi_include_info_version: bool = False
     openapi_version: OpenAPIVersion | None = None
+
+
+class XMLSchemaParserConfig(JSONSchemaParserConfig):
+    """Configuration model for XMLSchemaParser.__init__()."""
+
+    xmlschema_version: XMLSchemaVersion | None = None
 
 
 class ParseConfig(BaseModel):

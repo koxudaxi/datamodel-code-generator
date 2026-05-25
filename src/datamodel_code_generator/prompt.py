@@ -122,7 +122,6 @@ def generate_prompt(args: Namespace, help_text: str) -> str:
         "2. Option descriptions and their purposes",
         "3. Potential conflicts between options",
         "4. Best practices for the target output format",
-        "",
     ))
 
     return "\n".join(lines)
