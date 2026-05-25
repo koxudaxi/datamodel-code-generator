@@ -12257,6 +12257,29 @@ def test_main_jsonschema_contains_tuple_max_contains_intersection(output_file: P
     )
 
 
+def test_main_jsonschema_contains_tuple_max_contains_limit(output_file: Path) -> None:
+    """Test optional tuple items that imply contains are limited by maxContains."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "contains_tuple_max_contains_limit.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="contains_tuple_max_contains_limit.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="contains_tuple_max_contains_limit",
+        model_name="ContainsTupleMaxContainsLimit",
+        valid_json='{"values":["a"]}',
+        invalid_json='{"values":["a","a"]}',
+        expected_error_type="too_long",
+        expected_attribute_path=("values",),
+        expected_attribute_value=["a"],
+    )
+
+
 def test_main_jsonschema_numeric_multiple_of_bounds(output_file: Path) -> None:
     """Test multipleOf and numeric bounds keep only satisfiable constrained values."""
     run_main_and_assert(

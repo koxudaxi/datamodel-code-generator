@@ -3852,6 +3852,30 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if guaranteed_matches > max_contains:
             cls._raise_object_constraint_conflict()
 
+        cls._merge_raw_closed_tuple_max_contains_items_constraint(
+            schema_dict,
+            tuple_items,
+            contains_schema,
+            max_contains,
+        )
+
+    @classmethod
+    def _merge_raw_closed_tuple_max_contains_items_constraint(
+        cls,
+        schema_dict: dict[Any, Any],
+        tuple_items: list[Any],
+        contains_schema: dict[Any, Any],
+        max_contains: int,
+    ) -> None:
+        guaranteed_matches = 0
+        for item_count, item in enumerate(tuple_items, start=1):
+            if cls._raw_schema_implies_supported_filter(item, contains_schema):
+                guaranteed_matches += 1
+            if guaranteed_matches > max_contains:
+                cls._merge_raw_object_keyword(schema_dict, "maxItems", item_count - 1)
+                cls._validate_allof_intersected_constraints(schema_dict)
+                return
+
     @classmethod
     def _raw_closed_tuple_items(cls, schema_dict: dict[Any, Any]) -> list[Any] | None:
         prefix_items = schema_dict.get("prefixItems")
