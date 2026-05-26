@@ -441,6 +441,21 @@ def run_generate_file_and_assert(
     assert_func(output_path, expected_file, transform=transform)
 
 
+def run_generate_and_assert(
+    *,
+    input_: Any,
+    expected_file: Path,
+    **generate_kwargs: Any,
+) -> None:
+    """Execute generate(output=None) and assert the returned text output."""
+    __tracebackhide__ = True
+
+    result = generate(input_=input_, **generate_kwargs)
+    if not isinstance(result, str):  # pragma: no cover
+        pytest.fail(f"Expected generate() to return str, got {type(result).__name__}")
+    assert_output(result, expected_file)
+
+
 def run_main_and_assert(  # noqa: PLR0912
     *,
     input_path: Path | None = None,
@@ -454,6 +469,7 @@ def run_main_and_assert(  # noqa: PLR0912
     expected_output: str | None = None,
     expected_directory: Path | None = None,
     output_to_expected: Sequence[tuple[str, str | Path]] | None = None,
+    assert_output_path_not_exists: bool = False,
     file_should_not_exist: Path | None = None,
     output_should_not_exist: bool = False,
     # Verification options
@@ -500,6 +516,7 @@ def run_main_and_assert(  # noqa: PLR0912
         expected_output: Compare with string directly
         expected_directory: Compare entire directory
         output_to_expected: Compare multiple files
+        assert_output_path_not_exists: Assert output_path does NOT exist
         file_should_not_exist: Assert a file does NOT exist
         output_should_not_exist: Assert output_path does NOT exist
 
@@ -558,6 +575,26 @@ def run_main_and_assert(  # noqa: PLR0912
         assert_no_stderr=assert_no_stderr,
     )
 
+    output_verification_modes = (
+        int(assert_func is not None and output_to_expected is None)
+        + int(expected_output is not None)
+        + int(expected_directory is not None)
+        + int(output_to_expected is not None)
+        + int(assert_output_path_not_exists)
+        + int(file_should_not_exist is not None)
+        + int(output_should_not_exist)
+    )
+    if output_verification_modes > 1:  # pragma: no cover
+        pytest.fail(
+            "Output verification options are mutually exclusive; use exactly one of "
+            "standalone assert_func, expected_output, expected_directory, output_to_expected, "
+            "assert_output_path_not_exists, file_should_not_exist, or output_should_not_exist"
+        )
+
+    if assert_output_path_not_exists:
+        if output_path is None:  # pragma: no cover
+            pytest.fail("output_path is required when using assert_output_path_not_exists")
+        _assert_file_does_not_exist(output_path)
     if output_should_not_exist:
         if output_path is None:  # pragma: no cover
             pytest.fail("output_path is required when using output_should_not_exist")
@@ -567,6 +604,10 @@ def run_main_and_assert(  # noqa: PLR0912
 
     # Skip output verification if expected_exit is not OK
     if expected_exit != Exit.OK:
+        return
+    if (  # pragma: no cover
+        assert_output_path_not_exists or output_should_not_exist or file_should_not_exist is not None
+    ):
         return
 
     # Output verification

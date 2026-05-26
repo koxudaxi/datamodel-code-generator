@@ -1,0 +1,8 @@
+{
+  "type": "record",
+  "name": "DuplicateField",
+  "fields": [
+    {"name": "value", "type": "string"},
+    {"name": "value", "type": "int"}
+  ]
+}

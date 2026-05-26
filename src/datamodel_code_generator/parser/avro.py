@@ -29,6 +29,7 @@ PRIMITIVE_TYPES = frozenset({"null", "boolean", "int", "long", "float", "double"
 NAMED_TYPES = frozenset({"record", "enum", "fixed"})
 COMPLEX_TYPES = NAMED_TYPES | {"array", "map"}
 JSON_SCHEMA_MARKER_KEYS = frozenset({"$schema", "$defs", "definitions", "properties", "allOf", "anyOf", "oneOf"})
+NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 STRING_SCHEMA: JsonSchema = {"type": "string"}
 NULL_SCHEMA: JsonSchema = {"type": "null"}
@@ -134,6 +135,18 @@ def _namespace_name(namespace: str | None) -> str:
     return "".join(_to_class_title(part) for part in parts) or "Namespace"
 
 
+def _is_valid_name(name: str) -> bool:
+    return bool(NAME_PATTERN.fullmatch(name))
+
+
+def _is_valid_fullname(name: str) -> bool:
+    return all(_is_valid_name(part) for part in name.split("."))
+
+
+def _is_valid_namespace(namespace: str) -> bool:
+    return not namespace or _is_valid_fullname(namespace)
+
+
 class _AvroSchemaConverter:
     def __init__(self) -> None:
         self.named_schemas: dict[str, JsonSchema] = {}
@@ -186,6 +199,16 @@ class _AvroSchemaConverter:
         name = schema.get("name")
         if not isinstance(name, str):
             msg = f"Avro {type_name} schema requires a string name"
+            raise Error(msg)
+        if not _is_valid_fullname(name):
+            msg = f"Invalid Avro {type_name} name: {name}"
+            raise Error(msg)
+        if name.rsplit(".", maxsplit=1)[-1] in PRIMITIVE_TYPES:
+            msg = f"Avro primitive type names may not be redefined: {name}"
+            raise Error(msg)
+        namespace_value = schema.get("namespace")
+        if "." not in name and isinstance(namespace_value, str) and not _is_valid_namespace(namespace_value):
+            msg = f"Invalid Avro namespace: {namespace_value}"
             raise Error(msg)
         name_info = self._make_name(name, schema.get("namespace"), namespace)
         if (existing := self.named_schemas.get(name_info.fullname)) is not None and existing is not schema:
@@ -382,6 +405,12 @@ class _AvroSchemaConverter:
                 msg = f"Avro record field requires a string name: {fullname}"
                 raise Error(msg)
             field_name = cast("str", field["name"])
+            if not _is_valid_name(field_name):
+                msg = f"Invalid Avro record field name: {fullname}.{field_name}"
+                raise Error(msg)
+            if field_name in properties:
+                msg = f"Duplicate Avro record field name: {fullname}.{field_name}"
+                raise Error(msg)
             field_schema = self._convert_schema(field.get("type"), name_info.namespace)
             if "doc" in field and isinstance(field["doc"], str):
                 field_schema["description"] = field["doc"]
@@ -409,6 +438,15 @@ class _AvroSchemaConverter:
         if not isinstance(symbols, list) or not all(isinstance(symbol, str) for symbol in symbols):
             msg = f"Avro enum symbols must be a list of strings: {fullname}"
             raise Error(msg)
+        seen_symbols: set[str] = set()
+        for symbol in symbols:
+            if not _is_valid_name(symbol):
+                msg = f"Invalid Avro enum symbol: {fullname}.{symbol}"
+                raise Error(msg)
+            if symbol in seen_symbols:
+                msg = f"Duplicate Avro enum symbol: {fullname}.{symbol}"
+                raise Error(msg)
+            seen_symbols.add(symbol)
         converted: JsonSchema = {"type": "string", "enum": symbols}
         self._copy_common_metadata(schema, converted)
         if "default" in schema:

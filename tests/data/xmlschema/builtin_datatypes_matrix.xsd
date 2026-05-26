@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="https://example.com/xmlschema-datatypes"
+  targetNamespace="https://example.com/xmlschema-datatypes"
+  elementFormDefault="qualified"
+>
+  <xs:annotation>
+    <xs:documentation>W3C XML Schema built-in datatype coverage.</xs:documentation>
+  </xs:annotation>
+
+  <xs:notation name="png" public="image/png" system="image/png"/>
+
+  <xs:element name="types">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="anySimple" type="xs:anySimpleType" minOccurs="0"/>
+        <xs:element name="anyAtomic" type="xs:anyAtomicType" minOccurs="0"/>
+        <xs:element name="anyType" type="xs:anyType" minOccurs="0"/>
+        <xs:element name="anyUri" type="xs:anyURI" minOccurs="0"/>
+        <xs:element name="base64Binary" type="xs:base64Binary" minOccurs="0"/>
+        <xs:element name="boolean" type="xs:boolean" minOccurs="0"/>
+        <xs:element name="byte" type="xs:byte" minOccurs="0"/>
+        <xs:element name="date" type="xs:date" minOccurs="0"/>
+        <xs:element name="dateTime" type="xs:dateTime" minOccurs="0"/>
+        <xs:element name="decimal" type="xs:decimal" minOccurs="0"/>
+        <xs:element name="double" type="xs:double" minOccurs="0"/>
+        <xs:element name="duration" type="xs:duration" minOccurs="0"/>
+        <xs:element name="dayTimeDuration" type="xs:dayTimeDuration" minOccurs="0"/>
+        <xs:element name="entity" type="xs:ENTITY" minOccurs="0"/>
+        <xs:element name="entities" type="xs:ENTITIES" minOccurs="0"/>
+        <xs:element name="float" type="xs:float" minOccurs="0"/>
+        <xs:element name="gDay" type="xs:gDay" minOccurs="0"/>
+        <xs:element name="gMonth" type="xs:gMonth" minOccurs="0"/>
+        <xs:element name="gMonthDay" type="xs:gMonthDay" minOccurs="0"/>
+        <xs:element name="gYear" type="xs:gYear" minOccurs="0"/>
+        <xs:element name="gYearMonth" type="xs:gYearMonth" minOccurs="0"/>
+        <xs:element name="hexBinary" type="xs:hexBinary" minOccurs="0"/>
+        <xs:element name="id" type="xs:ID" minOccurs="0"/>
+        <xs:element name="idref" type="xs:IDREF" minOccurs="0"/>
+        <xs:element name="idrefs" type="xs:IDREFS" minOccurs="0"/>
+        <xs:element name="int" type="xs:int" minOccurs="0"/>
+        <xs:element name="integer" type="xs:integer" minOccurs="0"/>
+        <xs:element name="language" type="xs:language" minOccurs="0"/>
+        <xs:element name="long" type="xs:long" minOccurs="0"/>
+        <xs:element name="name" type="xs:Name" minOccurs="0"/>
+        <xs:element name="ncName" type="xs:NCName" minOccurs="0"/>
+        <xs:element name="negativeInteger" type="xs:negativeInteger" minOccurs="0"/>
+        <xs:element name="nmtoken" type="xs:NMTOKEN" minOccurs="0"/>
+        <xs:element name="nmtokens" type="xs:NMTOKENS" minOccurs="0"/>
+        <xs:element name="nonNegativeInteger" type="xs:nonNegativeInteger" minOccurs="0"/>
+        <xs:element name="nonPositiveInteger" type="xs:nonPositiveInteger" minOccurs="0"/>
+        <xs:element name="normalizedString" type="xs:normalizedString" minOccurs="0"/>
+        <xs:element name="notation" type="xs:NOTATION" minOccurs="0"/>
+        <xs:element name="positiveInteger" type="xs:positiveInteger" minOccurs="0"/>
+        <xs:element name="qName" type="xs:QName" minOccurs="0"/>
+        <xs:element name="short" type="xs:short" minOccurs="0"/>
+        <xs:element name="string" type="xs:string" minOccurs="0"/>
+        <xs:element name="time" type="xs:time" minOccurs="0"/>
+        <xs:element name="token" type="xs:token" minOccurs="0"/>
+        <xs:element name="unsignedByte" type="xs:unsignedByte" minOccurs="0"/>
+        <xs:element name="unsignedInt" type="xs:unsignedInt" minOccurs="0"/>
+        <xs:element name="unsignedLong" type="xs:unsignedLong" minOccurs="0"/>
+        <xs:element name="unsignedShort" type="xs:unsignedShort" minOccurs="0"/>
+        <xs:element name="yearMonthDuration" type="xs:yearMonthDuration" minOccurs="0"/>
+        <xs:element name="dateTimeStamp" type="xs:dateTimeStamp" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute name="status" type="xs:token" default="open"/>
+      <xs:attribute name="requiredId" type="xs:ID" use="required"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

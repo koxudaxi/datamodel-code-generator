@@ -1,0 +1,6 @@
+{
+  "type": "record",
+  "name": "BadNamespace",
+  "namespace": "bad..namespace",
+  "fields": []
+}

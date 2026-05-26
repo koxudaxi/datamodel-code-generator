@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from datamodel_code_generator.__main__ import Exit
 from tests.main.conftest import XML_SCHEMA_DATA_PATH, run_main_and_assert
-from tests.main.xmlschema.conftest import assert_file_content, assert_xmlschema_snippets
+from tests.main.xmlschema.conftest import assert_file_content
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -30,7 +30,7 @@ def test_main_xmlschema_infer_input_file_type(output_file: Path) -> None:
     run_main_and_assert(
         input_path=XML_SCHEMA_DATA_PATH / "single_root_item.xsd",
         output_path=output_file,
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="single_root_item.py",
     )
 
@@ -41,7 +41,7 @@ def test_main_xmlschema_supported_constructs(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "constructs_matrix.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="constructs_matrix.py",
     )
 
@@ -52,7 +52,7 @@ def test_main_xmlschema_edge_cases(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "edge_cases.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="edge_cases.py",
     )
 
@@ -63,7 +63,7 @@ def test_main_xmlschema_single_root_same_name(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "single_root_item.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="single_root_item.py",
     )
 
@@ -74,7 +74,7 @@ def test_main_xmlschema_inline_root(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "inline_root.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="inline_root.py",
     )
 
@@ -85,7 +85,7 @@ def test_main_xmlschema_recursive_root(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "recursive_node.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="recursive_node.py",
     )
 
@@ -96,7 +96,7 @@ def test_main_xmlschema_import_resolves_by_namespace(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "import_namespace.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="import_namespace.py",
     )
 
@@ -107,7 +107,7 @@ def test_main_xmlschema_imported_namespace_name_collisions(output_file: Path) ->
         input_path=XML_SCHEMA_DATA_PATH / "namespace_collisions.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="namespace_collisions.py",
     )
 
@@ -118,7 +118,7 @@ def test_main_xmlschema_no_namespace_name_collision(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "no_namespace_collision.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="no_namespace_collision.py",
     )
 
@@ -129,7 +129,7 @@ def test_main_xmlschema_namespace_fallback(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "namespace_fallback.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="namespace_fallback.py",
     )
 
@@ -140,7 +140,7 @@ def test_main_xmlschema_advanced_constructs(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "advanced_constructs.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="advanced_constructs.py",
     )
 
@@ -151,7 +151,7 @@ def test_main_xmlschema_multiple_substitution_groups(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "multiple_substitution_groups.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="multiple_substitution_groups.py",
     )
 
@@ -162,7 +162,7 @@ def test_main_xmlschema_include_local_elements(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "include_local_elements.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="include_local_elements.py",
     )
 
@@ -173,7 +173,7 @@ def test_main_xmlschema_type_element_symbol_spaces(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "type_element_symbol_spaces.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="type_element_symbol_spaces.py",
     )
 
@@ -184,7 +184,7 @@ def test_main_xmlschema_model_groups_and_wildcards(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "model_groups_and_wildcards.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="model_groups_and_wildcards.py",
     )
 
@@ -195,7 +195,7 @@ def test_main_xmlschema_spec_constructs(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "spec_constructs.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="spec_constructs.py",
     )
 
@@ -218,23 +218,11 @@ def test_main_xmlschema_utf16_input(tmp_path: Path, output_file: Path) -> None:
         encoding="utf-16",
     )
 
-    def assert_utf16_output(
-        generated_output: Path,
-        expected_name: str | Path | None = None,
-        encoding: str = "utf-8",
-        transform: object = None,
-    ) -> None:
-        assert expected_name == "xmlschema_utf16_input.py"
-        assert transform is None
-        content = generated_output.read_text(encoding=encoding)
-        assert "class Utf16Item(BaseModel):" in content
-        assert "value: str" in content
-
     run_main_and_assert(
         input_path=input_path,
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_utf16_output,
+        assert_func=assert_file_content,
     )
 
 
@@ -254,23 +242,11 @@ def test_main_xmlschema_unicode_ncname_alias(tmp_path: Path, output_file: Path) 
         encoding="utf-8",
     )
 
-    def assert_unicode_output(
-        generated_output: Path,
-        expected_name: str | Path | None = None,
-        encoding: str = "utf-8",
-        transform: object = None,
-    ) -> None:
-        assert expected_name == "xmlschema_unicode_ncname_alias.py"
-        assert transform is None
-        content = generated_output.read_text(encoding=encoding)
-        assert "from pydantic import BaseModel, Field" in content
-        assert "field_ue33_62: int | None = Field(None, alias='ำ62')" in content
-
     run_main_and_assert(
         input_path=input_path,
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_unicode_output,
+        assert_func=assert_file_content,
     )
 
 
@@ -297,24 +273,11 @@ def test_main_xmlschema_unsupported_xsd_pattern_importable(tmp_path: Path, outpu
         encoding="utf-8",
     )
 
-    def assert_unsupported_pattern_output(
-        generated_output: Path,
-        expected_name: str | Path | None = None,
-        encoding: str = "utf-8",
-        transform: object = None,
-    ) -> None:
-        assert expected_name == "xmlschema_unsupported_xsd_pattern_importable.py"
-        assert transform is None
-        content = generated_output.read_text(encoding=encoding)
-        assert "class NameToken(RootModel[str]):" in content
-        assert "class BrokenPattern(RootModel[str]):" in content
-        assert "pattern=" not in content
-
     run_main_and_assert(
         input_path=input_path,
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_unsupported_pattern_output,
+        assert_func=assert_file_content,
     )
 
 
@@ -339,24 +302,11 @@ def test_main_xmlschema_self_extension_without_redefine_importable(tmp_path: Pat
         encoding="utf-8",
     )
 
-    def assert_self_extension_output(
-        generated_output: Path,
-        expected_name: str | Path | None = None,
-        encoding: str = "utf-8",
-        transform: object = None,
-    ) -> None:
-        assert expected_name == "xmlschema_self_extension_without_redefine_importable.py"
-        assert transform is None
-        content = generated_output.read_text(encoding=encoding)
-        assert "class Node(BaseModel):" in content
-        assert "class Node(Node):" not in content
-        assert "child: str" in content
-
     run_main_and_assert(
         input_path=input_path,
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_self_extension_output,
+        assert_func=assert_file_content,
     )
 
 
@@ -416,29 +366,11 @@ def test_main_xmlschema_redefine_self_references_importable(tmp_path: Path, outp
         encoding="utf-8",
     )
 
-    def assert_redefine_output(
-        generated_output: Path,
-        expected_name: str | Path | None = None,
-        encoding: str = "utf-8",
-        transform: object = None,
-    ) -> None:
-        assert expected_name == "xmlschema_redefine_self_references_importable.py"
-        assert transform is None
-        content = generated_output.read_text(encoding=encoding)
-        assert "class Container(BaseModel):" in content
-        assert "class Container(Container):" not in content
-        assert "before: str" in content
-        assert "base: str" in content
-        assert "after: str" in content
-        assert "tail: str" in content
-        assert "baseAttr: str | None = None" in content
-        assert "addedAttr: str | None = None" in content
-
     run_main_and_assert(
         input_path=input_path,
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_redefine_output,
+        assert_func=assert_file_content,
     )
 
 
@@ -448,7 +380,7 @@ def test_main_xmlschema_schema_composition(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "schema_composition.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="schema_composition.py",
     )
 
@@ -459,7 +391,7 @@ def test_main_xmlschema_xsd11_constructs(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "xsd11_constructs.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="xsd11_constructs.py",
     )
 
@@ -470,7 +402,7 @@ def test_main_xmlschema_versioning_auto(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "versioning.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="versioning.py",
     )
 
@@ -482,7 +414,7 @@ def test_main_xmlschema_versioning_xsd10(output_file: Path) -> None:
         output_path=output_file,
         input_file_type="xmlschema",
         extra_args=["--schema-version", "1.0"],
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="versioning_xsd10.py",
     )
 
@@ -493,7 +425,7 @@ def test_main_xmlschema_versioning_auto_from_include(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "versioning_include.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="versioning_include.py",
     )
 
@@ -505,7 +437,7 @@ def test_main_xmlschema_versioning_include_xsd10(output_file: Path) -> None:
         output_path=output_file,
         input_file_type="xmlschema",
         extra_args=["--schema-version", "1.0"],
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="versioning_include_xsd10.py",
     )
 
@@ -516,7 +448,7 @@ def test_main_xmlschema_default_open_content_applies_to_empty(output_file: Path)
         input_path=XML_SCHEMA_DATA_PATH / "default_open_content_applies_to_empty.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="default_open_content_applies_to_empty.py",
     )
 
@@ -527,8 +459,19 @@ def test_main_xmlschema_datatypes_and_mixed_content(output_file: Path) -> None:
         input_path=XML_SCHEMA_DATA_PATH / "datatypes_and_mixed_content.xsd",
         output_path=output_file,
         input_file_type="xmlschema",
-        assert_func=assert_xmlschema_snippets,
+        assert_func=assert_file_content,
         expected_file="datatypes_and_mixed_content.py",
+    )
+
+
+def test_main_xmlschema_builtin_datatypes_matrix(output_file: Path) -> None:
+    """Generate models for the W3C XML Schema built-in datatype set."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "builtin_datatypes_matrix.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="builtin_datatypes_matrix.py",
     )
 
 
@@ -541,7 +484,7 @@ def test_main_xmlschema_parse_error(capsys: pytest.CaptureFixture[str], output_f
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Invalid XML Schema document",
-        file_should_not_exist=output_file,
+        assert_output_path_not_exists=True,
     )
 
 
@@ -554,7 +497,7 @@ def test_main_xmlschema_wrong_root_error(capsys: pytest.CaptureFixture[str], out
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="XML Schema root element must be xs:schema",
-        file_should_not_exist=output_file,
+        assert_output_path_not_exists=True,
     )
 
 
@@ -566,7 +509,7 @@ def test_main_xmlschema_auto_broken_xml_error(capsys: pytest.CaptureFixture[str]
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Can't infer input file type",
-        file_should_not_exist=output_file,
+        assert_output_path_not_exists=True,
     )
 
 
@@ -578,5 +521,5 @@ def test_main_xmlschema_auto_wrong_root_error(capsys: pytest.CaptureFixture[str]
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Can't infer input file type",
-        file_should_not_exist=output_file,
+        assert_output_path_not_exists=True,
     )
