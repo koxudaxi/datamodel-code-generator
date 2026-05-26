@@ -16,7 +16,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 
 ## ✨ What it does
 
-- 📄 Converts **OpenAPI 3**, **JSON Schema**, **Apache Avro**, **XML Schema**, **Protocol Buffers/gRPC**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
+- 📄 Converts **OpenAPI 3**, **AsyncAPI**, **JSON Schema**, **Apache Avro**, **XML Schema**, **Protocol Buffers/gRPC**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
 - 🐍 Generates from **existing Python types** (Pydantic, dataclass, TypedDict) via `--input-model`
 - 🎯 Generates **Pydantic v2**, **Pydantic v2 dataclass**, **dataclasses**, **TypedDict**, or **msgspec** output
 - 🔗 Handles complex schemas: `$ref`, `allOf`, `oneOf`, `anyOf`, enums, and nested types
@@ -100,6 +100,7 @@ datamodel-codegen --input pet.json --input-file-type jsonschema --output-model-t
 | Input Type | File Types | Example |
 |------------|------------|---------|
 | 📘 [OpenAPI 3](openapi.md) | `.yaml`, `.json` | API specifications |
+| 📡 [AsyncAPI](asyncapi.md) | `.yaml`, `.json` | Event-driven API specifications |
 | 📋 [JSON Schema](jsonschema.md) | `.json` | Data validation schemas |
 | 🪶 [Apache Avro](avro.md) | `.avsc`, `.json` | Avro schemas |
 | 🧾 XML Schema | `.xsd` | XML document schemas |
@@ -250,7 +251,7 @@ This documentation is auto-generated from test cases.
 | 🔧 [Typing Customization](typing-customization.md) | 30 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 26 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
-| 🎨 [Template Customization](template-customization.md) | 21 | Output formatting and custom rendering |
+| 🎨 [Template Customization](template-customization.md) | 22 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
 | ⚙️ [General Options](general-options.md) | 17 | Utilities and meta options |
@@ -312,6 +313,7 @@ This documentation is auto-generated from test cases.
 - [`--empty-enum-field-name`](field-customization.md#empty-enum-field-name)
 - [`--enable-command-header`](template-customization.md#enable-command-header)
 - [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability)
+- [`--enable-generated-header-marker`](template-customization.md#enable-generated-header-marker)
 - [`--enable-version-header`](template-customization.md#enable-version-header)
 - [`--encoding`](base-options.md#encoding)
 - [`--enum-field-as-literal`](typing-customization.md#enum-field-as-literal)
@@ -706,7 +708,7 @@ The `--input-file-type` flag explicitly sets the input format.
 
 **Important distinction:**
 
-- Use `jsonschema`, `openapi`, `xmlschema`, `protobuf`, `avro`, or `graphql` for **schema definition files**
+- Use `jsonschema`, `openapi`, or `graphql` for **schema definition files**
 - Use `json`, `yaml`, or `csv` for **raw sample data** to automatically infer a schema
 
 For example, if you have a JSON Schema written in YAML format, use `--input-file-type jsonschema`,
@@ -898,10 +900,8 @@ is written to stdout.
 Schema version to use for parsing.
 
 The `--schema-version` option specifies the schema version to use instead of auto-detection.
-Valid values depend on input type: JsonSchema (draft-04, draft-06, draft-07, 2019-09, 2020-12),
-OpenAPI (3.0, 3.1), XML Schema (1.0, 1.1), or Protobuf (proto2, proto3, 2023).
-Default is 'auto' (detected from $schema, openapi field, XML Schema versioning attributes,
-or Protobuf syntax/edition).
+Valid values depend on input type: JsonSchema (draft-04, draft-06, draft-07, 2019-09, 2020-12)
+or OpenAPI (3.0, 3.1). Default is 'auto' (detected from $schema or openapi field).
 
 !!! tip "Usage"
 
@@ -16660,6 +16660,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/template-cus
 | [`--disable-appending-item-suffix`](#disable-appending-item-suffix) | Disable appending 'Item' suffix to array item types. |
 | [`--disable-timestamp`](#disable-timestamp) | Disable timestamp in generated file header for reproducible ... |
 | [`--enable-command-header`](#enable-command-header) | Include command-line options in file header for reproducibil... |
+| [`--enable-generated-header-marker`](#enable-generated-header-marker) | Include the @generated marker in file header for generated-c... |
 | [`--enable-version-header`](#enable-version-header) | Include tool version information in file header. |
 | [`--extra-template-data`](#extra-template-data) | Pass custom template variables from JSON file for code gener... |
 | [`--formatters`](#formatters) | Specify code formatters to apply to generated output. |
@@ -18235,6 +18236,281 @@ the file to the header, making it easy to reproduce the generation.
     #   filename:  api.yaml
     #   timestamp: 2019-07-26T00:00:00+00:00
     #   command:   datamodel-codegen [COMMAND]
+
+    from __future__ import annotations
+
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
+
+
+    class Pet(BaseModel):
+        id: int
+        name: str
+        tag: str | None = None
+
+
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
+
+
+    class User(BaseModel):
+        id: int
+        name: str
+        tag: str | None = None
+
+
+    class Users(RootModel[list[User]]):
+        root: list[User]
+
+
+    class Id(RootModel[str]):
+        root: str
+
+
+    class Rules(RootModel[list[str]]):
+        root: list[str]
+
+
+    class Error(BaseModel):
+        code: int
+        message: str
+
+
+    class Api(BaseModel):
+        apiKey: str | None = Field(
+            None, description='To be used as a dataset parameter value'
+        )
+        apiVersionNumber: str | None = Field(
+            None, description='To be used as a version parameter value'
+        )
+        apiUrl: AnyUrl | None = Field(
+            None, description="The URL describing the dataset's fields"
+        )
+        apiDocumentationUrl: AnyUrl | None = Field(
+            None, description='A URL to the API console for each API'
+        )
+
+
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
+
+
+    class Event(BaseModel):
+        name: str | None = None
+
+
+    class Result(BaseModel):
+        event: Event | None = None
+    ```
+
+---
+
+## `--enable-generated-header-marker` {#enable-generated-header-marker}
+
+Include the @generated marker in file header for generated-code tooling.
+
+The `--enable-generated-header-marker` flag marks generated output for tools that
+recognize the `@generated` marker.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --enable-generated-header-marker # (1)!
+    ```
+
+    1. :material-arrow-left: `--enable-generated-header-marker` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```yaml
+    openapi: "3.0.0"
+    info:
+      version: 1.0.0
+      title: Swagger Petstore
+      license:
+        name: MIT
+    servers:
+      - url: http://petstore.swagger.io/v1
+    paths:
+      /pets:
+        get:
+          summary: List all pets
+          operationId: listPets
+          tags:
+            - pets
+          parameters:
+            - name: limit
+              in: query
+              description: How many items to return at one time (max 100)
+              required: false
+              schema:
+                type: integer
+                format: int32
+          responses:
+            '200':
+              description: A paged array of pets
+              headers:
+                x-next:
+                  description: A link to the next page of responses
+                  schema:
+                    type: string
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+        post:
+          summary: Create a pet
+          operationId: createPets
+          tags:
+            - pets
+          responses:
+            '201':
+              description: Null response
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+      /pets/{petId}:
+        get:
+          summary: Info for a specific pet
+          operationId: showPetById
+          tags:
+            - pets
+          parameters:
+            - name: petId
+              in: path
+              required: true
+              description: The id of the pet to retrieve
+              schema:
+                type: string
+          responses:
+            '200':
+              description: Expected response to a valid request
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+        x-amazon-apigateway-integration:
+          uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+          passthroughBehavior: when_no_templates
+          httpMethod: POST
+          type: aws_proxy
+    components:
+      schemas:
+        Pet:
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: integer
+              format: int64
+              default: 1
+            name:
+              type: string
+            tag:
+              type: string
+        Pets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pet"
+        Users:
+          type: array
+          items:
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: integer
+                format: int64
+              name:
+                type: string
+              tag:
+                type: string
+        Id:
+          type: string
+        Rules:
+          type: array
+          items:
+            type: string
+        Error:
+          description: error result
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: integer
+              format: int32
+            message:
+              type: string
+        apis:
+          type: array
+          items:
+            type: object
+            properties:
+              apiKey:
+                type: string
+                description: To be used as a dataset parameter value
+              apiVersionNumber:
+                type: string
+                description: To be used as a version parameter value
+              apiUrl:
+                type: string
+                format: uri
+                description: "The URL describing the dataset's fields"
+              apiDocumentationUrl:
+                type: string
+                format: uri
+                description: A URL to the API console for each API
+        Event:
+          type: object
+          description: Event object
+          properties:
+            name:
+              type: string
+        Result:
+            type: object
+            properties:
+              event:
+                $ref: '#/components/schemas/Event'
+    ```
+
+    **Output:**
+
+    ```python
+    # @generated by datamodel-codegen:
+    #   filename:  api.yaml
+    #   timestamp: 2019-07-26T00:00:00+00:00
 
     from __future__ import annotations
 
@@ -24859,6 +25135,7 @@ datamodel-codegen [OPTIONS]
 | [`--disable-appending-item-suffix`](template-customization.md#disable-appending-item-suffix) | Disable appending 'Item' suffix to array item types. |
 | [`--disable-timestamp`](template-customization.md#disable-timestamp) | Disable timestamp in generated file header for reproducible output. |
 | [`--enable-command-header`](template-customization.md#enable-command-header) | Include command-line options in file header for reproducibility. |
+| [`--enable-generated-header-marker`](template-customization.md#enable-generated-header-marker) | Include the @generated marker in file header for generated-code tooling. |
 | [`--enable-version-header`](template-customization.md#enable-version-header) | Include tool version information in file header. |
 | [`--extra-template-data`](template-customization.md#extra-template-data) | Pass custom template variables from JSON file for code generation. |
 | [`--formatters`](template-customization.md#formatters) | Specify code formatters to apply to generated output. |
@@ -24967,6 +25244,7 @@ All options sorted alphabetically:
 - [`--empty-enum-field-name`](field-customization.md#empty-enum-field-name) - Name for empty string enum field values.
 - [`--enable-command-header`](template-customization.md#enable-command-header) - Include command-line options in file header for reproducibil...
 - [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability) - Enable faux immutability in Pydantic models (frozen=True).
+- [`--enable-generated-header-marker`](template-customization.md#enable-generated-header-marker) - Include the @generated marker in file header for generated-c...
 - [`--enable-version-header`](template-customization.md#enable-version-header) - Include tool version information in file header.
 - [`--encoding`](base-options.md#encoding) - Specify character encoding for input and output files.
 - [`--enum-field-as-literal`](typing-customization.md#enum-field-as-literal) - Convert all enum fields to Literal types instead of Enum cla...
@@ -25389,11 +25667,11 @@ Below are the data types and features recognized by datamodel-code-generator for
 
 Source: https://datamodel-code-generator.koxudaxi.dev/supported_formats/
 
-This document describes the JSON Schema, OpenAPI, Apache Avro, XML Schema, and Protocol Buffers versions supported by datamodel-code-generator.
+This document describes the JSON Schema, OpenAPI, AsyncAPI, Apache Avro, XML Schema, and Protocol Buffers versions supported by datamodel-code-generator.
 
 ## Overview
 
-datamodel-code-generator supports multiple schema formats including JSON Schema, OpenAPI, Apache Avro, XML Schema, and Protocol Buffers. By default, the tool operates in **Lenient mode**, accepting all features regardless of version declarations for formats that carry version information. This ensures maximum compatibility with real-world schemas that often mix features from different versions.
+datamodel-code-generator supports multiple schema formats including JSON Schema, OpenAPI, AsyncAPI, Apache Avro, XML Schema, and Protocol Buffers. By default, the tool operates in **Lenient mode**, accepting all features regardless of version declarations for formats that carry version information. This ensures maximum compatibility with real-world schemas that often mix features from different versions.
 
 ## JSON Schema Version Support
 
@@ -25482,6 +25760,47 @@ datamodel-code-generator detects the OpenAPI version from the `openapi` field:
 - `openapi: "3.1.x"` -> OpenAPI 3.1
 - No `openapi` field -> Fallback to OpenAPI 3.1
 
+## AsyncAPI Version Support
+
+AsyncAPI documents are supported with `--input-file-type asyncapi`. The parser generates models from schema-bearing message payloads, headers, and reusable schemas.
+
+### Supported Versions
+
+| Version | Schema behavior |
+|---------|-----------------|
+| 2.x | Message `schemaFormat` is applied to `payload`; default schemas use OpenAPI 3.0-compatible features |
+| 3.x | `payload`, `headers`, and `components.schemas` may use Schema Object, Reference Object, or Multi Format Schema Object; default schemas use OpenAPI 3.1-compatible features |
+
+### Supported Schema Locations
+
+| Location | Status | Notes |
+|----------|--------|-------|
+| `components.schemas` | ✅ Supported | Reusable schemas are generated even when not referenced |
+| `components.messages[*].payload` / `headers` | ✅ Supported | Includes local and external references |
+| Channel `publish` / `subscribe` messages | ✅ Supported | AsyncAPI 2.x channel operation messages |
+| Channel `messages` | ✅ Supported | AsyncAPI 3.x channel messages |
+| Operation `messages` / `reply.messages` | ✅ Supported | Includes reusable `components.operations` |
+| Message trait `headers` | ✅ Supported | Used when the target message does not define `headers` |
+| Protocol bindings | ⚠️ Tolerated | Binding configuration is transport metadata and is not emitted as models |
+
+### Embedded Schema Formats
+
+| `schemaFormat` family | Status | Notes |
+|-----------------------|--------|-------|
+| AsyncAPI Schema Object | ✅ Supported | Default when omitted |
+| JSON Schema | ✅ Supported | `application/schema+json` and `application/schema+yaml` |
+| OpenAPI Schema Object | ✅ Supported | `application/vnd.oai.openapi...` |
+| Apache Avro | ✅ Supported | `application/vnd.apache.avro...` |
+| Protocol Buffers, RAML, XML Schema, custom formats | ❌ Explicit error | Use dedicated top-level input types where available |
+
+### Version Detection
+
+datamodel-code-generator detects the AsyncAPI version from the `asyncapi` field:
+
+- `asyncapi: "2.x.y"` -> AsyncAPI 2.x
+- `asyncapi: "3.x.y"` -> AsyncAPI 3.x
+- Unknown versions fall back to the 3.x schema behavior unless `--schema-version` is set explicitly
+
 ## Protocol Buffers Version Support
 
 ### Supported Versions
@@ -25499,7 +25818,8 @@ datamodel-code-generator detects Protocol Buffers syntax from each compiled `.pr
 - `syntax = "proto3";` -> proto3
 - `syntax = "proto2";` or no syntax declaration -> proto2
 - `edition = "2023";` -> edition 2023
-- `--schema-version proto2`, `--schema-version proto3`, or `--schema-version 2023` can override auto-detection
+- `--schema-version proto2`, `--schema-version proto3`, or `--schema-version 2023` can override
+  auto-detection
 
 ## Apache Avro Schema Support
 
@@ -25707,6 +26027,7 @@ In **Strict mode** (`--schema-version-mode strict`), warnings are emitted for ve
 - [Supported Data Types](./supported-data-types.md) - Complete data type support
 - [JSON Schema Guide](./jsonschema.md) - JSON Schema usage examples
 - [OpenAPI Guide](./openapi.md) - OpenAPI usage examples
+- [AsyncAPI Guide](./asyncapi.md) - AsyncAPI usage examples
 - [Apache Avro Guide](./avro.md) - Avro schema usage examples
 - [Protocol Buffers / gRPC Guide](./protobuf.md) - Protocol Buffers schema usage examples
 
@@ -26488,7 +26809,8 @@ Protocol Buffers syntax is detected from each compiled `.proto` descriptor:
 - `syntax = "proto2";` or no syntax declaration -> proto2
 - `edition = "2023";` -> edition 2023
 
-Use `--schema-version proto2`, `--schema-version proto3`, or `--schema-version 2023` to override auto-detection when needed.
+Use `--schema-version proto2`, `--schema-version proto3`, or `--schema-version 2023` to override
+auto-detection when needed.
 
 ## Multiple Files
 

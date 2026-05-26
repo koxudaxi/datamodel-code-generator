@@ -132,6 +132,7 @@
 - `--disable-appending-item-suffix`: Disable appending 'Item' suffix to array item types.
 - `--disable-timestamp`: Disable timestamp in generated file header for reproducible output.
 - `--enable-command-header`: Include command-line options in file header for reproducibility.
+- `--enable-generated-header-marker`: Include the @generated marker in file header for generated-code tooling.
 - `--enable-version-header`: Include tool version information in file header.
 - `--extra-template-data`: Pass custom template variables from JSON file for code generation.
 - `--formatters`: Specify code formatters to apply to generated output.
@@ -522,6 +523,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         reproducibility
   --enable-faux-immutability
                         Enable faux immutability
+  --enable-generated-header-marker
+                        Enable @generated marker on file headers
   --enable-version-header
                         Enable package version on file headers
   --extra-fields {allow,ignore,forbid}

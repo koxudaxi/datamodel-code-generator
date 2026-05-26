@@ -43,6 +43,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--empty-enum-field-name": "Name for empty string enum field values.",
     "--enable-command-header": "Include command-line options in file header for reproducibility.",
     "--enable-faux-immutability": "Enable faux immutability in Pydantic models (frozen=True).",
+    "--enable-generated-header-marker": "Include the @generated marker in file header for generated-code tooling.",
     "--enable-version-header": "Include tool version information in file header.",
     "--encoding": "Specify character encoding for input and output files.",
     "--enum-field-as-literal": "Convert all enum fields to Literal types instead of Enum classes.",
