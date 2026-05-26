@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from datamodel_code_generator import InputFileType, inferred_message
 from datamodel_code_generator.__main__ import Exit
 from tests.main.asyncapi.conftest import assert_file_content
 from tests.main.conftest import (
     ASYNC_API_DATA_PATH,
+    DATA_PATH,
     run_generate_file_and_assert,
     run_main_and_assert,
 )
@@ -17,8 +20,6 @@ PY310_TARGET_ARGS = ["--target-python-version", "3.10"]
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    import pytest
 
 
 def test_main_asyncapi_2_yaml(output_file: Path) -> None:
@@ -125,6 +126,100 @@ def test_main_asyncapi_external_message_ref(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="external_message_ref.py",
         extra_args=PY310_TARGET_ARGS,
+    )
+
+
+def test_main_asyncapi_stable_surface(output_file: Path) -> None:
+    """Generate models from the stable AsyncAPI schema-bearing surface."""
+    run_main_and_assert(
+        input_path=ASYNC_API_DATA_PATH / "stable-surface.yaml",
+        output_path=output_file,
+        input_file_type="asyncapi",
+        assert_func=assert_file_content,
+        expected_file="stable_surface.py",
+        extra_args=PY310_TARGET_ARGS,
+    )
+
+
+def test_main_asyncapi_multi_format_schema_objects(output_file: Path) -> None:
+    """Unwrap AsyncAPI 3.x Multi Format Schema Objects and dispatch supported schema formats."""
+    run_main_and_assert(
+        input_path=ASYNC_API_DATA_PATH / "multi-format-schemas.yaml",
+        output_path=output_file,
+        input_file_type="asyncapi",
+        assert_func=assert_file_content,
+        expected_file="multi_format_schemas.py",
+        extra_args=PY310_TARGET_ARGS,
+    )
+
+
+def test_main_asyncapi_v2_message_schema_format(output_file: Path) -> None:
+    """Apply AsyncAPI 2.x message-level schemaFormat to the payload schema."""
+    run_main_and_assert(
+        input_path=ASYNC_API_DATA_PATH / "schema-format-v2.yaml",
+        output_path=output_file,
+        input_file_type="asyncapi",
+        assert_func=assert_file_content,
+        expected_file="schema_format_v2.py",
+        extra_args=PY310_TARGET_ARGS,
+    )
+
+
+def test_main_asyncapi_unsupported_schema_format(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Reject unsupported embedded schema formats instead of generating wrong models."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "asyncapi_invalid" / "unsupported-schema-format.yaml",
+        output_path=output_file,
+        input_file_type="asyncapi",
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains="Unsupported AsyncAPI schemaFormat 'application/vnd.google.protobuf;version=3'",
+        capsys=capsys,
+    )
+
+
+@pytest.mark.parametrize(
+    ("fixture_name", "expected_stderr_contains"),
+    [
+        (
+            "message-schema-format-non-string.yaml",
+            "AsyncAPI message schemaFormat must be a string",
+        ),
+        (
+            "multiple-trait-headers.yaml",
+            "Multiple AsyncAPI message traits define headers",
+        ),
+        (
+            "schema-format-missing-schema.yaml",
+            "AsyncAPI Multi Format Schema Object requires a schema field",
+        ),
+        (
+            "schema-format-non-string.yaml",
+            "AsyncAPI schemaFormat must be a string",
+        ),
+        (
+            "schema-format-scalar-schema.yaml",
+            "requires a schema object",
+        ),
+        (
+            "unsupported-custom-schema-format.yaml",
+            "Unsupported AsyncAPI schemaFormat 'application/vnd.example.custom+json'",
+        ),
+    ],
+)
+def test_main_asyncapi_invalid_schema_format_documents(
+    fixture_name: str,
+    expected_stderr_contains: str,
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject malformed or unsupported AsyncAPI schemaFormat declarations."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "asyncapi_invalid" / fixture_name,
+        output_path=output_file,
+        input_file_type="asyncapi",
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains=expected_stderr_contains,
+        capsys=capsys,
     )
 
 

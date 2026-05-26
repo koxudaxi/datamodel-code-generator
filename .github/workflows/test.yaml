@@ -239,6 +239,64 @@ jobs:
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
 
+  apache-avro-schema-pass-e2e:
+    name: Apache Avro schema pass e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - name: Install tox
+        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
+      - name: Setup Apache Avro schema pass e2e suite
+        run: tox r -vv --notest --skip-missing-interpreters false -e apache-avro-schema-pass-e2e
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Checkout Apache Avro
+        run: |
+          git clone --filter=blob:none https://github.com/apache/avro.git .tox/apache-avro
+          git -C .tox/apache-avro checkout 9110c693767c1dde2665b2b57939333478b12036
+      - name: Run Apache Avro schema pass e2e suite
+        run: |
+          tox run --skip-uv-sync --skip-pkg-install -e apache-avro-schema-pass-e2e -- \
+            .tox/apache-avro/lang/c/tests/schema_tests/pass \
+            --expected-schemas 28
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+
+  protobuf-official-e2e:
+    name: Protocol Buffers official e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - name: Install tox
+        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
+      - name: Setup Protocol Buffers official e2e suite
+        run: tox r -vv --notest --skip-missing-interpreters false -e protobuf-official-e2e
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Checkout Protocol Buffers
+        run: |
+          git clone --filter=blob:none --no-checkout https://github.com/protocolbuffers/protobuf.git .tox/protobuf
+          git -C .tox/protobuf sparse-checkout init --cone
+          git -C .tox/protobuf sparse-checkout set src conformance benchmarks
+          git -C .tox/protobuf checkout 4376cba55d9e2f44f7e317d9c10e0259d145f8cf
+      - name: Run Protocol Buffers official e2e suite
+        run: |
+          tox run --skip-uv-sync --skip-pkg-install -e protobuf-official-e2e -- \
+            .tox/protobuf \
+            --expected-schemas 65
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+
   test-gate:
     name: test-gate
     if: always()
@@ -249,6 +307,8 @@ jobs:
       - check
       - w3c-xmlschema-e2e
       - asyncapi-spec-json-schemas-e2e
+      - apache-avro-schema-pass-e2e
+      - protobuf-official-e2e
     steps:
       - name: Fail if any test workflow job failed
         run: |
@@ -257,15 +317,21 @@ jobs:
           check_result='${{ needs.check.result }}'
           w3c_xmlschema_e2e_result='${{ needs.w3c-xmlschema-e2e.result }}'
           asyncapi_spec_json_schemas_e2e_result='${{ needs.asyncapi-spec-json-schemas-e2e.result }}'
+          apache_avro_schema_pass_e2e_result='${{ needs.apache-avro-schema-pass-e2e.result }}'
+          protobuf_official_e2e_result='${{ needs.protobuf-official-e2e.result }}'
 
           echo "test: ${test_result}"
           echo "coverage: ${coverage_result}"
           echo "check: ${check_result}"
           echo "w3c xmlschema e2e: ${w3c_xmlschema_e2e_result}"
           echo "asyncapi spec json schemas e2e: ${asyncapi_spec_json_schemas_e2e_result}"
+          echo "apache avro schema pass e2e: ${apache_avro_schema_pass_e2e_result}"
+          echo "protobuf official e2e: ${protobuf_official_e2e_result}"
 
           [ "${test_result}" = "success" ] || exit 1
           [ "${coverage_result}" = "success" ] || exit 1
           [ "${check_result}" = "success" ] || exit 1
           [ "${w3c_xmlschema_e2e_result}" = "success" ] || exit 1
           [ "${asyncapi_spec_json_schemas_e2e_result}" = "success" ] || exit 1
+          [ "${apache_avro_schema_pass_e2e_result}" = "success" ] || exit 1
+          [ "${protobuf_official_e2e_result}" = "success" ] || exit 1

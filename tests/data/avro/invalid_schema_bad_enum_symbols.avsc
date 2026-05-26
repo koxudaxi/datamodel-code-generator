@@ -1,0 +1,5 @@
+{
+  "type": "enum",
+  "name": "BadEnum",
+  "symbols": [1]
+}

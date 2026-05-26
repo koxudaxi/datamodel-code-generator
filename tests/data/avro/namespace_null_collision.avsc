@@ -1,0 +1,33 @@
+{
+  "type": "record",
+  "name": "Envelope",
+  "fields": [
+    {
+      "name": "nullNamespace",
+      "type": {
+        "type": "record",
+        "name": "Address",
+        "fields": [
+          {
+            "name": "line1",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "otherNamespace",
+      "type": {
+        "type": "record",
+        "name": "Address",
+        "namespace": "other",
+        "fields": [
+          {
+            "name": "line1",
+            "type": "string"
+          }
+        ]
+      }
+    }
+  ]
+}

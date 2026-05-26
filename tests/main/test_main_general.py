@@ -37,7 +37,6 @@ from tests.conftest import (
     assert_generated_modules_output,
     assert_httpx_get_kwargs,
     assert_no_uncommented_generated_code,
-    assert_output,
     assert_runtime_import_package,
     assert_warnings_contain,
     assert_warnings_do_not_contain,
@@ -52,6 +51,7 @@ from tests.main.conftest import (
     OPEN_API_DATA_PATH,
     PYTHON_DATA_PATH,
     TIMESTAMP,
+    run_generate_and_assert,
     run_generate_file_and_assert,
     run_main_and_assert,
     run_main_with_args,
@@ -1919,66 +1919,66 @@ def test_use_type_checking_imports_for_multi_module_pydantic_ruff() -> None:
 def test_generate_returns_string_when_output_none() -> None:
     """Test that generate() returns str when output=None for single file."""
     json_schema = '{"type": "object", "properties": {"name": {"type": "string"}}}'
-    result = generate(
-        json_schema,
+    run_generate_and_assert(
+        input_=json_schema,
         input_file_type=InputFileType.JsonSchema,
         input_filename="test.json",
         disable_timestamp=True,
+        expected_file=EXPECTED_MAIN_PATH / "generate_returns_string_when_output_none.py",
     )
-    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_when_output_none.py")
 
 
 def test_generate_returns_string_with_pydantic_v2() -> None:
     """Test that generate() returns str for Pydantic v2 models."""
     json_schema = '{"type": "object", "properties": {"value": {"type": "number"}}}'
-    result = generate(
-        json_schema,
+    run_generate_and_assert(
+        input_=json_schema,
         input_file_type=InputFileType.JsonSchema,
         input_filename="schema.json",
         output_model_type=DataModelType.PydanticV2BaseModel,
         disable_timestamp=True,
+        expected_file=EXPECTED_MAIN_PATH / "generate_returns_string_with_pydantic_v2.py",
     )
-    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_pydantic_v2.py")
 
 
 def test_generate_returns_string_with_dataclass() -> None:
     """Test that generate() returns str for dataclass models."""
     json_schema = '{"type": "object", "properties": {"value": {"type": "string"}}}'
-    result = generate(
-        json_schema,
+    run_generate_and_assert(
+        input_=json_schema,
         input_file_type=InputFileType.JsonSchema,
         input_filename="data.json",
         output_model_type=DataModelType.DataclassesDataclass,
         disable_timestamp=True,
+        expected_file=EXPECTED_MAIN_PATH / "generate_returns_string_with_dataclass.py",
     )
-    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_dataclass.py")
 
 
 def test_generate_uses_multiline_docstring_by_default() -> None:
     """Test that schema descriptions keep the historical multi-line docstring format."""
     json_schema = '{"title": "Person", "description": "Person model", "type": "object", "properties": {}}'
-    result = generate(
-        json_schema,
+    run_generate_and_assert(
+        input_=json_schema,
         input_file_type=InputFileType.JsonSchema,
         input_filename="schema.json",
         use_schema_description=True,
         disable_timestamp=True,
+        expected_file=EXPECTED_MAIN_PATH / "generate_uses_multiline_docstring_by_default.py",
     )
-    assert_output(result, EXPECTED_MAIN_PATH / "generate_uses_multiline_docstring_by_default.py")
 
 
 def test_generate_uses_single_line_docstring_when_enabled() -> None:
     """Test that schema descriptions use one-line docstrings when requested."""
     json_schema = '{"title": "Person", "description": "Person model", "type": "object", "properties": {}}'
-    result = generate(
-        json_schema,
+    run_generate_and_assert(
+        input_=json_schema,
         input_file_type=InputFileType.JsonSchema,
         input_filename="schema.json",
         use_schema_description=True,
         use_single_line_docstring=True,
         disable_timestamp=True,
+        expected_file=EXPECTED_MAIN_PATH / "generate_uses_single_line_docstring_when_enabled.py",
     )
-    assert_output(result, EXPECTED_MAIN_PATH / "generate_uses_single_line_docstring_when_enabled.py")
 
 
 @pytest.mark.cli_doc(
@@ -2096,63 +2096,61 @@ def test_generate_returns_string_with_custom_file_header() -> None:
     """Test generate() with custom_file_header when output=None."""
     json_schema = '{"type": "object", "properties": {"name": {"type": "string"}}}'
     custom_header = "# Custom header\n# More comments"
-    result = generate(
-        json_schema,
+    run_generate_and_assert(
+        input_=json_schema,
         input_file_type=InputFileType.JsonSchema,
         custom_file_header=custom_header,
+        expected_file=EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header.py",
     )
-    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header.py")
 
 
 def test_generate_returns_string_with_custom_file_header_and_code() -> None:
     """Test generate() with custom_file_header containing code after docstring."""
     json_schema = '{"type": "object", "properties": {"id": {"type": "integer"}}}'
     custom_header = '"""Module docstring."""\n\nimport sys'
-    result = generate(
-        json_schema,
+    run_generate_and_assert(
+        input_=json_schema,
         input_file_type=InputFileType.JsonSchema,
         custom_file_header=custom_header,
+        expected_file=EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header_and_code.py",
     )
-    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header_and_code.py")
 
 
 def test_generate_returns_string_with_custom_file_header_no_future() -> None:
     """Test generate() with custom_file_header when body has no future imports."""
     json_schema = '{"type": "object", "properties": {"id": {"type": "integer"}}}'
     custom_header = "# Custom header for legacy code"
-    result = generate(
-        json_schema,
+    run_generate_and_assert(
+        input_=json_schema,
         input_file_type=InputFileType.JsonSchema,
         custom_file_header=custom_header,
         disable_future_imports=True,
+        expected_file=EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header_no_future.py",
     )
-    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header_no_future.py")
 
 
 def test_generate_with_dict_jsonschema() -> None:
     """Test generate() with dict input as JsonSchema."""
     from tests.data.dict_input import jsonschema_dict
 
-    result = generate(
-        jsonschema_dict,
+    run_generate_and_assert(
+        input_=jsonschema_dict,
         input_file_type=InputFileType.JsonSchema,
         disable_timestamp=True,
+        expected_file=EXPECTED_MAIN_PATH / "dict_input" / "jsonschema.py",
     )
-
-    assert_output(result, EXPECTED_MAIN_PATH / "dict_input" / "jsonschema.py")
 
 
 def test_generate_with_dict_openapi() -> None:
     """Test generate() with dict input as OpenAPI."""
     from tests.data.dict_input import openapi_dict
 
-    result = generate(
-        openapi_dict,
+    run_generate_and_assert(
+        input_=openapi_dict,
         input_file_type=InputFileType.OpenAPI,
         disable_timestamp=True,
+        expected_file=EXPECTED_MAIN_PATH / "dict_input" / "openapi.py",
     )
-
-    assert_output(result, EXPECTED_MAIN_PATH / "dict_input" / "openapi.py")
 
 
 def test_generate_with_dict_auto_raises_error() -> None:
@@ -2187,13 +2185,13 @@ def test_generate_with_dict_openapi_validation_warns() -> None:
 
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
-        result = generate(
-            openapi_dict,
+        run_generate_and_assert(
+            input_=openapi_dict,
             input_file_type=InputFileType.OpenAPI,
             validation=True,
             disable_timestamp=True,
+            expected_file=EXPECTED_MAIN_PATH / "dict_input" / "openapi.py",
         )
-        assert_output(result, EXPECTED_MAIN_PATH / "dict_input" / "openapi.py")
         # Check that both deprecated warning and dict input warning were raised
         assert_warnings_contain(w, "deprecated", "dict input")
 
@@ -2241,11 +2239,11 @@ def test_generate_config_with_union_mode() -> None:
         union_mode=UnionMode.left_to_right,
         disable_timestamp=True,
     )
-    result = generate(
+    run_generate_and_assert(
         input_='{"type": "object", "properties": {"value": {"anyOf": [{"type": "string"}, {"type": "integer"}]}}}',
         config=config,
+        expected_file=EXPECTED_MAIN_PATH / "generate_config_union_mode.py",
     )
-    assert_output(result, EXPECTED_MAIN_PATH / "generate_config_union_mode.py")
 
 
 def test_generate_with_config_and_kwargs_raises_error(output_file: Path) -> None:
@@ -2398,6 +2396,7 @@ def test_default_values_invalid_json(output_file: Path, capsys: pytest.CaptureFi
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Unable to load default values mapping",
+        file_should_not_exist=output_file,
     )
 
 
@@ -2479,8 +2478,11 @@ def test_import_generate_config_from_top_level() -> None:
 def test_generate_with_imported_config_from_top_level() -> None:
     """Test generate() with GenerateConfig imported from top-level."""
     config = datamodel_code_generator.GenerateConfig(class_name="TestModel", disable_timestamp=True)
-    result = generate('{"type": "object"}', config=config)
-    assert_output(result, EXPECTED_MAIN_PATH / "generate_with_imported_config_from_top_level.py")
+    run_generate_and_assert(
+        input_='{"type": "object"}',
+        config=config,
+        expected_file=EXPECTED_MAIN_PATH / "generate_with_imported_config_from_top_level.py",
+    )
 
 
 @pytest.mark.allow_direct_assert

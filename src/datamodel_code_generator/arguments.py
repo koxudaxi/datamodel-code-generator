@@ -209,7 +209,8 @@ base_options.add_argument(
     "--input-file-type",
     help=(
         "Input file type (default: auto). "
-        "Use 'jsonschema', 'openapi', 'asyncapi', 'graphql', or 'xmlschema' for schema definitions. "
+        "Use 'jsonschema', 'openapi', 'asyncapi', 'graphql', 'xmlschema', 'protobuf', or 'avro' "
+        "for schema definitions. "
         "Use 'json', 'yaml', or 'csv' for raw sample data to infer a schema automatically."
     ),
     choices=[i.value for i in InputFileType],
@@ -1113,7 +1114,9 @@ base_options.add_argument(
     "OpenAPI: auto, 3.0, 3.1. "
     "AsyncAPI: auto, 2.0, 3.0. "
     "XMLSchema: auto, 1.0, 1.1. "
-    "(default: auto - detected from $schema, openapi/asyncapi field, or XML Schema versioning attributes)",
+    "Protobuf: auto, proto2, proto3, 2023. "
+    "(default: auto - detected from $schema, openapi/asyncapi field, XML Schema versioning attributes, "
+    "or Protobuf syntax/edition)",
     default=None,
 )
 base_options.add_argument(

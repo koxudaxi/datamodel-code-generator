@@ -77,6 +77,8 @@ InputFileType: TypeAlias = Literal[
     'asyncapi',
     'jsonschema',
     'xmlschema',
+    'protobuf',
+    'avro',
     'json',
     'yaml',
     'dict',

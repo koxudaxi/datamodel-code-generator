@@ -1,0 +1,48 @@
+asyncapi: 3.0.0
+info:
+  title: AsyncAPI multi-format schemas
+  version: 1.0.0
+channels:
+  user/signup:
+    address: user/signup
+    messages:
+      userSignup:
+        headers:
+          schemaFormat: application/schema+json;version=draft-07
+          schema:
+            type: object
+            properties:
+              correlationId:
+                type: string
+        payload:
+          schemaFormat: application/vnd.apache.avro+yaml;version=1.9.0
+          schema:
+            type: record
+            name: UserSignup
+            namespace: com.example
+            fields:
+              - name: displayName
+                type: string
+              - name: age
+                type:
+                  - "null"
+                  - int
+                default: null
+operations:
+  receiveUserSignup:
+    action: receive
+    channel:
+      $ref: "#/channels/user~1signup"
+    messages:
+      - $ref: "#/channels/user~1signup/messages/userSignup"
+components:
+  schemas:
+    UserStatus:
+      schemaFormat: application/vnd.aai.asyncapi+yaml;version=3.0.0
+      schema:
+        type: object
+        required:
+          - status
+        properties:
+          status:
+            type: string

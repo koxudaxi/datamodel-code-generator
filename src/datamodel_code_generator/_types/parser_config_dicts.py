@@ -24,6 +24,7 @@ if TYPE_CHECKING:
         NamingStrategy,
         OpenAPIScope,
         OpenAPIVersion,
+        ProtobufVersion,
         ReadOnlyWriteOnlyModelType,
         ReuseScope,
         StrictTypes,
@@ -184,6 +185,10 @@ class JSONSchemaParserConfigDict(ParserConfigDict):
     schema_version_mode: NotRequired[VersionMode | None]
 
 
+class AvroParserConfigDict(JSONSchemaParserConfigDict, closed=True):
+    pass
+
+
 class OpenAPIParserConfigDict(JSONSchemaParserConfigDict):
     openapi_scopes: NotRequired[list[OpenAPIScope] | None]
     include_path_parameters: NotRequired[bool]
@@ -197,6 +202,10 @@ class AsyncAPIParserConfigDict(OpenAPIParserConfigDict, closed=True):
     asyncapi_version: NotRequired[AsyncAPIVersion | None]
 
 
+class ProtobufParserConfigDict(JSONSchemaParserConfigDict, closed=True):
+    protobuf_version: NotRequired[ProtobufVersion | None]
+
+
 class XMLSchemaParserConfigDict(JSONSchemaParserConfigDict, closed=True):
     xmlschema_version: NotRequired[XMLSchemaVersion | None]
 
@@ -205,8 +214,10 @@ ModelDict: TypeAlias = (
     ParserConfigDict
     | GraphQLParserConfigDict
     | JSONSchemaParserConfigDict
+    | AvroParserConfigDict
     | OpenAPIParserConfigDict
     | AsyncAPIParserConfigDict
+    | ProtobufParserConfigDict
     | XMLSchemaParserConfigDict
 )
 

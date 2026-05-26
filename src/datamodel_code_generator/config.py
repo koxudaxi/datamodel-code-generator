@@ -28,6 +28,7 @@ from datamodel_code_generator.enums import (
     NamingStrategy,
     OpenAPIScope,
     OpenAPIVersion,
+    ProtobufVersion,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     TargetPydanticVersion,
@@ -356,6 +357,10 @@ class JSONSchemaParserConfig(ParserConfig):
     schema_version_mode: VersionMode | None = None
 
 
+class AvroParserConfig(JSONSchemaParserConfig):
+    """Configuration model for AvroParser.__init__()."""
+
+
 class OpenAPIParserConfig(JSONSchemaParserConfig):
     """Configuration model for OpenAPIParser.__init__()."""
 
@@ -377,6 +382,12 @@ class XMLSchemaParserConfig(JSONSchemaParserConfig):
     """Configuration model for XMLSchemaParser.__init__()."""
 
     xmlschema_version: XMLSchemaVersion | None = None
+
+
+class ProtobufParserConfig(JSONSchemaParserConfig):
+    """Configuration model for ProtobufParser.__init__()."""
+
+    protobuf_version: ProtobufVersion | None = None
 
 
 class ParseConfig(BaseModel):

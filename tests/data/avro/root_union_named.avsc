@@ -1,0 +1,39 @@
+[
+  "null",
+  {
+    "type": "string"
+  },
+  {
+    "type": {
+      "type": "long"
+    }
+  },
+  {
+    "type": "record",
+    "name": "UnionRecord",
+    "fields": [
+      {
+        "name": "value",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "type": "enum",
+    "name": "UnionEnum",
+    "symbols": ["A", "B"]
+  },
+  {
+    "type": "fixed",
+    "name": "UnionFixed",
+    "size": 8
+  },
+  {
+    "type": "array",
+    "items": "bytes"
+  },
+  {
+    "type": "map",
+    "values": "int"
+  }
+]

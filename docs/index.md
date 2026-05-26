@@ -14,7 +14,7 @@
 
 ## ✨ What it does
 
-- 📄 Converts **OpenAPI 3**, **JSON Schema**, **XML Schema**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
+- 📄 Converts **OpenAPI 3**, **AsyncAPI**, **JSON Schema**, **Apache Avro**, **XML Schema**, **Protocol Buffers/gRPC**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
 - 🐍 Generates from **existing Python types** (Pydantic, dataclass, TypedDict) via `--input-model`
 - 🎯 Generates **Pydantic v2**, **Pydantic v2 dataclass**, **dataclasses**, **TypedDict**, or **msgspec** output
 - 🔗 Handles complex schemas: `$ref`, `allOf`, `oneOf`, `anyOf`, enums, and nested types
@@ -98,8 +98,11 @@ datamodel-codegen --input pet.json --input-file-type jsonschema --output-model-t
 | Input Type | File Types | Example |
 |------------|------------|---------|
 | 📘 [OpenAPI 3](openapi.md) | `.yaml`, `.json` | API specifications |
+| 📡 [AsyncAPI](asyncapi.md) | `.yaml`, `.json` | Event-driven API specifications |
 | 📋 [JSON Schema](jsonschema.md) | `.json` | Data validation schemas |
+| 🪶 [Apache Avro](avro.md) | `.avsc`, `.json` | Avro schemas |
 | 🧾 XML Schema | `.xsd` | XML document schemas |
+| 🧩 [Protocol Buffers / gRPC](protobuf.md) | `.proto` | Protobuf messages and service schemas |
 | 🔷 [GraphQL](graphql.md) | `.graphql` | GraphQL type definitions |
 | 📊 [JSON/YAML Data](jsondata.md) | `.json`, `.yaml` | Infer schema from data |
 | 🐍 [Python Models](python-model.md) | `.py` | Pydantic, dataclass, TypedDict |

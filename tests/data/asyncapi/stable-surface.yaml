@@ -1,0 +1,150 @@
+asyncapi: 3.0.0
+info:
+  title: AsyncAPI stable surface
+  version: 1.0.0
+channels:
+  userLifecycle:
+    $ref: '#/components/channels/UserLifecycle'
+  badRef:
+    $ref: true
+  cycleChannel:
+    $ref: '#/channels/cycleChannel'
+operations:
+  receiveUserCreated:
+    $ref: '#/components/operations/ReceiveUserCreated'
+  badRef:
+    $ref: true
+  cycleOperation:
+    $ref: '#/operations/cycleOperation'
+  badReplyScalar:
+    reply: true
+  badReplyRef:
+    reply:
+      $ref: true
+  emptyReply:
+    reply:
+      channel:
+        $ref: '#/components/channels/UserLifecycle'
+  replyByRef:
+    reply:
+      $ref: '#/components/replies/UserCreatedReply'
+  replyCycle:
+    reply:
+      $ref: '#/components/replies/ReplyCycle'
+components:
+  replies:
+    ReplyCycle:
+      $ref: '#/components/replies/ReplyCycle'
+    UserCreatedReply:
+      messages:
+        - $ref: '#/components/messages/UserCreatedAck'
+  channels:
+    UserLifecycle:
+      address: users.lifecycle
+      bindings:
+        kafka:
+          topic: users.lifecycle
+          partitions: 3
+          bindingVersion: '0.5.0'
+      messages:
+        userCreated:
+          $ref: '#/components/messages/UserCreated'
+  operations:
+    ReceiveUserCreated:
+      action: receive
+      channel:
+        $ref: '#/components/channels/UserLifecycle'
+      bindings:
+        kafka:
+          groupId:
+            type: string
+            enum:
+              - user-service
+          clientId:
+            type: string
+      messages:
+        - $ref: '#/components/messages/UserCreated'
+      reply:
+        channel:
+          $ref: '#/components/channels/UserLifecycle'
+        messages:
+          - $ref: '#/components/messages/UserCreatedAck'
+  messageTraits:
+    noHeaders:
+      correlationId:
+        description: Not a schema-bearing trait field
+    cycleTrait:
+      $ref: '#/components/messageTraits/cycleTrait'
+    traceHeaders:
+      headers:
+        type: object
+        required:
+          - traceId
+        properties:
+          traceId:
+            type: string
+          attempt:
+            type: integer
+  messages:
+    UserCreated:
+      traits:
+        - not-a-trait
+        - $ref: true
+        - $ref: '#/components/messageTraits/noHeaders'
+        - $ref: '#/components/messageTraits/traceHeaders'
+      bindings:
+        kafka:
+          key:
+            type: string
+            enum:
+              - user-created
+          bindingVersion: '0.5.0'
+      payload:
+        $ref: '#/components/schemas/UserCreatedPayload'
+    UserCreatedAck:
+      payload:
+        type: object
+        required:
+          - accepted
+        properties:
+          accepted:
+            type: boolean
+          reason:
+            type:
+              - string
+              - 'null'
+  schemas:
+    OpenApiDecorated:
+      schemaFormat: application/vnd.oai.openapi+json;version=3.1.0
+      schema:
+        type: object
+        properties:
+          openapiId:
+            type: string
+    WrapperWithoutFormat:
+      x-source: multi-format-default
+      schema:
+        type: object
+        properties:
+          wrapped:
+            type: boolean
+    UserCreatedPayload:
+      type: object
+      required:
+        - user
+        - eventId
+      properties:
+        eventId:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+    User:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email

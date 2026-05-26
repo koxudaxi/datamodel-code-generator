@@ -1,0 +1,16 @@
+edition = "2023";
+
+package example.spec.edition;
+
+option features.field_presence = EXPLICIT;
+
+message EditionBucket {
+  string name = 1;
+  repeated int32 counts = 2;
+  map<string, string> labels = 3;
+
+  oneof choice {
+    string text = 4;
+    int32 number = 5;
+  }
+}
