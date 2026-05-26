@@ -165,15 +165,15 @@ def test_main_asyncapi_v2_message_schema_format(output_file: Path) -> None:
     )
 
 
-def test_main_asyncapi_unsupported_schema_format(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """Reject unsupported embedded schema formats instead of generating wrong models."""
+def test_main_asyncapi_protobuf_schema_format(output_file: Path) -> None:
+    """Dispatch AsyncAPI embedded Protocol Buffers schemas to the Protobuf parser."""
     run_main_and_assert(
-        input_path=DATA_PATH / "asyncapi_invalid" / "unsupported-schema-format.yaml",
+        input_path=ASYNC_API_DATA_PATH / "protobuf-schema-format.yaml",
         output_path=output_file,
         input_file_type="asyncapi",
-        expected_exit=Exit.ERROR,
-        expected_stderr_contains="Unsupported AsyncAPI schemaFormat 'application/vnd.google.protobuf;version=3'",
-        capsys=capsys,
+        assert_func=assert_file_content,
+        expected_file="protobuf_schema_format.py",
+        extra_args=PY310_TARGET_ARGS,
     )
 
 
@@ -195,6 +195,14 @@ def test_main_asyncapi_unsupported_schema_format(output_file: Path, capsys: pyte
         (
             "schema-format-non-string.yaml",
             "AsyncAPI schemaFormat must be a string",
+        ),
+        (
+            "raml-schema-format.yaml",
+            "Unsupported AsyncAPI schemaFormat 'application/raml+yaml'",
+        ),
+        (
+            "protobuf-schema-format-non-string.yaml",
+            "Protocol Buffers schemaFormat requires a .proto schema string",
         ),
         (
             "schema-format-scalar-schema.yaml",

@@ -95,6 +95,8 @@ def test_infer_input_type() -> None:  # noqa: PLR0912
         result = infer_input_type(file.read_text(encoding="utf-8"))
         assert result == InputFileType.XMLSchema, f"{file} was the wrong type!"
 
+    assert infer_input_type('syntax = "proto3"; message User { string id = 1; }') == InputFileType.Protobuf
+
 
 def test_is_xml_text() -> None:
     """Test XML-looking text detection for input type inference."""

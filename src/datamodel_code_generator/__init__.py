@@ -1099,9 +1099,6 @@ def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
         if is_xml_schema_text(text):
             return InputFileType.XMLSchema
 
-    if _is_protobuf_text(text):
-        return InputFileType.Protobuf
-
     try:
         data = load_yaml(text)
     except get_yaml_parse_errors():
@@ -1118,6 +1115,8 @@ def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
         if is_schema(data):
             return InputFileType.JsonSchema
         return InputFileType.Json
+    if _is_protobuf_text(text):
+        return InputFileType.Protobuf
     if isinstance(data, list):
         from datamodel_code_generator.parser.avro import is_avro_schema_data  # noqa: PLC0415
 

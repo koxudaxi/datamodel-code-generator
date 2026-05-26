@@ -20,6 +20,7 @@ from datamodel_code_generator.enums import AsyncAPIVersion
 from datamodel_code_generator.parser.avro import convert_avro_schema_data
 from datamodel_code_generator.parser.jsonschema import get_model_by_path, unescape_json_pointer_segment
 from datamodel_code_generator.parser.openapi import OpenAPIParser
+from datamodel_code_generator.parser.protobuf import convert_protobuf_schema_data
 from datamodel_code_generator.reference import is_url
 
 if TYPE_CHECKING:
@@ -54,6 +55,7 @@ AVRO_SCHEMA_FORMATS: frozenset[str] = frozenset({
 })
 PROTOBUF_SCHEMA_FORMATS: frozenset[str] = frozenset({"application/vnd.google.protobuf"})
 RAML_SCHEMA_FORMATS: frozenset[str] = frozenset({"application/raml+yaml"})
+INTERNAL_SCHEMA_CONTAINER = "x-datamodel-code-generator-asyncapi-schemas"
 
 
 @dataclass(frozen=True)
@@ -101,6 +103,10 @@ def _make_model_name(*parts: object) -> str:
     return "".join(words) or "AsyncAPIModel"
 
 
+def _escape_context_path_part(part: str) -> str:
+    return part.removeprefix("#/").replace("~", "~0").replace("/", "~1")
+
+
 def _schema_format_media_type(schema_format: str) -> str:
     return schema_format.split(";", maxsplit=1)[0].strip().lower()
 
@@ -118,7 +124,7 @@ def _unsupported_schema_format_error(schema_format: str, path: list[str]) -> Err
     msg = (
         f"Unsupported AsyncAPI schemaFormat {schema_format!r} at {_path_to_string(path)}. "
         "Supported embedded schema formats are AsyncAPI Schema Object, JSON Schema, "
-        "OpenAPI Schema Object, and Avro. Protocol Buffers, RAML, and custom schema "
+        "OpenAPI Schema Object, Avro, and Protocol Buffers. RAML and custom schema "
         "formats are not supported inside AsyncAPI documents."
     )
     return Error(msg)
@@ -137,9 +143,35 @@ def _schema_format_kind(schema_format: str | None, path: list[str]) -> str:
             return "openapi"
         case _ if media_type in AVRO_SCHEMA_FORMATS:
             return "avro"
-        case _ if media_type in PROTOBUF_SCHEMA_FORMATS | RAML_SCHEMA_FORMATS:
+        case _ if media_type in PROTOBUF_SCHEMA_FORMATS:
+            return "protobuf"
+        case _ if media_type in RAML_SCHEMA_FORMATS:
             raise _unsupported_schema_format_error(schema_format, path)
     raise _unsupported_schema_format_error(schema_format, path)
+
+
+def _move_json_schema_definitions_to_components(
+    schema: dict[str, YamlValue],
+    *,
+    ref_prefix: str = "#/components/schemas",
+) -> dict[str, YamlValue]:
+    if isinstance(definitions := schema.pop("definitions", None), dict):
+        schema["components"] = {"schemas": definitions}
+
+    def update_refs(value: YamlValue) -> None:
+        match value:
+            case dict():
+                if (ref := value.get("$ref")) and isinstance(ref, str) and ref.startswith("#/definitions/"):
+                    value["$ref"] = f"{ref_prefix}/{ref.removeprefix('#/definitions/')}"
+                    return
+                for item in value.values():
+                    update_refs(item)
+            case list():
+                for item in value:
+                    update_refs(item)
+
+    update_refs(schema)
+    return schema
 
 
 @snooper_to_methods()
@@ -230,9 +262,16 @@ class AsyncAPIParser(OpenAPIParser):
         path: list[str],
     ) -> AsyncAPIContext:
         current_context = self._current_asyncapi_context()
+        context_path = path
+        if path[: len(current_context.root_parts)] == current_context.root_parts:
+            context_path = path[len(current_context.root_parts) :]
         return AsyncAPIContext(
             raw_obj=converted_schema,
-            root_parts=[*current_context.root_parts, "#/asyncapi-schemas", *path],
+            root_parts=[
+                *current_context.root_parts,
+                "__asyncapi_schemas__",
+                *(_escape_context_path_part(part) for part in context_path),
+            ],
             base_path=current_context.base_path,
             base_url=current_context.base_url,
         )
@@ -273,6 +312,34 @@ class AsyncAPIParser(OpenAPIParser):
                 converted_schema.setdefault("title", name)
                 context = self._schema_context_for_converted_schema(converted_schema, path)
                 return [self._schema(name, converted_schema, context.root_parts, context, parse_as_file=True)]
+            case "protobuf":
+                context = self._current_asyncapi_context()
+                converted_schema_key = "_".join(_escape_context_path_part(part) for part in path) or name
+                ref_prefix = f"#/{INTERNAL_SCHEMA_CONTAINER}/{converted_schema_key}/components/schemas"
+                converted_schema = _move_json_schema_definitions_to_components(
+                    convert_protobuf_schema_data(raw_schema, encoding=self.encoding),
+                    ref_prefix=ref_prefix,
+                )
+                converted_schema.setdefault("title", name)
+                context.raw_obj.setdefault(INTERNAL_SCHEMA_CONTAINER, {})[converted_schema_key] = converted_schema
+                schemas = converted_schema.get("components", {}).get("schemas", {})
+                return [
+                    self._schema(
+                        schema_name,
+                        component_schema,
+                        [
+                            *context.root_parts,
+                            f"#/{INTERNAL_SCHEMA_CONTAINER}",
+                            converted_schema_key,
+                            "components",
+                            "schemas",
+                            schema_name,
+                        ],
+                        context,
+                    )
+                    for schema_name, component_schema in _iter_mapping_items(schemas)
+                    if isinstance(component_schema, (dict, bool))
+                ]
             case _:  # pragma: no cover
                 raise _unsupported_schema_format_error(schema_format or "", path)
 

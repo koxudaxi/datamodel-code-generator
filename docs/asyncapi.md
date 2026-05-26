@@ -96,8 +96,11 @@ Supported embedded schema formats are:
 | `application/schema+json` / `application/schema+yaml` | Parsed with the JSON Schema/OpenAPI schema stack |
 | `application/vnd.oai.openapi...` | Parsed with the OpenAPI schema stack |
 | `application/vnd.apache.avro...` | Converted with the Avro parser, then generated as Python models |
+| `application/vnd.google.protobuf` | Converted with the Protocol Buffers parser, then generated as Python models |
 
-Protocol Buffers, RAML, XML Schema, and custom embedded `schemaFormat` values inside an AsyncAPI document are rejected with an explicit error instead of producing partial or misleading models. Use the dedicated top-level `protobuf`, `xmlschema`, or other input types for those schema files.
+RAML, XML Schema, and custom embedded `schemaFormat` values inside an AsyncAPI document are rejected with an explicit error instead of producing partial or misleading models. Use the dedicated top-level `xmlschema` or other input types for those schema files.
+
+Embedded Protocol Buffers schemas support inline `.proto` source strings. Use the top-level `protobuf` input type for multi-file `.proto` schemas that depend on local imports.
 
 ## Limitations
 

@@ -10,7 +10,11 @@ channels:
         payload:
           schemaFormat: application/vnd.google.protobuf;version=3
           schema: |
-            syntax = "proto3";
+            syntax = "proto2";
             message ProtoEvent {
-              string id = 1;
+              required string id = 1;
+              repeated ProtoChild children = 2;
+            }
+            message ProtoChild {
+              optional string name = 1;
             }
