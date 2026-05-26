@@ -1,10 +1,10 @@
 # Schema Version Support
 
-This document describes the JSON Schema, OpenAPI, Apache Avro, and XML Schema versions supported by datamodel-code-generator.
+This document describes the JSON Schema, OpenAPI, Apache Avro, XML Schema, and Protocol Buffers versions supported by datamodel-code-generator.
 
 ## Overview
 
-datamodel-code-generator supports multiple schema formats including JSON Schema, OpenAPI, Apache Avro, and XML Schema. By default, the tool operates in **Lenient mode**, accepting all features regardless of version declarations for formats that carry version information. This ensures maximum compatibility with real-world schemas that often mix features from different versions.
+datamodel-code-generator supports multiple schema formats including JSON Schema, OpenAPI, Apache Avro, XML Schema, and Protocol Buffers. By default, the tool operates in **Lenient mode**, accepting all features regardless of version declarations for formats that carry version information. This ensures maximum compatibility with real-world schemas that often mix features from different versions.
 
 ## JSON Schema Version Support
 
@@ -92,6 +92,26 @@ datamodel-code-generator detects the OpenAPI version from the `openapi` field:
 - `openapi: "3.0.x"` -> OpenAPI 3.0
 - `openapi: "3.1.x"` -> OpenAPI 3.1
 - No `openapi` field -> Fallback to OpenAPI 3.1
+
+## Protocol Buffers Version Support
+
+### Supported Versions
+
+| Version | Spec URL | Notes |
+|---------|----------|-------|
+| proto2 | [protobuf.dev/reference/protobuf/proto2-spec](https://protobuf.dev/reference/protobuf/proto2-spec/) | `required`, `optional`, `repeated`, defaults, extensions |
+| proto3 | [protobuf.dev/reference/protobuf/proto3-spec](https://protobuf.dev/reference/protobuf/proto3-spec/) | implicit field defaults, `optional`, maps, services |
+| edition 2023 | [protobuf.dev/editions](https://protobuf.dev/programming-guides/editions/) | Supported by the bundled `protoc` runtime |
+
+### Version Detection
+
+datamodel-code-generator detects Protocol Buffers syntax from each compiled `.proto` descriptor:
+
+- `syntax = "proto3";` -> proto3
+- `syntax = "proto2";` or no syntax declaration -> proto2
+- `edition = "2023";` -> edition 2023
+- `--schema-version proto2`, `--schema-version proto3`, or `--schema-version 2023` can override
+  auto-detection
 
 ## Apache Avro Schema Support
 
@@ -300,3 +320,4 @@ In **Strict mode** (`--schema-version-mode strict`), warnings are emitted for ve
 - [JSON Schema Guide](./jsonschema.md) - JSON Schema usage examples
 - [OpenAPI Guide](./openapi.md) - OpenAPI usage examples
 - [Apache Avro Guide](./avro.md) - Avro schema usage examples
+- [Protocol Buffers / gRPC Guide](./protobuf.md) - Protocol Buffers schema usage examples

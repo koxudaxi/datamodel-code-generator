@@ -27,6 +27,7 @@ from datamodel_code_generator.enums import (
     NamingStrategy,
     OpenAPIScope,
     OpenAPIVersion,
+    ProtobufVersion,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     TargetPydanticVersion,
@@ -374,6 +375,12 @@ class XMLSchemaParserConfig(JSONSchemaParserConfig):
     """Configuration model for XMLSchemaParser.__init__()."""
 
     xmlschema_version: XMLSchemaVersion | None = None
+
+
+class ProtobufParserConfig(JSONSchemaParserConfig):
+    """Configuration model for ProtobufParser.__init__()."""
+
+    protobuf_version: ProtobufVersion | None = None
 
 
 class ParseConfig(BaseModel):

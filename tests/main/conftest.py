@@ -7,6 +7,7 @@ import inspect
 import shutil
 import sys
 import time
+import warnings
 from argparse import Namespace
 from collections.abc import Callable, Generator, Sequence
 from contextlib import contextmanager
@@ -26,6 +27,7 @@ from tests.conftest import (
     _validation_stats,
     assert_directory_content,
     assert_output,
+    assert_warnings_contain,
     freeze_time,
     validate_generated_code,
 )
@@ -35,6 +37,7 @@ InputFileTypeLiteral = Literal[
     "openapi",
     "jsonschema",
     "xmlschema",
+    "protobuf",
     "avro",
     "json",
     "yaml",
@@ -77,6 +80,7 @@ OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
 JSON_SCHEMA_DATA_PATH: Path = DATA_PATH / "jsonschema"
 GRAPHQL_DATA_PATH: Path = DATA_PATH / "graphql"
 XML_SCHEMA_DATA_PATH: Path = DATA_PATH / "xmlschema"
+PROTOBUF_DATA_PATH: Path = DATA_PATH / "protobuf"
 AVRO_DATA_PATH: Path = DATA_PATH / "avro"
 JSON_DATA_PATH: Path = DATA_PATH / "json"
 CSV_DATA_PATH: Path = DATA_PATH / "csv"
@@ -88,6 +92,7 @@ EXPECTED_OPENAPI_PATH: Path = EXPECTED_MAIN_PATH / "openapi"
 EXPECTED_JSON_SCHEMA_PATH: Path = EXPECTED_MAIN_PATH / "jsonschema"
 EXPECTED_GRAPHQL_PATH: Path = EXPECTED_MAIN_PATH / "graphql"
 EXPECTED_XML_SCHEMA_PATH: Path = EXPECTED_MAIN_PATH / "xmlschema"
+EXPECTED_PROTOBUF_PATH: Path = EXPECTED_MAIN_PATH / "protobuf"
 EXPECTED_AVRO_PATH: Path = EXPECTED_MAIN_PATH / "avro"
 EXPECTED_JSON_PATH: Path = EXPECTED_MAIN_PATH / "json"
 EXPECTED_CSV_PATH: Path = EXPECTED_MAIN_PATH / "csv"
@@ -181,6 +186,23 @@ def _assert_captured_output(
         pytest.fail(f"Expected stderr to contain: {expected_stderr_contains!r}\n\nActual stderr:\n{captured.err}")
     if assert_no_stderr and captured.err:  # pragma: no cover
         pytest.fail(f"Expected no stderr, but got:\n{captured.err}")
+
+
+def _assert_file_does_not_exist(path: Path) -> None:
+    if path.exists():  # pragma: no cover
+        pytest.fail(f"File should not exist: {path}")
+
+
+def _assert_python_module_importable(path: Path, module_name: str, attribute: str | None = None) -> None:
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None:  # pragma: no cover
+        pytest.fail(f"Unable to load generated module from {path}")
+    if spec.loader is None:  # pragma: no cover
+        pytest.fail(f"Unable to load generated module loader from {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    if attribute is not None and not hasattr(module, attribute):  # pragma: no cover
+        pytest.fail(f"Expected generated module {module_name!r} to define {attribute!r}")
 
 
 def _get_valid_cli_options() -> frozenset[str]:
@@ -330,6 +352,13 @@ def assert_watchfiles_module(result: object) -> None:
         pytest.fail("Expected watchfiles module with a watch attribute")
 
 
+def assert_input_file_type(result: object, expected: InputFileType) -> None:
+    """Assert input type inference selected the expected input file type."""
+    __tracebackhide__ = True
+    if result != expected:  # pragma: no cover
+        pytest.fail(f"Expected input file type {expected!r}, got {result!r}")
+
+
 def assert_watch_called(
     mock_watchfiles: Any,
     *,
@@ -363,6 +392,7 @@ def run_generate_file_and_assert(
     assert_func: AssertFileContent,
     expected_file: str | Path | None = None,
     transform: Callable[[str], str] | None = None,
+    expected_warnings: Sequence[str] | None = None,
     **generate_kwargs: Any,
 ) -> None:
     """Execute generate() for a file input and assert the generated output."""
@@ -384,10 +414,19 @@ def run_generate_file_and_assert(
     if input_file_type is not None:
         generate_options["input_file_type"] = input_file_type
 
-    generate(
-        input_=input_,
-        **generate_options,
-    )
+    if expected_warnings is None:
+        generate(
+            input_=input_,
+            **generate_options,
+        )
+    else:
+        with warnings.catch_warnings(record=True) as warning_records:
+            warnings.simplefilter("always")
+            generate(
+                input_=input_,
+                **generate_options,
+            )
+        assert_warnings_contain(warning_records, *expected_warnings)
 
     if expected_file is None:
         frame = inspect.currentframe()
@@ -432,6 +471,7 @@ def run_main_and_assert(  # noqa: PLR0912
     output_to_expected: Sequence[tuple[str, str | Path]] | None = None,
     assert_output_path_not_exists: bool = False,
     file_should_not_exist: Path | None = None,
+    output_should_not_exist: bool = False,
     # Verification options
     ignore_whitespace: bool = False,
     transform: Callable[[str], str] | None = None,
@@ -449,6 +489,9 @@ def run_main_and_assert(  # noqa: PLR0912
     # Code validation options
     skip_code_validation: bool = False,
     force_exec_validation: bool = False,
+    importable_module_name: str | None = None,
+    importable_module_file: str | Path | None = None,
+    importable_module_attribute: str | None = None,
 ) -> None:
     """Execute main() and assert output.
 
@@ -475,6 +518,7 @@ def run_main_and_assert(  # noqa: PLR0912
         output_to_expected: Compare multiple files
         assert_output_path_not_exists: Assert output_path does NOT exist
         file_should_not_exist: Assert a file does NOT exist
+        output_should_not_exist: Assert output_path does NOT exist
 
     Verification modifiers:
         ignore_whitespace: Ignore whitespace when comparing (for expected_output)
@@ -493,6 +537,9 @@ def run_main_and_assert(  # noqa: PLR0912
             the test environment (only effective when target <= runtime). This catches
             runtime errors that would otherwise be missed. Has no effect when target >
             runtime since compile is skipped in that case.
+        importable_module_name: Import output_path as this module name
+        importable_module_file: Relative file under output_path to import
+        importable_module_attribute: Assert imported module defines this attribute
     """
     __tracebackhide__ = True
 
@@ -535,26 +582,32 @@ def run_main_and_assert(  # noqa: PLR0912
         + int(output_to_expected is not None)
         + int(assert_output_path_not_exists)
         + int(file_should_not_exist is not None)
+        + int(output_should_not_exist)
     )
     if output_verification_modes > 1:  # pragma: no cover
         pytest.fail(
             "Output verification options are mutually exclusive; use exactly one of "
             "standalone assert_func, expected_output, expected_directory, output_to_expected, "
-            "assert_output_path_not_exists, or file_should_not_exist"
+            "assert_output_path_not_exists, file_should_not_exist, or output_should_not_exist"
         )
 
     if assert_output_path_not_exists:
         if output_path is None:  # pragma: no cover
             pytest.fail("output_path is required when using assert_output_path_not_exists")
-        if output_path.exists():  # pragma: no cover
-            pytest.fail(f"Output path should not exist: {output_path}")
-    if file_should_not_exist is not None and file_should_not_exist.exists():  # pragma: no cover
-        pytest.fail(f"File should not exist: {file_should_not_exist}")
+        _assert_file_does_not_exist(output_path)
+    if output_should_not_exist:
+        if output_path is None:  # pragma: no cover
+            pytest.fail("output_path is required when using output_should_not_exist")
+        _assert_file_does_not_exist(output_path)
+    if file_should_not_exist is not None:
+        _assert_file_does_not_exist(file_should_not_exist)
 
     # Skip output verification if expected_exit is not OK
     if expected_exit != Exit.OK:
         return
-    if assert_output_path_not_exists or file_should_not_exist is not None:  # pragma: no cover
+    if (  # pragma: no cover
+        assert_output_path_not_exists or output_should_not_exist or file_should_not_exist is not None
+    ):
         return
 
     # Output verification
@@ -598,6 +651,13 @@ def run_main_and_assert(  # noqa: PLR0912
 
     if output_path is not None and not skip_code_validation:
         _validate_output_files(output_path, extra_args, force_exec_validation=force_exec_validation)
+    if importable_module_name is not None:
+        if output_path is None:  # pragma: no cover
+            pytest.fail("output_path is required when using importable_module_name")
+        importable_path = output_path
+        if importable_module_file is not None:
+            importable_path = output_path / importable_module_file
+        _assert_python_module_importable(importable_path, importable_module_name, importable_module_attribute)
 
 
 def _get_argument_value(arguments: Sequence[str] | None, argument_name: str) -> str | None:
