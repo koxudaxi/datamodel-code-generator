@@ -189,7 +189,7 @@ class AvroParserConfigDict(JSONSchemaParserConfigDict, closed=True):
     pass
 
 
-class OpenAPIParserConfigDict(JSONSchemaParserConfigDict):
+class OpenAPIParserConfigDict(JSONSchemaParserConfigDict, closed=True):
     openapi_scopes: NotRequired[list[OpenAPIScope] | None]
     include_path_parameters: NotRequired[bool]
     use_status_code_in_response_name: NotRequired[bool]
@@ -198,7 +198,13 @@ class OpenAPIParserConfigDict(JSONSchemaParserConfigDict):
     openapi_version: NotRequired[OpenAPIVersion | None]
 
 
-class AsyncAPIParserConfigDict(OpenAPIParserConfigDict, closed=True):
+class AsyncAPIParserConfigDict(JSONSchemaParserConfigDict, closed=True):
+    openapi_scopes: NotRequired[list[OpenAPIScope] | None]
+    include_path_parameters: NotRequired[bool]
+    use_status_code_in_response_name: NotRequired[bool]
+    openapi_include_paths: NotRequired[list[str] | None]
+    openapi_include_info_version: NotRequired[bool]
+    openapi_version: NotRequired[OpenAPIVersion | None]
     asyncapi_version: NotRequired[AsyncAPIVersion | None]
 
 

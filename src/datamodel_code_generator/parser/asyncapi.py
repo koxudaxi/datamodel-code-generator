@@ -90,6 +90,10 @@ def _iter_mapping_items(value: Any) -> list[tuple[str, Any]]:
     return list(value.items()) if isinstance(value, dict) else []
 
 
+def _path_to_string(path: list[str]) -> str:
+    return "/".join(path)
+
+
 def _make_model_name(*parts: object) -> str:
     words: list[str] = []
     for part in parts:
@@ -112,7 +116,7 @@ def _is_multi_format_schema_object(raw_schema: YamlValue) -> bool:
 
 def _unsupported_schema_format_error(schema_format: str, path: list[str]) -> Error:
     msg = (
-        f"Unsupported AsyncAPI schemaFormat {schema_format!r} at {'/'.join(path)}. "
+        f"Unsupported AsyncAPI schemaFormat {schema_format!r} at {_path_to_string(path)}. "
         "Supported embedded schema formats are AsyncAPI Schema Object, JSON Schema, "
         "OpenAPI Schema Object, and Avro. Protocol Buffers, RAML, and custom schema "
         "formats are not supported inside AsyncAPI documents."
@@ -124,16 +128,17 @@ def _schema_format_kind(schema_format: str | None, path: list[str]) -> str:
     if schema_format is None:
         return "asyncapi"
     media_type = _schema_format_media_type(schema_format)
-    if media_type in ASYNCAPI_SCHEMA_FORMATS:
-        return "asyncapi"
-    if media_type in JSON_SCHEMA_FORMATS:
-        return "jsonschema"
-    if media_type in OPENAPI_SCHEMA_FORMATS:
-        return "openapi"
-    if media_type in AVRO_SCHEMA_FORMATS:
-        return "avro"
-    if media_type in PROTOBUF_SCHEMA_FORMATS | RAML_SCHEMA_FORMATS:
-        raise _unsupported_schema_format_error(schema_format, path)
+    match media_type:
+        case _ if media_type in ASYNCAPI_SCHEMA_FORMATS:
+            return "asyncapi"
+        case _ if media_type in JSON_SCHEMA_FORMATS:
+            return "jsonschema"
+        case _ if media_type in OPENAPI_SCHEMA_FORMATS:
+            return "openapi"
+        case _ if media_type in AVRO_SCHEMA_FORMATS:
+            return "avro"
+        case _ if media_type in PROTOBUF_SCHEMA_FORMATS | RAML_SCHEMA_FORMATS:
+            raise _unsupported_schema_format_error(schema_format, path)
     raise _unsupported_schema_format_error(schema_format, path)
 
 
@@ -241,13 +246,14 @@ class AsyncAPIParser(OpenAPIParser):
     ) -> list[AsyncAPISchema]:
         schema_format = inherited_schema_format
         if isinstance(raw_schema, dict) and "schemaFormat" in raw_schema and "schema" not in raw_schema:
-            msg = f"AsyncAPI Multi Format Schema Object requires a schema field at {'/'.join(path)}"
+            msg = f"AsyncAPI Multi Format Schema Object requires a schema field at {_path_to_string(path)}"
             raise Error(msg)
         if _is_multi_format_schema_object(raw_schema):
             assert isinstance(raw_schema, dict)
-            raw_schema_format = raw_schema.get("schemaFormat")
-            if raw_schema_format is not None and not isinstance(raw_schema_format, str):
-                msg = f"AsyncAPI schemaFormat must be a string at {'/'.join(path)}"
+            if (raw_schema_format := raw_schema.get("schemaFormat")) is not None and not isinstance(
+                raw_schema_format, str
+            ):
+                msg = f"AsyncAPI schemaFormat must be a string at {_path_to_string(path)}"
                 raise Error(msg)
             schema_format = raw_schema_format or schema_format
             raw_schema = raw_schema["schema"]
@@ -258,7 +264,7 @@ class AsyncAPIParser(OpenAPIParser):
                 if not isinstance(raw_schema, (dict, bool)):
                     msg = (
                         f"AsyncAPI schemaFormat {schema_format or 'default AsyncAPI schema'!r} "
-                        f"requires a schema object at {'/'.join(path)}"
+                        f"requires a schema object at {_path_to_string(path)}"
                     )
                     raise Error(msg)
                 return [self._schema(name, raw_schema, path)]
@@ -269,6 +275,16 @@ class AsyncAPIParser(OpenAPIParser):
                 return [self._schema(name, converted_schema, context.root_parts, context, parse_as_file=True)]
             case _:  # pragma: no cover
                 raise _unsupported_schema_format_error(schema_format or "", path)
+
+    def _resolve_ref_object(
+        self,
+        value: Any,
+        seen_paths: set[tuple[str, ...]],
+    ) -> AsyncAPIResolvedRef | None:
+        if not isinstance(value, dict) or not isinstance(ref := value.get("$ref"), str):
+            return None
+        resolved = self._resolve_asyncapi_ref(ref)
+        return None if tuple(resolved.path) in seen_paths else resolved
 
     def _resolve_asyncapi_ref(self, ref: str) -> AsyncAPIResolvedRef:
         """Resolve an AsyncAPI Reference Object to raw data and a parser path."""
@@ -311,21 +327,15 @@ class AsyncAPIParser(OpenAPIParser):
         seen_paths = seen_paths or set()
         if not isinstance(message, dict):
             return []
-        if ref := message.get("$ref"):
-            if not isinstance(ref, str):
-                return []
-            resolved = self._resolve_asyncapi_ref(ref)
+        if resolved := self._resolve_ref_object(message, seen_paths):
             resolved_path = resolved.path
-            resolved_key = tuple(resolved_path)
-            if resolved_key in seen_paths:
-                return []
             ref_name = resolved_path[-1] if resolved_path else name
             with self._asyncapi_context(resolved.context):
                 return self._iter_message_payload_schemas(
                     resolved.value,
                     _make_model_name(ref_name),
                     resolved_path,
-                    seen_paths | {resolved_key},
+                    seen_paths | {tuple(resolved_path)},
                 )
         if isinstance(one_of := message.get("oneOf"), list):
             schemas: list[AsyncAPISchema] = []
@@ -343,7 +353,7 @@ class AsyncAPIParser(OpenAPIParser):
         schemas = []
         payload_schema_format = message.get("schemaFormat")
         if payload_schema_format is not None and not isinstance(payload_schema_format, str):
-            msg = f"AsyncAPI message schemaFormat must be a string at {'/'.join(path)}"
+            msg = f"AsyncAPI message schemaFormat must be a string at {_path_to_string(path)}"
             raise Error(msg)
         if "payload" in message:
             schemas.extend(
@@ -387,27 +397,21 @@ class AsyncAPIParser(OpenAPIParser):
             if not isinstance(trait, dict):
                 continue
             trait_path = [*path, str(index)] if isinstance(traits, list) else path
-            if ref := trait.get("$ref"):
-                if not isinstance(ref, str):
-                    continue
-                resolved = self._resolve_asyncapi_ref(ref)
-                resolved_key = tuple(resolved.path)
-                if resolved_key in seen_paths:
-                    continue
+            if resolved := self._resolve_ref_object(trait, seen_paths):
                 with self._asyncapi_context(resolved.context):
                     schemas.extend(
                         self._iter_message_trait_header_schemas(
                             resolved.value,
                             name,
                             resolved.path,
-                            seen_paths | {resolved_key},
+                            seen_paths | {tuple(resolved.path)},
                         )
                     )
                 continue
             if "headers" not in trait:
                 continue
             if schemas:
-                msg = f"Multiple AsyncAPI message traits define headers for {'/'.join(path)}"
+                msg = f"Multiple AsyncAPI message traits define headers for {_path_to_string(path)}"
                 raise Error(msg)
             schemas.extend(
                 self._iter_schema_format_schemas(
@@ -447,19 +451,13 @@ class AsyncAPIParser(OpenAPIParser):
         seen_paths = seen_paths or set()
         if not isinstance(reply, dict):
             return []
-        if ref := reply.get("$ref"):
-            if not isinstance(ref, str):
-                return []
-            resolved = self._resolve_asyncapi_ref(ref)
-            resolved_key = tuple(resolved.path)
-            if resolved_key in seen_paths:
-                return []
+        if resolved := self._resolve_ref_object(reply, seen_paths):
             with self._asyncapi_context(resolved.context):
                 return self._iter_operation_reply_schemas(
                     resolved.value,
                     name,
                     resolved.path,
-                    seen_paths | {resolved_key},
+                    seen_paths | {tuple(resolved.path)},
                 )
         if "messages" not in reply:
             return []
@@ -479,19 +477,13 @@ class AsyncAPIParser(OpenAPIParser):
         seen_paths = seen_paths or set()
         if not isinstance(operation, dict):
             return []
-        if ref := operation.get("$ref"):
-            if not isinstance(ref, str):
-                return []
-            resolved = self._resolve_asyncapi_ref(ref)
-            resolved_key = tuple(resolved.path)
-            if resolved_key in seen_paths:
-                return []
+        if resolved := self._resolve_ref_object(operation, seen_paths):
             with self._asyncapi_context(resolved.context):
                 return self._iter_operation_schemas(
                     resolved.value,
                     _make_model_name(resolved.path[-1] if resolved.path else name),
                     resolved.path,
-                    seen_paths | {resolved_key},
+                    seen_paths | {tuple(resolved.path)},
                 )
         schemas: list[AsyncAPISchema] = []
         if "messages" in operation:
@@ -522,19 +514,13 @@ class AsyncAPIParser(OpenAPIParser):
         seen_paths = seen_paths or set()
         if not isinstance(channel, dict):
             return []
-        if ref := channel.get("$ref"):
-            if not isinstance(ref, str):
-                return []
-            resolved = self._resolve_asyncapi_ref(ref)
-            resolved_key = tuple(resolved.path)
-            if resolved_key in seen_paths:
-                return []
+        if resolved := self._resolve_ref_object(channel, seen_paths):
             with self._asyncapi_context(resolved.context):
                 return self._iter_channel_schemas(
                     resolved.value,
                     _make_model_name(resolved.path[-1] if resolved.path else name),
                     resolved.path,
-                    seen_paths | {resolved_key},
+                    seen_paths | {tuple(resolved.path)},
                 )
         schemas: list[AsyncAPISchema] = []
         for operation_name in OPERATION_NAMES:
@@ -659,8 +645,6 @@ class AsyncAPIParser(OpenAPIParser):
             for schema in self._iter_asyncapi_schemas(specification, path_parts):
                 context_sources[tuple(schema.context.root_parts)] = schema.context
                 raw_schema = schema.raw_schema
-                if not isinstance(raw_schema, (dict, bool)):
-                    continue
                 path_key = tuple(schema.path)
                 if path_key in parsed_paths:
                     continue
