@@ -35,6 +35,7 @@ from tests.conftest import (
 InputFileTypeLiteral = Literal[
     "auto",
     "openapi",
+    "asyncapi",
     "jsonschema",
     "xmlschema",
     "protobuf",
@@ -77,6 +78,7 @@ EXPECTED_MAIN_PATH: Path = DATA_PATH / "expected" / "main"
 
 PYTHON_DATA_PATH: Path = DATA_PATH / "python"
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
+ASYNC_API_DATA_PATH: Path = DATA_PATH / "asyncapi"
 JSON_SCHEMA_DATA_PATH: Path = DATA_PATH / "jsonschema"
 GRAPHQL_DATA_PATH: Path = DATA_PATH / "graphql"
 XML_SCHEMA_DATA_PATH: Path = DATA_PATH / "xmlschema"
@@ -89,6 +91,7 @@ ALIASES_DATA_PATH: Path = DATA_PATH / "aliases"
 DEFAULT_VALUES_DATA_PATH: Path = DATA_PATH / "default_values"
 
 EXPECTED_OPENAPI_PATH: Path = EXPECTED_MAIN_PATH / "openapi"
+EXPECTED_ASYNC_API_PATH: Path = EXPECTED_MAIN_PATH / "asyncapi"
 EXPECTED_JSON_SCHEMA_PATH: Path = EXPECTED_MAIN_PATH / "jsonschema"
 EXPECTED_GRAPHQL_PATH: Path = EXPECTED_MAIN_PATH / "graphql"
 EXPECTED_XML_SCHEMA_PATH: Path = EXPECTED_MAIN_PATH / "xmlschema"

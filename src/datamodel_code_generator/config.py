@@ -15,6 +15,7 @@ from datamodel_code_generator.enums import (
     AllExportsScope,
     AllOfClassHierarchy,
     AllOfMergeMode,
+    AsyncAPIVersion,
     ClassNameAffixScope,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
@@ -369,6 +370,18 @@ class OpenAPIParserConfig(JSONSchemaParserConfig):
     openapi_include_paths: list[str] | None = None
     openapi_include_info_version: bool = False
     openapi_version: OpenAPIVersion | None = None
+
+
+class AsyncAPIParserConfig(JSONSchemaParserConfig):
+    """Configuration model for AsyncAPIParser.__init__()."""
+
+    openapi_scopes: list[OpenAPIScope] | None = None
+    include_path_parameters: bool = False
+    use_status_code_in_response_name: bool = False
+    openapi_include_paths: list[str] | None = None
+    openapi_include_info_version: bool = False
+    openapi_version: OpenAPIVersion | None = None
+    asyncapi_version: AsyncAPIVersion | None = None
 
 
 class XMLSchemaParserConfig(JSONSchemaParserConfig):

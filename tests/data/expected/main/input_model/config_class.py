@@ -74,6 +74,7 @@ GraphQLScope: TypeAlias = Literal['schema']
 InputFileType: TypeAlias = Literal[
     'auto',
     'openapi',
+    'asyncapi',
     'jsonschema',
     'xmlschema',
     'protobuf',

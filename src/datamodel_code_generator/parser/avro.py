@@ -155,8 +155,7 @@ class _AvroSchemaConverter:
         self.definitions: dict[str, JsonSchema] = {}
         self._building_definitions: set[str] = set()
 
-    def convert(self, source: Source) -> dict[str, YamlValue]:
-        raw_obj = source.raw_data if source.raw_data is not None else load_yaml(source.text)
+    def convert_raw(self, raw_obj: YamlValue) -> dict[str, YamlValue]:
         self._collect_named_schemas(raw_obj)
         self._prepare_definition_names()
         schema = self._convert_schema(raw_obj, namespace=None, root=True)
@@ -165,6 +164,10 @@ class _AvroSchemaConverter:
             schema["definitions"] = self.definitions
         schema.setdefault("$schema", "http://json-schema.org/draft-07/schema#")
         return cast("dict[str, YamlValue]", schema)
+
+    def convert(self, source: Source) -> dict[str, YamlValue]:
+        raw_obj = source.raw_data if source.raw_data is not None else load_yaml(source.text)
+        return self.convert_raw(raw_obj)
 
     def _collect_named_schemas(self, schema: YamlValue, namespace: str | None = None) -> None:
         match schema:
@@ -585,4 +588,9 @@ class AvroParser(JsonSchemaParser):
         self._generate_forced_base_models()
 
 
-__all__ = ["AvroParser", "is_avro_schema_data"]
+def convert_avro_schema_data(data: YamlValue) -> dict[str, YamlValue]:
+    """Convert in-memory Avro schema data to the JSON Schema shape used by the parser."""
+    return _AvroSchemaConverter().convert_raw(data)
+
+
+__all__ = ["AvroParser", "convert_avro_schema_data", "is_avro_schema_data"]

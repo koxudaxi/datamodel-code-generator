@@ -1,0 +1,12 @@
+asyncapi: 3.0.0
+info:
+  title: Unsupported RAML schema format
+  version: 1.0.0
+channels:
+  user/events:
+    messages:
+      userEvent:
+        payload:
+          schemaFormat: application/raml+yaml
+          schema:
+            type: object

@@ -1,0 +1,17 @@
+asyncapi: 3.0.0
+info:
+  title: Protobuf local import
+  version: 1.0.0
+channels:
+  proto/events:
+    address: proto/events
+    messages:
+      protoEvent:
+        payload:
+          schemaFormat: application/vnd.google.protobuf;version=3
+          schema: |
+            syntax = "proto3";
+            import "proto_child.proto";
+            message ProtoImportEvent {
+              ProtoImportChild child = 1;
+            }

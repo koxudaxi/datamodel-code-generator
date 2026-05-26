@@ -116,6 +116,56 @@ def get_model_by_path(schema: dict[str, YamlValue] | list[YamlValue], keys: list
     raise NotImplementedError(msg)  # pragma: no cover
 
 
+def split_json_pointer(schema: dict[str, YamlValue] | list[YamlValue], pointer: str) -> list[str]:
+    """Split a JSON pointer into path parts, preserving slash-containing dict keys."""
+    return _split_json_pointer(schema, pointer)[0]
+
+
+def _split_json_pointer(schema: dict[str, YamlValue] | list[YamlValue], pointer: str) -> tuple[list[str], list[str]]:
+    """Split a JSON pointer into lookup and reference path parts."""
+    raw_parts = pointer.lstrip("/").split("/") if pointer else []
+    if "://" not in pointer and "~1" not in pointer:
+        return raw_parts, raw_parts
+
+    parts: list[str] = []
+    reference_parts: list[str] = []
+    current: YamlValue = schema
+    index = 0
+    while index < len(raw_parts):
+        if isinstance(current, dict):
+            direct_key = unescape_json_pointer_segment(raw_parts[index])
+            if direct_key in current:
+                parts.append(direct_key)
+                reference_parts.append(raw_parts[index])
+                current = current.get(direct_key, {})
+                index += 1
+                continue
+
+            matched_key: str | None = None
+            matched_end = index
+            for end in range(len(raw_parts), index, -1):
+                key = unescape_json_pointer_segment("/".join(raw_parts[index:end]))
+                if key in current:
+                    matched_key = key
+                    matched_end = end
+                    break
+            if matched_key is None:  # pragma: no cover
+                matched_key = unescape_json_pointer_segment(raw_parts[index])
+                matched_end = index + 1
+            parts.append(matched_key)
+            reference_parts.append("/".join(raw_parts[index:matched_end]))
+            current = current.get(matched_key, {})
+            index = matched_end
+            continue
+        part = unescape_json_pointer_segment(raw_parts[index])
+        parts.append(part)
+        reference_parts.append(raw_parts[index])
+        if isinstance(current, list):  # pragma: no branch
+            current = current[int(part)]
+        index += 1
+    return parts, reference_parts
+
+
 # TODO: This dictionary contains formats valid only for OpenAPI and not for
 #       jsonschema and vice versa. They should be separated.
 json_schema_data_formats: dict[str, dict[str, Types]] = {
@@ -2071,7 +2121,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         target_schema: dict[str, YamlValue] | YamlValue = raw_doc
         if fragment:
-            pointer = [p for p in fragment.split("/") if p]
+            pointer = split_json_pointer(raw_doc, fragment)
             target_schema = get_model_by_path(raw_doc, pointer)
 
         return self._validate_schema_object(target_schema, [resolved_ref])
@@ -4787,11 +4837,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             self.model_resolver.current_base_path_context(base_path),
             self.model_resolver.base_url_context(relative_path),
         ):
+            ref_body = self._get_ref_body(relative_path)
+            object_paths: list[str] | None = None
+            reference_paths: list[str] | None = None
+            if object_path:
+                object_paths, reference_paths = _split_json_pointer(ref_body, object_path)
             self._parse_file(
-                self._get_ref_body(relative_path),
+                ref_body,
                 self.model_resolver.add_ref(ref, resolved=True).name,
                 relative_paths,
-                object_path.split("/") if object_path else None,
+                object_paths,
+                reference_paths=reference_paths,
             )
         reference.loaded = True
         return reference
@@ -5214,24 +5270,35 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def parse_json_pointer(self, raw: dict[str, YamlValue], ref: str, path_parts: list[str]) -> None:
         """Parse a JSON pointer reference into a model."""
         path = ref.split("#", 1)[-1]
-        if path[0] == "/":  # pragma: no cover
-            path = path[1:]
-        object_paths = path.split("/")
+        path = path.removeprefix("/")
+        object_paths, reference_paths = _split_json_pointer(raw, path)
+        if not object_paths:  # pragma: no cover
+            reference = self.model_resolver.add_ref(ref)
+            self.parse_obj(reference.name, self._validate_schema_object(raw, [ref]), [ref])
+            return
         models = get_model_by_path(raw, object_paths)
-        model_name = object_paths[-1]
+        model_name = reference_paths[-1]
 
-        self.parse_raw_obj(model_name, models, [*path_parts, f"#/{object_paths[0]}", *object_paths[1:]])
+        self.parse_raw_obj(model_name, models, [*path_parts, f"#/{reference_paths[0]}", *reference_paths[1:]])
 
-    def _parse_file(  # noqa: PLR0912, PLR0915
+    def _parse_file(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         raw: dict[str, Any],
         obj_name: str,
         path_parts: list[str],
         object_paths: list[str] | None = None,
+        reference_paths: list[str] | None = None,
     ) -> None:
         """Parse a file containing JSON Schema definitions and references."""
         object_paths = [o for o in object_paths or [] if o]
-        path = [*path_parts, f"#/{object_paths[0]}", *object_paths[1:]] if object_paths else path_parts
+        reference_paths = [r for r in reference_paths or [] if r]
+        path = (
+            [*path_parts, f"#/{reference_paths[0]}", *reference_paths[1:]]
+            if reference_paths
+            else [*path_parts, f"#/{object_paths[0]}", *object_paths[1:]]
+            if object_paths
+            else path_parts
+        )
         with self.model_resolver.current_root_context(path_parts):
             obj_name = self.model_resolver.add(path, obj_name, unique=False, class_name=True).name
             with self.root_id_context(raw):
@@ -5288,10 +5355,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         reference = self.model_resolver.references.get(reserved_path)
                         if not reference or reference.loaded:
                             continue
-                        object_paths = reserved_path.split("#/", 1)[-1].split("/")
-                        path = reserved_path.split("/")
+                        object_paths, reference_paths = _split_json_pointer(raw, reserved_path.split("#", 1)[-1])
+                        if not object_paths:
+                            self.parse_obj(
+                                reference.name, self._validate_schema_object(raw, [reserved_path]), [reserved_path]
+                            )
+                            continue
                         models = get_model_by_path(raw, object_paths)
-                        model_name = object_paths[-1]
+                        model_name = reference_paths[-1]
+                        path = [*path_parts, f"#/{reference_paths[0]}", *reference_paths[1:]]
                         self.parse_obj(model_name, self._validate_schema_object(models, path), path)
                     previous_reserved_refs = reserved_refs
                     reserved_refs = set(self.reserved_refs.get(key) or [])

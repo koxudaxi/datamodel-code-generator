@@ -1,0 +1,25 @@
+asyncapi: 3.0
+info:
+  title: AsyncAPI non-object components
+  version: 1.0.0
+channels:
+  ping:
+    subscribe:
+      message:
+        payload:
+          type: object
+          properties:
+            ok:
+              type: boolean
+            maybe:
+              type:
+                - string
+                - 'null'
+            maybeLegacy:
+              type: string
+              nullable: true
+components:
+  schemas:
+    - not
+    - a
+    - mapping

@@ -86,12 +86,16 @@ def test_infer_input_type() -> None:  # noqa: PLR0912
             assert_invalid_infer_input_type(file)
             continue
         assert_infer_input_type(file, InputFileType.OpenAPI)
+    for file in (DATA_PATH / "asyncapi").rglob("*"):
+        assert_infer_input_type(file, InputFileType.AsyncAPI)
 
     xmlschema_files = list((DATA_PATH / "xmlschema").rglob("*.xsd"))
     assert xmlschema_files, "XML Schema fixtures are required for input type inference tests."
     for file in xmlschema_files:
         result = infer_input_type(file.read_text(encoding="utf-8"))
         assert result == InputFileType.XMLSchema, f"{file} was the wrong type!"
+
+    assert infer_input_type('syntax = "proto3"; message User { string id = 1; }') == InputFileType.Protobuf
 
 
 def test_is_xml_text() -> None:

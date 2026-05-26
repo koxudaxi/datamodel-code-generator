@@ -1,10 +1,10 @@
 # Schema Version Support
 
-This document describes the JSON Schema, OpenAPI, Apache Avro, XML Schema, and Protocol Buffers versions supported by datamodel-code-generator.
+This document describes the JSON Schema, OpenAPI, AsyncAPI, Apache Avro, XML Schema, and Protocol Buffers versions supported by datamodel-code-generator.
 
 ## Overview
 
-datamodel-code-generator supports multiple schema formats including JSON Schema, OpenAPI, Apache Avro, XML Schema, and Protocol Buffers. By default, the tool operates in **Lenient mode**, accepting all features regardless of version declarations for formats that carry version information. This ensures maximum compatibility with real-world schemas that often mix features from different versions.
+datamodel-code-generator supports multiple schema formats including JSON Schema, OpenAPI, AsyncAPI, Apache Avro, XML Schema, and Protocol Buffers. By default, the tool operates in **Lenient mode**, accepting all features regardless of version declarations for formats that carry version information. This ensures maximum compatibility with real-world schemas that often mix features from different versions.
 
 ## JSON Schema Version Support
 
@@ -92,6 +92,47 @@ datamodel-code-generator detects the OpenAPI version from the `openapi` field:
 - `openapi: "3.0.x"` -> OpenAPI 3.0
 - `openapi: "3.1.x"` -> OpenAPI 3.1
 - No `openapi` field -> Fallback to OpenAPI 3.1
+
+## AsyncAPI Version Support
+
+AsyncAPI documents are supported with `--input-file-type asyncapi`. The parser generates models from schema-bearing message payloads, headers, and reusable schemas.
+
+### Supported Versions
+
+| Version | Schema behavior |
+|---------|-----------------|
+| 2.x | Message `schemaFormat` is applied to `payload`; default schemas use OpenAPI 3.0-compatible features |
+| 3.x | `payload`, `headers`, and `components.schemas` may use Schema Object, Reference Object, or Multi Format Schema Object; default schemas use OpenAPI 3.1-compatible features |
+
+### Supported Schema Locations
+
+| Location | Status | Notes |
+|----------|--------|-------|
+| `components.schemas` | ✅ Supported | Reusable schemas are generated even when not referenced |
+| `components.messages[*].payload` / `headers` | ✅ Supported | Includes local and external references |
+| Channel `publish` / `subscribe` messages | ✅ Supported | AsyncAPI 2.x channel operation messages |
+| Channel `messages` | ✅ Supported | AsyncAPI 3.x channel messages |
+| Operation `messages` / `reply.messages` | ✅ Supported | Includes reusable `components.operations` |
+| Message trait `headers` | ✅ Supported | Used when the target message does not define `headers` |
+| Protocol bindings | ⚠️ Tolerated | Binding configuration is transport metadata and is not emitted as models |
+
+### Embedded Schema Formats
+
+| `schemaFormat` family | Status | Notes |
+|-----------------------|--------|-------|
+| AsyncAPI Schema Object | ✅ Supported | Default when omitted |
+| JSON Schema | ✅ Supported | `application/schema+json` and `application/schema+yaml` |
+| OpenAPI Schema Object | ✅ Supported | `application/vnd.oai.openapi...` |
+| Apache Avro | ✅ Supported | `application/vnd.apache.avro...` |
+| Protocol Buffers, RAML, XML Schema, custom formats | ❌ Explicit error | Use dedicated top-level input types where available |
+
+### Version Detection
+
+datamodel-code-generator detects the AsyncAPI version from the `asyncapi` field:
+
+- `asyncapi: "2.x.y"` -> AsyncAPI 2.x
+- `asyncapi: "3.x.y"` -> AsyncAPI 3.x
+- Unknown versions fall back to the 3.x schema behavior unless `--schema-version` is set explicitly
 
 ## Protocol Buffers Version Support
 
@@ -319,5 +360,6 @@ In **Strict mode** (`--schema-version-mode strict`), warnings are emitted for ve
 - [Supported Data Types](./supported-data-types.md) - Complete data type support
 - [JSON Schema Guide](./jsonschema.md) - JSON Schema usage examples
 - [OpenAPI Guide](./openapi.md) - OpenAPI usage examples
+- [AsyncAPI Guide](./asyncapi.md) - AsyncAPI usage examples
 - [Apache Avro Guide](./avro.md) - Avro schema usage examples
 - [Protocol Buffers / gRPC Guide](./protobuf.md) - Protocol Buffers schema usage examples

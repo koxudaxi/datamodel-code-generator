@@ -1,0 +1,96 @@
+{
+  "asyncapi": "3.0.0",
+  "info": {
+    "title": "Order events",
+    "version": "1.0.0"
+  },
+  "channels": {
+    "order/created": {
+      "messages": {
+        "orderCreated": {
+          "payload": {
+            "$ref": "#/components/schemas/OrderCreatedPayload"
+          },
+          "headers": {
+            "type": "object",
+            "properties": {
+              "correlationId": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "operations": {
+    "receiveOrderCreated": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/order~1created"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/order~1created/messages/orderCreated"
+        }
+      ]
+    }
+  },
+  "components": {
+    "schemas": {
+      "OrderCreatedPayload": {
+        "type": "object",
+        "required": [
+          "order"
+        ],
+        "properties": {
+          "order": {
+            "$ref": "#/components/schemas/Order"
+          }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "required": [
+          "id",
+          "total"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "total": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "legacyName": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "Money": {
+        "type": "object",
+        "required": [
+          "amount",
+          "currency"
+        ],
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          }
+        }
+      }
+    }
+  }
+}
