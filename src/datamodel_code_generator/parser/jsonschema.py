@@ -3798,6 +3798,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     ) -> DataType:
         if isinstance(property_names, bool):
             return self.data_type_manager.get_data_type(Types.string)
+        if property_names.extras.get("x-python-type") == "int":
+            return self.data_type_manager.get_data_type(Types.integer)
+        if property_names.extras.get("x-python-type") == "bool":
+            return self.data_type_manager.get_data_type(Types.boolean)
+        if property_names.extras.get("x-python-type") == "str":
+            return self.data_type_manager.get_data_type(Types.string)
         if property_names.ref:
             return self.get_ref_data_type(property_names.ref)
         if property_names.enum:

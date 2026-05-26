@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import black
 import pytest
@@ -82,6 +82,41 @@ def test_main_protobuf_well_known_wrappers(output_file: Path) -> None:
     )
 
 
+def test_main_protobuf_spec_proto3(output_file: Path) -> None:
+    """Generate models for proto3 constructs from the language specification."""
+    run_main_and_assert(
+        input_path=PROTOBUF_DATA_PATH / "spec_proto3.proto",
+        output_path=output_file,
+        input_file_type="protobuf",
+        extra_args=["--schema-version", "proto3", "--use-field-description"],
+        assert_func=assert_file_content,
+        expected_file="spec_proto3.py",
+    )
+
+
+def test_main_protobuf_spec_proto2(output_file: Path) -> None:
+    """Generate models for proto2 constructs from the language specification."""
+    run_main_and_assert(
+        input_path=PROTOBUF_DATA_PATH / "spec_proto2.proto",
+        output_path=output_file,
+        input_file_type="protobuf",
+        extra_args=["--schema-version", "proto2"],
+        assert_func=assert_file_content,
+        expected_file="spec_proto2.py",
+    )
+
+
+def test_main_protobuf_edition_2023_schema_version(output_file: Path) -> None:
+    """Infer and generate models for edition 2023 syntax with explicit schema version."""
+    run_main_and_assert(
+        input_path=PROTOBUF_DATA_PATH / "edition_2023.proto",
+        output_path=output_file,
+        extra_args=["--schema-version", "2023"],
+        assert_func=assert_file_content,
+        expected_file="edition_2023.py",
+    )
+
+
 def test_generate_api_protobuf(output_file: Path) -> None:
     """Generate Protocol Buffers models through the public generate() API."""
     run_generate_file_and_assert(
@@ -124,6 +159,17 @@ def test_generate_api_protobuf_definition_key_collision() -> None:
     )
 
     assert_output(result, EXPECTED_PROTOBUF_PATH / "collision.py")
+
+
+def test_generate_api_protobuf_from_path_list() -> None:
+    """Generate Protocol Buffers models from a list of .proto file paths."""
+    result = generate(
+        cast(Any, [(PROTOBUF_DATA_PATH / "spec_proto3.proto").resolve()]),  # noqa: TC006
+        input_file_type=InputFileType.Protobuf,
+        disable_timestamp=True,
+    )
+
+    assert_output(result, EXPECTED_PROTOBUF_PATH / "spec_proto3_list_input.py")
 
 
 def test_generate_api_protobuf_rejects_dict_input() -> None:
@@ -182,27 +228,6 @@ def test_main_protobuf_invalid_schema_version(capsys: pytest.CaptureFixture[str]
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Invalid Protobuf version",
-        output_should_not_exist=True,
-    )
-
-
-def test_main_protobuf_non_string_map_key_error(
-    capsys: pytest.CaptureFixture[str], tmp_path: Path, output_file: Path
-) -> None:
-    """Reject protobuf maps whose keys cannot be represented by JSON Schema object keys."""
-    input_path = tmp_path / "non_string_map.proto"
-    input_path.write_text(
-        'syntax = "proto3";\nmessage InvalidMap { map<int32, string> values = 1; }\n',
-        encoding="utf-8",
-    )
-
-    run_main_and_assert(
-        input_path=input_path,
-        output_path=output_file,
-        input_file_type="protobuf",
-        expected_exit=Exit.ERROR,
-        capsys=capsys,
-        expected_stderr_contains="unsupported non-string key type",
         output_should_not_exist=True,
     )
 

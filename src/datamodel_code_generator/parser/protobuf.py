@@ -88,6 +88,33 @@ SCALAR_SCHEMAS: dict[int, dict[str, Any]] = {
     TYPE_BYTES: {"type": "string", "format": "binary"},
 }
 SCALAR_OR_ENUM_TYPES = frozenset({*SCALAR_SCHEMAS, TYPE_ENUM})
+MAP_KEY_PYTHON_TYPES: dict[int, str] = {
+    TYPE_INT32: "int",
+    TYPE_INT64: "int",
+    TYPE_UINT32: "int",
+    TYPE_UINT64: "int",
+    TYPE_SINT32: "int",
+    TYPE_SINT64: "int",
+    TYPE_FIXED32: "int",
+    TYPE_FIXED64: "int",
+    TYPE_SFIXED32: "int",
+    TYPE_SFIXED64: "int",
+    TYPE_BOOL: "bool",
+    TYPE_STRING: "str",
+}
+WELL_KNOWN_PROTO_PATHS = frozenset({
+    "google/protobuf/any.proto",
+    "google/protobuf/api.proto",
+    "google/protobuf/descriptor.proto",
+    "google/protobuf/duration.proto",
+    "google/protobuf/empty.proto",
+    "google/protobuf/field_mask.proto",
+    "google/protobuf/source_context.proto",
+    "google/protobuf/struct.proto",
+    "google/protobuf/timestamp.proto",
+    "google/protobuf/type.proto",
+    "google/protobuf/wrappers.proto",
+})
 
 WELL_KNOWN_SCHEMAS: dict[str, dict[str, Any]] = {
     "google.protobuf.Timestamp": {"type": "string", "format": "date-time"},
@@ -276,16 +303,29 @@ class _ProtoInputPreparer:
         self.temp_dir: tempfile.TemporaryDirectory[str] | None = None
         self.weak_import_dir: Path | None = None
 
-    def __enter__(self) -> tuple[list[Path], list[Path]]:
+    def __enter__(self) -> tuple[list[Path], list[Path], frozenset[str]]:
         self.temp_dir = tempfile.TemporaryDirectory()
         temp_path = Path(self.temp_dir.name)
         include_paths = [temp_path, self.parser.base_path]
         input_files = self._input_files(temp_path)
+        input_file_names = frozenset(path.relative_to(temp_path).as_posix() for path in input_files)
+        include_paths.extend(self._additional_include_paths(input_files))
         self.weak_import_dir = temp_path / "__weak_imports__"
         self._write_missing_weak_imports(input_files, include_paths)
         if self.weak_import_dir.exists():
             include_paths.append(self.weak_import_dir)
-        return input_files, include_paths
+        return input_files, include_paths, input_file_names
+
+    def _additional_include_paths(self, input_files: Sequence[Path]) -> list[Path]:
+        paths = {path.parent for path in input_files}
+        source = self.parser.source
+        if isinstance(source, Path) and source.is_file():
+            paths.add(source.parent)
+        elif isinstance(source, list):
+            paths.update(path.parent for path in source)
+        paths.discard(Path())
+        paths.discard(self.parser.base_path)
+        return sorted(paths)
 
     def __exit__(self, *args: object) -> None:
         assert self.temp_dir is not None
@@ -339,9 +379,11 @@ class _ProtobufDescriptorConverter:
         *,
         protobuf_version: ProtobufVersion | None,
         schema_version_mode: VersionMode | None,
+        input_file_names: frozenset[str],
     ) -> None:
         self.protobuf_version = protobuf_version
         self.schema_version_mode = schema_version_mode or VersionMode.Lenient
+        self.input_file_names = input_file_names
         self.definitions: dict[str, dict[str, Any]] = {}
         self.enums: dict[str, Any] = {}
         self.messages: dict[str, Any] = {}
@@ -359,7 +401,7 @@ class _ProtobufDescriptorConverter:
                 self.enums[enum_full_name] = enum_descriptor
 
         for file_descriptor in file_descriptor_set.file:
-            if file_descriptor.name.startswith("google/protobuf/"):
+            if file_descriptor.name in WELL_KNOWN_PROTO_PATHS and file_descriptor.name not in self.input_file_names:
                 continue
             comments = _comment_map(file_descriptor)
             effective_version = self._effective_version(file_descriptor)
@@ -417,7 +459,7 @@ class _ProtobufDescriptorConverter:
         return self.definition_keys.get(full_name, self._make_definition_key(full_name))
 
     def _effective_version(self, file_descriptor: Any) -> ProtobufVersion:
-        declared = ProtobufVersion.Proto3 if file_descriptor.syntax == "proto3" else ProtobufVersion.Proto2
+        declared = self._declared_version(file_descriptor)
         if self.protobuf_version is None or self.protobuf_version == ProtobufVersion.Auto:
             return declared
         if self.schema_version_mode == VersionMode.Strict and self.protobuf_version != declared:
@@ -427,6 +469,14 @@ class _ProtobufDescriptorConverter:
                 stacklevel=3,
             )
         return self.protobuf_version
+
+    @staticmethod
+    def _declared_version(file_descriptor: Any) -> ProtobufVersion:
+        if file_descriptor.syntax == "proto3":
+            return ProtobufVersion.Proto3
+        if file_descriptor.syntax == "editions":
+            return ProtobufVersion.Edition2023
+        return ProtobufVersion.Proto2
 
     def _convert_enum(
         self,
@@ -512,9 +562,6 @@ class _ProtobufDescriptorConverter:
             schema["required"] = required
         if comment := comments.get(path):
             schema["description"] = comment
-        oneof_groups = [tuple(fields) for fields in real_oneof_fields.values() if len(fields) > 1]
-        if oneof_groups:
-            schema["x-protobuf-oneof"] = [list(fields) for fields in oneof_groups]
         self.definitions[self._definition_key(full_name)] = schema
 
     def _field_schema(self, field: Any, syntax: ProtobufVersion) -> dict[str, Any]:
@@ -554,14 +601,16 @@ class _ProtobufDescriptorConverter:
         key_field = next((item for item in entry.field if item.name == "key"), None)
         if key_field is None:  # pragma: no cover
             return None
-        if key_field.type != TYPE_STRING:
-            msg = f"Protocol Buffers map field {field.name!r} uses unsupported non-string key type"
+        map_key_python_type = MAP_KEY_PYTHON_TYPES.get(key_field.type)
+        if map_key_python_type is None:  # pragma: no cover
+            msg = f"Protocol Buffers map field {field.name!r} uses unsupported key type"
             raise SchemaParseError(msg)
         value_field = next((item for item in entry.field if item.name == "value"), None)
         if value_field is None:  # pragma: no cover
             return None
         return {
             "type": "object",
+            "propertyNames": {"type": "string", "x-python-type": map_key_python_type},
             "additionalProperties": self._single_field_schema(value_field, syntax),
             "default": {},
         }
@@ -632,7 +681,7 @@ class ProtobufParser(JsonSchemaParser):
     def _compile_descriptor_set(self) -> Any:
         protoc, well_known_include = _load_grpc_tools()
         descriptor_pb2 = _load_descriptor_pb2()
-        with _ProtoInputPreparer(self) as (input_files, include_paths):
+        with _ProtoInputPreparer(self) as (input_files, include_paths, input_file_names):
             if not input_files:
                 msg = "No .proto files found in input"
                 raise SchemaParseError(msg)
@@ -656,7 +705,7 @@ class ProtobufParser(JsonSchemaParser):
                     raise SchemaParseError(msg)
                 descriptor_set = descriptor_pb2.FileDescriptorSet()
                 descriptor_set.ParseFromString(output_path.read_bytes())
-                return descriptor_set
+                return descriptor_set, input_file_names
             finally:
                 with contextlib.suppress(OSError):
                     output_path.unlink()
@@ -664,10 +713,11 @@ class ProtobufParser(JsonSchemaParser):
     def parse_raw(self) -> None:
         """Parse all Protocol Buffers input sources into data models."""
         config = cast("ProtobufParserConfig", self.config)
-        descriptor_set = self._compile_descriptor_set()
+        descriptor_set, input_file_names = self._compile_descriptor_set()
         converter = _ProtobufDescriptorConverter(
             protobuf_version=config.protobuf_version,
             schema_version_mode=config.schema_version_mode,
+            input_file_names=input_file_names,
         )
         raw_obj = converter.convert(descriptor_set)
         source = next(self.iter_source)

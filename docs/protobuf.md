@@ -89,7 +89,7 @@ The Protocol Buffers parser supports the schema constructs needed to generate Py
 | Nested `message` | Generates a named Python model class with package and parent context |
 | `enum` | Generates an enum class |
 | `repeated` | Generates a list field |
-| `map<string, T>` | Generates a dict field |
+| `map<K, T>` | Generates a dict field for protobuf-supported string, integer, and bool key types |
 | `oneof` | Generates nullable fields and preserves oneof membership as field metadata |
 | `optional`, `required`, singular | Preserves proto2/proto3 presence and requiredness where model generation can represent it |
 | Defaults | Preserves explicit proto2 defaults and proto3 implicit defaults |
@@ -121,8 +121,10 @@ Protocol Buffers syntax is detected from each compiled `.proto` descriptor:
 
 - `syntax = "proto3";` -> proto3
 - `syntax = "proto2";` or no syntax declaration -> proto2
+- `edition = "2023";` -> edition 2023
 
-Use `--schema-version proto2` or `--schema-version proto3` to override auto-detection when needed.
+Use `--schema-version proto2`, `--schema-version proto3`, or `--schema-version 2023` to override
+auto-detection when needed.
 
 ## Multiple Files
 
@@ -142,7 +144,7 @@ The parser resolves imports relative to the input file or directory and emits im
 
 datamodel-code-generator uses Protocol Buffers schemas to generate Python model definitions. It does not implement protobuf runtime validation, oneof runtime exclusivity checks, wire serialization, or gRPC client/server code generation.
 
-Some protobuf constructs are parsed only as needed for data model generation. Options, custom options, extensions, reserved declarations, and service streaming markers are tolerated where possible but are not emitted as runtime protobuf behavior. Since JSON Schema object keys are strings, map fields with non-string keys are rejected instead of being generated as incorrectly typed dictionaries.
+Some protobuf constructs are parsed only as needed for data model generation. Options, custom options, extensions, reserved declarations, and service streaming markers are tolerated where possible but are not emitted as runtime protobuf behavior.
 
 ## 📖 See Also
 

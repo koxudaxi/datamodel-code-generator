@@ -177,6 +177,8 @@ def _is_protobuf_text(text: str) -> bool:
             continue
         if stripped.startswith("syntax"):
             return '"proto2"' in stripped or '"proto3"' in stripped
+        if stripped.startswith("edition"):
+            return '"2023"' in stripped
         if stripped.startswith(("package ", "import ", "message ", "enum ", "service ")):
             return True
     return False

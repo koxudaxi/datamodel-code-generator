@@ -101,6 +101,7 @@ datamodel-code-generator detects the OpenAPI version from the `openapi` field:
 |---------|----------|-------|
 | proto2 | [protobuf.dev/reference/protobuf/proto2-spec](https://protobuf.dev/reference/protobuf/proto2-spec/) | `required`, `optional`, `repeated`, defaults, extensions |
 | proto3 | [protobuf.dev/reference/protobuf/proto3-spec](https://protobuf.dev/reference/protobuf/proto3-spec/) | implicit field defaults, `optional`, maps, services |
+| edition 2023 | [protobuf.dev/editions](https://protobuf.dev/programming-guides/editions/) | Supported by the bundled `protoc` runtime |
 
 ### Version Detection
 
@@ -108,7 +109,9 @@ datamodel-code-generator detects Protocol Buffers syntax from each compiled `.pr
 
 - `syntax = "proto3";` -> proto3
 - `syntax = "proto2";` or no syntax declaration -> proto2
-- `--schema-version proto2` or `--schema-version proto3` can override auto-detection
+- `edition = "2023";` -> edition 2023
+- `--schema-version proto2`, `--schema-version proto3`, or `--schema-version 2023` can override
+  auto-detection
 
 ## Apache Avro Schema Support
 

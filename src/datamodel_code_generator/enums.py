@@ -281,11 +281,12 @@ class XMLSchemaVersion(Enum):
 class ProtobufVersion(Enum):
     """Protocol Buffers schema syntax versions.
 
-    Auto: Auto-detect from each file's syntax declaration. Files without a syntax declaration are proto2.
+    Auto: Auto-detect from each file's syntax or edition declaration. Files without a syntax declaration are proto2.
     """
 
     Proto2 = "proto2"
     Proto3 = "proto3"
+    Edition2023 = "2023"
     Auto = "auto"
 
 
