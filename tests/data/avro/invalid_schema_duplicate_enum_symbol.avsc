@@ -1,0 +1,5 @@
+{
+  "type": "enum",
+  "name": "DuplicateSymbol",
+  "symbols": ["A", "A"]
+}
