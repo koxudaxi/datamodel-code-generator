@@ -2396,6 +2396,7 @@ def test_default_values_invalid_json(output_file: Path, capsys: pytest.CaptureFi
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Unable to load default values mapping",
+        file_should_not_exist=output_file,
     )
 
 
