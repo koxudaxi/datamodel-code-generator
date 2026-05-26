@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import PurePosixPath, PureWindowsPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 import pytest
 
@@ -221,6 +221,25 @@ def test_resolve_ref_with_relative_root_id_and_base_url() -> None:
     result = resolver.resolve_ref("sub.schema.json")
 
     assert result == "http://localhost:8888/schemas/v1/sub.schema.json#"
+
+
+def test_resolve_path_absolute_local_ref_with_root_id(tmp_path: Path) -> None:
+    """Path-absolute refs with path-only $id should resolve inside the local schema root."""
+    schema_root = tmp_path
+    target = schema_root / "core" / "platform-extension-ref.json"
+    target.parent.mkdir()
+    target.touch()
+
+    resolver = ModelResolver(base_path=schema_root)
+    resolver.set_root_id("/schemas/3.1.0-beta.1/formats/canonical/_base.json")
+
+    with (
+        resolver.current_root_context(["formats", "canonical", "_base.json"]),
+        resolver.current_base_path_context(Path("formats/canonical")),
+    ):
+        result = resolver.resolve_ref("/schemas/3.1.0-beta.1/core/platform-extension-ref.json")
+
+    assert result == "core/platform-extension-ref.json#"
 
 
 @pytest.mark.parametrize(

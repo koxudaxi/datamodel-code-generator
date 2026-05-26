@@ -1014,6 +1014,17 @@ def test_main_url_with_relative_root_id_resolves_relative_refs(
     )
 
 
+def test_main_local_directory_path_absolute_root_id_refs(output_dir: Path) -> None:
+    """Test local directory input maps path-absolute $id refs to the input root."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "path_absolute_root_id_refs",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--disable-timestamp"],
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "path_absolute_root_id_refs",
+    )
+
+
 def test_main_url_jsonschema_relative_ref_without_fragment(
     mock_httpx_get: HttpxGetMockFactory, output_file: Path
 ) -> None:
