@@ -4,11 +4,19 @@
 
 from __future__ import annotations
 
+from enum import Enum
+
 from pydantic import BaseModel, ConfigDict
+
+
+class KnownAndEnumExtraAdditionalProperty(Enum):
+    red = 'red'
+    blue = 'blue'
 
 
 class KnownAndEnumExtra(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
+    __pydantic_extra__: dict[str, KnownAndEnumExtraAdditionalProperty]
     name: str

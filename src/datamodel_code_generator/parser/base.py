@@ -2379,7 +2379,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if "Enum" in model.base_class or not model.BASE_CLASS:
                 continue
 
-            for field in model.fields:
+            for field in (field for field in model.fields if field.name != "__pydantic_extra__"):
                 filed_name = field.name
                 reference_type_names: set[str] = set()
                 colliding_reference: Reference | None = None

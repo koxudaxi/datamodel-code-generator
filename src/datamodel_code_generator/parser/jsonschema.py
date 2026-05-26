@@ -56,6 +56,7 @@ from datamodel_code_generator.model.enum import (
     Enum,
     StrEnum,
 )
+from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel as PydanticV2BaseModel
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticV2DataClass
 from datamodel_code_generator.model.typed_dict import TypedDict as TypedDictModel
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
@@ -3512,6 +3513,40 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
         return fields
 
+    def _get_typed_additional_properties_field(
+        self,
+        class_name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+    ) -> DataModelFieldBase | None:
+        """Build the Pydantic v2 __pydantic_extra__ field for schema-valued extras."""
+        if not issubclass(self.data_model_type, PydanticV2BaseModel) or not isinstance(
+            obj.additionalProperties, JsonSchemaObject
+        ):
+            return None
+
+        additional_props = obj.additionalProperties
+        if additional_props.has_ref_with_schema_keywords and not additional_props.is_ref_with_nullable_only:
+            additional_props = self._merge_ref_with_schema(additional_props)
+        if self._build_lightweight_type(additional_props) is None:
+            return None
+
+        return self.data_model_field_type(
+            name="__pydantic_extra__",
+            data_type=self.data_type(
+                data_types=[
+                    self.parse_item(
+                        f"{class_name}AdditionalProperty",
+                        additional_props,
+                        [*path, "additionalProperties"],
+                    )
+                ],
+                is_dict=True,
+            ),
+            required=True,
+            original_name="__pydantic_extra__",
+        )
+
     def parse_object(
         self,
         name: str,
@@ -3550,6 +3585,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             class_name=class_name,
         )
         has_declared_fields = bool(fields)
+        if has_declared_fields and (extra_field := self._get_typed_additional_properties_field(class_name, obj, path)):
+            fields.insert(0, extra_field)
         should_parse_dict_root = not has_declared_fields and (
             isinstance(obj.additionalProperties, JsonSchemaObject) or self._should_parse_empty_object_as_dict(obj)
         )

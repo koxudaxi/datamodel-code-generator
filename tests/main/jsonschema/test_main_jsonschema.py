@@ -4547,7 +4547,7 @@ def test_main_jsonschema_property_names_closed_object(output_file: Path) -> None
 
 
 def test_main_jsonschema_additional_properties_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties schema allows extra keys without typed runtime validation."""
+    """Test additionalProperties schema validates typed extra values."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_schema_with_properties.json",
         output_path=output_file,
@@ -4563,7 +4563,7 @@ def test_main_jsonschema_additional_properties_schema_with_properties(output_fil
 
 
 def test_main_jsonschema_additional_properties_enum_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties enum schema allows extra keys without typed runtime validation."""
+    """Test additionalProperties enum schema validates typed extra values."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_enum_schema_with_properties.json",
         output_path=output_file,
@@ -4579,7 +4579,7 @@ def test_main_jsonschema_additional_properties_enum_schema_with_properties(outpu
 
 
 def test_main_jsonschema_additional_properties_const_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties const schema allows extra keys without typed runtime validation."""
+    """Test additionalProperties const schema validates typed extra values."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_const_schema_with_properties.json",
         output_path=output_file,
@@ -4595,7 +4595,7 @@ def test_main_jsonschema_additional_properties_const_schema_with_properties(outp
 
 
 def test_main_jsonschema_additional_properties_object_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties object schema allows extra keys without typed runtime validation."""
+    """Test additionalProperties object schema validates typed extra values."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_object_schema_with_properties.json",
         output_path=output_file,
@@ -4611,7 +4611,7 @@ def test_main_jsonschema_additional_properties_object_schema_with_properties(out
 
 
 def test_main_jsonschema_additional_properties_array_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties array schema allows extra keys without typed runtime validation."""
+    """Test additionalProperties array schema validates typed extra values."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_array_schema_with_properties.json",
         output_path=output_file,
@@ -4627,7 +4627,7 @@ def test_main_jsonschema_additional_properties_array_schema_with_properties(outp
 
 
 def test_main_jsonschema_additional_properties_ref_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties ref schema allows extra keys without typed runtime validation."""
+    """Test additionalProperties ref schema validates typed extra values."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_ref_schema_with_properties.json",
         output_path=output_file,
@@ -4639,6 +4639,48 @@ def test_main_jsonschema_additional_properties_ref_schema_with_properties(output
             "pydantic_v2.BaseModel",
         ],
         force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_additional_properties_ref_schema_with_keywords_and_properties(output_file: Path) -> None:
+    """Test additionalProperties ref schema with sibling keywords validates typed extra values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_ref_schema_with_keywords_and_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_ref_schema_with_keywords_and_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_additional_properties_oneof_schema_with_required_property(output_file: Path) -> None:
+    """Test typed extras work with required declared properties."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_oneof_schema_with_required_property.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_oneof_schema_with_required_property.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_oneof_schema_with_required_property",
+        model_name="RCloneConfig",
+        valid_json='{"type":"s3","size":1}',
+        invalid_json='{"type":"s3","items":[]}',
+        expected_error_type="float_type",
+        expected_attribute_path=("__pydantic_extra__",),
+        expected_attribute_value={"size": 1.0},
     )
 
 
