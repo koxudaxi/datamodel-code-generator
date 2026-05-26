@@ -258,6 +258,7 @@ def _add_generated_imports(body: str) -> str:
 def convert_protobuf_schema_data(
     raw_schema: Any,
     *,
+    base_path: Path | None = None,
     protobuf_version: ProtobufVersion | None = None,
     schema_version_mode: VersionMode | None = None,
     encoding: str = "utf-8",
@@ -268,6 +269,7 @@ def convert_protobuf_schema_data(
         raise Error(msg)
     parser = ProtobufParser(
         raw_schema,
+        base_path=base_path,
         protobuf_version=protobuf_version,
         schema_version_mode=schema_version_mode,
         encoding=encoding,

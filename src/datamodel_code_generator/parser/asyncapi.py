@@ -21,6 +21,7 @@ from datamodel_code_generator.parser.avro import convert_avro_schema_data
 from datamodel_code_generator.parser.jsonschema import get_model_by_path, unescape_json_pointer_segment
 from datamodel_code_generator.parser.openapi import OpenAPIParser
 from datamodel_code_generator.parser.protobuf import convert_protobuf_schema_data
+from datamodel_code_generator.parser.xmlschema import convert_xml_schema_data
 from datamodel_code_generator.reference import is_url
 
 if TYPE_CHECKING:
@@ -34,6 +35,7 @@ if TYPE_CHECKING:
 
 OPERATION_NAMES: tuple[str, ...] = ("publish", "subscribe")
 NAME_PART_PATTERN = re.compile(r"[A-Za-z0-9]+")
+BINDING_SCHEMA_FIELD_NAMES: frozenset[str] = frozenset({"headers", "query", "key", "groupId", "clientId"})
 ASYNCAPI_SCHEMA_FORMATS: frozenset[str] = frozenset({
     "application/vnd.aai.asyncapi",
     "application/vnd.aai.asyncapi+json",
@@ -54,7 +56,22 @@ AVRO_SCHEMA_FORMATS: frozenset[str] = frozenset({
     "application/vnd.apache.avro+yaml",
 })
 PROTOBUF_SCHEMA_FORMATS: frozenset[str] = frozenset({"application/vnd.google.protobuf"})
+XML_SCHEMA_FORMATS: frozenset[str] = frozenset({
+    "application/xml",
+    "application/xml+schema",
+    "application/xml-schema",
+    "application/xsd+xml",
+    "text/xml",
+})
 RAML_SCHEMA_FORMATS: frozenset[str] = frozenset({"application/raml+yaml"})
+SCHEMA_FORMAT_KIND_BY_MEDIA_TYPE: dict[str, str] = {
+    **dict.fromkeys(ASYNCAPI_SCHEMA_FORMATS, "asyncapi"),
+    **dict.fromkeys(JSON_SCHEMA_FORMATS, "jsonschema"),
+    **dict.fromkeys(OPENAPI_SCHEMA_FORMATS, "openapi"),
+    **dict.fromkeys(AVRO_SCHEMA_FORMATS, "avro"),
+    **dict.fromkeys(PROTOBUF_SCHEMA_FORMATS, "protobuf"),
+    **dict.fromkeys(XML_SCHEMA_FORMATS, "xmlschema"),
+}
 INTERNAL_SCHEMA_CONTAINER = "x-datamodel-code-generator-asyncapi-schemas"
 
 
@@ -124,7 +141,7 @@ def _unsupported_schema_format_error(schema_format: str, path: list[str]) -> Err
     msg = (
         f"Unsupported AsyncAPI schemaFormat {schema_format!r} at {_path_to_string(path)}. "
         "Supported embedded schema formats are AsyncAPI Schema Object, JSON Schema, "
-        "OpenAPI Schema Object, Avro, and Protocol Buffers. RAML and custom schema "
+        "OpenAPI Schema Object, Avro, Protocol Buffers, and XML Schema. RAML and custom schema "
         "formats are not supported inside AsyncAPI documents."
     )
     return Error(msg)
@@ -134,19 +151,8 @@ def _schema_format_kind(schema_format: str | None, path: list[str]) -> str:
     if schema_format is None:
         return "asyncapi"
     media_type = _schema_format_media_type(schema_format)
-    match media_type:
-        case _ if media_type in ASYNCAPI_SCHEMA_FORMATS:
-            return "asyncapi"
-        case _ if media_type in JSON_SCHEMA_FORMATS:
-            return "jsonschema"
-        case _ if media_type in OPENAPI_SCHEMA_FORMATS:
-            return "openapi"
-        case _ if media_type in AVRO_SCHEMA_FORMATS:
-            return "avro"
-        case _ if media_type in PROTOBUF_SCHEMA_FORMATS:
-            return "protobuf"
-        case _ if media_type in RAML_SCHEMA_FORMATS:
-            raise _unsupported_schema_format_error(schema_format, path)
+    if kind := SCHEMA_FORMAT_KIND_BY_MEDIA_TYPE.get(media_type):
+        return kind
     raise _unsupported_schema_format_error(schema_format, path)
 
 
@@ -163,9 +169,9 @@ def _move_json_schema_definitions_to_components(
             case dict():
                 if (ref := value.get("$ref")) and isinstance(ref, str) and ref.startswith("#/definitions/"):
                     value["$ref"] = f"{ref_prefix}/{ref.removeprefix('#/definitions/')}"
-                    return
-                for item in value.values():
-                    update_refs(item)
+                else:
+                    for item in value.values():
+                        update_refs(item)
             case list():
                 for item in value:
                     update_refs(item)
@@ -262,9 +268,7 @@ class AsyncAPIParser(OpenAPIParser):
         path: list[str],
     ) -> AsyncAPIContext:
         current_context = self._current_asyncapi_context()
-        context_path = path
-        if path[: len(current_context.root_parts)] == current_context.root_parts:
-            context_path = path[len(current_context.root_parts) :]
+        context_path = path[len(current_context.root_parts) :]
         return AsyncAPIContext(
             raw_obj=converted_schema,
             root_parts=[
@@ -275,6 +279,36 @@ class AsyncAPIParser(OpenAPIParser):
             base_path=current_context.base_path,
             base_url=current_context.base_url,
         )
+
+    def _iter_converted_schema_schemas(
+        self,
+        name: str,
+        converted_schema: dict[str, YamlValue],
+        path: list[str],
+        *,
+        include_root_schema: bool = False,
+    ) -> list[AsyncAPISchema]:
+        context = self._current_asyncapi_context()
+        converted_schema_key = "_".join(_escape_context_path_part(part) for part in path) or name
+        ref_prefix = f"#/{INTERNAL_SCHEMA_CONTAINER}/{converted_schema_key}/components/schemas"
+        converted_schema = _move_json_schema_definitions_to_components(converted_schema, ref_prefix=ref_prefix)
+        converted_schema.setdefault("title", name)
+        context.raw_obj.setdefault(INTERNAL_SCHEMA_CONTAINER, {})[converted_schema_key] = converted_schema
+        root_path = [*context.root_parts, f"#/{INTERNAL_SCHEMA_CONTAINER}", converted_schema_key]
+        schemas = [self._schema(name, converted_schema, root_path, context)] if include_root_schema else []
+        schemas.extend(
+            self._schema(
+                schema_name,
+                component_schema,
+                [*root_path, "components", "schemas", schema_name],
+                context,
+            )
+            for schema_name, component_schema in _iter_mapping_items(
+                converted_schema.get("components", {}).get("schemas", {})
+            )
+            if isinstance(component_schema, (dict, bool))
+        )
+        return schemas
 
     def _iter_schema_format_schemas(
         self,
@@ -314,34 +348,30 @@ class AsyncAPIParser(OpenAPIParser):
                 return [self._schema(name, converted_schema, context.root_parts, context, parse_as_file=True)]
             case "protobuf":
                 context = self._current_asyncapi_context()
-                converted_schema_key = "_".join(_escape_context_path_part(part) for part in path) or name
-                ref_prefix = f"#/{INTERNAL_SCHEMA_CONTAINER}/{converted_schema_key}/components/schemas"
-                converted_schema = _move_json_schema_definitions_to_components(
-                    convert_protobuf_schema_data(raw_schema, encoding=self.encoding),
-                    ref_prefix=ref_prefix,
+                return self._iter_converted_schema_schemas(
+                    name,
+                    convert_protobuf_schema_data(
+                        raw_schema,
+                        base_path=context.base_path,
+                        encoding=self.encoding,
+                    ),
+                    path,
                 )
-                converted_schema.setdefault("title", name)
-                context.raw_obj.setdefault(INTERNAL_SCHEMA_CONTAINER, {})[converted_schema_key] = converted_schema
-                schemas = converted_schema.get("components", {}).get("schemas", {})
-                return [
-                    self._schema(
-                        schema_name,
-                        component_schema,
-                        [
-                            *context.root_parts,
-                            f"#/{INTERNAL_SCHEMA_CONTAINER}",
-                            converted_schema_key,
-                            "components",
-                            "schemas",
-                            schema_name,
-                        ],
-                        context,
-                    )
-                    for schema_name, component_schema in _iter_mapping_items(schemas)
-                    if isinstance(component_schema, (dict, bool))
-                ]
+            case "xmlschema":
+                context = self._current_asyncapi_context()
+                return self._iter_converted_schema_schemas(
+                    name,
+                    convert_xml_schema_data(
+                        raw_schema,
+                        base_path=context.base_path,
+                        encoding=self.encoding,
+                    ),
+                    path,
+                    include_root_schema=True,
+                )
             case _:  # pragma: no cover
                 raise _unsupported_schema_format_error(schema_format or "", path)
+        raise _unsupported_schema_format_error(schema_format or "", path)  # pragma: no cover
 
     def _resolve_ref_object(
         self,
@@ -431,7 +461,8 @@ class AsyncAPIParser(OpenAPIParser):
                     payload_schema_format,
                 )
             )
-        if "headers" in message:
+        has_headers = "headers" in message
+        if has_headers:
             schemas.extend(
                 self._iter_schema_format_schemas(
                     _make_model_name(name, "Headers"),
@@ -439,18 +470,151 @@ class AsyncAPIParser(OpenAPIParser):
                     [*path, "headers"],
                 )
             )
-        elif "traits" in message:
+        if "traits" in message:
             schemas.extend(
-                self._iter_message_trait_header_schemas(
+                self._iter_message_trait_schemas(
                     message["traits"],
-                    _make_model_name(name, "Headers"),
+                    None if has_headers else _make_model_name(name, "Headers"),
+                    name,
                     [*path, "traits"],
+                    seen_paths,
+                )
+            )
+        if "bindings" in message:
+            schemas.extend(
+                self._iter_binding_schemas(
+                    message["bindings"],
+                    name,
+                    [*path, "bindings"],
                     seen_paths,
                 )
             )
         return schemas
 
-    def _iter_message_trait_header_schemas(
+    def _iter_binding_schemas(
+        self,
+        bindings: Any,
+        name: str,
+        path: list[str],
+        seen_paths: set[tuple[str, ...]] | None = None,
+    ) -> list[AsyncAPISchema]:
+        seen_paths = seen_paths or set()
+        if not isinstance(bindings, dict):
+            return []
+        if resolved := self._resolve_ref_object(bindings, seen_paths):
+            with self._asyncapi_context(resolved.context):
+                return self._iter_binding_schemas(
+                    resolved.value,
+                    _make_model_name(resolved.path[-1] if resolved.path else name),
+                    resolved.path,
+                    seen_paths | {tuple(resolved.path)},
+                )
+
+        schemas: list[AsyncAPISchema] = []
+        for protocol_name, binding in _iter_mapping_items(bindings):
+            binding_path = [*path, protocol_name]
+            binding_name = _make_model_name(name, protocol_name)
+            if resolved := self._resolve_ref_object(binding, seen_paths):
+                with self._asyncapi_context(resolved.context):
+                    schemas.extend(
+                        self._iter_binding_schemas(
+                            {protocol_name: resolved.value},
+                            name,
+                            resolved.path,
+                            seen_paths | {tuple(resolved.path)},
+                        )
+                    )
+                continue
+            if not isinstance(binding, dict):
+                continue
+            for field_name, field_schema in _iter_mapping_items(binding):
+                if field_name not in BINDING_SCHEMA_FIELD_NAMES:
+                    continue
+                schemas.extend(
+                    self._iter_schema_format_schemas(
+                        _make_model_name(binding_name, field_name),
+                        field_schema,
+                        [*binding_path, field_name],
+                    )
+                )
+        return schemas
+
+    def _iter_parameter_schemas(
+        self,
+        parameter: Any,
+        name: str,
+        path: list[str],
+        seen_paths: set[tuple[str, ...]] | None = None,
+    ) -> list[AsyncAPISchema]:
+        seen_paths = seen_paths or set()
+        if not isinstance(parameter, dict):
+            return []
+        if resolved := self._resolve_ref_object(parameter, seen_paths):
+            with self._asyncapi_context(resolved.context):
+                return self._iter_parameter_schemas(
+                    resolved.value,
+                    _make_model_name(resolved.path[-1] if resolved.path else name),
+                    resolved.path,
+                    seen_paths | {tuple(resolved.path)},
+                )
+        if "schema" not in parameter:
+            return []
+        return self._iter_schema_format_schemas(
+            name,
+            parameter["schema"],
+            [*path, "schema"],
+        )
+
+    def _iter_message_trait_schemas(
+        self,
+        traits: Any,
+        headers_name: str | None,
+        binding_name: str,
+        path: list[str],
+        seen_paths: set[tuple[str, ...]] | None = None,
+    ) -> list[AsyncAPISchema]:
+        seen_paths = seen_paths or set()
+        trait_items = traits if isinstance(traits, list) else [traits]
+        schemas: list[AsyncAPISchema] = []
+        for index, trait in enumerate(trait_items):
+            if not isinstance(trait, dict):
+                continue
+            trait_path = [*path, str(index)] if isinstance(traits, list) else path
+            if resolved := self._resolve_ref_object(trait, seen_paths):
+                with self._asyncapi_context(resolved.context):
+                    schemas.extend(
+                        self._iter_message_trait_schemas(
+                            resolved.value,
+                            headers_name,
+                            binding_name,
+                            resolved.path,
+                            seen_paths | {tuple(resolved.path)},
+                        )
+                    )
+                continue
+            if "headers" in trait and headers_name is not None:
+                if any(schema.name == headers_name for schema in schemas):
+                    msg = f"Multiple AsyncAPI message traits define headers for {_path_to_string(path)}"
+                    raise Error(msg)
+                schemas.extend(
+                    self._iter_schema_format_schemas(
+                        headers_name,
+                        trait["headers"],
+                        [*trait_path, "headers"],
+                    )
+                )
+            if "bindings" in trait:
+                schemas.extend(
+                    self._iter_binding_schemas(
+                        trait["bindings"],
+                        _make_model_name(binding_name, "Trait"),
+                        [*trait_path, "bindings"],
+                        seen_paths,
+                    )
+                )
+        return schemas
+
+    def _iter_operation_trait_schemas(
         self,
         traits: Any,
         name: str,
@@ -467,7 +631,7 @@ class AsyncAPIParser(OpenAPIParser):
             if resolved := self._resolve_ref_object(trait, seen_paths):
                 with self._asyncapi_context(resolved.context):
                     schemas.extend(
-                        self._iter_message_trait_header_schemas(
+                        self._iter_operation_trait_schemas(
                             resolved.value,
                             name,
                             resolved.path,
@@ -475,19 +639,32 @@ class AsyncAPIParser(OpenAPIParser):
                         )
                     )
                 continue
-            if "headers" not in trait:
+            if "bindings" not in trait:
                 continue
-            if schemas:
-                msg = f"Multiple AsyncAPI message traits define headers for {_path_to_string(path)}"
-                raise Error(msg)
             schemas.extend(
-                self._iter_schema_format_schemas(
-                    name,
-                    trait["headers"],
-                    [*trait_path, "headers"],
+                self._iter_binding_schemas(
+                    trait["bindings"],
+                    _make_model_name(name, "Trait"),
+                    [*trait_path, "bindings"],
+                    seen_paths,
                 )
             )
         return schemas
+
+    def _iter_message_trait_header_schemas(
+        self,
+        traits: Any,
+        name: str,
+        path: list[str],
+        seen_paths: set[tuple[str, ...]] | None = None,
+    ) -> list[AsyncAPISchema]:
+        return self._iter_message_trait_schemas(
+            traits,
+            name,
+            name.removesuffix("Headers") or name,
+            path,
+            seen_paths,
+        )
 
     def _iter_operation_message_schemas(
         self,
@@ -553,6 +730,24 @@ class AsyncAPIParser(OpenAPIParser):
                     seen_paths | {tuple(resolved.path)},
                 )
         schemas: list[AsyncAPISchema] = []
+        if "traits" in operation:
+            schemas.extend(
+                self._iter_operation_trait_schemas(
+                    operation["traits"],
+                    name,
+                    [*path, "traits"],
+                    seen_paths,
+                )
+            )
+        if "bindings" in operation:
+            schemas.extend(
+                self._iter_binding_schemas(
+                    operation["bindings"],
+                    name,
+                    [*path, "bindings"],
+                    seen_paths,
+                )
+            )
         if "messages" in operation:
             schemas.extend(
                 self._iter_operation_message_schemas(
@@ -590,6 +785,25 @@ class AsyncAPIParser(OpenAPIParser):
                     seen_paths | {tuple(resolved.path)},
                 )
         schemas: list[AsyncAPISchema] = []
+        if "parameters" in channel:
+            for parameter_name, parameter in _iter_mapping_items(channel["parameters"]):
+                schemas.extend(
+                    self._iter_parameter_schemas(
+                        parameter,
+                        _make_model_name(name, parameter_name),
+                        [*path, "parameters", parameter_name],
+                        seen_paths,
+                    )
+                )
+        if "bindings" in channel:
+            schemas.extend(
+                self._iter_binding_schemas(
+                    channel["bindings"],
+                    name,
+                    [*path, "bindings"],
+                    seen_paths,
+                )
+            )
         for operation_name in OPERATION_NAMES:
             operation = channel.get(operation_name)
             if isinstance(operation, dict) and "message" in operation:
@@ -648,12 +862,48 @@ class AsyncAPIParser(OpenAPIParser):
                 )
             )
 
+        for parameter_name, parameter in _iter_mapping_items(components.get("parameters")):
+            schemas.extend(
+                self._iter_parameter_schemas(
+                    parameter,
+                    _make_model_name(parameter_name),
+                    [*path_parts, "#/components", "parameters", parameter_name],
+                )
+            )
+
+        for channel_name, channel in _iter_mapping_items(components.get("channels")):
+            schemas.extend(
+                self._iter_channel_schemas(
+                    channel,
+                    _make_model_name(channel_name),
+                    [*path_parts, "#/components", "channels", channel_name],
+                )
+            )
+
+        for reply_name, reply in _iter_mapping_items(components.get("replies")):
+            schemas.extend(
+                self._iter_operation_reply_schemas(
+                    reply,
+                    _make_model_name(reply_name),
+                    [*path_parts, "#/components", "replies", reply_name],
+                )
+            )
+
         for operation_name, operation in _iter_mapping_items(components.get("operations")):
             schemas.extend(
                 self._iter_operation_schemas(
                     operation,
                     _make_model_name(operation_name),
                     [*path_parts, "#/components", "operations", operation_name],
+                )
+            )
+
+        for trait_name, trait in _iter_mapping_items(components.get("operationTraits")):
+            schemas.extend(
+                self._iter_operation_trait_schemas(
+                    trait,
+                    _make_model_name(trait_name),
+                    [*path_parts, "#/components", "operationTraits", trait_name],
                 )
             )
 

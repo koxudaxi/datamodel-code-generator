@@ -5,6 +5,8 @@ info:
 channels:
   userLifecycle:
     $ref: '#/components/channels/UserLifecycle'
+  bindingRefChannel:
+    $ref: '#/components/channels/BindingRefChannel'
   badRef:
     $ref: true
   cycleChannel:
@@ -41,7 +43,33 @@ components:
   channels:
     UserLifecycle:
       address: users.lifecycle
+      parameters:
+        userId:
+          $ref: '#/components/parameters/UserId'
+        eventShard:
+          schema:
+            type: object
+            required:
+              - shardId
+            properties:
+              shardId:
+                type: string
+        badParameter: true
       bindings:
+        websockets:
+          query:
+            type: object
+            required:
+              - token
+            properties:
+              token:
+                type: string
+          headers:
+            type: object
+            properties:
+              x-request-id:
+                type: string
+          bindingVersion: '0.1.0'
         kafka:
           topic: users.lifecycle
           partitions: 3
@@ -49,19 +77,46 @@ components:
       messages:
         userCreated:
           $ref: '#/components/messages/UserCreated'
+        headerWithTraitBinding:
+          $ref: '#/components/messages/HeaderWithTraitBinding'
+    BindingRefChannel:
+      bindings:
+        $ref: '#/components/x-bindings/WebsocketBinding'
+      messages:
+        bindingRef:
+          $ref: '#/components/messages/BindingRefMessage'
   operations:
     ReceiveUserCreated:
       action: receive
       channel:
         $ref: '#/components/channels/UserLifecycle'
+      traits:
+        - not-a-trait
+        - $ref: '#/components/operationTraits/noBindings'
+        - $ref: '#/components/operationTraits/httpConsumer'
       bindings:
+        http:
+          query:
+            type: object
+            required:
+              - consumer
+            properties:
+              consumer:
+                type: string
+          bindingVersion: '0.3.0'
         kafka:
           groupId:
-            type: string
-            enum:
-              - user-service
+            type: object
+            required:
+              - group
+            properties:
+              group:
+                type: string
           clientId:
-            type: string
+            type: object
+            properties:
+              client:
+                type: string
       messages:
         - $ref: '#/components/messages/UserCreated'
       reply:
@@ -69,6 +124,53 @@ components:
           $ref: '#/components/channels/UserLifecycle'
         messages:
           - $ref: '#/components/messages/UserCreatedAck'
+    BindingRefOperation:
+      action: send
+      bindings:
+        http:
+          $ref: '#/components/x-protocol-bindings/HttpOperationBinding'
+        scalar:
+          true
+      messages:
+        - $ref: '#/components/messages/BindingRefMessage'
+  x-bindings:
+    WebsocketBinding:
+      websockets:
+        query:
+          type: object
+          properties:
+            bindingRefToken:
+              type: string
+        headers:
+          type: object
+          properties:
+            bindingRefHeader:
+              type: string
+  x-protocol-bindings:
+    HttpOperationBinding:
+      query:
+        type: object
+        properties:
+          protocolRefQuery:
+            type: string
+    HttpMessageBinding:
+      headers:
+        type: object
+        properties:
+          protocolMessageHeader:
+            type: string
+  operationTraits:
+    noBindings:
+      summary: No binding schema here
+    httpConsumer:
+      bindings:
+        http:
+          query:
+            type: object
+            properties:
+              traitQuery:
+                type: string
+          bindingVersion: '0.3.0'
   messageTraits:
     noHeaders:
       correlationId:
@@ -85,6 +187,29 @@ components:
             type: string
           attempt:
             type: integer
+      bindings:
+        http:
+          headers:
+            type: object
+            properties:
+              x-trait:
+                type: string
+          bindingVersion: '0.3.0'
+    bindingOnly:
+      bindings:
+        kafka:
+          key:
+            type: object
+            properties:
+              traitKey:
+                type: string
+          bindingVersion: '0.5.0'
+  parameters:
+    UserId:
+      schema:
+        type: string
+    NoSchema:
+      description: Not a schema-bearing parameter
   messages:
     UserCreated:
       traits:
@@ -95,13 +220,26 @@ components:
       bindings:
         kafka:
           key:
-            type: string
-            enum:
-              - user-created
+            type: object
+            required:
+              - key
+            properties:
+              key:
+                type: string
           bindingVersion: '0.5.0'
+        http:
+          headers:
+            type: object
+            required:
+              - content-type
+            properties:
+              content-type:
+                type: string
+          bindingVersion: '0.3.0'
       payload:
         $ref: '#/components/schemas/UserCreatedPayload'
     UserCreatedAck:
+      bindings: true
       payload:
         type: object
         required:
@@ -113,6 +251,28 @@ components:
             type:
               - string
               - 'null'
+    HeaderWithTraitBinding:
+      traits:
+        - $ref: '#/components/messageTraits/bindingOnly'
+      headers:
+        type: object
+        properties:
+          directHeader:
+            type: string
+      payload:
+        type: object
+        properties:
+          value:
+            type: string
+    BindingRefMessage:
+      bindings:
+        http:
+          $ref: '#/components/x-protocol-bindings/HttpMessageBinding'
+      payload:
+        type: object
+        properties:
+          refValue:
+            type: string
   schemas:
     OpenApiDecorated:
       schemaFormat: application/vnd.oai.openapi+json;version=3.1.0

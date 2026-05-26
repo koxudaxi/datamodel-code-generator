@@ -177,6 +177,30 @@ def test_main_asyncapi_protobuf_schema_format(output_file: Path) -> None:
     )
 
 
+def test_main_asyncapi_protobuf_schema_format_local_import(output_file: Path) -> None:
+    """Resolve local imports from AsyncAPI embedded Protocol Buffers schemas."""
+    run_main_and_assert(
+        input_path=ASYNC_API_DATA_PATH / "protobuf-local-import.yaml",
+        output_path=output_file,
+        input_file_type="asyncapi",
+        assert_func=assert_file_content,
+        expected_file="protobuf_local_import.py",
+        extra_args=PY310_TARGET_ARGS,
+    )
+
+
+def test_main_asyncapi_xml_schema_format(output_file: Path) -> None:
+    """Dispatch AsyncAPI embedded XML Schema strings to the XML Schema parser."""
+    run_main_and_assert(
+        input_path=ASYNC_API_DATA_PATH / "xml-schema-format.yaml",
+        output_path=output_file,
+        input_file_type="asyncapi",
+        assert_func=assert_file_content,
+        expected_file="xml_schema_format.py",
+        extra_args=PY310_TARGET_ARGS,
+    )
+
+
 @pytest.mark.parametrize(
     ("fixture_name", "expected_stderr_contains"),
     [
@@ -203,6 +227,10 @@ def test_main_asyncapi_protobuf_schema_format(output_file: Path) -> None:
         (
             "protobuf-schema-format-non-string.yaml",
             "Protocol Buffers schemaFormat requires a .proto schema string",
+        ),
+        (
+            "xml-schema-format-non-string.yaml",
+            "XML Schema schemaFormat requires an XSD schema string",
         ),
         (
             "schema-format-scalar-schema.yaml",

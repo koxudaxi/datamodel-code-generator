@@ -1,3 +1,5 @@
+// Leading comments are valid protobuf input and should not block input type inference.
+
 syntax = "proto3";
 
 package example.presence;

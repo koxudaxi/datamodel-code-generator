@@ -75,13 +75,23 @@ The AsyncAPI parser extracts schemas from:
 |-------------------|------------------|
 | `components.schemas` | Reusable schema models |
 | `components.messages[*].payload` and `headers` | Reusable message payload/header models |
+| `components.messages[*].bindings` | Binding schemas for schema-bearing binding fields such as Kafka `key` and HTTP `headers` |
 | `channels[*].publish.message`, `subscribe.message`, and `messages[*]` | Channel message payload/header models |
+| `channels[*].parameters[*].schema` and `components.parameters[*].schema` | Channel parameter schema models |
+| `channels[*].bindings` and `components.channels[*].bindings` | Binding schemas for schema-bearing binding fields such as WebSockets `query`/`headers` |
 | `operations[*].messages` and `operations[*].reply.messages` | Operation request/reply message payload/header models |
 | `components.operations[*].messages` and `reply.messages` | Reusable operation message payload/header models |
+| `operations[*].bindings` and `components.operations[*].bindings` | Binding schemas for schema-bearing binding fields such as HTTP `query` and Kafka `groupId`/`clientId` |
+| `components.replies[*].messages` | Reusable reply message payload/header models |
 | `message.traits[*].headers` and `components.messageTraits[*].headers` | Header models when the message itself does not define `headers` |
+| `message.traits[*].bindings` and `components.messageTraits[*].bindings` | Binding schemas supplied by message traits |
+| `operation.traits[*].bindings` and `components.operationTraits[*].bindings` | Binding schemas supplied by operation traits |
 | Local and external Reference Objects | Resolved before model generation |
 
-Protocol bindings are tolerated and their references are resolved when they lead to the schema-bearing objects above. Binding-specific configuration is treated as transport metadata and is not emitted as Python models.
+Protocol binding configuration is treated as transport metadata unless the AsyncAPI binding
+specification defines the field as a Schema Object or Reference Object. The parser currently
+generates models for the schema-bearing binding fields used by the official bindings, including
+`headers`, `query`, `key`, `groupId`, and `clientId`.
 
 ## Schema Formats
 
@@ -97,17 +107,18 @@ Supported embedded schema formats are:
 | `application/vnd.oai.openapi...` | Parsed with the OpenAPI schema stack |
 | `application/vnd.apache.avro...` | Converted with the Avro parser, then generated as Python models |
 | `application/vnd.google.protobuf` | Converted with the Protocol Buffers parser, then generated as Python models |
+| `application/xml`, `text/xml`, `application/xsd+xml`, `application/xml+schema`, `application/xml-schema` | Converted with the XML Schema parser, then generated as Python models |
 
-RAML, XML Schema, and custom embedded `schemaFormat` values inside an AsyncAPI document are rejected with an explicit error instead of producing partial or misleading models. Use the dedicated top-level `xmlschema` or other input types for those schema files.
+RAML and custom embedded `schemaFormat` values inside an AsyncAPI document are rejected with an explicit error instead of producing partial or misleading models.
 
-Embedded Protocol Buffers schemas support inline `.proto` source strings. Use the top-level `protobuf` input type for multi-file `.proto` schemas that depend on local imports.
+Embedded Protocol Buffers schemas support inline `.proto` source strings and local imports resolved relative to the AsyncAPI document. Embedded XML Schema supports inline XSD strings and local `xs:include` / `xs:import` / `xs:redefine` / `xs:override` locations resolved relative to the AsyncAPI document.
 
 ## Limitations
 
 The AsyncAPI input type is for model generation from message payloads, headers, and reusable schemas. It does not:
 
 - validate complete AsyncAPI documents;
-- apply protocol binding semantics;
+- apply protocol binding runtime semantics;
 - generate producer/consumer code;
 - enforce runtime message validation;
 - merge multiple traits that define the same `headers` property.
