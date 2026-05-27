@@ -1,0 +1,12 @@
+asyncapi: 3.0.0
+info:
+  title: Invalid protobuf schema format
+  version: 1.0.0
+channels:
+  proto/events:
+    messages:
+      protoEvent:
+        payload:
+          schemaFormat: application/vnd.google.protobuf
+          schema:
+            type: object

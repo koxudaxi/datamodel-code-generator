@@ -151,6 +151,7 @@ datamodel-codegen [OPTIONS]
 | [`--disable-appending-item-suffix`](template-customization.md#disable-appending-item-suffix) | Disable appending 'Item' suffix to array item types. |
 | [`--disable-timestamp`](template-customization.md#disable-timestamp) | Disable timestamp in generated file header for reproducible output. |
 | [`--enable-command-header`](template-customization.md#enable-command-header) | Include command-line options in file header for reproducibility. |
+| [`--enable-generated-header-marker`](template-customization.md#enable-generated-header-marker) | Include the @generated marker in file header for generated-code tooling. |
 | [`--enable-version-header`](template-customization.md#enable-version-header) | Include tool version information in file header. |
 | [`--extra-template-data`](template-customization.md#extra-template-data) | Pass custom template variables from JSON file for code generation. |
 | [`--formatters`](template-customization.md#formatters) | Specify code formatters to apply to generated output. |
@@ -259,6 +260,7 @@ All options sorted alphabetically:
 - [`--empty-enum-field-name`](field-customization.md#empty-enum-field-name) - Name for empty string enum field values.
 - [`--enable-command-header`](template-customization.md#enable-command-header) - Include command-line options in file header for reproducibil...
 - [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability) - Enable faux immutability in Pydantic models (frozen=True).
+- [`--enable-generated-header-marker`](template-customization.md#enable-generated-header-marker) - Include the @generated marker in file header for generated-c...
 - [`--enable-version-header`](template-customization.md#enable-version-header) - Include tool version information in file header.
 - [`--encoding`](base-options.md#encoding) - Specify character encoding for input and output files.
 - [`--enum-field-as-literal`](typing-customization.md#enum-field-as-literal) - Convert all enum fields to Literal types instead of Enum cla...

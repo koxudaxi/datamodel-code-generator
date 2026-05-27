@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package example.common;
+
+// Shared postal address used from another file.
+message Address {
+  string line_1 = 1;
+  string city = 2;
+}
+
+// Lifecycle state shared across APIs.
+enum Status {
+  // Default status for proto3 compatibility.
+  STATUS_UNSPECIFIED = 0;
+  // Active resource.
+  ACTIVE = 1;
+  // Suspended resource.
+  SUSPENDED = 2;
+}

@@ -209,7 +209,8 @@ base_options.add_argument(
     "--input-file-type",
     help=(
         "Input file type (default: auto). "
-        "Use 'jsonschema', 'openapi', 'graphql', or 'xmlschema' for schema definitions. "
+        "Use 'jsonschema', 'openapi', 'asyncapi', 'graphql', 'xmlschema', 'protobuf', or 'avro' "
+        "for schema definitions. "
         "Use 'json', 'yaml', or 'csv' for raw sample data to infer a schema automatically."
     ),
     choices=[i.value for i in InputFileType],
@@ -354,6 +355,12 @@ model_options.add_argument(
 model_options.add_argument(
     "--enable-command-header",
     help="Enable command-line options on file headers for reproducibility",
+    action="store_true",
+    default=None,
+)
+model_options.add_argument(
+    "--enable-generated-header-marker",
+    help="Enable @generated marker on file headers",
     action="store_true",
     default=None,
 )
@@ -1111,8 +1118,11 @@ base_options.add_argument(
     help="Schema version. Valid values depend on input type: "
     "JsonSchema: auto, draft-04, draft-06, draft-07, 2019-09, 2020-12. "
     "OpenAPI: auto, 3.0, 3.1. "
+    "AsyncAPI: auto, 2.0, 3.0. "
     "XMLSchema: auto, 1.0, 1.1. "
-    "(default: auto - detected from $schema, openapi field, or XML Schema versioning attributes)",
+    "Protobuf: auto, proto2, proto3, 2023. "
+    "(default: auto - detected from $schema, openapi/asyncapi field, XML Schema versioning attributes, "
+    "or Protobuf syntax/edition)",
     default=None,
 )
 base_options.add_argument(

@@ -1,0 +1,29 @@
+asyncapi: 3.0.0
+info:
+  title: XML schema format
+  version: 1.0.0
+channels:
+  xml/events:
+    address: xml/events
+    messages:
+      xmlEvent:
+        payload:
+          schemaFormat: application/xml;version=1.0
+          schema: |
+            <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+              <xs:include schemaLocation="xml-common.xsd"/>
+              <xs:element name="XmlEvent">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="user" type="UserType"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:schema>
+      xmlNameEvent:
+        payload:
+          schemaFormat: application/xml;version=1.0
+          schema: |
+            <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+              <xs:element name="Name" type="xs:string"/>
+            </xs:schema>

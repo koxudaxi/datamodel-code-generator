@@ -1,0 +1,23 @@
+asyncapi: 3.0.0
+info:
+  title: Multiple trait headers
+  version: 1.0.0
+components:
+  messages:
+    InvalidTraits:
+      traits:
+        - headers:
+            type: object
+            properties:
+              first:
+                type: string
+        - headers:
+            type: object
+            properties:
+              second:
+                type: string
+      payload:
+        type: object
+        properties:
+          id:
+            type: string

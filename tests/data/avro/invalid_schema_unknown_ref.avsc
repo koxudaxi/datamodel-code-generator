@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "UnknownRef",
+  "fields": [
+    {
+      "name": "missing",
+      "type": "missing.Type"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "UnknownSimpleRef",
+  "namespace": "example",
+  "fields": [
+    {
+      "name": "missing",
+      "type": "Missing"
+    }
+  ]
+}

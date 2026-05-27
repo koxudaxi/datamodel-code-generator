@@ -1,0 +1,13 @@
+// Leading comments are valid protobuf input and should not block input type inference.
+
+syntax = "proto3";
+
+package example.presence;
+
+import weak "common.proto";
+
+message Presence {
+  string implicit_name = 1;
+  optional string explicit_name = 2;
+  optional int32 explicit_count = 3;
+}

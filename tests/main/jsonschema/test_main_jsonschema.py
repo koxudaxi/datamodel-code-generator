@@ -134,6 +134,29 @@ def test_main_inheritance_forward_ref(output_file: Path, tmp_path: Path) -> None
     )
 
 
+def test_main_external_ref_slash_containing_key(output_dir: Path) -> None:
+    """Generate importable modular output for external refs targeting slash-containing keys."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "external_ref_slash_key" / "schema.json",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "external_ref_slash_key",
+        extra_args=["--disable-timestamp", "--target-python-version", "3.10"],
+    )
+
+
+def test_main_root_ref(output_file: Path) -> None:
+    """Generate root models referenced through a JSON Pointer root ref."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_ref.py",
+        extra_args=["--disable-timestamp", "--skip-root-model", "--target-python-version", "3.10"],
+    )
+
+
 @pytest.mark.benchmark
 @pytest.mark.cli_doc(
     options=["--keep-model-order"],
@@ -2166,6 +2189,35 @@ def test_main_generate_pydantic_v2_dataclass_field(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="pydantic_v2_dataclass_field.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
+    )
+
+
+def test_main_generate_pydantic_v2_dataclass_required_field_order(output_file: Path) -> None:
+    """Test pydantic_v2.dataclass keeps required fields before defaulted fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_required_field_order.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_required_field_order.py",
+        extra_args=[
+            "--disable-timestamp",
+            "--snake-case-field",
+            "--output-model-type",
+            "pydantic_v2.dataclass",
+            "--formatters",
+            "ruff-format",
+            "ruff-check",
+            "isort",
+            "--no-use-type-checking-imports",
+            "--use-annotated",
+            "--use-union-operator",
+            "--use-standard-collections",
+            "--use-default",
+            "--target-python-version",
+            "3.10",
+        ],
+        force_exec_validation=True,
     )
 
 
@@ -4893,6 +4945,40 @@ def test_main_jsonschema_property_names_ref_enum(output_file: Path) -> None:
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
+    )
+
+
+def test_main_jsonschema_property_names_ref_with_constraints(output_file: Path) -> None:
+    """Test propertyNames $ref with sibling constraints merges both key constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_ref_with_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_ref_with_constraints.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_ref_with_constraints",
+        model_name="PropertyNamesRefWithConstraints",
+        valid_json='{"x_ok":1}',
+        invalid_json='{"x_":1}',
+        expected_error_type="string_too_short",
+        expected_attribute_path=("root",),
+        expected_attribute_value={"x_ok": 1},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_ref_with_constraints",
+        model_name="PropertyNamesRefWithConstraints",
+        valid_json='{"x_ok":1}',
+        invalid_json='{"y_ok":1}',
+        expected_error_type="string_pattern_mismatch",
     )
 
 

@@ -15,6 +15,7 @@ from datamodel_code_generator.enums import (
     AllExportsScope,
     AllOfClassHierarchy,
     AllOfMergeMode,
+    AsyncAPIVersion,
     ClassNameAffixScope,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
@@ -27,6 +28,7 @@ from datamodel_code_generator.enums import (
     NamingStrategy,
     OpenAPIScope,
     OpenAPIVersion,
+    ProtobufVersion,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     TargetPydanticVersion,
@@ -88,6 +90,7 @@ class GenerateConfig(BaseModel):
     disable_timestamp: bool = False
     enable_version_header: bool = False
     enable_command_header: bool = False
+    enable_generated_header_marker: bool = False
     command_line: str | None = None
     allow_population_by_field_name: bool = False
     allow_extra_fields: bool = False
@@ -355,6 +358,10 @@ class JSONSchemaParserConfig(ParserConfig):
     schema_version_mode: VersionMode | None = None
 
 
+class AvroParserConfig(JSONSchemaParserConfig):
+    """Configuration model for AvroParser.__init__()."""
+
+
 class OpenAPIParserConfig(JSONSchemaParserConfig):
     """Configuration model for OpenAPIParser.__init__()."""
 
@@ -366,10 +373,28 @@ class OpenAPIParserConfig(JSONSchemaParserConfig):
     openapi_version: OpenAPIVersion | None = None
 
 
+class AsyncAPIParserConfig(JSONSchemaParserConfig):
+    """Configuration model for AsyncAPIParser.__init__()."""
+
+    openapi_scopes: list[OpenAPIScope] | None = None
+    include_path_parameters: bool = False
+    use_status_code_in_response_name: bool = False
+    openapi_include_paths: list[str] | None = None
+    openapi_include_info_version: bool = False
+    openapi_version: OpenAPIVersion | None = None
+    asyncapi_version: AsyncAPIVersion | None = None
+
+
 class XMLSchemaParserConfig(JSONSchemaParserConfig):
     """Configuration model for XMLSchemaParser.__init__()."""
 
     xmlschema_version: XMLSchemaVersion | None = None
+
+
+class ProtobufParserConfig(JSONSchemaParserConfig):
+    """Configuration model for ProtobufParser.__init__()."""
+
+    protobuf_version: ProtobufVersion | None = None
 
 
 class ParseConfig(BaseModel):
