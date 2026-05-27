@@ -109,6 +109,32 @@ def test_main_openapi_include_info_version_modular(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--enable-generated-header-marker"],
+    option_description="""Include the @generated marker in file header for generated-code tooling.
+
+The `--enable-generated-header-marker` flag marks generated output for tools that
+recognize the `@generated` marker.""",
+    input_schema="openapi/api.yaml",
+    cli_args=["--enable-generated-header-marker"],
+    golden_output="openapi/enable_generated_header_marker.py",
+)
+def test_enable_generated_header_marker(output_file: Path) -> None:
+    """Include the @generated marker in file header for generated-code tooling.
+
+    The `--enable-generated-header-marker` flag marks generated output for tools that
+    recognize the `@generated` marker.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enable_generated_header_marker.py",
+        extra_args=["--enable-generated-header-marker"],
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
