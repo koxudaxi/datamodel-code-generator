@@ -648,25 +648,42 @@ class ModelResolver:  # noqa: PLR0904
         """Register an identifier mapping to a resolved reference path."""
         self.ids["/".join(self.current_root)][id_] = self.resolve_ref(path)
 
+    def _get_path_absolute_local_file(self, ref: str) -> tuple[Path, str] | None:
+        """Return the local file path for a path-absolute URI ref."""
+        if not (self.root_id and self.current_base_path and self.current_root and ref.startswith("/")):
+            return None
+
+        file_path, fragment = ref.split("#", 1) if "#" in ref else (ref, "")
+        root_path = urlparse(self.root_id).path
+        current_root = "/".join(self.current_root)
+        if not (root_path and current_root and root_path.endswith(f"/{current_root}")):
+            return None
+
+        uri_root = root_path[: -len(current_root)]
+        if not file_path.startswith(uri_root):
+            return None
+
+        relative_file_path = file_path.removeprefix(uri_root).lstrip("/")
+        if not relative_file_path:
+            return None
+
+        base_path = self._base_path.resolve()
+        local_file_path = Path(base_path, relative_file_path).resolve()
+        if not local_file_path.is_relative_to(base_path) or not local_file_path.is_file():
+            return None
+
+        return local_file_path, fragment
+
     def _resolve_path_absolute_local_ref(self, ref: str) -> str | None:
         """Resolve path-absolute URI refs against the local schema root."""
-        resolved_ref: str | None = None
-        if self.root_id and self.current_base_path and self.current_root and ref.startswith("/"):
-            file_path, fragment = ref.split("#", 1) if "#" in ref else (ref, "")
-            root_path = urlparse(self.root_id).path
-            current_root = "/".join(self.current_root)
-            if root_path and current_root and root_path.endswith(f"/{current_root}"):
-                uri_root = root_path[: -len(current_root)]
-                relative_file_path = ""
-                if file_path.startswith(uri_root):
-                    relative_file_path = file_path.removeprefix(uri_root).lstrip("/")
-                if relative_file_path:
-                    base_path = self._base_path.resolve()
-                    local_file_path = Path(base_path, relative_file_path).resolve()
-                    if local_file_path.is_relative_to(base_path) and local_file_path.is_file():
-                        resolved_ref = get_relative_path(self.current_base_path, local_file_path).as_posix()
-                        if fragment:
-                            resolved_ref += f"#{fragment}"
+        local_ref = self._get_path_absolute_local_file(ref)
+        if local_ref is None:
+            return None
+
+        local_file_path, fragment = local_ref
+        resolved_ref = get_relative_path(self.current_base_path, local_file_path).as_posix()
+        if fragment:
+            resolved_ref += f"#{fragment}"
         return resolved_ref
 
     def resolve_ref(self, path: Sequence[str] | str) -> str:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
