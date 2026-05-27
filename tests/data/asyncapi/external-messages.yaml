@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: External messages
+  version: 1.0.0
+components:
+  messages:
+    UserCreated:
+      payload:
+        $ref: '#/components/schemas/UserPayload'
+  schemas:
+    UserPayload:
+      type: object
+      required:
+        - id
+        - profile
+      properties:
+        id:
+          type: string
+        profile:
+          $ref: '#/components/schemas/UserProfile'
+    UserProfile:
+      type: object
+      properties:
+        displayName:
+          type: string

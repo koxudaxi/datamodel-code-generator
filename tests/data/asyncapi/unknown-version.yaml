@@ -1,0 +1,13 @@
+asyncapi: 4.0.0
+info:
+  title: Unknown AsyncAPI version
+  version: 1.0.0
+components:
+  schemas:
+    FallbackModel:
+      type: object
+      properties:
+        value:
+          type:
+            - string
+            - 'null'

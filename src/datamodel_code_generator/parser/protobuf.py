@@ -255,6 +255,28 @@ def _add_generated_imports(body: str) -> str:
     return _add_math_default_imports(body)
 
 
+def convert_protobuf_schema_data(
+    raw_schema: Any,
+    *,
+    base_path: Path | None = None,
+    protobuf_version: ProtobufVersion | None = None,
+    schema_version_mode: VersionMode | None = None,
+    encoding: str = "utf-8",
+) -> dict[str, Any]:
+    """Convert a Protocol Buffers schema source to JSON Schema data."""
+    if not isinstance(raw_schema, str):
+        msg = "Protocol Buffers schemaFormat requires a .proto schema string"
+        raise Error(msg)
+    parser = ProtobufParser(
+        raw_schema,
+        base_path=base_path,
+        protobuf_version=protobuf_version,
+        schema_version_mode=schema_version_mode,
+        encoding=encoding,
+    )
+    return parser.convert_to_json_schema_data()
+
+
 def _extract_default_option(options: str) -> str | None:
     current: list[str] = []
     parts: list[str] = []
@@ -710,8 +732,8 @@ class ProtobufParser(JsonSchemaParser):
                 with contextlib.suppress(OSError):
                     output_path.unlink()
 
-    def parse_raw(self) -> None:
-        """Parse all Protocol Buffers input sources into data models."""
+    def convert_to_json_schema_data(self) -> dict[str, Any]:
+        """Convert Protocol Buffers input sources into JSON Schema data."""
         config = cast("ProtobufParserConfig", self.config)
         descriptor_set, input_file_names = self._compile_descriptor_set()
         converter = _ProtobufDescriptorConverter(
@@ -719,7 +741,11 @@ class ProtobufParser(JsonSchemaParser):
             schema_version_mode=config.schema_version_mode,
             input_file_names=input_file_names,
         )
-        raw_obj = converter.convert(descriptor_set)
+        return converter.convert(descriptor_set)
+
+    def parse_raw(self) -> None:
+        """Parse all Protocol Buffers input sources into data models."""
+        raw_obj = self.convert_to_json_schema_data()
         source = next(self.iter_source)
         source.raw_data = raw_obj
         self.raw_obj = raw_obj
@@ -728,4 +754,4 @@ class ProtobufParser(JsonSchemaParser):
         self._generate_forced_base_models()
 
 
-__all__ = ["ProtobufParser"]
+__all__ = ["ProtobufParser", "convert_protobuf_schema_data"]

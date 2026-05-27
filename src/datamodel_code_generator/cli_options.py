@@ -241,6 +241,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--disable-timestamp": CLIOptionMeta(name="--disable-timestamp", category=OptionCategory.TEMPLATE),
     "--enable-version-header": CLIOptionMeta(name="--enable-version-header", category=OptionCategory.TEMPLATE),
     "--enable-command-header": CLIOptionMeta(name="--enable-command-header", category=OptionCategory.TEMPLATE),
+    "--enable-generated-header-marker": CLIOptionMeta(
+        name="--enable-generated-header-marker", category=OptionCategory.TEMPLATE
+    ),
     "--formatters": CLIOptionMeta(name="--formatters", category=OptionCategory.TEMPLATE),
     "--custom-formatters": CLIOptionMeta(name="--custom-formatters", category=OptionCategory.TEMPLATE),
     "--custom-formatters-kwargs": CLIOptionMeta(name="--custom-formatters-kwargs", category=OptionCategory.TEMPLATE),

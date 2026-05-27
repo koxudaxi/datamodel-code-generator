@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "escaped": {
+      "$ref": "external.json#/definitions/https:~1~1example.com~1schema.json"
+    },
+    "unescaped": {
+      "$ref": "external.json#/definitions/https://example.com/schema.json"
+    },
+    "nestedName": {
+      "$ref": "external.json#/definitions/https://example.com/schema.json/properties/name"
+    },
+    "listItem": {
+      "$ref": "external-list.json#/items/0/https://example.com/schema.json"
+    },
+    "slashKey": {
+      "$ref": "#/definitions/user/created"
+    }
+  },
+  "definitions": {
+    "user/created": {
+      "type": "object",
+      "properties": {
+        "eventId": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

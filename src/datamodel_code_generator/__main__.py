@@ -443,6 +443,7 @@ class Config(BaseModel):  # noqa: PLR0904
     disable_timestamp: bool = False
     enable_version_header: bool = False
     enable_command_header: bool = False
+    enable_generated_header_marker: bool = False
     allow_population_by_field_name: bool = False
     allow_extra_fields: bool = False
     extra_fields: Optional[str] = None  # noqa: UP045
@@ -902,6 +903,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         disable_timestamp=config.disable_timestamp,
         enable_version_header=config.enable_version_header,
         enable_command_header=config.enable_command_header,
+        enable_generated_header_marker=config.enable_generated_header_marker,
         command_line=command_line,
         allow_population_by_field_name=config.allow_population_by_field_name,
         allow_extra_fields=config.allow_extra_fields,

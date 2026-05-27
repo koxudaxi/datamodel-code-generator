@@ -1,0 +1,19 @@
+asyncapi: 2.6.0
+info:
+  title: AsyncAPI v2 schemaFormat
+  version: 1.0.0
+channels:
+  audit/events:
+    publish:
+      message:
+        name: AuditEvent
+        schemaFormat: application/vnd.apache.avro+yaml;version=1.9.0
+        payload:
+          type: record
+          name: AuditEvent
+          namespace: com.example.audit
+          fields:
+            - name: eventId
+              type: string
+            - name: severity
+              type: string

@@ -74,6 +74,7 @@ GraphQLScope: TypeAlias = Literal['schema']
 InputFileType: TypeAlias = Literal[
     'auto',
     'openapi',
+    'asyncapi',
     'jsonschema',
     'xmlschema',
     'protobuf',
@@ -149,6 +150,7 @@ class GenerateConfig(TypedDict, closed=True):
     disable_timestamp: NotRequired[bool]
     enable_version_header: NotRequired[bool]
     enable_command_header: NotRequired[bool]
+    enable_generated_header_marker: NotRequired[bool]
     command_line: NotRequired[str | None]
     allow_population_by_field_name: NotRequired[bool]
     allow_extra_fields: NotRequired[bool]

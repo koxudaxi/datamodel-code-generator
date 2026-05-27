@@ -309,6 +309,7 @@ input-model = [
   "src/datamodel_code_generator/config.py:JSONSchemaParserConfig",
   "src/datamodel_code_generator/config.py:AvroParserConfig",
   "src/datamodel_code_generator/config.py:OpenAPIParserConfig",
+  "src/datamodel_code_generator/config.py:AsyncAPIParserConfig",
   "src/datamodel_code_generator/config.py:ProtobufParserConfig",
   "src/datamodel_code_generator/config.py:XMLSchemaParserConfig",
 ]

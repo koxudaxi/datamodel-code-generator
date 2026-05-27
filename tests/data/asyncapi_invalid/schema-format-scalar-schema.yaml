@@ -1,0 +1,9 @@
+asyncapi: 3.0.0
+info:
+  title: Scalar Multi Format schema
+  version: 1.0.0
+components:
+  schemas:
+    ScalarSchema:
+      schemaFormat: application/schema+json
+      schema: not a schema object

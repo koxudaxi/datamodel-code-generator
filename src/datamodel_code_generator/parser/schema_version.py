@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Literal, TypeAlias, TypeVar
 
 from typing_extensions import TypedDict
 
-from datamodel_code_generator.enums import JsonSchemaVersion, OpenAPIVersion
+from datamodel_code_generator.enums import AsyncAPIVersion, JsonSchemaVersion, OpenAPIVersion
 
 if TYPE_CHECKING:
     from datamodel_code_generator.types import Types
@@ -454,6 +454,13 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
                     ref_sibling_keywords=True,
                 )
 
+    @classmethod
+    def from_asyncapi_version(cls, version: AsyncAPIVersion) -> OpenAPISchemaFeatures:
+        """Create schema features for AsyncAPI Schema Objects."""
+        if version == AsyncAPIVersion.V2:
+            return cls.from_openapi_version(OpenAPIVersion.V30)
+        return cls.from_openapi_version(OpenAPIVersion.V31)
+
 
 SchemaFeaturesT = TypeVar("SchemaFeaturesT", bound=JsonSchemaFeatures)
 
@@ -516,6 +523,16 @@ def detect_openapi_version(data: dict[str, Any]) -> OpenAPIVersion:
         if version.startswith("3.0"):
             return OpenAPIVersion.V30
     return OpenAPIVersion.V31
+
+
+def detect_asyncapi_version(data: dict[str, Any]) -> AsyncAPIVersion:
+    """Detect AsyncAPI major version from asyncapi field."""
+    if isinstance(version := data.get("asyncapi", ""), str):
+        if version.startswith("2."):
+            return AsyncAPIVersion.V2
+        if version.startswith("3."):
+            return AsyncAPIVersion.V3
+    return AsyncAPIVersion.V3
 
 
 DataFormatMapping: TypeAlias = "dict[str, dict[str, Types]]"
@@ -626,6 +643,7 @@ __all__ = [
     "JsonSchemaFeatures",
     "OpenAPISchemaFeatures",
     "SchemaFeaturesT",
+    "detect_asyncapi_version",
     "detect_jsonschema_version",
     "detect_openapi_version",
     "get_data_formats",

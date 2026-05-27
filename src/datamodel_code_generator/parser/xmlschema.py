@@ -237,6 +237,27 @@ def detect_xmlschema_version(source: ET.Element | str) -> XMLSchemaVersion:
     return XMLSchemaVersion.V10
 
 
+def convert_xml_schema_data(
+    raw_schema: Any,
+    *,
+    base_path: Path | None = None,
+    xmlschema_version: XMLSchemaVersion | None = None,
+    schema_version_mode: VersionMode | None = None,
+    encoding: str = "utf-8",
+) -> dict[str, YamlValue]:
+    """Convert an XML Schema source string to JSON Schema data."""
+    if not isinstance(raw_schema, str):
+        msg = "XML Schema schemaFormat requires an XSD schema string"
+        raise Error(msg)
+    converter = _XMLSchemaConverter(
+        base_path=base_path or Path.cwd(),
+        encoding=encoding,
+        xmlschema_version=xmlschema_version,
+        schema_version_mode=schema_version_mode,
+    )
+    return converter.convert(Source(path=Path("__asyncapi_schema__.xsd"), text=raw_schema))
+
+
 class _XMLSchemaConverter:
     def __init__(
         self,
@@ -1351,4 +1372,4 @@ class XMLSchemaParser(JsonSchemaParser):
         self._generate_forced_base_models()
 
 
-__all__ = ["XMLSchemaParser", "detect_xmlschema_version", "is_xml_schema_text"]
+__all__ = ["XMLSchemaParser", "convert_xml_schema_data", "detect_xmlschema_version", "is_xml_schema_text"]
