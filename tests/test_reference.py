@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import PurePosixPath, PureWindowsPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 import pytest
 
@@ -221,6 +221,106 @@ def test_resolve_ref_with_relative_root_id_and_base_url() -> None:
     result = resolver.resolve_ref("sub.schema.json")
 
     assert result == "http://localhost:8888/schemas/v1/sub.schema.json#"
+
+
+def test_resolve_path_absolute_local_ref_with_root_id(tmp_path: Path) -> None:
+    """Path-absolute refs with path-only $id should resolve inside the local schema root."""
+    schema_root = tmp_path
+    target = schema_root / "core" / "platform-extension-ref.json"
+    target.parent.mkdir()
+    target.touch()
+
+    resolver = ModelResolver(base_path=schema_root)
+    resolver.set_root_id("/schemas/3.1.0-beta.1/formats/canonical/_base.json")
+
+    with (
+        resolver.current_root_context(["formats", "canonical", "_base.json"]),
+        resolver.current_base_path_context(Path("formats/canonical")),
+    ):
+        result = resolver.resolve_ref("/schemas/3.1.0-beta.1/core/platform-extension-ref.json")
+
+    assert result == "core/platform-extension-ref.json#"
+
+
+def test_resolve_path_absolute_local_ref_rejects_parent_traversal(tmp_path: Path) -> None:
+    """Path-absolute refs should not resolve files outside the local schema root."""
+    schema_root = tmp_path
+    outside_target = tmp_path.parent / f"{tmp_path.name}-outside.json"
+    outside_target.touch()
+
+    resolver = ModelResolver(base_path=schema_root)
+    resolver.set_root_id("/schemas/3.1.0-beta.1/formats/canonical/_base.json")
+
+    with (
+        resolver.current_root_context(["formats", "canonical", "_base.json"]),
+        resolver.current_base_path_context(Path("formats/canonical")),
+    ):
+        result = resolver._resolve_path_absolute_local_ref(f"/schemas/3.1.0-beta.1/../{outside_target.name}")
+
+    assert result is None
+
+
+def test_resolve_path_absolute_local_ref_with_fragment(tmp_path: Path) -> None:
+    """Path-absolute refs should preserve fragments after local schema root resolution."""
+    schema_root = tmp_path
+    target = schema_root / "core" / "platform-extension-ref.json"
+    target.parent.mkdir()
+    target.touch()
+
+    resolver = ModelResolver(base_path=schema_root)
+    resolver.set_root_id("/schemas/3.1.0-beta.1/formats/canonical/_base.json")
+
+    with (
+        resolver.current_root_context(["formats", "canonical", "_base.json"]),
+        resolver.current_base_path_context(Path("formats/canonical")),
+    ):
+        result = resolver.resolve_ref("/schemas/3.1.0-beta.1/core/platform-extension-ref.json#/definitions/ref")
+
+    assert result == "core/platform-extension-ref.json#/definitions/ref"
+
+
+@pytest.mark.parametrize(
+    ("root_id", "current_root", "ref"),
+    [
+        (
+            "/schemas/3.1.0-beta.1/formats/canonical/_base.json",
+            ["formats", "canonical", "_base.json"],
+            "/other/core/platform-extension-ref.json",
+        ),
+        (
+            "/schemas/3.1.0-beta.1/formats/canonical/_base.json",
+            ["formats", "canonical", "_base.json"],
+            "/schemas/3.1.0-beta.1/",
+        ),
+        (
+            "/schemas/3.1.0-beta.1/formats/canonical/_base.json",
+            ["formats", "canonical", "_base.json"],
+            "/schemas/3.1.0-beta.1/core/missing.json",
+        ),
+        (
+            "/schemas/3.1.0-beta.1/formats/canonical/_base.json",
+            ["schemas", "formats", "canonical", "_base.json"],
+            "/schemas/3.1.0-beta.1/core/platform-extension-ref.json",
+        ),
+    ],
+)
+def test_resolve_path_absolute_local_ref_falls_back(
+    tmp_path: Path,
+    root_id: str,
+    current_root: list[str],
+    ref: str,
+) -> None:
+    """Unmatched path-absolute refs should fall back to the regular local resolver."""
+    resolver = ModelResolver(base_path=tmp_path)
+    resolver.set_root_id(root_id)
+
+    with (
+        resolver.current_root_context(current_root),
+        resolver.current_base_path_context(Path("formats/canonical")),
+    ):
+        result = resolver._resolve_path_absolute_local_ref(ref)
+
+    assert result is None
 
 
 @pytest.mark.parametrize(
