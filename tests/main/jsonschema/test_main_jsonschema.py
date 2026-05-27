@@ -1048,6 +1048,99 @@ def test_main_local_directory_path_absolute_root_id_refs(output_dir: Path) -> No
     )
 
 
+def test_main_local_directory_path_absolute_root_id_refs_rejects_parent_traversal(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test path-absolute $id refs cannot escape the input root."""
+    schema_root = tmp_path / "schema-root"
+    base_schema = schema_root / "formats" / "canonical" / "_base.json"
+    base_schema.parent.mkdir(parents=True)
+    base_schema.write_text(
+        json.dumps({
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$id": "/schemas/v1/formats/canonical/_base.json",
+            "title": "FormatBase",
+            "type": "object",
+            "properties": {
+                "escaped": {
+                    "$ref": "/schemas/v1/../outside-platform-extension-ref.json",
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+    (schema_root / "product-format-declaration.json").write_text(
+        json.dumps({
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$id": "/schemas/v1/product-format-declaration.json",
+            "title": "ProductFormatDeclaration",
+            "allOf": [{"$ref": "/schemas/v1/formats/canonical/_base.json"}],
+        }),
+        encoding="utf-8",
+    )
+    (tmp_path / "outside-platform-extension-ref.json").write_text(
+        json.dumps({
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$id": "/schemas/outside-platform-extension-ref.json",
+            "title": "OutsidePlatformExtensionRef",
+            "type": "object",
+            "properties": {"uri": {"type": "string"}},
+        }),
+        encoding="utf-8",
+    )
+
+    run_main_with_args(
+        [
+            "--input",
+            str(schema_root),
+            "--output",
+            str(tmp_path / "model"),
+            "--input-file-type",
+            "jsonschema",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="$ref file not found",
+    )
+
+
+def test_main_jsonschema_unresolved_local_id_ref_reports_known_ids(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test unresolved local ID refs report a helpful CLI error."""
+    input_file = tmp_path / "unresolved-local-id.json"
+    input_file.write_text(
+        json.dumps({
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$id": "root",
+            "title": "Root",
+            "type": "object",
+            "properties": {"missing": {"$ref": "#MissingId"}},
+        }),
+        encoding="utf-8",
+    )
+
+    run_main_with_args(
+        [
+            "--input",
+            str(input_file),
+            "--output",
+            str(tmp_path / "model.py"),
+            "--input-file-type",
+            "jsonschema",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Unresolved $id reference '#MissingId'",
+    )
+
+
 def test_main_url_jsonschema_relative_ref_without_fragment(
     mock_httpx_get: HttpxGetMockFactory, output_file: Path
 ) -> None:
