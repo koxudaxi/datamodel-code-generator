@@ -2192,6 +2192,35 @@ def test_main_generate_pydantic_v2_dataclass_field(output_file: Path) -> None:
     )
 
 
+def test_main_generate_pydantic_v2_dataclass_required_field_order(output_file: Path) -> None:
+    """Test pydantic_v2.dataclass keeps required fields before defaulted fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_required_field_order.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_required_field_order.py",
+        extra_args=[
+            "--disable-timestamp",
+            "--snake-case-field",
+            "--output-model-type",
+            "pydantic_v2.dataclass",
+            "--formatters",
+            "ruff-format",
+            "ruff-check",
+            "isort",
+            "--no-use-type-checking-imports",
+            "--use-annotated",
+            "--use-union-operator",
+            "--use-standard-collections",
+            "--use-default",
+            "--target-python-version",
+            "3.10",
+        ],
+        force_exec_validation=True,
+    )
+
+
 def test_main_generate_pydantic_v2_dataclass_enum(output_file: Path) -> None:
     """Test pydantic_v2.dataclass with enum types."""
     run_generate_file_and_assert(
