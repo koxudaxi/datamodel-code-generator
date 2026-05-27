@@ -667,11 +667,17 @@ class ModelResolver:  # noqa: PLR0904
         if not relative_file_path:
             return None
 
-        local_file_path = Path(self._base_path, relative_file_path)
+        base_path = self._base_path.resolve()
+        local_file_path = Path(base_path, relative_file_path).resolve()
+        try:
+            local_file_path.relative_to(base_path)
+        except ValueError:
+            return None
+
         if not local_file_path.is_file():
             return None
 
-        resolved_ref = get_relative_path(self.current_base_path, local_file_path.resolve()).as_posix()
+        resolved_ref = get_relative_path(self.current_base_path, local_file_path).as_posix()
         if fragment:
             resolved_ref += f"#{fragment}"
         return resolved_ref

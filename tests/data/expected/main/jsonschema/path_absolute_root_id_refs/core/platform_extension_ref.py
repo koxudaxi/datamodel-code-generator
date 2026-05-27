@@ -3,8 +3,12 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class PlatformExtensionRef(BaseModel):
     uri: str | None = None
+
+
+class Uri(RootModel[str]):
+    root: str

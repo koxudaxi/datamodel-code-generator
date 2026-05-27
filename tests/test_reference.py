@@ -242,6 +242,24 @@ def test_resolve_path_absolute_local_ref_with_root_id(tmp_path: Path) -> None:
     assert result == "core/platform-extension-ref.json#"
 
 
+def test_resolve_path_absolute_local_ref_rejects_parent_traversal(tmp_path: Path) -> None:
+    """Path-absolute refs should not resolve files outside the local schema root."""
+    schema_root = tmp_path
+    outside_target = tmp_path.parent / f"{tmp_path.name}-outside.json"
+    outside_target.touch()
+
+    resolver = ModelResolver(base_path=schema_root)
+    resolver.set_root_id("/schemas/3.1.0-beta.1/formats/canonical/_base.json")
+
+    with (
+        resolver.current_root_context(["formats", "canonical", "_base.json"]),
+        resolver.current_base_path_context(Path("formats/canonical")),
+    ):
+        result = resolver._resolve_path_absolute_local_ref(f"/schemas/3.1.0-beta.1/../{outside_target.name}")
+
+    assert result is None
+
+
 def test_resolve_path_absolute_local_ref_with_fragment(tmp_path: Path) -> None:
     """Path-absolute refs should preserve fragments after local schema root resolution."""
     schema_root = tmp_path

@@ -9,6 +9,9 @@
       "items": {
         "$ref": "/schemas/v1/core/platform-extension-ref.json"
       }
+    },
+    "platform_extension_uri": {
+      "$ref": "/schemas/v1/core/../core/platform-extension-ref.json#/properties/uri"
     }
   }
 }

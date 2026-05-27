@@ -10,3 +10,4 @@ from ...core import platform_extension_ref
 
 class FormatBase(BaseModel):
     platform_extensions: list[platform_extension_ref.PlatformExtensionRef] | None = None
+    platform_extension_uri: platform_extension_ref.Uri | None = None
