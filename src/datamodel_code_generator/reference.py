@@ -677,11 +677,12 @@ class ModelResolver:  # noqa: PLR0904
     def _resolve_path_absolute_local_ref(self, ref: str) -> str | None:
         """Resolve path-absolute URI refs against the local schema root."""
         local_ref = self._get_path_absolute_local_file(ref)
-        if local_ref is None:
+        current_base_path = self.current_base_path
+        if local_ref is None or current_base_path is None:
             return None
 
         local_file_path, fragment = local_ref
-        resolved_ref = get_relative_path(self.current_base_path, local_file_path).as_posix()
+        resolved_ref = get_relative_path(current_base_path, local_file_path).as_posix()
         if fragment:
             resolved_ref += f"#{fragment}"
         return resolved_ref
