@@ -2550,9 +2550,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     def _apply_override_to_field(self, field: DataModelFieldBase, override_import: Import) -> None:
         """Apply override to entire field's data_type."""
-        field.data_type = deepcopy(field.data_type)
-        field.data_type.import_ = override_import
-        field.data_type.alias = override_import.import_
+        data_type = deepcopy(field.data_type)
+        data_type.import_ = override_import
+        data_type.alias = override_import.import_
+        self.generation_store.replace_field_type(field, data_type)
         self.generation_store.detach_data_type_ref(field.data_type)
         self.generation_store.set_nested_data_types(field.data_type, [])
 
