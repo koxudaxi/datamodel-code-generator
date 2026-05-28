@@ -51,6 +51,7 @@ from tests.main.conftest import (
     OPEN_API_DATA_PATH,
     PYTHON_DATA_PATH,
     TIMESTAMP,
+    assert_generated_model_json_validation,
     run_generate_and_assert,
     run_generate_file_and_assert,
     run_main_and_assert,
@@ -107,6 +108,26 @@ def test_show_help_when_no_input(mocker: MockerFixture) -> None:
     run_main_with_args([], expected_exit=Exit.ERROR)
     isatty_mock.assert_called()
     print_help_mock.assert_called()
+
+
+def test_generated_pydantic_v2_model_accepts_runtime_value(output_file: Path) -> None:
+    """Generated Pydantic v2 model validates a schema-valid payload at runtime."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_runtime_value.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema.value,
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_person",
+        model_name="Person",
+        valid_json='{"name": "Alice", "age": 30}',
+        invalid_json='{"name": "Alice", "age": -1}',
+        expected_error_type="greater_than_equal",
+        expected_attribute_path=("name",),
+        expected_attribute_value="Alice",
+    )
 
 
 @pytest.mark.allow_direct_assert
