@@ -73,6 +73,16 @@ def test_model_resolver_add_ref_unevaluated() -> None:
     assert reference.original_name == "unevaluated"
 
 
+def test_model_resolver_delete_missing_reference_noop() -> None:
+    """Deleting a missing reference should not change existing references."""
+    model_resolver = ModelResolver()
+    reference = model_resolver.add(["#", "definitions", "User"], "User")
+
+    model_resolver.delete(["#", "definitions", "Missing"])
+
+    assert model_resolver.get(["#", "definitions", "User"]) is reference
+
+
 def test_base_url_context_sets_url_when_base_url_already_set() -> None:
     """When _base_url is already set, base_url_context should switch to new URL."""
     resolver = ModelResolver(base_url="https://example.com/original.json")

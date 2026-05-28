@@ -7,8 +7,13 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict
 
 
+class KnownAndObjectExtraAdditionalProperty(BaseModel):
+    count: int
+
+
 class KnownAndObjectExtra(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
+    __pydantic_extra__: dict[str, KnownAndObjectExtraAdditionalProperty]
     name: str

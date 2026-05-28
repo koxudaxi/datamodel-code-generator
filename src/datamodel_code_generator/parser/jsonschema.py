@@ -3255,8 +3255,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         continue
 
                     self.generation_store.replace_field_type(field, new_type)  # pragma: no cover
+        name = self._apply_title_as_name(name, obj)  # pragma: no cover
+        reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
+        extra_field = self._get_typed_additional_properties_field(reference.name, obj, path)
         # ignore an undetected object
-        if ignore_duplicate_model and not fields and len(base_classes) == 1:
+        if ignore_duplicate_model and not fields and extra_field is None and len(base_classes) == 1:
             with self.model_resolver.current_base_path_context(self.model_resolver._base_path):  # noqa: SLF001
                 self.model_resolver.delete(path)
                 return self.data_type(reference=base_classes[0])
@@ -3287,8 +3290,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                             class_name=name,
                         )
                     )
-        name = self._apply_title_as_name(name, obj)  # pragma: no cover
-        reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
+        if extra_field is not None:
+            fields.insert(0, extra_field)
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
 
@@ -3655,6 +3658,56 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
         return fields
 
+    def _get_typed_additional_properties_field(
+        self,
+        class_name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+    ) -> DataModelFieldBase | None:
+        """Build the output model's typed extra field for schema-valued extras."""
+        if self.data_model_type.TYPED_EXTRA_FIELD_NAME is None or not isinstance(
+            obj.additionalProperties, JsonSchemaObject
+        ):
+            return None
+
+        additional_props = obj.additionalProperties
+        if additional_props.has_ref_with_schema_keywords and not additional_props.is_ref_with_nullable_only:
+            additional_props = self._merge_ref_with_schema(additional_props)
+        if additional_props.allOf and self._contains_false_schema(additional_props.allOf):
+            return None
+        additional_props = self._add_nullable_combined_schema_branches(additional_props)
+        extra_value_type = self.parse_item(
+            f"{class_name}AdditionalProperty",
+            additional_props,
+            [*path, "additionalProperties"],
+        )
+
+        return self.data_model_type.create_typed_extra_field(
+            field_model=self.data_model_field_type,
+            data_type=self.data_type(
+                data_types=[extra_value_type],
+                is_dict=True,
+            ),
+        )
+
+    def _add_nullable_combined_schema_branches(self, obj: JsonSchemaObject) -> JsonSchemaObject:
+        updates: dict[str, list[JsonSchemaObject | bool]] = {}
+        for field_name in ("anyOf", "oneOf"):
+            combined_items = getattr(obj, field_name)
+            if not combined_items:
+                continue
+
+            updated_items: list[JsonSchemaObject | bool] = []
+            for item in combined_items:
+                updated_items.append(item)
+                if isinstance(item, JsonSchemaObject) and item.nullable and not item.type_has_null:
+                    updated_items.append(self.SCHEMA_OBJECT_TYPE.model_validate({"type": "null"}))
+
+            if len(updated_items) != len(combined_items):
+                updates[field_name] = updated_items
+
+        return obj.model_copy(update=updates) if updates else obj
+
     def parse_object(
         self,
         name: str,
@@ -3693,6 +3746,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             class_name=class_name,
         )
         has_declared_fields = bool(fields)
+        if has_declared_fields and (extra_field := self._get_typed_additional_properties_field(class_name, obj, path)):
+            fields.insert(0, extra_field)
         should_parse_dict_root = not has_declared_fields and (
             isinstance(obj.additionalProperties, JsonSchemaObject) or self._should_parse_empty_object_as_dict(obj)
         )

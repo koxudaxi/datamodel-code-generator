@@ -18,6 +18,7 @@ from datamodel_code_generator.model.base import (
     sanitize_module_name,
 )
 from datamodel_code_generator.model.pydantic_v2 import BaseModel
+from datamodel_code_generator.model.pydantic_v2 import DataModelField as PydanticV2DataModelField
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
 
@@ -99,6 +100,32 @@ def test_data_model() -> None:
     assert data_model.decorators == ["@validate"]
     assert data_model.base_class == "Base"
     assert data_model.render() == "@validate\n@dataclass\nclass test_model:\n    a: str"
+
+
+def test_data_model_create_typed_extra_field_unsupported() -> None:
+    """Test the default typed extra field factory for unsupported models."""
+    assert (
+        DataModel.create_typed_extra_field(
+            field_model=DataModelFieldBase,
+            data_type=DataType(type="str"),
+        )
+        is None
+    )
+
+
+def test_pydantic_v2_base_model_create_typed_extra_field() -> None:
+    """Test Pydantic v2 typed extra field creation."""
+    data_type = DataType(type="str", is_dict=True)
+
+    field = BaseModel.create_typed_extra_field(
+        field_model=PydanticV2DataModelField,
+        data_type=data_type,
+    )
+
+    assert field.name == "__pydantic_extra__"
+    assert field.original_name == "__pydantic_extra__"
+    assert field.data_type is data_type
+    assert field.required is True
 
 
 def test_data_model_exception() -> None:
