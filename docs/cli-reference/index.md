@@ -16,7 +16,7 @@ This documentation is auto-generated from test cases.
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
 | ⚙️ [General Options](general-options.md) | 17 | Utilities and meta options |
-| 📝 [Utility Options](utility-options.md) | 7 | Help, version, debug options |
+| 📝 [Utility Options](utility-options.md) | 8 | Help, version, debug options |
 
 ## All Options
 
@@ -128,6 +128,7 @@ This documentation is auto-generated from test cases.
 ### L {#l}
 
 - [`--list-deprecations`](utility-options.md#list-deprecations)
+- [`--list-experimental`](utility-options.md#list-experimental)
 
 ### M {#m}
 

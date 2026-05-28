@@ -181,6 +181,7 @@ MANUAL_OPTION_DESCRIPTIONS = {
     "--no-color": "Disable colorized output",
     "--generate-prompt": "Generate a prompt for consulting LLMs about CLI options",
     "--list-deprecations": "List registered deprecations and scheduled breaking changes",
+    "--list-experimental": "List registered experimental features",
 }
 
 # Regex pattern for detecting MkDocs Material admonitions in docstrings
