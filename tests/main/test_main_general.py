@@ -154,6 +154,29 @@ def test_list_deprecations_json(capsys: pytest.CaptureFixture[str]) -> None:
 
 
 @pytest.mark.allow_direct_assert
+def test_list_experimental(capsys: pytest.CaptureFixture[str]) -> None:
+    """List registered experimental features without requiring an input schema."""
+    run_main_with_args(["--list-experimental"])
+    captured = capsys.readouterr()
+
+    assert "input-format.avro" in captured.out
+    assert "--input-file-type avro" in captured.out
+    assert "Since" in captured.out
+    assert not captured.err
+
+
+@pytest.mark.allow_direct_assert
+def test_list_experimental_json(capsys: pytest.CaptureFixture[str]) -> None:
+    """List registered experimental features as JSON."""
+    run_main_with_args(["--list-experimental", "json"])
+    captured = capsys.readouterr()
+
+    features = json.loads(captured.out)
+    assert any(item["id"] == "input-format.xmlschema" for item in features)
+    assert not captured.err
+
+
+@pytest.mark.allow_direct_assert
 def test_no_args_has_default(monkeypatch: pytest.MonkeyPatch) -> None:
     """No argument should have a default value set because it would override pyproject.toml values.
 

@@ -114,6 +114,7 @@ EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
     "no_color",
     "disable_warnings",
     "list_deprecations",
+    "list_experimental",
     "watch",
     "watch_delay",
 })
@@ -558,6 +559,7 @@ class Config(BaseModel):  # noqa: PLR0904
     watch: bool = False
     watch_delay: float = 0.5
     list_deprecations: Optional[str] = None  # noqa: UP045
+    list_experimental: Optional[str] = None  # noqa: UP045
     schema_version: Optional[str] = None  # noqa: UP045
     schema_version_mode: Optional[VersionMode] = None  # noqa: UP045
     external_ref_mapping: Optional[dict[str, str]] = None  # noqa: UP045
@@ -1095,6 +1097,12 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
 
     if config.list_deprecations:
         print(render_deprecations(cast("Any", config.list_deprecations)), end="")  # noqa: T201
+        return Exit.OK
+
+    if config.list_experimental:
+        from datamodel_code_generator.experimental import render_experimental_features  # noqa: PLC0415
+
+        print(render_experimental_features(cast("Any", config.list_experimental)), end="")  # noqa: T201
         return Exit.OK
 
     if not config.input and not config.url and not config.input_model and sys.stdin.isatty():

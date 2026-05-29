@@ -69,6 +69,7 @@ nav = [
     ]}
   ]},
   { "Deprecations" = "deprecations.md" },
+  { "Experimental Features" = "experimental.md" },
   { "FAQ" = "faq.md" },
   { "Development-Contributing" = "development-contributing.md" }
 ]

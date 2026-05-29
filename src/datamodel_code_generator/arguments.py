@@ -1178,6 +1178,15 @@ general_options.add_argument(
     default=None,
 )
 general_options.add_argument(
+    "--list-experimental",
+    help="List registered experimental features, then exit.",
+    nargs="?",
+    const="table",
+    choices=["table", "json", "markdown"],
+    metavar="{table,json,markdown}",
+    default=None,
+)
+general_options.add_argument(
     "-h",
     "--help",
     action="help",

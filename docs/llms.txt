@@ -72,6 +72,7 @@
 
 
 - [Deprecations](https://datamodel-code-generator.koxudaxi.dev/deprecations/): This page lists deprecations and scheduled breaking changes.
+- [Experimental Features](https://datamodel-code-generator.koxudaxi.dev/experimental/): This page lists features that are available but still experimental.
 ## Optional
 
 - [Frequently Asked Questions](https://datamodel-code-generator.koxudaxi.dev/faq/)
