@@ -11,4 +11,5 @@ class KnownAndArrayExtra(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
+    __pydantic_extra__: dict[str, list[str | int]]
     name: str

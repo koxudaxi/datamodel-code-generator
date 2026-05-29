@@ -13,7 +13,13 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional
 from pydantic import Field, field_validator, model_validator
 
 from datamodel_code_generator.imports import IMPORT_ANY, Import
-from datamodel_code_generator.model.base import ALL_MODEL, UNDEFINED, BaseClassDataType, DataModelFieldBase
+from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace
+from datamodel_code_generator.model.base import (
+    ALL_MODEL,
+    UNDEFINED,
+    BaseClassDataType,
+    DataModelFieldBase,
+)
 from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
 from datamodel_code_generator.model.pydantic_base import (
     BaseModelBase,
@@ -39,6 +45,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from datamodel_code_generator.reference import Reference
+    from datamodel_code_generator.types import DataType
 
 
 class _RawRepr:
@@ -241,6 +248,7 @@ class BaseModel(BaseModelBase):
     BASE_CLASS_ALIAS: ClassVar[str] = "_BaseModel"
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
+    TYPED_EXTRA_FIELD_NAME: ClassVar[str] = "__pydantic_extra__"
     # In Pydantic 2.11+, populate_by_name is deprecated in favor of validate_by_name + validate_by_alias
     # Default to V2 compatible (populate_by_name) unless target_pydantic_version is specified
     _CONFIG_ATTRIBUTES_V2: ClassVar[list[ConfigAttribute]] = [
@@ -257,6 +265,21 @@ class BaseModel(BaseModelBase):
         ConfigAttribute("frozen", "frozen", False),  # noqa: FBT003
         ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False),  # noqa: FBT003
     ]
+
+    @classmethod
+    def create_typed_extra_field(
+        cls,
+        *,
+        field_model: type[DataModelFieldBase],
+        data_type: DataType,
+    ) -> DataModelFieldBase:
+        """Create the Pydantic v2 typed extra field."""
+        return field_model(
+            name=cls.TYPED_EXTRA_FIELD_NAME,
+            data_type=data_type,
+            required=True,
+            original_name=cls.TYPED_EXTRA_FIELD_NAME,
+        )
 
     def __init__(  # noqa: PLR0913
         self,
@@ -466,3 +489,6 @@ class BaseModel(BaseModelBase):
         )
 
         return base_model
+
+
+_rebuild_model_with_datamodel_namespace(DataModelField)

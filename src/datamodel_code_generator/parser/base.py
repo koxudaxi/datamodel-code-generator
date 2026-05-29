@@ -15,6 +15,7 @@ import sys
 from abc import ABC, abstractmethod
 from collections import Counter, OrderedDict, defaultdict
 from collections.abc import Callable, Hashable, Mapping, Sequence
+from copy import deepcopy
 from itertools import groupby
 from pathlib import Path
 from typing import (
@@ -328,6 +329,29 @@ def _reorder_models_keep_model_order(
     ordered_comp_ids = _build_keep_model_order_component_order(comps.components, comp_edges, order_index)
     ordered_names = _build_keep_model_ordered_names(ordered_comp_ids, comps.components, deps.strong, order_index)
     models[:] = [model_by_name[name] for name in ordered_names]
+
+
+def _sort_internal_module_models(models: list[DataModel]) -> list[DataModel]:
+    """Order models moved to _internal.py so runtime base classes are defined first."""
+    model_paths = {model.path for model in models}
+    order_index = {model.path: index for index, model in enumerate(models)}
+    edges: dict[str, set[str]] = {model.path: set() for model in models}
+
+    def add_dependency(model: DataModel, reference_path: str | None) -> None:
+        if reference_path in model_paths and reference_path != model.path:
+            edges[reference_path].add(model.path)
+
+    for model in models:
+        for base_class in model.base_classes:
+            add_dependency(model, base_class.reference.path if base_class.reference else None)
+        if isinstance(model, pydantic_model_v2.RootModel):
+            for field in model.fields:
+                for data_type in field.data_type.all_data_types:
+                    add_dependency(model, data_type.reference.path if data_type.reference else None)
+
+    sorted_paths = stable_toposort(list(order_index), edges, key=order_index.__getitem__)
+    model_by_path = {model.path: model for model in models}
+    return [model_by_path[path] for path in sorted_paths]
 
 
 SPECIAL_PATH_FORMAT: str = "#-datamodel-code-generator-#-{}-#-special-#"
@@ -2380,7 +2404,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if "Enum" in model.base_class or not model.BASE_CLASS:
                 continue
 
-            for field in model.fields:
+            for field in (field for field in model.fields if field.name != self.data_model_type.TYPED_EXTRA_FIELD_NAME):
                 filed_name = field.name
                 reference_type_names: set[str] = set()
                 colliding_reference: Reference | None = None
@@ -2527,8 +2551,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     def _apply_override_to_field(self, field: DataModelFieldBase, override_import: Import) -> None:
         """Apply override to entire field's data_type."""
-        field.data_type.import_ = override_import
-        field.data_type.alias = override_import.import_
+        data_type = deepcopy(field.data_type)
+        data_type.import_ = override_import
+        data_type.alias = override_import.import_
+        self.generation_store.replace_field_type(field, data_type)
         self.generation_store.detach_data_type_ref(field.data_type)
         self.generation_store.set_nested_data_types(field.data_type, [])
 
@@ -3103,6 +3129,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             module_class_mappings, path_mapping = self.__rename_and_relocate_scc_models(
                 all_scc_models, model_to_original_module, internal_module, internal_path
             )
+            all_scc_models = _sort_internal_module_models(all_scc_models)
             all_path_mappings.update(path_mapping)
 
             for scc_module in scc:

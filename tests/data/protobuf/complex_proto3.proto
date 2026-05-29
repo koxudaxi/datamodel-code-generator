@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package example.shop.v1;
+
+import "common.proto";
+import public "public_import.proto";
+import weak "missing_weak.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+// Purchase order with scalar, nested, map, oneof, imports, and well-known fields.
+message Order {
+  reserved 99 to 100;
+  reserved "legacy_code";
+
+  // Stable order identifier.
+  string id = 1;
+  double double_value = 2;
+  float float_value = 3;
+  int32 int32_value = 4;
+  int64 int64_value = 5;
+  uint32 uint32_value = 6;
+  uint64 uint64_value = 7;
+  sint32 sint32_value = 8;
+  sint64 sint64_value = 9;
+  fixed32 fixed32_value = 10;
+  fixed64 fixed64_value = 11;
+  sfixed32 sfixed32_value = 12;
+  sfixed64 sfixed64_value = 13;
+  bool active = 14;
+  bytes payload = 15;
+  repeated string tags = 16;
+  map<string, LineItem> items = 17;
+  repeated LineItem previous_items = 31;
+  example.common.Address shipping_address = 18;
+  .example.common.Status status = 19;
+  google.protobuf.Timestamp created_at = 20;
+  google.protobuf.Duration ttl = 21;
+  google.protobuf.Struct metadata = 22;
+  google.protobuf.Value arbitrary = 23;
+  google.protobuf.ListValue values = 24;
+  google.protobuf.Any attachment = 25;
+  google.protobuf.FieldMask update_mask = 26;
+  google.protobuf.StringValue optional_note = 27;
+  example.public.PublicToken public_token = 28;
+  repeated Role roles = 32;
+
+  oneof contact {
+    string email = 29;
+    string phone = 30;
+  }
+
+  message LineItem {
+    string sku = 1;
+    int32 quantity = 2;
+  }
+
+  enum Role {
+    ROLE_UNSPECIFIED = 0;
+    BUYER = 1;
+  }
+}
+
+message GetOrderRequest {
+  string id = 1;
+}
+
+message GetOrderResponse {
+  Order order = 1;
+}
+
+service OrderService {
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  rpc WatchOrders(stream GetOrderRequest) returns (stream GetOrderResponse);
+}

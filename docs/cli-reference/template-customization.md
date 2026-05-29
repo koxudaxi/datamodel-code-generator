@@ -14,6 +14,7 @@
 | [`--disable-appending-item-suffix`](#disable-appending-item-suffix) | Disable appending 'Item' suffix to array item types. |
 | [`--disable-timestamp`](#disable-timestamp) | Disable timestamp in generated file header for reproducible ... |
 | [`--enable-command-header`](#enable-command-header) | Include command-line options in file header for reproducibil... |
+| [`--enable-generated-header-marker`](#enable-generated-header-marker) | Include the @generated marker in file header for generated-c... |
 | [`--enable-version-header`](#enable-version-header) | Include tool version information in file header. |
 | [`--extra-template-data`](#extra-template-data) | Pass custom template variables from JSON file for code gener... |
 | [`--formatters`](#formatters) | Specify code formatters to apply to generated output. |
@@ -1589,6 +1590,281 @@ the file to the header, making it easy to reproduce the generation.
     #   filename:  api.yaml
     #   timestamp: 2019-07-26T00:00:00+00:00
     #   command:   datamodel-codegen [COMMAND]
+
+    from __future__ import annotations
+
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
+
+
+    class Pet(BaseModel):
+        id: int
+        name: str
+        tag: str | None = None
+
+
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
+
+
+    class User(BaseModel):
+        id: int
+        name: str
+        tag: str | None = None
+
+
+    class Users(RootModel[list[User]]):
+        root: list[User]
+
+
+    class Id(RootModel[str]):
+        root: str
+
+
+    class Rules(RootModel[list[str]]):
+        root: list[str]
+
+
+    class Error(BaseModel):
+        code: int
+        message: str
+
+
+    class Api(BaseModel):
+        apiKey: str | None = Field(
+            None, description='To be used as a dataset parameter value'
+        )
+        apiVersionNumber: str | None = Field(
+            None, description='To be used as a version parameter value'
+        )
+        apiUrl: AnyUrl | None = Field(
+            None, description="The URL describing the dataset's fields"
+        )
+        apiDocumentationUrl: AnyUrl | None = Field(
+            None, description='A URL to the API console for each API'
+        )
+
+
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
+
+
+    class Event(BaseModel):
+        name: str | None = None
+
+
+    class Result(BaseModel):
+        event: Event | None = None
+    ```
+
+---
+
+## `--enable-generated-header-marker` {#enable-generated-header-marker}
+
+Include the @generated marker in file header for generated-code tooling.
+
+The `--enable-generated-header-marker` flag marks generated output for tools that
+recognize the `@generated` marker.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --enable-generated-header-marker # (1)!
+    ```
+
+    1. :material-arrow-left: `--enable-generated-header-marker` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```yaml
+    openapi: "3.0.0"
+    info:
+      version: 1.0.0
+      title: Swagger Petstore
+      license:
+        name: MIT
+    servers:
+      - url: http://petstore.swagger.io/v1
+    paths:
+      /pets:
+        get:
+          summary: List all pets
+          operationId: listPets
+          tags:
+            - pets
+          parameters:
+            - name: limit
+              in: query
+              description: How many items to return at one time (max 100)
+              required: false
+              schema:
+                type: integer
+                format: int32
+          responses:
+            '200':
+              description: A paged array of pets
+              headers:
+                x-next:
+                  description: A link to the next page of responses
+                  schema:
+                    type: string
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+        post:
+          summary: Create a pet
+          operationId: createPets
+          tags:
+            - pets
+          responses:
+            '201':
+              description: Null response
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+      /pets/{petId}:
+        get:
+          summary: Info for a specific pet
+          operationId: showPetById
+          tags:
+            - pets
+          parameters:
+            - name: petId
+              in: path
+              required: true
+              description: The id of the pet to retrieve
+              schema:
+                type: string
+          responses:
+            '200':
+              description: Expected response to a valid request
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+        x-amazon-apigateway-integration:
+          uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+          passthroughBehavior: when_no_templates
+          httpMethod: POST
+          type: aws_proxy
+    components:
+      schemas:
+        Pet:
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: integer
+              format: int64
+              default: 1
+            name:
+              type: string
+            tag:
+              type: string
+        Pets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pet"
+        Users:
+          type: array
+          items:
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: integer
+                format: int64
+              name:
+                type: string
+              tag:
+                type: string
+        Id:
+          type: string
+        Rules:
+          type: array
+          items:
+            type: string
+        Error:
+          description: error result
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: integer
+              format: int32
+            message:
+              type: string
+        apis:
+          type: array
+          items:
+            type: object
+            properties:
+              apiKey:
+                type: string
+                description: To be used as a dataset parameter value
+              apiVersionNumber:
+                type: string
+                description: To be used as a version parameter value
+              apiUrl:
+                type: string
+                format: uri
+                description: "The URL describing the dataset's fields"
+              apiDocumentationUrl:
+                type: string
+                format: uri
+                description: A URL to the API console for each API
+        Event:
+          type: object
+          description: Event object
+          properties:
+            name:
+              type: string
+        Result:
+            type: object
+            properties:
+              event:
+                $ref: '#/components/schemas/Event'
+    ```
+
+    **Output:**
+
+    ```python
+    # @generated by datamodel-codegen:
+    #   filename:  api.yaml
+    #   timestamp: 2019-07-26T00:00:00+00:00
 
     from __future__ import annotations
 

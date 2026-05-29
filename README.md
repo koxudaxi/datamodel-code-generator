@@ -14,7 +14,7 @@
 
 ## ✨ What it does
 
-- 📄 Converts **OpenAPI 3**, **JSON Schema**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
+- 📄 Converts **OpenAPI 3**, **AsyncAPI**, **JSON Schema**, **Apache Avro**, **XML Schema**, **Protocol Buffers/gRPC**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
 - 🐍 Generates from **existing Python types** (Pydantic, dataclass, TypedDict) via `--input-model`
 - 🎯 Generates **Pydantic v2**, **Pydantic v2 dataclass**, **dataclasses**, **TypedDict**, or **msgspec** output
 - 🔗 Handles complex schemas: `$ref`, `allOf`, `oneOf`, `anyOf`, enums, and nested types
@@ -66,6 +66,11 @@ pip install 'datamodel-code-generator[http]'
 **With GraphQL support:**
 ```bash
 pip install 'datamodel-code-generator[graphql]'
+```
+
+**With Protocol Buffers support:**
+```bash
+pip install 'datamodel-code-generator[protobuf]'
 ```
 
 **Docker:**
@@ -152,7 +157,11 @@ class Pet(BaseModel):
 ## 📥 Supported Input
 
 - OpenAPI 3 (YAML/JSON)
+- AsyncAPI (YAML/JSON)
 - JSON Schema
+- Apache Avro schema (AVSC)
+- XML Schema (XSD)
+- Protocol Buffers / gRPC (`.proto`)
 - JSON / YAML / CSV data
 - GraphQL schema
 - Python types (Pydantic, dataclass, TypedDict) via `--input-model`

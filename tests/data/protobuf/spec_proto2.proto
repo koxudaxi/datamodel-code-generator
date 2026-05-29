@@ -1,0 +1,80 @@
+syntax = "proto2";
+
+package example.spec.proto2;
+
+import "google/protobuf/descriptor.proto";
+
+option java_package = "com.example.spec.proto2";
+option optimize_for = CODE_SIZE;
+
+extend google.protobuf.FileOptions {
+  optional string file_note = 51001;
+}
+
+option (file_note) = "file option";
+
+message SpecProto2 {
+  option message_set_wire_format = false;
+  extensions 100 to max;
+  reserved 90 to 99;
+  reserved "removed";
+
+  required string id = 1;
+  optional int32 decimal_default = 2 [default = -42];
+  optional int64 hex_default = 3 [default = 0x2a];
+  optional uint32 octal_default = 4 [default = 052];
+  optional double pos_inf = 5 [default = inf];
+  optional double neg_inf = 6 [default = -inf];
+  optional float not_a_number = 7 [default = nan];
+  optional bool enabled = 8 [default = false];
+  optional string single_quoted = 9 [default = 'single'];
+  optional bytes escaped_bytes = 10 [default = "\001\002"];
+  optional Proto2State state = 11 [default = PROTO2_ACTIVE];
+  repeated string tags = 12;
+  repeated int32 packed_numbers = 13 [packed = true];
+  map<string, Proto2Child> children = 14;
+
+  oneof payload {
+    string text = 15;
+    Proto2Child child = 16;
+  }
+
+  optional group LegacyGroup = 17 {
+    optional string name = 18;
+  }
+
+  message Proto2Child {
+    optional string value = 1;
+  }
+}
+
+extend SpecProto2 {
+  optional string external_note = 100;
+  optional group ExternalGroup = 101 {
+    optional string value = 102;
+  }
+}
+
+enum Proto2State {
+  option allow_alias = true;
+  reserved 5 to 7;
+  reserved "PROTO2_REMOVED";
+
+  PROTO2_UNKNOWN = 0;
+  PROTO2_ACTIVE = 1;
+  PROTO2_ENABLED = 1;
+  PROTO2_NEGATIVE = -1;
+}
+
+message Proto2Request {
+  required string id = 1;
+}
+
+message Proto2Response {
+  optional SpecProto2 item = 1;
+}
+
+service SpecProto2Service {
+  rpc Fetch(Proto2Request) returns (Proto2Response);
+  rpc Watch(stream Proto2Request) returns (stream Proto2Response) {}
+}

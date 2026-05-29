@@ -1,0 +1,188 @@
+{
+  "type": "record",
+  "name": "SpecMatrix",
+  "namespace": "spec.matrix",
+  "doc": "Spec coverage matrix for Avro schema declarations, defaults, names, and unions.",
+  "aliases": ["OldSpecMatrix", "not a valid name but valid alias"],
+  "fields": [
+    {"name": "nullDefault", "type": "null", "default": null},
+    {"name": "booleanDefault", "type": "boolean", "default": false},
+    {"name": "intDefault", "type": "int", "default": 1},
+    {"name": "longDefault", "type": "long", "default": 2},
+    {"name": "floatDefault", "type": "float", "default": 1.5},
+    {"name": "doubleDefault", "type": "double", "default": 2.5},
+    {"name": "bytesDefault", "type": "bytes", "default": "\u00ff"},
+    {"name": "stringDefault", "type": "string", "default": "foo"},
+    {
+      "name": "recordDefault",
+      "type": {
+        "type": "record",
+        "name": "DefaultRecord",
+        "fields": [
+          {"name": "value", "type": "int", "default": 1}
+        ]
+      },
+      "default": {"value": 1}
+    },
+    {
+      "name": "enumDefault",
+      "type": {
+        "type": "enum",
+        "name": "DefaultEnum",
+        "doc": "Enum with aliases and default.",
+        "aliases": ["OldDefaultEnum"],
+        "symbols": ["FOO", "BAR"],
+        "default": "FOO"
+      },
+      "default": "FOO"
+    },
+    {
+      "name": "arrayDefault",
+      "type": {"type": "array", "items": "int"},
+      "default": [1]
+    },
+    {
+      "name": "mapDefault",
+      "type": {"type": "map", "values": "long"},
+      "default": {"a": 1}
+    },
+    {
+      "name": "fixedDefault",
+      "type": {"type": "fixed", "name": "DefaultFixed", "size": 1},
+      "default": "\u00ff"
+    },
+    {
+      "name": "ascendingOrder",
+      "type": "string",
+      "order": "ascending"
+    },
+    {
+      "name": "descendingOrder",
+      "type": "string",
+      "order": "descending",
+      "aliases": ["oldDescendingOrder"]
+    },
+    {
+      "name": "nullableAfterValue",
+      "type": ["string", "null"],
+      "default": "value"
+    },
+    {
+      "name": "sameKindNamedUnion",
+      "type": [
+        {
+          "type": "record",
+          "name": "RA",
+          "fields": [{"name": "a", "type": "string"}]
+        },
+        {
+          "type": "record",
+          "name": "RB",
+          "fields": [{"name": "b", "type": "string"}]
+        },
+        {
+          "type": "enum",
+          "name": "EA",
+          "symbols": ["A"]
+        },
+        {
+          "type": "enum",
+          "name": "EB",
+          "symbols": ["B"]
+        },
+        {
+          "type": "fixed",
+          "name": "FA",
+          "size": 4
+        },
+        {
+          "type": "fixed",
+          "name": "FB",
+          "size": 8
+        }
+      ]
+    },
+    {
+      "name": "arrayOfRecords",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "ArrayItem",
+          "fields": [{"name": "label", "type": "string"}]
+        }
+      }
+    },
+    {
+      "name": "mapOfEnums",
+      "type": {
+        "type": "map",
+        "values": {
+          "type": "enum",
+          "name": "MapValue",
+          "symbols": ["ONE", "TWO"]
+        }
+      }
+    },
+    {
+      "name": "emptyNamespace",
+      "type": {
+        "type": "fixed",
+        "name": "EmptyNamespaceFixed",
+        "namespace": "",
+        "size": 2,
+        "aliases": ["legacy.fixed"]
+      }
+    },
+    {
+      "name": "fullnameIgnoresNamespace",
+      "type": {
+        "type": "record",
+        "name": "a.full.Name",
+        "namespace": "ignored",
+        "fields": [
+          {
+            "name": "understanding",
+            "type": {
+              "type": "enum",
+              "name": "Understanding",
+              "symbols": ["YES", "NO"]
+            }
+          },
+          {
+            "name": "understandingRef",
+            "type": "Understanding"
+          }
+        ]
+      }
+    },
+    {
+      "name": "fullnameReference",
+      "type": "a.full.Name"
+    },
+    {
+      "name": "complexTypeNameReuse",
+      "type": {
+        "type": "record",
+        "name": "array",
+        "namespace": "spec.reserved",
+        "fields": [{"name": "value", "type": "string"}]
+      }
+    },
+    {
+      "name": "unknownLogicalType",
+      "type": {
+        "type": "int",
+        "logicalType": "vendor-specific"
+      }
+    },
+    {
+      "name": "precisionOnlyDecimal",
+      "type": {
+        "type": "bytes",
+        "logicalType": "decimal",
+        "precision": 4
+      }
+    }
+  ]
+}

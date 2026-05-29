@@ -7,12 +7,13 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict
 
 
+class ExtraValue(BaseModel):
+    count: int
+
+
 class KnownAndRefExtra(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
+    __pydantic_extra__: dict[str, ExtraValue]
     name: str
-
-
-class ExtraValue(BaseModel):
-    count: int

@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "/schemas/v1/formats/canonical/_base.json",
+  "title": "FormatBase",
+  "type": "object",
+  "properties": {
+    "escaped": {
+      "$ref": "/schemas/v1/../outside-platform-extension-ref.json"
+    }
+  }
+}

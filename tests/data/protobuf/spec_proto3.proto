@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package example.spec.proto3;
+
+import "google/protobuf/descriptor.proto";
+
+option java_package = "com.example.spec.proto3";
+option optimize_for = SPEED;
+
+extend google.protobuf.MessageOptions {
+  string message_note = 52001;
+}
+
+extend google.protobuf.FieldOptions {
+  string field_note = 52002;
+}
+
+extend google.protobuf.EnumValueOptions {
+  string enum_value_note = 52003;
+}
+
+extend google.protobuf.MethodOptions {
+  string method_note = 52004;
+}
+
+enum AliasState {
+  option allow_alias = true;
+  reserved 4 to 6;
+  reserved "REMOVED";
+
+  ALIAS_STATE_UNSPECIFIED = 0;
+  ALIAS_STATE_STARTED = 1 [deprecated = true];
+  ALIAS_STATE_RUNNING = 1 [(enum_value_note) = "alias"];
+  ALIAS_STATE_DONE = 2;
+}
+
+// Covers proto3 grammar constructs that affect descriptor-to-model generation.
+message SpecProto3 {
+  option (message_note) = "model";
+  reserved 90 to max;
+  reserved "old_name";
+
+  string plain = 1 [json_name = "plainText"];
+  optional int32 explicit_count = 2 [(field_note) = "presence"];
+  repeated int64 packed_numbers = 3 [packed = true];
+  repeated string names = 4;
+  AliasState state = 5;
+  Nested nested = 6;
+  .example.spec.proto3.AliasState qualified_state = 7;
+
+  map<string, string> string_map = 8;
+  map<int32, string> int32_map = 9;
+  map<int64, string> int64_map = 10;
+  map<uint32, string> uint32_map = 11;
+  map<uint64, string> uint64_map = 12;
+  map<sint32, string> sint32_map = 13;
+  map<sint64, string> sint64_map = 14;
+  map<fixed32, string> fixed32_map = 15;
+  map<fixed64, string> fixed64_map = 16;
+  map<sfixed32, string> sfixed32_map = 17;
+  map<sfixed64, string> sfixed64_map = 18;
+  map<bool, string> bool_map = 19;
+
+  oneof lookup {
+    string by_name = 20;
+    Nested by_nested = 21;
+  }
+
+  message Nested {
+    string value = 1;
+  }
+}
+
+message SpecProto3Request {
+  string id = 1;
+}
+
+message SpecProto3Response {
+  SpecProto3 item = 1;
+}
+
+service SpecProto3Service {
+  option deprecated = true;
+
+  rpc Unary(SpecProto3Request) returns (SpecProto3Response) {
+    option deprecated = true;
+    option (method_note) = "custom";
+  }
+
+  rpc Streaming(stream SpecProto3Request) returns (stream SpecProto3Response);
+}

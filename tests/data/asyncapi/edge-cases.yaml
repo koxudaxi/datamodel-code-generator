@@ -1,0 +1,85 @@
+asyncapi: 3.0.0
+info:
+  title: AsyncAPI edge cases
+  version: 1.0.0
+channels:
+  invalid: true
+  user/events:
+    publish:
+      message:
+        oneOf:
+          - payload:
+              $ref: '#/components/schemas/User'
+          - headers:
+              type: object
+              properties:
+                correlationId:
+                  type: string
+    messages:
+      userDeleted:
+        payload:
+          type: object
+          required:
+            - userId
+          properties:
+            userId:
+              type: string
+operations:
+  invalid: true
+  receiveUserEvents:
+    action: receive
+    channel:
+      $ref: '#/channels/user~1events'
+    messages:
+      - $ref: '#/channels/user~1events/messages/userDeleted'
+      - payload:
+          type: object
+          properties:
+            retry:
+              type: boolean
+      - $ref: '#/components/messages/RootSlashRef'
+components:
+  messages:
+    '':
+      payload:
+        type: object
+        properties:
+          generated:
+            type: string
+    HeaderOnly:
+      headers:
+        type: object
+        properties:
+          token:
+            type: string
+    CycleA:
+      $ref: '#/components/messages/CycleB'
+    CycleB:
+      $ref: '#/components/messages/CycleA'
+    RootRef:
+      $ref: '#'
+    RootSlashRef:
+      $ref: '#/'
+    BadRef:
+      $ref: true
+    BadScalar: not a message
+  schemas:
+    Ignored: not a schema
+    AlwaysValid: true
+    User:
+      type: object
+      discriminator:
+        propertyName: kind
+      required:
+        - id
+        - kind
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+    UserAlias:
+      oneOf:
+        - $ref: '#/components/schemas/User'
+      discriminator:
+        propertyName: kind

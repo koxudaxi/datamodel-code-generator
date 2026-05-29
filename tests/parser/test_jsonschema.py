@@ -1598,6 +1598,7 @@ def test_standard_schema_metadata_is_included_in_model_extras() -> None:
             "List[Union[str, int]]",
         ),
         ({"type": "array", "prefixItems": [{"type": "string"}], "unevaluatedItems": True}, "List[Union[str, Any]]"),
+        ({"type": "array", "items": [{"type": "string"}], "additionalItems": True}, "List[Union[str, Any]]"),
         ({"type": "array"}, "List[Any]"),
         ({"type": "array", "unevaluatedItems": {"type": "integer"}}, "List[int]"),
         ({"type": "array", "unevaluatedItems": True}, "List[Any]"),

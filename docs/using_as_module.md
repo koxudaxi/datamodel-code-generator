@@ -211,6 +211,7 @@ Each parser type has its own config class:
 |--------|-------------|
 | `JsonSchemaParser` | `JSONSchemaParserConfig` |
 | `OpenAPIParser` | `OpenAPIParserConfig` |
+| `AvroParser` | `AvroParserConfig` |
 | `GraphQLParser` | `GraphQLParserConfig` |
 
 All config classes inherit from `ParserConfig` and include additional parser-specific options.

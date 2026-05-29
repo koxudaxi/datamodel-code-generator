@@ -28,14 +28,18 @@
 
 
 - [Supported Input Formats](https://datamodel-code-generator.koxudaxi.dev/supported-data-types/): This code generator supports the following input formats:
-- [Schema Version Support](https://datamodel-code-generator.koxudaxi.dev/supported_formats/): This document describes the JSON Schema and OpenAPI versions supported by datamodel-code-generator.
+- [Schema Version Support](https://datamodel-code-generator.koxudaxi.dev/supported_formats/): This document describes the JSON Schema, OpenAPI, AsyncAPI, Apache Avro, XML Schema, and Protocol Buffers versions supported by datamodel-code-gene...
 ## Usage
 
 ### Input Formats
 
 - [Generate from OpenAPI](https://datamodel-code-generator.koxudaxi.dev/openapi/): Generate Pydantic models from OpenAPI 3 schema definitions.
+- [Generate from AsyncAPI](https://datamodel-code-generator.koxudaxi.dev/asyncapi/): Generate Python models from AsyncAPI 2.x and 3.x documents.
 - [Generate from JSON Schema](https://datamodel-code-generator.koxudaxi.dev/jsonschema/): Generate Pydantic models from JSON Schema definitions. See [Supported Data Types](./supported-data-types.md#openapi-3-and-json-schema) for supporte...
-- [Generate from JSON Data](https://datamodel-code-generator.koxudaxi.dev/jsondata/): Generate Pydantic models directly from JSON data. Under the hood, the generator uses [GenSON](https://pypi.org/project/genson/) to infer a JSON Sch...
+- [Generate from Apache Avro Schema](https://datamodel-code-generator.koxudaxi.dev/avro/): Generate Python models from JSON-encoded Apache Avro schemas (`.avsc`).
+- [Generate from XML Schema](https://datamodel-code-generator.koxudaxi.dev/xmlschema/): Generate Python models from W3C XML Schema documents (`.xsd`).
+- [Generate from Protocol Buffers / gRPC](https://datamodel-code-generator.koxudaxi.dev/protobuf/): Generate Python models from Protocol Buffers schema files (`.proto`), including message types referenced by gRPC service definitions.
+- [Generate from JSON / YAML / CSV Data](https://datamodel-code-generator.koxudaxi.dev/jsondata/): Generate Pydantic models directly from raw JSON, YAML, or CSV data. Under the hood, the generator uses [GenSON](https://pypi.org/project/genson/) t...
 - [Generate from GraphQL](https://datamodel-code-generator.koxudaxi.dev/graphql/): Generate Pydantic models from GraphQL schema definitions.
 - [Generate from Python Models {#python-model}](https://datamodel-code-generator.koxudaxi.dev/python-model/): Generate code from existing Python types: Pydantic models, dataclasses, TypedDict, or dict schemas. This is useful for converting between model typ...
 
@@ -71,6 +75,7 @@
 
 
 - [Deprecations](https://datamodel-code-generator.koxudaxi.dev/deprecations/): This page lists deprecations and scheduled breaking changes.
+- [Experimental Features](https://datamodel-code-generator.koxudaxi.dev/experimental/): This page lists features that are available but still experimental.
 ## Optional
 
 - [Frequently Asked Questions](https://datamodel-code-generator.koxudaxi.dev/faq/)

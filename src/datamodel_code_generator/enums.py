@@ -37,7 +37,11 @@ class InputFileType(Enum):
 
     Auto = "auto"
     OpenAPI = "openapi"
+    AsyncAPI = "asyncapi"
     JsonSchema = "jsonschema"
+    XMLSchema = "xmlschema"
+    Protobuf = "protobuf"
+    Avro = "avro"
     Json = "json"
     Yaml = "yaml"
     Dict = "dict"
@@ -264,6 +268,40 @@ class OpenAPIVersion(Enum):
     Auto = "auto"
 
 
+class AsyncAPIVersion(Enum):
+    """AsyncAPI specification versions.
+
+    Auto: Auto-detect from asyncapi field (default).
+    """
+
+    V2 = "2.0"
+    V3 = "3.0"
+    Auto = "auto"
+
+
+class XMLSchemaVersion(Enum):
+    """XML Schema specification versions.
+
+    Auto: Auto-detect from XML Schema versioning attributes and XSD 1.1 constructs (default).
+    """
+
+    V10 = "1.0"
+    V11 = "1.1"
+    Auto = "auto"
+
+
+class ProtobufVersion(Enum):
+    """Protocol Buffers schema syntax versions.
+
+    Auto: Auto-detect from each file's syntax or edition declaration. Files without a syntax declaration are proto2.
+    """
+
+    Proto2 = "proto2"
+    Proto3 = "proto3"
+    Edition2023 = "2023"
+    Auto = "auto"
+
+
 class VersionMode(Enum):
     """Schema version validation mode.
 
@@ -283,6 +321,7 @@ __all__ = [
     "AllExportsScope",
     "AllOfClassHierarchy",
     "AllOfMergeMode",
+    "AsyncAPIVersion",
     "ClassNameAffixScope",
     "CollapseRootModelsNameStrategy",
     "DataModelType",
@@ -296,10 +335,12 @@ __all__ = [
     "NamingStrategy",
     "OpenAPIScope",
     "OpenAPIVersion",
+    "ProtobufVersion",
     "ReadOnlyWriteOnlyModelType",
     "ReuseScope",
     "StrictTypes",
     "TargetPydanticVersion",
     "UnionMode",
     "VersionMode",
+    "XMLSchemaVersion",
 ]

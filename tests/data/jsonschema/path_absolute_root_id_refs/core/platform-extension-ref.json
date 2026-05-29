@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "/schemas/v1/core/platform-extension-ref.json",
+  "title": "PlatformExtensionRef",
+  "type": "object",
+  "properties": {
+    "uri": {
+      "type": "string"
+    }
+  }
+}

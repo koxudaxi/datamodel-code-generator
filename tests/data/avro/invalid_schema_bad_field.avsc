@@ -1,0 +1,9 @@
+{
+  "type": "record",
+  "name": "BrokenField",
+  "fields": [
+    {
+      "type": "string"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+syntax = "proto2";
+
+package example.legacy;
+
+import "google/protobuf/descriptor.proto";
+
+option (unknown.file_option) = "ignored";
+
+extend google.protobuf.MessageOptions {
+  optional string model_note = 50001;
+}
+
+message LegacyMessage {
+  option (model_note) = "custom option is parsed by protoc and ignored by model generation";
+  option (unknown.message_option) = "also ignored by model generation";
+  extensions 100 to max;
+
+  required string id = 1;
+  optional int32 count = 2 [default = 7];
+  optional bool enabled = 3 [default = true];
+  repeated string tags = 4;
+  optional double ratio = 5 [default = inf];
+  optional LegacyStatus status = 6 [default = LEGACY_ACTIVE];
+  optional string title = 9 [default = "legacy"];
+  optional string annotated = 10 [default = "kept", (unknown.field_option) = true];
+  optional string annotation_only = 11 [(unknown.field_option) = true];
+  optional string escaped = 12 [default = "a\"b", (unknown.field_option) = true];
+  optional string empty_default = 13 [default = ""];
+  optional string multiline_option = 14 [
+    default = "wrapped",
+    (unknown.field_option) = true
+  ];
+  optional string bracket_default = 15 [
+    default = "a]b",
+    (unknown.field_option) = true
+  ];
+
+  optional group LegacyGroup = 7 {
+    optional string ignored = 8;
+  }
+}
+
+extend LegacyMessage {
+  optional string external_note = 100;
+}
+
+enum LegacyStatus {
+  LEGACY_UNKNOWN = 0;
+  LEGACY_ACTIVE = 1;
+}

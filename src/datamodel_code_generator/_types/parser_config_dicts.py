@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.enums import (
         AllOfClassHierarchy,
         AllOfMergeMode,
+        AsyncAPIVersion,
         ClassNameAffixScope,
         CollapseRootModelsNameStrategy,
         DataclassArguments,
@@ -23,11 +24,13 @@ if TYPE_CHECKING:
         NamingStrategy,
         OpenAPIScope,
         OpenAPIVersion,
+        ProtobufVersion,
         ReadOnlyWriteOnlyModelType,
         ReuseScope,
         StrictTypes,
         TargetPydanticVersion,
         VersionMode,
+        XMLSchemaVersion,
     )
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
     from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
@@ -183,6 +186,10 @@ class JSONSchemaParserConfigDict(ParserConfigDict):
     schema_version_mode: NotRequired[VersionMode | None]
 
 
+class AvroParserConfigDict(JSONSchemaParserConfigDict, closed=True):
+    pass
+
+
 class OpenAPIParserConfigDict(JSONSchemaParserConfigDict, closed=True):
     openapi_scopes: NotRequired[list[OpenAPIScope] | None]
     include_path_parameters: NotRequired[bool]
@@ -192,7 +199,34 @@ class OpenAPIParserConfigDict(JSONSchemaParserConfigDict, closed=True):
     openapi_version: NotRequired[OpenAPIVersion | None]
 
 
-ModelDict: TypeAlias = ParserConfigDict | GraphQLParserConfigDict | JSONSchemaParserConfigDict | OpenAPIParserConfigDict
+class AsyncAPIParserConfigDict(JSONSchemaParserConfigDict, closed=True):
+    openapi_scopes: NotRequired[list[OpenAPIScope] | None]
+    include_path_parameters: NotRequired[bool]
+    use_status_code_in_response_name: NotRequired[bool]
+    openapi_include_paths: NotRequired[list[str] | None]
+    openapi_include_info_version: NotRequired[bool]
+    openapi_version: NotRequired[OpenAPIVersion | None]
+    asyncapi_version: NotRequired[AsyncAPIVersion | None]
+
+
+class ProtobufParserConfigDict(JSONSchemaParserConfigDict, closed=True):
+    protobuf_version: NotRequired[ProtobufVersion | None]
+
+
+class XMLSchemaParserConfigDict(JSONSchemaParserConfigDict, closed=True):
+    xmlschema_version: NotRequired[XMLSchemaVersion | None]
+
+
+ModelDict: TypeAlias = (
+    ParserConfigDict
+    | GraphQLParserConfigDict
+    | JSONSchemaParserConfigDict
+    | AvroParserConfigDict
+    | OpenAPIParserConfigDict
+    | AsyncAPIParserConfigDict
+    | ProtobufParserConfigDict
+    | XMLSchemaParserConfigDict
+)
 
 
 class ModelValidatorsDict(TypedDict):

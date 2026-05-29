@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from datamodel_code_generator.model import DataModel, DataModelFieldBase
+from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.dataclass import has_field_assignment
 from datamodel_code_generator.model.pydantic_v2.base_model import ConfigAttribute, Constraints
@@ -182,3 +182,6 @@ class DataModelField(DataModelFieldV2):
     def process_const(self) -> None:
         """Process const field constraint using literal type."""
         self._process_const_as_literal()
+
+
+_rebuild_model_with_datamodel_namespace(DataModelField)

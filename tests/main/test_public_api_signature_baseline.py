@@ -77,6 +77,7 @@ def _baseline_generate(
     disable_timestamp: bool = False,
     enable_version_header: bool = False,
     enable_command_header: bool = False,
+    enable_generated_header_marker: bool = False,
     command_line: str | None = None,
     allow_population_by_field_name: bool = False,
     allow_extra_fields: bool = False,

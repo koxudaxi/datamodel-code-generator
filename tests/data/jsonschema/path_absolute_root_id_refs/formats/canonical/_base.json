@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "/schemas/v1/formats/canonical/_base.json",
+  "title": "FormatBase",
+  "type": "object",
+  "properties": {
+    "platform_extensions": {
+      "type": "array",
+      "items": {
+        "$ref": "/schemas/v1/core/platform-extension-ref.json"
+      }
+    },
+    "platform_extension_uri": {
+      "$ref": "/schemas/v1/core/../core/platform-extension-ref.json#/properties/uri"
+    }
+  }
+}

@@ -114,6 +114,7 @@ EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
     "no_color",
     "disable_warnings",
     "list_deprecations",
+    "list_experimental",
     "watch",
     "watch_delay",
 })
@@ -443,6 +444,7 @@ class Config(BaseModel):  # noqa: PLR0904
     disable_timestamp: bool = False
     enable_version_header: bool = False
     enable_command_header: bool = False
+    enable_generated_header_marker: bool = False
     allow_population_by_field_name: bool = False
     allow_extra_fields: bool = False
     extra_fields: Optional[str] = None  # noqa: UP045
@@ -558,6 +560,7 @@ class Config(BaseModel):  # noqa: PLR0904
     watch: bool = False
     watch_delay: float = 0.5
     list_deprecations: Optional[str] = None  # noqa: UP045
+    list_experimental: Optional[str] = None  # noqa: UP045
     schema_version: Optional[str] = None  # noqa: UP045
     schema_version_mode: Optional[VersionMode] = None  # noqa: UP045
     external_ref_mapping: Optional[dict[str, str]] = None  # noqa: UP045
@@ -903,6 +906,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         disable_timestamp=config.disable_timestamp,
         enable_version_header=config.enable_version_header,
         enable_command_header=config.enable_command_header,
+        enable_generated_header_marker=config.enable_generated_header_marker,
         command_line=command_line,
         allow_population_by_field_name=config.allow_population_by_field_name,
         allow_extra_fields=config.allow_extra_fields,
@@ -1095,6 +1099,12 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
 
     if config.list_deprecations:
         print(render_deprecations(cast("Any", config.list_deprecations)), end="")  # noqa: T201
+        return Exit.OK
+
+    if config.list_experimental:
+        from datamodel_code_generator.experimental import render_experimental_features  # noqa: PLC0415
+
+        print(render_experimental_features(cast("Any", config.list_experimental)), end="")  # noqa: T201
         return Exit.OK
 
     if not config.input and not config.url and not config.input_model and sys.stdin.isatty():

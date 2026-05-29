@@ -1,0 +1,6 @@
+{
+  "type": "fixed",
+  "name": "UuidBytes",
+  "size": 16,
+  "logicalType": "uuid"
+}

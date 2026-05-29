@@ -1,0 +1,14 @@
+asyncapi: 2.6.0
+info:
+  title: Invalid message schemaFormat
+  version: 1.0.0
+channels:
+  invalid:
+    publish:
+      message:
+        schemaFormat: true
+        payload:
+          type: object
+          properties:
+            id:
+              type: string

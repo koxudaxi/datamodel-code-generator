@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:ship="https://example.com/shipping"
+  xmlns:bill="https://example.com/billing"
+  xmlns:dash="urn:a-b"
+  xmlns:underscore="urn:a_b"
+  targetNamespace="https://example.com/order"
+>
+  <xs:import namespace="https://example.com/shipping" schemaLocation="collision_shipping.xsd"/>
+  <xs:import namespace="https://example.com/billing" schemaLocation="collision_billing.xsd"/>
+  <xs:import namespace="urn:a-b" schemaLocation="collision_urn_dash.xsd"/>
+  <xs:import namespace="urn:a_b" schemaLocation="collision_urn_underscore.xsd"/>
+  <xs:simpleType name="Code"/>
+  <xs:element name="shipping" type="ship:Address"/>
+  <xs:element name="billing" type="bill:Address"/>
+  <xs:element name="localCode" type="Code"/>
+  <xs:element name="dashThing" type="dash:Thing"/>
+  <xs:element name="underscoreThing" type="underscore:Thing"/>
+</xs:schema>

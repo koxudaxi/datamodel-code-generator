@@ -304,8 +304,8 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
                 kwargs["strict"] = True
             return self.data_type.from_import(IMPORT_CONINT, kwargs=kwargs)
         if strict:
-            return self.strict_type_map[StrictTypes.int]
-        return self.type_map[types]
+            return self.copy_data_type(self.strict_type_map[StrictTypes.int])
+        return self.copy_data_type(self.type_map[types])
 
     def get_data_float_type(  # noqa: PLR0911
         self,
@@ -339,8 +339,8 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
                 kwargs["strict"] = True
             return self.data_type.from_import(IMPORT_CONFLOAT, kwargs=kwargs)
         if strict:
-            return self.strict_type_map[StrictTypes.float]
-        return self.type_map[types]
+            return self.copy_data_type(self.strict_type_map[StrictTypes.float])
+        return self.copy_data_type(self.type_map[types])
 
     def get_data_decimal_type(self, types: Types, **kwargs: Any) -> DataType:
         """Get decimal data type with constraints (condecimal)."""
@@ -352,7 +352,7 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
                     k: Decimal(str(v.value if isinstance(v, UnionIntFloat) else v)) for k, v in data_type_kwargs.items()
                 },
             )
-        return self.type_map[types]
+        return self.copy_data_type(self.type_map[types])
 
     def get_data_str_type(self, types: Types, **kwargs: Any) -> DataType:
         """Get string data type with constraints (constr)."""
@@ -367,8 +367,8 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
                 data_type_kwargs[self.PATTERN_KEY] = f"r'{escaped_regex}'"
             return self.data_type.from_import(IMPORT_CONSTR, kwargs=data_type_kwargs)
         if strict:
-            return self.strict_type_map[StrictTypes.str]
-        return self.type_map[types]
+            return self.copy_data_type(self.strict_type_map[StrictTypes.str])
+        return self.copy_data_type(self.type_map[types])
 
     def get_data_bytes_type(self, types: Types, **kwargs: Any) -> DataType:
         """Get bytes data type with constraints (conbytes)."""
@@ -382,8 +382,8 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
         # conbytes doesn't accept strict argument
         # https://github.com/samuelcolvin/pydantic/issues/2489
         if strict:
-            return self.strict_type_map[StrictTypes.bytes]
-        return self.type_map[types]
+            return self.copy_data_type(self.strict_type_map[StrictTypes.bytes])
+        return self.copy_data_type(self.type_map[types])
 
     def get_data_type(  # noqa: PLR0911
         self,
@@ -404,14 +404,14 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
         if types == Types.binary:
             return self.get_data_bytes_type(types, **kwargs)
         if types == Types.boolean and StrictTypes.bool in self.strict_types:
-            return self.strict_type_map[StrictTypes.bool]
+            return self.copy_data_type(self.strict_type_map[StrictTypes.bool])
         if types == Types.hostname and field_constraints:
             strict = StrictTypes.str in self.strict_types
             if strict:
-                return self.strict_type_map[StrictTypes.str]
+                return self.copy_data_type(self.strict_type_map[StrictTypes.str])
             return self.data_type(type="str")
 
-        return self.type_map[types]
+        return self.copy_data_type(self.type_map[types])
 
 
 # --- Pydantic v2 specific ---
@@ -499,6 +499,9 @@ class DataTypeManager(_PydanticDataTypeManager):
             use_serialize_as_any=(bool, use_serialize_as_any),
             __base__=PydanticV2DataType,
         )
+        from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace  # noqa: PLC0415
+
+        _rebuild_model_with_datamodel_namespace(self.data_type)
 
     def type_map_factory(  # noqa: PLR0913, PLR0917
         self,

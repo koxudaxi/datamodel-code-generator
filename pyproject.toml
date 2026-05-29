@@ -44,6 +44,7 @@ optional-dependencies.all = [
   "datamodel-code-generator[debug]",
   "datamodel-code-generator[graphql]",
   "datamodel-code-generator[http]",
+  "datamodel-code-generator[protobuf]",
   "datamodel-code-generator[ruff]",
   "datamodel-code-generator[validation]",
   "datamodel-code-generator[watch]",
@@ -56,6 +57,9 @@ optional-dependencies.graphql = [
 ]
 optional-dependencies.http = [
   "httpx>=0.24.1",
+]
+optional-dependencies.protobuf = [
+  "grpcio-tools>=1.62,<2",
 ]
 optional-dependencies.ruff = [
   "ruff>=0.9.10",
@@ -108,7 +112,7 @@ type = [
   { include-group = "test" },
 ]
 docs = [
-  "zensical>=0.0.15; python_version>='3.10'",
+  "zensical>=0.0.43; python_version>='3.10'",
 ]
 benchmark = [
   "pytest-benchmark",
@@ -305,7 +309,11 @@ input-model = [
   "src/datamodel_code_generator/config.py:ParserConfig",
   "src/datamodel_code_generator/config.py:GraphQLParserConfig",
   "src/datamodel_code_generator/config.py:JSONSchemaParserConfig",
+  "src/datamodel_code_generator/config.py:AvroParserConfig",
   "src/datamodel_code_generator/config.py:OpenAPIParserConfig",
+  "src/datamodel_code_generator/config.py:AsyncAPIParserConfig",
+  "src/datamodel_code_generator/config.py:ProtobufParserConfig",
+  "src/datamodel_code_generator/config.py:XMLSchemaParserConfig",
 ]
 output = "src/datamodel_code_generator/_types/parser_config_dicts.py"
 class-name-suffix = "Dict"

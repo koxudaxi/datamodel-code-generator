@@ -21,7 +21,7 @@ from datamodel_code_generator.imports import (
     IMPORT_TIMEDELTA,
     Import,
 )
-from datamodel_code_generator.model import DataModel, DataModelFieldBase
+from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.imports import IMPORT_DATACLASS, IMPORT_FIELD
 from datamodel_code_generator.model.pydantic_base import Constraints  # noqa: TC001 # needed for pydantic
@@ -37,8 +37,8 @@ if TYPE_CHECKING:
 
 
 def has_field_assignment(field: DataModelFieldBase) -> bool:
-    """Check if a dataclass field has a default value or field() assignment."""
-    return bool(field.field) or not (
+    """Check if a dataclass field renders with an assignment or default value."""
+    return (bool(field.field) and not field.use_annotated) or not (
         (field.required and not field.use_default_with_required)
         or (field.represented_default == "None" and field.strip_default_none)
     )
@@ -269,3 +269,6 @@ class DataTypeManager(_DataTypeManager):
             **datetime_map,
             **standard_primitive_map,
         }
+
+
+_rebuild_model_with_datamodel_namespace(DataModelField)

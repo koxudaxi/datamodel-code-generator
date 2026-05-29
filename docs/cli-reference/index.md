@@ -12,11 +12,11 @@ This documentation is auto-generated from test cases.
 | 🔧 [Typing Customization](typing-customization.md) | 30 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 26 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
-| 🎨 [Template Customization](template-customization.md) | 21 | Output formatting and custom rendering |
+| 🎨 [Template Customization](template-customization.md) | 22 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
 | ⚙️ [General Options](general-options.md) | 17 | Utilities and meta options |
-| 📝 [Utility Options](utility-options.md) | 7 | Help, version, debug options |
+| 📝 [Utility Options](utility-options.md) | 8 | Help, version, debug options |
 
 ## All Options
 
@@ -74,6 +74,7 @@ This documentation is auto-generated from test cases.
 - [`--empty-enum-field-name`](field-customization.md#empty-enum-field-name)
 - [`--enable-command-header`](template-customization.md#enable-command-header)
 - [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability)
+- [`--enable-generated-header-marker`](template-customization.md#enable-generated-header-marker)
 - [`--enable-version-header`](template-customization.md#enable-version-header)
 - [`--encoding`](base-options.md#encoding)
 - [`--enum-field-as-literal`](typing-customization.md#enum-field-as-literal)
@@ -127,6 +128,7 @@ This documentation is auto-generated from test cases.
 ### L {#l}
 
 - [`--list-deprecations`](utility-options.md#list-deprecations)
+- [`--list-experimental`](utility-options.md#list-experimental)
 
 ### M {#m}
 

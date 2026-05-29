@@ -166,6 +166,8 @@ jobs:
           - type
           - docs
           - pkg_meta
+          - pydantic20
+          - pydantic25
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -184,6 +186,121 @@ jobs:
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
 
+  w3c-xmlschema-e2e:
+    name: W3C XML Schema e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - name: Install tox
+        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
+      - name: Setup W3C XML Schema e2e suite
+        run: tox r -vv --notest --skip-missing-interpreters false -e w3c-xmlschema-e2e
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Checkout W3C XML Schema Test Suite
+        run: |
+          git clone --filter=blob:none https://github.com/w3c/xsdtests.git .tox/w3c-xsdtests
+          git -C .tox/w3c-xsdtests checkout 7bc3365c652a322f3d762021b3879eb92dae7e30
+      - name: Run W3C XML Schema e2e suite
+        run: |
+          tox run --skip-uv-sync --skip-pkg-install -e w3c-xmlschema-e2e -- \
+            .tox/w3c-xsdtests \
+            --expected-documents 5284 \
+            --expected-unique-documents 5283
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+
+  asyncapi-spec-json-schemas-e2e:
+    name: AsyncAPI spec JSON Schemas e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - name: Install tox
+        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
+      - name: Setup AsyncAPI spec JSON Schemas e2e suite
+        run: tox r -vv --notest --skip-missing-interpreters false -e asyncapi-spec-json-schemas-e2e
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Checkout AsyncAPI spec JSON Schemas
+        run: |
+          git clone --filter=blob:none https://github.com/asyncapi/spec-json-schemas.git .tox/asyncapi-spec-json-schemas
+          git -C .tox/asyncapi-spec-json-schemas checkout 469c2b2bf5ed88e0cdf1e48975b93a87c710d229
+      - name: Run AsyncAPI spec JSON Schemas e2e suite
+        run: |
+          tox run --skip-uv-sync --skip-pkg-install -e asyncapi-spec-json-schemas-e2e -- \
+            .tox/asyncapi-spec-json-schemas/schemas \
+            --expected-schemas 12
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+
+  apache-avro-schema-pass-e2e:
+    name: Apache Avro schema pass e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - name: Install tox
+        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
+      - name: Setup Apache Avro schema pass e2e suite
+        run: tox r -vv --notest --skip-missing-interpreters false -e apache-avro-schema-pass-e2e
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Checkout Apache Avro
+        run: |
+          git clone --filter=blob:none https://github.com/apache/avro.git .tox/apache-avro
+          git -C .tox/apache-avro checkout 9110c693767c1dde2665b2b57939333478b12036
+      - name: Run Apache Avro schema pass e2e suite
+        run: |
+          tox run --skip-uv-sync --skip-pkg-install -e apache-avro-schema-pass-e2e -- \
+            .tox/apache-avro/lang/c/tests/schema_tests/pass \
+            --expected-schemas 28
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+
+  protobuf-official-e2e:
+    name: Protocol Buffers official e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - name: Install tox
+        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
+      - name: Setup Protocol Buffers official e2e suite
+        run: tox r -vv --notest --skip-missing-interpreters false -e protobuf-official-e2e
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Checkout Protocol Buffers
+        run: |
+          git clone --filter=blob:none --no-checkout https://github.com/protocolbuffers/protobuf.git .tox/protobuf
+          git -C .tox/protobuf sparse-checkout init --cone
+          git -C .tox/protobuf sparse-checkout set src conformance benchmarks
+          git -C .tox/protobuf checkout 4376cba55d9e2f44f7e317d9c10e0259d145f8cf
+      - name: Run Protocol Buffers official e2e suite
+        run: |
+          tox run --skip-uv-sync --skip-pkg-install -e protobuf-official-e2e -- \
+            .tox/protobuf \
+            --expected-schemas 65
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+
   test-gate:
     name: test-gate
     if: always()
@@ -192,17 +309,33 @@ jobs:
       - test
       - coverage
       - check
+      - w3c-xmlschema-e2e
+      - asyncapi-spec-json-schemas-e2e
+      - apache-avro-schema-pass-e2e
+      - protobuf-official-e2e
     steps:
       - name: Fail if any test workflow job failed
         run: |
           test_result='${{ needs.test.result }}'
           coverage_result='${{ needs.coverage.result }}'
           check_result='${{ needs.check.result }}'
+          w3c_xmlschema_e2e_result='${{ needs.w3c-xmlschema-e2e.result }}'
+          asyncapi_spec_json_schemas_e2e_result='${{ needs.asyncapi-spec-json-schemas-e2e.result }}'
+          apache_avro_schema_pass_e2e_result='${{ needs.apache-avro-schema-pass-e2e.result }}'
+          protobuf_official_e2e_result='${{ needs.protobuf-official-e2e.result }}'
 
           echo "test: ${test_result}"
           echo "coverage: ${coverage_result}"
           echo "check: ${check_result}"
+          echo "w3c xmlschema e2e: ${w3c_xmlschema_e2e_result}"
+          echo "asyncapi spec json schemas e2e: ${asyncapi_spec_json_schemas_e2e_result}"
+          echo "apache avro schema pass e2e: ${apache_avro_schema_pass_e2e_result}"
+          echo "protobuf official e2e: ${protobuf_official_e2e_result}"
 
           [ "${test_result}" = "success" ] || exit 1
           [ "${coverage_result}" = "success" ] || exit 1
           [ "${check_result}" = "success" ] || exit 1
+          [ "${w3c_xmlschema_e2e_result}" = "success" ] || exit 1
+          [ "${asyncapi_spec_json_schemas_e2e_result}" = "success" ] || exit 1
+          [ "${apache_avro_schema_pass_e2e_result}" = "success" ] || exit 1
+          [ "${protobuf_official_e2e_result}" = "success" ] || exit 1

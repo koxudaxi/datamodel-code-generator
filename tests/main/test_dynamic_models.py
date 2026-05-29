@@ -90,6 +90,36 @@ def test_nested_models() -> None:
     assert_dynamic_models(schema, {"Model": {"user": {"name": "Alice"}}}, EXPECTED_PATH / "nested_models.json")
 
 
+def test_asyncapi_dynamic_models() -> None:
+    """Test auto-detecting AsyncAPI input for dynamic models."""
+    schema: dict[str, Any] = {
+        "asyncapi": "2.6.0",
+        "info": {"title": "User Events", "version": "1.0.0"},
+        "channels": {
+            "users": {
+                "publish": {
+                    "message": {
+                        "payload": {"$ref": "#/components/schemas/User"},
+                    },
+                },
+            },
+        },
+        "components": {
+            "schemas": {
+                "User": {
+                    "type": "object",
+                    "properties": {"name": {"type": "string"}},
+                    "required": ["name"],
+                },
+            },
+        },
+    }
+
+    models = generate_dynamic_models(schema)
+
+    assert models["User"].model_validate({"name": "Alice"}).model_dump(mode="json") == {"name": "Alice"}
+
+
 def test_enum_model() -> None:
     """Test generating model with enum and validating enum values."""
     schema = make_object_schema({"status": {"type": "string", "enum": ["active", "inactive"]}})

@@ -1,0 +1,1 @@
+"""Avro main integration tests."""

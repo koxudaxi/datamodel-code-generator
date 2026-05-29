@@ -52,9 +52,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Timeout in seconds for HTTP requests to remote hosts
                         (default: 30)
   --input INPUT         Input file/directory (default: stdin)
-  --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv,graphql}
+  --input-file-type {auto,openapi,asyncapi,jsonschema,xmlschema,protobuf,avro,json,yaml,dict,csv,graphql}
                         Input file type (default: auto). Use 'jsonschema',
-                        'openapi', or 'graphql' for schema definitions. Use
+                        'openapi', 'asyncapi', 'graphql', 'xmlschema',
+                        'protobuf', or 'avro' for schema definitions. Use
                         'json', 'yaml', or 'csv' for raw sample data to infer
                         a schema automatically.
   --input-model MODULE:NAME
@@ -77,8 +78,11 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --schema-version SCHEMA_VERSION
                         Schema version. Valid values depend on input type:
                         JsonSchema: auto, draft-04, draft-06, draft-07,
-                        2019-09, 2020-12. OpenAPI: auto, 3.0, 3.1. (default:
-                        auto - detected from $schema or openapi field)
+                        2019-09, 2020-12. OpenAPI: auto, 3.0, 3.1. AsyncAPI:
+                        auto, 2.0, 3.0. XMLSchema: auto, 1.0, 1.1. Protobuf:
+                        auto, proto2, proto3, 2023. (default: auto - detected
+                        from $schema, openapi/asyncapi field, XML Schema
+                        versioning attributes, or Protobuf syntax/edition)
   --schema-version-mode {lenient,strict}
                         Schema version validation mode. 'lenient': accept all
                         features regardless of version (default). 'strict':
@@ -338,6 +342,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         reproducibility
   --enable-faux-immutability
                         Enable faux immutability
+  --enable-generated-header-marker
+                        Enable @generated marker on file headers
   --enable-version-header
                         Enable package version on file headers
   --extra-fields {allow,ignore,forbid}
@@ -534,6 +540,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --list-deprecations [{table,json,markdown}]
                         List registered deprecations and scheduled breaking
                         changes, then exit.
+  --list-experimental [{table,json,markdown}]
+                        List registered experimental features, then exit.
   --no-color            disable colorized output
   --profile PROFILE     Use a named profile from pyproject.toml
                         [tool.datamodel-codegen.profiles.<name>]

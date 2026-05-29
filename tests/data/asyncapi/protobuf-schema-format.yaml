@@ -1,0 +1,20 @@
+asyncapi: 3.0.0
+info:
+  title: Unsupported schema format
+  version: 1.0.0
+channels:
+  proto/events:
+    address: proto/events
+    messages:
+      protoEvent:
+        payload:
+          schemaFormat: application/vnd.google.protobuf;version=3
+          schema: |
+            syntax = "proto2";
+            message ProtoEvent {
+              required string id = 1;
+              repeated ProtoChild children = 2;
+            }
+            message ProtoChild {
+              optional string name = 1;
+            }

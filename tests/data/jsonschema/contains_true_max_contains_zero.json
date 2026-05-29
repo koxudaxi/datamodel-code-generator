@@ -9,6 +9,7 @@
         "type": "string"
       },
       "contains": true,
+      "minContains": 0,
       "maxContains": 0
     }
   },

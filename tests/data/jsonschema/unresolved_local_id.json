@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "root",
+  "title": "Root",
+  "type": "object",
+  "properties": {
+    "missing": {
+      "$ref": "#MissingId"
+    }
+  }
+}
