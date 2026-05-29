@@ -42,15 +42,40 @@
     }
   </style>
   <script>
+    const isPlaygroundLink = link => {
+      const url = new URL(link.href);
+      return url.origin === window.location.origin && (
+        url.pathname.endsWith("/playground/") ||
+        url.pathname.endsWith("/assets/playground/index.html")
+      );
+    };
+
     document.documentElement.classList.add("dcg-theme-loading");
     window.setTimeout(() => {
       document.documentElement.classList.remove("dcg-theme-loading");
     }, 3000);
     window.addEventListener("DOMContentLoaded", () => {
+      for (const link of document.querySelectorAll("a[href]")) {
+        if (isPlaygroundLink(link)) {
+          link.target = "_self";
+        }
+      }
       window.requestAnimationFrame(() => {
         document.documentElement.classList.remove("dcg-theme-loading");
       });
     });
+    document.addEventListener("click", event => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+      }
+      const target = event.target instanceof Element ? event.target : event.target.parentElement;
+      const link = target ? target.closest("a[href]") : null;
+      if (!link || !isPlaygroundLink(link)) {
+        return;
+      }
+      event.preventDefault();
+      window.location.assign(link.href);
+    }, true);
   </script>
 {% endblock %}
 

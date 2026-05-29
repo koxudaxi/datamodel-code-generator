@@ -27,7 +27,7 @@
 Generate models in your browser without installing anything.
 
 <p>
-  <a class="md-button md-button--primary" href="playground.md">Open Playground</a>
+  <a class="md-button md-button--primary" href="playground.md" target="_self">Open Playground</a>
 </p>
 
 ---
