@@ -24,7 +24,7 @@
 
 ## 🧪 Try It In Your Browser
 
-Use the [Playground](playground.md) to generate models without installing anything.
+Generate models in your browser without installing anything.
 
 <p>
   <a class="md-button md-button--primary" href="playground.md">Open Playground</a>

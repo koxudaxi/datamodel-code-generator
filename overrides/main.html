@@ -1,5 +1,30 @@
 {% extends "base.html" %}
 
+{% block extrahead %}
+  {{ super() }}
+  <style>
+    .md-toggle {
+      display: none;
+    }
+
+    .md-logo svg,
+    .md-icon svg {
+      width: 1.2rem;
+      height: 1.2rem;
+      max-width: 1.2rem;
+      max-height: 1.2rem;
+    }
+
+    .md-header__button.md-logo svg,
+    .md-nav__button.md-logo svg {
+      width: 1.5rem;
+      height: 1.5rem;
+      max-width: 1.5rem;
+      max-height: 1.5rem;
+    }
+  </style>
+{% endblock %}
+
 {% block announce %}
   📣 💼 Maintainer update: I'm open to opportunities.
   <a href="https://koxudaxi.dev/?utm_source=dm_docs&utm_medium=announce_bar&utm_campaign=open_to_work"
