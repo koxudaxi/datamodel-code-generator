@@ -32,7 +32,7 @@ jobs:
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
-          python-version: 3.13
+          python-version: 3.14
       - name: Install dependencies
         run: uv sync
       - name: Copy CHANGELOG to docs
@@ -48,6 +48,8 @@ jobs:
         run: python scripts/update_docs_version.py
         env:
           GH_TOKEN: ${{ github.token }}
+      - name: Build playground assets
+        run: uv run --python 3.14 --group playground python scripts/build_playground_assets.py
       - name: Build site
         run: zensical build --clean
       - name: Deploy

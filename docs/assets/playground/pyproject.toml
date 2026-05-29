@@ -1,0 +1,20 @@
+[tool.ruff]
+target-version = "py314"
+
+line-length = 120
+lint.select = [ "ALL" ]
+lint.ignore = [
+  "A002",    # tdom component prop names can mirror HTML attributes
+  "ANN401",  # tdom accepts dynamic HTML attributes
+  "ARG001",  # tdom passes children to component functions
+  "BLE001",  # browser bridge returns tracebacks as JSON
+  "COM812",  # t-linter owns t-string formatting here
+  "D",       # this file is shipped as browser runtime code
+  "E501",    # t-strings often contain single-line HTML fragments
+  "FBT",     # called from JavaScript/Pyodide bridge
+  "I001",    # keep imports stable for Pyodide runtime readability
+  "INP001",  # static browser asset, not a Python package
+  "N802",    # tdom components use PascalCase names
+  "PLR0913", # tdom component props are explicit
+  "PLR2004", # UI threshold constants are local to this file
+]

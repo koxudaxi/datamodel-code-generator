@@ -84,6 +84,7 @@ dev = [
   { include-group = "docs" },
   { include-group = "fix" },
   { include-group = "pkg-meta" },
+  { include-group = "playground" },
   { include-group = "test" },
   { include-group = "type" },
 ]
@@ -113,6 +114,10 @@ type = [
 ]
 docs = [
   "zensical>=0.0.15; python_version>='3.10'",
+]
+playground = [
+  "t-linter>=0.7",
+  "tdom>=0.1.16; python_version>='3.14'",
 ]
 benchmark = [
   "pytest-benchmark",

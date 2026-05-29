@@ -1,0 +1,54 @@
+name: Playground Lint
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/playground-lint.yaml'
+      - 'docs/assets/playground/**'
+      - 'docs/playground.md'
+      - 'pyproject.toml'
+      - 'scripts/build_playground_assets.py'
+      - 'scripts/lint_playground.sh'
+      - 'uv.lock'
+      - 'zensical.toml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/playground-lint.yaml'
+      - 'docs/assets/playground/**'
+      - 'docs/playground.md'
+      - 'pyproject.toml'
+      - 'scripts/build_playground_assets.py'
+      - 'scripts/lint_playground.sh'
+      - 'uv.lock'
+      - 'zensical.toml'
+  workflow_dispatch:
+
+concurrency:
+  group: playground-lint-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  playground-lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          enable-cache: true
+          cache-suffix: playground-lint
+      - name: Setup Python
+        run: uv python install 3.14
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Run playground lint
+        run: uv run --locked --python 3.14 --group playground bash scripts/lint_playground.sh
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"

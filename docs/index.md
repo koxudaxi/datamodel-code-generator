@@ -22,6 +22,25 @@
 
 ---
 
+## 🧪 Try It In Your Browser
+
+Use the [Playground](playground.md) to generate models without installing anything.
+
+<details>
+<summary>Open embedded playground</summary>
+
+<iframe
+  src="assets/playground/index.html"
+  title="datamodel-code-generator playground"
+  style="width: 100%; min-height: 900px; border: 0; border-radius: 8px;"
+  loading="lazy"
+  allow="clipboard-read; clipboard-write"
+></iframe>
+
+</details>
+
+---
+
 ## 📦 Installation
 
 === "uv tool (Recommended)"
