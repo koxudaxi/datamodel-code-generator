@@ -1,3 +1,6 @@
+import * as Comlink from "https://cdn.jsdelivr.net/npm/comlink@4.4.2/dist/esm/comlink.mjs";
+import morphdom from "https://cdn.jsdelivr.net/npm/morphdom@2.7.7/+esm";
+
 import {
   getInputValue,
   mountInputEditor,
@@ -8,6 +11,8 @@ import {
 } from "./editor.js";
 
 const appEl = document.querySelector("#app");
+const rawWorker = new Worker("./worker.js", { type: "module" });
+const worker = Comlink.wrap(rawWorker);
 
 let ready = false;
 let running = false;
@@ -21,8 +26,6 @@ let cliOptionsText = "";
 let cliOptionsDirty = true;
 let cliRequestId = 0;
 let appShellMounted = false;
-
-const worker = new Worker("./worker.js", { type: "module" });
 
 function currentSchema() {
   return getInputValue();
@@ -68,41 +71,38 @@ async function mountInitialShell() {
   mountEditor();
 }
 
-function collectOptions() {
-  const options = {};
-  for (const control of document.querySelectorAll("[data-option]")) {
-    if (control.disabled) {
-      continue;
-    }
-    const key = control.dataset.option;
-    if (control.type === "checkbox") {
-      if (control.checked) {
-        options[key] = true;
-      }
-      continue;
-    }
-    let value = control.value;
-    if (!value) {
-      continue;
-    }
-    if (control.tagName === "TEXTAREA") {
-      value = value
-        .split(/\r?\n|,/)
-        .map((item) => item.trim())
-        .filter(Boolean);
-      if (value.length === 0) {
-        continue;
-      }
-    } else if (control.type === "number") {
-      value = Number(value);
-    } else if (value === "true") {
-      value = true;
-    } else if (value === "false") {
-      value = false;
-    }
-    options[key] = value;
+function mountRenderedShell(html) {
+  const existingSchema = currentSchema();
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  const nextShell = template.content.firstElementChild;
+  appShellMounted = true;
+  if (appEl.firstElementChild && nextShell) {
+    morphdom(appEl.firstElementChild, nextShell, {
+      onBeforeElUpdated(fromEl, toEl) {
+        if (fromEl.id === "schema" && existingSchema) {
+          toEl.value = existingSchema;
+        }
+        return true;
+      },
+    });
+  } else {
+    appEl.innerHTML = html;
   }
-  return options;
+  if (existingSchema) {
+    const schema = document.querySelector("#schema");
+    if (schema) {
+      schema.value = existingSchema;
+    }
+  }
+  updateInputFormatState();
+  mountEditor();
+  setGenerateState();
+}
+
+function collectOptionEntries() {
+  const form = document.querySelector("#options-form");
+  return form ? Object.fromEntries(new FormData(form).entries()) : {};
 }
 
 function setAutoGenerate(enabled) {
@@ -123,18 +123,19 @@ function scheduleAutoGenerate(delay = 650) {
   autoTimer = setTimeout(() => requestGenerate("auto"), delay);
 }
 
-function refreshCliOptions() {
+async function refreshCliOptions() {
   if (!ready) {
     return;
   }
+  const requestId = ++cliRequestId;
   cliOptionsDirty = true;
   setGenerateState();
-  worker.postMessage({
-    type: "cli",
-    requestId: ++cliRequestId,
-    inputType: currentInputType(),
-    options: collectOptions(),
-  });
+  const text = await worker.buildCliOptions(collectOptionEntries(), currentInputType());
+  if (requestId === cliRequestId) {
+    cliOptionsText = text;
+    cliOptionsDirty = false;
+    setGenerateState();
+  }
 }
 
 function finishGeneration() {
@@ -147,7 +148,7 @@ function finishGeneration() {
   }
 }
 
-function requestGenerate(mode = "manual") {
+async function requestGenerate(mode = "manual") {
   if (!ready) {
     return;
   }
@@ -173,12 +174,37 @@ function requestGenerate(mode = "manual") {
     setStatus("Auto generating...");
   }
   setGenerateState();
-  worker.postMessage({
-    type: "generate",
-    schema: currentSchema(),
-    inputType: currentInputType(),
-    options: collectOptions(),
-  });
+
+  try {
+    const result = await worker.generate(currentSchema(), currentInputType(), collectOptionEntries());
+    if (result.ok) {
+      lastOutput = result.output;
+      renderOutput(lastOutput, "python");
+      document.querySelector("#copy").disabled = !lastOutput;
+      setStatus(
+        mode === "auto" ? "Auto generated with the built-in formatter." : "Generated with the built-in formatter.",
+      );
+    } else if (mode === "auto") {
+      setStatus("Auto generation failed; keeping the last successful output.", true);
+    } else {
+      lastOutput = result.error;
+      renderOutput(result.error, "python");
+      document.querySelector("#copy").disabled = true;
+      setStatus("Generation failed.", true);
+    }
+  } catch (error) {
+    const message = error?.stack || String(error);
+    if (mode === "auto") {
+      setStatus("Auto generation failed; keeping the last successful output.", true);
+    } else {
+      lastOutput = message;
+      renderOutput(message, "python");
+      document.querySelector("#copy").disabled = true;
+      setStatus("Generation failed.", true);
+    }
+  } finally {
+    finishGeneration();
+  }
 }
 
 function setGenerateState() {
@@ -213,78 +239,17 @@ function setStatus(text, isError = false) {
   status.classList.toggle("error", isError);
 }
 
-worker.addEventListener("message", (event) => {
-  const message = event.data;
-  if (message.type === "render") {
-    const existingSchema = currentSchema();
-    appShellMounted = true;
-    appEl.innerHTML = message.html;
-    if (existingSchema) {
-      const schema = document.querySelector("#schema");
-      if (schema) {
-        schema.value = existingSchema;
-      }
-    }
-    updateInputFormatState();
-    mountEditor();
-    if (ready) {
-      setStatus("Ready: UI rendered by tdom.");
-    }
-    setGenerateState();
-    return;
-  }
-  if (message.type === "ready") {
-    ready = true;
-    setStatus(`Ready: Pyodide ${message.pyodideVersion}, Python ${message.pythonVersion}, UI rendered by tdom`);
-    setGenerateState();
-    refreshCliOptions();
-    return;
-  }
-  if (message.type === "metadata") {
-    metadataJson = message.json;
-    setGenerateState();
-    return;
-  }
-  if (message.type === "cli") {
-    if (message.requestId === cliRequestId) {
-      cliOptionsText = message.text;
-      cliOptionsDirty = false;
-      setGenerateState();
-    }
-    return;
-  }
-  if (message.type === "sample") {
-    setInputValue(message.schema);
-    setStatus(`Loaded ${currentInputType()} sample.`);
-    return;
-  }
-  if (message.type === "status") {
-    setStatus(message.message);
-    return;
-  }
-  if (message.type === "result") {
-    const mode = activeGenerationMode;
-    lastOutput = message.output;
-    renderOutput(lastOutput, "python");
-    document.querySelector("#copy").disabled = !lastOutput;
-    setStatus(mode === "auto" ? "Auto generated with the built-in formatter." : "Generated with the built-in formatter.");
-    finishGeneration();
-    return;
-  }
-  if (message.type === "error") {
-    if (activeGenerationMode === "auto") {
-      setStatus("Auto generation failed; keeping the last successful output.", true);
-    } else {
-      lastOutput = message.error;
-      renderOutput(message.error, "python");
-      document.querySelector("#copy").disabled = true;
-      setStatus("Generation failed.", true);
-    }
-    finishGeneration();
-  }
-});
+async function initWorker() {
+  const info = await worker.init(Comlink.proxy((message) => setStatus(message)));
+  mountRenderedShell(info.html);
+  metadataJson = info.metadataJson;
+  ready = true;
+  setStatus(`Ready: Pyodide ${info.pyodideVersion}, Python ${info.pythonVersion}, UI rendered by tdom`);
+  setGenerateState();
+  await refreshCliOptions();
+}
 
-worker.addEventListener("error", (event) => {
+rawWorker.addEventListener("error", (event) => {
   setStatus(event.message || "Worker failed.", true);
   finishGeneration();
 });
@@ -298,7 +263,8 @@ document.addEventListener("click", async (event) => {
   if (action === "generate") {
     requestGenerate("manual");
   } else if (action === "sample") {
-    worker.postMessage({ type: "sample", inputType: currentInputType() });
+    setInputValue(await worker.sample(currentInputType()));
+    setStatus(`Loaded ${currentInputType()} sample.`);
   } else if (action === "clear-input") {
     setInputValue("");
     setStatus("Cleared input.");
@@ -327,6 +293,9 @@ document.addEventListener("click", async (event) => {
 
 mountInitialShell().catch((error) => {
   setStatus(error?.message || "Could not load the playground shell.", true);
+});
+initWorker().catch((error) => {
+  setStatus(error?.stack || String(error), true);
 });
 
 document.addEventListener("change", (event) => {

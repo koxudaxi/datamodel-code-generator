@@ -143,10 +143,10 @@ def OptionControl(*, option: dict[str, Any], children: Template = t"") -> Templa
     note = t"""<span class="option-note">{reason}</span>""" if reason else t""
 
     if option["control"] == "checkbox":
-        control = t"""<input type="checkbox" data-option="{option["dest"]}" />"""
+        control = t"""<input type="checkbox" name="{option["dest"]}" value="true" data-option="{option["dest"]}" />"""
     elif option["control"] == "boolean":
         control = t"""
-        <select data-option="{option["dest"]}">
+        <select name="{option["dest"]}" data-option="{option["dest"]}">
           <option value="">Default</option>
           <option value="true">True</option>
           <option value="false">False</option>
@@ -154,17 +154,17 @@ def OptionControl(*, option: dict[str, Any], children: Template = t"") -> Templa
         """
     elif option["control"] == "select":
         control = t"""
-        <select data-option="{option["dest"]}">
+        <select name="{option["dest"]}" data-option="{option["dest"]}">
           <option value="">Default</option>
           {[t'<option value="{choice}">{choice}</option>' for choice in choices]}
         </select>
         """
     elif option["control"] == "number":
-        control = t"""<input type="number" data-option="{option["dest"]}" />"""
+        control = t"""<input type="number" name="{option["dest"]}" data-option="{option["dest"]}" />"""
     elif option["control"] == "list":
-        control = t"""<textarea class="option-list" rows="2" data-option="{option["dest"]}"></textarea>"""
+        control = t"""<textarea class="option-list" rows="2" name="{option["dest"]}" data-option="{option["dest"]}"></textarea>"""
     else:
-        control = t"""<input type="text" data-option="{option["dest"]}" />"""
+        control = t"""<input type="text" name="{option["dest"]}" data-option="{option["dest"]}" />"""
 
     return t"""
     <label class="option-row option-control-{option["control"]}" title="{option["help"]}">
@@ -208,7 +208,7 @@ def OptionsPanel(*, groups: list[dict[str, Any]], children: Template = t"") -> T
           <span class="options-count">{visible_count} available</span>
         </div>
       </div>
-      {rendered_groups}
+      <form id="options-form">{rendered_groups}</form>
     </section>
     """
 
@@ -301,13 +301,41 @@ def export_ui_options() -> str:
     return json.dumps(UI_METADATA, ensure_ascii=False)
 
 
+def _coerce_option_value(option: dict[str, Any], value: Any) -> Any:
+    if value == "" or value is None or value == []:
+        return None
+
+    control = option["control"]
+    result: Any = value
+    if control in {"checkbox", "boolean"}:
+        if value is True or value == "true":
+            result = True
+        elif value is False or value == "false":
+            result = False
+        else:
+            result = None
+    elif control == "list":
+        if isinstance(value, list):
+            result = value
+        else:
+            result = [item.strip() for item in str(value).replace(",", "\n").splitlines() if item.strip()]
+    elif control == "number":
+        text = str(value)
+        result = float(text) if "." in text else int(text)
+    return result
+
+
 def _normalize_options(options: dict[str, Any], *, include_forced: bool = True) -> dict[str, Any]:
-    allowed = {option["dest"] for option in UI_METADATA["options"] if option["browser_supported"]}
+    options_by_dest = {option["dest"]: option for option in UI_METADATA["options"] if option["browser_supported"]}
     normalized: dict[str, Any] = {}
     for key, value in options.items():
-        if key not in allowed or value == "" or value is None or value == []:
+        option = options_by_dest.get(key)
+        if not option:
             continue
-        normalized[key] = value
+        normalized_value = _coerce_option_value(option, value)
+        if normalized_value is None or normalized_value == []:
+            continue
+        normalized[key] = normalized_value
     if include_forced:
         normalized.update(FORCED_OPTIONS)
     return normalized

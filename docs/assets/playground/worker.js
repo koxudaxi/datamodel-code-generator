@@ -1,3 +1,4 @@
+import { expose } from "https://cdn.jsdelivr.net/npm/comlink@4.4.2/dist/esm/comlink.mjs";
 import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v314.0.0a2/full/pyodide.mjs";
 
 const PYODIDE_VERSION = "314.0.0-alpha.2";
@@ -5,10 +6,12 @@ const PYODIDE_INDEX = "https://cdn.jsdelivr.net/pyodide/v314.0.0a2/full/";
 const PYPI_JSON_BASE = "https://pypi.org/pypi";
 const MICROPIP_VERSION = "0.11.1";
 
-let pyodideReadyPromise;
+let pyodideReadyPromise = null;
+let bootInfo = null;
+let statusCallback = null;
 
 function postStatus(message) {
-  self.postMessage({ type: "status", message });
+  statusCallback?.(message);
 }
 
 async function findWheelUrl(project, version, matcher) {
@@ -48,61 +51,46 @@ await micropip.install([
   pyodide.runPython(appSource);
   pyodide.globals.get("set_ui_metadata")(metadataJson);
 
-  self.postMessage({
-    type: "render",
+  bootInfo = {
     html: pyodide.globals.get("render_app")("", "", false),
-  });
-  self.postMessage({
-    type: "metadata",
-    json: metadataJson,
-  });
-  self.postMessage({
-    type: "ready",
+    metadataJson,
     pyodideVersion: PYODIDE_VERSION,
     pythonVersion: pyodide.runPython("import sys; sys.version.split()[0]"),
-  });
+  };
   return pyodide;
 }
 
-pyodideReadyPromise = initPyodide().catch((error) => {
-  self.postMessage({ type: "error", error: error?.stack || String(error) });
-  throw error;
-});
+async function ensurePyodide(onStatus = null) {
+  statusCallback = onStatus;
+  pyodideReadyPromise ??= initPyodide();
+  return pyodideReadyPromise;
+}
 
-self.addEventListener("message", async (event) => {
-  const message = event.data;
-  try {
-    const pyodide = await pyodideReadyPromise;
-    if (message.type === "sample") {
-      self.postMessage({
-        type: "sample",
-        schema: pyodide.globals.get("sample_schema")(message.inputType || ""),
-      });
-      return;
-    }
-    if (message.type === "cli") {
-      const text = pyodide.globals.get("build_cli_options")(
-        JSON.stringify(message.options || {}),
-        message.inputType || "",
-      );
-      self.postMessage({ type: "cli", requestId: message.requestId, text });
-      return;
-    }
-    if (message.type !== "generate") {
-      return;
-    }
+const api = {
+  async init(onStatus) {
+    await ensurePyodide(onStatus);
+    return bootInfo;
+  },
+
+  async sample(inputType) {
+    const pyodide = await ensurePyodide();
+    return pyodide.globals.get("sample_schema")(inputType || "");
+  },
+
+  async buildCliOptions(options, inputType) {
+    const pyodide = await ensurePyodide();
+    return pyodide.globals.get("build_cli_options")(JSON.stringify(options || {}), inputType || "");
+  },
+
+  async generate(schema, inputType, options) {
+    const pyodide = await ensurePyodide();
     const resultJson = pyodide.globals.get("generate_in_browser")(
-      message.schema,
-      message.inputType,
-      JSON.stringify(message.options || {}),
+      schema,
+      inputType,
+      JSON.stringify(options || {}),
     );
-    const result = JSON.parse(resultJson);
-    if (result.ok) {
-      self.postMessage({ type: "result", output: result.output });
-    } else {
-      self.postMessage({ type: "error", error: result.error });
-    }
-  } catch (error) {
-    self.postMessage({ type: "error", error: error?.stack || String(error) });
-  }
-});
+    return JSON.parse(resultJson);
+  },
+};
+
+expose(api);

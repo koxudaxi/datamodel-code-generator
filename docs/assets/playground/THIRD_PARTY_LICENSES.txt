@@ -25,6 +25,20 @@ these MIT-licensed packages:
 
 CodeMirror copyright: Copyright (C) 2018-2024 by Marijn Haverbeke and others.
 
+## Comlink
+
+Comlink `4.4.2` is loaded from jsDelivr to expose the Pyodide worker as an
+RPC-style API.
+
+Comlink is distributed under the Apache License 2.0.
+
+## morphdom
+
+morphdom `2.7.7` is loaded from jsDelivr to apply tdom-rendered HTML with
+targeted DOM patching instead of replacing the whole playground tree.
+
+morphdom is distributed under the MIT License.
+
 ## Python packages
 
 The playground installs Python packages from PyPI with `micropip` inside
