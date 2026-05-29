@@ -100,14 +100,14 @@ def _choices(action: argparse.Action) -> list[str]:
 
 def _control(action: argparse.Action) -> str:
     store_boolean_actions = (argparse._StoreTrueAction, argparse._StoreFalseAction)  # noqa: SLF001
+    if action.nargs in {"+", "*"}:
+        return "list"
     if action.choices:
         return "select"
     if isinstance(action, argparse.BooleanOptionalAction):
         return "boolean"
     if isinstance(action, store_boolean_actions):
         return "checkbox"
-    if action.nargs in {"+", "*"}:
-        return "list"
     if action.type in {int, float}:
         return "number"
     return "text"

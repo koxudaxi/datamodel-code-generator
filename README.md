@@ -2,6 +2,8 @@
 
 🚀 Generate Python data models from schema definitions in seconds.
 
+🧪 Try it in your browser: [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/)
+
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
 [![Downloads](https://img.shields.io/pypi/dm/datamodel-code-generator)](https://pypistats.org/packages/datamodel-code-generator)

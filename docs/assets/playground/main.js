@@ -17,12 +17,12 @@ const worker = Comlink.wrap(rawWorker);
 let ready = false;
 let running = false;
 let lastOutput = "";
-let metadataJson = "";
+let configToml = "";
 let autoGenerate = false;
 let autoTimer = null;
 let pendingAutoGenerate = false;
 let activeGenerationMode = "manual";
-let cliOptionsText = "";
+let cliCommandText = "";
 let cliOptionsDirty = true;
 let cliRequestId = 0;
 let appShellMounted = false;
@@ -130,12 +130,78 @@ async function refreshCliOptions() {
   const requestId = ++cliRequestId;
   cliOptionsDirty = true;
   setGenerateState();
-  const text = await worker.buildCliOptions(collectOptionEntries(), currentInputType());
+  const [commandText, tomlText] = await Promise.all([
+    worker.buildCliOptions(collectOptionEntries(), currentInputType()),
+    worker.exportConfigToml(collectOptionEntries(), currentInputType()),
+  ]);
   if (requestId === cliRequestId) {
-    cliOptionsText = text;
+    cliCommandText = commandText;
+    configToml = tomlText;
     cliOptionsDirty = false;
     setGenerateState();
   }
+}
+
+function openConfigDialog() {
+  const dialog = document.querySelector("#config-dialog");
+  const textarea = document.querySelector("#config-toml");
+  if (!dialog || !textarea) {
+    return;
+  }
+  textarea.value = configToml;
+  if (typeof dialog.showModal === "function") {
+    dialog.showModal();
+  } else {
+    dialog.setAttribute("open", "");
+  }
+  textarea.focus();
+}
+
+function closeConfigDialog() {
+  const dialog = document.querySelector("#config-dialog");
+  if (!dialog) {
+    return;
+  }
+  if (typeof dialog.close === "function") {
+    dialog.close();
+  } else {
+    dialog.removeAttribute("open");
+  }
+}
+
+function clearOptionControls() {
+  document.querySelectorAll("[data-option]").forEach((control) => {
+    if (control.type === "checkbox") {
+      control.checked = false;
+    } else {
+      control.value = "";
+    }
+  });
+}
+
+function applyImportedOptions(result) {
+  if (result.inputType) {
+    const inputType = document.querySelector("#input-type");
+    if (inputType) {
+      inputType.value = result.inputType;
+      updateInputFormatState();
+    }
+  }
+  clearOptionControls();
+  Object.entries(result.options || {}).forEach(([key, value]) => {
+    const control = document.querySelector(`[data-option="${CSS.escape(key)}"]`);
+    if (!control) {
+      return;
+    }
+    if (control.type === "checkbox") {
+      control.checked = Boolean(value);
+    } else if (Array.isArray(value)) {
+      control.value = value.join("\n");
+    } else {
+      control.value = String(value);
+    }
+    control.dispatchEvent(new Event("change", { bubbles: true }));
+  });
 }
 
 function finishGeneration() {
@@ -217,9 +283,9 @@ function setGenerateState() {
   if (cliButton) {
     cliButton.disabled = !ready || cliOptionsDirty;
   }
-  const metadataButton = document.querySelector("#metadata");
-  if (metadataButton) {
-    metadataButton.disabled = !metadataJson;
+  const configButton = document.querySelector("#config");
+  if (configButton) {
+    configButton.disabled = !ready || cliOptionsDirty;
   }
   const autoButton = document.querySelector("#auto-generate");
   if (autoButton) {
@@ -242,7 +308,6 @@ function setStatus(text, isError = false) {
 async function initWorker() {
   const info = await worker.init(Comlink.proxy((message) => setStatus(message)));
   mountRenderedShell(info.html);
-  metadataJson = info.metadataJson;
   ready = true;
   setStatus(`Ready: Pyodide ${info.pyodideVersion}, Python ${info.pythonVersion}, UI rendered by tdom`);
   setGenerateState();
@@ -274,17 +339,35 @@ document.addEventListener("click", async (event) => {
     document.querySelector("#copy").disabled = true;
     setStatus("Cleared output.");
   } else if (action === "copy-cli") {
-    await navigator.clipboard.writeText(cliOptionsText);
-    setStatus(cliOptionsText ? "Copied CLI options." : "Copied empty CLI options.");
+    await navigator.clipboard.writeText(cliCommandText);
+    setStatus(cliCommandText ? "Copied CLI command." : "Copied empty CLI command.");
+  } else if (action === "config") {
+    openConfigDialog();
+  } else if (action === "copy-config") {
+    const textarea = document.querySelector("#config-toml");
+    await navigator.clipboard.writeText(textarea?.value || configToml);
+    setStatus("Copied pyproject.toml config.");
+  } else if (action === "import-config") {
+    const textarea = document.querySelector("#config-toml");
+    const result = await worker.importConfigToml(textarea?.value || "");
+    if (!result.ok) {
+      setStatus(`Could not import pyproject.toml: ${result.error}`, true);
+      return;
+    }
+    applyImportedOptions(result);
+    await refreshCliOptions();
+    closeConfigDialog();
+    const ignored = result.ignored?.length ? ` Ignored: ${result.ignored.join(", ")}.` : "";
+    setStatus(`Imported pyproject.toml config.${ignored}`);
+    scheduleAutoGenerate();
+  } else if (action === "close-config") {
+    closeConfigDialog();
   } else if (action === "auto-generate") {
     setAutoGenerate(!autoGenerate);
     if (!autoGenerate) {
       return;
     }
     scheduleAutoGenerate(0);
-  } else if (action === "metadata") {
-    await navigator.clipboard.writeText(metadataJson);
-    setStatus("Copied options metadata JSON.");
   } else if (action === "copy" && lastOutput) {
     await navigator.clipboard.writeText(lastOutput);
     setStatus("Copied output.");

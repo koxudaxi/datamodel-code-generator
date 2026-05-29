@@ -530,6 +530,55 @@ pre {
   line-height: 1.35;
 }
 
+.config-dialog {
+  width: min(760px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel);
+  box-shadow: var(--shadow-md);
+}
+
+.config-dialog::backdrop {
+  background: rgb(15 23 42 / 38%);
+}
+
+.config-dialog-body {
+  display: grid;
+  grid-template-rows: auto minmax(260px, 52vh) auto;
+  min-height: min(640px, calc(100vh - 48px));
+}
+
+.config-dialog-head,
+.config-dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  background: #fbfcfe;
+}
+
+.config-dialog-actions {
+  justify-content: flex-end;
+  border-top: 1px solid var(--border);
+  border-bottom: 0;
+}
+
+.config-dialog h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+#config-toml {
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--code-bg);
+  white-space: pre;
+}
+
 @media (max-width: 840px) {
   .topbar {
     align-items: stretch;

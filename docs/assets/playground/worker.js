@@ -82,6 +82,16 @@ const api = {
     return pyodide.globals.get("build_cli_options")(JSON.stringify(options || {}), inputType || "");
   },
 
+  async exportConfigToml(options, inputType) {
+    const pyodide = await ensurePyodide();
+    return pyodide.globals.get("export_config_toml")(JSON.stringify(options || {}), inputType || "");
+  },
+
+  async importConfigToml(configToml) {
+    const pyodide = await ensurePyodide();
+    return JSON.parse(pyodide.globals.get("import_config_toml")(configToml || ""));
+  },
+
   async generate(schema, inputType, options) {
     const pyodide = await ensurePyodide();
     const resultJson = pyodide.globals.get("generate_in_browser")(
