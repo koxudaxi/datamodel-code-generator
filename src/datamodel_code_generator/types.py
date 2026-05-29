@@ -1009,6 +1009,9 @@ class DataTypeManager(ABC):
             use_serialize_as_any=(bool, use_serialize_as_any),
             __base__=DataType,
         )
+        from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace  # noqa: PLC0415
+
+        _rebuild_model_with_datamodel_namespace(self.data_type)
 
     @abstractmethod
     def get_data_type(self, types: Types, **kwargs: Any) -> DataType:

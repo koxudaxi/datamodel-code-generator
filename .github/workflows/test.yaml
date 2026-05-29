@@ -164,6 +164,8 @@ jobs:
           - type
           - docs
           - pkg_meta
+          - pydantic20
+          - pydantic25
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:

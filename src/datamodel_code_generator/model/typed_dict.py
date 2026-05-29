@@ -8,7 +8,7 @@ from __future__ import annotations
 import keyword
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from datamodel_code_generator.model import DataModel, DataModelFieldBase
+from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.imports import (
     IMPORT_NOT_REQUIRED,
@@ -251,3 +251,8 @@ class DataModelFieldBackport(DataModelField):
 
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_NOT_REQUIRED_BACKPORT,)
     DEFAULT_READ_ONLY_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_READ_ONLY_BACKPORT,)
+
+
+_rebuild_model_with_datamodel_namespace(DataModelField)
+_rebuild_model_with_datamodel_namespace(DataModelFieldReadOnlyBackport)
+_rebuild_model_with_datamodel_namespace(DataModelFieldBackport)

@@ -19,7 +19,7 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
-from datamodel_code_generator.model import DataModel, DataModelFieldBase
+from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import UNDEFINED, BaseClassDataType
 from datamodel_code_generator.model.imports import (
     IMPORT_MSGSPEC_CONVERT,
@@ -551,3 +551,6 @@ class DataTypeManager(_DataTypeManager):
             **datetime_map,
             **standard_primitive_map,
         }
+
+
+_rebuild_model_with_datamodel_namespace(DataModelField)

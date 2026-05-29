@@ -7,12 +7,13 @@ representation, and DataModel as the abstract base for all model types.
 from __future__ import annotations
 
 import re
+import sys
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
 from functools import cached_property, lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
 from warnings import warn
 
 from pydantic import ConfigDict, Field
@@ -1016,7 +1017,20 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         ]
 
 
-_rebuild_namespace = {"Union": Union, "DataModelFieldBase": DataModelFieldBase, "DataType": DataType}
-DataType.model_rebuild(_types_namespace=_rebuild_namespace)
-BaseClassDataType.model_rebuild(_types_namespace=_rebuild_namespace)
-DataModelFieldBase.model_rebuild(_types_namespace={"DataModel": DataModel})
+def _model_rebuild_namespace(*classes: type[Any]) -> dict[str, Any]:
+    namespace: dict[str, Any] = {}
+    for cls in classes:
+        namespace.update(vars(sys.modules[cls.__module__]))
+    return namespace
+
+
+_rebuild_namespace = _model_rebuild_namespace(DataType, BaseClassDataType, DataModelFieldBase, DataModel)
+
+
+def _rebuild_model_with_datamodel_namespace(model: type[Any]) -> None:
+    model.model_rebuild(_types_namespace={**_rebuild_namespace, **vars(sys.modules[model.__module__])})
+
+
+_rebuild_model_with_datamodel_namespace(DataType)
+_rebuild_model_with_datamodel_namespace(BaseClassDataType)
+_rebuild_model_with_datamodel_namespace(DataModelFieldBase)

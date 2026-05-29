@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, NamedTuple
 
 from datamodel_code_generator import PythonVersion
 
-from .base import ConstraintsBase, DataModel, DataModelFieldBase
+from .base import ConstraintsBase, DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -143,4 +143,4 @@ def get_data_model_types(  # noqa: PLR0912
     raise ValueError(msg)  # pragma: no cover
 
 
-__all__ = ["ConstraintsBase", "DataModel", "DataModelFieldBase"]
+__all__ = ["ConstraintsBase", "DataModel", "DataModelFieldBase", "_rebuild_model_with_datamodel_namespace"]
