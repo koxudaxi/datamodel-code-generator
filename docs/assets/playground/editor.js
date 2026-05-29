@@ -1,11 +1,27 @@
-import { basicSetup, EditorView } from "https://cdn.jsdelivr.net/npm/codemirror@6.0.2/+esm";
-import { HighlightStyle, syntaxHighlighting } from "https://cdn.jsdelivr.net/npm/@codemirror/language@6.11.1/+esm";
-import { EditorState } from "https://cdn.jsdelivr.net/npm/@codemirror/state@6.5.2/+esm";
-import { json } from "https://cdn.jsdelivr.net/npm/@codemirror/lang-json@6.0.2/+esm";
-import { python } from "https://cdn.jsdelivr.net/npm/@codemirror/lang-python@6.2.1/+esm";
-import { xml } from "https://cdn.jsdelivr.net/npm/@codemirror/lang-xml@6.1.0/+esm";
-import { yaml } from "https://cdn.jsdelivr.net/npm/@codemirror/lang-yaml@6.1.3/+esm";
-import { tags } from "https://cdn.jsdelivr.net/npm/@lezer/highlight@1.2.3/+esm";
+import {
+  bracketMatching,
+  foldGutter,
+  HighlightStyle,
+  indentOnInput,
+  syntaxHighlighting,
+} from "@codemirror/language";
+import { EditorState } from "@codemirror/state";
+import {
+  crosshairCursor,
+  drawSelection,
+  dropCursor,
+  EditorView,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  highlightSpecialChars,
+  lineNumbers,
+  rectangularSelection,
+} from "@codemirror/view";
+import { json } from "@codemirror/lang-json";
+import { python } from "@codemirror/lang-python";
+import { xml } from "@codemirror/lang-xml";
+import { yaml } from "@codemirror/lang-yaml";
+import { tags } from "@lezer/highlight";
 
 let inputEditor = null;
 let outputEditor = null;
@@ -35,14 +51,19 @@ const editorTheme = EditorView.theme({
 
 const playgroundHighlight = HighlightStyle.define([
   { tag: tags.keyword, color: "#7c3aed", fontWeight: "650" },
-  { tag: [tags.atom, tags.bool], color: "#b4236a", fontWeight: "650" },
+  { tag: tags.atom, color: "#b4236a", fontWeight: "650" },
+  { tag: tags.bool, color: "#b4236a", fontWeight: "650" },
   { tag: tags.number, color: "#a16207" },
   { tag: tags.string, color: "#0f766e" },
-  { tag: [tags.propertyName, tags.definition(tags.propertyName)], color: "#0b6bcb", fontWeight: "650" },
+  { tag: tags.propertyName, color: "#0b6bcb", fontWeight: "650" },
+  { tag: tags.definition(tags.propertyName), color: "#0b6bcb", fontWeight: "650" },
   { tag: tags.variableName, color: "#17202c" },
-  { tag: [tags.definition(tags.variableName), tags.typeName, tags.className], color: "#0b6bcb", fontWeight: "650" },
+  { tag: tags.definition(tags.variableName), color: "#0b6bcb", fontWeight: "650" },
+  { tag: tags.typeName, color: "#0b6bcb", fontWeight: "650" },
+  { tag: tags.className, color: "#0b6bcb", fontWeight: "650" },
   { tag: tags.comment, color: "#687385", fontStyle: "italic" },
-  { tag: [tags.operator, tags.punctuation], color: "#5d6878" },
+  { tag: tags.operator, color: "#5d6878" },
+  { tag: tags.punctuation, color: "#5d6878" },
 ]);
 
 function languageExtension(language) {
@@ -68,7 +89,19 @@ function languageExtension(language) {
 
 function editorExtensions(language, onChange = null, readOnly = false) {
   const extensions = [
-    basicSetup,
+    lineNumbers(),
+    highlightActiveLineGutter(),
+    highlightSpecialChars(),
+    foldGutter(),
+    drawSelection(),
+    dropCursor(),
+    EditorState.allowMultipleSelections.of(true),
+    indentOnInput(),
+    bracketMatching(),
+    rectangularSelection(),
+    crosshairCursor(),
+    highlightActiveLine(),
+    EditorView.lineWrapping,
     languageExtension(language),
     editorTheme,
     syntaxHighlighting(playgroundHighlight),
