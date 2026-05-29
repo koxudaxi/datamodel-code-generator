@@ -6,7 +6,7 @@ from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass, DataModelField
 from datamodel_code_generator.model.pydantic_v2.types import DataTypeManager
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import DataType, Types
+from datamodel_code_generator.types import DataType, StrictTypes, Types
 
 
 def test_data_class() -> None:
@@ -67,6 +67,30 @@ def test_data_class_get_data_type() -> None:
     # Check that the type is correctly mapped
     result = data_type_manager.get_data_type(Types.integer)
     assert result.type == "int"
+
+
+def test_data_type_manager_returns_copied_type_map_entries() -> None:
+    """Pydantic type map entries are reusable prototypes, not caller-owned objects."""
+    data_type_manager = DataTypeManager()
+
+    integer_type = data_type_manager.get_data_type(Types.integer)
+    int64_type = data_type_manager.get_data_type(Types.int64)
+    integer_type.alias = "CustomInt"
+
+    assert integer_type is not int64_type
+    assert int64_type.alias is None
+
+
+def test_data_type_manager_returns_copied_strict_type_map_entries() -> None:
+    """Strict type map entries should not be shared between callers."""
+    data_type_manager = DataTypeManager(strict_types=[StrictTypes.int])
+
+    integer_type = data_type_manager.get_data_type(Types.integer)
+    int64_type = data_type_manager.get_data_type(Types.int64)
+    integer_type.alias = "CustomInt"
+
+    assert integer_type is not int64_type
+    assert int64_type.alias is None
 
 
 def test_data_class_field_ordering() -> None:

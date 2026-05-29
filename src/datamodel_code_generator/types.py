@@ -1015,6 +1015,14 @@ class DataTypeManager(ABC):
         """Map a Types enum value to a DataType. Must be implemented by subclasses."""
         raise NotImplementedError
 
+    @staticmethod
+    def copy_data_type(data_type: DataType) -> DataType:
+        """Copy a type-map prototype for caller-owned mutation."""
+        copied_data_type = deepcopy(data_type)
+        for nested_data_type in copied_data_type.all_data_types:
+            nested_data_type.children = []
+        return copied_data_type
+
     def get_data_type_from_full_path(self, full_path: str, is_custom_type: bool) -> DataType:  # noqa: FBT001
         """Create a DataType from a fully qualified Python path."""
         return self.data_type.from_import(Import.from_full_path(full_path), is_custom_type=is_custom_type)

@@ -522,3 +522,32 @@ def test_data_type_manager_has_all_types() -> None:
     manager = DataTypeManager()
     missing_types = [t for t in Types if t not in manager.type_map]
     assert not missing_types, f"Missing type mappings: {[t.name for t in missing_types]}"
+
+
+def test_data_type_manager_returns_copied_type_map_entries() -> None:
+    """Type map entries are reusable prototypes, not caller-owned objects."""
+    from datamodel_code_generator.model.types import DataTypeManager
+
+    manager = DataTypeManager()
+
+    integer_type = manager.get_data_type(Types.integer)
+    int64_type = manager.get_data_type(Types.int64)
+    integer_type.alias = "CustomInt"
+
+    assert integer_type is not int64_type
+    assert int64_type.alias is None
+
+
+def test_data_type_manager_returns_copied_nested_type_map_entries() -> None:
+    """Nested data types from map prototypes should not be shared between callers."""
+    from datamodel_code_generator.model.types import DataTypeManager
+
+    manager = DataTypeManager()
+
+    array_type = manager.get_data_type(Types.array)
+    another_array_type = manager.get_data_type(Types.array)
+    array_type.data_types[0].alias = "CustomItem"
+
+    assert array_type is not another_array_type
+    assert array_type.data_types[0] is not another_array_type.data_types[0]
+    assert another_array_type.data_types[0].alias is None

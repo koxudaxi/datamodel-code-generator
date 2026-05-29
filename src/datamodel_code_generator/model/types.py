@@ -172,7 +172,7 @@ class DataTypeManager(_DataTypeManager):
     ) -> DataType:
         """Get data type for schema type."""
         if types in self.type_map:
-            return self.type_map[types]
+            return self.copy_data_type(self.type_map[types])
         msg = (
             f"Type mapping for {types.name!r} not implemented. "
             f"Please report this at https://github.com/koxudaxi/datamodel-code-generator/issues"
