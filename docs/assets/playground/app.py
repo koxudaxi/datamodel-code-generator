@@ -275,7 +275,7 @@ def App(
         <div class="controls">
           <{ActionButton} action="copy-cli" label="Copy CLI" id="copy-cli" disabled={True} />
           <{ActionButton} action="config" label="pyproject.toml" id="config" disabled={True} />
-          <{ActionButton} action="auto-generate" label="Auto Generate" id="auto-generate" disabled={True} />
+          <{ActionButton} action="auto-generate" label="Auto Generate: On" id="auto-generate" disabled={True} />
           <{ActionButton} action="generate" label={(running and "Generating...") or "Generate"} disabled={running} id="generate" />
         </div>
       </header>

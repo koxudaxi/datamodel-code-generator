@@ -18,7 +18,7 @@ let ready = false;
 let running = false;
 let lastOutput = "";
 let configToml = "";
-let autoGenerate = false;
+let autoGenerate = true;
 let autoTimer = null;
 let pendingAutoGenerate = false;
 let activeGenerationMode = "manual";
@@ -108,11 +108,16 @@ function collectOptionEntries() {
 function setAutoGenerate(enabled) {
   autoGenerate = enabled;
   if (!enabled) {
-    clearTimeout(autoTimer);
-    pendingAutoGenerate = false;
+    cancelAutoGenerate();
   }
   setGenerateState();
   setStatus(enabled ? "Auto Generate enabled." : "Auto Generate disabled.");
+}
+
+function cancelAutoGenerate() {
+  clearTimeout(autoTimer);
+  autoTimer = null;
+  pendingAutoGenerate = false;
 }
 
 function scheduleAutoGenerate(delay = 650) {
@@ -312,6 +317,7 @@ async function initWorker() {
   setStatus(`Ready: Pyodide ${info.pyodideVersion}, Python ${info.pythonVersion}, UI rendered by tdom`);
   setGenerateState();
   await refreshCliOptions();
+  scheduleAutoGenerate(0);
 }
 
 rawWorker.addEventListener("error", (event) => {
@@ -330,8 +336,10 @@ document.addEventListener("click", async (event) => {
   } else if (action === "sample") {
     setInputValue(await worker.sample(currentInputType()));
     setStatus(`Loaded ${currentInputType()} sample.`);
+    scheduleAutoGenerate();
   } else if (action === "clear-input") {
     setInputValue("");
+    cancelAutoGenerate();
     setStatus("Cleared input.");
   } else if (action === "clear-output") {
     lastOutput = "";
