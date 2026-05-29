@@ -1,18 +1,28 @@
 {% extends "base.html" %}
 
-{% block extrahead %}
+{% block site_meta %}
   {{ super() }}
   <style>
     .md-toggle {
-      display: none;
+      position: absolute;
+      width: 0;
+      height: 0;
+      opacity: 0;
+      pointer-events: none;
     }
 
+    .md-banner svg,
+    .md-header svg,
+    .md-nav svg,
+    .md-source svg,
     .md-logo svg,
-    .md-icon svg {
+    .md-icon svg,
+    svg.lucide {
       width: 1.2rem;
       height: 1.2rem;
       max-width: 1.2rem;
       max-height: 1.2rem;
+      overflow: visible;
     }
 
     .md-header__button.md-logo svg,
