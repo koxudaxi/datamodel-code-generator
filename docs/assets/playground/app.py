@@ -268,6 +268,10 @@ def App(
             using <a href="https://peps.python.org/pep-0750/" target="_blank" rel="noreferrer">PEP 750 t-strings</a>.
           </p>
         </div>
+        <nav class="docs-nav" aria-label="Documentation">
+          <a href="/">Docs</a>
+          <a href="/cli-reference/">CLI Reference</a>
+        </nav>
         <div class="controls">
           <{ActionButton} action="copy-cli" label="Copy CLI" id="copy-cli" disabled={True} />
           <{ActionButton} action="config" label="pyproject.toml" id="config" disabled={True} />

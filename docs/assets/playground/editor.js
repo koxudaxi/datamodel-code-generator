@@ -30,7 +30,8 @@ const editorTheme = EditorView.theme({
   "&": {
     height: "100%",
     fontSize: "13px",
-    backgroundColor: "#f6f8fb",
+    backgroundColor: "#171c23",
+    color: "#eef4fb",
   },
   ".cm-scroller": {
     fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
@@ -40,9 +41,21 @@ const editorTheme = EditorView.theme({
     padding: "16px",
   },
   ".cm-gutters": {
-    backgroundColor: "#edf2f7",
-    color: "#6b7480",
-    borderRight: "1px solid #d7dde6",
+    backgroundColor: "#20252e",
+    color: "#8a96a8",
+    borderRight: "1px solid #303845",
+  },
+  ".cm-activeLine": {
+    backgroundColor: "#202a35",
+  },
+  ".cm-activeLineGutter": {
+    backgroundColor: "#26313d",
+  },
+  ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
+    backgroundColor: "#064f99",
+  },
+  ".cm-cursor": {
+    borderLeftColor: "#eef4fb",
   },
   "&.cm-focused": {
     outline: "none",
@@ -50,20 +63,20 @@ const editorTheme = EditorView.theme({
 });
 
 const playgroundHighlight = HighlightStyle.define([
-  { tag: tags.keyword, color: "#7c3aed", fontWeight: "650" },
-  { tag: tags.atom, color: "#b4236a", fontWeight: "650" },
-  { tag: tags.bool, color: "#b4236a", fontWeight: "650" },
-  { tag: tags.number, color: "#a16207" },
-  { tag: tags.string, color: "#0f766e" },
-  { tag: tags.propertyName, color: "#0b6bcb", fontWeight: "650" },
-  { tag: tags.definition(tags.propertyName), color: "#0b6bcb", fontWeight: "650" },
-  { tag: tags.variableName, color: "#17202c" },
-  { tag: tags.definition(tags.variableName), color: "#0b6bcb", fontWeight: "650" },
-  { tag: tags.typeName, color: "#0b6bcb", fontWeight: "650" },
-  { tag: tags.className, color: "#0b6bcb", fontWeight: "650" },
-  { tag: tags.comment, color: "#687385", fontStyle: "italic" },
-  { tag: tags.operator, color: "#5d6878" },
-  { tag: tags.punctuation, color: "#5d6878" },
+  { tag: tags.keyword, color: "#b39ddb", fontWeight: "650" },
+  { tag: tags.atom, color: "#f06292", fontWeight: "650" },
+  { tag: tags.bool, color: "#f06292", fontWeight: "650" },
+  { tag: tags.number, color: "#ffca28" },
+  { tag: tags.string, color: "#80cbc4" },
+  { tag: tags.propertyName, color: "#4fc3f7", fontWeight: "650" },
+  { tag: tags.definition(tags.propertyName), color: "#4fc3f7", fontWeight: "650" },
+  { tag: tags.variableName, color: "#eef4fb" },
+  { tag: tags.definition(tags.variableName), color: "#4fc3f7", fontWeight: "650" },
+  { tag: tags.typeName, color: "#4fc3f7", fontWeight: "650" },
+  { tag: tags.className, color: "#4fc3f7", fontWeight: "650" },
+  { tag: tags.comment, color: "#8a96a8", fontStyle: "italic" },
+  { tag: tags.operator, color: "#a7b1bf" },
+  { tag: tags.punctuation, color: "#a7b1bf" },
 ]);
 
 function languageExtension(language) {

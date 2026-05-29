@@ -52,6 +52,11 @@ jobs:
         run: uv run --python 3.14 --group playground python scripts/build_playground_assets.py
       - name: Build site
         run: zensical build --clean
+      - name: Publish standalone playground route
+        run: |
+          rm -rf site/playground
+          mkdir -p site/playground
+          cp -R site/assets/playground/. site/playground/
       - name: Deploy
         if: inputs.deploy_branch != ''
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
