@@ -3,6 +3,14 @@
 {% block site_meta %}
   {{ super() }}
   <style>
+    html.dcg-theme-loading {
+      background: #0f172a;
+    }
+
+    html.dcg-theme-loading body {
+      visibility: hidden;
+    }
+
     .md-toggle {
       position: absolute;
       width: 0;
@@ -33,6 +41,17 @@
       max-height: 1.5rem;
     }
   </style>
+  <script>
+    document.documentElement.classList.add("dcg-theme-loading");
+    window.setTimeout(() => {
+      document.documentElement.classList.remove("dcg-theme-loading");
+    }, 3000);
+    window.addEventListener("DOMContentLoaded", () => {
+      window.requestAnimationFrame(() => {
+        document.documentElement.classList.remove("dcg-theme-loading");
+      });
+    });
+  </script>
 {% endblock %}
 
 {% block announce %}
