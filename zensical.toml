@@ -34,10 +34,12 @@ nav = [
   { "Usage" = [
     { "Input Formats" = [
       { "OpenAPI" = "openapi.md" },
+      { "AsyncAPI" = "asyncapi.md" },
       { "JSON Schema" = "jsonschema.md" },
       { "Apache Avro" = "avro.md" },
+      { "XML Schema" = "xmlschema.md" },
       { "Protocol Buffers / gRPC" = "protobuf.md" },
-      { "JSON Data" = "jsondata.md" },
+      { "JSON / YAML / CSV Data" = "jsondata.md" },
       { "GraphQL" = "graphql.md" },
       { "Python Models" = "python-model.md" }
     ]},
