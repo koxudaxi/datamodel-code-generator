@@ -13,7 +13,13 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional
 from pydantic import Field, field_validator, model_validator
 
 from datamodel_code_generator.imports import IMPORT_ANY, Import
-from datamodel_code_generator.model.base import ALL_MODEL, UNDEFINED, BaseClassDataType, DataModelFieldBase
+from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace
+from datamodel_code_generator.model.base import (
+    ALL_MODEL,
+    UNDEFINED,
+    BaseClassDataType,
+    DataModelFieldBase,
+)
 from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
 from datamodel_code_generator.model.pydantic_base import (
     BaseModelBase,
@@ -483,3 +489,6 @@ class BaseModel(BaseModelBase):
         )
 
         return base_model
+
+
+_rebuild_model_with_datamodel_namespace(DataModelField)

@@ -18,6 +18,7 @@ from datamodel_code_generator.model import (
     ConstraintsBase,
     DataModel,
     DataModelFieldBase,
+    _rebuild_model_with_datamodel_namespace,
 )
 from datamodel_code_generator.model.base import UNDEFINED, repr_set_sorted
 from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
@@ -348,3 +349,6 @@ class BaseModelBase(DataModel, ABC):
             if cached_path_exists(custom_template_file_path):
                 return custom_template_file_path
         return super().template_file_path
+
+
+_rebuild_model_with_datamodel_namespace(DataModelField)

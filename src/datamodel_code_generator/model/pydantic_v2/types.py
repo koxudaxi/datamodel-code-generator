@@ -499,6 +499,9 @@ class DataTypeManager(_PydanticDataTypeManager):
             use_serialize_as_any=(bool, use_serialize_as_any),
             __base__=PydanticV2DataType,
         )
+        from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace  # noqa: PLC0415
+
+        _rebuild_model_with_datamodel_namespace(self.data_type)
 
     def type_map_factory(  # noqa: PLR0913, PLR0917
         self,
