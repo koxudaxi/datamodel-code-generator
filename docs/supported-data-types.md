@@ -4,7 +4,7 @@ This code generator supports the following input formats:
 
 - OpenAPI 3.0/3.1 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types)); OpenAPI 2.0 (Swagger) has limited support.
 - [AsyncAPI](asyncapi.md) 2.x/3.x (YAML/JSON).
-- JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html) / [JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html)).
+- JSON Schema ([JSON Schema Core](https://json-schema.org/draft/2019-09/json-schema-core.html) / [JSON Schema Validation](https://json-schema.org/draft/2019-09/json-schema-validation.html)).
 - Apache Avro schema (`.avsc`, [Apache Avro](avro.md)).
 - [XML Schema](xmlschema.md) (XSD).
 - Protocol Buffers / gRPC (`.proto`, [Protocol Buffers / gRPC](protobuf.md)).
