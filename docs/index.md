@@ -116,14 +116,14 @@ datamodel-codegen --input pet.json --input-file-type jsonschema --output-model-t
 
 | Input Type | File Types | Example |
 |------------|------------|---------|
-| 📘 [OpenAPI 3](openapi.md) | `.yaml`, `.json` | API specifications |
+| 📘 [OpenAPI 3.0/3.1](openapi.md) | `.yaml`, `.json` | API specifications |
 | 📡 [AsyncAPI](asyncapi.md) | `.yaml`, `.json` | Event-driven API specifications |
-| 📋 [JSON Schema](jsonschema.md) | `.json` | Data validation schemas |
+| 📋 [JSON Schema](jsonschema.md) | `.json`, `.yaml` | Data validation schemas |
 | 🪶 [Apache Avro](avro.md) | `.avsc`, `.json` | Avro schemas |
-| 🧾 XML Schema | `.xsd` | XML document schemas |
+| 🧾 [XML Schema](xmlschema.md) | `.xsd` | XML document schemas |
 | 🧩 [Protocol Buffers / gRPC](protobuf.md) | `.proto` | Protobuf messages and service schemas |
 | 🔷 [GraphQL](graphql.md) | `.graphql` | GraphQL type definitions |
-| 📊 [JSON/YAML Data](jsondata.md) | `.json`, `.yaml` | Infer schema from data |
+| 📊 [JSON/YAML/CSV Data](jsondata.md) | `.json`, `.yaml`, `.csv` | Infer schema from data |
 | 🐍 [Python Models](python-model.md) | `.py` | Pydantic, dataclass, TypedDict |
 
 ---

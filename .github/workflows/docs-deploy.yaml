@@ -54,10 +54,8 @@ jobs:
         run: zensical build --clean
       - name: Deploy
         if: inputs.deploy_branch != ''
-        env:
-          DEPLOY_BRANCH: ${{ inputs.deploy_branch }}
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy site --project-name=datamodel-code-generator --branch="$DEPLOY_BRANCH"
+          command: pages deploy site --project-name=datamodel-code-generator --branch=${{ inputs.deploy_branch }}
