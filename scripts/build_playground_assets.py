@@ -165,6 +165,14 @@ def _input_formats() -> list[dict[str, Any]]:
 
 def build_metadata() -> dict[str, Any]:
     """Return playground metadata derived from the current CLI parser."""
+    category_values = {category.value for category in OptionCategory}
+    category_order_values = set(CATEGORY_ORDER)
+    if category_values != category_order_values:
+        missing = sorted(category_values - category_order_values)
+        extra = sorted(category_order_values - category_values)
+        message = f"CATEGORY_ORDER mismatch: missing={missing}, extra={extra}"
+        raise ValueError(message)
+
     options = [
         option
         for action in arg_parser._actions  # noqa: SLF001

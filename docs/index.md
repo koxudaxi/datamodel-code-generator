@@ -34,6 +34,7 @@ Use the [Playground](playground.md) to generate models without installing anythi
   title="datamodel-code-generator playground"
   style="width: 100%; min-height: 900px; border: 0; border-radius: 8px;"
   loading="lazy"
+  sandbox="allow-scripts allow-same-origin allow-forms allow-downloads"
   allow="clipboard-read; clipboard-write"
 ></iframe>
 
