@@ -124,7 +124,9 @@ AsyncAPI documents are supported with `--input-file-type asyncapi`. The parser g
 | JSON Schema | ✅ Supported | `application/schema+json` and `application/schema+yaml` |
 | OpenAPI Schema Object | ✅ Supported | `application/vnd.oai.openapi...` |
 | Apache Avro | ✅ Supported | `application/vnd.apache.avro...` |
-| Protocol Buffers, RAML, XML Schema, custom formats | ❌ Explicit error | Use dedicated top-level input types where available |
+| Protocol Buffers | ✅ Supported | `application/vnd.google.protobuf`; inline source and local imports are resolved |
+| XML Schema | ✅ Supported | `application/xml`, `text/xml`, `application/xsd+xml`, `application/xml+schema`, `application/xml-schema` |
+| RAML and custom formats | ❌ Explicit error | Use a dedicated top-level input type where available |
 
 ### Version Detection
 

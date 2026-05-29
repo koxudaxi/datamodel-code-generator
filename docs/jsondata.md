@@ -1,6 +1,6 @@
-# 📊 Generate from JSON Data
+# 📊 Generate from JSON / YAML / CSV Data
 
-Generate Pydantic models directly from JSON data. Under the hood, the generator uses [GenSON](https://pypi.org/project/genson/) to infer a JSON Schema from your input, then processes it the same way as [JSON Schema input](./jsonschema.md).
+Generate Pydantic models directly from raw JSON, YAML, or CSV data. Under the hood, the generator uses [GenSON](https://pypi.org/project/genson/) to infer a JSON Schema from JSON/YAML input, or infers a schema from CSV rows, then processes it the same way as [JSON Schema input](./jsonschema.md).
 
 ## 🚀 Quick Start
 
@@ -11,6 +11,10 @@ datamodel-codegen \
     --output-model-type pydantic_v2.BaseModel \
     --output model.py
 ```
+
+Use `--input-file-type yaml` for raw YAML sample data and `--input-file-type csv`
+for CSV files. If a YAML file is a schema definition rather than sample data, use
+`--input-file-type jsonschema`, `openapi`, or `asyncapi` instead.
 
 ## 📝 Example
 

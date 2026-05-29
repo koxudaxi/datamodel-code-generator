@@ -99,14 +99,14 @@ datamodel-codegen --input pet.json --input-file-type jsonschema --output-model-t
 
 | Input Type | File Types | Example |
 |------------|------------|---------|
-| 📘 [OpenAPI 3](openapi.md) | `.yaml`, `.json` | API specifications |
+| 📘 [OpenAPI 3.0/3.1](openapi.md) | `.yaml`, `.json` | API specifications |
 | 📡 [AsyncAPI](asyncapi.md) | `.yaml`, `.json` | Event-driven API specifications |
-| 📋 [JSON Schema](jsonschema.md) | `.json` | Data validation schemas |
+| 📋 [JSON Schema](jsonschema.md) | `.json`, `.yaml` | Data validation schemas |
 | 🪶 [Apache Avro](avro.md) | `.avsc`, `.json` | Avro schemas |
-| 🧾 XML Schema | `.xsd` | XML document schemas |
+| 🧾 [XML Schema](xmlschema.md) | `.xsd` | XML document schemas |
 | 🧩 [Protocol Buffers / gRPC](protobuf.md) | `.proto` | Protobuf messages and service schemas |
 | 🔷 [GraphQL](graphql.md) | `.graphql` | GraphQL type definitions |
-| 📊 [JSON/YAML Data](jsondata.md) | `.json`, `.yaml` | Infer schema from data |
+| 📊 [JSON/YAML/CSV Data](jsondata.md) | `.json`, `.yaml`, `.csv` | Infer schema from data |
 | 🐍 [Python Models](python-model.md) | `.py` | Pydantic, dataclass, TypedDict |
 
 ---
@@ -709,7 +709,8 @@ The `--input-file-type` flag explicitly sets the input format.
 
 **Important distinction:**
 
-- Use `jsonschema`, `openapi`, or `graphql` for **schema definition files**
+- Use `jsonschema`, `openapi`, `asyncapi`, `graphql`, `xmlschema`, `protobuf`,
+  or `avro` for **schema definition files**
 - Use `json`, `yaml`, or `csv` for **raw sample data** to automatically infer a schema
 
 For example, if you have a JSON Schema written in YAML format, use `--input-file-type jsonschema`,
@@ -25623,14 +25624,21 @@ Source: https://datamodel-code-generator.koxudaxi.dev/supported-data-types/
 
 This code generator supports the following input formats:
 
-- OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types));
-- JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html) /[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html));
-- Apache Avro schema (`.avsc`, [Apache Avro](avro.md));
-- XML Schema (XSD);
-- Protocol Buffers / gRPC (`.proto`, [Protocol Buffers / gRPC](protobuf.md));
-- JSON/YAML Data (it will be converted to JSON Schema);
-- Python dictionary (it will be converted to JSON Schema);
-- GraphQL schema ([GraphQL Schemas and Types](https://graphql.org/learn/schema/));
+- OpenAPI 3.0/3.1 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types)); OpenAPI 2.0 (Swagger) has limited support.
+- [AsyncAPI](asyncapi.md) 2.x/3.x (YAML/JSON).
+- JSON Schema ([JSON Schema Core](https://json-schema.org/draft/2019-09/json-schema-core.html) / [JSON Schema Validation](https://json-schema.org/draft/2019-09/json-schema-validation.html)).
+- Apache Avro schema (`.avsc`, [Apache Avro](avro.md)).
+- [XML Schema](xmlschema.md) (XSD).
+- Protocol Buffers / gRPC (`.proto`, [Protocol Buffers / gRPC](protobuf.md)).
+- GraphQL schema ([GraphQL Schemas and Types](https://graphql.org/learn/schema/)).
+- JSON / YAML / CSV data (converted to JSON Schema before model generation).
+- Python dictionary (converted to JSON Schema before model generation).
+- Existing Python types via [`--input-model`](python-model.md): Pydantic models, dataclasses, Pydantic dataclasses, TypedDict, and dict schemas.
+
+Use `--input-file-type auto` (the default) for common files, or set an explicit
+type when a file extension is ambiguous. For example, YAML can contain either an
+OpenAPI/JSON Schema document or raw sample data, so use `jsonschema`, `openapi`,
+or `yaml` depending on the intended input.
 
 ## 📘 OpenAPI 3 and JSON Schema {#openapi-3-and-json-schema}
 
@@ -25810,7 +25818,9 @@ AsyncAPI documents are supported with `--input-file-type asyncapi`. The parser g
 | JSON Schema | ✅ Supported | `application/schema+json` and `application/schema+yaml` |
 | OpenAPI Schema Object | ✅ Supported | `application/vnd.oai.openapi...` |
 | Apache Avro | ✅ Supported | `application/vnd.apache.avro...` |
-| Protocol Buffers, RAML, XML Schema, custom formats | ❌ Explicit error | Use dedicated top-level input types where available |
+| Protocol Buffers | ✅ Supported | `application/vnd.google.protobuf`; inline source and local imports are resolved |
+| XML Schema | ✅ Supported | `application/xml`, `text/xml`, `application/xsd+xml`, `application/xml+schema`, `application/xml-schema` |
+| RAML and custom formats | ❌ Explicit error | Use a dedicated top-level input type where available |
 
 ### Version Detection
 
@@ -26351,6 +26361,142 @@ readOnly/writeOnly resolution works with local and file reference types:
 
 ---
 
+# Generate from AsyncAPI
+
+Source: https://datamodel-code-generator.koxudaxi.dev/asyncapi/
+
+Generate Python models from AsyncAPI 2.x and 3.x documents.
+
+## 🚀 Quick Start
+
+```bash
+datamodel-codegen \
+    --input asyncapi.yaml \
+    --input-file-type asyncapi \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
+```
+
+## 📝 Example
+
+**asyncapi.yaml**
+```yaml
+asyncapi: 3.0.0
+info:
+  title: User events
+  version: 1.0.0
+channels:
+  userSignedUp:
+    messages:
+      userSignedUp:
+        payload:
+          $ref: '#/components/schemas/UserSignedUp'
+components:
+  schemas:
+    UserSignedUp:
+      type: object
+      required:
+        - id
+        - email
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+```
+
+**✨ Generated model.py**
+```python
+from __future__ import annotations
+
+from pydantic import BaseModel, EmailStr
+
+
+class UserSignedUp(BaseModel):
+    id: str
+    email: EmailStr
+```
+
+## Supported AsyncAPI Versions
+
+The AsyncAPI parser supports documents with `asyncapi` versions in the 2.x and 3.x families.
+
+| Version | Schema behavior |
+|---------|-----------------|
+| 2.x | Message `schemaFormat` is applied to the message payload. AsyncAPI Schema Objects are handled with OpenAPI 3.0-compatible schema features. |
+| 3.x | `payload`, `headers`, and `components.schemas` may be AsyncAPI Schema Objects, Reference Objects, or Multi Format Schema Objects. AsyncAPI Schema Objects are handled with OpenAPI 3.1-compatible schema features. |
+
+Use `--schema-version auto` to detect the version from the `asyncapi` field, or pass
+`--schema-version 2.0` / `--schema-version 3.0` to select a version explicitly.
+
+## Model Generation Scope
+
+datamodel-code-generator generates data models from schema-bearing fields. It does not generate clients, servers, protocol adapters, or runtime message validators.
+
+The AsyncAPI parser extracts schemas from:
+
+| AsyncAPI location | Generated models |
+|-------------------|------------------|
+| `components.schemas` | Reusable schema models |
+| `components.messages[*].payload` and `headers` | Reusable message payload/header models |
+| `components.messages[*].bindings` | Binding schemas for schema-bearing binding fields such as Kafka `key` and HTTP `headers` |
+| `channels[*].publish.message`, `subscribe.message`, and `messages[*]` | Channel message payload/header models |
+| `channels[*].parameters[*].schema` and `components.parameters[*].schema` | Channel parameter schema models |
+| `channels[*].bindings` and `components.channels[*].bindings` | Binding schemas for schema-bearing binding fields such as WebSockets `query`/`headers` |
+| `operations[*].messages` and `operations[*].reply.messages` | Operation request/reply message payload/header models |
+| `components.operations[*].messages` and `reply.messages` | Reusable operation message payload/header models |
+| `operations[*].bindings` and `components.operations[*].bindings` | Binding schemas for schema-bearing binding fields such as HTTP `query` and Kafka `groupId`/`clientId` |
+| `components.replies[*].messages` | Reusable reply message payload/header models |
+| `message.traits[*].headers` and `components.messageTraits[*].headers` | Header models when the message itself does not define `headers` |
+| `message.traits[*].bindings` and `components.messageTraits[*].bindings` | Binding schemas supplied by message traits |
+| `operation.traits[*].bindings` and `components.operationTraits[*].bindings` | Binding schemas supplied by operation traits |
+| Local and external Reference Objects | Resolved before model generation |
+
+Protocol binding configuration is treated as transport metadata unless the AsyncAPI binding
+specification defines the field as a Schema Object or Reference Object. The parser currently
+generates models for the schema-bearing binding fields used by the official bindings, including
+`headers`, `query`, `key`, `groupId`, and `clientId`.
+
+## Schema Formats
+
+AsyncAPI 3.x Multi Format Schema Objects are unwrapped through `schemaFormat` before model generation.
+AsyncAPI 2.x message-level `schemaFormat` is applied to the message payload.
+
+Supported embedded schema formats are:
+
+| `schemaFormat` family | Behavior |
+|-----------------------|----------|
+| `application/vnd.aai.asyncapi...` or omitted | Parsed as an AsyncAPI Schema Object |
+| `application/schema+json` / `application/schema+yaml` | Parsed with the JSON Schema/OpenAPI schema stack |
+| `application/vnd.oai.openapi...` | Parsed with the OpenAPI schema stack |
+| `application/vnd.apache.avro...` | Converted with the Avro parser, then generated as Python models |
+| `application/vnd.google.protobuf` | Converted with the Protocol Buffers parser, then generated as Python models |
+| `application/xml`, `text/xml`, `application/xsd+xml`, `application/xml+schema`, `application/xml-schema` | Converted with the XML Schema parser, then generated as Python models |
+
+RAML and custom embedded `schemaFormat` values inside an AsyncAPI document are rejected with an explicit error instead of producing partial or misleading models.
+
+Embedded Protocol Buffers schemas support inline `.proto` source strings and local imports resolved relative to the AsyncAPI document. Embedded XML Schema supports inline XSD strings and local `xs:include` / `xs:import` / `xs:redefine` / `xs:override` locations resolved relative to the AsyncAPI document.
+
+## Limitations
+
+The AsyncAPI input type is for model generation from message payloads, headers, and reusable schemas. It does not:
+
+- validate complete AsyncAPI documents;
+- apply protocol binding runtime semantics;
+- generate producer/consumer code;
+- enforce runtime message validation;
+- merge multiple traits that define the same `headers` property.
+
+## 📖 See Also
+
+- 🖥️ [CLI Reference](cli-reference/index.md) - Complete CLI options reference
+- 📋 [Generate from JSON Schema](jsonschema.md) - JSON Schema input documentation
+- 📘 [Generate from OpenAPI](openapi.md) - OpenAPI schema behavior
+- 🪶 [Generate from Apache Avro Schema](avro.md) - Avro schema input documentation
+
+---
+
 # Generate from JSON Schema
 
 Source: https://datamodel-code-generator.koxudaxi.dev/jsonschema/
@@ -26701,6 +26847,89 @@ datamodel-code-generator uses Avro schemas to generate Python model definitions.
 
 ---
 
+# Generate from XML Schema
+
+Source: https://datamodel-code-generator.koxudaxi.dev/xmlschema/
+
+Generate Python models from W3C XML Schema documents (`.xsd`).
+
+## 🚀 Quick Start
+
+```bash
+datamodel-codegen \
+    --input purchase_order.xsd \
+    --input-file-type xmlschema \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
+```
+
+## 📝 Example
+
+**purchase_order.xsd**
+```xml
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="purchaseOrder" type="PurchaseOrder"/>
+
+  <xs:complexType name="PurchaseOrder">
+    <xs:sequence>
+      <xs:element name="id" type="xs:string"/>
+      <xs:element name="total" type="xs:decimal"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>
+```
+
+**✨ Generated model.py**
+```python
+from __future__ import annotations
+
+from decimal import Decimal
+
+from pydantic import BaseModel
+
+
+class PurchaseOrder(BaseModel):
+    id: str
+    total: Decimal
+```
+
+## Supported XML Schema Versions
+
+The XML Schema parser supports XML Schema 1.0 and selected XML Schema 1.1 constructs.
+Use `--schema-version auto` to detect the version from versioning attributes and XSD
+1.1 constructs, or pass `--schema-version 1.0` / `--schema-version 1.1` explicitly.
+
+## Supported XML Schema Features
+
+The XML Schema parser converts XSD into the JSON Schema shape used by the normal
+model-generation pipeline. It supports the constructs needed to generate Python
+model definitions:
+
+| XSD construct | Model generation behavior |
+|---------------|---------------------------|
+| Built-in simple types | Maps XML Schema scalar types to Python scalar types |
+| `xs:complexType` | Generates a Python model class |
+| `xs:simpleType` restrictions | Generates constrained scalar fields where possible |
+| `xs:sequence`, `xs:choice`, `xs:all` | Generates fields from model particles |
+| `minOccurs`, `maxOccurs`, `nillable` | Preserves optionality, lists, and nullability |
+| Attributes | Generates model fields for XML attributes |
+| `xs:include`, `xs:import`, `xs:redefine`, `xs:override` | Resolves local schema composition |
+| Namespaces | Uses namespace context to avoid name collisions |
+| Substitution groups and wildcards | Generates compatible model shapes where possible |
+
+## Limitations
+
+The XML Schema input type is for generating Python model definitions. It does not
+implement XML parsing, XML serialization, or runtime XML validation.
+
+## 📖 See Also
+
+- 🖥️ [CLI Reference](cli-reference/index.md) - Complete CLI options reference
+- 📊 [Supported Data Types](supported-data-types.md) - Data type support details
+- 📋 [Generate from JSON Schema](jsonschema.md) - JSON Schema input documentation
+
+---
+
 # Generate from Protocol Buffers / gRPC
 
 Source: https://datamodel-code-generator.koxudaxi.dev/protobuf/
@@ -26859,11 +27088,11 @@ Some protobuf constructs are parsed only as needed for data model generation. Op
 
 ---
 
-# Generate from JSON Data
+# Generate from JSON / YAML / CSV Data
 
 Source: https://datamodel-code-generator.koxudaxi.dev/jsondata/
 
-Generate Pydantic models directly from JSON data. Under the hood, the generator uses [GenSON](https://pypi.org/project/genson/) to infer a JSON Schema from your input, then processes it the same way as [JSON Schema input](./jsonschema.md).
+Generate Pydantic models directly from raw JSON, YAML, or CSV data. Under the hood, the generator uses [GenSON](https://pypi.org/project/genson/) to infer a JSON Schema from JSON/YAML input, or infers a schema from CSV rows, then processes it the same way as [JSON Schema input](./jsonschema.md).
 
 ## 🚀 Quick Start
 
@@ -26874,6 +27103,10 @@ datamodel-codegen \
     --output-model-type pydantic_v2.BaseModel \
     --output model.py
 ```
+
+Use `--input-file-type yaml` for raw YAML sample data and `--input-file-type csv`
+for CSV files. If a YAML file is a schema definition rather than sample data, use
+`--input-file-type jsonschema`, `openapi`, or `asyncapi` instead.
 
 ## 📝 Example
 
