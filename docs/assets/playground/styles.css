@@ -16,6 +16,7 @@
   --code: #eef4fb;
   --code-bg: #171c23;
   --format: #03a9f4;
+  --topbar-offset: 0px;
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 24%);
   --shadow-md: 0 18px 42px rgb(0 0 0 / 32%);
 }
@@ -60,7 +61,7 @@ input {
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -254,6 +255,7 @@ button:disabled {
   padding: 18px;
   height: clamp(360px, 42vh, 560px);
   min-height: 0;
+  background: linear-gradient(180deg, rgb(31 36 45 / 98%), rgb(17 22 29 / 96%));
 }
 
 .pane {
@@ -269,6 +271,9 @@ button:disabled {
 }
 
 .pane-title {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   min-height: 46px;
   display: flex;
   align-items: center;
@@ -407,6 +412,9 @@ pre {
 }
 
 .options-head {
+  position: sticky;
+  top: var(--topbar-offset);
+  z-index: 8;
   min-height: 52px;
   display: flex;
   align-items: center;
@@ -439,6 +447,9 @@ pre {
 }
 
 .option-group summary {
+  position: sticky;
+  top: calc(var(--topbar-offset) + 52px);
+  z-index: 7;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -617,6 +628,23 @@ pre {
   white-space: pre;
 }
 
+@media (min-width: 841px) {
+  .workspace {
+    position: sticky;
+    top: calc(var(--topbar-offset) + 12px);
+    z-index: 12;
+    min-height: 320px;
+    max-height: calc(100vh - var(--topbar-offset) - 28px);
+    resize: vertical;
+    overflow: auto;
+    box-shadow: 0 18px 28px rgb(0 0 0 / 24%);
+  }
+
+  .options-panel {
+    scroll-margin-top: calc(var(--topbar-offset) + 24px);
+  }
+}
+
 @media (max-width: 840px) {
   .topbar {
     align-items: stretch;
@@ -670,6 +698,7 @@ pre {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(300px, 42vh) minmax(260px, 36vh);
     height: auto;
+    resize: none;
   }
 
   .option-list-panel {

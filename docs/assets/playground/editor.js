@@ -222,3 +222,8 @@ export function setOutputValue(value, language = "python") {
   output?.classList.remove("is-hidden");
   mountOutputViewer(output, value, language);
 }
+
+export function refreshEditors() {
+  inputEditor?.requestMeasure();
+  outputEditor?.requestMeasure();
+}

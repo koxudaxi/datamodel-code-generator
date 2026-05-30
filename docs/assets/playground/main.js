@@ -5,6 +5,7 @@ import {
   getInputValue,
   mountInputEditor,
   mountOutputViewer,
+  refreshEditors,
   setInputLanguage,
   setInputValue,
   setOutputValue,
@@ -26,6 +27,7 @@ let cliCommandText = "";
 let cliOptionsDirty = true;
 let cliRequestId = 0;
 let appShellMounted = false;
+let workspaceResizeObserver = null;
 
 function currentSchema() {
   return getInputValue();
@@ -54,6 +56,23 @@ function updateInputFormatState() {
 function mountEditor() {
   mountInputEditor(document.querySelector("#schema"), currentInputType());
   mountOutputViewer(document.querySelector("#output"), "", "python");
+  observeWorkspaceResize();
+  refreshEditors();
+}
+
+function syncStickyOffsets() {
+  const topbar = document.querySelector(".topbar");
+  const height = topbar ? Math.ceil(topbar.getBoundingClientRect().height) : 0;
+  document.documentElement.style.setProperty("--topbar-offset", `${height}px`);
+}
+
+function observeWorkspaceResize() {
+  const workspace = document.querySelector(".workspace");
+  if (!workspace || workspaceResizeObserver) {
+    return;
+  }
+  workspaceResizeObserver = new ResizeObserver(() => refreshEditors());
+  workspaceResizeObserver.observe(workspace);
 }
 
 async function mountInitialShell() {
@@ -67,6 +86,7 @@ async function mountInitialShell() {
   }
   appEl.innerHTML = html;
   appShellMounted = true;
+  syncStickyOffsets();
   updateInputFormatState();
   mountEditor();
 }
@@ -97,6 +117,7 @@ function mountRenderedShell(html) {
   }
   updateInputFormatState();
   mountEditor();
+  syncStickyOffsets();
   setGenerateState();
 }
 
@@ -312,7 +333,9 @@ function setStatus(text, isError = false) {
 
 async function initWorker() {
   const info = await worker.init(Comlink.proxy((message) => setStatus(message)));
-  mountRenderedShell(info.html);
+  if (!appShellMounted) {
+    mountRenderedShell(info.html);
+  }
   ready = true;
   setStatus(`Ready: Pyodide ${info.pyodideVersion}, Python ${info.pythonVersion}, UI rendered by tdom`);
   setGenerateState();
@@ -387,6 +410,11 @@ mountInitialShell().catch((error) => {
 });
 initWorker().catch((error) => {
   setStatus(error?.stack || String(error), true);
+});
+
+window.addEventListener("resize", () => {
+  syncStickyOffsets();
+  refreshEditors();
 });
 
 document.addEventListener("change", (event) => {
