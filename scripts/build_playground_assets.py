@@ -174,8 +174,7 @@ def _schema_variants(schema: dict[str, Any]) -> list[dict[str, Any]]:
             return _schema_variants(_GENERATE_DEFS.get(ref.rsplit("/", 1)[-1], {}))
         case {"type": "null"}:
             return []
-        case _:
-            return [schema]
+    return [schema]
 
 
 def _field_kind(config_dest: str, control: str) -> tuple[bool, str | None]:
@@ -265,11 +264,11 @@ def build_metadata() -> dict[str, Any]:
         message = f"CATEGORY_ORDER mismatch: missing={missing}, extra={extra}"
         raise ValueError(message)
 
-    options = [
-        option
-        for action in arg_parser._actions  # noqa: SLF001
-        if (option := _option_metadata(action)) is not None
-    ]
+    options = []
+    for action in arg_parser._actions:  # noqa: SLF001
+        option = _option_metadata(action)
+        if option is not None:
+            options.append(option)
     category_indexes = {category: index for index, category in enumerate(CATEGORY_ORDER)}
     options.sort(key=lambda option: (category_indexes.get(option["category"], len(category_indexes)), option["name"]))
     groups = [
