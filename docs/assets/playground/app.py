@@ -270,6 +270,8 @@ def App(
           <a href="/cli-reference/">CLI Reference</a>
         </nav>
         <div class="controls">
+          <{ActionButton} action="toggle-header" label="Compact Header" id="toggle-header" />
+          <{ActionButton} action="toggle-workspace" label="Hide Editors" id="toggle-workspace" />
           <{ActionButton} action="copy-cli" label="Copy CLI" id="copy-cli" disabled={True} />
           <{ActionButton} action="config" label="pyproject.toml" id="config" disabled={True} />
           <{ActionButton} action="auto-generate" label="Auto Generate: On" id="auto-generate" disabled={True} />

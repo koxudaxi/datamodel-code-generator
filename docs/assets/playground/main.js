@@ -28,6 +28,8 @@ let cliOptionsDirty = true;
 let cliRequestId = 0;
 let appShellMounted = false;
 let workspaceResizeObserver = null;
+let headerCompact = false;
+let workspaceCollapsed = false;
 
 function currentSchema() {
   return getInputValue();
@@ -75,6 +77,23 @@ function observeWorkspaceResize() {
   workspaceResizeObserver.observe(workspace);
 }
 
+function setLayoutState() {
+  document.body.classList.toggle("header-compact", headerCompact);
+  document.body.classList.toggle("workspace-collapsed", workspaceCollapsed);
+  const headerButton = document.querySelector("#toggle-header");
+  if (headerButton) {
+    headerButton.textContent = headerCompact ? "Full Header" : "Compact Header";
+    headerButton.setAttribute("aria-pressed", headerCompact ? "true" : "false");
+  }
+  const workspaceButton = document.querySelector("#toggle-workspace");
+  if (workspaceButton) {
+    workspaceButton.textContent = workspaceCollapsed ? "Show Editors" : "Hide Editors";
+    workspaceButton.setAttribute("aria-pressed", workspaceCollapsed ? "true" : "false");
+  }
+  syncStickyOffsets();
+  refreshEditors();
+}
+
 async function mountInitialShell() {
   const response = await fetch("./generated/app-shell.html");
   if (appShellMounted || !response.ok) {
@@ -89,6 +108,7 @@ async function mountInitialShell() {
   syncStickyOffsets();
   updateInputFormatState();
   mountEditor();
+  setLayoutState();
 }
 
 function mountRenderedShell(html) {
@@ -118,6 +138,7 @@ function mountRenderedShell(html) {
   updateInputFormatState();
   mountEditor();
   syncStickyOffsets();
+  setLayoutState();
   setGenerateState();
 }
 
@@ -399,6 +420,12 @@ document.addEventListener("click", async (event) => {
       return;
     }
     scheduleAutoGenerate(0);
+  } else if (action === "toggle-header") {
+    headerCompact = !headerCompact;
+    setLayoutState();
+  } else if (action === "toggle-workspace") {
+    workspaceCollapsed = !workspaceCollapsed;
+    setLayoutState();
   } else if (action === "copy" && lastOutput) {
     await navigator.clipboard.writeText(lastOutput);
     setStatus("Copied output.");

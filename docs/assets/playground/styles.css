@@ -65,8 +65,8 @@ input {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 10px 16px;
+  gap: 10px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--border);
   background: rgb(31 36 45 / 94%);
   backdrop-filter: blur(10px);
@@ -75,6 +75,10 @@ input {
 
 .topbar-title {
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 h1 {
@@ -83,7 +87,7 @@ h1 {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 720;
   letter-spacing: 0;
 }
@@ -113,7 +117,7 @@ h1 a:hover {
 }
 
 #status {
-  margin: 3px 0 0;
+  margin: 0;
   color: var(--muted);
   font-size: 13px;
 }
@@ -141,7 +145,7 @@ h1 a:hover {
 }
 
 .tech-note {
-  margin: 2px 0 0;
+  margin: 0;
   color: var(--muted);
   font-size: 12px;
 }
@@ -165,8 +169,8 @@ h1 a:hover {
 .docs-nav a {
   display: inline-flex;
   align-items: center;
-  height: 32px;
-  padding: 0 9px;
+  height: 28px;
+  padding: 0 8px;
   border-radius: 6px;
   color: var(--muted);
   font-size: 13px;
@@ -196,7 +200,7 @@ label {
 select,
 button,
 input {
-  height: 34px;
+  height: 32px;
   border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--panel);
@@ -213,7 +217,7 @@ select {
 }
 
 button {
-  padding: 0 12px;
+  padding: 0 10px;
   cursor: pointer;
   font-weight: 650;
   white-space: nowrap;
@@ -253,7 +257,7 @@ button:disabled {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
   padding: 12px;
-  height: clamp(520px, 64vh, 780px);
+  height: clamp(380px, 46vh, 620px);
   min-height: 0;
   background: linear-gradient(180deg, rgb(31 36 45 / 98%), rgb(17 22 29 / 96%));
 }
@@ -633,7 +637,7 @@ pre {
     position: sticky;
     top: calc(var(--topbar-offset) + 8px);
     z-index: 12;
-    min-height: 440px;
+    min-height: 320px;
     max-height: calc(100vh - var(--topbar-offset) - 16px);
     resize: vertical;
     overflow: auto;
@@ -643,6 +647,58 @@ pre {
   .options-panel {
     scroll-margin-top: calc(var(--topbar-offset) + 16px);
   }
+}
+
+body.header-compact .topbar {
+  padding: 4px 10px;
+}
+
+body.header-compact #status,
+body.header-compact .tech-note,
+body.header-compact .docs-nav {
+  display: none;
+}
+
+body.header-compact h1 {
+  font-size: 16px;
+}
+
+body.header-compact h1 span {
+  height: 18px;
+  font-size: 10px;
+}
+
+body.header-compact .controls {
+  gap: 5px;
+}
+
+body.header-compact .topbar button {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+body.header-compact #generate {
+  min-width: 88px;
+}
+
+body.workspace-collapsed .workspace {
+  height: 62px;
+  min-height: 62px;
+  max-height: 62px;
+  resize: none;
+  overflow: hidden;
+}
+
+body.workspace-collapsed .pane {
+  grid-template-rows: auto 0;
+}
+
+body.workspace-collapsed #schema,
+body.workspace-collapsed #output,
+body.workspace-collapsed .editor-mount,
+body.workspace-collapsed .output-editor-mount {
+  display: none;
 }
 
 @media (max-width: 840px) {
