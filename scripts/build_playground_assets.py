@@ -215,7 +215,7 @@ def main() -> None:
     app = _load_playground_app()
     app.set_ui_metadata(metadata_json)
     APP_SHELL_PATH.write_text(
-        app.render_app(status="Loading Python runtime...") + "\n",
+        app.render_app() + "\n",
         encoding="utf-8",
     )
 

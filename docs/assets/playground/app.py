@@ -239,10 +239,7 @@ def ConfigDialog(*, children: Template = t"") -> Template:
 def App(
     *,
     schema: str,
-    output: str,
     input_type: str,
-    running: bool,
-    status: str,
     children: Template = t"",
 ) -> Template:
     schema_actions = t"""
@@ -262,7 +259,7 @@ def App(
             <a href="https://github.com/koxudaxi/datamodel-code-generator" target="_blank" rel="noreferrer">datamodel-code-generator</a>
             <span>Browser</span>
           </h1>
-          <p id="status">{status}</p>
+          <p id="status">Loading Pyodide runtime...</p>
           <p class="tech-note">
             UI rendered with <a href="https://github.com/t-strings/tdom" target="_blank" rel="noreferrer">tdom</a>
             using <a href="https://peps.python.org/pep-0750/" target="_blank" rel="noreferrer">PEP 750 t-strings</a>.
@@ -276,7 +273,7 @@ def App(
           <{ActionButton} action="copy-cli" label="Copy CLI" id="copy-cli" disabled={True} />
           <{ActionButton} action="config" label="pyproject.toml" id="config" disabled={True} />
           <{ActionButton} action="auto-generate" label="Auto Generate: On" id="auto-generate" disabled={True} />
-          <{ActionButton} action="generate" label={(running and "Generating...") or "Generate"} disabled={running} id="generate" />
+          <{ActionButton} action="generate" label="Generate" disabled={True} id="generate" />
         </div>
       </header>
 
@@ -286,7 +283,7 @@ def App(
         </{Pane}>
 
         <{Pane} title="Output" extra={output_actions}>
-          <pre id="output" aria-live="polite">{output}</pre>
+          <pre id="output" aria-live="polite"></pre>
         </{Pane}>
       </section>
 
@@ -305,18 +302,12 @@ def default_input_type() -> str:
 
 def render_app(
     schema: str = "",
-    output: str = "",
-    running: bool = False,
     input_type: str = "",
-    status: str = "Loading Pyodide runtime...",
 ) -> str:
     return html(
         t"""<{App}
   schema={schema or SAMPLE_SCHEMA}
-  output={output}
   input-type={input_type or default_input_type()}
-  running={running}
-  status={status}
  />"""
     )
 

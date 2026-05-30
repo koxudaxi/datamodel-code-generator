@@ -52,7 +52,7 @@ await micropip.install([
   pyodide.globals.get("set_ui_metadata")(metadataJson);
 
   bootInfo = {
-    html: pyodide.globals.get("render_app")("", "", false),
+    html: pyodide.globals.get("render_app")(),
     metadataJson,
     pyodideVersion: PYODIDE_VERSION,
     pythonVersion: pyodide.runPython("import sys; sys.version.split()[0]"),
