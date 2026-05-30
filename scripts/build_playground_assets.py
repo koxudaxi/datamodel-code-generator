@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import importlib.util
+import inspect
 import json
 import sys
+import textwrap
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from datamodel_code_generator.arguments import arg_parser
 from datamodel_code_generator.cli_options import CLI_OPTION_META, OptionCategory
 from datamodel_code_generator.enums import InputFileType
+from datamodel_code_generator.input_model import load_model_schema
 
 ROOT = Path(__file__).resolve().parents[1]
 PLAYGROUND_ROOT = ROOT / "docs" / "assets" / "playground"
@@ -33,32 +37,30 @@ BROWSER_SUPPORTED_INPUT_TYPES = {
     InputFileType.GraphQL.value,
 }
 
-HIDDEN_OPTIONS = {
-    "allow_remote_refs",
-    "http_headers",
-    "http_ignore_tls",
-    "http_local_ref_path",
-    "http_query_parameters",
-    "http_timeout",
-    "input",
-    "input_file_type",
-    "input_model",
-    "output",
-    "url",
-}
-
-UNSUPPORTED_REASONS = {
-    "allow_remote_refs": "Server-only or unsafe in a browser sandbox.",
-    "http_headers": "Server-only or unsafe in a browser sandbox.",
-    "http_ignore_tls": "Server-only or unsafe in a browser sandbox.",
-    "http_local_ref_path": "Server-only or unsafe in a browser sandbox.",
-    "http_query_parameters": "Server-only or unsafe in a browser sandbox.",
-    "http_timeout": "Server-only or unsafe in a browser sandbox.",
+# Options the playground supplies through its own UI instead of the options form.
+UI_PROVIDED_OPTIONS = {
     "input": "Use the schema editor.",
     "input_file_type": "Use the top input selector.",
-    "input_model": "Python module imports are not available in the browser playground.",
     "output": "Output is shown in the browser.",
+}
+
+# Capabilities the browser build does not have. These are valid generate() parameters,
+# so they cannot be detected from the GenerateConfig field types and are listed explicitly
+# (network access, optional extras, and local Python modules). Everything else is classified
+# dynamically from the GenerateConfig schema by _option_support() below.
+BROWSER_UNAVAILABLE_OPTIONS = {
     "url": "Remote input URLs are not fetched by the browser playground.",
+    "input_model": "Python module imports are not available in the browser playground.",
+    "allow_remote_refs": "Resolving remote $refs needs network access.",
+    "http_headers": "HTTP requests are not available in the browser playground.",
+    "http_ignore_tls": "HTTP requests are not available in the browser playground.",
+    "http_local_ref_path": "HTTP requests are not available in the browser playground.",
+    "http_query_parameters": "HTTP requests are not available in the browser playground.",
+    "http_timeout": "HTTP requests are not available in the browser playground.",
+    "validation": "Requires the optional 'validation' extra, which is not installed in the browser build.",
+    "use_pendulum": "Requires the 'pendulum' package, which is not installed in the browser build.",
+    "custom_formatters": "Imports Python formatter modules that are not available in the browser.",
+    "custom_formatters_kwargs": "Configures custom formatter modules, which are not available in the browser.",
 }
 
 CATEGORY_ORDER = [
@@ -125,24 +127,114 @@ def _category(option_name: str) -> str:
     return OptionCategory.GENERAL.value
 
 
+def _arg_field_renames() -> dict[str, str]:
+    """Argparse dests that the CLI passes to generate() under a different name.
+
+    The CLI's run_generate_from_config() renames a few arguments (for example
+    ``use_default`` -> ``apply_default_values_for_required_fields``). Parsing that bridge keeps
+    the playground in sync automatically instead of hard-coding the renames here.
+    """
+    from datamodel_code_generator import __main__ as cli_main  # noqa: PLC0415
+
+    try:
+        tree = ast.parse(textwrap.dedent(inspect.getsource(cli_main.run_generate_from_config)))
+    except (OSError, TypeError, SyntaxError):
+        return {}
+    renames: dict[str, str] = {}
+    for node in ast.walk(tree):
+        match node:
+            case ast.Call(func=ast.Name(id="generate"), keywords=keywords):
+                for keyword in keywords:
+                    match keyword:
+                        case ast.keyword(
+                            arg=str() as field, value=ast.Attribute(value=ast.Name(id="config"), attr=source)
+                        ):
+                            renames[source] = field
+    return renames
+
+
+ARG_FIELD_RENAMES = _arg_field_renames()
+# dcg can introspect its own config model: load_model_schema() is the engine behind
+# `datamodel-codegen --input-model config.py:GenerateConfig`. We classify each option from the
+# JSON Schema it produces, so the playground tracks GenerateConfig without hand-rolled type checks.
+_GENERATE_SCHEMA = load_model_schema(
+    ["datamodel_code_generator.config:GenerateConfig"],
+    InputFileType.JsonSchema,
+)
+GENERATE_FIELDS: dict[str, Any] = cast("dict[str, Any]", _GENERATE_SCHEMA.get("properties") or {})
+_GENERATE_DEFS: dict[str, Any] = cast("dict[str, Any]", _GENERATE_SCHEMA.get("$defs") or {})
+
+
+def _schema_variants(schema: dict[str, Any]) -> list[dict[str, Any]]:
+    """Flatten anyOf/oneOf and resolve $ref into concrete, non-null sub-schemas."""
+    match schema:
+        case {"anyOf": list() as members} | {"oneOf": list() as members}:
+            return [variant for member in members for variant in _schema_variants(member)]
+        case {"$ref": str() as ref}:
+            return _schema_variants(_GENERATE_DEFS.get(ref.rsplit("/", 1)[-1], {}))
+        case {"type": "null"}:
+            return []
+        case _:
+            return [schema]
+
+
+def _field_kind(config_dest: str, control: str) -> tuple[bool, str | None]:
+    """Return ``(is_path, value_kind)`` for a generate() field from its JSON Schema.
+
+    object / additionalProperties -> a dict (inline JSON, or ``key=value`` for list widgets);
+    array -> a list; a string with ``format: path`` -> a local path (unsupported in the browser).
+    """
+    for variant in _schema_variants(GENERATE_FIELDS[config_dest]):
+        match variant:
+            case {"type": "object"} | {"additionalProperties": _}:
+                return False, "key_value" if control == "list" else "json"
+            case {"type": "array"}:
+                return False, "collection"
+            case {"format": "path"}:
+                return True, None
+    return False, None
+
+
+def _option_support(dest: str, config_dest: str, control: str) -> tuple[str, str | None]:
+    """Return ``(unsupported_reason, value_kind)`` for an option, derived from GenerateConfig.
+
+    An option is unsupported when it is not a generate() parameter, needs a filesystem path, or
+    is a known missing browser capability. Mapping/collection fields get a coercion hint so the
+    playground can turn the form string into the right type.
+    """
+    if reason := UI_PROVIDED_OPTIONS.get(dest) or BROWSER_UNAVAILABLE_OPTIONS.get(dest):
+        return reason, None
+    if config_dest not in GENERATE_FIELDS:
+        return "CLI-only action: not a code-generation option, so it cannot run in the browser.", None
+    is_path, value_kind = _field_kind(config_dest, control)
+    if is_path:
+        return "Needs a path on the local filesystem, which the browser playground does not have.", None
+    return "", value_kind
+
+
 def _option_metadata(action: argparse.Action) -> dict[str, Any] | None:
     name = _option_name(action)
     if not name:
         return None
 
     meta = CLI_OPTION_META.get(name)
-    browser_supported = action.dest not in HIDDEN_OPTIONS
+    control = _control(action)
+    config_dest = ARG_FIELD_RENAMES.get(action.dest, action.dest)
+    unsupported_reason, value_kind = _option_support(action.dest, config_dest, control)
+    browser_supported = not unsupported_reason
     return {
         "name": name,
         "negative_name": _negative_name(action),
         "dest": action.dest,
+        "config_dest": config_dest,
+        "value_kind": value_kind,
         "label": name.removeprefix("--"),
         "category": _category(name),
-        "control": _control(action),
+        "control": control,
         "choices": _choices(action),
         "help": _clean_help(action),
         "browser_supported": browser_supported,
-        "unsupported_reason": UNSUPPORTED_REASONS.get(action.dest, ""),
+        "unsupported_reason": unsupported_reason,
         "deprecated": bool(meta and meta.deprecated),
         "deprecated_message": meta.deprecated_message if meta else None,
         "hidden": not browser_supported,

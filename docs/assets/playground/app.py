@@ -287,6 +287,14 @@ def App(
           <textarea id="schema" spellcheck="false">{schema}</textarea>
         </{Pane}>
 
+        <div
+          class="workspace-splitter"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Drag to resize panes (double-click to reset)"
+          title="Drag to resize panes (double-click to reset)"
+        ></div>
+
         <{Pane} title="Output" extra={output_actions}>
           <pre id="output" aria-live="polite"></pre>
         </{Pane}>
@@ -329,7 +337,14 @@ def _options_by_dest() -> dict[str, dict[str, Any]]:
     return {option["dest"]: option for option in UI_METADATA["options"] if option["browser_supported"]}
 
 
+def _split_delimited(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    return [item.strip() for item in str(value).replace(",", "\n").splitlines() if item.strip()]
+
+
 def _coerce_option_value(option: dict[str, Any], value: Any) -> Any:
+    """Coerce a form value by widget type. Used for the CLI command and pyproject.toml export."""
     if value == "" or value is None or value == []:
         return None
 
@@ -344,7 +359,7 @@ def _coerce_option_value(option: dict[str, Any], value: Any) -> Any:
         case ("list", list()):
             result = value
         case ("list", _):
-            result = [item.strip() for item in str(value).replace(",", "\n").splitlines() if item.strip()]
+            result = _split_delimited(value)
         case ("number", _):
             text = str(value)
             result = float(text) if "." in text else int(text)
@@ -353,17 +368,42 @@ def _coerce_option_value(option: dict[str, Any], value: Any) -> Any:
     return result
 
 
-def _normalize_options(options: dict[str, Any], *, include_forced: bool = True) -> dict[str, Any]:
+def _coerce_for_generate(option: dict[str, Any], value: Any) -> Any:
+    """Coerce a form value into the type generate() expects.
+
+    value_kind is derived from the generate() field type (see build_playground_assets.py), so the
+    string a widget produces is turned into a dict/list/etc. independent of the widget itself.
+    """
+    if (coerced := _coerce_option_value(option, value)) is None:
+        return None
+    match option.get("value_kind"):
+        case "json":
+            try:
+                return json.loads(coerced) if isinstance(coerced, str) else coerced
+            except json.JSONDecodeError:
+                return None
+        case "key_value":
+            pairs = (item.partition("=") for item in _split_delimited(coerced))
+            return {key: val for key, sep, val in pairs if sep and key} or None
+        case "collection":
+            return coerced if isinstance(coerced, list) else _split_delimited(coerced)
+    return coerced
+
+
+def _normalize_options(
+    options: dict[str, Any], *, include_forced: bool = True, for_generate: bool = False
+) -> dict[str, Any]:
+    # for_generate=True keys by the generate() field name and coerces to its type; otherwise keys by
+    # the CLI dest with widget-level coercion (for the CLI command and pyproject.toml export).
     options_by_dest = _options_by_dest()
     normalized: dict[str, Any] = {}
     for key, value in options.items():
-        option = options_by_dest.get(key)
-        if not option:
+        if (option := options_by_dest.get(key)) is None:
             continue
-        normalized_value = _coerce_option_value(option, value)
+        normalized_value = _coerce_for_generate(option, value) if for_generate else _coerce_option_value(option, value)
         if normalized_value is None or normalized_value == []:
             continue
-        normalized[key] = normalized_value
+        normalized[option.get("config_dest", key) if for_generate else key] = normalized_value
     if include_forced:
         normalized.update(FORCED_OPTIONS)
     return normalized
@@ -456,7 +496,7 @@ def generate_in_browser(schema: str, input_type: str, options_json: str = "{}") 
         result = generate(
             schema,
             input_file_type=InputFileType(input_type),
-            **_normalize_options(options),
+            **_normalize_options(options, for_generate=True),
             disable_timestamp=True,
         )
     except Exception:

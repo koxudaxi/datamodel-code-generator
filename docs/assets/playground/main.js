@@ -499,3 +499,56 @@ document.addEventListener("input", (event) => {
     scheduleAutoGenerate();
   }
 });
+
+let splitterDragging = false;
+
+function endSplitterDrag() {
+  if (!splitterDragging) {
+    return;
+  }
+  splitterDragging = false;
+  document.querySelector(".workspace-splitter")?.classList.remove("is-dragging");
+  document.body.style.removeProperty("user-select");
+  refreshEditors();
+}
+
+document.addEventListener("pointerdown", (event) => {
+  if (!event.target.closest(".workspace-splitter")) {
+    return;
+  }
+  splitterDragging = true;
+  event.target.closest(".workspace-splitter").classList.add("is-dragging");
+  document.body.style.userSelect = "none";
+  event.preventDefault();
+});
+
+document.addEventListener("pointermove", (event) => {
+  if (!splitterDragging) {
+    return;
+  }
+  const workspace = document.querySelector(".workspace");
+  if (!workspace) {
+    return;
+  }
+  const rect = workspace.getBoundingClientRect();
+  if (rect.width <= 0) {
+    return;
+  }
+  const ratio = Math.min(0.85, Math.max(0.15, (event.clientX - rect.left) / rect.width));
+  workspace.style.setProperty("--pane-left", `${ratio.toFixed(4)}fr`);
+  workspace.style.setProperty("--pane-right", `${(1 - ratio).toFixed(4)}fr`);
+  refreshEditors();
+});
+
+document.addEventListener("pointerup", endSplitterDrag);
+document.addEventListener("pointercancel", endSplitterDrag);
+
+document.addEventListener("dblclick", (event) => {
+  if (!event.target.closest(".workspace-splitter")) {
+    return;
+  }
+  const workspace = document.querySelector(".workspace");
+  workspace?.style.removeProperty("--pane-left");
+  workspace?.style.removeProperty("--pane-right");
+  refreshEditors();
+});

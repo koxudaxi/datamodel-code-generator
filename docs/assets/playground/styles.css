@@ -285,12 +285,38 @@ button:disabled {
 .workspace {
   flex: none;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: minmax(0, var(--pane-left, 1fr)) 12px minmax(0, var(--pane-right, 1fr));
+  gap: 0;
   padding: 12px;
   height: clamp(340px, 56vh, 900px);
   min-height: 0;
   background: linear-gradient(180deg, rgb(31 36 45 / 98%), rgb(17 22 29 / 96%));
+}
+
+.workspace-splitter {
+  position: relative;
+  align-self: stretch;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.workspace-splitter::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 40px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: var(--border);
+  transition: background-color 0.16s ease;
+}
+
+.workspace-splitter:hover::before,
+.workspace-splitter.is-dragging::before {
+  background: var(--accent);
+  height: 64px;
 }
 
 .pane {
@@ -792,8 +818,13 @@ body.workspace-collapsed .output-editor-mount {
   .workspace {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(300px, 42vh) minmax(260px, 36vh);
+    gap: 12px;
     height: auto;
     resize: none;
+  }
+
+  .workspace-splitter {
+    display: none;
   }
 
   .option-list-panel {
