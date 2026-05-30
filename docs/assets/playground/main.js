@@ -104,6 +104,7 @@ async function mountInitialShell() {
     return;
   }
   appEl.innerHTML = html;
+  appEl.classList.remove("boot");
   appShellMounted = true;
   syncStickyOffsets();
   updateInputFormatState();
@@ -116,6 +117,7 @@ function mountRenderedShell(html) {
   const template = document.createElement("template");
   template.innerHTML = html;
   const nextShell = template.content.firstElementChild;
+  appEl.classList.remove("boot");
   appShellMounted = true;
   if (appEl.firstElementChild && nextShell) {
     morphdom(appEl.firstElementChild, nextShell, {
@@ -145,6 +147,25 @@ function mountRenderedShell(html) {
 function collectOptionEntries() {
   const form = document.querySelector("#options-form");
   return form ? Object.fromEntries(new FormData(form).entries()) : {};
+}
+
+function filterOptions(query) {
+  const needle = query.trim().toLowerCase();
+  document.querySelectorAll("#options-form .option-group").forEach((group) => {
+    let matches = 0;
+    group.querySelectorAll(".option-row").forEach((row) => {
+      const label = row.querySelector(".option-label")?.textContent.toLowerCase() ?? "";
+      const hit = !needle || label.includes(needle);
+      row.classList.toggle("is-hidden", !hit);
+      if (hit) {
+        matches += 1;
+      }
+    });
+    group.classList.toggle("is-hidden", matches === 0);
+    if (needle) {
+      group.open = matches > 0;
+    }
+  });
 }
 
 function setAutoGenerate(enabled) {
@@ -343,6 +364,15 @@ function setGenerateState() {
   }
 }
 
+function updateStatusTooltip() {
+  const status = document.querySelector("#status");
+  if (!status) {
+    return;
+  }
+  // Reveal the full message on hover only when the text is visually truncated.
+  status.title = status.scrollWidth > status.clientWidth ? status.textContent : "";
+}
+
 function setStatus(text, isError = false) {
   const status = document.querySelector("#status");
   if (!status) {
@@ -350,6 +380,7 @@ function setStatus(text, isError = false) {
   }
   status.textContent = text;
   status.classList.toggle("error", isError);
+  requestAnimationFrame(updateStatusTooltip);
 }
 
 async function initWorker() {
@@ -442,6 +473,7 @@ initWorker().catch((error) => {
 window.addEventListener("resize", () => {
   syncStickyOffsets();
   refreshEditors();
+  updateStatusTooltip();
 });
 
 document.addEventListener("change", (event) => {
@@ -456,6 +488,10 @@ document.addEventListener("change", (event) => {
 });
 
 document.addEventListener("input", (event) => {
+  if (event.target.id === "option-filter") {
+    filterOptions(event.target.value);
+    return;
+  }
   if (event.target.id === "schema" || event.target.matches("[data-option]")) {
     if (event.target.matches("[data-option]")) {
       refreshCliOptions();

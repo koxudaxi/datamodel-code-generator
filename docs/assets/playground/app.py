@@ -212,6 +212,7 @@ def OptionsPanel(*, groups: list[dict[str, Any]], children: Template = t"") -> T
           <h2>Options</h2>
           <span class="options-count">{visible_count} available</span>
         </div>
+        <input id="option-filter" type="search" placeholder="Filter options..." aria-label="Filter options" autocomplete="off" />
       </div>
       <form id="options-form">{rendered_groups}</form>
     </section>
@@ -259,11 +260,6 @@ def App(
             <a href="https://github.com/koxudaxi/datamodel-code-generator" target="_blank" rel="noreferrer">datamodel-code-generator</a>
             <span>Browser</span>
           </h1>
-          <p id="status">Loading Pyodide runtime...</p>
-          <p class="tech-note">
-            UI rendered with <a href="https://github.com/t-strings/tdom" target="_blank" rel="noreferrer">tdom</a>
-            using <a href="https://peps.python.org/pep-0750/" target="_blank" rel="noreferrer">PEP 750 t-strings</a>.
-          </p>
         </div>
         <nav class="docs-nav" aria-label="Documentation">
           <a href="/">Docs</a>
@@ -276,6 +272,13 @@ def App(
           <{ActionButton} action="config" label="pyproject.toml" id="config" disabled={True} />
           <{ActionButton} action="auto-generate" label="Auto Generate: On" id="auto-generate" disabled={True} />
           <{ActionButton} action="generate" label="Generate" disabled={True} id="generate" />
+        </div>
+        <div class="topbar-meta">
+          <p class="tech-note">
+            UI rendered with <a href="https://github.com/t-strings/tdom" target="_blank" rel="noreferrer">tdom</a>
+            using <a href="https://peps.python.org/pep-0750/" target="_blank" rel="noreferrer">PEP 750 t-strings</a>.
+          </p>
+          <p id="status">Loading Pyodide runtime...</p>
         </div>
       </header>
 
