@@ -210,6 +210,22 @@ h1 a:hover {
   gap: 6px;
 }
 
+.version-control {
+  display: flex;
+  align-items: center;
+  grid-template-columns: none;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.version-control select {
+  height: 30px;
+  min-width: 132px;
+  max-width: 180px;
+  padding-left: 8px;
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+}
+
 .topbar button {
   height: 30px;
   padding: 0 9px;
@@ -741,6 +757,11 @@ body.header-compact .topbar button {
   height: 28px;
   padding: 0 8px;
   font-size: 12px;
+}
+
+body.header-compact .version-control select {
+  height: 28px;
+  min-width: 120px;
 }
 
 body.header-compact #generate {

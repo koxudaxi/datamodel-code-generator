@@ -12,14 +12,26 @@ import {
 } from "./editor.js";
 
 const appEl = document.querySelector("#app");
-const rawWorker = new Worker("./worker.js", { type: "module" });
-const worker = Comlink.wrap(rawWorker);
 const stateEncoder = new TextEncoder();
 const stateDecoder = new TextDecoder();
 const stateFormatGzip = "gz";
 const stateFormatPlain = "b64";
 const stateVersion = 1;
+const versionsManifestUrl = "./generated/playground-versions.json";
+const fallbackVersionManifest = {
+  default: "current",
+  versions: [
+    {
+      id: "current",
+      label: "Current build",
+      kind: "current",
+      asset_base: "./generated/",
+    },
+  ],
+};
 
+let rawWorker = null;
+let worker = null;
 let ready = false;
 let running = false;
 let lastOutput = "";
@@ -36,6 +48,139 @@ let workspaceResizeObserver = null;
 let headerCompact = false;
 let workspaceCollapsed = false;
 let restoredUrlState = false;
+let playgroundVersions = [];
+let selectedPlaygroundVersion = null;
+let versionSelectionNotice = "";
+
+function absoluteUrl(path, base = window.location.href) {
+  return new URL(path, base).toString();
+}
+
+function normalizeInstall(install, assetBaseUrl) {
+  if (!install || typeof install !== "object") {
+    return null;
+  }
+  if (install.type === "wheel" && install.url) {
+    return {
+      type: "wheel",
+      url: absoluteUrl(install.url, assetBaseUrl),
+      deps: install.deps === true,
+    };
+  }
+  if (install.type === "requirement" && install.requirement) {
+    return {
+      type: "requirement",
+      requirement: String(install.requirement),
+      deps: install.deps === true,
+    };
+  }
+  return null;
+}
+
+function normalizePlaygroundVersion(entry) {
+  const id = String(entry?.id || "").trim();
+  if (!id) {
+    return null;
+  }
+  const assetBaseUrl = absoluteUrl(entry.asset_base || entry.assetBase || "./generated/");
+  return {
+    id,
+    label: String(entry.label || id),
+    kind: String(entry.kind || "custom"),
+    assetBaseUrl,
+    shellUrl: absoluteUrl(entry.app_shell || entry.app_shell_url || entry.shell_url || "app-shell.html", assetBaseUrl),
+    metadataUrl: absoluteUrl(
+      entry.metadata || entry.metadata_url || "codegen-ui-metadata.json",
+      assetBaseUrl,
+    ),
+    appUrl: absoluteUrl(entry.app || entry.app_url || "app.py", assetBaseUrl),
+    install: normalizeInstall(entry.install, assetBaseUrl),
+  };
+}
+
+async function loadPlaygroundVersions() {
+  let manifest = fallbackVersionManifest;
+  try {
+    const response = await fetch(versionsManifestUrl, { cache: "no-cache" });
+    if (response.ok) {
+      manifest = await response.json();
+    }
+  } catch {
+    manifest = fallbackVersionManifest;
+  }
+  const versions = (manifest.versions || []).map(normalizePlaygroundVersion).filter(Boolean);
+  if (versions.length === 0) {
+    return {
+      manifest: fallbackVersionManifest,
+      versions: fallbackVersionManifest.versions.map(normalizePlaygroundVersion).filter(Boolean),
+    };
+  }
+  return { manifest, versions };
+}
+
+function resolvePlaygroundVersion(manifest, versions) {
+  const requested = new URLSearchParams(window.location.search).get("version");
+  const defaultId = manifest.default || versions[0]?.id;
+  const selected = versions.find((version) => version.id === requested)
+    || versions.find((version) => version.id === defaultId)
+    || versions[0];
+  versionSelectionNotice = requested && requested !== selected.id
+    ? `Unknown playground version "${requested}", using ${selected.label}.`
+    : "";
+  return selected;
+}
+
+async function initPlaygroundVersions() {
+  const { manifest, versions } = await loadPlaygroundVersions();
+  playgroundVersions = versions;
+  selectedPlaygroundVersion = resolvePlaygroundVersion(manifest, versions);
+}
+
+function renderVersionSelect() {
+  const select = document.querySelector("#playground-version");
+  if (!select || !selectedPlaygroundVersion) {
+    return;
+  }
+  const versionIds = playgroundVersions.map((version) => version.id).join("\n");
+  if (select.dataset.versionIds !== versionIds) {
+    const options = playgroundVersions.map((version) => {
+      const option = new Option(version.label, version.id);
+      option.selected = version.id === selectedPlaygroundVersion.id;
+      return option;
+    });
+    select.replaceChildren(...options);
+    select.dataset.versionIds = versionIds;
+  }
+  select.value = selectedPlaygroundVersion.id;
+  select.disabled = running || playgroundVersions.length < 2;
+  select.title = selectedPlaygroundVersion.label;
+}
+
+function switchPlaygroundVersion(versionId) {
+  const nextVersion = playgroundVersions.find((version) => version.id === versionId);
+  if (!nextVersion || nextVersion.id === selectedPlaygroundVersion?.id) {
+    renderVersionSelect();
+    return;
+  }
+  const url = new URL(window.location.href);
+  url.searchParams.set("version", nextVersion.id);
+  setStatus(`Switching to ${nextVersion.label}...`);
+  document.querySelector("#playground-version")?.setAttribute("disabled", "");
+  window.location.assign(url.toString());
+}
+
+function createWorker() {
+  if (worker) {
+    return worker;
+  }
+  rawWorker = new Worker("./worker.js", { type: "module" });
+  rawWorker.addEventListener("error", (event) => {
+    setStatus(event.message || "Worker failed.", true);
+    finishGeneration();
+  });
+  worker = Comlink.wrap(rawWorker);
+  return worker;
+}
 
 function currentSchema() {
   return getInputValue();
@@ -101,7 +246,8 @@ function setLayoutState() {
 }
 
 async function mountInitialShell() {
-  const response = await fetch("./generated/app-shell.html");
+  const shellUrl = selectedPlaygroundVersion?.shellUrl || "./generated/app-shell.html";
+  const response = await fetch(shellUrl, { cache: "no-cache" });
   if (appShellMounted || !response.ok) {
     return;
   }
@@ -116,6 +262,7 @@ async function mountInitialShell() {
   updateInputFormatState();
   mountEditor();
   setLayoutState();
+  renderVersionSelect();
 }
 
 function mountRenderedShell(html) {
@@ -147,6 +294,7 @@ function mountRenderedShell(html) {
   mountEditor();
   syncStickyOffsets();
   setLayoutState();
+  renderVersionSelect();
   setGenerateState();
 }
 
@@ -229,6 +377,9 @@ function statePayloadFromHash() {
 
 function buildReproUrl(payload) {
   const url = new URL(window.location.href);
+  if (selectedPlaygroundVersion) {
+    url.searchParams.set("version", selectedPlaygroundVersion.id);
+  }
   const params = new URLSearchParams(url.hash.slice(1));
   params.set("state", payload);
   url.hash = params.toString();
@@ -250,8 +401,12 @@ async function restoreStateFromUrl() {
   const state = await decodePlaygroundState(payload);
   if (state.inputType) {
     const inputType = document.querySelector("#input-type");
-    if (inputType) {
-      inputType.value = String(state.inputType);
+    const inputTypeValue = String(state.inputType);
+    const isAvailableInputType = Array.from(inputType?.options || []).some(
+      (option) => option.value === inputTypeValue && !option.disabled,
+    );
+    if (inputType && isAvailableInputType) {
+      inputType.value = inputTypeValue;
       updateInputFormatState();
     }
   }
@@ -321,7 +476,7 @@ function scheduleAutoGenerate(delay = 650) {
 }
 
 async function refreshCliOptions() {
-  if (!ready) {
+  if (!ready || !worker) {
     return;
   }
   const requestId = ++cliRequestId;
@@ -412,7 +567,7 @@ function finishGeneration() {
 }
 
 async function requestGenerate(mode = "manual") {
-  if (!ready) {
+  if (!ready || !worker) {
     return;
   }
   if (running) {
@@ -491,6 +646,7 @@ function setGenerateState() {
     autoButton.setAttribute("aria-pressed", autoGenerate ? "true" : "false");
     autoButton.textContent = autoGenerate ? "Auto Generate: On" : "Auto Generate";
   }
+  renderVersionSelect();
 }
 
 function updateStatusTooltip() {
@@ -513,22 +669,30 @@ function setStatus(text, isError = false) {
 }
 
 async function initWorker() {
-  const info = await worker.init(Comlink.proxy((message) => setStatus(message)));
+  const api = createWorker();
+  const info = await api.init(Comlink.proxy((message) => setStatus(message)), selectedPlaygroundVersion);
   if (!appShellMounted) {
     mountRenderedShell(info.html);
   }
   ready = true;
-  const readyMessage = `Ready: Pyodide ${info.pyodideVersion}, Python ${info.pythonVersion}, UI rendered by tdom`;
-  setStatus(restoredUrlState ? `${readyMessage}. Restored URL state.` : readyMessage);
+  const readyMessage = [
+    `Ready: datamodel-code-generator ${info.codegenVersion}`,
+    `Pyodide ${info.pyodideVersion}`,
+    `Python ${info.pythonVersion}`,
+    `UI rendered by tdom`,
+  ].join(", ");
+  const notices = [readyMessage];
+  if (restoredUrlState) {
+    notices.push("Restored URL state.");
+  }
+  if (versionSelectionNotice) {
+    notices.push(versionSelectionNotice);
+  }
+  setStatus(notices.join(" "));
   setGenerateState();
   await refreshCliOptions();
   scheduleAutoGenerate(0);
 }
-
-rawWorker.addEventListener("error", (event) => {
-  setStatus(event.message || "Worker failed.", true);
-  finishGeneration();
-});
 
 document.addEventListener("click", async (event) => {
   const target = event.target.closest("[data-action]");
@@ -539,6 +703,9 @@ document.addEventListener("click", async (event) => {
   if (action === "generate") {
     requestGenerate("manual");
   } else if (action === "sample") {
+    if (!worker) {
+      return;
+    }
     setInputValue(await worker.sample(currentInputType()));
     setStatus(`Loaded ${currentInputType()} sample.`);
     scheduleAutoGenerate();
@@ -563,6 +730,9 @@ document.addEventListener("click", async (event) => {
     await navigator.clipboard.writeText(textarea?.value || configToml);
     setStatus("Copied pyproject.toml config.");
   } else if (action === "import-config") {
+    if (!worker) {
+      return;
+    }
     const textarea = document.querySelector("#config-toml");
     const result = await worker.importConfigToml(textarea?.value || "");
     if (!result.ok) {
@@ -596,7 +766,9 @@ document.addEventListener("click", async (event) => {
 });
 
 async function startPlayground() {
+  await initPlaygroundVersions();
   await mountInitialShell();
+  renderVersionSelect();
   try {
     await restoreStateFromUrl();
   } catch (error) {
@@ -628,7 +800,9 @@ window.addEventListener("resize", () => {
 });
 
 document.addEventListener("change", (event) => {
-  if (event.target.id === "input-type") {
+  if (event.target.id === "playground-version") {
+    switchPlaygroundVersion(event.target.value);
+  } else if (event.target.id === "input-type") {
     updateInputFormatState();
     refreshCliOptions();
     scheduleAutoGenerate();

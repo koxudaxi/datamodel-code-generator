@@ -125,6 +125,17 @@ def InputTypeSelect(*, selected: str, children: Template = t"", **attrs: Any) ->
     """
 
 
+def VersionSelect(*, children: Template = t"", **attrs: Any) -> Template:
+    return t"""
+    <label class="version-control" {attrs}>
+      Version
+      <select id="playground-version" disabled>
+        <option value="current" selected>Current build</option>
+      </select>
+    </label>
+    """
+
+
 def Pane(
     *,
     title: str,
@@ -272,6 +283,7 @@ def App(
           <a href="/cli-reference/">CLI Reference</a>
         </nav>
         <div class="controls">
+          <{VersionSelect} />
           <{ActionButton} action="toggle-header" label="Compact Header" id="toggle-header" />
           <{ActionButton} action="toggle-workspace" label="Hide Editors" id="toggle-workspace" />
           <{ActionButton} action="copy-cli" label="Copy CLI" id="copy-cli" disabled={True} />

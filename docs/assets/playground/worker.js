@@ -18,9 +18,57 @@ const PYTHON_RUNTIME_PACKAGES = [
 let pyodideReadyPromise = null;
 let bootInfo = null;
 let statusCallback = null;
+let activeVersion = null;
 
 function postStatus(message) {
   statusCallback?.(message);
+}
+
+async function fetchText(url) {
+  const response = await fetch(url, { cache: "no-cache" });
+  if (!response.ok) {
+    throw new Error(`Could not load ${url}: ${response.status}`);
+  }
+  return response.text();
+}
+
+function withDefaultVersionConfig(versionConfig = {}) {
+  const config = versionConfig || {};
+  const assetBaseUrl = config.assetBaseUrl || new URL("./generated/", self.location.href).toString();
+  return {
+    id: config.id || "current",
+    label: config.label || "Current build",
+    assetBaseUrl,
+    metadataUrl: config.metadataUrl || new URL("codegen-ui-metadata.json", assetBaseUrl).toString(),
+    appUrl: config.appUrl || new URL("app.py", assetBaseUrl).toString(),
+    install: config.install || null,
+  };
+}
+
+function packageInstallFromMetadata(metadata, versionConfig) {
+  const install = versionConfig.install;
+  if (install?.type === "wheel" && install.url) {
+    return {
+      source: install.url,
+      deps: install.deps === true,
+    };
+  }
+  if (install?.type === "requirement" && install.requirement) {
+    return {
+      source: install.requirement,
+      deps: install.deps === true,
+    };
+  }
+  if (metadata.package_wheel) {
+    return {
+      source: new URL(metadata.package_wheel, versionConfig.assetBaseUrl).toString(),
+      deps: false,
+    };
+  }
+  return {
+    source: "datamodel-code-generator",
+    deps: false,
+  };
 }
 
 async function findWheelUrl(project, version, matcher) {
@@ -36,8 +84,9 @@ async function findWheelUrl(project, version, matcher) {
   return wheel.url;
 }
 
-async function initPyodide() {
-  const metadataJson = await (await fetch("./generated/codegen-ui-metadata.json")).text();
+async function initPyodide(versionConfig) {
+  activeVersion = withDefaultVersionConfig(versionConfig);
+  const metadataJson = await fetchText(activeVersion.metadataUrl);
   const metadata = JSON.parse(metadataJson);
 
   postStatus("Loading Pyodide...");
@@ -55,39 +104,44 @@ import micropip
 await micropip.install(${JSON.stringify(PYTHON_RUNTIME_PACKAGES)})
 `);
 
-  const packageSource = metadata.package_wheel
-    ? `./generated/${metadata.package_wheel}`
-    : "datamodel-code-generator";
-  postStatus("Installing datamodel-code-generator...");
-  pyodide.globals.set("package_source", packageSource);
+  const packageInstall = packageInstallFromMetadata(metadata, activeVersion);
+  postStatus(`Installing datamodel-code-generator (${activeVersion.label})...`);
+  pyodide.globals.set("package_source", packageInstall.source);
+  pyodide.globals.set("package_deps", packageInstall.deps);
   await pyodide.runPythonAsync(`
 import micropip
-await micropip.install(package_source, deps=False)
+await micropip.install(package_source, deps=package_deps)
 `);
   pyodide.globals.delete("package_source");
+  pyodide.globals.delete("package_deps");
 
-  const appSource = await (await fetch("./app.py")).text();
+  const appSource = await fetchText(activeVersion.appUrl);
   pyodide.runPython(appSource);
   pyodide.globals.get("set_ui_metadata")(metadataJson);
 
   bootInfo = {
     html: pyodide.globals.get("render_app")(),
     metadataJson,
+    codegenVersion: pyodide.runPython(
+      "from importlib.metadata import version\nversion('datamodel-code-generator')",
+    ),
+    selectedVersion: activeVersion.id,
+    selectedVersionLabel: activeVersion.label,
     pyodideVersion: PYODIDE_VERSION,
     pythonVersion: pyodide.runPython("import sys; sys.version.split()[0]"),
   };
   return pyodide;
 }
 
-async function ensurePyodide(onStatus = null) {
+async function ensurePyodide(onStatus = null, versionConfig = null) {
   statusCallback = onStatus;
-  pyodideReadyPromise ??= initPyodide();
+  pyodideReadyPromise ??= initPyodide(versionConfig);
   return pyodideReadyPromise;
 }
 
 const api = {
-  async init(onStatus) {
-    await ensurePyodide(onStatus);
+  async init(onStatus, versionConfig) {
+    await ensurePyodide(onStatus, versionConfig);
     return bootInfo;
   },
 
