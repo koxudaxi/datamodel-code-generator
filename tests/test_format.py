@@ -6,6 +6,7 @@ import ast
 import sys
 import warnings
 from pathlib import Path
+from typing import cast
 from unittest import mock
 
 import black
@@ -20,6 +21,7 @@ from datamodel_code_generator.format import (
     PythonVersionMin,
     _format_constrained_call,
     _format_import_node,
+    _format_import_node_without_reordering,
     _get_builtin_known_first_party,
     _normalize_string_quotes,
     _split_escaped_string_literal,
@@ -421,6 +423,16 @@ def test_format_import_node_formats_from_import_aliases() -> None:
         2,
         "from pydantic import BaseModel as Model\nfrom pydantic import Field as PydanticField",
     )
+
+
+def test_format_import_node_rejects_unsupported_nodes() -> None:
+    """Test direct import node helpers reject unexpected AST nodes."""
+    unsupported_node = cast("ast.Import | ast.ImportFrom", ast.parse("pass\n").body[0])
+
+    with pytest.raises(TypeError, match="Unsupported import node: Pass"):
+        _format_import_node_without_reordering(unsupported_node, ["pass"])
+    with pytest.raises(TypeError, match="Unsupported import node: Pass"):
+        _format_import_node(unsupported_node, line_length=88)
 
 
 def test_apply_builtin_formatter_adds_blank_after_module_docstring() -> None:
