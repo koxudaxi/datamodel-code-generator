@@ -9,6 +9,7 @@ from tdom import html
 
 from datamodel_code_generator import InputFileType, generate
 from datamodel_code_generator.__main__ import EXCLUDED_CONFIG_OPTIONS, generate_cli_command
+from datamodel_code_generator.format import Formatter
 
 if TYPE_CHECKING:
     from string.templatelib import Template
@@ -84,8 +85,13 @@ tags:
 }
 
 UI_METADATA: dict[str, Any] = {"formats": [], "options": [], "groups": []}
-FORCED_OPTIONS = {
+PLAYGROUND_FORMATTERS = [Formatter.BUILTIN]
+GENERATE_FORCED_OPTIONS = {
     "output": None,
+    "formatters": PLAYGROUND_FORMATTERS,
+}
+CONFIG_FORCED_OPTIONS = {
+    "formatters": [formatter.value for formatter in PLAYGROUND_FORMATTERS],
 }
 CONFIG_TABLE = "tool.datamodel-codegen"
 
@@ -415,13 +421,14 @@ def _normalize_options(
             continue
         normalized[option.get("config_dest", key) if for_generate else key] = normalized_value
     if include_forced:
-        normalized.update(FORCED_OPTIONS)
+        normalized.update(GENERATE_FORCED_OPTIONS)
     return normalized
 
 
 def _config_options(options_json: str = "{}", input_type: str = "") -> dict[str, Any]:
     options = json.loads(options_json) if options_json else {}
     normalized_options = _normalize_options(options, include_forced=False, for_config=True)
+    normalized_options.update(CONFIG_FORCED_OPTIONS)
     if input_type and input_type != "auto":
         normalized_options["input_file_type"] = input_type
     return normalized_options
@@ -430,6 +437,7 @@ def _config_options(options_json: str = "{}", input_type: str = "") -> dict[str,
 def _cli_options(options_json: str = "{}", input_type: str = "") -> dict[str, Any]:
     options = json.loads(options_json) if options_json else {}
     normalized_options = _normalize_options(options, include_forced=False)
+    normalized_options.update(CONFIG_FORCED_OPTIONS)
     if input_type and input_type != "auto":
         normalized_options["input_file_type"] = input_type
     return normalized_options
@@ -490,6 +498,10 @@ def _form_option_value(option: dict[str, Any], value: Any) -> Any:
     return value
 
 
+def _is_browser_formatter(value: Any) -> bool:
+    return _split_delimited(value) == [Formatter.BUILTIN.value]
+
+
 def import_config_toml(config_toml: str) -> str:
     try:
         config = _config_table(tomllib.loads(config_toml))
@@ -511,6 +523,8 @@ def import_config_toml(config_toml: str) -> str:
                     input_type = text_value
                 case "input_file_type":
                     ignored.append(str(raw_key))
+                case "formatters" if _is_browser_formatter(value):
+                    pass
                 case _ if key in EXCLUDED_CONFIG_OPTIONS or key not in options_by_dest:
                     ignored.append(str(raw_key))
                 case _:

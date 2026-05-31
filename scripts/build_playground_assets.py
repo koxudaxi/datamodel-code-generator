@@ -59,6 +59,7 @@ BROWSER_UNAVAILABLE_OPTIONS = {
     "http_timeout": "HTTP requests are not available in the browser playground.",
     "validation": "Requires the optional 'validation' extra, which is not installed in the browser build.",
     "use_pendulum": "Requires the 'pendulum' package, which is not installed in the browser build.",
+    "formatters": "The browser playground always uses the dependency-free builtin formatter.",
     "custom_formatters": "Imports Python formatter modules that are not available in the browser.",
     "custom_formatters_kwargs": "Configures custom formatter modules, which are not available in the browser.",
 }
@@ -254,6 +255,12 @@ def _input_formats() -> list[dict[str, Any]]:
     return formats
 
 
+def find_package_wheel() -> str | None:
+    """Return the generated package wheel filename when the deploy build created one."""
+    wheels = sorted(GENERATED_ROOT.glob("datamodel_code_generator-*.whl"), key=lambda path: path.stat().st_mtime)
+    return wheels[-1].name if wheels else None
+
+
 def build_metadata() -> dict[str, Any]:
     """Return playground metadata derived from the current CLI parser."""
     category_values = {category.value for category in OptionCategory}
@@ -279,11 +286,14 @@ def build_metadata() -> dict[str, Any]:
         for category in CATEGORY_ORDER
         if any(option["category"] == category for option in options)
     ]
-    return {
+    metadata = {
         "formats": _input_formats(),
         "options": options,
         "groups": groups,
     }
+    if package_wheel := find_package_wheel():
+        metadata["package_wheel"] = package_wheel
+    return metadata
 
 
 def _load_playground_app() -> Any:

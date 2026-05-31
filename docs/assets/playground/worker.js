@@ -5,6 +5,15 @@ const PYODIDE_VERSION = "314.0.0-alpha.2";
 const PYODIDE_INDEX = "https://cdn.jsdelivr.net/pyodide/v314.0.0a2/full/";
 const PYPI_JSON_BASE = "https://pypi.org/pypi";
 const MICROPIP_VERSION = "0.11.1";
+const PYTHON_RUNTIME_PACKAGES = [
+  "genson>=1.2.1,<2",
+  "graphql-core>=3.2.3",
+  "inflect>=4.1,<8",
+  "jinja2>=2.10.1,<4",
+  "pydantic>=2.12,<3",
+  "pyyaml>=6.0.1",
+  "tdom",
+];
 
 let pyodideReadyPromise = null;
 let bootInfo = null;
@@ -28,6 +37,9 @@ async function findWheelUrl(project, version, matcher) {
 }
 
 async function initPyodide() {
+  const metadataJson = await (await fetch("./generated/codegen-ui-metadata.json")).text();
+  const metadata = JSON.parse(metadataJson);
+
   postStatus("Loading Pyodide...");
   const pyodide = await loadPyodide({ indexURL: PYODIDE_INDEX });
 
@@ -37,17 +49,24 @@ async function initPyodide() {
   );
   await pyodide.loadPackage(micropipWheel);
 
-  postStatus("Installing generator and tdom from PyPI...");
+  postStatus("Installing generator runtime from PyPI...");
   await pyodide.runPythonAsync(`
 import micropip
-await micropip.install([
-    "datamodel-code-generator[graphql]",
-    "tdom",
-])
+await micropip.install(${JSON.stringify(PYTHON_RUNTIME_PACKAGES)})
 `);
 
+  const packageSource = metadata.package_wheel
+    ? `./generated/${metadata.package_wheel}`
+    : "datamodel-code-generator";
+  postStatus("Installing datamodel-code-generator...");
+  pyodide.globals.set("package_source", packageSource);
+  await pyodide.runPythonAsync(`
+import micropip
+await micropip.install(package_source, deps=False)
+`);
+  pyodide.globals.delete("package_source");
+
   const appSource = await (await fetch("./app.py")).text();
-  const metadataJson = await (await fetch("./generated/codegen-ui-metadata.json")).text();
   pyodide.runPython(appSource);
   pyodide.globals.get("set_ui_metadata")(metadataJson);
 

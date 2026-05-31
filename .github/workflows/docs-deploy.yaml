@@ -48,6 +48,9 @@ jobs:
         run: python scripts/update_docs_version.py
         env:
           GH_TOKEN: ${{ github.token }}
+      - name: Build browser package wheel
+        if: inputs.deploy_branch != 'main'
+        run: uv build --wheel --out-dir docs/assets/playground/generated .
       - name: Build playground assets
         run: uv run --python 3.14 --group playground python scripts/build_playground_assets.py
       - name: Build site
