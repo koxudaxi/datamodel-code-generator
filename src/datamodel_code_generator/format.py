@@ -247,7 +247,10 @@ def _find_pyproject_toml(settings_path: Path) -> Path | None:
 
 def _get_builtin_line_length(settings_path: Path, explicit_line_length: int | None = None) -> int:
     if explicit_line_length is not None:
-        return explicit_line_length if _is_valid_builtin_line_length(explicit_line_length) else DEFAULT_LINE_LENGTH
+        if _is_valid_builtin_line_length(explicit_line_length):
+            return explicit_line_length
+        msg = "builtin_format_line_length must be a positive integer"
+        raise ValueError(msg)
 
     pyproject_toml_path = _find_pyproject_toml(settings_path)
     if pyproject_toml_path is None:

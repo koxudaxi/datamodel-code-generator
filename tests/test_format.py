@@ -163,30 +163,18 @@ def test_format_code_builtin_formatter_uses_explicit_line_length(
     )
 
 
-def test_format_code_builtin_formatter_ignores_invalid_explicit_line_length(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("line_length", [0, -1, True])
+def test_format_code_builtin_formatter_rejects_invalid_explicit_line_length(
+    line_length: int | bool, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Test built-in formatter ignores invalid explicit line length values."""
+    """Test built-in formatter rejects invalid explicit line length values."""
     monkeypatch.chdir(tmp_path)
-    formatter = CodeFormatter(
-        PythonVersionMin,
-        formatters=[Formatter.BUILTIN],
-        builtin_format_line_length=0,
-    )
-
-    formatted_code = formatter.format_code(
-        "from module import Zed, ExtremelyLongGeneratedTypeName, AnotherLongGeneratedTypeName, "
-        "GeneratedTypeNameThatDoesNotFitWithinDefaultLineLength\n"
-    )
-
-    assert formatted_code == (
-        "from module import (\n"
-        "    AnotherLongGeneratedTypeName,\n"
-        "    ExtremelyLongGeneratedTypeName,\n"
-        "    GeneratedTypeNameThatDoesNotFitWithinDefaultLineLength,\n"
-        "    Zed,\n"
-        ")\n"
-    )
+    with pytest.raises(ValueError, match="builtin_format_line_length must be a positive integer"):
+        CodeFormatter(
+            PythonVersionMin,
+            formatters=[Formatter.BUILTIN],
+            builtin_format_line_length=line_length,
+        )
 
 
 def test_format_code_builtin_formatter_uses_datamodel_codegen_line_length(

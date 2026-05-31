@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import sys
+import textwrap
 import time
 import warnings
 from argparse import Namespace
@@ -968,64 +969,137 @@ def _validate_output_files(
         return
     should_exec = not _should_skip_exec(extra_arguments, force_exec=force_exec_validation)
     if output_path.is_file() and output_path.suffix == ".py":
-        validate_generated_code(output_path.read_text(encoding="utf-8"), str(output_path), do_exec=should_exec)
+        validate_generated_code(output_path.read_text(encoding="utf-8"), str(output_path), do_exec=False)
+        if should_exec:
+            _import_generated_output(output_path)
     elif output_path.is_dir():  # pragma: no branch
         for python_file in output_path.rglob("*.py"):
             validate_generated_code(python_file.read_text(encoding="utf-8"), str(python_file), do_exec=False)
         if should_exec:
-            _import_package(output_path)
+            _import_generated_output(output_path)
 
 
-def _import_package(output_path: Path) -> None:
-    """Import generated packages to validate they can be loaded."""
-    if (output_path / "__init__.py").exists():
-        packages = [(output_path.parent, output_path.name)]
-    else:
-        packages = [  # pragma: no cover
-            (output_path, directory.name)
-            for directory in output_path.iterdir()
-            if directory.is_dir() and (directory / "__init__.py").exists()
-        ]
-    if not packages:  # pragma: no cover
-        return
+def _generated_output_import_code(output_path: Path) -> str:
+    return textwrap.dedent(
+        f"""
+        import importlib.util
+        import sys
+        from pathlib import Path
 
-    imported_modules: list[str] = []
+
+        def _import_file(path, module_name):
+            parent_directory = str(path.parent)
+            sys.path.insert(0, parent_directory)
+            try:
+                spec = importlib.util.spec_from_file_location(module_name, path)
+                if spec is None or spec.loader is None:
+                    raise ImportError(f"Unable to load generated module from {{path}}")
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[module_name] = module
+                spec.loader.exec_module(module)
+            finally:
+                if parent_directory in sys.path:
+                    sys.path.remove(parent_directory)
+                sys.modules.pop(module_name, None)
+
+
+        def _import_package(parent_directory, package_name):
+            package_path = parent_directory / package_name
+            parent_directory_value = str(parent_directory)
+            imported_modules = []
+            sys.path.insert(0, parent_directory_value)
+            try:
+                spec = importlib.util.spec_from_file_location(
+                    package_name,
+                    package_path / "__init__.py",
+                    submodule_search_locations=[str(package_path)],
+                )
+                if spec is None or spec.loader is None:
+                    raise ImportError(f"Unable to load generated package {{package_path}}")
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[package_name] = module
+                imported_modules.append(package_name)
+                spec.loader.exec_module(module)
+
+                for python_file in package_path.rglob("*.py"):
+                    if python_file.name == "__init__.py":
+                        continue
+                    relative_path = python_file.relative_to(package_path)
+                    module_name = f"{{package_name}}.{{'.'.join(relative_path.with_suffix('').parts)}}"
+                    submodule_spec = importlib.util.spec_from_file_location(module_name, python_file)
+                    if submodule_spec is None or submodule_spec.loader is None:
+                        raise ImportError(f"Unable to load generated module from {{python_file}}")
+                    submodule = importlib.util.module_from_spec(submodule_spec)
+                    sys.modules[module_name] = submodule
+                    imported_modules.append(module_name)
+                    submodule_spec.loader.exec_module(submodule)
+            finally:
+                if parent_directory_value in sys.path:
+                    sys.path.remove(parent_directory_value)
+                for module_name in reversed(imported_modules):
+                    sys.modules.pop(module_name, None)
+
+
+        output_path = Path({str(output_path)!r})
+        if output_path.is_file():
+            _import_file(output_path, "_datamodel_codegen_generated_output")
+        elif (output_path / "__init__.py").exists():
+            _import_package(output_path.parent, output_path.name)
+        else:
+            for directory in output_path.iterdir():
+                if directory.is_dir() and (directory / "__init__.py").exists():
+                    _import_package(output_path, directory.name)
+        """
+    )
+
+
+def _get_concurrent_interpreters_module() -> Any | None:
+    try:
+        from concurrent import interpreters
+    except ImportError:
+        return None
+    return interpreters
+
+
+def _is_subinterpreter_unsupported_import_error(exception: BaseException) -> bool:
+    messages = [str(exception)]
+    excinfo = getattr(exception, "excinfo", None)
+    if excinfo is not None:
+        messages.append(str(excinfo))
+    return any(
+        "does not support loading in subinterpreter" in message
+        or "does not support loading in subinterpreters" in message
+        for message in messages
+    )
+
+
+def _try_import_generated_output_in_subinterpreter(output_path: Path) -> bool:
+    interpreters = _get_concurrent_interpreters_module()
+    if interpreters is None:
+        return False
+
+    interpreter = interpreters.create()
+    try:
+        interpreter.exec(_generated_output_import_code(output_path))
+    except Exception as exception:
+        if _is_subinterpreter_unsupported_import_error(exception):
+            # Keep import validation active when an extension dependency cannot run in subinterpreters.
+            return False
+        raise
+    finally:
+        interpreter.close()
+    return True
+
+
+def _import_generated_output(output_path: Path) -> None:
     start_time = time.perf_counter()
     try:
-        for parent_directory, package_name in packages:
-            package_path = parent_directory / package_name
-            sys.path.insert(0, str(parent_directory))
-            spec = importlib.util.spec_from_file_location(
-                package_name, package_path / "__init__.py", submodule_search_locations=[str(package_path)]
-            )
-            if spec is None or spec.loader is None:  # pragma: no cover
-                continue
-            module = importlib.util.module_from_spec(spec)
-            sys.modules[package_name] = module
-            imported_modules.append(package_name)
-            spec.loader.exec_module(module)
-
-            for python_file in package_path.rglob("*.py"):
-                if python_file.name == "__init__.py":
-                    continue
-                relative_path = python_file.relative_to(package_path)
-                module_name = f"{package_name}.{'.'.join(relative_path.with_suffix('').parts)}"
-                submodule_spec = importlib.util.spec_from_file_location(module_name, python_file)
-                if submodule_spec is None or submodule_spec.loader is None:  # pragma: no cover
-                    continue
-                submodule = importlib.util.module_from_spec(submodule_spec)
-                sys.modules[module_name] = submodule
-                imported_modules.append(module_name)
-                submodule_spec.loader.exec_module(submodule)
+        if not _try_import_generated_output_in_subinterpreter(output_path):
+            exec(_generated_output_import_code(output_path), {})
         _validation_stats.record_exec(time.perf_counter() - start_time)
     except Exception as exception:  # pragma: no cover
         _validation_stats.record_error(str(output_path), f"{type(exception).__name__}: {exception}")
         raise
-    finally:
-        for parent_directory, _ in packages:
-            sys.path.remove(str(parent_directory))
-        for module_name in imported_modules:
-            sys.modules.pop(module_name, None)
 
 
 @contextmanager
