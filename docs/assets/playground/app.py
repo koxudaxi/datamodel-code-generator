@@ -344,7 +344,7 @@ def _split_delimited(value: Any) -> list[str]:
 
 
 def _coerce_option_value(option: dict[str, Any], value: Any) -> Any:
-    """Coerce a form value by widget type. Used for the CLI command and pyproject.toml export."""
+    """Coerce a form value by widget type. Used for the CLI command text."""
     if value == "" or value is None or value == []:
         return None
 
@@ -390,17 +390,27 @@ def _coerce_for_generate(option: dict[str, Any], value: Any) -> Any:
     return coerced
 
 
+def _coerce_for_config(option: dict[str, Any], value: Any) -> Any:
+    """Coerce a form value into a structured config value without renaming its CLI key."""
+    return _coerce_for_generate(option, value)
+
+
 def _normalize_options(
-    options: dict[str, Any], *, include_forced: bool = True, for_generate: bool = False
+    options: dict[str, Any], *, include_forced: bool = True, for_config: bool = False, for_generate: bool = False
 ) -> dict[str, Any]:
-    # for_generate=True keys by the generate() field name and coerces to its type; otherwise keys by
-    # the CLI dest with widget-level coercion (for the CLI command and pyproject.toml export).
+    # for_generate=True keys by the generate() field name; for_config=True keeps the CLI dest but
+    # emits structured values for TOML import/export. The default path is for CLI command text.
     options_by_dest = _options_by_dest()
     normalized: dict[str, Any] = {}
     for key, value in options.items():
         if (option := options_by_dest.get(key)) is None:
             continue
-        normalized_value = _coerce_for_generate(option, value) if for_generate else _coerce_option_value(option, value)
+        if for_generate:
+            normalized_value = _coerce_for_generate(option, value)
+        elif for_config:
+            normalized_value = _coerce_for_config(option, value)
+        else:
+            normalized_value = _coerce_option_value(option, value)
         if normalized_value is None or normalized_value == []:
             continue
         normalized[option.get("config_dest", key) if for_generate else key] = normalized_value
@@ -410,6 +420,14 @@ def _normalize_options(
 
 
 def _config_options(options_json: str = "{}", input_type: str = "") -> dict[str, Any]:
+    options = json.loads(options_json) if options_json else {}
+    normalized_options = _normalize_options(options, include_forced=False, for_config=True)
+    if input_type and input_type != "auto":
+        normalized_options["input_file_type"] = input_type
+    return normalized_options
+
+
+def _cli_options(options_json: str = "{}", input_type: str = "") -> dict[str, Any]:
     options = json.loads(options_json) if options_json else {}
     normalized_options = _normalize_options(options, include_forced=False)
     if input_type and input_type != "auto":
@@ -447,7 +465,7 @@ def export_config_toml(options_json: str = "{}", input_type: str = "") -> str:
 
 
 def build_cli_options(options_json: str = "{}", input_type: str = "") -> str:
-    return generate_cli_command(_config_options(options_json, input_type)).strip()
+    return generate_cli_command(_cli_options(options_json, input_type)).strip()
 
 
 def _json_result(**payload: Any) -> str:
@@ -457,6 +475,19 @@ def _json_result(**payload: Any) -> str:
 def _config_table(data: dict[str, Any]) -> dict[str, Any]:
     tool_config = data.get("tool", {}).get("datamodel-codegen")
     return tool_config if isinstance(tool_config, dict) else data
+
+
+def _form_option_value(option: dict[str, Any], value: Any) -> Any:
+    """Convert a TOML value back into the text shape used by the option form."""
+    match option.get("value_kind"), value:
+        case "key_value", dict():
+            return "\n".join(f"{key}={item}" for key, item in value.items())
+        case "json", dict() | list():
+            return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+        case "collection", list() | tuple() | set():
+            separator = "\n" if option["control"] == "list" else ","
+            return separator.join(str(item) for item in value)
+    return value
 
 
 def import_config_toml(config_toml: str) -> str:
@@ -483,7 +514,7 @@ def import_config_toml(config_toml: str) -> str:
                 case _ if key in EXCLUDED_CONFIG_OPTIONS or key not in options_by_dest:
                     ignored.append(str(raw_key))
                 case _:
-                    imported_options[key] = value
+                    imported_options[key] = _form_option_value(options_by_dest[key], value)
 
         return _json_result(ok=True, inputType=input_type, options=imported_options, ignored=ignored)
     except Exception as exc:
