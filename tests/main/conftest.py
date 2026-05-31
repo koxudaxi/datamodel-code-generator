@@ -436,6 +436,7 @@ def _assert_builtin_generate_formatter_parity(
     input_: Path,
     output_path: Path,
     generate_options: dict[str, Any],
+    expected_warnings: Sequence[str] | None = None,
 ) -> None:
     if os.environ.get(_BUILTIN_FORMATTER_PARITY_ENV) != "1":
         return
@@ -449,7 +450,13 @@ def _assert_builtin_generate_formatter_parity(
         "output": builtin_output_path,
         "formatters": [Formatter.BUILTIN],
     }
-    generate(input_=input_, **builtin_options)
+    if expected_warnings is None:
+        generate(input_=input_, **builtin_options)
+    else:
+        with warnings.catch_warnings(record=True) as warning_records:
+            warnings.simplefilter("always")
+            generate(input_=input_, **builtin_options)
+        assert_warnings_contain(warning_records, *expected_warnings)
     _assert_same_generated_python(output_path, builtin_output_path)
     _clear_builtin_formatter_parity_output(builtin_output_path)
 
@@ -664,6 +671,7 @@ def run_generate_file_and_assert(
         input_=input_,
         output_path=output_path,
         generate_options=generate_options,
+        expected_warnings=expected_warnings,
     )
 
 

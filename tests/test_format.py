@@ -919,7 +919,9 @@ def test_apply_builtin_formatter_handles_remaining_generated_edges() -> None:
         '        | Annotated[VeryLongAnnotatedTypeName, Field(description="x")]\n'
         "    ) = DEFAULT\n"
         "    simple_union: (\n"
-        "        VeryLongPlainTypeName | OtherVeryLongPlainTypeName | None\n"
+        "        VeryLongPlainTypeName\n"
+        "        | OtherVeryLongPlainTypeName\n"
+        "        | None\n"
         "    ) = DEFAULT\n"
         "\n"
         "Alias = TypeAliasType(\n"

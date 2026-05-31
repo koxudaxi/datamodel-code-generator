@@ -351,7 +351,7 @@ def _format_import_node_without_reordering(
     node: ast.Import | ast.ImportFrom,
     lines: list[str],
     known_first_party: frozenset[str] = DEFAULT_KNOWN_FIRST_PARTY,
-) -> tuple[int, str]:
+) -> tuple[_ImportCategory, str]:
     end_lineno = node.end_lineno or node.lineno
     raw_import = "\n".join(lines[node.lineno - 1 : end_lineno])
     if isinstance(node, ast.Import):
@@ -365,7 +365,7 @@ def _format_import_node(
     node: ast.Import | ast.ImportFrom,
     line_length: int,
     known_first_party: frozenset[str] = DEFAULT_KNOWN_FIRST_PARTY,
-) -> tuple[int, str]:
+) -> tuple[_ImportCategory, str]:
     if isinstance(node, ast.Import):
         lines = [f"import {_format_alias(alias)}" for alias in sorted(node.names, key=lambda alias: alias.name)]
         category = min(_import_category(alias.name, 0, known_first_party) for alias in node.names)
@@ -739,7 +739,7 @@ def _should_format_constrained_string_union(
 
 def _can_parenthesize_field_value(annotation: ast.AST, target: str) -> bool:
     if isinstance(annotation, ast.BinOp):
-        return True
+        return False
     if _is_constrained_string_call(annotation):
         return target != "root"
     return not _contains_constrained_string_call(annotation)
@@ -770,6 +770,113 @@ def _should_format_union_annotation(
             )
         )
     )
+
+
+def _iter_bit_or_elements(node: ast.AST) -> list[ast.AST]:
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+        return [*_iter_bit_or_elements(node.left), *_iter_bit_or_elements(node.right)]
+    return [node]
+
+
+def _format_bit_or_element(
+    element: ast.AST,
+    indent: str,
+    line_length: int,
+    source: str,
+    prefix: str = "",
+) -> list[str]:
+    element_source = _source_segment(source, element)
+    if not isinstance(element, ast.Subscript) or len(f"{indent}{prefix}{element_source}") <= line_length:
+        return [f"{indent}{prefix}{element_source}"]
+
+    value = _source_segment(source, element.value)
+    elements = _iter_subscript_elements(element)
+    trailing_comma = isinstance(element.slice, ast.Tuple)
+    formatted_lines = [f"{indent}{prefix}{value}["]
+    formatted_lines.extend(
+        f"{indent}    {_source_segment(source, subscript_element)}{',' if trailing_comma else ''}"
+        for subscript_element in elements
+    )
+    formatted_lines.append(f"{indent}]")
+    return formatted_lines
+
+
+def _format_bit_or_elements(annotation: ast.BinOp, indent: str, line_length: int, source: str) -> list[str]:
+    elements = _iter_bit_or_elements(annotation)
+    formatted_elements = _format_bit_or_element(elements[0], indent, line_length, source)
+    for element in elements[1:]:
+        formatted_elements.extend(_format_bit_or_element(element, indent, line_length, source, "| "))
+    return formatted_elements
+
+
+def _format_parenthesized_bit_or_annotation(
+    annotation: ast.BinOp,
+    indent: str,
+    line_length: int,
+    source: str,
+) -> str:
+    annotation_source = _source_segment(source, annotation)
+    if len(f"{indent}    {annotation_source}") <= line_length:
+        formatted_annotation = f"{indent}    {annotation_source}"
+    else:
+        formatted_annotation = "\n".join(_format_bit_or_elements(annotation, f"{indent}    ", line_length, source))
+    return f"(\n{formatted_annotation}\n{indent})"
+
+
+def _should_format_field_bit_or_annotation_assignment(
+    statement: ast.AnnAssign,
+    field_prefix: str,
+    annotation: str,
+    line_length: int,
+    source: str,
+) -> bool:
+    value_node = statement.value
+    if (
+        not isinstance(statement.annotation, ast.BinOp)
+        or not isinstance(statement.annotation.op, ast.BitOr)
+        or not _is_call(value_node, "Field")
+    ):
+        return False
+
+    call_start = f"{_source_segment(source, value_node.func)}("
+    return len(f"{field_prefix}{annotation} = {call_start}") > line_length
+
+
+def _should_format_string_bit_or_annotation_assignment(
+    statement: ast.AnnAssign,
+    field_prefix: str,
+    annotation: str,
+    line_length: int,
+    source: str,
+) -> bool:
+    return (
+        isinstance(statement.annotation, ast.BinOp)
+        and isinstance(statement.annotation.op, ast.BitOr)
+        and isinstance(statement.value, ast.Constant)
+        and isinstance(statement.value.value, str)
+        and len(f"{field_prefix}{annotation} = {_source_segment(source, statement.value)}") > line_length
+        and len(f"{field_prefix}{annotation} = (") > line_length
+    )
+
+
+def _format_bit_or_annotation_assignment(
+    statement: ast.AnnAssign,
+    field_prefix: str,
+    line_length: int,
+    source: str,
+) -> str:
+    value_node = statement.value
+    assert isinstance(statement.annotation, ast.BinOp)
+    assert value_node is not None
+    indent = field_prefix[: len(field_prefix) - len(field_prefix.lstrip())]
+    value = _source_segment(source, value_node)
+    formatted_annotation = _format_parenthesized_bit_or_annotation(
+        statement.annotation,
+        indent,
+        line_length,
+        source,
+    )
+    return f"{field_prefix}{formatted_annotation} = {value}"
 
 
 def _iter_subscript_elements(node: ast.Subscript) -> list[ast.AST]:
@@ -869,14 +976,32 @@ def _format_generated_class_statement(  # noqa: PLR0911, PLR0912
                 f"{indent}{target}: "
                 f"{_format_constrained_string_union(statement.annotation, indent, line_length, source)} = {value}"
             )
-        if (
-            isinstance(statement.annotation, ast.BinOp)
-            and isinstance(statement.annotation.op, ast.BitOr)
-            and _is_call(statement.value, "Field")
-            and len(f"{indent}{target}: {annotation}") > line_length
+        if _should_format_field_bit_or_annotation_assignment(
+            statement,
+            f"{indent}{target}: ",
+            annotation,
+            line_length,
+            source,
         ):
-            value = _source_segment(source, statement.value)
-            return f"{indent}{target}: (\n{indent}    {annotation}\n{indent}) = {value}"
+            return _format_bit_or_annotation_assignment(
+                statement,
+                f"{indent}{target}: ",
+                line_length,
+                source,
+            )
+        if _should_format_string_bit_or_annotation_assignment(
+            statement,
+            f"{indent}{target}: ",
+            annotation,
+            line_length,
+            source,
+        ):
+            return _format_bit_or_annotation_assignment(
+                statement,
+                f"{indent}{target}: ",
+                line_length,
+                source,
+            )
         if (
             isinstance(statement.annotation, ast.BinOp)
             and isinstance(statement.annotation.op, ast.BitOr)
@@ -1041,7 +1166,7 @@ def _format_annotated_union(annotation: ast.BinOp, indent: str, line_length: int
         return (
             f"(\n{indent}    {_source_segment(source, left)}\n{indent}    | {_source_segment(source, right)}\n{indent})"
         )
-    return f"(\n{indent}    {_source_segment(source, annotation)}\n{indent})"
+    return _format_parenthesized_bit_or_annotation(annotation, indent, line_length, source)
 
 
 def _format_list_of_annotated(annotation: ast.Subscript, indent: str, line_length: int, source: str) -> str:
@@ -1163,6 +1288,21 @@ def _format_root_model_constrained_union_base(
     return "\n".join(formatted_lines)
 
 
+def _format_root_model_union_base(
+    base: ast.Subscript,
+    indent: str,
+    line_length: int,
+    source: str,
+) -> str:
+    continuation_indent = f"{indent}    "
+    inner_indent = f"{continuation_indent}    "
+    assert isinstance(base.slice, ast.BinOp)
+    formatted_lines = ["RootModel["]
+    formatted_lines.extend(_format_bit_or_elements(base.slice, inner_indent, line_length, source))
+    formatted_lines.append(f"{continuation_indent}]")
+    return "\n".join(formatted_lines)
+
+
 def _format_generated_class_definition(
     statement: ast.ClassDef,
     line: str,
@@ -1181,6 +1321,13 @@ def _format_generated_class_definition(
 
     if _is_root_model_constrained_union(statement.bases[0]):
         base = _format_root_model_constrained_union_base(statement.bases[0], indent, line_length, source)
+    elif (
+        isinstance(statement.bases[0], ast.Subscript)
+        and _is_name_or_attr(statement.bases[0].value, "RootModel")
+        and isinstance(statement.bases[0].slice, ast.BinOp)
+        and isinstance(statement.bases[0].slice.op, ast.BitOr)
+    ):
+        base = _format_root_model_union_base(statement.bases[0], indent, line_length, source)
     elif _is_name_or_attr(statement.bases[0], "RootModel") or (
         isinstance(statement.bases[0], ast.Subscript) and _is_name_or_attr(statement.bases[0].value, "RootModel")
     ):
