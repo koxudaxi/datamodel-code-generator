@@ -619,6 +619,18 @@ def test_apply_builtin_formatter_normalizes_type_alias_blank_lines_without_impor
     assert apply_builtin_formatter(code) == "type Foo = str\n\n\ntype Bar = Foo\n"
 
 
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="type statements require Python 3.12")
+def test_builtin_formatter_respects_target_python_version_for_ast_parse() -> None:
+    """Test built-in formatter parses code using the configured target Python version."""
+    code = "type Foo = str\n\n\n\ntype Bar = Foo\n"
+
+    py310_formatter = CodeFormatter(PythonVersion.PY_310, formatters=[Formatter.BUILTIN])
+    py312_formatter = CodeFormatter(PythonVersion.PY_312, formatters=[Formatter.BUILTIN])
+
+    assert py310_formatter.format_code(code) == code
+    assert py312_formatter.format_code(code) == "type Foo = str\n\n\ntype Bar = Foo\n"
+
+
 def test_apply_builtin_formatter_parenthesizes_short_annotated_default() -> None:
     """Test built-in formatter matches black for short overflowing Annotated defaults."""
     code = (

@@ -13,7 +13,7 @@ import subprocess  # noqa: S404
 import sys
 import tokenize
 from collections import defaultdict
-from enum import Enum
+from enum import Enum, IntEnum
 from functools import cached_property, lru_cache
 from importlib import import_module
 from io import StringIO
@@ -69,6 +69,20 @@ class DateClassType(Enum):
     Date = "date"
     Pastdate = "PastDate"
     Futuredate = "FutureDate"
+
+
+class _AliasSortCategory(IntEnum):
+    CONSTANT = 0
+    CLASS = 1
+    OTHER = 2
+
+
+class _ImportCategory(IntEnum):
+    FUTURE = 0
+    STANDARD_LIBRARY = 1
+    THIRD_PARTY = 2
+    FIRST_PARTY = 3
+    LOCAL = 4
 
 
 class PythonVersion(Enum):
@@ -295,14 +309,14 @@ def _alias_imported_name(alias: str) -> str:
     return alias
 
 
-def _alias_sort_key(alias: str) -> tuple[int, str]:
+def _alias_sort_key(alias: str) -> tuple[_AliasSortCategory, str]:
     name = _alias_imported_name(alias)
     if name.isupper():
-        category = 0
+        category = _AliasSortCategory.CONSTANT
     elif name[:1].isupper():
-        category = 1
+        category = _AliasSortCategory.CLASS
     else:
-        category = 2
+        category = _AliasSortCategory.OTHER
     return category, name.lower()
 
 
@@ -314,17 +328,17 @@ def _format_from_import(module: str, aliases: list[str], line_length: int) -> st
     return f"from {module} import (\n{imports}\n)"
 
 
-def _import_category(module: str, level: int, known_first_party: frozenset[str]) -> int:
+def _import_category(module: str, level: int, known_first_party: frozenset[str]) -> _ImportCategory:
     if module == "__future__":
-        return 0
+        return _ImportCategory.FUTURE
     if level:
-        return 4
+        return _ImportCategory.LOCAL
     top_level_module = module.split(".", 1)[0]
     if top_level_module in sys.stdlib_module_names:
-        return 1
+        return _ImportCategory.STANDARD_LIBRARY
     if top_level_module in known_first_party:
-        return 3
-    return 2
+        return _ImportCategory.FIRST_PARTY
+    return _ImportCategory.THIRD_PARTY
 
 
 def _has_inline_comment(lines: list[str], node: ast.AST) -> bool:
@@ -413,16 +427,16 @@ def _iter_aliased_from_import_lines(
         yield _format_from_import(module, chunk, line_length)
 
 
-def _import_line_sort_key(line: str) -> tuple[int, int, str, str]:
+def _import_line_sort_key(line: str) -> tuple[int, int, str, int, str, str]:
     if not line.startswith("from "):
-        return 0, 0, line.lower(), line
+        return 0, 0, line.lower(), 0, "", line
 
     module, _, imported = line.removeprefix("from ").partition(" import ")
     relative_level = len(module) - len(module.lstrip("."))
-    import_key = _alias_sort_key(imported.split(",", 1)[0].strip())
+    alias_category, alias_name = _alias_sort_key(imported.split(",", 1)[0].strip())
     if relative_level:
-        return 1, -relative_level, module[relative_level:].lower(), f"{import_key!r}:{line.lower()}"
-    return 1, 0, module.lower(), f"{import_key!r}:{line.lower()}"
+        return 1, -relative_level, module[relative_level:].lower(), int(alias_category), alias_name, line.lower()
+    return 1, 0, module.lower(), int(alias_category), alias_name, line.lower()
 
 
 def _build_builtin_import_block(
@@ -431,9 +445,9 @@ def _build_builtin_import_block(
     lines: list[str],
     known_first_party: frozenset[str],
 ) -> str:
-    categorized_lines: defaultdict[int, set[str]] = defaultdict(set)
-    grouped_from_imports: defaultdict[tuple[int, int, str], set[str]] = defaultdict(set)
-    aliased_from_imports: defaultdict[tuple[int, int, str], list[tuple[int, str, bool]]] = defaultdict(list)
+    categorized_lines: defaultdict[_ImportCategory, set[str]] = defaultdict(set)
+    grouped_from_imports: defaultdict[tuple[_ImportCategory, int, str], set[str]] = defaultdict(set)
+    aliased_from_imports: defaultdict[tuple[_ImportCategory, int, str], list[tuple[int, str, bool]]] = defaultdict(list)
     aliased_modules = _modules_with_aliased_imports(import_nodes)
 
     for node_index, node in enumerate(import_nodes):
@@ -1414,13 +1428,14 @@ def _normalize_string_quotes(code: str) -> str:
     return tokenize.untokenize(tokens)
 
 
-def apply_builtin_formatter(
+def apply_builtin_formatter(  # noqa: PLR0913
     code: str,
     *,
     line_length: int = DEFAULT_LINE_LENGTH,
     known_first_party: frozenset[str] = DEFAULT_KNOWN_FIRST_PARTY,
     wrap_string_literal: bool = False,
     string_normalization: bool = False,
+    python_version: PythonVersion | None = None,
 ) -> str:
     """Apply dependency-free formatting for generated Python code."""
     lines = [line.rstrip() for line in code.splitlines()]
@@ -1429,7 +1444,7 @@ def apply_builtin_formatter(
         return ""
 
     try:
-        tree = ast.parse(code)
+        tree = ast.parse(code, feature_version=python_version.version_key if python_version is not None else None)
     except SyntaxError:
         return f"{code}\n"
 
@@ -1530,6 +1545,7 @@ class CodeFormatter:
         self.defer_formatting = defer_formatting
         self.encoding = encoding
         self.use_type_checking_imports = use_type_checking_imports
+        self.python_version = python_version
 
         has_external_formatter = bool(EXTERNAL_FORMATTERS.intersection(formatters))
         if Formatter.BUILTIN in formatters and has_external_formatter:
@@ -1655,6 +1671,7 @@ class CodeFormatter:
                 known_first_party=self.builtin_known_first_party,
                 wrap_string_literal=self.builtin_wrap_string_literal,
                 string_normalization=self.builtin_string_normalization,
+                python_version=self.python_version,
             )
         if Formatter.BLACK in self.formatters:
             code = self.apply_black(code)
@@ -1683,13 +1700,14 @@ class CodeFormatter:
         )
 
     @staticmethod
-    def apply_builtin_formatter(
+    def apply_builtin_formatter(  # noqa: PLR0913
         code: str,
         *,
         line_length: int = DEFAULT_LINE_LENGTH,
         known_first_party: frozenset[str] = DEFAULT_KNOWN_FIRST_PARTY,
         wrap_string_literal: bool = False,
         string_normalization: bool = False,
+        python_version: PythonVersion | None = None,
     ) -> str:
         """Format generated code without external formatter dependencies."""
         return apply_builtin_formatter(
@@ -1698,6 +1716,7 @@ class CodeFormatter:
             known_first_party=known_first_party,
             wrap_string_literal=wrap_string_literal,
             string_normalization=string_normalization,
+            python_version=python_version,
         )
 
     def apply_ruff_lint(self, code: str) -> str:
