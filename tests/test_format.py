@@ -862,6 +862,8 @@ def test_apply_builtin_formatter_handles_remaining_generated_edges() -> None:
     code = (
         "class Model:\n"
         "    very_long_attribute_name: VeryLongPlainAnnotation = DEFAULT_VALUE\n"
+        "    field_with_long_value: VeryLongPlainAnnotation = "
+        "Field(..., description='long generated field', title='Long Field')\n"
         "    empty_value_with_long_name: VeryLongPlainAnnotation\n"
         "\n"
         "    data: dict[str, type] = {**BASE_FIELDS, 'id': str, 'name': str}\n"
@@ -884,6 +886,13 @@ def test_apply_builtin_formatter_handles_remaining_generated_edges() -> None:
         "class Model:\n"
         "    very_long_attribute_name: VeryLongPlainAnnotation = (\n"
         "        DEFAULT_VALUE\n"
+        "    )\n"
+        "    field_with_long_value: VeryLongPlainAnnotation = (\n"
+        "        Field(\n"
+        "            ...,\n"
+        '            description="long generated field",\n'
+        '            title="Long Field",\n'
+        "        )\n"
         "    )\n"
         "    empty_value_with_long_name: VeryLongPlainAnnotation\n"
         "\n"
