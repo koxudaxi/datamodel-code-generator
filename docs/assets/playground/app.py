@@ -275,6 +275,7 @@ def App(
           <{ActionButton} action="toggle-header" label="Compact Header" id="toggle-header" />
           <{ActionButton} action="toggle-workspace" label="Hide Editors" id="toggle-workspace" />
           <{ActionButton} action="copy-cli" label="Copy CLI" id="copy-cli" disabled={True} />
+          <{ActionButton} action="copy-repro-url" label="Copy Repro URL" id="copy-repro-url" />
           <{ActionButton} action="config" label="pyproject.toml" id="config" disabled={True} />
           <{ActionButton} action="auto-generate" label="Auto Generate: On" id="auto-generate" disabled={True} />
           <{ActionButton} action="generate" label="Generate" disabled={True} id="generate" />
