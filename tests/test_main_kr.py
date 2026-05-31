@@ -1679,8 +1679,8 @@ def test_encoding_option(output_file: Path) -> None:
     option_description="""Specify code formatters to apply to generated output.
 
 The `--formatters` flag specifies which code formatters to apply to
-the generated Python code. Available formatters are: black, isort,
-ruff, yapf, autopep8, autoflake. Default is [black, isort].
+the generated Python code. Available formatters are: builtin, black,
+isort, ruff-check, ruff-format. Default is [black, isort].
 Use this to customize formatting or disable formatters entirely.""",
     input_schema="jsonschema/pet_simple.json",
     cli_args=["--formatters", "isort"],
@@ -1691,8 +1691,8 @@ def test_formatters_option(output_file: Path) -> None:
     """Specify code formatters to apply to generated output.
 
     The `--formatters` flag specifies which code formatters to apply to
-    the generated Python code. Available formatters are: black, isort,
-    ruff, yapf, autopep8, autoflake. Default is [black, isort].
+    the generated Python code. Available formatters are: builtin, black,
+    isort, ruff-check, ruff-format. Default is [black, isort].
     Use this to customize formatting or disable formatters entirely.
     """
     run_main_and_assert(

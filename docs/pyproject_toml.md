@@ -17,6 +17,27 @@ field-constraints = true
 
 All CLI options can be used in `pyproject.toml` by converting them to kebab-case (e.g., `--snake-case-field` becomes `snake-case-field`).
 
+## Formatter settings
+
+Formatter selection is configured with the same keys as the CLI:
+
+```toml
+[tool.datamodel-codegen]
+formatters = ["builtin"]
+builtin-format-line-length = 100
+```
+
+`builtin-format-line-length` is used only by the built-in formatter. It controls wrapping for `from ... import ...` statements and generated model statements.
+
+If it is not set, the built-in formatter reads existing formatter settings in this order:
+
+1. `[tool.ruff].line-length`
+2. `[tool.black].line-length`
+3. `[tool.isort].line_length`
+4. `88`
+
+See [Formatter Behavior](formatter-behavior.md) for the full built-in formatter scope.
+
 ## 📋 Named Profiles
 
 You can define multiple named profiles for different use cases within a single project:

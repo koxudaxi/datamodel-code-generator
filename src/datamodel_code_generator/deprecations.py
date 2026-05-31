@@ -99,10 +99,10 @@ DEPRECATIONS: dict[DeprecationId, Deprecation] = {
         id="format.default-formatters",
         kind="behavior",
         target="Default formatters",
-        message="The default formatters (black, isort) will be replaced by ruff in a future version.",
+        message="The default external formatters (black, isort) will become opt-in in a future version.",
         warning_since="0.52.0",
         removal_version=None,
-        replacement="Set formatters explicitly, for example ruff-format and ruff-check.",
+        replacement="Set formatters explicitly, for example black and isort or builtin.",
         warning_category="FutureWarning",
     ),
     "config.yaml-non-lowercase-bool": Deprecation(

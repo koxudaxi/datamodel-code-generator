@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import warnings
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -26,9 +27,41 @@ def load_toml(path: Path) -> dict[str, Any]:
 
 _YAML_1_2_BOOL_PATTERN = re.compile(r"^(?:true|false|True|False|TRUE|FALSE)$")
 _YAML_DEPRECATED_BOOL_VALUES = {"True", "False", "TRUE", "FALSE"}
+_YAML_DEPRECATED_BOOL_WARNING_VALUES = ("True", "False", "TRUE", "FALSE")
+_YAML_DEPRECATED_BOOL_LINE_PATTERN = re.compile(r"(?m)(?::|-\s*)\s*(True|False|TRUE|FALSE)(?:\s*(?:#.*)?)$")
+_YAML_DEPRECATED_BOOL_WARNING_MESSAGE = "YAML bool "
+_YAML_DEPRECATED_BOOL_WARNING_MODULE = "datamodel_code_generator"
 # Pattern for scientific notation without decimal point (e.g., 1e-5, 1E+10)
 # Standard YAML only matches floats with decimal points, missing patterns like "1e-5"
 _YAML_SCIENTIFIC_NOTATION_PATTERN = re.compile(r"^[-+]?[0-9][0-9_]*[eE][-+]?[0-9]+$")
+
+
+def _is_yaml_deprecated_bool_warning_enabled() -> bool:
+    for action, message, category, module, _ in warnings.filters:
+        if not issubclass(DeprecationWarning, category):
+            continue
+        if message is not None and not message.match(_YAML_DEPRECATED_BOOL_WARNING_MESSAGE):
+            continue
+        if module is not None and not module.match(_YAML_DEPRECATED_BOOL_WARNING_MODULE):
+            continue
+        return action != "ignore"
+    return True
+
+
+def warn_yaml_deprecated_bool_values(text: str) -> None:
+    """Warn for YAML 1.1-style boolean scalars when ryaml is used."""
+    if not _is_yaml_deprecated_bool_warning_enabled() or not any(
+        value in text for value in _YAML_DEPRECATED_BOOL_WARNING_VALUES
+    ):
+        return
+
+    for match in _YAML_DEPRECATED_BOOL_LINE_PATTERN.finditer(text):
+        warnings.warn(
+            f"YAML bool '{match.group(1)}' is deprecated. Use lowercase 'true' or 'false' instead. "
+            f"In a future version, only lowercase booleans will be recognized.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
 
 
 def _construct_yaml_bool_with_warning(loader: Any, node: Any) -> bool:

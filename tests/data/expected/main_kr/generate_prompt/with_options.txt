@@ -220,8 +220,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         "path/to/schema.yaml=mypackage.models". When a $ref
                         points to a mapped file, an import statement is
                         generated instead of a class definition.
-  --formatters {black,isort,ruff-check,ruff-format} [{black,isort,ruff-check,ruff-format} ...]
-                        Formatters for output (default: [black, isort])
+  --formatters {builtin,black,isort,ruff-check,ruff-format} [{builtin,black,isort,ruff-check,ruff-format} ...]
+                        Formatters for output (default: [black, isort]; use
+                        builtin for dependency-free formatting)
   --http-headers HTTP_HEADER [HTTP_HEADER ...]
                         Set headers in HTTP requests to the remote host.
                         (example: "Authorization: Basic dXNlcjpwYXNz")

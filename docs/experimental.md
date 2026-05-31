@@ -6,12 +6,23 @@ This page lists features that are available but still experimental.
 
 | ID | Kind | Target | Since | Tracking |
 |----|------|--------|-------|----------|
+| `formatter.builtin` | formatter | `--formatters builtin` | 0.59.0 | - |
 | `input-format.asyncapi` | input-format | `--input-file-type asyncapi` | 0.59.0 | - |
 | `input-format.avro` | input-format | `--input-file-type avro` | 0.59.0 | - |
 | `input-format.protobuf` | input-format | `--input-file-type protobuf` | 0.59.0 | - |
 | `input-format.xmlschema` | input-format | `--input-file-type xmlschema` | 0.59.0 | - |
 
 ## Details
+
+### `formatter.builtin`
+
+- **Kind:** formatter
+- **Target:** `--formatters builtin`
+- **Since:** 0.59.0
+
+The internal formatter is experimental and may change as generated-output coverage is expanded.
+
+The formatter is designed for generated model modules and is not a general-purpose Python formatter.
 
 ### `input-format.asyncapi`
 

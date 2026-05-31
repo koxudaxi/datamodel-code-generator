@@ -15,10 +15,13 @@ import pytest
 
 from datamodel_code_generator.format import PythonVersion, is_supported_in_black
 
+from . import conftest as main_conftest
 from .conftest import (
     CURRENT_PYTHON_VERSION,
     JSON_SCHEMA_DATA_PATH,
     OPEN_API_DATA_PATH,
+    _try_import_generated_output_in_subinterpreter,
+    _validate_output_files,
     get_current_version_args,
     run_main_and_assert,
 )
@@ -31,6 +34,32 @@ _SKIP_BLACK = pytest.mark.skipif(
     not is_supported_in_black(_CURRENT_PY_VERSION),
     reason=f"Installed black doesn't support Python {CURRENT_PYTHON_VERSION}",
 )
+
+
+class _FakeInterpreter:
+    def __init__(self, error: Exception | None = None) -> None:
+        self.error = error
+        self.executed_code = ""
+        self.closed = False
+
+    def exec(self, code: str) -> None:
+        self.executed_code = code
+        if self.error is not None:
+            raise self.error
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class _FakeInterpreters:
+    def __init__(self, error: Exception | None = None) -> None:
+        self.error = error
+        self.instances: list[_FakeInterpreter] = []
+
+    def create(self) -> _FakeInterpreter:
+        interpreter = _FakeInterpreter(self.error)
+        self.instances.append(interpreter)
+        return interpreter
 
 
 @_SKIP_BLACK
@@ -103,6 +132,82 @@ def test_jsonschema_circular_reference_exec_current_version(output_file: Path) -
         skip_code_validation=False,
         force_exec_validation=True,
     )
+
+
+@pytest.mark.allow_direct_assert
+def test_validate_output_files_imports_generated_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test generated single-file outputs are imported during validation."""
+    sentinel = tmp_path / "sentinel.txt"
+    output_file = tmp_path / "output.py"
+    output_file.write_text(
+        f"from pathlib import Path\nPath({str(sentinel)!r}).write_text('imported', encoding='utf-8')\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(main_conftest, "_get_concurrent_interpreters_module", lambda: None)
+
+    _validate_output_files(output_file, get_current_version_args(), force_exec_validation=True)
+
+    assert sentinel.read_text(encoding="utf-8") == "imported"
+
+
+@pytest.mark.allow_direct_assert
+def test_validate_output_files_imports_generated_package_modules(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test generated package submodules are imported during validation."""
+    sentinel = tmp_path / "sentinel.txt"
+    output_dir = tmp_path / "model"
+    output_dir.mkdir()
+    (output_dir / "__init__.py").write_text("", encoding="utf-8")
+    (output_dir / "child.py").write_text(
+        f"from pathlib import Path\nPath({str(sentinel)!r}).write_text('imported', encoding='utf-8')\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(main_conftest, "_get_concurrent_interpreters_module", lambda: None)
+
+    _validate_output_files(output_dir, get_current_version_args())
+
+    assert sentinel.read_text(encoding="utf-8") == "imported"
+
+
+@pytest.mark.allow_direct_assert
+def test_try_import_generated_output_uses_subinterpreter(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test generated output import uses subinterpreters when available."""
+    fake_interpreters = _FakeInterpreters()
+    output_file = tmp_path / "output.py"
+    output_file.write_text("VALUE = 1\n", encoding="utf-8")
+    monkeypatch.setattr(main_conftest, "_get_concurrent_interpreters_module", lambda: fake_interpreters)
+
+    assert _try_import_generated_output_in_subinterpreter(output_file)
+    assert output_file.name in fake_interpreters.instances[0].executed_code
+    assert fake_interpreters.instances[0].closed
+
+
+@pytest.mark.allow_direct_assert
+def test_try_import_generated_output_falls_back_for_unsupported_subinterpreter_extension(
+    output_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test subinterpreter-incompatible extensions fall back to normal imports."""
+    fake_interpreters = _FakeInterpreters(
+        RuntimeError("ImportError: module _pydantic_core does not support loading in subinterpreters")
+    )
+    monkeypatch.setattr(main_conftest, "_get_concurrent_interpreters_module", lambda: fake_interpreters)
+
+    assert not _try_import_generated_output_in_subinterpreter(output_file)
+    assert fake_interpreters.instances[0].closed
+
+
+@pytest.mark.allow_direct_assert
+def test_try_import_generated_output_reraises_subinterpreter_import_errors(
+    output_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test generated import errors are not hidden by the subinterpreter path."""
+    fake_interpreters = _FakeInterpreters(RuntimeError("generated import failed"))
+    monkeypatch.setattr(main_conftest, "_get_concurrent_interpreters_module", lambda: fake_interpreters)
+
+    with pytest.raises(RuntimeError, match="generated import failed"):
+        _try_import_generated_output_in_subinterpreter(output_file)
+    assert fake_interpreters.instances[0].closed
 
 
 @_SKIP_BLACK

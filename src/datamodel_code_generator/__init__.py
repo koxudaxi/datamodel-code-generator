@@ -111,6 +111,9 @@ def load_yaml(stream: str | TextIO) -> YamlValue:
         import ryaml  # noqa: PLC0415  # ty: ignore[unresolved-import]
 
         text = stream if isinstance(stream, str) else stream.read()
+        from datamodel_code_generator.util import warn_yaml_deprecated_bool_values  # noqa: PLC0415
+
+        warn_yaml_deprecated_bool_values(text)
         return ryaml.loads(text)
 
     import yaml  # noqa: PLC0415
@@ -1082,6 +1085,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             custom_formatters_kwargs=config.custom_formatters_kwargs,
             encoding=config.encoding,
             formatters=config.formatters,
+            builtin_format_line_length=config.builtin_format_line_length,
             use_type_checking_imports=effective_use_type_checking_imports,
             defer_formatting=True,
         )
