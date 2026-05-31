@@ -365,9 +365,13 @@ def _format_import_node_without_reordering(
     match node:
         case ast.Import(names=names):
             category = min(_import_category(alias.name, 0, known_first_party) for alias in names)
+            return category, raw_import
         case ast.ImportFrom(module=module, level=level):
             category = _import_category(module or "", level, known_first_party)
-    return category, raw_import
+            return category, raw_import
+        case _:
+            msg = f"Unsupported import node: {type(node).__name__}"
+            raise TypeError(msg)
 
 
 def _format_import_node(
@@ -392,6 +396,9 @@ def _format_import_node(
 
             aliases = sorted((_format_alias(alias) for alias in names), key=_alias_sort_key)
             return category, _format_from_import(module, aliases, line_length)
+        case _:
+            msg = f"Unsupported import node: {type(node).__name__}"
+            raise TypeError(msg)
 
 
 def _from_import_key(node: ast.ImportFrom) -> tuple[int, str]:
