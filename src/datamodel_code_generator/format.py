@@ -363,15 +363,14 @@ def _format_import_node_without_reordering(
     end_lineno = node.end_lineno or node.lineno
     raw_import = "\n".join(lines[node.lineno - 1 : end_lineno])
     match node:
-        case ast.Import(names=names):
-            category = min(_import_category(alias.name, 0, known_first_party) for alias in names)
+        case ast.Import():
+            category = min(_import_category(alias.name, 0, known_first_party) for alias in node.names)
             return category, raw_import
-        case ast.ImportFrom(module=module, level=level):
-            category = _import_category(module or "", level, known_first_party)
+        case ast.ImportFrom():
+            category = _import_category(node.module or "", node.level, known_first_party)
             return category, raw_import
-        case _:
-            msg = f"Unsupported import node: {type(node).__name__}"
-            raise TypeError(msg)
+    msg = f"Unsupported import node: {type(node).__name__}"
+    raise TypeError(msg)
 
 
 def _format_import_node(
@@ -380,25 +379,24 @@ def _format_import_node(
     known_first_party: frozenset[str] = DEFAULT_KNOWN_FIRST_PARTY,
 ) -> tuple[_ImportCategory, str]:
     match node:
-        case ast.Import(names=names):
-            lines = [f"import {_format_alias(alias)}" for alias in sorted(names, key=lambda alias: alias.name)]
-            category = min(_import_category(alias.name, 0, known_first_party) for alias in names)
+        case ast.Import():
+            lines = [f"import {_format_alias(alias)}" for alias in sorted(node.names, key=lambda alias: alias.name)]
+            category = min(_import_category(alias.name, 0, known_first_party) for alias in node.names)
             return category, "\n".join(lines)
-        case ast.ImportFrom(module=module_name, level=level, names=names):
-            module = "." * level + (module_name or "")
-            category = _import_category(module_name or "", level, known_first_party)
-            if any(alias.asname is not None for alias in names):
+        case ast.ImportFrom():
+            module = "." * node.level + (node.module or "")
+            category = _import_category(node.module or "", node.level, known_first_party)
+            if any(alias.asname is not None for alias in node.names):
                 lines = [
                     _format_from_import(module, [_format_alias(alias)], line_length)
-                    for alias in sorted(names, key=lambda alias: _alias_sort_key(_format_alias(alias)))
+                    for alias in sorted(node.names, key=lambda alias: _alias_sort_key(_format_alias(alias)))
                 ]
                 return category, "\n".join(lines)
 
-            aliases = sorted((_format_alias(alias) for alias in names), key=_alias_sort_key)
+            aliases = sorted((_format_alias(alias) for alias in node.names), key=_alias_sort_key)
             return category, _format_from_import(module, aliases, line_length)
-        case _:
-            msg = f"Unsupported import node: {type(node).__name__}"
-            raise TypeError(msg)
+    msg = f"Unsupported import node: {type(node).__name__}"
+    raise TypeError(msg)
 
 
 def _from_import_key(node: ast.ImportFrom) -> tuple[int, str]:
