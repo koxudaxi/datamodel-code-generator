@@ -969,8 +969,12 @@ def _validate_output_files(
         return
     should_exec = not _should_skip_exec(extra_arguments, force_exec=force_exec_validation)
     if output_path.is_file() and output_path.suffix == ".py":
-        validate_generated_code(output_path.read_text(encoding="utf-8"), str(output_path), do_exec=False)
-        if should_exec:
+        validate_generated_code(
+            output_path.read_text(encoding="utf-8"),
+            str(output_path),
+            do_exec=should_exec and not force_exec_validation,
+        )
+        if should_exec and force_exec_validation:
             _import_generated_output(output_path)
     elif output_path.is_dir():  # pragma: no branch
         for python_file in output_path.rglob("*.py"):

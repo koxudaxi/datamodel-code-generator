@@ -145,7 +145,7 @@ def test_validate_output_files_imports_generated_file(tmp_path: Path, monkeypatc
     )
     monkeypatch.setattr(main_conftest, "_get_concurrent_interpreters_module", lambda: None)
 
-    _validate_output_files(output_file, get_current_version_args())
+    _validate_output_files(output_file, get_current_version_args(), force_exec_validation=True)
 
     assert sentinel.read_text(encoding="utf-8") == "imported"
 
