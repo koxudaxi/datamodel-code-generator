@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>datamodel-code-generator t-string demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "@codemirror/autocomplete": "https://esm.sh/@codemirror/autocomplete@6.18.6?external=@codemirror/state,@codemirror/view,@codemirror/language",
+          "@codemirror/lang-json": "https://esm.sh/@codemirror/lang-json@6.0.2?external=@codemirror/state,@codemirror/view,@codemirror/language,@lezer/common,@lezer/highlight,@lezer/lr,@lezer/json",
+          "@codemirror/lang-python": "https://esm.sh/@codemirror/lang-python@6.2.1?external=@codemirror/state,@codemirror/view,@codemirror/language,@codemirror/autocomplete,@lezer/common,@lezer/highlight,@lezer/lr,@lezer/python",
+          "@codemirror/lang-xml": "https://esm.sh/@codemirror/lang-xml@6.1.0?external=@codemirror/state,@codemirror/view,@codemirror/language,@codemirror/autocomplete,@lezer/common,@lezer/highlight,@lezer/lr,@lezer/xml",
+          "@codemirror/lang-yaml": "https://esm.sh/@codemirror/lang-yaml@6.1.3?external=@codemirror/state,@codemirror/view,@codemirror/language,@lezer/common,@lezer/highlight,@lezer/lr,@lezer/yaml",
+          "@codemirror/language": "https://esm.sh/@codemirror/language@6.12.2?external=@codemirror/state,@codemirror/view,@lezer/common,@lezer/highlight,style-mod",
+          "@codemirror/state": "https://esm.sh/@codemirror/state@6.5.4",
+          "@codemirror/view": "https://esm.sh/@codemirror/view@6.39.15?external=@codemirror/state",
+          "@lezer/common": "https://esm.sh/@lezer/common@1.5.1",
+          "@lezer/highlight": "https://esm.sh/@lezer/highlight@1.2.3?external=@lezer/common",
+          "@lezer/json": "https://esm.sh/@lezer/json@1.0.3?external=@lezer/common,@lezer/highlight,@lezer/lr",
+          "@lezer/lr": "https://esm.sh/@lezer/lr@1.4.8?external=@lezer/common",
+          "@lezer/python": "https://esm.sh/@lezer/python@1.1.18?external=@lezer/common,@lezer/highlight,@lezer/lr",
+          "@lezer/xml": "https://esm.sh/@lezer/xml@1.0.5?external=@lezer/common,@lezer/highlight,@lezer/lr",
+          "@lezer/yaml": "https://esm.sh/@lezer/yaml@1.0.4?external=@lezer/common,@lezer/highlight,@lezer/lr",
+          "style-mod": "https://esm.sh/style-mod@4.1.3"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app" class="boot">
+      <p class="boot-status">Loading playground...</p>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

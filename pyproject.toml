@@ -30,10 +30,10 @@ dynamic = [
 ]
 dependencies = [
   "argcomplete>=2.10.1,<4",
-  "black>=19.10b0",
+  "black>=19.10b0; sys_platform!='emscripten'",
   "genson>=1.2.1,<2",
   "inflect>=4.1,<8",
-  "isort>=4.3.21,<9",
+  "isort>=4.3.21,<9; sys_platform!='emscripten'",
   "jinja2>=2.10.1,<4",
   "pydantic>=2,<3; python_version<'3.14'",
   "pydantic>=2.12,<3; python_version>='3.14'",
@@ -84,6 +84,7 @@ dev = [
   { include-group = "docs" },
   { include-group = "fix" },
   { include-group = "pkg-meta" },
+  { include-group = "playground" },
   { include-group = "test" },
   { include-group = "type" },
 ]
@@ -113,6 +114,10 @@ type = [
 ]
 docs = [
   "zensical>=0.0.43; python_version>='3.10'",
+]
+playground = [
+  "t-linter>=0.8",
+  "tdom>=0.1.16; python_version>='3.14'",
 ]
 benchmark = [
   "pytest-benchmark",

@@ -1,0 +1,69 @@
+# Third-party licenses
+
+The playground loads third-party JavaScript and Python packages at runtime from
+public package CDNs. These package artifacts are not vendored in this repository.
+
+## Pyodide
+
+Pyodide `314.0.0-alpha.2` is loaded from jsDelivr:
+
+`https://cdn.jsdelivr.net/pyodide/v314.0.0a2/full/`
+
+Pyodide is distributed under the Mozilla Public License 2.0.
+
+## CodeMirror
+
+CodeMirror modules are loaded from esm.sh as ESM modules. The playground uses
+these MIT-licensed packages:
+
+- `@codemirror/autocomplete` 6.18.6
+- `@codemirror/language` 6.12.2
+- `@codemirror/lang-json` 6.0.2
+- `@codemirror/lang-python` 6.2.1
+- `@codemirror/lang-yaml` 6.1.3
+- `@codemirror/lang-xml` 6.1.0
+- `@codemirror/state` 6.5.4
+- `@codemirror/view` 6.39.15
+- `@lezer/common` 1.5.1
+- `@lezer/highlight` 1.2.3
+- `@lezer/json` 1.0.3
+- `@lezer/lr` 1.4.8
+- `@lezer/python` 1.1.18
+- `@lezer/xml` 1.0.5
+- `@lezer/yaml` 1.0.4
+- `style-mod` 4.1.3
+
+CodeMirror copyright: Copyright (C) 2018-2024 by Marijn Haverbeke and others.
+
+## Comlink
+
+Comlink `4.4.2` is loaded from jsDelivr to expose the Pyodide worker as an
+RPC-style API.
+
+Comlink is distributed under the Apache License 2.0.
+
+## morphdom
+
+morphdom `2.7.7` is loaded from jsDelivr to apply tdom-rendered HTML with
+targeted DOM patching instead of replacing the whole playground tree.
+
+morphdom is distributed under the MIT License.
+
+## Python packages
+
+The playground installs Python packages from PyPI with `micropip` inside
+Pyodide. The primary packages are:
+
+- `datamodel-code-generator`
+- `genson`
+- `graphql-core`
+- `inflect`
+- `jinja2`
+- `pydantic`
+- `pyyaml`
+- `tdom`
+- `micropip`
+
+The generator package is installed without its declared transitive dependencies
+so the browser runtime can use the builtin formatter without loading black or
+isort. Runtime dependencies needed by the playground are installed explicitly.

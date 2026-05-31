@@ -7,3 +7,4 @@ coverage.xml
 .vscode/
 site/
 tests/cli_doc/.cli_doc_collection.json
+docs/assets/playground/generated/

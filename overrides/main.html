@@ -1,5 +1,84 @@
 {% extends "base.html" %}
 
+{% block site_meta %}
+  {{ super() }}
+  <style>
+    html.dcg-theme-loading {
+      background: #0f172a;
+    }
+
+    html.dcg-theme-loading body {
+      visibility: hidden;
+    }
+
+    .md-toggle {
+      position: absolute;
+      width: 0;
+      height: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .md-banner svg,
+    .md-header svg,
+    .md-nav svg,
+    .md-source svg,
+    .md-logo svg,
+    .md-icon svg,
+    svg.lucide {
+      width: 1.2rem;
+      height: 1.2rem;
+      max-width: 1.2rem;
+      max-height: 1.2rem;
+      overflow: visible;
+    }
+
+    .md-header__button.md-logo svg,
+    .md-nav__button.md-logo svg {
+      width: 1.5rem;
+      height: 1.5rem;
+      max-width: 1.5rem;
+      max-height: 1.5rem;
+    }
+  </style>
+  <script>
+    const isPlaygroundLink = link => {
+      const url = new URL(link.href);
+      return url.origin === window.location.origin && (
+        url.pathname.endsWith("/playground/") ||
+        url.pathname.endsWith("/assets/playground/index.html")
+      );
+    };
+
+    document.documentElement.classList.add("dcg-theme-loading");
+    window.setTimeout(() => {
+      document.documentElement.classList.remove("dcg-theme-loading");
+    }, 3000);
+    window.addEventListener("DOMContentLoaded", () => {
+      for (const link of document.querySelectorAll("a[href]")) {
+        if (isPlaygroundLink(link)) {
+          link.target = "_self";
+        }
+      }
+      window.requestAnimationFrame(() => {
+        document.documentElement.classList.remove("dcg-theme-loading");
+      });
+    });
+    document.addEventListener("click", event => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+      }
+      const target = event.target instanceof Element ? event.target : event.target.parentElement;
+      const link = target ? target.closest("a[href]") : null;
+      if (!link || !isPlaygroundLink(link)) {
+        return;
+      }
+      event.preventDefault();
+      window.location.assign(link.href);
+    }, true);
+  </script>
+{% endblock %}
+
 {% block announce %}
   📣 💼 Maintainer update: I'm open to opportunities.
   <a href="https://koxudaxi.dev/?utm_source=dm_docs&utm_medium=announce_bar&utm_campaign=open_to_work"

@@ -22,6 +22,16 @@
 
 ---
 
+## 🧪 Try It In Your Browser
+
+Generate models in your browser without installing anything.
+
+<p>
+  <a class="md-button md-button--primary" href="playground.md" target="_self">Open Playground</a>
+</p>
+
+---
+
 ## 📦 Installation
 
 === "uv tool (Recommended)"
