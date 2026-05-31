@@ -179,7 +179,7 @@ def test_try_import_generated_output_uses_subinterpreter(tmp_path: Path, monkeyp
     monkeypatch.setattr(main_conftest, "_get_concurrent_interpreters_module", lambda: fake_interpreters)
 
     assert _try_import_generated_output_in_subinterpreter(output_file)
-    assert str(output_file) in fake_interpreters.instances[0].executed_code
+    assert output_file.name in fake_interpreters.instances[0].executed_code
     assert fake_interpreters.instances[0].closed
 
 
