@@ -59,7 +59,8 @@ nav = [
     { "Templates and Formatting" = [
       { "Custom Templates" = "custom_template.md" },
       { "Custom Formatters" = "custom-formatters.md" },
-      { "Code Formatting" = "formatting.md" }
+      { "Code Formatting" = "formatting.md" },
+      { "Formatter Behavior" = "formatter-behavior.md" }
     ]},
     { "Integration" = [
       { "One-liner Usage" = "oneliner.md" },

@@ -544,6 +544,7 @@ class Config(BaseModel):  # noqa: PLR0904
     use_frozen_field: bool = False
     use_default_factory_for_optional_nested_models: bool = False
     formatters: list[Formatter] | None = None
+    builtin_format_line_length: Optional[int] = None  # noqa: UP045
     parent_scoped_naming: bool = False
     naming_strategy: Optional[NamingStrategy] = None  # noqa: UP045
     duplicate_name_suffix: Optional[dict[str, str]] = None  # noqa: UP045
@@ -566,7 +567,7 @@ class Config(BaseModel):  # noqa: PLR0904
 
     def merge_args(self, args: Namespace) -> None:
         """Merge command-line arguments into config."""
-        set_args = {f: getattr(args, f) for f in self.get_fields() if getattr(args, f) is not None}
+        set_args = {f: value for f in self.get_fields() if (value := getattr(args, f, None)) is not None}
         explicit_input_sources = {
             field_name for field_name in ("input", "url", "input_model") if field_name in set_args
         }
@@ -1004,6 +1005,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         use_frozen_field=config.use_frozen_field,
         use_default_factory_for_optional_nested_models=config.use_default_factory_for_optional_nested_models,
         formatters=config.formatters,
+        builtin_format_line_length=config.builtin_format_line_length,
         settings_path=settings_path,
         parent_scoped_naming=config.parent_scoped_naming,
         naming_strategy=config.naming_strategy,
@@ -1152,7 +1154,8 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         )
         return Exit.ERROR
 
-    if not is_supported_in_black(config.target_python_version):  # pragma: no cover
+    uses_black_formatter = config.formatters is None or Formatter.BLACK in config.formatters
+    if uses_black_formatter and not is_supported_in_black(config.target_python_version):  # pragma: no cover
         print(  # noqa: T201
             f"Installed black doesn't support Python version {config.target_python_version.value}.\n"
             f"You have to install a newer black.\n"

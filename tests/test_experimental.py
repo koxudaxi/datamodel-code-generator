@@ -58,6 +58,7 @@ def test_experimental_markdown_output_includes_details() -> None:
     assert "input-format.avro" in output
     assert "input-format.protobuf" in output
     assert "input-format.xmlschema" in output
+    assert "formatter.builtin" in output
 
 
 def test_experimental_markdown_output_can_omit_header() -> None:
@@ -77,6 +78,7 @@ def test_release_note_output_filters_by_version() -> None:
     assert "--input-file-type avro" in output
     assert "--input-file-type protobuf" in output
     assert "--input-file-type xmlschema" in output
+    assert "--formatters builtin" in output
 
 
 def test_experimental_markdown_includes_tracking_issue(monkeypatch: pytest.MonkeyPatch) -> None:

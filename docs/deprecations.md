@@ -6,7 +6,7 @@ This page lists deprecations and scheduled breaking changes.
 
 | ID | Kind | Target | Warning since | Removal | Replacement |
 |----|------|--------|---------------|---------|-------------|
-| `format.default-formatters` | behavior | `Default formatters` | 0.52.0 | TBD | Set formatters explicitly, for example ruff-format and ruff-check. |
+| `format.default-formatters` | behavior | `Default formatters` | 0.52.0 | TBD | Set formatters explicitly, for example black and isort or builtin. |
 | `behavior.pydantic-v2-use-annotated-default` | behavior | `Pydantic v2 default for --use-annotated` | 0.52.1 | TBD | Explicitly pass --use-annotated or --no-use-annotated. |
 | `behavior.remote-ref-default` | behavior | `Remote $ref fetching without --allow-remote-refs` | 0.56.0 | TBD | Pass --allow-remote-refs or --no-allow-remote-refs explicitly. |
 | `cli.allow-extra-fields` | cli-option | `--allow-extra-fields` | 0.31.0 | TBD | --extra-fields=allow |
@@ -26,9 +26,9 @@ This page lists deprecations and scheduled breaking changes.
 - **Warning since:** 0.52.0
 - **Planned removal:** TBD
 - **Warning category:** `FutureWarning`
-- **Replacement:** Set formatters explicitly, for example ruff-format and ruff-check.
+- **Replacement:** Set formatters explicitly, for example black and isort or builtin.
 
-The default formatters (black, isort) will be replaced by ruff in a future version.
+The default external formatters (black, isort) will become opt-in in a future version.
 
 ### `behavior.pydantic-v2-use-annotated-default`
 

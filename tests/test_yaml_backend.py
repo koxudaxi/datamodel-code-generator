@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import io
+import re
+import warnings
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
@@ -10,7 +12,12 @@ import pytest
 import yaml
 
 from datamodel_code_generator import InputFileType, infer_input_type, load_yaml
-from datamodel_code_generator.util import get_yaml_backend, get_yaml_parse_errors
+from datamodel_code_generator.util import (
+    _is_yaml_deprecated_bool_warning_enabled,
+    get_yaml_backend,
+    get_yaml_parse_errors,
+    warn_yaml_deprecated_bool_values,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -84,6 +91,39 @@ class TestLoadYaml:
             result = load_yaml("key: value")
             mock_ryaml.loads.assert_called_once_with("key: value")
             assert result == {"key": "value"}
+
+    def test_warn_yaml_deprecated_bool_values_skips_scan_when_warning_ignored(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When deprecation warnings are ignored, skip the extra YAML source scan."""
+        pattern = MagicMock()
+        monkeypatch.setattr("datamodel_code_generator.util._YAML_DEPRECATED_BOOL_LINE_PATTERN", pattern)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            warn_yaml_deprecated_bool_values("enabled: True\n")
+
+        pattern.finditer.assert_not_called()
+
+    def test_warn_yaml_deprecated_bool_values_warns_when_enabled(self) -> None:
+        """When deprecation warnings are enabled, warn for YAML 1.1 bool values."""
+        with pytest.warns(DeprecationWarning, match=r"YAML bool 'True' is deprecated"):
+            warn_yaml_deprecated_bool_values("enabled: True\n")
+
+    def test_yaml_deprecated_bool_warning_enabled_ignores_unmatched_filters(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Warning filter entries for other messages or modules do not disable the YAML warning."""
+        monkeypatch.setattr(
+            warnings,
+            "filters",
+            [
+                ("ignore", re.compile(r"Other warning"), DeprecationWarning, None, 0),
+                ("ignore", None, DeprecationWarning, re.compile(r"other_module"), 0),
+            ],
+        )
+
+        assert _is_yaml_deprecated_bool_warning_enabled()
 
     def test_with_ryaml_textio(self) -> None:
         """When ryaml is available, TextIO.read() is called before ryaml.loads()."""

@@ -2,18 +2,30 @@
 
 from __future__ import annotations
 
+import ast
 import sys
 import warnings
 from pathlib import Path
+from typing import cast
 from unittest import mock
 
+import black
+import isort
 import pytest
 
 from datamodel_code_generator.format import (
+    DEFAULT_KNOWN_FIRST_PARTY,
     CodeFormatter,
     Formatter,
     PythonVersion,
     PythonVersionMin,
+    _format_constrained_call,
+    _format_import_node,
+    _format_import_node_without_reordering,
+    _get_builtin_known_first_party,
+    _normalize_string_quotes,
+    _split_escaped_string_literal,
+    apply_builtin_formatter,
     resolve_use_type_checking_imports,
 )
 
@@ -25,6 +37,9 @@ NOT_SUBCLASS_FORMATTER = "tests.data.python.custom_formatters.not_subclass"
 ADD_COMMENT_FORMATTER = "tests.data.python.custom_formatters.add_comment"
 ADD_LICENSE_FORMATTER = "tests.data.python.custom_formatters.add_license"
 FAKE_RUFF_PATH = "/opt/fake-ruff/bin/ruff"
+BLACK_VERSION_DEPENDENT_NORMALIZED_EXPECTED_FILES = {
+    "main/openapi/custom_file_header_with_docstring_and_import.py",
+}
 
 
 def test_python_version() -> None:
@@ -65,6 +80,989 @@ def test_format_code_with_skip_string_normalization(
     formatted_code = formatter.format_code("a = 'b'")
 
     assert formatted_code == expected_output + "\n"
+
+
+def test_format_code_builtin_formatter(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test dependency-free built-in formatting."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    formatted_code = formatter.format_code(
+        "from pydantic import Field, BaseModel\n"
+        "import sys\n"
+        "from __future__ import annotations\n"
+        "from .models import Pet\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    pet: Pet\n"
+        "    name: str = Field(...)\n"
+    )
+
+    assert (
+        formatted_code == "from __future__ import annotations\n"
+        "\n"
+        "import sys\n"
+        "\n"
+        "from pydantic import BaseModel, Field\n"
+        "\n"
+        "from .models import Pet\n"
+        "\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    pet: Pet\n"
+        "    name: str = Field(...)\n"
+    )
+
+
+def test_format_code_ignores_builtin_when_external_formatter_selected(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatting does not add work before external formatters."""
+
+    def fail_get_builtin_line_length(*_args: object, **_kwargs: object) -> int:
+        pytest.fail("built-in formatter configuration should not be read")  # pragma: no cover
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "datamodel_code_generator.format._get_builtin_line_length",
+        fail_get_builtin_line_length,
+    )
+
+    with pytest.warns(UserWarning, match="built-in formatter is ignored"):
+        formatter = CodeFormatter(
+            PythonVersionMin,
+            formatters=[Formatter.BUILTIN, Formatter.BLACK],
+        )
+
+    assert not formatter.use_builtin_formatter
+    assert formatter.format_code("x=1\n") == "x = 1\n"
+
+
+def test_format_code_builtin_formatter_uses_explicit_line_length(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatter uses explicit line length configuration."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool.ruff]\nline-length = 88\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+        builtin_format_line_length=140,
+    )
+
+    formatted_code = formatter.format_code(
+        "from module import Zed, ExtremelyLongGeneratedTypeName, AnotherLongGeneratedTypeName, "
+        "GeneratedTypeNameThatFitsWithinConfiguredLineLength\n"
+    )
+
+    assert (
+        formatted_code == "from module import AnotherLongGeneratedTypeName, ExtremelyLongGeneratedTypeName, "
+        "GeneratedTypeNameThatFitsWithinConfiguredLineLength, Zed\n"
+    )
+
+
+@pytest.mark.parametrize("line_length", [0, -1, True])
+def test_format_code_builtin_formatter_rejects_invalid_explicit_line_length(
+    line_length: int | bool, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatter rejects invalid explicit line length values."""
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ValueError, match="builtin_format_line_length must be a positive integer"):
+        CodeFormatter(
+            PythonVersionMin,
+            formatters=[Formatter.BUILTIN],
+            builtin_format_line_length=line_length,
+        )
+
+
+def test_format_code_builtin_formatter_uses_datamodel_codegen_line_length(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatter uses datamodel-codegen line length configuration."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool.datamodel-codegen]\nbuiltin-format-line-length = 140\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    formatted_code = formatter.format_code(
+        "from module import Zed, ExtremelyLongGeneratedTypeName, AnotherLongGeneratedTypeName, "
+        "GeneratedTypeNameThatFitsWithinConfiguredLineLength\n"
+    )
+
+    assert (
+        formatted_code == "from module import AnotherLongGeneratedTypeName, ExtremelyLongGeneratedTypeName, "
+        "GeneratedTypeNameThatFitsWithinConfiguredLineLength, Zed\n"
+    )
+
+
+def test_format_code_builtin_formatter_falls_back_to_ruff_line_length(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatter falls back to Ruff line length configuration."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool.ruff]\nline-length = 140\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    formatted_code = formatter.format_code(
+        "from module import Zed, ExtremelyLongGeneratedTypeName, AnotherLongGeneratedTypeName, "
+        "GeneratedTypeNameThatFitsWithinConfiguredLineLength\n"
+    )
+
+    assert (
+        formatted_code == "from module import AnotherLongGeneratedTypeName, ExtremelyLongGeneratedTypeName, "
+        "GeneratedTypeNameThatFitsWithinConfiguredLineLength, Zed\n"
+    )
+
+
+@pytest.mark.parametrize(
+    ("black_config", "skip_string_normalization", "expected_alias"),
+    [
+        ("skip-string-normalization = false\n", True, '"mapViewMode"'),
+        ("skip-string-normalization = true\n", True, "'mapViewMode'"),
+        ("", True, "'mapViewMode'"),
+        ("skip-string-normalization = true\n", False, '"mapViewMode"'),
+    ],
+)
+def test_format_code_builtin_formatter_reads_black_skip_string_normalization(
+    black_config: str,
+    skip_string_normalization: bool,
+    expected_alias: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test built-in formatter reuses Black string normalization config."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(f"[tool.black]\n{black_config}", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+        skip_string_normalization=skip_string_normalization,
+    )
+
+    formatted_code = formatter.format_code(
+        "from typing import Literal\n"
+        "from pydantic import BaseModel, Field\n"
+        "\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    mode: Literal['MODE_2D'] = Field(..., alias='mapViewMode')\n"
+    )
+
+    assert f"alias={expected_alias}" in formatted_code
+
+
+def test_format_code_builtin_formatter_ignores_non_integer_line_lengths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatter ignores invalid line length configuration."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        "[tool.datamodel-codegen]\n"
+        "builtin_format_line_length = -1\n"
+        "[tool.ruff]\n"
+        "line-length = false\n"
+        "[tool.black]\n"
+        'line-length = "140"\n'
+        "[tool.isort]\n"
+        'line_length = "140"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    formatted_code = formatter.format_code(
+        "from module import Zed, ExtremelyLongGeneratedTypeName, AnotherLongGeneratedTypeName, "
+        "GeneratedTypeNameThatPushesTheImportPastTheDefaultLineLength\n"
+    )
+
+    assert (
+        formatted_code == "from module import (\n"
+        "    AnotherLongGeneratedTypeName,\n"
+        "    ExtremelyLongGeneratedTypeName,\n"
+        "    GeneratedTypeNameThatPushesTheImportPastTheDefaultLineLength,\n"
+        "    Zed,\n"
+        ")\n"
+    )
+
+
+def test_format_code_builtin_formatter_wraps_long_imports(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test built-in formatter wraps import lines that exceed the default line length."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    formatted_code = formatter.format_code(
+        "from module import Zed, ExtremelyLongGeneratedTypeName, AnotherLongGeneratedTypeName, "
+        "GeneratedTypeNameThatPushesTheImportPastTheDefaultLineLength\n"
+    )
+
+    assert (
+        formatted_code == "from module import (\n"
+        "    AnotherLongGeneratedTypeName,\n"
+        "    ExtremelyLongGeneratedTypeName,\n"
+        "    GeneratedTypeNameThatPushesTheImportPastTheDefaultLineLength,\n"
+        "    Zed,\n"
+        ")\n"
+    )
+
+
+def test_format_code_builtin_formatter_preserves_commented_imports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatter keeps import comments attached to their import line."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    formatted_code = formatter.format_code(
+        "from pydantic import Field, BaseModel  # noqa: F401\n"
+        "import sys\n"
+        "from __future__ import annotations\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    name: str\n"
+    )
+
+    assert (
+        formatted_code == "from __future__ import annotations\n"
+        "\n"
+        "import sys\n"
+        "\n"
+        "from pydantic import Field, BaseModel  # noqa: F401\n"
+        "\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    name: str\n"
+    )
+
+
+def test_format_code_builtin_formatter_sorts_type_checking_imports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatter sorts imports inside a generated TYPE_CHECKING block."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    formatted_code = formatter.format_code(
+        "from typing import TYPE_CHECKING\n"
+        "from pydantic import BaseModel\n"
+        "\n"
+        "if TYPE_CHECKING:\n"
+        "    from .models import Zebra, Antelope\n"
+        "    import os\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    pet: Antelope\n"
+    )
+
+    assert (
+        formatted_code == "from typing import TYPE_CHECKING\n"
+        "\n"
+        "from pydantic import BaseModel\n"
+        "\n"
+        "if TYPE_CHECKING:\n"
+        "    import os\n"
+        "\n"
+        "    from .models import Antelope, Zebra\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    pet: Antelope\n"
+    )
+
+
+def test_apply_builtin_formatter_sorts_aliased_imports_like_isort() -> None:
+    """Test built-in formatter keeps isort-compatible groups for aliased imports."""
+    code = (
+        "from pydantic import Field\n"
+        "from pydantic import BaseModel as Model\n"
+        "from pydantic import ConfigDict\n"
+        "\n"
+        "class Pet(Model):\n"
+        "    name: str = Field(...)\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "from pydantic import BaseModel as Model\n"
+        "from pydantic import ConfigDict\n"
+        "from pydantic import Field\n"
+        "\n"
+        "\n"
+        "class Pet(Model):\n"
+        "    name: str = Field(...)\n"
+    )
+
+
+def test_format_import_node_formats_from_import_aliases() -> None:
+    """Test direct import node formatting for aliased from-imports."""
+    node = ast.parse("from pydantic import Field as PydanticField, BaseModel as Model\n").body[0]
+
+    assert isinstance(node, ast.ImportFrom)
+    assert _format_import_node(node, line_length=88) == (
+        2,
+        "from pydantic import BaseModel as Model\nfrom pydantic import Field as PydanticField",
+    )
+
+
+def test_format_import_node_rejects_unsupported_nodes() -> None:
+    """Test direct import node helpers reject unexpected AST nodes."""
+    unsupported_node = cast("ast.Import | ast.ImportFrom", ast.parse("pass\n").body[0])
+
+    with pytest.raises(TypeError, match="Unsupported import node: Pass"):
+        _format_import_node_without_reordering(unsupported_node, ["pass"])
+    with pytest.raises(TypeError, match="Unsupported import node: Pass"):
+        _format_import_node(unsupported_node, line_length=88)
+
+
+def test_apply_builtin_formatter_adds_blank_after_module_docstring() -> None:
+    """Test built-in formatter keeps a blank line between module docstrings and imports."""
+    code = '"""Generated models."""\nimport sys\n\nclass Pet:\n    pass\n'
+
+    assert apply_builtin_formatter(code) == '"""Generated models."""\n\nimport sys\n\n\nclass Pet:\n    pass\n'
+
+
+def test_apply_builtin_formatter_collapses_top_level_decorator_blank_lines() -> None:
+    """Test built-in formatter keeps black-compatible spacing before top-level decorators."""
+    code = (
+        "from dataclasses import dataclass\n"
+        "\n"
+        "Alias = str\n"
+        '"""Alias docs."""\n'
+        "\n"
+        "\n"
+        "\n"
+        "@dataclass\n"
+        "class Pet:\n"
+        "    name: str\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "from dataclasses import dataclass\n"
+        "\n"
+        "Alias = str\n"
+        '"""Alias docs."""\n'
+        "\n"
+        "\n"
+        "@dataclass\n"
+        "class Pet:\n"
+        "    name: str\n"
+    )
+
+
+def test_apply_builtin_formatter_removes_blank_between_stacked_decorators() -> None:
+    """Test built-in formatter keeps black-compatible stacked decorator spacing."""
+    code = (
+        "from dataclasses import dataclass\n"
+        "from typing_extensions import deprecated\n"
+        "\n"
+        "\n"
+        "@deprecated('LegacyUser is deprecated.')\n"
+        "\n"
+        "@dataclass\n"
+        "class LegacyUser:\n"
+        "    name: str\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "from dataclasses import dataclass\n"
+        "\n"
+        "from typing_extensions import deprecated\n"
+        "\n"
+        "\n"
+        "@deprecated('LegacyUser is deprecated.')\n"
+        "@dataclass\n"
+        "class LegacyUser:\n"
+        "    name: str\n"
+    )
+
+
+def test_apply_builtin_formatter_removes_blank_between_decorator_and_class() -> None:
+    """Test built-in formatter keeps decorators attached to decorated classes."""
+    code = "from my_module import my_decorator\n\n\n@my_decorator\n\nclass User:\n    name: str\n"
+
+    assert apply_builtin_formatter(code) == (
+        "from my_module import my_decorator\n\n\n@my_decorator\nclass User:\n    name: str\n"
+    )
+
+
+def test_apply_builtin_formatter_adds_blank_between_assignment_and_class() -> None:
+    """Test built-in formatter keeps black-compatible spacing before classes."""
+    code = '__all__ = [\n    "Model",\n]\n\nclass Model:\n    id: str\n'
+
+    assert apply_builtin_formatter(code) == '__all__ = [\n    "Model",\n]\n\n\nclass Model:\n    id: str\n'
+
+
+def test_apply_builtin_formatter_normalizes_simple_string_quotes() -> None:
+    """Test built-in formatter can match black string normalization for generated strings."""
+    code = (
+        "from typing import Literal\n"
+        "from pydantic import BaseModel, Field\n"
+        "\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    mode: Literal['MODE_2D'] = Field(..., alias='mapViewMode')\n"
+    )
+
+    assert apply_builtin_formatter(code, string_normalization=True) == (
+        "from typing import Literal\n"
+        "\n"
+        "from pydantic import BaseModel, Field\n"
+        "\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        '    mode: Literal["MODE_2D"] = Field(..., alias="mapViewMode")\n'
+    )
+
+
+def test_apply_builtin_formatter_normalizes_blank_after_class_docstring() -> None:
+    """Test built-in formatter keeps black-compatible class docstring spacing."""
+    code = (
+        "from enum import Enum\n"
+        "\n"
+        "\n"
+        "class Shift(Enum):\n"
+        '    """\n'
+        "    Employee shift status\n"
+        '    """\n'
+        "    ON_SHIFT = 'ON_SHIFT'\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "from enum import Enum\n"
+        "\n"
+        "\n"
+        "class Shift(Enum):\n"
+        '    """\n'
+        "    Employee shift status\n"
+        '    """\n'
+        "\n"
+        "    ON_SHIFT = 'ON_SHIFT'\n"
+    )
+
+
+def test_apply_builtin_formatter_wraps_type_alias_type_union() -> None:
+    """Test built-in formatter wraps generated TypeAliasType unions like black."""
+    code = (
+        "from typing import TypeAliasType, Union\n"
+        "\n"
+        "\n"
+        'Resource = TypeAliasType("Resource", Union[\n'
+        "    'Car',\n"
+        "    'Employee',\n"
+        "])\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "from typing import TypeAliasType, Union\n"
+        "\n"
+        "Resource = TypeAliasType(\n"
+        '    "Resource",\n'
+        "    Union[\n"
+        "        'Car',\n"
+        "        'Employee',\n"
+        "    ],\n"
+        ")\n"
+    )
+
+
+def test_apply_builtin_formatter_wraps_inline_type_alias_type_union() -> None:
+    """Test built-in formatter matches black for inline Union TypeAliasType calls."""
+    code = (
+        "from typing import TypeAliasType, Union\n"
+        "\n"
+        "\n"
+        'JsonType = TypeAliasType("JsonType", Union[ElementaryType, list["JsonType"], dict[str, "JsonType"]])\n'
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "from typing import TypeAliasType, Union\n"
+        "\n"
+        "JsonType = TypeAliasType(\n"
+        '    "JsonType", Union[ElementaryType, list["JsonType"], dict[str, "JsonType"]]\n'
+        ")\n"
+    )
+
+
+def test_apply_builtin_formatter_normalizes_blank_lines_without_imports() -> None:
+    """Test built-in formatter normalizes top-level blanks when no imports exist."""
+    code = "Alias = str\n\n\n\nOtherAlias = Alias\n"
+
+    assert apply_builtin_formatter(code) == "Alias = str\n\n\nOtherAlias = Alias\n"
+
+
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="type statements require Python 3.12")
+def test_apply_builtin_formatter_normalizes_type_alias_blank_lines_without_imports() -> None:
+    """Test built-in formatter normalizes top-level blanks between type statements."""
+    code = "type Foo = str\n\n\n\ntype Bar = Foo\n"
+
+    assert apply_builtin_formatter(code) == "type Foo = str\n\n\ntype Bar = Foo\n"
+
+
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="type statements require Python 3.12")
+def test_builtin_formatter_respects_target_python_version_for_ast_parse() -> None:
+    """Test built-in formatter parses code using the configured target Python version."""
+    code = "type Foo = str\n\n\n\ntype Bar = Foo\n"
+
+    py310_formatter = CodeFormatter(PythonVersion.PY_310, formatters=[Formatter.BUILTIN])
+    py312_formatter = CodeFormatter(PythonVersion.PY_312, formatters=[Formatter.BUILTIN])
+
+    assert py310_formatter.format_code(code) == code
+    assert py312_formatter.format_code(code) == "type Foo = str\n\n\ntype Bar = Foo\n"
+
+
+def test_apply_builtin_formatter_parenthesizes_short_annotated_default() -> None:
+    """Test built-in formatter matches black for short overflowing Annotated defaults."""
+    code = (
+        "from typing import Annotated, Literal\n"
+        "from pydantic import Field\n"
+        "\n"
+        "\n"
+        "class Model:\n"
+        "    typename__: Annotated[Literal['Notification'] | None, Field(alias='__typename')] = 'Notification'\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "from typing import Annotated, Literal\n"
+        "\n"
+        "from pydantic import Field\n"
+        "\n"
+        "\n"
+        "class Model:\n"
+        "    typename__: Annotated[Literal['Notification'] | None, Field(alias='__typename')] = (\n"
+        "        'Notification'\n"
+        "    )\n"
+    )
+
+
+def test_apply_builtin_formatter_parenthesizes_long_union_annotation() -> None:
+    """Test built-in formatter matches black for long generated union annotations."""
+    code = (
+        "class Model:\n"
+        "    optional_oneof_with_null_and_constraint: OptionalOneofWithNullAndConstraint | None | UnsetType = UNSET\n"
+        "    optional_nullable_with_constraint: Annotated[str, Meta(max_length=50)] | UnsetType = UNSET\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "class Model:\n"
+        "    optional_oneof_with_null_and_constraint: (\n"
+        "        OptionalOneofWithNullAndConstraint | None | UnsetType\n"
+        "    ) = UNSET\n"
+        "    optional_nullable_with_constraint: (\n"
+        "        Annotated[str, Meta(max_length=50)] | UnsetType\n"
+        "    ) = UNSET\n"
+    )
+
+
+def test_apply_builtin_formatter_wraps_union_subscript_annotation() -> None:
+    """Test built-in formatter matches black for generated Union annotations."""
+    code = (
+        "class Api(Struct):\n"
+        "    apiKey: Union[Annotated[str, Meta(description='To be used as a dataset parameter value')], "
+        "UnsetType] = UNSET\n"
+        "    optional_nullable_with_constraint: Union[Annotated[str, Meta(max_length=50)], UnsetType] = UNSET\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "class Api(Struct):\n"
+        "    apiKey: Union[\n"
+        "        Annotated[str, Meta(description='To be used as a dataset parameter value')],\n"
+        "        UnsetType,\n"
+        "    ] = UNSET\n"
+        "    optional_nullable_with_constraint: Union[\n"
+        "        Annotated[str, Meta(max_length=50)], UnsetType\n"
+        "    ] = UNSET\n"
+    )
+
+
+def test_format_code_builtin_formatter_wraps_generated_model_statements(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatter wraps generated model statements that Black would split."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    formatted_code = formatter.format_code(
+        "from typing import Annotated\n"
+        "from pydantic import BaseModel, ConfigDict, Field\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    model_config = ConfigDict(extra='forbid', populate_by_name=True, json_schema_extra={'x-one': 'two'})\n"
+        "    name: str = Field(None, examples=['dog', 'cat'], description='description', "
+        "title='Long Title That makes it exceed line length maybe')\n"
+        "    pet: Annotated[VeryLongGeneratedTypeNameThatExceedsTheDefaultLineLength, "
+        "Field(description='x', title='y')]\n"
+    )
+
+    assert (
+        formatted_code == "from typing import Annotated\n"
+        "\n"
+        "from pydantic import BaseModel, ConfigDict, Field\n"
+        "\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    model_config = ConfigDict(\n"
+        "        extra='forbid', populate_by_name=True, json_schema_extra={'x-one': 'two'}\n"
+        "    )\n"
+        "    name: str = Field(\n"
+        "        None,\n"
+        "        examples=['dog', 'cat'],\n"
+        "        description='description',\n"
+        "        title='Long Title That makes it exceed line length maybe',\n"
+        "    )\n"
+        "    pet: Annotated[\n"
+        "        VeryLongGeneratedTypeNameThatExceedsTheDefaultLineLength,\n"
+        "        Field(description='x', title='y'),\n"
+        "    ]\n"
+    )
+
+
+def test_format_code_builtin_formatter_handles_additional_generated_model_edges(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test less common generated model formatting branches."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+        builtin_format_line_length=72,
+    )
+    long_pattern = "a" * 80
+
+    formatted_code = formatter.format_code(
+        "import sys  # noqa: F401\n"
+        "from typing import TYPE_CHECKING\n"
+        "\n"
+        "if TYPE_CHECKING:\n"
+        "    VALUE = 1\n"
+        "\n"
+        "class Model:\n"
+        "    model_config_with_an_extremely_long_name_to_force_formatting = ConfigDict()\n"
+        "    model_config = ConfigDict(**CONFIG_WITH_A_LONG_NAME_TO_FORCE_FORMATTING)\n"
+        "    alias: str = pydantic.Field(None, description='uses attribute field call')\n"
+        "    plain_value = 'this line is long enough to be inspected but is not a generated formatter target'\n"
+        "    existing: str = Field(\n"
+        "        None,\n"
+        "        description='already wrapped',\n"
+        "    )\n"
+        "    metadata: Annotated[VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength]\n"
+        "    defaulted_metadata: Annotated[VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength, "
+        "Field(description='kept as-is because it already has a default')] = None\n"
+        "    typename__: Annotated[Literal['Notification'] | None, Field(alias='__typename')] = 'Notification'\n"
+        f"    hostName: constr(pattern=r'{long_pattern}', strict=True) | None = None\n"
+        "    optional_nested_value: list[list[VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength | None] "
+        "| None] "
+        "| None = None\n"
+        "    nested: Annotated[VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength, "
+        "Field(description='This nested field is long enough to wrap inside Annotated')]\n"
+    )
+
+    assert (
+        formatted_code == "import sys  # noqa: F401\n"
+        "from typing import TYPE_CHECKING\n"
+        "\n"
+        "if TYPE_CHECKING:\n"
+        "    VALUE = 1\n"
+        "\n"
+        "class Model:\n"
+        "    model_config_with_an_extremely_long_name_to_force_formatting = ConfigDict()\n"
+        "    model_config = ConfigDict(\n"
+        "        **CONFIG_WITH_A_LONG_NAME_TO_FORCE_FORMATTING\n"
+        "    )\n"
+        "    alias: str = pydantic.Field(\n"
+        "        None, description='uses attribute field call'\n"
+        "    )\n"
+        "    plain_value = 'this line is long enough to be inspected but is not a generated formatter target'\n"
+        "    existing: str = Field(\n"
+        "        None,\n"
+        "        description='already wrapped',\n"
+        "    )\n"
+        "    metadata: Annotated[\n"
+        "        VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength\n"
+        "    ]\n"
+        "    defaulted_metadata: Annotated[\n"
+        "        VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength,\n"
+        "        Field(\n"
+        "            description='kept as-is because it already has a default'\n"
+        "        ),\n"
+        "    ] = None\n"
+        "    typename__: Annotated[\n"
+        "        Literal['Notification'] | None, Field(alias='__typename')\n"
+        "    ] = 'Notification'\n"
+        "    hostName: (\n"
+        "        constr(\n"
+        f"            pattern=r'{long_pattern}',\n"
+        "            strict=True,\n"
+        "        )\n"
+        "        | None\n"
+        "    ) = None\n"
+        "    optional_nested_value: list[list[VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength | None] "
+        "| None] "
+        "| None = (\n"
+        "        None\n"
+        "    )\n"
+        "    nested: Annotated[\n"
+        "        VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength,\n"
+        "        Field(\n"
+        "            description='This nested field is long enough to wrap inside Annotated'\n"
+        "        ),\n"
+        "    ]\n"
+    )
+
+
+def test_apply_builtin_formatter_wraps_msgspec_field_default_factory() -> None:
+    """Test built-in formatter matches black for generated msgspec field defaults."""
+    code = (
+        "class Bar(Struct):\n"
+        "    original_foo: Foo_1 | UnsetType = field(default_factory=lambda: "
+        "convert({'text': 'abc', 'number': 123}, type=Foo_1))\n"
+        "    baz: list[Foo_1] | UnsetType = field(default_factory=lambda: "
+        "convert([{'text': 'abc', 'number': 123}, {'text': 'efg', 'number': 456}], type=list[Foo_1]))\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "class Bar(Struct):\n"
+        "    original_foo: Foo_1 | UnsetType = field(\n"
+        "        default_factory=lambda: convert({'text': 'abc', 'number': 123}, type=Foo_1)\n"
+        "    )\n"
+        "    baz: list[Foo_1] | UnsetType = field(\n"
+        "        default_factory=lambda: convert(\n"
+        "            [{'text': 'abc', 'number': 123}, {'text': 'efg', 'number': 456}],\n"
+        "            type=list[Foo_1],\n"
+        "        )\n"
+        "    )\n"
+    )
+
+
+def test_apply_builtin_formatter_handles_remaining_generated_edges() -> None:
+    """Test generated formatting branches that are less common but supported."""
+    code = (
+        "class Model:\n"
+        "    very_long_attribute_name: VeryLongPlainAnnotation = DEFAULT_VALUE\n"
+        "    field_with_long_value: VeryLongPlainAnnotation = "
+        "Field(..., description='long generated field', title='Long Field')\n"
+        "    empty_value_with_long_name: VeryLongPlainAnnotation\n"
+        "\n"
+        "    data: dict[str, type] = {**BASE_FIELDS, 'id': str, 'name': str}\n"
+        "\n"
+        "class LeftRoot(RootModel[constr(pattern='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') | None]):\n"
+        "    pass\n"
+        "\n"
+        "class RightRoot(RootModel[None | constr(pattern='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')]):\n"
+        "    pass\n"
+        "\n"
+        "class UnionModel:\n"
+        "    right_annotated: VeryLongPlainTypeName | "
+        "Annotated[VeryLongAnnotatedTypeName, Field(description='x')] = DEFAULT\n"
+        "    simple_union: VeryLongPlainTypeName | OtherVeryLongPlainTypeName | None = DEFAULT\n"
+        "\n"
+        "Alias = TypeAliasType('Alias', Union[str, int], **OPTIONS)\n"
+    )
+
+    assert apply_builtin_formatter(code, line_length=40, string_normalization=True) == (
+        "class Model:\n"
+        "    very_long_attribute_name: VeryLongPlainAnnotation = (\n"
+        "        DEFAULT_VALUE\n"
+        "    )\n"
+        "    field_with_long_value: VeryLongPlainAnnotation = (\n"
+        "        Field(\n"
+        "            ...,\n"
+        '            description="long generated field",\n'
+        '            title="Long Field",\n'
+        "        )\n"
+        "    )\n"
+        "    empty_value_with_long_name: VeryLongPlainAnnotation\n"
+        "\n"
+        "    data: dict[str, type] = {\n"
+        "        **BASE_FIELDS,\n"
+        '        "id": str,\n'
+        '        "name": str,\n'
+        "    }\n"
+        "\n"
+        "class LeftRoot(\n"
+        "    RootModel[\n"
+        "        constr(\n"
+        '            pattern="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"\n'
+        "        )\n"
+        "        | None\n"
+        "    ]\n"
+        "):\n"
+        "    pass\n"
+        "\n"
+        "class RightRoot(\n"
+        "    RootModel[\n"
+        "        None\n"
+        "        | constr(\n"
+        '            pattern="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"\n'
+        "        )\n"
+        "    ]\n"
+        "):\n"
+        "    pass\n"
+        "\n"
+        "class UnionModel:\n"
+        "    right_annotated: (\n"
+        "        VeryLongPlainTypeName\n"
+        '        | Annotated[VeryLongAnnotatedTypeName, Field(description="x")]\n'
+        "    ) = DEFAULT\n"
+        "    simple_union: (\n"
+        "        VeryLongPlainTypeName\n"
+        "        | OtherVeryLongPlainTypeName\n"
+        "        | None\n"
+        "    ) = DEFAULT\n"
+        "\n"
+        "Alias = TypeAliasType(\n"
+        '    "Alias",\n'
+        "    Union[\n"
+        "        str,\n"
+        "        int,\n"
+        "    ],\n"
+        "    **OPTIONS,\n"
+        ")\n"
+    )
+
+
+def test_apply_builtin_formatter_handles_no_import_string_normalization_and_spacing() -> None:
+    """Test quote normalization and blank-line normalization without imports."""
+    code = (
+        "class Model:\n"
+        '    """Doc."""\n'
+        "\n"
+        "\n"
+        "\n"
+        "    value: str\n"
+        "\n"
+        "    def very_long_generated_method_name_without_arguments():\n"
+        "        pass\n"
+        "\n"
+        "    def very_long_generated_method_name_with_arguments(value: str):\n"
+        "        pass\n"
+        "\n"
+        "def very_long_generated_function_name_without_arguments():\n"
+        "    pass\n"
+        "\n"
+        "def very_long_generated_function_name_with_arguments(value: str):\n"
+        "    pass\n"
+        "\n"
+        "class VeryLongGeneratedClassNameWithoutAnyBaseClass:\n"
+        "    value = 'x'\n"
+        "\n"
+        "class VeryLongGeneratedClassNameWithPlainBase(VeryLongPlainBase):\n"
+        '    value = "x"\n'
+    )
+
+    assert apply_builtin_formatter(code, line_length=40, string_normalization=True) == (
+        "class Model:\n"
+        '    """Doc."""\n'
+        "\n"
+        "    value: str\n"
+        "\n"
+        "    def very_long_generated_method_name_without_arguments():\n"
+        "        pass\n"
+        "\n"
+        "    def very_long_generated_method_name_with_arguments(\n"
+        "        value: str\n"
+        "    ):\n"
+        "        pass\n"
+        "\n"
+        "def very_long_generated_function_name_without_arguments():\n"
+        "    pass\n"
+        "\n"
+        "def very_long_generated_function_name_with_arguments(value: str):\n"
+        "    pass\n"
+        "\n"
+        "class VeryLongGeneratedClassNameWithoutAnyBaseClass:\n"
+        '    value = "x"\n'
+        "\n"
+        "class VeryLongGeneratedClassNameWithPlainBase(VeryLongPlainBase):\n"
+        '    value = "x"\n'
+    )
+
+
+def test_builtin_formatter_private_edge_helpers(tmp_path: Path) -> None:
+    """Test small helper branches used by generated-code formatting."""
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.isort]\nknown_first_party = "not-a-list"\n',
+        encoding="utf-8",
+    )
+    call = ast.parse("constr()").body[0].value
+
+    assert _get_builtin_known_first_party(tmp_path) == DEFAULT_KNOWN_FIRST_PARTY
+    assert _split_escaped_string_literal("abc\\def", 4) == ["abc", "\\def"]
+    assert _split_escaped_string_literal("abcdef", 4) == ["abcd", "ef"]
+    assert _format_constrained_call(call, "", 88, "constr()") == "constr()"
+    assert _normalize_string_quotes("a = \"ok\"\nb = 'has \" quote'\nc = 'abc\\\\'\nd = 'ok'\n") == (
+        'a = "ok"\nb = \'has " quote\'\nc = \'abc\\\\\'\nd = "ok"\n'
+    )
+
+
+@pytest.mark.parametrize(
+    ("code", "expected_code"),
+    [
+        ("", ""),
+        ("class Model:\n    pass", "class Model:\n    pass\n"),
+        ("if", "if\n"),
+        ("import typing as t", "import typing as t\n"),
+    ],
+)
+def test_apply_builtin_formatter_handles_simple_edge_cases(code: str, expected_code: str) -> None:
+    """Test built-in formatter behavior when no import block can be rewritten."""
+    assert apply_builtin_formatter(code) == expected_code
+
+
+def test_apply_builtin_formatter_matches_black_isort_for_normalized_expected_files(tmp_path: Path) -> None:
+    """Keep built-in formatting aligned with black + isort for generated model outputs."""
+    expected_path = Path(__file__).parent / "data" / "expected"
+    isort_config = isort.Config(settings_path=str(tmp_path))
+    black_mode = black.FileMode(line_length=88, string_normalization=False)
+    checked_files = 0
+    mismatches: list[str] = []
+
+    for path in sorted(expected_path.rglob("*.py")):
+        relative_path = path.relative_to(expected_path).as_posix()
+        if relative_path in BLACK_VERSION_DEPENDENT_NORMALIZED_EXPECTED_FILES:
+            continue
+
+        code = path.read_text(encoding="utf-8")
+        try:
+            black_isort_code = black.format_str(
+                isort.code(code, config=isort_config),
+                mode=black_mode,
+            )
+        except black.InvalidInput:
+            continue
+
+        if code != black_isort_code:
+            continue
+
+        checked_files += 1
+        if apply_builtin_formatter(code) != black_isort_code:
+            mismatches.append(relative_path)  # pragma: no cover
+
+    assert checked_files > 1000
+    assert not mismatches
 
 
 def test_format_code_un_exist_custom_formatter() -> None:
@@ -611,7 +1609,9 @@ def test_generate_with_ruff_batch_formatting_and_explicit_type_checking_imports(
 def test_code_formatter_warns_when_formatters_is_none(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that FutureWarning is emitted when formatters is None (default)."""
     monkeypatch.chdir(tmp_path)
-    with pytest.warns(FutureWarning, match="default formatters"):
+    with pytest.warns(FutureWarning, match="external formatters"):
+        CodeFormatter(PythonVersionMin)
+    with pytest.warns(FutureWarning, match="dependency-free formatting"):
         CodeFormatter(PythonVersionMin)
 
 
