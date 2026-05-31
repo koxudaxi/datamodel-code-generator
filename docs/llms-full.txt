@@ -24,6 +24,16 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 
 ---
 
+## 🧪 Try It In Your Browser
+
+Generate models in your browser without installing anything.
+
+<p>
+  <a class="md-button md-button--primary" href="playground.md" target="_self">Open Playground</a>
+</p>
+
+---
+
 ## 📦 Installation
 
 === "uv tool (Recommended)"
@@ -232,6 +242,18 @@ These projects use datamodel-code-generator. See the linked examples for real-wo
 - [IBM/compliance-trestle](https://github.com/IBM/compliance-trestle) - *[Building models from OSCAL schemas](https://github.com/IBM/compliance-trestle/blob/develop/docs/contributing/website.md#building-the-models-from-the-oscal-schemas)*
 
 [See all dependents →](https://github.com/koxudaxi/datamodel-code-generator/network/dependents)
+
+---
+
+# Playground
+
+Source: https://datamodel-code-generator.koxudaxi.dev/playground/
+
+Run datamodel-code-generator in your browser. The deployed site serves this route as a standalone app so Pyodide only starts after you open it.
+
+<p>
+  <a class="md-button md-button--primary" href="../assets/playground/index.html">Open Playground</a>
+</p>
 
 ---
 
