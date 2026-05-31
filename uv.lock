@@ -1011,7 +1011,7 @@ dev = [
     { name = "pytest-mock", specifier = ">=3.14" },
     { name = "pytest-timeout", specifier = ">=2.4" },
     { name = "pytest-xdist", specifier = ">=3.3.1" },
-    { name = "t-linter", specifier = ">=0.7" },
+    { name = "t-linter", specifier = ">=0.8" },
     { name = "tdom", marker = "python_full_version >= '3.14'", specifier = ">=0.1.16" },
     { name = "time-machine", specifier = ">=3.1" },
     { name = "twine", specifier = ">=6.1" },
@@ -1036,7 +1036,7 @@ pkg-meta = [
     { name = "uv", specifier = ">=0.5.22" },
 ]
 playground = [
-    { name = "t-linter", specifier = ">=0.7" },
+    { name = "t-linter", specifier = ">=0.8" },
     { name = "tdom", marker = "python_full_version >= '3.14'", specifier = ">=0.1.16" },
 ]
 test = [
@@ -3085,14 +3085,14 @@ wheels = [
 
 [[package]]
 name = "t-linter"
-version = "0.7.0"
+version = "0.8.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/11/20/9bf544bfe55e209ca153636aeb6c83d73344378319645406cf6d1577f421/t_linter-0.7.0.tar.gz", hash = "sha256:188a92295304274a0311957f41a43969aab2d953b8e0066faea858bab5ed3b34", size = 101688, upload-time = "2026-03-24T18:45:04.701Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/df/31/e5468768e23b25e4a55ce018475ae238a9e4530ae3a747e838de032a8ebb/t_linter-0.8.0.tar.gz", hash = "sha256:d9bd0bb050b2c208c16ef96bba918a153c9ca9da8053a88c439d6799b6a256f9", size = 126018, upload-time = "2026-05-31T13:54:42.782Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2d/39/674a68ba4f89601d48983ad20d21b733b648d5b23f53f0f6c50092934790/t_linter-0.7.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:f448a2a910ef471c3d764bda2654c4a5f3b9fe801769d12b0212d2789f838d01", size = 4066204, upload-time = "2026-03-24T18:44:58.67Z" },
-    { url = "https://files.pythonhosted.org/packages/72/cf/23d47c1614d07a1962a582cdfd2376375defdf071c172b62f17ad22b4359/t_linter-0.7.0-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:33037e614746d82aea3bd08c0a7461d0d106000d9665d1addd09d2269fa23689", size = 4259227, upload-time = "2026-03-24T18:45:00.203Z" },
-    { url = "https://files.pythonhosted.org/packages/e1/13/79ad6dc20469a875dc33021cd89bd3c3ab712d791dac24a928a1fea9b092/t_linter-0.7.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:a228c5e8a52b4dc0c41fb58d3985f59e0076f24f5d2315600b53209f60c71820", size = 4348950, upload-time = "2026-03-24T18:45:01.467Z" },
-    { url = "https://files.pythonhosted.org/packages/94/9a/fd0c5d774b2422f8463ed19b060e50f8129ff3b09c9c132324d5233de8fc/t_linter-0.7.0-py3-none-win_amd64.whl", hash = "sha256:c6b9d66aece74a9418f05624d8d1636a6cbd9e2ac9670715a043e63a25fc01c5", size = 3736114, upload-time = "2026-03-24T18:45:03.028Z" },
+    { url = "https://files.pythonhosted.org/packages/0d/3f/06f396ddb5dfe17fa9fb764afcf877ebcc42057f763ac97f57e580d4ad77/t_linter-0.8.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:8216a700dcb96d0b3fbab98664450460fe48bb7b379bea7372ec3b7831eb9215", size = 4851711, upload-time = "2026-05-31T13:54:36.435Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/ea/63aafe1a7dcc7d33ff700d48d9e4047a206b78ef7924555e1243e0823f20/t_linter-0.8.0-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:7cfb13045b5cc395be5d243e99d8676761459219c45057338828ee199ff571ce", size = 5049771, upload-time = "2026-05-31T13:54:37.857Z" },
+    { url = "https://files.pythonhosted.org/packages/3c/c1/6d5bed6e55a4bfaa1110f0ff754c39460a3fbafb5f39400dd1f2fac7bccb/t_linter-0.8.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:8e10e711681235407862fabb64303b52d7698c9b6fe1b602b985295424fde508", size = 5116016, upload-time = "2026-05-31T13:54:39.523Z" },
+    { url = "https://files.pythonhosted.org/packages/15/ed/d39d0985fc6348d3693c64271ff3b77cb0ee31ab156b0d025120a83dcd4b/t_linter-0.8.0-py3-none-win_amd64.whl", hash = "sha256:1d28fd4e89942bb8c76f18959bca88fe252fe1474ca056bae4aa593bf9ad0ba2", size = 4533609, upload-time = "2026-05-31T13:54:41.087Z" },
 ]
 
 [[package]]

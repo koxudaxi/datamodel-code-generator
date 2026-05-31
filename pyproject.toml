@@ -116,7 +116,7 @@ docs = [
   "zensical>=0.0.43; python_version>='3.10'",
 ]
 playground = [
-  "t-linter>=0.7",
+  "t-linter>=0.8",
   "tdom>=0.1.16; python_version>='3.14'",
 ]
 benchmark = [

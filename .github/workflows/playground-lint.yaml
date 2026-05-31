@@ -9,7 +9,7 @@ on:
       - 'docs/playground.md'
       - 'pyproject.toml'
       - 'scripts/build_playground_assets.py'
-      - 'scripts/lint_playground.sh'
+      - 'tox.ini'
       - 'uv.lock'
       - 'zensical.toml'
   push:
@@ -20,7 +20,7 @@ on:
       - 'docs/playground.md'
       - 'pyproject.toml'
       - 'scripts/build_playground_assets.py'
-      - 'scripts/lint_playground.sh'
+      - 'tox.ini'
       - 'uv.lock'
       - 'zensical.toml'
   workflow_dispatch:
@@ -48,7 +48,9 @@ jobs:
         run: uv python install 3.14
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Install tox
+        run: uv tool install --python-preference only-managed --python 3.14 tox --with tox-uv
       - name: Run playground lint
-        run: uv run --locked --python 3.14 --group playground bash scripts/lint_playground.sh
+        run: tox run -e playground-lint
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
