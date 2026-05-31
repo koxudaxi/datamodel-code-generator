@@ -158,9 +158,10 @@ def get_current_version_args(*extra_args: str) -> list[str]:
 
 def _copy_files(copy_files: CopyFilesMapping | None) -> None:
     """Copy files from source to destination paths."""
-    if copy_files is not None:
-        for src, dst in copy_files:
-            shutil.copy(src, dst)
+    if copy_files is None:
+        return
+    for src, dst in copy_files:
+        shutil.copy(src, dst)
 
 
 def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> None:
@@ -295,8 +296,7 @@ def _uses_default_cli_formatters(extra_args: Sequence[str] | None) -> bool:
         return True
     if "--custom-formatters" in extra_args or "--custom-formatters-kwargs" in extra_args:
         return False
-    formatters = _extract_cli_formatters(extra_args)
-    return formatters is None or set(formatters) == _DEFAULT_CLI_FORMATTERS
+    return (formatters := _extract_cli_formatters(extra_args)) is None or set(formatters) == _DEFAULT_CLI_FORMATTERS
 
 
 def _uses_check_mode(extra_args: Sequence[str] | None) -> bool:
@@ -308,8 +308,7 @@ def _uses_default_api_formatters(generate_options: dict[str, Any]) -> bool:
         "custom_formatters_kwargs"
     ):  # pragma: no cover
         return False
-    formatters = generate_options.get("formatters")
-    return formatters is None or set(formatters) == _DEFAULT_API_FORMATTERS
+    return (formatters := generate_options.get("formatters")) is None or set(formatters) == _DEFAULT_API_FORMATTERS
 
 
 def _builtin_formatter_extra_args(extra_args: Sequence[str] | None) -> list[str]:
@@ -976,11 +975,14 @@ def _validate_output_files(
         )
         if should_exec and force_exec_validation:
             _import_generated_output(output_path)
-    elif output_path.is_dir():  # pragma: no branch
-        for python_file in output_path.rglob("*.py"):
-            validate_generated_code(python_file.read_text(encoding="utf-8"), str(python_file), do_exec=False)
-        if should_exec:
-            _import_generated_output(output_path)
+        return
+
+    if not output_path.is_dir():  # pragma: no cover
+        return
+    for python_file in output_path.rglob("*.py"):
+        validate_generated_code(python_file.read_text(encoding="utf-8"), str(python_file), do_exec=False)
+    if should_exec:
+        _import_generated_output(output_path)
 
 
 def _generated_output_import_code(output_path: Path) -> str:
