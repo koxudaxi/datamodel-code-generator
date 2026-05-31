@@ -828,6 +828,22 @@ def _should_format_field_bit_or_annotation_assignment(
     field_prefix: str,
     annotation: str,
     line_length: int,
+) -> bool:
+    value_node = statement.value
+    if (
+        not isinstance(statement.annotation, ast.BinOp)
+        or not isinstance(statement.annotation.op, ast.BitOr)
+        or not _is_call(value_node, "Field")
+    ):
+        return False
+
+    return len(f"{field_prefix}{annotation} = (") > line_length
+
+
+def _should_format_field_bit_or_value_assignment(
+    statement: ast.AnnAssign,
+    value_prefix: str,
+    line_length: int,
     source: str,
 ) -> bool:
     value_node = statement.value
@@ -839,7 +855,32 @@ def _should_format_field_bit_or_annotation_assignment(
         return False
 
     call_start = f"{_source_segment(source, value_node.func)}("
-    return len(f"{field_prefix}{annotation} = {call_start}") > line_length
+    return len(f"{value_prefix}{call_start}") > line_length and len(f"{value_prefix}(") <= line_length
+
+
+def _format_parenthesized_field_value(
+    statement: ast.AnnAssign,
+    value_prefix: str,
+    line_length: int,
+    source: str,
+    *,
+    wrap_string_literal: bool,
+) -> str:
+    value_node = statement.value
+    assert _is_call(value_node, "Field")
+    indent = value_prefix[: len(value_prefix) - len(value_prefix.lstrip())]
+    value = _source_segment(source, value_node)
+    if len(f"{indent}    {value}") <= line_length:
+        return f"{value_prefix}(\n{indent}    {value}\n{indent})"
+
+    formatted_value = _format_call(
+        value_node,
+        f"{indent}    ",
+        line_length,
+        source,
+        wrap_string_literal=wrap_string_literal,
+    )
+    return f"{value_prefix}(\n{indent}    {formatted_value}\n{indent})"
 
 
 def _should_format_string_bit_or_annotation_assignment(
@@ -981,13 +1022,25 @@ def _format_generated_class_statement(  # noqa: PLR0911, PLR0912
             f"{indent}{target}: ",
             annotation,
             line_length,
-            source,
         ):
             return _format_bit_or_annotation_assignment(
                 statement,
                 f"{indent}{target}: ",
                 line_length,
                 source,
+            )
+        if _should_format_field_bit_or_value_assignment(
+            statement,
+            f"{indent}{target}: {annotation} = ",
+            line_length,
+            source,
+        ):
+            return _format_parenthesized_field_value(
+                statement,
+                f"{indent}{target}: {annotation} = ",
+                line_length,
+                source,
+                wrap_string_literal=wrap_string_literal,
             )
         if _should_format_string_bit_or_annotation_assignment(
             statement,
@@ -1326,6 +1379,7 @@ def _format_generated_class_definition(
         and _is_name_or_attr(statement.bases[0].value, "RootModel")
         and isinstance(statement.bases[0].slice, ast.BinOp)
         and isinstance(statement.bases[0].slice.op, ast.BitOr)
+        and len(f"{indent}    {_source_segment(source, statement.bases[0])}") > line_length
     ):
         base = _format_root_model_union_base(statement.bases[0], indent, line_length, source)
     elif _is_name_or_attr(statement.bases[0], "RootModel") or (
