@@ -27,7 +27,9 @@ Available formatter names are:
 | `ruff-check` | Runs `ruff check --fix`. |
 | `ruff-format` | Runs `ruff format`. |
 
-External formatters run in the order passed to `--formatters`.
+`--formatters` selects which formatter integrations are enabled. It does not reorder the built-in integrations:
+single-file output is processed as isort, built-in formatter, Black, then Ruff check/format when those formatters are
+selected.
 The built-in formatter is an alternative to external formatting, not a pre-formatter.
 If `builtin` is passed together with `black`, `isort`, `ruff-check`, or `ruff-format`, `builtin` is ignored.
 
