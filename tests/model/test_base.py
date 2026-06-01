@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
@@ -126,6 +127,25 @@ def test_pydantic_v2_base_model_create_typed_extra_field() -> None:
     assert field.original_name == "__pydantic_extra__"
     assert field.data_type is data_type
     assert field.required is True
+
+
+def test_pydantic_v2_base_model_processes_schema_validators_without_body_lines() -> None:
+    """Test schema validator imports can be added without generated class body lines."""
+    extra_template_data: defaultdict[str, dict[str, Any]] = defaultdict(dict)
+    extra_template_data["#/Model"]["schema_validators"] = {
+        "body_lines": [],
+        "data_types": [],
+        "uses_re": True,
+    }
+
+    model = BaseModel(
+        fields=[],
+        reference=Reference(path="#/Model", original_name="Model", name="Model"),
+        extra_template_data=extra_template_data,
+    )
+
+    assert "class_body_lines" not in model.extra_template_data
+    assert any(import_.import_ == "re" for import_ in model._additional_imports)
 
 
 def test_data_model_exception() -> None:

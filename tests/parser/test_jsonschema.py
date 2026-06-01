@@ -91,6 +91,7 @@ def test_schema_validator_input_names_include_validation_aliases_and_schema_base
         validation_aliases=["fieldAlias", "field-alt"],
         data_type=DataType(type="str"),
     )
+    empty_field = DataModelFieldBase(name="", original_name="", data_type=DataType(type="str"))
     parser.raw_obj = {
         "$defs": {
             "Empty": {"type": "object"},
@@ -103,7 +104,7 @@ def test_schema_validator_input_names_include_validation_aliases_and_schema_base
 
     assert parser._field_input_names(field) == ("field", "fieldAlias", "field_name", "field-alt")
     assert parser._get_input_names_by_property(
-        [],
+        [empty_field],
         [Reference(path="#/$defs/Empty", name="Empty"), Reference(path="#/$defs/Base", name="Base")],
     ) == {"base": ("base",)}
 
@@ -151,6 +152,22 @@ def test_schema_validator_pattern_property_helpers_collect_value_types() -> None
     validators = parser.extra_template_data["#/Model"]["schema_validators"]
     assert validators["data_types"]
     assert validators["uses_type_adapter"]
+
+
+def test_schema_validator_pattern_property_helpers_ignore_unexpected_value_types() -> None:
+    """Test patternProperties collection ignores unexpected runtime values defensively."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    obj = JsonSchemaObject.model_validate({"type": "object"})
+    obj.patternProperties = {"^ignored": object()}  # type: ignore[dict-item]
+
+    pattern_value_types, rejected_patterns, additional_property_type, allow_unmatched = (
+        parser._collect_pattern_property_validators("Model", obj, ["#"])
+    )
+
+    assert pattern_value_types == []
+    assert rejected_patterns == []
+    assert additional_property_type is None
+    assert allow_unmatched
 
 
 def test_schema_validator_conditional_predicate_helpers() -> None:
