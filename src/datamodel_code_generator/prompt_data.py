@@ -61,6 +61,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--frozen-dataclasses": "Generate frozen dataclasses with optional keyword-only fields.",
     "--generate-cli-command": "Generate CLI command from pyproject.toml configuration.",
     "--generate-pyproject-config": "Generate pyproject.toml configuration from CLI arguments.",
+    "--generate-schema-validators": "Generate Pydantic v2 model validators for JSON Schema runtime rules.",
     "--graphql-no-typename": "Exclude __typename field from generated GraphQL models.",
     "--http-headers": "Fetch schema from URL with custom HTTP headers.",
     "--http-ignore-tls": "Disable TLS certificate verification for HTTPS requests.",

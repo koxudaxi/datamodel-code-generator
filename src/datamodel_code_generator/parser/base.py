@@ -1108,6 +1108,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.custom_template_dir = config.custom_template_dir
         self.extra_template_data: defaultdict[str, Any] = config.extra_template_data or defaultdict(dict)
         self.validators = config.validators
+        self.generate_schema_validators: bool = config.generate_schema_validators
 
         if self.validators:
             for model_name, model_config in self.validators.items():

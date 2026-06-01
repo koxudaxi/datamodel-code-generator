@@ -35,6 +35,8 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_CONFIG_DICT,
     IMPORT_FIELD,
     IMPORT_FIELD_VALIDATOR,
+    IMPORT_MODEL_VALIDATOR,
+    IMPORT_TYPE_ADAPTER,
     IMPORT_VALIDATION_INFO,
     IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER,
 )
@@ -351,9 +353,13 @@ class BaseModel(BaseModelBase):
             self.extra_template_data["config"] = ConfigDict.model_validate(config_parameters)  # ty: ignore
             self._additional_imports.append(IMPORT_CONFIG_DICT)
 
+        self._process_schema_validators()
         self._process_validators()
 
     def _get_config_extra(self) -> Literal["'allow'", "'forbid'", "'ignore'"] | None:
+        if self.extra_template_data.get("force_extra_allow"):
+            return "'allow'"
+
         additional_properties = self.extra_template_data.get("additionalProperties")
         unevaluated_properties = self.extra_template_data.get("unevaluatedProperties")
         allow_extra_fields = self.extra_template_data.get("allow_extra_fields")
@@ -447,6 +453,27 @@ class BaseModel(BaseModelBase):
                 self._additional_imports.append(IMPORT_VALIDATION_INFO)
             if "wrap" in modes:
                 self._additional_imports.append(IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER)
+
+    def _process_schema_validators(self) -> None:
+        """Add schema-derived runtime validators prepared by JSON Schema parsing."""
+        schema_validators = self.extra_template_data.get("schema_validators")
+        if not schema_validators:
+            return
+
+        body_lines = schema_validators.get("body_lines") or []
+        if body_lines:
+            class_body_lines = self.extra_template_data.setdefault("class_body_lines", [])
+            class_body_lines.extend(body_lines)
+            self._additional_imports.append(IMPORT_MODEL_VALIDATOR)
+            self._additional_imports.append(IMPORT_ANY)
+
+        if schema_validators.get("uses_re"):
+            self._additional_imports.append(Import(import_="re"))
+        if schema_validators.get("uses_type_adapter"):
+            self._additional_imports.append(IMPORT_TYPE_ADAPTER)
+
+        for data_type in schema_validators.get("data_types") or []:
+            self._additional_imports.extend(data_type.all_imports)
 
     @classmethod
     def create_base_class_model(

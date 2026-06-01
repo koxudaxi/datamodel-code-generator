@@ -752,6 +752,10 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     else:
         default_field_extras = None
 
+    if config.generate_schema_validators and config.output_model_type != DataModelType.PydanticV2BaseModel:
+        msg = "generate_schema_validators is only supported for pydantic_v2.BaseModel"
+        raise Error(msg)
+
     from datamodel_code_generator.model import get_data_model_types  # noqa: PLC0415
 
     data_model_types = get_data_model_types(

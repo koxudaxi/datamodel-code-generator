@@ -81,6 +81,7 @@ class GenerateConfig(BaseModel):
     custom_template_dir: Path | None = None
     extra_template_data: ExtraTemplateDataType | None = None
     validators: Mapping[str, ModelValidators] | None = None
+    generate_schema_validators: bool = False
     validation: bool = False
     field_constraints: bool = False
     snake_case_field: bool = False
@@ -228,6 +229,7 @@ class ParserConfig(BaseModel):
     custom_template_dir: Path | None = None
     extra_template_data: ExtraTemplateDataType | None = None
     validators: Mapping[str, ModelValidators] | None = None
+    generate_schema_validators: bool = False
     target_python_version: PythonVersion = PythonVersionMin
     dump_resolve_reference_action: DumpResolveReferenceAction | None = None
     validation: bool = False

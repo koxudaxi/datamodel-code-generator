@@ -11,7 +11,7 @@ import pydantic
 import pytest
 import yaml
 
-from datamodel_code_generator import AllOfMergeMode, Error
+from datamodel_code_generator import AllOfMergeMode, DataModelType, Error, InputFileType, generate
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.dataclass import DataClass
@@ -33,6 +33,182 @@ if TYPE_CHECKING:
 DATA_PATH: Path = Path(__file__).parents[1] / "data" / "jsonschema"
 
 EXPECTED_JSONSCHEMA_PATH = Path(__file__).parents[1] / "data" / "expected" / "parser" / "jsonschema"
+
+
+def test_schema_validator_required_only_schema_filters() -> None:
+    """Test detection of required-only combined-schema branches."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+
+    assert not parser._is_required_only_schema(True)
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"$ref": "#/$defs/Model"}))
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"items": {"type": "string"}}))
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"anyOf": [{"required": ["a"]}]}))
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"enum": ["a"]}))
+    assert (
+        parser._get_required_groups([JsonSchemaObject.model_validate({"properties": {"a": {"type": "string"}}})]) == ()
+    )
+
+
+def test_schema_validator_helpers_disabled() -> None:
+    """Test schema validator helpers are inert when disabled."""
+    parser = JsonSchemaParser("", generate_schema_validators=False)
+    obj = JsonSchemaObject.model_validate({
+        "type": "object",
+        "properties": {"a": {"type": "string"}},
+        "oneOf": [{"required": ["a"]}],
+    })
+    parser.extra_template_data["#/Model"] = {}
+
+    assert not parser._should_parse_object_with_schema_validators(obj)
+    assert parser._merge_conditional_properties(obj) is obj
+
+    parser._add_schema_validators("#/Model", "Model", obj, ["#"], [], [])
+
+    assert parser.extra_template_data["#/Model"] == {}
+
+
+def test_schema_validator_merge_conditional_properties_skips_missing_and_duplicate_properties() -> None:
+    """Test conditional property merging skips missing and duplicate branch properties."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    obj = JsonSchemaObject.model_validate({
+        "type": "object",
+        "properties": {"metric": {"type": "integer"}},
+        "if": {"required": ["kind"], "properties": {"kind": {"const": "metric"}}},
+        "then": {"required": ["metric"]},
+        "else": {"required": ["metric"], "properties": {"metric": {"type": "integer"}}},
+    })
+
+    assert parser._merge_conditional_properties(obj) is obj
+
+
+def test_schema_validator_input_names_include_validation_aliases_and_schema_base_properties() -> None:
+    """Test validator input names include aliases and inherited schema properties."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    field = DataModelFieldBase(
+        name="field_name",
+        original_name="field",
+        alias="fieldAlias",
+        validation_aliases=["fieldAlias", "field-alt"],
+        data_type=DataType(type="str"),
+    )
+    parser.raw_obj = {
+        "$defs": {
+            "Empty": {"type": "object"},
+            "Base": {
+                "type": "object",
+                "properties": {"base": {"type": "string"}},
+            },
+        }
+    }
+
+    assert JsonSchemaParser._field_input_names(field) == ("field", "fieldAlias", "field_name", "field-alt")
+    assert parser._get_input_names_by_property(
+        [],
+        [Reference(path="#/$defs/Empty", name="Empty"), Reference(path="#/$defs/Base", name="Base")],
+    ) == {"base": ("base",)}
+
+
+def test_schema_validator_pattern_property_helpers_collect_inherited_sources() -> None:
+    """Test patternProperties helper walks usable inherited schema sources."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    parser.raw_obj = {"$defs": {"Loop": {"allOf": [{"$ref": "#/$defs/Loop"}]}}}
+    obj = JsonSchemaObject.model_validate({
+        "allOf": [
+            True,
+            {"$ref": "#/$defs/Loop"},
+            {"type": "object", "patternProperties": {"^x": True}},
+        ]
+    })
+
+    sources = list(parser._iter_schema_validation_sources(obj))
+
+    assert len(sources) == 3
+    assert sources[-1].patternProperties == {"^x": True}
+    assert JsonSchemaParser._pattern_property_entries_code(()) == "()"
+
+
+def test_schema_validator_pattern_property_helpers_collect_value_types() -> None:
+    """Test patternProperties helper collects generated value data types."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    obj = JsonSchemaObject.model_validate({
+        "type": "object",
+        "patternProperties": {"^reject": False, "^any": True},
+        "additionalProperties": {"type": "integer"},
+    })
+    parser.extra_template_data["#/Model"] = {}
+
+    pattern_value_types, rejected_patterns, additional_property_type, allow_unmatched = (
+        parser._collect_pattern_property_validators("Model", obj, ["#"])
+    )
+
+    assert pattern_value_types[0][0] == "^any"
+    assert rejected_patterns == ["^reject"]
+    assert additional_property_type is not None
+    assert allow_unmatched
+
+    parser._add_pattern_properties_validator("#/Model", "Model", obj, ["#"], [], [])
+
+    validators = parser.extra_template_data["#/Model"]["schema_validators"]
+    assert validators["data_types"]
+    assert validators["uses_type_adapter"]
+
+
+def test_schema_validator_conditional_predicate_helpers() -> None:
+    """Test conditional predicate extraction accepts only mechanical cases."""
+    assert (
+        JsonSchemaParser._get_conditional_predicate(
+            JsonSchemaObject.model_validate({"if": {"required": ["kind"], "properties": {"kind": True}}})
+        )
+        is None
+    )
+    assert JsonSchemaParser._get_conditional_predicate(
+        JsonSchemaObject.model_validate({"if": {"required": ["kind"], "properties": {"kind": {"enum": ["a", "b"]}}}})
+    ) == (("kind", ("a", "b")),)
+    assert (
+        JsonSchemaParser._get_conditional_predicate(
+            JsonSchemaObject.model_validate({"if": {"required": ["kind"], "properties": {"kind": {"type": "string"}}}})
+        )
+        is None
+    )
+
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    parser.extra_template_data["#/Model"] = {}
+    parser._add_conditional_validator(
+        "#/Model",
+        JsonSchemaObject.model_validate({
+            "if": {"required": ["kind"], "properties": {"kind": {"const": "metric"}}},
+            "then": {},
+        }),
+        {"kind": ("kind",)},
+    )
+
+    assert parser.extra_template_data["#/Model"] == {}
+
+
+def test_schema_validator_nested_one_of_property_generates_model_validator() -> None:
+    """Test nested required-only oneOf properties generate object validators."""
+    output = generate(
+        {
+            "title": "Container",
+            "type": "object",
+            "properties": {
+                "choice": {
+                    "type": "object",
+                    "properties": {"a": {"type": "string"}, "b": {"type": "string"}},
+                    "oneOf": [{"required": ["a"]}, {"required": ["b"]}],
+                }
+            },
+        },
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        generate_schema_validators=True,
+        disable_timestamp=True,
+        formatters=[],
+    )
+
+    assert isinstance(output, str)
+    assert "class Choice(BaseModel):" in output
+    assert "def _validate_schema_one_of_required(cls, data: Any) -> Any:" in output
 
 
 @pytest.mark.parametrize(

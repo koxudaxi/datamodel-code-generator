@@ -10763,6 +10763,111 @@ def test_field_validators(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--generate-schema-validators"],
+    option_description="""Generate Pydantic v2 model validators for JSON Schema runtime rules.
+
+The `--generate-schema-validators` option emits schema-derived model validators
+for object constraints that cannot be represented as type hints alone, including
+patternProperties on composed object models, required-only oneOf/anyOf groups,
+and simple if/then/else required-property conditions.""",
+    input_schema="jsonschema/schema_validators.json",
+    cli_args=[
+        "--generate-schema-validators",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--disable-timestamp",
+    ],
+    golden_output="jsonschema/schema_validators.py",
+)
+def test_main_jsonschema_generate_schema_validators(output_file: Path) -> None:
+    """Generate Pydantic v2 model validators for JSON Schema runtime rules."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators.py",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output",
+        model_name="PatternTarget",
+        valid_json='{"first":"x","Alpha":{"second":"y"}}',
+        invalid_json='{"first":"x","1bad":{"second":"y"}}',
+        expected_error_type="value_error",
+        expected_attribute_path=("Alpha", "second"),
+        expected_attribute_value="y",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output",
+        model_name="OneOfContact",
+        valid_json='{"email":"a@example.com"}',
+        invalid_json='{"email":"a@example.com","phone":"123"}',
+        expected_error_type="value_error",
+        expected_attribute_path=("email",),
+        expected_attribute_value="a@example.com",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output",
+        model_name="AnyOfContact",
+        valid_json='{"email":"a@example.com","phone":"123"}',
+        invalid_json="{}",
+        expected_error_type="value_error",
+        expected_attribute_path=("phone",),
+        expected_attribute_value="123",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output",
+        model_name="ConditionalPayload",
+        valid_json='{"kind":"metric","metric":7}',
+        invalid_json='{"kind":"metric"}',
+        expected_error_type="value_error",
+        expected_attribute_path=("metric",),
+        expected_attribute_value=7,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output",
+        model_name="ConditionalPayload",
+        valid_json='{"kind":"note","note":"ok"}',
+        invalid_json='{"kind":"note"}',
+        expected_error_type="value_error",
+        expected_attribute_path=("note",),
+        expected_attribute_value="ok",
+    )
+
+
+def test_main_jsonschema_generate_schema_validators_requires_pydantic_v2(
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject schema-derived validators for output models without Pydantic v2 runtime hooks."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="generate_schema_validators is only supported for pydantic_v2.BaseModel",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "dataclasses.dataclass",
+        ],
+    )
+
+
 def test_field_validators_multi_fields(output_file: Path) -> None:
     """Test validators with multiple fields."""
     run_main_and_assert(

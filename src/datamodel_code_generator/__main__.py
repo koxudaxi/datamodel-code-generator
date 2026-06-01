@@ -434,6 +434,7 @@ class Config(BaseModel):  # noqa: PLR0904
     custom_template_dir: Optional[Path] = None  # noqa: UP045
     extra_template_data: Optional[TextIOBase] = None  # noqa: UP045
     validators: Optional[TextIOBase] = None  # noqa: UP045
+    generate_schema_validators: bool = False
     validation: bool = False
     field_constraints: bool = False
     snake_case_field: bool = False
@@ -896,6 +897,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         additional_imports=config.additional_imports,
         class_decorators=config.class_decorators,
         custom_template_dir=config.custom_template_dir,
+        generate_schema_validators=config.generate_schema_validators,
         validation=config.validation,
         field_constraints=config.field_constraints,
         snake_case_field=config.snake_case_field,
