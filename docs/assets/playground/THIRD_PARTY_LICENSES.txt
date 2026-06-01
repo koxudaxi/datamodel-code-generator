@@ -42,13 +42,6 @@ RPC-style API.
 
 Comlink is distributed under the Apache License 2.0.
 
-## morphdom
-
-morphdom `2.7.7` is loaded from jsDelivr to apply tdom-rendered HTML with
-targeted DOM patching instead of replacing the whole playground tree.
-
-morphdom is distributed under the MIT License.
-
 ## Python packages
 
 The playground installs Python packages from PyPI with `micropip` inside
@@ -61,9 +54,11 @@ Pyodide. The primary packages are:
 - `jinja2`
 - `pydantic`
 - `pyyaml`
-- `tdom`
 - `micropip`
 
 The generator package is installed without its declared transitive dependencies
 so the browser runtime can use the builtin formatter without loading black or
 isort. Runtime dependencies needed by the playground are installed explicitly.
+The static playground shell is generated at build time with `tdom`. Current
+runtime assets do not install `tdom`; older version assets that still use
+`app.py` may install it for compatibility.

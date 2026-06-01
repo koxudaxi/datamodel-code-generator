@@ -25,7 +25,8 @@ GENERATED_ROOT = PLAYGROUND_ROOT / "generated"
 METADATA_PATH = GENERATED_ROOT / "codegen-ui-metadata.json"
 APP_SHELL_PATH = GENERATED_ROOT / "app-shell.html"
 APP_SOURCE_PATH = PLAYGROUND_ROOT / "app.py"
-GENERATED_APP_PATH = GENERATED_ROOT / "app.py"
+RUNTIME_SOURCE_PATH = PLAYGROUND_ROOT / "runtime.py"
+GENERATED_RUNTIME_PATH = GENERATED_ROOT / "runtime.py"
 VERSIONS_PATH = GENERATED_ROOT / "playground-versions.json"
 
 BROWSER_SUPPORTED_INPUT_TYPES = {
@@ -340,6 +341,7 @@ def build_versions(metadata: dict[str, Any]) -> dict[str, Any]:
             "requirement": "datamodel-code-generator",
             "deps": False,
         }
+    current_version["app"] = "runtime.py"
 
     return {
         "schema_version": 1,
@@ -364,7 +366,7 @@ def main() -> None:
     metadata_json = json.dumps(metadata, indent=2, ensure_ascii=False) + "\n"
     GENERATED_ROOT.mkdir(parents=True, exist_ok=True)
     METADATA_PATH.write_text(metadata_json, encoding="utf-8")
-    shutil.copyfile(APP_SOURCE_PATH, GENERATED_APP_PATH)
+    shutil.copyfile(RUNTIME_SOURCE_PATH, GENERATED_RUNTIME_PATH)
 
     app = _load_playground_app()
     app.set_ui_metadata(metadata_json)
@@ -378,7 +380,7 @@ def main() -> None:
     )
 
     print(f"Generated {METADATA_PATH.relative_to(ROOT)}")
-    print(f"Generated {GENERATED_APP_PATH.relative_to(ROOT)}")
+    print(f"Generated {GENERATED_RUNTIME_PATH.relative_to(ROOT)}")
     print(f"Generated {APP_SHELL_PATH.relative_to(ROOT)}")
     print(f"Generated {VERSIONS_PATH.relative_to(ROOT)}")
 

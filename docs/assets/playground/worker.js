@@ -5,20 +5,27 @@ const PYODIDE_VERSION = "314.0.0-alpha.2";
 const PYODIDE_INDEX = "https://cdn.jsdelivr.net/pyodide/v314.0.0a2/full/";
 const PYPI_JSON_BASE = "https://pypi.org/pypi";
 const MICROPIP_VERSION = "0.11.1";
-const PYTHON_RUNTIME_PACKAGES = [
-  "genson>=1.2.1,<2",
-  "graphql-core>=3.2.3",
+const STANDARD_RUNTIME_PACKAGES = [
   "inflect>=4.1,<8",
   "jinja2>=2.10.1,<4",
   "pydantic>=2.12,<3",
   "pyyaml>=6.0.1",
-  "tdom",
 ];
+const LEGACY_APP_PACKAGES = ["tdom"];
+const INPUT_TYPE_PACKAGES = {
+  csv: ["genson>=1.2.1,<2"],
+  dict: ["genson>=1.2.1,<2"],
+  graphql: ["graphql-core>=3.2.3"],
+  json: ["genson>=1.2.1,<2"],
+  yaml: ["genson>=1.2.1,<2"],
+};
 
 let pyodideReadyPromise = null;
 let bootInfo = null;
 let statusCallback = null;
 let activeVersion = null;
+const packageInstallPromises = new Map();
+let packageInstallQueue = Promise.resolve();
 
 function postStatus(message) {
   statusCallback?.(message);
@@ -40,7 +47,7 @@ function withDefaultVersionConfig(versionConfig = {}) {
     label: config.label || "Current build",
     assetBaseUrl,
     metadataUrl: config.metadataUrl || new URL("codegen-ui-metadata.json", assetBaseUrl).toString(),
-    appUrl: config.appUrl || new URL("app.py", assetBaseUrl).toString(),
+    appUrl: config.appUrl || new URL("runtime.py", assetBaseUrl).toString(),
     install: config.install || null,
   };
 }
@@ -84,6 +91,37 @@ async function findWheelUrl(project, version, matcher) {
   return wheel.url;
 }
 
+async function installPythonPackages(pyodide, packages, message) {
+  const missingPackages = packages.filter((name) => !packageInstallPromises.has(name));
+  if (missingPackages.length > 0) {
+    const installPromise = packageInstallQueue.then(async () => {
+      postStatus(message);
+      pyodide.globals.set("packages_json", JSON.stringify(missingPackages));
+      try {
+        await pyodide.runPythonAsync(`
+import json
+import micropip
+await micropip.install(json.loads(packages_json))
+`);
+      } finally {
+        pyodide.globals.delete("packages_json");
+      }
+    });
+    packageInstallQueue = installPromise.catch(() => {});
+    missingPackages.forEach((name) => packageInstallPromises.set(name, installPromise));
+  }
+  await Promise.all(packages.map((name) => packageInstallPromises.get(name)));
+}
+
+function packagesForInputType(inputType) {
+  return INPUT_TYPE_PACKAGES[inputType] || [];
+}
+
+function packagesForRuntimeApp(versionConfig) {
+  const appPath = new URL(versionConfig.appUrl).pathname;
+  return appPath.endsWith("/app.py") ? LEGACY_APP_PACKAGES : [];
+}
+
 async function initPyodide(versionConfig) {
   activeVersion = withDefaultVersionConfig(versionConfig);
   const metadataJson = await fetchText(activeVersion.metadataUrl);
@@ -98,11 +136,11 @@ async function initPyodide(versionConfig) {
   );
   await pyodide.loadPackage(micropipWheel);
 
-  postStatus("Installing generator runtime from PyPI...");
-  await pyodide.runPythonAsync(`
-import micropip
-await micropip.install(${JSON.stringify(PYTHON_RUNTIME_PACKAGES)})
-`);
+  await installPythonPackages(
+    pyodide,
+    [...STANDARD_RUNTIME_PACKAGES, ...packagesForRuntimeApp(activeVersion)],
+    "Installing generator runtime dependencies...",
+  );
 
   const packageInstall = packageInstallFromMetadata(metadata, activeVersion);
   postStatus(`Installing datamodel-code-generator (${activeVersion.label})...`);
@@ -120,7 +158,6 @@ await micropip.install(package_source, deps=package_deps)
   pyodide.globals.get("set_ui_metadata")(metadataJson);
 
   bootInfo = {
-    html: pyodide.globals.get("render_app")(),
     metadataJson,
     codegenVersion: pyodide.runPython(
       "from importlib.metadata import version\nversion('datamodel-code-generator')",
@@ -150,6 +187,15 @@ const api = {
     return pyodide.globals.get("sample_schema")(inputType || "");
   },
 
+  async prepare(inputType) {
+    const pyodide = await ensurePyodide();
+    await installPythonPackages(
+      pyodide,
+      packagesForInputType(inputType || ""),
+      `Installing ${inputType || "selected"} input dependencies...`,
+    );
+  },
+
   async buildCliOptions(options, inputType) {
     const pyodide = await ensurePyodide();
     return pyodide.globals.get("build_cli_options")(JSON.stringify(options || {}), inputType || "");
@@ -167,6 +213,11 @@ const api = {
 
   async generate(schema, inputType, options) {
     const pyodide = await ensurePyodide();
+    await installPythonPackages(
+      pyodide,
+      packagesForInputType(inputType || ""),
+      `Installing ${inputType || "selected"} input dependencies...`,
+    );
     const resultJson = pyodide.globals.get("generate_in_browser")(
       schema,
       inputType,
