@@ -1003,6 +1003,12 @@ template_options.add_argument(
     default=None,
 )
 template_options.add_argument(
+    "--schema-validator-mixin-name",
+    help="Set the generated shared Pydantic v2 schema runtime validator mixin class name.",
+    type=str,
+    default=None,
+)
+template_options.add_argument(
     "--use-type-checking-imports",
     help="Allow Ruff to move typing-only imports into TYPE_CHECKING blocks. "
     "By default this stays enabled, except for multi-module Ruff formatting of modular Pydantic output "

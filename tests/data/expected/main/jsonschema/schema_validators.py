@@ -4,88 +4,112 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, RootModel, TypeAdapter, model_validator
 
 
-def _datamodel_codegen_validate_schema_pattern_properties(
-    data: Any,
-    *,
-    declared_properties: tuple[str, ...],
-    rejected_patterns: tuple[str, ...],
-    pattern_properties: list[tuple[str, Any]],
-    additional_property_type: Any,
-    allow_unmatched: bool,
-) -> Any:
-    if not isinstance(data, dict):
-        return data
-    values = dict(data)
-    for key, value in data.items():
-        if key in declared_properties:
-            continue
-        if any(re.search(pattern, key) for pattern in rejected_patterns):
-            raise ValueError(f'Property {key!r} is not allowed by patternProperties')
-        matched = False
-        for pattern, value_type in pattern_properties:
-            if not re.search(pattern, key):
-                continue
-            matched = True
-            value = TypeAdapter(value_type).validate_python(value)
-        if matched:
-            values[key] = value
-            continue
-        if additional_property_type is not None:
-            values[key] = TypeAdapter(additional_property_type).validate_python(value)
-            continue
-        if not allow_unmatched:
-            raise ValueError(f'Unexpected property {key!r}')
-    return values
+class _JsonSchemaRuntimeValidationMixin:
+    __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = ()
+    __json_schema_one_of_required_groups__: ClassVar[tuple[Any, ...]] = ()
+    __json_schema_any_of_required_groups__: ClassVar[tuple[Any, ...]] = ()
+    __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = ()
 
-
-def _datamodel_codegen_validate_schema_required_groups(
-    data: Any,
-    *,
-    required_groups: tuple[tuple[tuple[str, ...], ...], ...],
-    require_exactly_one: bool,
-) -> Any:
-    if not isinstance(data, dict):
+    @model_validator(mode='before')
+    @classmethod
+    def _validate_json_schema_runtime_rules(cls, data: Any) -> Any:
+        data = cls._validate_json_schema_pattern_properties(data)
+        data = cls._validate_json_schema_required_groups(
+            data,
+            required_group_rules=cls.__json_schema_one_of_required_groups__,
+            require_exactly_one=True,
+        )
+        data = cls._validate_json_schema_required_groups(
+            data,
+            required_group_rules=cls.__json_schema_any_of_required_groups__,
+            require_exactly_one=False,
+        )
+        data = cls._validate_json_schema_conditional_required(data)
         return data
-    matches = sum(
-        all(any(name in data for name in names) for names in group)
-        for group in required_groups
-    )
-    if require_exactly_one:
-        if matches != 1:
-            raise ValueError(
-                'Expected exactly one required property group to be present'
+
+    @classmethod
+    def _validate_json_schema_pattern_properties(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        values = dict(data)
+        for rule in cls.__json_schema_pattern_properties__:
+            for key, value in data.items():
+                if key in rule['declared_properties']:
+                    continue
+                if any(
+                    re.search(pattern, key) for pattern in rule['rejected_patterns']
+                ):
+                    raise ValueError(
+                        f'Property {key!r} is not allowed by patternProperties'
+                    )
+                matched = False
+                for pattern, value_type in rule['pattern_properties']:
+                    if not re.search(pattern, key):
+                        continue
+                    matched = True
+                    value = TypeAdapter(value_type).validate_python(value)
+                if matched:
+                    values[key] = value
+                    continue
+                if rule['additional_property_type'] is not None:
+                    values[key] = TypeAdapter(
+                        rule['additional_property_type']
+                    ).validate_python(value)
+                    continue
+                if not rule['allow_unmatched']:
+                    raise ValueError(f'Unexpected property {key!r}')
+        return values
+
+    @classmethod
+    def _validate_json_schema_required_groups(
+        cls,
+        data: Any,
+        *,
+        required_group_rules: tuple[Any, ...],
+        require_exactly_one: bool,
+    ) -> Any:
+        if not required_group_rules or not isinstance(data, dict):
+            return data
+        for required_groups in required_group_rules:
+            matches = sum(
+                all(any(name in data for name in names) for names in group)
+                for group in required_groups
             )
-    elif matches == 0:
-        raise ValueError('Expected at least one required property group to be present')
-    return data
-
-
-def _datamodel_codegen_validate_schema_conditional_required(
-    data: Any,
-    *,
-    condition: tuple[tuple[tuple[str, ...], tuple[object, ...]], ...],
-    then_required_groups: tuple[tuple[tuple[str, ...], ...], ...],
-    else_required_groups: tuple[tuple[tuple[str, ...], ...], ...],
-) -> Any:
-    if not isinstance(data, dict):
+            if require_exactly_one:
+                if matches != 1:
+                    raise ValueError(
+                        'Expected exactly one required property group to be present'
+                    )
+            elif matches == 0:
+                raise ValueError(
+                    'Expected at least one required property group to be present'
+                )
         return data
-    condition_matches = all(
-        any(name in data and data[name] in expected for name in names)
-        for names, expected in condition
-    )
-    required_groups = (
-        then_required_groups if condition_matches else else_required_groups
-    )
-    for group in required_groups:
-        if all(any(name in data for name in names) for names in group):
-            continue
-        raise ValueError('Conditional required properties are missing')
-    return data
+
+    @classmethod
+    def _validate_json_schema_conditional_required(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        for rule in cls.__json_schema_conditional_required__:
+            condition_matches = all(
+                any(name in data and data[name] in expected for name in names)
+                for names, expected in rule['condition']
+            )
+            required_groups = (
+                rule['then_required_groups']
+                if condition_matches
+                else rule['else_required_groups']
+            )
+            for group in required_groups:
+                if all(any(name in data for name in names) for names in group):
+                    continue
+                raise ValueError('Conditional required properties are missing')
+        return data
 
 
 class First(BaseModel):
@@ -96,24 +120,20 @@ class Second(BaseModel):
     second: str
 
 
-class PatternBag(BaseModel):
+class PatternBag(_JsonSchemaRuntimeValidationMixin, BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
 
-    @model_validator(mode='before')
-    @classmethod
-    def _validate_schema_pattern_properties(cls, data: Any) -> Any:
-        return _datamodel_codegen_validate_schema_pattern_properties(
-            data,
-            declared_properties=(),
-            rejected_patterns=(),
-            pattern_properties=[
-                ('^[A-Z][A-Za-z0-9_]*$', Second),
-            ],
-            additional_property_type=None,
-            allow_unmatched=False,
-        )
+    __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
+        {
+            'declared_properties': (),
+            'rejected_patterns': (),
+            'pattern_properties': (('^[A-Z][A-Za-z0-9_]*$', Second),),
+            'additional_property_type': None,
+            'allow_unmatched': False,
+        },
+    )
 
 
 class PatternTarget(First, PatternBag):
@@ -121,119 +141,91 @@ class PatternTarget(First, PatternBag):
         extra='allow',
     )
 
-    @model_validator(mode='before')
-    @classmethod
-    def _validate_schema_pattern_properties(cls, data: Any) -> Any:
-        return _datamodel_codegen_validate_schema_pattern_properties(
-            data,
-            declared_properties=('first',),
-            rejected_patterns=(),
-            pattern_properties=[
-                ('^[A-Z][A-Za-z0-9_]*$', Second),
-            ],
-            additional_property_type=None,
-            allow_unmatched=False,
-        )
+    __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
+        {
+            'declared_properties': ('first',),
+            'rejected_patterns': (),
+            'pattern_properties': (('^[A-Z][A-Za-z0-9_]*$', Second),),
+            'additional_property_type': None,
+            'allow_unmatched': False,
+        },
+    )
 
 
-class DirectPatternBag(BaseModel):
+class DirectPatternBag(_JsonSchemaRuntimeValidationMixin, BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
 
-    @model_validator(mode='before')
-    @classmethod
-    def _validate_schema_pattern_properties(cls, data: Any) -> Any:
-        return _datamodel_codegen_validate_schema_pattern_properties(
-            data,
-            declared_properties=(),
-            rejected_patterns=(),
-            pattern_properties=[
-                ('^item_[0-9]+$', int),
-            ],
-            additional_property_type=None,
-            allow_unmatched=False,
-        )
+    __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
+        {
+            'declared_properties': (),
+            'rejected_patterns': (),
+            'pattern_properties': (('^item_[0-9]+$', int),),
+            'additional_property_type': None,
+            'allow_unmatched': False,
+        },
+    )
 
 
-class ValidatorOnlyChild(First):
+class ValidatorOnlyChild(_JsonSchemaRuntimeValidationMixin, First):
     model_config = ConfigDict(
         extra='allow',
     )
 
-    @model_validator(mode='before')
-    @classmethod
-    def _validate_schema_pattern_properties(cls, data: Any) -> Any:
-        return _datamodel_codegen_validate_schema_pattern_properties(
-            data,
-            declared_properties=('first',),
-            rejected_patterns=(),
-            pattern_properties=[
-                ('^extra_[A-Za-z]+$', int),
-            ],
-            additional_property_type=None,
-            allow_unmatched=False,
-        )
+    __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
+        {
+            'declared_properties': ('first',),
+            'rejected_patterns': (),
+            'pattern_properties': (('^extra_[A-Za-z]+$', int),),
+            'additional_property_type': None,
+            'allow_unmatched': False,
+        },
+    )
 
 
-class ValidatorOnlyPatternRef(First):
+class ValidatorOnlyPatternRef(_JsonSchemaRuntimeValidationMixin, First):
     model_config = ConfigDict(
         extra='allow',
     )
 
-    @model_validator(mode='before')
-    @classmethod
-    def _validate_schema_pattern_properties(cls, data: Any) -> Any:
-        return _datamodel_codegen_validate_schema_pattern_properties(
-            data,
-            declared_properties=('first',),
-            rejected_patterns=(),
-            pattern_properties=[
-                ('^ref_extra_[A-Za-z]+$', int),
-            ],
-            additional_property_type=None,
-            allow_unmatched=False,
-        )
+    __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
+        {
+            'declared_properties': ('first',),
+            'rejected_patterns': (),
+            'pattern_properties': (('^ref_extra_[A-Za-z]+$', int),),
+            'additional_property_type': None,
+            'allow_unmatched': False,
+        },
+    )
 
 
-class OneOfContact(BaseModel):
-    @model_validator(mode='before')
-    @classmethod
-    def _validate_schema_one_of_required(cls, data: Any) -> Any:
-        return _datamodel_codegen_validate_schema_required_groups(
-            data,
-            required_groups=((('email',),), (('phone',),)),
-            require_exactly_one=True,
-        )
+class OneOfContact(_JsonSchemaRuntimeValidationMixin, BaseModel):
+    __json_schema_one_of_required_groups__: ClassVar[tuple[Any, ...]] = (
+        ((('email',),), (('phone',),)),
+    )
 
     email: str | None = None
     phone: str | None = None
 
 
-class AnyOfContact(BaseModel):
-    @model_validator(mode='before')
-    @classmethod
-    def _validate_schema_any_of_required(cls, data: Any) -> Any:
-        return _datamodel_codegen_validate_schema_required_groups(
-            data,
-            required_groups=((('email',),), (('phone',),)),
-            require_exactly_one=False,
-        )
+class AnyOfContact(_JsonSchemaRuntimeValidationMixin, BaseModel):
+    __json_schema_any_of_required_groups__: ClassVar[tuple[Any, ...]] = (
+        ((('email',),), (('phone',),)),
+    )
 
     email: str | None = None
     phone: str | None = None
 
 
-class ConditionalPayload(BaseModel):
-    @model_validator(mode='before')
-    @classmethod
-    def _validate_schema_conditional_required(cls, data: Any) -> Any:
-        return _datamodel_codegen_validate_schema_conditional_required(
-            data,
-            condition=((('kind',), ('metric',)),),
-            then_required_groups=((('metric',),),),
-            else_required_groups=((('note',),),),
-        )
+class ConditionalPayload(_JsonSchemaRuntimeValidationMixin, BaseModel):
+    __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = (
+        {
+            'condition': ((('kind',), ('metric',)),),
+            'then_required_groups': ((('metric',),),),
+            'else_required_groups': ((('note',),),),
+        },
+    )
 
     kind: str | None = None
     metric: int | None = None

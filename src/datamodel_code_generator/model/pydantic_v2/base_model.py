@@ -19,6 +19,7 @@ from datamodel_code_generator.model.base import (
     ALL_MODEL,
     UNDEFINED,
     BaseClassDataType,
+    DataModel,
     DataModelFieldBase,
     _get_template_with_custom_dir,
 )
@@ -47,7 +48,6 @@ from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
 
 if TYPE_CHECKING:
-    from datamodel_code_generator.model import DataModel
     from datamodel_code_generator.reference import Reference
     from datamodel_code_generator.types import DataType
 
@@ -250,6 +250,7 @@ class BaseModel(BaseModelBase):
     SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH: ClassVar[str] = (
         "pydantic_v2/schema_runtime_validation_helpers.jinja2"
     )
+    SCHEMA_RUNTIME_VALIDATION_MIXIN_NAME: ClassVar[str] = "_JsonSchemaRuntimeValidationMixin"
     BASE_CLASS: ClassVar[str] = "pydantic.BaseModel"
     BASE_CLASS_NAME: ClassVar[str] = "BaseModel"
     BASE_CLASS_ALIAS: ClassVar[str] = "_BaseModel"
@@ -276,17 +277,28 @@ class BaseModel(BaseModelBase):
     @classmethod
     def render_module_code(cls, models: list[DataModel]) -> str:
         """Render shared schema runtime validation helpers for the module."""
-        runtime_validations = [
-            runtime_validation
+        runtime_models: list[DataModel] = [
+            model
             for model in models
             if isinstance(
-                runtime_validation := model.extra_template_data.get("schema_runtime_validation"),
+                model.extra_template_data.get("schema_runtime_validation"),
                 SchemaRuntimeValidation,
             )
-            and runtime_validation
+            and model.extra_template_data["schema_runtime_validation"]
         ]
-        if not runtime_validations:
+        if not runtime_models:
             return ""
+
+        mixin_name = (
+            runtime_models[0].extra_template_data.get("schema_validator_mixin_name")
+            or cls.SCHEMA_RUNTIME_VALIDATION_MIXIN_NAME
+        )
+        for model in runtime_models:
+            model.extra_template_data["schema_runtime_validation_mixin_name"] = mixin_name
+            model.extra_template_data["schema_runtime_validation_use_mixin"] = not cls._inherits_schema_runtime_mixin(
+                model,
+                seen=set(),
+            )
 
         custom_template_dir = next(
             (model.custom_template_dir for model in models if model.custom_template_dir is not None),
@@ -296,7 +308,9 @@ class BaseModel(BaseModelBase):
             Path(cls.SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH),
             custom_template_dir,
         )
+        runtime_validations = [model.extra_template_data["schema_runtime_validation"] for model in runtime_models]
         return template.render(
+            schema_runtime_validation_mixin_name=mixin_name,
             has_pattern_properties=any(
                 runtime_validation.pattern_properties for runtime_validation in runtime_validations
             ),
@@ -305,6 +319,28 @@ class BaseModel(BaseModelBase):
                 runtime_validation.conditional_required for runtime_validation in runtime_validations
             ),
         )
+
+    @classmethod
+    def _inherits_schema_runtime_mixin(cls, model: DataModel, *, seen: set[str]) -> bool:
+        """Return whether a model already inherits the generated runtime validation mixin."""
+        if model.reference.path in seen:
+            return False
+        seen.add(model.reference.path)
+        for base_class in model.base_classes:
+            if not base_class.reference or not isinstance(base_class.reference.source, DataModel):
+                continue
+            base_model = base_class.reference.source
+            if (
+                isinstance(
+                    base_model.extra_template_data.get("schema_runtime_validation"),
+                    SchemaRuntimeValidation,
+                )
+                and base_model.extra_template_data["schema_runtime_validation"]
+            ):
+                return True
+            if cls._inherits_schema_runtime_mixin(base_model, seen=seen):
+                return True
+        return False
 
     @classmethod
     def create_typed_extra_field(
@@ -516,6 +552,7 @@ class BaseModel(BaseModelBase):
 
         self._additional_imports.append(IMPORT_MODEL_VALIDATOR)
         self._additional_imports.append(IMPORT_ANY)
+        self._additional_imports.append(IMPORT_CLASSVAR)
         if runtime_validation.pattern_properties:
             self._additional_imports.append(Import(import_="re"))
             self._additional_imports.append(IMPORT_TYPE_ADAPTER)

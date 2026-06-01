@@ -1156,6 +1156,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 self.generic_base_class_config["target_pydantic_version"] = config.target_pydantic_version
             else:
                 self.extra_template_data[ALL_MODEL]["target_pydantic_version"] = config.target_pydantic_version
+        if config.schema_validator_mixin_name:
+            self.extra_template_data[ALL_MODEL]["schema_validator_mixin_name"] = config.schema_validator_mixin_name
 
         self.model_resolver = ModelResolver(
             base_url=source.geturl() if isinstance(source, ParseResult) else None,

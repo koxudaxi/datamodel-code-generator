@@ -208,6 +208,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--generate-schema-validators": CLIOptionMeta(
         name="--generate-schema-validators", category=OptionCategory.TEMPLATE
     ),
+    "--schema-validator-mixin-name": CLIOptionMeta(
+        name="--schema-validator-mixin-name", category=OptionCategory.TEMPLATE
+    ),
     "--output-datetime-class": CLIOptionMeta(name="--output-datetime-class", category=OptionCategory.TYPING),
     "--output-date-class": CLIOptionMeta(name="--output-date-class", category=OptionCategory.TYPING),
     "--use-decimal-for-multiple-of": CLIOptionMeta(

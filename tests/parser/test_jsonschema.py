@@ -138,6 +138,34 @@ def test_schema_validator_input_names_include_validation_aliases_and_schema_base
     ) == {"base": ("base",)}
 
 
+def test_schema_validator_input_names_skip_empty_datamodel_base_fields() -> None:
+    """Test inherited generated model fields include usable names and skip empty names."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    base_field = DataModelFieldBase(
+        name="base_field",
+        original_name="base",
+        alias="baseAlias",
+        validation_aliases=["baseAlias", "base-alt"],
+        data_type=DataType(type="str"),
+    )
+    empty_field = DataModelFieldBase(name="", original_name="", data_type=DataType(type="str"))
+    base_ref = Reference(path="#/$defs/Base", name="Base")
+    BaseModel(reference=base_ref, fields=[base_field, empty_field])
+
+    assert parser._get_input_names_by_property([], [base_ref]) == {
+        "base": ("base", "baseAlias", "base_field", "base-alt")
+    }
+
+
+def test_schema_runtime_validation_reuses_existing_instance() -> None:
+    """Test schema runtime validation config is reused for a reference."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+
+    runtime_validation = parser._schema_runtime_validation("#/Model")
+
+    assert parser._schema_runtime_validation("#/Model") is runtime_validation
+
+
 def test_schema_validator_pattern_property_helpers_collect_inherited_sources() -> None:
     """Test patternProperties helper walks usable inherited schema sources."""
     parser = JsonSchemaParser("", generate_schema_validators=True)

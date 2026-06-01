@@ -37,6 +37,15 @@
           }
         }
       ]
+    },
+    "inlinePattern": {
+      "type": "object",
+      "patternProperties": {
+        "^item_[0-9]+$": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

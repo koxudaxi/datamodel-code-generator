@@ -12,6 +12,7 @@ from pathlib import Path
 import black
 import pytest
 from packaging import version
+from pydantic import ValidationError
 
 from datamodel_code_generator import (
     MIN_VERSION,
@@ -72,11 +73,11 @@ def assert_schema_required_group_validator_not_generated(
     """Assert constrained oneOf/anyOf branches are not lowered to required-group validators."""
     generated = output_file.read_text(encoding=encoding)
     forbidden_fragments = (
-        "_validate_schema_one_of_required",
-        "_datamodel_codegen_validate_schema_required_groups",
+        "__json_schema_one_of_required_groups__",
+        "_validate_json_schema_required_groups",
     )
     generated_fragments = [fragment for fragment in forbidden_fragments if fragment in generated]
-    if generated_fragments:
+    if generated_fragments:  # pragma: no cover
         pytest.fail(
             "Constrained oneOf/anyOf branches generated required-group validators: " + ", ".join(generated_fragments),
             pytrace=False,
@@ -10938,6 +10939,55 @@ def test_main_jsonschema_generate_schema_validators_extra_template_collision(
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--schema-validator-mixin-name"],
+    option_description="""Set the generated shared Pydantic v2 schema runtime validator mixin class name.
+
+The `--schema-validator-mixin-name` option changes the name of the generated
+shared mixin that owns schema-derived runtime validators. It is only used when
+`--generate-schema-validators` emits shared validator code.""",
+    input_schema="jsonschema/schema_validators_custom_mixin_name.json",
+    cli_args=[
+        "--generate-schema-validators",
+        "--schema-validator-mixin-name",
+        "SharedSchemaValidatorMixin",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--disable-timestamp",
+    ],
+    golden_output="jsonschema/schema_validators_custom_mixin_name.py",
+    related_options=["--generate-schema-validators"],
+)
+def test_main_jsonschema_generate_schema_validators_custom_mixin_name(output_file: Path) -> None:
+    """Generate schema validators with a custom shared mixin class name."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_custom_mixin_name.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators_custom_mixin_name.py",
+        extra_args=[
+            "--generate-schema-validators",
+            "--schema-validator-mixin-name",
+            "SharedSchemaValidatorMixin",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_custom_mixin_name",
+        model_name="CustomMixinName",
+        valid_json='{"item_1":7}',
+        invalid_json='{"bad":7}',
+        expected_error_type="value_error",
+        expected_attribute_path=("item_1",),
+        expected_attribute_value=7,
+    )
+
+
 def test_main_jsonschema_generate_schema_validators_parser_branch_runtime(
     output_file: Path,
 ) -> None:
@@ -10965,6 +11015,16 @@ def test_main_jsonschema_generate_schema_validators_parser_branch_runtime(
         expected_error_type="string_type",
         expected_attribute_path=("child", "value"),
         expected_attribute_value="x",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_parser_branch_runtime_inline_pattern",
+        model_name="RuntimeBranchCoverage",
+        valid_json='{"inlinePattern":{"item_1":7}}',
+        invalid_json='{"inlinePattern":{"bad":7}}',
+        expected_error_type="value_error",
+        expected_attribute_path=("inlinePattern", "item_1"),
+        expected_attribute_value=7,
     )
 
     required_ref_output_file = output_file.with_name("required_ref_coverage.py")
@@ -11029,6 +11089,53 @@ def test_main_jsonschema_generate_schema_validators_requires_pydantic_v2(
             "dataclasses.dataclass",
         ],
     )
+
+
+def test_main_jsonschema_generate_schema_validators_invalid_mixin_name(
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject invalid custom schema validator mixin names."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="--schema-validator-mixin-name '123Invalid' is not a valid Python identifier",
+        extra_args=[
+            "--generate-schema-validators",
+            "--schema-validator-mixin-name",
+            "123Invalid",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_generate_schema_validators_invalid_mixin_name_public_api(output_file: Path) -> None:
+    """Reject invalid schema validator mixin names through generate()."""
+    from datamodel_code_generator.config import GenerateConfig
+
+    for value in (None, "SharedSchemaValidatorMixin"):
+        config = GenerateConfig.model_validate({"schema_validator_mixin_name": value})
+        if config.schema_validator_mixin_name != value:  # pragma: no cover
+            pytest.fail(
+                f"Expected schema_validator_mixin_name to be {value!r}, got {config.schema_validator_mixin_name!r}",
+                pytrace=False,
+            )
+    with pytest.raises(
+        ValidationError,
+        match="--schema-validator-mixin-name '123Invalid' is not a valid Python identifier",
+    ):
+        generate(
+            input_={"type": "object"},
+            input_file_type=InputFileType.JsonSchema,
+            output=output_file,
+            output_model_type=DataModelType.PydanticV2BaseModel,
+            generate_schema_validators=True,
+            schema_validator_mixin_name="123Invalid",
+        )
 
 
 def test_field_validators_multi_fields(output_file: Path) -> None:

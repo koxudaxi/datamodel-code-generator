@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from keyword import iskeyword
 from pathlib import Path  # noqa: TC003 - used at runtime by Pydantic
 from typing import TYPE_CHECKING, Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -63,6 +64,16 @@ else:
     ExtraTemplateDataType = defaultdict[str, Annotated[dict[str, Any], Field(default_factory=dict)]]
 
 
+def validate_schema_validator_mixin_name(value: str | None) -> str | None:
+    """Validate the generated shared schema validator mixin name."""
+    if value is None:
+        return value
+    if not value.isidentifier() or iskeyword(value):
+        msg = f"--schema-validator-mixin-name '{value}' is not a valid Python identifier"
+        raise ValueError(msg)
+    return value
+
+
 class GenerateConfig(BaseModel):
     """Configuration model for generate()."""
 
@@ -82,6 +93,7 @@ class GenerateConfig(BaseModel):
     extra_template_data: ExtraTemplateDataType | None = None
     validators: Mapping[str, ModelValidators] | None = None
     generate_schema_validators: bool = False
+    schema_validator_mixin_name: str | None = None
     validation: bool = False
     field_constraints: bool = False
     snake_case_field: bool = False
@@ -212,6 +224,10 @@ class GenerateConfig(BaseModel):
     schema_version_mode: VersionMode | None = None
     external_ref_mapping: dict[str, str] | None = None
 
+    _validate_schema_validator_mixin_name = field_validator("schema_validator_mixin_name")(
+        validate_schema_validator_mixin_name
+    )
+
 
 class ParserConfig(BaseModel):
     """Configuration model for Parser.__init__()."""
@@ -230,6 +246,7 @@ class ParserConfig(BaseModel):
     extra_template_data: ExtraTemplateDataType | None = None
     validators: Mapping[str, ModelValidators] | None = None
     generate_schema_validators: bool = False
+    schema_validator_mixin_name: str | None = None
     target_python_version: PythonVersion = PythonVersionMin
     dump_resolve_reference_action: DumpResolveReferenceAction | None = None
     validation: bool = False
@@ -345,6 +362,10 @@ class ParserConfig(BaseModel):
     target_pydantic_version: TargetPydanticVersion | None = None
     default_value_overrides: Mapping[str, Any] | None = None
     external_ref_mapping: dict[str, str] | None = None
+
+    _validate_schema_validator_mixin_name = field_validator("schema_validator_mixin_name")(
+        validate_schema_validator_mixin_name
+    )
 
 
 class GraphQLParserConfig(ParserConfig):

@@ -54,6 +54,7 @@ class GenerateConfigDict(TypedDict, closed=True):
     extra_template_data: NotRequired[defaultdict[str, dict[str, Any]] | None]
     validators: NotRequired[Mapping[str, ModelValidators] | None]
     generate_schema_validators: NotRequired[bool]
+    schema_validator_mixin_name: NotRequired[str | None]
     validation: NotRequired[bool]
     field_constraints: NotRequired[bool]
     snake_case_field: NotRequired[bool]
