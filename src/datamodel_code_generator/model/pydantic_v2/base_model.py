@@ -277,6 +277,9 @@ class BaseModel(BaseModelBase):
     @classmethod
     def render_module_code(cls, models: list[DataModel]) -> str:
         """Render shared schema runtime validation helpers for the module."""
+        if not models or not models[0].extra_template_data.get("schema_runtime_validation_enabled"):
+            return ""
+
         runtime_models: list[DataModel] = [
             model
             for model in models
@@ -540,9 +543,9 @@ class BaseModel(BaseModelBase):
     def _prepare_schema_runtime_validation_config(self) -> None:
         """Prepare Pydantic config required by schema-derived runtime validators."""
         runtime_validation = self._get_schema_runtime_validation()
-        self.extra_template_data["schema_runtime_validation"] = runtime_validation
         if runtime_validation is None:
             return
+        self.extra_template_data["schema_runtime_validation"] = runtime_validation
         if runtime_validation.pattern_properties:
             self.extra_template_data["force_extra_allow"] = True
 

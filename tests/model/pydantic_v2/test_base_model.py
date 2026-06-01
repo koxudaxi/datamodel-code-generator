@@ -39,3 +39,15 @@ def test_schema_runtime_validation_base_inheritance_detects_transitive_base() ->
         runtime_leaf,
         seen={runtime_leaf.reference.path},
     )
+
+
+def test_schema_runtime_validation_helpers_are_gated_by_parser_option() -> None:
+    """Avoid scanning and rendering runtime helpers for the normal Pydantic v2 path."""
+    runtime_model = BaseModel(fields=[], reference=Reference(name="RuntimeModel", path="#/RuntimeModel"))
+    runtime_model.extra_template_data["schema_runtime_validation"] = _schema_runtime_validation()
+
+    assert not BaseModel.render_module_code([runtime_model])
+
+    runtime_model.extra_template_data["schema_runtime_validation_enabled"] = True
+
+    assert "_JsonSchemaRuntimeValidationBase" in BaseModel.render_module_code([runtime_model])

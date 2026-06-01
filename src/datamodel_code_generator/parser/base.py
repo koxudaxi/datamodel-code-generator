@@ -1160,6 +1160,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             self.extra_template_data[ALL_MODEL]["schema_validator_base_class_name"] = (
                 config.schema_validator_base_class_name
             )
+        if config.generate_schema_validators:
+            self.extra_template_data[ALL_MODEL]["schema_runtime_validation_enabled"] = True
 
         self.model_resolver = ModelResolver(
             base_url=source.geturl() if isinstance(source, ParseResult) else None,
