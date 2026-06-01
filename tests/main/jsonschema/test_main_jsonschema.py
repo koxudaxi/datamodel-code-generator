@@ -20,6 +20,7 @@ from datamodel_code_generator import (
     InputFileType,
     PythonVersion,
     PythonVersionMin,
+    ReadOnlyWriteOnlyModelType,
     TargetPydanticVersion,
     chdir,
     generate,
@@ -10765,12 +10766,13 @@ def test_field_validators(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--generate-schema-validators"],
-    option_description="""Generate Pydantic v2 model validators for JSON Schema runtime rules.
+    option_description="""Generate experimental Pydantic v2 model validators for JSON Schema runtime rules.
 
 The `--generate-schema-validators` option emits schema-derived model validators
 for object constraints that cannot be represented as type hints alone, including
 patternProperties on composed object models, required-only oneOf/anyOf groups,
-and simple if/then/else required-property conditions.""",
+and simple if/then/else required-property conditions. This feature is
+experimental and may change as JSON Schema coverage is expanded.""",
     input_schema="jsonschema/schema_validators.json",
     cli_args=[
         "--generate-schema-validators",
@@ -10805,6 +10807,36 @@ def test_main_jsonschema_generate_schema_validators(output_file: Path) -> None:
         expected_error_type="value_error",
         expected_attribute_path=("Alpha", "second"),
         expected_attribute_value="y",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output",
+        model_name="DirectPatternBag",
+        valid_json='{"item_1":7}',
+        invalid_json='{"bad":7}',
+        expected_error_type="value_error",
+        expected_attribute_path=("item_1",),
+        expected_attribute_value=7,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output",
+        model_name="ValidatorOnlyChild",
+        valid_json='{"first":"x","extra_count":3}',
+        invalid_json='{"first":"x","bad":3}',
+        expected_error_type="value_error",
+        expected_attribute_path=("extra_count",),
+        expected_attribute_value=3,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output",
+        model_name="ValidatorOnlyPatternRef",
+        valid_json='{"first":"x","ref_extra_count":3}',
+        invalid_json='{"first":"x","bad":3}',
+        expected_error_type="value_error",
+        expected_attribute_path=("ref_extra_count",),
+        expected_attribute_value=3,
     )
     assert_generated_model_json_validation(
         output_file,
@@ -10845,6 +10877,125 @@ def test_main_jsonschema_generate_schema_validators(output_file: Path) -> None:
         expected_error_type="value_error",
         expected_attribute_path=("note",),
         expected_attribute_value="ok",
+    )
+
+
+def test_main_jsonschema_generate_schema_validators_extra_template_collision(
+    output_file: Path,
+    tmp_path: Path,
+) -> None:
+    """Generate schema validators when user extra template data uses the reserved runtime key."""
+    extra_template_data = tmp_path / "extra-template-data.json"
+    extra_template_data.write_text(
+        json.dumps({"#/$defs/DirectPatternBag": {"schema_runtime_validation": {"ignored": True}}}),
+        encoding="utf-8",
+    )
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators.py",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--extra-template-data",
+            str(extra_template_data),
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_extra_template_collision",
+        model_name="DirectPatternBag",
+        valid_json='{"item_1":7}',
+        invalid_json='{"bad":7}',
+        expected_error_type="value_error",
+        expected_attribute_path=("item_1",),
+        expected_attribute_value=7,
+    )
+
+
+def test_main_jsonschema_generate_schema_validators_parser_branch_runtime(
+    output_file: Path,
+) -> None:
+    """Generate and execute a model that covers runtime-validator parser integration branches."""
+    generate(
+        input_={
+            "title": "RuntimeBranchCoverage",
+            "$defs": {
+                "Child": {
+                    "type": "object",
+                    "properties": {"value": {"type": "string"}},
+                },
+                "BaseWithScalarItems": {
+                    "type": "object",
+                    "properties": {"items": {"type": "string"}},
+                },
+            },
+            "type": "object",
+            "properties": {
+                "child": {"$ref": "#/$defs/Child"},
+                "listOverride": {
+                    "allOf": [
+                        {"$ref": "#/$defs/BaseWithScalarItems"},
+                        {"type": "object", "properties": {"items": {"type": "array"}}},
+                    ]
+                },
+            },
+        },
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.All,
+        generate_schema_validators=True,
+        disable_timestamp=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_parser_branch_runtime",
+        model_name="RuntimeBranchCoverage",
+        valid_json='{"child":{"value":"x"},"listOverride":{"items":[1]}}',
+        invalid_json='{"child":{"value":1}}',
+        expected_error_type="string_type",
+        expected_attribute_path=("child", "value"),
+        expected_attribute_value="x",
+    )
+
+    generate(
+        input_={
+            "title": "RequiredRefCoverage",
+            "$defs": {
+                "First": {
+                    "type": "object",
+                    "properties": {"first": {"type": "string"}},
+                    "required": ["first"],
+                }
+            },
+            "type": "object",
+            "oneOf": [
+                {"$ref": "#/$defs/First"},
+                {"required": ["first"]},
+            ],
+        },
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        generate_schema_validators=True,
+        disable_timestamp=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_required_ref_branch_runtime",
+        model_name="RequiredRefCoverage",
+        valid_json='{"first":"x"}',
+        invalid_json="[]",
+        expected_error_type="model_type",
+        expected_attribute_path=("root", "first"),
+        expected_attribute_value="x",
     )
 
 

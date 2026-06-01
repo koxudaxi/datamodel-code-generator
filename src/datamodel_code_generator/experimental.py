@@ -9,6 +9,7 @@ from typing import Literal
 ExperimentalFeatureKind = Literal["input-format", "formatter", "cli-option", "python-api", "behavior"]
 ExperimentalFeatureFormat = Literal["table", "json", "markdown"]
 ExperimentalFeatureId = Literal[
+    "cli-option.generate-schema-validators",
     "input-format.asyncapi",
     "input-format.avro",
     "input-format.protobuf",
@@ -31,6 +32,19 @@ class ExperimentalFeature:
 
 
 EXPERIMENTAL_FEATURES: dict[ExperimentalFeatureId, ExperimentalFeature] = {
+    "cli-option.generate-schema-validators": ExperimentalFeature(
+        id="cli-option.generate-schema-validators",
+        kind="cli-option",
+        target="--generate-schema-validators",
+        message=(
+            "Schema-derived runtime validators are experimental and may change as JSON Schema coverage is expanded."
+        ),
+        since_version="0.59.0",
+        note=(
+            "The option currently targets Pydantic v2 BaseModel output and covers selected object-level rules such as "
+            "patternProperties, required-only oneOf/anyOf groups, and simple if/then/else required-property conditions."
+        ),
+    ),
     "input-format.asyncapi": ExperimentalFeature(
         id="input-format.asyncapi",
         kind="input-format",

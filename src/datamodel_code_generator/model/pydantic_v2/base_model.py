@@ -40,6 +40,7 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_VALIDATION_INFO,
     IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER,
 )
+from datamodel_code_generator.model.runtime_validation import SchemaRuntimeValidation
 from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
 
@@ -316,6 +317,7 @@ class BaseModel(BaseModelBase):
             keyword_only=keyword_only,
             treat_dot_as_module=treat_dot_as_module,
         )
+        self._prepare_schema_runtime_validation_config()
         config_parameters: dict[str, Any] = {}
 
         extra = self._get_config_extra()
@@ -353,7 +355,7 @@ class BaseModel(BaseModelBase):
             self.extra_template_data["config"] = ConfigDict.model_validate(config_parameters)  # ty: ignore
             self._additional_imports.append(IMPORT_CONFIG_DICT)
 
-        self._process_schema_validators()
+        self._process_schema_runtime_validation()
         self._process_validators()
 
     def _get_config_extra(self) -> Literal["'allow'", "'forbid'", "'ignore'"] | None:
@@ -454,30 +456,34 @@ class BaseModel(BaseModelBase):
             if "wrap" in modes:
                 self._additional_imports.append(IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER)
 
-    def _process_schema_validators(self) -> None:
-        """Add schema-derived runtime validators prepared by JSON Schema parsing."""
-        schema_validators = self.extra_template_data.get("schema_validators")
-        if not schema_validators:
+    def _get_schema_runtime_validation(self) -> SchemaRuntimeValidation | None:
+        runtime_validation = self.extra_template_data.get("schema_runtime_validation")
+        if isinstance(runtime_validation, SchemaRuntimeValidation) and runtime_validation:
+            return runtime_validation
+        return None
+
+    def _prepare_schema_runtime_validation_config(self) -> None:
+        """Prepare Pydantic config required by schema-derived runtime validators."""
+        runtime_validation = self._get_schema_runtime_validation()
+        self.extra_template_data["schema_runtime_validation"] = runtime_validation
+        if runtime_validation is None:
+            return
+        if runtime_validation.pattern_properties:
+            self.extra_template_data["force_extra_allow"] = True
+
+    def _process_schema_runtime_validation(self) -> None:
+        """Add imports required by schema-derived runtime validators."""
+        runtime_validation = self._get_schema_runtime_validation()
+        if runtime_validation is None:
             return
 
-        body_lines = schema_validators.get("body_lines") or []
-        if body_lines:
-            class_body_lines = self.extra_template_data.setdefault("class_body_lines", [])
-            has_prior_class_body = class_body_lines or self.extra_template_data.get("config") or self.description
-            if not body_lines[0] and not has_prior_class_body:
-                body_lines = body_lines[1:]
-            if self.fields and body_lines[-1]:
-                body_lines = [*body_lines, ""]
-            class_body_lines.extend(body_lines)
-            self._additional_imports.append(IMPORT_MODEL_VALIDATOR)
-            self._additional_imports.append(IMPORT_ANY)
-
-        if schema_validators.get("uses_re"):
+        self._additional_imports.append(IMPORT_MODEL_VALIDATOR)
+        self._additional_imports.append(IMPORT_ANY)
+        if runtime_validation.pattern_properties:
             self._additional_imports.append(Import(import_="re"))
-        if schema_validators.get("uses_type_adapter"):
             self._additional_imports.append(IMPORT_TYPE_ADAPTER)
 
-        for data_type in schema_validators.get("data_types") or []:
+        for data_type in runtime_validation.data_types:
             self._additional_imports.extend(data_type.all_imports)
 
     @classmethod

@@ -11,7 +11,7 @@ import pydantic
 import pytest
 import yaml
 
-from datamodel_code_generator import AllOfMergeMode, DataModelType, Error, InputFileType, generate
+from datamodel_code_generator import AllOfMergeMode, Error
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.dataclass import DataClass
@@ -125,7 +125,6 @@ def test_schema_validator_pattern_property_helpers_collect_inherited_sources() -
 
     assert len(sources) == 3
     assert sources[-1].patternProperties == {"^x": True}
-    assert parser._pattern_property_entries_code(()) == "()"
 
 
 def test_schema_validator_pattern_property_helpers_collect_value_types() -> None:
@@ -149,9 +148,8 @@ def test_schema_validator_pattern_property_helpers_collect_value_types() -> None
 
     parser._add_pattern_properties_validator("#/Model", "Model", obj, ["#"], [], [])
 
-    validators = parser.extra_template_data["#/Model"]["schema_validators"]
-    assert validators["data_types"]
-    assert validators["uses_type_adapter"]
+    runtime_validation = parser.extra_template_data["#/Model"]["schema_runtime_validation"]
+    assert runtime_validation.data_types
 
 
 def test_schema_validator_pattern_property_helpers_ignore_unexpected_value_types() -> None:
@@ -201,32 +199,6 @@ def test_schema_validator_conditional_predicate_helpers() -> None:
     )
 
     assert parser.extra_template_data["#/Model"] == {}
-
-
-def test_schema_validator_nested_one_of_property_generates_model_validator() -> None:
-    """Test nested required-only oneOf properties generate object validators."""
-    output = generate(
-        {
-            "title": "Container",
-            "type": "object",
-            "properties": {
-                "choice": {
-                    "type": "object",
-                    "properties": {"a": {"type": "string"}, "b": {"type": "string"}},
-                    "oneOf": [{"required": ["a"]}, {"required": ["b"]}],
-                }
-            },
-        },
-        input_file_type=InputFileType.JsonSchema,
-        output_model_type=DataModelType.PydanticV2BaseModel,
-        generate_schema_validators=True,
-        disable_timestamp=True,
-        formatters=[],
-    )
-
-    assert isinstance(output, str)
-    assert "class Choice(BaseModel):" in output
-    assert "def _validate_schema_one_of_required(cls, data: Any) -> Any:" in output
 
 
 def test_parse_id_traverses_property_names_schema(mocker: MockerFixture) -> None:

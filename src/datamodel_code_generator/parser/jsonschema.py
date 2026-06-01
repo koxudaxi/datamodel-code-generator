@@ -57,6 +57,12 @@ from datamodel_code_generator.model.enum import (
     StrEnum,
 )
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticV2DataClass
+from datamodel_code_generator.model.runtime_validation import (
+    ConditionalRequiredRule,
+    PatternPropertiesRule,
+    RequiredGroupsRule,
+    SchemaRuntimeValidation,
+)
 from datamodel_code_generator.model.typed_dict import TypedDict as TypedDictModel
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import (
@@ -314,7 +320,7 @@ class JsonSchemaObject(BaseModel):
     __schema_affecting_extras__: set[str] = {  # noqa: RUF012
         "const",
     }
-    __schema_validator_only_fields__: set[str] = {"if_", "then", "else_"}  # noqa: RUF012
+    __runtime_validation_only_fields__: set[str] = {"if_", "then", "else_"}  # noqa: RUF012
 
     @model_validator(mode="before")
     def validate_exclusive_maximum_and_exclusive_minimum(cls, values: Any) -> Any:  # noqa: N805
@@ -544,7 +550,7 @@ class JsonSchemaObject(BaseModel):
             return False
         other_fields = self.model_fields_set - {"ref"}
         schema_affecting_fields = (
-            other_fields - self.__metadata_only_fields__ - self.__schema_validator_only_fields__ - {"extras"}
+            other_fields - self.__metadata_only_fields__ - self.__runtime_validation_only_fields__ - {"extras"}
         )
         if self.extras:
             schema_affecting_extras = {k for k in self.extras if k in self.__schema_affecting_extras__}
@@ -566,7 +572,7 @@ class JsonSchemaObject(BaseModel):
             self.model_fields_set
             - {"ref", "nullable"}
             - self.__metadata_only_fields__
-            - self.__schema_validator_only_fields__
+            - self.__runtime_validation_only_fields__
             - {"extras"}
         )
         if other_fields:
@@ -3184,7 +3190,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return False
         if item.anyOf or item.oneOf or item.allOf:
             return False
-        if item.enum or item.has_constraint or "const" in item.extras:
+        if item.enum or item.has_constraint or "const" in item.extras or not item.required:
             return False
         return item.type in {None, "object"}
 
@@ -3212,12 +3218,26 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             branch.required for branch in self._iter_conditional_branches(obj)
         )
 
+    def _has_schema_validator_constraints(self, obj: JsonSchemaObject) -> bool:
+        if not self.generate_schema_validators:
+            return False
+        return bool(
+            self._has_required_group_validators(obj)
+            or self._has_conditional_validator(obj)
+            or any(bool(source.patternProperties) for source in self._iter_schema_validation_sources(obj))
+        )
+
     def _should_parse_object_with_schema_validators(self, obj: JsonSchemaObject) -> bool:
         if not self.generate_schema_validators:
             return False
+        has_pattern_properties = bool(obj.patternProperties)
+        if has_pattern_properties:
+            return True
         if obj.properties and self._has_required_group_validators(obj):
             return True
-        has_conditional_properties = any(branch.properties for branch in self._iter_conditional_branches(obj))
+        has_conditional_properties = any(
+            branch.properties or branch.patternProperties for branch in self._iter_conditional_branches(obj)
+        )
         return bool((obj.properties or has_conditional_properties) and self._has_conditional_validator(obj))
 
     def _merge_conditional_properties(self, obj: JsonSchemaObject) -> JsonSchemaObject:
@@ -3291,36 +3311,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             tuple(names_by_property.get(property_name, (property_name,)) for property_name in group) for group in groups
         )
 
-    def _schema_validators_data(self, reference_path: str) -> dict[str, Any]:
-        return self.extra_template_data[reference_path].setdefault(
-            "schema_validators",
-            {"body_lines": [], "data_types": []},
-        )
-
-    def _add_schema_validator_body(
-        self,
-        reference_path: str,
-        body_lines: Sequence[str],
-        *,
-        data_types: Sequence[DataType] = (),
-        uses_re: bool = False,
-        uses_type_adapter: bool = False,
-    ) -> None:
-        validators = self._schema_validators_data(reference_path)
-        validators["body_lines"].extend(body_lines)
-        validators["data_types"].extend(data_types)
-        validators["uses_re"] = validators.get("uses_re", False) or uses_re
-        validators["uses_type_adapter"] = validators.get("uses_type_adapter", False) or uses_type_adapter
-
-    def _pattern_property_entries_code(  # noqa: PLR6301
-        self,
-        pattern_value_types: Sequence[tuple[str, DataType]],
-    ) -> str:
-        entries = [f"({pattern!r}, {data_type.type_hint})" for pattern, data_type in pattern_value_types]
-        if not entries:
-            return "()"
-        trailing_comma = "," if len(entries) == 1 else ""
-        return f"({', '.join(entries)}{trailing_comma})"
+    def _schema_runtime_validation(self, reference_path: str) -> SchemaRuntimeValidation:
+        runtime_validation = self.extra_template_data[reference_path].get("schema_runtime_validation")
+        if not isinstance(runtime_validation, SchemaRuntimeValidation):
+            runtime_validation = SchemaRuntimeValidation()
+            self.extra_template_data[reference_path]["schema_runtime_validation"] = runtime_validation
+        return runtime_validation
 
     def _iter_schema_validation_sources(
         self,
@@ -3402,57 +3398,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         names_by_property = self._get_input_names_by_property(fields, base_classes)
         declared_names = tuple(sorted({name for names in names_by_property.values() for name in names}))
-        pattern_entries = self._pattern_property_entries_code(pattern_value_types)
-        additional_type_hint = additional_property_type.type_hint if additional_property_type is not None else None
-        data_types = [data_type for _, data_type in pattern_value_types]
-        if additional_property_type is not None:
-            data_types.append(additional_property_type)
-
-        body_lines = [
-            "",
-            "@model_validator(mode='before')",
-            "@classmethod",
-            "def _validate_schema_pattern_properties(cls, data: Any) -> Any:",
-            "    if not isinstance(data, dict):",
-            "        return data",
-            "    values = dict(data)",
-            f"    declared_properties = {declared_names!r}",
-            f"    rejected_patterns = {tuple(rejected_patterns)!r}",
-            f"    pattern_properties = {pattern_entries}",
-            f"    additional_property_type = {additional_type_hint or 'None'}",
-            "    for key, value in data.items():",
-            "        if key in declared_properties:",
-            "            continue",
-            "        if any(re.search(pattern, key) for pattern in rejected_patterns):",
-            "            raise ValueError(",
-            "                f'Property {key!r} is not allowed by patternProperties'",
-            "            )",
-            "        matched = False",
-            "        for pattern, value_type in pattern_properties:",
-            "            if not re.search(pattern, key):",
-            "                continue",
-            "            matched = True",
-            "            value = TypeAdapter(value_type).validate_python(value)",
-            "        if matched:",
-            "            values[key] = value",
-            "            continue",
-            "        if additional_property_type is not None:",
-            "            values[key] = TypeAdapter(additional_property_type).validate_python(",
-            "                value",
-            "            )",
-            "            continue",
-        ]
-        if not allow_unmatched:
-            body_lines.append("        raise ValueError(f'Unexpected property {key!r}')")
-        body_lines.append("    return values")
-
-        self.extra_template_data[reference_path]["force_extra_allow"] = True
-        self._add_schema_validator_body(
-            reference_path,
-            body_lines,
-            data_types=data_types,
-            uses_re=True,
-            uses_type_adapter=True,
+        self._schema_runtime_validation(reference_path).pattern_properties.append(
+            PatternPropertiesRule(
+                declared_properties=declared_names,
+                pattern_properties=tuple(pattern_value_types),
+                rejected_patterns=tuple(rejected_patterns),
+                additional_property_type=additional_property_type,
+                allow_unmatched=allow_unmatched,
+            )
         )
 
     def _add_required_groups_validator(
@@ -3466,29 +3419,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return
 
         required_groups = self._required_group_input_names(groups, names_by_property)
-        method_name = f"_validate_schema_{'one_of' if keyword == 'oneOf' else 'any_of'}_required"
-        expected = "exactly one" if keyword == "oneOf" else "at least one"
-        comparison = "matches != 1" if keyword == "oneOf" else "matches == 0"
-        self._add_schema_validator_body(
-            reference_path,
-            [
-                "",
-                "@model_validator(mode='before')",
-                "@classmethod",
-                f"def {method_name}(cls, data: Any) -> Any:",
-                "    if not isinstance(data, dict):",
-                "        return data",
-                f"    required_groups = {required_groups!r}",
-                "    matches = sum(",
-                "        all(any(name in data for name in names) for names in group)",
-                "        for group in required_groups",
-                "    )",
-                f"    if {comparison}:",
-                "        raise ValueError(",
-                f"            'Expected {expected} required property group to be present'",
-                "        )",
-                "    return data",
-            ],
+        self._schema_runtime_validation(reference_path).required_groups.append(
+            RequiredGroupsRule(keyword=keyword, groups=required_groups)
         )
 
     def _get_conditional_predicate(  # noqa: PLR6301
@@ -3534,31 +3466,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             (names_by_property.get(property_name, (property_name,)), expected_values)
             for property_name, expected_values in predicate
         )
-        self._add_schema_validator_body(
-            reference_path,
-            [
-                "",
-                "@model_validator(mode='before')",
-                "@classmethod",
-                "def _validate_schema_conditional_required(cls, data: Any) -> Any:",
-                "    if not isinstance(data, dict):",
-                "        return data",
-                f"    condition = {condition!r}",
-                f"    then_required_groups = {self._required_group_input_names(then_groups, names_by_property)!r}",
-                f"    else_required_groups = {self._required_group_input_names(else_groups, names_by_property)!r}",
-                "    condition_matches = all(",
-                "        any(name in data and data[name] in expected for name in names)",
-                "        for names, expected in condition",
-                "    )",
-                "    required_groups = (",
-                "        then_required_groups if condition_matches else else_required_groups",
-                "    )",
-                "    for group in required_groups:",
-                "        if all(any(name in data for name in names) for names in group):",
-                "            continue",
-                "        raise ValueError('Conditional required properties are missing')",
-                "    return data",
-            ],
+        self._schema_runtime_validation(reference_path).conditional_required.append(
+            ConditionalRequiredRule(
+                condition=condition,
+                then_groups=self._required_group_input_names(then_groups, names_by_property),
+                else_groups=self._required_group_input_names(else_groups, names_by_property),
+            )
         )
 
     def _add_schema_validators(  # noqa: PLR0913, PLR0917
@@ -3684,7 +3597,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         extra_field = self._get_typed_additional_properties_field(reference.name, obj, path)
         # ignore an undetected object
-        if ignore_duplicate_model and not fields and extra_field is None and len(base_classes) == 1:
+        if (
+            ignore_duplicate_model
+            and not fields
+            and extra_field is None
+            and len(base_classes) == 1
+            and not self._has_schema_validator_constraints(obj)
+        ):
             with self.model_resolver.current_base_path_context(self.model_resolver._base_path):  # noqa: SLF001
                 self.model_resolver.delete(path)
                 return self.data_type(reference=base_classes[0])

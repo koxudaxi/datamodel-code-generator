@@ -136,7 +136,7 @@
 - `--enable-version-header`: Include tool version information in file header.
 - `--extra-template-data`: Pass custom template variables from JSON file for code generation.
 - `--formatters`: Specify code formatters to apply to generated output.
-- `--generate-schema-validators`: Generate Pydantic v2 model validators for JSON Schema runtime rules.
+- `--generate-schema-validators`: Generate experimental Pydantic v2 model validators for JSON Schema runtime rules.
 - `--no-treat-dot-as-module`: Keep dots in schema names as underscores for flat output.
 - `--no-use-type-checking-imports`: Keep generated model imports available at runtime when using Ruff fixes.
 - `--use-double-quotes`: Use double quotes for string literals in generated code.
@@ -647,7 +647,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         is a dictionary of the template data to add.
   --generate-schema-validators
                         Generate Pydantic v2 model validators for JSON Schema
-                        rules that cannot be represented as type hints.
+                        rules that cannot be represented as type hints
+                        (experimental).
   --use-double-quotes   Model generated with double quotes. Single quotes or
                         your black config skip_string_normalization value will
                         be used without this option.

@@ -38,6 +38,44 @@
         }
       ]
     },
+    "DirectPatternBag": {
+      "type": "object",
+      "patternProperties": {
+        "^item_[0-9]+$": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ValidatorOnlyChild": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/First"
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^extra_[A-Za-z]+$": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ValidatorOnlyPatternRef": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/First"
+        }
+      ],
+      "patternProperties": {
+        "^ref_extra_[A-Za-z]+$": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
     "OneOfContact": {
       "type": "object",
       "properties": {
@@ -107,6 +145,20 @@
         },
         "required": ["note"]
       }
+    },
+    "RequiredOnlyGuard": {
+      "type": "object",
+      "properties": {
+        "flag": {
+          "type": "string"
+        }
+      },
+      "oneOf": [
+        {},
+        {
+          "required": []
+        }
+      ]
     }
   },
   "$ref": "#/$defs/PatternTarget"

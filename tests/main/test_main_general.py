@@ -161,6 +161,8 @@ def test_list_experimental(capsys: pytest.CaptureFixture[str]) -> None:
 
     assert "input-format.avro" in captured.out
     assert "--input-file-type avro" in captured.out
+    assert "cli-option.generate-schema-validators" in captured.out
+    assert "--generate-schema-validators" in captured.out
     assert "formatter.builtin" in captured.out
     assert "--formatters builtin" in captured.out
     assert "Since" in captured.out
@@ -175,6 +177,7 @@ def test_list_experimental_json(capsys: pytest.CaptureFixture[str]) -> None:
 
     features = json.loads(captured.out)
     assert any(item["id"] == "input-format.xmlschema" for item in features)
+    assert any(item["id"] == "cli-option.generate-schema-validators" for item in features)
     assert any(item["id"] == "formatter.builtin" for item in features)
     assert not captured.err
 

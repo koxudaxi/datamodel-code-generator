@@ -6,14 +6,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    RootModel,
-    TypeAdapter,
-    constr,
-    model_validator,
-)
+from pydantic import BaseModel, ConfigDict, RootModel, TypeAdapter, model_validator
 
 
 class First(BaseModel):
@@ -24,11 +17,47 @@ class Second(BaseModel):
     second: str
 
 
-class PatternBag(RootModel[dict[constr(pattern=r'^[A-Z][A-Za-z0-9_]*$'), Second]]):
-    root: dict[constr(pattern=r'^[A-Z][A-Za-z0-9_]*$'), Second]
+class PatternBag(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+    @model_validator(mode='before')
+    @classmethod
+    def _validate_schema_pattern_properties(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        values = dict(data)
+        declared_properties = ()
+        rejected_patterns = ()
+        pattern_properties = (('^[A-Z][A-Za-z0-9_]*$', Second),)
+        additional_property_type = None
+        for key, value in data.items():
+            if key in declared_properties:
+                continue
+            if any(re.search(pattern, key) for pattern in rejected_patterns):
+                raise ValueError(
+                    f'Property {key!r} is not allowed by patternProperties'
+                )
+            matched = False
+            for pattern, value_type in pattern_properties:
+                if not re.search(pattern, key):
+                    continue
+                matched = True
+                value = TypeAdapter(value_type).validate_python(value)
+            if matched:
+                values[key] = value
+                continue
+            if additional_property_type is not None:
+                values[key] = TypeAdapter(additional_property_type).validate_python(
+                    value
+                )
+                continue
+            raise ValueError(f'Unexpected property {key!r}')
+        return values
 
 
-class PatternTarget(First):
+class PatternTarget(First, PatternBag):
     model_config = ConfigDict(
         extra='allow',
     )
@@ -42,6 +71,126 @@ class PatternTarget(First):
         declared_properties = ('first',)
         rejected_patterns = ()
         pattern_properties = (('^[A-Z][A-Za-z0-9_]*$', Second),)
+        additional_property_type = None
+        for key, value in data.items():
+            if key in declared_properties:
+                continue
+            if any(re.search(pattern, key) for pattern in rejected_patterns):
+                raise ValueError(
+                    f'Property {key!r} is not allowed by patternProperties'
+                )
+            matched = False
+            for pattern, value_type in pattern_properties:
+                if not re.search(pattern, key):
+                    continue
+                matched = True
+                value = TypeAdapter(value_type).validate_python(value)
+            if matched:
+                values[key] = value
+                continue
+            if additional_property_type is not None:
+                values[key] = TypeAdapter(additional_property_type).validate_python(
+                    value
+                )
+                continue
+            raise ValueError(f'Unexpected property {key!r}')
+        return values
+
+
+class DirectPatternBag(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+    @model_validator(mode='before')
+    @classmethod
+    def _validate_schema_pattern_properties(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        values = dict(data)
+        declared_properties = ()
+        rejected_patterns = ()
+        pattern_properties = (('^item_[0-9]+$', int),)
+        additional_property_type = None
+        for key, value in data.items():
+            if key in declared_properties:
+                continue
+            if any(re.search(pattern, key) for pattern in rejected_patterns):
+                raise ValueError(
+                    f'Property {key!r} is not allowed by patternProperties'
+                )
+            matched = False
+            for pattern, value_type in pattern_properties:
+                if not re.search(pattern, key):
+                    continue
+                matched = True
+                value = TypeAdapter(value_type).validate_python(value)
+            if matched:
+                values[key] = value
+                continue
+            if additional_property_type is not None:
+                values[key] = TypeAdapter(additional_property_type).validate_python(
+                    value
+                )
+                continue
+            raise ValueError(f'Unexpected property {key!r}')
+        return values
+
+
+class ValidatorOnlyChild(First):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+    @model_validator(mode='before')
+    @classmethod
+    def _validate_schema_pattern_properties(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        values = dict(data)
+        declared_properties = ('first',)
+        rejected_patterns = ()
+        pattern_properties = (('^extra_[A-Za-z]+$', int),)
+        additional_property_type = None
+        for key, value in data.items():
+            if key in declared_properties:
+                continue
+            if any(re.search(pattern, key) for pattern in rejected_patterns):
+                raise ValueError(
+                    f'Property {key!r} is not allowed by patternProperties'
+                )
+            matched = False
+            for pattern, value_type in pattern_properties:
+                if not re.search(pattern, key):
+                    continue
+                matched = True
+                value = TypeAdapter(value_type).validate_python(value)
+            if matched:
+                values[key] = value
+                continue
+            if additional_property_type is not None:
+                values[key] = TypeAdapter(additional_property_type).validate_python(
+                    value
+                )
+                continue
+            raise ValueError(f'Unexpected property {key!r}')
+        return values
+
+
+class ValidatorOnlyPatternRef(First):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+    @model_validator(mode='before')
+    @classmethod
+    def _validate_schema_pattern_properties(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        values = dict(data)
+        declared_properties = ('first',)
+        rejected_patterns = ()
+        pattern_properties = (('^ref_extra_[A-Za-z]+$', int),)
         additional_property_type = None
         for key, value in data.items():
             if key in declared_properties:
@@ -135,6 +284,14 @@ class ConditionalPayload(BaseModel):
     kind: str | None = None
     metric: int | None = None
     note: str | None = None
+
+
+class RequiredOnlyGuard1(BaseModel):
+    flag: str | None = None
+
+
+class RequiredOnlyGuard(RootModel[RequiredOnlyGuard1]):
+    root: RequiredOnlyGuard1
 
 
 class Model(RootModel[PatternTarget]):

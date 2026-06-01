@@ -155,7 +155,7 @@ datamodel-codegen [OPTIONS]
 | [`--enable-version-header`](template-customization.md#enable-version-header) | Include tool version information in file header. |
 | [`--extra-template-data`](template-customization.md#extra-template-data) | Pass custom template variables from JSON file for code generation. |
 | [`--formatters`](template-customization.md#formatters) | Specify code formatters to apply to generated output. |
-| [`--generate-schema-validators`](template-customization.md#generate-schema-validators) | Generate Pydantic v2 model validators for JSON Schema runtime rules. |
+| [`--generate-schema-validators`](template-customization.md#generate-schema-validators) | Generate experimental Pydantic v2 model validators for JSON Schema runtime rules... |
 | [`--no-treat-dot-as-module`](template-customization.md#no-treat-dot-as-module) | Keep dots in schema names as underscores for flat output. |
 | [`--no-use-type-checking-imports`](template-customization.md#no-use-type-checking-imports) | Keep generated model imports available at runtime when using Ruff fixes. |
 | [`--treat-dot-as-module`](template-customization.md#treat-dot-as-module) | Treat dots in schema names as module separators. |
@@ -281,7 +281,7 @@ All options sorted alphabetically:
 - [`--generate-cli-command`](general-options.md#generate-cli-command) - Generate CLI command from pyproject.toml configuration.
 - [`--generate-prompt`](utility-options.md#generate-prompt) - Generate a prompt for consulting LLMs about CLI options
 - [`--generate-pyproject-config`](general-options.md#generate-pyproject-config) - Generate pyproject.toml configuration from CLI arguments.
-- [`--generate-schema-validators`](template-customization.md#generate-schema-validators) - Generate Pydantic v2 model validators for JSON Schema runtim...
+- [`--generate-schema-validators`](template-customization.md#generate-schema-validators) - Generate experimental Pydantic v2 model validators for JSON ...
 - [`--graphql-no-typename`](graphql-only-options.md#graphql-no-typename) - Exclude __typename field from generated GraphQL models.
 - [`--help`](utility-options.md#help) - Show help message and exit
 - [`--http-headers`](general-options.md#http-headers) - Fetch schema from URL with custom HTTP headers.

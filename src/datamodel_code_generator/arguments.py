@@ -997,7 +997,8 @@ template_options.add_argument(
 )
 template_options.add_argument(
     "--generate-schema-validators",
-    help="Generate Pydantic v2 model validators for JSON Schema rules that cannot be represented as type hints.",
+    help="Generate Pydantic v2 model validators for JSON Schema rules that cannot be represented as type hints "
+    "(experimental).",
     action="store_true",
     default=None,
 )

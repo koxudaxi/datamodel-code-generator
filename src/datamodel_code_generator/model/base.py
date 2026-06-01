@@ -513,6 +513,7 @@ def _get_environment(template_subdir: Path, custom_template_dir: Path | None) ->
     )
     env.filters["escape_docstring"] = escape_docstring  # For old custom templates
     env.filters["format_docstring"] = format_docstring
+    env.filters["repr"] = repr
     return env
 
 
@@ -547,6 +548,7 @@ def _get_environment_with_absolute_path(absolute_template_dir: Path, builtin_sub
     )
     env.filters["escape_docstring"] = escape_docstring  # For old custom templates
     env.filters["format_docstring"] = format_docstring
+    env.filters["repr"] = repr
     return env
 
 
