@@ -7,6 +7,8 @@ import ast
 import importlib.util
 import inspect
 import json
+import os
+import shutil
 import sys
 import textwrap
 from pathlib import Path
@@ -22,6 +24,9 @@ PLAYGROUND_ROOT = ROOT / "docs" / "assets" / "playground"
 GENERATED_ROOT = PLAYGROUND_ROOT / "generated"
 METADATA_PATH = GENERATED_ROOT / "codegen-ui-metadata.json"
 APP_SHELL_PATH = GENERATED_ROOT / "app-shell.html"
+APP_SOURCE_PATH = PLAYGROUND_ROOT / "app.py"
+GENERATED_APP_PATH = GENERATED_ROOT / "app.py"
+VERSIONS_PATH = GENERATED_ROOT / "playground-versions.json"
 
 BROWSER_SUPPORTED_INPUT_TYPES = {
     InputFileType.Auto.value,
@@ -296,8 +301,55 @@ def build_metadata() -> dict[str, Any]:
     return metadata
 
 
+def _extra_versions() -> list[dict[str, Any]]:
+    raw_versions = os.environ.get("PLAYGROUND_EXTRA_VERSIONS_JSON")
+    if not raw_versions:
+        return []
+    try:
+        versions = json.loads(raw_versions)
+    except json.JSONDecodeError as exc:
+        msg = f"PLAYGROUND_EXTRA_VERSIONS_JSON is not valid JSON: {exc}"
+        raise ValueError(msg) from exc
+    if not isinstance(versions, list) or not all(isinstance(version, dict) for version in versions):
+        msg = "PLAYGROUND_EXTRA_VERSIONS_JSON must be a JSON array of objects"
+        raise TypeError(msg)
+    return cast("list[dict[str, Any]]", versions)
+
+
+def build_versions(metadata: dict[str, Any]) -> dict[str, Any]:
+    """Return runtime version entries for the browser playground."""
+    current_id = os.environ.get("PLAYGROUND_VERSION_ID", "current")
+    current_version = {
+        "id": current_id,
+        "label": os.environ.get("PLAYGROUND_VERSION_LABEL", "Current build"),
+        "kind": os.environ.get("PLAYGROUND_VERSION_KIND", "current"),
+        "asset_base": "./generated/",
+    }
+    if source_ref := os.environ.get("PLAYGROUND_SOURCE_REF"):
+        current_version["source_ref"] = source_ref
+
+    if package_wheel := metadata.get("package_wheel"):
+        current_version["install"] = {
+            "type": "wheel",
+            "url": package_wheel,
+            "deps": False,
+        }
+    else:
+        current_version["install"] = {
+            "type": "requirement",
+            "requirement": "datamodel-code-generator",
+            "deps": False,
+        }
+
+    return {
+        "schema_version": 1,
+        "default": os.environ.get("PLAYGROUND_DEFAULT_VERSION", current_id),
+        "versions": [current_version, *_extra_versions()],
+    }
+
+
 def _load_playground_app() -> Any:
-    spec = importlib.util.spec_from_file_location("playground_app", PLAYGROUND_ROOT / "app.py")
+    spec = importlib.util.spec_from_file_location("playground_app", APP_SOURCE_PATH)
     if spec is None or spec.loader is None:
         message = "Could not load playground app module"
         raise RuntimeError(message)
@@ -312,6 +364,7 @@ def main() -> None:
     metadata_json = json.dumps(metadata, indent=2, ensure_ascii=False) + "\n"
     GENERATED_ROOT.mkdir(parents=True, exist_ok=True)
     METADATA_PATH.write_text(metadata_json, encoding="utf-8")
+    shutil.copyfile(APP_SOURCE_PATH, GENERATED_APP_PATH)
 
     app = _load_playground_app()
     app.set_ui_metadata(metadata_json)
@@ -319,9 +372,15 @@ def main() -> None:
         app.render_app() + "\n",
         encoding="utf-8",
     )
+    VERSIONS_PATH.write_text(
+        json.dumps(build_versions(metadata), indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
 
     print(f"Generated {METADATA_PATH.relative_to(ROOT)}")
+    print(f"Generated {GENERATED_APP_PATH.relative_to(ROOT)}")
     print(f"Generated {APP_SHELL_PATH.relative_to(ROOT)}")
+    print(f"Generated {VERSIONS_PATH.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":
