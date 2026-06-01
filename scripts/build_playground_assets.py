@@ -305,9 +305,13 @@ def _extra_versions() -> list[dict[str, Any]]:
     raw_versions = os.environ.get("PLAYGROUND_EXTRA_VERSIONS_JSON")
     if not raw_versions:
         return []
-    versions = json.loads(raw_versions)
-    if not isinstance(versions, list):
-        msg = "PLAYGROUND_EXTRA_VERSIONS_JSON must be a JSON array"
+    try:
+        versions = json.loads(raw_versions)
+    except json.JSONDecodeError as exc:
+        msg = f"PLAYGROUND_EXTRA_VERSIONS_JSON is not valid JSON: {exc}"
+        raise ValueError(msg) from exc
+    if not isinstance(versions, list) or not all(isinstance(version, dict) for version in versions):
+        msg = "PLAYGROUND_EXTRA_VERSIONS_JSON must be a JSON array of objects"
         raise TypeError(msg)
     return cast("list[dict[str, Any]]", versions)
 
