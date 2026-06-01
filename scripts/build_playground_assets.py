@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PLAYGROUND_ROOT = ROOT / "docs" / "assets" / "playground"
 GENERATED_ROOT = PLAYGROUND_ROOT / "generated"
 METADATA_PATH = GENERATED_ROOT / "codegen-ui-metadata.json"
+MAIN_METADATA_PATH = GENERATED_ROOT / "main" / "codegen-ui-metadata.json"
 APP_SHELL_PATH = GENERATED_ROOT / "app-shell.html"
 APP_SOURCE_PATH = PLAYGROUND_ROOT / "app.py"
 RUNTIME_SOURCE_PATH = PLAYGROUND_ROOT / "runtime.py"
@@ -325,6 +326,25 @@ def _release_versions() -> list[dict[str, Any]]:
     return _json_env_list("PLAYGROUND_RELEASES_JSON")
 
 
+def _json_file_dict(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        return {}
+    return cast("dict[str, Any]", data)
+
+
+def _wheel_install(metadata: dict[str, Any]) -> dict[str, Any] | None:
+    if not (package_wheel := metadata.get("package_wheel")):
+        return None
+    return {
+        "type": "wheel",
+        "url": package_wheel,
+        "deps": False,
+    }
+
+
 def _deploy_kind() -> str:
     match os.environ.get("PLAYGROUND_DEPLOY_BRANCH", ""):
         case branch if branch.startswith("pr-"):
@@ -353,12 +373,8 @@ def _current_version(
     if source_ref := os.environ.get("PLAYGROUND_SOURCE_REF"):
         version["source_ref"] = source_ref
 
-    if package_wheel := metadata.get("package_wheel"):
-        version["install"] = {
-            "type": "wheel",
-            "url": package_wheel,
-            "deps": False,
-        }
+    if install := _wheel_install(metadata):
+        version["install"] = install
     else:
         version["install"] = {
             "type": "requirement",
@@ -372,24 +388,23 @@ def _current_version(
 def _main_version(metadata: dict[str, Any], *, local: bool) -> dict[str, Any]:
     if local:
         return _current_version(metadata, version_id="main", label="main", kind="main")
-    return {
+    version = {
         "id": "main",
         "label": "main",
         "kind": "main",
         "asset_base": os.environ.get("PLAYGROUND_MAIN_ASSET_BASE") or DEFAULT_MAIN_ASSET_BASE,
         "app": "runtime.py",
     }
+    if install := _wheel_install(_json_file_dict(MAIN_METADATA_PATH)):
+        version["install"] = install
+    return version
 
 
 def _release_version(version: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
     checkout_ref = os.environ.get("PLAYGROUND_CHECKOUT_REF")
     result = dict(version)
-    if result.get("id") == checkout_ref and (package_wheel := metadata.get("package_wheel")):
-        result["install"] = {
-            "type": "wheel",
-            "url": package_wheel,
-            "deps": False,
-        }
+    if result.get("id") == checkout_ref and (install := _wheel_install(metadata)):
+        result["install"] = install
     result.setdefault("asset_base", "./generated/")
     result.setdefault("app", "runtime.py")
     return result

@@ -22,10 +22,12 @@ def run_gh(args: list[str], *, check: bool = True) -> subprocess.CompletedProces
     )
 
 
-def _release_tags(limit: int) -> list[str]:
+def _release_tags(repo: str, limit: int) -> list[str]:
     result = run_gh([
         "release",
         "list",
+        "--repo",
+        repo,
         "--limit",
         str(limit),
         "--exclude-drafts",
@@ -69,7 +71,7 @@ def _release_version(tag: str) -> dict[str, Any]:
 
 def _build_release_versions(repo: str, limit: int) -> list[dict[str, Any]]:
     versions = []
-    for tag in _release_tags(limit):
+    for tag in _release_tags(repo, limit):
         if not _has_playground_runtime(repo, tag):
             continue
         versions.append(_release_version(tag))
