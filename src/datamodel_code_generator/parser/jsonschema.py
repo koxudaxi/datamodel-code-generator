@@ -11,7 +11,6 @@ import importlib
 import json
 import re
 from collections import defaultdict
-from collections.abc import Iterable
 from contextlib import contextmanager, suppress
 from fractions import Fraction
 from functools import cached_property, lru_cache
