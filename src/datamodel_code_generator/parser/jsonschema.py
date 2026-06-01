@@ -3174,8 +3174,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Parse oneOf schema into a list of data types."""
         return self.parse_combined_schema(name, obj, path, "oneOf")
 
-    @staticmethod
-    def _is_required_only_schema(item: JsonSchemaObject | bool) -> bool:  # noqa: FBT001
+    def _is_required_only_schema(self, item: JsonSchemaObject | bool) -> bool:  # noqa: FBT001, PLR6301
         """Return whether a combined-schema branch is only a property presence rule."""
         if not isinstance(item, JsonSchemaObject):
             return False
@@ -3203,8 +3202,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _has_required_group_validators(self, obj: JsonSchemaObject) -> bool:
         return bool(self._get_required_groups(obj.oneOf) or self._get_required_groups(obj.anyOf))
 
-    @staticmethod
-    def _iter_conditional_branches(obj: JsonSchemaObject) -> Iterator[JsonSchemaObject]:
+    def _iter_conditional_branches(self, obj: JsonSchemaObject) -> Iterator[JsonSchemaObject]:  # noqa: PLR6301
         for branch in (obj.then, obj.else_):
             if isinstance(branch, JsonSchemaObject):
                 yield branch
@@ -3249,8 +3247,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         schema_dict["properties"] = merged_properties
         return self.SCHEMA_OBJECT_TYPE.model_validate(schema_dict)
 
-    @staticmethod
-    def _field_input_names(field: DataModelFieldBase) -> tuple[str, ...]:
+    def _field_input_names(self, field: DataModelFieldBase) -> tuple[str, ...]:  # noqa: PLR6301
         names: list[str] = []
         for value in (field.original_name, field.alias, field.name):
             if value and value not in names:
@@ -3285,8 +3282,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return names_by_property
 
-    @staticmethod
-    def _required_group_input_names(
+    def _required_group_input_names(  # noqa: PLR6301
+        self,
         groups: Sequence[Sequence[str]],
         names_by_property: dict[str, tuple[str, ...]],
     ) -> tuple[tuple[tuple[str, ...], ...], ...]:
@@ -3315,8 +3312,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         validators["uses_re"] = validators.get("uses_re", False) or uses_re
         validators["uses_type_adapter"] = validators.get("uses_type_adapter", False) or uses_type_adapter
 
-    @staticmethod
-    def _pattern_property_entries_code(pattern_value_types: Sequence[tuple[str, DataType]]) -> str:
+    def _pattern_property_entries_code(  # noqa: PLR6301
+        self,
+        pattern_value_types: Sequence[tuple[str, DataType]],
+    ) -> str:
         entries = [f"({pattern!r}, {data_type.type_hint})" for pattern, data_type in pattern_value_types]
         if not entries:
             return "()"
@@ -3486,8 +3485,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             ],
         )
 
-    @staticmethod
-    def _get_conditional_predicate(
+    def _get_conditional_predicate(  # noqa: PLR6301
+        self,
         obj: JsonSchemaObject,
     ) -> tuple[tuple[str, tuple[object, ...]], ...] | None:
         if not isinstance(obj.if_, JsonSchemaObject) or not obj.if_.properties or not obj.if_.required:

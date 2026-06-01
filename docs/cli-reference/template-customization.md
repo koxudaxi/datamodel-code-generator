@@ -2578,6 +2578,7 @@ and simple if/then/else required-property conditions.
 
     ```json
     {
+      "$schema": "http://json-schema.org/draft-07/schema#",
       "$defs": {
         "First": {
           "type": "object",

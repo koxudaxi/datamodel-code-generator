@@ -101,7 +101,7 @@ def test_schema_validator_input_names_include_validation_aliases_and_schema_base
         }
     }
 
-    assert JsonSchemaParser._field_input_names(field) == ("field", "fieldAlias", "field_name", "field-alt")
+    assert parser._field_input_names(field) == ("field", "fieldAlias", "field_name", "field-alt")
     assert parser._get_input_names_by_property(
         [],
         [Reference(path="#/$defs/Empty", name="Empty"), Reference(path="#/$defs/Base", name="Base")],
@@ -124,7 +124,7 @@ def test_schema_validator_pattern_property_helpers_collect_inherited_sources() -
 
     assert len(sources) == 3
     assert sources[-1].patternProperties == {"^x": True}
-    assert JsonSchemaParser._pattern_property_entries_code(()) == "()"
+    assert parser._pattern_property_entries_code(()) == "()"
 
 
 def test_schema_validator_pattern_property_helpers_collect_value_types() -> None:
@@ -155,23 +155,24 @@ def test_schema_validator_pattern_property_helpers_collect_value_types() -> None
 
 def test_schema_validator_conditional_predicate_helpers() -> None:
     """Test conditional predicate extraction accepts only mechanical cases."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+
     assert (
-        JsonSchemaParser._get_conditional_predicate(
+        parser._get_conditional_predicate(
             JsonSchemaObject.model_validate({"if": {"required": ["kind"], "properties": {"kind": True}}})
         )
         is None
     )
-    assert JsonSchemaParser._get_conditional_predicate(
+    assert parser._get_conditional_predicate(
         JsonSchemaObject.model_validate({"if": {"required": ["kind"], "properties": {"kind": {"enum": ["a", "b"]}}}})
     ) == (("kind", ("a", "b")),)
     assert (
-        JsonSchemaParser._get_conditional_predicate(
+        parser._get_conditional_predicate(
             JsonSchemaObject.model_validate({"if": {"required": ["kind"], "properties": {"kind": {"type": "string"}}}})
         )
         is None
     )
 
-    parser = JsonSchemaParser("", generate_schema_validators=True)
     parser.extra_template_data["#/Model"] = {}
     parser._add_conditional_validator(
         "#/Model",
