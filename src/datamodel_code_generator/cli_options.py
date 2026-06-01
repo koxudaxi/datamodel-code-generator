@@ -205,6 +205,12 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--no-use-type-checking-imports": CLIOptionMeta(
         name="--no-use-type-checking-imports", category=OptionCategory.TEMPLATE
     ),
+    "--generate-schema-validators": CLIOptionMeta(
+        name="--generate-schema-validators", category=OptionCategory.TEMPLATE
+    ),
+    "--schema-validator-base-class-name": CLIOptionMeta(
+        name="--schema-validator-base-class-name", category=OptionCategory.TEMPLATE
+    ),
     "--output-datetime-class": CLIOptionMeta(name="--output-datetime-class", category=OptionCategory.TYPING),
     "--output-date-class": CLIOptionMeta(name="--output-date-class", category=OptionCategory.TYPING),
     "--use-decimal-for-multiple-of": CLIOptionMeta(

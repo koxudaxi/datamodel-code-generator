@@ -513,6 +513,7 @@ def _get_environment(template_subdir: Path, custom_template_dir: Path | None) ->
     )
     env.filters["escape_docstring"] = escape_docstring  # For old custom templates
     env.filters["format_docstring"] = format_docstring
+    env.filters["repr"] = repr
     return env
 
 
@@ -547,6 +548,7 @@ def _get_environment_with_absolute_path(absolute_template_dir: Path, builtin_sub
     )
     env.filters["escape_docstring"] = escape_docstring  # For old custom templates
     env.filters["format_docstring"] = format_docstring
+    env.filters["repr"] = repr
     return env
 
 
@@ -957,6 +959,16 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         Each model type should override this to provide appropriate implementation.
         """
         return None
+
+    @classmethod
+    def render_module_code(cls, models: list[DataModel]) -> str:  # noqa: ARG003
+        """Render shared code that should be emitted once per generated module."""
+        return ""
+
+    @property
+    def custom_template_dir(self) -> Path | None:
+        """Return the custom template directory used by this model."""
+        return self._custom_template_dir
 
     @property
     def nullable(self) -> bool:

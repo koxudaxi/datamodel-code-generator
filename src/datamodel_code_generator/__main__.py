@@ -42,6 +42,7 @@ from collections import defaultdict
 from collections.abc import Callable, Mapping, Sequence  # noqa: TC003  # pydantic needs it
 from enum import IntEnum
 from io import TextIOBase  # noqa: TC003 # needed for pydantic
+from keyword import iskeyword
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
@@ -416,6 +417,17 @@ class Config(BaseModel):  # noqa: PLR0904
             return ClassNameAffixScope(v)
         return v  # pragma: no cover
 
+    @field_validator("schema_validator_base_class_name")
+    @classmethod
+    def validate_schema_validator_base_class_name(cls, v: str | None) -> str | None:  # ty: ignore
+        """Validate schema validator base class name."""
+        if v is None:  # pragma: no cover
+            return v
+        if not v.isidentifier() or iskeyword(v):
+            msg = f"--schema-validator-base-class-name '{v}' is not a valid Python identifier"
+            raise Error(msg)
+        return v
+
     input: Optional[Union[Path, str]] = None  # noqa: UP007, UP045
     input_model: Optional[list[str]] = None  # noqa: UP045
     input_model_ref_strategy: Optional[InputModelRefStrategy] = None  # noqa: UP045
@@ -434,6 +446,8 @@ class Config(BaseModel):  # noqa: PLR0904
     custom_template_dir: Optional[Path] = None  # noqa: UP045
     extra_template_data: Optional[TextIOBase] = None  # noqa: UP045
     validators: Optional[TextIOBase] = None  # noqa: UP045
+    generate_schema_validators: bool = False
+    schema_validator_base_class_name: Optional[str] = None  # noqa: UP045
     validation: bool = False
     field_constraints: bool = False
     snake_case_field: bool = False
@@ -896,6 +910,8 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         additional_imports=config.additional_imports,
         class_decorators=config.class_decorators,
         custom_template_dir=config.custom_template_dir,
+        generate_schema_validators=config.generate_schema_validators,
+        schema_validator_base_class_name=config.schema_validator_base_class_name,
         validation=config.validation,
         field_constraints=config.field_constraints,
         snake_case_field=config.snake_case_field,

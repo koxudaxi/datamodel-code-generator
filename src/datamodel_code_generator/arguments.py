@@ -996,6 +996,19 @@ template_options.add_argument(
     type=Path,
 )
 template_options.add_argument(
+    "--generate-schema-validators",
+    help="Generate Pydantic v2 model validators for JSON Schema rules that cannot be represented as type hints "
+    "(experimental).",
+    action="store_true",
+    default=None,
+)
+template_options.add_argument(
+    "--schema-validator-base-class-name",
+    help="Set the generated shared Pydantic v2 schema runtime validator base class name.",
+    type=str,
+    default=None,
+)
+template_options.add_argument(
     "--use-type-checking-imports",
     help="Allow Ruff to move typing-only imports into TYPE_CHECKING blocks. "
     "By default this stays enabled, except for multi-module Ruff formatting of modular Pydantic output "

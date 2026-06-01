@@ -35,6 +35,253 @@ DATA_PATH: Path = Path(__file__).parents[1] / "data" / "jsonschema"
 EXPECTED_JSONSCHEMA_PATH = Path(__file__).parents[1] / "data" / "expected" / "parser" / "jsonschema"
 
 
+def test_schema_validator_required_only_schema_filters() -> None:
+    """Test detection of required-only combined-schema branches."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    required_only_schema = JsonSchemaObject.model_validate({
+        "type": "object",
+        "required": ["a"],
+        "$comment": "metadata is ignored",
+        "x-vendor": {"metadata": True},
+    })
+
+    assert parser._is_required_only_schema(required_only_schema)
+    assert parser._get_required_groups([required_only_schema]) == (("a",),)
+    assert not parser._is_required_only_schema(True)
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({}))
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": []}))
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"$ref": "#/$defs/Model"}))
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"items": {"type": "string"}}))
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"anyOf": [{"required": ["a"]}]}))
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"enum": ["a"]}))
+    assert not parser._is_required_only_schema(
+        JsonSchemaObject.model_validate({"required": ["a"], "additionalProperties": False})
+    )
+    assert not parser._is_required_only_schema(
+        JsonSchemaObject.model_validate({"required": ["a"], "unevaluatedProperties": False})
+    )
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": ["a"], "minProperties": 1}))
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": ["a"], "maxProperties": 1}))
+    assert not parser._is_required_only_schema(
+        JsonSchemaObject.model_validate({"required": ["a"], "dependentRequired": {"a": ["b"]}})
+    )
+    assert not parser._is_required_only_schema(
+        JsonSchemaObject.model_validate({"required": ["a"], "dependentSchemas": {"a": {"required": ["b"]}}})
+    )
+    assert not parser._is_required_only_schema(
+        JsonSchemaObject.model_validate({"required": ["a"], "dependencies": {"a": ["b"]}})
+    )
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": ["a"], "contains": {}}))
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": ["a"], "not": {}}))
+    assert (
+        parser._get_required_groups([JsonSchemaObject.model_validate({"properties": {"a": {"type": "string"}}})]) == ()
+    )
+
+
+def test_schema_validator_helpers_disabled() -> None:
+    """Test schema validator helpers are inert when disabled."""
+    parser = JsonSchemaParser("", generate_schema_validators=False)
+    obj = JsonSchemaObject.model_validate({
+        "type": "object",
+        "properties": {"a": {"type": "string"}},
+        "oneOf": [{"required": ["a"]}],
+    })
+    parser.extra_template_data["#/Model"] = {}
+
+    assert not parser._should_parse_object_with_schema_validators(obj)
+    assert parser._merge_conditional_properties(obj) is obj
+
+    parser._add_schema_validators("#/Model", "Model", obj, ["#"], [], [])
+
+    assert parser.extra_template_data["#/Model"] == {}
+
+
+def test_schema_validator_merge_conditional_properties_skips_missing_and_duplicate_properties() -> None:
+    """Test conditional property merging skips missing and duplicate branch properties."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    obj = JsonSchemaObject.model_validate({
+        "type": "object",
+        "properties": {"metric": {"type": "integer"}},
+        "if": {"required": ["kind"], "properties": {"kind": {"const": "metric"}}},
+        "then": {"required": ["metric"]},
+        "else": {"required": ["metric"], "properties": {"metric": {"type": "integer"}}},
+    })
+
+    assert parser._merge_conditional_properties(obj) is obj
+
+
+def test_schema_validator_input_names_include_validation_aliases_and_schema_base_properties() -> None:
+    """Test validator input names include aliases and inherited schema properties."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    field = DataModelFieldBase(
+        name="field_name",
+        original_name="field",
+        alias="fieldAlias",
+        validation_aliases=["fieldAlias", "field-alt"],
+        data_type=DataType(type="str"),
+    )
+    empty_field = DataModelFieldBase(name="", original_name="", data_type=DataType(type="str"))
+    parser.raw_obj = {
+        "$defs": {
+            "Empty": {"type": "object"},
+            "Base": {
+                "type": "object",
+                "properties": {"base": {"type": "string"}},
+            },
+        }
+    }
+
+    assert parser._field_input_names(field) == ("field", "fieldAlias", "field_name", "field-alt")
+    assert parser._get_input_names_by_property(
+        [empty_field],
+        [Reference(path="#/$defs/Empty", name="Empty"), Reference(path="#/$defs/Base", name="Base")],
+    ) == {"base": ("base",)}
+
+
+def test_schema_validator_input_names_skip_empty_datamodel_base_fields() -> None:
+    """Test inherited generated model fields include usable names and skip empty names."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    base_field = DataModelFieldBase(
+        name="base_field",
+        original_name="base",
+        alias="baseAlias",
+        validation_aliases=["baseAlias", "base-alt"],
+        data_type=DataType(type="str"),
+    )
+    empty_field = DataModelFieldBase(name="", original_name="", data_type=DataType(type="str"))
+    base_ref = Reference(path="#/$defs/Base", name="Base")
+    BaseModel(reference=base_ref, fields=[base_field, empty_field])
+
+    assert parser._get_input_names_by_property([], [base_ref]) == {
+        "base": ("base", "baseAlias", "base_field", "base-alt")
+    }
+
+
+def test_schema_runtime_validation_reuses_existing_instance() -> None:
+    """Test schema runtime validation config is reused for a reference."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+
+    runtime_validation = parser._schema_runtime_validation("#/Model")
+
+    assert parser._schema_runtime_validation("#/Model") is runtime_validation
+
+
+def test_schema_validator_pattern_property_helpers_collect_inherited_sources() -> None:
+    """Test patternProperties helper walks usable inherited schema sources."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    parser.raw_obj = {"$defs": {"Loop": {"allOf": [{"$ref": "#/$defs/Loop"}]}}}
+    obj = JsonSchemaObject.model_validate({
+        "allOf": [
+            True,
+            {"$ref": "#/$defs/Loop"},
+            {"type": "object", "patternProperties": {"^x": True}},
+        ]
+    })
+
+    sources = list(parser._iter_schema_validation_sources(obj))
+
+    assert len(sources) == 3
+    assert sources[-1].patternProperties == {"^x": True}
+
+
+def test_schema_validator_pattern_property_helpers_collect_value_types() -> None:
+    """Test patternProperties helper collects generated value data types."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    obj = JsonSchemaObject.model_validate({
+        "type": "object",
+        "patternProperties": {"^reject": False, "^any": True},
+        "additionalProperties": {"type": "integer"},
+    })
+    parser.extra_template_data["#/Model"] = {}
+
+    pattern_value_types, rejected_patterns, additional_property_type, allow_unmatched = (
+        parser._collect_pattern_property_validators("Model", obj, ["#"])
+    )
+
+    assert pattern_value_types[0][0] == "^any"
+    assert rejected_patterns == ["^reject"]
+    assert additional_property_type is not None
+    assert allow_unmatched
+
+    parser._add_pattern_properties_validator("#/Model", "Model", obj, ["#"], [], [])
+
+    runtime_validation = parser.extra_template_data["#/Model"]["schema_runtime_validation"]
+    assert runtime_validation.data_types
+
+
+def test_schema_validator_pattern_property_helpers_ignore_unexpected_value_types() -> None:
+    """Test patternProperties collection ignores unexpected runtime values defensively."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    obj = JsonSchemaObject.model_validate({"type": "object"})
+    obj.patternProperties = {"^ignored": object()}  # type: ignore[dict-item]
+
+    pattern_value_types, rejected_patterns, additional_property_type, allow_unmatched = (
+        parser._collect_pattern_property_validators("Model", obj, ["#"])
+    )
+
+    assert pattern_value_types == []
+    assert rejected_patterns == []
+    assert additional_property_type is None
+    assert allow_unmatched
+
+
+def test_schema_validator_conditional_predicate_helpers() -> None:
+    """Test conditional predicate extraction accepts only mechanical cases."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+
+    assert (
+        parser._get_conditional_predicate(
+            JsonSchemaObject.model_validate({"if": {"required": ["kind"], "properties": {"kind": True}}})
+        )
+        is None
+    )
+    assert parser._get_conditional_predicate(
+        JsonSchemaObject.model_validate({"if": {"required": ["kind"], "properties": {"kind": {"enum": ["a", "b"]}}}})
+    ) == (("kind", ("a", "b")),)
+    assert (
+        parser._get_conditional_predicate(
+            JsonSchemaObject.model_validate({"if": {"required": ["kind"], "properties": {"kind": {"type": "string"}}}})
+        )
+        is None
+    )
+
+    parser.extra_template_data["#/Model"] = {}
+    parser._add_conditional_validator(
+        "#/Model",
+        JsonSchemaObject.model_validate({
+            "if": {"required": ["kind"], "properties": {"kind": {"const": "metric"}}},
+            "then": {},
+        }),
+        {"kind": ("kind",)},
+    )
+
+    assert parser.extra_template_data["#/Model"] == {}
+
+
+def test_parse_id_traverses_property_names_schema(mocker: MockerFixture) -> None:
+    """Test $id collection traverses propertyNames schemas."""
+    parser = JsonSchemaParser("")
+    obj = JsonSchemaObject.model_validate({"propertyNames": {"$id": "urn:property-name"}})
+    spy = mocker.spy(parser, "parse_id")
+
+    parser.parse_id(obj, ["#"])
+
+    assert spy.call_count == 2
+    assert parser.model_resolver.ids[""]["urn:property-name"] == "#"
+
+
+def test_parse_obj_returns_when_merged_ref_still_has_ref(mocker: MockerFixture) -> None:
+    """Test parse_obj stops after parsing a schema-keyword ref that still resolves as a ref."""
+    parser = JsonSchemaParser("")
+    obj = JsonSchemaObject.model_validate({"$ref": "#/$defs/Target", "minLength": 1})
+    mocker.patch.object(parser, "_merge_ref_with_schema", return_value=obj)
+    parse_ref = mocker.patch.object(parser, "parse_ref")
+
+    parser.parse_obj("Target", obj, ["#", "$defs", "Target"])
+
+    parse_ref.assert_called_once_with(obj, ["#", "$defs", "Target"])
+
+
 @pytest.mark.parametrize(
     ("schema", "path", "model"),
     [

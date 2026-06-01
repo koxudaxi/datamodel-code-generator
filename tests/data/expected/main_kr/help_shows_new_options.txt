@@ -462,6 +462,13 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         If you are using another input file type (e.g.
                         GraphQL), the key is the name of the object. The value
                         is a dictionary of the template data to add.
+  --generate-schema-validators
+                        Generate Pydantic v2 model validators for JSON Schema
+                        rules that cannot be represented as type hints
+                        (experimental).
+  --schema-validator-base-class-name SCHEMA_VALIDATOR_BASE_CLASS_NAME
+                        Set the generated shared Pydantic v2 schema runtime
+                        validator base class name.
   --use-double-quotes   Model generated with double quotes. Single quotes or
                         your black config skip_string_normalization value will
                         be used without this option.

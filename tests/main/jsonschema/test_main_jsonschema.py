@@ -12,6 +12,7 @@ from pathlib import Path
 import black
 import pytest
 from packaging import version
+from pydantic import ValidationError
 
 from datamodel_code_generator import (
     MIN_VERSION,
@@ -61,6 +62,26 @@ FixtureRequest = pytest.FixtureRequest
 def assert_run_main_with_args_error(args: list[str], capsys: pytest.CaptureFixture[str], expected_error: str) -> None:
     """Assert that running the CLI exits with code 2 and emits the expected error."""
     run_main_with_system_exit(args, expected_code=2, capsys=capsys, expected_stderr_contains=expected_error)
+
+
+def assert_schema_required_group_validator_not_generated(
+    output_file: Path,
+    expected_name: str | Path | None = None,  # noqa: ARG001
+    encoding: str = "utf-8",
+    transform: object | None = None,  # noqa: ARG001
+) -> None:
+    """Assert constrained oneOf/anyOf branches are not lowered to required-group validators."""
+    generated = output_file.read_text(encoding=encoding)
+    forbidden_fragments = (
+        "__json_schema_one_of_required_groups__",
+        "_validate_json_schema_required_groups",
+    )
+    generated_fragments = [fragment for fragment in forbidden_fragments if fragment in generated]
+    if generated_fragments:  # pragma: no cover
+        pytest.fail(
+            "Constrained oneOf/anyOf branches generated required-group validators: " + ", ".join(generated_fragments),
+            pytrace=False,
+        )
 
 
 def _keep_model_order_field_references_expected_file(
@@ -10761,6 +10782,361 @@ def test_field_validators(output_file: Path) -> None:
         ],
         skip_code_validation=True,
     )
+
+
+@pytest.mark.cli_doc(
+    options=["--generate-schema-validators"],
+    option_description="""Generate experimental Pydantic v2 model validators for JSON Schema runtime rules.
+
+The `--generate-schema-validators` option emits schema-derived model validators
+for object constraints that cannot be represented as type hints alone, including
+patternProperties on composed object models, required-only oneOf/anyOf groups,
+and simple if/then/else required-property conditions. This feature is
+experimental and may change as JSON Schema coverage is expanded.""",
+    input_schema="jsonschema/schema_validators.json",
+    cli_args=[
+        "--generate-schema-validators",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--disable-timestamp",
+    ],
+    golden_output="jsonschema/schema_validators.py",
+)
+def test_main_jsonschema_generate_schema_validators(output_file: Path) -> None:
+    """Generate Pydantic v2 model validators for JSON Schema runtime rules."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators.py",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output",
+        model_name="PatternTarget",
+        valid_json='{"first":"x","Alpha":{"second":"y"}}',
+        invalid_json='{"first":"x","1bad":{"second":"y"}}',
+        expected_error_type="value_error",
+        expected_attribute_path=("Alpha", "second"),
+        expected_attribute_value="y",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output",
+        model_name="DirectPatternBag",
+        valid_json='{"item_1":7}',
+        invalid_json='{"bad":7}',
+        expected_error_type="value_error",
+        expected_attribute_path=("item_1",),
+        expected_attribute_value=7,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output",
+        model_name="ValidatorOnlyChild",
+        valid_json='{"first":"x","extra_count":3}',
+        invalid_json='{"first":"x","bad":3}',
+        expected_error_type="value_error",
+        expected_attribute_path=("extra_count",),
+        expected_attribute_value=3,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output",
+        model_name="ValidatorOnlyPatternRef",
+        valid_json='{"first":"x","ref_extra_count":3}',
+        invalid_json='{"first":"x","bad":3}',
+        expected_error_type="value_error",
+        expected_attribute_path=("ref_extra_count",),
+        expected_attribute_value=3,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output",
+        model_name="OneOfContact",
+        valid_json='{"email":"a@example.com"}',
+        invalid_json='{"email":"a@example.com","phone":"123"}',
+        expected_error_type="value_error",
+        expected_attribute_path=("email",),
+        expected_attribute_value="a@example.com",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output",
+        model_name="AnyOfContact",
+        valid_json='{"email":"a@example.com","phone":"123"}',
+        invalid_json="{}",
+        expected_error_type="value_error",
+        expected_attribute_path=("phone",),
+        expected_attribute_value="123",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output",
+        model_name="ConditionalPayload",
+        valid_json='{"kind":"metric","metric":7}',
+        invalid_json='{"kind":"metric"}',
+        expected_error_type="value_error",
+        expected_attribute_path=("metric",),
+        expected_attribute_value=7,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output",
+        model_name="ConditionalPayload",
+        valid_json='{"kind":"note","note":"ok"}',
+        invalid_json='{"kind":"note"}',
+        expected_error_type="value_error",
+        expected_attribute_path=("note",),
+        expected_attribute_value="ok",
+    )
+
+
+def test_main_jsonschema_generate_schema_validators_extra_template_collision(
+    output_file: Path,
+    tmp_path: Path,
+) -> None:
+    """Generate schema validators when user extra template data uses the reserved runtime key."""
+    extra_template_data = tmp_path / "extra-template-data.json"
+    extra_template_data.write_text(
+        json.dumps({"#/$defs/DirectPatternBag": {"schema_runtime_validation": {"ignored": True}}}),
+        encoding="utf-8",
+    )
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators.py",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--extra-template-data",
+            str(extra_template_data),
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_extra_template_collision",
+        model_name="DirectPatternBag",
+        valid_json='{"item_1":7}',
+        invalid_json='{"bad":7}',
+        expected_error_type="value_error",
+        expected_attribute_path=("item_1",),
+        expected_attribute_value=7,
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--schema-validator-base-class-name"],
+    option_description="""Set the generated shared Pydantic v2 schema runtime validator base class name.
+
+The `--schema-validator-base-class-name` option changes the name of the generated
+shared base class that owns schema-derived runtime validators. It is only used when
+`--generate-schema-validators` emits shared validator code.""",
+    input_schema="jsonschema/schema_validators_custom_base_class_name.json",
+    cli_args=[
+        "--generate-schema-validators",
+        "--schema-validator-base-class-name",
+        "SharedSchemaValidatorBase",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--disable-timestamp",
+    ],
+    golden_output="jsonschema/schema_validators_custom_base_class_name.py",
+    related_options=["--generate-schema-validators"],
+)
+def test_main_jsonschema_generate_schema_validators_custom_base_class_name(output_file: Path) -> None:
+    """Generate schema validators with a custom shared base class name."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_custom_base_class_name.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators_custom_base_class_name.py",
+        extra_args=[
+            "--generate-schema-validators",
+            "--schema-validator-base-class-name",
+            "SharedSchemaValidatorBase",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_custom_base_class_name",
+        model_name="CustomBaseClassName",
+        valid_json='{"item_1":7}',
+        invalid_json='{"bad":7}',
+        expected_error_type="value_error",
+        expected_attribute_path=("item_1",),
+        expected_attribute_value=7,
+    )
+
+
+def test_main_jsonschema_generate_schema_validators_parser_branch_runtime(
+    output_file: Path,
+) -> None:
+    """Generate and execute a model that covers runtime-validator parser integration branches."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_parser_branch_runtime.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--read-only-write-only-model-type",
+            "all",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_parser_branch_runtime",
+        model_name="RuntimeBranchCoverage",
+        valid_json='{"child":{"value":"x"},"listOverride":{"items":[1]}}',
+        invalid_json='{"child":{"value":1}}',
+        expected_error_type="string_type",
+        expected_attribute_path=("child", "value"),
+        expected_attribute_value="x",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_parser_branch_runtime_inline_pattern",
+        model_name="RuntimeBranchCoverage",
+        valid_json='{"inlinePattern":{"item_1":7}}',
+        invalid_json='{"inlinePattern":{"bad":7}}',
+        expected_error_type="value_error",
+        expected_attribute_path=("inlinePattern", "item_1"),
+        expected_attribute_value=7,
+    )
+
+    required_ref_output_file = output_file.with_name("required_ref_coverage.py")
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_required_ref_branch_runtime.json",
+        output_path=required_ref_output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        required_ref_output_file,
+        module_name="output_required_ref_branch_runtime",
+        model_name="RequiredRefCoverage",
+        valid_json='{"first":"x"}',
+        invalid_json="[]",
+        expected_error_type="model_type",
+        expected_attribute_path=("root", "first"),
+        expected_attribute_value="x",
+    )
+
+
+def test_main_jsonschema_generate_schema_validators_required_branch_constraints(
+    output_file: Path,
+) -> None:
+    """Generate from a file and avoid collapsing constrained oneOf branches to presence checks."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_required_branch_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_schema_required_group_validator_not_generated,
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_generate_schema_validators_requires_pydantic_v2(
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject schema-derived validators for output models without Pydantic v2 runtime hooks."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="generate_schema_validators is only supported for pydantic_v2.BaseModel",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "dataclasses.dataclass",
+        ],
+    )
+
+
+def test_main_jsonschema_generate_schema_validators_invalid_base_class_name(
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject invalid custom schema validator base class names."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="--schema-validator-base-class-name '123Invalid' is not a valid Python identifier",
+        extra_args=[
+            "--generate-schema-validators",
+            "--schema-validator-base-class-name",
+            "123Invalid",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_generate_schema_validators_invalid_base_class_name_public_api(output_file: Path) -> None:
+    """Reject invalid schema validator base class names through generate()."""
+    from datamodel_code_generator.config import GenerateConfig
+
+    for value in (None, "SharedSchemaValidatorBase"):
+        config = GenerateConfig.model_validate({"schema_validator_base_class_name": value})
+        if config.schema_validator_base_class_name != value:  # pragma: no cover
+            pytest.fail(
+                "Expected schema_validator_base_class_name to be "
+                f"{value!r}, got {config.schema_validator_base_class_name!r}",
+                pytrace=False,
+            )
+    with pytest.raises(
+        ValidationError,
+        match="--schema-validator-base-class-name '123Invalid' is not a valid Python identifier",
+    ):
+        generate(
+            input_={"type": "object"},
+            input_file_type=InputFileType.JsonSchema,
+            output=output_file,
+            output_model_type=DataModelType.PydanticV2BaseModel,
+            generate_schema_validators=True,
+            schema_validator_base_class_name="123Invalid",
+        )
 
 
 def test_field_validators_multi_fields(output_file: Path) -> None:
