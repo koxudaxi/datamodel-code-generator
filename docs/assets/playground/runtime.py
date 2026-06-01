@@ -209,21 +209,22 @@ def _cli_options(options_json: str = "{}", input_type: str = "") -> dict[str, An
 def _format_toml_value(value: Any) -> str:
     match value:
         case bool():
-            return "true" if value else "false"
+            result = "true" if value else "false"
         case int() | float():
-            return str(value)
+            result = str(value)
         case str():
-            return json.dumps(value, ensure_ascii=False)
+            result = json.dumps(value, ensure_ascii=False)
         case list() | tuple():
-            return f"[{', '.join(_format_toml_value(item) for item in value)}]"
+            result = f"[{', '.join(_format_toml_value(item) for item in value)}]"
         case dict():
             items = ", ".join(
                 f"{json.dumps(str(key), ensure_ascii=False)} = {_format_toml_value(item)}"
                 for key, item in sorted(value.items())
             )
-            return f"{{ {items} }}"
+            result = f"{{ {items} }}"
         case _:
-            return json.dumps(str(value), ensure_ascii=False)
+            result = json.dumps(str(value), ensure_ascii=False)
+    return result
 
 
 def export_config_toml(options_json: str = "{}", input_type: str = "") -> str:
