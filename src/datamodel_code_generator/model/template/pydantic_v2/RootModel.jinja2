@@ -16,7 +16,7 @@
 
 {#- Use base_type_hint in generic when regex_engine is set to avoid evaluating pattern before config is processed -#}
 {%- set use_base_type = config and config.regex_engine -%}
-class {{ class_name }}({%- if schema_runtime_validation_use_mixin -%}{{ schema_runtime_validation_mixin_name }}, {%- endif -%}{{ base_class }}{%- if fields -%}[{{get_type_hint(fields, use_base_type)}}]{%- endif -%}):{% if comment is defined %}  # {{ comment }}{% endif %}
+class {{ class_name }}({% if schema_runtime_validation_use_mixin %}{{ schema_runtime_validation_mixin_name }}, {% endif %}{{ base_class }}{%- if fields -%}[{{get_type_hint(fields, use_base_type)}}]{%- endif -%}):{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
     {{ description }}
 {%- endif %}
