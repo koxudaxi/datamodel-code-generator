@@ -207,6 +207,7 @@ def _cli_options(options_json: str = "{}", input_type: str = "") -> dict[str, An
 
 
 def _format_toml_value(value: Any) -> str:
+    result = json.dumps(str(value), ensure_ascii=False)
     match value:
         case bool():
             result = "true" if value else "false"
@@ -222,8 +223,6 @@ def _format_toml_value(value: Any) -> str:
                 for key, item in sorted(value.items())
             )
             result = f"{{ {items} }}"
-        case _:
-            result = json.dumps(str(value), ensure_ascii=False)
     return result
 
 
