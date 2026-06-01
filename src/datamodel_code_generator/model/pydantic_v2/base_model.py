@@ -466,6 +466,8 @@ class BaseModel(BaseModelBase):
             has_prior_class_body = class_body_lines or self.extra_template_data.get("config") or self.description
             if not body_lines[0] and not has_prior_class_body:
                 body_lines = body_lines[1:]
+            if self.fields and body_lines[-1]:
+                body_lines = [*body_lines, ""]
             class_body_lines.extend(body_lines)
             self._additional_imports.append(IMPORT_MODEL_VALIDATOR)
             self._additional_imports.append(IMPORT_ANY)

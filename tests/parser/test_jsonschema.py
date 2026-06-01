@@ -212,6 +212,30 @@ def test_schema_validator_nested_one_of_property_generates_model_validator() -> 
     assert "def _validate_schema_one_of_required(cls, data: Any) -> Any:" in output
 
 
+def test_parse_id_traverses_property_names_schema(mocker: MockerFixture) -> None:
+    """Test $id collection traverses propertyNames schemas."""
+    parser = JsonSchemaParser("")
+    obj = JsonSchemaObject.model_validate({"propertyNames": {"$id": "urn:property-name"}})
+    spy = mocker.spy(parser, "parse_id")
+
+    parser.parse_id(obj, ["#"])
+
+    assert spy.call_count == 2
+    assert parser.model_resolver.ids[""]["urn:property-name"] == "#"
+
+
+def test_parse_obj_returns_when_merged_ref_still_has_ref(mocker: MockerFixture) -> None:
+    """Test parse_obj stops after parsing a schema-keyword ref that still resolves as a ref."""
+    parser = JsonSchemaParser("")
+    obj = JsonSchemaObject.model_validate({"$ref": "#/$defs/Target", "minLength": 1})
+    mocker.patch.object(parser, "_merge_ref_with_schema", return_value=obj)
+    parse_ref = mocker.patch.object(parser, "parse_ref")
+
+    parser.parse_obj("Target", obj, ["#", "$defs", "Target"])
+
+    parse_ref.assert_called_once_with(obj, ["#", "$defs", "Target"])
+
+
 @pytest.mark.parametrize(
     ("schema", "path", "model"),
     [
