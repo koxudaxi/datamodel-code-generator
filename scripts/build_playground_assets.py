@@ -353,8 +353,7 @@ def _deploy_kind() -> str:
             return "main"
         case "main":
             return "production"
-        case _:
-            return "current"
+    return "current"
 
 
 def _current_version(
@@ -423,14 +422,14 @@ def _version_list(metadata: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
             main = _main_version(metadata, local=False)
             default_id = releases[0]["id"] if releases else main["id"]
             return default_id, [*releases, main, *_extra_versions()]
-        case _:
-            current = _current_version(
-                metadata,
-                version_id=os.environ.get("PLAYGROUND_VERSION_ID", "current"),
-                label=os.environ.get("PLAYGROUND_VERSION_LABEL", "Current build"),
-                kind=os.environ.get("PLAYGROUND_VERSION_KIND", "current"),
-            )
-            return os.environ.get("PLAYGROUND_DEFAULT_VERSION", current["id"]), [current, *_extra_versions()]
+
+    current = _current_version(
+        metadata,
+        version_id=os.environ.get("PLAYGROUND_VERSION_ID", "current"),
+        label=os.environ.get("PLAYGROUND_VERSION_LABEL", "Current build"),
+        kind=os.environ.get("PLAYGROUND_VERSION_KIND", "current"),
+    )
+    return os.environ.get("PLAYGROUND_DEFAULT_VERSION", current["id"]), [current, *_extra_versions()]
 
 
 def build_versions(metadata: dict[str, Any]) -> dict[str, Any]:
