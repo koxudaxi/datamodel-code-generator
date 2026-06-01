@@ -1,5 +1,4 @@
 import * as Comlink from "https://cdn.jsdelivr.net/npm/comlink@4.4.2/dist/esm/comlink.mjs";
-import morphdom from "https://cdn.jsdelivr.net/npm/morphdom@2.7.7/+esm";
 
 import {
   getInputValue,
@@ -32,6 +31,7 @@ const fallbackVersionManifest = {
 
 let rawWorker = null;
 let worker = null;
+let workerInitPromise = null;
 let ready = false;
 let running = false;
 let lastOutput = "";
@@ -83,6 +83,7 @@ function normalizePlaygroundVersion(entry) {
     return null;
   }
   const assetBaseUrl = absoluteUrl(entry.asset_base || entry.assetBase || "./generated/");
+  const defaultApp = String(entry.kind || "") === "current" ? "runtime.py" : "app.py";
   return {
     id,
     label: String(entry.label || id),
@@ -93,7 +94,7 @@ function normalizePlaygroundVersion(entry) {
       entry.metadata || entry.metadata_url || "codegen-ui-metadata.json",
       assetBaseUrl,
     ),
-    appUrl: absoluteUrl(entry.app || entry.app_url || "app.py", assetBaseUrl),
+    appUrl: absoluteUrl(entry.app || entry.app_url || defaultApp, assetBaseUrl),
     install: normalizeInstall(entry.install, assetBaseUrl),
   };
 }
@@ -182,6 +183,22 @@ function createWorker() {
   return worker;
 }
 
+function startWorkerWarmup() {
+  const api = createWorker();
+  workerInitPromise ??= api.init(
+    Comlink.proxy((message) => setStatus(message)),
+    selectedPlaygroundVersion,
+  );
+  return workerInitPromise;
+}
+
+function prepareCurrentInput() {
+  if (!worker) {
+    return Promise.resolve();
+  }
+  return worker.prepare(currentInputType());
+}
+
 function currentSchema() {
   return getInputValue();
 }
@@ -263,39 +280,6 @@ async function mountInitialShell() {
   mountEditor();
   setLayoutState();
   renderVersionSelect();
-}
-
-function mountRenderedShell(html) {
-  const existingSchema = currentSchema();
-  const template = document.createElement("template");
-  template.innerHTML = html;
-  const nextShell = template.content.firstElementChild;
-  appEl.classList.remove("boot");
-  appShellMounted = true;
-  if (appEl.firstElementChild && nextShell) {
-    morphdom(appEl.firstElementChild, nextShell, {
-      onBeforeElUpdated(fromEl, toEl) {
-        if (fromEl.id === "schema" && existingSchema) {
-          toEl.value = existingSchema;
-        }
-        return true;
-      },
-    });
-  } else {
-    appEl.innerHTML = html;
-  }
-  if (existingSchema) {
-    const schema = document.querySelector("#schema");
-    if (schema) {
-      schema.value = existingSchema;
-    }
-  }
-  updateInputFormatState();
-  mountEditor();
-  syncStickyOffsets();
-  setLayoutState();
-  renderVersionSelect();
-  setGenerateState();
 }
 
 function collectOptionEntries() {
@@ -668,18 +652,14 @@ function setStatus(text, isError = false) {
   requestAnimationFrame(updateStatusTooltip);
 }
 
-async function initWorker() {
-  const api = createWorker();
-  const info = await api.init(Comlink.proxy((message) => setStatus(message)), selectedPlaygroundVersion);
-  if (!appShellMounted) {
-    mountRenderedShell(info.html);
-  }
+async function finishWorkerWarmup() {
+  const info = await startWorkerWarmup();
+  await prepareCurrentInput();
   ready = true;
   const readyMessage = [
     `Ready: datamodel-code-generator ${info.codegenVersion}`,
     `Pyodide ${info.pyodideVersion}`,
     `Python ${info.pythonVersion}`,
-    `UI rendered by tdom`,
   ].join(", ");
   const notices = [readyMessage];
   if (restoredUrlState) {
@@ -703,10 +683,9 @@ document.addEventListener("click", async (event) => {
   if (action === "generate") {
     requestGenerate("manual");
   } else if (action === "sample") {
-    if (!worker) {
-      return;
-    }
-    setInputValue(await worker.sample(currentInputType()));
+    const api = createWorker();
+    startWorkerWarmup();
+    setInputValue(await api.sample(currentInputType()));
     setStatus(`Loaded ${currentInputType()} sample.`);
     scheduleAutoGenerate();
   } else if (action === "clear-input") {
@@ -767,6 +746,7 @@ document.addEventListener("click", async (event) => {
 
 async function startPlayground() {
   await initPlaygroundVersions();
+  startWorkerWarmup();
   await mountInitialShell();
   renderVersionSelect();
   try {
@@ -774,7 +754,10 @@ async function startPlayground() {
   } catch (error) {
     setStatus(`Could not load URL state: ${error?.message || String(error)}`, true);
   }
-  await initWorker();
+  finishWorkerWarmup().catch((error) => {
+    setStatus(error?.stack || String(error), true);
+    finishGeneration();
+  });
 }
 
 startPlayground().catch((error) => {
@@ -785,6 +768,9 @@ window.addEventListener("hashchange", async () => {
   try {
     if (await restoreStateFromUrl()) {
       setStatus("Loaded state from URL.");
+      prepareCurrentInput().catch((error) => {
+        setStatus(error?.stack || String(error), true);
+      });
       await refreshCliOptions();
       scheduleAutoGenerate(0);
     }
@@ -804,6 +790,9 @@ document.addEventListener("change", (event) => {
     switchPlaygroundVersion(event.target.value);
   } else if (event.target.id === "input-type") {
     updateInputFormatState();
+    prepareCurrentInput().catch((error) => {
+      setStatus(error?.stack || String(error), true);
+    });
     refreshCliOptions();
     scheduleAutoGenerate();
   } else if (event.target.matches("[data-option]")) {
