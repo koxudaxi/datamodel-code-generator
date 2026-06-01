@@ -320,7 +320,6 @@ class JsonSchemaObject(BaseModel):
     __schema_affecting_extras__: set[str] = {  # noqa: RUF012
         "const",
     }
-    __runtime_validation_only_fields__: set[str] = {"if_", "then", "else_"}  # noqa: RUF012
 
     @model_validator(mode="before")
     def validate_exclusive_maximum_and_exclusive_minimum(cls, values: Any) -> Any:  # noqa: N805
@@ -418,9 +417,6 @@ class JsonSchemaObject(BaseModel):
     oneOf: list[Union[JsonSchemaObject, bool]] = Field(default_factory=list)  # noqa: N815, UP007
     anyOf: list[Union[JsonSchemaObject, bool]] = Field(default_factory=list)  # noqa: N815, UP007
     allOf: list[Union[JsonSchemaObject, bool]] = Field(default_factory=list)  # noqa: N815, UP007
-    if_: Optional[Union[JsonSchemaObject, bool]] = Field(default=None, alias="if")  # noqa: UP007, UP045
-    then: Optional[Union[JsonSchemaObject, bool]] = None  # noqa: UP007, UP045
-    else_: Optional[Union[JsonSchemaObject, bool]] = Field(default=None, alias="else")  # noqa: UP007, UP045
     enum: list[Any] = Field(default_factory=list)
     writeOnly: Optional[bool] = None  # noqa: N815, UP045
     readOnly: Optional[bool] = None  # noqa: N815, UP045
@@ -549,9 +545,7 @@ class JsonSchemaObject(BaseModel):
         if not self.ref:
             return False
         other_fields = self.model_fields_set - {"ref"}
-        schema_affecting_fields = (
-            other_fields - self.__metadata_only_fields__ - self.__runtime_validation_only_fields__ - {"extras"}
-        )
+        schema_affecting_fields = other_fields - self.__metadata_only_fields__ - {"extras"}
         if self.extras:
             schema_affecting_extras = {k for k in self.extras if k in self.__schema_affecting_extras__}
             if schema_affecting_extras:
@@ -568,13 +562,7 @@ class JsonSchemaObject(BaseModel):
         """
         if not self.ref or self.nullable is not True:
             return False
-        other_fields = (
-            self.model_fields_set
-            - {"ref", "nullable"}
-            - self.__metadata_only_fields__
-            - self.__runtime_validation_only_fields__
-            - {"extras"}
-        )
+        other_fields = self.model_fields_set - {"ref", "nullable"} - self.__metadata_only_fields__ - {"extras"}
         if other_fields:
             return False
         if self.extras:
@@ -653,9 +641,6 @@ EXCLUDE_FIELD_KEYS = (
     "$recursiveAnchor",
     "$dynamicRef",
     "$dynamicAnchor",
-    "if",
-    "then",
-    "else",
     JsonSchemaObject.__extra_key__,
 }
 
@@ -3211,8 +3196,23 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _has_required_group_validators(self, obj: JsonSchemaObject) -> bool:
         return bool(self._get_required_groups(obj.oneOf) or self._get_required_groups(obj.anyOf))
 
-    def _iter_conditional_branches(self, obj: JsonSchemaObject) -> Iterator[JsonSchemaObject]:  # noqa: PLR6301
-        for branch in (obj.then, obj.else_):
+    def _get_conditional_schema(
+        self,
+        obj: JsonSchemaObject,
+        keyword: Literal["if", "then", "else"],
+    ) -> JsonSchemaObject | bool | None:
+        item = obj.extras.get(keyword)
+        if isinstance(item, (JsonSchemaObject, bool)):
+            return item
+        if isinstance(item, dict):
+            item = self.SCHEMA_OBJECT_TYPE.model_validate(item)
+            obj.extras[keyword] = item
+            return item
+        return None
+
+    def _iter_conditional_branches(self, obj: JsonSchemaObject) -> Iterator[JsonSchemaObject]:
+        for keyword in ("then", "else"):
+            branch = self._get_conditional_schema(obj, keyword)
             if isinstance(branch, JsonSchemaObject):
                 yield branch
 
@@ -3426,16 +3426,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             RequiredGroupsRule(keyword=keyword, groups=required_groups)
         )
 
-    def _get_conditional_predicate(  # noqa: PLR6301
+    def _get_conditional_predicate(
         self,
         obj: JsonSchemaObject,
     ) -> tuple[tuple[str, tuple[object, ...]], ...] | None:
-        if not isinstance(obj.if_, JsonSchemaObject) or not obj.if_.properties or not obj.if_.required:
+        if_schema = self._get_conditional_schema(obj, "if")
+        if not isinstance(if_schema, JsonSchemaObject) or not if_schema.properties or not if_schema.required:
             return None
 
         predicates: list[tuple[str, tuple[object, ...]]] = []
-        for property_name in obj.if_.required:
-            property_schema = obj.if_.properties.get(property_name)
+        for property_name in if_schema.required:
+            property_schema = if_schema.properties.get(property_name)
             if not isinstance(property_schema, JsonSchemaObject):
                 return None
             if "const" in property_schema.extras:
@@ -3456,11 +3457,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if (predicate := self._get_conditional_predicate(obj)) is None:
             return
 
+        then_schema = self._get_conditional_schema(obj, "then")
+        else_schema = self._get_conditional_schema(obj, "else")
         then_groups = (
-            (tuple(obj.then.required),) if isinstance(obj.then, JsonSchemaObject) and obj.then.required else ()
+            (tuple(then_schema.required),) if isinstance(then_schema, JsonSchemaObject) and then_schema.required else ()
         )
         else_groups = (
-            (tuple(obj.else_.required),) if isinstance(obj.else_, JsonSchemaObject) and obj.else_.required else ()
+            (tuple(else_schema.required),) if isinstance(else_schema, JsonSchemaObject) and else_schema.required else ()
         )
         if not then_groups and not else_groups:
             return
@@ -5302,9 +5305,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for item in obj.oneOf:
                 if isinstance(item, JsonSchemaObject):
                     self._traverse_schema_objects(item, path, callback, include_one_of=include_one_of)
-        for item in (obj.if_, obj.then, obj.else_):
-            if isinstance(item, JsonSchemaObject):
-                self._traverse_schema_objects(item, path, callback, include_one_of=include_one_of)
+        if self.generate_schema_validators:
+            for keyword in ("if", "then", "else"):
+                item = self._get_conditional_schema(obj, keyword)
+                if isinstance(item, JsonSchemaObject):
+                    self._traverse_schema_objects(item, path, callback, include_one_of=include_one_of)
         if obj.properties:
             for value in obj.properties.values():
                 if isinstance(value, JsonSchemaObject):
@@ -5348,9 +5353,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         for item in obj.allOf:
             if isinstance(item, JsonSchemaObject):
                 self.parse_id(item, path)
-        for item in (obj.if_, obj.then, obj.else_):
-            if isinstance(item, JsonSchemaObject):
-                self.parse_id(item, path)
+        if self.generate_schema_validators:
+            for keyword in ("if", "then", "else"):
+                item = self._get_conditional_schema(obj, keyword)
+                if isinstance(item, JsonSchemaObject):
+                    self.parse_id(item, path)
         if obj.properties:
             for property_value in obj.properties.values():
                 if isinstance(property_value, JsonSchemaObject):
