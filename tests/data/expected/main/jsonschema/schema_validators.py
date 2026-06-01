@@ -69,7 +69,6 @@ class PatternTarget(First):
 
 
 class OneOfContact(BaseModel):
-
     @model_validator(mode='before')
     @classmethod
     def _validate_schema_one_of_required(cls, data: Any) -> Any:
@@ -91,7 +90,6 @@ class OneOfContact(BaseModel):
 
 
 class AnyOfContact(BaseModel):
-
     @model_validator(mode='before')
     @classmethod
     def _validate_schema_any_of_required(cls, data: Any) -> Any:
@@ -113,7 +111,6 @@ class AnyOfContact(BaseModel):
 
 
 class ConditionalPayload(BaseModel):
-
     @model_validator(mode='before')
     @classmethod
     def _validate_schema_conditional_required(cls, data: Any) -> Any:

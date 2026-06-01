@@ -2766,7 +2766,6 @@ and simple if/then/else required-property conditions.
 
 
     class OneOfContact(BaseModel):
-
         @model_validator(mode='before')
         @classmethod
         def _validate_schema_one_of_required(cls, data: Any) -> Any:
@@ -2788,7 +2787,6 @@ and simple if/then/else required-property conditions.
 
 
     class AnyOfContact(BaseModel):
-
         @model_validator(mode='before')
         @classmethod
         def _validate_schema_any_of_required(cls, data: Any) -> Any:
@@ -2810,7 +2808,6 @@ and simple if/then/else required-property conditions.
 
 
     class ConditionalPayload(BaseModel):
-
         @model_validator(mode='before')
         @classmethod
         def _validate_schema_conditional_required(cls, data: Any) -> Any:
