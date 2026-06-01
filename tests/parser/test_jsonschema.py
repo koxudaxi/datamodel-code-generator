@@ -38,12 +38,41 @@ EXPECTED_JSONSCHEMA_PATH = Path(__file__).parents[1] / "data" / "expected" / "pa
 def test_schema_validator_required_only_schema_filters() -> None:
     """Test detection of required-only combined-schema branches."""
     parser = JsonSchemaParser("", generate_schema_validators=True)
+    required_only_schema = JsonSchemaObject.model_validate({
+        "type": "object",
+        "required": ["a"],
+        "$comment": "metadata is ignored",
+        "x-vendor": {"metadata": True},
+    })
 
+    assert parser._is_required_only_schema(required_only_schema)
+    assert parser._get_required_groups([required_only_schema]) == (("a",),)
     assert not parser._is_required_only_schema(True)
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({}))
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": []}))
     assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"$ref": "#/$defs/Model"}))
     assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"items": {"type": "string"}}))
     assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"anyOf": [{"required": ["a"]}]}))
     assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"enum": ["a"]}))
+    assert not parser._is_required_only_schema(
+        JsonSchemaObject.model_validate({"required": ["a"], "additionalProperties": False})
+    )
+    assert not parser._is_required_only_schema(
+        JsonSchemaObject.model_validate({"required": ["a"], "unevaluatedProperties": False})
+    )
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": ["a"], "minProperties": 1}))
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": ["a"], "maxProperties": 1}))
+    assert not parser._is_required_only_schema(
+        JsonSchemaObject.model_validate({"required": ["a"], "dependentRequired": {"a": ["b"]}})
+    )
+    assert not parser._is_required_only_schema(
+        JsonSchemaObject.model_validate({"required": ["a"], "dependentSchemas": {"a": {"required": ["b"]}}})
+    )
+    assert not parser._is_required_only_schema(
+        JsonSchemaObject.model_validate({"required": ["a"], "dependencies": {"a": ["b"]}})
+    )
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": ["a"], "contains": {}}))
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": ["a"], "not": {}}))
     assert (
         parser._get_required_groups([JsonSchemaObject.model_validate({"properties": {"a": {"type": "string"}}})]) == ()
     )

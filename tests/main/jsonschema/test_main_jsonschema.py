@@ -20,7 +20,6 @@ from datamodel_code_generator import (
     InputFileType,
     PythonVersion,
     PythonVersionMin,
-    ReadOnlyWriteOnlyModelType,
     TargetPydanticVersion,
     chdir,
     generate,
@@ -62,6 +61,26 @@ FixtureRequest = pytest.FixtureRequest
 def assert_run_main_with_args_error(args: list[str], capsys: pytest.CaptureFixture[str], expected_error: str) -> None:
     """Assert that running the CLI exits with code 2 and emits the expected error."""
     run_main_with_system_exit(args, expected_code=2, capsys=capsys, expected_stderr_contains=expected_error)
+
+
+def assert_schema_required_group_validator_not_generated(
+    output_file: Path,
+    expected_name: str | Path | None = None,  # noqa: ARG001
+    encoding: str = "utf-8",
+    transform: object | None = None,  # noqa: ARG001
+) -> None:
+    """Assert constrained oneOf/anyOf branches are not lowered to required-group validators."""
+    generated = output_file.read_text(encoding=encoding)
+    forbidden_fragments = (
+        "_validate_schema_one_of_required",
+        "_datamodel_codegen_validate_schema_required_groups",
+    )
+    generated_fragments = [fragment for fragment in forbidden_fragments if fragment in generated]
+    if generated_fragments:
+        pytest.fail(
+            "Constrained oneOf/anyOf branches generated required-group validators: " + ", ".join(generated_fragments),
+            pytrace=False,
+        )
 
 
 def _keep_model_order_field_references_expected_file(
@@ -10923,36 +10942,19 @@ def test_main_jsonschema_generate_schema_validators_parser_branch_runtime(
     output_file: Path,
 ) -> None:
     """Generate and execute a model that covers runtime-validator parser integration branches."""
-    generate(
-        input_={
-            "title": "RuntimeBranchCoverage",
-            "$defs": {
-                "Child": {
-                    "type": "object",
-                    "properties": {"value": {"type": "string"}},
-                },
-                "BaseWithScalarItems": {
-                    "type": "object",
-                    "properties": {"items": {"type": "string"}},
-                },
-            },
-            "type": "object",
-            "properties": {
-                "child": {"$ref": "#/$defs/Child"},
-                "listOverride": {
-                    "allOf": [
-                        {"$ref": "#/$defs/BaseWithScalarItems"},
-                        {"type": "object", "properties": {"items": {"type": "array"}}},
-                    ]
-                },
-            },
-        },
-        input_file_type=InputFileType.JsonSchema,
-        output=output_file,
-        output_model_type=DataModelType.PydanticV2BaseModel,
-        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.All,
-        generate_schema_validators=True,
-        disable_timestamp=True,
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_parser_branch_runtime.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--read-only-write-only-model-type",
+            "all",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
     )
     assert_generated_model_json_validation(
         output_file,
@@ -10965,30 +10967,21 @@ def test_main_jsonschema_generate_schema_validators_parser_branch_runtime(
         expected_attribute_value="x",
     )
 
-    generate(
-        input_={
-            "title": "RequiredRefCoverage",
-            "$defs": {
-                "First": {
-                    "type": "object",
-                    "properties": {"first": {"type": "string"}},
-                    "required": ["first"],
-                }
-            },
-            "type": "object",
-            "oneOf": [
-                {"$ref": "#/$defs/First"},
-                {"required": ["first"]},
-            ],
-        },
-        input_file_type=InputFileType.JsonSchema,
-        output=output_file,
-        output_model_type=DataModelType.PydanticV2BaseModel,
-        generate_schema_validators=True,
-        disable_timestamp=True,
+    required_ref_output_file = output_file.with_name("required_ref_coverage.py")
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_required_ref_branch_runtime.json",
+        output_path=required_ref_output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
     )
     assert_generated_model_json_validation(
-        output_file,
+        required_ref_output_file,
         module_name="output_required_ref_branch_runtime",
         model_name="RequiredRefCoverage",
         valid_json='{"first":"x"}',
@@ -10996,6 +10989,25 @@ def test_main_jsonschema_generate_schema_validators_parser_branch_runtime(
         expected_error_type="model_type",
         expected_attribute_path=("root", "first"),
         expected_attribute_value="x",
+    )
+
+
+def test_main_jsonschema_generate_schema_validators_required_branch_constraints(
+    output_file: Path,
+) -> None:
+    """Generate from a file and avoid collapsing constrained oneOf branches to presence checks."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_required_branch_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_schema_required_group_validator_not_generated,
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
     )
 
 

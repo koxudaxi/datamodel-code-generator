@@ -666,6 +666,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     SCHEMA_PATHS: ClassVar[list[str]] = ["#/definitions", "#/$defs"]
     SCHEMA_OBJECT_TYPE: ClassVar[type[JsonSchemaObject]] = JsonSchemaObject
+    REQUIRED_ONLY_SCHEMA_ALLOWED_FIELDS: ClassVar[frozenset[str]] = frozenset({"required", "type", "extras"})
 
     COMPATIBLE_PYTHON_TYPES: ClassVar[dict[str, frozenset[str]]] = {
         "string": frozenset({"str", "String"}),
@@ -3180,17 +3181,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Parse oneOf schema into a list of data types."""
         return self.parse_combined_schema(name, obj, path, "oneOf")
 
-    def _is_required_only_schema(self, item: JsonSchemaObject | bool) -> bool:  # noqa: FBT001, PLR6301
+    def _is_required_only_schema(self, item: JsonSchemaObject | bool) -> bool:  # noqa: FBT001
         """Return whether a combined-schema branch is only a property presence rule."""
         if not isinstance(item, JsonSchemaObject):
             return False
-        if item.ref or item.properties or item.patternProperties or item.propertyNames is not None:
+        if not item.required:
             return False
-        if item.items is not None or item.prefixItems is not None:
+
+        schema_affecting_fields = (
+            item.model_fields_set - self.REQUIRED_ONLY_SCHEMA_ALLOWED_FIELDS - item.__metadata_only_fields__
+        )
+        if schema_affecting_fields:
             return False
-        if item.anyOf or item.oneOf or item.allOf:
-            return False
-        if item.enum or item.has_constraint or "const" in item.extras or not item.required:
+        if any(key not in item.__metadata_only_fields__ and not key.startswith("x-") for key in item.extras):
             return False
         return item.type in {None, "object"}
 
