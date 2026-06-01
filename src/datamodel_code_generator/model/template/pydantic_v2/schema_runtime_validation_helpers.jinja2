@@ -1,0 +1,87 @@
+{%- if has_pattern_properties %}
+def _datamodel_codegen_validate_schema_pattern_properties(
+    data: Any,
+    *,
+    declared_properties: tuple[str, ...],
+    rejected_patterns: tuple[str, ...],
+    pattern_properties: list[tuple[str, Any]],
+    additional_property_type: Any,
+    allow_unmatched: bool,
+) -> Any:
+    if not isinstance(data, dict):
+        return data
+    values = dict(data)
+    for key, value in data.items():
+        if key in declared_properties:
+            continue
+        if any(re.search(pattern, key) for pattern in rejected_patterns):
+            raise ValueError(f'Property {key!r} is not allowed by patternProperties')
+        matched = False
+        for pattern, value_type in pattern_properties:
+            if not re.search(pattern, key):
+                continue
+            matched = True
+            value = TypeAdapter(value_type).validate_python(value)
+        if matched:
+            values[key] = value
+            continue
+        if additional_property_type is not None:
+            values[key] = TypeAdapter(additional_property_type).validate_python(value)
+            continue
+        if not allow_unmatched:
+            raise ValueError(f'Unexpected property {key!r}')
+    return values
+
+{%- endif %}
+{%- if has_required_groups %}
+{%- if has_pattern_properties %}
+{{ '\n' }}
+{%- endif %}
+def _datamodel_codegen_validate_schema_required_groups(
+    data: Any,
+    *,
+    required_groups: tuple[tuple[tuple[str, ...], ...], ...],
+    require_exactly_one: bool,
+) -> Any:
+    if not isinstance(data, dict):
+        return data
+    matches = sum(
+        all(any(name in data for name in names) for names in group)
+        for group in required_groups
+    )
+    if require_exactly_one:
+        if matches != 1:
+            raise ValueError(
+                'Expected exactly one required property group to be present'
+            )
+    elif matches == 0:
+        raise ValueError('Expected at least one required property group to be present')
+    return data
+
+{%- endif %}
+{%- if has_conditional_required %}
+{%- if has_pattern_properties or has_required_groups %}
+{{ '\n' }}
+{%- endif %}
+def _datamodel_codegen_validate_schema_conditional_required(
+    data: Any,
+    *,
+    condition: tuple[tuple[tuple[str, ...], tuple[object, ...]], ...],
+    then_required_groups: tuple[tuple[tuple[str, ...], ...], ...],
+    else_required_groups: tuple[tuple[tuple[str, ...], ...], ...],
+) -> Any:
+    if not isinstance(data, dict):
+        return data
+    condition_matches = all(
+        any(name in data and data[name] in expected for name in names)
+        for names, expected in condition
+    )
+    required_groups = (
+        then_required_groups if condition_matches else else_required_groups
+    )
+    for group in required_groups:
+        if all(any(name in data for name in names) for names in group):
+            continue
+        raise ValueError('Conditional required properties are missing')
+    return data{{ '\n\n' }}
+{%- endif %}

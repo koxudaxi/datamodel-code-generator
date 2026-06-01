@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, TypeAlias
 
 if TYPE_CHECKING:
     from datamodel_code_generator.types import DataType
 
-InputNames = tuple[str, ...]
-RequiredGroup = tuple[InputNames, ...]
-RequiredGroups = tuple[RequiredGroup, ...]
-Condition = tuple[tuple[InputNames, tuple[object, ...]], ...]
+InputNames: TypeAlias = tuple[str, ...]
+RequiredGroup: TypeAlias = tuple[InputNames, ...]
+RequiredGroups: TypeAlias = tuple[RequiredGroup, ...]
+Condition: TypeAlias = tuple[tuple[InputNames, tuple[object, ...]], ...]
 
 
 @dataclass(frozen=True)

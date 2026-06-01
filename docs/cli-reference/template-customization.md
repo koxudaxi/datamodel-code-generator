@@ -2759,6 +2759,85 @@ experimental and may change as JSON Schema coverage is expanded.
     from pydantic import BaseModel, ConfigDict, RootModel, TypeAdapter, model_validator
 
 
+    def _datamodel_codegen_validate_schema_pattern_properties(
+        data: Any,
+        *,
+        declared_properties: tuple[str, ...],
+        rejected_patterns: tuple[str, ...],
+        pattern_properties: list[tuple[str, Any]],
+        additional_property_type: Any,
+        allow_unmatched: bool,
+    ) -> Any:
+        if not isinstance(data, dict):
+            return data
+        values = dict(data)
+        for key, value in data.items():
+            if key in declared_properties:
+                continue
+            if any(re.search(pattern, key) for pattern in rejected_patterns):
+                raise ValueError(f'Property {key!r} is not allowed by patternProperties')
+            matched = False
+            for pattern, value_type in pattern_properties:
+                if not re.search(pattern, key):
+                    continue
+                matched = True
+                value = TypeAdapter(value_type).validate_python(value)
+            if matched:
+                values[key] = value
+                continue
+            if additional_property_type is not None:
+                values[key] = TypeAdapter(additional_property_type).validate_python(value)
+                continue
+            if not allow_unmatched:
+                raise ValueError(f'Unexpected property {key!r}')
+        return values
+
+
+    def _datamodel_codegen_validate_schema_required_groups(
+        data: Any,
+        *,
+        required_groups: tuple[tuple[tuple[str, ...], ...], ...],
+        require_exactly_one: bool,
+    ) -> Any:
+        if not isinstance(data, dict):
+            return data
+        matches = sum(
+            all(any(name in data for name in names) for names in group)
+            for group in required_groups
+        )
+        if require_exactly_one:
+            if matches != 1:
+                raise ValueError(
+                    'Expected exactly one required property group to be present'
+                )
+        elif matches == 0:
+            raise ValueError('Expected at least one required property group to be present')
+        return data
+
+
+    def _datamodel_codegen_validate_schema_conditional_required(
+        data: Any,
+        *,
+        condition: tuple[tuple[tuple[str, ...], tuple[object, ...]], ...],
+        then_required_groups: tuple[tuple[tuple[str, ...], ...], ...],
+        else_required_groups: tuple[tuple[tuple[str, ...], ...], ...],
+    ) -> Any:
+        if not isinstance(data, dict):
+            return data
+        condition_matches = all(
+            any(name in data and data[name] in expected for name in names)
+            for names, expected in condition
+        )
+        required_groups = (
+            then_required_groups if condition_matches else else_required_groups
+        )
+        for group in required_groups:
+            if all(any(name in data for name in names) for names in group):
+                continue
+            raise ValueError('Conditional required properties are missing')
+        return data
+
+
     class First(BaseModel):
         first: str
 
@@ -2775,36 +2854,16 @@ experimental and may change as JSON Schema coverage is expanded.
         @model_validator(mode='before')
         @classmethod
         def _validate_schema_pattern_properties(cls, data: Any) -> Any:
-            if not isinstance(data, dict):
-                return data
-            values = dict(data)
-            declared_properties = ()
-            rejected_patterns = ()
-            pattern_properties = (('^[A-Z][A-Za-z0-9_]*$', Second),)
-            additional_property_type = None
-            for key, value in data.items():
-                if key in declared_properties:
-                    continue
-                if any(re.search(pattern, key) for pattern in rejected_patterns):
-                    raise ValueError(
-                        f'Property {key!r} is not allowed by patternProperties'
-                    )
-                matched = False
-                for pattern, value_type in pattern_properties:
-                    if not re.search(pattern, key):
-                        continue
-                    matched = True
-                    value = TypeAdapter(value_type).validate_python(value)
-                if matched:
-                    values[key] = value
-                    continue
-                if additional_property_type is not None:
-                    values[key] = TypeAdapter(additional_property_type).validate_python(
-                        value
-                    )
-                    continue
-                raise ValueError(f'Unexpected property {key!r}')
-            return values
+            return _datamodel_codegen_validate_schema_pattern_properties(
+                data,
+                declared_properties=(),
+                rejected_patterns=(),
+                pattern_properties=[
+                    ('^[A-Z][A-Za-z0-9_]*$', Second),
+                ],
+                additional_property_type=None,
+                allow_unmatched=False,
+            )
 
 
     class PatternTarget(First, PatternBag):
@@ -2815,36 +2874,16 @@ experimental and may change as JSON Schema coverage is expanded.
         @model_validator(mode='before')
         @classmethod
         def _validate_schema_pattern_properties(cls, data: Any) -> Any:
-            if not isinstance(data, dict):
-                return data
-            values = dict(data)
-            declared_properties = ('first',)
-            rejected_patterns = ()
-            pattern_properties = (('^[A-Z][A-Za-z0-9_]*$', Second),)
-            additional_property_type = None
-            for key, value in data.items():
-                if key in declared_properties:
-                    continue
-                if any(re.search(pattern, key) for pattern in rejected_patterns):
-                    raise ValueError(
-                        f'Property {key!r} is not allowed by patternProperties'
-                    )
-                matched = False
-                for pattern, value_type in pattern_properties:
-                    if not re.search(pattern, key):
-                        continue
-                    matched = True
-                    value = TypeAdapter(value_type).validate_python(value)
-                if matched:
-                    values[key] = value
-                    continue
-                if additional_property_type is not None:
-                    values[key] = TypeAdapter(additional_property_type).validate_python(
-                        value
-                    )
-                    continue
-                raise ValueError(f'Unexpected property {key!r}')
-            return values
+            return _datamodel_codegen_validate_schema_pattern_properties(
+                data,
+                declared_properties=('first',),
+                rejected_patterns=(),
+                pattern_properties=[
+                    ('^[A-Z][A-Za-z0-9_]*$', Second),
+                ],
+                additional_property_type=None,
+                allow_unmatched=False,
+            )
 
 
     class DirectPatternBag(BaseModel):
@@ -2855,36 +2894,16 @@ experimental and may change as JSON Schema coverage is expanded.
         @model_validator(mode='before')
         @classmethod
         def _validate_schema_pattern_properties(cls, data: Any) -> Any:
-            if not isinstance(data, dict):
-                return data
-            values = dict(data)
-            declared_properties = ()
-            rejected_patterns = ()
-            pattern_properties = (('^item_[0-9]+$', int),)
-            additional_property_type = None
-            for key, value in data.items():
-                if key in declared_properties:
-                    continue
-                if any(re.search(pattern, key) for pattern in rejected_patterns):
-                    raise ValueError(
-                        f'Property {key!r} is not allowed by patternProperties'
-                    )
-                matched = False
-                for pattern, value_type in pattern_properties:
-                    if not re.search(pattern, key):
-                        continue
-                    matched = True
-                    value = TypeAdapter(value_type).validate_python(value)
-                if matched:
-                    values[key] = value
-                    continue
-                if additional_property_type is not None:
-                    values[key] = TypeAdapter(additional_property_type).validate_python(
-                        value
-                    )
-                    continue
-                raise ValueError(f'Unexpected property {key!r}')
-            return values
+            return _datamodel_codegen_validate_schema_pattern_properties(
+                data,
+                declared_properties=(),
+                rejected_patterns=(),
+                pattern_properties=[
+                    ('^item_[0-9]+$', int),
+                ],
+                additional_property_type=None,
+                allow_unmatched=False,
+            )
 
 
     class ValidatorOnlyChild(First):
@@ -2895,36 +2914,16 @@ experimental and may change as JSON Schema coverage is expanded.
         @model_validator(mode='before')
         @classmethod
         def _validate_schema_pattern_properties(cls, data: Any) -> Any:
-            if not isinstance(data, dict):
-                return data
-            values = dict(data)
-            declared_properties = ('first',)
-            rejected_patterns = ()
-            pattern_properties = (('^extra_[A-Za-z]+$', int),)
-            additional_property_type = None
-            for key, value in data.items():
-                if key in declared_properties:
-                    continue
-                if any(re.search(pattern, key) for pattern in rejected_patterns):
-                    raise ValueError(
-                        f'Property {key!r} is not allowed by patternProperties'
-                    )
-                matched = False
-                for pattern, value_type in pattern_properties:
-                    if not re.search(pattern, key):
-                        continue
-                    matched = True
-                    value = TypeAdapter(value_type).validate_python(value)
-                if matched:
-                    values[key] = value
-                    continue
-                if additional_property_type is not None:
-                    values[key] = TypeAdapter(additional_property_type).validate_python(
-                        value
-                    )
-                    continue
-                raise ValueError(f'Unexpected property {key!r}')
-            return values
+            return _datamodel_codegen_validate_schema_pattern_properties(
+                data,
+                declared_properties=('first',),
+                rejected_patterns=(),
+                pattern_properties=[
+                    ('^extra_[A-Za-z]+$', int),
+                ],
+                additional_property_type=None,
+                allow_unmatched=False,
+            )
 
 
     class ValidatorOnlyPatternRef(First):
@@ -2935,54 +2934,27 @@ experimental and may change as JSON Schema coverage is expanded.
         @model_validator(mode='before')
         @classmethod
         def _validate_schema_pattern_properties(cls, data: Any) -> Any:
-            if not isinstance(data, dict):
-                return data
-            values = dict(data)
-            declared_properties = ('first',)
-            rejected_patterns = ()
-            pattern_properties = (('^ref_extra_[A-Za-z]+$', int),)
-            additional_property_type = None
-            for key, value in data.items():
-                if key in declared_properties:
-                    continue
-                if any(re.search(pattern, key) for pattern in rejected_patterns):
-                    raise ValueError(
-                        f'Property {key!r} is not allowed by patternProperties'
-                    )
-                matched = False
-                for pattern, value_type in pattern_properties:
-                    if not re.search(pattern, key):
-                        continue
-                    matched = True
-                    value = TypeAdapter(value_type).validate_python(value)
-                if matched:
-                    values[key] = value
-                    continue
-                if additional_property_type is not None:
-                    values[key] = TypeAdapter(additional_property_type).validate_python(
-                        value
-                    )
-                    continue
-                raise ValueError(f'Unexpected property {key!r}')
-            return values
+            return _datamodel_codegen_validate_schema_pattern_properties(
+                data,
+                declared_properties=('first',),
+                rejected_patterns=(),
+                pattern_properties=[
+                    ('^ref_extra_[A-Za-z]+$', int),
+                ],
+                additional_property_type=None,
+                allow_unmatched=False,
+            )
 
 
     class OneOfContact(BaseModel):
         @model_validator(mode='before')
         @classmethod
         def _validate_schema_one_of_required(cls, data: Any) -> Any:
-            if not isinstance(data, dict):
-                return data
-            required_groups = ((('email',),), (('phone',),))
-            matches = sum(
-                all(any(name in data for name in names) for names in group)
-                for group in required_groups
+            return _datamodel_codegen_validate_schema_required_groups(
+                data,
+                required_groups=((('email',),), (('phone',),)),
+                require_exactly_one=True,
             )
-            if matches != 1:
-                raise ValueError(
-                    'Expected exactly one required property group to be present'
-                )
-            return data
 
         email: str | None = None
         phone: str | None = None
@@ -2992,18 +2964,11 @@ experimental and may change as JSON Schema coverage is expanded.
         @model_validator(mode='before')
         @classmethod
         def _validate_schema_any_of_required(cls, data: Any) -> Any:
-            if not isinstance(data, dict):
-                return data
-            required_groups = ((('email',),), (('phone',),))
-            matches = sum(
-                all(any(name in data for name in names) for names in group)
-                for group in required_groups
+            return _datamodel_codegen_validate_schema_required_groups(
+                data,
+                required_groups=((('email',),), (('phone',),)),
+                require_exactly_one=False,
             )
-            if matches == 0:
-                raise ValueError(
-                    'Expected at least one required property group to be present'
-                )
-            return data
 
         email: str | None = None
         phone: str | None = None
@@ -3013,23 +2978,12 @@ experimental and may change as JSON Schema coverage is expanded.
         @model_validator(mode='before')
         @classmethod
         def _validate_schema_conditional_required(cls, data: Any) -> Any:
-            if not isinstance(data, dict):
-                return data
-            condition = ((('kind',), ('metric',)),)
-            then_required_groups = ((('metric',),),)
-            else_required_groups = ((('note',),),)
-            condition_matches = all(
-                any(name in data and data[name] in expected for name in names)
-                for names, expected in condition
+            return _datamodel_codegen_validate_schema_conditional_required(
+                data,
+                condition=((('kind',), ('metric',)),),
+                then_required_groups=((('metric',),),),
+                else_required_groups=((('note',),),),
             )
-            required_groups = (
-                then_required_groups if condition_matches else else_required_groups
-            )
-            for group in required_groups:
-                if all(any(name in data for name in names) for names in group):
-                    continue
-                raise ValueError('Conditional required properties are missing')
-            return data
 
         kind: str | None = None
         metric: int | None = None

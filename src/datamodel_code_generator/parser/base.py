@@ -3479,6 +3479,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         export_imports.add_export(m.reference.short_name)
                 result += [export_imports.dump_all(multiline=True) + "\n"]
 
+            module_code = self.data_model_type.render_module_code(ctx.models)
+            if module_code:
+                result += [module_code, ""]
+
             code = dump_templates(ctx.models)
             result += [code]
 

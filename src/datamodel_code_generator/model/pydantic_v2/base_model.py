@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional
 
 from pydantic import Field, field_validator, model_validator
@@ -19,6 +20,7 @@ from datamodel_code_generator.model.base import (
     UNDEFINED,
     BaseClassDataType,
     DataModelFieldBase,
+    _get_template_with_custom_dir,
 )
 from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
 from datamodel_code_generator.model.pydantic_base import (
@@ -45,8 +47,7 @@ from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
+    from datamodel_code_generator.model import DataModel
     from datamodel_code_generator.reference import Reference
     from datamodel_code_generator.types import DataType
 
@@ -246,6 +247,9 @@ class BaseModel(BaseModelBase):
     """Pydantic v2 BaseModel with ConfigDict and pattern-based regex_engine support."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic_v2/BaseModel.jinja2"
+    SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH: ClassVar[str] = (
+        "pydantic_v2/schema_runtime_validation_helpers.jinja2"
+    )
     BASE_CLASS: ClassVar[str] = "pydantic.BaseModel"
     BASE_CLASS_NAME: ClassVar[str] = "BaseModel"
     BASE_CLASS_ALIAS: ClassVar[str] = "_BaseModel"
@@ -268,6 +272,39 @@ class BaseModel(BaseModelBase):
         ConfigAttribute("frozen", "frozen", False),  # noqa: FBT003
         ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False),  # noqa: FBT003
     ]
+
+    @classmethod
+    def render_module_code(cls, models: list[DataModel]) -> str:
+        """Render shared schema runtime validation helpers for the module."""
+        runtime_validations = [
+            runtime_validation
+            for model in models
+            if isinstance(
+                runtime_validation := model.extra_template_data.get("schema_runtime_validation"),
+                SchemaRuntimeValidation,
+            )
+            and runtime_validation
+        ]
+        if not runtime_validations:
+            return ""
+
+        custom_template_dir = next(
+            (model.custom_template_dir for model in models if model.custom_template_dir is not None),
+            None,
+        )
+        template = _get_template_with_custom_dir(
+            Path(cls.SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH),
+            custom_template_dir,
+        )
+        return template.render(
+            has_pattern_properties=any(
+                runtime_validation.pattern_properties for runtime_validation in runtime_validations
+            ),
+            has_required_groups=any(runtime_validation.required_groups for runtime_validation in runtime_validations),
+            has_conditional_required=any(
+                runtime_validation.conditional_required for runtime_validation in runtime_validations
+            ),
+        )
 
     @classmethod
     def create_typed_extra_field(

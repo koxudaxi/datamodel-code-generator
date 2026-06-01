@@ -960,6 +960,16 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         """
         return None
 
+    @classmethod
+    def render_module_code(cls, models: list[DataModel]) -> str:  # noqa: ARG003
+        """Render shared code that should be emitted once per generated module."""
+        return ""
+
+    @property
+    def custom_template_dir(self) -> Path | None:
+        """Return the custom template directory used by this model."""
+        return self._custom_template_dir
+
     @property
     def nullable(self) -> bool:
         """Check if this model is nullable."""
