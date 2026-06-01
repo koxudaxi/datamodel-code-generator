@@ -1,5 +1,5 @@
 {
-  "title": "CustomMixinName",
+  "title": "CustomBaseClassName",
   "type": "object",
   "patternProperties": {
     "^item_[0-9]+$": {

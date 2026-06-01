@@ -250,7 +250,7 @@ class BaseModel(BaseModelBase):
     SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH: ClassVar[str] = (
         "pydantic_v2/schema_runtime_validation_helpers.jinja2"
     )
-    SCHEMA_RUNTIME_VALIDATION_MIXIN_NAME: ClassVar[str] = "_JsonSchemaRuntimeValidationMixin"
+    SCHEMA_RUNTIME_VALIDATION_BASE_CLASS_NAME: ClassVar[str] = "_JsonSchemaRuntimeValidationBase"
     BASE_CLASS: ClassVar[str] = "pydantic.BaseModel"
     BASE_CLASS_NAME: ClassVar[str] = "BaseModel"
     BASE_CLASS_ALIAS: ClassVar[str] = "_BaseModel"
@@ -289,13 +289,15 @@ class BaseModel(BaseModelBase):
         if not runtime_models:
             return ""
 
-        mixin_name = (
-            runtime_models[0].extra_template_data.get("schema_validator_mixin_name")
-            or cls.SCHEMA_RUNTIME_VALIDATION_MIXIN_NAME
+        base_class_name = (
+            runtime_models[0].extra_template_data.get("schema_validator_base_class_name")
+            or cls.SCHEMA_RUNTIME_VALIDATION_BASE_CLASS_NAME
         )
         for model in runtime_models:
-            model.extra_template_data["schema_runtime_validation_mixin_name"] = mixin_name
-            model.extra_template_data["schema_runtime_validation_use_mixin"] = not cls._inherits_schema_runtime_mixin(
+            model.extra_template_data["schema_runtime_validation_base_class_name"] = base_class_name
+            model.extra_template_data[
+                "schema_runtime_validation_use_base"
+            ] = not cls._inherits_schema_runtime_validation_base(
                 model,
                 seen=set(),
             )
@@ -310,7 +312,7 @@ class BaseModel(BaseModelBase):
         )
         runtime_validations = [model.extra_template_data["schema_runtime_validation"] for model in runtime_models]
         return template.render(
-            schema_runtime_validation_mixin_name=mixin_name,
+            schema_runtime_validation_base_class_name=base_class_name,
             has_pattern_properties=any(
                 runtime_validation.pattern_properties for runtime_validation in runtime_validations
             ),
@@ -321,8 +323,8 @@ class BaseModel(BaseModelBase):
         )
 
     @classmethod
-    def _inherits_schema_runtime_mixin(cls, model: DataModel, *, seen: set[str]) -> bool:
-        """Return whether a model already inherits the generated runtime validation mixin."""
+    def _inherits_schema_runtime_validation_base(cls, model: DataModel, *, seen: set[str]) -> bool:
+        """Return whether a model already inherits the generated runtime validation base."""
         if model.reference.path in seen:
             return False
         seen.add(model.reference.path)
@@ -338,7 +340,7 @@ class BaseModel(BaseModelBase):
                 and base_model.extra_template_data["schema_runtime_validation"]
             ):
                 return True
-            if cls._inherits_schema_runtime_mixin(base_model, seen=seen):
+            if cls._inherits_schema_runtime_validation_base(base_model, seen=seen):
                 return True
         return False
 
@@ -553,6 +555,7 @@ class BaseModel(BaseModelBase):
         self._additional_imports.append(IMPORT_MODEL_VALIDATOR)
         self._additional_imports.append(IMPORT_ANY)
         self._additional_imports.append(IMPORT_CLASSVAR)
+        self._additional_imports.append(IMPORT_BASE_MODEL)
         if runtime_validation.pattern_properties:
             self._additional_imports.append(Import(import_="re"))
             self._additional_imports.append(IMPORT_TYPE_ADAPTER)

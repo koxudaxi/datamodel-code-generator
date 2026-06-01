@@ -18,8 +18,8 @@ def _schema_runtime_validation() -> SchemaRuntimeValidation:
     )
 
 
-def test_schema_runtime_mixin_inheritance_detects_transitive_base() -> None:
-    """Detect inherited runtime mixins through non-runtime intermediate models."""
+def test_schema_runtime_validation_base_inheritance_detects_transitive_base() -> None:
+    """Detect inherited runtime validation bases through non-runtime intermediate models."""
     runtime_base = BaseModel(fields=[], reference=Reference(name="RuntimeBase", path="#/RuntimeBase"))
     runtime_base.extra_template_data["schema_runtime_validation"] = _schema_runtime_validation()
 
@@ -34,8 +34,8 @@ def test_schema_runtime_mixin_inheritance_detects_transitive_base() -> None:
         base_classes=[intermediate.reference],
     )
 
-    assert BaseModel._inherits_schema_runtime_mixin(runtime_leaf, seen=set())
-    assert not BaseModel._inherits_schema_runtime_mixin(
+    assert BaseModel._inherits_schema_runtime_validation_base(runtime_leaf, seen=set())
+    assert not BaseModel._inherits_schema_runtime_validation_base(
         runtime_leaf,
         seen={runtime_leaf.reference.path},
     )

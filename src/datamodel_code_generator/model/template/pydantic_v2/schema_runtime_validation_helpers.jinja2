@@ -1,4 +1,4 @@
-class {{ schema_runtime_validation_mixin_name }}:
+class {{ schema_runtime_validation_base_class_name }}(BaseModel):
 {%- if has_pattern_properties %}
     __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = ()
 {%- endif %}

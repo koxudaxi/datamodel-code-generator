@@ -174,7 +174,7 @@ This documentation is auto-generated from test cases.
 
 ### S {#s}
 
-- [`--schema-validator-mixin-name`](template-customization.md#schema-validator-mixin-name)
+- [`--schema-validator-base-class-name`](template-customization.md#schema-validator-base-class-name)
 - [`--schema-version`](base-options.md#schema-version)
 - [`--schema-version-mode`](base-options.md#schema-version-mode)
 - [`--serialization-aliases`](field-customization.md#serialization-aliases)

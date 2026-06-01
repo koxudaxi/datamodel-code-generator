@@ -9,7 +9,7 @@ from typing import Any, ClassVar
 from pydantic import BaseModel, ConfigDict, RootModel, TypeAdapter, model_validator
 
 
-class _JsonSchemaRuntimeValidationMixin:
+class _JsonSchemaRuntimeValidationBase(BaseModel):
     __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = ()
     __json_schema_one_of_required_groups__: ClassVar[tuple[Any, ...]] = ()
     __json_schema_any_of_required_groups__: ClassVar[tuple[Any, ...]] = ()
@@ -120,7 +120,7 @@ class Second(BaseModel):
     second: str
 
 
-class PatternBag(_JsonSchemaRuntimeValidationMixin, BaseModel):
+class PatternBag(_JsonSchemaRuntimeValidationBase):
     model_config = ConfigDict(
         extra='allow',
     )
@@ -152,7 +152,7 @@ class PatternTarget(First, PatternBag):
     )
 
 
-class DirectPatternBag(_JsonSchemaRuntimeValidationMixin, BaseModel):
+class DirectPatternBag(_JsonSchemaRuntimeValidationBase):
     model_config = ConfigDict(
         extra='allow',
     )
@@ -168,7 +168,7 @@ class DirectPatternBag(_JsonSchemaRuntimeValidationMixin, BaseModel):
     )
 
 
-class ValidatorOnlyChild(_JsonSchemaRuntimeValidationMixin, First):
+class ValidatorOnlyChild(_JsonSchemaRuntimeValidationBase, First):
     model_config = ConfigDict(
         extra='allow',
     )
@@ -184,7 +184,7 @@ class ValidatorOnlyChild(_JsonSchemaRuntimeValidationMixin, First):
     )
 
 
-class ValidatorOnlyPatternRef(_JsonSchemaRuntimeValidationMixin, First):
+class ValidatorOnlyPatternRef(_JsonSchemaRuntimeValidationBase, First):
     model_config = ConfigDict(
         extra='allow',
     )
@@ -200,7 +200,7 @@ class ValidatorOnlyPatternRef(_JsonSchemaRuntimeValidationMixin, First):
     )
 
 
-class OneOfContact(_JsonSchemaRuntimeValidationMixin, BaseModel):
+class OneOfContact(_JsonSchemaRuntimeValidationBase):
     __json_schema_one_of_required_groups__: ClassVar[tuple[Any, ...]] = (
         ((('email',),), (('phone',),)),
     )
@@ -209,7 +209,7 @@ class OneOfContact(_JsonSchemaRuntimeValidationMixin, BaseModel):
     phone: str | None = None
 
 
-class AnyOfContact(_JsonSchemaRuntimeValidationMixin, BaseModel):
+class AnyOfContact(_JsonSchemaRuntimeValidationBase):
     __json_schema_any_of_required_groups__: ClassVar[tuple[Any, ...]] = (
         ((('email',),), (('phone',),)),
     )
@@ -218,7 +218,7 @@ class AnyOfContact(_JsonSchemaRuntimeValidationMixin, BaseModel):
     phone: str | None = None
 
 
-class ConditionalPayload(_JsonSchemaRuntimeValidationMixin, BaseModel):
+class ConditionalPayload(_JsonSchemaRuntimeValidationBase):
     __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = (
         {
             'condition': ((('kind',), ('metric',)),),

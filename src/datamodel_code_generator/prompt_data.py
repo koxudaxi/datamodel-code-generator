@@ -103,7 +103,9 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--reuse-scope": "Scope for model reuse detection (root or tree).",
     "--schema-version": "Schema version to use for parsing.",
     "--schema-version-mode": "Schema version validation mode.",
-    "--schema-validator-mixin-name": "Set the generated shared Pydantic v2 schema runtime validator mixin class name.",
+    "--schema-validator-base-class-name": (
+        "Set the generated shared Pydantic v2 schema runtime validator base class name."
+    ),
     "--serialization-aliases": "Apply custom Pydantic v2 serialization aliases from JSON file.",
     "--set-default-enum-member": "Set the first enum member as the default value for enum fields.",
     "--shared-module-name": "Customize the name of the shared module for deduplicated models.",

@@ -10940,36 +10940,36 @@ def test_main_jsonschema_generate_schema_validators_extra_template_collision(
 
 
 @pytest.mark.cli_doc(
-    options=["--schema-validator-mixin-name"],
-    option_description="""Set the generated shared Pydantic v2 schema runtime validator mixin class name.
+    options=["--schema-validator-base-class-name"],
+    option_description="""Set the generated shared Pydantic v2 schema runtime validator base class name.
 
-The `--schema-validator-mixin-name` option changes the name of the generated
-shared mixin that owns schema-derived runtime validators. It is only used when
+The `--schema-validator-base-class-name` option changes the name of the generated
+shared base class that owns schema-derived runtime validators. It is only used when
 `--generate-schema-validators` emits shared validator code.""",
-    input_schema="jsonschema/schema_validators_custom_mixin_name.json",
+    input_schema="jsonschema/schema_validators_custom_base_class_name.json",
     cli_args=[
         "--generate-schema-validators",
-        "--schema-validator-mixin-name",
-        "SharedSchemaValidatorMixin",
+        "--schema-validator-base-class-name",
+        "SharedSchemaValidatorBase",
         "--output-model-type",
         "pydantic_v2.BaseModel",
         "--disable-timestamp",
     ],
-    golden_output="jsonschema/schema_validators_custom_mixin_name.py",
+    golden_output="jsonschema/schema_validators_custom_base_class_name.py",
     related_options=["--generate-schema-validators"],
 )
-def test_main_jsonschema_generate_schema_validators_custom_mixin_name(output_file: Path) -> None:
-    """Generate schema validators with a custom shared mixin class name."""
+def test_main_jsonschema_generate_schema_validators_custom_base_class_name(output_file: Path) -> None:
+    """Generate schema validators with a custom shared base class name."""
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_custom_mixin_name.json",
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_custom_base_class_name.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file="schema_validators_custom_mixin_name.py",
+        expected_file="schema_validators_custom_base_class_name.py",
         extra_args=[
             "--generate-schema-validators",
-            "--schema-validator-mixin-name",
-            "SharedSchemaValidatorMixin",
+            "--schema-validator-base-class-name",
+            "SharedSchemaValidatorBase",
             "--output-model-type",
             "pydantic_v2.BaseModel",
             "--disable-timestamp",
@@ -10978,8 +10978,8 @@ def test_main_jsonschema_generate_schema_validators_custom_mixin_name(output_fil
     )
     assert_generated_model_json_validation(
         output_file,
-        module_name="output_custom_mixin_name",
-        model_name="CustomMixinName",
+        module_name="output_custom_base_class_name",
+        model_name="CustomBaseClassName",
         valid_json='{"item_1":7}',
         invalid_json='{"bad":7}',
         expected_error_type="value_error",
@@ -11091,21 +11091,21 @@ def test_main_jsonschema_generate_schema_validators_requires_pydantic_v2(
     )
 
 
-def test_main_jsonschema_generate_schema_validators_invalid_mixin_name(
+def test_main_jsonschema_generate_schema_validators_invalid_base_class_name(
     output_file: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Reject invalid custom schema validator mixin names."""
+    """Reject invalid custom schema validator base class names."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "schema_validators.json",
         output_path=output_file,
         input_file_type="jsonschema",
         expected_exit=Exit.ERROR,
         capsys=capsys,
-        expected_stderr_contains="--schema-validator-mixin-name '123Invalid' is not a valid Python identifier",
+        expected_stderr_contains="--schema-validator-base-class-name '123Invalid' is not a valid Python identifier",
         extra_args=[
             "--generate-schema-validators",
-            "--schema-validator-mixin-name",
+            "--schema-validator-base-class-name",
             "123Invalid",
             "--output-model-type",
             "pydantic_v2.BaseModel",
@@ -11113,20 +11113,21 @@ def test_main_jsonschema_generate_schema_validators_invalid_mixin_name(
     )
 
 
-def test_generate_schema_validators_invalid_mixin_name_public_api(output_file: Path) -> None:
-    """Reject invalid schema validator mixin names through generate()."""
+def test_generate_schema_validators_invalid_base_class_name_public_api(output_file: Path) -> None:
+    """Reject invalid schema validator base class names through generate()."""
     from datamodel_code_generator.config import GenerateConfig
 
-    for value in (None, "SharedSchemaValidatorMixin"):
-        config = GenerateConfig.model_validate({"schema_validator_mixin_name": value})
-        if config.schema_validator_mixin_name != value:  # pragma: no cover
+    for value in (None, "SharedSchemaValidatorBase"):
+        config = GenerateConfig.model_validate({"schema_validator_base_class_name": value})
+        if config.schema_validator_base_class_name != value:  # pragma: no cover
             pytest.fail(
-                f"Expected schema_validator_mixin_name to be {value!r}, got {config.schema_validator_mixin_name!r}",
+                "Expected schema_validator_base_class_name to be "
+                f"{value!r}, got {config.schema_validator_base_class_name!r}",
                 pytrace=False,
             )
     with pytest.raises(
         ValidationError,
-        match="--schema-validator-mixin-name '123Invalid' is not a valid Python identifier",
+        match="--schema-validator-base-class-name '123Invalid' is not a valid Python identifier",
     ):
         generate(
             input_={"type": "object"},
@@ -11134,7 +11135,7 @@ def test_generate_schema_validators_invalid_mixin_name_public_api(output_file: P
             output=output_file,
             output_model_type=DataModelType.PydanticV2BaseModel,
             generate_schema_validators=True,
-            schema_validator_mixin_name="123Invalid",
+            schema_validator_base_class_name="123Invalid",
         )
 
 

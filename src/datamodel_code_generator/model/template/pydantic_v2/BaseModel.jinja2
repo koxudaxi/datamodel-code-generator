@@ -1,7 +1,7 @@
 {% for decorator in decorators -%}
 {{ decorator }}
 {% endfor -%}
-class {{ class_name }}({% if schema_runtime_validation_use_mixin %}{{ schema_runtime_validation_mixin_name }}, {% endif %}{{ base_class }}):{% if comment is defined %}  # {{ comment }}{% endif %}
+class {{ class_name }}({%- if schema_runtime_validation_use_base -%}{{ schema_runtime_validation_base_class_name }}{% if base_class != 'BaseModel' %}, {{ base_class }}{% endif %}{%- else -%}{{ base_class }}{%- endif -%}):{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
     {{ description }}
 {%- endif %}

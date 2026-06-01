@@ -64,12 +64,12 @@ else:
     ExtraTemplateDataType = defaultdict[str, Annotated[dict[str, Any], Field(default_factory=dict)]]
 
 
-def validate_schema_validator_mixin_name(value: str | None) -> str | None:
-    """Validate the generated shared schema validator mixin name."""
+def validate_schema_validator_base_class_name(value: str | None) -> str | None:
+    """Validate the generated shared schema validator base class name."""
     if value is None:
         return value
     if not value.isidentifier() or iskeyword(value):
-        msg = f"--schema-validator-mixin-name '{value}' is not a valid Python identifier"
+        msg = f"--schema-validator-base-class-name '{value}' is not a valid Python identifier"
         raise ValueError(msg)
     return value
 
@@ -93,7 +93,7 @@ class GenerateConfig(BaseModel):
     extra_template_data: ExtraTemplateDataType | None = None
     validators: Mapping[str, ModelValidators] | None = None
     generate_schema_validators: bool = False
-    schema_validator_mixin_name: str | None = None
+    schema_validator_base_class_name: str | None = None
     validation: bool = False
     field_constraints: bool = False
     snake_case_field: bool = False
@@ -224,8 +224,8 @@ class GenerateConfig(BaseModel):
     schema_version_mode: VersionMode | None = None
     external_ref_mapping: dict[str, str] | None = None
 
-    _validate_schema_validator_mixin_name = field_validator("schema_validator_mixin_name")(
-        validate_schema_validator_mixin_name
+    _validate_schema_validator_base_class_name = field_validator("schema_validator_base_class_name")(
+        validate_schema_validator_base_class_name
     )
 
 
@@ -246,7 +246,7 @@ class ParserConfig(BaseModel):
     extra_template_data: ExtraTemplateDataType | None = None
     validators: Mapping[str, ModelValidators] | None = None
     generate_schema_validators: bool = False
-    schema_validator_mixin_name: str | None = None
+    schema_validator_base_class_name: str | None = None
     target_python_version: PythonVersion = PythonVersionMin
     dump_resolve_reference_action: DumpResolveReferenceAction | None = None
     validation: bool = False
@@ -363,8 +363,8 @@ class ParserConfig(BaseModel):
     default_value_overrides: Mapping[str, Any] | None = None
     external_ref_mapping: dict[str, str] | None = None
 
-    _validate_schema_validator_mixin_name = field_validator("schema_validator_mixin_name")(
-        validate_schema_validator_mixin_name
+    _validate_schema_validator_base_class_name = field_validator("schema_validator_base_class_name")(
+        validate_schema_validator_base_class_name
     )
 
 

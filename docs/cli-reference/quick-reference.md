@@ -158,7 +158,7 @@ datamodel-codegen [OPTIONS]
 | [`--generate-schema-validators`](template-customization.md#generate-schema-validators) | Generate experimental Pydantic v2 model validators for JSON Schema runtime rules... |
 | [`--no-treat-dot-as-module`](template-customization.md#no-treat-dot-as-module) | Keep dots in schema names as underscores for flat output. |
 | [`--no-use-type-checking-imports`](template-customization.md#no-use-type-checking-imports) | Keep generated model imports available at runtime when using Ruff fixes. |
-| [`--schema-validator-mixin-name`](template-customization.md#schema-validator-mixin-name) | Set the generated shared Pydantic v2 schema runtime validator mixin class name. |
+| [`--schema-validator-base-class-name`](template-customization.md#schema-validator-base-class-name) | Set the generated shared Pydantic v2 schema runtime validator base class name. |
 | [`--treat-dot-as-module`](template-customization.md#treat-dot-as-module) | Treat dots in schema names as module separators. |
 | [`--use-double-quotes`](template-customization.md#use-double-quotes) | Use double quotes for string literals in generated code. |
 | [`--use-exact-imports`](template-customization.md#use-exact-imports) | Import exact types instead of modules. |
@@ -327,7 +327,7 @@ All options sorted alphabetically:
 - [`--remove-special-field-name-prefix`](field-customization.md#remove-special-field-name-prefix) - Remove the special prefix from field names.
 - [`--reuse-model`](model-customization.md#reuse-model) - Reuse identical model definitions instead of generating dupl...
 - [`--reuse-scope`](model-customization.md#reuse-scope) - Scope for model reuse detection (root or tree).
-- [`--schema-validator-mixin-name`](template-customization.md#schema-validator-mixin-name) - Set the generated shared Pydantic v2 schema runtime validato...
+- [`--schema-validator-base-class-name`](template-customization.md#schema-validator-base-class-name) - Set the generated shared Pydantic v2 schema runtime validato...
 - [`--schema-version`](base-options.md#schema-version) - Schema version to use for parsing.
 - [`--schema-version-mode`](base-options.md#schema-version-mode) - Schema version validation mode.
 - [`--serialization-aliases`](field-customization.md#serialization-aliases) - Apply custom Pydantic v2 serialization aliases from JSON fil...

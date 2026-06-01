@@ -21,7 +21,7 @@
 | [`--generate-schema-validators`](#generate-schema-validators) | Generate experimental Pydantic v2 model validators for JSON ... |
 | [`--no-treat-dot-as-module`](#no-treat-dot-as-module) | Keep dots in schema names as underscores for flat output. |
 | [`--no-use-type-checking-imports`](#no-use-type-checking-imports) | Keep generated model imports available at runtime when using... |
-| [`--schema-validator-mixin-name`](#schema-validator-mixin-name) | Set the generated shared Pydantic v2 schema runtime validato... |
+| [`--schema-validator-base-class-name`](#schema-validator-base-class-name) | Set the generated shared Pydantic v2 schema runtime validato... |
 | [`--treat-dot-as-module`](#treat-dot-as-module) | Treat dots in schema names as module separators. |
 | [`--use-double-quotes`](#use-double-quotes) | Use double quotes for string literals in generated code. |
 | [`--use-exact-imports`](#use-exact-imports) | Import exact types instead of modules. |
@@ -2760,7 +2760,7 @@ experimental and may change as JSON Schema coverage is expanded.
     from pydantic import BaseModel, ConfigDict, RootModel, TypeAdapter, model_validator
 
 
-    class _JsonSchemaRuntimeValidationMixin:
+    class _JsonSchemaRuntimeValidationBase(BaseModel):
         __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = ()
         __json_schema_one_of_required_groups__: ClassVar[tuple[Any, ...]] = ()
         __json_schema_any_of_required_groups__: ClassVar[tuple[Any, ...]] = ()
@@ -2871,7 +2871,7 @@ experimental and may change as JSON Schema coverage is expanded.
         second: str
 
 
-    class PatternBag(_JsonSchemaRuntimeValidationMixin, BaseModel):
+    class PatternBag(_JsonSchemaRuntimeValidationBase):
         model_config = ConfigDict(
             extra='allow',
         )
@@ -2903,7 +2903,7 @@ experimental and may change as JSON Schema coverage is expanded.
         )
 
 
-    class DirectPatternBag(_JsonSchemaRuntimeValidationMixin, BaseModel):
+    class DirectPatternBag(_JsonSchemaRuntimeValidationBase):
         model_config = ConfigDict(
             extra='allow',
         )
@@ -2919,7 +2919,7 @@ experimental and may change as JSON Schema coverage is expanded.
         )
 
 
-    class ValidatorOnlyChild(_JsonSchemaRuntimeValidationMixin, First):
+    class ValidatorOnlyChild(_JsonSchemaRuntimeValidationBase, First):
         model_config = ConfigDict(
             extra='allow',
         )
@@ -2935,7 +2935,7 @@ experimental and may change as JSON Schema coverage is expanded.
         )
 
 
-    class ValidatorOnlyPatternRef(_JsonSchemaRuntimeValidationMixin, First):
+    class ValidatorOnlyPatternRef(_JsonSchemaRuntimeValidationBase, First):
         model_config = ConfigDict(
             extra='allow',
         )
@@ -2951,7 +2951,7 @@ experimental and may change as JSON Schema coverage is expanded.
         )
 
 
-    class OneOfContact(_JsonSchemaRuntimeValidationMixin, BaseModel):
+    class OneOfContact(_JsonSchemaRuntimeValidationBase):
         __json_schema_one_of_required_groups__: ClassVar[tuple[Any, ...]] = (
             ((('email',),), (('phone',),)),
         )
@@ -2960,7 +2960,7 @@ experimental and may change as JSON Schema coverage is expanded.
         phone: str | None = None
 
 
-    class AnyOfContact(_JsonSchemaRuntimeValidationMixin, BaseModel):
+    class AnyOfContact(_JsonSchemaRuntimeValidationBase):
         __json_schema_any_of_required_groups__: ClassVar[tuple[Any, ...]] = (
             ((('email',),), (('phone',),)),
         )
@@ -2969,7 +2969,7 @@ experimental and may change as JSON Schema coverage is expanded.
         phone: str | None = None
 
 
-    class ConditionalPayload(_JsonSchemaRuntimeValidationMixin, BaseModel):
+    class ConditionalPayload(_JsonSchemaRuntimeValidationBase):
         __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = (
             {
                 'condition': ((('kind',), ('metric',)),),
@@ -3444,12 +3444,12 @@ require manual `model_rebuild()` calls for cross-module runtime references.
 
 ---
 
-## `--schema-validator-mixin-name` {#schema-validator-mixin-name}
+## `--schema-validator-base-class-name` {#schema-validator-base-class-name}
 
-Set the generated shared Pydantic v2 schema runtime validator mixin class name.
+Set the generated shared Pydantic v2 schema runtime validator base class name.
 
-The `--schema-validator-mixin-name` option changes the name of the generated
-shared mixin that owns schema-derived runtime validators. It is only used when
+The `--schema-validator-base-class-name` option changes the name of the generated
+shared base class that owns schema-derived runtime validators. It is only used when
 `--generate-schema-validators` emits shared validator code.
 
 **Related:** [`--generate-schema-validators`](template-customization.md#generate-schema-validators)
@@ -3457,10 +3457,10 @@ shared mixin that owns schema-derived runtime validators. It is only used when
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --generate-schema-validators --schema-validator-mixin-name SharedSchemaValidatorMixin --output-model-type pydantic_v2.BaseModel --disable-timestamp # (1)!
+    datamodel-codegen --input schema.json --generate-schema-validators --schema-validator-base-class-name SharedSchemaValidatorBase --output-model-type pydantic_v2.BaseModel --disable-timestamp # (1)!
     ```
 
-    1. :material-arrow-left: `--schema-validator-mixin-name` - the option documented here
+    1. :material-arrow-left: `--schema-validator-base-class-name` - the option documented here
 
 ??? example "Examples"
 
@@ -3468,7 +3468,7 @@ shared mixin that owns schema-derived runtime validators. It is only used when
 
     ```json
     {
-      "title": "CustomMixinName",
+      "title": "CustomBaseClassName",
       "type": "object",
       "patternProperties": {
         "^item_[0-9]+$": {
@@ -3483,7 +3483,7 @@ shared mixin that owns schema-derived runtime validators. It is only used when
 
     ```python
     # generated by datamodel-codegen:
-    #   filename:  schema_validators_custom_mixin_name.json
+    #   filename:  schema_validators_custom_base_class_name.json
 
     from __future__ import annotations
 
@@ -3493,7 +3493,7 @@ shared mixin that owns schema-derived runtime validators. It is only used when
     from pydantic import BaseModel, ConfigDict, TypeAdapter, model_validator
 
 
-    class SharedSchemaValidatorMixin:
+    class SharedSchemaValidatorBase(BaseModel):
         __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = ()
 
         @model_validator(mode='before')
@@ -3536,7 +3536,7 @@ shared mixin that owns schema-derived runtime validators. It is only used when
             return values
 
 
-    class CustomMixinName(SharedSchemaValidatorMixin, BaseModel):
+    class CustomBaseClassName(SharedSchemaValidatorBase):
         model_config = ConfigDict(
             extra='allow',
         )

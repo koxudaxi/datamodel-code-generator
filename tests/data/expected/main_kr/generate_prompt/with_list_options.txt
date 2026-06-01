@@ -139,7 +139,7 @@
 - `--generate-schema-validators`: Generate experimental Pydantic v2 model validators for JSON Schema runtime rules.
 - `--no-treat-dot-as-module`: Keep dots in schema names as underscores for flat output.
 - `--no-use-type-checking-imports`: Keep generated model imports available at runtime when using Ruff fixes.
-- `--schema-validator-mixin-name`: Set the generated shared Pydantic v2 schema runtime validator mixin class name.
+- `--schema-validator-base-class-name`: Set the generated shared Pydantic v2 schema runtime validator base class name.
 - `--use-double-quotes`: Use double quotes for string literals in generated code.
 - `--use-exact-imports`: Import exact types instead of modules.
 - `--use-type-checking-imports`: Allow Ruff to move typing-only imports into TYPE_CHECKING blocks.
@@ -650,9 +650,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Generate Pydantic v2 model validators for JSON Schema
                         rules that cannot be represented as type hints
                         (experimental).
-  --schema-validator-mixin-name SCHEMA_VALIDATOR_MIXIN_NAME
+  --schema-validator-base-class-name SCHEMA_VALIDATOR_BASE_CLASS_NAME
                         Set the generated shared Pydantic v2 schema runtime
-                        validator mixin class name.
+                        validator base class name.
   --use-double-quotes   Model generated with double quotes. Single quotes or
                         your black config skip_string_normalization value will
                         be used without this option.

@@ -788,7 +788,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         "dump_resolve_reference_action": data_model_types.dump_resolve_reference_action,
         "extra_template_data": extra_template_data,
         "serialization_aliases": config.serialization_aliases,
-        "schema_validator_mixin_name": config.schema_validator_mixin_name,
+        "schema_validator_base_class_name": config.schema_validator_base_class_name,
         "base_path": input_.parent if isinstance(input_, Path) and input_.is_file() else None,
         "remote_text_cache": remote_text_cache,
         "known_third_party": data_model_types.known_third_party,

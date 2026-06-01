@@ -417,14 +417,14 @@ class Config(BaseModel):  # noqa: PLR0904
             return ClassNameAffixScope(v)
         return v  # pragma: no cover
 
-    @field_validator("schema_validator_mixin_name")
+    @field_validator("schema_validator_base_class_name")
     @classmethod
-    def validate_schema_validator_mixin_name(cls, v: str | None) -> str | None:  # ty: ignore
-        """Validate schema validator mixin class name."""
+    def validate_schema_validator_base_class_name(cls, v: str | None) -> str | None:  # ty: ignore
+        """Validate schema validator base class name."""
         if v is None:  # pragma: no cover
             return v
         if not v.isidentifier() or iskeyword(v):
-            msg = f"--schema-validator-mixin-name '{v}' is not a valid Python identifier"
+            msg = f"--schema-validator-base-class-name '{v}' is not a valid Python identifier"
             raise Error(msg)
         return v
 
@@ -447,7 +447,7 @@ class Config(BaseModel):  # noqa: PLR0904
     extra_template_data: Optional[TextIOBase] = None  # noqa: UP045
     validators: Optional[TextIOBase] = None  # noqa: UP045
     generate_schema_validators: bool = False
-    schema_validator_mixin_name: Optional[str] = None  # noqa: UP045
+    schema_validator_base_class_name: Optional[str] = None  # noqa: UP045
     validation: bool = False
     field_constraints: bool = False
     snake_case_field: bool = False
@@ -911,7 +911,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         class_decorators=config.class_decorators,
         custom_template_dir=config.custom_template_dir,
         generate_schema_validators=config.generate_schema_validators,
-        schema_validator_mixin_name=config.schema_validator_mixin_name,
+        schema_validator_base_class_name=config.schema_validator_base_class_name,
         validation=config.validation,
         field_constraints=config.field_constraints,
         snake_case_field=config.snake_case_field,

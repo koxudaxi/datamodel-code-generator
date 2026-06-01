@@ -1003,8 +1003,8 @@ template_options.add_argument(
     default=None,
 )
 template_options.add_argument(
-    "--schema-validator-mixin-name",
-    help="Set the generated shared Pydantic v2 schema runtime validator mixin class name.",
+    "--schema-validator-base-class-name",
+    help="Set the generated shared Pydantic v2 schema runtime validator base class name.",
     type=str,
     default=None,
 )
