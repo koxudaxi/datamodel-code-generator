@@ -14,6 +14,11 @@ import {
 const appEl = document.querySelector("#app");
 const rawWorker = new Worker("./worker.js", { type: "module" });
 const worker = Comlink.wrap(rawWorker);
+const stateEncoder = new TextEncoder();
+const stateDecoder = new TextDecoder();
+const stateFormatGzip = "gz";
+const stateFormatPlain = "b64";
+const stateVersion = 1;
 
 let ready = false;
 let running = false;
@@ -30,6 +35,7 @@ let appShellMounted = false;
 let workspaceResizeObserver = null;
 let headerCompact = false;
 let workspaceCollapsed = false;
+let restoredUrlState = false;
 
 function currentSchema() {
   return getInputValue();
@@ -147,6 +153,129 @@ function mountRenderedShell(html) {
 function collectOptionEntries() {
   const form = document.querySelector("#options-form");
   return form ? Object.fromEntries(new FormData(form).entries()) : {};
+}
+
+function bytesToBase64Url(bytes) {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function base64UrlToBytes(value) {
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+async function gzipText(text) {
+  const stream = new Blob([text]).stream().pipeThrough(new CompressionStream("gzip"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function gunzipText(bytes) {
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return stateDecoder.decode(await new Response(stream).arrayBuffer());
+}
+
+async function encodePlaygroundState(state) {
+  const json = JSON.stringify(state);
+  if ("CompressionStream" in globalThis) {
+    return `${stateFormatGzip}.${bytesToBase64Url(await gzipText(json))}`;
+  }
+  return `${stateFormatPlain}.${bytesToBase64Url(stateEncoder.encode(json))}`;
+}
+
+async function decodePlaygroundState(payload) {
+  const [format, value] = payload.includes(".") ? payload.split(".", 2) : [stateFormatPlain, payload];
+  const bytes = base64UrlToBytes(value);
+  let json = "";
+  if (format === stateFormatGzip) {
+    if (!("DecompressionStream" in globalThis)) {
+      throw new Error("Compressed URL state is not supported by this browser");
+    }
+    json = await gunzipText(bytes);
+  } else if (format === stateFormatPlain) {
+    json = stateDecoder.decode(bytes);
+  } else {
+    throw new Error(`Unknown playground state format: ${format}`);
+  }
+  const state = JSON.parse(json);
+  if (state.v !== stateVersion) {
+    throw new Error(`Unsupported playground state version: ${state.v}`);
+  }
+  return state;
+}
+
+function buildPlaygroundState() {
+  return {
+    v: stateVersion,
+    inputType: currentInputType(),
+    schema: currentSchema(),
+    options: collectOptionEntries(),
+  };
+}
+
+function statePayloadFromHash() {
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  return params.get("state");
+}
+
+function buildReproUrl(payload) {
+  const url = new URL(window.location.href);
+  const params = new URLSearchParams(url.hash.slice(1));
+  params.set("state", payload);
+  url.hash = params.toString();
+  return url.toString();
+}
+
+async function copyReproUrl() {
+  const payload = await encodePlaygroundState(buildPlaygroundState());
+  const url = buildReproUrl(payload);
+  await navigator.clipboard.writeText(url);
+  setStatus(url.length > 8000 ? "Copied reproducible URL. The URL is long." : "Copied reproducible URL.");
+}
+
+async function restoreStateFromUrl() {
+  const payload = statePayloadFromHash();
+  if (!payload) {
+    return false;
+  }
+  const state = await decodePlaygroundState(payload);
+  if (state.inputType) {
+    const inputType = document.querySelector("#input-type");
+    if (inputType) {
+      inputType.value = String(state.inputType);
+      updateInputFormatState();
+    }
+  }
+  if (typeof state.schema === "string") {
+    setInputValue(state.schema);
+  }
+  clearOptionControls();
+  Object.entries(state.options || {}).forEach(([key, value]) => {
+    const control = document.querySelector(`[data-option="${CSS.escape(key)}"]`);
+    if (!control) {
+      return;
+    }
+    if (control.type === "checkbox") {
+      control.checked = value === true || value === "true" || value === "on";
+    } else if (Array.isArray(value)) {
+      control.value = value.join("\n");
+    } else {
+      control.value = String(value);
+    }
+    control.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  restoredUrlState = true;
+  refreshEditors();
+  return true;
 }
 
 function filterOptions(query) {
@@ -389,7 +518,8 @@ async function initWorker() {
     mountRenderedShell(info.html);
   }
   ready = true;
-  setStatus(`Ready: Pyodide ${info.pyodideVersion}, Python ${info.pythonVersion}, UI rendered by tdom`);
+  const readyMessage = `Ready: Pyodide ${info.pyodideVersion}, Python ${info.pythonVersion}, UI rendered by tdom`;
+  setStatus(restoredUrlState ? `${readyMessage}. Restored URL state.` : readyMessage);
   setGenerateState();
   await refreshCliOptions();
   scheduleAutoGenerate(0);
@@ -424,6 +554,8 @@ document.addEventListener("click", async (event) => {
   } else if (action === "copy-cli") {
     await navigator.clipboard.writeText(cliCommandText);
     setStatus(cliCommandText ? "Copied CLI command." : "Copied empty CLI command.");
+  } else if (action === "copy-repro-url") {
+    await copyReproUrl();
   } else if (action === "config") {
     openConfigDialog();
   } else if (action === "copy-config") {
@@ -463,11 +595,30 @@ document.addEventListener("click", async (event) => {
   }
 });
 
-mountInitialShell().catch((error) => {
-  setStatus(error?.message || "Could not load the playground shell.", true);
-});
-initWorker().catch((error) => {
+async function startPlayground() {
+  await mountInitialShell();
+  try {
+    await restoreStateFromUrl();
+  } catch (error) {
+    setStatus(`Could not load URL state: ${error?.message || String(error)}`, true);
+  }
+  await initWorker();
+}
+
+startPlayground().catch((error) => {
   setStatus(error?.stack || String(error), true);
+});
+
+window.addEventListener("hashchange", async () => {
+  try {
+    if (await restoreStateFromUrl()) {
+      setStatus("Loaded state from URL.");
+      await refreshCliOptions();
+      scheduleAutoGenerate(0);
+    }
+  } catch (error) {
+    setStatus(`Could not load URL state: ${error?.message || String(error)}`, true);
+  }
 });
 
 window.addEventListener("resize", () => {
