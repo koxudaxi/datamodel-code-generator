@@ -23,11 +23,13 @@ ROOT = Path(__file__).resolve().parents[1]
 PLAYGROUND_ROOT = ROOT / "docs" / "assets" / "playground"
 GENERATED_ROOT = PLAYGROUND_ROOT / "generated"
 METADATA_PATH = GENERATED_ROOT / "codegen-ui-metadata.json"
+MAIN_METADATA_PATH = GENERATED_ROOT / "main" / "codegen-ui-metadata.json"
 APP_SHELL_PATH = GENERATED_ROOT / "app-shell.html"
 APP_SOURCE_PATH = PLAYGROUND_ROOT / "app.py"
 RUNTIME_SOURCE_PATH = PLAYGROUND_ROOT / "runtime.py"
 GENERATED_RUNTIME_PATH = GENERATED_ROOT / "runtime.py"
 VERSIONS_PATH = GENERATED_ROOT / "playground-versions.json"
+DEFAULT_MAIN_ASSET_BASE = "https://dev.datamodel-code-generator.pages.dev/playground/generated/"
 
 BROWSER_SUPPORTED_INPUT_TYPES = {
     InputFileType.Auto.value,
@@ -302,51 +304,142 @@ def build_metadata() -> dict[str, Any]:
     return metadata
 
 
-def _extra_versions() -> list[dict[str, Any]]:
-    raw_versions = os.environ.get("PLAYGROUND_EXTRA_VERSIONS_JSON")
-    if not raw_versions:
+def _json_env_list(name: str) -> list[dict[str, Any]]:
+    if not (raw_versions := os.environ.get(name)):
         return []
     try:
         versions = json.loads(raw_versions)
     except json.JSONDecodeError as exc:
-        msg = f"PLAYGROUND_EXTRA_VERSIONS_JSON is not valid JSON: {exc}"
+        msg = f"{name} is not valid JSON: {exc}"
         raise ValueError(msg) from exc
     if not isinstance(versions, list) or not all(isinstance(version, dict) for version in versions):
-        msg = "PLAYGROUND_EXTRA_VERSIONS_JSON must be a JSON array of objects"
+        msg = f"{name} must be a JSON array of objects"
         raise TypeError(msg)
     return cast("list[dict[str, Any]]", versions)
 
 
-def build_versions(metadata: dict[str, Any]) -> dict[str, Any]:
-    """Return runtime version entries for the browser playground."""
-    current_id = os.environ.get("PLAYGROUND_VERSION_ID", "current")
-    current_version = {
-        "id": current_id,
-        "label": os.environ.get("PLAYGROUND_VERSION_LABEL", "Current build"),
-        "kind": os.environ.get("PLAYGROUND_VERSION_KIND", "current"),
+def _extra_versions() -> list[dict[str, Any]]:
+    return _json_env_list("PLAYGROUND_EXTRA_VERSIONS_JSON")
+
+
+def _release_versions() -> list[dict[str, Any]]:
+    return _json_env_list("PLAYGROUND_RELEASES_JSON")
+
+
+def _json_file_dict(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        return {}
+    return cast("dict[str, Any]", data)
+
+
+def _wheel_install(metadata: dict[str, Any]) -> dict[str, Any] | None:
+    if not (package_wheel := metadata.get("package_wheel")):
+        return None
+    return {
+        "type": "wheel",
+        "url": package_wheel,
+        "deps": False,
+    }
+
+
+def _deploy_kind() -> str:
+    match os.environ.get("PLAYGROUND_DEPLOY_BRANCH", ""):
+        case branch if branch.startswith("pr-"):
+            return "preview"
+        case "dev":
+            return "main"
+        case "main":
+            return "production"
+    return "current"
+
+
+def _current_version(
+    metadata: dict[str, Any],
+    *,
+    version_id: str,
+    label: str,
+    kind: str,
+) -> dict[str, Any]:
+    version = {
+        "id": version_id,
+        "label": label,
+        "kind": kind,
         "asset_base": "./generated/",
     }
     if source_ref := os.environ.get("PLAYGROUND_SOURCE_REF"):
-        current_version["source_ref"] = source_ref
+        version["source_ref"] = source_ref
 
-    if package_wheel := metadata.get("package_wheel"):
-        current_version["install"] = {
-            "type": "wheel",
-            "url": package_wheel,
-            "deps": False,
-        }
+    if install := _wheel_install(metadata):
+        version["install"] = install
     else:
-        current_version["install"] = {
+        version["install"] = {
             "type": "requirement",
             "requirement": "datamodel-code-generator",
             "deps": False,
         }
-    current_version["app"] = "runtime.py"
+    version["app"] = "runtime.py"
+    return version
+
+
+def _main_version(metadata: dict[str, Any], *, local: bool) -> dict[str, Any]:
+    if local:
+        return _current_version(metadata, version_id="main", label="main", kind="main")
+    version = {
+        "id": "main",
+        "label": "main",
+        "kind": "main",
+        "asset_base": os.environ.get("PLAYGROUND_MAIN_ASSET_BASE") or DEFAULT_MAIN_ASSET_BASE,
+        "app": "runtime.py",
+    }
+    if install := _wheel_install(_json_file_dict(MAIN_METADATA_PATH)):
+        version["install"] = install
+    return version
+
+
+def _release_version(version: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
+    checkout_ref = os.environ.get("PLAYGROUND_CHECKOUT_REF")
+    result = dict(version)
+    if result.get("id") == checkout_ref and (install := _wheel_install(metadata)):
+        result["install"] = install
+    result.setdefault("asset_base", "./generated/")
+    result.setdefault("app", "runtime.py")
+    return result
+
+
+def _version_list(metadata: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
+    releases = [_release_version(version, metadata) for version in _release_versions()]
+    match _deploy_kind():
+        case "preview":
+            current = _current_version(metadata, version_id="current", label="Preview build", kind="preview")
+            return current["id"], [current, *releases, _main_version(metadata, local=False), *_extra_versions()]
+        case "main":
+            main = _main_version(metadata, local=True)
+            return main["id"], [main, *releases, *_extra_versions()]
+        case "production":
+            main = _main_version(metadata, local=False)
+            default_id = releases[0]["id"] if releases else main["id"]
+            return default_id, [*releases, main, *_extra_versions()]
+
+    current = _current_version(
+        metadata,
+        version_id=os.environ.get("PLAYGROUND_VERSION_ID", "current"),
+        label=os.environ.get("PLAYGROUND_VERSION_LABEL", "Current build"),
+        kind=os.environ.get("PLAYGROUND_VERSION_KIND", "current"),
+    )
+    return os.environ.get("PLAYGROUND_DEFAULT_VERSION", current["id"]), [current, *_extra_versions()]
+
+
+def build_versions(metadata: dict[str, Any]) -> dict[str, Any]:
+    """Return runtime version entries for the browser playground."""
+    default_id, versions = _version_list(metadata)
 
     return {
         "schema_version": 1,
-        "default": os.environ.get("PLAYGROUND_DEFAULT_VERSION", current_id),
-        "versions": [current_version, *_extra_versions()],
+        "default": os.environ.get("PLAYGROUND_DEFAULT_VERSION", default_id),
+        "versions": versions,
     }
 
 

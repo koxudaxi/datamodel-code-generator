@@ -49,10 +49,36 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Build browser package wheel
-        if: inputs.deploy_branch != 'main'
         run: uv build --wheel --out-dir docs/assets/playground/generated .
+      - name: Build main playground assets
+        if: inputs.deploy_branch != '' && github.repository == 'koxudaxi/datamodel-code-generator'
+        run: |
+          main_checkout="$RUNNER_TEMP/playground-main"
+          rm -rf "$main_checkout"
+          # This step executes the checked-out code, so keep the source fixed to the trusted upstream.
+          git clone --depth 1 --single-branch --branch main -- https://github.com/koxudaxi/datamodel-code-generator.git "$main_checkout"
+          pushd "$main_checkout"
+          uv sync
+          uv build --wheel --out-dir docs/assets/playground/generated .
+          uv run --python 3.14 --group playground python scripts/build_playground_assets.py
+          popd
+          mkdir -p docs/assets/playground/generated/main
+          cp -R "$main_checkout/docs/assets/playground/generated/." docs/assets/playground/generated/main/
+      - name: Build playground release list
+        run: |
+          {
+            echo 'PLAYGROUND_RELEASES_JSON<<EOF'
+            python scripts/build_playground_release_versions.py
+            echo EOF
+          } >> "$GITHUB_ENV"
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Build playground assets
         run: uv run --python 3.14 --group playground python scripts/build_playground_assets.py
+        env:
+          PLAYGROUND_CHECKOUT_REF: ${{ inputs.checkout_ref }}
+          PLAYGROUND_DEPLOY_BRANCH: ${{ inputs.deploy_branch }}
+          PLAYGROUND_MAIN_ASSET_BASE: ${{ inputs.deploy_branch != '' && github.repository == 'koxudaxi/datamodel-code-generator' && './generated/main/' || '' }}
       - name: Build site
         run: zensical build --clean
       - name: Publish standalone playground route
@@ -61,7 +87,7 @@ jobs:
           mkdir -p site/playground
           cp -R site/assets/playground/. site/playground/
       - name: Deploy
-        if: inputs.deploy_branch != ''
+        if: inputs.deploy_branch != '' && github.repository == 'koxudaxi/datamodel-code-generator'
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
