@@ -245,13 +245,12 @@ def test_mcp_tools(input_file: str, expected_file: str, output_file: Path) -> No
 @pytest.mark.parametrize(argnames="input_kind", argvalues=["mapping", "list", "string"])
 def test_mcp_tools_generate_direct_input(input_kind: str, output_file: Path) -> None:
     """Generate MCP tool models from direct generate() input values."""
+    input_file = "direct_tool.json"
+    expected_file = "mcp_tools/direct_tool.py"
     match input_kind:
         case "list":
             input_file = "top_level_list.json"
             expected_file = "mcp_tools/top_level_list.py"
-        case _:
-            input_file = "direct_tool.json"
-            expected_file = "mcp_tools/direct_tool.py"
     input_text = (DATA_PATH / "mcp_tools" / input_file).read_text(encoding="utf-8")
     input_: object = json.loads(input_text) if input_kind in {"mapping", "list"} else input_text
 
