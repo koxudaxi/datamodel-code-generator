@@ -170,6 +170,7 @@ class Pet(BaseModel):
 - Apache Avro schema (AVSC)
 - XML Schema (XSD)
 - Protocol Buffers / gRPC (`.proto`)
+- MCP tool schemas
 - JSON / YAML / CSV data
 - GraphQL schema
 - Python types (Pydantic, dataclass, TypedDict) via `--input-model`

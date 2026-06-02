@@ -242,19 +242,52 @@ def test_mcp_tools(input_file: str, expected_file: str, output_file: Path) -> No
     )
 
 
-@pytest.mark.parametrize(argnames="input_kind", argvalues=["mapping", "string"])
+@pytest.mark.parametrize(argnames="input_kind", argvalues=["mapping", "list", "string"])
 def test_mcp_tools_generate_direct_input(input_kind: str, output_file: Path) -> None:
     """Generate MCP tool models from direct generate() input values."""
-    input_text = (DATA_PATH / "mcp_tools" / "direct_tool.json").read_text(encoding="utf-8")
-    input_: object = json.loads(input_text) if input_kind == "mapping" else input_text
+    match input_kind:
+        case "list":
+            input_file = "top_level_list.json"
+            expected_file = "mcp_tools/top_level_list.py"
+        case _:
+            input_file = "direct_tool.json"
+            expected_file = "mcp_tools/direct_tool.py"
+    input_text = (DATA_PATH / "mcp_tools" / input_file).read_text(encoding="utf-8")
+    input_: object = json.loads(input_text) if input_kind in {"mapping", "list"} else input_text
 
     generate(
         input_=input_,
         input_file_type=InputFileType.MCPTools,
-        input_filename="direct_tool.json",
+        input_filename=input_file,
         output=output_file,
     )
-    assert_file_content(output_file, "mcp_tools/direct_tool.py")
+    assert_file_content(output_file, expected_file)
+
+
+def test_mcp_tools_url_preserves_relative_ref_context(
+    mock_httpx_get: HttpxGetMockFactory,
+    output_file: Path,
+) -> None:
+    """Resolve MCP inputSchema relative refs from the original URL."""
+    base_url = "https://example.com/mcp/"
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse(f"{base_url}tools.json", DATA_PATH / "mcp_tools" / "remote_relative_ref.json"),
+        MockHttpxResponse(f"{base_url}common.json", DATA_PATH / "mcp_tools" / "remote_common.json"),
+    )
+    run_main_with_args([
+        "--url",
+        f"{base_url}tools.json",
+        "--input-file-type",
+        "mcp-tools",
+        "--output",
+        str(output_file),
+    ])
+    assert_file_content(output_file, "mcp_tools/remote_relative_ref.py")
+    assert_httpx_get_kwargs(
+        httpx_get_mock,
+        expected_urls=[f"{base_url}tools.json", f"{base_url}common.json"],
+        call_count=2,
+    )
 
 
 @pytest.mark.parametrize(
