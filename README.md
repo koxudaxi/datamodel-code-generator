@@ -2,7 +2,8 @@
 
 🚀 Generate Python data models from schema definitions in seconds.
 
-🧪 Try it in your browser: [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/)
+🧪 Try it in your browser: [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/) - runs locally in
+your browser with Pyodide; schemas and options are not sent to a backend.
 
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
@@ -29,7 +30,8 @@
 **👉 [datamodel-code-generator.koxudaxi.dev](https://datamodel-code-generator.koxudaxi.dev)**
 
 - 🖥️ [CLI Reference](https://datamodel-code-generator.koxudaxi.dev/cli-reference/) - All command-line options
-- 🧪 [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/) - Try generation in your browser
+- 🧪 [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/) - Try generation locally in your browser
+  with Pyodide; shared repro URLs encode state in the URL fragment.
 - ⚙️ [pyproject.toml](https://datamodel-code-generator.koxudaxi.dev/pyproject_toml/) - Configuration file
 - 🔄 [CI/CD Integration](https://datamodel-code-generator.koxudaxi.dev/ci-cd/) - GitHub Actions, pre-commit hooks
 - 🚀 [One-liner Usage](https://datamodel-code-generator.koxudaxi.dev/oneliner/) - uvx, pipx, clipboard integration
