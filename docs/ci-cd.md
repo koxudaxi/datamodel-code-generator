@@ -32,7 +32,7 @@ By default, the action runs in **check mode** (`--check`), which validates that 
 |-------|----------|---------|-------------|
 | `input` | Yes | - | Input schema file or directory |
 | `output` | Yes | - | Output file or directory |
-| `input-file-type` | Yes | - | Input file type (`openapi`, `jsonschema`, `xmlschema`, `avro`, `json`, `yaml`, `csv`, `graphql`) |
+| `input-file-type` | Yes | - | Input file type (`openapi`, `jsonschema`, `mcp-tools`, `xmlschema`, `avro`, `json`, `yaml`, `csv`, `graphql`) |
 | `output-model-type` | Yes | - | Output model type (`pydantic_v2.BaseModel`, `pydantic_v2.dataclass`, `dataclasses.dataclass`, `typing.TypedDict`, `msgspec.Struct`) |
 | `check` | No | `true` | Validate that existing output is up to date (no generation) |
 | `working-directory` | No | `.` | Working directory (where `pyproject.toml` is located) |

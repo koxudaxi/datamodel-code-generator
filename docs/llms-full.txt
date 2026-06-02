@@ -16,7 +16,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 
 ## ✨ What it does
 
-- 📄 Converts **OpenAPI 3**, **AsyncAPI**, **JSON Schema**, **Apache Avro**, **XML Schema**, **Protocol Buffers/gRPC**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
+- 📄 Converts **OpenAPI 3**, **AsyncAPI**, **JSON Schema**, **Apache Avro**, **XML Schema**, **Protocol Buffers/gRPC**, **GraphQL**, **MCP tool schemas**, and raw data (JSON/YAML/CSV) into Python models
 - 🐍 Generates from **existing Python types** (Pydantic, dataclass, TypedDict) via `--input-model`
 - 🎯 Generates **Pydantic v2**, **Pydantic v2 dataclass**, **dataclasses**, **TypedDict**, or **msgspec** output
 - 🔗 Handles complex schemas: `$ref`, `allOf`, `oneOf`, `anyOf`, enums, and nested types
@@ -122,6 +122,7 @@ datamodel-codegen --input pet.json --input-file-type jsonschema --output-model-t
 | 🧾 [XML Schema](xmlschema.md) | `.xsd` | XML document schemas |
 | 🧩 [Protocol Buffers / gRPC](protobuf.md) | `.proto` | Protobuf messages and service schemas |
 | 🔷 [GraphQL](graphql.md) | `.graphql` | GraphQL type definitions |
+| 🛠️ [MCP Tool Schemas](mcp-tools.md) | `.json`, `.yaml` | MCP tool input/output schemas |
 | 📊 [JSON/YAML/CSV Data](jsondata.md) | `.json`, `.yaml`, `.csv` | Infer schema from data |
 | 🐍 [Python Models](python-model.md) | `.py` | Pydantic, dataclass, TypedDict |
 
@@ -749,8 +750,8 @@ The `--input-file-type` flag explicitly sets the input format.
 
 **Important distinction:**
 
-- Use `jsonschema`, `openapi`, `asyncapi`, `graphql`, `xmlschema`, `protobuf`,
-  or `avro` for **schema definition files**
+- Use `jsonschema`, `openapi`, `asyncapi`, `graphql`, `mcp-tools`, `xmlschema`,
+  `protobuf`, or `avro` for **schema definition files**
 - Use `json`, `yaml`, or `csv` for **raw sample data** to automatically infer a schema
 
 For example, if you have a JSON Schema written in YAML format, use `--input-file-type jsonschema`,
@@ -25671,6 +25672,7 @@ This code generator supports the following input formats:
 - [XML Schema](xmlschema.md) (XSD).
 - Protocol Buffers / gRPC (`.proto`, [Protocol Buffers / gRPC](protobuf.md)).
 - GraphQL schema ([GraphQL Schemas and Types](https://graphql.org/learn/schema/)).
+- MCP tool schemas (`--input-file-type mcp-tools`, [MCP Tool Schemas](mcp-tools.md)).
 - JSON / YAML / CSV data (converted to JSON Schema before model generation).
 - Python dictionary (converted to JSON Schema before model generation).
 - Existing Python types via [`--input-model`](python-model.md): Pydantic models, dataclasses, Pydantic dataclasses, TypedDict, and dict schemas.
@@ -25869,6 +25871,19 @@ datamodel-code-generator detects the AsyncAPI version from the `asyncapi` field:
 - `asyncapi: "2.x.y"` -> AsyncAPI 2.x
 - `asyncapi: "3.x.y"` -> AsyncAPI 3.x
 - Unknown versions fall back to the 3.x schema behavior unless `--schema-version` is set explicitly
+
+## MCP Tool Schema Profile Support
+
+MCP tool schema profile documents are supported with `--input-file-type mcp-tools`. This input type is experimental and converts MCP tool `inputSchema` and `outputSchema` entries into JSON Schema definitions before model generation.
+
+Supported source shapes include:
+
+- `tools/list` JSON-RPC responses with `result.tools`;
+- MCP server definitions with a top-level `tools` array;
+- single tool definitions or arrays of tool definitions;
+- JSON Schema documents whose `$defs` or `definitions` values are tool definitions.
+
+Each generated definition is named from the tool `name` plus `Input` or `Output`, for example `SearchInput`, `SearchOutput`, and `CreateIssueInput`.
 
 ## Protocol Buffers Version Support
 
@@ -27125,6 +27140,110 @@ Some protobuf constructs are parsed only as needed for data model generation. Op
 - 🖥️ [CLI Reference](cli-reference/index.md) - Complete CLI options reference
 - 📊 [Supported Data Types](supported-data-types.md) - Data type support details
 - 📋 [Generate from JSON Schema](jsonschema.md) - JSON Schema input documentation
+
+---
+
+# Generate from MCP Tool Schemas
+
+Source: https://datamodel-code-generator.koxudaxi.dev/mcp-tools/
+
+Generate Python models from Model Context Protocol (MCP) tool schema profiles.
+
+!!! warning "Experimental"
+    MCP tool schema profile input support is experimental. The MCP specification and real-world tool schema shapes may
+    evolve, so generated behavior may change as compatibility is expanded.
+
+## Quick Start
+
+```bash
+datamodel-codegen \
+    --input tools-list.json \
+    --input-file-type mcp-tools \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
+```
+
+## Supported Input Shapes
+
+The `mcp-tools` input type accepts:
+
+- a `tools/list` JSON-RPC response containing `result.tools`;
+- an MCP server definition containing a top-level `tools` array;
+- a single tool definition or an array of tool definitions;
+- JSON Schema documents whose `$defs` or `definitions` values are tool definitions.
+
+Each tool must define `name` and `inputSchema`. If `outputSchema` is present, it is generated too.
+
+## Example
+
+**tools-list.json**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [
+      {
+        "name": "search",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": { "type": "string" }
+          },
+          "required": ["query"]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "results": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "required": ["results"]
+        }
+      }
+    ]
+  }
+}
+```
+
+**Generated model.py**
+```python
+from __future__ import annotations
+
+from pydantic import BaseModel
+
+
+class SearchInput(BaseModel):
+    query: str
+
+
+class SearchOutput(BaseModel):
+    results: list[str]
+```
+
+## Naming
+
+Tool names are converted to PascalCase and suffixed with `Input` or `Output`.
+
+For example:
+
+| Tool name | Generated input model | Generated output model |
+|-----------|-----------------------|------------------------|
+| `search` | `SearchInput` | `SearchOutput` |
+| `create_issue` | `CreateIssueInput` | `CreateIssueOutput` |
+
+## Notes
+
+MCP `inputSchema` and `outputSchema` entries are converted into JSON Schema definitions before generation. Local
+`$defs` and `definitions` entries inside a tool schema are hoisted and prefixed to avoid collisions between tools.
+
+## See Also
+
+- [MCP Tools specification](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)
+- [MCP Schema reference](https://modelcontextprotocol.io/specification/2025-06-18/schema)
+- [Generate from JSON Schema](jsonschema.md)
 
 ---
 
@@ -32007,7 +32126,7 @@ By default, the action runs in **check mode** (`--check`), which validates that 
 |-------|----------|---------|-------------|
 | `input` | Yes | - | Input schema file or directory |
 | `output` | Yes | - | Output file or directory |
-| `input-file-type` | Yes | - | Input file type (`openapi`, `jsonschema`, `xmlschema`, `avro`, `json`, `yaml`, `csv`, `graphql`) |
+| `input-file-type` | Yes | - | Input file type (`openapi`, `jsonschema`, `mcp-tools`, `xmlschema`, `avro`, `json`, `yaml`, `csv`, `graphql`) |
 | `output-model-type` | Yes | - | Output model type (`pydantic_v2.BaseModel`, `pydantic_v2.dataclass`, `dataclasses.dataclass`, `typing.TypedDict`, `msgspec.Struct`) |
 | `check` | No | `true` | Validate that existing output is up to date (no generation) |
 | `working-directory` | No | `.` | Working directory (where `pyproject.toml` is located) |
@@ -32734,6 +32853,7 @@ This page lists features that are available but still experimental.
 | `formatter.builtin` | formatter | `--formatters builtin` | 0.59.0 | - |
 | `input-format.asyncapi` | input-format | `--input-file-type asyncapi` | 0.59.0 | - |
 | `input-format.avro` | input-format | `--input-file-type avro` | 0.59.0 | - |
+| `input-format.mcp-tools` | input-format | `--input-file-type mcp-tools` | 0.60.0 | - |
 | `input-format.protobuf` | input-format | `--input-file-type protobuf` | 0.59.0 | - |
 | `input-format.xmlschema` | input-format | `--input-file-type xmlschema` | 0.59.0 | - |
 
@@ -32768,6 +32888,16 @@ The parser focuses on message payload model generation from AsyncAPI documents.
 Apache Avro schema input support is experimental and may change as real-world usage is validated.
 
 The parser generates Python models from Avro schemas; it does not provide Avro runtime validation.
+
+### `input-format.mcp-tools`
+
+- **Kind:** input-format
+- **Target:** `--input-file-type mcp-tools`
+- **Since:** 0.60.0
+
+MCP tool schema profile input support is experimental and may change as MCP schemas evolve.
+
+The input is converted from MCP tool inputSchema/outputSchema entries into JSON Schema definitions before model generation.
 
 ### `input-format.protobuf`
 

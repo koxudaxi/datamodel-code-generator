@@ -38,8 +38,8 @@ The `--input-file-type` flag explicitly sets the input format.
 
 **Important distinction:**
 
-- Use `jsonschema`, `openapi`, `asyncapi`, `graphql`, `xmlschema`, `protobuf`,
-  or `avro` for **schema definition files**
+- Use `jsonschema`, `openapi`, `asyncapi`, `graphql`, `mcp-tools`, `xmlschema`,
+  `protobuf`, or `avro` for **schema definition files**
 - Use `json`, `yaml`, or `csv` for **raw sample data** to automatically infer a schema
 
 For example, if you have a JSON Schema written in YAML format, use `--input-file-type jsonschema`,
@@ -56,8 +56,8 @@ def test_main_json(output_file: Path) -> None:
 
     **Important distinction:**
 
-    - Use `jsonschema`, `openapi`, `asyncapi`, `graphql`, `xmlschema`, `protobuf`,
-      or `avro` for **schema definition files**
+    - Use `jsonschema`, `openapi`, `asyncapi`, `graphql`, `mcp-tools`, `xmlschema`,
+      `protobuf`, or `avro` for **schema definition files**
     - Use `json`, `yaml`, or `csv` for **raw sample data** to automatically infer a schema
 
     For example, if you have a JSON Schema written in YAML format, use `--input-file-type jsonschema`,

@@ -36,6 +36,7 @@ BROWSER_SUPPORTED_INPUT_TYPES = {
     InputFileType.OpenAPI.value,
     InputFileType.AsyncAPI.value,
     InputFileType.JsonSchema.value,
+    InputFileType.MCPTools.value,
     InputFileType.XMLSchema.value,
     InputFileType.Avro.value,
     InputFileType.Json.value,

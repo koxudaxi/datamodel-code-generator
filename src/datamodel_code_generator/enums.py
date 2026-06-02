@@ -39,6 +39,7 @@ class InputFileType(Enum):
     OpenAPI = "openapi"
     AsyncAPI = "asyncapi"
     JsonSchema = "jsonschema"
+    MCPTools = "mcp-tools"
     XMLSchema = "xmlschema"
     Protobuf = "protobuf"
     Avro = "avro"

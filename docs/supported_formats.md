@@ -136,6 +136,19 @@ datamodel-code-generator detects the AsyncAPI version from the `asyncapi` field:
 - `asyncapi: "3.x.y"` -> AsyncAPI 3.x
 - Unknown versions fall back to the 3.x schema behavior unless `--schema-version` is set explicitly
 
+## MCP Tool Schema Profile Support
+
+MCP tool schema profile documents are supported with `--input-file-type mcp-tools`. This input type is experimental and converts MCP tool `inputSchema` and `outputSchema` entries into JSON Schema definitions before model generation.
+
+Supported source shapes include:
+
+- `tools/list` JSON-RPC responses with `result.tools`;
+- MCP server definitions with a top-level `tools` array;
+- single tool definitions or arrays of tool definitions;
+- JSON Schema documents whose `$defs` or `definitions` values are tool definitions.
+
+Each generated definition is named from the tool `name` plus `Input` or `Output`, for example `SearchInput`, `SearchOutput`, and `CreateIssueInput`.
+
 ## Protocol Buffers Version Support
 
 ### Supported Versions

@@ -216,6 +216,25 @@ def test_direct_input_dict(tmp_path: Path) -> None:
     assert_file_content(output_file)
 
 
+@pytest.mark.parametrize(
+    ("input_file", "expected_file"),
+    [
+        ("tools_list.json", "mcp_tools/tools_list.py"),
+        ("server_definition.json", "mcp_tools/server_definition.py"),
+        ("schema_tool_definitions.json", "mcp_tools/schema_tool_definitions.py"),
+    ],
+)
+def test_mcp_tools(input_file: str, expected_file: str, output_file: Path) -> None:
+    """Generate models from MCP tool schema profiles."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "mcp_tools" / input_file,
+        output_path=output_file,
+        input_file_type="mcp-tools",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+    )
+
+
 @freeze_time(TIMESTAMP)
 @pytest.mark.parametrize(
     ("keyword_only", "target_python_version", "expected_file"),
