@@ -1,0 +1,51 @@
+[
+  {
+    "name": "sync_user",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id"
+      ]
+    }
+  },
+  {
+    "name": "sync-user",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "force": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  },
+  {
+    "name": "sync.user",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "dry_run": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  },
+  {
+    "name": "123_status",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+]

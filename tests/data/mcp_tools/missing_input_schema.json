@@ -1,0 +1,6 @@
+{
+  "name": "only_output",
+  "outputSchema": {
+    "type": "object"
+  }
+}

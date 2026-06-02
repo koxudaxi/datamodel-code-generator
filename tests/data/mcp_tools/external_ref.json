@@ -1,0 +1,11 @@
+{
+  "name": "external_ref",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "value": {
+        "$ref": "#/components/schemas/Value"
+      }
+    }
+  }
+}

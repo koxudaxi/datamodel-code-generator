@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "github-mcp-server",
+      "tools": [
+        {
+          "name": "list_repos",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "owner": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "owner"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

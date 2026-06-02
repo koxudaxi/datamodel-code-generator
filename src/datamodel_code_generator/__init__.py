@@ -745,15 +745,23 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     if input_file_type == InputFileType.MCPTools:
         from datamodel_code_generator.parser.mcp import convert_mcp_tools_to_jsonschema  # noqa: PLC0415
 
+        def load_mcp_tools_text(text: str) -> Any:
+            import json  # noqa: PLC0415
+
+            if _is_json_text(text):
+                with contextlib.suppress(json.JSONDecodeError):
+                    return json.loads(text)
+            return load_yaml(text)
+
         def load_mcp_tools_data() -> Any:
             match input_:
-                case Mapping():
+                case Mapping() | list():
                     return input_
                 case Path():
-                    return load_data_from_path(input_, config.encoding)
+                    return load_mcp_tools_text(input_.read_text(encoding=config.encoding))
                 case _:
                     assert input_text is not None
-                    return load_data(input_text)
+                    return load_mcp_tools_text(input_text)
 
         try:
             source_override = convert_mcp_tools_to_jsonschema(load_mcp_tools_data())
