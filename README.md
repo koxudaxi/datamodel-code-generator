@@ -4,6 +4,11 @@
 
 🧪 Try it in your browser: [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/)
 
+> [!NOTE]
+> Playground privacy: generation runs locally in your browser with Pyodide. Schemas and options are not sent to a
+> backend. Shared repro URLs encode them in the URL fragment (`#state=...`), which browsers do not send to the server;
+> the full URL can still be stored in your browser history or wherever you share it.
+
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
 [![Downloads](https://img.shields.io/pypi/dm/datamodel-code-generator)](https://pypistats.org/packages/datamodel-code-generator)

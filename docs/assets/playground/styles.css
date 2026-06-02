@@ -88,6 +88,7 @@ input {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 14px;
 }
 
@@ -176,6 +177,55 @@ h1 a:hover {
 
 .tech-note a:hover {
   text-decoration: underline;
+}
+
+.security-note {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid rgb(129 212 250 / 34%);
+  border-radius: 999px;
+  background: rgb(3 169 244 / 10%);
+  color: #b3e5fc;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.security-note::after {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  z-index: 40;
+  width: min(420px, calc(100vw - 24px));
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel-strong);
+  box-shadow: var(--shadow-md);
+  color: var(--text);
+  content: attr(data-tooltip);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  opacity: 0;
+  pointer-events: none;
+  text-align: left;
+  transform: translateX(-50%) translateY(2px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+  white-space: normal;
+}
+
+.security-note:hover::after,
+.security-note:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 .docs-nav {
@@ -796,6 +846,33 @@ body.workspace-collapsed .output-editor-mount {
   .docs-nav {
     margin-left: 0;
     overflow-x: auto;
+  }
+
+  .topbar-meta {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .tech-note,
+  #status {
+    width: 100%;
+    min-width: 0;
+    white-space: normal;
+  }
+
+  .security-note {
+    width: fit-content;
+  }
+
+  .security-note::after {
+    left: 0;
+    transform: translateY(-2px);
+  }
+
+  .security-note:hover::after,
+  .security-note:focus-visible::after {
+    transform: translateY(0);
   }
 
   .controls {

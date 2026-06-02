@@ -94,6 +94,12 @@ CONFIG_FORCED_OPTIONS = {
     "formatters": [formatter.value for formatter in PLAYGROUND_FORMATTERS],
 }
 CONFIG_TABLE = "tool.datamodel-codegen"
+SECURITY_TOOLTIP = (
+    "Generation runs locally in your browser with Pyodide. Schemas and options are not uploaded. "
+    "Copy Repro URL stores them in the #state URL fragment, which is not sent to the server; "
+    "only the optional ?version query is sent as a normal page request. The full shared URL can still be saved "
+    "in browser history or services where you paste it."
+)
 
 
 def set_ui_metadata(metadata_json: str) -> None:
@@ -297,6 +303,13 @@ def App(
             UI rendered with <a href="https://github.com/t-strings/tdom" target="_blank" rel="noreferrer">tdom</a>
             using <a href="https://peps.python.org/pep-0750/" target="_blank" rel="noreferrer">PEP 750 t-strings</a>.
           </p>
+          <span
+            class="security-note"
+            tabindex="0"
+            data-tooltip="{SECURITY_TOOLTIP}"
+          >
+            Security: local execution
+          </span>
           <p id="status">Loading Pyodide runtime...</p>
         </div>
       </header>
