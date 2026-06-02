@@ -745,16 +745,18 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     if input_file_type == InputFileType.MCPTools:
         from datamodel_code_generator.parser.mcp import convert_mcp_tools_to_jsonschema  # noqa: PLC0415
 
-        try:
+        def load_mcp_tools_data() -> Any:
             match input_:
                 case Mapping():
-                    mcp_tools_data = input_
+                    return input_
                 case Path():
-                    mcp_tools_data = load_data_from_path(input_, config.encoding)
+                    return load_data_from_path(input_, config.encoding)
                 case _:
                     assert input_text is not None
-                    mcp_tools_data = load_data(input_text)
-            source_override = convert_mcp_tools_to_jsonschema(mcp_tools_data)
+                    return load_data(input_text)
+
+        try:
+            source_override = convert_mcp_tools_to_jsonschema(load_mcp_tools_data())
         except Error:
             raise
         except Exception as exc:

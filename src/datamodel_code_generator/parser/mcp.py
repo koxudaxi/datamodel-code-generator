@@ -133,8 +133,7 @@ def _rewrite_schema_refs(value: Any, ref_map: Mapping[str, str], *, strip_root_d
             return rewritten
         case list():
             return [_rewrite_schema_refs(item, ref_map) for item in value]
-        case _:
-            return value
+    return value
 
 
 def _normalize_schema(
