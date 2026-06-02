@@ -30,10 +30,11 @@ Generate models in your browser without installing anything.
   <a class="md-button md-button--primary" href="playground.md" target="_self">Open Playground</a>
 </p>
 
-The playground runs datamodel-code-generator locally in your browser with Pyodide. Your schema and options are not sent
-to a backend for generation. If you copy a repro URL, the schema and options are encoded in the URL fragment
-(`#state=...`), which browsers do not send to the server; the full URL can still be stored in your browser history or
-wherever you share it.
+!!! note "Playground privacy"
+    The playground runs datamodel-code-generator locally in your browser with Pyodide. Your schema and options are not
+    sent to a backend for generation. If you copy a repro URL, the schema and options are encoded in the URL fragment
+    (`#state=...`), which browsers do not send to the server; the full URL can still be stored in your browser history
+    or wherever you share it.
 
 ---
 

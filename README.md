@@ -2,8 +2,12 @@
 
 🚀 Generate Python data models from schema definitions in seconds.
 
-🧪 Try it in your browser: [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/) - runs locally in
-your browser with Pyodide; schemas and options are not sent to a backend.
+🧪 Try it in your browser: [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/)
+
+> [!NOTE]
+> Playground privacy: generation runs locally in your browser with Pyodide. Schemas and options are not sent to a
+> backend. Shared repro URLs encode them in the URL fragment (`#state=...`), which browsers do not send to the server;
+> the full URL can still be stored in your browser history or wherever you share it.
 
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
@@ -30,8 +34,7 @@ your browser with Pyodide; schemas and options are not sent to a backend.
 **👉 [datamodel-code-generator.koxudaxi.dev](https://datamodel-code-generator.koxudaxi.dev)**
 
 - 🖥️ [CLI Reference](https://datamodel-code-generator.koxudaxi.dev/cli-reference/) - All command-line options
-- 🧪 [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/) - Try generation locally in your browser
-  with Pyodide; shared repro URLs encode state in the URL fragment.
+- 🧪 [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/) - Try generation in your browser
 - ⚙️ [pyproject.toml](https://datamodel-code-generator.koxudaxi.dev/pyproject_toml/) - Configuration file
 - 🔄 [CI/CD Integration](https://datamodel-code-generator.koxudaxi.dev/ci-cd/) - GitHub Actions, pre-commit hooks
 - 🚀 [One-liner Usage](https://datamodel-code-generator.koxudaxi.dev/oneliner/) - uvx, pipx, clipboard integration
