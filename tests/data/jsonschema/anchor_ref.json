@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Name": {
+      "$anchor": "name",
+      "type": "string"
+    }
+  },
+  "type": "object",
+  "properties": {
+    "local_name": {
+      "$anchor": "localName",
+      "type": "string"
+    },
+    "billing_name": {
+      "$ref": "#name"
+    },
+    "display_name": {
+      "$ref": "#localName"
+    }
+  },
+  "required": ["billing_name", "display_name"]
+}

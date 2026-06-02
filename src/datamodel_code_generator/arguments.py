@@ -1117,7 +1117,7 @@ base_options.add_argument(
     "--schema-version",
     help="Schema version. Valid values depend on input type: "
     "JsonSchema: auto, draft-04, draft-06, draft-07, 2019-09, 2020-12. "
-    "OpenAPI: auto, 3.0, 3.1. "
+    "OpenAPI: auto, 3.0, 3.1, 3.2. "
     "AsyncAPI: auto, 2.0, 3.0. "
     "XMLSchema: auto, 1.0, 1.1. "
     "Protobuf: auto, proto2, proto3, 2023. "

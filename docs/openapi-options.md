@@ -306,6 +306,7 @@ datamodel-codegen --input openapi.yaml --output models/ \
 |-----------------|---------|
 | 3.0.x | Full support |
 | 3.1.x | Full support |
+| 3.2.x | Full support |
 | 2.0 (Swagger) | Partial support |
 
 ---

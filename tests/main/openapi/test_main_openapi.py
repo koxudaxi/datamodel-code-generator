@@ -4129,6 +4129,44 @@ def test_main_openapi_webhooks(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_item_schema(output_file: Path) -> None:
+    """Test OpenAPI 3.2 itemSchema in media type objects."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "item_schema.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="item_schema.py",
+        extra_args=[
+            "--disable-timestamp",
+            "--openapi-scopes",
+            "schemas",
+            "paths",
+            "parameters",
+            "requestbodies",
+        ],
+    )
+
+
+def test_main_openapi_item_schema_requires_32(output_file: Path) -> None:
+    """Test OpenAPI 3.1 ignores OpenAPI 3.2 itemSchema in media type objects."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "item_schema_31.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="item_schema_31.py",
+        extra_args=[
+            "--disable-timestamp",
+            "--openapi-scopes",
+            "schemas",
+            "paths",
+            "parameters",
+            "requestbodies",
+        ],
+    )
+
+
 def test_main_openapi_non_operations_and_security(output_file: Path) -> None:
     """Test OpenAPI generation with non-operation fields and security inheritance."""
     run_main_and_assert(

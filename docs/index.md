@@ -113,7 +113,7 @@ datamodel-codegen --input pet.json --input-file-type jsonschema --output-model-t
 
 | Input Type | File Types | Example |
 |------------|------------|---------|
-| 📘 [OpenAPI 3.0/3.1](openapi.md) | `.yaml`, `.json` | API specifications |
+| 📘 [OpenAPI 3.0/3.1/3.2](openapi.md) | `.yaml`, `.json` | API specifications |
 | 📡 [AsyncAPI](asyncapi.md) | `.yaml`, `.json` | Event-driven API specifications |
 | 📋 [JSON Schema](jsonschema.md) | `.json`, `.yaml` | Data validation schemas |
 | 🪶 [Apache Avro](avro.md) | `.avsc`, `.json` | Avro schemas |

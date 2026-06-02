@@ -265,6 +265,7 @@ class OpenAPIVersion(Enum):
 
     V30 = "3.0"
     V31 = "3.1"
+    V32 = "3.2"
     Auto = "auto"
 
 

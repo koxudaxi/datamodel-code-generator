@@ -411,7 +411,7 @@ Schema version to use for parsing.
 
 The `--schema-version` option specifies the schema version to use instead of auto-detection.
 Valid values depend on input type: JsonSchema (draft-04, draft-06, draft-07, 2019-09, 2020-12)
-or OpenAPI (3.0, 3.1). Default is 'auto' (detected from $schema or openapi field).
+or OpenAPI (3.0, 3.1, 3.2). Default is 'auto' (detected from $schema or openapi field).
 
 !!! tip "Usage"
 

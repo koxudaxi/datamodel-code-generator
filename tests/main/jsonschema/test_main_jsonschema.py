@@ -861,6 +861,18 @@ def test_main_jsonschema_with_local_anchor(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_anchor_ref(output_file: Path) -> None:
+    """Test JSON Schema $anchor references generate referenced models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "anchor_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="anchor_ref.py",
+        extra_args=["--disable-timestamp"],
+    )
+
+
 def test_main_jsonschema_missing_anchor_reports_error(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Test missing $id anchor produces a clear error instead of KeyError trace."""
     run_main_and_assert(
