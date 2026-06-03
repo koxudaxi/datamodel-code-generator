@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from pydantic import Field, StrictStr, ValidationError
 from typing_extensions import Unpack
 
 from datamodel_code_generator import Error, YamlValue, load_data, snooper_to_methods
@@ -23,6 +24,7 @@ from datamodel_code_generator.parser.openapi import OpenAPIParser
 from datamodel_code_generator.parser.protobuf import convert_protobuf_schema_data
 from datamodel_code_generator.parser.xmlschema import convert_xml_schema_data
 from datamodel_code_generator.reference import is_url
+from datamodel_code_generator.util import BaseModel
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -105,6 +107,13 @@ class AsyncAPISchema:
     parse_as_file: bool = False
 
 
+class MultiFormatSchemaObject(BaseModel):
+    """AsyncAPI Multi Format Schema Object fields used by the parser."""
+
+    schema_: Any = Field(alias="schema")
+    schema_format: StrictStr | None = Field(default=None, alias="schemaFormat")
+
+
 def _iter_mapping_items(value: Any) -> list[tuple[str, Any]]:
     return list(value.items()) if isinstance(value, dict) else []
 
@@ -128,13 +137,32 @@ def _schema_format_media_type(schema_format: str) -> str:
     return schema_format.split(";", maxsplit=1)[0].strip().lower()
 
 
-def _is_multi_format_schema_object(raw_schema: YamlValue) -> bool:
-    if not isinstance(raw_schema, dict) or "schema" not in raw_schema:
+def _is_multi_format_schema_object_candidate(raw_schema: YamlValue) -> bool:
+    if not isinstance(raw_schema, dict):
         return False
     if "schemaFormat" in raw_schema:
         return True
     fixed_keys = {key for key in raw_schema if isinstance(key, str) and not key.startswith("x-")}
     return fixed_keys == {"schema"}
+
+
+def _parse_multi_format_schema_object(
+    raw_schema: YamlValue,
+    path: list[str],
+) -> MultiFormatSchemaObject | None:
+    if not _is_multi_format_schema_object_candidate(raw_schema):
+        return None
+    try:
+        return MultiFormatSchemaObject.model_validate(raw_schema)
+    except ValidationError as error:
+        error_types_by_location = {
+            tuple(str(part) for part in detail.get("loc", ())): detail.get("type") for detail in error.errors()
+        }
+        if error_types_by_location.get(("schema",)) == "missing":
+            msg = f"AsyncAPI Multi Format Schema Object requires a schema field at {_path_to_string(path)}"
+            raise Error(msg) from error
+        msg = f"AsyncAPI schemaFormat must be a string at {_path_to_string(path)}"
+        raise Error(msg) from error
 
 
 def _unsupported_schema_format_error(schema_format: str, path: list[str]) -> Error:
@@ -318,18 +346,9 @@ class AsyncAPIParser(OpenAPIParser):
         inherited_schema_format: str | None = None,
     ) -> list[AsyncAPISchema]:
         schema_format = inherited_schema_format
-        if isinstance(raw_schema, dict) and "schemaFormat" in raw_schema and "schema" not in raw_schema:
-            msg = f"AsyncAPI Multi Format Schema Object requires a schema field at {_path_to_string(path)}"
-            raise Error(msg)
-        if _is_multi_format_schema_object(raw_schema):
-            assert isinstance(raw_schema, dict)
-            if (raw_schema_format := raw_schema.get("schemaFormat")) is not None and not isinstance(
-                raw_schema_format, str
-            ):
-                msg = f"AsyncAPI schemaFormat must be a string at {_path_to_string(path)}"
-                raise Error(msg)
-            schema_format = raw_schema_format or schema_format
-            raw_schema = raw_schema["schema"]
+        if multi_format_schema := _parse_multi_format_schema_object(raw_schema, path):
+            schema_format = multi_format_schema.schema_format or schema_format
+            raw_schema = multi_format_schema.schema_
             path = [*path, "schema"]
 
         match _schema_format_kind(schema_format, path):
