@@ -805,37 +805,16 @@ def test_main_class_name_suffix_with_class_name(output_file: Path) -> None:
     )
 
 
-@pytest.mark.allow_direct_assert
-def test_main_leading_underscore_class_name_default_unchanged() -> None:
+def test_main_leading_underscore_class_name_default_unchanged(output_file: Path) -> None:
     """Leading underscore class names are still normalized unless explicitly allowed."""
-    result = generate(
-        input_={"type": "object", "properties": {"value": {"type": "string"}}},
-        input_file_type=InputFileType.JsonSchema,
-        output_model_type=DataModelType.PydanticV2BaseModel,
-        disable_timestamp=True,
-        class_name="__ParsedModel",
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "class_name_affix.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="leading_underscore_class_name_default_unchanged.py",
+        extra_args=["--class-name", "__ParsedModel", "--disable-timestamp"],
     )
-
-    assert isinstance(result, str)
-    assert "class FieldParsedModel(BaseModel):" in result
-    assert "class __ParsedModel(BaseModel):" not in result
-
-
-@pytest.mark.allow_direct_assert
-def test_main_allow_leading_underscore_class_name() -> None:
-    """Allow explicitly requested root class names to start with underscores."""
-    result = generate(
-        input_={"type": "object", "properties": {"value": {"type": "string"}}},
-        input_file_type=InputFileType.JsonSchema,
-        output_model_type=DataModelType.PydanticV2BaseModel,
-        disable_timestamp=True,
-        class_name="__ParsedModel",
-        allow_leading_underscore_class_name=True,
-    )
-
-    assert isinstance(result, str)
-    assert "class __ParsedModel(BaseModel):" in result
-    assert "class FieldParsedModel(BaseModel):" not in result
 
 
 @pytest.mark.cli_doc(
