@@ -5,74 +5,78 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from copy import deepcopy
-from typing import Any, Literal
+from typing import Any, Literal, TypeAlias
 
-from typing_extensions import NotRequired, TypedDict, TypeIs
+from pydantic import ConfigDict, Field, StrictStr, ValidationError
 
 from datamodel_code_generator import Error
+from datamodel_code_generator.util import BaseModel
 
-JSON_SCHEMA_DRAFT_2020_12 = "https://json-schema.org/draft/2020-12/schema"
-DEFINITION_KEYS = ("$defs", "definitions")
-OPTIONAL_STRING_TOOL_KEYS = ("title", "description")
-OPTIONAL_MAPPING_TOOL_KEYS = ("outputSchema", "annotations", "_meta")
-SchemaKey = Literal["inputSchema", "outputSchema"]
+JSONSchemaDraft: TypeAlias = Literal["https://json-schema.org/draft/2020-12/schema"]
+JSONSchemaMapping: TypeAlias = Mapping[str, Any]
+DefinitionKey: TypeAlias = Literal["$defs", "definitions"]
+OptionalStringToolKey: TypeAlias = Literal["title", "description"]
+OptionalMappingToolKey: TypeAlias = Literal["outputSchema", "annotations", "_meta"]
+SchemaKey: TypeAlias = Literal["inputSchema", "outputSchema"]
 
-
-class MCPTool(TypedDict):
-    """Validated MCP tool definition mapping."""
-
-    name: str
-    inputSchema: Mapping[str, Any]
-    outputSchema: NotRequired[Mapping[str, Any]]
-    title: NotRequired[str]
-    description: NotRequired[str]
-    annotations: NotRequired[Mapping[str, Any]]
-    _meta: NotRequired[Mapping[str, Any]]
+JSON_SCHEMA_DRAFT_2020_12: JSONSchemaDraft = "https://json-schema.org/draft/2020-12/schema"
+DEFINITION_KEYS: tuple[DefinitionKey, ...] = ("$defs", "definitions")
+OPTIONAL_STRING_TOOL_KEYS: tuple[OptionalStringToolKey, ...] = ("title", "description")
+OPTIONAL_MAPPING_TOOL_KEYS: tuple[OptionalMappingToolKey, ...] = ("outputSchema", "annotations", "_meta")
 
 
-def _is_json_schema_object(value: object) -> TypeIs[Mapping[str, Any]]:
-    return isinstance(value, Mapping)
+class MCPTool(BaseModel):
+    """Validated MCP tool definition."""
+
+    model_config = ConfigDict(extra="allow", protected_namespaces=())
+
+    name: StrictStr
+    input_schema: JSONSchemaMapping = Field(alias="inputSchema")
+    output_schema: JSONSchemaMapping = Field(default_factory=dict, alias="outputSchema")
+    title: StrictStr = ""
+    description: StrictStr = ""
+    annotations: JSONSchemaMapping = Field(default_factory=dict)
+    meta: JSONSchemaMapping = Field(default_factory=dict, alias="_meta")
+
+    @property
+    def has_output_schema(self) -> bool:
+        """Return whether outputSchema was present in the source tool."""
+        return "output_schema" in self.model_fields_set
 
 
-def _has_tool_schema_key(value: Mapping[str, Any]) -> bool:
+def _has_tool_schema_key(value: JSONSchemaMapping) -> bool:
     return "inputSchema" in value or "outputSchema" in value
 
 
-def _tool_shape_error(value: Mapping[str, Any], tool_name: str) -> str | None:
-    if "inputSchema" not in value:
+def _tool_validation_error(value: JSONSchemaMapping, validation_error: ValidationError) -> str:
+    first_error = validation_error.errors()[0]
+    location = first_error["loc"]
+    key = str(location[0]) if location else ""
+    tool_name = value.get("name")
+    if key == "name" or not isinstance(tool_name, str):
+        return "MCP tool name must be a string"
+    if key == "inputSchema" and first_error["type"] == "missing":
         return f"MCP tool {tool_name!r} is missing inputSchema"
-    if not _is_json_schema_object(value["inputSchema"]):
-        return f"MCP tool {tool_name!r} inputSchema must be a JSON Schema object"
-    for key in OPTIONAL_MAPPING_TOOL_KEYS:
-        if key in value and not _is_json_schema_object(value[key]):
-            return f"MCP tool {tool_name!r} {key} must be a JSON Schema object"
-    for key in OPTIONAL_STRING_TOOL_KEYS:
-        if key in value and not isinstance(value[key], str):
-            return f"MCP tool {tool_name!r} {key} must be a string"
-    return None
+    if key in OPTIONAL_MAPPING_TOOL_KEYS or key == "inputSchema":
+        return f"MCP tool {tool_name!r} {key} must be a JSON Schema object"
+    if key in OPTIONAL_STRING_TOOL_KEYS:
+        return f"MCP tool {tool_name!r} {key} must be a string"
+    return f"Invalid MCP tool {tool_name!r}: {first_error['msg']}"  # pragma: no cover
 
 
-def _is_tool(value: object) -> TypeIs[MCPTool]:
-    return (
-        _is_json_schema_object(value)
-        and isinstance(tool_name := value.get("name"), str)
-        and _tool_shape_error(value, tool_name) is None
-    )
+def _parse_tool(value: JSONSchemaMapping) -> MCPTool:
+    try:
+        return MCPTool.model_validate(value)
+    except ValidationError as validation_error:
+        raise Error(_tool_validation_error(value, validation_error)) from validation_error
 
 
 def _coerce_tool(value: Any, fallback_name: str | None = None) -> MCPTool | None:
-    if fallback_name is not None and isinstance(value, Mapping) and _has_tool_schema_key(value):
+    if not isinstance(value, Mapping) or not _has_tool_schema_key(value):
+        return None
+    if fallback_name is not None:
         value = {"name": fallback_name, **value}
-    if _is_tool(value):
-        return value
-    if (
-        isinstance(value, Mapping)
-        and _has_tool_schema_key(value)
-        and isinstance(tool_name := value.get("name"), str)
-        and (error := _tool_shape_error(value, tool_name))
-    ):
-        raise Error(error)
-    return None
+    return _parse_tool(value)
 
 
 def _validate_tools(value: list[Any], context: str) -> list[MCPTool]:
@@ -182,7 +186,7 @@ def _rewrite_schema_refs(value: Any, ref_map: Mapping[str, str], *, strip_root_d
 
 
 def _normalize_schema(
-    schema: Mapping[str, Any],
+    schema: JSONSchemaMapping,
     definition_name: str,
     used_names: set[str],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -219,11 +223,11 @@ def _add_tool_schema_definition(
     schema_key: SchemaKey,
     suffix: str,
 ) -> None:
-    if schema_key == "outputSchema" and schema_key not in tool:
+    if schema_key == "outputSchema" and not tool.has_output_schema:
         return
-    base_name = _to_definition_name(str(tool["name"]))
+    base_name = _to_definition_name(tool.name)
     definition_name = _unique_definition_name(f"{base_name} {suffix}", used_names)
-    schema = tool["inputSchema"] if schema_key == "inputSchema" else tool["outputSchema"]
+    schema = tool.input_schema if schema_key == "inputSchema" else tool.output_schema
     normalized, hoisted_definitions = _normalize_schema(schema, definition_name, used_names)
     definitions.update(hoisted_definitions)
     definitions[definition_name] = normalized

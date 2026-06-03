@@ -548,7 +548,7 @@ def _create_parser_config(
 
 
 def generate(  # noqa: PLR0912, PLR0914, PLR0915
-    input_: Path | str | ParseResult | Mapping[str, Any],
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     *,
     config: GenerateConfig | None = None,
     **options: Unpack[GenerateConfigDict],
@@ -560,7 +560,9 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     (JSON, YAML, Dict, CSV) as input.
 
     Args:
-        input_: The input source (file path, string content, URL, or dict).
+        input_: The input source (file path, string content, URL, dict,
+            list of file paths, or MCP tools list when input_file_type is
+            InputFileType.MCPTools).
         config: A GenerateConfig object with all options. Cannot be used together with **options.
         **options: Individual options matching GenerateConfig fields. Cannot be used together with config.
 
@@ -598,6 +600,16 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     custom_file_header = config.custom_file_header
     skip_root_model = config.skip_root_model
     source_override: Mapping[str, Any] | None = None
+
+    if (
+        isinstance(input_, list)
+        and input_file_type != InputFileType.MCPTools
+        and (not input_ or any(not isinstance(item, Path) for item in input_))
+    ):
+        msg = (  # pragma: no cover
+            "List input is only supported for file path lists or input_file_type=InputFileType.MCPTools."
+        )
+        raise Error(msg)  # pragma: no cover
 
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     match input_:

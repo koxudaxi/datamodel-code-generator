@@ -296,6 +296,7 @@ def test_mcp_tools_url_preserves_relative_ref_context(
         ("no_tools.json", "Invalid MCP tools document: no tool definitions were found"),
         ("non_mapping_definitions.json", "Invalid MCP tools document: no tool definitions were found"),
         ("scalar.json", "Invalid MCP tools document: no tool definitions were found"),
+        ("missing_tool_name.json", "MCP tool name must be a string"),
         ("missing_input_schema.json", "MCP tool 'only_output' is missing inputSchema"),
         ("invalid_input_schema.json", "MCP tool 'bad_schema' inputSchema must be a JSON Schema object"),
         ("invalid_output_schema.json", "MCP tool 'bad_output' outputSchema must be a JSON Schema object"),
