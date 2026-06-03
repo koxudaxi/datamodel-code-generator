@@ -192,7 +192,7 @@ class JsonSchemaFeatures:
             introduced="2019-09",
             doc_name="$anchor",
             description="Location-independent schema references",
-            status="not_supported",
+            status="supported",
         ),
     )
     vocabulary: bool = field(
@@ -308,6 +308,7 @@ class JsonSchemaFeatures:
                     definitions_key="$defs",
                     exclusive_as_number=True,
                     read_only_write_only=True,
+                    anchor=True,
                     recursive_ref=True,
                 )
             case _:
@@ -320,6 +321,7 @@ class JsonSchemaFeatures:
                     definitions_key="$defs",
                     exclusive_as_number=True,
                     read_only_write_only=True,
+                    anchor=True,
                     recursive_ref=True,
                     dynamic_ref=True,
                 )
@@ -370,6 +372,33 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
             doc_name="$ref with sibling keywords",
             description="$ref can coexist with description, summary (no allOf workaround)",
             status="partial",
+        ),
+    )
+    media_item_schema: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="OAS 3.2",
+            doc_name="itemSchema",
+            description="Media Type Object item schema for sequential media",
+            status="supported",
+        ),
+    )
+    openapi_self: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="OAS 3.2",
+            doc_name="$self",
+            description="Root document URI for relative and absolute reference resolution",
+            status="supported",
+        ),
+    )
+    querystring_parameter: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="OAS 3.2",
+            doc_name="querystring",
+            description="Query string parameter object without a parameter name",
+            status="supported",
         ),
     )
     # --- Unsupported features ---
@@ -436,6 +465,27 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
                     nullable_keyword=True,
                     discriminator_support=True,
                 )
+            case OpenAPIVersion.V32:
+                return cls(
+                    null_in_type_array=True,
+                    defs_not_definitions=True,
+                    prefix_items=True,
+                    boolean_schemas=True,
+                    id_field="$id",
+                    definitions_key="$defs",
+                    exclusive_as_number=True,
+                    read_only_write_only=True,
+                    anchor=True,
+                    recursive_ref=True,
+                    dynamic_ref=True,
+                    nullable_keyword=False,
+                    discriminator_support=True,
+                    webhooks=True,
+                    ref_sibling_keywords=True,
+                    media_item_schema=True,
+                    openapi_self=True,
+                    querystring_parameter=True,
+                )
             case _:
                 return cls(
                     null_in_type_array=True,
@@ -446,6 +496,7 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
                     definitions_key="$defs",
                     exclusive_as_number=True,
                     read_only_write_only=True,
+                    anchor=True,
                     recursive_ref=True,
                     dynamic_ref=True,
                     nullable_keyword=False,
@@ -481,7 +532,7 @@ def detect_jsonschema_version(data: dict[str, Any]) -> JsonSchemaVersion:
     Detection priority:
     1. $schema field explicit declaration
     2. Heuristics ($defs vs definitions, etc.)
-    3. Fallback: Draft7 (most widely used)
+    3. Fallback: Draft 7 (backward-compatible default)
 
     Note: In Lenient mode, detection result is only used for optimization hints.
           In Strict mode, detection result is used to warn on version violations.
@@ -517,12 +568,18 @@ def detect_openapi_version(data: dict[str, Any]) -> OpenAPIVersion:
     Returns:
         The detected OpenAPI version.
     """
-    if isinstance(version := data.get("openapi", ""), str):
-        if version.startswith("3.1"):
-            return OpenAPIVersion.V31
-        if version.startswith("3.0"):
+    if not isinstance(version := data.get("openapi", ""), str):
+        return OpenAPIVersion.V31
+
+    match version.split(".", maxsplit=2)[:2]:
+        case ["3", "0"]:
             return OpenAPIVersion.V30
-    return OpenAPIVersion.V31
+        case ["3", "1"]:
+            return OpenAPIVersion.V31
+        case ["3", "2"]:
+            return OpenAPIVersion.V32
+        case _:
+            return OpenAPIVersion.V31
 
 
 def detect_asyncapi_version(data: dict[str, Any]) -> AsyncAPIVersion:

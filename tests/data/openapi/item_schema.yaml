@@ -1,0 +1,84 @@
+openapi: 3.2.0
+$self: https://example.com/schemas/item_schema.yaml
+info:
+  title: Item Schema
+  version: 1.0.0
+paths:
+  /events:
+    get:
+      parameters:
+        - name: names
+          in: query
+          content:
+            application/json-seq:
+              itemSchema:
+                type: string
+        - in: querystring
+          content:
+            application/x-www-form-urlencoded:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  includeArchived:
+                    type: boolean
+                required:
+                  - status
+        - name: trace-id
+          in: header
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Event stream
+          content:
+            application/json-seq:
+              itemSchema:
+                $ref: https://example.com/schemas/item_schema.yaml#/components/schemas/Event
+    post:
+      requestBody:
+        content:
+          application/json-seq:
+            itemSchema: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: true
+        "204":
+          description: Accepted
+components:
+  requestBodies:
+    AnyPayload:
+      content:
+        application/json:
+          schema: true
+    BulkIds:
+      content:
+        application/json-seq:
+          itemSchema:
+            type: integer
+    TagNames:
+      content:
+        application/json-seq:
+          itemSchema:
+            type: string
+            enum:
+              - active
+              - archived
+  schemas:
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        tag:
+          type: string
+          nullable: true
+      required:
+        - id
+        - name
