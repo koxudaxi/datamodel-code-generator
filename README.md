@@ -44,8 +44,16 @@
 
 ## 📦 Installation
 
+Recommended for standalone CLI use:
+
 ```bash
 uv tool install datamodel-code-generator
+```
+
+For projects that should pin the generator version, add it as a development dependency instead:
+
+```bash
+uv add --dev datamodel-code-generator
 ```
 
 <details>
@@ -56,9 +64,9 @@ uv tool install datamodel-code-generator
 pip install datamodel-code-generator
 ```
 
-**uv (add to project):**
+**uv (run without adding to project):**
 ```bash
-uv add datamodel-code-generator
+uv run --with datamodel-code-generator datamodel-codegen --help
 ```
 
 **conda:**

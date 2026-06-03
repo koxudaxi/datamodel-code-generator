@@ -40,7 +40,7 @@ Generate models in your browser without installing anything.
 
 ## 📦 Installation
 
-=== "uv tool (Recommended)"
+=== "uv tool (Recommended for CLI use)"
 
     ```bash
     uv tool install datamodel-code-generator
@@ -55,7 +55,7 @@ Generate models in your browser without installing anything.
 === "uv (project)"
 
     ```bash
-    uv add datamodel-code-generator
+    uv add --dev datamodel-code-generator
     ```
 
 === "conda"
@@ -75,6 +75,9 @@ Generate models in your browser without installing anything.
     ```bash
     uvx datamodel-codegen --help
     ```
+
+Use `uv tool install` when you want `datamodel-codegen` available as a standalone CLI. Use `uv add --dev` when a project
+or CI workflow should pin the generator version in its lockfile.
 
 ---
 
