@@ -805,6 +805,43 @@ def test_main_class_name_suffix_with_class_name(output_file: Path) -> None:
     )
 
 
+def test_main_leading_underscore_class_name_default_unchanged(output_file: Path) -> None:
+    """Leading underscore class names are still normalized unless explicitly allowed."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "class_name_affix.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="leading_underscore_class_name_default_unchanged.py",
+        extra_args=["--class-name", "__ParsedModel", "--disable-timestamp"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--allow-leading-underscore-class-name"],
+    option_description="""Allow an explicitly specified root class name to start with an underscore.
+
+By default, leading underscores in class names are normalized to avoid private
+model names. Use --allow-leading-underscore-class-name together with an explicit
+--class-name when you need the generated root model to preserve that name
+exactly.""",
+    input_schema="jsonschema/class_name_affix.json",
+    cli_args=["--class-name", "__ParsedModel", "--allow-leading-underscore-class-name", "--disable-timestamp"],
+    golden_output="main/jsonschema/allow_leading_underscore_class_name.py",
+    related_options=["--class-name"],
+)
+def test_main_allow_leading_underscore_class_name_cli(output_file: Path) -> None:
+    """Allow leading underscore root class names through the CLI option."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "class_name_affix.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allow_leading_underscore_class_name.py",
+        extra_args=["--class-name", "__ParsedModel", "--allow-leading-underscore-class-name", "--disable-timestamp"],
+    )
+
+
 def test_main_class_name_prefix_invalid(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test that invalid --class-name-prefix is rejected."""
     run_main_with_args(

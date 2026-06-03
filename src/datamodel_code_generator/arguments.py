@@ -279,6 +279,12 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
+    "--allow-leading-underscore-class-name",
+    help="Allow an explicitly specified root class name to start with an underscore",
+    action="store_true",
+    default=None,
+)
+model_options.add_argument(
     "--class-name-prefix",
     help="Prefix to add to generated class names (e.g., 'Api' produces 'ApiUser'). "
     "Does not apply to root model when --class-name is specified.",

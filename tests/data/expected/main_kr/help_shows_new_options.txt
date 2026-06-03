@@ -293,6 +293,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         'recursive': export from all descendant modules.
   --allow-extra-fields  Deprecated: --allow-extra-fields is deprecated. Use
                         --extra-fields=allow instead.
+  --allow-leading-underscore-class-name
+                        Allow an explicitly specified root class name to start
+                        with an underscore
   --allow-population-by-field-name
                         Allow population by field name
   --class-name CLASS_NAME

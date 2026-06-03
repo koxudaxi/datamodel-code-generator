@@ -49,12 +49,12 @@ def _path_to_module_name(package_name: str, path_tuple: tuple[str, ...]) -> str:
     return ".".join(parts)
 
 
-def _execute_single_module(code: str) -> dict[str, type]:
+def _execute_single_module(code: str, *, include_private_models: bool = False) -> dict[str, type]:
     """Execute single module code and extract models."""
     namespace: dict[str, Any] = {"__builtins__": builtins.__dict__}
     exec(code, namespace)  # noqa: S102
 
-    models = _extract_models(namespace)
+    models = _extract_models(namespace, include_private=include_private_models)
 
     for obj in models.values():
         if issubclass(obj, BaseModel) and hasattr(obj, "__pydantic_generic_metadata__"):
@@ -94,7 +94,11 @@ def _build_module_edges(modules: dict[tuple[str, ...], str]) -> dict[tuple[str, 
     return edges
 
 
-def _execute_multi_module(modules: dict[tuple[str, ...], str]) -> dict[str, type]:
+def _execute_multi_module(
+    modules: dict[tuple[str, ...], str],
+    *,
+    include_private_models: bool = False,
+) -> dict[str, type]:
     """Execute multiple modules and extract models."""
     package_name = f"_dcg_dynamic_{next(_dynamic_module_counter)}"
 
@@ -132,7 +136,7 @@ def _execute_multi_module(modules: dict[tuple[str, ...], str]) -> dict[str, type
         combined_namespace: dict[str, Any] = {}
         for ns in all_namespaces.values():
             combined_namespace.update(ns)
-            models.update(_extract_models(ns))
+            models.update(_extract_models(ns, include_private=include_private_models))
 
         for obj in models.values():
             if issubclass(obj, BaseModel) and hasattr(obj, "__pydantic_generic_metadata__"):
@@ -144,13 +148,19 @@ def _execute_multi_module(modules: dict[tuple[str, ...], str]) -> dict[str, type
             sys.modules.pop(module_name, None)
 
 
-def _extract_models(namespace: dict[str, Any]) -> dict[str, type]:
+def _should_extract_model_name(name: str, *, include_private: bool = False) -> bool:
+    if include_private:
+        return True
+    return not name.startswith("_")
+
+
+def _extract_models(namespace: dict[str, Any], *, include_private: bool = False) -> dict[str, type]:
     """Extract model and enum classes from namespace."""
     return {
         k: v
         for k, v in namespace.items()
         if isinstance(v, type)
-        and not k.startswith("_")
+        and _should_extract_model_name(k, include_private=include_private)
         and ((issubclass(v, BaseModel) and v is not BaseModel) or (issubclass(v, Enum) and v is not Enum))
     }
 
@@ -233,14 +243,21 @@ def generate_dynamic_models(
     use_cache = cache_size > 0 and cache_key is not None
 
     with _dynamic_models_lock:
-        if use_cache and cache_key in _dynamic_models_cache:
-            return _dynamic_models_cache[cache_key]
+        if use_cache:
+            assert cache_key is not None
+            if (cached_models := _dynamic_models_cache.get(cache_key)) is not None:
+                return cached_models
 
         result = generate(input_=input_, config=config)
         if result is None:  # pragma: no cover
             msg = "generate() returned None"
             raise Error(msg)
-        models = _execute_single_module(result) if isinstance(result, str) else _execute_multi_module(result)
+        include_private_models = config.allow_leading_underscore_class_name
+        models = (
+            _execute_single_module(result, include_private_models=include_private_models)
+            if isinstance(result, str)
+            else _execute_multi_module(result, include_private_models=include_private_models)
+        )
 
         if use_cache:
             while len(_dynamic_models_cache) >= cache_size:

@@ -86,6 +86,7 @@ How do I convert enums to Literal types?
 
 ### Model Customization
 - `--allow-extra-fields`: Allow extra fields in generated Pydantic models (extra='allow').
+- `--allow-leading-underscore-class-name`: Allow an explicitly specified root class name to start with an unders...
 - `--allow-population-by-field-name`: Allow Pydantic model population by field name (not just alias).
 - `--base-class`: Specify a custom base class for generated models.
 - `--base-class-map`: Specify different base classes for specific models via JSON mapping.
@@ -479,6 +480,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         'recursive': export from all descendant modules.
   --allow-extra-fields  Deprecated: --allow-extra-fields is deprecated. Use
                         --extra-fields=allow instead.
+  --allow-leading-underscore-class-name
+                        Allow an explicitly specified root class name to start
+                        with an underscore
   --allow-population-by-field-name
                         Allow population by field name
   --class-name CLASS_NAME

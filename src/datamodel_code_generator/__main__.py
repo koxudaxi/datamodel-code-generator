@@ -452,6 +452,7 @@ class Config(BaseModel):  # noqa: PLR0904
     use_default: bool = False
     force_optional: bool = False
     class_name: Optional[str] = None  # noqa: UP045
+    allow_leading_underscore_class_name: bool = False
     class_name_prefix: Optional[str] = None  # noqa: UP045
     class_name_suffix: Optional[str] = None  # noqa: UP045
     class_name_affix_scope: ClassNameAffixScope = ClassNameAffixScope.All
@@ -915,6 +916,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         apply_default_values_for_required_fields=config.use_default,
         force_optional_for_required_fields=config.force_optional,
         class_name=config.class_name,
+        allow_leading_underscore_class_name=config.allow_leading_underscore_class_name,
         class_name_prefix=config.class_name_prefix,
         class_name_suffix=config.class_name_suffix,
         class_name_affix_scope=config.class_name_affix_scope,

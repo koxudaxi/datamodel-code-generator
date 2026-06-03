@@ -86,6 +86,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--base-class": CLIOptionMeta(name="--base-class", category=OptionCategory.MODEL),
     "--base-class-map": CLIOptionMeta(name="--base-class-map", category=OptionCategory.MODEL),
     "--class-name": CLIOptionMeta(name="--class-name", category=OptionCategory.MODEL),
+    "--allow-leading-underscore-class-name": CLIOptionMeta(
+        name="--allow-leading-underscore-class-name", category=OptionCategory.MODEL
+    ),
     "--class-name-prefix": CLIOptionMeta(name="--class-name-prefix", category=OptionCategory.MODEL),
     "--class-name-suffix": CLIOptionMeta(name="--class-name-suffix", category=OptionCategory.MODEL),
     "--class-name-affix-scope": CLIOptionMeta(name="--class-name-affix-scope", category=OptionCategory.MODEL),
