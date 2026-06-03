@@ -1366,7 +1366,12 @@ class XMLSchemaParser(JsonSchemaParser):
             self.raw_obj = raw_obj
             title = str(raw_obj.get("title") or "Model")
             obj_name = self.class_name or title
-            self._parse_file(raw_obj, obj_name, path_parts)
+            self._parse_file(
+                raw_obj,
+                obj_name,
+                path_parts,
+                preserve_root_class_name=self._should_preserve_explicit_root_class_name(obj_name),
+            )
 
         self._resolve_unparsed_json_pointer()
         self._generate_forced_base_models()

@@ -805,6 +805,66 @@ def test_main_class_name_suffix_with_class_name(output_file: Path) -> None:
     )
 
 
+def test_main_leading_underscore_class_name_default_unchanged() -> None:
+    """Leading underscore class names are still normalized unless explicitly allowed."""
+    result = generate(
+        input_={"type": "object", "properties": {"value": {"type": "string"}}},
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        disable_timestamp=True,
+        class_name="__ParsedModel",
+    )
+
+    assert isinstance(result, str)
+    assert "class FieldParsedModel(BaseModel):" in result
+    assert "class __ParsedModel(BaseModel):" not in result
+
+
+def test_main_allow_leading_underscore_class_name() -> None:
+    """Allow explicitly requested root class names to start with underscores."""
+    result = generate(
+        input_={"type": "object", "properties": {"value": {"type": "string"}}},
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        disable_timestamp=True,
+        class_name="__ParsedModel",
+        allow_leading_underscore_class_name=True,
+    )
+
+    assert isinstance(result, str)
+    assert "class __ParsedModel(BaseModel):" in result
+    assert "class FieldParsedModel(BaseModel):" not in result
+
+
+def test_main_allow_leading_underscore_class_name_cli(tmp_path: Path) -> None:
+    """Allow leading underscore root class names through the CLI option."""
+    input_path = tmp_path / "schema.json"
+    output_path = tmp_path / "output.py"
+    input_path.write_text('{"type": "object", "properties": {"value": {"type": "string"}}}', encoding="utf-8")
+
+    run_main_with_args(
+        [
+            "--input",
+            str(input_path),
+            "--input-file-type",
+            "jsonschema",
+            "--output",
+            str(output_path),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--class-name",
+            "__ParsedModel",
+            "--allow-leading-underscore-class-name",
+        ],
+        expected_exit=Exit.OK,
+    )
+
+    output = output_path.read_text(encoding="utf-8")
+    assert "class __ParsedModel(BaseModel):" in output
+    assert "class FieldParsedModel(BaseModel):" not in output
+
+
 def test_main_class_name_prefix_invalid(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test that invalid --class-name-prefix is rejected."""
     run_main_with_args(

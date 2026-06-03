@@ -320,6 +320,38 @@ def test_config_with_auto_input_type() -> None:
     assert sorted(models.keys()) == ["User"]
 
 
+def test_leading_underscore_class_name_default_unchanged() -> None:
+    """Test leading underscore class names are normalized by default."""
+    schema = make_object_schema({"name": {"type": "string"}})
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        class_name="__ParsedModel",
+    )
+
+    models = generate_dynamic_models(schema, config=config)
+
+    assert sorted(models.keys()) == ["FieldParsedModel"]
+    assert models["FieldParsedModel"].__name__ == "FieldParsedModel"
+
+
+def test_allow_leading_underscore_class_name() -> None:
+    """Test dynamic models return explicitly allowed leading underscore class names."""
+    schema = make_object_schema({"name": {"type": "string"}})
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        class_name="__ParsedModel",
+        allow_leading_underscore_class_name=True,
+    )
+
+    models = generate_dynamic_models(schema, config=config)
+
+    assert sorted(models.keys()) == ["__ParsedModel"]
+    assert models["__ParsedModel"].__name__ == "__ParsedModel"
+    assert models["__ParsedModel"].model_validate({"name": "Alice"}).model_dump(mode="json") == {"name": "Alice"}
+
+
 def test_non_serializable_schema_skips_cache() -> None:
     """Test that non-JSON-serializable schemas skip caching."""
     from datamodel_code_generator.dynamic import _make_cache_key
