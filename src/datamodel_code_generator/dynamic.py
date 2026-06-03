@@ -243,8 +243,10 @@ def generate_dynamic_models(
     use_cache = cache_size > 0 and cache_key is not None
 
     with _dynamic_models_lock:
-        if use_cache and (cached_models := _dynamic_models_cache.get(cache_key)) is not None:
-            return cached_models
+        if use_cache:
+            assert cache_key is not None
+            if (cached_models := _dynamic_models_cache.get(cache_key)) is not None:
+                return cached_models
 
         result = generate(input_=input_, config=config)
         if result is None:  # pragma: no cover
