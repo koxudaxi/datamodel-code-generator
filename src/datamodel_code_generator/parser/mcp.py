@@ -5,32 +5,78 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from copy import deepcopy
-from typing import Any
+from typing import Any, Literal
+
+from typing_extensions import NotRequired, TypedDict, TypeIs
 
 from datamodel_code_generator import Error
 
 JSON_SCHEMA_DRAFT_2020_12 = "https://json-schema.org/draft/2020-12/schema"
 DEFINITION_KEYS = ("$defs", "definitions")
+OPTIONAL_STRING_TOOL_KEYS = ("title", "description")
+OPTIONAL_MAPPING_TOOL_KEYS = ("outputSchema", "annotations", "_meta")
+SchemaKey = Literal["inputSchema", "outputSchema"]
 
 
-def _is_tool(value: Any) -> bool:
-    return (
-        isinstance(value, Mapping)
-        and isinstance(value.get("name"), str)
-        and ("inputSchema" in value or "outputSchema" in value)
-    )
+class MCPTool(TypedDict):
+    """Validated MCP tool definition mapping."""
+
+    name: str
+    inputSchema: Mapping[str, Any]
+    outputSchema: NotRequired[Mapping[str, Any]]
+    title: NotRequired[str]
+    description: NotRequired[str]
+    annotations: NotRequired[Mapping[str, Any]]
+    _meta: NotRequired[Mapping[str, Any]]
 
 
-def _coerce_tool(value: Any, fallback_name: str | None = None) -> Mapping[str, Any] | None:
-    if _is_tool(value):
-        return value
-    if fallback_name is not None and isinstance(value, Mapping) and ("inputSchema" in value or "outputSchema" in value):
-        return {"name": fallback_name, **value}
+def _is_json_schema_object(value: object) -> TypeIs[Mapping[str, Any]]:
+    return isinstance(value, Mapping)
+
+
+def _has_tool_schema_key(value: Mapping[str, Any]) -> bool:
+    return "inputSchema" in value or "outputSchema" in value
+
+
+def _tool_shape_error(value: Mapping[str, Any], tool_name: str) -> str | None:
+    if "inputSchema" not in value:
+        return f"MCP tool {tool_name!r} is missing inputSchema"
+    if not _is_json_schema_object(value["inputSchema"]):
+        return f"MCP tool {tool_name!r} inputSchema must be a JSON Schema object"
+    for key in OPTIONAL_MAPPING_TOOL_KEYS:
+        if key in value and not _is_json_schema_object(value[key]):
+            return f"MCP tool {tool_name!r} {key} must be a JSON Schema object"
+    for key in OPTIONAL_STRING_TOOL_KEYS:
+        if key in value and not isinstance(value[key], str):
+            return f"MCP tool {tool_name!r} {key} must be a string"
     return None
 
 
-def _validate_tools(value: list[Any], context: str) -> list[Mapping[str, Any]]:
-    tools: list[Mapping[str, Any]] = []
+def _is_tool(value: object) -> TypeIs[MCPTool]:
+    return (
+        _is_json_schema_object(value)
+        and isinstance(tool_name := value.get("name"), str)
+        and _tool_shape_error(value, tool_name) is None
+    )
+
+
+def _coerce_tool(value: Any, fallback_name: str | None = None) -> MCPTool | None:
+    if fallback_name is not None and isinstance(value, Mapping) and _has_tool_schema_key(value):
+        value = {"name": fallback_name, **value}
+    if _is_tool(value):
+        return value
+    if (
+        isinstance(value, Mapping)
+        and _has_tool_schema_key(value)
+        and isinstance(tool_name := value.get("name"), str)
+        and (error := _tool_shape_error(value, tool_name))
+    ):
+        raise Error(error)
+    return None
+
+
+def _validate_tools(value: list[Any], context: str) -> list[MCPTool]:
+    tools: list[MCPTool] = []
     for item in value:
         if tool := _coerce_tool(item):
             tools.append(tool)
@@ -40,7 +86,7 @@ def _validate_tools(value: list[Any], context: str) -> list[Mapping[str, Any]]:
     return tools
 
 
-def _collect_tools_from_servers(value: Any) -> list[Mapping[str, Any]]:
+def _collect_tools_from_servers(value: Any) -> list[MCPTool]:
     match value:
         case Mapping():
             servers = value.values()
@@ -49,20 +95,20 @@ def _collect_tools_from_servers(value: Any) -> list[Mapping[str, Any]]:
         case _:
             return []
 
-    tools: list[Mapping[str, Any]] = []
+    tools: list[MCPTool] = []
     for server in servers:
         if isinstance(server, Mapping) and isinstance(server_tools := server.get("tools"), list):
             tools.extend(_validate_tools(server_tools, "server tools"))
     return tools
 
 
-def _collect_tools_from_definitions(value: Any) -> list[Mapping[str, Any]]:
+def _collect_tools_from_definitions(value: Any) -> list[MCPTool]:
     if not isinstance(value, Mapping):
         return []
     return [tool for name, schema in value.items() if (tool := _coerce_tool(schema, str(name)))]
 
 
-def _extract_tools(data: Any) -> list[Mapping[str, Any]]:
+def _extract_tools(data: Any) -> list[MCPTool]:
     match data:
         case Mapping() if tool := _coerce_tool(data):
             tools = [tool]
@@ -167,30 +213,19 @@ def _normalize_schema(
     return normalized_schema, hoisted_definitions
 
 
-def _get_tool_schema(tool: Mapping[str, Any], key: str) -> Mapping[str, Any]:
-    tool_name = str(tool["name"])
-    if key not in tool:
-        msg = f"MCP tool {tool_name!r} is missing {key}"
-        raise Error(msg)
-    schema = tool[key]
-    if isinstance(schema, Mapping):
-        return schema
-    msg = f"MCP tool {tool_name!r} {key} must be a JSON Schema object"
-    raise Error(msg)
-
-
 def _add_tool_schema_definition(
     definitions: dict[str, Any],
     used_names: set[str],
-    tool: Mapping[str, Any],
-    schema_key: str,
+    tool: MCPTool,
+    schema_key: SchemaKey,
     suffix: str,
 ) -> None:
     if schema_key == "outputSchema" and schema_key not in tool:
         return
     base_name = _to_definition_name(str(tool["name"]))
     definition_name = _unique_definition_name(f"{base_name} {suffix}", used_names)
-    normalized, hoisted_definitions = _normalize_schema(_get_tool_schema(tool, schema_key), definition_name, used_names)
+    schema = tool["inputSchema"] if schema_key == "inputSchema" else tool["outputSchema"]
+    normalized, hoisted_definitions = _normalize_schema(schema, definition_name, used_names)
     definitions.update(hoisted_definitions)
     definitions[definition_name] = normalized
 

@@ -1,0 +1,7 @@
+{
+  "name": "bad_title",
+  "title": 123,
+  "inputSchema": {
+    "type": "object"
+  }
+}
