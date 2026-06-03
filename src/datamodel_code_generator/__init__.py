@@ -548,7 +548,7 @@ def _create_parser_config(
 
 
 def generate(  # noqa: PLR0912, PLR0914, PLR0915
-    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    input_: Path | str | ParseResult | Mapping[str, Any],
     *,
     config: GenerateConfig | None = None,
     **options: Unpack[GenerateConfigDict],
@@ -560,7 +560,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     (JSON, YAML, Dict, CSV) as input.
 
     Args:
-        input_: The input source (file path, string content, URL, dict, or top-level MCP tools list).
+        input_: The input source (file path, string content, URL, or dict).
         config: A GenerateConfig object with all options. Cannot be used together with **options.
         **options: Individual options matching GenerateConfig fields. Cannot be used together with config.
 

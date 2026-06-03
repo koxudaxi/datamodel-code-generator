@@ -166,19 +166,18 @@ def _rewrite_local_definition_ref(ref: str, ref_map: Mapping[str, str]) -> str:
 
 
 def _rewrite_schema_refs(value: Any, ref_map: Mapping[str, str], *, strip_root_definitions: bool = False) -> Any:
-    match value:
-        case Mapping():
-            rewritten: dict[str, Any] = {}
-            for key, item in value.items():
-                if strip_root_definitions and key in DEFINITION_KEYS:
-                    continue
-                if key == "$ref" and isinstance(item, str):
-                    rewritten[key] = _rewrite_local_definition_ref(item, ref_map)
-                    continue
-                rewritten[key] = _rewrite_schema_refs(item, ref_map)
-            return rewritten
-        case list():
-            return [_rewrite_schema_refs(item, ref_map) for item in value]
+    if isinstance(value, Mapping):
+        rewritten: dict[str, Any] = {}
+        for key, item in value.items():
+            if strip_root_definitions and key in DEFINITION_KEYS:
+                continue
+            if key == "$ref" and isinstance(item, str):
+                rewritten[key] = _rewrite_local_definition_ref(item, ref_map)
+                continue
+            rewritten[key] = _rewrite_schema_refs(item, ref_map)
+        return rewritten
+    if isinstance(value, list):
+        return [_rewrite_schema_refs(item, ref_map) for item in value]
     return value
 
 
