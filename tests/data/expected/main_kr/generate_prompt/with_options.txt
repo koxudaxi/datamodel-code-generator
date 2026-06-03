@@ -240,12 +240,12 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Timeout in seconds for HTTP requests to remote hosts
                         (default: 30)
   --input INPUT         Input file/directory (default: stdin)
-  --input-file-type {auto,openapi,asyncapi,jsonschema,xmlschema,protobuf,avro,json,yaml,dict,csv,graphql}
+  --input-file-type {auto,openapi,asyncapi,jsonschema,mcp-tools,xmlschema,protobuf,avro,json,yaml,dict,csv,graphql}
                         Input file type (default: auto). Use 'jsonschema',
-                        'openapi', 'asyncapi', 'graphql', 'xmlschema',
-                        'protobuf', or 'avro' for schema definitions. Use
-                        'json', 'yaml', or 'csv' for raw sample data to infer
-                        a schema automatically.
+                        'openapi', 'asyncapi', 'graphql', 'mcp-tools',
+                        'xmlschema', 'protobuf', or 'avro' for schema
+                        definitions. Use 'json', 'yaml', or 'csv' for raw
+                        sample data to infer a schema automatically.
   --input-model MODULE:NAME
                         Python import path to a Pydantic v2 model or schema
                         dict (e.g., 'mypackage.module:ClassName' or

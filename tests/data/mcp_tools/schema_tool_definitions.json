@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "ListProjects": {
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string"
+          },
+          "includeArchived": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "owner"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projects": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "projects"
+        ]
+      }
+    }
+  }
+}

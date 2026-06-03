@@ -40,6 +40,7 @@
 - [Generate from Apache Avro Schema](https://datamodel-code-generator.koxudaxi.dev/avro/): Generate Python models from JSON-encoded Apache Avro schemas (`.avsc`).
 - [Generate from XML Schema](https://datamodel-code-generator.koxudaxi.dev/xmlschema/): Generate Python models from W3C XML Schema documents (`.xsd`).
 - [Generate from Protocol Buffers / gRPC](https://datamodel-code-generator.koxudaxi.dev/protobuf/): Generate Python models from Protocol Buffers schema files (`.proto`), including message types referenced by gRPC service definitions.
+- [Generate from MCP Tool Schemas](https://datamodel-code-generator.koxudaxi.dev/mcp-tools/): Generate Python models from Model Context Protocol (MCP) tool schema profiles.
 - [Generate from JSON / YAML / CSV Data](https://datamodel-code-generator.koxudaxi.dev/jsondata/): Generate Pydantic models directly from raw JSON, YAML, or CSV data. Under the hood, the generator uses [GenSON](https://pypi.org/project/genson/) t...
 - [Generate from GraphQL](https://datamodel-code-generator.koxudaxi.dev/graphql/): Generate Pydantic models from GraphQL schema definitions.
 - [Generate from Python Models {#python-model}](https://datamodel-code-generator.koxudaxi.dev/python-model/): Generate code from existing Python types: Pydantic models, dataclasses, TypedDict, or dict schemas. This is useful for converting between model typ...

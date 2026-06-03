@@ -1,0 +1,27 @@
+{
+  "servers": [
+    {
+      "name": "linear",
+      "tools": [
+        {
+          "name": "create_comment",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "issue_id": {
+                "type": "string"
+              },
+              "body": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "issue_id",
+              "body"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

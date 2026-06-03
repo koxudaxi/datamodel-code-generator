@@ -51,7 +51,7 @@ if TYPE_CHECKING:
 
 
 def _baseline_generate(
-    input_: Path | str | ParseResult | Mapping[str, Any],
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     *,
     config: GenerateConfig | None = None,
     input_filename: str | None = None,

@@ -1,0 +1,7 @@
+{
+  "name": "bad_output",
+  "inputSchema": {
+    "type": "object"
+  },
+  "outputSchema": true
+}

@@ -548,7 +548,7 @@ def _create_parser_config(
 
 
 def generate(  # noqa: PLR0912, PLR0914, PLR0915
-    input_: Path | str | ParseResult | Mapping[str, Any],
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     *,
     config: GenerateConfig | None = None,
     **options: Unpack[GenerateConfigDict],
@@ -560,7 +560,9 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     (JSON, YAML, Dict, CSV) as input.
 
     Args:
-        input_: The input source (file path, string content, URL, or dict).
+        input_: The input source (file path, string content, URL, dict,
+            list of file paths, or MCP tools list when input_file_type is
+            InputFileType.MCPTools).
         config: A GenerateConfig object with all options. Cannot be used together with **options.
         **options: Individual options matching GenerateConfig fields. Cannot be used together with config.
 
@@ -596,6 +598,18 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         extra_template_data = defaultdict(dict, config.extra_template_data)
     dataclass_arguments = config.dataclass_arguments
     custom_file_header = config.custom_file_header
+    skip_root_model = config.skip_root_model
+    source_override: Mapping[str, Any] | None = None
+
+    if (
+        isinstance(input_, list)
+        and input_file_type != InputFileType.MCPTools
+        and (not input_ or any(not isinstance(item, Path) for item in input_))
+    ):
+        msg = (  # pragma: no cover
+            "List input is only supported for file path lists or input_file_type=InputFileType.MCPTools."
+        )
+        raise Error(msg)  # pragma: no cover
 
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     match input_:
@@ -740,6 +754,39 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         builder.add_object(obj)
         input_text = json.dumps(builder.to_schema())
 
+    if input_file_type == InputFileType.MCPTools:
+        import json  # noqa: PLC0415
+
+        from datamodel_code_generator.parser.mcp import convert_mcp_tools_to_jsonschema  # noqa: PLC0415
+
+        def load_mcp_tools_text(text: str) -> Any:
+            if _is_json_text(text):
+                with contextlib.suppress(json.JSONDecodeError):
+                    return json.loads(text)
+            return load_yaml(text)
+
+        def load_mcp_tools_data() -> Any:
+            match input_:
+                case Mapping() | list():
+                    return input_
+                case Path():
+                    return load_mcp_tools_text(input_.read_text(encoding=config.encoding))
+            assert input_text is not None
+            return load_mcp_tools_text(input_text)
+
+        try:
+            mcp_tools_jsonschema = convert_mcp_tools_to_jsonschema(load_mcp_tools_data())
+        except Error:
+            raise
+        except Exception as exc:
+            raise InvalidFileFormatError(exc, input_file_type) from exc
+        if isinstance(input_, ParseResult) and (input_url := input_.geturl()):
+            remote_text_cache[input_url] = json.dumps(mcp_tools_jsonschema)
+        else:
+            source_override = mcp_tools_jsonschema
+        input_file_type = InputFileType.JsonSchema
+        skip_root_model = True
+
     if isinstance(input_, ParseResult) and input_file_type not in RAW_DATA_TYPES:
         input_text = None
 
@@ -761,7 +808,9 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         use_root_model_type_alias=config.use_root_model_type_alias,
     )
 
-    if isinstance(input_, Mapping) and input_file_type not in RAW_DATA_TYPES:
+    if source_override is not None:
+        source = dict(source_override)
+    elif isinstance(input_, Mapping) and input_file_type not in RAW_DATA_TYPES:
         source = dict(input_)
     else:
         source = input_text or input_
@@ -811,6 +860,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             True if config.output_model_type == DataModelType.DataclassesDataclass else config.set_default_enum_member
         ),
         "use_object_type": config.use_object_type,
+        "skip_root_model": skip_root_model,
     }
 
     # Convert schema_version string to appropriate enum based on input type
@@ -905,9 +955,9 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         from datamodel_code_generator.parser.protobuf import ProtobufParser  # noqa: PLC0415
 
         protobuf_additional_options: ProtobufParserConfigDict = {
+            **additional_options,
             "protobuf_version": protobuf_version,
             "skip_root_model": True,
-            **additional_options,
         }
         parser_config = _create_parser_config(ProtobufParserConfig, config, protobuf_additional_options)
         parser = ProtobufParser(source=source, config=parser_config)  # ty: ignore

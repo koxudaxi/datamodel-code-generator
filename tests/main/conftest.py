@@ -43,6 +43,7 @@ InputFileTypeLiteral = Literal[
     "openapi",
     "asyncapi",
     "jsonschema",
+    "mcp-tools",
     "xmlschema",
     "protobuf",
     "avro",

@@ -216,6 +216,112 @@ def test_direct_input_dict(tmp_path: Path) -> None:
     assert_file_content(output_file)
 
 
+@pytest.mark.parametrize(
+    ("input_file", "expected_file"),
+    [
+        ("direct_tool.json", "mcp_tools/direct_tool.py"),
+        ("tools_list.json", "mcp_tools/tools_list.py"),
+        ("server_definition.json", "mcp_tools/server_definition.py"),
+        ("schema_tool_definitions.json", "mcp_tools/schema_tool_definitions.py"),
+        ("top_level_list.json", "mcp_tools/top_level_list.py"),
+        ("mcp_servers.json", "mcp_tools/mcp_servers.py"),
+        ("servers_list.json", "mcp_tools/servers_list.py"),
+        ("top_level_tool_definitions.json", "mcp_tools/top_level_tool_definitions.py"),
+        ("definitions_ref.json", "mcp_tools/definitions_ref.py"),
+        ("external_ref.json", "mcp_tools/external_ref.py"),
+    ],
+)
+def test_mcp_tools(input_file: str, expected_file: str, output_file: Path) -> None:
+    """Generate models from MCP tool schema profiles."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "mcp_tools" / input_file,
+        output_path=output_file,
+        input_file_type="mcp-tools",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+    )
+
+
+@pytest.mark.parametrize(argnames="input_kind", argvalues=["mapping", "list", "string"])
+def test_mcp_tools_generate_direct_input(input_kind: str, output_file: Path) -> None:
+    """Generate MCP tool models from direct generate() input values."""
+    input_file = "direct_tool.json"
+    expected_file = "mcp_tools/direct_tool.py"
+    match input_kind:
+        case "list":
+            input_file = "top_level_list.json"
+            expected_file = "mcp_tools/top_level_list.py"
+    input_text = (DATA_PATH / "mcp_tools" / input_file).read_text(encoding="utf-8")
+    input_: object = json.loads(input_text) if input_kind in {"mapping", "list"} else input_text
+
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.MCPTools,
+        input_filename=input_file,
+        output=output_file,
+    )
+    assert_file_content(output_file, expected_file)
+
+
+def test_mcp_tools_url_preserves_relative_ref_context(
+    mock_httpx_get: HttpxGetMockFactory,
+    output_file: Path,
+) -> None:
+    """Resolve MCP inputSchema relative refs from the original URL."""
+    base_url = "https://example.com/mcp/"
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse(f"{base_url}tools.json", DATA_PATH / "mcp_tools" / "remote_relative_ref.json"),
+        MockHttpxResponse(f"{base_url}common.json", DATA_PATH / "mcp_tools" / "remote_common.json"),
+    )
+    run_main_with_args([
+        "--url",
+        f"{base_url}tools.json",
+        "--input-file-type",
+        "mcp-tools",
+        "--output",
+        str(output_file),
+    ])
+    assert_file_content(output_file, "mcp_tools/remote_relative_ref.py")
+    assert_httpx_get_kwargs(
+        httpx_get_mock,
+        expected_urls=[f"{base_url}tools.json", f"{base_url}common.json"],
+        call_count=2,
+    )
+
+
+@pytest.mark.parametrize(
+    ("input_file", "expected_stderr_contains"),
+    [
+        ("invalid_top_level_list.json", "Invalid MCP tools document: top-level list contains a non-tool item"),
+        ("no_tools.json", "Invalid MCP tools document: no tool definitions were found"),
+        ("non_mapping_definitions.json", "Invalid MCP tools document: no tool definitions were found"),
+        ("scalar.json", "Invalid MCP tools document: no tool definitions were found"),
+        ("missing_tool_name.json", "MCP tool name must be a string"),
+        ("missing_input_schema.json", "MCP tool 'only_output' is missing inputSchema"),
+        ("invalid_input_schema.json", "MCP tool 'bad_schema' inputSchema must be a JSON Schema object"),
+        ("invalid_output_schema.json", "MCP tool 'bad_output' outputSchema must be a JSON Schema object"),
+        ("invalid_tool_title.json", "MCP tool 'bad_title' title must be a string"),
+        ("invalid_json.json", "Invalid file format for mcp-tools"),
+    ],
+)
+def test_mcp_tools_invalid(
+    input_file: str,
+    expected_stderr_contains: str,
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject invalid MCP tool schema profile input through the CLI path."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "mcp_tools" / input_file,
+        output_path=output_file,
+        input_file_type="mcp-tools",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains=expected_stderr_contains,
+        file_should_not_exist=output_file,
+    )
+
+
 @freeze_time(TIMESTAMP)
 @pytest.mark.parametrize(
     ("keyword_only", "target_python_version", "expected_file"),

@@ -9,6 +9,7 @@ This code generator supports the following input formats:
 - [XML Schema](xmlschema.md) (XSD).
 - Protocol Buffers / gRPC (`.proto`, [Protocol Buffers / gRPC](protobuf.md)).
 - GraphQL schema ([GraphQL Schemas and Types](https://graphql.org/learn/schema/)).
+- MCP tool schemas (`--input-file-type mcp-tools`, [MCP Tool Schemas](mcp-tools.md)).
 - JSON / YAML / CSV data (converted to JSON Schema before model generation).
 - Python dictionary (converted to JSON Schema before model generation).
 - Existing Python types via [`--input-model`](python-model.md): Pydantic models, dataclasses, Pydantic dataclasses, TypedDict, and dict schemas.

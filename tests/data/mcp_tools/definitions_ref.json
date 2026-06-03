@@ -1,0 +1,38 @@
+{
+  "tools": [
+    {
+      "name": "resolve_ticket",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "$ref": "#/definitions/Ticket"
+          }
+        },
+        "required": [
+          "ticket"
+        ],
+        "definitions": {
+          "Ticket": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "Ignored": true
+        }
+      }
+    }
+  ]
+}

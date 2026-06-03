@@ -40,6 +40,7 @@ nav = [
       { "Apache Avro" = "avro.md" },
       { "XML Schema" = "xmlschema.md" },
       { "Protocol Buffers / gRPC" = "protobuf.md" },
+      { "MCP Tool Schemas" = "mcp-tools.md" },
       { "JSON / YAML / CSV Data" = "jsondata.md" },
       { "GraphQL" = "graphql.md" },
       { "Python Models" = "python-model.md" }
