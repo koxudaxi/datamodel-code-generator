@@ -1,0 +1,48 @@
+openapi: 3.1.0
+info:
+  title: Item Schema 3.1
+  version: 1.0.0
+paths:
+  /events:
+    get:
+      parameters:
+        - name: names
+          in: query
+          content:
+            application/json-seq:
+              itemSchema:
+                type: string
+      responses:
+        "200":
+          description: Event stream
+          content:
+            application/json-seq:
+              itemSchema:
+                $ref: "#/components/schemas/Event"
+    post:
+      requestBody:
+        content:
+          application/json-seq:
+            itemSchema:
+              type: integer
+      responses:
+        "204":
+          description: Accepted
+components:
+  requestBodies:
+    BulkIds:
+      content:
+        application/json-seq:
+          itemSchema:
+            type: integer
+  schemas:
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+        - id
+        - name

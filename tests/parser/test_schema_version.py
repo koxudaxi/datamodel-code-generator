@@ -196,6 +196,7 @@ def test_jsonschema_features_2019_09() -> None:
             definitions_key="$defs",
             exclusive_as_number=True,
             read_only_write_only=True,
+            anchor=True,
             recursive_ref=True,
             dynamic_ref=False,
         )
@@ -214,6 +215,7 @@ def test_jsonschema_features_2020_12() -> None:
             definitions_key="$defs",
             exclusive_as_number=True,
             read_only_write_only=True,
+            anchor=True,
             recursive_ref=True,
             dynamic_ref=True,
         )
@@ -232,6 +234,7 @@ def test_jsonschema_features_auto() -> None:
             definitions_key="$defs",
             exclusive_as_number=True,
             read_only_write_only=True,
+            anchor=True,
             recursive_ref=True,
             dynamic_ref=True,
         )
@@ -279,6 +282,7 @@ def test_openapi_features_v31() -> None:
             ref_sibling_keywords=True,
             exclusive_as_number=True,
             read_only_write_only=True,
+            anchor=True,
             recursive_ref=True,
             dynamic_ref=True,
             nullable_keyword=False,
@@ -301,6 +305,7 @@ def test_openapi_features_auto() -> None:
             ref_sibling_keywords=True,
             exclusive_as_number=True,
             read_only_write_only=True,
+            anchor=True,
             recursive_ref=True,
             dynamic_ref=True,
             nullable_keyword=False,
@@ -551,7 +556,7 @@ def test_openapi_parser_config_version_override() -> None:
 
 The `--schema-version` option specifies the schema version to use instead of auto-detection.
 Valid values depend on input type: JsonSchema (draft-04, draft-06, draft-07, 2019-09, 2020-12)
-or OpenAPI (3.0, 3.1). Default is 'auto' (detected from $schema or openapi field).""",
+or OpenAPI (3.0, 3.1, 3.2). Default is 'auto' (detected from $schema or openapi field).""",
     input_schema="jsonschema/simple_string.json",
     cli_args=["--schema-version", "draft-07"],
     golden_output="jsonschema/simple_string.py",
@@ -1055,7 +1060,7 @@ class Model(BaseModel):
     option_description="""Schema version to use for parsing OpenAPI.
 
 The `--schema-version` option specifies the OpenAPI version to use instead of auto-detection.
-Valid values: 3.0, 3.1.
+Valid values: 3.0, 3.1, 3.2.
 Default is 'auto' (detected from openapi field).""",
     input_schema="openapi/api.yaml",
     cli_args=["--schema-version", "3.0"],
