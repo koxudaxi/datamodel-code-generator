@@ -62,12 +62,19 @@ def assert_dynamic_models(
     expected_path: Path,
     *,
     config: GenerateConfig | None = None,
+    include_model_names: bool = False,
 ) -> None:
     """Generate dynamic models, validate data, and assert with external file."""
     models = generate_dynamic_models(schema, config=config)
-    assert {
-        name: models[name].model_validate(data).model_dump(mode="json") for name, data in validations.items()
-    } == external_file(expected_path)
+    actual: dict[str, Any] = {}
+    for name, data in validations.items():
+        model = models[name]
+        model_dump = model.model_validate(data).model_dump(mode="json")
+        if include_model_names:
+            actual[name] = {"__name__": model.__name__, "data": model_dump}
+            continue
+        actual[name] = model_dump
+    assert actual == external_file(expected_path)
 
 
 @pytest.fixture(autouse=True)
@@ -328,11 +335,13 @@ def test_leading_underscore_class_name_default_unchanged() -> None:
         output_model_type=DataModelType.PydanticV2BaseModel,
         class_name="__ParsedModel",
     )
-
-    models = generate_dynamic_models(schema, config=config)
-
-    assert sorted(models.keys()) == ["FieldParsedModel"]
-    assert models["FieldParsedModel"].__name__ == "FieldParsedModel"
+    assert_dynamic_models(
+        schema,
+        {"FieldParsedModel": {"name": "Alice"}},
+        EXPECTED_PATH / "leading_underscore_class_name_default_unchanged.json",
+        config=config,
+        include_model_names=True,
+    )
 
 
 def test_allow_leading_underscore_class_name() -> None:
@@ -344,12 +353,13 @@ def test_allow_leading_underscore_class_name() -> None:
         class_name="__ParsedModel",
         allow_leading_underscore_class_name=True,
     )
-
-    models = generate_dynamic_models(schema, config=config)
-
-    assert sorted(models.keys()) == ["__ParsedModel"]
-    assert models["__ParsedModel"].__name__ == "__ParsedModel"
-    assert models["__ParsedModel"].model_validate({"name": "Alice"}).model_dump(mode="json") == {"name": "Alice"}
+    assert_dynamic_models(
+        schema,
+        {"__ParsedModel": {"name": "Alice"}},
+        EXPECTED_PATH / "allow_leading_underscore_class_name.json",
+        config=config,
+        include_model_names=True,
+    )
 
 
 def test_non_serializable_schema_skips_cache() -> None:
