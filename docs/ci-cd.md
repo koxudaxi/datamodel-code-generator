@@ -306,6 +306,9 @@ If your project uses [uv](https://github.com/astral-sh/uv), you can run the CLI 
   run: uv run --with datamodel-code-generator datamodel-codegen --profile api --check
 ```
 
+If you want the generator version pinned in your project lockfile, add it once with `uv add --dev datamodel-code-generator`
+and run `uv run datamodel-codegen --profile api --check` in CI.
+
 ---
 
 ## Pre-commit Hook
