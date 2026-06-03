@@ -805,6 +805,7 @@ def test_main_class_name_suffix_with_class_name(output_file: Path) -> None:
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_main_leading_underscore_class_name_default_unchanged() -> None:
     """Leading underscore class names are still normalized unless explicitly allowed."""
     result = generate(
@@ -820,6 +821,7 @@ def test_main_leading_underscore_class_name_default_unchanged() -> None:
     assert "class __ParsedModel(BaseModel):" not in result
 
 
+@pytest.mark.allow_direct_assert
 def test_main_allow_leading_underscore_class_name() -> None:
     """Allow explicitly requested root class names to start with underscores."""
     result = generate(
@@ -836,33 +838,29 @@ def test_main_allow_leading_underscore_class_name() -> None:
     assert "class FieldParsedModel(BaseModel):" not in result
 
 
-def test_main_allow_leading_underscore_class_name_cli(tmp_path: Path) -> None:
+@pytest.mark.cli_doc(
+    options=["--allow-leading-underscore-class-name"],
+    option_description="""Allow an explicitly specified root class name to start with an underscore.
+
+By default, leading underscores in class names are normalized to avoid private
+model names. Use --allow-leading-underscore-class-name together with an explicit
+--class-name when you need the generated root model to preserve that name
+exactly.""",
+    input_schema="jsonschema/class_name_affix.json",
+    cli_args=["--class-name", "__ParsedModel", "--allow-leading-underscore-class-name", "--disable-timestamp"],
+    golden_output="main/jsonschema/allow_leading_underscore_class_name.py",
+    related_options=["--class-name"],
+)
+def test_main_allow_leading_underscore_class_name_cli(output_file: Path) -> None:
     """Allow leading underscore root class names through the CLI option."""
-    input_path = tmp_path / "schema.json"
-    output_path = tmp_path / "output.py"
-    input_path.write_text('{"type": "object", "properties": {"value": {"type": "string"}}}', encoding="utf-8")
-
-    run_main_with_args(
-        [
-            "--input",
-            str(input_path),
-            "--input-file-type",
-            "jsonschema",
-            "--output",
-            str(output_path),
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-            "--disable-timestamp",
-            "--class-name",
-            "__ParsedModel",
-            "--allow-leading-underscore-class-name",
-        ],
-        expected_exit=Exit.OK,
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "class_name_affix.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allow_leading_underscore_class_name.py",
+        extra_args=["--class-name", "__ParsedModel", "--allow-leading-underscore-class-name", "--disable-timestamp"],
     )
-
-    output = output_path.read_text(encoding="utf-8")
-    assert "class __ParsedModel(BaseModel):" in output
-    assert "class FieldParsedModel(BaseModel):" not in output
 
 
 def test_main_class_name_prefix_invalid(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
