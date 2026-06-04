@@ -47,18 +47,29 @@ def test_temporal_expression_helpers_reject_invalid_lexical_values(parse: Any, v
 
 @pytest.mark.allow_direct_assert
 @pytest.mark.parametrize(
-    ("parse", "value"),
+    ("parse", "value", "expected"),
     [
-        (_safe_date_expression, "2026-06-04"),
-        (_safe_time_expression, "14:30:00"),
-        (_safe_time_expression, "14:30:00Z"),
-        (_safe_datetime_expression, "2026-06-04T14:30:00"),
-        (_safe_datetime_expression, "2026-06-04T14:30:00Z"),
+        (_safe_date_expression, "2026-06-04", "datetime_module.date.fromisoformat('2026-06-04')"),
+        (_safe_time_expression, "14:30:00", "datetime_module.time.fromisoformat('14:30:00')"),
+        (_safe_time_expression, "14:30:00Z", "datetime_module.time.fromisoformat('14:30:00+00:00')"),
+        (
+            _safe_datetime_expression,
+            "2026-06-04T14:30:00",
+            "datetime_module.datetime.fromisoformat('2026-06-04T14:30:00')",
+        ),
+        (
+            _safe_datetime_expression,
+            "2026-06-04T14:30:00Z",
+            "datetime_module.datetime.fromisoformat('2026-06-04T14:30:00+00:00')",
+        ),
     ],
 )
-def test_temporal_expression_helpers_parse_supported_lexical_values(parse: Any, value: str) -> None:
+def test_temporal_expression_helpers_parse_supported_lexical_values(parse: Any, value: str, expected: str) -> None:
     """Parse supported XML Schema temporal lexical values."""
-    assert parse(value) is not None
+    expression = parse(value)
+
+    assert expression is not None
+    assert repr(expression) == expected
 
 
 @pytest.mark.allow_direct_assert
