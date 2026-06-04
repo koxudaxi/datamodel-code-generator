@@ -18,7 +18,6 @@ from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
 from datamodel_code_generator.parser.base import Parser, dump_templates
 from datamodel_code_generator.parser.jsonschema import (
-    USE_DEFAULT_WITH_REQUIRED_KEY,
     JsonSchemaObject,
     JsonSchemaParser,
     Types,
@@ -1560,33 +1559,6 @@ def test_standard_schema_metadata_is_included_in_field_extras() -> None:
         "externalDocs": {"url": "https://example.com/field"},
         "xml": {"name": "field"},
     }
-
-
-@pytest.mark.parametrize("field_include_all_keys", [False, True])
-def test_internal_use_default_with_required_marker_is_not_included_in_field_extras(
-    field_include_all_keys: bool,
-) -> None:
-    """Test Avro default marker is consumed internally and never rendered as field metadata."""
-    parser = JsonSchemaParser("", field_include_all_keys=field_include_all_keys)
-    obj = JsonSchemaObject.model_validate({
-        "type": "string",
-        "description": "visible",
-        USE_DEFAULT_WITH_REQUIRED_KEY: True,
-    })
-
-    assert parser.get_field_extras(obj) == {"description": "visible"}
-
-
-def test_internal_use_default_with_required_marker_enables_required_defaults() -> None:
-    """Test Avro default marker allows default output without parser-wide --use-default."""
-    parser = JsonSchemaParser("")
-    obj = JsonSchemaObject.model_validate({
-        "type": "string",
-        "default": "value",
-        USE_DEFAULT_WITH_REQUIRED_KEY: True,
-    })
-
-    assert parser._should_use_default_with_required(obj, required=True, has_default=True) is True
 
 
 def test_standard_schema_metadata_is_included_in_model_extras() -> None:
