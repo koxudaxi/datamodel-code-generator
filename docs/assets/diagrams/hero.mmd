@@ -1,6 +1,6 @@
 flowchart LR
     subgraph LEFT["Input type"]
-        INPUT["Schemas<br/>OpenAPI 3 · AsyncAPI ·<br/>JSON Schema<br/>Apache Avro · XML Schema<br/>Protocol Buffers · GraphQL<br/>MCP tool schemas<br/>────────────────<br/>Raw data<br/>JSON · YAML · CSV<br/>────────────────<br/>Python objects<br/>pydantic_v2.BaseModel<br/>pydantic_v2.dataclass<br/>msgspec.Struct<br/>dataclasses.dataclass<br/>typing.TypedDict"]
+        INPUT["Schemas<br/>JSON Schema<br/>OpenAPI 3<br/>GraphQL<br/>AsyncAPI<br/>Apache Avro · XML Schema<br/>Protocol Buffers<br/>MCP tool schemas<br/>────────────────<br/>Raw data<br/>JSON · YAML · CSV<br/>────────────────<br/>Python objects<br/>pydantic_v2.BaseModel<br/>pydantic_v2.dataclass<br/>msgspec.Struct<br/>dataclasses.dataclass<br/>typing.TypedDict"]
     end
 
     CONVERTER(["datamodel-code-generator"])
