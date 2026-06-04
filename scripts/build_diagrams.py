@@ -59,6 +59,10 @@ HASH_RE = re.compile(rf"<!-- {re.escape(HASH_MARKER)}([0-9a-f]{{64}}) -->")
 SVG_NS = "http://www.w3.org/2000/svg"
 XLINK_NS = "http://www.w3.org/1999/xlink"
 INPUT_SECTION_HEADINGS = {"Schemas", "Raw data", "Python objects"}
+INPUT_SECTION_HEADING_ATTRS = {
+    "fill": "#0288d1",
+    "font-weight": "800",
+}
 ARROW_MARKER_ATTRS = {
     "markerWidth": "14",
     "markerHeight": "14",
@@ -107,7 +111,8 @@ def adjust_svg(markup: str) -> str:
         match row_text := "".join(tspan.text or "" for tspan in inner_tspans).strip():
             case _ if row_text in INPUT_SECTION_HEADINGS:
                 for tspan in inner_tspans:
-                    tspan.set("font-weight", "700")
+                    for attr, value in INPUT_SECTION_HEADING_ATTRS.items():
+                        tspan.set(attr, value)
     for marker in root.findall(f".//{{{SVG_NS}}}marker"):
         if "pointEnd__" in marker.get("id", ""):
             for attr, value in ARROW_MARKER_ATTRS.items():
