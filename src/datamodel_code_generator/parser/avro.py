@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import copy
 import re
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any, NamedTuple, cast
+from uuid import UUID
 
 from typing_extensions import Unpack
 
@@ -30,6 +32,10 @@ NAMED_TYPES = frozenset({"record", "enum", "fixed"})
 COMPLEX_TYPES = NAMED_TYPES | {"array", "map"}
 JSON_SCHEMA_MARKER_KEYS = frozenset({"$schema", "$defs", "definitions", "properties", "allOf", "anyOf", "oneOf"})
 NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+AVRO_BYTE_MAX = 0xFF
+AVRO_DURATION_SIZE = 12
+AVRO_DURATION_PART_SIZE = 4
+AVRO_UUID_SIZE = 16
 
 STRING_SCHEMA: JsonSchema = {"type": "string"}
 NULL_SCHEMA: JsonSchema = {"type": "null"}
@@ -91,6 +97,18 @@ class _Name(NamedTuple):
     fullname: str
     namespace: str | None
     name: str
+
+
+class _DefaultCode:
+    """Default value represented as Python source code."""
+
+    __slots__ = ("value",)
+
+    def __init__(self, value: str) -> None:
+        self.value = value
+
+    def __repr__(self) -> str:
+        return self.value
 
 
 def is_avro_schema_data(data: YamlValue) -> bool:
@@ -422,7 +440,9 @@ class _AvroSchemaConverter:
             if "order" in field:
                 field_schema["x-avro-order"] = field["order"]
             if "default" in field:
-                field_schema["default"] = field["default"]
+                field_schema["default"] = self._convert_default(
+                    field["default"], field.get("type"), name_info.namespace
+                )
             required.append(field_name)
             properties[field_name] = field_schema
 
@@ -513,6 +533,144 @@ class _AvroSchemaConverter:
         converted = _copy_schema(target)
         converted.update(updates)
         return converted
+
+    def _convert_default(self, default: Any, schema: YamlValue, namespace: str | None) -> Any:
+        match schema:
+            case str() as type_name:
+                return self._convert_default_type_name(default, type_name, namespace)
+            case [first, *_]:
+                return self._convert_default(default, first, namespace)
+            case dict() as schema_dict:
+                return self._convert_default_dict(default, schema_dict, namespace)
+            case _:  # pragma: no cover
+                return default
+
+    def _convert_default_type_name(self, default: Any, type_name: str, namespace: str | None) -> Any:
+        if type_name == "bytes":
+            return self._decode_bytes_default(default)
+        if type_name in PRIMITIVE_TYPES:
+            return default
+
+        referenced_schema = self.named_schemas.get(self._resolve_fullname(type_name, namespace))
+        if referenced_schema is None:
+            return default
+        return self._convert_default(default, referenced_schema, namespace)
+
+    def _convert_default_dict(self, default: Any, schema: JsonSchema, namespace: str | None) -> Any:
+        match schema.get("type"):
+            case [first, *_]:
+                child_schema: YamlValue | None = first
+            case dict() as nested_schema:
+                child_schema = nested_schema
+            case "string" if schema.get("logicalType") == "uuid":
+                return self._convert_uuid_default(default)
+            case "bytes" | "fixed":
+                return self._convert_binary_default(default, schema)
+            case ("array" | "map" | "record") as type_name:
+                return self._convert_complex_default(default, schema, namespace, type_name)
+            case str() as type_name:
+                return self._convert_default_type_name(default, type_name, namespace)
+            case _:  # pragma: no cover
+                return default
+        return self._convert_default(default, child_schema, namespace)
+
+    def _convert_complex_default(self, default: Any, schema: JsonSchema, namespace: str | None, type_name: str) -> Any:
+        match type_name:
+            case "array" if isinstance(default, list):
+                return [self._convert_default(item, schema.get("items"), namespace) for item in default]
+            case "map" if isinstance(default, dict):
+                return {
+                    key: self._convert_default(value, schema.get("values"), namespace) for key, value in default.items()
+                }
+            case "record" if isinstance(default, dict):
+                return self._convert_record_default(default, schema, namespace)
+            case _:
+                return default
+
+    def _convert_record_default(
+        self, default: dict[str, Any], schema: JsonSchema, namespace: str | None
+    ) -> dict[str, Any]:
+        fields = schema.get("fields")
+        if not isinstance(fields, list):  # pragma: no cover
+            return default
+        record_namespace = namespace
+        if isinstance(name := schema.get("name"), str):  # pragma: no branch
+            record_namespace = self._make_name(name, schema.get("namespace"), namespace).namespace
+
+        field_schemas = {
+            field["name"]: field.get("type")
+            for field in fields
+            if isinstance(field, dict) and isinstance(field.get("name"), str)
+        }
+        return {
+            key: self._convert_default(value, field_schema, record_namespace)
+            if (field_schema := field_schemas.get(key)) is not None
+            else value
+            for key, value in default.items()
+        }
+
+    @staticmethod
+    def _decode_bytes_default(default: Any) -> Any:
+        if not isinstance(default, str):
+            return default
+        byte_values = [ord(char) for char in default]
+        if any(value > AVRO_BYTE_MAX for value in byte_values):
+            return default
+        return bytes(byte_values)
+
+    def _convert_binary_default(self, default: Any, schema: JsonSchema) -> Any:
+        match schema.get("logicalType"):
+            case "decimal":
+                return self._convert_decimal_default(default, schema)
+            case "uuid":
+                return self._convert_uuid_default(default)
+            case "duration":
+                return self._convert_duration_default(default)
+            case "big-decimal":
+                return default
+            case _:
+                return self._decode_bytes_default(default)
+
+    def _convert_decimal_default(self, default: Any, schema: JsonSchema) -> Any:
+        decoded = self._decode_bytes_default(default)
+        if not isinstance(decoded, bytes):
+            return default
+        scale = schema.get("scale", 0)
+        if not isinstance(scale, int):
+            return default
+        return Decimal(int.from_bytes(decoded, byteorder="big", signed=True)).scaleb(-scale)
+
+    def _convert_uuid_default(self, default: Any) -> Any:
+        decoded = self._decode_bytes_default(default)
+        try:
+            if isinstance(decoded, bytes) and len(decoded) == AVRO_UUID_SIZE:
+                return UUID(bytes=decoded)
+            if isinstance(default, str):
+                return UUID(default)
+        except ValueError:
+            return default
+        return default  # pragma: no cover
+
+    def _convert_duration_default(self, default: Any) -> Any:
+        decoded = self._decode_bytes_default(default)
+        if not isinstance(decoded, bytes) or len(decoded) != AVRO_DURATION_SIZE:
+            return default
+        months = int.from_bytes(decoded[:AVRO_DURATION_PART_SIZE], byteorder="little", signed=False)
+        if months:
+            return default
+        days = int.from_bytes(
+            decoded[AVRO_DURATION_PART_SIZE : AVRO_DURATION_PART_SIZE * 2],
+            byteorder="little",
+            signed=False,
+        )
+        milliseconds = int.from_bytes(decoded[AVRO_DURATION_PART_SIZE * 2 :], byteorder="little", signed=False)
+        if days and milliseconds:
+            return _DefaultCode(f"timedelta(days={days}, milliseconds={milliseconds})")
+        if days:
+            return _DefaultCode(f"timedelta(days={days})")
+        if milliseconds:
+            return _DefaultCode(f"timedelta(milliseconds={milliseconds})")
+        return _DefaultCode("timedelta(0)")
 
     @staticmethod
     def _decimal_schema(source: JsonSchema) -> JsonSchema:

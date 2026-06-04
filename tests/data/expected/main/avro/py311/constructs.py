@@ -49,7 +49,7 @@ class User(BaseModel):
     score: float
     rating: float
     payload: bytes
-    status: Status = 'ACTIVE'
+    status: Status = Status.ACTIVE
     tags: list[str] = []
     attributes: dict[str, str] = {}
     address: Address

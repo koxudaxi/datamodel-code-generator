@@ -4,8 +4,10 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from decimal import Decimal
 from enum import StrEnum
+from uuid import UUID
 
 from pydantic import BaseModel, Field, RootModel, conbytes
 
@@ -74,6 +76,14 @@ class Array(BaseModel):
     value: str
 
 
+class DefaultUuid(RootModel[UUID]):
+    root: UUID = Field(..., title='DefaultUuid')
+
+
+class DefaultDuration(RootModel[timedelta]):
+    root: timedelta = Field(..., title='DefaultDuration')
+
+
 class SpecMatrix(BaseModel):
     nullDefault: None = None
     booleanDefault: bool = False
@@ -81,13 +91,13 @@ class SpecMatrix(BaseModel):
     longDefault: int = 2
     floatDefault: float = 1.5
     doubleDefault: float = 2.5
-    bytesDefault: bytes = 'ÿ'
+    bytesDefault: bytes = b'\xff'
     stringDefault: str = 'foo'
     recordDefault: DefaultRecord = Field({'value': 1}, validate_default=True)
-    enumDefault: DefaultEnum = 'FOO'
+    enumDefault: DefaultEnum = DefaultEnum.FOO
     arrayDefault: list[int] = [1]
     mapDefault: dict[str, int] = {'a': 1}
-    fixedDefault: DefaultFixed = Field('ÿ', validate_default=True)
+    fixedDefault: DefaultFixed = Field(b'\xff', validate_default=True)
     ascendingOrder: str
     descendingOrder: str
     nullableAfterValue: str | None = 'value'
@@ -100,3 +110,10 @@ class SpecMatrix(BaseModel):
     complexTypeNameReuse: Array
     unknownLogicalType: int
     precisionOnlyDecimal: Decimal
+    logicalDecimalDefault: Decimal = Decimal('12.34')
+    logicalFixedUuidDefault: DefaultUuid = Field(
+        UUID('00112233-4455-6677-8899-aabbccddeeff'), validate_default=True
+    )
+    logicalDurationDefault: DefaultDuration = Field(
+        timedelta(days=2, milliseconds=3000), validate_default=True
+    )

@@ -968,6 +968,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         avro_additional_options: AvroParserConfigDict = {
             "apply_default_values_for_required_fields": True,
             **additional_options,
+            "set_default_enum_member": True,
         }
         parser_config = _create_parser_config(AvroParserConfig, config, avro_additional_options)
         parser = AvroParser(source=source, config=parser_config)  # ty: ignore

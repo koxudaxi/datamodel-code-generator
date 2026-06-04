@@ -183,6 +183,36 @@
         "logicalType": "decimal",
         "precision": 4
       }
+    },
+    {
+      "name": "logicalDecimalDefault",
+      "type": {
+        "type": "bytes",
+        "logicalType": "decimal",
+        "precision": 4,
+        "scale": 2
+      },
+      "default": "\u0004\u00d2"
+    },
+    {
+      "name": "logicalFixedUuidDefault",
+      "type": {
+        "type": "fixed",
+        "name": "DefaultUuid",
+        "size": 16,
+        "logicalType": "uuid"
+      },
+      "default": "\u0000\u0011\u0022\u0033\u0044\u0055\u0066\u0077\u0088\u0099\u00aa\u00bb\u00cc\u00dd\u00ee\u00ff"
+    },
+    {
+      "name": "logicalDurationDefault",
+      "type": {
+        "type": "fixed",
+        "name": "DefaultDuration",
+        "size": 12,
+        "logicalType": "duration"
+      },
+      "default": "\u0000\u0000\u0000\u0000\u0002\u0000\u0000\u0000\u00b8\u000b\u0000\u0000"
     }
   ]
 }

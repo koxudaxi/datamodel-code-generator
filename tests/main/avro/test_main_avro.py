@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
+from uuid import UUID
 
 import pytest
 
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import PythonVersion, is_supported_in_black
+from datamodel_code_generator.parser.avro import convert_avro_schema_data
 from tests.main.avro.conftest import assert_file_content
 from tests.main.conftest import (
     AVRO_DATA_PATH,
@@ -26,6 +29,167 @@ _SKIP_BLACK = pytest.mark.skipif(
 
 def _expected_file(expected_file: str) -> str:
     return f"py{CURRENT_PYTHON_VERSION.replace('.', '')}/{expected_file}"
+
+
+def _avro_bytes_default(*values: int) -> str:
+    return bytes(values).decode("latin1")
+
+
+def test_convert_avro_schema_data_normalizes_binary_defaults() -> None:
+    """Convert Avro bytes/fixed default strings to Python bytes."""
+    uuid_text = "00112233-4455-6677-8899-aabbccddeeff"
+    uuid_bytes_default = UUID(uuid_text).bytes.decode("latin1")
+    duration_default = _avro_bytes_default(0, 0, 0, 0, 2, 0, 0, 0, 0xB8, 0x0B, 0, 0)
+
+    converted = convert_avro_schema_data({
+        "type": "record",
+        "name": "Defaults",
+        "fields": [
+            {"name": "nullByteDefault", "type": "bytes", "default": _avro_bytes_default(0)},
+            {"name": "asciiByteDefault", "type": "bytes", "default": _avro_bytes_default(0x7F)},
+            {"name": "firstHighByteDefault", "type": "bytes", "default": _avro_bytes_default(0x80)},
+            {"name": "multiByteDefault", "type": "bytes", "default": _avro_bytes_default(0xFF, 0)},
+            {"name": "bytesDefault", "type": "bytes", "default": "\u00ff"},
+            {"name": "fixedDefault", "type": {"type": "fixed", "name": "FixedDefault", "size": 1}, "default": "\u00ff"},
+            {"name": "namedFixedDefault", "type": "FixedDefault", "default": "\u00ff"},
+            {
+                "name": "unionDefault",
+                "type": [{"type": "fixed", "name": "UnionFixed", "size": 1}, "null"],
+                "default": "\u00ff",
+            },
+            {"name": "wrappedUnionDefault", "type": {"type": ["bytes", "null"]}, "default": "\u00ff"},
+            {"name": "wrappedTypeDefault", "type": {"type": {"type": "bytes"}}, "default": "\u00ff"},
+            {
+                "name": "decimalDefault",
+                "type": {"type": "bytes", "logicalType": "decimal", "precision": 4, "scale": 2},
+                "default": "\u0004\u00d2",
+            },
+            {
+                "name": "fixedUuidDefault",
+                "type": {"type": "fixed", "name": "DefaultUuid", "size": 16, "logicalType": "uuid"},
+                "default": uuid_bytes_default,
+            },
+            {
+                "name": "stringUuidDefault",
+                "type": {"type": "string", "logicalType": "uuid"},
+                "default": uuid_text,
+            },
+            {
+                "name": "durationDefault",
+                "type": {"type": "fixed", "name": "DefaultDuration", "size": 12, "logicalType": "duration"},
+                "default": duration_default,
+            },
+            {"name": "arrayDefault", "type": {"type": "array", "items": "bytes"}, "default": ["\u00ff"]},
+            {"name": "mapDefault", "type": {"type": "map", "values": "bytes"}, "default": {"k": "\u00ff"}},
+            {
+                "name": "recordDefault",
+                "type": {
+                    "type": "record",
+                    "name": "NestedDefault",
+                    "fields": [{"name": "payload", "type": "bytes"}],
+                },
+                "default": {"payload": "\u00ff"},
+            },
+        ],
+    })
+
+    properties = converted["properties"]
+    assert properties["nullByteDefault"]["default"] == b"\x00"
+    assert properties["asciiByteDefault"]["default"] == b"\x7f"
+    assert properties["firstHighByteDefault"]["default"] == b"\x80"
+    assert properties["multiByteDefault"]["default"] == b"\xff\x00"
+    assert properties["bytesDefault"]["default"] == b"\xff"
+    assert properties["fixedDefault"]["default"] == b"\xff"
+    assert properties["namedFixedDefault"]["default"] == b"\xff"
+    assert properties["unionDefault"]["default"] == b"\xff"
+    assert properties["wrappedUnionDefault"]["default"] == b"\xff"
+    assert properties["wrappedTypeDefault"]["default"] == b"\xff"
+    assert properties["decimalDefault"]["default"] == Decimal("12.34")
+    assert properties["fixedUuidDefault"]["default"] == UUID(uuid_text)
+    assert properties["stringUuidDefault"]["default"] == UUID(uuid_text)
+    assert repr(properties["durationDefault"]["default"]) == "timedelta(days=2, milliseconds=3000)"
+    assert properties["arrayDefault"]["default"] == [b"\xff"]
+    assert properties["mapDefault"]["default"] == {"k": b"\xff"}
+    assert properties["recordDefault"]["default"] == {"payload": b"\xff"}
+
+
+def test_convert_avro_schema_data_keeps_values_for_unsupported_default_shapes() -> None:
+    """Keep defaults unchanged when schemas or values cannot contain Avro binary defaults."""
+    duration_with_months = _avro_bytes_default(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    duration_days = _avro_bytes_default(0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0)
+    duration_millis = _avro_bytes_default(0, 0, 0, 0, 0, 0, 0, 0, 0xB8, 0x0B, 0, 0)
+    duration_zero = _avro_bytes_default(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+    converted = convert_avro_schema_data({
+        "type": "record",
+        "name": "UnsupportedDefaults",
+        "fields": [
+            {"name": "bytesNonString", "type": "bytes", "default": 1},
+            {"name": "bytesHighCodepoint", "type": "bytes", "default": "\u0100"},
+            {"name": "arrayDefaultNotList", "type": {"type": "array", "items": "bytes"}, "default": "unchanged"},
+            {
+                "name": "recordDefaultExtraField",
+                "type": {
+                    "type": "record",
+                    "name": "GuardRecord",
+                    "fields": [{"name": "payload", "type": "bytes"}],
+                },
+                "default": {"payload": "\u00ff", "unknown": "\u00ff"},
+            },
+            {"name": "bigDecimalDefault", "type": {"type": "bytes", "logicalType": "big-decimal"}, "default": "\u00ff"},
+            {"name": "decimalHighCodepoint", "type": {"type": "bytes", "logicalType": "decimal"}, "default": "\u0100"},
+            {
+                "name": "decimalInvalidScale",
+                "type": {"type": "bytes", "logicalType": "decimal", "scale": "invalid"},
+                "default": "\u00ff",
+            },
+            {
+                "name": "durationWithMonths",
+                "type": {"type": "fixed", "name": "DurationWithMonths", "size": 12, "logicalType": "duration"},
+                "default": duration_with_months,
+            },
+            {
+                "name": "durationWrongLength",
+                "type": {"type": "fixed", "name": "DurationWrongLength", "size": 12, "logicalType": "duration"},
+                "default": "\u00ff",
+            },
+            {
+                "name": "durationDays",
+                "type": {"type": "fixed", "name": "DurationDays", "size": 12, "logicalType": "duration"},
+                "default": duration_days,
+            },
+            {
+                "name": "durationMillis",
+                "type": {"type": "fixed", "name": "DurationMillis", "size": 12, "logicalType": "duration"},
+                "default": duration_millis,
+            },
+            {
+                "name": "durationZero",
+                "type": {"type": "fixed", "name": "DurationZero", "size": 12, "logicalType": "duration"},
+                "default": duration_zero,
+            },
+            {
+                "name": "uuidInvalid",
+                "type": {"type": "fixed", "name": "InvalidUuid", "size": 16, "logicalType": "uuid"},
+                "default": "not-a-uuid",
+            },
+        ],
+    })
+
+    properties = converted["properties"]
+    assert properties["bytesNonString"]["default"] == 1
+    assert properties["bytesHighCodepoint"]["default"] == "\u0100"
+    assert properties["arrayDefaultNotList"]["default"] == "unchanged"
+    assert properties["recordDefaultExtraField"]["default"] == {"payload": b"\xff", "unknown": "\u00ff"}
+    assert properties["bigDecimalDefault"]["default"] == "\u00ff"
+    assert properties["decimalHighCodepoint"]["default"] == "\u0100"
+    assert properties["decimalInvalidScale"]["default"] == "\u00ff"
+    assert properties["durationWithMonths"]["default"] == duration_with_months
+    assert properties["durationWrongLength"]["default"] == "\u00ff"
+    assert repr(properties["durationDays"]["default"]) == "timedelta(days=2)"
+    assert repr(properties["durationMillis"]["default"]) == "timedelta(milliseconds=3000)"
+    assert repr(properties["durationZero"]["default"]) == "timedelta(0)"
+    assert properties["uuidInvalid"]["default"] == "not-a-uuid"
 
 
 @_SKIP_BLACK
