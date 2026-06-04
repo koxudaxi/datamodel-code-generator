@@ -31,7 +31,7 @@ class ExampleLegacyLegacyMessage(BaseModel):
     enabled: bool | None = True
     tags: list[str] | None = []
     ratio: float | None = inf
-    status: ExampleLegacyLegacyStatus | None = 'LEGACY_ACTIVE'
+    status: ExampleLegacyLegacyStatus | None = ExampleLegacyLegacyStatus.LEGACY_ACTIVE
     title: str | None = 'legacy'
     annotated: str | None = 'kept'
     annotation_only: str | None = None

@@ -30,9 +30,13 @@ class ExampleSpecProto3SpecProto3(BaseModel):
     explicit_count: int | None = None
     packed_numbers: list[int] | None = []
     names: list[str] | None = []
-    state: ExampleSpecProto3AliasState | None = 'ALIAS_STATE_UNSPECIFIED'
+    state: ExampleSpecProto3AliasState | None = (
+        ExampleSpecProto3AliasState.ALIAS_STATE_UNSPECIFIED
+    )
     nested: ExampleSpecProto3SpecProto3Nested | None = None
-    qualified_state: ExampleSpecProto3AliasState | None = 'ALIAS_STATE_UNSPECIFIED'
+    qualified_state: ExampleSpecProto3AliasState | None = (
+        ExampleSpecProto3AliasState.ALIAS_STATE_UNSPECIFIED
+    )
     string_map: dict[str, str] | None = {}
     int32_map: dict[int, str] | None = {}
     int64_map: dict[int, str] | None = {}
