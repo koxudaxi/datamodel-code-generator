@@ -101,6 +101,17 @@ def test_main_xmlschema_union_defaults(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_boolean_whitespace_defaults(output_file: Path) -> None:
+    """Generate boolean defaults after XML Schema whitespace normalization."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "boolean_whitespace_defaults.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="boolean_whitespace_defaults.py",
+    )
+
+
 def test_main_xmlschema_temporal_defaults(output_file: Path) -> None:
     """Generate typed defaults for XML Schema temporal lexical values."""
     run_main_and_assert(
