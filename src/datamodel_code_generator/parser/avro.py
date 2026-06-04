@@ -564,7 +564,7 @@ class _AvroSchemaConverter:
             case dict() as nested_schema:
                 child_schema = nested_schema
             case "string" if schema.get("logicalType") == "uuid":
-                return self._convert_uuid_default(default)
+                return self._convert_uuid_text_default(default)
             case "bytes" | "fixed":
                 return self._convert_binary_default(default, schema)
             case ("array" | "map" | "record") as type_name:
@@ -625,7 +625,7 @@ class _AvroSchemaConverter:
             case "decimal":
                 return self._convert_decimal_default(default, schema)
             case "uuid":
-                return self._convert_uuid_default(default)
+                return self._convert_uuid_binary_default(default)
             case "duration":
                 return self._convert_duration_default(default)
             case "big-decimal":
@@ -643,16 +643,20 @@ class _AvroSchemaConverter:
             return default
         return Decimal(int.from_bytes(decoded, byteorder="big", signed=True)).scaleb(-scale)
 
-    def _convert_uuid_default(self, default: Any) -> Any:
-        decoded = self._decode_bytes_default(default)
+    @staticmethod
+    def _convert_uuid_text_default(default: Any) -> Any:
+        if not isinstance(default, str):
+            return default
         try:
-            if isinstance(decoded, bytes) and len(decoded) == AVRO_UUID_SIZE:
-                return UUID(bytes=decoded)
-            if isinstance(default, str):
-                return UUID(default)
+            return UUID(default)
         except ValueError:
             return default
-        return default  # pragma: no cover
+
+    def _convert_uuid_binary_default(self, default: Any) -> Any:
+        decoded = self._decode_bytes_default(default)
+        if not isinstance(decoded, bytes) or len(decoded) != AVRO_UUID_SIZE:
+            return default
+        return UUID(bytes=decoded)
 
     def _convert_duration_default(self, default: Any) -> Any:
         decoded = self._decode_bytes_default(default)

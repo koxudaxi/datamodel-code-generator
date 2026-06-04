@@ -173,6 +173,16 @@ def test_convert_avro_schema_data_keeps_values_for_unsupported_default_shapes() 
                 "type": {"type": "fixed", "name": "InvalidUuid", "size": 16, "logicalType": "uuid"},
                 "default": "not-a-uuid",
             },
+            {
+                "name": "stringUuidInvalid",
+                "type": {"type": "string", "logicalType": "uuid"},
+                "default": "abcdefghijklmnop",
+            },
+            {
+                "name": "stringUuidNonString",
+                "type": {"type": "string", "logicalType": "uuid"},
+                "default": 1,
+            },
         ],
     })
 
@@ -190,6 +200,8 @@ def test_convert_avro_schema_data_keeps_values_for_unsupported_default_shapes() 
     assert repr(properties["durationMillis"]["default"]) == "timedelta(milliseconds=3000)"
     assert repr(properties["durationZero"]["default"]) == "timedelta(0)"
     assert properties["uuidInvalid"]["default"] == "not-a-uuid"
+    assert properties["stringUuidInvalid"]["default"] == "abcdefghijklmnop"
+    assert properties["stringUuidNonString"]["default"] == 1
 
 
 @_SKIP_BLACK
