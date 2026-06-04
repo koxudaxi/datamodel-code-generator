@@ -149,12 +149,18 @@ def create_httpx_get_mock(mocker: Any) -> HttpxGetMock:
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
-    """Add --collect-cli-docs option."""
+    """Add pytest options and ini settings."""
     parser.addoption(
         "--collect-cli-docs",
         action="store_true",
         default=False,
         help="Collect CLI documentation metadata from tests marked with @pytest.mark.cli_doc",
+    )
+    parser.addini(
+        "assert_helper_direct_assert_exempt_files",
+        "Test files under tests/ that are exempt from the shared assertion helper direct-assert guard.",
+        type="linelist",
+        default=(),
     )
 
 
