@@ -11,4 +11,4 @@ class Person(BaseModel):
     height: int
     weight: int
     name: str
-    hacker: bool = False
+    hacker: bool
