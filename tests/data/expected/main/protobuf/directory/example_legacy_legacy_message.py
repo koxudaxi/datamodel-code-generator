@@ -20,7 +20,7 @@ class ExampleLegacyLegacyMessage(BaseModel):
     tags: list[str] | None = []
     ratio: float | None = inf
     status: example_legacy_legacy_status.ExampleLegacyLegacyStatus | None = (
-        example_legacy_legacy_status.ExampleLegacyLegacyStatus.LEGACY_ACTIVE
+        'LEGACY_ACTIVE'
     )
     title: str | None = 'legacy'
     annotated: str | None = 'kept'
