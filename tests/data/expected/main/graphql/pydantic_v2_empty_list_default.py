@@ -31,4 +31,5 @@ class PodSpec(BaseModel):
     container_or_none_list_or_none: list[Container | None] | None = Field(
         [], validate_default=True
     )
+    nullable_default_null: String | None = None
     typename__: Literal['PodSpec'] | None = Field('PodSpec', alias='__typename')
