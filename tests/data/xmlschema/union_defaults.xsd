@@ -17,6 +17,11 @@
           <xs:union memberTypes="xs:boolean xs:string"/>
         </xs:simpleType>
       </xs:attribute>
+      <xs:attribute name="atomic" default="anything">
+        <xs:simpleType>
+          <xs:union memberTypes="xs:anyAtomicType xs:int"/>
+        </xs:simpleType>
+      </xs:attribute>
     </xs:complexType>
   </xs:element>
 </xs:schema>

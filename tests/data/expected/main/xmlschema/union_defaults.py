@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, conint
 
 
@@ -11,3 +13,4 @@ class Root(BaseModel):
     value: conint(ge=-2147483648, le=2147483647) | str | None = 1
     flag: bool | str | None = False
     text: bool | str | None = 'maybe'
+    atomic: Any | conint(ge=-2147483648, le=2147483647) | None = 'anything'
