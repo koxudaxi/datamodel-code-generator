@@ -32,6 +32,7 @@ def test_safe_float_rejects_python_only_non_finite_literals(value: str) -> None:
     [
         (_safe_date_expression, "not-a-date"),
         (_safe_date_expression, "2026-02-31"),
+        (_safe_date_expression, "2026-06-04+09:00"),
         (_safe_time_expression, "25:00:00"),
         (_safe_datetime_expression, "2026-02-31T00:00:00"),
         (_safe_day_time_duration_expression, "1D"),

@@ -19,6 +19,7 @@ class Root(BaseModel):
     duration: timedelta | None = datetime_module.timedelta(
         days=1, hours=2, minutes=3, seconds=4, microseconds=500000
     )
+    fixedDate: date | None = datetime_module.date.fromisoformat('2026-06-06')
     dates: list[date] | None = [
         datetime_module.date.fromisoformat('2026-06-04'),
         datetime_module.date.fromisoformat('2026-06-05'),
@@ -26,3 +27,4 @@ class Root(BaseModel):
     stampedAt: AwareDatetime | None = datetime_module.datetime.fromisoformat(
         '2026-06-04T21:34:56+09:00'
     )
+    fixedDuration: timedelta | None = datetime_module.timedelta(minutes=5)

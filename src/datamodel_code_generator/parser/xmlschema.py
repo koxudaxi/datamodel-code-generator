@@ -262,6 +262,8 @@ def _safe_date_expression(value: str) -> _PythonExpression | None:
     if date_match is None:
         return None
     date_value = date_match["date"]
+    if value != date_value:
+        return None
     with contextlib.suppress(ValueError):
         datetime_module.date.fromisoformat(date_value)
         return _datetime_expression(f"datetime_module.date.fromisoformat({date_value!r})")
@@ -820,12 +822,19 @@ class _XMLSchemaConverter:
         if "default" in element.attrib:
             schema["default"] = self._parse_literal(str(element.get("default")), schema, parse_temporal=True)
         if "fixed" in element.attrib:
-            schema["const"] = self._parse_literal(str(element.get("fixed")), schema)
+            self._apply_fixed_literal(schema, str(element.get("fixed")))
         if element.get("nillable") == "true":
             schema = self._make_nullable(schema)
         if element.get("abstract") == "true":
             schema["x-xsd-abstract"] = True
         return schema
+
+    def _apply_fixed_literal(self, schema: JsonSchema, value: str) -> None:
+        parsed = self._parse_literal(value, schema, parse_temporal=True)
+        if isinstance(parsed, _PythonExpression):
+            schema["default"] = parsed
+            return
+        schema["const"] = parsed
 
     def _make_nullable(self, schema: JsonSchema) -> JsonSchema:  # noqa: PLR6301
         schema = _copy_schema(schema)
@@ -966,18 +975,19 @@ class _XMLSchemaConverter:
         return parsed if parsed is not None else value
 
     @staticmethod
-    def _parse_temporal_literal(value: str, schema: JsonSchema) -> Any:
-        match (schema.get("type"), schema.get("format")):
-            case ("string", "date"):
+    def _parse_temporal_literal(value: str, schema: JsonSchema) -> _PythonExpression | None:
+        if schema.get("type") != "string":
+            return None
+        match schema.get("format"):
+            case "date":
                 return _safe_date_expression(value)
-            case ("string", "time"):
+            case "time":
                 return _safe_time_expression(value)
-            case ("string", "date-time"):
+            case "date-time":
                 return _safe_datetime_expression(value)
-            case ("string", "duration"):
+            case "duration":
                 return _safe_day_time_duration_expression(value)
-            case _:
-                return None
+        return None
 
     def _parse_union_literal(self, value: str, schemas: list[JsonSchema], *, parse_temporal: bool = False) -> Any:
         for schema in schemas:
@@ -1286,7 +1296,7 @@ class _XMLSchemaConverter:
         if fixed is None and "fixed" not in attribute.attrib:
             fixed = source_attribute.get("fixed")
         if fixed is not None:
-            attribute_schema["const"] = self._parse_literal(fixed, attribute_schema)
+            self._apply_fixed_literal(attribute_schema, fixed)
         schema.setdefault("properties", {})[name] = attribute_schema
         if (attribute.get("use") or source_attribute.get("use")) == "required":
             schema.setdefault("required", []).append(name)
