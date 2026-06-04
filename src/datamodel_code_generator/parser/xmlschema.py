@@ -857,11 +857,14 @@ class _XMLSchemaConverter:
         return value
 
     def _parse_union_literal(self, value: str, schemas: list[JsonSchema]) -> Any:
-        for schema in schemas:
-            parsed = self._parse_literal(value, schema)
-            if parsed != value or schema.get("type") == "string":
-                return parsed
-        return value
+        return next(
+            (
+                parsed
+                for schema in schemas
+                if (parsed := self._parse_literal(value, schema)) != value or schema.get("type") == "string"
+            ),
+            value,
+        )
 
     def _parse_number(self, value: str, schema: JsonSchema) -> int | float | Decimal | str:  # noqa: PLR6301
         if schema.get("type") == "integer":
