@@ -57,6 +57,50 @@ def test_main_xmlschema_edge_cases(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_fixed_decimal(output_file: Path) -> None:
+    """Generate Decimal defaults for fixed XML Schema decimal values."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "fixed_decimal.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="fixed_decimal.py",
+    )
+
+
+def test_main_xmlschema_special_float_defaults(output_file: Path) -> None:
+    """Generate non-finite float defaults from XML Schema lexical values."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "special_float_defaults.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="special_float_defaults.py",
+    )
+
+
+def test_main_xmlschema_special_float_bounds(output_file: Path) -> None:
+    """Generate non-finite float bounds from XML Schema lexical values."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "special_float_bounds.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="special_float_bounds.py",
+    )
+
+
+def test_main_xmlschema_union_defaults(output_file: Path) -> None:
+    """Generate typed defaults for XML Schema union values."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "union_defaults.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="union_defaults.py",
+    )
+
+
 def test_main_xmlschema_single_root_same_name(output_file: Path) -> None:
     """Inline a single root type when no other definition references it."""
     run_main_and_assert(
@@ -197,6 +241,17 @@ def test_main_xmlschema_spec_constructs(output_file: Path) -> None:
         input_file_type="xmlschema",
         assert_func=assert_file_content,
         expected_file="spec_constructs.py",
+    )
+
+
+def test_main_xmlschema_list_defaults(output_file: Path) -> None:
+    """Generate list-typed defaults from XML Schema list lexical values."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "list_defaults.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="list_defaults.py",
     )
 
 

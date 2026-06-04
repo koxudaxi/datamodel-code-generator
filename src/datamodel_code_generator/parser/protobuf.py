@@ -17,6 +17,7 @@ from warnings import warn
 from typing_extensions import Unpack
 
 from datamodel_code_generator import Error, ProtobufVersion, SchemaParseError, VersionMode
+from datamodel_code_generator.parser._math_imports import add_math_imports_for_non_finite_literals
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
 if TYPE_CHECKING:
@@ -28,7 +29,6 @@ if TYPE_CHECKING:
 
 CUSTOM_OPTION_STATEMENT_PATTERN = re.compile(r"(?ms)^[ \t]*option\s+\([^)]+\)\s*=\s*.*?;")
 WEAK_IMPORT_PATTERN = re.compile(r'^\s*import\s+weak\s+"([^"]+)"\s*;', re.MULTILINE)
-MATH_DEFAULT_PATTERN = re.compile(r"(?m)= (?P<sign>-?)(?P<name>inf|nan)(?=\n|$)")
 
 LABEL_REQUIRED = 2
 LABEL_REPEATED = 3
@@ -232,27 +232,8 @@ def _find_option_end(text: str, start: int) -> int | None:
     return None  # pragma: no cover
 
 
-def _add_math_default_imports(body: str) -> str:
-    names = {match.group("name") for match in MATH_DEFAULT_PATTERN.finditer(body)}
-    if not names:
-        return body
-    import_line = f"from math import {', '.join(name for name in ('inf', 'nan') if name in names)}"
-    if import_line in body:  # pragma: no cover
-        return body
-    lines = body.splitlines()
-    insert_at = 0
-    while insert_at < len(lines) and (
-        lines[insert_at].startswith("#")
-        or lines[insert_at].startswith("from __future__ import ")
-        or not lines[insert_at]
-    ):
-        insert_at += 1
-    lines.insert(insert_at, import_line)
-    return "\n".join(lines)
-
-
 def _add_generated_imports(body: str) -> str:
-    return _add_math_default_imports(body)
+    return add_math_imports_for_non_finite_literals(body)
 
 
 def convert_protobuf_schema_data(
