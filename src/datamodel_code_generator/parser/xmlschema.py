@@ -53,6 +53,7 @@ DAY_TIME_DURATION_PATTERN = re.compile(
     r"^(?P<sign>-)?P(?:(?P<days>\d+)D)?"
     r"(?:T(?:(?P<hours>\d+)H)?(?:(?P<minutes>\d+)M)?(?:(?P<seconds>\d+(?:\.\d+)?)S)?)?$"
 )
+XSD_WHITESPACE_CHARS = " \t\n\r"
 IMPORT_DATETIME_MODULE = Import(import_="datetime", alias="datetime_module")
 
 
@@ -251,7 +252,7 @@ def _safe_decimal(value: str) -> Decimal | None:
 
 
 def _safe_bool(value: str) -> bool | None:
-    match value:
+    match value.strip(XSD_WHITESPACE_CHARS):
         case "true" | "1":
             return True
         case "false" | "0":

@@ -12,6 +12,7 @@ from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from datamodel_code_generator.parser.xmlschema import (
     XMLSchemaParser,
     _collect_python_expression_imports,
+    _safe_bool,
     _safe_date_expression,
     _safe_datetime_expression,
     _safe_day_time_duration_expression,
@@ -25,6 +26,28 @@ from datamodel_code_generator.parser.xmlschema import (
 def test_safe_float_rejects_python_only_non_finite_literals(value: str) -> None:
     """Reject non-finite spellings outside the XML Schema lexical space."""
     assert _safe_float(value) is None
+
+
+@pytest.mark.allow_direct_assert
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (" true ", True),
+        ("\t1\n", True),
+        ("\rfalse\t", False),
+        ("\n0 ", False),
+    ],
+)
+def test_safe_bool_collapses_xml_schema_whitespace(value: str, expected: bool) -> None:
+    """Apply XML Schema whiteSpace=collapse before parsing boolean literals."""
+    assert _safe_bool(value) is expected
+
+
+@pytest.mark.allow_direct_assert
+@pytest.mark.parametrize("value", ["True", "False", " true false "])
+def test_safe_bool_rejects_values_outside_xml_schema_lexical_space(value: str) -> None:
+    """Reject Python-only spellings and invalid collapsed boolean values."""
+    assert _safe_bool(value) is None
 
 
 @pytest.mark.allow_direct_assert
