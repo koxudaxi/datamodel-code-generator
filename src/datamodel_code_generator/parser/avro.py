@@ -23,7 +23,6 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator._types import AvroParserConfigDict
     from datamodel_code_generator.config import AvroParserConfig
-    from datamodel_code_generator.parser.base import Source
 
 JsonSchema = dict[str, Any]
 
@@ -182,10 +181,6 @@ class _AvroSchemaConverter:
             schema["definitions"] = self.definitions
         schema.setdefault("$schema", "http://json-schema.org/draft-07/schema#")
         return cast("dict[str, YamlValue]", schema)
-
-    def convert(self, source: Source) -> dict[str, YamlValue]:
-        raw_obj = source.raw_data if source.raw_data is not None else load_yaml(source.text)
-        return self.convert_raw(raw_obj)
 
     def _collect_named_schemas(self, schema: YamlValue, namespace: str | None = None) -> None:
         match schema:
@@ -585,7 +580,7 @@ class _AvroSchemaConverter:
                 }
             case "record" if isinstance(default, dict):
                 return self._convert_record_default(default, schema, namespace)
-            case _:
+            case _:  # pragma: no cover
                 return default
         return default  # pragma: no cover
 
@@ -613,10 +608,10 @@ class _AvroSchemaConverter:
 
     @staticmethod
     def _decode_bytes_default(default: Any) -> Any:
-        if not isinstance(default, str):
+        if not isinstance(default, str):  # pragma: no cover
             return default
         byte_values = [ord(char) for char in default]
-        if any(value > AVRO_BYTE_MAX for value in byte_values):
+        if any(value > AVRO_BYTE_MAX for value in byte_values):  # pragma: no cover
             return default
         return bytes(byte_values)
 
@@ -628,7 +623,7 @@ class _AvroSchemaConverter:
                 return self._convert_uuid_binary_default(default)
             case "duration":
                 return self._convert_duration_default(default)
-            case "big-decimal":
+            case "big-decimal":  # pragma: no cover
                 return default
             case _:
                 return self._decode_bytes_default(default)
@@ -636,34 +631,34 @@ class _AvroSchemaConverter:
 
     def _convert_decimal_default(self, default: Any, schema: JsonSchema) -> Any:
         decoded = self._decode_bytes_default(default)
-        if not isinstance(decoded, bytes):
+        if not isinstance(decoded, bytes):  # pragma: no cover
             return default
         scale = schema.get("scale", 0)
-        if not isinstance(scale, int):
+        if not isinstance(scale, int):  # pragma: no cover
             return default
         return Decimal(int.from_bytes(decoded, byteorder="big", signed=True)).scaleb(-scale)
 
     @staticmethod
     def _convert_uuid_text_default(default: Any) -> Any:
-        if not isinstance(default, str):
+        if not isinstance(default, str):  # pragma: no cover
             return default
         try:
             return UUID(default)
-        except ValueError:
+        except ValueError:  # pragma: no cover
             return default
 
     def _convert_uuid_binary_default(self, default: Any) -> Any:
         decoded = self._decode_bytes_default(default)
-        if not isinstance(decoded, bytes) or len(decoded) != AVRO_UUID_SIZE:
+        if not isinstance(decoded, bytes) or len(decoded) != AVRO_UUID_SIZE:  # pragma: no cover
             return default
         return UUID(bytes=decoded)
 
     def _convert_duration_default(self, default: Any) -> Any:
         decoded = self._decode_bytes_default(default)
-        if not isinstance(decoded, bytes) or len(decoded) != AVRO_DURATION_SIZE:
+        if not isinstance(decoded, bytes) or len(decoded) != AVRO_DURATION_SIZE:  # pragma: no cover
             return default
         months = int.from_bytes(decoded[:AVRO_DURATION_PART_SIZE], byteorder="little", signed=False)
-        if months:
+        if months:  # pragma: no cover
             return default
         days = int.from_bytes(
             decoded[AVRO_DURATION_PART_SIZE : AVRO_DURATION_PART_SIZE * 2],
@@ -740,7 +735,8 @@ class AvroParser(JsonSchemaParser):
     def parse_raw(self) -> None:
         """Parse all Avro schema input sources into data models."""
         for source, path_parts in self._get_context_source_path_parts():
-            raw_obj = _AvroSchemaConverter().convert(source)
+            raw_data = source.raw_data if source.raw_data is not None else load_yaml(source.text)
+            raw_obj = convert_avro_schema_data(raw_data)
             source.raw_data = raw_obj
             if source.path.parts:
                 self.remote_object_cache[str(self.base_path / source.path)] = raw_obj

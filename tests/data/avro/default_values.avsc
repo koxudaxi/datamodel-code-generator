@@ -1,0 +1,72 @@
+{
+  "type": "record",
+  "name": "DefaultValues",
+  "namespace": "default.values",
+  "doc": "Avro default value normalization coverage.",
+  "fields": [
+    {"name": "nullByteDefault", "type": "bytes", "default": "\u0000"},
+    {"name": "asciiByteDefault", "type": "bytes", "default": "\u007f"},
+    {"name": "firstHighByteDefault", "type": "bytes", "default": "\u0080"},
+    {"name": "multiByteDefault", "type": "bytes", "default": "\u00ff\u0000"},
+    {"name": "bytesDefault", "type": "bytes", "default": "\u00ff"},
+    {
+      "name": "fixedDefault",
+      "type": {"type": "fixed", "name": "FixedDefault", "size": 1},
+      "default": "\u00ff"
+    },
+    {"name": "namedFixedDefault", "type": "FixedDefault", "default": "\u00ff"},
+    {
+      "name": "unionDefault",
+      "type": [{"type": "fixed", "name": "UnionFixed", "size": 1}, "null"],
+      "default": "\u00ff"
+    },
+    {"name": "wrappedUnionDefault", "type": {"type": ["bytes", "null"]}, "default": "\u00ff"},
+    {"name": "wrappedTypeDefault", "type": {"type": {"type": "bytes"}}, "default": "\u00ff"},
+    {
+      "name": "decimalDefault",
+      "type": {"type": "bytes", "logicalType": "decimal", "precision": 4, "scale": 2},
+      "default": "\u0004\u00d2"
+    },
+    {
+      "name": "fixedUuidDefault",
+      "type": {"type": "fixed", "name": "DefaultUuid", "size": 16, "logicalType": "uuid"},
+      "default": "\u0000\u0011\u0022\u0033\u0044\u0055\u0066\u0077\u0088\u0099\u00aa\u00bb\u00cc\u00dd\u00ee\u00ff"
+    },
+    {
+      "name": "stringUuidDefault",
+      "type": {"type": "string", "logicalType": "uuid"},
+      "default": "00112233-4455-6677-8899-aabbccddeeff"
+    },
+    {
+      "name": "durationDefault",
+      "type": {"type": "fixed", "name": "DefaultDuration", "size": 12, "logicalType": "duration"},
+      "default": "\u0000\u0000\u0000\u0000\u0002\u0000\u0000\u0000\u00b8\u000b\u0000\u0000"
+    },
+    {
+      "name": "durationDays",
+      "type": {"type": "fixed", "name": "DurationDays", "size": 12, "logicalType": "duration"},
+      "default": "\u0000\u0000\u0000\u0000\u0002\u0000\u0000\u0000\u0000\u0000\u0000\u0000"
+    },
+    {
+      "name": "durationMillis",
+      "type": {"type": "fixed", "name": "DurationMillis", "size": 12, "logicalType": "duration"},
+      "default": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u00b8\u000b\u0000\u0000"
+    },
+    {
+      "name": "durationZero",
+      "type": {"type": "fixed", "name": "DurationZero", "size": 12, "logicalType": "duration"},
+      "default": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000"
+    },
+    {"name": "arrayDefault", "type": {"type": "array", "items": "bytes"}, "default": ["\u00ff"]},
+    {"name": "mapDefault", "type": {"type": "map", "values": "bytes"}, "default": {"k": "\u00ff"}},
+    {
+      "name": "recordDefault",
+      "type": {
+        "type": "record",
+        "name": "NestedDefault",
+        "fields": [{"name": "payload", "type": "bytes"}]
+      },
+      "default": {"payload": "\u00ff"}
+    }
+  ]
+}

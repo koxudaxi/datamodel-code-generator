@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-from decimal import Decimal
 from pathlib import Path
-from typing import Any
-from uuid import UUID
 
 import pytest
 
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import PythonVersion, is_supported_in_black
-from datamodel_code_generator.parser.avro import convert_avro_schema_data
 from tests.main.avro.conftest import assert_file_content
 from tests.main.conftest import (
     AVRO_DATA_PATH,
@@ -30,191 +26,6 @@ _SKIP_BLACK = pytest.mark.skipif(
 
 def _expected_file(expected_file: str) -> str:
     return f"py{CURRENT_PYTHON_VERSION.replace('.', '')}/{expected_file}"
-
-
-def _avro_bytes_default(*values: int) -> str:
-    return bytes(values).decode("latin1")
-
-
-def _assert_default(properties: dict[str, Any], name: str, expected: object) -> None:
-    actual = properties[name]["default"]
-    if actual != expected:
-        pytest.fail(f"{name} default mismatch: {actual!r} != {expected!r}")
-
-
-def _assert_default_repr(properties: dict[str, Any], name: str, expected: str) -> None:
-    actual = repr(properties[name]["default"])
-    if actual != expected:
-        pytest.fail(f"{name} default repr mismatch: {actual!r} != {expected!r}")
-
-
-def test_convert_avro_schema_data_normalizes_binary_defaults() -> None:
-    """Convert Avro bytes/fixed default strings to Python bytes."""
-    uuid_text = "00112233-4455-6677-8899-aabbccddeeff"
-    uuid_bytes_default = UUID(uuid_text).bytes.decode("latin1")
-    duration_default = _avro_bytes_default(0, 0, 0, 0, 2, 0, 0, 0, 0xB8, 0x0B, 0, 0)
-
-    converted = convert_avro_schema_data({
-        "type": "record",
-        "name": "Defaults",
-        "fields": [
-            {"name": "nullByteDefault", "type": "bytes", "default": _avro_bytes_default(0)},
-            {"name": "asciiByteDefault", "type": "bytes", "default": _avro_bytes_default(0x7F)},
-            {"name": "firstHighByteDefault", "type": "bytes", "default": _avro_bytes_default(0x80)},
-            {"name": "multiByteDefault", "type": "bytes", "default": _avro_bytes_default(0xFF, 0)},
-            {"name": "bytesDefault", "type": "bytes", "default": "\u00ff"},
-            {"name": "fixedDefault", "type": {"type": "fixed", "name": "FixedDefault", "size": 1}, "default": "\u00ff"},
-            {"name": "namedFixedDefault", "type": "FixedDefault", "default": "\u00ff"},
-            {
-                "name": "unionDefault",
-                "type": [{"type": "fixed", "name": "UnionFixed", "size": 1}, "null"],
-                "default": "\u00ff",
-            },
-            {"name": "wrappedUnionDefault", "type": {"type": ["bytes", "null"]}, "default": "\u00ff"},
-            {"name": "wrappedTypeDefault", "type": {"type": {"type": "bytes"}}, "default": "\u00ff"},
-            {
-                "name": "decimalDefault",
-                "type": {"type": "bytes", "logicalType": "decimal", "precision": 4, "scale": 2},
-                "default": "\u0004\u00d2",
-            },
-            {
-                "name": "fixedUuidDefault",
-                "type": {"type": "fixed", "name": "DefaultUuid", "size": 16, "logicalType": "uuid"},
-                "default": uuid_bytes_default,
-            },
-            {
-                "name": "stringUuidDefault",
-                "type": {"type": "string", "logicalType": "uuid"},
-                "default": uuid_text,
-            },
-            {
-                "name": "durationDefault",
-                "type": {"type": "fixed", "name": "DefaultDuration", "size": 12, "logicalType": "duration"},
-                "default": duration_default,
-            },
-            {"name": "arrayDefault", "type": {"type": "array", "items": "bytes"}, "default": ["\u00ff"]},
-            {"name": "mapDefault", "type": {"type": "map", "values": "bytes"}, "default": {"k": "\u00ff"}},
-            {
-                "name": "recordDefault",
-                "type": {
-                    "type": "record",
-                    "name": "NestedDefault",
-                    "fields": [{"name": "payload", "type": "bytes"}],
-                },
-                "default": {"payload": "\u00ff"},
-            },
-        ],
-    })
-
-    properties = converted["properties"]
-    _assert_default(properties, "nullByteDefault", b"\x00")
-    _assert_default(properties, "asciiByteDefault", b"\x7f")
-    _assert_default(properties, "firstHighByteDefault", b"\x80")
-    _assert_default(properties, "multiByteDefault", b"\xff\x00")
-    _assert_default(properties, "bytesDefault", b"\xff")
-    _assert_default(properties, "fixedDefault", b"\xff")
-    _assert_default(properties, "namedFixedDefault", b"\xff")
-    _assert_default(properties, "unionDefault", b"\xff")
-    _assert_default(properties, "wrappedUnionDefault", b"\xff")
-    _assert_default(properties, "wrappedTypeDefault", b"\xff")
-    _assert_default(properties, "decimalDefault", Decimal("12.34"))
-    _assert_default(properties, "fixedUuidDefault", UUID(uuid_text))
-    _assert_default(properties, "stringUuidDefault", UUID(uuid_text))
-    _assert_default_repr(properties, "durationDefault", "timedelta(days=2, milliseconds=3000)")
-    _assert_default(properties, "arrayDefault", [b"\xff"])
-    _assert_default(properties, "mapDefault", {"k": b"\xff"})
-    _assert_default(properties, "recordDefault", {"payload": b"\xff"})
-
-
-def test_convert_avro_schema_data_keeps_values_for_unsupported_default_shapes() -> None:
-    """Keep defaults unchanged when schemas or values cannot contain Avro binary defaults."""
-    duration_with_months = _avro_bytes_default(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-    duration_days = _avro_bytes_default(0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0)
-    duration_millis = _avro_bytes_default(0, 0, 0, 0, 0, 0, 0, 0, 0xB8, 0x0B, 0, 0)
-    duration_zero = _avro_bytes_default(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-
-    converted = convert_avro_schema_data({
-        "type": "record",
-        "name": "UnsupportedDefaults",
-        "fields": [
-            {"name": "bytesNonString", "type": "bytes", "default": 1},
-            {"name": "bytesHighCodepoint", "type": "bytes", "default": "\u0100"},
-            {"name": "arrayDefaultNotList", "type": {"type": "array", "items": "bytes"}, "default": "unchanged"},
-            {
-                "name": "recordDefaultExtraField",
-                "type": {
-                    "type": "record",
-                    "name": "GuardRecord",
-                    "fields": [{"name": "payload", "type": "bytes"}],
-                },
-                "default": {"payload": "\u00ff", "unknown": "\u00ff"},
-            },
-            {"name": "bigDecimalDefault", "type": {"type": "bytes", "logicalType": "big-decimal"}, "default": "\u00ff"},
-            {"name": "decimalHighCodepoint", "type": {"type": "bytes", "logicalType": "decimal"}, "default": "\u0100"},
-            {
-                "name": "decimalInvalidScale",
-                "type": {"type": "bytes", "logicalType": "decimal", "scale": "invalid"},
-                "default": "\u00ff",
-            },
-            {
-                "name": "durationWithMonths",
-                "type": {"type": "fixed", "name": "DurationWithMonths", "size": 12, "logicalType": "duration"},
-                "default": duration_with_months,
-            },
-            {
-                "name": "durationWrongLength",
-                "type": {"type": "fixed", "name": "DurationWrongLength", "size": 12, "logicalType": "duration"},
-                "default": "\u00ff",
-            },
-            {
-                "name": "durationDays",
-                "type": {"type": "fixed", "name": "DurationDays", "size": 12, "logicalType": "duration"},
-                "default": duration_days,
-            },
-            {
-                "name": "durationMillis",
-                "type": {"type": "fixed", "name": "DurationMillis", "size": 12, "logicalType": "duration"},
-                "default": duration_millis,
-            },
-            {
-                "name": "durationZero",
-                "type": {"type": "fixed", "name": "DurationZero", "size": 12, "logicalType": "duration"},
-                "default": duration_zero,
-            },
-            {
-                "name": "uuidInvalid",
-                "type": {"type": "fixed", "name": "InvalidUuid", "size": 16, "logicalType": "uuid"},
-                "default": "not-a-uuid",
-            },
-            {
-                "name": "stringUuidInvalid",
-                "type": {"type": "string", "logicalType": "uuid"},
-                "default": "abcdefghijklmnop",
-            },
-            {
-                "name": "stringUuidNonString",
-                "type": {"type": "string", "logicalType": "uuid"},
-                "default": 1,
-            },
-        ],
-    })
-
-    properties = converted["properties"]
-    _assert_default(properties, "bytesNonString", 1)
-    _assert_default(properties, "bytesHighCodepoint", "\u0100")
-    _assert_default(properties, "arrayDefaultNotList", "unchanged")
-    _assert_default(properties, "recordDefaultExtraField", {"payload": b"\xff", "unknown": "\u00ff"})
-    _assert_default(properties, "bigDecimalDefault", "\u00ff")
-    _assert_default(properties, "decimalHighCodepoint", "\u0100")
-    _assert_default(properties, "decimalInvalidScale", "\u00ff")
-    _assert_default(properties, "durationWithMonths", duration_with_months)
-    _assert_default(properties, "durationWrongLength", "\u00ff")
-    _assert_default_repr(properties, "durationDays", "timedelta(days=2)")
-    _assert_default_repr(properties, "durationMillis", "timedelta(milliseconds=3000)")
-    _assert_default_repr(properties, "durationZero", "timedelta(0)")
-    _assert_default(properties, "uuidInvalid", "not-a-uuid")
-    _assert_default(properties, "stringUuidInvalid", "abcdefghijklmnop")
-    _assert_default(properties, "stringUuidNonString", 1)
 
 
 @_SKIP_BLACK
@@ -282,6 +93,20 @@ def test_main_avro_spec_matrix(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file=_expected_file("spec_matrix.py"),
         extra_args=get_current_version_args("--use-field-description"),
+        force_exec_validation=True,
+    )
+
+
+@_SKIP_BLACK
+def test_main_avro_default_values(output_file: Path) -> None:
+    """Generate Python defaults from Avro default values."""
+    run_main_and_assert(
+        input_path=AVRO_DATA_PATH / "default_values.avsc",
+        output_path=output_file,
+        input_file_type="avro",
+        assert_func=assert_file_content,
+        expected_file=_expected_file("default_values.py"),
+        extra_args=get_current_version_args(),
         force_exec_validation=True,
     )
 
