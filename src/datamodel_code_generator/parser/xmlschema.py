@@ -22,6 +22,7 @@ from typing_extensions import Unpack
 
 from datamodel_code_generator import Error, YamlValue
 from datamodel_code_generator.enums import VersionMode, XMLSchemaVersion
+from datamodel_code_generator.format import DatetimeClassType
 from datamodel_code_generator.parser._math_imports import add_math_imports_for_non_finite_literals
 from datamodel_code_generator.parser.base import Source, title_to_class_name
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
@@ -52,7 +53,7 @@ INTEGER_SCHEMA: JsonSchema = {"type": "integer"}
 NUMBER_SCHEMA: JsonSchema = {"type": "number"}
 BOOLEAN_SCHEMA: JsonSchema = {"type": "boolean"}
 DECIMAL_SCHEMA: JsonSchema = {"type": "number", "format": "decimal"}
-DATETIME_SCHEMA: JsonSchema = {"type": "string", "format": "date-time", "x-python-type": "datetime"}
+DATETIME_SCHEMA: JsonSchema = {"type": "string", "format": "date-time"}
 
 
 class _OccurrenceContext(NamedTuple):
@@ -286,13 +287,16 @@ class _XMLSchemaConverter:
         self,
         base_path: Path,
         encoding: str,
+        *,
         xmlschema_version: XMLSchemaVersion | None = None,
         schema_version_mode: VersionMode | None = None,
+        use_xmlschema_datetime_default: bool = False,
     ) -> None:
         self.base_path = base_path
         self.encoding = encoding
         self.xmlschema_version = xmlschema_version
         self.schema_version_mode = schema_version_mode or VersionMode.Lenient
+        self.use_xmlschema_datetime_default = use_xmlschema_datetime_default
         self._resolved_xmlschema_version: XMLSchemaVersion | None = None
         self.namespaces: dict[str, str] = {}
         self.target_namespace: str | None = None
@@ -1267,10 +1271,16 @@ class _XMLSchemaConverter:
         key = self._resolve_key(qname, self.simple_types, self.complex_types, element=element)
         is_user_defined = key in self.simple_types or key in self.complex_types
         if namespace == XML_SCHEMA_NAMESPACE or (is_unprefixed_builtin and not is_user_defined):
-            return _copy_schema(BUILTIN_TYPE_SCHEMAS.get(local, STRING_SCHEMA))
+            return self._builtin_type_schema(local, default=STRING_SCHEMA)
         if is_user_defined:
             return {"$ref": self._ref_for_type_key(key)}
-        return _copy_schema(BUILTIN_TYPE_SCHEMAS.get(local, {}))
+        return self._builtin_type_schema(local, default={})
+
+    def _builtin_type_schema(self, local: str, *, default: JsonSchema) -> JsonSchema:
+        schema = _copy_schema(BUILTIN_TYPE_SCHEMAS.get(local, default))
+        if local == "dateTime" and self.use_xmlschema_datetime_default:
+            schema["x-python-type"] = "datetime"
+        return schema
 
     def _qname_namespace(self, qname: str, element: ET.Element | None = None) -> str | None:
         if ":" not in qname:
@@ -1372,6 +1382,14 @@ class XMLSchemaParser(JsonSchemaParser):
         **options: Unpack[XMLSchemaParserConfigDict],
     ) -> None:
         """Initialize the XML Schema parser with JSON Schema parser configuration."""
+        if config is None:
+            self.use_xmlschema_datetime_default = options.get("target_datetime_class") is None
+            options.setdefault("target_datetime_class", DatetimeClassType.Awaredatetime)
+        else:
+            self.use_xmlschema_datetime_default = config.target_datetime_class is None
+            if self.use_xmlschema_datetime_default:
+                config_updates: dict[str, Any] = {"target_datetime_class": DatetimeClassType.Awaredatetime}
+                config = config.model_copy(update=config_updates)
         super().__init__(source=source, config=config, **options)
 
     def parse(self, *args: Any, **kwargs: Any) -> str | dict[tuple[str, ...], Any]:
@@ -1412,6 +1430,7 @@ class XMLSchemaParser(JsonSchemaParser):
                 encoding=self.encoding,
                 xmlschema_version=config.xmlschema_version,
                 schema_version_mode=config.schema_version_mode,
+                use_xmlschema_datetime_default=self.use_xmlschema_datetime_default,
             )
             raw_obj = converter.convert(source)
             source.raw_data = raw_obj

@@ -843,6 +843,8 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             else (
                 DatetimeClassType.Datetime
                 if input_file_type == InputFileType.GraphQL
+                else None
+                if input_file_type == InputFileType.XMLSchema
                 else DatetimeClassType.Awaredatetime
             )
         ),
