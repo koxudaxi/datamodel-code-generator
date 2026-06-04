@@ -207,6 +207,16 @@ def _safe_decimal(value: str) -> Decimal | None:
         return None
 
 
+def _safe_bool(value: str) -> bool | None:
+    match value:
+        case "true" | "1":
+            return True
+        case "false" | "0":
+            return False
+        case _:
+            return None
+
+
 def _versioning_value(element: ET.Element, name: str) -> Decimal | None:
     value = element.get(f"{{{XML_SCHEMA_VERSIONING_NAMESPACE}}}{name}")
     return _safe_decimal(value) if value is not None else None
@@ -832,7 +842,9 @@ class _XMLSchemaConverter:
         else:
             schema[max_key] = length
 
-    def _parse_literal(self, value: str, schema: JsonSchema) -> Any:  # noqa: PLR6301
+    def _parse_literal(self, value: str, schema: JsonSchema) -> Any:
+        if any_of := schema.get("anyOf"):
+            return self._parse_union_literal(value, any_of)
         schema_type = schema.get("type")
         if schema_type == "integer":
             return integer if (integer := _safe_int(value)) is not None else value
@@ -841,7 +853,14 @@ class _XMLSchemaConverter:
                 return decimal if (decimal := _safe_decimal(value)) is not None else value
             return number if (number := _safe_float(value)) is not None else value
         if schema_type == "boolean":
-            return value in {"true", "1"}
+            return boolean if (boolean := _safe_bool(value)) is not None else value
+        return value
+
+    def _parse_union_literal(self, value: str, schemas: list[JsonSchema]) -> Any:
+        for schema in schemas:
+            parsed = self._parse_literal(value, schema)
+            if parsed != value or schema.get("type") == "string":
+                return parsed
         return value
 
     def _parse_number(self, value: str, schema: JsonSchema) -> int | float | Decimal | str:  # noqa: PLR6301

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="root">
+    <xs:complexType>
+      <xs:attribute name="value" default="1">
+        <xs:simpleType>
+          <xs:union memberTypes="xs:int xs:string"/>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="flag" default="false">
+        <xs:simpleType>
+          <xs:union memberTypes="xs:boolean xs:string"/>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="text" default="maybe">
+        <xs:simpleType>
+          <xs:union memberTypes="xs:boolean xs:string"/>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
