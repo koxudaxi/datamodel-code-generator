@@ -69,6 +69,38 @@ def test_update_openapi_info_version_warns_when_missing() -> None:
         parser._update_openapi_info_version({"info": {"title": "Test"}})
 
 
+@pytest.mark.parametrize(
+    ("raw_obj", "specification", "expected_root_id"),
+    [
+        ({"openapi": "3.1.0"}, {"openapi": "3.1.0", "$self": "https://example.com/root.yaml"}, "original"),
+        (
+            {"openapi": "3.2.1"},
+            {"openapi": "3.2.1", "$self": "https://example.com/root.yaml"},
+            "https://example.com/root.yaml",
+        ),
+        ({}, {"$self": "https://example.com/root.yaml"}, "original"),
+        ({"openapi": 3.2}, {"openapi": 3.2, "$self": "https://example.com/root.yaml"}, "original"),
+        ({"openapi": "4.0.0"}, {"openapi": "4.0.0", "$self": "https://example.com/root.yaml"}, "original"),
+        ({"openapi": "3.2.0"}, {"openapi": "3.2.0"}, "original"),
+        ({"openapi": "3.2.0"}, {"openapi": "3.2.0", "$self": 123}, "original"),
+    ],
+)
+def test_openapi_self_context_requires_32(
+    raw_obj: dict[str, Any],
+    specification: dict[str, Any],
+    expected_root_id: str,
+) -> None:
+    """Apply $self as the root id only for OpenAPI 3.2 documents."""
+    parser = OpenAPIParser("")
+    parser.raw_obj = raw_obj
+    parser.root_id = "original"
+
+    with parser.openapi_self_context(specification):
+        assert parser.root_id == expected_root_id
+
+    assert parser.root_id == "original"
+
+
 def test_parse_skips_info_version_when_option_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
     """Leave parser output unchanged when OpenAPI info.version output is disabled."""
 

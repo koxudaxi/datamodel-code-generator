@@ -14,6 +14,7 @@ class UserStatus(BaseModel):
 class UserSignupUserSignupPayload(BaseModel):
     displayName: str
     age: int | None
+    signupCount: int
 
 
 class UserSignupUserSignupHeaders(BaseModel):

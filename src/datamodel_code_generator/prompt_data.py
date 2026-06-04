@@ -14,6 +14,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--allof-class-hierarchy": "Controls how allOf schemas are represented in the generated class hierarchy.",
     "--allof-merge-mode": "Merge constraints from root model references in allOf schemas.",
     "--allow-extra-fields": "Allow extra fields in generated Pydantic models (extra='allow').",
+    "--allow-leading-underscore-class-name": "Allow an explicitly specified root class name to start with an unders...",
     "--allow-population-by-field-name": "Allow Pydantic model population by field name (not just alias).",
     "--allow-remote-refs": "Enable fetching of `$ref` targets over HTTP/HTTPS.",
     "--base-class": "Specify a custom base class for generated models.",

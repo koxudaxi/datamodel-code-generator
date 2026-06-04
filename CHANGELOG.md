@@ -5,6 +5,34 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.59.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.59.1) - 2026-06-03
+
+## What's Changed
+* Update CHANGELOG for 0.59.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3216
+* Update supported input formats by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3219
+* Fix docs preview deploy by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3218
+* Update zensical by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3220
+* Add builtin formatter warning by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3178
+* Add playground by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3217
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3222
+* Add playground state URLs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3223
+* Add playground version selector by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3224
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3225
+* Optimize playground runtime warmup by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3227
+* Fix playground runtime versions by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3229
+* Add playground privacy note by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3231
+* Fix download badge by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3232
+* Add OpenAPI 3.2 schema version by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3233
+* Add MCP tools input type by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3234
+* Parse AsyncAPI multi-format schemas by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3236
+* Allow leading underscore class names by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3237
+* Clarify uv installation guidance by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3238
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.59.0...0.59.1
+
+---
+
 ## [0.59.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.59.0) - 2026-05-29
 
 ## Breaking Changes

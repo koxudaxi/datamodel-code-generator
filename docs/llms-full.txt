@@ -4,7 +4,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 
 🚀 Generate Python data models from schema definitions in seconds.
 
-[![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
+[![PyPI version](https://img.shields.io/pypi/v/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
 [![Downloads](https://api.pepy.tech/badge/datamodel-code-generator/month)](https://pepy.tech/projects/datamodel-code-generator)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datamodel-code-generator)](https://pypi.python.org/pypi/datamodel-code-generator)
@@ -42,7 +42,7 @@ Generate models in your browser without installing anything.
 
 ## 📦 Installation
 
-=== "uv tool (Recommended)"
+=== "uv tool (Recommended for CLI use)"
 
     ```bash
     uv tool install datamodel-code-generator
@@ -57,7 +57,7 @@ Generate models in your browser without installing anything.
 === "uv (project)"
 
     ```bash
-    uv add datamodel-code-generator
+    uv add --dev datamodel-code-generator
     ```
 
 === "conda"
@@ -77,6 +77,9 @@ Generate models in your browser without installing anything.
     ```bash
     uvx datamodel-codegen --help
     ```
+
+Use `uv tool install` when you want `datamodel-codegen` available as a standalone CLI. Use `uv add --dev` when a project
+or CI workflow should pin the generator version in its lockfile.
 
 ---
 
@@ -291,7 +294,7 @@ This documentation is auto-generated from test cases.
 | 📁 [Base Options](base-options.md) | 10 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 30 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 26 | Field naming and docstring behavior |
-| 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
+| 🏗️ [Model Customization](model-customization.md) | 40 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 22 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
@@ -312,6 +315,7 @@ This documentation is auto-generated from test cases.
 - [`--allof-class-hierarchy`](typing-customization.md#allof-class-hierarchy)
 - [`--allof-merge-mode`](typing-customization.md#allof-merge-mode)
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields)
+- [`--allow-leading-underscore-class-name`](model-customization.md#allow-leading-underscore-class-name)
 - [`--allow-population-by-field-name`](model-customization.md#allow-population-by-field-name)
 - [`--allow-remote-refs`](general-options.md#allow-remote-refs)
 
@@ -1293,6 +1297,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-custom
 | Option | Description |
 |--------|-------------|
 | [`--allow-extra-fields`](#allow-extra-fields) | Allow extra fields in generated Pydantic models (extra='allo... |
+| [`--allow-leading-underscore-class-name`](#allow-leading-underscore-class-name) | Allow an explicitly specified root class name to start with ... |
 | [`--allow-population-by-field-name`](#allow-population-by-field-name) | Allow Pydantic model population by field name (not just alia... |
 | [`--base-class`](#base-class) | Specify a custom base class for generated models. |
 | [`--base-class-map`](#base-class-map) | Specify different base classes for specific models via JSON ... |
@@ -1625,6 +1630,86 @@ The `--allow-extra-fields` flag configures the code generation behavior.
             )
             event: Event | None = None
         ```
+
+---
+
+## `--allow-leading-underscore-class-name` {#allow-leading-underscore-class-name}
+
+Allow an explicitly specified root class name to start with an underscore.
+
+By default, leading underscores in class names are normalized to avoid private
+model names. Use --allow-leading-underscore-class-name together with an explicit
+--class-name when you need the generated root model to preserve that name
+exactly.
+
+**Related:** [`--class-name`](model-customization.md#class-name)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --class-name __ParsedModel --allow-leading-underscore-class-name --disable-timestamp # (1)!
+    ```
+
+    1. :material-arrow-left: `--allow-leading-underscore-class-name` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "item": {
+          "$ref": "#/$defs/Item"
+        }
+      },
+      "$defs": {
+        "Status": {
+          "type": "string",
+          "enum": ["active", "inactive"]
+        },
+        "Item": {
+          "type": "object",
+          "properties": {
+            "id": {"type": "integer"},
+            "name": {"type": "string"}
+          }
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  class_name_affix.json
+
+    from __future__ import annotations
+
+    from enum import Enum
+
+    from pydantic import BaseModel
+
+
+    class Status(Enum):
+        active = 'active'
+        inactive = 'inactive'
+
+
+    class Item(BaseModel):
+        id: int | None = None
+        name: str | None = None
+
+
+    class __ParsedModel(BaseModel):
+        status: Status | None = None
+        item: Item | None = None
+    ```
 
 ---
 
@@ -25141,6 +25226,7 @@ datamodel-codegen [OPTIONS]
 | Option | Description |
 |--------|-------------|
 | [`--allow-extra-fields`](model-customization.md#allow-extra-fields) | Allow extra fields in generated Pydantic models (extra='allow'). |
+| [`--allow-leading-underscore-class-name`](model-customization.md#allow-leading-underscore-class-name) | Allow an explicitly specified root class name to start with an underscore. |
 | [`--allow-population-by-field-name`](model-customization.md#allow-population-by-field-name) | Allow Pydantic model population by field name (not just alias). |
 | [`--base-class`](model-customization.md#base-class) | Specify a custom base class for generated models. |
 | [`--base-class-map`](model-customization.md#base-class-map) | Specify different base classes for specific models via JSON mapping. |
@@ -25274,6 +25360,7 @@ All options sorted alphabetically:
 - [`--allof-class-hierarchy`](typing-customization.md#allof-class-hierarchy) - Controls how allOf schemas are represented in the generated ...
 - [`--allof-merge-mode`](typing-customization.md#allof-merge-mode) - Merge constraints from root model references in allOf schema...
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields) - Allow extra fields in generated Pydantic models (extra='allo...
+- [`--allow-leading-underscore-class-name`](model-customization.md#allow-leading-underscore-class-name) - Allow an explicitly specified root class name to start with ...
 - [`--allow-population-by-field-name`](model-customization.md#allow-population-by-field-name) - Allow Pydantic model population by field name (not just alia...
 - [`--allow-remote-refs`](general-options.md#allow-remote-refs) - Enable fetching of `$ref` targets over HTTP/HTTPS.
 - [`--base-class`](model-customization.md#base-class) - Specify a custom base class for generated models.
@@ -31358,14 +31445,15 @@ cat openapi.yaml | yq '.components.schemas.User' | \
 |--------|---------|----------|
 | **uvx** | `uvx datamodel-codegen` | One-liner usage, no installation |
 | **pipx run** | `pipx run datamodel-code-generator` | One-liner usage, alternative to uvx |
+| **uv tool install** | `uv tool install datamodel-code-generator` | Standalone CLI installation |
 | **pipx install** | `pipx install datamodel-code-generator` | Global installation, frequent usage |
-| **uv add** | `uv add datamodel-code-generator` | Project dependency |
+| **uv add --dev** | `uv add --dev datamodel-code-generator` | Pinned project/CI dependency |
 | **pip install** | `pip install datamodel-code-generator` | Traditional installation |
 
 !!! tip "When to use each method"
     - **uvx/pipx run**: Quick one-liner generation, testing different versions
-    - **pipx install**: Frequent CLI usage across multiple projects
-    - **uv add/pip install**: Project dependency, CI/CD pipelines, programmatic usage
+    - **uv tool install/pipx install**: Frequent CLI usage across multiple projects
+    - **uv add --dev/pip install**: Project dependency, CI/CD pipelines, programmatic usage
 
 ---
 
@@ -32405,6 +32493,9 @@ If your project uses [uv](https://github.com/astral-sh/uv), you can run the CLI 
   run: uv run --with datamodel-code-generator datamodel-codegen --profile api --check
 ```
 
+If you want the generator version pinned in your project lockfile, add it once with `uv add --dev datamodel-code-generator`
+and run `uv run datamodel-codegen --profile api --check` in CI.
+
 ---
 
 ## Pre-commit Hook
@@ -33335,12 +33426,14 @@ the resulting `git diff` before committing. See the inline-snapshot
 [`--inline-snapshot` pytest options](https://15r10nk.github.io/inline-snapshot/latest/pytest/#-inline-snapshotcreatefixtrimupdate)
 for the meaning of `create` and `fix`.
 
-Direct `assert` statements are blocked in the guarded E2E test modules by
-`tests/test_assert_helper_usage.py`. If you add a new E2E test file that checks
-generated output, add it to `E2E_TEST_PATHS` in that guard test so new direct
-assertions are also rejected. Only use `@pytest.mark.allow_direct_assert` for
-cases that cannot reasonably be expressed with the shared helpers, such as
-mock setup internals or narrow intermediate-state checks.
+Direct `assert` statements are blocked in guarded test modules by
+`tests/test_assert_helper_usage.py`. New test files are guarded by default; add
+legacy or unit-focused files to
+`assert_helper_direct_assert_exempt_files` in `pyproject.toml` only when they
+are intentionally outside the generated-output helper policy. Use
+`@pytest.mark.allow_direct_assert` for narrow in-file exceptions that cannot
+reasonably be expressed with the shared helpers, such as external-request mock
+checks or intermediate-state checks.
 
 ## Parser generation state
 

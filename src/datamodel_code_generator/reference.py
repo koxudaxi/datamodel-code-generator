@@ -922,6 +922,7 @@ class ModelResolver:  # noqa: PLR0904
         singular_name_suffix: str | None = None,
         loaded: bool = False,
         model_type: str = "model",
+        preserve_class_name: bool = False,
     ) -> Reference:
         """Add or update a model reference with the given path and name."""
         joined_path = self.join_path(tuple(path))
@@ -960,6 +961,7 @@ class ModelResolver:  # noqa: PLR0904
                     singular_name_suffix=singular_name_suffix,
                     model_type=model_type,
                     is_root=is_root,
+                    preserve_name=preserve_class_name,
                 )
             else:
                 name, duplicate_name = self.get_class_name(
@@ -970,6 +972,7 @@ class ModelResolver:  # noqa: PLR0904
                     singular_name_suffix=singular_name_suffix,
                     model_type=model_type,
                     is_root=is_root,
+                    preserve_name=preserve_class_name,
                 )
         else:
             # TODO: create a validate for module name
@@ -1068,6 +1071,11 @@ class ModelResolver:  # noqa: PLR0904
         class_name = self.class_name_generator(name)
         return self._apply_class_name_affix(class_name, model_type=model_type, is_root=False)
 
+    def _generate_class_name(self, name: str, *, preserve_name: bool = False) -> str:
+        if preserve_name and self.validate_name(name):
+            return name
+        return self.class_name_generator(name)
+
     def get_class_name(  # noqa: PLR0913, PLR0917
         self,
         name: str,
@@ -1078,6 +1086,7 @@ class ModelResolver:  # noqa: PLR0904
         model_type: str = "model",
         is_root: bool = False,  # noqa: FBT001, FBT002
         skip_affix: bool = False,  # noqa: FBT001, FBT002
+        preserve_name: bool = False,  # noqa: FBT001, FBT002
     ) -> ClassName:
         """Generate a unique class name with optional singularization."""
         if "." in name and self.treat_dot_as_module is not False:
@@ -1093,7 +1102,7 @@ class ModelResolver:  # noqa: PLR0904
             prefix = ""
             class_name = name.replace(".", "_") if "." in name else name
 
-        class_name = self.class_name_generator(class_name)
+        class_name = self._generate_class_name(class_name, preserve_name=preserve_name)
 
         if singular_name:
             class_name = get_singular_name(class_name, singular_name_suffix or self.singular_name_suffix)

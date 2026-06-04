@@ -2,7 +2,7 @@
 
 🚀 Generate Python data models from schema definitions in seconds.
 
-[![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
+[![PyPI version](https://img.shields.io/pypi/v/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
 [![Downloads](https://api.pepy.tech/badge/datamodel-code-generator/month)](https://pepy.tech/projects/datamodel-code-generator)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datamodel-code-generator)](https://pypi.python.org/pypi/datamodel-code-generator)
@@ -48,7 +48,7 @@ Generate models in your browser without installing anything.
 
 ## 📦 Installation
 
-=== "uv tool (Recommended)"
+=== "uv tool (Recommended for CLI use)"
 
     ```bash
     uv tool install datamodel-code-generator
@@ -63,7 +63,7 @@ Generate models in your browser without installing anything.
 === "uv (project)"
 
     ```bash
-    uv add datamodel-code-generator
+    uv add --dev datamodel-code-generator
     ```
 
 === "conda"
@@ -83,6 +83,9 @@ Generate models in your browser without installing anything.
     ```bash
     uvx datamodel-codegen --help
     ```
+
+Use `uv tool install` when you want `datamodel-codegen` available as a standalone CLI. Use `uv add --dev` when a project
+or CI workflow should pin the generator version in its lockfile.
 
 ---
 

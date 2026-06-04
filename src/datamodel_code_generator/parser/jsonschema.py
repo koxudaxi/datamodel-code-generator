@@ -5307,19 +5307,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             self.raw_obj = raw_obj
             title = self.raw_obj.get("title")
             title_str = str(title) if title is not None else "Model"
-            if self.custom_class_name_generator:
-                obj_name = title_str
-            else:
-                if self.class_name:
-                    obj_name = self.class_name
-                else:
+            preserve_root_class_name = False
+            validate_obj_name = False
+            match (self.custom_class_name_generator, self.class_name):
+                case (custom_generator, _) if custom_generator:
+                    obj_name = title_str
+                case (_, class_name) if class_name:
+                    obj_name = class_name
+                    preserve_root_class_name = self._should_preserve_explicit_root_class_name(obj_name)
+                    validate_obj_name = True
+                case _:
                     # backward compatible
                     obj_name = title_str
                     if not self.model_resolver.validate_name(obj_name):
                         obj_name = title_to_class_name(obj_name)
-                if not self.model_resolver.validate_name(obj_name):
-                    raise InvalidClassNameError(obj_name)
-            self._parse_file(self.raw_obj, obj_name, path_parts)
+                    validate_obj_name = True
+            if validate_obj_name and not self.model_resolver.validate_name(obj_name):
+                raise InvalidClassNameError(obj_name)
+            self._parse_file(self.raw_obj, obj_name, path_parts, preserve_root_class_name=preserve_root_class_name)
 
         self._resolve_unparsed_json_pointer()
         self._generate_forced_base_models()
@@ -5362,13 +5367,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         self.parse_raw_obj(model_name, models, [*path_parts, f"#/{reference_paths[0]}", *reference_paths[1:]])
 
-    def _parse_file(  # noqa: PLR0912, PLR0914, PLR0915
+    def _parse_file(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         self,
         raw: dict[str, Any],
         obj_name: str,
         path_parts: list[str],
         object_paths: list[str] | None = None,
         reference_paths: list[str] | None = None,
+        *,
+        preserve_root_class_name: bool = False,
     ) -> None:
         """Parse a file containing JSON Schema definitions and references."""
         object_paths = [o for o in object_paths or [] if o]
@@ -5381,7 +5388,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             else path_parts
         )
         with self.model_resolver.current_root_context(path_parts):
-            obj_name = self.model_resolver.add(path, obj_name, unique=False, class_name=True).name
+            obj_name = self.model_resolver.add(
+                path,
+                obj_name,
+                unique=False,
+                class_name=True,
+                preserve_class_name=preserve_root_class_name,
+            ).name
             with self.root_id_context(raw):
                 # Some jsonschema docs include attribute self to have include version details
                 raw.pop("self", None)

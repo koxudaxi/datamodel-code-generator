@@ -1182,6 +1182,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             default_value_overrides=config.default_value_overrides,
         )
         self.class_name: str | None = config.class_name
+        self.allow_leading_underscore_class_name: bool = config.allow_leading_underscore_class_name
         self.wrap_string_literal: bool | None = config.wrap_string_literal
         self.allow_remote_refs: bool | None = config.allow_remote_refs
         self.http_headers: Sequence[tuple[str, str]] | None = config.http_headers
@@ -1228,6 +1229,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             config.use_default_factory_for_optional_nested_models
         )
         self.field_type_collision_strategy: FieldTypeCollisionStrategy | None = config.field_type_collision_strategy
+
+    def _should_preserve_explicit_root_class_name(self, class_name: str) -> bool:
+        if not self.allow_leading_underscore_class_name:
+            return False
+        if class_name != self.class_name:
+            return False
+        return class_name.startswith("_") and ModelResolver.validate_name(class_name)
 
     @property
     def field_name_model_type(self) -> ModelType:
@@ -1496,7 +1504,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         model_names: dict[str, DataModel] = {}
         for model in models:
             class_name: str = model.class_name
-            generated_name: str = scoped_model_resolver.add([model.path], class_name, unique=True, class_name=True).name
+            generated_name: str = scoped_model_resolver.add(
+                [model.path],
+                class_name,
+                unique=True,
+                class_name=True,
+                preserve_class_name=self._should_preserve_explicit_root_class_name(class_name),
+            ).name
             if class_name != generated_name:
                 model.class_name = generated_name
             model_names[model.class_name] = model

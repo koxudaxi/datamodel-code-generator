@@ -5,8 +5,10 @@
 from __future__ import annotations
 
 from datetime import date as date_aliased
+from datetime import datetime
 from datetime import time as time_aliased
 from datetime import timedelta
+from decimal import Decimal
 from typing import Any
 
 from pydantic import AnyUrl, AwareDatetime, Base64Str, BaseModel, Field, conint
@@ -21,10 +23,10 @@ class Types(BaseModel):
     boolean: bool | None = None
     byte: conint(ge=-128, le=127) | None = None
     date: date_aliased | None = None
-    dateTime: AwareDatetime | None = None
-    decimal: float | None = None
+    dateTime: datetime | None = None
+    decimal: Decimal | None = None
     double: float | None = None
-    duration: timedelta | None = None
+    duration: str | None = None
     dayTimeDuration: timedelta | None = None
     entity: str | None = None
     entities: list[str] | None = None
@@ -61,7 +63,7 @@ class Types(BaseModel):
     unsignedInt: conint(ge=0, le=4294967295) | None = None
     unsignedLong: conint(ge=0, le=18446744073709551615) | None = None
     unsignedShort: conint(ge=0, le=65535) | None = None
-    yearMonthDuration: timedelta | None = None
+    yearMonthDuration: str | None = None
     dateTimeStamp: AwareDatetime | None = None
     status: str | None = 'open'
     requiredId: str

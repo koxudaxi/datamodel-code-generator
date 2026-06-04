@@ -73,6 +73,7 @@ class ParserConfigDict(TypedDict):
     use_generic_base_class: NotRequired[bool]
     force_optional_for_required_fields: NotRequired[bool]
     class_name: NotRequired[str | None]
+    allow_leading_underscore_class_name: NotRequired[bool]
     class_name_prefix: NotRequired[str | None]
     class_name_suffix: NotRequired[str | None]
     class_name_affix_scope: NotRequired[ClassNameAffixScope]

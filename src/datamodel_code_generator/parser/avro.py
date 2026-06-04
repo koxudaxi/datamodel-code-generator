@@ -421,8 +421,6 @@ class _AvroSchemaConverter:
                 field_schema["x-avro-aliases"] = field["aliases"]
             if "order" in field:
                 field_schema["x-avro-order"] = field["order"]
-            if "default" in field:
-                field_schema["default"] = field["default"]
             required.append(field_name)
             properties[field_name] = field_schema
 
@@ -452,8 +450,6 @@ class _AvroSchemaConverter:
             seen_symbols.add(symbol)
         converted: JsonSchema = {"type": "string", "enum": symbols}
         self._copy_common_metadata(schema, converted)
-        if "default" in schema:
-            converted["default"] = schema["default"]
         converted["x-avro-fullname"] = fullname
         return converted
 
@@ -582,7 +578,12 @@ class AvroParser(JsonSchemaParser):
             self.raw_obj = raw_obj
             title = str(raw_obj.get("title") or "Model")
             obj_name = self.class_name or title
-            self._parse_file(raw_obj, obj_name, path_parts)
+            self._parse_file(
+                raw_obj,
+                obj_name,
+                path_parts,
+                preserve_root_class_name=self._should_preserve_explicit_root_class_name(obj_name),
+            )
 
         self._resolve_unparsed_json_pointer()
         self._generate_forced_base_models()
