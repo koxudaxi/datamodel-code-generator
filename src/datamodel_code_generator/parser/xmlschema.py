@@ -845,16 +845,20 @@ class _XMLSchemaConverter:
     def _parse_literal(self, value: str, schema: JsonSchema) -> Any:
         if any_of := schema.get("anyOf"):
             return self._parse_union_literal(value, any_of)
-        schema_type = schema.get("type")
-        if schema_type == "integer":
-            return integer if (integer := _safe_int(value)) is not None else value
-        if schema_type == "number":
-            if schema.get("format") == "decimal":
-                return decimal if (decimal := _safe_decimal(value)) is not None else value
-            return number if (number := _safe_float(value)) is not None else value
-        if schema_type == "boolean":
-            return boolean if (boolean := _safe_bool(value)) is not None else value
-        return value
+        match schema.get("type"):
+            case "array":
+                return self._parse_list_literal(value, schema)
+            case "integer":
+                parsed: Any = _safe_int(value)
+            case "number" if schema.get("format") == "decimal":
+                parsed = _safe_decimal(value)
+            case "number":
+                parsed = _safe_float(value)
+            case "boolean":
+                parsed = _safe_bool(value)
+            case _:
+                return value
+        return parsed if parsed is not None else value
 
     def _parse_union_literal(self, value: str, schemas: list[JsonSchema]) -> Any:
         for schema in schemas:
@@ -862,6 +866,11 @@ class _XMLSchemaConverter:
             if parsed != value or schema.get("type") == "string":
                 return parsed
         return value
+
+    def _parse_list_literal(self, value: str, schema: JsonSchema) -> list[Any]:
+        items = schema.get("items")
+        item_schema = items if isinstance(items, dict) else STRING_SCHEMA
+        return [self._parse_literal(item, item_schema) for item in value.split()]
 
     def _parse_number(self, value: str, schema: JsonSchema) -> int | float | Decimal | str:  # noqa: PLR6301
         if schema.get("type") == "integer":
