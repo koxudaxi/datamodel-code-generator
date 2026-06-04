@@ -200,6 +200,17 @@ def test_main_xmlschema_spec_constructs(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_list_defaults(output_file: Path) -> None:
+    """Generate list-typed defaults from XML Schema list lexical values."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "list_defaults.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="list_defaults.py",
+    )
+
+
 def test_main_xmlschema_utf16_input(tmp_path: Path, output_file: Path) -> None:
     """Generate models from XML Schema files that rely on XML encoding detection."""
     input_path = tmp_path / "utf16_schema.xsd"
