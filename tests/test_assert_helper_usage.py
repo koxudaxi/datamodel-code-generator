@@ -20,28 +20,24 @@ from tests.conftest import (
 from tests.main.conftest import assert_generated_model_json_invalid, assert_generated_model_json_validation
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from pytest_mock import MockerFixture
 
 TESTS_ROOT = Path(__file__).parent
-E2E_TEST_PATHS = (
-    Path("main/graphql/test_annotated.py"),
-    Path("main/graphql/test_main_graphql.py"),
-    Path("main/jsonschema/test_main_jsonschema.py"),
-    Path("main/openapi/test_main_openapi.py"),
-    Path("main/protobuf/test_main_protobuf.py"),
-    Path("main/test_main_csv.py"),
-    Path("main/test_exec_validation.py"),
-    Path("main/test_main_general.py"),
-    Path("main/test_main_json.py"),
-    Path("main/test_main_watch.py"),
-    Path("main/test_main_yaml.py"),
-    Path("test_main_kr.py"),
+DIRECT_ASSERT_EXEMPT_FILES_INI = "assert_helper_direct_assert_exempt_files"
+DIRECT_ASSERT_FAILURE_MESSAGE = (
+    "Direct assert statements in guarded test modules require explicit permission.\n"
+    "HTTP, external-request, or similar mock assertions may be unavoidable, but generation tests should generally "
+    "be e2e tests that compare generated output through the shared assert helpers.\n"
+    "Use @pytest.mark.allow_direct_assert for a narrow exception, or add intentional legacy/unit files to "
+    f"{DIRECT_ASSERT_EXEMPT_FILES_INI}."
 )
 
 
 @dataclass(frozen=True)
 class DirectAssert:
-    """A direct assert statement in an e2e test module."""
+    """A direct assert statement in a guarded test module."""
 
     path: Path
     function_name: str | None
@@ -54,6 +50,50 @@ def _allows_direct_assert(function: ast.FunctionDef | ast.AsyncFunctionDef) -> b
         ast.unparse(decorator).split("(", 1)[0] == "pytest.mark.allow_direct_assert"
         for decorator in function.decorator_list
     )
+
+
+def _is_test_file(path: Path, tests_root: Path) -> bool:
+    relative_path = path.relative_to(tests_root)
+    is_test_file = False
+    match relative_path.parts:
+        case ("data", *_):
+            pass
+        case (*_, file_name) if path.suffix == ".py" and (
+            file_name.startswith("test_") or file_name.endswith("_test.py")
+        ):
+            is_test_file = True
+        case _:
+            pass
+    return is_test_file
+
+
+def _normalize_exempt_file(raw_path: str) -> Path:
+    path = Path(raw_path.strip())
+    normalized_path = path
+    match path.parts:
+        case ("tests", *parts):
+            normalized_path = Path(*parts)
+        case _:
+            pass
+    return normalized_path
+
+
+def _configured_exempt_files(config: pytest.Config) -> frozenset[Path]:
+    return frozenset(
+        normalized_path
+        for raw_path in config.getini(DIRECT_ASSERT_EXEMPT_FILES_INI)
+        if raw_path.strip() and (normalized_path := _normalize_exempt_file(raw_path))
+    )
+
+
+def _iter_guarded_test_files(tests_root: Path, exempt_files: Iterable[Path]) -> Iterable[Path]:
+    exempt_file_set = frozenset(exempt_files)
+    for path in sorted(tests_root.rglob("*.py")):
+        if not _is_test_file(path, tests_root):
+            continue
+        if path.relative_to(tests_root) in exempt_file_set:
+            continue
+        yield path
 
 
 def _statement(node: ast.Assert, source: str) -> str:
@@ -85,14 +125,14 @@ def _collect_function_asserts(function: ast.FunctionDef | ast.AsyncFunctionDef) 
     return visitor.asserts
 
 
-def _collect_direct_asserts(path: Path) -> list[DirectAssert]:
+def _collect_direct_asserts(path: Path, tests_root: Path = TESTS_ROOT) -> list[DirectAssert]:
     source = path.read_text(encoding="utf-8")
     tree = ast.parse(source, filename=str(path))
     direct_asserts: list[DirectAssert] = []
 
     direct_asserts.extend(
         DirectAssert(
-            path=path.relative_to(TESTS_ROOT),
+            path=path.relative_to(tests_root),
             function_name="<module>",
             lineno=node.lineno,
             statement=_statement(node, source),
@@ -106,7 +146,7 @@ def _collect_direct_asserts(path: Path) -> list[DirectAssert]:
             continue
         direct_asserts.extend(
             DirectAssert(
-                path=path.relative_to(TESTS_ROOT),
+                path=path.relative_to(tests_root),
                 function_name=function.name,
                 lineno=node.lineno,
                 statement=_statement(node, source),
@@ -117,49 +157,92 @@ def _collect_direct_asserts(path: Path) -> list[DirectAssert]:
     return direct_asserts
 
 
-def test_e2e_modules_use_shared_assertion_helpers() -> None:
-    """Direct asserts in e2e modules must be explicitly marked as exceptions."""
-    direct_asserts = [
+def _collect_guarded_direct_asserts(tests_root: Path, exempt_files: Iterable[Path]) -> list[DirectAssert]:
+    return [
         direct_assert
-        for relative_path in E2E_TEST_PATHS
-        for direct_assert in _collect_direct_asserts(TESTS_ROOT / relative_path)
+        for path in _iter_guarded_test_files(tests_root, exempt_files)
+        if (path_direct_asserts := _collect_direct_asserts(path, tests_root))
+        for direct_assert in path_direct_asserts
     ]
 
-    if direct_asserts:  # pragma: no cover
-        details = "\n".join(
-            f"  tests/{direct_assert.path}:{direct_assert.lineno} "
-            f"({direct_assert.function_name}): {direct_assert.statement}"
-            for direct_assert in direct_asserts
-        )
-        pytest.fail(
-            "Direct assert statements in e2e modules must either use shared assertion helpers "
-            "or be marked with @pytest.mark.allow_direct_assert.\n"
-            f"{details}",
-            pytrace=False,
-        )
+
+def _format_direct_assert_failure(direct_asserts: Iterable[DirectAssert]) -> str:
+    details = "\n".join(
+        f"  tests/{direct_assert.path}:{direct_assert.lineno} "
+        f"({direct_assert.function_name}): {direct_assert.statement}"
+        for direct_assert in direct_asserts
+    )
+    return f"{DIRECT_ASSERT_FAILURE_MESSAGE}\n{details}"
 
 
-def test_e2e_modules_use_shared_assertion_helpers_reports_unmarked_assert(
-    monkeypatch: pytest.MonkeyPatch,
+def test_modules_use_shared_assertion_helpers(pytestconfig: pytest.Config) -> None:
+    """Direct asserts in guarded test modules must be explicitly marked as exceptions."""
+    direct_asserts = _collect_guarded_direct_asserts(TESTS_ROOT, _configured_exempt_files(pytestconfig))
+
+    if not direct_asserts:
+        return
+
+    pytest.fail(_format_direct_assert_failure(direct_asserts), pytrace=False)  # pragma: no cover
+
+
+def test_modules_use_shared_assertion_helpers_reports_unmarked_assert(
     tmp_path: Path,
 ) -> None:
     """Unmarked direct asserts in guarded files are reported as test failures."""
     test_file = tmp_path / "test_example.py"
     test_file.write_text("def test_example():\n    assert False\n", encoding="utf-8")
-    monkeypatch.setattr(sys.modules[__name__], "TESTS_ROOT", tmp_path)
-    monkeypatch.setattr(sys.modules[__name__], "E2E_TEST_PATHS", (Path("test_example.py"),))
+    direct_asserts = _collect_guarded_direct_asserts(tmp_path, ())
 
-    with pytest.raises(pytest.fail.Exception, match="Direct assert statements"):
-        test_e2e_modules_use_shared_assertion_helpers()
+    with pytest.raises(pytest.fail.Exception, match="shared assert helpers"):
+        pytest.fail(_format_direct_assert_failure(direct_asserts), pytrace=False)
 
 
-def test_collect_direct_asserts_reports_module_level_assert(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_iter_guarded_test_files_uses_all_test_files_by_default(tmp_path: Path) -> None:
+    """All pytest-style test files under tests/ are guarded unless configured otherwise."""
+    (tmp_path / "test_root.py").write_text("", encoding="utf-8")
+    (tmp_path / "nested").mkdir()
+    (tmp_path / "nested" / "example_test.py").write_text("", encoding="utf-8")
+    (tmp_path / "nested" / "helper.py").write_text("", encoding="utf-8")
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "test_fixture.py").write_text("", encoding="utf-8")
+
+    assert [path.relative_to(tmp_path) for path in _iter_guarded_test_files(tmp_path, ())] == [
+        Path("nested/example_test.py"),
+        Path("test_root.py"),
+    ]
+
+
+def test_iter_guarded_test_files_skips_configured_exempt_files(tmp_path: Path) -> None:
+    """Configured file exceptions are skipped by the guard."""
+    (tmp_path / "test_guarded.py").write_text("", encoding="utf-8")
+    (tmp_path / "test_exempt.py").write_text("", encoding="utf-8")
+
+    assert [path.relative_to(tmp_path) for path in _iter_guarded_test_files(tmp_path, (Path("test_exempt.py"),))] == [
+        Path("test_guarded.py")
+    ]
+
+
+@pytest.mark.parametrize(
+    ("raw_path", "expected"),
+    [
+        ("test_unit.py", Path("test_unit.py")),
+        ("tests/test_unit.py", Path("test_unit.py")),
+        ("tests/main/test_unit.py", Path("main/test_unit.py")),
+    ],
+)
+def test_normalize_exempt_file_accepts_tests_prefix(raw_path: str, expected: Path) -> None:
+    """Config paths may be relative to tests/ or include the tests/ prefix."""
+    assert _normalize_exempt_file(raw_path) == expected
+
+
+def test_collect_direct_asserts_reports_module_level_assert(tmp_path: Path) -> None:
     """Module-level direct asserts are reported by the guard."""
     test_file = tmp_path / "test_example.py"
     test_file.write_text("assert False\n", encoding="utf-8")
-    monkeypatch.setattr(sys.modules[__name__], "TESTS_ROOT", tmp_path)
 
-    assert _collect_direct_asserts(test_file) == [DirectAssert(Path("test_example.py"), "<module>", 1, "assert False")]
+    assert _collect_direct_asserts(test_file, tmp_path) == [
+        DirectAssert(Path("test_example.py"), "<module>", 1, "assert False")
+    ]
 
 
 def test_collect_function_asserts_ignores_nested_async_helpers() -> None:
