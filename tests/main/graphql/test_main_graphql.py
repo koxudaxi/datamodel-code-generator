@@ -132,7 +132,7 @@ def test_main_graphql_empty_list_default(output_file: Path) -> None:
 
 
 def test_main_graphql_field_enum_default(output_file: Path) -> None:
-    """Test GraphQL enum default values use generated enum members."""
+    """Test GraphQL enum default values keep the default option behavior."""
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "field-default-enum.graphql",
         output_path=output_file,

@@ -675,7 +675,6 @@ class ProtobufParser(JsonSchemaParser):
     ) -> None:
         """Initialize the Protobuf parser with JSON Schema parser configuration."""
         super().__init__(source=source, config=config, **options)
-        self.set_default_enum_member = True
 
     def parse(self, *args: Any, **kwargs: Any) -> str | dict[tuple[str, ...], Any]:
         """Parse Protocol Buffers schemas and add imports for non-finite defaults."""

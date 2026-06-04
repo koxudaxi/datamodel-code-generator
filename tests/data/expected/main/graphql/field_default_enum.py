@@ -29,6 +29,6 @@ class Color(Enum):
 
 
 class Car(BaseModel):
-    colorList: list[Color] | None = [Color.RED]
-    colorOne: Color | None = Color.GREEN
+    colorList: list[Color] | None = ['RED']
+    colorOne: Color | None = 'GREEN'
     typename__: Literal['Car'] | None = Field('Car', alias='__typename')

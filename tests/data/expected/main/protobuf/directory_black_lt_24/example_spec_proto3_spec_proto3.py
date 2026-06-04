@@ -18,13 +18,13 @@ class ExampleSpecProto3SpecProto3(BaseModel):
     packed_numbers: list[int] | None = []
     names: list[str] | None = []
     state: example_spec_proto3_alias_state.ExampleSpecProto3AliasState | None = (
-        example_spec_proto3_alias_state.ExampleSpecProto3AliasState.ALIAS_STATE_UNSPECIFIED
+        'ALIAS_STATE_UNSPECIFIED'
     )
     nested: example_spec_proto3_spec_proto3_nested.ExampleSpecProto3SpecProto3Nested | None = (
         None
     )
     qualified_state: example_spec_proto3_alias_state.ExampleSpecProto3AliasState | None = (
-        example_spec_proto3_alias_state.ExampleSpecProto3AliasState.ALIAS_STATE_UNSPECIFIED
+        'ALIAS_STATE_UNSPECIFIED'
     )
     string_map: dict[str, str] | None = {}
     int32_map: dict[int, str] | None = {}
