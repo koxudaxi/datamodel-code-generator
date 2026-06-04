@@ -29,7 +29,7 @@ class ExampleSpecProto2SpecProto2(BaseModel):
     single_quoted: str | None = 'single'
     escaped_bytes: bytes | None = b'\x01\x02'
     state: example_spec_proto2_proto2_state.ExampleSpecProto2Proto2State | None = (
-        example_spec_proto2_proto2_state.ExampleSpecProto2Proto2State.PROTO2_ACTIVE
+        'PROTO2_ACTIVE'
     )
     tags: list[str] | None = []
     packed_numbers: list[int] | None = []

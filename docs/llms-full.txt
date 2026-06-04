@@ -16,6 +16,14 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 
 ## ✨ What it does
 
+<!-- Source of truth: docs/assets/diagrams/hero.mmd — regenerate with `tox run -e diagrams` -->
+![Schema files, raw data, and existing Python models flow through datamodel-code-generator into Python model output types](assets/diagrams/hero-light.svg#only-light){ align=center }
+![Schema files, raw data, and existing Python models flow through datamodel-code-generator into Python model output types](assets/diagrams/hero-dark.svg#only-dark){ align=center }
+
+Pick any one of the supported inputs and pick the Python model style you want as output.
+`--input-model path/to/file.py:ClassName` can even retarget an existing Pydantic, dataclass, or TypedDict class defined
+in another Python file to a different output type.
+
 - 📄 Converts **OpenAPI 3**, **AsyncAPI**, **JSON Schema**, **Apache Avro**, **XML Schema**, **Protocol Buffers/gRPC**, **GraphQL**, **MCP tool schemas**, and raw data (JSON/YAML/CSV) into Python models
 - 🐍 Generates from **existing Python types** (Pydantic, dataclass, TypedDict) via `--input-model`
 - 🎯 Generates **Pydantic v2**, **Pydantic v2 dataclass**, **dataclasses**, **TypedDict**, or **msgspec** output
@@ -27696,6 +27704,26 @@ Generate code from existing Python types: Pydantic models, dataclasses, TypedDic
 
 ```bash
 datamodel-codegen --input-model ./mymodule.py:User --output model.py
+```
+
+## 🔄 Convert Between Python Model Styles {#convert-between-python-model-styles}
+
+`--input-model` can retarget an existing Python model into another supported output model type. This is useful when
+moving a codebase between model frameworks, or when one boundary needs validation models while another boundary needs
+plain typed dictionaries.
+
+```bash
+# Pydantic BaseModel -> TypedDict
+datamodel-codegen \
+  --input-model ./models.py:User \
+  --output-model-type typing.TypedDict \
+  --output user_types.py
+
+# TypedDict -> Pydantic v2
+datamodel-codegen \
+  --input-model ./types.py:User \
+  --output-model-type pydantic_v2.BaseModel \
+  --output user_model.py
 ```
 
 ## Format {#format}

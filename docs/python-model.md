@@ -8,6 +8,26 @@ Generate code from existing Python types: Pydantic models, dataclasses, TypedDic
 datamodel-codegen --input-model ./mymodule.py:User --output model.py
 ```
 
+## 🔄 Convert Between Python Model Styles {#convert-between-python-model-styles}
+
+`--input-model` can retarget an existing Python model into another supported output model type. This is useful when
+moving a codebase between model frameworks, or when one boundary needs validation models while another boundary needs
+plain typed dictionaries.
+
+```bash
+# Pydantic BaseModel -> TypedDict
+datamodel-codegen \
+  --input-model ./models.py:User \
+  --output-model-type typing.TypedDict \
+  --output user_types.py
+
+# TypedDict -> Pydantic v2
+datamodel-codegen \
+  --input-model ./types.py:User \
+  --output-model-type pydantic_v2.BaseModel \
+  --output user_model.py
+```
+
 ## Format {#format}
 
 ```

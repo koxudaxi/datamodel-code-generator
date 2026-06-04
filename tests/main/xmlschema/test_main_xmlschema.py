@@ -541,6 +541,41 @@ def test_main_xmlschema_builtin_datatypes_matrix(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_datetime_classes_default(output_file: Path) -> None:
+    """Use XML Schema datetime defaults when no datetime class option is set."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "datetime_classes.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="datetime_classes.py",
+    )
+
+
+def test_main_xmlschema_datetime_classes_naive(output_file: Path) -> None:
+    """Respect an explicit NaiveDatetime class for XML Schema date-time types."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "datetime_classes.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="datetime_classes_naive.py",
+        extra_args=["--output-datetime-class", "NaiveDatetime"],
+    )
+
+
+def test_main_xmlschema_datetime_classes_aware(output_file: Path) -> None:
+    """Respect an explicit AwareDatetime class for XML Schema date-time types."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "datetime_classes.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="datetime_classes_aware.py",
+        extra_args=["--output-datetime-class", "AwareDatetime"],
+    )
+
+
 def test_main_xmlschema_parse_error(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Report invalid XML Schema syntax through the CLI."""
     run_main_and_assert(
