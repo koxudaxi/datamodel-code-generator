@@ -105,7 +105,7 @@ class AsyncAPISchema:
     path: list[str]
     context: AsyncAPIContext
     parse_as_file: bool = False
-    apply_default_values_for_required_fields: bool = False
+    apply_default_values_for_required_fields: bool | None = None
 
 
 class MultiFormatSchemaObject(BaseModel):
@@ -292,13 +292,13 @@ class AsyncAPIParser(OpenAPIParser):
         )
 
     @contextmanager
-    def _required_field_defaults(self, enabled: bool) -> Iterator[None]:  # noqa: FBT001
-        if not enabled:
+    def _required_field_defaults(self, enabled: bool | None) -> Iterator[None]:  # noqa: FBT001
+        if enabled is None:
             yield
             return
 
         previous = self.apply_default_values_for_required_fields
-        self.apply_default_values_for_required_fields = True
+        self.apply_default_values_for_required_fields = enabled
         try:
             yield
         finally:
