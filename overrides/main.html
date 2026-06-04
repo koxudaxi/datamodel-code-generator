@@ -40,6 +40,54 @@
       max-width: 1.5rem;
       max-height: 1.5rem;
     }
+
+    .md-typeset .mermaid {
+      background: transparent;
+      overflow-x: auto;
+      padding: 1rem 0;
+      text-align: center;
+    }
+
+    .md-typeset .mermaid svg {
+      display: inline-block;
+      height: auto;
+      max-width: 100%;
+    }
+
+    .md-typeset .mermaid svg foreignObject {
+      opacity: 1;
+    }
+
+    .md-typeset .mermaid svg foreignObject span,
+    .md-typeset .mermaid svg foreignObject p,
+    .md-typeset .mermaid svg foreignObject div {
+      white-space: nowrap !important;
+      margin: 0 !important;
+      opacity: 1 !important;
+    }
+
+    /* HUB node: keep white text in both light and dark Material themes */
+    .md-typeset .mermaid svg g.node.hub foreignObject *,
+    .md-typeset .mermaid svg g.node.hub .nodeLabel,
+    .md-typeset .mermaid svg g.node.hub text {
+      color: #ffffff !important;
+      fill: #ffffff !important;
+    }
+
+    /* Section separators inside flowchart node labels */
+    .md-typeset .mermaid svg foreignObject hr {
+      border: none !important;
+      border-top: 1px dashed #90caf9 !important;
+      margin: 6px 0 !important;
+      width: 100%;
+    }
+
+    /* Bold subgraph cluster labels */
+    .md-typeset .mermaid svg g.cluster .cluster-label foreignObject p,
+    .md-typeset .mermaid svg g.cluster .cluster-label foreignObject span,
+    .md-typeset .mermaid svg g.cluster text {
+      font-weight: bold !important;
+    }
   </style>
   <script>
     const isPlaygroundLink = link => {
@@ -85,4 +133,35 @@
      target="_blank" rel="noopener">
     🔗 koxudaxi.dev
   </a>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js"></script>
+  <script>
+    const renderMermaid = async () => {
+      if (!window.mermaid) {
+        return;
+      }
+      const nodes = document.querySelectorAll("pre.mermaid:not([data-processed]), div.mermaid:not([data-processed])");
+      if (!nodes.length) {
+        return;
+      }
+      window.mermaid.initialize({
+        startOnLoad: false,
+        theme: document.body.getAttribute("data-md-color-scheme") === "slate" ? "dark" : "default",
+        themeVariables: {
+          fontSize: "15px",
+        },
+      });
+      await window.mermaid.run({ nodes });
+    };
+
+    window.addEventListener("load", renderMermaid);
+    if (typeof document$ !== "undefined") {
+      document$.subscribe(() => {
+        window.requestAnimationFrame(renderMermaid);
+      });
+    }
+  </script>
 {% endblock %}

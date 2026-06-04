@@ -1,0 +1,27 @@
+flowchart LR
+    subgraph LEFT["Input type"]
+        INPUT["Schemas<br/>OpenAPI 3 · AsyncAPI ·<br/>JSON Schema<br/>Apache Avro · XML Schema<br/>Protocol Buffers · GraphQL<br/>MCP tool schemas<br/>────────────────<br/>Raw data<br/>JSON · YAML · CSV<br/>────────────────<br/>Python objects<br/>Pydantic BaseModel ·<br/>dataclasses.dataclass ·<br/>typing.TypedDict"]
+    end
+
+    CONVERTER(["datamodel-code-generator"])
+
+    subgraph RIGHT["Output type"]
+        OUTPUT["pydantic_v2.BaseModel<br/>pydantic_v2.dataclass<br/>msgspec.Struct<br/>dataclasses.dataclass<br/>typing.TypedDict"]
+    end
+
+    INPUT --> CONVERTER
+    CONVERTER --> OUTPUT
+
+    classDef input fill:transparent,stroke:#0288d1,stroke-width:2px,font-size:16px
+    classDef output fill:transparent,stroke:#0288d1,stroke-width:2px,font-size:16px
+    classDef hub fill:#0288d1,stroke:#01579b,stroke-width:3px,color:#ffffff,font-size:14px
+
+    class INPUT input
+    class OUTPUT output
+    class CONVERTER hub
+
+    style LEFT fill:transparent,stroke:transparent,font-size:18px,font-weight:bold
+    style RIGHT fill:transparent,stroke:transparent,font-size:18px,font-weight:bold
+
+    linkStyle 0 stroke:#29b6f6,stroke-width:4px
+    linkStyle 1 stroke:#29b6f6,stroke-width:5px
