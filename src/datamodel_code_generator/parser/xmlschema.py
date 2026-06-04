@@ -843,8 +843,10 @@ class _XMLSchemaConverter:
         else:
             schema[max_key] = length
 
-    def _parse_literal(self, value: str, schema: JsonSchema) -> Any:  # noqa: PLR6301
+    def _parse_literal(self, value: str, schema: JsonSchema) -> Any:
         schema_type = schema.get("type")
+        if schema_type == "array":
+            return self._parse_list_literal(value, schema)
         if schema_type == "integer":
             return integer if (integer := _safe_int(value)) is not None else value
         if schema_type == "number":
@@ -854,6 +856,11 @@ class _XMLSchemaConverter:
         if schema_type == "boolean":
             return value in {"true", "1"}
         return value
+
+    def _parse_list_literal(self, value: str, schema: JsonSchema) -> list[Any]:
+        items = schema.get("items")
+        item_schema = items if isinstance(items, dict) else STRING_SCHEMA
+        return [self._parse_literal(item, item_schema) for item in value.split()]
 
     def _parse_number(self, value: str, schema: JsonSchema) -> int | float | Decimal | str:  # noqa: PLR6301
         if schema.get("type") == "integer":

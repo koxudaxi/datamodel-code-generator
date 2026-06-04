@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="root">
+    <xs:complexType>
+      <xs:attribute name="flags" default="true false 1 0">
+        <xs:simpleType>
+          <xs:list itemType="xs:boolean"/>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="counts" default="1 2 3">
+        <xs:simpleType>
+          <xs:list itemType="xs:int"/>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
