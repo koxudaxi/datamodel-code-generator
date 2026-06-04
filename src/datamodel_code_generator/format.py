@@ -778,6 +778,10 @@ def _should_format_union_annotation(
                 and len(target_prefix) > LONG_TARGET_PREFIX_LENGTH
                 and (_contains_annotated(annotation) or _is_simple_union_annotation(annotation))
             )
+            or (
+                len(f"{annotation_prefix} = (") > line_length
+                and (_contains_annotated(annotation) or _is_simple_union_annotation(annotation))
+            )
         )
     )
 
@@ -1065,7 +1069,10 @@ def _format_generated_annotation_assignment(  # noqa: PLR0911, PLR0912
     ):
         assert statement.value is not None
         value = _source_segment(source, statement.value)
-        return f"{target_prefix}{_format_annotated_union(statement.annotation, indent, line_length, source)} = {value}"
+        formatted_annotation = _format_annotated_union(statement.annotation, indent, line_length, source)
+        if len(f"{indent}) = {value}") > line_length:
+            return f"{target_prefix}{formatted_annotation} = (\n{indent}    {value}\n{indent})"
+        return f"{target_prefix}{formatted_annotation} = {value}"
     if _is_union(statement.annotation) and statement.value is not None and len(annotation_prefix) > line_length:
         value = _source_segment(source, statement.value)
         return (
