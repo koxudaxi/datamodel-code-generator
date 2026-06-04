@@ -9,6 +9,7 @@ from __future__ import annotations
 import codecs
 import contextlib
 import copy
+import datetime as datetime_module
 import io
 import re
 import warnings
@@ -23,6 +24,7 @@ from typing_extensions import Unpack
 from datamodel_code_generator import Error, YamlValue
 from datamodel_code_generator.enums import VersionMode, XMLSchemaVersion
 from datamodel_code_generator.format import DatetimeClassType
+from datamodel_code_generator.imports import Import
 from datamodel_code_generator.parser._math_imports import add_math_imports_for_non_finite_literals
 from datamodel_code_generator.parser.base import Source, title_to_class_name
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
@@ -46,6 +48,12 @@ JsonSchema = dict[str, Any]
 QNameKey = tuple[str | None, str]
 DefinitionKey = tuple[str, str | None, str]
 PYTHON_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+XML_DATE_PATTERN = re.compile(r"^(?P<date>-?\d{4,}-\d{2}-\d{2})(?:Z|[+-]\d{2}:\d{2})?$")
+DAY_TIME_DURATION_PATTERN = re.compile(
+    r"^(?P<sign>-)?P(?:(?P<days>\d+)D)?"
+    r"(?:T(?:(?P<hours>\d+)H)?(?:(?P<minutes>\d+)M)?(?:(?P<seconds>\d+(?:\.\d+)?)S)?)?$"
+)
+IMPORT_DATETIME_MODULE = Import(import_="datetime", alias="datetime_module")
 
 
 STRING_SCHEMA: JsonSchema = {"type": "string"}
@@ -54,6 +62,29 @@ NUMBER_SCHEMA: JsonSchema = {"type": "number"}
 BOOLEAN_SCHEMA: JsonSchema = {"type": "boolean"}
 DECIMAL_SCHEMA: JsonSchema = {"type": "number", "format": "decimal"}
 DATETIME_SCHEMA: JsonSchema = {"type": "string", "format": "date-time"}
+
+
+class _PythonExpression:
+    """Raw Python expression rendered through repr() with required imports."""
+
+    __slots__ = ("code", "imports")
+
+    def __init__(self, code: str, *imports: Import) -> None:
+        self.code = code
+        self.imports = imports
+
+    def __repr__(self) -> str:
+        return self.code
+
+
+def _collect_python_expression_imports(value: Any) -> tuple[Import, ...]:
+    if isinstance(value, _PythonExpression):
+        return value.imports
+    if isinstance(value, dict):
+        return tuple(import_ for item in value.values() for import_ in _collect_python_expression_imports(item))
+    if isinstance(value, (list, tuple, set)):
+        return tuple(import_ for item in value for import_ in _collect_python_expression_imports(item))
+    return ()
 
 
 class _OccurrenceContext(NamedTuple):
@@ -227,6 +258,79 @@ def _safe_bool(value: str) -> bool | None:
             return False
         case _:
             return None
+
+
+def _datetime_expression(code: str) -> _PythonExpression:
+    return _PythonExpression(code, IMPORT_DATETIME_MODULE)
+
+
+def _normalize_timezone(value: str) -> str:
+    return f"{value[:-1]}+00:00" if value.endswith("Z") else value
+
+
+def _safe_date_expression(value: str) -> _PythonExpression | None:
+    date_match = XML_DATE_PATTERN.match(value)
+    if date_match is None:
+        return None
+    date_value = date_match["date"]
+    if value != date_value:
+        return None
+    with contextlib.suppress(ValueError):
+        datetime_module.date.fromisoformat(date_value)
+        return _datetime_expression(f"datetime_module.date.fromisoformat({date_value!r})")
+    return None
+
+
+def _safe_time_expression(value: str) -> _PythonExpression | None:
+    normalized = _normalize_timezone(value)
+    with contextlib.suppress(ValueError):
+        datetime_module.time.fromisoformat(normalized)
+        return _datetime_expression(f"datetime_module.time.fromisoformat({normalized!r})")
+    return None
+
+
+def _safe_datetime_expression(value: str) -> _PythonExpression | None:
+    normalized = _normalize_timezone(value)
+    with contextlib.suppress(ValueError):
+        datetime_module.datetime.fromisoformat(normalized)
+        return _datetime_expression(f"datetime_module.datetime.fromisoformat({normalized!r})")
+    return None
+
+
+def _safe_day_time_duration_expression(value: str) -> _PythonExpression | None:
+    duration_match = DAY_TIME_DURATION_PATTERN.match(value)
+    if duration_match is None:
+        return None
+
+    days = duration_match["days"]
+    hours = duration_match["hours"]
+    minutes = duration_match["minutes"]
+    seconds = duration_match["seconds"]
+    if not any((days, hours, minutes, seconds)):
+        return None
+
+    arguments: list[str] = []
+    if days:
+        arguments.append(f"days={int(days)}")
+    if hours:
+        arguments.append(f"hours={int(hours)}")
+    if minutes:
+        arguments.append(f"minutes={int(minutes)}")
+    if seconds:
+        seconds_in_microseconds = Decimal(seconds) * 1_000_000
+        integral_microseconds = seconds_in_microseconds.to_integral_value()
+        if seconds_in_microseconds != integral_microseconds:
+            return None
+        whole_seconds, microseconds = divmod(int(integral_microseconds), 1_000_000)
+        if whole_seconds:
+            arguments.append(f"seconds={whole_seconds}")
+        if microseconds:
+            arguments.append(f"microseconds={microseconds}")
+
+    expression = f"datetime_module.timedelta({', '.join(arguments)})" if arguments else "datetime_module.timedelta(0)"
+    if duration_match["sign"]:
+        expression = f"-{expression}"
+    return _datetime_expression(expression)
 
 
 def _versioning_value(element: ET.Element, name: str) -> Decimal | None:
@@ -730,7 +834,7 @@ class _XMLSchemaConverter:
         if documentation := _documentation(element):
             schema["description"] = documentation
         if "default" in element.attrib:
-            schema["default"] = self._parse_literal(str(element.get("default")), schema)
+            schema["default"] = self._parse_literal(str(element.get("default")), schema, parse_temporal=True)
         if "fixed" in element.attrib:
             schema["const"] = self._parse_literal(str(element.get("fixed")), schema)
         if element.get("nillable") == "true":
@@ -857,12 +961,14 @@ class _XMLSchemaConverter:
         else:
             schema[max_key] = length
 
-    def _parse_literal(self, value: str, schema: JsonSchema) -> Any:
+    def _parse_literal(self, value: str, schema: JsonSchema, *, parse_temporal: bool = False) -> Any:
         if any_of := schema.get("anyOf"):
-            return self._parse_union_literal(value, any_of)
+            return self._parse_union_literal(value, any_of, parse_temporal=parse_temporal)
+        if parse_temporal and (parsed_temporal := self._parse_temporal_literal(value, schema)) is not None:
+            return parsed_temporal
         match schema.get("type"):
             case "array":
-                return self._parse_list_literal(value, schema)
+                return self._parse_list_literal(value, schema, parse_temporal=parse_temporal)
             case "integer":
                 parsed: Any = _safe_int(value)
             case "number" if schema.get("format") == "decimal":
@@ -875,17 +981,32 @@ class _XMLSchemaConverter:
                 return value
         return parsed if parsed is not None else value
 
-    def _parse_union_literal(self, value: str, schemas: list[JsonSchema]) -> Any:
+    @staticmethod
+    def _parse_temporal_literal(value: str, schema: JsonSchema) -> _PythonExpression | None:
+        if schema.get("type") != "string":
+            return None
+        match schema.get("format"):
+            case "date":
+                return _safe_date_expression(value)
+            case "time":
+                return _safe_time_expression(value)
+            case "date-time":
+                return _safe_datetime_expression(value)
+            case "duration":
+                return _safe_day_time_duration_expression(value)
+        return None
+
+    def _parse_union_literal(self, value: str, schemas: list[JsonSchema], *, parse_temporal: bool = False) -> Any:
         for schema in schemas:
-            parsed = self._parse_literal(value, schema)
+            parsed = self._parse_literal(value, schema, parse_temporal=parse_temporal)
             if parsed != value or schema.get("type") == "string":
                 return parsed
         return value
 
-    def _parse_list_literal(self, value: str, schema: JsonSchema) -> list[Any]:
+    def _parse_list_literal(self, value: str, schema: JsonSchema, *, parse_temporal: bool = False) -> list[Any]:
         items = schema.get("items")
         item_schema = items if isinstance(items, dict) else STRING_SCHEMA
-        return [self._parse_literal(item, item_schema) for item in value.split()]
+        return [self._parse_literal(item, item_schema, parse_temporal=parse_temporal) for item in value.split()]
 
     def _parse_number(self, value: str, schema: JsonSchema) -> int | float | Decimal | str:  # noqa: PLR6301
         if schema.get("type") == "integer":
@@ -1177,7 +1298,7 @@ class _XMLSchemaConverter:
         if default is None and "default" not in attribute.attrib and "fixed" not in attribute.attrib:
             default = source_attribute.get("default")
         if default is not None:
-            attribute_schema["default"] = self._parse_literal(default, attribute_schema)
+            attribute_schema["default"] = self._parse_literal(default, attribute_schema, parse_temporal=True)
         fixed = attribute.get("fixed")
         if fixed is None and "fixed" not in attribute.attrib:
             fixed = source_attribute.get("fixed")
@@ -1448,6 +1569,15 @@ class XMLSchemaParser(JsonSchemaParser):
 
         self._resolve_unparsed_json_pointer()
         self._generate_forced_base_models()
+        self._append_python_expression_imports()
+
+    def _append_python_expression_imports(self) -> None:
+        for model in self.results:
+            imports = tuple(
+                import_ for field in model.fields for import_ in _collect_python_expression_imports(field.default)
+            )
+            if imports:
+                model._additional_imports.extend(imports)  # noqa: SLF001
 
 
 __all__ = ["XMLSchemaParser", "convert_xml_schema_data", "detect_xmlschema_version", "is_xml_schema_text"]
