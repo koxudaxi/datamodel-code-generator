@@ -27,7 +27,7 @@ class ExampleSpecProto2SpecProto2(BaseModel):
     not_a_number: float | None = nan
     enabled: bool | None = False
     single_quoted: str | None = 'single'
-    escaped_bytes: bytes | None = '\\001\\002'
+    escaped_bytes: bytes | None = b'\x01\x02'
     state: example_spec_proto2_proto2_state.ExampleSpecProto2Proto2State | None = (
         example_spec_proto2_proto2_state.ExampleSpecProto2Proto2State.PROTO2_ACTIVE
     )

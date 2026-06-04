@@ -62,7 +62,7 @@ PROTO2_DEFAULTS: dict[int, Any] = {
     TYPE_FIXED32: 0,
     TYPE_BOOL: False,
     TYPE_STRING: "",
-    TYPE_BYTES: "",
+    TYPE_BYTES: b"",
     TYPE_UINT32: 0,
     TYPE_SFIXED32: 0,
     TYPE_SFIXED64: 0,
@@ -656,6 +656,10 @@ class _ProtobufDescriptorConverter:
         value = field.default_value
         if field.type == TYPE_BOOL:
             return value == "true"
+        if field.type == TYPE_BYTES:
+            from google.protobuf import text_encoding  # noqa: PLC0415
+
+            return text_encoding.CUnescape(value)
         if field.type in {TYPE_DOUBLE, TYPE_FLOAT}:
             return float(value)
         if field.type in {
