@@ -204,6 +204,12 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
 
         return None
 
+    def _has_schema_default(  # noqa: PLR6301
+        self, field: graphql.GraphQLField | graphql.GraphQLInputField
+    ) -> bool:
+        """Return whether a GraphQL input field defines a schema default."""
+        return isinstance(field, graphql.GraphQLInputField) and field.default_value != graphql.pyutils.Undefined
+
     def parse_scalar(self, scalar_graphql_object: graphql.GraphQLScalarType) -> None:  # ty: ignore
         """Parse a GraphQL scalar type and add it to results."""
         self.generation_store.register_model(
@@ -361,10 +367,16 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             # Only happens for Query and Mutation root types
             data_type.type = obj.name
 
-        required = (not self.force_optional_for_required_fields) and (not final_data_type.is_optional)
+        has_schema_default = self._has_schema_default(field)
+        required = (
+            (not self.force_optional_for_required_fields)
+            and (not final_data_type.is_optional)
+            and not has_schema_default
+        )
+        nullable = False if has_schema_default and not final_data_type.is_optional else None
 
         default = self._get_default(field, final_data_type, required=required)
-        has_default = default is not None
+        has_default = has_schema_default
 
         effective_default, effective_has_default = self.model_resolver.resolve_default_value(
             original_field_name,
@@ -392,6 +404,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             default=effective_default,
             data_type=final_data_type,
             required=required,
+            nullable=nullable,
             extras=extras,
             alias=single_alias,
             validation_aliases=validation_aliases,
