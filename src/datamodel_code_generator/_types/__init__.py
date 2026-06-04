@@ -17,9 +17,9 @@ from datamodel_code_generator._types.parser_config_dicts import (
 )
 
 __all__ = [
+    "AsyncAPIParserConfigDict",
     "AvroParserConfigDict",
     "GenerateConfigDict",
-    "AsyncAPIParserConfigDict",
     "GraphQLParserConfigDict",
     "JSONSchemaParserConfigDict",
     "ModelDict",

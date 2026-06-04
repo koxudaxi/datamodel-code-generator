@@ -421,8 +421,6 @@ class _AvroSchemaConverter:
                 field_schema["x-avro-aliases"] = field["aliases"]
             if "order" in field:
                 field_schema["x-avro-order"] = field["order"]
-            if "default" in field:
-                field_schema["default"] = field["default"]
             required.append(field_name)
             properties[field_name] = field_schema
 
@@ -452,8 +450,6 @@ class _AvroSchemaConverter:
             seen_symbols.add(symbol)
         converted: JsonSchema = {"type": "string", "enum": symbols}
         self._copy_common_metadata(schema, converted)
-        if "default" in schema:
-            converted["default"] = schema["default"]
         converted["x-avro-fullname"] = fullname
         return converted
 
