@@ -252,9 +252,15 @@ class OpenAPIParser(JsonSchemaParser):
     @contextmanager
     def openapi_self_context(self, specification: dict[str, Any]) -> Generator[None, None, None]:
         """Temporarily use OpenAPI 3.2 $self as the document root identifier."""
+        if not isinstance(openapi_self := specification.get("$self"), str):
+            yield
+            return
+        if not self.schema_features.openapi_self:
+            yield
+            return
+
         previous_root_id = self.root_id
-        if isinstance(openapi_self := specification.get("$self"), str):
-            self.root_id = openapi_self
+        self.root_id = openapi_self
         try:
             yield
         finally:
@@ -740,7 +746,7 @@ class OpenAPIParser(JsonSchemaParser):
         for parameter_ in parameters:
             parameter = self.resolve_object(parameter_, ParameterObject)
             match parameter.in_:
-                case ParameterLocation.querystring:
+                case ParameterLocation.querystring if self.schema_features.querystring_parameter:
                     parameter_name = parameter.name or "querystring"
                 case ParameterLocation.query | ParameterLocation.path:
                     if not (parameter_name := parameter.name):
