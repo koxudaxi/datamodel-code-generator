@@ -47,6 +47,22 @@ def test_temporal_expression_helpers_reject_invalid_lexical_values(parse: Any, v
 
 @pytest.mark.allow_direct_assert
 @pytest.mark.parametrize(
+    ("parse", "value"),
+    [
+        (_safe_date_expression, "2026-06-04"),
+        (_safe_time_expression, "14:30:00"),
+        (_safe_time_expression, "14:30:00Z"),
+        (_safe_datetime_expression, "2026-06-04T14:30:00"),
+        (_safe_datetime_expression, "2026-06-04T14:30:00Z"),
+    ],
+)
+def test_temporal_expression_helpers_parse_supported_lexical_values(parse: Any, value: str) -> None:
+    """Parse supported XML Schema temporal lexical values."""
+    assert parse(value) is not None
+
+
+@pytest.mark.allow_direct_assert
+@pytest.mark.parametrize(
     ("value", "expected"),
     [
         ("P1D", "datetime_module.timedelta(days=1)"),
@@ -55,6 +71,10 @@ def test_temporal_expression_helpers_reject_invalid_lexical_values(parse: Any, v
         ("PT4S", "datetime_module.timedelta(seconds=4)"),
         ("PT0.5S", "datetime_module.timedelta(microseconds=500000)"),
         ("-P1D", "-datetime_module.timedelta(days=1)"),
+        (
+            "P1DT2H3M4.5S",
+            "datetime_module.timedelta(days=1, hours=2, minutes=3, seconds=4, microseconds=500000)",
+        ),
     ],
 )
 def test_safe_day_time_duration_expression_parses_supported_components(value: str, expected: str) -> None:
