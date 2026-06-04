@@ -8,6 +8,9 @@ NON_FINITE_LITERAL_PATTERN = re.compile(r"(?<![\w.'\"])[+-]?(?P<name>inf|nan)(?!
 
 
 def add_math_imports_for_non_finite_literals(body: str) -> str:
+    if "inf" not in body and "nan" not in body:
+        return body
+
     names = {match.group("name") for match in NON_FINITE_LITERAL_PATTERN.finditer(body)}
     if not names:
         return body
