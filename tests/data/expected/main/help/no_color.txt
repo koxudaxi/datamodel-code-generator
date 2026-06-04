@@ -16,6 +16,8 @@ Options:
                         to opt in without warning, or --no-allow-remote-refs
                         to block remote fetching. In a future version, remote
                         fetching will be disabled by default.
+  --builtin-format-line-length BUILTIN_FORMAT_LINE_LENGTH
+                        Line length for the builtin formatter.
   --class-decorators CLASS_DECORATORS
                         Custom decorators for generated model classes
                         (delimited list input). For example

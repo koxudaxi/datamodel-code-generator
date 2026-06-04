@@ -1045,6 +1045,12 @@ base_options.add_argument(
     default=None,
 )
 base_options.add_argument(
+    "--builtin-format-line-length",
+    help="Line length for the builtin formatter.",
+    type=int,
+    default=None,
+)
+base_options.add_argument(
     "--custom-formatters",
     help="List of modules with custom formatter (delimited list input).",
     type=str,

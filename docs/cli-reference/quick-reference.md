@@ -143,6 +143,7 @@ datamodel-codegen [OPTIONS]
 | Option | Description |
 |--------|-------------|
 | [`--additional-imports`](template-customization.md#additional-imports) | Add custom imports to generated output files. |
+| [`--builtin-format-line-length`](template-customization.md#builtin-format-line-length) | Set line length used by the built-in formatter. |
 | [`--class-decorators`](template-customization.md#class-decorators) | Add custom decorators to generated model classes. |
 | [`--custom-file-header`](template-customization.md#custom-file-header) | Add custom header text to the generated file. |
 | [`--custom-file-header-path`](template-customization.md#custom-file-header-path) | Add custom header content from file to generated code. |
@@ -237,6 +238,7 @@ All options sorted alphabetically:
 - [`--allow-remote-refs`](general-options.md#allow-remote-refs) - Enable fetching of `$ref` targets over HTTP/HTTPS.
 - [`--base-class`](model-customization.md#base-class) - Specify a custom base class for generated models.
 - [`--base-class-map`](model-customization.md#base-class-map) - Specify different base classes for specific models via JSON ...
+- [`--builtin-format-line-length`](template-customization.md#builtin-format-line-length) - Set line length used by the built-in formatter.
 - [`--capitalize-enum-members`](field-customization.md#capitalize-enum-members) - Capitalize enum member names to UPPER_CASE format.
 - [`--check`](general-options.md#check) - Verify generated code matches existing output without modify...
 - [`--class-decorators`](template-customization.md#class-decorators) - Add custom decorators to generated model classes.

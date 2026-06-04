@@ -65,7 +65,13 @@ LEGACY_BLACK_SKIP = pytest.mark.skipif(
     reason="Type annotation formatting differs with black < 24",
 )
 
-from datamodel_code_generator.format import Formatter, PythonVersion, is_supported_in_black  # noqa: E402
+from datamodel_code_generator.format import (  # noqa: E402
+    Formatter,
+    PythonVersion,
+    black_find_project_root,
+    is_supported_in_black,
+)
+from datamodel_code_generator.util import load_toml  # noqa: E402
 
 BLACK_PY313_SKIP = pytest.mark.skipif(
     not is_supported_in_black(PythonVersion.PY_313),
@@ -312,10 +318,27 @@ def _uses_default_api_formatters(generate_options: dict[str, Any]) -> bool:
     return (formatters := generate_options.get("formatters")) is None or set(formatters) == _DEFAULT_API_FORMATTERS
 
 
-def _builtin_formatter_extra_args(extra_args: Sequence[str] | None) -> list[str]:
+def _black_line_length_for_settings(settings_path: Path) -> int:
+    root = black_find_project_root((settings_path,))
+    pyproject_toml = root / "pyproject.toml"
+    if pyproject_toml.is_file():
+        line_length = load_toml(pyproject_toml).get("tool", {}).get("black", {}).get("line-length")
+        if isinstance(line_length, int) and not isinstance(line_length, bool) and line_length > 0:
+            return line_length
+    return black.DEFAULT_LINE_LENGTH
+
+
+def _formatter_settings_path(output_path: Path) -> Path:
+    return output_path if output_path.is_dir() else output_path.parent
+
+
+def _builtin_formatter_extra_args(extra_args: Sequence[str] | None, settings_path: Path) -> list[str]:
+    builtin_line_length_args = ["--builtin-format-line-length", str(_black_line_length_for_settings(settings_path))]
     if extra_args is None:
-        return ["--formatters", "builtin"]
+        return ["--formatters", "builtin", *builtin_line_length_args]
     extra_args_list = list(extra_args)
+    if not any(arg.partition("=")[0] == "--builtin-format-line-length" for arg in extra_args_list):
+        extra_args_list.extend(builtin_line_length_args)
     if "--formatters" not in extra_args_list:
         return [*extra_args_list, "--formatters", "builtin"]
     formatter_index = extra_args_list.index("--formatters")  # pragma: no cover
@@ -399,7 +422,7 @@ def _assert_builtin_cli_formatter_parity(
 
     builtin_output_path = _builtin_formatter_parity_output_path(output_path)
     _clear_builtin_formatter_parity_output(builtin_output_path)
-    builtin_extra_args = _builtin_formatter_extra_args(extra_args)
+    builtin_extra_args = _builtin_formatter_extra_args(extra_args, _formatter_settings_path(output_path))
 
     with _preserve_mock_calls(_parity_mocked_callables_to_preserve()):
         if stdin_path is not None:
@@ -450,6 +473,7 @@ def _assert_builtin_generate_formatter_parity(
         **generate_options,
         "output": builtin_output_path,
         "formatters": [Formatter.BUILTIN],
+        "builtin_format_line_length": _black_line_length_for_settings(_formatter_settings_path(output_path)),
     }
     if expected_warnings is None:
         generate(input_=input_, **builtin_options)
