@@ -36,7 +36,7 @@ class ExampleShopV1Order(BaseModel):
     sfixed32_value: int | None = 0
     sfixed64_value: int | None = 0
     active: bool | None = False
-    payload: bytes | None = ''
+    payload: bytes | None = b''
     tags: list[str] | None = []
     items: (
         dict[str, example_shop_v1_order_line_item.ExampleShopV1OrderLineItem] | None
