@@ -249,9 +249,6 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
         name="--enable-generated-header-marker", category=OptionCategory.TEMPLATE
     ),
     "--formatters": CLIOptionMeta(name="--formatters", category=OptionCategory.TEMPLATE),
-    "--builtin-format-line-length": CLIOptionMeta(
-        name="--builtin-format-line-length", category=OptionCategory.TEMPLATE
-    ),
     "--custom-formatters": CLIOptionMeta(name="--custom-formatters", category=OptionCategory.TEMPLATE),
     "--custom-formatters-kwargs": CLIOptionMeta(name="--custom-formatters-kwargs", category=OptionCategory.TEMPLATE),
     # ==========================================================================

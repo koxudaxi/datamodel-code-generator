@@ -1574,45 +1574,6 @@ class Person(BaseModel):
     )
 
 
-@pytest.mark.cli_doc(
-    options=["--builtin-format-line-length"],
-    option_description="""Set line length used by the built-in formatter.
-
-The `--builtin-format-line-length` option controls wrapping when
-`--formatters builtin` is selected. It defaults to formatter configuration
-from pyproject.toml when available, otherwise Black's default line length.""",
-    input_schema="jsonschema/builtin_format_line_length.json",
-    cli_args=[
-        "--formatters",
-        "builtin",
-        "--builtin-format-line-length",
-        "40",
-        "--use-annotated",
-        "--disable-timestamp",
-    ],
-    golden_output="builtin_format_line_length.py",
-    related_options=["--formatters"],
-)
-@freeze_time(TIMESTAMP)
-def test_builtin_format_line_length_option(output_file: Path) -> None:
-    """Set line length used by the built-in formatter."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "builtin_format_line_length.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="builtin_format_line_length.py",
-        extra_args=[
-            "--formatters",
-            "builtin",
-            "--builtin-format-line-length",
-            "40",
-            "--use-annotated",
-            "--disable-timestamp",
-        ],
-    )
-
-
 def test_use_specialized_enum_requires_python_311(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

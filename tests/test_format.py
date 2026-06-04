@@ -674,41 +674,6 @@ def test_apply_builtin_formatter_parenthesizes_long_union_annotation() -> None:
     )
 
 
-def test_apply_builtin_formatter_parenthesizes_long_union_annotation_with_default() -> None:
-    """Test built-in formatter matches black for long union annotations with parenthesized defaults."""
-    code = (
-        "class Model:\n"
-        "    qualified_state: example_spec_proto3_alias_state.ExampleSpecProto3AliasState | None = "
-        "example_spec_proto3_alias_state.ExampleSpecProto3AliasState.ALIAS_STATE_UNSPECIFIED\n"
-    )
-
-    assert apply_builtin_formatter(code) == (
-        "class Model:\n"
-        "    qualified_state: (\n"
-        "        example_spec_proto3_alias_state.ExampleSpecProto3AliasState | None\n"
-        "    ) = (\n"
-        "        example_spec_proto3_alias_state.ExampleSpecProto3AliasState.ALIAS_STATE_UNSPECIFIED\n"
-        "    )\n"
-    )
-
-
-def test_apply_builtin_formatter_parenthesizes_long_union_annotation_with_string_default() -> None:
-    """Test built-in formatter matches black for long union annotations with string defaults."""
-    code = (
-        "class Model:\n"
-        "    field_with_long_name: VeryLongPlainTypeName | OtherVeryLongPlainTypeName | None = 'DEFAULT'\n"
-    )
-
-    assert apply_builtin_formatter(code, line_length=60) == (
-        "class Model:\n"
-        "    field_with_long_name: (\n"
-        "        VeryLongPlainTypeName\n"
-        "        | OtherVeryLongPlainTypeName\n"
-        "        | None\n"
-        "    ) = 'DEFAULT'\n"
-    )
-
-
 def test_apply_builtin_formatter_wraps_union_subscript_annotation() -> None:
     """Test built-in formatter matches black for generated Union annotations."""
     code = (
