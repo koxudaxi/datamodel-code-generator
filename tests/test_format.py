@@ -692,6 +692,15 @@ def test_apply_builtin_formatter_parenthesizes_union_annotation_with_long_defaul
     )
 
 
+def test_apply_builtin_formatter_parenthesizes_union_annotation_with_string_default() -> None:
+    """Test built-in formatter matches black for long union annotations with string defaults."""
+    code = "class Model:\n    typename__: Literal['Notification'] | None = 'Notification'\n"
+
+    assert apply_builtin_formatter(code, line_length=40) == (
+        "class Model:\n    typename__: (\n        Literal['Notification'] | None\n    ) = 'Notification'\n"
+    )
+
+
 def test_apply_builtin_formatter_wraps_union_subscript_annotation() -> None:
     """Test built-in formatter matches black for generated Union annotations."""
     code = (
