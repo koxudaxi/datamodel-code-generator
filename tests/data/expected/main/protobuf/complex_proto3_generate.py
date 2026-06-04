@@ -72,7 +72,7 @@ class ExampleShopV1Order(BaseModel):
         [], validate_default=True
     )
     shipping_address: ExampleCommonAddress | None = None
-    status: ExampleCommonStatus | None = 'STATUS_UNSPECIFIED'
+    status: ExampleCommonStatus | None = ExampleCommonStatus.STATUS_UNSPECIFIED
     created_at: AwareDatetime | None = None
     ttl: timedelta | None = None
     metadata: dict[str, Any] | None = None

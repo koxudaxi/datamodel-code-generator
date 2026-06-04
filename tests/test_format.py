@@ -674,6 +674,33 @@ def test_apply_builtin_formatter_parenthesizes_long_union_annotation() -> None:
     )
 
 
+def test_apply_builtin_formatter_parenthesizes_union_annotation_with_long_default() -> None:
+    """Test built-in formatter matches black for long union annotations with long defaults."""
+    code = (
+        "class Model:\n"
+        "    qualified_state: example_spec_proto3_alias_state.ExampleSpecProto3AliasState | None = "
+        "example_spec_proto3_alias_state.ExampleSpecProto3AliasState.ALIAS_STATE_UNSPECIFIED\n"
+    )
+
+    assert apply_builtin_formatter(code, line_length=88) == (
+        "class Model:\n"
+        "    qualified_state: (\n"
+        "        example_spec_proto3_alias_state.ExampleSpecProto3AliasState | None\n"
+        "    ) = (\n"
+        "        example_spec_proto3_alias_state.ExampleSpecProto3AliasState.ALIAS_STATE_UNSPECIFIED\n"
+        "    )\n"
+    )
+
+
+def test_apply_builtin_formatter_parenthesizes_union_annotation_with_string_default() -> None:
+    """Test built-in formatter matches black for long union annotations with string defaults."""
+    code = "class Model:\n    typename__: Literal['Notification'] | None = 'Notification'\n"
+
+    assert apply_builtin_formatter(code, line_length=40) == (
+        "class Model:\n    typename__: (\n        Literal['Notification'] | None\n    ) = 'Notification'\n"
+    )
+
+
 def test_apply_builtin_formatter_wraps_union_subscript_annotation() -> None:
     """Test built-in formatter matches black for generated Union annotations."""
     code = (
