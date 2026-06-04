@@ -5572,7 +5572,7 @@ def test_main_const_complex_values(output_file: Path) -> None:
 
 
 def test_main_const_optional_values(output_file: Path) -> None:
-    """Generate defaults for optional non-literal const values."""
+    """Do not treat optional non-literal const values as schema defaults."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "const_optional_values.json",
         output_path=output_file,

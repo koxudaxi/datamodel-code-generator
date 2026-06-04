@@ -837,12 +837,19 @@ class _XMLSchemaConverter:
         if "default" in element.attrib:
             schema["default"] = self._parse_literal(str(element.get("default")), schema, parse_temporal=True)
         if "fixed" in element.attrib:
-            schema["const"] = self._parse_literal(str(element.get("fixed")), schema)
+            self._apply_fixed_value(schema, self._parse_literal(str(element.get("fixed")), schema))
         if element.get("nillable") == "true":
             schema = self._make_nullable(schema)
         if element.get("abstract") == "true":
             schema["x-xsd-abstract"] = True
         return schema
+
+    @staticmethod
+    def _apply_fixed_value(schema: JsonSchema, fixed_value: Any) -> None:
+        if isinstance(fixed_value, Decimal):
+            schema["x-python-type"] = "Decimal"
+        schema["const"] = fixed_value
+        schema.setdefault("default", fixed_value)
 
     def _make_nullable(self, schema: JsonSchema) -> JsonSchema:  # noqa: PLR6301
         schema = _copy_schema(schema)
@@ -1304,7 +1311,7 @@ class _XMLSchemaConverter:
         if fixed is None and "fixed" not in attribute.attrib:
             fixed = source_attribute.get("fixed")
         if fixed is not None:
-            attribute_schema["const"] = self._parse_literal(fixed, attribute_schema)
+            self._apply_fixed_value(attribute_schema, self._parse_literal(fixed, attribute_schema))
         schema.setdefault("properties", {})[name] = attribute_schema
         if (attribute.get("use") or source_attribute.get("use")) == "required":
             schema.setdefault("required", []).append(name)
