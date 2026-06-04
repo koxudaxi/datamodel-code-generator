@@ -267,7 +267,7 @@ class DataModelFieldBase(_BaseModel):
         if const is None:
             self.replace_data_type(self.data_type.__class__(type=NONE), clear_old_parent=False)
             return
-        if not self.default:
+        if self.default is None:
             self.default = const
         if not isinstance(const, (bool, int, str)):
             return
