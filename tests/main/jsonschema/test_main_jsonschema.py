@@ -5571,6 +5571,16 @@ def test_main_const_complex_values(output_file: Path) -> None:
     )
 
 
+def test_main_const_optional_values(output_file: Path) -> None:
+    """Generate defaults for optional non-literal const values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "const_optional_values.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
 @pytest.mark.skipif(
     version.parse(black.__version__) < version.parse("23.3.0"),
     reason="Require Black version 23.3.0 or later ",

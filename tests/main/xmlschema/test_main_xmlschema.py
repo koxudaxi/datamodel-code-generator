@@ -57,6 +57,17 @@ def test_main_xmlschema_edge_cases(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_fixed_decimal(output_file: Path) -> None:
+    """Generate Decimal defaults for fixed XML Schema decimal values."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "fixed_decimal.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="fixed_decimal.py",
+    )
+
+
 def test_main_xmlschema_special_float_defaults(output_file: Path) -> None:
     """Generate non-finite float defaults from XML Schema lexical values."""
     run_main_and_assert(

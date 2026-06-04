@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ConstOptionalValues",
+  "type": "object",
+  "properties": {
+    "ratio": {
+      "const": 1.5
+    },
+    "settings": {
+      "const": {
+        "enabled": true,
+        "limit": 3
+      }
+    },
+    "choices": {
+      "const": [1, "two"]
+    }
+  }
+}
