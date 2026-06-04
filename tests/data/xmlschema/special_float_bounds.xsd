@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning"
+  elementFormDefault="qualified"
+  vc:minVersion="1.1">
+  <xs:element name="Bounds">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="bounded" minOccurs="0">
+          <xs:simpleType>
+            <xs:restriction base="xs:double">
+              <xs:minInclusive value="-INF"/>
+              <xs:maxExclusive value="INF"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

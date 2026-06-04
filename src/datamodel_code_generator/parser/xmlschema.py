@@ -13,7 +13,7 @@ import io
 import re
 import warnings
 from decimal import Decimal, InvalidOperation
-from math import isfinite
+from math import inf, isfinite, nan
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple, cast
 from xml.etree import ElementTree as ET  # noqa: S405
@@ -22,6 +22,7 @@ from typing_extensions import Unpack
 
 from datamodel_code_generator import Error, YamlValue
 from datamodel_code_generator.enums import VersionMode, XMLSchemaVersion
+from datamodel_code_generator.parser._math_imports import add_math_imports_for_non_finite_literals
 from datamodel_code_generator.parser.base import Source, title_to_class_name
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
@@ -184,7 +185,17 @@ def _safe_float(value: str) -> float | None:
         number = float(value)
     except ValueError:
         return None
-    return number if isfinite(number) else None
+    if isfinite(number):
+        return number
+    match value:
+        case "INF" | "+INF":
+            return inf
+        case "-INF":
+            return -inf
+        case "NaN":
+            return nan
+        case _:
+            return None
 
 
 def _is_supported_pattern(value: str) -> bool:
@@ -205,6 +216,16 @@ def _safe_decimal(value: str) -> Decimal | None:
         return Decimal(value)
     except InvalidOperation:
         return None
+
+
+def _safe_bool(value: str) -> bool | None:
+    match value:
+        case "true" | "1":
+            return True
+        case "false" | "0":
+            return False
+        case _:
+            return None
 
 
 def _versioning_value(element: ET.Element, name: str) -> Decimal | None:
@@ -833,17 +854,28 @@ class _XMLSchemaConverter:
             schema[max_key] = length
 
     def _parse_literal(self, value: str, schema: JsonSchema) -> Any:
-        schema_type = schema.get("type")
-        if schema_type == "array":
-            return self._parse_list_literal(value, schema)
-        if schema_type == "integer":
-            return integer if (integer := _safe_int(value)) is not None else value
-        if schema_type == "number":
-            if schema.get("format") == "decimal":
-                return decimal if (decimal := _safe_decimal(value)) is not None else value
-            return number if (number := _safe_float(value)) is not None else value
-        if schema_type == "boolean":
-            return value in {"true", "1"}
+        if any_of := schema.get("anyOf"):
+            return self._parse_union_literal(value, any_of)
+        match schema.get("type"):
+            case "array":
+                return self._parse_list_literal(value, schema)
+            case "integer":
+                parsed: Any = _safe_int(value)
+            case "number" if schema.get("format") == "decimal":
+                parsed = _safe_decimal(value)
+            case "number":
+                parsed = _safe_float(value)
+            case "boolean":
+                parsed = _safe_bool(value)
+            case _:
+                return value
+        return parsed if parsed is not None else value
+
+    def _parse_union_literal(self, value: str, schemas: list[JsonSchema]) -> Any:
+        for schema in schemas:
+            parsed = self._parse_literal(value, schema)
+            if parsed != value or schema.get("type") == "string":
+                return parsed
         return value
 
     def _parse_list_literal(self, value: str, schema: JsonSchema) -> list[Any]:
@@ -1341,6 +1373,15 @@ class XMLSchemaParser(JsonSchemaParser):
     ) -> None:
         """Initialize the XML Schema parser with JSON Schema parser configuration."""
         super().__init__(source=source, config=config, **options)
+
+    def parse(self, *args: Any, **kwargs: Any) -> str | dict[tuple[str, ...], Any]:
+        """Parse XML Schema and add imports for non-finite float literals."""
+        result = super().parse(*args, **kwargs)
+        if isinstance(result, str):
+            return add_math_imports_for_non_finite_literals(result)
+        for item in result.values():
+            item.body = add_math_imports_for_non_finite_literals(item.body)
+        return result
 
     @property
     def iter_source(self) -> Iterator[Source]:
