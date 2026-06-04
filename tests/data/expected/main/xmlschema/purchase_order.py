@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from enum import Enum
 
 from pydantic import BaseModel, Field, RootModel, conint, constr
@@ -28,7 +29,7 @@ class AddressType(BaseModel):
 
 
 class Money(BaseModel):
-    value: float
+    value: Decimal
     currency: str
 
 

@@ -50,6 +50,8 @@ STRING_SCHEMA: JsonSchema = {"type": "string"}
 INTEGER_SCHEMA: JsonSchema = {"type": "integer"}
 NUMBER_SCHEMA: JsonSchema = {"type": "number"}
 BOOLEAN_SCHEMA: JsonSchema = {"type": "boolean"}
+DECIMAL_SCHEMA: JsonSchema = {"type": "number", "format": "decimal"}
+DATETIME_SCHEMA: JsonSchema = {"type": "string", "format": "date-time", "x-python-type": "datetime"}
 
 
 class _OccurrenceContext(NamedTuple):
@@ -70,10 +72,10 @@ BUILTIN_TYPE_SCHEMAS: dict[str, JsonSchema] = {
     "boolean": BOOLEAN_SCHEMA,
     "byte": {"type": "integer", "minimum": -128, "maximum": 127},
     "date": {"type": "string", "format": "date"},
-    "dateTime": {"type": "string", "format": "date-time"},
-    "decimal": NUMBER_SCHEMA,
+    "dateTime": DATETIME_SCHEMA,
+    "decimal": DECIMAL_SCHEMA,
     "double": NUMBER_SCHEMA,
-    "duration": {"type": "string", "format": "duration"},
+    "duration": STRING_SCHEMA,
     "dayTimeDuration": {"type": "string", "format": "duration"},
     "ENTITIES": {"type": "array", "items": STRING_SCHEMA},
     "ENTITY": STRING_SCHEMA,
@@ -110,7 +112,7 @@ BUILTIN_TYPE_SCHEMAS: dict[str, JsonSchema] = {
     "unsignedInt": {"type": "integer", "minimum": 0, "maximum": 4294967295},
     "unsignedLong": {"type": "integer", "minimum": 0, "maximum": 18446744073709551615},
     "unsignedShort": {"type": "integer", "minimum": 0, "maximum": 65535},
-    "yearMonthDuration": {"type": "string", "format": "duration"},
+    "yearMonthDuration": STRING_SCHEMA,
     "dateTimeStamp": {"type": "string", "format": "date-time"},
 }
 
@@ -835,14 +837,18 @@ class _XMLSchemaConverter:
         if schema_type == "integer":
             return integer if (integer := _safe_int(value)) is not None else value
         if schema_type == "number":
+            if schema.get("format") == "decimal":
+                return decimal if (decimal := _safe_decimal(value)) is not None else value
             return number if (number := _safe_float(value)) is not None else value
         if schema_type == "boolean":
             return value in {"true", "1"}
         return value
 
-    def _parse_number(self, value: str, schema: JsonSchema) -> int | float | str:  # noqa: PLR6301
+    def _parse_number(self, value: str, schema: JsonSchema) -> int | float | Decimal | str:  # noqa: PLR6301
         if schema.get("type") == "integer":
             return integer if (integer := _safe_int(value)) is not None else value
+        if schema.get("format") == "decimal":
+            return decimal if (decimal := _safe_decimal(value)) is not None else value
         return number if (number := _safe_float(value)) is not None else value
 
     @staticmethod
