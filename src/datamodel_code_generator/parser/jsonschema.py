@@ -640,6 +640,8 @@ EXCLUDE_FIELD_KEYS = (
     JsonSchemaObject.__extra_key__,
 }
 
+USE_DEFAULT_WITH_REQUIRED_KEY = "x-datamodel-code-generator-use-default-with-required"
+
 
 @snooper_to_methods()  # noqa: PLR0904
 class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
@@ -800,16 +802,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             extras = {
                 self.get_field_extra_key(k.lstrip("x-") if k in self.field_extra_keys_without_x_prefix else k): v
                 for k, v in obj.extras.items()
+                if k != USE_DEFAULT_WITH_REQUIRED_KEY
             }
         else:
             extras = {
                 self.get_field_extra_key(k.lstrip("x-") if k in self.field_extra_keys_without_x_prefix else k): v
                 for k, v in obj.extras.items()
-                if k in self.field_keys
+                if k in self.field_keys and k != USE_DEFAULT_WITH_REQUIRED_KEY
             }
         if self.default_field_extras:
             extras.update(self.default_field_extras)
         return extras
+
+    def _should_use_default_with_required(self, field: JsonSchemaObject, *, required: bool, has_default: bool) -> bool:
+        if not has_default:
+            return False
+        if field.extras.get(USE_DEFAULT_WITH_REQUIRED_KEY) is True:
+            return True
+        return required and self.apply_default_values_for_required_fields
 
     @cached_property
     def _data_formats(self) -> dict[str, dict[str, Types]]:
@@ -3271,7 +3281,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     continue  # pragma: no cover
                 if (field.original_name or field.name) in required:
                     field.required = True
-                    if self.apply_default_values_for_required_fields and field.has_default:
+                    if field.use_default_with_required or (
+                        self.apply_default_values_for_required_fields and field.has_default
+                    ):
                         field.use_default_with_required = True
         if obj.required:
             field_name_to_field = {f.original_name or f.name: f for f in fields}
@@ -3281,7 +3293,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     if self.force_optional_for_required_fields:
                         continue
                     field.required = True
-                    if self.apply_default_values_for_required_fields and field.has_default:
+                    if field.use_default_with_required or (
+                        self.apply_default_values_for_required_fields and field.has_default
+                    ):
                         field.use_default_with_required = True
                 else:
                     fields.append(
@@ -3641,8 +3655,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 required: bool = False
             else:
                 required = original_field_name in requires
-            use_default_with_required = (
-                required and self.apply_default_values_for_required_fields and effective_has_default
+            use_default_with_required = self._should_use_default_with_required(
+                field,
+                required=required,
+                has_default=effective_has_default,
             )
             fields.append(
                 self.get_object_field(

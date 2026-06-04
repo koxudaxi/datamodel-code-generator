@@ -13,7 +13,7 @@ class UserStatus(BaseModel):
 
 class UserSignupUserSignupPayload(BaseModel):
     displayName: str
-    age: int | None
+    age: int | None = None
 
 
 class UserSignupUserSignupHeaders(BaseModel):

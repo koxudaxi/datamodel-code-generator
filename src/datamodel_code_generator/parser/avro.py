@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple, cast
 from typing_extensions import Unpack
 
 from datamodel_code_generator import Error, YamlValue, load_yaml
-from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+from datamodel_code_generator.parser.jsonschema import USE_DEFAULT_WITH_REQUIRED_KEY, JsonSchemaParser
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -423,6 +423,7 @@ class _AvroSchemaConverter:
                 field_schema["x-avro-order"] = field["order"]
             if "default" in field:
                 field_schema["default"] = field["default"]
+                field_schema[USE_DEFAULT_WITH_REQUIRED_KEY] = True
             required.append(field_name)
             properties[field_name] = field_schema
 
