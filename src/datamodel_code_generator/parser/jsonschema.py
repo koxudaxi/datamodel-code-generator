@@ -13,6 +13,7 @@ import re
 from collections import defaultdict
 from collections.abc import Iterable
 from contextlib import contextmanager, suppress
+from decimal import Decimal
 from fractions import Fraction
 from functools import cached_property, lru_cache
 from math import gcd, lcm
@@ -1325,17 +1326,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _get_scalar_data_type_from_json_value(self, value: object) -> DataType | None:
         """Infer a normal Python type from a scalar JSON value."""
-        if value is None:
-            return self.data_type_manager.get_data_type(Types.null)
-        if isinstance(value, bool):
-            return self.data_type_manager.get_data_type(Types.boolean)
-        if isinstance(value, int):
-            return self.data_type_manager.get_data_type(Types.integer)
-        if isinstance(value, float):
-            return self.data_type_manager.get_data_type(Types.float)
-        if isinstance(value, str):
-            return self.data_type_manager.get_data_type(Types.string)
-        return None
+        match value:
+            case None:
+                type_ = Types.null
+            case bool():
+                type_ = Types.boolean
+            case int():
+                type_ = Types.integer
+            case float():
+                type_ = Types.float
+            case Decimal():
+                type_ = Types.decimal
+            case str():
+                type_ = Types.string
+            case _:
+                return None
+        return self.data_type_manager.get_data_type(type_)
 
     def _get_data_type_from_json_value(self, value: object) -> DataType:
         """Infer a normal Python type from a JSON value."""

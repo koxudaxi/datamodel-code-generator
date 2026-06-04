@@ -116,6 +116,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
         use_union_operator = config.use_union_operator if config else options.get("use_union_operator", False)
         super().__init__(source=source, config=config, **options)
 
+        self.set_default_enum_member = True
         self.data_model_scalar_type = self.config.data_model_scalar_type
         self.data_model_union_type = self.config.data_model_union_type
         self.use_standard_collections = use_standard_collections
