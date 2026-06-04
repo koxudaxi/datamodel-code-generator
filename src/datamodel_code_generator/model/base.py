@@ -160,12 +160,12 @@ def repr_set_sorted(value: set[Any]) -> str:
 
 
 def _collect_extra_imports_from_default(value: Any) -> tuple[Import, ...]:
-    imports = getattr(value, "imports", ())
+    imports = getattr(value, "imports", None)
     if isinstance(value, dict):
-        return chain_as_tuple(imports, *(_collect_extra_imports_from_default(v) for v in value.values()))
+        return chain_as_tuple(imports or (), *(_collect_extra_imports_from_default(v) for v in value.values()))
     if isinstance(value, (list, tuple, set)):
-        return chain_as_tuple(imports, *(_collect_extra_imports_from_default(v) for v in value))
-    return tuple(imports)
+        return chain_as_tuple(imports or (), *(_collect_extra_imports_from_default(v) for v in value))
+    return tuple(imports or ())
 
 
 ConstraintsBaseT = TypeVar("ConstraintsBaseT", bound="ConstraintsBase")
@@ -359,10 +359,11 @@ class DataModelFieldBase(_BaseModel):
         has_union = not self._use_union_operator and UNION_PREFIX in type_hint
         has_optional = OPTIONAL_PREFIX in type_hint
         needs_annotated = self.use_annotated and self.needs_annotated_import
-        base_imports = chain_as_tuple(
-            self.data_type.all_imports,
-            _collect_extra_imports_from_default(self.default),
-        )
+        base_imports = chain_as_tuple(self.data_type.all_imports)
+        if self.default is not None:
+            default_imports = _collect_extra_imports_from_default(self.default)
+            if default_imports:
+                base_imports = chain_as_tuple(base_imports, default_imports)
 
         # Fast path: no special typing imports needed
         if not has_union and not has_optional and not needs_annotated:
