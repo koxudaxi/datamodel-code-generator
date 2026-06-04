@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -33,6 +34,18 @@ def _expected_file(expected_file: str) -> str:
 
 def _avro_bytes_default(*values: int) -> str:
     return bytes(values).decode("latin1")
+
+
+def _assert_default(properties: dict[str, Any], name: str, expected: object) -> None:
+    actual = properties[name]["default"]
+    if actual != expected:
+        pytest.fail(f"{name} default mismatch: {actual!r} != {expected!r}")
+
+
+def _assert_default_repr(properties: dict[str, Any], name: str, expected: str) -> None:
+    actual = repr(properties[name]["default"])
+    if actual != expected:
+        pytest.fail(f"{name} default repr mismatch: {actual!r} != {expected!r}")
 
 
 def test_convert_avro_schema_data_normalizes_binary_defaults() -> None:
@@ -94,23 +107,23 @@ def test_convert_avro_schema_data_normalizes_binary_defaults() -> None:
     })
 
     properties = converted["properties"]
-    assert properties["nullByteDefault"]["default"] == b"\x00"
-    assert properties["asciiByteDefault"]["default"] == b"\x7f"
-    assert properties["firstHighByteDefault"]["default"] == b"\x80"
-    assert properties["multiByteDefault"]["default"] == b"\xff\x00"
-    assert properties["bytesDefault"]["default"] == b"\xff"
-    assert properties["fixedDefault"]["default"] == b"\xff"
-    assert properties["namedFixedDefault"]["default"] == b"\xff"
-    assert properties["unionDefault"]["default"] == b"\xff"
-    assert properties["wrappedUnionDefault"]["default"] == b"\xff"
-    assert properties["wrappedTypeDefault"]["default"] == b"\xff"
-    assert properties["decimalDefault"]["default"] == Decimal("12.34")
-    assert properties["fixedUuidDefault"]["default"] == UUID(uuid_text)
-    assert properties["stringUuidDefault"]["default"] == UUID(uuid_text)
-    assert repr(properties["durationDefault"]["default"]) == "timedelta(days=2, milliseconds=3000)"
-    assert properties["arrayDefault"]["default"] == [b"\xff"]
-    assert properties["mapDefault"]["default"] == {"k": b"\xff"}
-    assert properties["recordDefault"]["default"] == {"payload": b"\xff"}
+    _assert_default(properties, "nullByteDefault", b"\x00")
+    _assert_default(properties, "asciiByteDefault", b"\x7f")
+    _assert_default(properties, "firstHighByteDefault", b"\x80")
+    _assert_default(properties, "multiByteDefault", b"\xff\x00")
+    _assert_default(properties, "bytesDefault", b"\xff")
+    _assert_default(properties, "fixedDefault", b"\xff")
+    _assert_default(properties, "namedFixedDefault", b"\xff")
+    _assert_default(properties, "unionDefault", b"\xff")
+    _assert_default(properties, "wrappedUnionDefault", b"\xff")
+    _assert_default(properties, "wrappedTypeDefault", b"\xff")
+    _assert_default(properties, "decimalDefault", Decimal("12.34"))
+    _assert_default(properties, "fixedUuidDefault", UUID(uuid_text))
+    _assert_default(properties, "stringUuidDefault", UUID(uuid_text))
+    _assert_default_repr(properties, "durationDefault", "timedelta(days=2, milliseconds=3000)")
+    _assert_default(properties, "arrayDefault", [b"\xff"])
+    _assert_default(properties, "mapDefault", {"k": b"\xff"})
+    _assert_default(properties, "recordDefault", {"payload": b"\xff"})
 
 
 def test_convert_avro_schema_data_keeps_values_for_unsupported_default_shapes() -> None:
@@ -187,21 +200,21 @@ def test_convert_avro_schema_data_keeps_values_for_unsupported_default_shapes() 
     })
 
     properties = converted["properties"]
-    assert properties["bytesNonString"]["default"] == 1
-    assert properties["bytesHighCodepoint"]["default"] == "\u0100"
-    assert properties["arrayDefaultNotList"]["default"] == "unchanged"
-    assert properties["recordDefaultExtraField"]["default"] == {"payload": b"\xff", "unknown": "\u00ff"}
-    assert properties["bigDecimalDefault"]["default"] == "\u00ff"
-    assert properties["decimalHighCodepoint"]["default"] == "\u0100"
-    assert properties["decimalInvalidScale"]["default"] == "\u00ff"
-    assert properties["durationWithMonths"]["default"] == duration_with_months
-    assert properties["durationWrongLength"]["default"] == "\u00ff"
-    assert repr(properties["durationDays"]["default"]) == "timedelta(days=2)"
-    assert repr(properties["durationMillis"]["default"]) == "timedelta(milliseconds=3000)"
-    assert repr(properties["durationZero"]["default"]) == "timedelta(0)"
-    assert properties["uuidInvalid"]["default"] == "not-a-uuid"
-    assert properties["stringUuidInvalid"]["default"] == "abcdefghijklmnop"
-    assert properties["stringUuidNonString"]["default"] == 1
+    _assert_default(properties, "bytesNonString", 1)
+    _assert_default(properties, "bytesHighCodepoint", "\u0100")
+    _assert_default(properties, "arrayDefaultNotList", "unchanged")
+    _assert_default(properties, "recordDefaultExtraField", {"payload": b"\xff", "unknown": "\u00ff"})
+    _assert_default(properties, "bigDecimalDefault", "\u00ff")
+    _assert_default(properties, "decimalHighCodepoint", "\u0100")
+    _assert_default(properties, "decimalInvalidScale", "\u00ff")
+    _assert_default(properties, "durationWithMonths", duration_with_months)
+    _assert_default(properties, "durationWrongLength", "\u00ff")
+    _assert_default_repr(properties, "durationDays", "timedelta(days=2)")
+    _assert_default_repr(properties, "durationMillis", "timedelta(milliseconds=3000)")
+    _assert_default_repr(properties, "durationZero", "timedelta(0)")
+    _assert_default(properties, "uuidInvalid", "not-a-uuid")
+    _assert_default(properties, "stringUuidInvalid", "abcdefghijklmnop")
+    _assert_default(properties, "stringUuidNonString", 1)
 
 
 @_SKIP_BLACK
