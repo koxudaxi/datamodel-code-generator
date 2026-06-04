@@ -848,9 +848,8 @@ class _XMLSchemaConverter:
 
     def _parse_list_literal(self, value: str, schema: JsonSchema) -> list[Any]:
         items = schema.get("items")
-        if isinstance(items, dict):
-            return [self._parse_literal(item, items) for item in value.split()]
-        return value.split()
+        item_schema = items if isinstance(items, dict) else STRING_SCHEMA
+        return [self._parse_literal(item, item_schema) for item in value.split()]
 
     def _parse_number(self, value: str, schema: JsonSchema) -> int | float | Decimal | str:  # noqa: PLR6301
         if schema.get("type") == "integer":
