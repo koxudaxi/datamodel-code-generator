@@ -90,6 +90,17 @@ def test_main_xmlschema_union_defaults(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_temporal_defaults(output_file: Path) -> None:
+    """Generate typed defaults for XML Schema temporal lexical values."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "temporal_defaults.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="temporal_defaults.py",
+    )
+
+
 def test_main_xmlschema_single_root_same_name(output_file: Path) -> None:
     """Inline a single root type when no other definition references it."""
     run_main_and_assert(

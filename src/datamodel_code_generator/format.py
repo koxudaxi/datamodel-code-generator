@@ -1130,6 +1130,15 @@ def _format_generated_annotation_assignment(  # noqa: PLR0911, PLR0912
             wrap_string_literal=wrap_string_literal,
         )
         return f"{value_prefix}{formatted_value}"
+    if isinstance(statement.value, ast.Call):
+        formatted_value = _format_call(
+            statement.value,
+            indent,
+            line_length,
+            source,
+            wrap_string_literal=wrap_string_literal,
+        )
+        return f"{value_prefix}{formatted_value}"
     if _is_annotated(statement.annotation):
         if (
             statement.value is not None
