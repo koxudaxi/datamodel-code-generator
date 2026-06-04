@@ -77,6 +77,16 @@ class _PythonExpression:
         return self.code
 
 
+def _collect_python_expression_imports(value: Any) -> tuple[Import, ...]:
+    if isinstance(value, _PythonExpression):
+        return value.imports
+    if isinstance(value, dict):
+        return tuple(import_ for item in value.values() for import_ in _collect_python_expression_imports(item))
+    if isinstance(value, (list, tuple, set)):
+        return tuple(import_ for item in value for import_ in _collect_python_expression_imports(item))
+    return ()
+
+
 class _OccurrenceContext(NamedTuple):
     required: bool = True
     repeating: bool = False
@@ -1559,6 +1569,15 @@ class XMLSchemaParser(JsonSchemaParser):
 
         self._resolve_unparsed_json_pointer()
         self._generate_forced_base_models()
+        self._append_python_expression_imports()
+
+    def _append_python_expression_imports(self) -> None:
+        for model in self.results:
+            imports = tuple(
+                import_ for field in model.fields for import_ in _collect_python_expression_imports(field.default)
+            )
+            if imports:
+                model._additional_imports.extend(imports)  # noqa: SLF001
 
 
 __all__ = ["XMLSchemaParser", "convert_xml_schema_data", "detect_xmlschema_version", "is_xml_schema_text"]
