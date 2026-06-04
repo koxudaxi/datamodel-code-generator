@@ -5,6 +5,53 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.60.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.60.0) - 2026-06-04
+
+## Breaking Changes
+
+* Avro record field defaults are no longer emitted as generated Python defaults. Avro defaults describe reader behavior, not Python model construction defaults, so generated Avro model fields now stay required even when the Avro schema has `default`. This also applies to Avro schemas embedded in AsyncAPI multi-format schemas. (#3256)
+* XML Schema datatype mappings were corrected. `xs:decimal` now generates `Decimal` instead of `float`; `xs:dateTime` defaults to standard-library `datetime` because XML Schema allows values without a timezone; `xs:dateTimeStamp` remains `AwareDatetime`; `xs:duration` and `xs:yearMonthDuration` now generate `str`, while `xs:dayTimeDuration` still generates `timedelta`. (#3248)
+* GraphQL input fields with schema defaults are now generated as optional fields with defaults. For example, non-null list inputs declared with `= []` can now be omitted when constructing the generated model. (#3255)
+* Protobuf `bytes` defaults are now generated as bytes literals instead of strings, including escaped byte sequences. (#3252)
+* XML Schema default and fixed values are parsed according to their XSD lexical types. This affects list defaults, union defaults, non-finite float values, temporal defaults, boolean defaults with XML Schema whitespace, and fixed decimal values. (#3258, #3260, #3261, #3263, #3267, #3268)
+
+## Notes
+
+* `--output-datetime-class` is respected for XML Schema `xs:dateTime` and `xs:dateTimeStamp` when explicitly provided. Without the option, the XML Schema defaults above are used. (#3266)
+* Enum member defaults remain opt-in through `--set-default-enum-member`. The default behavior is not changed to force enum member references. (#3264)
+* JSON Schema and OpenAPI `const` values are not treated as generated Python defaults unless the schema also defines a default. XML Schema `fixed` keeps its XSD value-constraint behavior. (#3268)
+
+## What's Changed
+
+* Update CHANGELOG for 0.59.1 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3239
+* Fix release notification duplicates by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3240
+* Respect OpenAPI 3.2 feature gates by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3243
+* Enforce assert helper usage by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3244
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3246
+* Fix PyPI badge rendering by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3247
+* Preserve AsyncAPI Avro defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3242 (superseded by #3256 before release)
+* Fix XML Schema datatypes by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3248
+* Fix Avro field defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3256
+* Fix GraphQL input defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3255
+* Fix Protobuf bytes defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3252
+* Fix Protobuf enum defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3253
+* Fix XML Schema list defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3258
+* Fix XML Schema union defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3260
+* Fix XML Schema float defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3261
+* Fix complex const defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3259 (narrowed by #3268 before release)
+* Fix GraphQL enum defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3262 (default enum-member behavior restored by #3264 before release)
+* Restore enum default option behavior by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3264
+* Add conversion diagram by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3257
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3265
+* Fix XML Schema datetime class override by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3266
+* Fix XML Schema temporal defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3263
+* Fix XML Schema boolean whitespace by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3267
+* Fix const default scope by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3268
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.59.1...0.60.0
+
+---
+
 ## [0.59.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.59.1) - 2026-06-03
 
 ## What's Changed
