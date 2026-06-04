@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, RootModel, conbytes
 
 
 class DefaultRecord(BaseModel):
-    value: int = 1
+    value: int
 
 
 class DefaultEnum(Enum):
@@ -75,22 +75,22 @@ class Array(BaseModel):
 
 
 class SpecMatrix(BaseModel):
-    nullDefault: None = None
-    booleanDefault: bool = False
-    intDefault: int = 1
-    longDefault: int = 2
-    floatDefault: float = 1.5
-    doubleDefault: float = 2.5
-    bytesDefault: bytes = 'ÿ'
-    stringDefault: str = 'foo'
-    recordDefault: DefaultRecord = Field({'value': 1}, validate_default=True)
-    enumDefault: DefaultEnum = 'FOO'
-    arrayDefault: list[int] = [1]
-    mapDefault: dict[str, int] = {'a': 1}
-    fixedDefault: DefaultFixed = Field('ÿ', validate_default=True)
+    nullDefault: None
+    booleanDefault: bool
+    intDefault: int
+    longDefault: int
+    floatDefault: float
+    doubleDefault: float
+    bytesDefault: bytes
+    stringDefault: str
+    recordDefault: DefaultRecord
+    enumDefault: DefaultEnum
+    arrayDefault: list[int]
+    mapDefault: dict[str, int]
+    fixedDefault: DefaultFixed
     ascendingOrder: str
     descendingOrder: str
-    nullableAfterValue: str | None = 'value'
+    nullableAfterValue: str | None
     sameKindNamedUnion: RA | RB | EA | EB | FA | FB
     arrayOfRecords: list[ArrayItem]
     mapOfEnums: dict[str, MapValue]
