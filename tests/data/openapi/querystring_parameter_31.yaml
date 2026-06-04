@@ -1,0 +1,30 @@
+openapi: 3.1.0
+info:
+  title: Querystring Parameter
+  version: 1.0.0
+paths:
+  /events:
+    get:
+      parameters:
+        - in: querystring
+          content:
+            application/x-www-form-urlencoded:
+              schema:
+                type: object
+                required:
+                  - status
+                properties:
+                  status:
+                    type: string
+      responses:
+        "200":
+          description: OK
+components:
+  schemas:
+    Event:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: integer
