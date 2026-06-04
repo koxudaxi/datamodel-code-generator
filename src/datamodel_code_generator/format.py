@@ -694,6 +694,16 @@ def _is_call(node: ast.AST | None, name: str) -> TypeGuard[ast.Call]:
     return isinstance(node, ast.Call) and _is_name_or_attr(node.func, name)
 
 
+def _has_attribute_root(node: ast.AST, name: str) -> bool:
+    while isinstance(node, ast.Attribute):
+        node = node.value
+    return isinstance(node, ast.Name) and node.id == name
+
+
+def _is_datetime_module_call(node: ast.AST | None) -> TypeGuard[ast.Call]:
+    return isinstance(node, ast.Call) and _has_attribute_root(node.func, "datetime_module")
+
+
 def _is_annotated(node: ast.AST) -> TypeGuard[ast.Subscript]:
     return isinstance(node, ast.Subscript) and _is_name_or_attr(node.value, "Annotated")
 
@@ -1122,6 +1132,15 @@ def _format_generated_annotation_assignment(  # noqa: PLR0911, PLR0912
     if isinstance(statement.value, ast.List):
         return f"{value_prefix}{_format_list_literal(statement.value, indent, source)}"
     if _is_call(statement.value, "field"):
+        formatted_value = _format_call(
+            statement.value,
+            indent,
+            line_length,
+            source,
+            wrap_string_literal=wrap_string_literal,
+        )
+        return f"{value_prefix}{formatted_value}"
+    if _is_datetime_module_call(statement.value):
         formatted_value = _format_call(
             statement.value,
             indent,
