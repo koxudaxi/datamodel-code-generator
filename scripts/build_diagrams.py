@@ -115,6 +115,18 @@ def render_error_output(error: subprocess.CalledProcessError) -> str:
     return "No output captured from mermaid-cli."
 
 
+def merge_row_tspans(row: ET.Element, text: str) -> list[ET.Element]:
+    """Merge one Mermaid text row into a single tspan so spaces render."""
+    inner_tspans = row.findall(f"./{{{SVG_NS}}}tspan")
+    if not inner_tspans:
+        return []
+    first, *extra_tspans = inner_tspans
+    first.text = text
+    for tspan in extra_tspans:
+        row.remove(tspan)
+    return [first]
+
+
 def adjust_svg(markup: str) -> str:
     """Adjust the exported SVG for GitHub-safe rendering.
 
@@ -129,7 +141,8 @@ def adjust_svg(markup: str) -> str:
     """
     root = ET.fromstring(markup)
     for row in root.findall(f".//{{{SVG_NS}}}tspan[@class='text-outer-tspan row']"):
-        inner_tspans = row.findall(f"./{{{SVG_NS}}}tspan")
+        original_tspans = row.findall(f"./{{{SVG_NS}}}tspan")
+        inner_tspans = merge_row_tspans(row, "".join(tspan.text or "" for tspan in original_tspans).strip())
         match row_text := "".join(tspan.text or "" for tspan in inner_tspans).strip():
             case _ if row_text in INPUT_SECTION_HEADINGS:
                 for tspan in inner_tspans:
