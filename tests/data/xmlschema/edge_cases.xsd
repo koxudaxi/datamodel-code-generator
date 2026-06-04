@@ -63,6 +63,16 @@
       <xs:group ref="missingGroup"/>
       <xs:any/>
       <xs:element name="unknownNamespace" type="other:Thing"/>
+      <xs:element name="badDoubleDefault" type="xs:double" default="bad"/>
+      <xs:element name="infiniteDoubleDefault" type="xs:double" default="INF"/>
+      <xs:element name="doubleRange">
+        <xs:simpleType>
+          <xs:restriction base="xs:double">
+            <xs:minInclusive value="1.5"/>
+            <xs:maxExclusive value="10.5"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
       <xs:element name="badDecimalDefault" type="xs:decimal" default="bad"/>
       <xs:element name="badIntDefault" type="xs:int" default="bad"/>
     </xs:sequence>

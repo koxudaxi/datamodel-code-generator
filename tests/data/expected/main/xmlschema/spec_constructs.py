@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, Field, RootModel, conint, constr
@@ -32,7 +33,7 @@ class RestrictedAllType(BaseModel):
 
 
 class AnonymousComplex(BaseModel):
-    value: float
+    value: Decimal
     flag: bool | None = True
 
 
