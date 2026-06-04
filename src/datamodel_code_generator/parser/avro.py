@@ -544,6 +544,7 @@ class _AvroSchemaConverter:
                 return self._convert_default_dict(default, schema_dict, namespace)
             case _:  # pragma: no cover
                 return default
+        return default  # pragma: no cover
 
     def _convert_default_type_name(self, default: Any, type_name: str, namespace: str | None) -> Any:
         if type_name == "bytes":
@@ -586,6 +587,7 @@ class _AvroSchemaConverter:
                 return self._convert_record_default(default, schema, namespace)
             case _:
                 return default
+        return default  # pragma: no cover
 
     def _convert_record_default(
         self, default: dict[str, Any], schema: JsonSchema, namespace: str | None
@@ -630,6 +632,7 @@ class _AvroSchemaConverter:
                 return default
             case _:
                 return self._decode_bytes_default(default)
+        return default  # pragma: no cover
 
     def _convert_decimal_default(self, default: Any, schema: JsonSchema) -> Any:
         decoded = self._decode_bytes_default(default)
