@@ -105,7 +105,7 @@ class AsyncAPISchema:
     path: list[str]
     context: AsyncAPIContext
     parse_as_file: bool = False
-    apply_default_values_for_required_fields: bool | None = None
+    apply_avro_default_values: bool = False
 
 
 class MultiFormatSchemaObject(BaseModel):
@@ -292,13 +292,13 @@ class AsyncAPIParser(OpenAPIParser):
         )
 
     @contextmanager
-    def _required_field_defaults(self, enabled: bool | None) -> Iterator[None]:  # noqa: FBT001
-        if enabled is None:
+    def _avro_default_values(self, *, enabled: bool) -> Iterator[None]:
+        if not enabled:
             yield
             return
 
         previous = self.apply_default_values_for_required_fields
-        self.apply_default_values_for_required_fields = enabled
+        self.apply_default_values_for_required_fields = True
         try:
             yield
         finally:
@@ -381,7 +381,7 @@ class AsyncAPIParser(OpenAPIParser):
                 return [
                     replace(
                         self._schema(name, converted_schema, context.root_parts, context, parse_as_file=True),
-                        apply_default_values_for_required_fields=True,
+                        apply_avro_default_values=True,
                     )
                 ]
             case "protobuf":
@@ -1006,7 +1006,7 @@ class AsyncAPIParser(OpenAPIParser):
                 parsed_paths.add(path_key)
                 with (
                     self._asyncapi_context(schema.context),
-                    self._required_field_defaults(schema.apply_default_values_for_required_fields),
+                    self._avro_default_values(enabled=schema.apply_avro_default_values),
                 ):
                     if schema.parse_as_file:
                         self._parse_file(raw_schema, schema.name, schema.path)
