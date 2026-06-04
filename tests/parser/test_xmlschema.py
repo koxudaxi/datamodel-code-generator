@@ -11,6 +11,7 @@ from datamodel_code_generator.parser.base import Result
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from datamodel_code_generator.parser.xmlschema import (
     XMLSchemaParser,
+    _collect_python_expression_imports,
     _safe_date_expression,
     _safe_datetime_expression,
     _safe_day_time_duration_expression,
@@ -94,6 +95,15 @@ def test_safe_day_time_duration_expression_parses_supported_components(value: st
 
     assert expression is not None
     assert repr(expression) == expected
+
+
+@pytest.mark.allow_direct_assert
+def test_collect_python_expression_imports_from_dict_values() -> None:
+    """Collect imports from Python expressions nested in mapping defaults."""
+    expression = _safe_date_expression("2026-06-04")
+
+    assert expression is not None
+    assert _collect_python_expression_imports({"eventDate": expression}) == expression.imports
 
 
 @pytest.mark.allow_direct_assert
