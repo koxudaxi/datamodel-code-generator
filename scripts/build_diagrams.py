@@ -203,6 +203,8 @@ def main() -> int:
             return check_diagrams(sources)
         case False:
             return write_diagrams(sources)
+        case _:
+            return 1
 
 
 if __name__ == "__main__":
