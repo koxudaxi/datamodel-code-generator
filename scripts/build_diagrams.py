@@ -24,6 +24,7 @@ import argparse
 import hashlib
 import json
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -74,6 +75,10 @@ ET.register_namespace("", SVG_NS)
 ET.register_namespace("xlink", XLINK_NS)
 
 
+class DiagramRenderError(RuntimeError):
+    """Raised when Mermaid CLI rendering fails."""
+
+
 def source_hash(source: Path) -> str:
     """Return the SHA-256 of a ``.mmd`` source file."""
     return hashlib.sha256(source.read_bytes()).hexdigest()
@@ -91,6 +96,23 @@ def embedded_hash(svg: Path) -> str | None:
 def rendered_svg_path(source: Path, theme: str) -> Path:
     """Return the committed SVG path for a source/theme pair."""
     return DIAGRAMS_DIR / f"{source.stem}-{theme}.svg"
+
+
+def npx_executable() -> str:
+    """Return an absolute npx executable path, or raise a user-facing error."""
+    if npx := shutil.which("npx"):
+        return npx
+    msg = "Node.js/npx not found. Install Node.js to render diagrams: https://nodejs.org/"
+    raise DiagramRenderError(msg)
+
+
+def render_error_output(error: subprocess.CalledProcessError) -> str:
+    """Return captured process output, if mermaid-cli emitted any."""
+    if output := "\n".join(
+        stream.strip() for stream in (error.stdout, error.stderr) if isinstance(stream, str) and stream.strip()
+    ):
+        return output
+    return "No output captured from mermaid-cli."
 
 
 def adjust_svg(markup: str) -> str:
@@ -123,28 +145,36 @@ def adjust_svg(markup: str) -> str:
 def render_theme(source: Path, theme: str, config: dict[str, str], tmp_dir: Path, digest: str) -> tuple[Path, str]:
     """Render one source/theme pair and return the destination with stamped SVG."""
     tmp = tmp_dir / f"{source.stem}-{theme}.svg"
-    subprocess.run(
-        [
-            "npx",
-            "--yes",
-            "-p",
-            "@mermaid-js/mermaid-cli",
-            "mmdc",
-            "-i",
-            str(source),
-            "-o",
-            str(tmp),
-            "-t",
-            config["mmdc_theme"],
-            "-b",
-            config["background"],
-            "-p",
-            str(tmp_dir / "mmdc-puppeteer.json"),
-            "-c",
-            str(tmp_dir / "mmdc-config.json"),
-        ],
-        check=True,
-    )
+    command = [
+        npx_executable(),
+        "--yes",
+        "-p",
+        "@mermaid-js/mermaid-cli",
+        "mmdc",
+        "-i",
+        str(source),
+        "-o",
+        str(tmp),
+        "-t",
+        config["mmdc_theme"],
+        "-b",
+        config["background"],
+        "-p",
+        str(tmp_dir / "mmdc-puppeteer.json"),
+        "-c",
+        str(tmp_dir / "mmdc-config.json"),
+    ]
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True)
+    except FileNotFoundError as error:
+        msg = f"Node.js/npx not found ({error}). Install Node.js to render diagrams: https://nodejs.org/"
+        raise DiagramRenderError(msg) from error
+    except subprocess.CalledProcessError as error:
+        msg = (
+            f"mermaid-cli failed to render {source.relative_to(REPO_ROOT)} for the {theme} theme "
+            f"(exit code {error.returncode}).\n{render_error_output(error)}"
+        )
+        raise DiagramRenderError(msg) from error
     stamp = f"\n<!-- {HASH_MARKER}{digest} -->\n"
     return rendered_svg_path(source, theme), adjust_svg(tmp.read_text(encoding="utf-8")) + stamp
 
@@ -203,13 +233,17 @@ def main() -> int:
         print(f"No .mmd sources found in {DIAGRAMS_DIR}", file=sys.stderr)
         return 1
 
-    match args.check:
-        case True:
-            return check_diagrams(sources)
-        case False:
-            return write_diagrams(sources)
-        case _:
-            return 1
+    try:
+        match args.check:
+            case True:
+                return check_diagrams(sources)
+            case False:
+                return write_diagrams(sources)
+            case _:
+                return 1
+    except DiagramRenderError as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
