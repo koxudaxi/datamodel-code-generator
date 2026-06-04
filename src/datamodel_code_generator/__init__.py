@@ -965,10 +965,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         from datamodel_code_generator.config import AvroParserConfig  # noqa: PLC0415
         from datamodel_code_generator.parser.avro import AvroParser  # noqa: PLC0415
 
-        avro_additional_options: AvroParserConfigDict = {
-            "apply_default_values_for_required_fields": True,
-            **additional_options,
-        }
+        avro_additional_options: AvroParserConfigDict = {**additional_options}
         parser_config = _create_parser_config(AvroParserConfig, config, avro_additional_options)
         parser = AvroParser(source=source, config=parser_config)  # ty: ignore
     elif input_file_type == InputFileType.GraphQL:
