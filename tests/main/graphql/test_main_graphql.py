@@ -131,6 +131,17 @@ def test_main_graphql_empty_list_default(output_file: Path) -> None:
     )
 
 
+def test_main_graphql_field_enum_default(output_file: Path) -> None:
+    """Test GraphQL enum default values use generated enum members."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "field-default-enum.graphql",
+        output_path=output_file,
+        assert_func=assert_file_content,
+        expected_file="field_default_enum.py",
+        input_file_type="graphql",
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
