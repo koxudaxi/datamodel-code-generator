@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -105,6 +105,7 @@ class AsyncAPISchema:
     path: list[str]
     context: AsyncAPIContext
     parse_as_file: bool = False
+    apply_avro_default_values: bool = False
 
 
 class MultiFormatSchemaObject(BaseModel):
@@ -290,6 +291,19 @@ class AsyncAPIParser(OpenAPIParser):
             parse_as_file=parse_as_file,
         )
 
+    @contextmanager
+    def _avro_default_values(self, *, enabled: bool) -> Iterator[None]:
+        if not enabled:
+            yield
+            return
+
+        previous = self.apply_default_values_for_required_fields
+        self.apply_default_values_for_required_fields = True
+        try:
+            yield
+        finally:
+            self.apply_default_values_for_required_fields = previous
+
     def _schema_context_for_converted_schema(
         self,
         converted_schema: dict[str, YamlValue],
@@ -364,7 +378,12 @@ class AsyncAPIParser(OpenAPIParser):
                 converted_schema = convert_avro_schema_data(raw_schema)
                 converted_schema.setdefault("title", name)
                 context = self._schema_context_for_converted_schema(converted_schema, path)
-                return [self._schema(name, converted_schema, context.root_parts, context, parse_as_file=True)]
+                return [
+                    replace(
+                        self._schema(name, converted_schema, context.root_parts, context, parse_as_file=True),
+                        apply_avro_default_values=True,
+                    )
+                ]
             case "protobuf":
                 context = self._current_asyncapi_context()
                 return self._iter_converted_schema_schemas(
@@ -985,7 +1004,10 @@ class AsyncAPIParser(OpenAPIParser):
                 if path_key in parsed_paths:
                     continue
                 parsed_paths.add(path_key)
-                with self._asyncapi_context(schema.context):
+                with (
+                    self._asyncapi_context(schema.context),
+                    self._avro_default_values(enabled=schema.apply_avro_default_values),
+                ):
                     if schema.parse_as_file:
                         self._parse_file(raw_schema, schema.name, schema.path)
                     else:
