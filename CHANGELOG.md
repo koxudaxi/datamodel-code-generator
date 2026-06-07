@@ -5,6 +5,19 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.60.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.60.1) - 2026-06-07
+
+## What's Changed
+* Update CHANGELOG for 0.60.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3269
+* Fix readOnly/writeOnly option docs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3270
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3271
+* Fix built-in formatter type alias union by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3273
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.60.0...0.60.1
+
+---
+
 ## [0.60.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.60.0) - 2026-06-04
 
 ## Breaking Changes
