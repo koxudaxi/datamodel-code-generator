@@ -1323,6 +1323,28 @@ def _format_type_alias_type_call(call: ast.Call, indent: str, line_length: int, 
     return "\n".join(formatted_lines)
 
 
+def _format_type_alias_union_assignment(
+    statement: ast.AnnAssign,
+    line: str,
+    line_length: int,
+    source: str,
+) -> str | None:
+    if len(line) <= line_length and statement.lineno == (statement.end_lineno or statement.lineno):
+        return None
+
+    indent = _line_indent(line)
+    match statement:
+        case ast.AnnAssign(
+            target=ast.Name(id=target),
+            annotation=ast.Name(id="TypeAlias"),
+            value=ast.Subscript() as value,
+        ) if _is_union(value):
+            union = _format_union_subscript(value, indent, source, line_length=0)
+            return f"{indent}{target}: TypeAlias = {union}"
+        case _:
+            return None
+
+
 def _format_typed_dict_call(call: ast.Call, indent: str, source: str) -> str:
     continuation_indent = f"{indent}    "
     formatted_lines = ["TypedDict("]
@@ -1429,6 +1451,11 @@ def _format_generated_module_statement(  # noqa: PLR0911
 ) -> str | None:
     if "#" in line:
         return None
+    if (
+        isinstance(statement, ast.AnnAssign)
+        and (formatted_alias := _format_type_alias_union_assignment(statement, line, line_length, source)) is not None
+    ):
+        return formatted_alias
     if (
         sys.version_info >= (3, 12)
         and isinstance(statement, ast.TypeAlias)
