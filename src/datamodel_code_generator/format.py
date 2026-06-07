@@ -1341,8 +1341,8 @@ def _format_type_alias_union_assignment(
         ) if _is_union(value):
             union = _format_union_subscript(value, indent, source, line_length=0)
             return f"{indent}{target}: TypeAlias = {union}"
-        case _:
-            return None
+
+    return None
 
 
 def _format_typed_dict_call(call: ast.Call, indent: str, source: str) -> str:
