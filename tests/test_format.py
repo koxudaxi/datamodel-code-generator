@@ -604,6 +604,52 @@ def test_apply_builtin_formatter_wraps_inline_type_alias_type_union() -> None:
     )
 
 
+def test_apply_builtin_formatter_wraps_type_alias_union_assignment() -> None:
+    """Test built-in formatter matches black for TypeAlias Union assignments."""
+    code = (
+        "from typing import TypeAlias, Union\n"
+        "\n"
+        "\n"
+        "# safe\n"
+        "# raise RuntimeError('executed')\n"
+        "SearchResult: TypeAlias = Union[\n"
+        "        'A',\n"
+        "        'B',\n"
+        "    ]\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "from typing import TypeAlias, Union\n"
+        "\n"
+        "# safe\n"
+        "# raise RuntimeError('executed')\n"
+        "SearchResult: TypeAlias = Union[\n"
+        "    'A',\n"
+        "    'B',\n"
+        "]\n"
+    )
+
+
+def test_apply_builtin_formatter_keeps_inline_type_alias_union_assignment() -> None:
+    """Test built-in formatter keeps short TypeAlias Union assignments inline."""
+    code = "from typing import TypeAlias, Union\n\n\nSearchResult: TypeAlias = Union['A', 'B']\n"
+
+    assert (
+        apply_builtin_formatter(code)
+        == "from typing import TypeAlias, Union\n\nSearchResult: TypeAlias = Union['A', 'B']\n"
+    )
+
+
+def test_apply_builtin_formatter_keeps_non_union_type_alias_assignment() -> None:
+    """Test built-in formatter only rewrites TypeAlias Union assignments."""
+    code = "from typing import TypeAlias\n\n\nSearchResult: TypeAlias = tuple[\n    'A',\n    'B',\n]\n"
+
+    assert (
+        apply_builtin_formatter(code)
+        == "from typing import TypeAlias\n\nSearchResult: TypeAlias = tuple[\n    'A',\n    'B',\n]\n"
+    )
+
+
 def test_apply_builtin_formatter_normalizes_blank_lines_without_imports() -> None:
     """Test built-in formatter normalizes top-level blanks when no imports exist."""
     code = "Alias = str\n\n\n\nOtherAlias = Alias\n"
