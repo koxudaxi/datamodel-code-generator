@@ -116,6 +116,19 @@ def format_docstring(value: str | None, indent_spaces: int = 0, *, use_single_li
     return f'"""\n{escaped}\n"""'
 
 
+def comment_safe(value: str | None) -> str | None:
+    """Normalize line endings before rendering text in Python comments.
+
+    Built-in union templates already prefix LF continuation lines with ``# ``.
+    This helper converts CRLF and bare CR into LF so that existing template
+    behavior keeps the whole description inside the comment block.
+    """
+    if value is None:
+        return None
+    # Collapse CRLF before converting lone CR.
+    return value.replace("\r\n", "\n").replace("\r", "\n")
+
+
 class _RenderedDataModelField:
     """Proxy a field with a pre-rendered docstring for built-in templates."""
 

@@ -14,7 +14,7 @@ from datamodel_code_generator.imports import (
     Import,
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
-from datamodel_code_generator.model.base import UNDEFINED
+from datamodel_code_generator.model.base import UNDEFINED, comment_safe
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -57,7 +57,7 @@ class _DataTypeUnionBase(DataModel):
             extra_template_data=extra_template_data,
             methods=methods,
             path=path,
-            description=description,
+            description=comment_safe(description),
             default=default,
             nullable=nullable,
             keyword_only=keyword_only,

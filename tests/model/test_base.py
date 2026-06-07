@@ -12,6 +12,7 @@ from datamodel_code_generator.model.base import (
     DataModel,
     DataModelFieldBase,
     TemplateBase,
+    comment_safe,
     escape_docstring,
     format_docstring,
     get_module_path,
@@ -447,6 +448,30 @@ def test_escape_docstring(input_value: str | None, expected: str | None) -> None
     were not escaped, causing Python syntax errors and type checker warnings.
     """
     assert escape_docstring(input_value) == expected
+
+
+@pytest.mark.parametrize(
+    ("input_value", "expected"),
+    [
+        (None, None),
+        ("", ""),
+        ("plain text", "plain text"),
+        # LF is already handled by the union templates.
+        ("line one\nline two", "line one\nline two"),
+        ("a\nb\nc", "a\nb\nc"),
+        # CR and CRLF must be normalized before template rendering.
+        ("line one\rline two", "line one\nline two"),
+        ("line one\r\nline two", "line one\nline two"),
+        ("a\r\nb\nc\rd", "a\nb\nc\nd"),
+        (
+            "Color union\rprint('PWNED')",
+            "Color union\nprint('PWNED')",
+        ),
+    ],
+)
+def test_comment_safe(input_value: str | None, expected: str | None) -> None:
+    """Test comment_safe line ending normalization."""
+    assert comment_safe(input_value) == expected
 
 
 def test_format_docstring_uses_multiline_format_by_default() -> None:

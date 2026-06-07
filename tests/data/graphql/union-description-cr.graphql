@@ -1,0 +1,10 @@
+type A {
+  id: String
+}
+
+type B {
+  id: String
+}
+
+"safe\rraise RuntimeError('executed')"
+union SearchResult = A | B

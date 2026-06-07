@@ -453,6 +453,44 @@ def test_main_graphql_union(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("extra_args", "expected_file"),
+    [
+        (
+            ["--target-python-version", "3.10", "--output-model-type", "pydantic_v2.BaseModel"],
+            "union_description_cr_pydantic_v2.py",
+        ),
+        (
+            ["--target-python-version", "3.10", "--output-model-type", "dataclasses.dataclass"],
+            "union_description_cr_dataclass.py",
+        ),
+        pytest.param(
+            ["--target-python-version", "3.12", "--output-model-type", "pydantic_v2.BaseModel"],
+            "union_description_cr_py312.py",
+            marks=pytest.mark.skipif(
+                int(black.__version__.split(".")[0]) < 23,
+                reason="Installed black doesn't support the new 'type' statement",
+            ),
+        ),
+    ],
+)
+def test_main_graphql_union_description_comment_is_safe(
+    output_file: Path,
+    extra_args: list[str],
+    expected_file: str,
+) -> None:
+    """Test GraphQL union descriptions with CR in generated comments."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "union-description-cr.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=extra_args,
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
