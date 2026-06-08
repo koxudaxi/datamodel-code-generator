@@ -32,17 +32,66 @@ DEFAULT_HTTP_TIMEOUT = 30.0
 MAX_HTTP_REDIRECTS = 20
 _HTTP_REDIRECT_STATUS_CODES = frozenset({301, 302, 303, 307, 308})
 _UNSAFE_HOST_NAMES = frozenset({"localhost"})
+_IPV4_PART_COUNT = 4
+_IPV4_OCTET_MAX = 0xFF
+_IPV4_THREE_PART_TAIL_MAX = 0xFFFF
+_IPV4_TWO_PART_TAIL_MAX = 0xFFFFFF
+_IPV4_ADDRESS_MAX = 0xFFFFFFFF
 
 
 def _is_safe_ip(ip: IPv4Address | IPv6Address) -> bool:
     return ip.is_global
 
 
-def _get_ips_from_host(host: str) -> tuple[IPv4Address | IPv6Address, ...]:
+def _parse_legacy_ipv4_int(value: str) -> int | None:
     try:
-        return (ip_address(host.split("%", maxsplit=1)[0]),)
+        if value.lower().startswith("0x"):
+            return int(value, 0)
+        if len(value) > 1 and value.startswith("0"):
+            return int(value[1:], 8)
+        return int(value, 10)
+    except ValueError:
+        return None
+
+
+def _parse_legacy_ipv4_address(host: str) -> IPv4Address | None:
+    parts = host.split(".")
+    if len(parts) > _IPV4_PART_COUNT:
+        return None
+
+    numbers: list[int] = []
+    for part in parts:
+        if (number := _parse_legacy_ipv4_int(part)) is None:
+            return None
+        numbers.append(number)
+
+    ipv4_value: int | None
+    match numbers:
+        case [a] if 0 <= a <= _IPV4_ADDRESS_MAX:
+            ipv4_value = a
+        case [a, b] if 0 <= a <= _IPV4_OCTET_MAX and 0 <= b <= _IPV4_TWO_PART_TAIL_MAX:
+            ipv4_value = (a << 24) | b
+        case [a, b, c] if (
+            0 <= a <= _IPV4_OCTET_MAX and 0 <= b <= _IPV4_OCTET_MAX and 0 <= c <= _IPV4_THREE_PART_TAIL_MAX
+        ):
+            ipv4_value = (a << 24) | (b << 16) | c
+        case [a, b, c, d] if all(0 <= part <= _IPV4_OCTET_MAX for part in (a, b, c, d)):
+            ipv4_value = (a << 24) | (b << 16) | (c << 8) | d
+        case _:
+            ipv4_value = None
+
+    return IPv4Address(ipv4_value) if ipv4_value is not None else None
+
+
+def _get_ips_from_host(host: str) -> tuple[IPv4Address | IPv6Address, ...]:
+    normalized_host = host.split("%", maxsplit=1)[0]
+    try:
+        return (ip_address(normalized_host),)
     except ValueError:
         pass
+
+    if (legacy_ipv4 := _parse_legacy_ipv4_address(normalized_host)) is not None:
+        return (legacy_ipv4,)
 
     try:
         addr_infos = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
