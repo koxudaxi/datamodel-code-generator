@@ -8,7 +8,7 @@ This page lists deprecations and scheduled breaking changes.
 |----|------|--------|---------------|---------|-------------|
 | `format.default-formatters` | behavior | `Default formatters` | 0.52.0 | TBD | Set formatters explicitly, for example black and isort or builtin. |
 | `behavior.pydantic-v2-use-annotated-default` | behavior | `Pydantic v2 default for --use-annotated` | 0.52.1 | TBD | Explicitly pass --use-annotated or --no-use-annotated. |
-| `behavior.remote-ref-default` | behavior | `Remote $ref fetching without --allow-remote-refs` | 0.56.0 | TBD | Pass --allow-remote-refs or --no-allow-remote-refs explicitly. |
+| `behavior.remote-ref-default` | behavior | `Remote $ref fetching without --allow-remote-refs` | 0.56.0 | TBD | Pass --allow-remote-refs for trusted remote schemas, or --no-allow-remote-refs to block HTTP(S) $ref fetching. |
 | `cli.allow-extra-fields` | cli-option | `--allow-extra-fields` | 0.31.0 | TBD | --extra-fields=allow |
 | `cli.parent-scoped-naming` | cli-option | `--parent-scoped-naming` | 0.48.0 | TBD | --naming-strategy parent-prefixed |
 | `cli.validation` | cli-option | `--validation` | 0.24.0 | TBD | --field-constraints |
@@ -48,11 +48,11 @@ Pydantic v2 with --use-annotated is recommended for correct type annotations. In
 - **Warning since:** 0.56.0
 - **Planned removal:** TBD
 - **Warning category:** `FutureWarning`
-- **Replacement:** Pass --allow-remote-refs or --no-allow-remote-refs explicitly.
+- **Replacement:** Pass --allow-remote-refs for trusted remote schemas, or --no-allow-remote-refs to block HTTP(S) $ref fetching.
 
 Remote $ref fetching without --allow-remote-refs is deprecated.
 
-The current default allows remote fetching for compatibility; the scheduled default is disabled.
+The current default allows remote fetching for compatibility; the scheduled default is disabled. Private, loopback, link-local, and otherwise non-public network targets require --allow-private-network.
 
 ### `cli.allow-extra-fields`
 

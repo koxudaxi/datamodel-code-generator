@@ -211,6 +211,7 @@ class GenerateConfig(TypedDict, closed=True):
     allof_merge_mode: NotRequired[AllOfMergeMode]
     allof_class_hierarchy: NotRequired[AllOfClassHierarchy]
     allow_remote_refs: NotRequired[bool | None]
+    allow_private_network: NotRequired[bool]
     http_headers: NotRequired[Sequence[tuple[str, str]] | None]
     http_local_ref_path: NotRequired[str | None]
     http_ignore_tls: NotRequired[bool]
