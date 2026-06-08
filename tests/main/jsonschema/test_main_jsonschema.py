@@ -1050,11 +1050,11 @@ def test_main_url_with_relative_root_id_resolves_relative_refs(
     """Test --url input keeps resolving relative refs remotely when root $id is path-only."""
     httpx_get_mock = mock_httpx_get(
         MockHttpxResponse(
-            "http://localhost:8888/schemas/v1/main.schema.json",
+            "https://example.com/schemas/v1/main.schema.json",
             JSON_SCHEMA_DATA_PATH / "url_relative_root_id" / "main.schema.json",
         ),
         MockHttpxResponse(
-            "http://localhost:8888/schemas/v1/sub.schema.json",
+            "https://example.com/schemas/v1/sub.schema.json",
             JSON_SCHEMA_DATA_PATH / "url_relative_root_id" / "sub.schema.json",
         ),
     )
@@ -1062,7 +1062,7 @@ def test_main_url_with_relative_root_id_resolves_relative_refs(
 
     run_main_with_args([
         "--url",
-        "http://localhost:8888/schemas/v1/main.schema.json",
+        "https://example.com/schemas/v1/main.schema.json",
         "--output",
         str(output_dir),
         "--input-file-type",
@@ -1079,8 +1079,8 @@ def test_main_url_with_relative_root_id_resolves_relative_refs(
     assert_httpx_get_kwargs(
         httpx_get_mock,
         expected_urls=[
-            "http://localhost:8888/schemas/v1/main.schema.json",
-            "http://localhost:8888/schemas/v1/sub.schema.json",
+            "https://example.com/schemas/v1/main.schema.json",
+            "https://example.com/schemas/v1/sub.schema.json",
         ],
         call_count=2,
     )
@@ -1169,6 +1169,41 @@ def test_main_url_jsonschema_relative_ref_without_fragment(
     )
 
 
+def test_main_url_jsonschema_remote_ref_respects_explicit_disable(
+    mock_httpx_get: HttpxGetMockFactory,
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Respect explicit --no-allow-remote-refs with --url input."""
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse(
+            "https://example.com/schemas/root.json",
+            json.dumps({
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "title": "RemoteRoot",
+                "type": "object",
+                "properties": {"person": {"$ref": "person.json"}},
+            }),
+        )
+    )
+
+    run_main_with_args(
+        [
+            "--url",
+            "https://example.com/schemas/root.json",
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--no-allow-remote-refs",
+        ],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Fetching remote $ref is disabled",
+    )
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/schemas/root.json")
+
+
 def test_main_jsonschema_remote_relative_ref_without_fragment(
     mock_httpx_get: HttpxGetMockFactory, output_file: Path
 ) -> None:
@@ -1215,8 +1250,11 @@ def test_main_jsonschema_remote_relative_ref_without_fragment(
     )
 
 
-def test_main_remote_ref_emits_deprecation_warning(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
-    """Test that implicit remote $ref fetching emits a FutureWarning when flag is not set."""
+def test_main_remote_ref_warns_without_explicit_allow(
+    mock_httpx_get: HttpxGetMockFactory,
+    output_file: Path,
+) -> None:
+    """Keep implicit public remote $ref fetching compatible, but warn."""
     httpx_get_mock = mock_httpx_get(
         MockHttpxResponse(
             "https://example.com/schema/../other/schema.json",
@@ -1241,9 +1279,81 @@ def test_main_remote_ref_blocked_when_explicitly_disabled(mock_httpx_get: HttpxG
     """Test that remote $ref fetching is blocked when allow_remote_refs=False."""
     httpx_get_mock = mock_httpx_get()
 
-    with pytest.raises(Error, match=r"Fetching remote \$ref is disabled"):
+    with pytest.raises(Error, match=r"--allow-remote-refs.*--allow-private-network"):
         generate(JSON_SCHEMA_DATA_PATH / "remote_ref" / "main.json", allow_remote_refs=False)
     assert_httpx_get_kwargs(httpx_get_mock, called=False)
+
+
+def test_main_remote_ref_blocks_private_network_without_explicit_allow(
+    tmp_path: Path,
+    output_file: Path,
+    mock_httpx_get: HttpxGetMockFactory,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Block private network HTTP $ref targets before fetching."""
+    schema_path = tmp_path / "schema.json"
+    schema_path.write_text(
+        json.dumps({
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": "Root",
+            "type": "object",
+            "properties": {"local": {"$ref": "http://127.0.0.1/schema.json#/definitions/Local"}},
+        }),
+        encoding="utf-8",
+    )
+    httpx_get_mock = mock_httpx_get()
+
+    run_main_and_assert(
+        input_path=schema_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--allow-remote-refs"],
+        expected_exit=Exit.ERROR,
+        output_should_not_exist=True,
+        capsys=capsys,
+        expected_stderr_contains="--allow-private-network",
+    )
+    assert_httpx_get_kwargs(httpx_get_mock, called=False)
+
+
+def test_main_remote_ref_allows_private_network_with_explicit_allow(
+    tmp_path: Path,
+    output_file: Path,
+    mock_httpx_get: HttpxGetMockFactory,
+) -> None:
+    """Allow trusted private network HTTP $ref targets only when explicitly requested."""
+    schema_path = tmp_path / "schema.json"
+    schema_path.write_text(
+        json.dumps({
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": "Root",
+            "type": "object",
+            "properties": {"local": {"$ref": "http://127.0.0.1/schema.json#/definitions/Local"}},
+        }),
+        encoding="utf-8",
+    )
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse(
+            "http://127.0.0.1/schema.json",
+            json.dumps({
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "definitions": {
+                    "Local": {
+                        "type": "object",
+                        "properties": {"name": {"type": "string"}},
+                    }
+                },
+            }),
+        )
+    )
+
+    run_main_and_assert(
+        input_path=schema_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--allow-remote-refs", "--allow-private-network"],
+    )
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="http://127.0.0.1/schema.json")
 
 
 def test_main_missing_local_ref_error_message(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

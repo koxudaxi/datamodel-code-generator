@@ -171,6 +171,16 @@ base_options.add_argument(
     default=None,
 )
 base_options.add_argument(
+    "--allow-private-network",
+    help=(
+        "Allow HTTP(S) schema requests to private, loopback, link-local, or otherwise non-public network hosts. "
+        "By default these targets are blocked to reduce SSRF risk. Use only for trusted internal schema endpoints. "
+        "Pass --no-allow-private-network to override a configuration file that enables it."
+    ),
+    action=BooleanOptionalAction,
+    default=None,
+)
+base_options.add_argument(
     "--http-headers",
     nargs="+",
     metavar="HTTP_HEADER",

@@ -1693,6 +1693,130 @@ def test_cli_input_overrides_pyproject_url(
     assert_httpx_get_kwargs(httpx_get_mock, called=False)
 
 
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://127.0.0.1/schema.json",
+        "http://2130706433/schema.json",
+        "http://169.254.169.254/latest/meta-data",
+        "http://localhost/schema.json",
+    ],
+)
+def test_cli_url_blocks_unsafe_host(
+    url: str,
+    output_file: Path,
+    mock_httpx_get: HttpxGetMockFactory,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Block local and private network targets."""
+    httpx_get_mock = mock_httpx_get()
+
+    run_main_with_args(
+        [
+            "--url",
+            url,
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--disable-timestamp",
+        ],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="--allow-private-network",
+    )
+    assert_httpx_get_kwargs(httpx_get_mock, called=False)
+
+
+def test_cli_url_allows_unsafe_host_with_explicit_opt_in(
+    output_file: Path,
+    mock_httpx_get: HttpxGetMockFactory,
+) -> None:
+    """Allow trusted private network URL input only when explicitly requested."""
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse("http://127.0.0.1/schema.json", '{"type": "object", "title": "LocalSchema"}')
+    )
+
+    run_main_with_args(
+        [
+            "--url",
+            "http://127.0.0.1/schema.json",
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--disable-timestamp",
+            "--allow-private-network",
+        ],
+    )
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="http://127.0.0.1/schema.json")
+
+
+def test_cli_url_blocks_unsafe_host_with_explicit_opt_out(
+    output_file: Path,
+    tmp_path: Path,
+    mock_httpx_get: HttpxGetMockFactory,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Allow CLI to override a configuration file that permits private network requests."""
+    pyproject_toml = tmp_path / "pyproject.toml"
+    pyproject_toml.write_text(
+        "[tool.datamodel-codegen]\nallow-private-network = true\n",
+        encoding="utf-8",
+    )
+    httpx_get_mock = mock_httpx_get()
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            [
+                "--url",
+                "http://127.0.0.1/schema.json",
+                "--output",
+                str(output_file),
+                "--input-file-type",
+                "jsonschema",
+                "--disable-timestamp",
+                "--no-allow-private-network",
+            ],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="--allow-private-network",
+        )
+    assert_httpx_get_kwargs(httpx_get_mock, called=False)
+
+
+def test_cli_url_blocks_redirect_to_unsafe_host(
+    output_file: Path,
+    mock_httpx_get: HttpxGetMockFactory,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Validate redirect targets before fetching them."""
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse(
+            "https://example.com/schema.json",
+            "{}",
+            status_code=302,
+            headers={"location": "http://127.0.0.1/schema.json"},
+        )
+    )
+
+    run_main_with_args(
+        [
+            "--url",
+            "https://example.com/schema.json",
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--disable-timestamp",
+        ],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="--allow-private-network",
+    )
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/schema.json")
+
+
 def test_cli_url_overrides_pyproject_input(
     output_file: Path, tmp_path: Path, mock_httpx_get: HttpxGetMockFactory
 ) -> None:
@@ -1711,7 +1835,7 @@ def test_cli_url_overrides_pyproject_input(
 
     httpx_get_mock = mock_httpx_get(
         MockHttpxResponse(
-            "http://127.0.0.1:8123/schema.json",
+            "https://example.com/schema.json",
             JSON_SCHEMA_DATA_PATH / "cli_url_overrides_pyproject_input.json",
         )
     )
@@ -1719,14 +1843,14 @@ def test_cli_url_overrides_pyproject_input(
     with chdir(tmp_path):
         run_main_with_args([
             "--url",
-            "http://127.0.0.1:8123/schema.json",
+            "https://example.com/schema.json",
             "--output",
             str(output_file),
             "--disable-timestamp",
         ])
 
     assert_file_content(output_file, "cli_url_overrides_pyproject_input.py")
-    assert_httpx_get_kwargs(httpx_get_mock, expected_url="http://127.0.0.1:8123/schema.json")
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/schema.json")
 
 
 @pytest.mark.cli_doc(

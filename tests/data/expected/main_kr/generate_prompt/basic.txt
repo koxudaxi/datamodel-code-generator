@@ -161,6 +161,7 @@
 ### General Options
 - `--all-exports-collision-strategy`: Handle name collisions when exporting recursive module hierarchies.
 - `--all-exports-scope`: Generate __all__ exports for child modules in __init__.py files.
+- `--allow-private-network`: Allow HTTP requests to private network schema endpoints.
 - `--allow-remote-refs`: Enable fetching of `$ref` targets over HTTP/HTTPS.
 - `--check`: Verify generated code matches existing output without modifying files.
 - `--disable-warnings`: Suppress warning messages during code generation.
@@ -173,6 +174,7 @@
 - `--http-timeout`: Set timeout for HTTP requests to remote hosts.
 - `--ignore-pyproject`: Ignore pyproject.toml configuration file.
 - `--module-split-mode`: Split generated models into separate files, one per model class.
+- `--no-allow-private-network`: Block private network schema endpoints even if enabled in configuration.
 - `--no-allow-remote-refs`
 - `--shared-module-name`: Customize the name of the shared module for deduplicated models.
 - `--watch`: Watch input file(s) for changes and regenerate output automatically.
@@ -192,6 +194,13 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --additional-imports ADDITIONAL_IMPORTS
                         Custom imports for output (delimited list input). For
                         example "datetime.date,datetime.datetime"
+  --allow-private-network, --no-allow-private-network
+                        Allow HTTP(S) schema requests to private, loopback,
+                        link-local, or otherwise non-public network hosts. By
+                        default these targets are blocked to reduce SSRF risk.
+                        Use only for trusted internal schema endpoints. Pass
+                        --no-allow-private-network to override a configuration
+                        file that enables it.
   --allow-remote-refs, --no-allow-remote-refs
                         Allow fetching remote $ref references over HTTP/HTTPS.
                         Currently remote fetching is allowed by default but

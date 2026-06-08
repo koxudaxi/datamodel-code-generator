@@ -1586,6 +1586,34 @@ def test_http_local_ref_path_cli_doc(mock_httpx_get: HttpxGetMockFactory, output
 
 
 @pytest.mark.cli_doc(
+    options=["--allow-private-network"],
+    option_description="""Allow HTTP requests to private network schema endpoints.
+
+The `--allow-private-network` flag permits trusted HTTP(S) schema requests to
+private, loopback, link-local, or otherwise non-public network hosts. Without
+this flag, those targets are blocked by default to reduce SSRF risk.""",
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=["--url", "http://127.0.0.1/schema.json", "--allow-private-network"],
+    golden_output="main_kr/allow_private_network/output.py",
+)
+@freeze_time("2019-07-26")
+def test_allow_private_network_cli_doc(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
+    """Allow trusted private network schema endpoints."""
+    mock_get = mock_httpx_get(
+        MockHttpxResponse("http://127.0.0.1/schema.json", JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    )
+    run_main_url_and_assert(
+        url="http://127.0.0.1/schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allow_private_network/output.py",
+        extra_args=["--allow-private-network"],
+    )
+    assert_httpx_get_kwargs(mock_get, expected_url="http://127.0.0.1/schema.json")
+
+
+@pytest.mark.cli_doc(
     options=["--input"],
     option_description="""Specify the input schema file path.
 

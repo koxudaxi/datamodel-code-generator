@@ -1185,6 +1185,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.allow_leading_underscore_class_name: bool = config.allow_leading_underscore_class_name
         self.wrap_string_literal: bool | None = config.wrap_string_literal
         self.allow_remote_refs: bool | None = config.allow_remote_refs
+        self.allow_private_network: bool = config.allow_private_network
         self.http_headers: Sequence[tuple[str, str]] | None = config.http_headers
         self.http_local_ref_path: Path | None = config.http_local_ref_path
         self.http_query_parameters: Sequence[tuple[str, str]] | None = config.http_query_parameters
@@ -1366,7 +1367,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         return self.remote_text_cache.get_or_put(
             url,
             default_factory=lambda _url: get_body(
-                url, self.http_headers, self.http_ignore_tls, self.http_query_parameters, timeout
+                url,
+                self.http_headers,
+                self.http_ignore_tls,
+                self.http_query_parameters,
+                timeout,
+                allow_private_network=self.allow_private_network,
             ),
         )
 

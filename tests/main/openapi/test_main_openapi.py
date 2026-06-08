@@ -1945,13 +1945,13 @@ def test_main_http_openapi_with_custom_port(mock_httpx_get: HttpxGetMockFactory,
     """Test OpenAPI code generation from HTTP URL with custom port preserves port in refs."""
     httpx_get_mock = mock_httpx_get(
         MockHttpxResponse(
-            "http://127.0.0.1:8123/openapi.json",
+            "https://example.com:8123/openapi.json",
             OPEN_API_DATA_PATH / "http_openapi_with_custom_port.yaml",
         )
     )
 
     run_main_url_and_assert(
-        url="http://127.0.0.1:8123/openapi.json",
+        url="https://example.com:8123/openapi.json",
         output_path=output_file,
         input_file_type=None,
         assert_func=assert_file_content,
@@ -1959,7 +1959,7 @@ def test_main_http_openapi_with_custom_port(mock_httpx_get: HttpxGetMockFactory,
         extra_args=["--disable-timestamp"],
     )
 
-    assert_httpx_get_kwargs(httpx_get_mock, expected_url="http://127.0.0.1:8123/openapi.json")
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com:8123/openapi.json")
 
 
 @pytest.mark.cli_doc(

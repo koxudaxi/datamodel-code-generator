@@ -4802,13 +4802,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 if self.allow_remote_refs is False:
                     msg = (
                         f"Fetching remote $ref is disabled: {resolved_ref}\n"
-                        "Use --allow-remote-refs to enable HTTP fetching of remote references."
+                        "Reason: --no-allow-remote-refs was set, so HTTP(S) $ref targets are not fetched.\n"
+                        "If this schema and all of its remote references are trusted, pass --allow-remote-refs. "
+                        "If a trusted remote reference points to an internal schema registry, also pass "
+                        "--allow-private-network."
                     )
                     raise Error(msg)
                 if self.allow_remote_refs is None:
                     warn_deprecated(
                         "behavior.remote-ref-default",
-                        details=f"Reference: {resolved_ref}",
+                        details=(
+                            f"Reference: {resolved_ref}. Pass --allow-remote-refs for trusted remote schemas, "
+                            "or --no-allow-remote-refs to block HTTP(S) $ref fetching. Internal network targets "
+                            "also require --allow-private-network."
+                        ),
                         stacklevel=2,
                     )
             return self._get_ref_body_from_url(resolved_ref)

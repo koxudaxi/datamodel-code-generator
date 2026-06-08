@@ -627,6 +627,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
                     config.http_ignore_tls,
                     config.http_query_parameters,
                     timeout,
+                    allow_private_network=config.allow_private_network,
                 ),
             )
         case _:

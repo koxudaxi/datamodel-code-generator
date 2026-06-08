@@ -91,9 +91,15 @@ DEPRECATIONS: dict[DeprecationId, Deprecation] = {
         message="Remote $ref fetching without --allow-remote-refs is deprecated.",
         warning_since="0.56.0",
         removal_version=None,
-        replacement="Pass --allow-remote-refs or --no-allow-remote-refs explicitly.",
+        replacement=(
+            "Pass --allow-remote-refs for trusted remote schemas, or --no-allow-remote-refs to block HTTP(S) "
+            "$ref fetching."
+        ),
         warning_category="FutureWarning",
-        note="The current default allows remote fetching for compatibility; the scheduled default is disabled.",
+        note=(
+            "The current default allows remote fetching for compatibility; the scheduled default is disabled. "
+            "Private, loopback, link-local, and otherwise non-public network targets require --allow-private-network."
+        ),
     ),
     "format.default-formatters": Deprecation(
         id="format.default-formatters",
