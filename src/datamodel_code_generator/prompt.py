@@ -36,19 +36,17 @@ ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 def _serialize_value(value: Any) -> Any:
     """Convert argparse metadata values to JSON-serializable values."""
-    match value:
-        case None | bool() | int() | float() | str():
-            return value
-        case Path():
-            return str(value)
-        case list() | tuple() | set() | frozenset():
-            return [_serialize_value(item) for item in value]
-        case dict():
-            return {str(key): _serialize_value(item) for key, item in value.items()}
-        case _ if hasattr(value, "value"):
-            return _serialize_value(value.value)
-        case _:
-            return str(value)
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return [_serialize_value(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): _serialize_value(item) for key, item in value.items()}
+    if hasattr(value, "value"):
+        return _serialize_value(value.value)
+    return str(value)
 
 
 def _canonical_option(action: Action) -> str:
@@ -129,7 +127,7 @@ def _current_options_metadata(args: Namespace, parser: ArgumentParser) -> list[d
         action = actions.get(key)
         if not (name := _format_current_option(key, value, action)):
             continue
-        option_name = name.split(maxsplit=1)[0]
+        option_name = _canonical_option(action) if action else name.split(maxsplit=1)[0]
         current_options.append({
             "name": option_name,
             "dest": key,

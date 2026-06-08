@@ -2180,7 +2180,7 @@ def test_generate_prompt_json(capsys: pytest.CaptureFixture[str]) -> None:
     assert current_options["--input"]["value"] == "schema.json"
     assert current_options["--output-model-type"]["value"] == "pydantic_v2.BaseModel"
     assert current_options["--strict-types"]["value"] == ["str", "int"]
-    assert current_options["--no-use-annotated"]["value"] is False
+    assert current_options["--use-annotated"]["value"] is False
 
     options = {option["name"]: option for option in payload["options"]}
     assert options["--format"]["choices"] == ["markdown", "json"]
