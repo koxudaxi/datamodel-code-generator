@@ -277,6 +277,49 @@ def extract_qualified_names(type_str: str) -> list[str]:
     return qualified_names
 
 
+@lru_cache(maxsize=1024)
+def is_python_type_annotation(type_str: str) -> bool:
+    """Return whether a string is a Python type annotation expression."""
+    try:
+        tree = ast.parse(type_str, mode="eval")
+    except SyntaxError:
+        return False
+
+    return _is_python_type_annotation_node(tree.body, allow_literal=False)
+
+
+def _is_python_type_annotation_node(node: ast.AST, *, allow_literal: bool) -> bool:
+    match node:
+        case ast.Name():
+            result = True
+        case ast.Attribute(value=value):
+            result = isinstance(value, (ast.Name, ast.Attribute)) and _is_python_type_annotation_node(
+                value,
+                allow_literal=False,
+            )
+        case ast.Subscript(value=value, slice=slice_node):
+            result = _is_python_type_annotation_node(
+                value,
+                allow_literal=False,
+            ) and _is_python_type_annotation_node(slice_node, allow_literal=True)
+        case ast.Tuple(elts=elts) | ast.List(elts=elts):
+            result = all(_is_python_type_annotation_node(elt, allow_literal=True) for elt in elts)
+        case ast.BinOp(left=left, op=ast.BitOr(), right=right):
+            result = _is_python_type_annotation_node(left, allow_literal=False) and _is_python_type_annotation_node(
+                right,
+                allow_literal=False,
+            )
+        case ast.Constant(value=None):
+            result = True
+        case ast.Constant(value=value) if allow_literal:
+            result = value is None or value is Ellipsis or isinstance(value, (str, int, float, bool))
+        case ast.UnaryOp(op=ast.UAdd() | ast.USub(), operand=ast.Constant(value=value)) if allow_literal:
+            result = isinstance(value, (int, float))
+        case _:
+            result = False
+    return result
+
+
 def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # noqa: PLR0912
     """Remove None from a Union type string, handling nested unions."""
     if use_union_operator:

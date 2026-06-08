@@ -10560,6 +10560,57 @@ def test_main_jsonschema_x_python_import_unused(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "x_python_type",
+    [
+        "X[1]; __import__('builtins').print('XPT_EXEC') #",
+        "__import__('builtins').print('XPT_EXEC')",
+        "Callable[[str], __import__('builtins').print('XPT_EXEC')]",
+        "str\nprint('XPT_EXEC')\n#",
+    ],
+)
+@pytest.mark.parametrize(
+    "output_model",
+    [
+        "pydantic_v2.BaseModel",
+        "pydantic_v2.dataclass",
+        "dataclasses.dataclass",
+        "msgspec.Struct",
+        "typing.TypedDict",
+    ],
+)
+def test_x_python_type_rejects_unsafe_value(
+    x_python_type: str,
+    output_model: str,
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject unsafe x-python-type values."""
+    input_file = output_file.with_suffix(".json")
+    input_file.write_text(
+        json.dumps({
+            "type": "object",
+            "properties": {
+                "payload": {
+                    "type": "string",
+                    "x-python-type": x_python_type,
+                }
+            },
+        }),
+        encoding="utf-8",
+    )
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        output_should_not_exist=True,
+        capsys=capsys,
+        expected_stderr_contains="x-python-type must be a valid Python type annotation",
+        extra_args=["--output-model-type", output_model],
+    )
+
+
 def test_x_python_type_callable(output_file: Path) -> None:
     """Test x-python-type with Callable preserves the Callable type."""
     run_main_and_assert(

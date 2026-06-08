@@ -1392,6 +1392,7 @@ def test_json_schema_standard_string_formats_map_to_string(format_: str) -> None
         # Non-special container types
         ("List[str]", {}),
         ("Dict[str, int]", {}),
+        ("Literal[-1]", {}),
         ("str", {}),
         ("int", {}),
         ("CustomType", {}),
