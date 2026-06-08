@@ -3106,6 +3106,56 @@ def test_main_jsonschema_field_extras(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "default_factory",
+    [
+        "__import__('builtins').print('DF_EXEC') or str",
+        "lambda: []",
+        "datetime.utcnow",
+        None,
+    ],
+)
+@pytest.mark.parametrize(
+    "output_model",
+    [
+        "pydantic_v2.BaseModel",
+        "pydantic_v2.dataclass",
+        "dataclasses.dataclass",
+        "msgspec.Struct",
+    ],
+)
+def test_main_jsonschema_default_factory_rejects_unsafe_value(
+    default_factory: object,
+    output_model: str,
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject unsafe schema-supplied default_factory values."""
+    input_file = output_file.with_suffix(".json")
+    input_file.write_text(
+        json.dumps({
+            "type": "object",
+            "properties": {
+                "payload": {
+                    "type": "string",
+                    "default_factory": default_factory,
+                }
+            },
+        }),
+        encoding="utf-8",
+    )
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        output_should_not_exist=True,
+        capsys=capsys,
+        expected_stderr_contains="default_factory must be one of: dict, list, set",
+        extra_args=["--output-model-type", output_model],
+    )
+
+
 def test_main_jsonschema_custom_base_path(output_file: Path) -> None:
     """Test custom base path configuration."""
     run_main_and_assert(

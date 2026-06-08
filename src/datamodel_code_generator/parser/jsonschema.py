@@ -613,6 +613,17 @@ DEFAULT_FIELD_KEYS: set[str] = {
     "xml",
 }
 
+ALLOWED_DEFAULT_FACTORIES: frozenset[str] = frozenset({"dict", "list", "set"})
+
+
+def _validate_default_factory(default_factory: Any) -> str:
+    if isinstance(default_factory, str) and default_factory in ALLOWED_DEFAULT_FACTORIES:
+        return default_factory
+    allowed_values = ", ".join(sorted(ALLOWED_DEFAULT_FACTORIES))
+    msg = f"default_factory must be one of: {allowed_values}"
+    raise Error(msg)
+
+
 DEFAULT_MODEL_EXTRA_KEYS: set[str] = {
     "contentEncoding",
     "contentMediaType",
@@ -809,6 +820,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             }
         if self.default_field_extras:
             extras.update(self.default_field_extras)
+        if (default_factory := extras.get("default_factory", UNDEFINED)) is not UNDEFINED:
+            extras["default_factory"] = _validate_default_factory(default_factory)
         return extras
 
     @cached_property
