@@ -1,0 +1,106 @@
+"""Tests for LLM prompt generation helpers."""
+
+from __future__ import annotations
+
+import json
+from argparse import SUPPRESS, ArgumentParser, Namespace
+from enum import Enum
+from pathlib import Path
+
+import pytest
+
+from datamodel_code_generator.cli_options import OptionCategory
+from datamodel_code_generator.prompt import (
+    _actions_by_dest,
+    _canonical_option,
+    _format_current_options,
+    _negative_option,
+    _option_metadata,
+    _positive_option,
+    generate_prompt,
+)
+
+
+class SerializableChoice(Enum):
+    """Enum value used to verify JSON serialization."""
+
+    VALUE = "enum-value"
+
+
+class FallbackValue:
+    """Object serialized through its string representation."""
+
+    def __str__(self) -> str:
+        """Return a stable string for assertions."""
+        return "fallback-value"
+
+
+class CallableType:
+    """Callable without __name__ used as an argparse type."""
+
+    def __call__(self, value: str) -> str:
+        """Return the argparse value unchanged."""
+        return value
+
+    def __str__(self) -> str:
+        """Return a stable type display name."""
+        return "callable-type"
+
+
+@pytest.mark.allow_direct_assert
+def test_generate_prompt_json_serializes_fallback_current_options() -> None:
+    """Serialize current options even when argparse has no matching action."""
+    args = Namespace(
+        format="json",
+        generate_prompt="",
+        config={"choice": SerializableChoice.VALUE},
+        items=(Path("item.json"), SerializableChoice.VALUE),
+        path=Path("schema.json"),
+        raw=FallbackValue(),
+    )
+
+    payload = json.loads(generate_prompt(args, "\x1b[31mhelp\x1b[0m", ArgumentParser()))
+    current_options = {option["name"]: option for option in payload["current_options"]}
+
+    assert payload["help_text"] == "help"
+    assert current_options["--config"]["value"] == {"choice": "enum-value"}
+    assert current_options["--items"]["value"] == ["item.json", "enum-value"]
+    assert current_options["--path"]["value"] == "schema.json"
+    assert current_options["--raw"]["flags"] == ["--raw"]
+    assert current_options["--raw"]["value"] == "fallback-value"
+
+
+@pytest.mark.allow_direct_assert
+def test_prompt_option_metadata_fallbacks() -> None:
+    """Cover fallback metadata paths for non-standard argparse actions."""
+    parser = ArgumentParser()
+    callable_type = CallableType()
+    short_action = parser.add_argument("-x", dest="x")
+    custom_action = parser.add_argument("--custom", default=SUPPRESS, help=SUPPRESS, type=callable_type)
+
+    assert _canonical_option(short_action) == "-x"
+    assert _positive_option(short_action, "--x") == "--x"
+    assert _negative_option(short_action, "--no-x") == "--no-x"
+    assert callable_type("value") == "value"
+
+    metadata = _option_metadata(custom_action)
+    assert metadata["category"] == OptionCategory.GENERAL.value
+    assert metadata["default"] is None
+    assert not metadata["description"]
+    assert metadata["type"] == "callable-type"
+
+
+@pytest.mark.allow_direct_assert
+def test_format_current_options_without_parser() -> None:
+    """Format current options when no parser metadata is available."""
+    assert _actions_by_dest(None) == {}
+    assert _format_current_options(Namespace(disabled=False), None) == "(No options specified)"
+
+
+@pytest.mark.allow_direct_assert
+def test_generate_prompt_uses_default_parser_for_markdown() -> None:
+    """Use the shared parser when generate_prompt is called without one."""
+    prompt = generate_prompt(Namespace(format="markdown", generate_prompt="", input="schema.json"), "HELP")
+
+    assert "--input schema.json" in prompt
+    assert "HELP" in prompt
