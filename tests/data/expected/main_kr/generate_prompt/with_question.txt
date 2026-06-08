@@ -178,7 +178,7 @@ How do I convert enums to Literal types?
 - `--http-timeout`: Set timeout for HTTP requests to remote hosts.
 - `--ignore-pyproject`: Ignore pyproject.toml configuration file.
 - `--module-split-mode`: Split generated models into separate files, one per model class.
-- `--no-allow-private-network`: Block private network schema endpoints even if enabled in configuration.
+- `--no-allow-private-network`
 - `--no-allow-remote-refs`
 - `--shared-module-name`: Customize the name of the shared module for deduplicated models.
 - `--watch`: Watch input file(s) for changes and regenerate output automatically.
