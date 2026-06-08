@@ -5,6 +5,25 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.60.2](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.60.2) - 2026-06-08
+
+## Security
+
+* Fixed code injection from schema-provided `default_factory` values. (GHSA-386q-5hp3-95m9)
+* Fixed code injection from JSON Schema `x-python-type` extension values. (GHSA-m34r-v34r-rf9q)
+* Fixed code injection from `comment` entries supplied through `--extra-template-data`. (GHSA-wjv6-jcfj-mf9r)
+* Fixed code injection from Pydantic v2 validator definitions supplied through `--validators` or `--extra-template-data`. (GHSA-8m8r-38jm-f355)
+
+## What's Changed
+* Update CHANGELOG for 0.60.1 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3274
+* Cover validator error formatting by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3276
+* Update CHANGELOG for 0.60.1 by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3275
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.60.1...0.60.2
+
+---
+
 ## [0.60.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.60.1) - 2026-06-07
 
 ## Security
