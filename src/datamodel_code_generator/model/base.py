@@ -129,6 +129,20 @@ def comment_safe(value: str | None) -> str | None:
     return value.replace("\r\n", "\n").replace("\r", "\n")
 
 
+def inline_comment_safe(value: str | None) -> str | None:
+    """Make a value safe for a generated inline Python comment."""
+    if value is None:
+        return None
+    safe_value = comment_safe(value) or ""
+    return safe_value.replace("\v", "\n").replace("\f", "\n").replace("\n", "\n# ")
+
+
+def _safe_extra_template_data(extra_template_data: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(comment := extra_template_data.get("comment"), str):
+        return extra_template_data
+    return {**extra_template_data, "comment": inline_comment_safe(comment)}
+
+
 class _RenderedDataModelField:
     """Proxy a field with a pre-rendered docstring for built-in templates."""
 
@@ -990,6 +1004,10 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     def render(self, *, class_name: str | None = None) -> str:
         """Render the model to a string using the template."""
         use_custom_template = self.template_file_path.is_absolute()
+        if use_custom_template:
+            extra_template_data = self.extra_template_data
+        else:
+            extra_template_data = _safe_extra_template_data(self.extra_template_data)
         return self._render(
             class_name=class_name or self.class_name,
             fields=self.fields if use_custom_template else self.rendered_fields,
@@ -1001,7 +1019,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             else self.rendered_description,
             dataclass_arguments=self.dataclass_arguments,
             path=self.path,
-            **self.extra_template_data,
+            **extra_template_data,
         )
 
     @property
