@@ -1,6 +1,6 @@
 # LLM Integration
 
-<!-- related-cli-options: --generate-prompt -->
+<!-- related-cli-options: --generate-prompt, --format -->
 
 The `--generate-prompt` option generates a formatted prompt that you can use
 to consult Large Language Models (LLMs) about datamodel-code-generator CLI options.
@@ -22,6 +22,17 @@ The generated prompt includes:
 - All options organized by category with descriptions
 - Full help text for reference
 
+Use `--format json` when an LLM agent or tool should consume structured option
+metadata instead of Markdown:
+
+```bash
+datamodel-codegen --generate-prompt "How do I generate strict Pydantic v2 models?" --format json
+```
+
+The JSON payload includes the user question, current options, options grouped by
+category, full option metadata from argparse, and help text without ANSI color
+codes.
+
 ## CLI LLM Tools
 
 Pipe the generated prompt directly to CLI-based LLM tools:
@@ -42,6 +53,12 @@ Use `exec` subcommand for non-interactive mode:
 
 ```bash
 datamodel-codegen --generate-prompt "How to handle nullable fields?" | codex exec
+```
+
+For agents that can inspect structured input, prefer JSON:
+
+```bash
+datamodel-codegen --generate-prompt "How to handle nullable fields?" --format json | codex exec
 ```
 
 ### Other CLI Tools
@@ -99,6 +116,14 @@ Generate a prompt without a specific question:
 
 ```bash
 datamodel-codegen --generate-prompt
+```
+
+### JSON Output
+
+Generate structured option metadata for automated tools:
+
+```bash
+datamodel-codegen --generate-prompt "Find the minimal strict-model options." --format json
 ```
 
 ### With a Question

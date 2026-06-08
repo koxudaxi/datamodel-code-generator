@@ -52,6 +52,7 @@ MANUAL_DOCS: frozenset[str] = frozenset({
     "--version",
     "--debug",
     "--profile",
+    "--format",
     "--no-color",
     "--generate-prompt",
     "--list-deprecations",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from argparse import Namespace
 from pathlib import Path
 
@@ -2141,6 +2142,61 @@ def test_generate_prompt_with_list_options(capsys: pytest.CaptureFixture[str]) -
         expected_exit=Exit.OK,
         capsys=capsys,
         expected_stdout_path=EXPECTED_MAIN_KR_PATH / "generate_prompt" / "with_list_options.txt",
+    )
+
+
+@pytest.mark.allow_direct_assert
+def test_generate_prompt_json(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-prompt --format json emits structured option metadata."""
+    question = "Which strict Pydantic v2 options should I use?"
+    run_main_with_args(
+        [
+            "--input",
+            "schema.json",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--no-use-annotated",
+            "--strict-types",
+            "str",
+            "int",
+            "--generate-prompt",
+            question,
+            "--format",
+            "json",
+        ],
+        expected_exit=Exit.OK,
+    )
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert not captured.err
+    assert payload["version"] == 1
+    assert payload["format"] == "json"
+    assert payload["question"] == question
+    assert "\x1b[" not in payload["help_text"]
+    assert "Base Options" in payload["options_by_category"]
+
+    current_options = {option["name"]: option for option in payload["current_options"]}
+    assert current_options["--input"]["value"] == "schema.json"
+    assert current_options["--output-model-type"]["value"] == "pydantic_v2.BaseModel"
+    assert current_options["--strict-types"]["value"] == ["str", "int"]
+    assert current_options["--no-use-annotated"]["value"] is False
+
+    options = {option["name"]: option for option in payload["options"]}
+    assert options["--format"]["choices"] == ["markdown", "json"]
+    assert options["--format"]["default"] == "markdown"
+    assert options["--generate-prompt"]["nargs"] == "?"
+    assert options["--output-model-type"]["choices"]
+    assert "--no-use-annotated" in options["--use-annotated"]["flags"]
+
+
+def test_generate_prompt_format_requires_generate_prompt(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --format is only accepted for --generate-prompt."""
+    run_main_with_args(
+        ["--format", "json"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr="Error: --format can only be used with --generate-prompt\n",
     )
 
 

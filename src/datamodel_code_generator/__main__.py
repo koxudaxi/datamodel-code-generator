@@ -20,14 +20,16 @@ if len(sys.argv) == 2 and sys.argv[1] in {"--help", "-h"}:  # pragma: no cover  
 
 # Fast path for --generate-prompt
 if any(arg.startswith("--generate-prompt") for arg in sys.argv[1:]):  # pragma: no cover
-    from datamodel_code_generator.arguments import arg_parser
+    from datamodel_code_generator.arguments import arg_parser, namespace
 
-    namespace = arg_parser.parse_args()
+    vars(namespace).clear()
+    namespace.no_color = False
+    arg_parser.parse_args(namespace=namespace)
     if namespace.generate_prompt is not None:
         from datamodel_code_generator.prompt import generate_prompt
 
         help_text = arg_parser.format_help()
-        prompt_output = generate_prompt(namespace, help_text)
+        prompt_output = generate_prompt(namespace, help_text, arg_parser)
         print(prompt_output)  # noqa: T201
         sys.exit(0)
 
@@ -112,6 +114,7 @@ EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
     "help",
     "debug",
     "no_color",
+    "format",
     "disable_warnings",
     "list_deprecations",
     "list_experimental",
@@ -1060,6 +1063,10 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(get_version())  # noqa: T201
         sys.exit(0)
 
+    if namespace.generate_prompt is None and namespace.format is not None:
+        print("Error: --format can only be used with --generate-prompt", file=sys.stderr)  # noqa: T201
+        return Exit.ERROR
+
     if namespace.generate_pyproject_config:
         config_output = generate_pyproject_config(namespace)
         print(config_output)  # noqa: T201
@@ -1069,7 +1076,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         from datamodel_code_generator.prompt import generate_prompt  # noqa: PLC0415
 
         help_text = arg_parser.format_help()
-        prompt_output = generate_prompt(namespace, help_text)
+        prompt_output = generate_prompt(namespace, help_text, arg_parser)
         print(prompt_output)  # noqa: T201
         return Exit.OK
 

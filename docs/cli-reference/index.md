@@ -16,7 +16,7 @@ This documentation is auto-generated from test cases.
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
 | ⚙️ [General Options](general-options.md) | 18 | Utilities and meta options |
-| 📝 [Utility Options](utility-options.md) | 8 | Help, version, debug options |
+| 📝 [Utility Options](utility-options.md) | 9 | Help, version, debug options |
 
 ## All Options
 
@@ -93,6 +93,7 @@ This documentation is auto-generated from test cases.
 - [`--field-include-all-keys`](field-customization.md#field-include-all-keys)
 - [`--field-type-collision-strategy`](field-customization.md#field-type-collision-strategy)
 - [`--force-optional`](model-customization.md#force-optional)
+- [`--format`](utility-options.md#format)
 - [`--formatters`](template-customization.md#formatters)
 - [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses)
 

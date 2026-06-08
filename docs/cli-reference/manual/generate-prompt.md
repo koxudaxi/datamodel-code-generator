@@ -6,6 +6,9 @@ Outputs a formatted prompt containing your current options, all available
 options by category, and full help text. Pipe to CLI LLM tools or copy
 to clipboard for web-based LLM chats.
 
+Use `--format json` when an LLM agent or tool should consume structured
+option metadata instead of Markdown.
+
 **See also:** [LLM Integration](../../llm-integration.md) for detailed usage examples
 
 !!! tip "Usage"
@@ -13,10 +16,12 @@ to clipboard for web-based LLM chats.
     ```bash
     datamodel-codegen --generate-prompt # (1)!
     datamodel-codegen --generate-prompt "How do I generate strict types?" # (2)!
+    datamodel-codegen --generate-prompt --format json # (3)!
     ```
 
     1. :material-arrow-left: `--generate-prompt` - generate prompt without a question
     2. :material-arrow-left: Include a specific question in the prompt
+    3. :material-arrow-left: Emit structured JSON for LLM/tool ingestion
 
 ??? example "Quick Examples"
 
@@ -24,6 +29,7 @@ to clipboard for web-based LLM chats.
     ```bash
     datamodel-codegen --generate-prompt | claude -p    # Claude Code
     datamodel-codegen --generate-prompt | codex exec   # OpenAI Codex
+    datamodel-codegen --generate-prompt --format json | codex exec
     ```
 
     **Copy to clipboard:**

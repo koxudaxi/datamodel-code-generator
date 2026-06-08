@@ -1216,6 +1216,12 @@ general_options.add_argument(
     help="disable colorized output",
 )
 general_options.add_argument(
+    "--format",
+    choices=["markdown", "json"],
+    default=None,
+    help=("Output format for --generate-prompt (default: markdown). Can only be used together with --generate-prompt."),
+)
+general_options.add_argument(
     "--generate-pyproject-config",
     action="store_true",
     default=None,

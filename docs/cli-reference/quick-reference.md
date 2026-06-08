@@ -212,6 +212,7 @@ datamodel-codegen [OPTIONS]
 | Option | Description |
 |--------|-------------|
 | [`--debug`](utility-options.md#debug) | Show debug messages during code generation |
+| [`--format`](utility-options.md#format) | Choose the output format for --generate-prompt |
 | [`--generate-prompt`](utility-options.md#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](utility-options.md#help) | Show help message and exit |
 | [`--list-deprecations`](utility-options.md#list-deprecations) | List registered deprecations and scheduled breaking changes |
@@ -279,6 +280,7 @@ All options sorted alphabetically:
 - [`--field-include-all-keys`](field-customization.md#field-include-all-keys) - Include all schema keys in Field() json_schema_extra.
 - [`--field-type-collision-strategy`](field-customization.md#field-type-collision-strategy) - Rename type class instead of field when names collide (Pydan...
 - [`--force-optional`](model-customization.md#force-optional) - Force all fields to be Optional regardless of required statu...
+- [`--format`](utility-options.md#format) - Choose the output format for --generate-prompt
 - [`--formatters`](template-customization.md#formatters) - Specify code formatters to apply to generated output.
 - [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses) - Generate frozen dataclasses with optional keyword-only field...
 - [`--generate-cli-command`](general-options.md#generate-cli-command) - Generate CLI command from pyproject.toml configuration.

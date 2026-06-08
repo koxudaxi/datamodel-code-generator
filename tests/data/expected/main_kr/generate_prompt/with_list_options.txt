@@ -720,6 +720,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --debug               show debug message (require "debug". `$ pip install
                         'datamodel-code-generator[debug]'`)
   --disable-warnings    disable warnings
+  --format {markdown,json}
+                        Output format for --generate-prompt (default:
+                        markdown). Can only be used together with --generate-
+                        prompt.
   --generate-cli-command
                         Generate CLI command from pyproject.toml configuration
                         and exit
