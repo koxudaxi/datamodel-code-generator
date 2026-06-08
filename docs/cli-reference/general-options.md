@@ -1172,9 +1172,6 @@ The `--allow-private-network` flag permits trusted HTTP(S) schema requests to
 private, loopback, link-local, or otherwise non-public network hosts. Without
 this flag, those targets are blocked by default to reduce SSRF risk.
 
-Use `--no-allow-private-network` to override a configuration file that enables
-private network schema requests.
-
 !!! tip "Usage"
 
     ```bash
