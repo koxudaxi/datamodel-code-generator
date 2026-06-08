@@ -5,6 +5,28 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.61.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.61.0) - 2026-06-08
+
+## Breaking Changes
+
+* HTTP(S) schema fetching now blocks localhost, loopback, private, link-local, reserved, and other non-public network targets by default. Users who intentionally fetch schemas from trusted internal/private network endpoints must pass `--allow-private-network` or set `allow_private_network=True`.
+* HTTP(S) redirects are now followed manually and each redirect target is validated before fetching. Redirects to non-public network targets are blocked unless private network access is explicitly enabled.
+
+## Security
+
+* Fixed SSRF protections for HTTP(S) schema fetching via `--url` and remote JSON Schema/OpenAPI `$ref` URLs. (GHSA-rfr2-mq9m-x2qx, GHSA-954p-556p-r752)
+* Remote `$ref` fetching remains controlled by `--allow-remote-refs`; non-public remote references additionally require `--allow-private-network`.
+
+## What's Changed
+* Update CHANGELOG for 0.60.2 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3277
+* Fix generated files by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3279
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3280
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.60.2...0.61.0
+
+---
+
 ## [0.60.2](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.60.2) - 2026-06-08
 
 ## Security
