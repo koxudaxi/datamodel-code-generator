@@ -33,7 +33,10 @@ PROMPT_GUIDANCE_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "- Final `datamodel-codegen` command in a shell code block.",
             "- Brief explanation for each selected option.",
             "- Rejected alternatives with the reason they do not fit.",
-            "- Verification command, such as `datamodel-codegen ... --check` or a diff against expected output.",
+            (
+                "- Verification command, such as `datamodel-codegen ... --output models.py --check` "
+                "(`--check` requires `--output`) or a diff against expected output."
+            ),
         ),
     ),
     (
@@ -84,7 +87,7 @@ PROMPT_GUIDANCE_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "- `--use-annotated` also enables `--field-constraints`; prefer it for constrained Pydantic v2 fields.",
             "- `--openapi-include-paths` only has an effect when `--openapi-scopes paths` is included.",
             "- `--strict-types` requires one or more values: `str`, `int`, `float`, `bool`, or `bytes`.",
-            "- `--use-specialized-enum` requires `--target-python-version 3.11` or newer.",
+            "- `--use-specialized-enum` requires `--target-python-version >= 3.11`.",
             "- `--validation` is deprecated; use `--field-constraints` for generated Field constraints.",
         ),
     ),
