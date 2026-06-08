@@ -10,7 +10,7 @@ import re
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, ValidationError, field_validator, model_validator
 
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace
@@ -40,6 +40,7 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
 )
 from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
+from datamodel_code_generator.validators import format_validation_error, normalize_validators
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -404,9 +405,18 @@ class BaseModel(BaseModelBase):
 
     def _process_validators(self) -> None:
         """Process validator definitions and prepare them for template rendering."""
+        self.extra_template_data.pop("prepared_validators", None)
         validators = self.extra_template_data.get("validators")
         if not validators:
             return
+
+        try:
+            validators = normalize_validators(validators)
+        except ValidationError as e:
+            from datamodel_code_generator import Error  # noqa: PLC0415
+
+            msg = f"Invalid validators configuration: {format_validation_error(e)}"
+            raise Error(msg) from e
 
         prepared_validators: list[dict[str, Any]] = []
         scoped_resolver = ModelResolver(custom_class_name_generator=lambda name: name)
@@ -420,12 +430,12 @@ class BaseModel(BaseModelBase):
             function_name = function_path.rsplit(".", 1)[-1]
             mode = validator.get("mode", "after")
 
-            fields_str = ", ".join(f"'{f}'" for f in fields)
+            fields_str = ", ".join(repr(f) for f in fields)
 
             base_method_name = f"{function_name}_validator"
             method_name = scoped_resolver.add([base_method_name], base_method_name, unique=True, class_name=True).name
 
-            mode_str = f"mode='{mode}'"
+            mode_str = f"mode={mode!r}"
 
             prepared_validators.append({
                 "fields_str": fields_str,

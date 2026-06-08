@@ -10942,6 +10942,194 @@ def test_field_validators_multi_fields(output_file: Path) -> None:
     )
 
 
+def test_extra_template_data_field_validators(output_file: Path, tmp_path: Path) -> None:
+    """Test validators supplied through extra template data."""
+    extra_template_data = tmp_path / "extra_template_data_validators.json"
+    extra_template_data.write_text(
+        json.dumps({
+            "User": {
+                "validators": [
+                    {
+                        "field": "name",
+                        "function": "myapp.validators.validate_name",
+                        "mode": "before",
+                    },
+                    {
+                        "field": "email",
+                        "function": "myapp.validators.validate_email",
+                        "mode": "after",
+                    },
+                ]
+            }
+        })
+    )
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_validators.py",
+        extra_args=[
+            "--extra-template-data",
+            str(extra_template_data),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        skip_code_validation=True,
+    )
+
+
+@pytest.mark.parametrize("extra_template_data_key", ["User", "#all#"])
+def test_extra_template_data_prepared_validators_ignored(
+    output_file: Path,
+    tmp_path: Path,
+    extra_template_data_key: str,
+) -> None:
+    """Ignore prepared validator data supplied through extra template data."""
+    extra_template_data = tmp_path / "extra_template_data_prepared_validators.json"
+    extra_template_data.write_text(
+        json.dumps({
+            extra_template_data_key: {
+                "prepared_validators": [
+                    {
+                        "fields_str": "'name'); __import__('os').system('touch pwned') #",
+                        "mode_str": "mode='after'",
+                        "method_name": "validate_name_validator",
+                        "function_name": "validate_name",
+                        "mode": "after",
+                    }
+                ]
+            }
+        })
+    )
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_validators_all_skipped.py",
+        extra_args=[
+            "--extra-template-data",
+            str(extra_template_data),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        skip_code_validation=True,
+    )
+
+
+@pytest.mark.parametrize(
+    ("validator", "expected_message"),
+    [
+        (
+            {
+                "field": "name', __import__('os').system('touch pwned'), 'email",
+                "function": "myapp.validators.validate_name",
+            },
+            (
+                "validators.0.field: must be a valid Python identifier: "
+                "\"name', __import__('os').system('touch pwned'), 'email\""
+            ),
+        ),
+        (
+            {
+                "fields": ["name", "email', __import__('os').system('touch pwned'), 'age"],
+                "function": "myapp.validators.validate_name",
+            },
+            (
+                "validators.0.fields: must be a valid Python identifier: "
+                "\"email', __import__('os').system('touch pwned'), 'age\""
+            ),
+        ),
+        (
+            {
+                "field": "name",
+                "function": "myapp.validators.validate_name;__import__('os').system('touch pwned')",
+            },
+            (
+                "validators.0.function: must be a dotted Python identifier path: "
+                "\"myapp.validators.validate_name;__import__('os').system('touch pwned')\""
+            ),
+        ),
+        (
+            {
+                "field": "name",
+                "function": "myapp.validators.validate_name",
+                "mode": "after', __import__('os').system('touch pwned'), mode='after",
+            },
+            "validators.0.mode: must be one of: 'before', 'after', 'wrap', 'plain'",
+        ),
+    ],
+)
+def test_extra_template_data_field_validators_reject_unsafe_values(
+    output_file: Path,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    validator: dict[str, str | list[str]],
+    expected_message: str,
+) -> None:
+    """Test unsafe extra template data validators fail before code generation."""
+    extra_template_data = tmp_path / "extra_template_data_invalid_validators.json"
+    extra_template_data.write_text(json.dumps({"User": {"validators": [validator]}}))
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        extra_args=[
+            "--extra-template-data",
+            str(extra_template_data),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        capsys=capsys,
+        expected_stderr=f"Invalid validators configuration: {expected_message}\n",
+        output_should_not_exist=True,
+    )
+
+
+def test_validators_option_rejects_unsafe_values(
+    output_file: Path,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test unsafe validators file values fail before code generation."""
+    validators_config = tmp_path / "invalid_validators_config.json"
+    validators_config.write_text(
+        json.dumps({
+            "User": {
+                "validators": [
+                    {
+                        "field": "name', __import__('os').system('touch pwned'), 'email",
+                        "function": "myapp.validators.validate_name",
+                    }
+                ]
+            }
+        })
+    )
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        extra_args=[
+            "--validators",
+            str(validators_config),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        capsys=capsys,
+        expected_stderr_contains="must be a valid Python identifier",
+        output_should_not_exist=True,
+    )
+
+
 def test_field_validators_wrap_mode(output_file: Path, tmp_path: Path) -> None:
     """Test validators with wrap mode."""
     config_file = tmp_path / "wrap_mode_config.json"
