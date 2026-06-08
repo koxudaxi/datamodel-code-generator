@@ -7,6 +7,10 @@ This changelog is automatically generated from GitHub Releases.
 
 ## [0.60.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.60.1) - 2026-06-07
 
+## Security
+
+* Fixed code injection from GraphQL union descriptions containing carriage returns. (GHSA-j884-q54q-mmx3)
+
 ## What's Changed
 * Update CHANGELOG for 0.60.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3269
 * Fix readOnly/writeOnly option docs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3270
