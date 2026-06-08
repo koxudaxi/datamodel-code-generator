@@ -83,7 +83,6 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--module-split-mode": "Split generated models into separate files, one per model class.",
     "--naming-strategy": "Use parent-prefixed naming strategy for duplicate model names.",
     "--no-alias": "Disable Field alias generation for non-Python-safe property names.",
-    "--no-allow-private-network": "Block private network schema endpoints even if enabled in configuration.",
     "--no-treat-dot-as-module": "Keep dots in schema names as underscores for flat output.",
     "--no-use-closed-typed-dict": "Disable PEP 728 TypedDict closed/extra_items generation.",
     "--no-use-specialized-enum": "Disable specialized Enum classes for Python 3.11+ code generation.",
