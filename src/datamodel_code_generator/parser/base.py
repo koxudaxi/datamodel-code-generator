@@ -2511,7 +2511,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """Get inherited field names and whether any has default. Returns None if not applicable."""
         if not model.SUPPORTS_KW_ONLY:
             return None
-        if not model.base_classes or model.dataclass_arguments.get("kw_only"):
+        base_class_kw_only = None
+        if isinstance(model, msgspec_model.Struct):
+            base_class_kw_only = model.extra_template_data.get("base_class_kwargs", {}).get("kw_only")
+        if not model.base_classes or model.dataclass_arguments.get("kw_only") or base_class_kw_only in {True, "True"}:
             return None
 
         field_has_assignment = cls._get_field_assignment_checker(model)

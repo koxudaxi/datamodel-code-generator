@@ -146,10 +146,10 @@ class Struct(DataModel):
         keyword_only: bool = False,
         treat_dot_as_module: bool | None = None,
     ) -> None:
-        """Initialize msgspec Struct with fields sorted by field assignment requirement."""
+        """Initialize msgspec Struct with positional fields sorted by assignment requirement."""
         super().__init__(
             reference=reference,
-            fields=sorted(fields, key=has_field_assignment),
+            fields=fields if keyword_only else sorted(fields, key=has_field_assignment),
             decorators=decorators,
             base_classes=base_classes,
             custom_base_class=custom_base_class,

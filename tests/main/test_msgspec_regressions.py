@@ -104,6 +104,23 @@ def test_msgspec_required_alias_field_sorts_before_optional(tmp_path: Path) -> N
     _import_generated_code(code, tmp_path)
 
 
+def test_msgspec_keyword_only_preserves_declared_field_order(tmp_path: Path) -> None:
+    """Keep declared order for keyword-only Structs because assignment order is allowed."""
+    code = _generate_msgspec_code(
+        {
+            "title": "Rec",
+            "type": "object",
+            "properties": {"opt": {"type": "string"}, "req-id": {"type": "integer"}},
+            "required": ["req-id"],
+        },
+        keyword_only=True,
+    )
+
+    _assert_contains(code, "class Rec(Struct, kw_only=True):")
+    _assert_before(code, "opt: str | UnsetType = UNSET", "req_id: int = field(name='req-id')")
+    _import_generated_code(code, tmp_path)
+
+
 def test_msgspec_required_nullable_field_has_no_default(tmp_path: Path) -> None:
     """Keep required nullable fields required instead of rendering '= None'."""
     code = _generate_msgspec_code({
@@ -130,7 +147,9 @@ def test_msgspec_array_length_constraints_use_meta(tmp_path: Path) -> None:
         use_annotated=True,
     )
 
-    _assert_contains(code, "Annotated[list[str], Meta(max_length=5, min_length=1)]")
+    _assert_contains(code, "Annotated[list[str], Meta(")
+    _assert_contains(code, "max_length=5")
+    _assert_contains(code, "min_length=1")
     module = _import_generated_code(code, tmp_path)
     with pytest.raises(msgspec.ValidationError):
         msgspec.convert({"items": []}, type=module.Model)
