@@ -82,6 +82,7 @@ def _contains_decimal(value: Any) -> bool:
             return any(_contains_decimal(item) for item in value)
         case _:
             return False
+    return False
 
 
 UNION_OPERATOR_PATTERN: Pattern[str] = re.compile(r"\s*\|\s*")
