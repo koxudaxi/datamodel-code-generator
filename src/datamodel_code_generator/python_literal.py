@@ -5,15 +5,20 @@ from __future__ import annotations
 from math import isfinite, isnan
 from typing import Any
 
+from typing_extensions import Self
 
-class PythonCode:
+
+class PythonCode(str):  # noqa: FURB189 - must behave as str for regex consumers.
     """Python expression rendered without extra quoting."""
 
+    code: str
     __slots__ = ("code",)
 
-    def __init__(self, code: str) -> None:
-        """Initialize with a raw Python expression."""
-        self.code = code
+    def __new__(cls, code: str, value: str | None = None) -> Self:
+        """Initialize with a raw Python expression and optional string value."""
+        obj = super().__new__(cls, code if value is None else value)
+        obj.code = code
+        return obj
 
     def __repr__(self) -> str:
         """Render the wrapped expression."""

@@ -191,14 +191,14 @@ HOSTNAME_REGEX = (
 )
 
 
-def _get_regex_literal(pattern: str) -> PythonCode | str:
+def _get_regex_literal(pattern: str) -> str:
     escaped_regex = pattern.translate(escape_characters)
     raw_literal = f"r'{escaped_regex}'"
     try:
         ast.literal_eval(raw_literal)
     except SyntaxError:
         return pattern
-    return PythonCode(raw_literal)
+    return PythonCode(raw_literal, pattern)
 
 
 class _PydanticDataTypeManager(_DataTypeManagerBase):
