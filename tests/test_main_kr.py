@@ -22,7 +22,7 @@ from tests.conftest import (
     create_assert_file_content,
     freeze_time,
 )
-from tests.main.conftest import run_main_and_assert, run_main_url_and_assert, run_main_with_args
+from tests.main.conftest import LEGACY_BLACK_SKIP, run_main_and_assert, run_main_url_and_assert, run_main_with_args
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
@@ -1284,6 +1284,7 @@ precise decimal arithmetic when validating values against the constraint.""",
     cli_args=["--use-decimal-for-multiple-of"],
     golden_output="main_kr/use_decimal_for_multiple_of/output.py",
 )
+@LEGACY_BLACK_SKIP
 @freeze_time("2019-07-26")
 def test_use_decimal_for_multiple_of(output_file: Path) -> None:
     """Generate Decimal types for fields with multipleOf constraint.
@@ -1292,15 +1293,12 @@ def test_use_decimal_for_multiple_of(output_file: Path) -> None:
     types for numeric fields that have a `multipleOf` constraint. This ensures
     precise decimal arithmetic when validating values against the constraint.
     """
-    expected_name = (
-        "output_black_lt_24.py" if version.parse(black.__version__) < version.parse("24.0.0") else "output.py"
-    )
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "use_decimal_for_multiple_of.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file=EXPECTED_MAIN_KR_PATH / "use_decimal_for_multiple_of" / expected_name,
+        expected_file=EXPECTED_MAIN_KR_PATH / "use_decimal_for_multiple_of" / "output.py",
         extra_args=["--use-decimal-for-multiple-of"],
     )
 
