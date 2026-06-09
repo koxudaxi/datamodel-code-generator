@@ -93,7 +93,6 @@ This documentation is auto-generated from test cases.
 - [`--field-include-all-keys`](field-customization.md#field-include-all-keys)
 - [`--field-type-collision-strategy`](field-customization.md#field-type-collision-strategy)
 - [`--force-optional`](model-customization.md#force-optional)
-- [`--format`](utility-options.md#format)
 - [`--formatters`](template-customization.md#formatters)
 - [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses)
 
@@ -160,6 +159,7 @@ This documentation is auto-generated from test cases.
 - [`--output`](base-options.md#output)
 - [`--output-date-class`](typing-customization.md#output-date-class)
 - [`--output-datetime-class`](typing-customization.md#output-datetime-class)
+- [`--output-format`](utility-options.md#output-format)
 - [`--output-model-type`](model-customization.md#output-model-type)
 
 ### P {#p}

@@ -384,7 +384,6 @@ This documentation is auto-generated from test cases.
 - [`--field-include-all-keys`](field-customization.md#field-include-all-keys)
 - [`--field-type-collision-strategy`](field-customization.md#field-type-collision-strategy)
 - [`--force-optional`](model-customization.md#force-optional)
-- [`--format`](utility-options.md#format)
 - [`--formatters`](template-customization.md#formatters)
 - [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses)
 
@@ -451,6 +450,7 @@ This documentation is auto-generated from test cases.
 - [`--output`](base-options.md#output)
 - [`--output-date-class`](typing-customization.md#output-date-class)
 - [`--output-datetime-class`](typing-customization.md#output-datetime-class)
+- [`--output-format`](utility-options.md#output-format)
 - [`--output-model-type`](model-customization.md#output-model-type)
 
 ### P {#p}
@@ -24967,12 +24967,12 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/utility-opti
 | Option | Description |
 |--------|-------------|
 | [`--debug`](#debug) | Show debug messages during code generation |
-| [`--format`](#format) | Choose the output format for --generate-prompt |
 | [`--generate-prompt`](#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](#help) | Show help message and exit |
 | [`--list-deprecations`](#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](#list-experimental) | List registered experimental features |
 | [`--no-color`](#no-color) | Disable colorized output |
+| [`--output-format`](#output-format) | Choose the command output format |
 | [`--profile`](#profile) | Use a named profile from pyproject.toml |
 | [`--version`](#version) | Show program version and exit |
 
@@ -25003,36 +25003,6 @@ or code generation. Requires the `debug` extra to be installed.
 
 ---
 
-## `--format` {#format}
-
-Choose the output format for `--generate-prompt`.
-
-The option is only valid together with `--generate-prompt`. The default output
-is Markdown. Use `json` when another program or LLM agent should inspect
-structured option metadata.
-
-!!! tip "Usage"
-
-    ```bash
-    datamodel-codegen --generate-prompt --format markdown # (1)!
-    datamodel-codegen --generate-prompt --format json # (2)!
-    ```
-
-    1. :material-arrow-left: Emit the default Markdown consultation prompt
-    2. :material-arrow-left: Emit structured JSON with current options and argparse metadata
-
-??? example "JSON output"
-
-    ```bash
-    datamodel-codegen \
-        --input schema.json \
-        --output-model-type pydantic_v2.BaseModel \
-        --generate-prompt "Choose strict model options." \
-        --format json
-    ```
-
----
-
 ## `--generate-prompt` {#generate-prompt}
 
 Generate a prompt for consulting LLMs about CLI options.
@@ -25041,7 +25011,7 @@ Outputs a formatted prompt containing your current options, all available
 options by category, and full help text. Pipe to CLI LLM tools or copy
 to clipboard for web-based LLM chats.
 
-Use `--format json` when an LLM agent or tool should consume structured
+Use `--output-format json` when an LLM agent or tool should consume structured
 option metadata instead of Markdown.
 
 **See also:** [LLM Integration](../llm-integration.md) for detailed usage examples
@@ -25051,7 +25021,7 @@ option metadata instead of Markdown.
     ```bash
     datamodel-codegen --generate-prompt # (1)!
     datamodel-codegen --generate-prompt "How do I generate strict types?" # (2)!
-    datamodel-codegen --generate-prompt --format json # (3)!
+    datamodel-codegen --generate-prompt --output-format json # (3)!
     ```
 
     1. :material-arrow-left: `--generate-prompt` - generate prompt without a question
@@ -25064,7 +25034,7 @@ option metadata instead of Markdown.
     ```bash
     datamodel-codegen --generate-prompt | claude -p    # Claude Code
     datamodel-codegen --generate-prompt | codex exec   # OpenAI Codex
-    datamodel-codegen --generate-prompt --format json | codex exec
+    datamodel-codegen --generate-prompt --output-format json | codex exec
     ```
 
     **Copy to clipboard:**
@@ -25157,6 +25127,38 @@ or when redirecting output to files.
 
     ```bash
     NO_COLOR=1 datamodel-codegen --input schema.json
+    ```
+
+---
+
+## `--output-format` {#output-format}
+
+Choose the command output format.
+
+The default output format is `text`. Use `json` when another program or LLM
+agent should inspect structured output.
+
+JSON output is currently supported for `--generate-prompt`. In normal generation
+mode, `--output-format text` preserves the existing generated-code output.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --generate-prompt --output-format text # (1)!
+    datamodel-codegen --generate-prompt --output-format json # (2)!
+    ```
+
+    1. :material-arrow-left: Emit the default text consultation prompt
+    2. :material-arrow-left: Emit structured JSON with current options and argparse metadata
+
+??? example "JSON output"
+
+    ```bash
+    datamodel-codegen \
+        --input schema.json \
+        --output-model-type pydantic_v2.BaseModel \
+        --generate-prompt "Choose strict model options." \
+        --output-format json
     ```
 
 ---
@@ -25447,12 +25449,12 @@ datamodel-codegen [OPTIONS]
 | Option | Description |
 |--------|-------------|
 | [`--debug`](utility-options.md#debug) | Show debug messages during code generation |
-| [`--format`](utility-options.md#format) | Choose the output format for --generate-prompt |
 | [`--generate-prompt`](utility-options.md#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](utility-options.md#help) | Show help message and exit |
 | [`--list-deprecations`](utility-options.md#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](utility-options.md#list-experimental) | List registered experimental features |
 | [`--no-color`](utility-options.md#no-color) | Disable colorized output |
+| [`--output-format`](utility-options.md#output-format) | Choose the command output format |
 | [`--profile`](utility-options.md#profile) | Use a named profile from pyproject.toml |
 | [`--version`](utility-options.md#version) | Show program version and exit |
 
@@ -25515,7 +25517,6 @@ All options sorted alphabetically:
 - [`--field-include-all-keys`](field-customization.md#field-include-all-keys) - Include all schema keys in Field() json_schema_extra.
 - [`--field-type-collision-strategy`](field-customization.md#field-type-collision-strategy) - Rename type class instead of field when names collide (Pydan...
 - [`--force-optional`](model-customization.md#force-optional) - Force all fields to be Optional regardless of required statu...
-- [`--format`](utility-options.md#format) - Choose the output format for --generate-prompt
 - [`--formatters`](template-customization.md#formatters) - Specify code formatters to apply to generated output.
 - [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses) - Generate frozen dataclasses with optional keyword-only field...
 - [`--generate-cli-command`](general-options.md#generate-cli-command) - Generate CLI command from pyproject.toml configuration.
@@ -25558,6 +25559,7 @@ All options sorted alphabetically:
 - [`--output`](base-options.md#output) - Specify the destination path for generated Python code.
 - [`--output-date-class`](typing-customization.md#output-date-class) - Specify date class type for date schema fields.
 - [`--output-datetime-class`](typing-customization.md#output-datetime-class) - Specify datetime class type for date-time schema fields.
+- [`--output-format`](utility-options.md#output-format) - Choose the command output format
 - [`--output-model-type`](model-customization.md#output-model-type) - Select the output model type (Pydantic v2, Pydantic v2 datac...
 - [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) - Namespace models by their parent scope to avoid naming confl...
 - [`--profile`](utility-options.md#profile) - Use a named profile from pyproject.toml
@@ -25811,7 +25813,7 @@ Outputs a formatted prompt containing your current options, all available
 options by category, and full help text. Pipe to CLI LLM tools or copy
 to clipboard for web-based LLM chats.
 
-Use `--format json` when an LLM agent or tool should consume structured
+Use `--output-format json` when an LLM agent or tool should consume structured
 option metadata instead of Markdown.
 
 **See also:** [LLM Integration](../../llm-integration.md) for detailed usage examples
@@ -25821,7 +25823,7 @@ option metadata instead of Markdown.
     ```bash
     datamodel-codegen --generate-prompt # (1)!
     datamodel-codegen --generate-prompt "How do I generate strict types?" # (2)!
-    datamodel-codegen --generate-prompt --format json # (3)!
+    datamodel-codegen --generate-prompt --output-format json # (3)!
     ```
 
     1. :material-arrow-left: `--generate-prompt` - generate prompt without a question
@@ -25834,7 +25836,7 @@ option metadata instead of Markdown.
     ```bash
     datamodel-codegen --generate-prompt | claude -p    # Claude Code
     datamodel-codegen --generate-prompt | codex exec   # OpenAI Codex
-    datamodel-codegen --generate-prompt --format json | codex exec
+    datamodel-codegen --generate-prompt --output-format json | codex exec
     ```
 
     **Copy to clipboard:**
@@ -32791,7 +32793,7 @@ target-python-version = "3.14"
 
 Source: https://datamodel-code-generator.koxudaxi.dev/llm-integration/
 
-<!-- related-cli-options: --generate-prompt, --format -->
+<!-- related-cli-options: --generate-prompt, --output-format -->
 
 The `--generate-prompt` option generates a formatted prompt that you can use
 to consult Large Language Models (LLMs) about datamodel-code-generator CLI options.
@@ -32813,11 +32815,11 @@ The generated prompt includes:
 - All options organized by category with descriptions
 - Full help text for reference
 
-Use `--format json` when an LLM agent or tool should consume structured option
+Use `--output-format json` when an LLM agent or tool should consume structured option
 metadata instead of Markdown:
 
 ```bash
-datamodel-codegen --generate-prompt "How do I generate strict Pydantic v2 models?" --format json
+datamodel-codegen --generate-prompt "How do I generate strict Pydantic v2 models?" --output-format json
 ```
 
 The JSON payload includes the user question, current options, options grouped by
@@ -32849,7 +32851,7 @@ datamodel-codegen --generate-prompt "How to handle nullable fields?" | codex exe
 For agents that can inspect structured input, prefer JSON:
 
 ```bash
-datamodel-codegen --generate-prompt "How to handle nullable fields?" --format json | codex exec
+datamodel-codegen --generate-prompt "How to handle nullable fields?" --output-format json | codex exec
 ```
 
 ### Other CLI Tools
@@ -32914,7 +32916,7 @@ datamodel-codegen --generate-prompt
 Generate structured option metadata for automated tools:
 
 ```bash
-datamodel-codegen --generate-prompt "Find the minimal strict-model options." --format json
+datamodel-codegen --generate-prompt "Find the minimal strict-model options." --output-format json
 ```
 
 ### With a Question

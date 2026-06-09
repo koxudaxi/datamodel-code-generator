@@ -114,7 +114,7 @@ EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
     "help",
     "debug",
     "no_color",
-    "format",
+    "output_format",
     "disable_warnings",
     "list_deprecations",
     "list_experimental",
@@ -1063,8 +1063,11 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(get_version())  # noqa: T201
         sys.exit(0)
 
-    if namespace.generate_prompt is None and namespace.format is not None:
-        print("Error: --format can only be used with --generate-prompt", file=sys.stderr)  # noqa: T201
+    if namespace.generate_prompt is None and namespace.output_format == "json":
+        print(  # noqa: T201
+            "Error: --output-format json is currently supported only with --generate-prompt",
+            file=sys.stderr,
+        )
         return Exit.ERROR
 
     if namespace.generate_pyproject_config:

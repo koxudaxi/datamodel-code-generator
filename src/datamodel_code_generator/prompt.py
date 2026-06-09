@@ -28,7 +28,7 @@ PROMPT_EXCLUDED_OPTIONS: frozenset[str] = frozenset({
     "version",
     "help",
     "no_color",
-    "format",
+    "output_format",
 })
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
@@ -167,8 +167,8 @@ def _option_type(action: Action) -> str | None:
 
 def _option_default(action: Action, name: str) -> Any:
     """Return the user-facing default value for an option."""
-    if name == "--format":
-        return "markdown"
+    if name == "--output-format":
+        return "text"
     if action.default == SUPPRESS:
         return None
     return _serialize_value(action.default)
@@ -270,7 +270,7 @@ def generate_prompt(args: Namespace, help_text: str, parser: ArgumentParser | No
 
         parser = arg_parser
 
-    if getattr(args, "format", None) == "json":
+    if getattr(args, "output_format", None) == "json":
         return _generate_prompt_json(args, help_text, parser)
 
     lines: list[str] = []

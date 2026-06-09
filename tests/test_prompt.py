@@ -51,7 +51,7 @@ class CallableType:
 def test_generate_prompt_json_serializes_fallback_current_options() -> None:
     """Serialize current options even when argparse has no matching action."""
     args = Namespace(
-        format="json",
+        output_format="json",
         generate_prompt="",
         config={"choice": SerializableChoice.VALUE},
         items=(Path("item.json"), SerializableChoice.VALUE),
@@ -98,9 +98,9 @@ def test_format_current_options_without_parser() -> None:
 
 
 @pytest.mark.allow_direct_assert
-def test_generate_prompt_uses_default_parser_for_markdown() -> None:
+def test_generate_prompt_uses_default_parser_for_text_output() -> None:
     """Use the shared parser when generate_prompt is called without one."""
-    prompt = generate_prompt(Namespace(format="markdown", generate_prompt="", input="schema.json"), "HELP")
+    prompt = generate_prompt(Namespace(output_format="text", generate_prompt="", input="schema.json"), "HELP")
 
     assert "--input schema.json" in prompt
     assert "HELP" in prompt

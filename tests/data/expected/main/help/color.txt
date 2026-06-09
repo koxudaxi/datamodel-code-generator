@@ -535,10 +535,6 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --debug               show debug message (require "debug". `$ pip install
                         'datamodel-code-generator[debug]'`)
   --disable-warnings    disable warnings
-  --format {markdown,json}
-                        Output format for --generate-prompt (default:
-                        markdown). Can only be used together with --generate-
-                        prompt.
   --generate-cli-command
                         Generate CLI command from pyproject.toml configuration
                         and exit
@@ -558,6 +554,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --list-experimental [{table,json,markdown}]
                         List registered experimental features, then exit.
   --no-color            disable colorized output
+  --output-format {text,json}
+                        Format for command output (default: text). JSON output
+                        is currently supported only with --generate-prompt.
   --profile PROFILE     Use a named profile from pyproject.toml
                         [tool.datamodel-codegen.profiles.<name>]
   --version             show version

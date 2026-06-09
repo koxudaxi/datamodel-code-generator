@@ -2147,7 +2147,7 @@ def test_generate_prompt_with_list_options(capsys: pytest.CaptureFixture[str]) -
 
 @pytest.mark.allow_direct_assert
 def test_generate_prompt_json(capsys: pytest.CaptureFixture[str]) -> None:
-    """Test --generate-prompt --format json emits structured option metadata."""
+    """Test --generate-prompt --output-format json emits structured option metadata."""
     question = "Which strict Pydantic v2 options should I use?"
     run_main_with_args(
         [
@@ -2161,7 +2161,7 @@ def test_generate_prompt_json(capsys: pytest.CaptureFixture[str]) -> None:
             "int",
             "--generate-prompt",
             question,
-            "--format",
+            "--output-format",
             "json",
         ],
         expected_exit=Exit.OK,
@@ -2183,20 +2183,20 @@ def test_generate_prompt_json(capsys: pytest.CaptureFixture[str]) -> None:
     assert current_options["--use-annotated"]["value"] is False
 
     options = {option["name"]: option for option in payload["options"]}
-    assert options["--format"]["choices"] == ["markdown", "json"]
-    assert options["--format"]["default"] == "markdown"
+    assert options["--output-format"]["choices"] == ["text", "json"]
+    assert options["--output-format"]["default"] == "text"
     assert options["--generate-prompt"]["nargs"] == "?"
     assert options["--output-model-type"]["choices"]
     assert "--no-use-annotated" in options["--use-annotated"]["flags"]
 
 
-def test_generate_prompt_format_requires_generate_prompt(capsys: pytest.CaptureFixture[str]) -> None:
-    """Test --format is only accepted for --generate-prompt."""
+def test_output_format_json_requires_generate_prompt(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --output-format json is only accepted for --generate-prompt."""
     run_main_with_args(
-        ["--format", "json"],
+        ["--output-format", "json"],
         expected_exit=Exit.ERROR,
         capsys=capsys,
-        expected_stderr="Error: --format can only be used with --generate-prompt\n",
+        expected_stderr="Error: --output-format json is currently supported only with --generate-prompt\n",
     )
 
 

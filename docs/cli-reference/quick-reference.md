@@ -212,12 +212,12 @@ datamodel-codegen [OPTIONS]
 | Option | Description |
 |--------|-------------|
 | [`--debug`](utility-options.md#debug) | Show debug messages during code generation |
-| [`--format`](utility-options.md#format) | Choose the output format for --generate-prompt |
 | [`--generate-prompt`](utility-options.md#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](utility-options.md#help) | Show help message and exit |
 | [`--list-deprecations`](utility-options.md#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](utility-options.md#list-experimental) | List registered experimental features |
 | [`--no-color`](utility-options.md#no-color) | Disable colorized output |
+| [`--output-format`](utility-options.md#output-format) | Choose the command output format |
 | [`--profile`](utility-options.md#profile) | Use a named profile from pyproject.toml |
 | [`--version`](utility-options.md#version) | Show program version and exit |
 
@@ -280,7 +280,6 @@ All options sorted alphabetically:
 - [`--field-include-all-keys`](field-customization.md#field-include-all-keys) - Include all schema keys in Field() json_schema_extra.
 - [`--field-type-collision-strategy`](field-customization.md#field-type-collision-strategy) - Rename type class instead of field when names collide (Pydan...
 - [`--force-optional`](model-customization.md#force-optional) - Force all fields to be Optional regardless of required statu...
-- [`--format`](utility-options.md#format) - Choose the output format for --generate-prompt
 - [`--formatters`](template-customization.md#formatters) - Specify code formatters to apply to generated output.
 - [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses) - Generate frozen dataclasses with optional keyword-only field...
 - [`--generate-cli-command`](general-options.md#generate-cli-command) - Generate CLI command from pyproject.toml configuration.
@@ -323,6 +322,7 @@ All options sorted alphabetically:
 - [`--output`](base-options.md#output) - Specify the destination path for generated Python code.
 - [`--output-date-class`](typing-customization.md#output-date-class) - Specify date class type for date schema fields.
 - [`--output-datetime-class`](typing-customization.md#output-datetime-class) - Specify datetime class type for date-time schema fields.
+- [`--output-format`](utility-options.md#output-format) - Choose the command output format
 - [`--output-model-type`](model-customization.md#output-model-type) - Select the output model type (Pydantic v2, Pydantic v2 datac...
 - [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) - Namespace models by their parent scope to avoid naming confl...
 - [`--profile`](utility-options.md#profile) - Use a named profile from pyproject.toml

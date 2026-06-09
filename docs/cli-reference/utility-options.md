@@ -5,12 +5,12 @@
 | Option | Description |
 |--------|-------------|
 | [`--debug`](#debug) | Show debug messages during code generation |
-| [`--format`](#format) | Choose the output format for --generate-prompt |
 | [`--generate-prompt`](#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](#help) | Show help message and exit |
 | [`--list-deprecations`](#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](#list-experimental) | List registered experimental features |
 | [`--no-color`](#no-color) | Disable colorized output |
+| [`--output-format`](#output-format) | Choose the command output format |
 | [`--profile`](#profile) | Use a named profile from pyproject.toml |
 | [`--version`](#version) | Show program version and exit |
 
@@ -41,36 +41,6 @@ or code generation. Requires the `debug` extra to be installed.
 
 ---
 
-## `--format` {#format}
-
-Choose the output format for `--generate-prompt`.
-
-The option is only valid together with `--generate-prompt`. The default output
-is Markdown. Use `json` when another program or LLM agent should inspect
-structured option metadata.
-
-!!! tip "Usage"
-
-    ```bash
-    datamodel-codegen --generate-prompt --format markdown # (1)!
-    datamodel-codegen --generate-prompt --format json # (2)!
-    ```
-
-    1. :material-arrow-left: Emit the default Markdown consultation prompt
-    2. :material-arrow-left: Emit structured JSON with current options and argparse metadata
-
-??? example "JSON output"
-
-    ```bash
-    datamodel-codegen \
-        --input schema.json \
-        --output-model-type pydantic_v2.BaseModel \
-        --generate-prompt "Choose strict model options." \
-        --format json
-    ```
-
----
-
 ## `--generate-prompt` {#generate-prompt}
 
 Generate a prompt for consulting LLMs about CLI options.
@@ -79,7 +49,7 @@ Outputs a formatted prompt containing your current options, all available
 options by category, and full help text. Pipe to CLI LLM tools or copy
 to clipboard for web-based LLM chats.
 
-Use `--format json` when an LLM agent or tool should consume structured
+Use `--output-format json` when an LLM agent or tool should consume structured
 option metadata instead of Markdown.
 
 **See also:** [LLM Integration](../llm-integration.md) for detailed usage examples
@@ -89,7 +59,7 @@ option metadata instead of Markdown.
     ```bash
     datamodel-codegen --generate-prompt # (1)!
     datamodel-codegen --generate-prompt "How do I generate strict types?" # (2)!
-    datamodel-codegen --generate-prompt --format json # (3)!
+    datamodel-codegen --generate-prompt --output-format json # (3)!
     ```
 
     1. :material-arrow-left: `--generate-prompt` - generate prompt without a question
@@ -102,7 +72,7 @@ option metadata instead of Markdown.
     ```bash
     datamodel-codegen --generate-prompt | claude -p    # Claude Code
     datamodel-codegen --generate-prompt | codex exec   # OpenAI Codex
-    datamodel-codegen --generate-prompt --format json | codex exec
+    datamodel-codegen --generate-prompt --output-format json | codex exec
     ```
 
     **Copy to clipboard:**
@@ -195,6 +165,38 @@ or when redirecting output to files.
 
     ```bash
     NO_COLOR=1 datamodel-codegen --input schema.json
+    ```
+
+---
+
+## `--output-format` {#output-format}
+
+Choose the command output format.
+
+The default output format is `text`. Use `json` when another program or LLM
+agent should inspect structured output.
+
+JSON output is currently supported for `--generate-prompt`. In normal generation
+mode, `--output-format text` preserves the existing generated-code output.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --generate-prompt --output-format text # (1)!
+    datamodel-codegen --generate-prompt --output-format json # (2)!
+    ```
+
+    1. :material-arrow-left: Emit the default text consultation prompt
+    2. :material-arrow-left: Emit structured JSON with current options and argparse metadata
+
+??? example "JSON output"
+
+    ```bash
+    datamodel-codegen \
+        --input schema.json \
+        --output-model-type pydantic_v2.BaseModel \
+        --generate-prompt "Choose strict model options." \
+        --output-format json
     ```
 
 ---
