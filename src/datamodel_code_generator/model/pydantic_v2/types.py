@@ -5,6 +5,7 @@ Maps schema types to Pydantic v2 specific types with AwareDatetime, NaiveDatetim
 
 from __future__ import annotations
 
+import ast
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -67,9 +68,11 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
 )
 from datamodel_code_generator.types import (
     DataType,
+    PythonCode,
     StrictTypes,
     Types,
     UnionIntFloat,
+    normalize_integer_constraints,
 )
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManagerBase
 
@@ -188,6 +191,16 @@ HOSTNAME_REGEX = (
 )
 
 
+def _get_regex_literal(pattern: str) -> PythonCode | str:
+    escaped_regex = pattern.translate(escape_characters)
+    raw_literal = f"r'{escaped_regex}'"
+    try:
+        ast.literal_eval(raw_literal)
+    except SyntaxError:
+        return pattern
+    return PythonCode(raw_literal)
+
+
 class _PydanticDataTypeManager(_DataTypeManagerBase):
     """Base data type manager for Pydantic models with constrained types."""
 
@@ -299,7 +312,13 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
                     return self.data_type.from_import(IMPORT_NON_NEGATIVE_INT)
                 if data_type_kwargs == {"le": 0} and self.use_non_positive_negative_number_constrained_types:
                     return self.data_type.from_import(IMPORT_NON_POSITIVE_INT)
-            kwargs = {k: int(v) for k, v in data_type_kwargs.items()}
+            kwargs = normalize_integer_constraints(data_type_kwargs)
+            if not kwargs:
+                return (
+                    self.copy_data_type(self.strict_type_map[StrictTypes.int])
+                    if strict
+                    else self.copy_data_type(self.type_map[types])
+                )
             if strict:
                 kwargs["strict"] = True
             return self.data_type.from_import(IMPORT_CONINT, kwargs=kwargs)
@@ -362,9 +381,7 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
             if strict:
                 data_type_kwargs["strict"] = True  # ty: ignore
             if self.PATTERN_KEY in data_type_kwargs:
-                escaped_regex = data_type_kwargs[self.PATTERN_KEY].translate(escape_characters)
-                # TODO: remove unneeded escaped characters
-                data_type_kwargs[self.PATTERN_KEY] = f"r'{escaped_regex}'"
+                data_type_kwargs[self.PATTERN_KEY] = _get_regex_literal(data_type_kwargs[self.PATTERN_KEY])
             return self.data_type.from_import(IMPORT_CONSTR, kwargs=data_type_kwargs)
         if strict:
             return self.copy_data_type(self.strict_type_map[StrictTypes.str])

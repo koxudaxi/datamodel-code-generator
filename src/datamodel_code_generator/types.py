@@ -12,8 +12,10 @@ import re
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from enum import Enum, auto
+from fractions import Fraction
 from functools import lru_cache
 from itertools import chain
+from math import isfinite, isnan
 from re import Pattern
 from typing import (
     TYPE_CHECKING,
@@ -163,6 +165,98 @@ class UnionIntFloat:
             msg = f"{v} is not int or float"
             raise TypeError(msg)
         return cls(v)
+
+
+class PythonCode:
+    """Python expression rendered without extra quoting."""
+
+    __slots__ = ("code",)
+
+    def __init__(self, code: str) -> None:
+        """Initialize with a raw Python expression."""
+        self.code = code
+
+    def __repr__(self) -> str:
+        """Render the wrapped expression."""
+        return self.code
+
+
+def _get_fraction_floor(value: Fraction) -> int:
+    return value.numerator // value.denominator
+
+
+def _get_fraction_ceil(value: Fraction) -> int:
+    return -(-value.numerator // value.denominator)
+
+
+def _get_constraint_number(value: Any) -> Any:
+    return value.value if isinstance(value, UnionIntFloat) else value
+
+
+def normalize_integer_constraint(constraint: str, value: Any) -> tuple[str, Any] | None:  # noqa: PLR0911
+    """Return an integer-safe pydantic constraint for a numeric schema constraint."""
+    number = _get_constraint_number(value)
+    try:
+        fraction = Fraction(str(number))
+    except (TypeError, ValueError):
+        return constraint, value
+
+    if constraint == "multiple_of":
+        if fraction.numerator == 1:
+            return None
+        return constraint, abs(fraction.numerator)
+
+    if fraction.denominator == 1:
+        return constraint, int(fraction)
+
+    match constraint:
+        case "ge":
+            return "ge", _get_fraction_ceil(fraction)
+        case "gt":
+            return "ge", _get_fraction_floor(fraction) + 1
+        case "le":
+            return "le", _get_fraction_floor(fraction)
+        case "lt":
+            return "le", _get_fraction_ceil(fraction) - 1
+        case _:
+            return constraint, value
+
+
+def normalize_integer_constraints(constraints: dict[str, Any]) -> dict[str, Any]:
+    """Return integer-safe pydantic constraints."""
+    return {
+        normalized[0]: normalized[1]
+        for key, value in constraints.items()
+        if (normalized := normalize_integer_constraint(key, value)) is not None
+    }
+
+
+def represent_python_value(value: Any) -> str:  # noqa: PLR0911
+    """Render a value as a Python expression safe for generated source."""
+    if isinstance(value, PythonCode):
+        return value.code
+    if isinstance(value, float):
+        if isnan(value):
+            return "float('nan')"
+        if not isfinite(value):
+            return "float('inf')" if value > 0 else "float('-inf')"
+    if isinstance(value, dict):
+        rendered_items = ", ".join(
+            f"{represent_python_value(k)}: {represent_python_value(v)}" for k, v in value.items()
+        )
+        return f"{{{rendered_items}}}"
+    if isinstance(value, list):
+        return "[" + ", ".join(represent_python_value(item) for item in value) + "]"
+    if isinstance(value, tuple):
+        rendered_items = ", ".join(represent_python_value(item) for item in value)
+        trailing_comma = "," if len(value) == 1 else ""
+        return f"({rendered_items}{trailing_comma})"
+    if isinstance(value, set):
+        if not value:
+            return "set()"
+        sorted_items = sorted(value, key=lambda item: (type(item).__name__, repr(item)))
+        return "{" + ", ".join(represent_python_value(item) for item in sorted_items) + "}"
+    return repr(value)
 
 
 def chain_as_tuple(*iterables: Iterable[T]) -> tuple[T, ...]:
@@ -820,7 +914,7 @@ class DataType(_BaseModel):
         if self.is_optional and type_ != ANY:
             return get_optional_type(type_, self.use_union_operator)
         if self.is_func and self.kwargs:
-            kwargs: str = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
+            kwargs: str = ", ".join(f"{k}={represent_python_value(v)}" for k, v in self.kwargs.items())
             return f"{type_}({kwargs})"
         return type_
 

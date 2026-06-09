@@ -36,6 +36,7 @@ from datamodel_code_generator.types import (
     Nullable,
     chain_as_tuple,
     get_optional_type,
+    represent_python_value,
 )
 
 if TYPE_CHECKING:
@@ -463,9 +464,7 @@ class DataModelFieldBase(_BaseModel):
     @property
     def represented_default(self) -> str:
         """Get the repr() string of the default value."""
-        if isinstance(self.default, set):
-            return repr_set_sorted(self.default)
-        return repr(self.default)
+        return represent_python_value(self.default)
 
     @property
     def annotated(self) -> str | None:

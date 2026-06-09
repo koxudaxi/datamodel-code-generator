@@ -20,8 +20,13 @@ from datamodel_code_generator.model import (
     DataModelFieldBase,
     _rebuild_model_with_datamodel_namespace,
 )
-from datamodel_code_generator.model.base import UNDEFINED, repr_set_sorted
-from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
+from datamodel_code_generator.model.base import UNDEFINED
+from datamodel_code_generator.types import (
+    UnionIntFloat,
+    chain_as_tuple,
+    normalize_integer_constraint,
+    represent_python_value,
+)
 
 # Defined here instead of importing from pydantic_v2.imports to avoid circular import
 # (pydantic_base -> pydantic_v2.imports -> pydantic_v2/__init__ -> pydantic_v2.base_model -> pydantic_base)
@@ -68,6 +73,7 @@ class DataModelField(DataModelFieldBase):
         "regex",
     }
     _COMPARE_EXPRESSIONS: ClassVar[set[str]] = {"gt", "ge", "lt", "le"}
+    _INTEGER_CONSTRAINTS: ClassVar[set[str]] = _COMPARE_EXPRESSIONS | {"multiple_of"}
     constraints: Optional[Constraints] = None  # noqa: UP045
     _PARSE_METHOD: ClassVar[str] = "model_validate"
 
@@ -138,9 +144,9 @@ class DataModelField(DataModelFieldBase):
             return True
         return bool(self.nullable and self.required and not self.use_default_with_required)
 
-    def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
-        if value is None or constraint not in self._COMPARE_EXPRESSIONS:
-            return value
+    def _get_strict_field_constraint(self, constraint: str, value: Any) -> tuple[str, Any] | None:
+        if value is None or constraint not in self._INTEGER_CONSTRAINTS:
+            return constraint, value
 
         is_float_type = any(
             data_type.type == "float"
@@ -148,14 +154,18 @@ class DataModelField(DataModelFieldBase):
             for data_type in self.data_type.all_data_types
         )
         if is_float_type:
-            return float(value)
-        str_value = str(value)
-        if "e" in str_value.lower():  # pragma: no cover
-            # Scientific notation like 1e-08 - keep as float
-            return float(value)
+            return constraint, float(value)
+
+        is_int_type = any(
+            data_type.type == "int" or (data_type.strict and data_type.import_ and "Int" in data_type.import_.import_)
+            for data_type in self.data_type.all_data_types
+        )
+        if is_int_type:
+            return normalize_integer_constraint(constraint, value)
+
         if isinstance(value, int) and not isinstance(value, bool):
-            return value
-        return int(value)
+            return constraint, value
+        return constraint, int(value)
 
     def _get_default_factory_for_optional_nested_model(self) -> str | None:
         """Get default_factory for optional nested Pydantic model fields.
@@ -197,8 +207,9 @@ class DataModelField(DataModelFieldBase):
                     {}
                     if any(d.import_ == IMPORT_ANYURL for d in self.data_type.all_data_types)
                     else {
-                        k: self._get_strict_field_constraint_value(k, v)
+                        normalized[0]: normalized[1]
                         for k, v in self.constraints.model_dump(exclude_unset=True).items()
+                        if (normalized := self._get_strict_field_constraint(k, v)) is not None
                     }
                 ),
             }
@@ -238,7 +249,7 @@ class DataModelField(DataModelFieldBase):
         """Return Field() call with all constraints and metadata."""
         data, default_factory = self._get_field_data_and_default_factory()
 
-        field_arguments = sorted(f"{k}={v!r}" for k, v in data.items() if v is not None)
+        field_arguments = sorted(f"{k}={represent_python_value(v)}" for k, v in data.items() if v is not None)
 
         if not field_arguments and not default_factory:
             if self.nullable and self.required and not self.use_default_with_required:
@@ -258,13 +269,13 @@ class DataModelField(DataModelFieldBase):
         ):
             field_arguments = ["...", *field_arguments]
         elif not default_factory:
-            default_repr = repr_set_sorted(self.default) if isinstance(self.default, set) else repr(self.default)
+            default_repr = represent_python_value(self.default)
             field_arguments = [default_repr, *field_arguments]
 
         if self.is_class_var:
             if self.default is UNDEFINED:  # pragma: no cover
                 return ""
-            return repr_set_sorted(self.default) if isinstance(self.default, set) else repr(self.default)
+            return represent_python_value(self.default)
 
         return f"Field({', '.join(field_arguments)})"
 
