@@ -10,13 +10,18 @@ output independently.
 Currently supported schema targets:
 
 - `generate-prompt`: schema for `--generate-prompt --output-format json`
+- `generation`: schema for normal generation with `--output-format json`
 
 !!! tip "Usage"
 
     ```bash
     datamodel-codegen --output-format-json-schema generate-prompt # (1)!
-    datamodel-codegen --generate-prompt --output-format json # (2)!
+    datamodel-codegen --output-format-json-schema generation # (2)!
+    datamodel-codegen --generate-prompt --output-format json # (3)!
+    datamodel-codegen --input schema.json --output-format json # (4)!
     ```
 
     1. :material-arrow-left: Emit the JSON Schema for structured prompt output
-    2. :material-arrow-left: Emit payloads that match that schema
+    2. :material-arrow-left: Emit the JSON Schema for generated-file output
+    3. :material-arrow-left: Emit prompt payloads that match the prompt schema
+    4. :material-arrow-left: Emit generation payloads that match the generation schema

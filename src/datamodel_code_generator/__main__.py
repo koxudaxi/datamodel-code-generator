@@ -33,7 +33,7 @@ if any(
 
         print(generate_prompt_json_schema())  # noqa: T201
         sys.exit(0)
-    if namespace.generate_prompt is not None:
+    if namespace.output_format_json_schema is None and namespace.generate_prompt is not None:
         from datamodel_code_generator.prompt import generate_prompt
 
         help_text = arg_parser.format_help()
@@ -45,6 +45,7 @@ import difflib
 import json
 import os
 import shlex
+import shutil
 import signal
 import tempfile
 import warnings
@@ -53,7 +54,7 @@ from collections.abc import Callable, Mapping, Sequence  # noqa: TC003  # pydant
 from enum import IntEnum
 from io import TextIOBase  # noqa: TC003 # needed for pydantic
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeAlias, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
 
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
@@ -884,6 +885,92 @@ def _load_validators_config(
         return None, f"Invalid validators configuration: {e}"
 
 
+def _generated_module_path(module: tuple[str, ...]) -> str:
+    return Path(*module).as_posix()
+
+
+class GeneratedFilePayload(BaseModel):
+    """One generated file emitted by --output-format json."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    path: str | None
+    content: str
+
+
+class GenerationPayload(BaseModel):
+    """Structured JSON payload emitted by generation mode --output-format json."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal[1]
+    format: Literal["json"]
+    files: list[GeneratedFilePayload]
+
+
+def _dump_json(value: Any) -> str:
+    return json.dumps(value, indent=2, ensure_ascii=False)
+
+
+def _generated_files_from_result(result: str | Mapping[tuple[str, ...], str]) -> list[GeneratedFilePayload]:
+    if isinstance(result, str):
+        return [GeneratedFilePayload(path=None, content=result)]
+    return [
+        GeneratedFilePayload(path=_generated_module_path(module), content=content)
+        for module, content in sorted(result.items())
+    ]
+
+
+def _generated_files_from_output(
+    output: Path, encoding: str, *, display_output: Path | None = None
+) -> list[GeneratedFilePayload]:
+    if output.is_file():
+        return [
+            GeneratedFilePayload(
+                path=(display_output or output).as_posix(),
+                content=output.read_text(encoding=encoding),
+            )
+        ]
+    return [
+        GeneratedFilePayload(path=path.relative_to(output).as_posix(), content=path.read_text(encoding=encoding))
+        for path in sorted(output.rglob("*.py"))
+        if path.is_file()
+    ]
+
+
+def _generation_output_json(files: list[GeneratedFilePayload]) -> str:
+    payload = GenerationPayload(version=1, format="json", files=files)
+    return _dump_json(payload.model_dump(mode="json"))
+
+
+def _generation_output_json_schema() -> str:
+    return _dump_json(GenerationPayload.model_json_schema(mode="serialization"))
+
+
+def _copy_generated_output(generated_output: Path, actual_output: Path, *, is_directory_output: bool) -> None:
+    if is_directory_output:
+        for generated_file in sorted(generated_output.rglob("*")):
+            if not generated_file.is_file():
+                continue
+            target = actual_output / generated_file.relative_to(generated_output)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(generated_file, target)
+        return
+
+    actual_output.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(generated_output, actual_output)
+
+
+def _write_generated_result(result: str | Mapping[tuple[str, ...], str], output_format: str | None) -> None:
+    if output_format == "json":
+        sys.stdout.write(_generation_output_json(_generated_files_from_result(result)) + "\n")
+    elif isinstance(result, str):
+        sys.stdout.write(result + "\n")
+    else:
+        for content in result.values():
+            sys.stdout.write(content + "\n")
+
+
 def run_generate_from_config(  # noqa: PLR0913, PLR0917
     config: Config,
     input_: Path | str | ParseResult,
@@ -896,9 +983,9 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     settings_path: Path | None = None,
     validators: Mapping[str, ModelValidators] | None = None,
     default_value_overrides: dict[str, Any] | None = None,
-) -> None:
+) -> str | Mapping[tuple[str, ...], str] | None:
     """Run code generation with the given config and parameters."""
-    result = generate(
+    return generate(
         input_=input_,
         input_file_type=config.input_file_type,
         output=output,
@@ -1043,13 +1130,6 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         external_ref_mapping=config.external_ref_mapping,
     )
 
-    if output is None and result is not None:  # pragma: no cover
-        if isinstance(result, str):
-            sys.stdout.write(result + "\n")
-        else:
-            for content in result.values():
-                sys.stdout.write(content + "\n")
-
 
 def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     """Execute datamodel code generation from command-line arguments."""
@@ -1077,15 +1157,17 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
 
         print(generate_prompt_json_schema())  # noqa: T201
         return Exit.OK
-
-    if namespace.generate_prompt is None and namespace.output_format == "json":
-        print(  # noqa: T201
-            f"Error: --output-format {namespace.output_format} is currently supported only with --generate-prompt",
-            file=sys.stderr,
-        )
-        return Exit.ERROR
+    if namespace.output_format_json_schema == "generation":
+        print(_generation_output_json_schema())  # noqa: T201
+        return Exit.OK
 
     if namespace.generate_pyproject_config:
+        if namespace.output_format == "json":
+            print(  # noqa: T201
+                "Error: --output-format json cannot be used with --generate-pyproject-config",
+                file=sys.stderr,
+            )
+            return Exit.ERROR
         config_output = generate_pyproject_config(namespace)
         print(config_output)  # noqa: T201
         return Exit.OK
@@ -1109,6 +1191,12 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             return Exit.ERROR
 
     if namespace.generate_cli_command:
+        if namespace.output_format == "json":
+            print(  # noqa: T201
+                "Error: --output-format json cannot be used with --generate-cli-command",
+                file=sys.stderr,
+            )
+            return Exit.ERROR
         if not pyproject_config:
             print(  # noqa: T201
                 "No [tool.datamodel-codegen] section found in pyproject.toml",
@@ -1126,9 +1214,23 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(e.message, file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
+    if namespace.output_format == "json" and config.list_deprecations is not None:
+        print(  # noqa: T201
+            "Error: --output-format json cannot be used with --list-deprecations; use --list-deprecations json",
+            file=sys.stderr,
+        )
+        return Exit.ERROR
+
     if config.list_deprecations:
         print(render_deprecations(cast("Any", config.list_deprecations)), end="")  # noqa: T201
         return Exit.OK
+
+    if namespace.output_format == "json" and config.list_experimental is not None:
+        print(  # noqa: T201
+            "Error: --output-format json cannot be used with --list-experimental; use --list-experimental json",
+            file=sys.stderr,
+        )
+        return Exit.ERROR
 
     if config.list_experimental:
         from datamodel_code_generator.experimental import render_experimental_features  # noqa: PLC0415
@@ -1161,9 +1263,23 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         )
         return Exit.ERROR
 
+    if config.check and namespace.output_format == "json":
+        print(  # noqa: T201
+            "Error: --output-format json cannot be used with --check",
+            file=sys.stderr,
+        )
+        return Exit.ERROR
+
     if config.watch and config.check:
         print(  # noqa: T201
             "Error: --watch and --check cannot be used together",
+            file=sys.stderr,
+        )
+        return Exit.ERROR
+
+    if config.watch and namespace.output_format == "json":
+        print(  # noqa: T201
+            "Error: --output-format json cannot be used with --watch",
             file=sys.stderr,
         )
         return Exit.ERROR
@@ -1312,7 +1428,8 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(error, file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
-    if config.check:
+    writes_json_output_file = namespace.output_format == "json" and config.output is not None
+    if config.check or writes_json_output_file:
         config_output = cast("Path", config.output)
         is_directory_output = not config_output.suffix
         temp_context: tempfile.TemporaryDirectory[str] | None = tempfile.TemporaryDirectory()
@@ -1347,7 +1464,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         else:
             input_ = config.url or config.input or sys.stdin.read()
 
-        run_generate_from_config(
+        result = run_generate_from_config(
             config=config,
             input_=input_,
             output=generate_output,
@@ -1377,6 +1494,23 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         if temp_context is not None:
             temp_context.cleanup()
         return Exit.ERROR
+
+    if writes_json_output_file and generate_output is not None and config.output is not None:
+        _copy_generated_output(generate_output, config.output, is_directory_output=is_directory_output)
+
+    if generate_output is None and result is not None:
+        _write_generated_result(result, namespace.output_format)
+    elif namespace.output_format == "json" and generate_output is not None and not config.check:
+        display_output = config.output if writes_json_output_file else None
+        sys.stdout.write(
+            _generation_output_json(
+                _generated_files_from_output(generate_output, config.encoding, display_output=display_output)
+            )
+            + "\n"
+        )
+        if temp_context is not None:
+            temp_context.cleanup()
+            temp_context = None
 
     if config.check and config.output is not None and generate_output is not None:
         has_differences = False

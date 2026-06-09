@@ -30,6 +30,7 @@ DATA_PATH: Path = Path(__file__).parent / "data"
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
 JSON_SCHEMA_DATA_PATH: Path = DATA_PATH / "jsonschema"
 EXPECTED_MAIN_KR_PATH = DATA_PATH / "expected" / "main_kr"
+EXPECTED_OUTPUT_FORMAT_JSON_PATH = EXPECTED_MAIN_KR_PATH / "output_format_json"
 
 assert_file_content = create_assert_file_content(EXPECTED_MAIN_KR_PATH)
 
@@ -2186,7 +2187,7 @@ def test_generate_prompt_json(capsys: pytest.CaptureFixture[str]) -> None:
     options = {option["name"]: option for option in payload["options"]}
     assert options["--output-format"]["choices"] == ["text", "json"]
     assert options["--output-format"]["default"] == "text"
-    assert options["--output-format-json-schema"]["choices"] == ["generate-prompt"]
+    assert options["--output-format-json-schema"]["choices"] == ["generate-prompt", "generation"]
     assert options["--generate-prompt"]["nargs"] == "?"
     assert options["--output-model-type"]["choices"]
     assert "--no-use-annotated" in options["--use-annotated"]["flags"]
@@ -2238,13 +2239,151 @@ def test_output_format_json_schema_validates_generate_prompt_json(capsys: pytest
     jsonschema.validate(instance=payload, schema=schema)
 
 
-def test_output_format_json_requires_generate_prompt(capsys: pytest.CaptureFixture[str]) -> None:
-    """Test --output-format json is only accepted for --generate-prompt."""
+@pytest.mark.allow_direct_assert
+def test_output_format_json_schema_generation(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --output-format-json-schema generation emits the generation JSON Schema."""
     run_main_with_args(
-        ["--output-format", "json"],
+        [
+            "--output-format-json-schema",
+            "generation",
+        ],
+        expected_exit=Exit.OK,
+    )
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert not captured.err
+    assert payload["type"] == "object"
+    assert "files" in payload["properties"]
+
+
+def test_output_format_json_schema_validates_generation_json(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test generation JSON output conforms to its emitted JSON Schema."""
+    run_main_with_args(
+        [
+            "--output-format-json-schema",
+            "generation",
+        ],
+        expected_exit=Exit.OK,
+    )
+    schema = json.loads(capsys.readouterr().out)
+
+    run_main_with_args(
+        [
+            "--input",
+            str(OPEN_API_DATA_PATH / "api.yaml"),
+            "--input-file-type",
+            "openapi",
+            "--output-format",
+            "json",
+        ],
+        expected_exit=Exit.OK,
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    jsonschema.validate(instance=payload, schema=schema)
+
+
+def test_output_format_json_generation_stdout(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test normal generation can emit generated content as JSON."""
+    run_main_with_args(
+        [
+            "--input",
+            str(OPEN_API_DATA_PATH / "api.yaml"),
+            "--input-file-type",
+            "openapi",
+            "--output-format",
+            "json",
+            "--disable-timestamp",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_stdout.txt",
+        assert_no_stderr=True,
+    )
+
+
+@pytest.mark.allow_direct_assert
+def test_output_format_json_generation_output_file(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
+    """Test --output-format json can mirror a generated single output file."""
+    run_main_with_args(
+        [
+            "--input",
+            str(OPEN_API_DATA_PATH / "api.yaml"),
+            "--input-file-type",
+            "openapi",
+            "--output",
+            str(output_file),
+            "--output-format",
+            "json",
+        ],
+        expected_exit=Exit.OK,
+    )
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert not captured.err
+    assert output_file.read_text(encoding="utf-8") == payload["files"][0]["content"]
+    assert payload["files"][0]["path"] == output_file.as_posix()
+
+
+@pytest.mark.allow_direct_assert
+def test_output_format_json_generation_output_directory(capsys: pytest.CaptureFixture[str], output_dir: Path) -> None:
+    """Test --output-format json reports generated multi-file modules."""
+    run_main_with_args(
+        [
+            "--input",
+            str(OPEN_API_DATA_PATH / "modular.yaml"),
+            "--input-file-type",
+            "openapi",
+            "--output",
+            str(output_dir),
+            "--output-format",
+            "json",
+        ],
+        expected_exit=Exit.OK,
+    )
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    expected_paths = {
+        "__init__.py",
+        "_internal.py",
+        "bar.py",
+        "collections.py",
+        "foo/__init__.py",
+        "foo/bar.py",
+        "models.py",
+        "nested/__init__.py",
+        "nested/foo.py",
+        "woo/__init__.py",
+        "woo/boo.py",
+    }
+    files_by_path = {file["path"]: file["content"] for file in payload["files"]}
+
+    assert not captured.err
+    assert set(files_by_path) == expected_paths
+    for path, content in files_by_path.items():
+        assert (output_dir / path).read_text() == content
+
+
+def test_output_format_json_rejects_check(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
+    """Test --output-format json does not alter --check diff semantics."""
+    run_main_with_args(
+        [
+            "--input",
+            str(OPEN_API_DATA_PATH / "api.yaml"),
+            "--input-file-type",
+            "openapi",
+            "--output",
+            str(output_file),
+            "--check",
+            "--output-format",
+            "json",
+        ],
         expected_exit=Exit.ERROR,
         capsys=capsys,
-        expected_stderr="Error: --output-format json is currently supported only with --generate-prompt\n",
+        expected_stderr="Error: --output-format json cannot be used with --check\n",
     )
 
 
