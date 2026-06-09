@@ -24,8 +24,31 @@ def _generate_msgspec_code(schema: dict[str, Any], **kwargs: Any) -> str:
         formatters=[Formatter.BLACK, Formatter.ISORT],
         **kwargs,
     )
-    assert isinstance(result, str)
+    if not isinstance(result, str):
+        pytest.fail("Expected code generation to return a string")
     return result
+
+
+def _assert_contains(code: str, expected: str) -> None:
+    if expected not in code:
+        pytest.fail(f"Expected generated code to contain {expected!r}")
+
+
+def _assert_not_contains(code: str, expected: str) -> None:
+    if expected in code:
+        pytest.fail(f"Expected generated code not to contain {expected!r}")
+
+
+def _assert_before(code: str, expected: str, following: str) -> None:
+    expected_index = code.find(expected)
+    following_index = code.find(following)
+    if expected_index == -1 or following_index == -1 or expected_index >= following_index:
+        pytest.fail(f"Expected {expected!r} to appear before {following!r}")
+
+
+def _assert_equal(actual: Any, expected: Any) -> None:
+    if actual != expected:
+        pytest.fail(f"Expected {expected!r}, got {actual!r}")
 
 
 def _import_generated_code(code: str, tmp_path: Path) -> Any:
@@ -33,8 +56,10 @@ def _import_generated_code(code: str, tmp_path: Path) -> Any:
     module_path.write_text(code, encoding="utf-8")
     module_name = f"generated_msgspec_{tmp_path.name}_{abs(hash(code))}"
     spec = importlib.util.spec_from_file_location(module_name, module_path)
-    assert spec is not None
-    assert spec.loader is not None
+    if spec is None:
+        pytest.fail("Expected generated module spec")
+    if spec.loader is None:
+        pytest.fail("Expected generated module loader")
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
@@ -61,9 +86,9 @@ def test_msgspec_allof_inheritance_uses_kw_only(tmp_path: Path) -> None:
         }
     })
 
-    assert "class Child(Base, kw_only=True):" in code
+    _assert_contains(code, "class Child(Base, kw_only=True):")
     module = _import_generated_code(code, tmp_path)
-    assert module.Child(id=1).id == 1
+    _assert_equal(module.Child(id=1).id, 1)
 
 
 def test_msgspec_required_alias_field_sorts_before_optional(tmp_path: Path) -> None:
@@ -75,7 +100,7 @@ def test_msgspec_required_alias_field_sorts_before_optional(tmp_path: Path) -> N
         "required": ["req-id"],
     })
 
-    assert code.index("req_id: int = field(name='req-id')") < code.index("opt: str | UnsetType = UNSET")
+    _assert_before(code, "req_id: int = field(name='req-id')", "opt: str | UnsetType = UNSET")
     _import_generated_code(code, tmp_path)
 
 
@@ -88,10 +113,10 @@ def test_msgspec_required_nullable_field_has_no_default(tmp_path: Path) -> None:
         "required": ["a", "b"],
     })
 
-    assert "a: str | None\n" in code
-    assert "a: str | None = None" not in code
+    _assert_contains(code, "a: str | None\n")
+    _assert_not_contains(code, "a: str | None = None")
     module = _import_generated_code(code, tmp_path)
-    assert module.M(a=None, b=1).a is None
+    _assert_equal(module.M(a=None, b=1).a, None)
 
 
 def test_msgspec_array_length_constraints_use_meta(tmp_path: Path) -> None:
@@ -105,8 +130,8 @@ def test_msgspec_array_length_constraints_use_meta(tmp_path: Path) -> None:
         use_annotated=True,
     )
 
-    assert "Annotated[list[str], Meta(max_length=5, min_length=1)]" in code
+    _assert_contains(code, "Annotated[list[str], Meta(max_length=5, min_length=1)]")
     module = _import_generated_code(code, tmp_path)
     with pytest.raises(msgspec.ValidationError):
         msgspec.convert({"items": []}, type=module.Model)
-    assert msgspec.convert({"items": ["ok"]}, type=module.Model).items == ["ok"]
+    _assert_equal(msgspec.convert({"items": ["ok"]}, type=module.Model).items, ["ok"])
