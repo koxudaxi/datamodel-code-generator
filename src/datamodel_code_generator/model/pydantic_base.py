@@ -15,12 +15,12 @@ from pydantic import Field
 from datamodel_code_generator import cached_path_exists
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import (
+    UNDEFINED,
     ConstraintsBase,
     DataModel,
     DataModelFieldBase,
     _rebuild_model_with_datamodel_namespace,
 )
-from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.types import (
     UnionIntFloat,
