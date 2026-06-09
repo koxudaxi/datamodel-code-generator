@@ -194,7 +194,7 @@ class ConstraintsBase(_BaseModel):
     """Base class for field constraints (min/max, patterns, etc.)."""
 
     unique_items: Optional[bool] = Field(None, alias="uniqueItems")  # noqa: UP045
-    _exclude_fields: ClassVar[set[str]] = {"has_constraints"}
+    _exclude_fields: ClassVar[set[str]] = {"has_constraints", "_exclude_unset_dump"}
     model_config = ConfigDict(  # ty: ignore
         arbitrary_types_allowed=True, ignored_types=(cached_property,)
     )
@@ -203,6 +203,11 @@ class ConstraintsBase(_BaseModel):
     def has_constraints(self) -> bool:
         """Check if any constraint values are set."""
         return any(v is not None for v in self.model_dump().values())
+
+    @cached_property
+    def _exclude_unset_dump(self) -> dict[str, Any]:
+        """Cached model_dump(exclude_unset=True); constraints are immutable after creation. Read-only."""
+        return self.model_dump(exclude_unset=True)
 
     @staticmethod
     def merge_constraints(a: ConstraintsBaseT | None, b: ConstraintsBaseT | None) -> ConstraintsBaseT | None:
