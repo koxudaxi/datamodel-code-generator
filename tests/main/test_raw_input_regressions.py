@@ -21,18 +21,18 @@ def _generate_raw_model(source: str, input_file_type: InputFileType) -> str:
         disable_timestamp=True,
         formatters=[Formatter.BLACK, Formatter.ISORT],
     )
-    if not isinstance(result, str):
+    if not isinstance(result, str):  # pragma: no cover
         pytest.fail("Expected code generation to return a string")
     return result
 
 
 def _assert_contains(code: str, expected: str) -> None:
-    if expected not in code:
+    if expected not in code:  # pragma: no cover
         pytest.fail(f"Expected generated code to contain {expected!r}")
 
 
 def _assert_not_contains(code: str, expected: str) -> None:
-    if expected in code:
+    if expected in code:  # pragma: no cover
         pytest.fail(f"Expected generated code not to contain {expected!r}")
 
 
