@@ -24,30 +24,30 @@ def _generate_msgspec_code(schema: dict[str, Any], **kwargs: Any) -> str:
         formatters=[Formatter.BLACK, Formatter.ISORT],
         **kwargs,
     )
-    if not isinstance(result, str):
+    if not isinstance(result, str):  # pragma: no cover
         pytest.fail("Expected code generation to return a string")
     return result
 
 
 def _assert_contains(code: str, expected: str) -> None:
-    if expected not in code:
+    if expected not in code:  # pragma: no cover
         pytest.fail(f"Expected generated code to contain {expected!r}")
 
 
 def _assert_not_contains(code: str, expected: str) -> None:
-    if expected in code:
+    if expected in code:  # pragma: no cover
         pytest.fail(f"Expected generated code not to contain {expected!r}")
 
 
 def _assert_before(code: str, expected: str, following: str) -> None:
     expected_index = code.find(expected)
     following_index = code.find(following)
-    if expected_index == -1 or following_index == -1 or expected_index >= following_index:
+    if expected_index == -1 or following_index == -1 or expected_index >= following_index:  # pragma: no cover
         pytest.fail(f"Expected {expected!r} to appear before {following!r}")
 
 
 def _assert_equal(actual: Any, expected: Any) -> None:
-    if actual != expected:
+    if actual != expected:  # pragma: no cover
         pytest.fail(f"Expected {expected!r}, got {actual!r}")
 
 
@@ -56,9 +56,9 @@ def _import_generated_code(code: str, tmp_path: Path) -> Any:
     module_path.write_text(code, encoding="utf-8")
     module_name = f"generated_msgspec_{tmp_path.name}_{abs(hash(code))}"
     spec = importlib.util.spec_from_file_location(module_name, module_path)
-    if spec is None:
+    if spec is None:  # pragma: no cover
         pytest.fail("Expected generated module spec")
-    if spec.loader is None:
+    if spec.loader is None:  # pragma: no cover
         pytest.fail("Expected generated module loader")
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
