@@ -69,11 +69,10 @@ if TYPE_CHECKING:
     from datamodel_code_generator.reference import Reference
 
 
-def _has_field_assignment(field: DataModelFieldBase) -> bool:
-    return (
-        bool(field.field)
-        or field.use_default_with_required
-        or not (field.required or (field.represented_default == "None" and field.strip_default_none))
+def has_field_assignment(field: DataModelFieldBase) -> bool:
+    """Return whether a msgspec field renders with a default assignment."""
+    return field.use_default_with_required or not (
+        field.required or (field.represented_default == "None" and field.strip_default_none)
     )
 
 
@@ -118,6 +117,7 @@ class Struct(DataModel):
     BASE_CLASS_ALIAS: ClassVar[str] = "_Struct"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
+    SUPPORTS_KW_ONLY: ClassVar[bool] = True
     CONFIG_MAPPING: ClassVar[dict[tuple[str, Any], tuple[str, Any] | None]] = {
         ("allow_mutation", False): ("frozen", True),
         ("extra_fields", "forbid"): ("forbid_unknown_fields", True),
@@ -149,7 +149,7 @@ class Struct(DataModel):
         """Initialize msgspec Struct with fields sorted by field assignment requirement."""
         super().__init__(
             reference=reference,
-            fields=sorted(fields, key=_has_field_assignment),
+            fields=sorted(fields, key=has_field_assignment),
             decorators=decorators,
             base_classes=base_classes,
             custom_base_class=custom_base_class,
@@ -265,8 +265,8 @@ class DataModelField(DataModelFieldBase):
         "lt",
         "le",
         "multiple_of",
-        # 'min_items', # not supported by msgspec
-        # 'max_items', # not supported by msgspec
+        "min_items",
+        "max_items",
         "min_length",
         "max_length",
         "pattern",
@@ -397,6 +397,11 @@ class DataModelField(DataModelFieldBase):
                     if k in self._META_FIELD_KEYS
                 },
             }
+
+        if (min_items := data.pop("min_items", None)) is not None:
+            data["min_length"] = min_items
+        if (max_items := data.pop("max_items", None)) is not None:
+            data["max_length"] = max_items
 
         meta_arguments = sorted(f"{k}={v!r}" for k, v in data.items() if v is not None)
         return f"Meta({', '.join(meta_arguments)})" if meta_arguments else None

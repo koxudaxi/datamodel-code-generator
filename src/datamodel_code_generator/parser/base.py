@@ -2483,12 +2483,17 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if (inherited := self.__get_dataclass_inherited_info(model)) is None:
                 continue
             inherited_names, has_default = inherited
-            if not has_default or not any(self.__is_new_required_field(f, inherited_names) for f in model.fields):
+            field_has_assignment = Parser._get_field_assignment_checker(model)
+            if not has_default or not any(
+                self.__is_new_required_field(f, inherited_names, field_has_assignment) for f in model.fields
+            ):
                 continue
 
-            if self.target_python_version.has_kw_only_dataclass:
+            if isinstance(model, msgspec_model.Struct):
+                model.add_base_class_kwarg("kw_only", "True")
+            elif self.target_python_version.has_kw_only_dataclass:
                 for field in model.fields:
-                    if self.__is_new_required_field(field, inherited_names):
+                    if self.__is_new_required_field(field, inherited_names, field_has_assignment):
                         field.extras["kw_only"] = True
             else:  # pragma: no cover
                 warn(
@@ -2499,7 +2504,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     category=UserWarning,
                     stacklevel=2,
                 )
-            self.generation_store.set_fields(model, sorted(model.fields, key=dataclass_model.has_field_assignment))
+            self.generation_store.set_fields(model, sorted(model.fields, key=field_has_assignment))
 
     @classmethod
     def __get_dataclass_inherited_info(cls, model: DataModel) -> tuple[set[str], bool] | None:
@@ -2509,6 +2514,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if not model.base_classes or model.dataclass_arguments.get("kw_only"):
             return None
 
+        field_has_assignment = cls._get_field_assignment_checker(model)
         inherited_names: set[str] = set()
         has_default = False
         for base in model.base_classes:
@@ -2518,23 +2524,30 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 if not f.name or f.extras.get("init") is False:
                     continue  # pragma: no cover
                 inherited_names.add(f.name)
-                if dataclass_model.has_field_assignment(f):
+                if field_has_assignment(f):
                     has_default = True
 
         for f in model.fields:
             if f.name not in inherited_names or f.extras.get("init") is False:
                 continue
-            if dataclass_model.has_field_assignment(f):  # pragma: no branch
+            if field_has_assignment(f):  # pragma: no branch
                 has_default = True
         return (inherited_names, has_default) if inherited_names else None
 
-    def __is_new_required_field(self, field: DataModelFieldBase, inherited: set[str]) -> bool:  # noqa: PLR6301
+    @staticmethod
+    def _get_field_assignment_checker(model: DataModel) -> Callable[[DataModelFieldBase], bool]:
+        if isinstance(model, msgspec_model.Struct):
+            return msgspec_model.has_field_assignment
+        return dataclass_model.has_field_assignment
+
+    def __is_new_required_field(  # noqa: PLR6301
+        self,
+        field: DataModelFieldBase,
+        inherited: set[str],
+        field_has_assignment: Callable[[DataModelFieldBase], bool],
+    ) -> bool:
         """Check if field is a new required init field."""
-        return (
-            field.name not in inherited
-            and field.extras.get("init") is not False
-            and not dataclass_model.has_field_assignment(field)
-        )
+        return field.name not in inherited and field.extras.get("init") is not False and not field_has_assignment(field)
 
     def __remove_overridden_models(self, models: list[DataModel]) -> list[DataModel]:
         """Remove models that are being overridden by custom types (model-level only).
