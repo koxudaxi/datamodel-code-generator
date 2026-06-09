@@ -619,6 +619,34 @@ class DataType(_BaseModel):
             yield from data_type.all_imports
         yield from self.imports
 
+    def _conditional_imports(self) -> Iterator[tuple[bool, Import]]:
+        """Yield (condition, import) pairs in the order they may be emitted."""
+        use_standard_collections = self.use_standard_collections
+        yield (self.is_optional and not self.use_union_operator, IMPORT_OPTIONAL)
+        yield (len(self.data_types) > 1 and not self.use_union_operator, IMPORT_UNION)
+        yield (bool(self.literals) or bool(self.enum_member_literals), IMPORT_LITERAL)
+        yield (bool(self.discriminator), IMPORT_ANNOTATED)
+        yield (self.is_frozen_set and not use_standard_collections, IMPORT_FROZEN_SET)
+        yield (self.is_mapping and use_standard_collections, IMPORT_ABC_MAPPING)
+        yield (self.is_mapping and not use_standard_collections, IMPORT_MAPPING)
+        yield (self.is_sequence and use_standard_collections, IMPORT_ABC_SEQUENCE)
+        yield (self.is_sequence and not use_standard_collections, IMPORT_SEQUENCE)
+        if self.use_generic_container:
+            if use_standard_collections:
+                # frozenset is builtin, no import needed for is_set
+                yield (self.is_list, IMPORT_ABC_SEQUENCE)
+                yield (self.is_dict, IMPORT_ABC_MAPPING)
+            else:  # pragma: no cover
+                yield (self.is_list, IMPORT_SEQUENCE)
+                yield (self.is_set, IMPORT_FROZEN_SET)
+                yield (self.is_dict, IMPORT_MAPPING)
+                yield (self.is_tuple, IMPORT_TUPLE)
+        elif not use_standard_collections:
+            yield (self.is_list, IMPORT_LIST)
+            yield (self.is_set, IMPORT_SET)
+            yield (self.is_dict, IMPORT_DICT)
+            yield (self.is_tuple, IMPORT_TUPLE)
+
     @property
     def imports(self) -> Iterator[Import]:
         """Yield imports required by this DataType."""
@@ -626,49 +654,8 @@ class DataType(_BaseModel):
         if self.import_:
             yield self.import_
 
-        imports: tuple[tuple[bool, Import], ...] = (
-            (self.is_optional and not self.use_union_operator, IMPORT_OPTIONAL),
-            (len(self.data_types) > 1 and not self.use_union_operator, IMPORT_UNION),
-            (bool(self.literals) or bool(self.enum_member_literals), IMPORT_LITERAL),
-            (bool(self.discriminator), IMPORT_ANNOTATED),
-        )
-
-        imports = (
-            *imports,
-            (self.is_frozen_set and not self.use_standard_collections, IMPORT_FROZEN_SET),
-            (self.is_mapping and self.use_standard_collections, IMPORT_ABC_MAPPING),
-            (self.is_mapping and not self.use_standard_collections, IMPORT_MAPPING),
-            (self.is_sequence and self.use_standard_collections, IMPORT_ABC_SEQUENCE),
-            (self.is_sequence and not self.use_standard_collections, IMPORT_SEQUENCE),
-        )
-
-        if self.use_generic_container:
-            if self.use_standard_collections:
-                # frozenset is builtin, no import needed for is_set
-                imports = (
-                    *imports,
-                    (self.is_list, IMPORT_ABC_SEQUENCE),
-                    (self.is_dict, IMPORT_ABC_MAPPING),
-                )
-            else:  # pragma: no cover
-                imports = (
-                    *imports,
-                    (self.is_list, IMPORT_SEQUENCE),
-                    (self.is_set, IMPORT_FROZEN_SET),
-                    (self.is_dict, IMPORT_MAPPING),
-                    (self.is_tuple, IMPORT_TUPLE),
-                )
-        elif not self.use_standard_collections:
-            imports = (
-                *imports,
-                (self.is_list, IMPORT_LIST),
-                (self.is_set, IMPORT_SET),
-                (self.is_dict, IMPORT_DICT),
-                (self.is_tuple, IMPORT_TUPLE),
-            )
-
         # Yield imports based on conditions
-        for field, import_ in imports:
+        for field, import_ in self._conditional_imports():
             if field and import_ is not None and import_ != self.import_:
                 yield import_
 
@@ -1063,10 +1050,30 @@ class DataTypeManager(ABC):
 
     @staticmethod
     def copy_data_type(data_type: DataType) -> DataType:
-        """Copy a type-map prototype for caller-owned mutation."""
-        copied_data_type = deepcopy(data_type)
-        for nested_data_type in copied_data_type.all_data_types:
-            nested_data_type.children = []
+        """Copy a type-map prototype for caller-owned mutation.
+
+        Leaf prototypes (no nested data types, reference, dict key, or parent)
+        take a shallow-copy fast path with fresh mutable containers, which is
+        equivalent to deepcopy because every other shared value is immutable
+        (scalars, enums, and the frozen Import dataclass).
+        """
+        if (
+            data_type.data_types
+            or data_type.reference is not None
+            or data_type.dict_key is not None
+            or data_type.parent is not None
+        ):
+            copied_data_type = deepcopy(data_type)
+            for nested_data_type in copied_data_type.all_data_types:
+                nested_data_type.children = []
+            return copied_data_type
+        copied_data_type = data_type.model_copy()
+        copied_data_type.data_types = []
+        copied_data_type.children = []
+        copied_data_type.literals = list(data_type.literals)
+        copied_data_type.enum_member_literals = list(data_type.enum_member_literals)
+        if (kwargs := data_type.kwargs) is not None:
+            copied_data_type.kwargs = deepcopy(kwargs)
         return copied_data_type
 
     def get_data_type_from_full_path(self, full_path: str, is_custom_type: bool) -> DataType:  # noqa: FBT001
