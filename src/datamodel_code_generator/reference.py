@@ -554,6 +554,16 @@ class ModelResolver:  # noqa: PLR0904
             {} if default_value_overrides is None else {**default_value_overrides}
         )
 
+    def _reset_for_reuse(self, exclude_names: set[str]) -> None:
+        """Reset naming state so this resolver behaves like a freshly constructed one.
+
+        Internal helper for hot paths that would otherwise construct a new
+        ModelResolver per call; only the state touched by add() is reset.
+        """
+        self.exclude_names = exclude_names
+        self.references.clear()
+        self._reference_names_cache.clear()
+
     def _get_reference_names(self) -> set[str]:
         """Get the set of all reference names for uniqueness checking."""
         return self._reference_names_cache
