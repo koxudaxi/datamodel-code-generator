@@ -1292,12 +1292,15 @@ def test_use_decimal_for_multiple_of(output_file: Path) -> None:
     types for numeric fields that have a `multipleOf` constraint. This ensures
     precise decimal arithmetic when validating values against the constraint.
     """
+    expected_name = (
+        "output_black_lt_24.py" if version.parse(black.__version__) < version.parse("24.0.0") else "output.py"
+    )
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "use_decimal_for_multiple_of.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file=EXPECTED_MAIN_KR_PATH / "use_decimal_for_multiple_of" / "output.py",
+        expected_file=EXPECTED_MAIN_KR_PATH / "use_decimal_for_multiple_of" / expected_name,
         extra_args=["--use-decimal-for-multiple-of"],
     )
 
