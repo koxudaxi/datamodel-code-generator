@@ -179,6 +179,7 @@ MANUAL_OPTION_DESCRIPTIONS = {
     "--debug": "Show debug messages during code generation",
     "--profile": "Use a named profile from pyproject.toml",
     "--output-format": "Choose the command output format",
+    "--output-format-json-schema": "Output JSON Schema for structured command output",
     "--no-color": "Disable colorized output",
     "--generate-prompt": "Generate a prompt for consulting LLMs about CLI options",
     "--list-deprecations": "List registered deprecations and scheduled breaking changes",

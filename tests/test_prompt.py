@@ -19,6 +19,9 @@ from datamodel_code_generator.prompt import (
     _positive_option,
     generate_prompt,
 )
+from tests.conftest import assert_output
+
+EXPECTED_PROMPT_PATH = Path(__file__).parent / "data" / "expected" / "prompt"
 
 
 class SerializableChoice(Enum):
@@ -84,10 +87,10 @@ def test_prompt_option_metadata_fallbacks() -> None:
     assert callable_type("value") == "value"
 
     metadata = _option_metadata(custom_action)
-    assert metadata["category"] == OptionCategory.GENERAL.value
-    assert metadata["default"] is None
-    assert not metadata["description"]
-    assert metadata["type"] == "callable-type"
+    assert metadata.category == OptionCategory.GENERAL.value
+    assert metadata.default is None
+    assert not metadata.description
+    assert metadata.type == "callable-type"
 
 
 @pytest.mark.allow_direct_assert
@@ -97,10 +100,8 @@ def test_format_current_options_without_parser() -> None:
     assert _format_current_options(Namespace(disabled=False), None) == "(No options specified)"
 
 
-@pytest.mark.allow_direct_assert
 def test_generate_prompt_uses_default_parser_for_text_output() -> None:
     """Use the shared parser when generate_prompt is called without one."""
     prompt = generate_prompt(Namespace(output_format="text", generate_prompt="", input="schema.json"), "HELP")
 
-    assert "--input schema.json" in prompt
-    assert "HELP" in prompt
+    assert_output(prompt, EXPECTED_PROMPT_PATH / "default_parser_text.txt")

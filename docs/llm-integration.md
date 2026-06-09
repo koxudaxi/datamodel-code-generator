@@ -1,6 +1,6 @@
 # LLM Integration
 
-<!-- related-cli-options: --generate-prompt, --output-format -->
+<!-- related-cli-options: --generate-prompt, --output-format, --output-format-json-schema -->
 
 The `--generate-prompt` option generates a formatted prompt that you can use
 to consult Large Language Models (LLMs) about datamodel-code-generator CLI options.
@@ -32,6 +32,13 @@ datamodel-codegen --generate-prompt "How do I generate strict Pydantic v2 models
 The JSON payload includes the user question, current options, options grouped by
 category, full option metadata from argparse, and help text without ANSI color
 codes.
+
+Use `--output-format-json-schema generate-prompt` when a tool or agent needs the
+schema for the structured payload:
+
+```bash
+datamodel-codegen --output-format-json-schema generate-prompt
+```
 
 ## CLI LLM Tools
 

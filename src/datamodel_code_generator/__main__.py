@@ -18,13 +18,21 @@ if len(sys.argv) == 2 and sys.argv[1] in {"--help", "-h"}:  # pragma: no cover  
     arg_parser.print_help()
     sys.exit(0)
 
-# Fast path for --generate-prompt
-if any(arg.startswith("--generate-prompt") for arg in sys.argv[1:]):  # pragma: no cover
+# Fast path for prompt helper outputs
+if any(
+    arg.startswith(("--generate-prompt", "--output-format-json-schema=")) or arg == "--output-format-json-schema"
+    for arg in sys.argv[1:]
+):  # pragma: no cover
     from datamodel_code_generator.arguments import arg_parser, namespace
 
     vars(namespace).clear()
     namespace.no_color = False
     arg_parser.parse_args(namespace=namespace)
+    if namespace.output_format_json_schema == "generate-prompt":
+        from datamodel_code_generator.prompt import generate_prompt_json_schema
+
+        print(generate_prompt_json_schema())  # noqa: T201
+        sys.exit(0)
     if namespace.generate_prompt is not None:
         from datamodel_code_generator.prompt import generate_prompt
 
@@ -115,6 +123,7 @@ EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
     "debug",
     "no_color",
     "output_format",
+    "output_format_json_schema",
     "disable_warnings",
     "list_deprecations",
     "list_experimental",
@@ -1063,9 +1072,15 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(get_version())  # noqa: T201
         sys.exit(0)
 
+    if namespace.output_format_json_schema == "generate-prompt":
+        from datamodel_code_generator.prompt import generate_prompt_json_schema  # noqa: PLC0415
+
+        print(generate_prompt_json_schema())  # noqa: T201
+        return Exit.OK
+
     if namespace.generate_prompt is None and namespace.output_format == "json":
         print(  # noqa: T201
-            "Error: --output-format json is currently supported only with --generate-prompt",
+            f"Error: --output-format {namespace.output_format} is currently supported only with --generate-prompt",
             file=sys.stderr,
         )
         return Exit.ERROR

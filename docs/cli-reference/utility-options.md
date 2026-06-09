@@ -11,6 +11,7 @@
 | [`--list-experimental`](#list-experimental) | List registered experimental features |
 | [`--no-color`](#no-color) | Disable colorized output |
 | [`--output-format`](#output-format) | Choose the command output format |
+| [`--output-format-json-schema`](#output-format-json-schema) | Output JSON Schema for structured command output |
 | [`--profile`](#profile) | Use a named profile from pyproject.toml |
 | [`--version`](#version) | Show program version and exit |
 
@@ -51,6 +52,8 @@ to clipboard for web-based LLM chats.
 
 Use `--output-format json` when an LLM agent or tool should consume structured
 option metadata instead of Markdown.
+Use `--output-format-json-schema generate-prompt` when the agent needs the JSON
+Schema for that structured payload, such as when defining a tool contract.
 
 **See also:** [LLM Integration](../llm-integration.md) for detailed usage examples
 
@@ -60,11 +63,13 @@ option metadata instead of Markdown.
     datamodel-codegen --generate-prompt # (1)!
     datamodel-codegen --generate-prompt "How do I generate strict types?" # (2)!
     datamodel-codegen --generate-prompt --output-format json # (3)!
+    datamodel-codegen --output-format-json-schema generate-prompt # (4)!
     ```
 
     1. :material-arrow-left: `--generate-prompt` - generate prompt without a question
     2. :material-arrow-left: Include a specific question in the prompt
     3. :material-arrow-left: Emit structured JSON for LLM/tool ingestion
+    4. :material-arrow-left: Emit JSON Schema for structured prompt JSON
 
 ??? example "Quick Examples"
 
@@ -176,8 +181,10 @@ Choose the command output format.
 The default output format is `text`. Use `json` when another program or LLM
 agent should inspect structured output.
 
-JSON output is currently supported for `--generate-prompt`. In normal generation
-mode, `--output-format text` preserves the existing generated-code output.
+JSON output is currently supported for `--generate-prompt`. In normal
+generation mode, `--output-format text` preserves the existing generated-code
+output. Use `--output-format-json-schema generate-prompt` when an LLM agent or tool
+needs the schema for the structured JSON payload.
 
 !!! tip "Usage"
 
@@ -198,6 +205,31 @@ mode, `--output-format text` preserves the existing generated-code output.
         --generate-prompt "Choose strict model options." \
         --output-format json
     ```
+
+---
+
+## `--output-format-json-schema` {#output-format-json-schema}
+
+Output JSON Schema for a structured command output format and exit.
+
+Use this when an LLM agent, tool call definition, or validation layer needs the
+contract before consuming JSON output. The schema is emitted separately from the
+JSON payload so tools can fetch the contract once and validate later command
+output independently.
+
+Currently supported schema targets:
+
+- `generate-prompt`: schema for `--generate-prompt --output-format json`
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --output-format-json-schema generate-prompt # (1)!
+    datamodel-codegen --generate-prompt --output-format json # (2)!
+    ```
+
+    1. :material-arrow-left: Emit the JSON Schema for structured prompt output
+    2. :material-arrow-left: Emit payloads that match that schema
 
 ---
 

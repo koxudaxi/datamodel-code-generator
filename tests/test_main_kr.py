@@ -7,6 +7,7 @@ from argparse import Namespace
 from pathlib import Path
 
 import black
+import jsonschema
 import pydantic
 import pytest
 from packaging import version
@@ -2185,9 +2186,56 @@ def test_generate_prompt_json(capsys: pytest.CaptureFixture[str]) -> None:
     options = {option["name"]: option for option in payload["options"]}
     assert options["--output-format"]["choices"] == ["text", "json"]
     assert options["--output-format"]["default"] == "text"
+    assert options["--output-format-json-schema"]["choices"] == ["generate-prompt"]
     assert options["--generate-prompt"]["nargs"] == "?"
     assert options["--output-model-type"]["choices"]
     assert "--no-use-annotated" in options["--use-annotated"]["flags"]
+
+
+@pytest.mark.allow_direct_assert
+def test_output_format_json_schema_generate_prompt(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --output-format-json-schema generate-prompt emits the prompt JSON Schema."""
+    run_main_with_args(
+        [
+            "--output-format-json-schema",
+            "generate-prompt",
+        ],
+        expected_exit=Exit.OK,
+    )
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert not captured.err
+    assert payload["type"] == "object"
+    assert "current_options" in payload["properties"]
+    assert "options" in payload["properties"]
+
+
+def test_output_format_json_schema_validates_generate_prompt_json(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test prompt JSON output conforms to its emitted JSON Schema."""
+    run_main_with_args(
+        [
+            "--output-format-json-schema",
+            "generate-prompt",
+        ],
+        expected_exit=Exit.OK,
+    )
+    schema = json.loads(capsys.readouterr().out)
+
+    run_main_with_args(
+        [
+            "--input",
+            "schema.json",
+            "--generate-prompt",
+            "Which options should I use?",
+            "--output-format",
+            "json",
+        ],
+        expected_exit=Exit.OK,
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    jsonschema.validate(instance=payload, schema=schema)
 
 
 def test_output_format_json_requires_generate_prompt(capsys: pytest.CaptureFixture[str]) -> None:

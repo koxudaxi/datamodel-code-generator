@@ -307,7 +307,7 @@ This documentation is auto-generated from test cases.
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
 | ⚙️ [General Options](general-options.md) | 18 | Utilities and meta options |
-| 📝 [Utility Options](utility-options.md) | 9 | Help, version, debug options |
+| 📝 [Utility Options](utility-options.md) | 10 | Help, version, debug options |
 
 ## All Options
 
@@ -451,6 +451,7 @@ This documentation is auto-generated from test cases.
 - [`--output-date-class`](typing-customization.md#output-date-class)
 - [`--output-datetime-class`](typing-customization.md#output-datetime-class)
 - [`--output-format`](utility-options.md#output-format)
+- [`--output-format-json-schema`](utility-options.md#output-format-json-schema)
 - [`--output-model-type`](model-customization.md#output-model-type)
 
 ### P {#p}
@@ -24973,6 +24974,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/utility-opti
 | [`--list-experimental`](#list-experimental) | List registered experimental features |
 | [`--no-color`](#no-color) | Disable colorized output |
 | [`--output-format`](#output-format) | Choose the command output format |
+| [`--output-format-json-schema`](#output-format-json-schema) | Output JSON Schema for structured command output |
 | [`--profile`](#profile) | Use a named profile from pyproject.toml |
 | [`--version`](#version) | Show program version and exit |
 
@@ -25013,6 +25015,8 @@ to clipboard for web-based LLM chats.
 
 Use `--output-format json` when an LLM agent or tool should consume structured
 option metadata instead of Markdown.
+Use `--output-format-json-schema generate-prompt` when the agent needs the JSON
+Schema for that structured payload, such as when defining a tool contract.
 
 **See also:** [LLM Integration](../llm-integration.md) for detailed usage examples
 
@@ -25022,11 +25026,13 @@ option metadata instead of Markdown.
     datamodel-codegen --generate-prompt # (1)!
     datamodel-codegen --generate-prompt "How do I generate strict types?" # (2)!
     datamodel-codegen --generate-prompt --output-format json # (3)!
+    datamodel-codegen --output-format-json-schema generate-prompt # (4)!
     ```
 
     1. :material-arrow-left: `--generate-prompt` - generate prompt without a question
     2. :material-arrow-left: Include a specific question in the prompt
     3. :material-arrow-left: Emit structured JSON for LLM/tool ingestion
+    4. :material-arrow-left: Emit JSON Schema for structured prompt JSON
 
 ??? example "Quick Examples"
 
@@ -25138,8 +25144,10 @@ Choose the command output format.
 The default output format is `text`. Use `json` when another program or LLM
 agent should inspect structured output.
 
-JSON output is currently supported for `--generate-prompt`. In normal generation
-mode, `--output-format text` preserves the existing generated-code output.
+JSON output is currently supported for `--generate-prompt`. In normal
+generation mode, `--output-format text` preserves the existing generated-code
+output. Use `--output-format-json-schema generate-prompt` when an LLM agent or tool
+needs the schema for the structured JSON payload.
 
 !!! tip "Usage"
 
@@ -25160,6 +25168,31 @@ mode, `--output-format text` preserves the existing generated-code output.
         --generate-prompt "Choose strict model options." \
         --output-format json
     ```
+
+---
+
+## `--output-format-json-schema` {#output-format-json-schema}
+
+Output JSON Schema for a structured command output format and exit.
+
+Use this when an LLM agent, tool call definition, or validation layer needs the
+contract before consuming JSON output. The schema is emitted separately from the
+JSON payload so tools can fetch the contract once and validate later command
+output independently.
+
+Currently supported schema targets:
+
+- `generate-prompt`: schema for `--generate-prompt --output-format json`
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --output-format-json-schema generate-prompt # (1)!
+    datamodel-codegen --generate-prompt --output-format json # (2)!
+    ```
+
+    1. :material-arrow-left: Emit the JSON Schema for structured prompt output
+    2. :material-arrow-left: Emit payloads that match that schema
 
 ---
 
@@ -25455,6 +25488,7 @@ datamodel-codegen [OPTIONS]
 | [`--list-experimental`](utility-options.md#list-experimental) | List registered experimental features |
 | [`--no-color`](utility-options.md#no-color) | Disable colorized output |
 | [`--output-format`](utility-options.md#output-format) | Choose the command output format |
+| [`--output-format-json-schema`](utility-options.md#output-format-json-schema) | Output JSON Schema for structured command output |
 | [`--profile`](utility-options.md#profile) | Use a named profile from pyproject.toml |
 | [`--version`](utility-options.md#version) | Show program version and exit |
 
@@ -25560,6 +25594,7 @@ All options sorted alphabetically:
 - [`--output-date-class`](typing-customization.md#output-date-class) - Specify date class type for date schema fields.
 - [`--output-datetime-class`](typing-customization.md#output-datetime-class) - Specify datetime class type for date-time schema fields.
 - [`--output-format`](utility-options.md#output-format) - Choose the command output format
+- [`--output-format-json-schema`](utility-options.md#output-format-json-schema) - Output JSON Schema for structured command output
 - [`--output-model-type`](model-customization.md#output-model-type) - Select the output model type (Pydantic v2, Pydantic v2 datac...
 - [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) - Namespace models by their parent scope to avoid naming confl...
 - [`--profile`](utility-options.md#profile) - Use a named profile from pyproject.toml
@@ -25815,6 +25850,8 @@ to clipboard for web-based LLM chats.
 
 Use `--output-format json` when an LLM agent or tool should consume structured
 option metadata instead of Markdown.
+Use `--output-format-json-schema generate-prompt` when the agent needs the JSON
+Schema for that structured payload, such as when defining a tool contract.
 
 **See also:** [LLM Integration](../../llm-integration.md) for detailed usage examples
 
@@ -25824,11 +25861,13 @@ option metadata instead of Markdown.
     datamodel-codegen --generate-prompt # (1)!
     datamodel-codegen --generate-prompt "How do I generate strict types?" # (2)!
     datamodel-codegen --generate-prompt --output-format json # (3)!
+    datamodel-codegen --output-format-json-schema generate-prompt # (4)!
     ```
 
     1. :material-arrow-left: `--generate-prompt` - generate prompt without a question
     2. :material-arrow-left: Include a specific question in the prompt
     3. :material-arrow-left: Emit structured JSON for LLM/tool ingestion
+    4. :material-arrow-left: Emit JSON Schema for structured prompt JSON
 
 ??? example "Quick Examples"
 
@@ -32793,7 +32832,7 @@ target-python-version = "3.14"
 
 Source: https://datamodel-code-generator.koxudaxi.dev/llm-integration/
 
-<!-- related-cli-options: --generate-prompt, --output-format -->
+<!-- related-cli-options: --generate-prompt, --output-format, --output-format-json-schema -->
 
 The `--generate-prompt` option generates a formatted prompt that you can use
 to consult Large Language Models (LLMs) about datamodel-code-generator CLI options.
@@ -32825,6 +32864,13 @@ datamodel-codegen --generate-prompt "How do I generate strict Pydantic v2 models
 The JSON payload includes the user question, current options, options grouped by
 category, full option metadata from argparse, and help text without ANSI color
 codes.
+
+Use `--output-format-json-schema generate-prompt` when a tool or agent needs the
+schema for the structured payload:
+
+```bash
+datamodel-codegen --output-format-json-schema generate-prompt
+```
 
 ## CLI LLM Tools
 

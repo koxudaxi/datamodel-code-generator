@@ -10,9 +10,10 @@ import json
 import re
 from argparse import SUPPRESS, Action, ArgumentParser, BooleanOptionalAction
 from collections import defaultdict
-from operator import itemgetter
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
+
+from pydantic import BaseModel, ConfigDict
 
 from datamodel_code_generator.cli_options import CLI_OPTION_META, MANUAL_DOCS, OptionCategory
 from datamodel_code_generator.prompt_data import OPTION_DESCRIPTIONS
@@ -29,24 +30,94 @@ PROMPT_EXCLUDED_OPTIONS: frozenset[str] = frozenset({
     "help",
     "no_color",
     "output_format",
+    "output_format_json_schema",
 })
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 
+class CurrentOptionPayload(BaseModel):
+    """Machine-readable metadata for a CLI option currently set by the caller."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    dest: str
+    value: Any
+    flags: list[str]
+
+
+class OptionMetadataPayload(BaseModel):
+    """Machine-readable metadata for one argparse option."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    flags: list[str]
+    dest: str
+    category: str
+    description: str
+    choices: list[Any] | None
+    nargs: Any
+    default: Any
+    required: bool
+    metavar: Any
+    type: str | None
+    action: str
+    deprecated: bool
+    deprecated_message: str | None
+
+
+class PromptPayload(BaseModel):
+    """Structured JSON payload emitted by --generate-prompt --output-format json."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal[1]
+    format: Literal["json"]
+    question: str
+    current_options: list[CurrentOptionPayload]
+    current_options_text: str
+    options_by_category: dict[str, list[OptionMetadataPayload]]
+    options: list[OptionMetadataPayload]
+    help_text: str
+
+
+def _prompt_payload_json_schema() -> dict[str, Any]:
+    """Return the JSON Schema for structured prompt output."""
+    return PromptPayload.model_json_schema(mode="serialization")
+
+
+def _dump_json(value: Any) -> str:
+    """Serialize a JSON-compatible value with stable formatting."""
+    return json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True)
+
+
+def _dump_payload(payload: BaseModel) -> str:
+    """Serialize a Pydantic payload with stable JSON formatting."""
+    return _dump_json(payload.model_dump(mode="json"))
+
+
+def generate_prompt_json_schema() -> str:
+    """Generate the JSON Schema for --generate-prompt --output-format json."""
+    return _dump_json(_prompt_payload_json_schema())
+
+
 def _serialize_value(value: Any) -> Any:
     """Convert argparse metadata values to JSON-serializable values."""
-    if value is None or isinstance(value, (bool, int, float, str)):
-        return value
-    if isinstance(value, Path):
-        return str(value)
-    if isinstance(value, (list, tuple, set, frozenset)):
-        return [_serialize_value(item) for item in value]
-    if isinstance(value, dict):
-        return {str(key): _serialize_value(item) for key, item in value.items()}
-    if hasattr(value, "value"):
-        return _serialize_value(value.value)
-    return str(value)
+    match value:
+        case None | bool() | int() | float() | str():
+            return value
+        case Path():
+            return str(value)
+        case list() | tuple() | set() | frozenset():
+            return [_serialize_value(item) for item in value]
+        case dict():
+            return {str(key): _serialize_value(item) for key, item in value.items()}
+        case _ if hasattr(value, "value"):
+            return _serialize_value(value.value)
+        case _:
+            return str(value)
 
 
 def _canonical_option(action: Action) -> str:
@@ -116,9 +187,9 @@ def _format_current_options(args: Namespace, parser: ArgumentParser | None = Non
     return "\n".join(lines) if lines else "(No options specified)"
 
 
-def _current_options_metadata(args: Namespace, parser: ArgumentParser) -> list[dict[str, Any]]:
+def _current_options_metadata(args: Namespace, parser: ArgumentParser) -> list[CurrentOptionPayload]:
     """Return machine-readable metadata for currently set CLI options."""
-    current_options: list[dict[str, Any]] = []
+    current_options: list[CurrentOptionPayload] = []
     actions = _actions_by_dest(parser)
 
     for key, value in sorted(vars(args).items()):
@@ -128,12 +199,14 @@ def _current_options_metadata(args: Namespace, parser: ArgumentParser) -> list[d
         if not (name := _format_current_option(key, value, action)):
             continue
         option_name = _canonical_option(action) if action else name.split(maxsplit=1)[0]
-        current_options.append({
-            "name": option_name,
-            "dest": key,
-            "value": _serialize_value(value),
-            "flags": list(action.option_strings) if action else [option_name],
-        })
+        current_options.append(
+            CurrentOptionPayload(
+                name=option_name,
+                dest=key,
+                value=_serialize_value(value),
+                flags=list(action.option_strings) if action else [option_name],
+            )
+        )
 
     return current_options
 
@@ -174,41 +247,41 @@ def _option_default(action: Action, name: str) -> Any:
     return _serialize_value(action.default)
 
 
-def _option_metadata(action: Action) -> dict[str, Any]:
+def _option_metadata(action: Action) -> OptionMetadataPayload:
     """Build machine-readable metadata for one argparse action."""
     name = _canonical_option(action)
     meta = next((CLI_OPTION_META[option] for option in action.option_strings if option in CLI_OPTION_META), None)
     choices = None if action.choices is None else [_serialize_value(choice) for choice in action.choices]
 
-    return {
-        "name": name,
-        "flags": list(action.option_strings),
-        "dest": action.dest,
-        "category": _option_category(action).value,
-        "description": _option_description(action, name),
-        "choices": choices,
-        "nargs": _serialize_value(action.nargs),
-        "default": _option_default(action, name),
-        "required": action.required,
-        "metavar": _serialize_value(action.metavar),
-        "type": _option_type(action),
-        "action": action.__class__.__name__.removeprefix("_"),
-        "deprecated": bool(meta and meta.deprecated),
-        "deprecated_message": meta.deprecated_message if meta else None,
-    }
+    return OptionMetadataPayload(
+        name=name,
+        flags=list(action.option_strings),
+        dest=action.dest,
+        category=_option_category(action).value,
+        description=_option_description(action, name),
+        choices=choices,
+        nargs=_serialize_value(action.nargs),
+        default=_option_default(action, name),
+        required=action.required,
+        metavar=_serialize_value(action.metavar),
+        type=_option_type(action),
+        action=action.__class__.__name__.removeprefix("_"),
+        deprecated=bool(meta and meta.deprecated),
+        deprecated_message=meta.deprecated_message if meta else None,
+    )
 
 
-def _all_options_metadata(parser: ArgumentParser) -> list[dict[str, Any]]:
+def _all_options_metadata(parser: ArgumentParser) -> list[OptionMetadataPayload]:
     """Return metadata for all argparse options."""
     options = [_option_metadata(action) for action in parser._actions if action.option_strings]  # noqa: SLF001
-    return sorted(options, key=itemgetter("category", "name"))
+    return sorted(options, key=lambda option: (option.category, option.name))
 
 
-def _options_by_category_metadata(parser: ArgumentParser) -> dict[str, list[dict[str, Any]]]:
+def _options_by_category_metadata(parser: ArgumentParser) -> dict[str, list[OptionMetadataPayload]]:
     """Return argparse option metadata grouped by documentation category."""
-    by_category: dict[str, list[dict[str, Any]]] = {category.value: [] for category in OptionCategory}
+    by_category: dict[str, list[OptionMetadataPayload]] = {category.value: [] for category in OptionCategory}
     for option in _all_options_metadata(parser):
-        by_category[option["category"]].append(option)
+        by_category[option.category].append(option)
     return by_category
 
 
@@ -241,17 +314,17 @@ def _format_options_by_category() -> str:
 
 def _generate_prompt_json(args: Namespace, help_text: str, parser: ArgumentParser) -> str:
     """Generate a machine-readable LLM consultation payload."""
-    payload = {
-        "version": 1,
-        "format": "json",
-        "question": getattr(args, "generate_prompt", "") or "",
-        "current_options": _current_options_metadata(args, parser),
-        "current_options_text": _format_current_options(args, parser),
-        "options_by_category": _options_by_category_metadata(parser),
-        "options": _all_options_metadata(parser),
-        "help_text": _strip_ansi(help_text),
-    }
-    return json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True)
+    payload = PromptPayload(
+        version=1,
+        format="json",
+        question=getattr(args, "generate_prompt", "") or "",
+        current_options=_current_options_metadata(args, parser),
+        current_options_text=_format_current_options(args, parser),
+        options_by_category=_options_by_category_metadata(parser),
+        options=_all_options_metadata(parser),
+        help_text=_strip_ansi(help_text),
+    )
+    return _dump_payload(payload)
 
 
 def generate_prompt(args: Namespace, help_text: str, parser: ArgumentParser | None = None) -> str:

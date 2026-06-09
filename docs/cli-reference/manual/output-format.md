@@ -5,8 +5,10 @@ Choose the command output format.
 The default output format is `text`. Use `json` when another program or LLM
 agent should inspect structured output.
 
-JSON output is currently supported for `--generate-prompt`. In normal generation
-mode, `--output-format text` preserves the existing generated-code output.
+JSON output is currently supported for `--generate-prompt`. In normal
+generation mode, `--output-format text` preserves the existing generated-code
+output. Use `--output-format-json-schema generate-prompt` when an LLM agent or tool
+needs the schema for the structured JSON payload.
 
 !!! tip "Usage"
 
