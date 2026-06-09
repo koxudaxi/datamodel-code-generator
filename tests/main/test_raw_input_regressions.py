@@ -21,43 +21,54 @@ def _generate_raw_model(source: str, input_file_type: InputFileType) -> str:
         disable_timestamp=True,
         formatters=[Formatter.BLACK, Formatter.ISORT],
     )
-    assert isinstance(result, str)
+    if not isinstance(result, str):
+        pytest.fail("Expected code generation to return a string")
     return result
+
+
+def _assert_contains(code: str, expected: str) -> None:
+    if expected not in code:
+        pytest.fail(f"Expected generated code to contain {expected!r}")
+
+
+def _assert_not_contains(code: str, expected: str) -> None:
+    if expected in code:
+        pytest.fail(f"Expected generated code not to contain {expected!r}")
 
 
 def test_dict_text_input_is_parsed() -> None:
     """Parse dict text input instead of treating it as a raw string sample."""
     code = _generate_raw_model("{'a': 1}", InputFileType.Dict)
 
-    assert "class Model(BaseModel):" in code
-    assert "a: int" in code
-    assert "RootModel[str]" not in code
+    _assert_contains(code, "class Model(BaseModel):")
+    _assert_contains(code, "a: int")
+    _assert_not_contains(code, "RootModel[str]")
 
 
 def test_csv_duplicate_header_keeps_following_columns() -> None:
     """Use DictReader row values so duplicate headers do not hide later columns."""
     code = _generate_raw_model("a,a,b\n1,2,3\n", InputFileType.CSV)
 
-    assert "a: str" in code
-    assert "b: str" in code
+    _assert_contains(code, "a: str")
+    _assert_contains(code, "b: str")
 
 
 def test_csv_missing_trailing_cell_infers_null_column() -> None:
     """Preserve missing trailing cells from the first row."""
     code = _generate_raw_model("a,b,c\n1,2\n", InputFileType.CSV)
 
-    assert "a: str" in code
-    assert "b: str" in code
-    assert "c: None" in code
+    _assert_contains(code, "a: str")
+    _assert_contains(code, "b: str")
+    _assert_contains(code, "c: None")
 
 
 def test_yaml_top_level_list_is_supported() -> None:
     """Allow YAML raw sample data to use a top-level list like JSON input."""
     code = _generate_raw_model("- a: 1\n", InputFileType.Yaml)
 
-    assert "class ModelItem(BaseModel):" in code
-    assert "a: int" in code
-    assert "class Model(RootModel[list[ModelItem]]):" in code
+    _assert_contains(code, "class ModelItem(BaseModel):")
+    _assert_contains(code, "a: int")
+    _assert_contains(code, "class Model(RootModel[list[ModelItem]]):")
 
 
 def test_yaml_genson_errors_are_wrapped() -> None:
