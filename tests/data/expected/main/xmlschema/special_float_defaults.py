@@ -4,15 +4,14 @@
 
 from __future__ import annotations
 
-from math import inf, nan
 from pydantic import BaseModel, confloat
 
 
 class Model(BaseModel):
     finite: float | None = 1.5
-    positive: float | None = inf
-    positiveXsd11: float | None = inf
-    negative: float | None = -inf
-    notNumber: float | None = nan
-    bounded: confloat(ge=-inf, lt=inf) | None = None
-    limit: float | None = inf
+    positive: float | None = float('inf')
+    positiveXsd11: float | None = float('inf')
+    negative: float | None = float('-inf')
+    notNumber: float | None = float('nan')
+    bounded: confloat(ge=float('-inf'), lt=float('inf')) | None = None
+    limit: float | None = float('inf')

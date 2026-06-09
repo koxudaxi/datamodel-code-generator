@@ -129,8 +129,7 @@ def type_map_factory(
             IMPORT_CONSTR,
             strict=StrictTypes.str in strict_types,
             kwargs={
-                pattern_key: r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*"
-                r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'",
+                pattern_key: _get_regex_literal(HOSTNAME_REGEX),
                 **({"strict": True} if StrictTypes.str in strict_types else {}),
             },
         ),
@@ -543,8 +542,7 @@ class DataTypeManager(_PydanticDataTypeManager):
                 IMPORT_CONSTR,
                 strict=StrictTypes.str in strict_types,
                 kwargs={
-                    pattern_key: r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*"
-                    r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$'",
+                    pattern_key: _get_regex_literal(HOSTNAME_REGEX),
                     **({"strict": True} if StrictTypes.str in strict_types else {}),
                 },
             ),

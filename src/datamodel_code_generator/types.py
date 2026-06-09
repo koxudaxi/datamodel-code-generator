@@ -11,6 +11,7 @@ import ast
 import re
 from abc import ABC, abstractmethod
 from copy import deepcopy
+from decimal import Decimal
 from enum import Enum, auto
 from fractions import Fraction
 from functools import lru_cache
@@ -42,6 +43,7 @@ from datamodel_code_generator.imports import (
     IMPORT_ABC_SEQUENCE,
     IMPORT_ANNOTATED,
     IMPORT_ANY,
+    IMPORT_DECIMAL,
     IMPORT_DICT,
     IMPORT_FROZEN_SET,
     IMPORT_LIST,
@@ -68,6 +70,20 @@ UNION_PREFIX = f"{UNION}["
 UNION_DELIMITER = ", "
 UNION_PATTERN: Pattern[str] = re.compile(r"\s*,\s*")
 UNION_OPERATOR_DELIMITER = " | "
+
+
+def _contains_decimal(value: Any) -> bool:
+    match value:
+        case Decimal():
+            return True
+        case dict():
+            return any(_contains_decimal(k) or _contains_decimal(v) for k, v in value.items())
+        case list() | tuple() | set() | frozenset():
+            return any(_contains_decimal(item) for item in value)
+        case _:
+            return False
+
+
 UNION_OPERATOR_PATTERN: Pattern[str] = re.compile(r"\s*\|\s*")
 NONE = "None"
 ANY = "Any"
@@ -676,6 +692,8 @@ class DataType(_BaseModel):
         # Add base import if exists
         if self.import_:
             yield self.import_
+        if self.kwargs and self.import_ != IMPORT_DECIMAL and _contains_decimal(self.kwargs):
+            yield IMPORT_DECIMAL
 
         imports: tuple[tuple[bool, Import], ...] = (
             (self.is_optional and not self.use_union_operator, IMPORT_OPTIONAL),

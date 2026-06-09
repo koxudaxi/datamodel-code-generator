@@ -82,7 +82,8 @@ def _generate_pydantic_v2_code(schema: dict[str, Any], **kwargs: Any) -> str:
         formatters=[Formatter.BLACK, Formatter.ISORT],
         **kwargs,
     )
-    assert isinstance(result, str)
+    if not isinstance(result, str):  # pragma: no cover
+        pytest.fail("expected generated code as a string")
     return result
 
 
@@ -91,8 +92,8 @@ def _import_generated_code(code: str, tmp_path: Path) -> Any:
     module_path.write_text(code, encoding="utf-8")
     module_name = f"generated_model_{tmp_path.name}_{abs(hash(code))}"
     spec = importlib.util.spec_from_file_location(module_name, module_path)
-    assert spec is not None
-    assert spec.loader is not None
+    if spec is None or spec.loader is None:  # pragma: no cover
+        pytest.fail("expected import spec with loader")
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
@@ -190,7 +191,8 @@ def test_pydantic_v2_integer_decimal_constraints_are_integer_safe(field_constrai
         field_constraints=field_constraints,
     )
 
-    assert "multiple_of=0" not in code
+    if "multiple_of=0" in code:
+        pytest.fail("integer multipleOf constraint was truncated to zero")
     module = _import_generated_code(code, tmp_path)
     module.Model.model_validate({"a": 1, "c": 123, "neg_gt": -1})
     with pytest.raises(ValidationError):
@@ -209,10 +211,11 @@ def test_pydantic_v2_non_finite_values_render_as_python_expressions(tmp_path: Pa
         },
     })
 
-    assert " = inf" not in code
-    assert "ge=inf" not in code
+    if " = inf" in code or "ge=inf" in code:
+        pytest.fail("non-finite floats should render as Python expressions")
     module = _import_generated_code(code, tmp_path)
-    assert module.Model().big_default == float("inf")
+    if module.Model().big_default != float("inf"):
+        pytest.fail("non-finite default should round-trip as infinity")
 
 
 @pytest.mark.allow_direct_assert
