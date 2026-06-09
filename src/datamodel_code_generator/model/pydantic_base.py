@@ -21,11 +21,11 @@ from datamodel_code_generator.model import (
     _rebuild_model_with_datamodel_namespace,
 )
 from datamodel_code_generator.model.base import UNDEFINED
+from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.types import (
     UnionIntFloat,
     chain_as_tuple,
     normalize_integer_constraint,
-    represent_python_value,
 )
 
 # Defined here instead of importing from pydantic_v2.imports to avoid circular import

@@ -26,6 +26,7 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
+from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.types import (
     ANY,
@@ -36,7 +37,6 @@ from datamodel_code_generator.types import (
     Nullable,
     chain_as_tuple,
     get_optional_type,
-    represent_python_value,
 )
 
 if TYPE_CHECKING:

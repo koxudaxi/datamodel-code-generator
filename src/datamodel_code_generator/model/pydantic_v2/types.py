@@ -66,9 +66,9 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_UUID4,
     IMPORT_UUID5,
 )
+from datamodel_code_generator.python_literal import PythonCode
 from datamodel_code_generator.types import (
     DataType,
-    PythonCode,
     StrictTypes,
     Types,
     UnionIntFloat,

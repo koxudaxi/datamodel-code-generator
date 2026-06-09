@@ -15,7 +15,6 @@ from enum import Enum, auto
 from fractions import Fraction
 from functools import lru_cache
 from itertools import chain
-from math import isfinite, isnan
 from re import Pattern
 from typing import (
     TYPE_CHECKING,
@@ -55,6 +54,7 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
+from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.reference import Reference, _BaseModel
 
 T = TypeVar("T")
@@ -167,20 +167,6 @@ class UnionIntFloat:
         return cls(v)
 
 
-class PythonCode:
-    """Python expression rendered without extra quoting."""
-
-    __slots__ = ("code",)
-
-    def __init__(self, code: str) -> None:
-        """Initialize with a raw Python expression."""
-        self.code = code
-
-    def __repr__(self) -> str:
-        """Render the wrapped expression."""
-        return self.code
-
-
 def _get_fraction_floor(value: Fraction) -> int:
     return value.numerator // value.denominator
 
@@ -218,8 +204,7 @@ def normalize_integer_constraint(constraint: str, value: Any) -> tuple[str, Any]
             return "le", _get_fraction_floor(fraction)
         case "lt":
             return "le", _get_fraction_ceil(fraction) - 1
-        case _:
-            return constraint, value
+    return constraint, value
 
 
 def normalize_integer_constraints(constraints: dict[str, Any]) -> dict[str, Any]:
@@ -229,34 +214,6 @@ def normalize_integer_constraints(constraints: dict[str, Any]) -> dict[str, Any]
         for key, value in constraints.items()
         if (normalized := normalize_integer_constraint(key, value)) is not None
     }
-
-
-def represent_python_value(value: Any) -> str:  # noqa: PLR0911
-    """Render a value as a Python expression safe for generated source."""
-    if isinstance(value, PythonCode):
-        return value.code
-    if isinstance(value, float):
-        if isnan(value):
-            return "float('nan')"
-        if not isfinite(value):
-            return "float('inf')" if value > 0 else "float('-inf')"
-    if isinstance(value, dict):
-        rendered_items = ", ".join(
-            f"{represent_python_value(k)}: {represent_python_value(v)}" for k, v in value.items()
-        )
-        return f"{{{rendered_items}}}"
-    if isinstance(value, list):
-        return "[" + ", ".join(represent_python_value(item) for item in value) + "]"
-    if isinstance(value, tuple):
-        rendered_items = ", ".join(represent_python_value(item) for item in value)
-        trailing_comma = "," if len(value) == 1 else ""
-        return f"({rendered_items}{trailing_comma})"
-    if isinstance(value, set):
-        if not value:
-            return "set()"
-        sorted_items = sorted(value, key=lambda item: (type(item).__name__, repr(item)))
-        return "{" + ", ".join(represent_python_value(item) for item in sorted_items) + "}"
-    return repr(value)
 
 
 def chain_as_tuple(*iterables: Iterable[T]) -> tuple[T, ...]:
