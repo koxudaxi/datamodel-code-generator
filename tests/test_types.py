@@ -2,16 +2,23 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 
+from datamodel_code_generator.model.base import repr_set_sorted
+from datamodel_code_generator.parser._math_imports import add_math_imports_for_non_finite_literals
+from datamodel_code_generator.python_literal import PythonCode, represent_python_value
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import (
     DataType,
+    _contains_decimal,
     _remove_none_from_union,
     extract_qualified_names,
     get_optional_type,
     get_subscript_args,
     get_type_base_name,
+    normalize_integer_constraint,
 )
 
 
@@ -199,6 +206,36 @@ def test_datatype_remove_reference_detaches_compatibility_child() -> None:
 
     assert data_type.reference is None
     assert [child is data_type for child in reference.children] == []
+
+
+def test_python_literal_helpers_render_code_and_tuple_values() -> None:
+    """Test Python literal rendering for raw code and tuple containers."""
+    raw = PythonCode("datetime_module.date.fromisoformat('2026-01-01')", "2026-01-01")
+
+    assert repr(raw) == "datetime_module.date.fromisoformat('2026-01-01')"
+    assert represent_python_value((raw,)) == "(datetime_module.date.fromisoformat('2026-01-01'),)"
+    assert represent_python_value((1, "two")) == "(1, 'two')"
+    assert repr_set_sorted(set()) == "set()"
+
+
+def test_add_math_imports_inserts_after_generated_header() -> None:
+    """Test non-finite math imports are inserted after headers and future imports."""
+    body = "# generated\nfrom __future__ import annotations\n\nvalue = inf\n"
+
+    assert add_math_imports_for_non_finite_literals(body) == (
+        "# generated\nfrom __future__ import annotations\n\nfrom math import inf\nvalue = inf"
+    )
+
+
+def test_decimal_detection_and_integer_constraint_edges() -> None:
+    """Test Decimal detection and integer constraint normalization edge cases."""
+    sentinel = object()
+
+    assert _contains_decimal([Decimal(1)])
+    assert normalize_integer_constraint("ge", sentinel) == ("ge", sentinel)
+    assert normalize_integer_constraint("le", 1.5) == ("le", 1)
+    assert normalize_integer_constraint("lt", 1.5) == ("le", 1)
+    assert normalize_integer_constraint("unknown", 1.5) == ("unknown", 1.5)
 
 
 def test_datatype_deepcopy_with_nested_data_types() -> None:

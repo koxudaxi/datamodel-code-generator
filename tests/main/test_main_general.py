@@ -191,7 +191,7 @@ def test_pydantic_v2_integer_decimal_constraints_are_integer_safe(field_constrai
         field_constraints=field_constraints,
     )
 
-    if "multiple_of=0" in code:
+    if "multiple_of=0" in code:  # pragma: no cover
         pytest.fail("integer multipleOf constraint was truncated to zero")
     module = _import_generated_code(code, tmp_path)
     module.Model.model_validate({"a": 1, "c": 123, "neg_gt": -1})
@@ -211,10 +211,10 @@ def test_pydantic_v2_non_finite_values_render_as_python_expressions(tmp_path: Pa
         },
     })
 
-    if " = inf" in code or "ge=inf" in code:
+    if " = inf" in code or "ge=inf" in code:  # pragma: no cover
         pytest.fail("non-finite floats should render as Python expressions")
     module = _import_generated_code(code, tmp_path)
-    if module.Model().big_default != float("inf"):
+    if module.Model().big_default != float("inf"):  # pragma: no cover
         pytest.fail("non-finite default should round-trip as infinity")
 
 
