@@ -74,7 +74,7 @@ from datamodel_code_generator.types import (
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManagerBase
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Collection, Iterator, Sequence
 
     from datamodel_code_generator.imports import Import
 
@@ -161,17 +161,17 @@ def strict_type_map_factory(data_type: type[DataType]) -> dict[StrictTypes, Data
     }
 
 
-number_kwargs: set[str] = {
-    "exclusiveMinimum",
+number_kwargs: tuple[str, ...] = (
     "minimum",
-    "exclusiveMaximum",
     "maximum",
     "multipleOf",
-}
+    "exclusiveMaximum",
+    "exclusiveMinimum",
+)
 
-string_kwargs: set[str] = {"minItems", "maxItems", "minLength", "maxLength", "pattern"}
+string_kwargs: tuple[str, ...] = ("pattern", "minLength", "maxLength", "minItems", "maxItems")
 
-bytes_kwargs: set[str] = {"minLength", "maxLength"}
+bytes_kwargs: tuple[str, ...] = ("minLength", "maxLength")
 
 escape_characters = str.maketrans({
     "'": r"\'",
@@ -277,9 +277,18 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
             use_object_type,
         )
 
-    def transform_kwargs(self, kwargs: dict[str, Any], filter_: set[str]) -> dict[str, str]:
-        """Transform schema kwargs to Pydantic field kwargs."""
-        return {self.kwargs_schema_to_model.get(k, k): v for (k, v) in kwargs.items() if v is not None and k in filter_}
+    def transform_kwargs(self, kwargs: dict[str, Any], filter_: Collection[str]) -> dict[str, str]:
+        """Transform schema kwargs to Pydantic field kwargs.
+
+        Iterates whichever side is smaller. Output order is identical either way
+        because the filters are tuples in JsonSchemaObject field-definition order,
+        which is also the iteration order of kwargs built from model_dump().
+        """
+        if len(kwargs) <= len(filter_):
+            return {
+                self.kwargs_schema_to_model.get(k, k): v for (k, v) in kwargs.items() if v is not None and k in filter_
+            }
+        return {self.kwargs_schema_to_model.get(k, k): v for k in filter_ if (v := kwargs.get(k)) is not None}
 
     def get_data_int_type(  # noqa: PLR0911
         self,
