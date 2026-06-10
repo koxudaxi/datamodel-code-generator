@@ -429,6 +429,11 @@ def test_find_member_with_string_enum() -> None:
         reference=Reference(path="test_path", original_name="TestEnum", name="TestEnum"),
         fields=[
             DataModelField(
+                name="NO_DEFAULT",
+                data_type=DataType(type="str"),
+                required=True,
+            ),
+            DataModelField(
                 name="VALUE_A",
                 default="'value_a'",
                 data_type=DataType(type="str"),
@@ -440,8 +445,18 @@ def test_find_member_with_string_enum() -> None:
                 data_type=DataType(type="str"),
                 required=True,
             ),
+            DataModelField(
+                name="BARE",
+                default="bare value",
+                data_type=DataType(type="str"),
+                required=True,
+            ),
         ],
     )
+
+    member = enum.find_member("bare value")
+    assert member is not None
+    assert member.field.name == "BARE"
 
     member = enum.find_member("value_a")
     assert member is not None
