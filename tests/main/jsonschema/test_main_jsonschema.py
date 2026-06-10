@@ -12053,3 +12053,16 @@ def test_main_msgspec_array_length_constraints_without_annotated() -> None:
         input_file_type=InputFileType.JsonSchema,
         output_model_type=DataModelType.MsgspecStruct,
     )
+
+
+def test_main_jsonschema_uuid_format_versions(output_file: Path) -> None:
+    """Test uuid format versions map to importable pydantic types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "uuid_format_versions.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        assert_func=assert_file_content,
+        expected_file="uuid_format_versions.py",
+        importable_module_name="generated_uuid_format_versions",
+    )
