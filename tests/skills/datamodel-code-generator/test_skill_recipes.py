@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 
-from tests.conftest import assert_directory_content, create_assert_file_content
+from tests.conftest import assert_exact_directory_content, create_assert_file_content
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -31,18 +32,14 @@ assert_file_content = create_assert_file_content(EXPECTED)
 
 def _run_codegen(args: Sequence[str]) -> None:
     """Run datamodel-codegen and fail with captured output on errors."""
-    try:
-        result = subprocess.run(
-            ["datamodel-codegen", *args],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode != 0:
-            pytest.fail(f"datamodel-codegen failed\nargs: {args!r}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}")
-    except FileNotFoundError as error:
-        msg = "datamodel-codegen not found; ensure the CLI is installed in the test environment"
-        raise AssertionError(msg) from error
+    result = subprocess.run(
+        [sys.executable, "-m", "datamodel_code_generator", *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        pytest.fail(f"datamodel-codegen failed\nargs: {args!r}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}")
 
 
 @pytest.mark.parametrize(
@@ -122,7 +119,7 @@ def test_skill_directory_output_recipe_matches_expected_package(tmp_path: Path) 
         "--all-exports-scope",
         "recursive",
     ])
-    assert_directory_content(output, EXPECTED / "directory_output")
+    assert_exact_directory_content(output, EXPECTED / "directory_output")
 
 
 def test_skill_recipe_check_mode_matches_expected_output(tmp_path: Path) -> None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import sys
 from json import dumps
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,10 @@ SKILL_FILES = [
 ]
 FLAG_RE = re.compile(r"(?<![\w-])--[a-zA-Z0-9][a-zA-Z0-9-]*")
 NON_DATAMODEL_FLAGS = frozenset({"--from", "--with"})
+
+
+def _relative_posix(path: Path, parent: Path) -> str:
+    return path.relative_to(parent).as_posix()
 
 
 def _read_frontmatter(path: Path) -> dict[str, Any]:
@@ -60,7 +65,7 @@ def test_skill_frontmatter_validates() -> None:
         "name": name,
         "name_matches_directory": name == SKILL_DIR.name,
         "name_valid": isinstance(name, str) and re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?", name) is not None,
-        "skill_files": {str(path.relative_to(SKILL_DIR)): path.is_file() for path in SKILL_FILES},
+        "skill_files": {_relative_posix(path, SKILL_DIR): path.is_file() for path in SKILL_FILES},
     }
 
     assert_output(dumps(summary, indent=2, sort_keys=True) + "\n", EXPECTED / "frontmatter.txt")
@@ -68,21 +73,17 @@ def test_skill_frontmatter_validates() -> None:
 
 def test_skill_documented_flags_exist_in_cli_help() -> None:
     """Documented datamodel-codegen flags must exist in current CLI help."""
-    try:
-        result = subprocess.run(
-            ["datamodel-codegen", "--help"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode != 0:
-            pytest.fail(f"datamodel-codegen --help failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}")
-        help_text = result.stdout
-    except FileNotFoundError as error:
-        msg = "datamodel-codegen not found; ensure the CLI is installed in the test environment"
-        raise AssertionError(msg) from error
+    result = subprocess.run(
+        [sys.executable, "-m", "datamodel_code_generator", "--help"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        pytest.fail(f"datamodel-codegen --help failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}")
+    help_text = result.stdout
     unknown = {
-        flag: sorted(str(path.relative_to(SKILL_DIR.parents[1])) for path in paths)
+        flag: sorted(_relative_posix(path, SKILL_DIR.parents[1]) for path in paths)
         for flag, paths in _documented_flags().items()
         if flag not in NON_DATAMODEL_FLAGS and flag not in help_text
     }
