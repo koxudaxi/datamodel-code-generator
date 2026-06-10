@@ -90,6 +90,9 @@ EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/integer_fractional_constraints.json": (
         "hypothesis-jsonschema emits integers near float precision limits where multipleOf checks are unstable"
     ),
+    "jsonschema/non_finite_container_defaults.json": (
+        "non-finite defaults cannot be represented in the JSON payloads hypothesis-jsonschema generates"
+    ),
     "jsonschema/non_finite_number_values.json": (
         "non-finite bounds cannot be satisfied by any JSON payload hypothesis-jsonschema generates"
     ),

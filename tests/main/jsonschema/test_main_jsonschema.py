@@ -12053,3 +12053,72 @@ def test_main_msgspec_array_length_constraints_without_annotated() -> None:
         input_file_type=InputFileType.JsonSchema,
         output_model_type=DataModelType.MsgspecStruct,
     )
+
+
+def test_main_msgspec_integer_fractional_constraints(output_file: Path) -> None:
+    """Test msgspec normalizes fractional integer constraints to integer-safe bounds."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "integer_fractional_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct", "--use-annotated"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_integer_fractional_constraints.py",
+        importable_module_name="generated_msgspec_integer_fractional_constraints",
+    )
+
+
+def test_main_msgspec_non_finite_number_values(output_file: Path) -> None:
+    """Test msgspec renders non-finite defaults as expressions and drops non-finite bounds."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "non_finite_number_values.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct", "--use-annotated"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_non_finite_number_values.py",
+        importable_module_name="generated_msgspec_non_finite_number_values",
+    )
+
+
+def test_main_dataclass_non_finite_number_values(output_file: Path) -> None:
+    """Test dataclass renders non-finite defaults as valid Python expressions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "non_finite_number_values.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "dataclasses.dataclass"],
+        assert_func=assert_file_content,
+        expected_file="dataclass_non_finite_number_values.py",
+        importable_module_name="generated_dataclass_non_finite_number_values",
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "module_name", "expected_file"),
+    [
+        (
+            "dataclasses.dataclass",
+            "generated_dataclass_non_finite_container_defaults",
+            "dataclass_non_finite_container_defaults.py",
+        ),
+        (
+            "msgspec.Struct",
+            "generated_msgspec_non_finite_container_defaults",
+            "msgspec_non_finite_container_defaults.py",
+        ),
+    ],
+)
+def test_main_non_finite_container_defaults(
+    output_model: str, module_name: str, expected_file: str, output_file: Path
+) -> None:
+    """Test container defaults containing non-finite numbers render as expressions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "non_finite_container_defaults.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", output_model],
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        importable_module_name=module_name,
+    )
