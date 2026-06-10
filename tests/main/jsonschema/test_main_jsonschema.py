@@ -12053,3 +12053,29 @@ def test_main_msgspec_array_length_constraints_without_annotated() -> None:
         input_file_type=InputFileType.JsonSchema,
         output_model_type=DataModelType.MsgspecStruct,
     )
+
+
+def test_main_dataclass_enum_member_special_defaults(output_file: Path) -> None:
+    """Test enum defaults containing quotes resolve to members for scalars and lists."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_member_special_defaults.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "dataclasses.dataclass"],
+        assert_func=assert_file_content,
+        expected_file="dataclass_enum_member_special_defaults.py",
+        importable_module_name="generated_dataclass_enum_member_special_defaults",
+    )
+
+
+def test_main_jsonschema_enum_member_typed_defaults(output_file: Path) -> None:
+    """Test enum defaults resolve to the member with a matching JSON type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_member_typed_defaults.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--set-default-enum-member"],
+        assert_func=assert_file_content,
+        expected_file="enum_member_typed_defaults.py",
+        importable_module_name="generated_enum_member_typed_defaults",
+    )

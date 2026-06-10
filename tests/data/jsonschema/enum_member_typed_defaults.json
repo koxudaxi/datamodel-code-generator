@@ -1,0 +1,7 @@
+{
+    "type": "object",
+    "properties": {
+        "str_one": {"enum": [1, "1"], "default": "1"},
+        "int_two": {"enum": ["2", 2], "default": 2}
+    }
+}
