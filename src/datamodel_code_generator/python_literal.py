@@ -50,5 +50,4 @@ def represent_python_value(value: Any) -> str:  # noqa: PLR0911
         case set():
             sorted_items = sorted(value, key=lambda item: (type(item).__name__, repr(item)))
             return "{" + ", ".join(represent_python_value(item) for item in sorted_items) + "}"
-        case _:
-            return repr(value)
+    return repr(value)

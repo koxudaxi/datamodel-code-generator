@@ -216,8 +216,7 @@ def normalize_integer_constraint(constraint: str, value: Any) -> tuple[str, Any]
             return "le", _get_fraction_floor(fraction)
         case "lt":
             return "le", _get_fraction_ceil(fraction) - 1
-        case _:
-            return constraint, value
+    return constraint, value
 
 
 def merge_normalized_constraint(constraints: dict[str, Any], key: str, value: Any) -> None:
