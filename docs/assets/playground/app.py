@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from tdom import html
 
-from datamodel_code_generator import InputFileType, generate
+from datamodel_code_generator import DataModelType, InputFileType, generate
 from datamodel_code_generator.__main__ import EXCLUDED_CONFIG_OPTIONS, generate_cli_command
 from datamodel_code_generator.format import Formatter
 
@@ -427,6 +427,13 @@ def _coerce_for_config(option: dict[str, Any], value: Any) -> Any:
     return _coerce_for_generate(option, value)
 
 
+def _apply_generate_option_implications(options: dict[str, Any]) -> None:
+    if options.get("output_model_type") in {DataModelType.MsgspecStruct, DataModelType.MsgspecStruct.value}:
+        options["use_annotated"] = True
+    if options.get("use_annotated"):
+        options["field_constraints"] = True
+
+
 def _normalize_options(
     options: dict[str, Any], *, include_forced: bool = True, for_config: bool = False, for_generate: bool = False
 ) -> dict[str, Any]:
@@ -446,6 +453,8 @@ def _normalize_options(
         if normalized_value is None or normalized_value == []:
             continue
         normalized[option.get("config_dest", key) if for_generate else key] = normalized_value
+    if for_generate:
+        _apply_generate_option_implications(normalized)
     if include_forced:
         normalized.update(GENERATE_FORCED_OPTIONS)
     return normalized
