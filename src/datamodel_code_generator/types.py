@@ -70,21 +70,6 @@ UNION_PREFIX = f"{UNION}["
 UNION_DELIMITER = ", "
 UNION_PATTERN: Pattern[str] = re.compile(r"\s*,\s*")
 UNION_OPERATOR_DELIMITER = " | "
-
-
-def _contains_decimal(value: Any) -> bool:
-    match value:
-        case Decimal():
-            return True
-        case dict():
-            return any(_contains_decimal(k) or _contains_decimal(v) for k, v in value.items())
-        case list() | tuple() | set() | frozenset():
-            return any(_contains_decimal(item) for item in value)
-        case _:
-            return False
-    return False
-
-
 UNION_OPERATOR_PATTERN: Pattern[str] = re.compile(r"\s*\|\s*")
 NONE = "None"
 ANY = "Any"
@@ -182,6 +167,18 @@ class UnionIntFloat:
             msg = f"{v} is not int or float"
             raise TypeError(msg)
         return cls(v)
+
+
+def _contains_decimal(value: Any) -> bool:
+    match value:
+        case Decimal():
+            return True
+        case dict():
+            return any(_contains_decimal(k) or _contains_decimal(v) for k, v in value.items())
+        case list() | tuple() | set() | frozenset():
+            return any(_contains_decimal(item) for item in value)
+        case _:
+            return False
 
 
 def _get_fraction_floor(value: Fraction) -> int:

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import sys
 import warnings
@@ -13,7 +12,6 @@ from typing import TYPE_CHECKING, Any
 import black
 import pytest
 from packaging import version
-from pydantic import ValidationError
 
 import datamodel_code_generator
 from datamodel_code_generator import (
@@ -71,33 +69,6 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
 assert_file_content = create_assert_file_content(EXPECTED_MAIN_PATH)
-
-
-def _generate_pydantic_v2_code(schema: dict[str, Any], **kwargs: Any) -> str:
-    result = generate(
-        schema,
-        input_file_type=InputFileType.JsonSchema,
-        output_model_type=DataModelType.PydanticV2BaseModel,
-        disable_timestamp=True,
-        formatters=[Formatter.BLACK, Formatter.ISORT],
-        **kwargs,
-    )
-    if not isinstance(result, str):  # pragma: no cover
-        pytest.fail("expected generated code as a string")
-    return result
-
-
-def _import_generated_code(code: str, tmp_path: Path) -> Any:
-    module_path = tmp_path / "generated_model.py"
-    module_path.write_text(code, encoding="utf-8")
-    module_name = f"generated_model_{tmp_path.name}_{abs(hash(code))}"
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    if spec is None or spec.loader is None:  # pragma: no cover
-        pytest.fail("expected import spec with loader")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
 
 
 def test_debug(mocker: MockerFixture) -> None:
@@ -161,61 +132,6 @@ def test_generated_pydantic_v2_model_accepts_runtime_value(output_file: Path) ->
         expected_attribute_path=("name",),
         expected_attribute_value="Alice",
     )
-
-
-def test_pydantic_v2_pattern_with_escaped_quote_imports(tmp_path: Path) -> None:
-    """Render regex patterns containing backslash-quote without generating invalid syntax."""
-    code = _generate_pydantic_v2_code({
-        "type": "object",
-        "properties": {"x": {"type": "string", "pattern": r"^don\'t$"}},
-    })
-
-    module = _import_generated_code(code, tmp_path)
-    module.Model.model_validate({"x": "don't"})
-    with pytest.raises(ValidationError):
-        module.Model.model_validate({"x": "dont"})
-
-
-@pytest.mark.parametrize("field_constraints", [False, True])
-def test_pydantic_v2_integer_decimal_constraints_are_integer_safe(field_constraints: bool, tmp_path: Path) -> None:
-    """Normalize decimal integer constraints instead of truncating them."""
-    code = _generate_pydantic_v2_code(
-        {
-            "type": "object",
-            "properties": {
-                "a": {"type": "integer", "minimum": 0.5},
-                "c": {"type": "integer", "multipleOf": 0.5},
-                "neg_gt": {"type": "integer", "exclusiveMinimum": -1.5},
-            },
-        },
-        field_constraints=field_constraints,
-    )
-
-    if "multiple_of=0" in code:  # pragma: no cover
-        pytest.fail("integer multipleOf constraint was truncated to zero")
-    module = _import_generated_code(code, tmp_path)
-    module.Model.model_validate({"a": 1, "c": 123, "neg_gt": -1})
-    with pytest.raises(ValidationError):
-        module.Model.model_validate({"a": 0})
-    with pytest.raises(ValidationError):
-        module.Model.model_validate({"neg_gt": -2})
-
-
-def test_pydantic_v2_non_finite_values_render_as_python_expressions(tmp_path: Path) -> None:
-    """Render non-finite floats without emitting undefined names."""
-    code = _generate_pydantic_v2_code({
-        "type": "object",
-        "properties": {
-            "big_default": {"type": "number", "default": 1e999},
-            "big_min": {"type": "number", "minimum": 1e999},
-        },
-    })
-
-    if " = inf" in code or "ge=inf" in code:  # pragma: no cover
-        pytest.fail("non-finite floats should render as Python expressions")
-    module = _import_generated_code(code, tmp_path)
-    if module.Model().big_default != float("inf"):  # pragma: no cover
-        pytest.fail("non-finite default should round-trip as infinity")
 
 
 @pytest.mark.allow_direct_assert

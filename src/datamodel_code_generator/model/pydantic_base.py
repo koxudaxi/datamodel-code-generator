@@ -144,28 +144,24 @@ class DataModelField(DataModelFieldBase):
             return True
         return bool(self.nullable and self.required and not self.use_default_with_required)
 
+    def _has_numeric_data_type(self, type_name: str, strict_import_part: str) -> bool:
+        """Return whether any field data type is the given builtin or strict numeric type."""
+        return any(
+            data_type.type == type_name
+            or (data_type.strict and data_type.import_ and strict_import_part in data_type.import_.import_)
+            for data_type in self.data_type.all_data_types
+        )
+
     def _get_strict_field_constraint(self, constraint: str, value: Any) -> tuple[str, Any] | None:
         if value is None or constraint not in self._INTEGER_CONSTRAINTS:
             return constraint, value
-
-        is_float_type = any(
-            data_type.type == "float"
-            or (data_type.strict and data_type.import_ and "Float" in data_type.import_.import_)
-            for data_type in self.data_type.all_data_types
-        )
-        if is_float_type:
+        if self._has_numeric_data_type("float", "Float"):
             return constraint, float(value)
-
-        is_int_type = any(
-            data_type.type == "int" or (data_type.strict and data_type.import_ and "Int" in data_type.import_.import_)
-            for data_type in self.data_type.all_data_types
-        )
-        if is_int_type:
+        if self._has_numeric_data_type("int", "Int"):
             return normalize_integer_constraint(constraint, value)
-
-        if isinstance(value, int) and not isinstance(value, bool):
-            return constraint, value
-        return constraint, int(value)
+        if isinstance(value, float) and value.is_integer():
+            return constraint, int(value)
+        return constraint, value
 
     def _get_default_factory_for_optional_nested_model(self) -> str | None:
         """Get default_factory for optional nested Pydantic model fields.
