@@ -309,22 +309,21 @@ class DataModelField(DataModelFieldBase):
         return f"Annotated[{self.type_hint}, {field}]"
 
     @property
-    def needs_annotated_import(self) -> bool:
-        """Check if this field requires the Annotated import.
-
-        Equivalent to bool(self.annotated): str(self) is non-empty exactly when
-        _has_field_statement() is true (both derive from the same Field() data),
-        but this avoids building the type hint and Field() string only to
-        discard them.
-        """
-        return self.use_annotated and not self.is_class_var and self._has_field_statement()
-
-    @property
     def imports(self) -> tuple[Import, ...]:
-        """Get all required imports including Field if needed."""
-        if self._has_field_statement():
-            return chain_as_tuple(super().imports, (IMPORT_FIELD,))
-        return super().imports
+        """Get all required imports including Field if needed.
+
+        Computes _has_field_statement() once and derives needs_annotated from it:
+        str(self) is non-empty exactly when _has_field_statement() is true (both
+        come from the same Field() data), so this matches bool(self.annotated)
+        without rebuilding the type hint and Field() string.
+        """
+        has_field_statement = self._has_field_statement()
+        base_imports = self._collect_field_imports(
+            needs_annotated=self.use_annotated and not self.is_class_var and has_field_statement
+        )
+        if has_field_statement:
+            return chain_as_tuple(base_imports, (IMPORT_FIELD,))
+        return base_imports
 
 
 class BaseModelBase(DataModel, ABC):
