@@ -11,8 +11,10 @@ import ast
 import re
 from abc import ABC, abstractmethod
 from copy import deepcopy
+from decimal import Decimal
 from enum import Enum, auto
-from functools import lru_cache
+from fractions import Fraction
+from functools import cache, lru_cache
 from itertools import chain
 from re import Pattern
 from typing import (
@@ -41,6 +43,7 @@ from datamodel_code_generator.imports import (
     IMPORT_ABC_SEQUENCE,
     IMPORT_ANNOTATED,
     IMPORT_ANY,
+    IMPORT_DECIMAL,
     IMPORT_DICT,
     IMPORT_FROZEN_SET,
     IMPORT_LIST,
@@ -53,6 +56,7 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
+from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.reference import Reference, _BaseModel
 
 T = TypeVar("T")
@@ -163,6 +167,76 @@ class UnionIntFloat:
             msg = f"{v} is not int or float"
             raise TypeError(msg)
         return cls(v)
+
+
+def _contains_decimal(value: Any) -> bool:
+    match value:
+        case Decimal():
+            return True
+        case dict():
+            return any(_contains_decimal(k) or _contains_decimal(v) for k, v in value.items())
+        case list() | tuple() | set() | frozenset():
+            return any(_contains_decimal(item) for item in value)
+        case _:
+            return False
+
+
+def _get_fraction_floor(value: Fraction) -> int:
+    return value.numerator // value.denominator
+
+
+def _get_fraction_ceil(value: Fraction) -> int:
+    return -(-value.numerator // value.denominator)
+
+
+def _get_constraint_number(value: Any) -> Any:
+    return value.value if isinstance(value, UnionIntFloat) else value
+
+
+def normalize_integer_constraint(constraint: str, value: Any) -> tuple[str, Any] | None:  # noqa: PLR0911
+    """Return an integer-safe pydantic constraint for a numeric schema constraint."""
+    number = _get_constraint_number(value)
+    try:
+        fraction = Fraction(str(number))
+    except (TypeError, ValueError):
+        return constraint, value
+
+    match constraint:
+        case "multiple_of" if fraction.numerator == 1:
+            return None
+        case "multiple_of":
+            return constraint, abs(fraction.numerator)
+        case _ if fraction.denominator == 1:
+            return constraint, int(fraction)
+        case "ge":
+            return "ge", _get_fraction_ceil(fraction)
+        case "gt":
+            return "ge", _get_fraction_floor(fraction) + 1
+        case "le":
+            return "le", _get_fraction_floor(fraction)
+        case "lt":
+            return "le", _get_fraction_ceil(fraction) - 1
+    return constraint, value
+
+
+def merge_normalized_constraint(constraints: dict[str, Any], key: str, value: Any) -> None:
+    """Merge a normalized constraint, keeping the stronger bound when ge or le collides."""
+    match constraints.get(key):
+        case None:
+            constraints[key] = value
+        case current if key == "ge":
+            constraints[key] = max(current, value)
+        case current:
+            constraints[key] = min(current, value)
+
+
+def normalize_integer_constraints(constraints: dict[str, Any]) -> dict[str, Any]:
+    """Return integer-safe pydantic constraints."""
+    normalized_constraints: dict[str, Any] = {}
+    for key, value in constraints.items():
+        if (normalized := normalize_integer_constraint(key, value)) is not None:
+            merge_normalized_constraint(normalized_constraints, normalized[0], normalized[1])
+    return normalized_constraints
 
 
 def chain_as_tuple(*iterables: Iterable[T]) -> tuple[T, ...]:
@@ -619,56 +693,45 @@ class DataType(_BaseModel):
             yield from data_type.all_imports
         yield from self.imports
 
+    def _conditional_imports(self) -> Iterator[tuple[bool, Import]]:
+        """Yield (condition, import) pairs in the order they may be emitted."""
+        use_standard_collections = self.use_standard_collections
+        yield (self.is_optional and not self.use_union_operator, IMPORT_OPTIONAL)
+        yield (len(self.data_types) > 1 and not self.use_union_operator, IMPORT_UNION)
+        yield (bool(self.literals) or bool(self.enum_member_literals), IMPORT_LITERAL)
+        yield (bool(self.discriminator), IMPORT_ANNOTATED)
+        yield (self.is_frozen_set and not use_standard_collections, IMPORT_FROZEN_SET)
+        yield (self.is_mapping and use_standard_collections, IMPORT_ABC_MAPPING)
+        yield (self.is_mapping and not use_standard_collections, IMPORT_MAPPING)
+        yield (self.is_sequence and use_standard_collections, IMPORT_ABC_SEQUENCE)
+        yield (self.is_sequence and not use_standard_collections, IMPORT_SEQUENCE)
+        if self.use_generic_container:
+            if use_standard_collections:
+                # frozenset is builtin, no import needed for is_set
+                yield (self.is_list, IMPORT_ABC_SEQUENCE)
+                yield (self.is_dict, IMPORT_ABC_MAPPING)
+            else:  # pragma: no cover
+                yield (self.is_list, IMPORT_SEQUENCE)
+                yield (self.is_set, IMPORT_FROZEN_SET)
+                yield (self.is_dict, IMPORT_MAPPING)
+                yield (self.is_tuple, IMPORT_TUPLE)
+        elif not use_standard_collections:
+            yield (self.is_list, IMPORT_LIST)
+            yield (self.is_set, IMPORT_SET)
+            yield (self.is_dict, IMPORT_DICT)
+            yield (self.is_tuple, IMPORT_TUPLE)
+
     @property
     def imports(self) -> Iterator[Import]:
         """Yield imports required by this DataType."""
         # Add base import if exists
         if self.import_:
             yield self.import_
-
-        imports: tuple[tuple[bool, Import], ...] = (
-            (self.is_optional and not self.use_union_operator, IMPORT_OPTIONAL),
-            (len(self.data_types) > 1 and not self.use_union_operator, IMPORT_UNION),
-            (bool(self.literals) or bool(self.enum_member_literals), IMPORT_LITERAL),
-            (bool(self.discriminator), IMPORT_ANNOTATED),
-        )
-
-        imports = (
-            *imports,
-            (self.is_frozen_set and not self.use_standard_collections, IMPORT_FROZEN_SET),
-            (self.is_mapping and self.use_standard_collections, IMPORT_ABC_MAPPING),
-            (self.is_mapping and not self.use_standard_collections, IMPORT_MAPPING),
-            (self.is_sequence and self.use_standard_collections, IMPORT_ABC_SEQUENCE),
-            (self.is_sequence and not self.use_standard_collections, IMPORT_SEQUENCE),
-        )
-
-        if self.use_generic_container:
-            if self.use_standard_collections:
-                # frozenset is builtin, no import needed for is_set
-                imports = (
-                    *imports,
-                    (self.is_list, IMPORT_ABC_SEQUENCE),
-                    (self.is_dict, IMPORT_ABC_MAPPING),
-                )
-            else:  # pragma: no cover
-                imports = (
-                    *imports,
-                    (self.is_list, IMPORT_SEQUENCE),
-                    (self.is_set, IMPORT_FROZEN_SET),
-                    (self.is_dict, IMPORT_MAPPING),
-                    (self.is_tuple, IMPORT_TUPLE),
-                )
-        elif not self.use_standard_collections:
-            imports = (
-                *imports,
-                (self.is_list, IMPORT_LIST),
-                (self.is_set, IMPORT_SET),
-                (self.is_dict, IMPORT_DICT),
-                (self.is_tuple, IMPORT_TUPLE),
-            )
+        if self.kwargs and self.import_ != IMPORT_DECIMAL and _contains_decimal(self.kwargs):
+            yield IMPORT_DECIMAL
 
         # Yield imports based on conditions
-        for field, import_ in imports:
+        for field, import_ in self._conditional_imports():
             if field and import_ is not None and import_ != self.import_:
                 yield import_
 
@@ -820,7 +883,7 @@ class DataType(_BaseModel):
         if self.is_optional and type_ != ANY:
             return get_optional_type(type_, self.use_union_operator)
         if self.is_func and self.kwargs:
-            kwargs: str = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
+            kwargs: str = ", ".join(f"{k}={represent_python_value(v)}" for k, v in self.kwargs.items())
             return f"{type_}({kwargs})"
         return type_
 
@@ -996,6 +1059,38 @@ class Types(Enum):
     any = auto()
 
 
+@cache
+def _create_context_data_type(  # noqa: PLR0913, PLR0917
+    model_name: str,
+    base: type[DataType],
+    python_version: PythonVersion,
+    use_standard_collections: bool,  # noqa: FBT001
+    use_generic_container: bool,  # noqa: FBT001
+    use_union_operator: bool,  # noqa: FBT001
+    treat_dot_as_module: bool | None,  # noqa: FBT001
+    use_serialize_as_any: bool,  # noqa: FBT001
+) -> type[DataType]:
+    """Create or reuse a DataType subclass with context-specific defaults.
+
+    Building a pydantic model class is expensive; the class is fully determined
+    by its arguments, so identical configurations share one class.
+    """
+    context_data_type: type[DataType] = create_model(
+        model_name,
+        python_version=(PythonVersion, python_version),
+        use_standard_collections=(bool, use_standard_collections),
+        use_generic_container=(bool, use_generic_container),
+        use_union_operator=(bool, use_union_operator),
+        treat_dot_as_module=(bool, treat_dot_as_module),
+        use_serialize_as_any=(bool, use_serialize_as_any),
+        __base__=base,
+    )
+    from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace  # noqa: PLC0415
+
+    _rebuild_model_with_datamodel_namespace(context_data_type)
+    return context_data_type
+
+
 class DataTypeManager(ABC):
     """Abstract base class for managing type mappings in code generation.
 
@@ -1042,19 +1137,16 @@ class DataTypeManager(ABC):
         self.treat_dot_as_module: bool = treat_dot_as_module or False
         self.use_serialize_as_any: bool = use_serialize_as_any
 
-        self.data_type: type[DataType] = create_model(
+        self.data_type: type[DataType] = _create_context_data_type(
             "ContextDataType",
-            python_version=(PythonVersion, python_version),
-            use_standard_collections=(bool, use_standard_collections),
-            use_generic_container=(bool, use_generic_container_types),
-            use_union_operator=(bool, use_union_operator),
-            treat_dot_as_module=(bool, treat_dot_as_module),
-            use_serialize_as_any=(bool, use_serialize_as_any),
-            __base__=DataType,
+            DataType,
+            python_version,
+            use_standard_collections,
+            use_generic_container_types,
+            use_union_operator,
+            treat_dot_as_module,
+            use_serialize_as_any,
         )
-        from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace  # noqa: PLC0415
-
-        _rebuild_model_with_datamodel_namespace(self.data_type)
 
     @abstractmethod
     def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
@@ -1063,10 +1155,30 @@ class DataTypeManager(ABC):
 
     @staticmethod
     def copy_data_type(data_type: DataType) -> DataType:
-        """Copy a type-map prototype for caller-owned mutation."""
-        copied_data_type = deepcopy(data_type)
-        for nested_data_type in copied_data_type.all_data_types:
-            nested_data_type.children = []
+        """Copy a type-map prototype for caller-owned mutation.
+
+        Leaf prototypes (no nested data types, reference, dict key, or parent)
+        take a shallow-copy fast path with fresh mutable containers, which is
+        equivalent to deepcopy because every other shared value is immutable
+        (scalars, enums, and the frozen Import dataclass).
+        """
+        if (
+            data_type.data_types
+            or data_type.reference is not None
+            or data_type.dict_key is not None
+            or data_type.parent is not None
+        ):
+            copied_data_type = deepcopy(data_type)
+            for nested_data_type in copied_data_type.all_data_types:
+                nested_data_type.children = []
+            return copied_data_type
+        copied_data_type = data_type.model_copy()
+        copied_data_type.data_types = []
+        copied_data_type.children = []
+        copied_data_type.literals = list(data_type.literals)
+        copied_data_type.enum_member_literals = list(data_type.enum_member_literals)
+        if (kwargs := data_type.kwargs) is not None:
+            copied_data_type.kwargs = deepcopy(kwargs)
         return copied_data_type
 
     def get_data_type_from_full_path(self, full_path: str, is_custom_type: bool) -> DataType:  # noqa: FBT001

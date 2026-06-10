@@ -174,7 +174,9 @@ base_options.add_argument(
     "--allow-private-network",
     help=(
         "Allow HTTP(S) schema requests to private, loopback, link-local, or otherwise non-public network hosts. "
-        "By default these targets are blocked to reduce SSRF risk. Use only for trusted internal schema endpoints. "
+        "By default these targets are blocked to reduce server-side request forgery (SSRF) risk. "
+        "If a trusted internal schema endpoint is blocked, verify the URL and pass this option; otherwise use a "
+        "local schema file or public endpoint. "
         "Pass --no-allow-private-network to override a configuration file that enables it."
     ),
     action=BooleanOptionalAction,

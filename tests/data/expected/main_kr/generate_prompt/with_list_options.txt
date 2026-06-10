@@ -45,6 +45,7 @@
 - `--use-object-type`: Use object instead of Any for unspecified object and array values.
 - `--use-pendulum`: Use pendulum types for date, time, and duration fields.
 - `--use-root-model-type-alias`: Generate RootModel as type alias format for better mypy support.
+- `--use-specialized-enum`: Generate StrEnum/IntEnum for string/integer enums (Python 3.11+).
 - `--use-standard-collections`: Use built-in dict/list instead of typing.Dict/List.
 - `--use-standard-primitive-types`: Use Python standard library types for string formats instead of str.
 - `--use-tuple-for-fixed-items`: Generate tuple types for arrays with items array syntax.
@@ -197,10 +198,13 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --allow-private-network, --no-allow-private-network
                         Allow HTTP(S) schema requests to private, loopback,
                         link-local, or otherwise non-public network hosts. By
-                        default these targets are blocked to reduce SSRF risk.
-                        Use only for trusted internal schema endpoints. Pass
-                        --no-allow-private-network to override a configuration
-                        file that enables it.
+                        default these targets are blocked to reduce server-
+                        side request forgery (SSRF) risk. If a trusted
+                        internal schema endpoint is blocked, verify the URL
+                        and pass this option; otherwise use a local schema
+                        file or public endpoint. Pass --no-allow-private-
+                        network to override a configuration file that enables
+                        it.
   --allow-remote-refs, --no-allow-remote-refs
                         Allow fetching remote $ref references over HTTP/HTTPS.
                         Currently remote fetching is allowed by default but

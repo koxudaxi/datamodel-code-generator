@@ -15,13 +15,19 @@ from pydantic import Field
 from datamodel_code_generator import cached_path_exists
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import (
+    UNDEFINED,
     ConstraintsBase,
     DataModel,
     DataModelFieldBase,
     _rebuild_model_with_datamodel_namespace,
 )
-from datamodel_code_generator.model.base import UNDEFINED, repr_set_sorted
-from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
+from datamodel_code_generator.python_literal import represent_python_value
+from datamodel_code_generator.types import (
+    UnionIntFloat,
+    chain_as_tuple,
+    merge_normalized_constraint,
+    normalize_integer_constraint,
+)
 
 # Defined here instead of importing from pydantic_v2.imports to avoid circular import
 # (pydantic_base -> pydantic_v2.imports -> pydantic_v2/__init__ -> pydantic_v2.base_model -> pydantic_base)
@@ -68,6 +74,7 @@ class DataModelField(DataModelFieldBase):
         "regex",
     }
     _COMPARE_EXPRESSIONS: ClassVar[set[str]] = {"gt", "ge", "lt", "le"}
+    _INTEGER_CONSTRAINTS: ClassVar[set[str]] = _COMPARE_EXPRESSIONS | {"multiple_of"}
     constraints: Optional[Constraints] = None  # noqa: UP045
     _PARSE_METHOD: ClassVar[str] = "model_validate"
 
@@ -138,24 +145,43 @@ class DataModelField(DataModelFieldBase):
             return True
         return bool(self.nullable and self.required and not self.use_default_with_required)
 
-    def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
-        if value is None or constraint not in self._COMPARE_EXPRESSIONS:
-            return value
-
-        is_float_type = any(
-            data_type.type == "float"
-            or (data_type.strict and data_type.import_ and "Float" in data_type.import_.import_)
+    def _has_numeric_data_type(self, type_name: str, strict_import_part: str) -> bool:
+        """Return whether any field data type is the given builtin or strict numeric type."""
+        return any(
+            data_type.type == type_name
+            or (data_type.strict and data_type.import_ and strict_import_part in data_type.import_.import_)
             for data_type in self.data_type.all_data_types
         )
+
+    def _get_strict_field_constraint(
+        self, constraint: str, value: Any, *, is_float_type: bool, is_int_type: bool
+    ) -> tuple[str, Any] | None:
+        if value is None or constraint not in self._INTEGER_CONSTRAINTS:
+            return constraint, value
         if is_float_type:
-            return float(value)
-        str_value = str(value)
-        if "e" in str_value.lower():  # pragma: no cover
-            # Scientific notation like 1e-08 - keep as float
-            return float(value)
-        if isinstance(value, int) and not isinstance(value, bool):
-            return value
-        return int(value)
+            return constraint, float(value)
+        if is_int_type:
+            return normalize_integer_constraint(constraint, value)
+        if isinstance(value, float) and value.is_integer():
+            return constraint, int(value)
+        return constraint, value
+
+    def _get_normalized_constraint_data(self) -> dict[str, Any]:
+        """Build constraint data with integer-safe values, merging colliding bounds."""
+        assert self.constraints is not None
+        dumped = self.constraints._exclude_unset_dump  # noqa: SLF001
+        has_integer_constraints = bool(self._INTEGER_CONSTRAINTS & dumped.keys())
+        is_float_type = has_integer_constraints and self._has_numeric_data_type("float", "Float")
+        is_int_type = has_integer_constraints and not is_float_type and self._has_numeric_data_type("int", "Int")
+        constraint_data: dict[str, Any] = {}
+        for k, v in dumped.items():
+            if (
+                normalized := self._get_strict_field_constraint(
+                    k, v, is_float_type=is_float_type, is_int_type=is_int_type
+                )
+            ) is not None:
+                merge_normalized_constraint(constraint_data, normalized[0], normalized[1])
+        return constraint_data
 
     def _get_default_factory_for_optional_nested_model(self) -> str | None:
         """Get default_factory for optional nested Pydantic model fields.
@@ -191,17 +217,11 @@ class DataModelField(DataModelFieldBase):
             and not self.self_reference()
             and not (self.data_type.strict and has_type_constraints)
         ):
-            data = {
-                **data,
-                **(
-                    {}
-                    if any(d.import_ == IMPORT_ANYURL for d in self.data_type.all_data_types)
-                    else {
-                        k: self._get_strict_field_constraint_value(k, v)
-                        for k, v in self.constraints.model_dump(exclude_unset=True).items()
-                    }
-                ),
-            }
+            if any(d.import_ == IMPORT_ANYURL for d in self.data_type.all_data_types):
+                constraint_data: dict[str, Any] = {}
+            else:
+                constraint_data = self._get_normalized_constraint_data()
+            data = {**data, **constraint_data}
 
         if self.use_field_description:
             data.pop("description", None)  # Description is part of field docstring
@@ -238,7 +258,7 @@ class DataModelField(DataModelFieldBase):
         """Return Field() call with all constraints and metadata."""
         data, default_factory = self._get_field_data_and_default_factory()
 
-        field_arguments = sorted(f"{k}={v!r}" for k, v in data.items() if v is not None)
+        field_arguments = sorted(f"{k}={represent_python_value(v)}" for k, v in data.items() if v is not None)
 
         if not field_arguments and not default_factory:
             if self.nullable and self.required and not self.use_default_with_required:
@@ -258,13 +278,13 @@ class DataModelField(DataModelFieldBase):
         ):
             field_arguments = ["...", *field_arguments]
         elif not default_factory:
-            default_repr = repr_set_sorted(self.default) if isinstance(self.default, set) else repr(self.default)
+            default_repr = represent_python_value(self.default)
             field_arguments = [default_repr, *field_arguments]
 
         if self.is_class_var:
             if self.default is UNDEFINED:  # pragma: no cover
                 return ""
-            return repr_set_sorted(self.default) if isinstance(self.default, set) else repr(self.default)
+            return represent_python_value(self.default)
 
         return f"Field({', '.join(field_arguments)})"
 
@@ -283,17 +303,28 @@ class DataModelField(DataModelFieldBase):
     @property
     def annotated(self) -> str | None:
         """Get the Annotated type hint if use_annotated is enabled."""
-        field = str(self)
-        if not self.use_annotated or not field or self.is_class_var:
+        if not self.use_annotated or self.is_class_var:
+            return None
+        if not (field := str(self)):
             return None
         return f"Annotated[{self.type_hint}, {field}]"
 
     @property
     def imports(self) -> tuple[Import, ...]:
-        """Get all required imports including Field if needed."""
-        if self._has_field_statement():
-            return chain_as_tuple(super().imports, (IMPORT_FIELD,))
-        return super().imports
+        """Get all required imports including Field if needed.
+
+        Computes _has_field_statement() once and derives needs_annotated from it:
+        str(self) is non-empty exactly when _has_field_statement() is true (both
+        come from the same Field() data), so this matches bool(self.annotated)
+        without rebuilding the type hint and Field() string.
+        """
+        has_field_statement = self._has_field_statement()
+        base_imports = self._collect_field_imports(
+            needs_annotated=self.use_annotated and not self.is_class_var and has_field_statement
+        )
+        if has_field_statement:
+            return chain_as_tuple(base_imports, (IMPORT_FIELD,))
+        return base_imports
 
 
 class BaseModelBase(DataModel, ABC):

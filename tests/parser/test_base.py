@@ -407,14 +407,15 @@ def test_find_member_with_integer_enum() -> None:
     assert enum.find_member(100).field.name == "VALUE_100"
     assert enum.find_member(0).field.name == "VALUE_0"
 
-    # Test with string representations
-    assert enum.find_member("1000").field.name == "VALUE_1000"
-    assert enum.find_member("100").field.name == "VALUE_100"
-    assert enum.find_member("0").field.name == "VALUE_0"
+    # String values only match integer members for discriminator mapping keys
+    assert enum.find_member("1000") is None
+    assert enum.find_member("1000", coerce_strings=True).field.name == "VALUE_1000"
+    assert enum.find_member("100", coerce_strings=True).field.name == "VALUE_100"
+    assert enum.find_member("0", coerce_strings=True).field.name == "VALUE_0"
 
     # Test with non-existent values
     assert enum.find_member(999) is None
-    assert enum.find_member("999") is None
+    assert enum.find_member("999", coerce_strings=True) is None
 
 
 def test_find_member_with_string_enum() -> None:
@@ -428,6 +429,11 @@ def test_find_member_with_string_enum() -> None:
         reference=Reference(path="test_path", original_name="TestEnum", name="TestEnum"),
         fields=[
             DataModelField(
+                name="NO_DEFAULT",
+                data_type=DataType(type="str"),
+                required=True,
+            ),
+            DataModelField(
                 name="VALUE_A",
                 default="'value_a'",
                 data_type=DataType(type="str"),
@@ -439,8 +445,18 @@ def test_find_member_with_string_enum() -> None:
                 data_type=DataType(type="str"),
                 required=True,
             ),
+            DataModelField(
+                name="BARE",
+                default="bare value",
+                data_type=DataType(type="str"),
+                required=True,
+            ),
         ],
     )
+
+    member = enum.find_member("bare value")
+    assert member is not None
+    assert member.field.name == "BARE"
 
     member = enum.find_member("value_a")
     assert member is not None
@@ -450,9 +466,8 @@ def test_find_member_with_string_enum() -> None:
     assert member is not None
     assert member.field.name == "VALUE_B"
 
-    member = enum.find_member("'value_a'")
-    assert member is not None
-    assert member.field.name == "VALUE_A"
+    # A value that is only the quoted form of a member is a different value
+    assert enum.find_member("'value_a'") is None
 
 
 def test_find_member_with_mixed_enum() -> None:
@@ -484,7 +499,8 @@ def test_find_member_with_mixed_enum() -> None:
     assert member is not None
     assert member.field.name == "INT_VALUE"
 
-    member = enum.find_member("100")
+    assert enum.find_member("100") is None
+    member = enum.find_member("100", coerce_strings=True)
     assert member is not None
     assert member.field.name == "INT_VALUE"
 
@@ -492,9 +508,7 @@ def test_find_member_with_mixed_enum() -> None:
     assert member is not None
     assert member.field.name == "STR_VALUE"
 
-    member = enum.find_member("'value_a'")
-    assert member is not None
-    assert member.field.name == "STR_VALUE"
+    assert enum.find_member("'value_a'") is None
 
 
 @pytest.mark.parametrize(
@@ -755,3 +769,27 @@ def test_needs_validate_default_for_optional_single_model_union() -> None:
     )
 
     assert _needs_validate_default(optional_model_union) is True
+
+
+def test_get_enum_discriminator_literal_with_escaped_value() -> None:
+    """Test discriminator literals use the runtime enum value, not its escaped source."""
+    from datamodel_code_generator.model.enum import Enum
+    from datamodel_code_generator.model.pydantic_v2.base_model import DataModelField
+    from datamodel_code_generator.parser.base import Parser
+    from datamodel_code_generator.reference import Reference
+    from datamodel_code_generator.types import DataType
+
+    enum = Enum(
+        reference=Reference(path="test_path", original_name="TestEnum", name="TestEnum"),
+        fields=[
+            DataModelField(
+                name="DON_T",
+                default="'don\\'t'",
+                data_type=DataType(type="str"),
+                required=True,
+            ),
+        ],
+    )
+
+    assert Parser._get_enum_discriminator_literal(enum, "don't") == "don't"
+    assert Parser._get_enum_discriminator_literal(enum, "missing") == "missing"
