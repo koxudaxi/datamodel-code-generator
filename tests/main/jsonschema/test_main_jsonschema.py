@@ -6041,7 +6041,7 @@ def test_main_typed_dict_nested_allof_extra_items(output_file: Path) -> None:
         "from typing_extensions import NotRequired, TypedDict\n\n\n"
         "class BaseExtra(TypedDict):\n"
         "    id: NotRequired[int]\n\n\n"
-        "class Payload(TypedDict, extra_items=BaseExtra):\n"
+        "class Payload(TypedDict, extra_items='BaseExtra'):\n"
         "    name: NotRequired[str]\n"
     )
     _run_jsonschema_dict(
@@ -12193,4 +12193,37 @@ def test_main_jsonschema_uuid_format_versions(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="uuid_format_versions.py",
         importable_module_name="generated_uuid_format_versions",
+    )
+
+
+def test_main_typed_dict_functional_descriptions(output_file: Path) -> None:
+    """Test functional TypedDict renders descriptions outside the fields dict."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_functional_descriptions.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--use-schema-description",
+            "--use-field-description",
+        ],
+        assert_func=assert_file_content,
+        expected_file="typed_dict_functional_descriptions.py",
+        importable_module_name="generated_typed_dict_functional_descriptions",
+        importable_module_attribute="FuncDesc",
+    )
+
+
+def test_main_typed_dict_self_referencing_extra_items(output_file: Path) -> None:
+    """Test self-referencing additionalProperties renders extra_items as a forward reference."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_self_referencing_extra_items.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "typing.TypedDict"],
+        assert_func=assert_file_content,
+        expected_file="typed_dict_self_referencing_extra_items.py",
+        importable_module_name="generated_typed_dict_self_referencing_extra_items",
+        importable_module_attribute="SelfMap",
     )

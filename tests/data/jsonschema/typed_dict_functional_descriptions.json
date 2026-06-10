@@ -1,0 +1,10 @@
+{
+    "title": "FuncDesc",
+    "type": "object",
+    "description": "Documented functional TypedDict.",
+    "properties": {
+        "a-b": {"type": "string", "description": "doc for ab"},
+        "c-d": {"type": "integer", "description": "doc for cd"}
+    },
+    "required": ["a-b"]
+}
