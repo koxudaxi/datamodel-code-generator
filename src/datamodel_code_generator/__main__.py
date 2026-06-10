@@ -8,7 +8,7 @@ import sys
 if len(sys.argv) == 2 and sys.argv[1] in {"--version", "-V"}:  # pragma: no cover  # noqa: PLR2004
     from importlib.metadata import version
 
-    print(f"datamodel-codegen {version('datamodel-code-generator')}")  # noqa: T201
+    sys.stdout.write(f"datamodel-codegen {version('datamodel-code-generator')}\n")
     sys.exit(0)
 
 # Fast path for --help (avoid importing heavy modules)
@@ -31,14 +31,14 @@ if any(
     if namespace.output_format_json_schema == "generate-prompt":
         from datamodel_code_generator.prompt import generate_prompt_json_schema
 
-        print(generate_prompt_json_schema())  # noqa: T201
+        sys.stdout.write(f"{generate_prompt_json_schema()}\n")
         sys.exit(0)
     if namespace.output_format_json_schema is None and namespace.generate_prompt is not None:
         from datamodel_code_generator.prompt import generate_prompt
 
         help_text = arg_parser.format_help()
         prompt_output = generate_prompt(namespace, help_text, arg_parser)
-        print(prompt_output)  # noqa: T201
+        sys.stdout.write(f"{prompt_output}\n")
         sys.exit(0)
 
 import difflib

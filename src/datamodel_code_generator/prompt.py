@@ -105,19 +105,17 @@ def generate_prompt_json_schema() -> str:
 
 def _serialize_value(value: Any) -> Any:
     """Convert argparse metadata values to JSON-serializable values."""
-    match value:
-        case None | bool() | int() | float() | str():
-            return value
-        case Path():
-            return str(value)
-        case list() | tuple() | set() | frozenset():
-            return [_serialize_value(item) for item in value]
-        case dict():
-            return {str(key): _serialize_value(item) for key, item in value.items()}
-        case _ if hasattr(value, "value"):
-            return _serialize_value(value.value)
-        case _:
-            return str(value)
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return [_serialize_value(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): _serialize_value(item) for key, item in value.items()}
+    if hasattr(value, "value"):
+        return _serialize_value(value.value)
+    return str(value)
 
 
 def _canonical_option(action: Action) -> str:
