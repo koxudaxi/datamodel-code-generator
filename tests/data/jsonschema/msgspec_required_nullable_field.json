@@ -1,0 +1,9 @@
+{
+    "title": "Record",
+    "type": "object",
+    "properties": {
+        "label": {"type": ["string", "null"]},
+        "count": {"type": "integer"}
+    },
+    "required": ["label", "count"]
+}

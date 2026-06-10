@@ -47,6 +47,7 @@ from tests.main.conftest import (
     TIMESTAMP,
     assert_generated_model_json_invalid,
     assert_generated_model_json_validation,
+    run_generate_and_assert,
     run_generate_file_and_assert,
     run_main_and_assert,
     run_main_url_and_assert,
@@ -11870,4 +11871,69 @@ def test_main_jsonschema_discriminated_oneof_allof_cycle(output_file: Path) -> N
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
+    )
+
+
+def test_main_msgspec_inherited_optional_default_uses_kw_only(output_file: Path) -> None:
+    """Test msgspec allOf child with required fields stays importable via kw_only."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_inherited_optional_default.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_inherited_optional_default.py",
+        importable_module_name="generated_msgspec_inherited_optional_default",
+        importable_module_attribute="Child",
+    )
+
+
+def test_main_msgspec_required_alias_field_sorts_first(output_file: Path) -> None:
+    """Test msgspec required field with alias sorts before optional fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_required_alias_field.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_required_alias_field.py",
+        importable_module_name="generated_msgspec_required_alias_field",
+        importable_module_attribute="Record",
+    )
+
+
+def test_main_msgspec_required_nullable_field_stays_required(output_file: Path) -> None:
+    """Test msgspec required nullable field renders without a default."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_required_nullable_field.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_required_nullable_field.py",
+        importable_module_name="generated_msgspec_required_nullable_field",
+        importable_module_attribute="Record",
+    )
+
+
+def test_main_msgspec_array_length_constraints_use_annotated(output_file: Path) -> None:
+    """Test msgspec renders array length constraints as Meta annotations."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_array_length_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct", "--use-annotated"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_array_length_constraints_use_annotated.py",
+        importable_module_name="generated_msgspec_array_length_constraints",
+    )
+
+
+def test_main_msgspec_array_length_constraints_without_annotated() -> None:
+    """Test msgspec generate API without use_annotated keeps imports minimal."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "msgspec_array_length_constraints.json",
+        expected_file=EXPECTED_JSON_SCHEMA_PATH / "msgspec_array_length_constraints_without_annotated.py",
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.MsgspecStruct,
     )
