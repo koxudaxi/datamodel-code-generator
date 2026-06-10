@@ -4,9 +4,8 @@
 
 from __future__ import annotations
 
-from math import inf
 from pydantic import BaseModel, confloat
 
 
 class Bounds(BaseModel):
-    bounded: confloat(ge=-inf, lt=inf) | None = None
+    bounded: confloat(ge=float('-inf'), lt=float('inf')) | None = None

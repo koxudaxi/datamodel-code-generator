@@ -716,8 +716,15 @@ def _is_union(node: ast.AST) -> TypeGuard[ast.Subscript]:
     return isinstance(node, ast.Subscript) and _is_name_or_attr(node.value, "Union")
 
 
+_CONSTRAINED_CALL_NAMES = frozenset({"conbytes", "condecimal", "confloat", "conint", "conlist", "conset", "constr"})
+
+
 def _is_constrained_string_call(node: ast.AST | None) -> TypeGuard[ast.Call]:
     return _is_call(node, "constr")
+
+
+def _is_constrained_call(node: ast.AST | None) -> TypeGuard[ast.Call]:
+    return any(_is_call(node, name) for name in _CONSTRAINED_CALL_NAMES)
 
 
 def _contains_constrained_string_call(node: ast.AST) -> bool:
@@ -738,7 +745,7 @@ def _is_simple_union_annotation(node: ast.AST) -> bool:
     return isinstance(node, ast.Name | ast.Attribute) or (isinstance(node, ast.Constant) and node.value is None)
 
 
-def _should_format_constrained_string_union(
+def _should_format_constrained_call_union(
     annotation: ast.AST,
     value: ast.AST | None,
     annotation_prefix: str,
@@ -747,9 +754,9 @@ def _should_format_constrained_string_union(
 ) -> TypeGuard[ast.BinOp]:
     if not isinstance(annotation, ast.BinOp) or not isinstance(annotation.op, ast.BitOr) or value is None:
         return False
-    if not (_is_constrained_string_call(annotation.left) or _is_constrained_string_call(annotation.right)):
+    if not (_is_constrained_call(annotation.left) or _is_constrained_call(annotation.right)):
         return False
-    constrained_call = annotation.left if _is_constrained_string_call(annotation.left) else annotation.right
+    constrained_call = annotation.left if _is_constrained_call(annotation.left) else annotation.right
     return (
         not _is_call(value, "Field")
         or len(annotation_prefix) > line_length
@@ -1010,7 +1017,7 @@ def _format_generated_annotation_assignment(  # noqa: PLR0911, PLR0912
     value_prefix = f"{annotation_prefix} = "
     if statement.value is None and _is_list_of_annotated(statement.annotation):
         return f"{target_prefix}{_format_list_of_annotated(statement.annotation, indent, line_length, source)}"
-    if _should_format_constrained_string_union(
+    if _should_format_constrained_call_union(
         statement.annotation,
         statement.value,
         annotation_prefix,
@@ -1020,7 +1027,7 @@ def _format_generated_annotation_assignment(  # noqa: PLR0911, PLR0912
         assert statement.value is not None
         value = _source_segment(source, statement.value)
         return (
-            f"{target_prefix}{_format_constrained_string_union(statement.annotation, indent, line_length, source)}"
+            f"{target_prefix}{_format_constrained_call_union(statement.annotation, indent, line_length, source)}"
             f" = {value}"
         )
     if _should_format_field_bit_or_annotation_assignment(
@@ -1224,7 +1231,7 @@ def _format_generated_class_statement(
     return None
 
 
-def _format_constrained_string_union(
+def _format_constrained_call_union(
     annotation: ast.BinOp,
     indent: str,
     line_length: int,
@@ -1232,13 +1239,13 @@ def _format_constrained_string_union(
 ) -> str:
     left = annotation.left
     right = annotation.right
-    if _is_constrained_string_call(left):
+    if _is_constrained_call(left):
         formatted_left = _format_constrained_call(left, f"{indent}    ", line_length, source)
         inline_union = f"{formatted_left} | {_source_segment(source, right)}"
         if "\n" not in formatted_left and len(f"{indent}    {inline_union}") <= line_length:
             return f"(\n{indent}    {inline_union}\n{indent})"
         return f"(\n{indent}    {formatted_left}\n{indent}    | {_source_segment(source, right)}\n{indent})"
-    if _is_constrained_string_call(right):
+    if _is_constrained_call(right):
         return f"{_source_segment(source, left)} | {_format_constrained_call(right, indent, line_length, source)}"
     return _source_segment(source, annotation)  # pragma: no cover
 

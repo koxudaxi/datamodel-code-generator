@@ -13,7 +13,7 @@ class StrictTypesCoverage(BaseModel):
     int_with_range: conint(ge=1, le=100, strict=True) | None = None
     float_with_range: confloat(ge=1.5, le=99.9, strict=True) | None = None
     decimal_value: Decimal | None = None
-    decimal_with_range: condecimal(ge=0, le=1000) | None = None
+    decimal_with_range: condecimal(ge=Decimal('0'), le=Decimal('1000')) | None = None
     hostname_value: (
         constr(
             pattern=r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$',

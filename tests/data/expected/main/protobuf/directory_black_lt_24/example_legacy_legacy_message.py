@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-from math import inf
 from pydantic import BaseModel, ConfigDict
 
 from . import example_legacy_legacy_message_legacy_group, example_legacy_legacy_status
@@ -18,7 +17,7 @@ class ExampleLegacyLegacyMessage(BaseModel):
     count: int | None = 7
     enabled: bool | None = True
     tags: list[str] | None = []
-    ratio: float | None = inf
+    ratio: float | None = float('inf')
     status: example_legacy_legacy_status.ExampleLegacyLegacyStatus | None = (
         'LEGACY_ACTIVE'
     )

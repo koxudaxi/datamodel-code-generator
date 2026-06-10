@@ -11,7 +11,9 @@ import ast
 import re
 from abc import ABC, abstractmethod
 from copy import deepcopy
+from decimal import Decimal
 from enum import Enum, auto
+from fractions import Fraction
 from functools import cache, lru_cache
 from itertools import chain
 from re import Pattern
@@ -41,6 +43,7 @@ from datamodel_code_generator.imports import (
     IMPORT_ABC_SEQUENCE,
     IMPORT_ANNOTATED,
     IMPORT_ANY,
+    IMPORT_DECIMAL,
     IMPORT_DICT,
     IMPORT_FROZEN_SET,
     IMPORT_LIST,
@@ -53,6 +56,7 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
+from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.reference import Reference, _BaseModel
 
 T = TypeVar("T")
@@ -163,6 +167,76 @@ class UnionIntFloat:
             msg = f"{v} is not int or float"
             raise TypeError(msg)
         return cls(v)
+
+
+def _contains_decimal(value: Any) -> bool:
+    match value:
+        case Decimal():
+            return True
+        case dict():
+            return any(_contains_decimal(k) or _contains_decimal(v) for k, v in value.items())
+        case list() | tuple() | set() | frozenset():
+            return any(_contains_decimal(item) for item in value)
+        case _:
+            return False
+
+
+def _get_fraction_floor(value: Fraction) -> int:
+    return value.numerator // value.denominator
+
+
+def _get_fraction_ceil(value: Fraction) -> int:
+    return -(-value.numerator // value.denominator)
+
+
+def _get_constraint_number(value: Any) -> Any:
+    return value.value if isinstance(value, UnionIntFloat) else value
+
+
+def normalize_integer_constraint(constraint: str, value: Any) -> tuple[str, Any] | None:  # noqa: PLR0911
+    """Return an integer-safe pydantic constraint for a numeric schema constraint."""
+    number = _get_constraint_number(value)
+    try:
+        fraction = Fraction(str(number))
+    except (TypeError, ValueError):
+        return constraint, value
+
+    match constraint:
+        case "multiple_of" if fraction.numerator == 1:
+            return None
+        case "multiple_of":
+            return constraint, abs(fraction.numerator)
+        case _ if fraction.denominator == 1:
+            return constraint, int(fraction)
+        case "ge":
+            return "ge", _get_fraction_ceil(fraction)
+        case "gt":
+            return "ge", _get_fraction_floor(fraction) + 1
+        case "le":
+            return "le", _get_fraction_floor(fraction)
+        case "lt":
+            return "le", _get_fraction_ceil(fraction) - 1
+    return constraint, value
+
+
+def merge_normalized_constraint(constraints: dict[str, Any], key: str, value: Any) -> None:
+    """Merge a normalized constraint, keeping the stronger bound when ge or le collides."""
+    match constraints.get(key):
+        case None:
+            constraints[key] = value
+        case current if key == "ge":
+            constraints[key] = max(current, value)
+        case current:
+            constraints[key] = min(current, value)
+
+
+def normalize_integer_constraints(constraints: dict[str, Any]) -> dict[str, Any]:
+    """Return integer-safe pydantic constraints."""
+    normalized_constraints: dict[str, Any] = {}
+    for key, value in constraints.items():
+        if (normalized := normalize_integer_constraint(key, value)) is not None:
+            merge_normalized_constraint(normalized_constraints, normalized[0], normalized[1])
+    return normalized_constraints
 
 
 def chain_as_tuple(*iterables: Iterable[T]) -> tuple[T, ...]:
@@ -653,6 +727,8 @@ class DataType(_BaseModel):
         # Add base import if exists
         if self.import_:
             yield self.import_
+        if self.kwargs and self.import_ != IMPORT_DECIMAL and _contains_decimal(self.kwargs):
+            yield IMPORT_DECIMAL
 
         # Yield imports based on conditions
         for field, import_ in self._conditional_imports():
@@ -807,7 +883,7 @@ class DataType(_BaseModel):
         if self.is_optional and type_ != ANY:
             return get_optional_type(type_, self.use_union_operator)
         if self.is_func and self.kwargs:
-            kwargs: str = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
+            kwargs: str = ", ".join(f"{k}={represent_python_value(v)}" for k, v in self.kwargs.items())
             return f"{type_}({kwargs})"
         return type_
 

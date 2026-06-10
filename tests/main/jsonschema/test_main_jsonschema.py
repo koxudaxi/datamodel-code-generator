@@ -11874,6 +11874,122 @@ def test_main_jsonschema_discriminated_oneof_allof_cycle(output_file: Path) -> N
     )
 
 
+def test_main_jsonschema_pattern_escaped_quote(output_file: Path) -> None:
+    """Test pattern with an escaped quote renders importable code that still matches."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pattern_escaped_quote.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="pattern_escaped_quote.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_pattern_escaped_quote",
+        model_name="Model",
+        valid_json='{"x": "don\'t"}',
+        invalid_json='{"x": "dont"}',
+        expected_error_type="string_pattern_mismatch",
+        expected_attribute_path=("x",),
+        expected_attribute_value="don't",
+    )
+
+
+@pytest.mark.parametrize(
+    ("constraint_args", "module_name", "expected_file"),
+    [
+        ([], "generated_integer_fractional_constraints", "integer_fractional_constraints.py"),
+        (
+            ["--field-constraints"],
+            "generated_integer_fractional_field_constraints",
+            "integer_fractional_constraints_field_constraints.py",
+        ),
+    ],
+)
+def test_main_jsonschema_integer_fractional_constraints(
+    constraint_args: list[str], module_name: str, expected_file: str, output_file: Path
+) -> None:
+    """Test fractional integer constraints normalize to integer-safe bounds."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "integer_fractional_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", *constraint_args],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=module_name,
+        model_name="Model",
+        valid_json=(
+            '{"ge_field": 1, "any_multiple": 7, "gt_field": -1, "fraction_multiple": 3,'
+            ' "le_field": 2, "lt_field": 2, "combined_min": 3, "combined_max": 2}'
+        ),
+        invalid_json='{"ge_field": 0}',
+        expected_error_type="greater_than_equal",
+        expected_attribute_path=("fraction_multiple",),
+        expected_attribute_value=3,
+    )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name=module_name,
+        model_name="Model",
+        invalid_json='{"combined_min": 2}',
+        expected_error_type="greater_than_equal",
+    )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name=module_name,
+        model_name="Model",
+        invalid_json='{"combined_max": 3}',
+        expected_error_type="less_than_equal",
+    )
+
+
+def test_main_jsonschema_non_finite_number_values(output_file: Path) -> None:
+    """Test non-finite numeric defaults and bounds render as valid Python expressions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "non_finite_number_values.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="non_finite_number_values.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_non_finite_number_values",
+        model_name="Model",
+        valid_json="{}",
+        invalid_json='{"big_min": 1.0}',
+        expected_error_type="greater_than_equal",
+        expected_attribute_path=("big_default",),
+        expected_attribute_value=float("inf"),
+    )
+
+
+def test_main_jsonschema_decimal_fractional_constraints(output_file: Path) -> None:
+    """Test decimal fields keep fractional bounds and multipleOf with field constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "decimal_fractional_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="decimal_fractional_constraints.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--field-constraints"],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_decimal_fractional_constraints",
+        model_name="Model",
+        valid_json='{"price": "0.51"}',
+        invalid_json='{"price": "0.4"}',
+        expected_error_type="greater_than_equal",
+    )
+
+
 def test_main_msgspec_inherited_optional_default_uses_kw_only(output_file: Path) -> None:
     """Test msgspec allOf child with required fields stays importable via kw_only."""
     run_main_and_assert(

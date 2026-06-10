@@ -4,11 +4,19 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from pydantic import BaseModel, condecimal, confloat
 
 
 class Model(BaseModel):
-    price: condecimal(ge=0, le=99999.99, multiple_of=0.01) | None = None
-    quantity: condecimal(multiple_of=0.1) | None = None
-    rate: condecimal(multiple_of=0.001, lt=1.0, gt=0.0) | None = None
+    price: (
+        condecimal(ge=Decimal('0'), le=Decimal('99999.99'), multiple_of=Decimal('0.01'))
+        | None
+    ) = None
+    quantity: condecimal(multiple_of=Decimal('0.1')) | None = None
+    rate: (
+        condecimal(multiple_of=Decimal('0.001'), lt=Decimal('1.0'), gt=Decimal('0.0'))
+        | None
+    ) = None
     simple_float: confloat(ge=0.0, le=100.0) | None = None

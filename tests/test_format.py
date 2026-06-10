@@ -738,6 +738,22 @@ def test_apply_builtin_formatter_parenthesizes_union_annotation_with_long_defaul
     )
 
 
+def test_apply_builtin_formatter_parenthesizes_constrained_call_union_annotation_with_default() -> None:
+    """Test built-in formatter matches black for constrained call union annotations."""
+    code = (
+        "class Model:\n"
+        "    price: condecimal(ge=Decimal('0'), le=Decimal('99999.99'), multiple_of=Decimal('0.01')) | None = None\n"
+    )
+
+    assert apply_builtin_formatter(code, line_length=88) == (
+        "class Model:\n"
+        "    price: (\n"
+        "        condecimal(ge=Decimal('0'), le=Decimal('99999.99'), multiple_of=Decimal('0.01'))\n"
+        "        | None\n"
+        "    ) = None\n"
+    )
+
+
 def test_apply_builtin_formatter_parenthesizes_union_annotation_with_string_default() -> None:
     """Test built-in formatter matches black for long union annotations with string defaults."""
     code = "class Model:\n    typename__: Literal['Notification'] | None = 'Notification'\n"
