@@ -1,0 +1,11 @@
+{
+    "type": "object",
+    "properties": {
+        "u": {"type": "string", "format": "uuid"},
+        "u1": {"type": "string", "format": "uuid1"},
+        "u2": {"type": "string", "format": "uuid2"},
+        "u3": {"type": "string", "format": "uuid3"},
+        "u4": {"type": "string", "format": "uuid4"},
+        "u5": {"type": "string", "format": "uuid5"}
+    }
+}

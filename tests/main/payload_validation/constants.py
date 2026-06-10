@@ -93,6 +93,7 @@ EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/non_finite_number_values.json": (
         "non-finite bounds cannot be satisfied by any JSON payload hypothesis-jsonschema generates"
     ),
+    "jsonschema/uuid_format_versions.json": ("versioned uuid formats reject the fixed version-4 uuid example payloads"),
     "jsonschema/prefix_items_fixed_unevaluated_tail_schema.json": (
         "hypothesis-jsonschema cannot satisfy fixed prefixItems with unevaluatedItems tail constraints"
     ),
