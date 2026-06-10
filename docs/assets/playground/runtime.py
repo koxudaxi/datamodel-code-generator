@@ -181,11 +181,10 @@ def _relation_source_matches(value: Any, relation: dict[str, Any]) -> bool:
     value = getattr(value, "value", value)
     if "when" not in relation:
         return bool(value)
-    match relation["when"]:
-        case list() as values:
-            return value in values
-        case expected:
-            return value == expected
+    expected = relation["when"]
+    if isinstance(expected, list):
+        return value in expected
+    return value == expected
 
 
 def _apply_generate_option_implications(options: dict[str, Any]) -> None:
