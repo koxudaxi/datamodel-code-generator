@@ -10,11 +10,8 @@ to clipboard for web-based LLM chats.
 
 !!! note "For LLM agents"
 
-    Inspect the user's goal and schema, then run
-    `datamodel-codegen [known options] --generate-prompt "<goal>"` before
-    choosing options. Preserve current options unless they conflict, and return
-    the final command, reasons for non-obvious options, rejected alternatives,
-    and a verification command.
+    See [LLM Integration: If You Are an LLM Agent](../../llm-integration.md#if-you-are-an-llm-agent)
+    for workflow guidance.
 
 !!! tip "Usage"
 

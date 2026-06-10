@@ -760,10 +760,12 @@ GitHub: https://github.com/koxudaxi/datamodel-code-generator
 
 ## Instructions
 
-Based on the above information, please help with the question or suggest
-appropriate CLI options for the use case. Consider:
+Based on the above information, propose the smallest datamodel-codegen
+command that satisfies the question or use case. Preserve current options
+unless they conflict with the goal or another option. Include:
 
-1. The current options already set
-2. Option descriptions and their purposes
-3. Potential conflicts between options
-4. Best practices for the target output format
+1. Final CLI command to run
+2. Reasons for each non-obvious added or changed option
+3. Current options that should remain unchanged
+4. Options considered but rejected, with a short reason
+5. Verification command that validates the generated CLI or output
