@@ -263,8 +263,6 @@ assert_helper_direct_assert_exempt_files = [
   "parser/test_openapi.py",
   "parser/test_scc.py",
   "parser/test_schema_version.py",
-  "skills/datamodel-code-generator/test_skill_flag_drift.py",
-  "skills/datamodel-code-generator/test_skill_recipes.py",
   "test_assert_helper_usage.py",
   "test_build_deprecation_docs_script.py",
   "test_build_experimental_docs_script.py",

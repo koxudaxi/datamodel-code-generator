@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import re
 import subprocess
+from json import dumps
 from pathlib import Path
 from typing import Any
 
 import pytest
 import yaml
 
+from tests.conftest import assert_output
+
 SKILL_DIR = Path(__file__).parents[3] / "skills" / "datamodel-code-generator"
+EXPECTED = Path(__file__).parents[2] / "data" / "expected" / "skills" / "datamodel-code-generator"
 SKILL_FILES = [
     SKILL_DIR / "SKILL.md",
     SKILL_DIR / "references" / "workflows.md",
@@ -44,20 +48,22 @@ def _documented_flags() -> dict[str, set[Path]]:
 
 
 def test_skill_frontmatter_validates() -> None:
-    """Validate the skill frontmatter and referenced files."""
+    """Skill frontmatter summary matches checked-in expected output."""
     frontmatter = _read_frontmatter(SKILL_DIR / "SKILL.md")
     name = frontmatter.get("name")
     description = frontmatter.get("description")
+    summary = {
+        "description_present": isinstance(description, str) and bool(description.strip()),
+        "description_within_limit": isinstance(description, str) and len(description) <= 1024,
+        "license": frontmatter.get("license"),
+        "metadata": frontmatter.get("metadata"),
+        "name": name,
+        "name_matches_directory": name == SKILL_DIR.name,
+        "name_valid": isinstance(name, str) and re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?", name) is not None,
+        "skill_files": {str(path.relative_to(SKILL_DIR)): path.is_file() for path in SKILL_FILES},
+    }
 
-    assert name == SKILL_DIR.name
-    assert re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?", name)
-    assert isinstance(description, str)
-    assert description.strip()
-    assert len(description) <= 1024
-    assert frontmatter.get("license") == "MIT"
-    assert frontmatter.get("metadata") == {"status": "experimental"}
-    for path in SKILL_FILES:
-        assert path.is_file()
+    assert_output(dumps(summary, indent=2, sort_keys=True) + "\n", EXPECTED / "frontmatter.txt")
 
 
 def test_skill_documented_flags_exist_in_cli_help() -> None:
@@ -81,4 +87,4 @@ def test_skill_documented_flags_exist_in_cli_help() -> None:
         if flag not in NON_DATAMODEL_FLAGS and flag not in help_text
     }
 
-    assert unknown == {}
+    assert_output(dumps(unknown, indent=2, sort_keys=True) + "\n", EXPECTED / "documented_flag_drift.txt")

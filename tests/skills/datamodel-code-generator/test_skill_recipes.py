@@ -1,79 +1,69 @@
-"""Recipe smoke tests for the datamodel-code-generator agent skill."""
+"""E2E recipe tests for the datamodel-code-generator agent skill."""
 
 from __future__ import annotations
 
-import importlib
-import importlib.util
 import subprocess
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 
+from tests.conftest import assert_directory_content, create_assert_file_content
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
 FIXTURES = Path(__file__).parent / "fixtures"
+EXPECTED = Path(__file__).parents[2] / "data" / "expected" / "skills" / "datamodel-code-generator"
 TARGET_PYTHON = "3.10"
+COMMON_ARGS = (
+    "--output-model-type",
+    "pydantic_v2.BaseModel",
+    "--target-python-version",
+    TARGET_PYTHON,
+    "--formatters",
+    "black",
+    "isort",
+    "--disable-timestamp",
+)
+assert_file_content = create_assert_file_content(EXPECTED)
 
 
-def _run_codegen(args: Sequence[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+def _run_codegen(args: Sequence[str]) -> None:
     """Run datamodel-codegen and fail with captured output on errors."""
-    result = subprocess.run(
-        ["datamodel-codegen", *args],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            ["datamodel-codegen", *args],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        pytest.fail("datamodel-codegen not found; ensure the CLI is installed in the test environment")
     if result.returncode != 0:
         pytest.fail(f"datamodel-codegen failed\nargs: {args!r}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}")
-    return result
-
-
-def _import_file(path: Path, module_name: str) -> object:
-    """Import a generated Python file by path."""
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    if spec is None or spec.loader is None:
-        pytest.fail(f"Unable to import generated file: {path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules.pop(module_name, None)
-    spec.loader.exec_module(module)
-    return module
-
-
-def _import_package(tmp_path: Path, package_name: str) -> object:
-    """Import a generated package from a temporary root."""
-    sys.path.insert(0, str(tmp_path))
-    try:
-        sys.modules.pop(package_name, None)
-        return importlib.import_module(package_name)
-    finally:
-        sys.path.remove(str(tmp_path))
 
 
 @pytest.mark.parametrize(
-    ("fixture_name", "input_type", "module_name", "expected_name", "extra_args"),
+    ("fixture_name", "input_type", "expected_file", "extra_args"),
     [
-        ("openapi.yaml", "openapi", "skill_openapi_models", "SkillPet", ()),
-        ("asyncapi.yaml", "asyncapi", "skill_asyncapi_models", "SkillPetCreated", ()),
-        ("jsonschema.json", "jsonschema", "skill_jsonschema_models", "SkillUser", ()),
-        ("sample.json", "json", "skill_json_models", "SampleJson", ("--class-name", "SampleJson")),
-        ("sample.yaml", "yaml", "skill_yaml_models", "SampleYaml", ("--class-name", "SampleYaml")),
-        ("sample.csv", "csv", "skill_csv_models", "SampleCsv", ("--class-name", "SampleCsv")),
+        ("openapi.yaml", "openapi", "single_file/openapi.py", ()),
+        ("asyncapi.yaml", "asyncapi", "single_file/asyncapi.py", ()),
+        ("jsonschema.json", "jsonschema", "single_file/jsonschema.py", ()),
+        ("sample.json", "json", "single_file/json.py", ("--class-name", "SampleJson")),
+        ("sample.yaml", "yaml", "single_file/yaml.py", ("--class-name", "SampleYaml")),
+        ("sample.csv", "csv", "single_file/csv.py", ("--class-name", "SampleCsv")),
     ],
 )
-def test_skill_single_file_recipes_generate_importable_models(
+def test_skill_single_file_recipes_match_expected_output(
     tmp_path: Path,
     fixture_name: str,
     input_type: str,
-    module_name: str,
-    expected_name: str,
+    expected_file: str,
     extra_args: tuple[str, ...],
 ) -> None:
-    """Representative single-file recipes generate importable models."""
-    output = tmp_path / f"{module_name}.py"
+    """Representative single-file recipes match checked-in expected output."""
+    output = tmp_path / "models.py"
     _run_codegen([
         "--input",
         str(FIXTURES / fixture_name),
@@ -81,21 +71,15 @@ def test_skill_single_file_recipes_generate_importable_models(
         input_type,
         "--output",
         str(output),
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--target-python-version",
-        TARGET_PYTHON,
+        *COMMON_ARGS,
         *extra_args,
     ])
-
-    module = _import_file(output, module_name)
-    assert hasattr(module, expected_name)
+    assert_file_content(output, expected_file)
 
 
-def test_skill_graphql_recipe_generates_importable_models(tmp_path: Path) -> None:
-    """GraphQL recipe runs when the optional dependency is installed."""
-    if importlib.util.find_spec("graphql") is None:
-        pytest.skip("GraphQL optional dependency is not installed")
+def test_skill_graphql_recipe_matches_expected_output(tmp_path: Path) -> None:
+    """GraphQL recipe matches checked-in expected output."""
+    pytest.importorskip("graphql", reason="GraphQL optional dependency is not installed")
 
     output = tmp_path / "graphql_models.py"
     _run_codegen([
@@ -105,36 +89,26 @@ def test_skill_graphql_recipe_generates_importable_models(tmp_path: Path) -> Non
         "graphql",
         "--output",
         str(output),
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--target-python-version",
-        TARGET_PYTHON,
+        *COMMON_ARGS,
     ])
-
-    module = _import_file(output, "skill_graphql_models")
-    assert hasattr(module, "SkillGraphPet")
+    assert_file_content(output, "graphql.py")
 
 
-def test_skill_input_model_recipe_generates_importable_models(tmp_path: Path) -> None:
-    """Python model input can be retargeted to Pydantic v2 output."""
+def test_skill_input_model_recipe_matches_expected_output(tmp_path: Path) -> None:
+    """Python model input retargeting matches checked-in expected output."""
     output = tmp_path / "input_model.py"
     _run_codegen([
         "--input-model",
         f"{FIXTURES / 'python_models.py'}:SkillInputUser",
         "--output",
         str(output),
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--target-python-version",
-        TARGET_PYTHON,
+        *COMMON_ARGS,
     ])
-
-    module = _import_file(output, "skill_input_model")
-    assert hasattr(module, "SkillInputUser")
+    assert_file_content(output, "input_model.py")
 
 
-def test_skill_directory_output_recipe_generates_importable_package(tmp_path: Path) -> None:
-    """Directory output creates an importable package."""
+def test_skill_directory_output_recipe_matches_expected_package(tmp_path: Path) -> None:
+    """Directory output matches checked-in expected package files."""
     output = tmp_path / "skill_models"
     _run_codegen([
         "--input",
@@ -143,20 +117,15 @@ def test_skill_directory_output_recipe_generates_importable_package(tmp_path: Pa
         "jsonschema",
         "--output",
         str(output),
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--target-python-version",
-        TARGET_PYTHON,
+        *COMMON_ARGS,
         "--all-exports-scope",
         "recursive",
     ])
-
-    package = _import_package(tmp_path, "skill_models")
-    assert hasattr(package, "SkillProduct")
+    assert_directory_content(output, EXPECTED / "directory_output")
 
 
-def test_skill_recipe_check_mode_passes_for_stable_fixture(tmp_path: Path) -> None:
-    """The documented --check workflow passes after generation."""
+def test_skill_recipe_check_mode_matches_expected_output(tmp_path: Path) -> None:
+    """The documented --check workflow matches checked-in expected output."""
     output = tmp_path / "checked_models.py"
     base_args = [
         "--input",
@@ -165,13 +134,8 @@ def test_skill_recipe_check_mode_passes_for_stable_fixture(tmp_path: Path) -> No
         "jsonschema",
         "--output",
         str(output),
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--target-python-version",
-        TARGET_PYTHON,
-        "--disable-timestamp",
+        *COMMON_ARGS,
     ]
     _run_codegen(base_args)
+    assert_file_content(output, "check_mode.py")
     _run_codegen([*base_args, "--check"])
-    module = _import_file(output, "skill_checked_models")
-    assert hasattr(module, "SkillUser")
