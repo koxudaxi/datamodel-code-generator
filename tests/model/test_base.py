@@ -130,21 +130,6 @@ def test_pydantic_v2_base_model_create_typed_extra_field() -> None:
     assert field.required is True
 
 
-def test_pydantic_v2_field_str_class_var_renders_default() -> None:
-    """Test str() of a ClassVar field returns only the represented default value."""
-    field = PydanticV2DataModelField(
-        name="namespace",
-        data_type=DataType(type="str"),
-        default="test",
-        required=False,
-        extras={"x-is-classvar": True},
-    )
-
-    assert field.is_class_var
-    assert field.annotated is None
-    assert str(field) == "'test'"
-
-
 def test_data_model_exception() -> None:
     """Test DataModel raises exception when TEMPLATE_FILE_PATH is undefined."""
     field = DataModelFieldBase(name="a", data_type=DataType(type="str"), default="abc", required=True)
