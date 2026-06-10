@@ -378,10 +378,13 @@ class DataModelFieldBase(_BaseModel):
     @property
     def imports(self) -> tuple[Import, ...]:
         """Get all imports required for this field's type hint."""
+        return self._collect_field_imports(needs_annotated=self.use_annotated and self.needs_annotated_import)
+
+    def _collect_field_imports(self, *, needs_annotated: bool) -> tuple[Import, ...]:
+        """Collect type-hint imports; needs_annotated is passed in so subclasses can precompute it."""
         type_hint = self.type_hint
         has_union = not self._use_union_operator and UNION_PREFIX in type_hint
         has_optional = OPTIONAL_PREFIX in type_hint
-        needs_annotated = self.use_annotated and self.needs_annotated_import
 
         # Fast path: no special typing imports needed
         if not has_union and not has_optional and not needs_annotated:
