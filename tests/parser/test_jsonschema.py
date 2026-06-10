@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import json
+import socket
+from ipaddress import ip_address
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, Union
-from unittest.mock import call
 
 import pydantic
 import pytest
 import yaml
 
 from datamodel_code_generator import AllOfMergeMode, Error
+from datamodel_code_generator.http import _get_httpx
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.dataclass import DataClass
@@ -35,6 +37,12 @@ DATA_PATH: Path = Path(__file__).parents[1] / "data" / "jsonschema"
 EXPECTED_JSONSCHEMA_PATH = Path(__file__).parents[1] / "data" / "expected" / "parser" / "jsonschema"
 
 
+@pytest.fixture(autouse=True)
+def block_dns_by_default(mocker: MockerFixture) -> None:
+    """Keep tests that mock httpx.get independent from external DNS."""
+    mocker.patch("socket.getaddrinfo", side_effect=OSError)
+
+
 @pytest.mark.parametrize(
     ("schema", "path", "model"),
     [
@@ -54,10 +62,14 @@ def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:
     """Test JSON schema object reference with JSON URL."""
     parser = JsonSchemaParser("", allow_remote_refs=True)
     obj = JsonSchemaObject.model_validate({"$ref": "https://example.com/person.schema.json#/definitions/User"})
-    mock_get = mocker.patch("httpx.get")
-    mock_get.return_value.status_code = 200
-    mock_get.return_value.headers = {}
-    mock_get.return_value.text = json.dumps(
+    mocker.patch(
+        "socket.getaddrinfo",
+        return_value=[(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))],
+    )
+    mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response")
+    mock_fetch.return_value.status_code = 200
+    mock_fetch.return_value.headers = {}
+    mock_fetch.return_value.text = json.dumps(
         {
             "$id": "https://example.com/person.schema.json",
             "$schema": "http://json-schema.org/draft-07/schema#",
@@ -81,26 +93,31 @@ def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:
     name: Optional[str] = None"""
     )
     parser.parse_ref(obj, ["Model"])
-    mock_get.assert_has_calls([
-        call(
-            "https://example.com/person.schema.json",
-            headers=None,
-            verify=True,
-            follow_redirects=False,
-            params=None,
-            timeout=30.0,
-        ),
-    ])
+    mock_fetch.assert_called_once_with(
+        _get_httpx(),
+        "https://example.com/person.schema.json",
+        headers=None,
+        verify=True,
+        follow_redirects=False,
+        query_parameters=None,
+        timeout=30.0,
+        pinned_host="example.com",
+        pinned_ips=(ip_address("93.184.216.34"),),
+    )
 
 
 def test_json_schema_object_ref_url_yaml(mocker: MockerFixture) -> None:
     """Test JSON schema object reference with YAML URL."""
     parser = JsonSchemaParser("", allow_remote_refs=True)
     obj = JsonSchemaObject.model_validate({"$ref": "https://example.org/schema.yaml#/definitions/User"})
-    mock_get = mocker.patch("httpx.get")
-    mock_get.return_value.status_code = 200
-    mock_get.return_value.headers = {}
-    mock_get.return_value.text = yaml.safe_dump(json.load((DATA_PATH / "user.json").open()))
+    mocker.patch(
+        "socket.getaddrinfo",
+        return_value=[(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))],
+    )
+    mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response")
+    mock_fetch.return_value.status_code = 200
+    mock_fetch.return_value.headers = {}
+    mock_fetch.return_value.text = yaml.safe_dump(json.load((DATA_PATH / "user.json").open()))
 
     parser.parse_ref(obj, ["User"])
     assert (
@@ -114,13 +131,16 @@ class Pet(BaseModel):
     name: Optional[str] = Field(None, examples=['dog', 'cat'])"""
     )
     parser.parse_ref(obj, [])
-    mock_get.assert_called_once_with(
+    mock_fetch.assert_called_once_with(
+        _get_httpx(),
         "https://example.org/schema.yaml",
         headers=None,
         verify=True,
         follow_redirects=False,
-        params=None,
+        query_parameters=None,
         timeout=30.0,
+        pinned_host="example.org",
+        pinned_ips=(ip_address("93.184.216.34"),),
     )
 
 
@@ -137,10 +157,14 @@ def test_json_schema_object_cached_ref_url_yaml(mocker: MockerFixture) -> None:
             },
         },
     )
-    mock_get = mocker.patch("httpx.get")
-    mock_get.return_value.status_code = 200
-    mock_get.return_value.headers = {}
-    mock_get.return_value.text = yaml.safe_dump(json.load((DATA_PATH / "user.json").open()))
+    mocker.patch(
+        "socket.getaddrinfo",
+        return_value=[(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))],
+    )
+    mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response")
+    mock_fetch.return_value.status_code = 200
+    mock_fetch.return_value.headers = {}
+    mock_fetch.return_value.text = yaml.safe_dump(json.load((DATA_PATH / "user.json").open()))
 
     parser.parse_ref(obj, [])
     assert (
@@ -153,13 +177,16 @@ class User(BaseModel):
     name: Optional[str] = Field(None, examples=['ken'])
     pets: List[User] = Field(default_factory=list)"""
     )
-    mock_get.assert_called_once_with(
+    mock_fetch.assert_called_once_with(
+        _get_httpx(),
         "https://example.org/schema.yaml",
         headers=None,
         verify=True,
         follow_redirects=False,
-        params=None,
+        query_parameters=None,
         timeout=30.0,
+        pinned_host="example.org",
+        pinned_ips=(ip_address("93.184.216.34"),),
     )
 
 
@@ -170,10 +197,14 @@ def test_json_schema_ref_url_json(mocker: MockerFixture) -> None:
         "type": "object",
         "properties": {"user": {"$ref": "https://example.org/schema.json#/definitions/User"}},
     }
-    mock_get = mocker.patch("httpx.get")
-    mock_get.return_value.status_code = 200
-    mock_get.return_value.headers = {}
-    mock_get.return_value.text = json.dumps(json.load((DATA_PATH / "user.json").open()))
+    mocker.patch(
+        "socket.getaddrinfo",
+        return_value=[(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))],
+    )
+    mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response")
+    mock_fetch.return_value.status_code = 200
+    mock_fetch.return_value.headers = {}
+    mock_fetch.return_value.text = json.dumps(json.load((DATA_PATH / "user.json").open()))
 
     parser.parse_raw_obj("Model", obj, ["Model"])
     assert (
@@ -190,13 +221,16 @@ class User(BaseModel):
 class Pet(BaseModel):
     name: Optional[str] = Field(None, examples=['dog', 'cat'])"""
     )
-    mock_get.assert_called_once_with(
+    mock_fetch.assert_called_once_with(
+        _get_httpx(),
         "https://example.org/schema.json",
         headers=None,
         verify=True,
         follow_redirects=False,
-        params=None,
+        query_parameters=None,
         timeout=30.0,
+        pinned_host="example.org",
+        pinned_ips=(ip_address("93.184.216.34"),),
     )
 
 
@@ -555,7 +589,7 @@ def test_parse_nested_array(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
         ("string", "uri-reference", "str", None, None, False),
         ("string", "uuid", "UUID", "uuid", "UUID", False),
         ("string", "uuid1", "UUID1", "pydantic", "UUID1", False),
-        ("string", "uuid2", "UUID2", "pydantic", "UUID2", False),
+        ("string", "uuid2", "UUID", "uuid", "UUID", False),
         ("string", "uuid3", "UUID3", "pydantic", "UUID3", False),
         ("string", "uuid4", "UUID4", "pydantic", "UUID4", False),
         ("string", "uuid5", "UUID5", "pydantic", "UUID5", False),
@@ -989,7 +1023,7 @@ def test_create_data_model_dataclass_arguments(
 
 def test_get_ref_body_from_url_file_unc_path(mocker: MockerFixture) -> None:
     """Test _get_ref_body_from_url handles UNC file:// URLs correctly."""
-    parser = JsonSchemaParser("")
+    parser = JsonSchemaParser("", allow_remote_refs=True)
     mock_load = mocker.patch(
         "datamodel_code_generator.parser.jsonschema.load_data_from_path",
         return_value={"type": "object"},
@@ -1010,7 +1044,7 @@ def test_get_ref_body_from_url_file_unc_path(mocker: MockerFixture) -> None:
 
 def test_get_ref_body_from_url_file_local_path(mocker: MockerFixture) -> None:
     """Test _get_ref_body_from_url handles local file:// URLs (no netloc)."""
-    parser = JsonSchemaParser("")
+    parser = JsonSchemaParser("", allow_remote_refs=True)
     mock_load = mocker.patch(
         "datamodel_code_generator.parser.jsonschema.load_data_from_path",
         return_value={"type": "string"},

@@ -26,6 +26,7 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
+from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.types import (
     ANY,
@@ -173,19 +174,6 @@ def _copy_all_model_data(source: dict[str, Any], target: dict[str, Any]) -> None
         target[key] = deepcopy(value) if isinstance(value, (dict, list, set)) else value
 
 
-def repr_set_sorted(value: set[Any]) -> str:
-    """Return a repr of a set with elements sorted for consistent output.
-
-    Uses (type_name, repr(x)) as sort key to safely handle any type including
-    Enum, custom classes, or types without __lt__ defined.
-    """
-    if not value:
-        return "set()"
-    # Sort by type name first, then by repr for consistent output
-    sorted_elements = sorted(value, key=lambda x: (type(x).__name__, repr(x)))
-    return "{" + ", ".join(repr(e) for e in sorted_elements) + "}"
-
-
 ConstraintsBaseT = TypeVar("ConstraintsBaseT", bound="ConstraintsBase")
 DataModelFieldBaseT = TypeVar("DataModelFieldBaseT", bound="DataModelFieldBase")
 
@@ -194,7 +182,7 @@ class ConstraintsBase(_BaseModel):
     """Base class for field constraints (min/max, patterns, etc.)."""
 
     unique_items: Optional[bool] = Field(None, alias="uniqueItems")  # noqa: UP045
-    _exclude_fields: ClassVar[set[str]] = {"has_constraints"}
+    _exclude_fields: ClassVar[set[str]] = {"has_constraints", "_exclude_unset_dump"}
     model_config = ConfigDict(  # ty: ignore
         arbitrary_types_allowed=True, ignored_types=(cached_property,)
     )
@@ -203,6 +191,11 @@ class ConstraintsBase(_BaseModel):
     def has_constraints(self) -> bool:
         """Check if any constraint values are set."""
         return any(v is not None for v in self.model_dump().values())
+
+    @cached_property
+    def _exclude_unset_dump(self) -> dict[str, Any]:
+        """Cached model_dump(exclude_unset=True); constraints are immutable after creation. Read-only."""
+        return self.model_dump(exclude_unset=True)
 
     @staticmethod
     def merge_constraints(a: ConstraintsBaseT | None, b: ConstraintsBaseT | None) -> ConstraintsBaseT | None:
@@ -373,10 +366,13 @@ class DataModelFieldBase(_BaseModel):
     @property
     def imports(self) -> tuple[Import, ...]:
         """Get all imports required for this field's type hint."""
+        return self._collect_field_imports(needs_annotated=self.use_annotated and self.needs_annotated_import)
+
+    def _collect_field_imports(self, *, needs_annotated: bool) -> tuple[Import, ...]:
+        """Collect type-hint imports; needs_annotated is passed in so subclasses can precompute it."""
         type_hint = self.type_hint
         has_union = not self._use_union_operator and UNION_PREFIX in type_hint
         has_optional = OPTIONAL_PREFIX in type_hint
-        needs_annotated = self.use_annotated and self.needs_annotated_import
 
         # Fast path: no special typing imports needed
         if not has_union and not has_optional and not needs_annotated:
@@ -463,9 +459,7 @@ class DataModelFieldBase(_BaseModel):
     @property
     def represented_default(self) -> str:
         """Get the repr() string of the default value."""
-        if isinstance(self.default, set):
-            return repr_set_sorted(self.default)
-        return repr(self.default)
+        return represent_python_value(self.default)
 
     @property
     def annotated(self) -> str | None:

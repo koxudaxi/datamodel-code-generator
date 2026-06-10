@@ -448,18 +448,20 @@ class JsonSchemaObject(BaseModel):
     def __init__(self, **data: Any) -> None:
         """Initialize JsonSchemaObject with extra fields handling."""
         super().__init__(**data)
-        if data.get("items") is False:
+        items = data.get("items")
+        if items is False:
             self.items = False
-        elif data.get("items") == []:
+        elif items == []:
             self.items = []
         # Restore extras from alias key (for dict -> parse_obj round-trip)
         alias_extras = data.get(self.__extra_key__, {})
         # Collect custom keys from raw data
         raw_extras = {k: v for k, v in data.items() if k not in EXCLUDE_FIELD_KEYS}
-        # Merge: raw_extras takes precedence (original data is the source of truth)
-        self.extras = {**alias_extras, **raw_extras}
-        if "const" in alias_extras:  # pragma: no cover
-            self.extras["const"] = alias_extras["const"]
+        if alias_extras or raw_extras:
+            # Merge: raw_extras takes precedence (original data is the source of truth)
+            self.extras = {**alias_extras, **raw_extras}
+            if "const" in alias_extras:  # pragma: no cover
+                self.extras["const"] = alias_extras["const"]
         # Support x-propertyNames extension for OpenAPI 3.0
         if "x-propertyNames" in self.extras and self.propertyNames is None:
             x_prop_names = self.extras.pop("x-propertyNames")
@@ -791,6 +793,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self.reserved_refs: defaultdict[tuple[str, ...], set[str]] = defaultdict(set)
         self._dynamic_anchor_index: dict[tuple[str, ...], dict[str, str]] = {}
         self._recursive_anchor_index: dict[tuple[str, ...], list[str]] = {}
+        self._ref_data_type_facts: dict[str, tuple[Any, bool]] = {}
         self.field_keys: set[str] = {
             *DEFAULT_FIELD_KEYS,
             *self.field_extra_keys,
@@ -1842,14 +1845,26 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return self.data_type.from_import(import_)
 
     def get_ref_data_type(self, ref: str) -> DataType:
-        """Get a data type from a reference string."""
+        """Get a data type from a reference string.
+
+        The referenced schema only contributes its x-python-import extra and
+        null/nullable flags here, so those facts are cached per resolved ref to
+        avoid re-validating the same schema for every occurrence of the ref.
+        """
         # Check external ref mapping before loading the schema
         mapped = self._check_external_ref_mapping(ref)
         if mapped is not None:
             return mapped
 
-        ref_schema = self._load_ref_schema_object(ref)
-        x_python_import = ref_schema.extras.get("x-python-import")
+        resolved_ref = self.model_resolver.resolve_ref(ref)
+        if (facts := self._ref_data_type_facts.get(resolved_ref)) is None:
+            ref_schema = self._load_ref_schema_object(ref)
+            facts = (
+                ref_schema.extras.get("x-python-import"),
+                ref_schema.type == "null" or (self.strict_nullable and ref_schema.nullable is True),
+            )
+            self._ref_data_type_facts[resolved_ref] = facts
+        x_python_import, is_optional = facts
         if isinstance(x_python_import, dict):
             module = x_python_import.get("module")
             type_name = x_python_import.get("name")
@@ -1859,7 +1874,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 self.imports.append(import_)
                 return self.data_type.from_import(import_)
         reference = self.model_resolver.add_ref(ref)
-        is_optional = ref_schema.type == "null" or (self.strict_nullable and ref_schema.nullable is True)
         return self.data_type(reference=reference, is_optional=is_optional)
 
     def set_additional_properties(self, path: str, obj: JsonSchemaObject) -> None:
@@ -4798,17 +4812,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _get_ref_body(self, resolved_ref: str) -> dict[str, YamlValue]:
         """Get the body of a reference from URL or remote file."""
         if is_url(resolved_ref):
-            if not resolved_ref.startswith("file://") and self.http_local_ref_path is None:
+            url_scheme = urlparse(resolved_ref).scheme
+            uses_local_http_path = url_scheme in {"http", "https"} and self.http_local_ref_path is not None
+            if not uses_local_http_path:
                 if self.allow_remote_refs is False:
                     msg = (
                         f"Fetching remote $ref is disabled: {resolved_ref}\n"
-                        "Reason: --no-allow-remote-refs was set, so HTTP(S) $ref targets are not fetched.\n"
+                        "Reason: --no-allow-remote-refs was set, so external $ref targets are not fetched.\n"
                         "If this schema and all of its remote references are trusted, pass --allow-remote-refs. "
                         "If a trusted remote reference points to an internal schema registry, also pass "
                         "--allow-private-network."
                     )
                     raise Error(msg)
-                if self.allow_remote_refs is None:
+                if self.allow_remote_refs is None and url_scheme in {"http", "https"}:
                     warn_deprecated(
                         "behavior.remote-ref-default",
                         details=(
@@ -4820,6 +4836,32 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     )
             return self._get_ref_body_from_url(resolved_ref)
         return self._get_ref_body_from_remote(resolved_ref)
+
+    def _resolve_local_ref_path(self, path: Path, ref: str) -> Path:
+        base_path = self.base_path.resolve()
+        resolved_path = path.resolve()
+        if resolved_path.is_relative_to(base_path) or self.allow_remote_refs is True:
+            return resolved_path
+
+        details = (
+            f"Reference: {ref}. Reason: the resolved file is outside the input base path. "
+            f"Base path: {base_path}. Resolved path: {resolved_path}. "
+            "Move trusted referenced schemas under the input directory, pass --allow-remote-refs to allow this "
+            "external local file reference without a warning, or pass --no-allow-remote-refs to block it."
+        )
+        if self.allow_remote_refs is None:
+            warn_deprecated("behavior.remote-ref-default", details=details, stacklevel=3)
+            return resolved_path
+
+        msg = (
+            f"Blocked unsafe local $ref: {ref}\n"
+            "Reason: --no-allow-remote-refs was set and the resolved file is outside the input base path.\n"
+            f"Base path: {base_path}\n"
+            f"Resolved path: {resolved_path}\n"
+            "Move trusted referenced schemas under the input directory, or pass --allow-remote-refs only when the "
+            "schema and referenced files are trusted."
+        )
+        raise Error(msg)
 
     def _get_ref_body_from_local_http_path(self, ref: str) -> dict[str, YamlValue]:
         assert self.http_local_ref_path is not None
@@ -4864,9 +4906,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             # Handle UNC paths (file://server/share/path)
             if parsed.netloc:
                 path = f"//{parsed.netloc}{path}"
-            file_path = Path(path)
+            file_path = self._resolve_local_ref_path(Path(path), ref)
             return self.remote_object_cache.get_or_put(
-                ref, default_factory=lambda _: load_data_from_path(file_path, self.encoding)
+                str(file_path), default_factory=lambda _: load_data_from_path(file_path, self.encoding)
             )
         if self.http_local_ref_path is not None and urlparse(ref).scheme in {"http", "https"}:
             return self._get_ref_body_from_local_http_path(ref)
@@ -4876,7 +4918,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _get_ref_body_from_remote(self, resolved_ref: str) -> dict[str, YamlValue]:
         """Get reference body from a remote file path."""
-        full_path = self.base_path / resolved_ref
+        full_path = self._resolve_local_ref_path(self.base_path / resolved_ref, resolved_ref)
 
         try:
             return self.remote_object_cache.get_or_put(

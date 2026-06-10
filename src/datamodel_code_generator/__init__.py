@@ -21,7 +21,6 @@ from typing import (
     TextIO,
     TypeAlias,
     TypeVar,
-    cast,
 )
 from urllib.parse import ParseResult
 
@@ -705,14 +704,14 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             if isinstance(input_, Path) and input_.is_dir():  # pragma: no cover
                 msg = f"Input must be a file for {input_file_type}"
                 raise Error(msg)  # noqa: TRY301
-            obj: dict[str, Any]
+            obj: Any
             if input_file_type == InputFileType.CSV:
                 import csv  # noqa: PLC0415
 
                 def get_header_and_first_line(csv_file: IO[str]) -> dict[str, Any]:
                     csv_reader = csv.DictReader(csv_file)
                     assert csv_reader.fieldnames is not None
-                    return dict(zip(csv_reader.fieldnames, next(csv_reader), strict=False))
+                    return {key: value for key, value in next(csv_reader).items() if key is not None}
 
                 if isinstance(input_, Path):
                     with input_.open(encoding=config.encoding) as f:
@@ -723,10 +722,10 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
                     obj = get_header_and_first_line(io.StringIO(input_text))
             elif input_file_type == InputFileType.Yaml:
                 if isinstance(input_, Path):
-                    obj = load_yaml_dict(input_.read_text(encoding=config.encoding))
+                    obj = load_yaml(input_.read_text(encoding=config.encoding))
                 else:  # pragma: no cover
                     assert input_text is not None
-                    obj = load_yaml_dict(input_text)
+                    obj = load_yaml(input_text)
             elif input_file_type == InputFileType.Json:
                 if isinstance(input_, Path):
                     obj = json.loads(input_.read_text(encoding=config.encoding))
@@ -736,24 +735,26 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             elif input_file_type == InputFileType.Dict:
                 import ast  # noqa: PLC0415
 
-                obj = (
-                    ast.literal_eval(input_.read_text(encoding=config.encoding))
-                    if isinstance(input_, Path)
-                    else cast("dict[str, Any]", input_)
-                )
+                if isinstance(input_, Path):
+                    obj = ast.literal_eval(input_.read_text(encoding=config.encoding))
+                elif isinstance(input_, Mapping):
+                    obj = input_
+                else:
+                    assert input_text is not None
+                    obj = ast.literal_eval(input_text)
             else:  # pragma: no cover
                 msg = f"Unsupported input file type: {input_file_type}"
                 raise Error(msg)  # noqa: TRY301
+
+            from genson import SchemaBuilder  # noqa: PLC0415
+
+            builder = SchemaBuilder()
+            builder.add_object(obj)
+            input_text = json.dumps(builder.to_schema())
         except Error:
             raise
         except Exception as exc:
             raise InvalidFileFormatError(exc, input_file_type) from exc
-
-        from genson import SchemaBuilder  # noqa: PLC0415
-
-        builder = SchemaBuilder()
-        builder.add_object(obj)
-        input_text = json.dumps(builder.to_schema())
 
     if input_file_type == InputFileType.MCPTools:
         import json  # noqa: PLC0415
@@ -999,6 +1000,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             all_exports_collision_strategy=config.all_exports_collision_strategy,
             module_split_mode=config.module_split_mode,
         )
+    parser._dispose()  # noqa: SLF001
     if not input_filename:  # pragma: no cover
         match input_:
             case str():

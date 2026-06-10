@@ -27,6 +27,7 @@ from datamodel_code_generator.model.imports import IMPORT_DATACLASS, IMPORT_FIEL
 from datamodel_code_generator.model.pydantic_base import Constraints  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
 from datamodel_code_generator.model.types import standard_primitive_type_map_factory, type_map_factory
+from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, StrictTypes, Types, chain_as_tuple
 
@@ -202,13 +203,10 @@ class DataModelField(DataModelFieldBase):
 
             if isinstance(default, (list, dict, set)):
                 if default:
-                    from datamodel_code_generator.model.base import repr_set_sorted  # noqa: PLC0415
-
-                    default_repr = repr_set_sorted(default) if isinstance(default, set) else repr(default)
-                    return f"field(default_factory=lambda: {default_repr})"
+                    return f"field(default_factory=lambda: {represent_python_value(default)})"
                 return f"field(default_factory={type(default).__name__})"
-            return repr(default)
-        kwargs = [f"{k}={v if k == 'default_factory' else repr(v)}" for k, v in data.items()]
+            return represent_python_value(default)
+        kwargs = [f"{k}={v if k == 'default_factory' else represent_python_value(v)}" for k, v in data.items()]
         return f"field({', '.join(kwargs)})"
 
 
