@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import platform
+import socket
+from ipaddress import ip_address
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +16,7 @@ from packaging import version
 
 from datamodel_code_generator import DataModelType, OpenAPIScope, PythonVersionMin
 from datamodel_code_generator.format import Formatter
+from datamodel_code_generator.http import _get_httpx
 from datamodel_code_generator.model import DataModelFieldBase, get_data_model_types
 from datamodel_code_generator.model.pydantic_v2 import DataModelField
 from datamodel_code_generator.parser.base import Result, dump_templates
@@ -35,6 +38,12 @@ from tests.conftest import (
 DATA_PATH: Path = Path(__file__).parents[1] / "data" / "openapi"
 
 EXPECTED_OPEN_API_PATH = Path(__file__).parents[1] / "data" / "expected" / "parser" / "openapi"
+
+
+@pytest.fixture(autouse=True)
+def block_dns_by_default(mocker: Any) -> None:
+    """Keep tests that mock httpx.get independent from external DNS."""
+    mocker.patch("socket.getaddrinfo", side_effect=OSError)
 
 
 def test_insert_info_version_constant_empty_body() -> None:
@@ -684,7 +693,11 @@ schemas:
     mock_response.status_code = 200
     mock_response.headers = {}
     mock_response.text = remote_schema
-    mocker.patch("httpx.get", return_value=mock_response)
+    mocker.patch(
+        "socket.getaddrinfo",
+        return_value=[(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))],
+    )
+    mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response", return_value=mock_response)
 
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
@@ -695,6 +708,17 @@ schemas:
     expected_file = get_expected_file("openapi_parser_parse_remote_ref", True, True)
 
     assert_output(parser.parse(), expected_file)
+    mock_fetch.assert_called_once_with(
+        _get_httpx(),
+        "https://teamdigitale.github.io/openapi/0.0.6/definitions.yaml",
+        headers=None,
+        verify=True,
+        follow_redirects=False,
+        query_parameters=None,
+        timeout=30.0,
+        pinned_host="teamdigitale.github.io",
+        pinned_ips=(ip_address("93.184.216.34"),),
+    )
 
 
 def test_openapi_parser_parse_required_null(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
