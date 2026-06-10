@@ -510,7 +510,7 @@ class _XMLSchemaConverter:
             schema_location = child.get("schemaLocation")
             if not schema_location:
                 continue
-            location = (source_dir / schema_location).resolve()
+            location = self._resolve_schema_location(source_dir, schema_location)
             if location in seen or not location.is_file():
                 continue
             seen.add(location)
@@ -519,6 +519,21 @@ class _XMLSchemaConverter:
             if _version_decimal(included_version) > _version_decimal(version):
                 version = included_version
         return version
+
+    def _resolve_schema_location(self, source_dir: Path, schema_location: str) -> Path:
+        base_path = self.base_path.resolve()
+        location = (source_dir / schema_location).resolve()
+        if location.is_relative_to(base_path):
+            return location
+
+        msg = (
+            f"Blocked unsafe XML Schema schemaLocation: {schema_location}\n"
+            "Reason: the resolved file is outside the input base path.\n"
+            f"Base path: {base_path}\n"
+            f"Resolved path: {location}\n"
+            "Move trusted included schemas under the input directory before generating models."
+        )
+        raise Error(msg)
 
     def _prepare_schema_root(self, root: ET.Element, version: XMLSchemaVersion) -> None:
         self._check_version_specific_features(root, version)
@@ -605,7 +620,7 @@ class _XMLSchemaConverter:
             schema_location = child.get("schemaLocation")
             if not schema_location:
                 continue
-            location = (source_dir / schema_location).resolve()
+            location = self._resolve_schema_location(source_dir, schema_location)
             if not location.is_file():
                 continue
             included_root = self._parse_schema(_read_xml_text(location, self.encoding), location)
