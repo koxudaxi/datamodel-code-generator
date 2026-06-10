@@ -162,15 +162,16 @@ class TypedDict(DataModel):
 
     @property
     def all_fields(self) -> Iterator[DataModelFieldBase]:
-        """Iterate over all fields including inherited ones."""
-        yield from self.iter_all_fields()
+        """Iterate over all fields, without docstrings the functional dict literal cannot hold."""
+        for field in self.iter_all_fields():
+            yield field.model_copy(update={"use_field_description": False, "use_inline_field_description": False})
 
     def render(self, *, class_name: str | None = None) -> str:
         """Render TypedDict class with appropriate syntax."""
         use_custom_template = self.template_file_path.is_absolute()
         description = self.description if use_custom_template else self.rendered_description
-        if description and not use_custom_template and self.is_functional_syntax:
-            description = "\n".join(line.removeprefix("    ") for line in description.splitlines())
+        if not use_custom_template and self.is_functional_syntax:
+            description = None
         return self._render(
             class_name=class_name or self.class_name,
             fields=self.fields if use_custom_template else self.rendered_fields,

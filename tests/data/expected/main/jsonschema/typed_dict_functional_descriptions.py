@@ -15,6 +15,3 @@ FuncDesc = TypedDict(
         'c-d': NotRequired[int],
     },
 )
-"""
-Documented functional TypedDict.
-"""
