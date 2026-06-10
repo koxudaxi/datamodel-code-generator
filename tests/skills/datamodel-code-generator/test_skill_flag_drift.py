@@ -75,13 +75,12 @@ def test_skill_documented_flags_exist_in_cli_help() -> None:
             text=True,
             check=False,
         )
+        if result.returncode != 0:
+            pytest.fail(f"datamodel-codegen --help failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}")
+        help_text = result.stdout
     except FileNotFoundError as error:
         msg = "datamodel-codegen not found; ensure the CLI is installed in the test environment"
         raise AssertionError(msg) from error
-    if result.returncode != 0:
-        pytest.fail(f"datamodel-codegen --help failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}")
-
-    help_text = result.stdout
     unknown = {
         flag: sorted(str(path.relative_to(SKILL_DIR.parents[1])) for path in paths)
         for flag, paths in _documented_flags().items()
