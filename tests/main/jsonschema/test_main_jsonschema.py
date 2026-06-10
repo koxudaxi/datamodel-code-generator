@@ -462,6 +462,28 @@ def test_main_jsonschema_dataclass_use_annotated(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_constrained_types_keyword_order(output_file: Path) -> None:
+    """Constrained type arguments keep the JsonSchemaObject field-definition order.
+
+    Guards the iteration-order contract of transform_kwargs: conint/confloat/constr
+    keyword order follows the schema field-definition (model_dump) order regardless
+    of which side of the kwargs/filter pair is iterated.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "constrained_types_keyword_order.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="constrained_types_keyword_order.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
 @pytest.mark.benchmark
 def test_main_jsonschema_nested_deep(tmp_path: Path) -> None:
     """Test deeply nested JSON Schema generation."""
@@ -12078,4 +12100,17 @@ def test_main_jsonschema_enum_member_typed_defaults(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="enum_member_typed_defaults.py",
         importable_module_name="generated_enum_member_typed_defaults",
+    )
+
+
+def test_main_jsonschema_uuid_format_versions(output_file: Path) -> None:
+    """Test uuid format versions map to importable pydantic types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "uuid_format_versions.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        assert_func=assert_file_content,
+        expected_file="uuid_format_versions.py",
+        importable_module_name="generated_uuid_format_versions",
     )
