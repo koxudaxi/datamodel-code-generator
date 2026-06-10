@@ -11460,6 +11460,30 @@ def test_jsonschema_classvar_extra_pydantic_v2(output_file: Path) -> None:
     )
 
 
+def test_jsonschema_classvar_field_str_custom_template(
+    capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that custom templates can render a ClassVar field via str(field)."""
+    model_base._get_environment.cache_clear()
+    model_base._get_template_with_custom_dir.cache_clear()
+    monkeypatch.chdir(tmp_path)
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "has_classvar_extra.json",
+            output_path=None,
+            expected_stdout_path=EXPECTED_JSON_SCHEMA_PATH / "has_classvar_extra_custom_template_field.py",
+            capsys=capsys,
+            input_file_type=None,
+            extra_args=[
+                "--custom-template-dir",
+                str(DATA_PATH / "templates_class_var_field"),
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--field-include-all-keys",
+            ],
+        )
+
+
 def test_jsonschema_classvar_extra_set_pydantic_v2(output_file: Path) -> None:
     """Test ClassVar with set default value."""
     run_main_and_assert(
@@ -12077,6 +12101,101 @@ def test_main_msgspec_array_length_constraints_without_annotated() -> None:
     )
 
 
+def test_main_msgspec_integer_fractional_constraints(output_file: Path) -> None:
+    """Test msgspec normalizes fractional integer constraints to integer-safe bounds."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "integer_fractional_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct", "--use-annotated"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_integer_fractional_constraints.py",
+        importable_module_name="generated_msgspec_integer_fractional_constraints",
+    )
+
+
+def test_main_msgspec_non_finite_number_values(output_file: Path) -> None:
+    """Test msgspec renders non-finite defaults as expressions and drops non-finite bounds."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "non_finite_number_values.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct", "--use-annotated"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_non_finite_number_values.py",
+        importable_module_name="generated_msgspec_non_finite_number_values",
+    )
+
+
+def test_main_dataclass_non_finite_number_values(output_file: Path) -> None:
+    """Test dataclass renders non-finite defaults as valid Python expressions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "non_finite_number_values.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "dataclasses.dataclass"],
+        assert_func=assert_file_content,
+        expected_file="dataclass_non_finite_number_values.py",
+        importable_module_name="generated_dataclass_non_finite_number_values",
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "module_name", "expected_file"),
+    [
+        (
+            "dataclasses.dataclass",
+            "generated_dataclass_non_finite_container_defaults",
+            "dataclass_non_finite_container_defaults.py",
+        ),
+        (
+            "msgspec.Struct",
+            "generated_msgspec_non_finite_container_defaults",
+            "msgspec_non_finite_container_defaults.py",
+        ),
+    ],
+)
+def test_main_non_finite_container_defaults(
+    output_model: str, module_name: str, expected_file: str, output_file: Path
+) -> None:
+    """Test container defaults containing non-finite numbers render as expressions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "non_finite_container_defaults.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", output_model],
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        importable_module_name=module_name,
+    )
+
+
+def test_main_msgspec_decimal_constraints(output_file: Path) -> None:
+    """Test msgspec keeps fractional decimal constraints and integer-valued bounds."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_decimal_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct", "--use-annotated"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_decimal_constraints.py",
+        importable_module_name="generated_msgspec_decimal_constraints",
+    )
+
+
+def test_main_jsonschema_uuid_format_versions(output_file: Path) -> None:
+    """Test uuid format versions map to importable pydantic types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "uuid_format_versions.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        assert_func=assert_file_content,
+        expected_file="uuid_format_versions.py",
+        importable_module_name="generated_uuid_format_versions",
+    )
+
+
 def test_main_dataclass_enum_member_special_defaults(output_file: Path) -> None:
     """Test enum defaults containing quotes resolve to members for scalars and lists."""
     run_main_and_assert(
@@ -12100,17 +12219,4 @@ def test_main_jsonschema_enum_member_typed_defaults(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="enum_member_typed_defaults.py",
         importable_module_name="generated_enum_member_typed_defaults",
-    )
-
-
-def test_main_jsonschema_uuid_format_versions(output_file: Path) -> None:
-    """Test uuid format versions map to importable pydantic types."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "uuid_format_versions.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
-        assert_func=assert_file_content,
-        expected_file="uuid_format_versions.py",
-        importable_module_name="generated_uuid_format_versions",
     )
