@@ -4812,17 +4812,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _get_ref_body(self, resolved_ref: str) -> dict[str, YamlValue]:
         """Get the body of a reference from URL or remote file."""
         if is_url(resolved_ref):
-            if not resolved_ref.startswith("file://") and self.http_local_ref_path is None:
+            url_scheme = urlparse(resolved_ref).scheme
+            uses_local_http_path = url_scheme in {"http", "https"} and self.http_local_ref_path is not None
+            if not uses_local_http_path:
                 if self.allow_remote_refs is False:
                     msg = (
                         f"Fetching remote $ref is disabled: {resolved_ref}\n"
-                        "Reason: --no-allow-remote-refs was set, so HTTP(S) $ref targets are not fetched.\n"
+                        "Reason: --no-allow-remote-refs was set, so external $ref targets are not fetched.\n"
                         "If this schema and all of its remote references are trusted, pass --allow-remote-refs. "
                         "If a trusted remote reference points to an internal schema registry, also pass "
                         "--allow-private-network."
                     )
                     raise Error(msg)
-                if self.allow_remote_refs is None:
+                if self.allow_remote_refs is None and url_scheme in {"http", "https"}:
                     warn_deprecated(
                         "behavior.remote-ref-default",
                         details=(
@@ -4834,6 +4836,32 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     )
             return self._get_ref_body_from_url(resolved_ref)
         return self._get_ref_body_from_remote(resolved_ref)
+
+    def _resolve_local_ref_path(self, path: Path, ref: str) -> Path:
+        base_path = self.base_path.resolve()
+        resolved_path = path.resolve()
+        if resolved_path.is_relative_to(base_path) or self.allow_remote_refs is True:
+            return resolved_path
+
+        details = (
+            f"Reference: {ref}. Reason: the resolved file is outside the input base path. "
+            f"Base path: {base_path}. Resolved path: {resolved_path}. "
+            "Move trusted referenced schemas under the input directory, pass --allow-remote-refs to allow this "
+            "external local file reference without a warning, or pass --no-allow-remote-refs to block it."
+        )
+        if self.allow_remote_refs is None:
+            warn_deprecated("behavior.remote-ref-default", details=details, stacklevel=3)
+            return resolved_path
+
+        msg = (
+            f"Blocked unsafe local $ref: {ref}\n"
+            "Reason: --no-allow-remote-refs was set and the resolved file is outside the input base path.\n"
+            f"Base path: {base_path}\n"
+            f"Resolved path: {resolved_path}\n"
+            "Move trusted referenced schemas under the input directory, or pass --allow-remote-refs only when the "
+            "schema and referenced files are trusted."
+        )
+        raise Error(msg)
 
     def _get_ref_body_from_local_http_path(self, ref: str) -> dict[str, YamlValue]:
         assert self.http_local_ref_path is not None
@@ -4878,9 +4906,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             # Handle UNC paths (file://server/share/path)
             if parsed.netloc:
                 path = f"//{parsed.netloc}{path}"
-            file_path = Path(path)
+            file_path = self._resolve_local_ref_path(Path(path), ref)
             return self.remote_object_cache.get_or_put(
-                ref, default_factory=lambda _: load_data_from_path(file_path, self.encoding)
+                str(file_path), default_factory=lambda _: load_data_from_path(file_path, self.encoding)
             )
         if self.http_local_ref_path is not None and urlparse(ref).scheme in {"http", "https"}:
             return self._get_ref_body_from_local_http_path(ref)
@@ -4890,7 +4918,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _get_ref_body_from_remote(self, resolved_ref: str) -> dict[str, YamlValue]:
         """Get reference body from a remote file path."""
-        full_path = self.base_path / resolved_ref
+        full_path = self._resolve_local_ref_path(self.base_path / resolved_ref, resolved_ref)
 
         try:
             return self.remote_object_cache.get_or_put(

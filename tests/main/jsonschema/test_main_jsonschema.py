@@ -1150,10 +1150,15 @@ def test_main_local_directory_path_absolute_root_id_refs_rejects_parent_traversa
         input_path=JSON_SCHEMA_DATA_PATH / "path_absolute_root_id_refs_parent_traversal" / "schema-root",
         output_path=output_dir,
         input_file_type="jsonschema",
-        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--disable-timestamp"],
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--no-allow-remote-refs",
+        ],
         expected_exit=Exit.ERROR,
         capsys=capsys,
-        expected_stderr_contains="$ref file not found",
+        expected_stderr_contains="Blocked unsafe local $ref",
     )
 
 
@@ -3308,6 +3313,120 @@ def test_main_jsonschema_default_factory_rejects_unsafe_value(
         capsys=capsys,
         expected_stderr_contains="default_factory must be one of: dict, list, set",
         extra_args=["--output-model-type", output_model],
+    )
+
+
+@pytest.mark.parametrize("ref_template", ["../secret/leak.json", "{file_uri}"])
+def test_main_jsonschema_warns_local_ref_outside_base_path(
+    ref_template: str,
+    output_file: Path,
+) -> None:
+    """Keep local refs outside the input base path compatible, but warn."""
+    project_dir = output_file.parent / "project"
+    secret_dir = output_file.parent / "secret"
+    project_dir.mkdir()
+    secret_dir.mkdir()
+    secret_schema = secret_dir / "leak.json"
+    secret_schema.write_text(
+        json.dumps({
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string",
+                    "default": "SECRET_TOKEN",
+                }
+            },
+        }),
+        encoding="utf-8",
+    )
+    ref = ref_template.format(file_uri=secret_schema.resolve().as_uri())
+    input_file = project_dir / "schema.json"
+    input_file.write_text(
+        json.dumps({
+            "type": "object",
+            "properties": {
+                "payload": {
+                    "$ref": ref,
+                }
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    with pytest.warns(FutureWarning, match=r"outside the input base path"):
+        run_main_and_assert(
+            input_path=input_file,
+            output_path=output_file,
+            input_file_type="jsonschema",
+        )
+
+
+def test_main_jsonschema_no_allow_remote_refs_blocks_local_ref_outside_base_path(
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject local JSON Schema refs outside the input base path when explicitly disabled."""
+    project_dir = output_file.parent / "project"
+    secret_dir = output_file.parent / "secret"
+    project_dir.mkdir()
+    secret_dir.mkdir()
+    (secret_dir / "leak.json").write_text(json.dumps({"type": "object"}), encoding="utf-8")
+    input_file = project_dir / "schema.json"
+    input_file.write_text(
+        json.dumps({
+            "type": "object",
+            "properties": {
+                "payload": {
+                    "$ref": "../secret/leak.json",
+                }
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        output_should_not_exist=True,
+        capsys=capsys,
+        expected_stderr_contains="Blocked unsafe local $ref",
+        extra_args=["--no-allow-remote-refs"],
+    )
+
+
+def test_main_jsonschema_no_allow_remote_refs_blocks_file_url(
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Apply --no-allow-remote-refs to file:// refs as external refs."""
+    project_dir = output_file.parent / "project"
+    project_dir.mkdir()
+    referenced_schema = project_dir / "referenced.json"
+    referenced_schema.write_text(json.dumps({"type": "object"}), encoding="utf-8")
+    input_file = project_dir / "schema.json"
+    input_file.write_text(
+        json.dumps({
+            "type": "object",
+            "properties": {
+                "payload": {
+                    "$ref": referenced_schema.resolve().as_uri(),
+                }
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        output_should_not_exist=True,
+        capsys=capsys,
+        expected_stderr_contains="Fetching remote $ref is disabled",
+        extra_args=["--no-allow-remote-refs"],
     )
 
 
@@ -6514,14 +6633,15 @@ def test_main_jsonschema_external_discriminator(
     output_model: str, expected_output: str, min_version: str, output_file: Path
 ) -> None:
     """Test external discriminator references."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "discriminator_with_external_reference" / "inner_folder" / "schema.json",
-        output_path=output_file,
-        input_file_type=None,
-        assert_func=assert_file_content,
-        expected_file=expected_output,
-        extra_args=["--output-model-type", output_model, "--target-python-version", min_version],
-    )
+    with pytest.warns(FutureWarning, match=r"outside the input base path"):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "discriminator_with_external_reference" / "inner_folder" / "schema.json",
+            output_path=output_file,
+            input_file_type=None,
+            assert_func=assert_file_content,
+            expected_file=expected_output,
+            extra_args=["--output-model-type", output_model, "--target-python-version", min_version],
+        )
 
 
 @pytest.mark.parametrize(
