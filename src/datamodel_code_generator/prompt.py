@@ -43,10 +43,13 @@ PROMPT_GUIDANCE_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
         "Decision Checklist",
         (
             "- Input type: JSON Schema, OpenAPI, GraphQL, CSV, Python input model, or raw JSON/YAML data.",
-            "- Output model type: Pydantic v1/v2, dataclasses, TypedDict, msgspec, or a custom base class.",
+            (
+                "- Output model type: `pydantic_v2.BaseModel`, `pydantic_v2.dataclass`, "
+                "`dataclasses.dataclass`, `typing.TypedDict`, or `msgspec.Struct`."
+            ),
             (
                 "- Python/Pydantic version: align `--target-python-version`, `--output-model-type`, and "
-                "`--target-pydantic-version`."
+                "`--target-pydantic-version` when generating Pydantic v2 models."
             ),
             (
                 "- Strictness: choose `--strict-types` values, `--strict-nullable`, `--field-constraints`, and "
@@ -57,6 +60,10 @@ PROMPT_GUIDANCE_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
                 "`--snake-case-field`."
             ),
             "- Module layout: choose one file or an output directory with `--module-split-mode` and reuse options.",
+            (
+                "- Runtime model base: use `--base-class` for a custom base class; "
+                "it is separate from `--output-model-type`."
+            ),
             "- Validation constraints: prefer `--field-constraints`; add `--use-annotated` for Pydantic v2.",
         ),
     ),

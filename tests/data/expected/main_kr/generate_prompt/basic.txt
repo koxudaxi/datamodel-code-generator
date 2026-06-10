@@ -765,11 +765,12 @@ Recommend a final CLI command for the user's schema and target runtime. Include:
 ## Decision Checklist
 
 - Input type: JSON Schema, OpenAPI, GraphQL, CSV, Python input model, or raw JSON/YAML data.
-- Output model type: Pydantic v1/v2, dataclasses, TypedDict, msgspec, or a custom base class.
-- Python/Pydantic version: align `--target-python-version`, `--output-model-type`, and `--target-pydantic-version`.
+- Output model type: `pydantic_v2.BaseModel`, `pydantic_v2.dataclass`, `dataclasses.dataclass`, `typing.TypedDict`, or `msgspec.Struct`.
+- Python/Pydantic version: align `--target-python-version`, `--output-model-type`, and `--target-pydantic-version` when generating Pydantic v2 models.
 - Strictness: choose `--strict-types` values, `--strict-nullable`, `--field-constraints`, and `--extra-fields`.
 - Aliases/naming: decide between API-compatible aliases and normalized names such as `--snake-case-field`.
 - Module layout: choose one file or an output directory with `--module-split-mode` and reuse options.
+- Runtime model base: use `--base-class` for a custom base class; it is separate from `--output-model-type`.
 - Validation constraints: prefer `--field-constraints`; add `--use-annotated` for Pydantic v2.
 
 ## Common Recipes
