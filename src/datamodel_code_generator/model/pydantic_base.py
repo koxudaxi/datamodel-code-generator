@@ -303,8 +303,9 @@ class DataModelField(DataModelFieldBase):
     @property
     def annotated(self) -> str | None:
         """Get the Annotated type hint if use_annotated is enabled."""
-        field = str(self)
-        if not self.use_annotated or not field or self.is_class_var:
+        if not self.use_annotated or self.is_class_var:
+            return None
+        if not (field := str(self)):
             return None
         return f"Annotated[{self.type_hint}, {field}]"
 

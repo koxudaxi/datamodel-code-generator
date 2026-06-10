@@ -11460,6 +11460,30 @@ def test_jsonschema_classvar_extra_pydantic_v2(output_file: Path) -> None:
     )
 
 
+def test_jsonschema_classvar_field_str_custom_template(
+    capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that custom templates can render a ClassVar field via str(field)."""
+    model_base._get_environment.cache_clear()
+    model_base._get_template_with_custom_dir.cache_clear()
+    monkeypatch.chdir(tmp_path)
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "has_classvar_extra.json",
+            output_path=None,
+            expected_stdout_path=EXPECTED_JSON_SCHEMA_PATH / "has_classvar_extra_custom_template_field.py",
+            capsys=capsys,
+            input_file_type=None,
+            extra_args=[
+                "--custom-template-dir",
+                str(DATA_PATH / "templates_class_var_field"),
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--field-include-all-keys",
+            ],
+        )
+
+
 def test_jsonschema_classvar_extra_set_pydantic_v2(output_file: Path) -> None:
     """Test ClassVar with set default value."""
     run_main_and_assert(
