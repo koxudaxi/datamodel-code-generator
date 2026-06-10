@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from datamodel_code_generator.arguments import arg_parser
-from datamodel_code_generator.cli_options import CLI_OPTION_META, OptionCategory
+from datamodel_code_generator.cli_options import CLI_OPTION_META, CLIOptionRelation, OptionCategory, get_option_meta
 from datamodel_code_generator.enums import InputFileType
 from datamodel_code_generator.input_model import load_model_schema
 
@@ -131,10 +131,41 @@ def _clean_help(action: argparse.Action) -> str:
     return str(action.help).replace("%(default)s", str(action.default))
 
 
-def _category(option_name: str) -> str:
-    if option_name in CLI_OPTION_META:
-        return CLI_OPTION_META[option_name].category.value
-    return OptionCategory.GENERAL.value
+def _relation_metadata(relation: CLIOptionRelation) -> dict[str, Any]:
+    item = {"option": relation.option}
+    if relation.value is not None:
+        item["value"] = relation.value
+    if relation.when is not None:
+        item["when"] = relation.when
+    if relation.message:
+        item["message"] = relation.message
+    return item
+
+
+def _relations_metadata(relations: tuple[CLIOptionRelation, ...]) -> list[dict[str, Any]]:
+    return [_relation_metadata(relation) for relation in relations]
+
+
+def _options_by_name(options: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {}
+    for option in options:
+        result[option["name"]] = option
+        if negative_name := option.get("negative_name"):
+            result[negative_name] = option
+    return result
+
+
+def _annotate_relation_targets(options: list[dict[str, Any]]) -> None:
+    options_by_name = _options_by_name(options)
+    for option in options:
+        for relation_kind in ("implies", "requires", "conflicts"):
+            if not (relations := option.get(relation_kind)):
+                continue
+            for relation in relations:
+                if not (target := options_by_name.get(relation["option"])):
+                    continue
+                relation["dest"] = target["dest"]
+                relation["config_dest"] = target.get("config_dest", target["dest"])
 
 
 def _arg_field_renames() -> dict[str, str]:
@@ -226,19 +257,19 @@ def _option_metadata(action: argparse.Action) -> dict[str, Any] | None:
     if not name:
         return None
 
-    meta = CLI_OPTION_META.get(name)
+    meta = CLI_OPTION_META.get(name) or get_option_meta(name)
     control = _control(action)
     config_dest = ARG_FIELD_RENAMES.get(action.dest, action.dest)
     unsupported_reason, value_kind = _option_support(action.dest, config_dest, control)
     browser_supported = not unsupported_reason
-    return {
+    option_metadata = {
         "name": name,
         "negative_name": _negative_name(action),
         "dest": action.dest,
         "config_dest": config_dest,
         "value_kind": value_kind,
         "label": name.removeprefix("--"),
-        "category": _category(name),
+        "category": meta.category.value if meta else OptionCategory.GENERAL.value,
         "control": control,
         "choices": _choices(action),
         "help": _clean_help(action),
@@ -248,6 +279,11 @@ def _option_metadata(action: argparse.Action) -> dict[str, Any] | None:
         "deprecated_message": meta.deprecated_message if meta else None,
         "hidden": not browser_supported,
     }
+    if meta:
+        for relation_kind in ("implies", "requires", "conflicts"):
+            if relations := _relations_metadata(getattr(meta, relation_kind)):
+                option_metadata[relation_kind] = relations
+    return option_metadata
 
 
 def _input_formats() -> list[dict[str, Any]]:
@@ -285,6 +321,7 @@ def build_metadata() -> dict[str, Any]:
         option = _option_metadata(action)
         if option is not None:
             options.append(option)
+    _annotate_relation_targets(options)
     category_indexes = {category: index for index, category in enumerate(CATEGORY_ORDER)}
     options.sort(key=lambda option: (category_indexes.get(option["category"], len(category_indexes)), option["name"]))
     groups = [

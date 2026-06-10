@@ -53,6 +53,8 @@ Allow extra fields in generated Pydantic models (extra='allow').
 
 The `--allow-extra-fields` flag configures the code generation behavior.
 
+**Deprecated:** --allow-extra-fields is deprecated. Use --extra-fields=allow instead.
+
 !!! tip "Usage"
 
     ```bash
