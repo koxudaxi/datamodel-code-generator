@@ -22,7 +22,7 @@ from tests.conftest import (
     create_assert_file_content,
     freeze_time,
 )
-from tests.main.conftest import run_main_and_assert, run_main_url_and_assert, run_main_with_args
+from tests.main.conftest import LEGACY_BLACK_SKIP, run_main_and_assert, run_main_url_and_assert, run_main_with_args
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
@@ -1284,6 +1284,7 @@ precise decimal arithmetic when validating values against the constraint.""",
     cli_args=["--use-decimal-for-multiple-of"],
     golden_output="main_kr/use_decimal_for_multiple_of/output.py",
 )
+@LEGACY_BLACK_SKIP
 @freeze_time("2019-07-26")
 def test_use_decimal_for_multiple_of(output_file: Path) -> None:
     """Generate Decimal types for fields with multipleOf constraint.
@@ -1591,7 +1592,10 @@ def test_http_local_ref_path_cli_doc(mock_httpx_get: HttpxGetMockFactory, output
 
 The `--allow-private-network` flag permits trusted HTTP(S) schema requests to
 private, loopback, link-local, or otherwise non-public network hosts. Without
-this flag, those targets are blocked by default to reduce SSRF risk.""",
+this flag, those targets are blocked by default to reduce server-side request
+forgery (SSRF) risk. If a trusted internal schema endpoint is blocked, verify
+the URL and pass `--allow-private-network`; otherwise use a local schema file
+or public endpoint.""",
     input_schema="jsonschema/pet_simple.json",
     cli_args=["--url", "http://127.0.0.1/schema.json", "--allow-private-network"],
     golden_output="main_kr/allow_private_network/output.py",

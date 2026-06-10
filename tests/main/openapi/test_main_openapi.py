@@ -2173,11 +2173,12 @@ def test_main_openapi_nullable_use_union_operator(output_file: Path) -> None:
 
 def test_external_relative_ref(tmp_path: Path) -> None:
     """Test OpenAPI generation with external relative references."""
-    run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "external_relative_ref" / "model_b",
-        output_path=tmp_path,
-        expected_directory=EXPECTED_OPENAPI_PATH / "external_relative_ref",
-    )
+    with pytest.warns(FutureWarning, match=r"outside the input base path"):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "external_relative_ref" / "model_b",
+            output_path=tmp_path,
+            expected_directory=EXPECTED_OPENAPI_PATH / "external_relative_ref",
+        )
 
 
 def test_paths_external_ref(output_file: Path) -> None:
@@ -2919,7 +2920,10 @@ def test_main_dataclass_base_class(output_file: Path) -> None:
 def test_main_openapi_reference_same_hierarchy_directory(tmp_path: Path) -> None:
     """Test OpenAPI generation with reference in same hierarchy directory."""
     output_file: Path = tmp_path / "output.py"
-    with chdir(OPEN_API_DATA_PATH / "reference_same_hierarchy_directory"):
+    with (
+        chdir(OPEN_API_DATA_PATH / "reference_same_hierarchy_directory"),
+        pytest.warns(FutureWarning, match=r"outside the input base path"),
+    ):
         run_main_and_assert(
             input_path=Path("./public/entities.yaml"),
             output_path=output_file,

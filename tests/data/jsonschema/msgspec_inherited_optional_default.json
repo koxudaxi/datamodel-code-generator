@@ -1,0 +1,25 @@
+{
+    "type": "object",
+    "properties": {
+        "child": {"$ref": "#/definitions/Child"}
+    },
+    "definitions": {
+        "Base": {
+            "type": "object",
+            "properties": {
+                "kind": {"type": "string", "default": "base"},
+                "note": {"type": "string"}
+            }
+        },
+        "Child": {
+            "allOf": [
+                {"$ref": "#/definitions/Base"},
+                {
+                    "type": "object",
+                    "properties": {"id": {"type": "integer"}},
+                    "required": ["id"]
+                }
+            ]
+        }
+    }
+}

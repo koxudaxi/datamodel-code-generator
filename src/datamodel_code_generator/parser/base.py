@@ -77,7 +77,7 @@ from datamodel_code_generator.model.base import (
     DataModel,
     DataModelFieldBase,
 )
-from datamodel_code_generator.model.enum import Enum, Member
+from datamodel_code_generator.model.enum import Enum, Member, evaluate_member_value
 from datamodel_code_generator.model.imports import IMPORT_TYPED_DICT, IMPORT_TYPED_DICT_BACKPORT
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
@@ -1655,7 +1655,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 enum_class_name = enum_source.reference.short_name
                 enum_member_literals: list[tuple[str, str]] = []
                 for value in discriminator_values:
-                    member = enum_source.find_member(value)
+                    member = enum_source.find_member(value, coerce_strings=True)
                     if member and member.field.name:
                         enum_member_literals.append((enum_class_name, member.field.name))
                     else:  # pragma: no cover
@@ -1675,15 +1675,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     @staticmethod
     def _get_enum_discriminator_literal(enum_source: Enum, value: DiscriminatorValue) -> DiscriminatorValue:
-        member = enum_source.find_member(value)
+        member = enum_source.find_member(value, coerce_strings=True)
         if not member:
             return value
 
-        default = member.field.default
-        if isinstance(default, str):
-            return default.strip("'\"")
-        if isinstance(default, int | bool):
-            return default
+        member_value = evaluate_member_value(member.field.default)
+        if isinstance(member_value, (str, int, bool)):
+            return member_value
         return value
 
     def __apply_discriminator_type(  # noqa: PLR0912, PLR0914, PLR0915
@@ -2420,6 +2418,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         rename_type = self.field_type_collision_strategy == FieldTypeCollisionStrategy.RenameType
         all_class_names = {cast("str", m.class_name) for m in models if m.class_name}
 
+        resolver = ModelResolver(
+            snake_case_field=self.snake_case_field,
+            remove_suffix_number=True,
+        )
+
         for model in models:
             if "Enum" in model.base_class or not model.BASE_CLASS:
                 continue
@@ -2437,22 +2440,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         colliding_reference = data_type.reference
 
                 if colliding_reference is not None:
-                    resolver = ModelResolver(
-                        exclude_names=all_class_names.copy(),
-                        snake_case_field=self.snake_case_field,
-                        remove_suffix_number=True,
-                    )
+                    resolver._reset_for_reuse(all_class_names.copy())  # noqa: SLF001
                     source = cast("DataModel", colliding_reference.source)
                     resolver.exclude_names.add(cast("str", filed_name))
                     new_class_name = resolver.add(["type"], cast("str", source.class_name)).name  # ty: ignore
                     source.class_name = new_class_name
                     all_class_names.add(new_class_name)
                 elif not rename_type:
-                    resolver = ModelResolver(
-                        exclude_names=reference_type_names,
-                        snake_case_field=self.snake_case_field,
-                        remove_suffix_number=True,
-                    )
+                    resolver._reset_for_reuse(reference_type_names)  # noqa: SLF001
                     new_filed_name = resolver.add(["field"], cast("str", filed_name)).name
                     if filed_name != new_filed_name:
                         field.alias = filed_name
@@ -2483,12 +2478,17 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if (inherited := self.__get_dataclass_inherited_info(model)) is None:
                 continue
             inherited_names, has_default = inherited
-            if not has_default or not any(self.__is_new_required_field(f, inherited_names) for f in model.fields):
+            field_has_assignment = Parser._get_field_assignment_checker(model)
+            if not has_default or not any(
+                self.__is_new_required_field(f, inherited_names, field_has_assignment) for f in model.fields
+            ):
                 continue
 
-            if self.target_python_version.has_kw_only_dataclass:
+            if isinstance(model, msgspec_model.Struct):
+                model.add_base_class_kwarg("kw_only", "True")
+            elif self.target_python_version.has_kw_only_dataclass:
                 for field in model.fields:
-                    if self.__is_new_required_field(field, inherited_names):
+                    if self.__is_new_required_field(field, inherited_names, field_has_assignment):
                         field.extras["kw_only"] = True
             else:  # pragma: no cover
                 warn(
@@ -2499,16 +2499,20 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     category=UserWarning,
                     stacklevel=2,
                 )
-            self.generation_store.set_fields(model, sorted(model.fields, key=dataclass_model.has_field_assignment))
+            self.generation_store.set_fields(model, sorted(model.fields, key=field_has_assignment))
 
     @classmethod
     def __get_dataclass_inherited_info(cls, model: DataModel) -> tuple[set[str], bool] | None:
         """Get inherited field names and whether any has default. Returns None if not applicable."""
         if not model.SUPPORTS_KW_ONLY:
             return None
-        if not model.base_classes or model.dataclass_arguments.get("kw_only"):
+        base_class_kw_only = None
+        if isinstance(model, msgspec_model.Struct):
+            base_class_kw_only = model.extra_template_data.get("base_class_kwargs", {}).get("kw_only")
+        if not model.base_classes or model.dataclass_arguments.get("kw_only") or base_class_kw_only in {True, "True"}:
             return None
 
+        field_has_assignment = cls._get_field_assignment_checker(model)
         inherited_names: set[str] = set()
         has_default = False
         for base in model.base_classes:
@@ -2518,23 +2522,30 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 if not f.name or f.extras.get("init") is False:
                     continue  # pragma: no cover
                 inherited_names.add(f.name)
-                if dataclass_model.has_field_assignment(f):
+                if field_has_assignment(f):
                     has_default = True
 
         for f in model.fields:
             if f.name not in inherited_names or f.extras.get("init") is False:
                 continue
-            if dataclass_model.has_field_assignment(f):  # pragma: no branch
+            if field_has_assignment(f):  # pragma: no branch
                 has_default = True
         return (inherited_names, has_default) if inherited_names else None
 
-    def __is_new_required_field(self, field: DataModelFieldBase, inherited: set[str]) -> bool:  # noqa: PLR6301
+    @staticmethod
+    def _get_field_assignment_checker(model: DataModel) -> Callable[[DataModelFieldBase], bool]:
+        if isinstance(model, msgspec_model.Struct):
+            return msgspec_model.has_field_assignment
+        return dataclass_model.has_field_assignment
+
+    def __is_new_required_field(  # noqa: PLR6301
+        self,
+        field: DataModelFieldBase,
+        inherited: set[str],
+        field_has_assignment: Callable[[DataModelFieldBase], bool],
+    ) -> bool:
         """Check if field is a new required init field."""
-        return (
-            field.name not in inherited
-            and field.extras.get("init") is not False
-            and not dataclass_model.has_field_assignment(field)
-        )
+        return field.name not in inherited and field.extras.get("init") is not False and not field_has_assignment(field)
 
     def __remove_overridden_models(self, models: list[DataModel]) -> list[DataModel]:
         """Remove models that are being overridden by custom types (model-level only).
@@ -3567,6 +3578,18 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     body=body,
                     future_imports=future_imports_str,
                 )
+
+    def _dispose(self) -> None:
+        """Break reference cycles in the parsed object graph.
+
+        Models, fields, data types, and references point at each other in
+        cycles, which keeps the whole graph alive until a full garbage
+        collection pass. Severing the back references lets ordinary reference
+        counting reclaim the graph as soon as the parser is dropped, which
+        matters for processes that call generate() repeatedly.
+        """
+        self.generation_store._dispose(self.model_resolver.references.values())  # noqa: SLF001
+        self.model_resolver.references.clear()
 
     def parse(  # noqa: PLR0913, PLR0914, PLR0917
         self,

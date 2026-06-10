@@ -1,0 +1,20 @@
+{
+    "type": "object",
+    "properties": {
+        "vals": {
+            "type": "array",
+            "items": {"type": "number"},
+            "default": [1e999, 1.5]
+        },
+        "inner": {
+            "allOf": [{"$ref": "#/definitions/Inner"}],
+            "default": {"v": 1e999}
+        }
+    },
+    "definitions": {
+        "Inner": {
+            "type": "object",
+            "properties": {"v": {"type": "number"}}
+        }
+    }
+}

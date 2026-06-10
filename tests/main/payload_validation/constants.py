@@ -84,6 +84,22 @@ EXCLUDED_FILES: dict[str, str] = {
 }
 EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/all_of_any_of_base_class_ref.json": "hypothesis-jsonschema cannot satisfy the allOf/anyOf constraints",
+    "jsonschema/decimal_fractional_constraints.json": (
+        "format decimal strings from hypothesis-jsonschema are arbitrary text that Decimal cannot parse"
+    ),
+    "jsonschema/integer_fractional_constraints.json": (
+        "hypothesis-jsonschema emits integers near float precision limits where multipleOf checks are unstable"
+    ),
+    "jsonschema/msgspec_decimal_constraints.json": (
+        "format decimal strings from hypothesis-jsonschema are arbitrary text that Decimal cannot parse"
+    ),
+    "jsonschema/non_finite_container_defaults.json": (
+        "non-finite defaults cannot be represented in the JSON payloads hypothesis-jsonschema generates"
+    ),
+    "jsonschema/non_finite_number_values.json": (
+        "non-finite bounds cannot be satisfied by any JSON payload hypothesis-jsonschema generates"
+    ),
+    "jsonschema/uuid_format_versions.json": ("versioned uuid formats reject the fixed version-4 uuid example payloads"),
     "jsonschema/prefix_items_fixed_unevaluated_tail_schema.json": (
         "hypothesis-jsonschema cannot satisfy fixed prefixItems with unevaluatedItems tail constraints"
     ),

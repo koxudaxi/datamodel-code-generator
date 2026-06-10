@@ -5,6 +5,7 @@ Maps schema types to Pydantic v2 specific types with AwareDatetime, NaiveDatetim
 
 from __future__ import annotations
 
+import ast
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -60,21 +61,22 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_STRICT_INT,
     IMPORT_STRICT_STR,
     IMPORT_UUID1,
-    IMPORT_UUID2,
     IMPORT_UUID3,
     IMPORT_UUID4,
     IMPORT_UUID5,
 )
+from datamodel_code_generator.python_literal import PythonCode
 from datamodel_code_generator.types import (
     DataType,
     StrictTypes,
     Types,
     UnionIntFloat,
+    normalize_integer_constraints,
 )
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManagerBase
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Collection, Iterator, Sequence
 
     from datamodel_code_generator.imports import Import
 
@@ -116,7 +118,7 @@ def type_map_factory(
         Types.email: data_type.from_import(IMPORT_EMAIL_STR),
         Types.uuid: data_type.from_import(IMPORT_UUID),
         Types.uuid1: data_type.from_import(IMPORT_UUID1),
-        Types.uuid2: data_type.from_import(IMPORT_UUID2),
+        Types.uuid2: data_type.from_import(IMPORT_UUID),
         Types.uuid3: data_type.from_import(IMPORT_UUID3),
         Types.uuid4: data_type.from_import(IMPORT_UUID4),
         Types.uuid5: data_type.from_import(IMPORT_UUID5),
@@ -126,8 +128,7 @@ def type_map_factory(
             IMPORT_CONSTR,
             strict=StrictTypes.str in strict_types,
             kwargs={
-                pattern_key: r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*"
-                r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'",
+                pattern_key: _get_regex_literal(HOSTNAME_REGEX),
                 **({"strict": True} if StrictTypes.str in strict_types else {}),
             },
         ),
@@ -161,17 +162,17 @@ def strict_type_map_factory(data_type: type[DataType]) -> dict[StrictTypes, Data
     }
 
 
-number_kwargs: set[str] = {
-    "exclusiveMinimum",
+number_kwargs: tuple[str, ...] = (
     "minimum",
-    "exclusiveMaximum",
     "maximum",
     "multipleOf",
-}
+    "exclusiveMaximum",
+    "exclusiveMinimum",
+)
 
-string_kwargs: set[str] = {"minItems", "maxItems", "minLength", "maxLength", "pattern"}
+string_kwargs: tuple[str, ...] = ("pattern", "minLength", "maxLength", "minItems", "maxItems")
 
-bytes_kwargs: set[str] = {"minLength", "maxLength"}
+bytes_kwargs: tuple[str, ...] = ("minLength", "maxLength")
 
 escape_characters = str.maketrans({
     "'": r"\'",
@@ -186,6 +187,16 @@ HOSTNAME_REGEX = (
     r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*"
     r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$"
 )
+
+
+def _get_regex_literal(pattern: str) -> str:
+    escaped_regex = pattern.translate(escape_characters)
+    raw_literal = f"r'{escaped_regex}'"
+    try:
+        ast.literal_eval(raw_literal)
+    except SyntaxError:
+        return pattern
+    return PythonCode(raw_literal, pattern)
 
 
 class _PydanticDataTypeManager(_DataTypeManagerBase):
@@ -277,9 +288,18 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
             use_object_type,
         )
 
-    def transform_kwargs(self, kwargs: dict[str, Any], filter_: set[str]) -> dict[str, str]:
-        """Transform schema kwargs to Pydantic field kwargs."""
-        return {self.kwargs_schema_to_model.get(k, k): v for (k, v) in kwargs.items() if v is not None and k in filter_}
+    def transform_kwargs(self, kwargs: dict[str, Any], filter_: Collection[str]) -> dict[str, str]:
+        """Transform schema kwargs to Pydantic field kwargs.
+
+        Iterates whichever side is smaller. Output order is identical either way
+        because the filters are tuples in JsonSchemaObject field-definition order,
+        which is also the iteration order of kwargs built from model_dump().
+        """
+        if len(kwargs) <= len(filter_):
+            return {
+                self.kwargs_schema_to_model.get(k, k): v for (k, v) in kwargs.items() if v is not None and k in filter_
+            }
+        return {self.kwargs_schema_to_model.get(k, k): v for k in filter_ if (v := kwargs.get(k)) is not None}
 
     def get_data_int_type(  # noqa: PLR0911
         self,
@@ -299,7 +319,12 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
                     return self.data_type.from_import(IMPORT_NON_NEGATIVE_INT)
                 if data_type_kwargs == {"le": 0} and self.use_non_positive_negative_number_constrained_types:
                     return self.data_type.from_import(IMPORT_NON_POSITIVE_INT)
-            kwargs = {k: int(v) for k, v in data_type_kwargs.items()}
+            if not (kwargs := normalize_integer_constraints(data_type_kwargs)):
+                return (
+                    self.copy_data_type(self.strict_type_map[StrictTypes.int])
+                    if strict
+                    else self.copy_data_type(self.type_map[types])
+                )
             if strict:
                 kwargs["strict"] = True
             return self.data_type.from_import(IMPORT_CONINT, kwargs=kwargs)
@@ -362,9 +387,7 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
             if strict:
                 data_type_kwargs["strict"] = True  # ty: ignore
             if self.PATTERN_KEY in data_type_kwargs:
-                escaped_regex = data_type_kwargs[self.PATTERN_KEY].translate(escape_characters)
-                # TODO: remove unneeded escaped characters
-                data_type_kwargs[self.PATTERN_KEY] = f"r'{escaped_regex}'"
+                data_type_kwargs[self.PATTERN_KEY] = _get_regex_literal(data_type_kwargs[self.PATTERN_KEY])
             return self.data_type.from_import(IMPORT_CONSTR, kwargs=data_type_kwargs)
         if strict:
             return self.copy_data_type(self.strict_type_map[StrictTypes.str])
@@ -487,21 +510,18 @@ class DataTypeManager(_PydanticDataTypeManager):
         )
 
         # Override the data_type with our pydantic v2 version
-        from pydantic import create_model  # noqa: PLC0415
+        from datamodel_code_generator.types import _create_context_data_type  # noqa: PLC0415
 
-        self.data_type: type[DataType] = create_model(
+        self.data_type: type[DataType] = _create_context_data_type(
             "PydanticV2ContextDataType",
-            python_version=(PythonVersion, python_version),
-            use_standard_collections=(bool, use_standard_collections),
-            use_generic_container=(bool, use_generic_container_types),
-            use_union_operator=(bool, use_union_operator),
-            treat_dot_as_module=(bool, treat_dot_as_module),
-            use_serialize_as_any=(bool, use_serialize_as_any),
-            __base__=PydanticV2DataType,
+            PydanticV2DataType,
+            python_version,
+            use_standard_collections,
+            use_generic_container_types,
+            use_union_operator,
+            treat_dot_as_module,
+            use_serialize_as_any,
         )
-        from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace  # noqa: PLC0415
-
-        _rebuild_model_with_datamodel_namespace(self.data_type)
 
     def type_map_factory(  # noqa: PLR0913, PLR0917
         self,
@@ -526,8 +546,7 @@ class DataTypeManager(_PydanticDataTypeManager):
                 IMPORT_CONSTR,
                 strict=StrictTypes.str in strict_types,
                 kwargs={
-                    pattern_key: r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*"
-                    r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$'",
+                    pattern_key: _get_regex_literal(HOSTNAME_REGEX),
                     **({"strict": True} if StrictTypes.str in strict_types else {}),
                 },
             ),

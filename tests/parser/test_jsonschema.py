@@ -555,7 +555,7 @@ def test_parse_nested_array(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
         ("string", "uri-reference", "str", None, None, False),
         ("string", "uuid", "UUID", "uuid", "UUID", False),
         ("string", "uuid1", "UUID1", "pydantic", "UUID1", False),
-        ("string", "uuid2", "UUID2", "pydantic", "UUID2", False),
+        ("string", "uuid2", "UUID", "uuid", "UUID", False),
         ("string", "uuid3", "UUID3", "pydantic", "UUID3", False),
         ("string", "uuid4", "UUID4", "pydantic", "UUID4", False),
         ("string", "uuid5", "UUID5", "pydantic", "UUID5", False),
@@ -989,7 +989,7 @@ def test_create_data_model_dataclass_arguments(
 
 def test_get_ref_body_from_url_file_unc_path(mocker: MockerFixture) -> None:
     """Test _get_ref_body_from_url handles UNC file:// URLs correctly."""
-    parser = JsonSchemaParser("")
+    parser = JsonSchemaParser("", allow_remote_refs=True)
     mock_load = mocker.patch(
         "datamodel_code_generator.parser.jsonschema.load_data_from_path",
         return_value={"type": "object"},
@@ -1010,7 +1010,7 @@ def test_get_ref_body_from_url_file_unc_path(mocker: MockerFixture) -> None:
 
 def test_get_ref_body_from_url_file_local_path(mocker: MockerFixture) -> None:
     """Test _get_ref_body_from_url handles local file:// URLs (no netloc)."""
-    parser = JsonSchemaParser("")
+    parser = JsonSchemaParser("", allow_remote_refs=True)
     mock_load = mocker.patch(
         "datamodel_code_generator.parser.jsonschema.load_data_from_path",
         return_value={"type": "string"},

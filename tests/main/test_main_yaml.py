@@ -53,10 +53,21 @@ def test_main_yaml(output_file: Path) -> None:
     )
 
 
-def test_main_yaml_invalid_root_list(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """Test YAML file with list as root element fails with invalid file format error."""
+def test_main_yaml_root_list(output_file: Path) -> None:
+    """Test YAML file with list as root element generates a list root model."""
     run_main_and_assert(
-        input_path=YAML_DATA_PATH / "invalid_root_list.yaml",
+        input_path=YAML_DATA_PATH / "root_list.yaml",
+        output_path=output_file,
+        input_file_type="yaml",
+        assert_func=assert_file_content,
+        expected_file="yaml/root_list.py",
+    )
+
+
+def test_main_yaml_unsupported_set_tag(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test YAML file with a set tag fails with invalid file format error."""
+    run_main_and_assert(
+        input_path=YAML_DATA_PATH / "unsupported_set_tag.yaml",
         output_path=output_file,
         input_file_type="yaml",
         expected_exit=Exit.ERROR,
