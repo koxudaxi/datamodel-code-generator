@@ -6,7 +6,6 @@ import argparse
 import re
 import sys
 from collections import defaultdict
-from itertools import starmap
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -29,6 +28,16 @@ CATEGORY_DESCRIPTIONS = {
     OptionCategory.GRAPHQL: "GraphQL-specific generation behavior.",
     OptionCategory.GENERAL: "General utility, HTTP, checking, and project integration options.",
 }
+OPTION_CATEGORIES = (
+    OptionCategory.BASE,
+    OptionCategory.TYPING,
+    OptionCategory.FIELD,
+    OptionCategory.MODEL,
+    OptionCategory.TEMPLATE,
+    OptionCategory.OPENAPI,
+    OptionCategory.GRAPHQL,
+    OptionCategory.GENERAL,
+)
 
 
 def _clean_text(text: object) -> str:
@@ -115,7 +124,7 @@ def build_cli_options_reference() -> str:
         "",
     ]
 
-    for category in OptionCategory:
+    for category in OPTION_CATEGORIES:
         options = options_by_category.get(category)
         if not options:
             continue
@@ -125,7 +134,8 @@ def build_cli_options_reference() -> str:
             CATEGORY_DESCRIPTIONS[category],
             "",
         ])
-        lines.extend(starmap(_line_for, options))
+        for option, action in options:
+            lines.append(_line_for(option, action))
         lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"
