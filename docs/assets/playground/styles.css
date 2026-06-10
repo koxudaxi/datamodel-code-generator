@@ -534,6 +534,7 @@ pre {
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--panel);
+  container-type: inline-size;
   overflow: hidden;
   box-shadow: var(--shadow-sm);
 }
@@ -611,7 +612,7 @@ pre {
 
 .option-list-panel {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
   gap: 1px;
   border-top: 1px solid var(--border);
   background: var(--border-soft);
@@ -621,7 +622,7 @@ pre {
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 170px;
-  align-items: center;
+  align-items: start;
   gap: 10px;
   padding: 7px 12px;
   background: var(--panel);
@@ -648,22 +649,21 @@ pre {
 }
 
 .option-label code {
-  overflow: hidden;
   color: var(--text);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 12px;
   font-weight: 720;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .option-label span {
-  overflow: hidden;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .option-widget {
@@ -700,6 +700,18 @@ pre {
   height: 18px;
   accent-color: var(--accent);
   justify-self: end;
+}
+
+@container (max-width: 560px) {
+  .option-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .option-widget {
+    justify-content: stretch;
+  }
 }
 
 .option-list {
