@@ -6,6 +6,7 @@ Provides Enum, StrEnum, and specialized enum classes for code generation.
 from __future__ import annotations
 
 import ast
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, IMPORT_INT_ENUM, IMPORT_STR_ENUM, Import
@@ -26,14 +27,20 @@ _BYTES: str = "bytes"
 _STR: str = "str"
 
 
-def evaluate_member_value(default: Any) -> Any:
-    """Return the runtime value of a member default rendered as a Python literal."""
-    if not isinstance(default, str):
-        return default
+@lru_cache(maxsize=4096)
+def _evaluate_string_member_value(default: str) -> Any:
+    """Parse a member default rendered as a Python literal, returning it unchanged when not a literal."""
     try:
         return ast.literal_eval(default)
     except (SyntaxError, ValueError):
         return default
+
+
+def evaluate_member_value(default: Any) -> Any:
+    """Return the runtime value of a member default rendered as a Python literal."""
+    if not isinstance(default, str):
+        return default
+    return _evaluate_string_member_value(default)
 
 
 def _json_value_equal(member_value: Any, value: Any) -> bool:
