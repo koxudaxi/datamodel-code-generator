@@ -111,7 +111,10 @@ class TypedDict(DataModel):
         if additional_props is False and not is_base_class:
             typed_dict_kwargs["closed"] = "True"
         elif additional_props_type and not is_base_class:
-            typed_dict_kwargs["extra_items"] = additional_props_type
+            if self.extra_template_data.get("additionalPropertiesReferenceClasses"):
+                typed_dict_kwargs["extra_items"] = repr(additional_props_type)
+            else:
+                typed_dict_kwargs["extra_items"] = additional_props_type
 
         if typed_dict_kwargs:
             self.extra_template_data["typed_dict_kwargs"] = typed_dict_kwargs
@@ -165,13 +168,16 @@ class TypedDict(DataModel):
     def render(self, *, class_name: str | None = None) -> str:
         """Render TypedDict class with appropriate syntax."""
         use_custom_template = self.template_file_path.is_absolute()
+        description = self.description if use_custom_template else self.rendered_description
+        if description and not use_custom_template and self.is_functional_syntax:
+            description = "\n".join(line.removeprefix("    ") for line in description.splitlines())
         return self._render(
             class_name=class_name or self.class_name,
             fields=self.fields if use_custom_template else self.rendered_fields,
             decorators=self.decorators,
             base_class=self.base_class,
             methods=self.methods,
-            description=self.description if use_custom_template else self.rendered_description,
+            description=description,
             is_functional_syntax=self.is_functional_syntax,
             all_fields=self.all_fields,
             **self.extra_template_data,
