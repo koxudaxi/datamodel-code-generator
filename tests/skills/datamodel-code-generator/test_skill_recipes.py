@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 FIXTURES = Path(__file__).parent / "fixtures"
-TARGET_PYTHON = f"{sys.version_info[0]}.{sys.version_info[1]}"
+TARGET_PYTHON = "3.10"
 
 
 def _run_codegen(args: Sequence[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
