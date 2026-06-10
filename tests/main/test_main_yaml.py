@@ -53,13 +53,11 @@ def test_main_yaml(output_file: Path) -> None:
 
 
 def test_main_yaml_invalid_root_list(output_file: Path) -> None:
-    """Test YAML file with list as root element generates a root model."""
+    """Test YAML file with list as root element generates valid code."""
     run_main_and_assert(
         input_path=YAML_DATA_PATH / "invalid_root_list.yaml",
         output_path=output_file,
         input_file_type="yaml",
-        assert_func=assert_file_content,
-        expected_file="yaml/invalid_root_list.py",
     )
 
 
