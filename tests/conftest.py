@@ -447,7 +447,11 @@ def freeze_time(time_to_freeze: str, **kwargs: Any) -> time_machine.travel:  # n
 
 
 def _normalize_line_endings(text: str) -> str:
-    """Normalize line endings to LF for cross-platform comparison."""
+    """Normalize line endings to LF for cross-platform comparison.
+
+    This keeps snapshot comparisons platform-neutral; byte-level generated-file
+    newline invariants are pinned separately.
+    """
     return text.replace("\r\n", "\n")
 
 
@@ -776,8 +780,12 @@ def assert_parser_results(
     __tracebackhide__ = True
     for expected_path in expected_dir.rglob(pattern):
         key = str(expected_path.relative_to(expected_dir))
+        if key not in results:
+            msg = f"Parser result missing expected file: {key}"
+            raise AssertionError(msg)
         result_obj = results.pop(key)
         _assert_with_external_file(_get_full_body(result_obj), expected_path)
+    assert not results, list(results)
 
 
 def assert_parser_modules(
@@ -795,6 +803,15 @@ def assert_parser_modules(
         assert_parser_modules(modules, EXPECTED_PATH / "parser_modular")
     """
     __tracebackhide__ = True
+    output_files = set(starmap(Path, modules))
+    expected_files = {path.relative_to(expected_dir) for path in expected_dir.rglob("*.py")}
+
+    extra = expected_files - output_files
+    assert not extra, f"Expected files not in parser modules: {extra}"
+
+    missing = output_files - expected_files
+    assert not missing, f"Parser modules not in expected files: {missing}"
+
     for paths, result in modules.items():
         expected_path = expected_dir.joinpath(*paths)
         _assert_with_external_file(_get_full_body(result), expected_path)
