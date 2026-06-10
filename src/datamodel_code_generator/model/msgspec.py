@@ -146,10 +146,10 @@ class Struct(DataModel):
         keyword_only: bool = False,
         treat_dot_as_module: bool | None = None,
     ) -> None:
-        """Initialize msgspec Struct with positional fields sorted by assignment requirement."""
+        """Initialize msgspec Struct with fields sorted by field assignment requirement."""
         super().__init__(
             reference=reference,
-            fields=fields if keyword_only else sorted(fields, key=has_field_assignment),
+            fields=sorted(fields, key=has_field_assignment),
             decorators=decorators,
             base_classes=base_classes,
             custom_base_class=custom_base_class,
@@ -453,7 +453,7 @@ class DataModelField(DataModelFieldBase):
     @property
     def needs_meta_import(self) -> bool:
         """Check if this field requires the Meta import."""
-        return self._get_meta_string() is not None
+        return self.use_annotated and self._get_meta_string() is not None
 
     def _get_default_as_struct_model(self) -> str | None:
         """Convert default value to Struct model using msgspec convert."""

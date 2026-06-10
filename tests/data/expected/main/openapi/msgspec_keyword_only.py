@@ -14,5 +14,5 @@ class Base(Struct, kw_only=True):
 
 
 class Child(Base, kw_only=True):
-    url: str | UnsetType = 'https://example.com'
     title: str
+    url: str | UnsetType = 'https://example.com'
