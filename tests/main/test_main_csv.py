@@ -41,3 +41,25 @@ def test_csv_stdin(monkeypatch: pytest.MonkeyPatch, output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="csv_stdin_simple.py",
     )
+
+
+def test_csv_file_missing_trailing_cell(output_file: Path) -> None:
+    """Test CSV file input infers row values, not header names, for short rows."""
+    run_main_and_assert(
+        input_path=CSV_DATA_PATH / "missing_trailing_cell.csv",
+        output_path=output_file,
+        input_file_type="csv",
+        assert_func=assert_file_content,
+        expected_file="csv_file_missing_trailing_cell.py",
+    )
+
+
+def test_csv_file_extra_trailing_cell(output_file: Path) -> None:
+    """Test CSV file input ignores cells beyond the header columns."""
+    run_main_and_assert(
+        input_path=CSV_DATA_PATH / "extra_trailing_cell.csv",
+        output_path=output_file,
+        input_file_type="csv",
+        assert_func=assert_file_content,
+        expected_file="csv_file_extra_trailing_cell.py",
+    )
