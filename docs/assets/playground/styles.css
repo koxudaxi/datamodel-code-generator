@@ -17,6 +17,7 @@
   --code-bg: #171c23;
   --format: #03a9f4;
   --topbar-offset: 0px;
+  --options-head-offset: 44px;
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 24%);
   --shadow-md: 0 18px 42px rgb(0 0 0 / 32%);
 }
@@ -581,7 +582,7 @@ pre {
 
 .option-group summary {
   position: sticky;
-  top: calc(var(--topbar-offset) + 44px);
+  top: calc(var(--topbar-offset) + var(--options-head-offset));
   z-index: 7;
   display: flex;
   align-items: center;
