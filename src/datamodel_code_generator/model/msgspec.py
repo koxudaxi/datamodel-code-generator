@@ -6,6 +6,7 @@ Generates Python models using msgspec.Struct for high-performance serialization.
 from __future__ import annotations
 
 from functools import lru_cache, wraps
+from math import isfinite
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
 
 from pydantic import Field
@@ -35,6 +36,7 @@ from datamodel_code_generator.model.pydantic_base import (
 from datamodel_code_generator.model.type_alias import TypeAliasBase
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
 from datamodel_code_generator.model.types import standard_primitive_type_map_factory, type_map_factory
+from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.types import (
     NONE,
     OPTIONAL_PREFIX,
@@ -46,6 +48,8 @@ from datamodel_code_generator.types import (
     Types,
     _remove_none_from_union,
     chain_as_tuple,
+    merge_normalized_constraint,
+    normalize_integer_constraint,
 )
 
 UNSET_TYPE = "UnsetType"
@@ -287,14 +291,28 @@ class DataModelField(DataModelFieldBase):
         if self.data_type.type == "str" and isinstance(const, str):  # pragma: no cover
             self.replace_data_type(self.data_type.__class__(literals=[const]), clear_old_parent=False)
 
-    def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
-        """Get constraint value with appropriate numeric type."""
-        if value is None or constraint not in self._COMPARE_EXPRESSIONS:
-            return value
+    def _has_numeric_data_type(self, type_name: str) -> bool:
+        """Return whether any field data type is the given numeric type."""
+        return any(data_type.type == type_name for data_type in self.data_type.all_data_types)
 
-        if any(data_type.type == "float" for data_type in self.data_type.all_data_types):
-            return float(value)
-        return int(value)
+    def _get_strict_field_constraint(
+        self, constraint: str, value: Any, *, is_float_type: bool, is_int_type: bool
+    ) -> tuple[str, Any] | None:
+        """Return a constraint normalized for the field's numeric type.
+
+        Non-finite bounds are dropped because msgspec Meta only accepts finite values.
+        """
+        if value is None or constraint not in self._COMPARE_EXPRESSIONS:
+            return constraint, value
+        if isinstance(value, float) and not isfinite(value):
+            return None
+        if is_float_type:
+            return constraint, float(value)
+        if is_int_type:
+            return normalize_integer_constraint(constraint, value)
+        if isinstance(value, float) and value.is_integer():
+            return constraint, int(value)
+        return constraint, value
 
     @property
     def field(self) -> str | None:
@@ -334,10 +352,7 @@ class DataModelField(DataModelFieldBase):
         if "default" in data and isinstance(data["default"], (list, dict, set)) and "default_factory" not in data:
             default_value = data.pop("default")
             if default_value:
-                from datamodel_code_generator.model.base import repr_set_sorted  # noqa: PLC0415
-
-                default_repr = repr_set_sorted(default_value) if isinstance(default_value, set) else repr(default_value)
-                data["default_factory"] = f"lambda: {default_repr}"
+                data["default_factory"] = f"lambda: {represent_python_value(default_value)}"
             else:
                 data["default_factory"] = type(default_value).__name__
 
@@ -356,9 +371,9 @@ class DataModelField(DataModelFieldBase):
             return ""
 
         if len(data) == 1 and "default" in data:
-            return repr(data["default"])
+            return represent_python_value(data["default"])
 
-        kwargs = [f"{k}={v if k == 'default_factory' else repr(v)}" for k, v in data.items()]
+        kwargs = [f"{k}={v if k == 'default_factory' else represent_python_value(v)}" for k, v in data.items()]
         return f"field({', '.join(kwargs)})"
 
     @property
@@ -389,21 +404,28 @@ class DataModelField(DataModelFieldBase):
             and not self.self_reference()
             and not (self.data_type.strict and has_type_constraints)
         ):
-            data = {
-                **data,
-                **{
-                    k: self._get_strict_field_constraint_value(k, v)
-                    for k, v in self.constraints.model_dump().items()
-                    if k in self._META_FIELD_KEYS
-                },
-            }
+            dumped = self.constraints.model_dump()
+            has_integer_constraints = any(dumped.get(key) is not None for key in self._COMPARE_EXPRESSIONS)
+            is_float_type = has_integer_constraints and self._has_numeric_data_type("float")
+            is_int_type = has_integer_constraints and not is_float_type and self._has_numeric_data_type("int")
+            constraint_data: dict[str, Any] = {}
+            for k, v in dumped.items():
+                if k not in self._META_FIELD_KEYS or v is None:
+                    continue
+                if (
+                    normalized := self._get_strict_field_constraint(
+                        k, v, is_float_type=is_float_type, is_int_type=is_int_type
+                    )
+                ) is not None:
+                    merge_normalized_constraint(constraint_data, normalized[0], normalized[1])
+            data = {**data, **constraint_data}
 
         if (min_items := data.pop("min_items", None)) is not None:
             data["min_length"] = min_items
         if (max_items := data.pop("max_items", None)) is not None:
             data["max_length"] = max_items
 
-        meta_arguments = sorted(f"{k}={v!r}" for k, v in data.items() if v is not None)
+        meta_arguments = sorted(f"{k}={represent_python_value(v)}" for k, v in data.items() if v is not None)
         return f"Meta({', '.join(meta_arguments)})" if meta_arguments else None
 
     @property
@@ -470,7 +492,7 @@ class DataModelField(DataModelFieldBase):
                     and isinstance(self.default, list)
                 ):
                     return (
-                        f"lambda: {self._PARSE_METHOD}({self.default!r},  "
+                        f"lambda: {self._PARSE_METHOD}({represent_python_value(self.default)},  "
                         f"type=list[{data_type_child.alias or data_type_child.reference.source.class_name}])"
                     )
             elif data_type.reference and isinstance(data_type.reference.source, Struct):
@@ -480,7 +502,7 @@ class DataModelField(DataModelFieldBase):
                     if isinstance(self.default, dict) and any(dt.is_dict for dt in self.data_type.data_types):
                         continue
                 return (
-                    f"lambda: {self._PARSE_METHOD}({self.default!r},  "
+                    f"lambda: {self._PARSE_METHOD}({represent_python_value(self.default)},  "
                     f"type={data_type.alias or data_type.reference.source.class_name})"
                 )
         return None
