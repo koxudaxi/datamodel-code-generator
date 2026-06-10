@@ -70,7 +70,8 @@ nav = [
       { "Dynamic Model Generation" = "dynamic-model-generation.md" },
       { "pyproject.toml" = "pyproject_toml.md" },
       { "CI/CD Integration" = "ci-cd.md" },
-      { "LLM Integration" = "llm-integration.md" }
+      { "LLM Integration" = "llm-integration.md" },
+      { "Coding Agent Skill" = "coding-agent-skill.md" }
     ]}
   ]},
   { "Deprecations" = "deprecations.md" },
