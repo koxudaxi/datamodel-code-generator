@@ -15,7 +15,13 @@ from pathlib import Path
 from typing import Any, cast
 
 from datamodel_code_generator.arguments import arg_parser
-from datamodel_code_generator.cli_options import CLI_OPTION_META, CLIOptionRelation, OptionCategory, get_option_meta
+from datamodel_code_generator.cli_options import (
+    CLI_OPTION_META,
+    OPTION_RELATION_KINDS,
+    CLIOptionRelation,
+    OptionCategory,
+    get_option_meta,
+)
 from datamodel_code_generator.enums import InputFileType
 from datamodel_code_generator.input_model import load_model_schema
 
@@ -131,7 +137,22 @@ def _clean_help(action: argparse.Action) -> str:
     return str(action.help).replace("%(default)s", str(action.default))
 
 
-def _relation_metadata(relation: CLIOptionRelation) -> dict[str, Any]:
+def _option_target_index(actions: list[argparse.Action]) -> dict[str, dict[str, str]]:
+    targets: dict[str, dict[str, str]] = {}
+    for action in actions:
+        if not (name := _option_name(action)):
+            continue
+        target = {
+            "dest": action.dest,
+            "config_dest": ARG_FIELD_RENAMES.get(action.dest, action.dest),
+        }
+        targets[name] = target
+        if negative_name := _negative_name(action):
+            targets[negative_name] = target
+    return targets
+
+
+def _relation_metadata(relation: CLIOptionRelation, option_targets: dict[str, dict[str, str]]) -> dict[str, Any]:
     item = {"option": relation.option}
     if relation.value is not None:
         item["value"] = relation.value
@@ -139,33 +160,15 @@ def _relation_metadata(relation: CLIOptionRelation) -> dict[str, Any]:
         item["when"] = relation.when
     if relation.message:
         item["message"] = relation.message
+    if target := option_targets.get(relation.option):
+        item.update(target)
     return item
 
 
-def _relations_metadata(relations: tuple[CLIOptionRelation, ...]) -> list[dict[str, Any]]:
-    return [_relation_metadata(relation) for relation in relations]
-
-
-def _options_by_name(options: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    result: dict[str, dict[str, Any]] = {}
-    for option in options:
-        result[option["name"]] = option
-        if negative_name := option.get("negative_name"):
-            result[negative_name] = option
-    return result
-
-
-def _annotate_relation_targets(options: list[dict[str, Any]]) -> None:
-    options_by_name = _options_by_name(options)
-    for option in options:
-        for relation_kind in ("implies", "requires", "conflicts"):
-            if not (relations := option.get(relation_kind)):
-                continue
-            for relation in relations:
-                if not (target := options_by_name.get(relation["option"])):
-                    continue
-                relation["dest"] = target["dest"]
-                relation["config_dest"] = target.get("config_dest", target["dest"])
+def _relations_metadata(
+    relations: tuple[CLIOptionRelation, ...], option_targets: dict[str, dict[str, str]]
+) -> list[dict[str, Any]]:
+    return [_relation_metadata(relation, option_targets) for relation in relations]
 
 
 def _arg_field_renames() -> dict[str, str]:
@@ -252,7 +255,7 @@ def _option_support(dest: str, config_dest: str, control: str) -> tuple[str, str
     return "", value_kind
 
 
-def _option_metadata(action: argparse.Action) -> dict[str, Any] | None:
+def _option_metadata(action: argparse.Action, option_targets: dict[str, dict[str, str]]) -> dict[str, Any] | None:
     name = _option_name(action)
     if not name:
         return None
@@ -280,8 +283,8 @@ def _option_metadata(action: argparse.Action) -> dict[str, Any] | None:
         "hidden": not browser_supported,
     }
     if meta:
-        for relation_kind in ("implies", "requires", "conflicts"):
-            if relations := _relations_metadata(getattr(meta, relation_kind)):
+        for relation_kind in OPTION_RELATION_KINDS:
+            if relations := _relations_metadata(getattr(meta, relation_kind), option_targets):
                 option_metadata[relation_kind] = relations
     return option_metadata
 
@@ -316,12 +319,13 @@ def build_metadata() -> dict[str, Any]:
         message = f"CATEGORY_ORDER mismatch: missing={missing}, extra={extra}"
         raise ValueError(message)
 
+    actions = arg_parser._actions  # noqa: SLF001
+    option_targets = _option_target_index(actions)
     options = []
-    for action in arg_parser._actions:  # noqa: SLF001
-        option = _option_metadata(action)
+    for action in actions:
+        option = _option_metadata(action, option_targets)
         if option is not None:
             options.append(option)
-    _annotate_relation_targets(options)
     category_indexes = {category: index for index, category in enumerate(CATEGORY_ORDER)}
     options.sort(key=lambda option: (category_indexes.get(option["category"], len(category_indexes)), option["name"]))
     groups = [

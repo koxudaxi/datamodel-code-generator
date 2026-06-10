@@ -14,6 +14,7 @@ from datamodel_code_generator.arguments import arg_parser as argument_parser
 from datamodel_code_generator.cli_options import (
     CLI_OPTION_META,
     MANUAL_DOCS,
+    OPTION_RELATION_KINDS,
     _canonical_option_key,
     get_all_argparse_options,
     get_all_canonical_options,
@@ -85,7 +86,7 @@ class TestCLIOptionMetaSync:
         missing = [
             f"  {source} {relation_kind} {relation.option}"
             for source, meta in CLI_OPTION_META.items()
-            for relation_kind in ("implies", "requires", "conflicts")
+            for relation_kind in OPTION_RELATION_KINDS
             for relation in getattr(meta, relation_kind)
             if relation.option not in argparse_options
         ]

@@ -66,6 +66,9 @@ class CLIOptionMeta:
     conflicts: tuple[CLIOptionRelation, ...] = ()
 
 
+OPTION_RELATION_KINDS = ("implies", "requires", "conflicts")
+
+
 # Options with manual documentation (not auto-generated from tests)
 # These options have hand-written docs in docs/cli-reference/manual/
 MANUAL_DOCS: frozenset[str] = frozenset({
