@@ -201,15 +201,13 @@ def normalize_integer_constraint(constraint: str, value: Any) -> tuple[str, Any]
     except (TypeError, ValueError):
         return constraint, value
 
-    if constraint == "multiple_of":
-        if fraction.numerator == 1:
-            return None
-        return constraint, abs(fraction.numerator)
-
-    if fraction.denominator == 1:
-        return constraint, int(fraction)
-
     match constraint:
+        case "multiple_of" if fraction.numerator == 1:
+            return None
+        case "multiple_of":
+            return constraint, abs(fraction.numerator)
+        case _ if fraction.denominator == 1:
+            return constraint, int(fraction)
         case "ge":
             return "ge", _get_fraction_ceil(fraction)
         case "gt":
@@ -218,15 +216,19 @@ def normalize_integer_constraint(constraint: str, value: Any) -> tuple[str, Any]
             return "le", _get_fraction_floor(fraction)
         case "lt":
             return "le", _get_fraction_ceil(fraction) - 1
-    return constraint, value
+        case _:
+            return constraint, value
 
 
 def merge_normalized_constraint(constraints: dict[str, Any], key: str, value: Any) -> None:
     """Merge a normalized constraint, keeping the stronger bound when ge or le collides."""
-    if (current := constraints.get(key)) is None:
-        constraints[key] = value
-        return
-    constraints[key] = max(current, value) if key == "ge" else min(current, value)
+    match constraints.get(key):
+        case None:
+            constraints[key] = value
+        case current if key == "ge":
+            constraints[key] = max(current, value)
+        case current:
+            constraints[key] = min(current, value)
 
 
 def normalize_integer_constraints(constraints: dict[str, Any]) -> dict[str, Any]:

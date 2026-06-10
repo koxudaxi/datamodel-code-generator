@@ -311,8 +311,7 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
                     return self.data_type.from_import(IMPORT_NON_NEGATIVE_INT)
                 if data_type_kwargs == {"le": 0} and self.use_non_positive_negative_number_constrained_types:
                     return self.data_type.from_import(IMPORT_NON_POSITIVE_INT)
-            kwargs = normalize_integer_constraints(data_type_kwargs)
-            if not kwargs:
+            if not (kwargs := normalize_integer_constraints(data_type_kwargs)):
                 return (
                     self.copy_data_type(self.strict_type_map[StrictTypes.int])
                     if strict
