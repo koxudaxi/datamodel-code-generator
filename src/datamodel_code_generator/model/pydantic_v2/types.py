@@ -487,21 +487,18 @@ class DataTypeManager(_PydanticDataTypeManager):
         )
 
         # Override the data_type with our pydantic v2 version
-        from pydantic import create_model  # noqa: PLC0415
+        from datamodel_code_generator.types import _create_context_data_type  # noqa: PLC0415
 
-        self.data_type: type[DataType] = create_model(
+        self.data_type: type[DataType] = _create_context_data_type(
             "PydanticV2ContextDataType",
-            python_version=(PythonVersion, python_version),
-            use_standard_collections=(bool, use_standard_collections),
-            use_generic_container=(bool, use_generic_container_types),
-            use_union_operator=(bool, use_union_operator),
-            treat_dot_as_module=(bool, treat_dot_as_module),
-            use_serialize_as_any=(bool, use_serialize_as_any),
-            __base__=PydanticV2DataType,
+            PydanticV2DataType,
+            python_version,
+            use_standard_collections,
+            use_generic_container_types,
+            use_union_operator,
+            treat_dot_as_module,
+            use_serialize_as_any,
         )
-        from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace  # noqa: PLC0415
-
-        _rebuild_model_with_datamodel_namespace(self.data_type)
 
     def type_map_factory(  # noqa: PLR0913, PLR0917
         self,

@@ -12,7 +12,7 @@ import re
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from enum import Enum, auto
-from functools import lru_cache
+from functools import cache, lru_cache
 from itertools import chain
 from re import Pattern
 from typing import (
@@ -983,6 +983,38 @@ class Types(Enum):
     any = auto()
 
 
+@cache
+def _create_context_data_type(  # noqa: PLR0913, PLR0917
+    model_name: str,
+    base: type[DataType],
+    python_version: PythonVersion,
+    use_standard_collections: bool,  # noqa: FBT001
+    use_generic_container: bool,  # noqa: FBT001
+    use_union_operator: bool,  # noqa: FBT001
+    treat_dot_as_module: bool | None,  # noqa: FBT001
+    use_serialize_as_any: bool,  # noqa: FBT001
+) -> type[DataType]:
+    """Create or reuse a DataType subclass with context-specific defaults.
+
+    Building a pydantic model class is expensive; the class is fully determined
+    by its arguments, so identical configurations share one class.
+    """
+    context_data_type: type[DataType] = create_model(
+        model_name,
+        python_version=(PythonVersion, python_version),
+        use_standard_collections=(bool, use_standard_collections),
+        use_generic_container=(bool, use_generic_container),
+        use_union_operator=(bool, use_union_operator),
+        treat_dot_as_module=(bool, treat_dot_as_module),
+        use_serialize_as_any=(bool, use_serialize_as_any),
+        __base__=base,
+    )
+    from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace  # noqa: PLC0415
+
+    _rebuild_model_with_datamodel_namespace(context_data_type)
+    return context_data_type
+
+
 class DataTypeManager(ABC):
     """Abstract base class for managing type mappings in code generation.
 
@@ -1029,19 +1061,16 @@ class DataTypeManager(ABC):
         self.treat_dot_as_module: bool = treat_dot_as_module or False
         self.use_serialize_as_any: bool = use_serialize_as_any
 
-        self.data_type: type[DataType] = create_model(
+        self.data_type: type[DataType] = _create_context_data_type(
             "ContextDataType",
-            python_version=(PythonVersion, python_version),
-            use_standard_collections=(bool, use_standard_collections),
-            use_generic_container=(bool, use_generic_container_types),
-            use_union_operator=(bool, use_union_operator),
-            treat_dot_as_module=(bool, treat_dot_as_module),
-            use_serialize_as_any=(bool, use_serialize_as_any),
-            __base__=DataType,
+            DataType,
+            python_version,
+            use_standard_collections,
+            use_generic_container_types,
+            use_union_operator,
+            treat_dot_as_module,
+            use_serialize_as_any,
         )
-        from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace  # noqa: PLC0415
-
-        _rebuild_model_with_datamodel_namespace(self.data_type)
 
     @abstractmethod
     def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
