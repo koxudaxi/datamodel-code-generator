@@ -1,0 +1,9 @@
+{
+    "title": "Record",
+    "type": "object",
+    "properties": {
+        "opt": {"type": "string"},
+        "req-id": {"type": "integer"}
+    },
+    "required": ["req-id"]
+}

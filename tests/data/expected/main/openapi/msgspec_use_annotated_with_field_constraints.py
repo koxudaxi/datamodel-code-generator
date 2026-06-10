@@ -15,7 +15,7 @@ class Pet(Struct):
     tag: Annotated[str, Meta(max_length=64)] | UnsetType = UNSET
 
 
-Pets: TypeAlias = list[Pet]
+Pets: TypeAlias = Annotated[list[Pet], Meta(max_length=10, min_length=1)]
 
 
 UID: TypeAlias = Annotated[int, Meta(ge=0)]
@@ -32,7 +32,7 @@ class User(Struct):
     name: Annotated[str, Meta(max_length=256)]
     uid: UID
     tag: Annotated[str, Meta(max_length=64)] | UnsetType = UNSET
-    phones: list[Phone] | UnsetType = UNSET
+    phones: Annotated[list[Phone], Meta(max_length=10)] | UnsetType = UNSET
     fax: list[FaxItem] | UnsetType = UNSET
     height: Annotated[int | float, Meta(ge=1.0, le=300.0)] | UnsetType = UNSET
     weight: Annotated[float | int, Meta(ge=1.0, le=1000.0)] | UnsetType = UNSET

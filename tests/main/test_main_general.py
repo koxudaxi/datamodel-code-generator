@@ -206,6 +206,17 @@ def test_space_and_special_characters_dict(output_file: Path) -> None:
     )
 
 
+def test_space_and_special_characters_dict_stdin(monkeypatch: pytest.MonkeyPatch, output_file: Path) -> None:
+    """Test dict stdin input is parsed as a Python literal."""
+    run_main_and_assert(
+        stdin_path=PYTHON_DATA_PATH / "space_and_special_characters_dict.py",
+        output_path=output_file,
+        monkeypatch=monkeypatch,
+        input_file_type="dict",
+        assert_func=assert_file_content,
+    )
+
+
 @freeze_time("2024-12-14")
 def test_direct_input_dict(tmp_path: Path) -> None:
     """Test direct dict input code generation."""
