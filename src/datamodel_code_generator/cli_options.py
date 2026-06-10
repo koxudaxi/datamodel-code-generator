@@ -317,8 +317,8 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--no-use-closed-typed-dict": CLIOptionMeta(name="--no-use-closed-typed-dict", category=OptionCategory.TYPING),
     "--type-mappings": CLIOptionMeta(name="--type-mappings", category=OptionCategory.TYPING),
     "--type-overrides": CLIOptionMeta(name="--type-overrides", category=OptionCategory.TYPING),
-    "--no-use-specialized-enum": CLIOptionMeta(
-        name="--no-use-specialized-enum",
+    "--use-specialized-enum": CLIOptionMeta(
+        name="--use-specialized-enum",
         category=OptionCategory.TYPING,
         requires=(
             CLIOptionRelation(
@@ -331,6 +331,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
             ),
         ),
     ),
+    "--no-use-specialized-enum": CLIOptionMeta(name="--no-use-specialized-enum", category=OptionCategory.TYPING),
     "--allof-merge-mode": CLIOptionMeta(name="--allof-merge-mode", category=OptionCategory.TYPING),
     "--allof-class-hierarchy": CLIOptionMeta(name="--allof-class-hierarchy", category=OptionCategory.TYPING),
     # ==========================================================================
@@ -515,10 +516,13 @@ def is_excluded_from_docs(option: str) -> bool:  # pragma: no cover
 def get_option_meta(option: str) -> CLIOptionMeta | None:  # pragma: no cover
     """Get documentation metadata for an option.
 
-    Always canonicalizes the option name before lookup.
+    Uses an exact match first so BooleanOptionalAction variants can carry
+    separate metadata, then falls back to the canonical option name.
     If the option is not explicitly registered, returns a default entry
     with General category (auto-categorization for new options).
     """
+    if option in CLI_OPTION_META:
+        return CLI_OPTION_META[option]
     canonical = get_canonical_option(option)
     if canonical in CLI_OPTION_META:
         return CLI_OPTION_META[canonical]
