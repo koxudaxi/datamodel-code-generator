@@ -38,8 +38,9 @@ def _run_codegen(args: Sequence[str]) -> None:
             text=True,
             check=False,
         )
-    except FileNotFoundError:
-        pytest.fail("datamodel-codegen not found; ensure the CLI is installed in the test environment")
+    except FileNotFoundError as error:
+        msg = "datamodel-codegen not found; ensure the CLI is installed in the test environment"
+        raise AssertionError(msg) from error
     if result.returncode != 0:
         pytest.fail(f"datamodel-codegen failed\nargs: {args!r}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}")
 
