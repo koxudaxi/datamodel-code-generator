@@ -14,6 +14,7 @@ from datamodel_code_generator.arguments import arg_parser as argument_parser
 from datamodel_code_generator.cli_options import (
     CLI_OPTION_META,
     MANUAL_DOCS,
+    OPTION_RELATION_KINDS,
     _canonical_option_key,
     get_all_argparse_options,
     get_all_canonical_options,
@@ -78,6 +79,24 @@ class TestCLIOptionMetaSync:
 
         if mismatches:
             pytest.fail("CLIOptionMeta.name mismatches:\n" + "\n".join(mismatches))
+
+    def test_option_relations_reference_argparse_options(self) -> None:
+        """Verify that option relation metadata points at real argparse options."""
+        argparse_options = get_all_argparse_options()
+        missing = [
+            f"  {source} {relation_kind} {relation.option}"
+            for source, meta in CLI_OPTION_META.items()
+            for relation_kind in OPTION_RELATION_KINDS
+            for relation in getattr(meta, relation_kind)
+            if relation.option not in argparse_options
+        ]
+
+        if missing:
+            pytest.fail(
+                "CLI option relation targets missing from argparse:\n"
+                + "\n".join(sorted(missing))
+                + "\n\nRemove the relation or add the target option to arguments.py."
+            )
 
     def test_all_argparse_options_are_documented_or_excluded(self) -> None:
         """Verify that all argparse options are either documented or explicitly excluded.
