@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, NamedTuple
 
 from datamodel_code_generator import PythonVersion
 
+from .base import UNDEFINED as UNDEFINED
 from .base import ConstraintsBase, DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 
 if TYPE_CHECKING:

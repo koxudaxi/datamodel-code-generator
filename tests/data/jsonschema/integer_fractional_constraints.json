@@ -1,0 +1,13 @@
+{
+    "type": "object",
+    "properties": {
+        "ge_field": {"type": "integer", "minimum": 0.5},
+        "any_multiple": {"type": "integer", "multipleOf": 0.5},
+        "gt_field": {"type": "integer", "exclusiveMinimum": -1.5},
+        "fraction_multiple": {"type": "integer", "multipleOf": 1.5},
+        "le_field": {"type": "integer", "maximum": 2.5},
+        "lt_field": {"type": "integer", "exclusiveMaximum": 2.5},
+        "combined_min": {"type": "integer", "minimum": 2.5, "exclusiveMinimum": 1.5},
+        "combined_max": {"type": "integer", "maximum": 2.5, "exclusiveMaximum": 4.5}
+    }
+}

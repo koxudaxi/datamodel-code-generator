@@ -587,6 +587,85 @@ def test_main_xmlschema_datetime_classes_aware(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_blocks_relative_schema_location_outside_base_path(
+    capsys: pytest.CaptureFixture[str],
+    output_file: Path,
+) -> None:
+    """Reject XML Schema includes that resolve outside the input base path."""
+    project_dir = output_file.parent / "project"
+    secret_dir = output_file.parent / "secret"
+    project_dir.mkdir()
+    secret_dir.mkdir()
+    (secret_dir / "leak.xsd").write_text(
+        """<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="Leaked"><xs:restriction base="xs:string"/></xs:simpleType>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+    input_file = project_dir / "attack.xsd"
+    input_file.write_text(
+        """<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:include schemaLocation="../secret/leak.xsd"/>
+  <xs:element name="Root" type="Leaked"/>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="xmlschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Blocked unsafe XML Schema schemaLocation",
+        assert_output_path_not_exists=True,
+    )
+
+
+def test_main_xmlschema_blocks_absolute_schema_location_outside_base_path(
+    capsys: pytest.CaptureFixture[str],
+    output_file: Path,
+) -> None:
+    """Reject absolute XML Schema includes outside the input base path."""
+    project_dir = output_file.parent / "project"
+    secret_dir = output_file.parent / "secret"
+    project_dir.mkdir()
+    secret_dir.mkdir()
+    secret_schema = secret_dir / "leak.xsd"
+    secret_schema.write_text(
+        """<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="Leaked"><xs:restriction base="xs:string"/></xs:simpleType>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+    input_file = project_dir / "attack.xsd"
+    input_file.write_text(
+        f"""<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:include schemaLocation="{secret_schema}"/>
+  <xs:element name="Root" type="Leaked"/>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="xmlschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Blocked unsafe XML Schema schemaLocation",
+        assert_output_path_not_exists=True,
+    )
+
+
 def test_main_xmlschema_parse_error(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Report invalid XML Schema syntax through the CLI."""
     run_main_and_assert(

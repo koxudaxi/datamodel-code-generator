@@ -12,10 +12,13 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --allow-private-network, --no-allow-private-network
                         Allow HTTP(S) schema requests to private, loopback,
                         link-local, or otherwise non-public network hosts. By
-                        default these targets are blocked to reduce SSRF risk.
-                        Use only for trusted internal schema endpoints. Pass
-                        --no-allow-private-network to override a configuration
-                        file that enables it.
+                        default these targets are blocked to reduce server-
+                        side request forgery (SSRF) risk. If a trusted
+                        internal schema endpoint is blocked, verify the URL
+                        and pass this option; otherwise use a local schema
+                        file or public endpoint. Pass --no-allow-private-
+                        network to override a configuration file that enables
+                        it.
   --allow-remote-refs, --no-allow-remote-refs
                         Allow fetching remote $ref references over HTTP/HTTPS.
                         Currently remote fetching is allowed by default but

@@ -47,6 +47,7 @@ from tests.main.conftest import (
     TIMESTAMP,
     assert_generated_model_json_invalid,
     assert_generated_model_json_validation,
+    run_generate_and_assert,
     run_generate_file_and_assert,
     run_main_and_assert,
     run_main_url_and_assert,
@@ -433,6 +434,50 @@ def test_main_jsonschema_dataclass_frozen_keyword_only(output_file: Path) -> Non
             "dataclasses.dataclass",
             "--frozen-dataclasses",
             "--keyword-only",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+def test_main_jsonschema_dataclass_use_annotated(output_file: Path) -> None:
+    """Generate dataclasses with use-annotated enabled.
+
+    Dataclass fields have no Annotated representation, so the output matches
+    the plain dataclass form and no Annotated import is emitted.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="general_dataclass_use_annotated.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--use-annotated",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+def test_main_jsonschema_constrained_types_keyword_order(output_file: Path) -> None:
+    """Constrained type arguments keep the JsonSchemaObject field-definition order.
+
+    Guards the iteration-order contract of transform_kwargs: conint/confloat/constr
+    keyword order follows the schema field-definition (model_dump) order regardless
+    of which side of the kwargs/filter pair is iterated.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "constrained_types_keyword_order.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="constrained_types_keyword_order.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
             "--target-python-version",
             "3.10",
         ],
@@ -1105,10 +1150,15 @@ def test_main_local_directory_path_absolute_root_id_refs_rejects_parent_traversa
         input_path=JSON_SCHEMA_DATA_PATH / "path_absolute_root_id_refs_parent_traversal" / "schema-root",
         output_path=output_dir,
         input_file_type="jsonschema",
-        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--disable-timestamp"],
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--no-allow-remote-refs",
+        ],
         expected_exit=Exit.ERROR,
         capsys=capsys,
-        expected_stderr_contains="$ref file not found",
+        expected_stderr_contains="Blocked unsafe local $ref",
     )
 
 
@@ -3263,6 +3313,120 @@ def test_main_jsonschema_default_factory_rejects_unsafe_value(
         capsys=capsys,
         expected_stderr_contains="default_factory must be one of: dict, list, set",
         extra_args=["--output-model-type", output_model],
+    )
+
+
+@pytest.mark.parametrize("ref_template", ["../secret/leak.json", "{file_uri}"])
+def test_main_jsonschema_warns_local_ref_outside_base_path(
+    ref_template: str,
+    output_file: Path,
+) -> None:
+    """Keep local refs outside the input base path compatible, but warn."""
+    project_dir = output_file.parent / "project"
+    secret_dir = output_file.parent / "secret"
+    project_dir.mkdir()
+    secret_dir.mkdir()
+    secret_schema = secret_dir / "leak.json"
+    secret_schema.write_text(
+        json.dumps({
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string",
+                    "default": "SECRET_TOKEN",
+                }
+            },
+        }),
+        encoding="utf-8",
+    )
+    ref = ref_template.format(file_uri=secret_schema.resolve().as_uri())
+    input_file = project_dir / "schema.json"
+    input_file.write_text(
+        json.dumps({
+            "type": "object",
+            "properties": {
+                "payload": {
+                    "$ref": ref,
+                }
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    with pytest.warns(FutureWarning, match=r"outside the input base path"):
+        run_main_and_assert(
+            input_path=input_file,
+            output_path=output_file,
+            input_file_type="jsonschema",
+        )
+
+
+def test_main_jsonschema_no_allow_remote_refs_blocks_local_ref_outside_base_path(
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject local JSON Schema refs outside the input base path when explicitly disabled."""
+    project_dir = output_file.parent / "project"
+    secret_dir = output_file.parent / "secret"
+    project_dir.mkdir()
+    secret_dir.mkdir()
+    (secret_dir / "leak.json").write_text(json.dumps({"type": "object"}), encoding="utf-8")
+    input_file = project_dir / "schema.json"
+    input_file.write_text(
+        json.dumps({
+            "type": "object",
+            "properties": {
+                "payload": {
+                    "$ref": "../secret/leak.json",
+                }
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        output_should_not_exist=True,
+        capsys=capsys,
+        expected_stderr_contains="Blocked unsafe local $ref",
+        extra_args=["--no-allow-remote-refs"],
+    )
+
+
+def test_main_jsonschema_no_allow_remote_refs_blocks_file_url(
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Apply --no-allow-remote-refs to file:// refs as external refs."""
+    project_dir = output_file.parent / "project"
+    project_dir.mkdir()
+    referenced_schema = project_dir / "referenced.json"
+    referenced_schema.write_text(json.dumps({"type": "object"}), encoding="utf-8")
+    input_file = project_dir / "schema.json"
+    input_file.write_text(
+        json.dumps({
+            "type": "object",
+            "properties": {
+                "payload": {
+                    "$ref": referenced_schema.resolve().as_uri(),
+                }
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        output_should_not_exist=True,
+        capsys=capsys,
+        expected_stderr_contains="Fetching remote $ref is disabled",
+        extra_args=["--no-allow-remote-refs"],
     )
 
 
@@ -5996,7 +6160,7 @@ def test_main_typed_dict_nested_allof_extra_items(output_file: Path) -> None:
         "from typing_extensions import NotRequired, TypedDict\n\n\n"
         "class BaseExtra(TypedDict):\n"
         "    id: NotRequired[int]\n\n\n"
-        "class Payload(TypedDict, extra_items=BaseExtra):\n"
+        "class Payload(TypedDict, extra_items='BaseExtra'):\n"
         "    name: NotRequired[str]\n"
     )
     _run_jsonschema_dict(
@@ -6469,14 +6633,15 @@ def test_main_jsonschema_external_discriminator(
     output_model: str, expected_output: str, min_version: str, output_file: Path
 ) -> None:
     """Test external discriminator references."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "discriminator_with_external_reference" / "inner_folder" / "schema.json",
-        output_path=output_file,
-        input_file_type=None,
-        assert_func=assert_file_content,
-        expected_file=expected_output,
-        extra_args=["--output-model-type", output_model, "--target-python-version", min_version],
-    )
+    with pytest.warns(FutureWarning, match=r"outside the input base path"):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "discriminator_with_external_reference" / "inner_folder" / "schema.json",
+            output_path=output_file,
+            input_file_type=None,
+            assert_func=assert_file_content,
+            expected_file=expected_output,
+            extra_args=["--output-model-type", output_model, "--target-python-version", min_version],
+        )
 
 
 @pytest.mark.parametrize(
@@ -11415,6 +11580,30 @@ def test_jsonschema_classvar_extra_pydantic_v2(output_file: Path) -> None:
     )
 
 
+def test_jsonschema_classvar_field_str_custom_template(
+    capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that custom templates can render a ClassVar field via str(field)."""
+    model_base._get_environment.cache_clear()
+    model_base._get_template_with_custom_dir.cache_clear()
+    monkeypatch.chdir(tmp_path)
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "has_classvar_extra.json",
+            output_path=None,
+            expected_stdout_path=EXPECTED_JSON_SCHEMA_PATH / "has_classvar_extra_custom_template_field.py",
+            capsys=capsys,
+            input_file_type=None,
+            extra_args=[
+                "--custom-template-dir",
+                str(DATA_PATH / "templates_class_var_field"),
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--field-include-all-keys",
+            ],
+        )
+
+
 def test_jsonschema_classvar_extra_set_pydantic_v2(output_file: Path) -> None:
     """Test ClassVar with set default value."""
     run_main_and_assert(
@@ -11848,4 +12037,339 @@ def test_main_jsonschema_discriminated_oneof_allof_cycle(output_file: Path) -> N
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
+    )
+
+
+def test_main_jsonschema_pattern_escaped_quote(output_file: Path) -> None:
+    """Test pattern with an escaped quote renders importable code that still matches."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pattern_escaped_quote.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="pattern_escaped_quote.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_pattern_escaped_quote",
+        model_name="Model",
+        valid_json='{"x": "don\'t"}',
+        invalid_json='{"x": "dont"}',
+        expected_error_type="string_pattern_mismatch",
+        expected_attribute_path=("x",),
+        expected_attribute_value="don't",
+    )
+
+
+@pytest.mark.parametrize(
+    ("constraint_args", "module_name", "expected_file"),
+    [
+        ([], "generated_integer_fractional_constraints", "integer_fractional_constraints.py"),
+        (
+            ["--field-constraints"],
+            "generated_integer_fractional_field_constraints",
+            "integer_fractional_constraints_field_constraints.py",
+        ),
+    ],
+)
+def test_main_jsonschema_integer_fractional_constraints(
+    constraint_args: list[str], module_name: str, expected_file: str, output_file: Path
+) -> None:
+    """Test fractional integer constraints normalize to integer-safe bounds."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "integer_fractional_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", *constraint_args],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=module_name,
+        model_name="Model",
+        valid_json=(
+            '{"ge_field": 1, "any_multiple": 7, "gt_field": -1, "fraction_multiple": 3,'
+            ' "le_field": 2, "lt_field": 2, "combined_min": 3, "combined_max": 2}'
+        ),
+        invalid_json='{"ge_field": 0}',
+        expected_error_type="greater_than_equal",
+        expected_attribute_path=("fraction_multiple",),
+        expected_attribute_value=3,
+    )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name=module_name,
+        model_name="Model",
+        invalid_json='{"combined_min": 2}',
+        expected_error_type="greater_than_equal",
+    )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name=module_name,
+        model_name="Model",
+        invalid_json='{"combined_max": 3}',
+        expected_error_type="less_than_equal",
+    )
+
+
+def test_main_jsonschema_non_finite_number_values(output_file: Path) -> None:
+    """Test non-finite numeric defaults and bounds render as valid Python expressions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "non_finite_number_values.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="non_finite_number_values.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_non_finite_number_values",
+        model_name="Model",
+        valid_json="{}",
+        invalid_json='{"big_min": 1.0}',
+        expected_error_type="greater_than_equal",
+        expected_attribute_path=("big_default",),
+        expected_attribute_value=float("inf"),
+    )
+
+
+def test_main_jsonschema_decimal_fractional_constraints(output_file: Path) -> None:
+    """Test decimal fields keep fractional bounds and multipleOf with field constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "decimal_fractional_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="decimal_fractional_constraints.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--field-constraints"],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_decimal_fractional_constraints",
+        model_name="Model",
+        valid_json='{"price": "0.51"}',
+        invalid_json='{"price": "0.4"}',
+        expected_error_type="greater_than_equal",
+    )
+
+
+def test_main_msgspec_inherited_optional_default_uses_kw_only(output_file: Path) -> None:
+    """Test msgspec allOf child with required fields stays importable via kw_only."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_inherited_optional_default.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_inherited_optional_default.py",
+        importable_module_name="generated_msgspec_inherited_optional_default",
+        importable_module_attribute="Child",
+    )
+
+
+def test_main_msgspec_required_alias_field_sorts_first(output_file: Path) -> None:
+    """Test msgspec required field with alias sorts before optional fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_required_alias_field.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_required_alias_field.py",
+        importable_module_name="generated_msgspec_required_alias_field",
+        importable_module_attribute="Record",
+    )
+
+
+def test_main_msgspec_required_nullable_field_stays_required(output_file: Path) -> None:
+    """Test msgspec required nullable field renders without a default."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_required_nullable_field.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_required_nullable_field.py",
+        importable_module_name="generated_msgspec_required_nullable_field",
+        importable_module_attribute="Record",
+    )
+
+
+def test_main_msgspec_array_length_constraints_use_annotated(output_file: Path) -> None:
+    """Test msgspec renders array length constraints as Meta annotations."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_array_length_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct", "--use-annotated"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_array_length_constraints_use_annotated.py",
+        importable_module_name="generated_msgspec_array_length_constraints",
+    )
+
+
+def test_main_msgspec_array_length_constraints_without_annotated() -> None:
+    """Test msgspec generate API without use_annotated keeps imports minimal."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "msgspec_array_length_constraints.json",
+        expected_file=EXPECTED_JSON_SCHEMA_PATH / "msgspec_array_length_constraints_without_annotated.py",
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.MsgspecStruct,
+    )
+
+
+def test_main_msgspec_integer_fractional_constraints(output_file: Path) -> None:
+    """Test msgspec normalizes fractional integer constraints to integer-safe bounds."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "integer_fractional_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct", "--use-annotated"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_integer_fractional_constraints.py",
+        importable_module_name="generated_msgspec_integer_fractional_constraints",
+    )
+
+
+def test_main_msgspec_non_finite_number_values(output_file: Path) -> None:
+    """Test msgspec renders non-finite defaults as expressions and drops non-finite bounds."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "non_finite_number_values.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct", "--use-annotated"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_non_finite_number_values.py",
+        importable_module_name="generated_msgspec_non_finite_number_values",
+    )
+
+
+def test_main_dataclass_non_finite_number_values(output_file: Path) -> None:
+    """Test dataclass renders non-finite defaults as valid Python expressions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "non_finite_number_values.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "dataclasses.dataclass"],
+        assert_func=assert_file_content,
+        expected_file="dataclass_non_finite_number_values.py",
+        importable_module_name="generated_dataclass_non_finite_number_values",
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "module_name", "expected_file"),
+    [
+        (
+            "dataclasses.dataclass",
+            "generated_dataclass_non_finite_container_defaults",
+            "dataclass_non_finite_container_defaults.py",
+        ),
+        (
+            "msgspec.Struct",
+            "generated_msgspec_non_finite_container_defaults",
+            "msgspec_non_finite_container_defaults.py",
+        ),
+    ],
+)
+def test_main_non_finite_container_defaults(
+    output_model: str, module_name: str, expected_file: str, output_file: Path
+) -> None:
+    """Test container defaults containing non-finite numbers render as expressions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "non_finite_container_defaults.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", output_model],
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        importable_module_name=module_name,
+    )
+
+
+def test_main_msgspec_decimal_constraints(output_file: Path) -> None:
+    """Test msgspec keeps fractional decimal constraints and integer-valued bounds."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_decimal_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct", "--use-annotated"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_decimal_constraints.py",
+        importable_module_name="generated_msgspec_decimal_constraints",
+    )
+
+
+def test_main_jsonschema_uuid_format_versions(output_file: Path) -> None:
+    """Test uuid format versions map to importable pydantic types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "uuid_format_versions.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        assert_func=assert_file_content,
+        expected_file="uuid_format_versions.py",
+        importable_module_name="generated_uuid_format_versions",
+    )
+
+
+def test_main_dataclass_enum_member_special_defaults(output_file: Path) -> None:
+    """Test enum defaults containing quotes resolve to members for scalars and lists."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_member_special_defaults.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "dataclasses.dataclass"],
+        assert_func=assert_file_content,
+        expected_file="dataclass_enum_member_special_defaults.py",
+        importable_module_name="generated_dataclass_enum_member_special_defaults",
+    )
+
+
+def test_main_jsonschema_enum_member_typed_defaults(output_file: Path) -> None:
+    """Test enum defaults resolve to the member with a matching JSON type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_member_typed_defaults.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--set-default-enum-member"],
+        assert_func=assert_file_content,
+        expected_file="enum_member_typed_defaults.py",
+        importable_module_name="generated_enum_member_typed_defaults",
+    )
+
+
+def test_main_typed_dict_functional_descriptions(output_file: Path) -> None:
+    """Test functional TypedDict renders descriptions outside the fields dict."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_functional_descriptions.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--use-schema-description",
+            "--use-field-description",
+        ],
+        assert_func=assert_file_content,
+        expected_file="typed_dict_functional_descriptions.py",
+        importable_module_name="generated_typed_dict_functional_descriptions",
+        importable_module_attribute="FuncDesc",
+    )
+
+
+def test_main_typed_dict_self_referencing_extra_items(output_file: Path) -> None:
+    """Test self-referencing additionalProperties renders extra_items as a forward reference."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_self_referencing_extra_items.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "typing.TypedDict"],
+        assert_func=assert_file_content,
+        expected_file="typed_dict_self_referencing_extra_items.py",
+        importable_module_name="generated_typed_dict_self_referencing_extra_items",
+        importable_module_attribute="SelfMap",
     )

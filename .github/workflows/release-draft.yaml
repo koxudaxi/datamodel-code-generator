@@ -100,7 +100,7 @@ jobs:
       - name: Run Claude Code Analysis
         id: claude
         timeout-minutes: 10
-        uses: anthropics/claude-code-action@4e5d8b13ca281a6d163cdb287d8917b216e00d6f # v1
+        uses: anthropics/claude-code-action@11ba60486e4aec9ddfeafcf4bb3f00b028ac2c16 # v1.0.142
         with:
           # OAuth authentication for Max plan subscribers
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -146,7 +146,7 @@ jobs:
             - Return empty string for breaking_changes_content if no breaking changes
 
           claude_args: |
-            --model claude-opus-4-6
+            --model claude-opus-4-8
             --max-turns 50
             --json-schema '{"type":"object","properties":{"has_breaking_changes":{"type":"boolean","description":"Whether this PR contains breaking changes"},"breaking_changes_content":{"type":"string","description":"Formatted breaking changes section content (without ## Breaking Changes header), or empty string if none"},"reasoning":{"type":"string","description":"Brief explanation of why this is or is not a breaking change"}},"required":["has_breaking_changes","breaking_changes_content","reasoning"]}'
 
