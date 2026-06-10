@@ -174,19 +174,6 @@ def _copy_all_model_data(source: dict[str, Any], target: dict[str, Any]) -> None
         target[key] = deepcopy(value) if isinstance(value, (dict, list, set)) else value
 
 
-def repr_set_sorted(value: set[Any]) -> str:
-    """Return a repr of a set with elements sorted for consistent output.
-
-    Uses (type_name, repr(x)) as sort key to safely handle any type including
-    Enum, custom classes, or types without __lt__ defined.
-    """
-    if not value:
-        return "set()"
-    # Sort by type name first, then by repr for consistent output
-    sorted_elements = sorted(value, key=lambda x: (type(x).__name__, repr(x)))
-    return "{" + ", ".join(repr(e) for e in sorted_elements) + "}"
-
-
 ConstraintsBaseT = TypeVar("ConstraintsBaseT", bound="ConstraintsBase")
 DataModelFieldBaseT = TypeVar("DataModelFieldBaseT", bound="DataModelFieldBase")
 

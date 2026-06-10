@@ -1,0 +1,12 @@
+{
+    "type": "object",
+    "properties": {
+        "price": {
+            "type": "string",
+            "format": "decimal",
+            "minimum": 0.5,
+            "maximum": 100.0,
+            "multipleOf": 0.01
+        }
+    }
+}

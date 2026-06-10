@@ -6,7 +6,6 @@ from decimal import Decimal
 
 import pytest
 
-from datamodel_code_generator.model.base import repr_set_sorted
 from datamodel_code_generator.parser._math_imports import add_math_imports_for_non_finite_literals
 from datamodel_code_generator.python_literal import PythonCode, represent_python_value
 from datamodel_code_generator.reference import Reference
@@ -215,7 +214,7 @@ def test_python_literal_helpers_render_code_and_tuple_values() -> None:
     assert repr(raw) == "datetime_module.date.fromisoformat('2026-01-01')"
     assert represent_python_value((raw,)) == "(datetime_module.date.fromisoformat('2026-01-01'),)"
     assert represent_python_value((1, "two")) == "(1, 'two')"
-    assert repr_set_sorted(set()) == "set()"
+    assert represent_python_value(set()) == "set()"
 
 
 def test_add_math_imports_inserts_after_generated_header() -> None:

@@ -12122,3 +12122,16 @@ def test_main_non_finite_container_defaults(
         expected_file=expected_file,
         importable_module_name=module_name,
     )
+
+
+def test_main_msgspec_decimal_constraints(output_file: Path) -> None:
+    """Test msgspec keeps fractional decimal constraints and integer-valued bounds."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_decimal_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "msgspec.Struct", "--use-annotated"],
+        assert_func=assert_file_content,
+        expected_file="msgspec_decimal_constraints.py",
+        importable_module_name="generated_msgspec_decimal_constraints",
+    )
