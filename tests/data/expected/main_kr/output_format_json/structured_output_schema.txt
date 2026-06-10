@@ -1,0 +1,484 @@
+{
+  "$defs": {
+    "CheckDifferencePayload": {
+      "additionalProperties": false,
+      "description": "One --check difference emitted by --output-format json.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "changed",
+            "missing",
+            "extra"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        },
+        "diff": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Diff"
+        }
+      },
+      "required": [
+        "kind",
+        "path"
+      ],
+      "title": "CheckDifferencePayload",
+      "type": "object"
+    },
+    "CheckOutputPayload": {
+      "additionalProperties": false,
+      "description": "Structured JSON payload emitted by --check --output-format json.",
+      "properties": {
+        "version": {
+          "const": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "format": {
+          "const": "json",
+          "title": "Format",
+          "type": "string"
+        },
+        "kind": {
+          "const": "check",
+          "title": "Kind",
+          "type": "string"
+        },
+        "success": {
+          "title": "Success",
+          "type": "boolean"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "differences": {
+          "items": {
+            "$ref": "#/$defs/CheckDifferencePayload"
+          },
+          "title": "Differences",
+          "type": "array"
+        }
+      },
+      "required": [
+        "version",
+        "format",
+        "kind",
+        "success",
+        "content",
+        "differences"
+      ],
+      "title": "CheckOutputPayload",
+      "type": "object"
+    },
+    "CliCommandOutputPayload": {
+      "additionalProperties": false,
+      "description": "Structured JSON payload emitted by --generate-cli-command.",
+      "properties": {
+        "version": {
+          "const": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "format": {
+          "const": "json",
+          "title": "Format",
+          "type": "string"
+        },
+        "kind": {
+          "const": "cli-command",
+          "title": "Kind",
+          "type": "string"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "config": {
+          "additionalProperties": true,
+          "title": "Config",
+          "type": "object"
+        },
+        "arguments": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Arguments",
+          "type": "array"
+        }
+      },
+      "required": [
+        "version",
+        "format",
+        "kind",
+        "content",
+        "config",
+        "arguments"
+      ],
+      "title": "CliCommandOutputPayload",
+      "type": "object"
+    },
+    "DeprecationItemPayload": {
+      "additionalProperties": false,
+      "description": "One deprecation entry emitted by --list-deprecations --output-format json.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "warning_since": {
+          "title": "Warning Since",
+          "type": "string"
+        },
+        "removal_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Removal Version"
+        },
+        "replacement": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Replacement"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "warning_category": {
+          "title": "Warning Category",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Note"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "target",
+        "message",
+        "warning_since",
+        "removal_version",
+        "replacement",
+        "status",
+        "warning_category",
+        "note"
+      ],
+      "title": "DeprecationItemPayload",
+      "type": "object"
+    },
+    "DeprecationsOutputPayload": {
+      "additionalProperties": false,
+      "description": "Structured JSON payload emitted by --list-deprecations.",
+      "properties": {
+        "version": {
+          "const": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "format": {
+          "const": "json",
+          "title": "Format",
+          "type": "string"
+        },
+        "kind": {
+          "const": "deprecations",
+          "title": "Kind",
+          "type": "string"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/DeprecationItemPayload"
+          },
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "version",
+        "format",
+        "kind",
+        "content",
+        "items"
+      ],
+      "title": "DeprecationsOutputPayload",
+      "type": "object"
+    },
+    "ExperimentalItemPayload": {
+      "additionalProperties": false,
+      "description": "One experimental feature entry emitted by --list-experimental --output-format json.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "since_version": {
+          "title": "Since Version",
+          "type": "string"
+        },
+        "tracking_issue": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tracking Issue"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Note"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "target",
+        "message",
+        "since_version",
+        "tracking_issue",
+        "note"
+      ],
+      "title": "ExperimentalItemPayload",
+      "type": "object"
+    },
+    "ExperimentalOutputPayload": {
+      "additionalProperties": false,
+      "description": "Structured JSON payload emitted by --list-experimental.",
+      "properties": {
+        "version": {
+          "const": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "format": {
+          "const": "json",
+          "title": "Format",
+          "type": "string"
+        },
+        "kind": {
+          "const": "experimental",
+          "title": "Kind",
+          "type": "string"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ExperimentalItemPayload"
+          },
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "version",
+        "format",
+        "kind",
+        "content",
+        "items"
+      ],
+      "title": "ExperimentalOutputPayload",
+      "type": "object"
+    },
+    "GeneratedFilePayload": {
+      "additionalProperties": false,
+      "description": "One generated file emitted by --output-format json.",
+      "properties": {
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Path"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "content"
+      ],
+      "title": "GeneratedFilePayload",
+      "type": "object"
+    },
+    "GenerationPayload": {
+      "additionalProperties": false,
+      "description": "Structured JSON payload emitted by generation mode --output-format json.",
+      "properties": {
+        "version": {
+          "const": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "format": {
+          "const": "json",
+          "title": "Format",
+          "type": "string"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/$defs/GeneratedFilePayload"
+          },
+          "title": "Files",
+          "type": "array"
+        }
+      },
+      "required": [
+        "version",
+        "format",
+        "files"
+      ],
+      "title": "GenerationPayload",
+      "type": "object"
+    },
+    "PyprojectConfigOutputPayload": {
+      "additionalProperties": false,
+      "description": "Structured JSON payload emitted by --generate-pyproject-config.",
+      "properties": {
+        "version": {
+          "const": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "format": {
+          "const": "json",
+          "title": "Format",
+          "type": "string"
+        },
+        "kind": {
+          "const": "pyproject-config",
+          "title": "Kind",
+          "type": "string"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "config": {
+          "additionalProperties": true,
+          "title": "Config",
+          "type": "object"
+        }
+      },
+      "required": [
+        "version",
+        "format",
+        "kind",
+        "content",
+        "config"
+      ],
+      "title": "PyprojectConfigOutputPayload",
+      "type": "object"
+    }
+  },
+  "anyOf": [
+    {
+      "$ref": "#/$defs/GenerationPayload"
+    },
+    {
+      "$ref": "#/$defs/PyprojectConfigOutputPayload"
+    },
+    {
+      "$ref": "#/$defs/CliCommandOutputPayload"
+    },
+    {
+      "$ref": "#/$defs/DeprecationsOutputPayload"
+    },
+    {
+      "$ref": "#/$defs/ExperimentalOutputPayload"
+    },
+    {
+      "$ref": "#/$defs/CheckOutputPayload"
+    }
+  ]
+}
