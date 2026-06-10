@@ -232,8 +232,8 @@ function mountEditor() {
 
 function syncStickyOffsets() {
   const topbar = document.querySelector(".topbar");
-  const height = topbar ? Math.ceil(topbar.getBoundingClientRect().height) : 0;
-  document.documentElement.style.setProperty("--topbar-offset", `${height}px`);
+  const topbarHeight = topbar ? Math.ceil(topbar.getBoundingClientRect().height) : 0;
+  document.documentElement.style.setProperty("--topbar-offset", `${topbarHeight}px`);
 }
 
 function observeWorkspaceResize() {
@@ -540,6 +540,45 @@ function applyImportedOptions(result) {
   });
 }
 
+function generationErrorMessage(error) {
+  if (!error) {
+    return "Unknown generation error.";
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  return error.stack || error.message || String(error);
+}
+
+function generationErrorSummary(message) {
+  const lines = String(message)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const line = lines[index];
+    if (!line.startsWith("File ") && !line.startsWith("Traceback ")) {
+      return line;
+    }
+  }
+  return lines.at(-1) || "Unknown generation error.";
+}
+
+function renderGenerationFailure(error, mode) {
+  const message = generationErrorMessage(error);
+  const summary = generationErrorSummary(message);
+  const statusText = mode === "auto"
+    ? `Auto generation failed: ${summary}. Keeping the last successful output.`
+    : `Generation failed: ${summary}.`;
+  setStatus(statusText, true, message);
+  if (mode === "auto") {
+    return;
+  }
+  lastOutput = message;
+  renderOutput(message, "python");
+  document.querySelector("#copy").disabled = true;
+}
+
 function finishGeneration() {
   running = false;
   activeGenerationMode = "manual";
@@ -586,24 +625,11 @@ async function requestGenerate(mode = "manual") {
       setStatus(
         mode === "auto" ? "Auto generated with the built-in formatter." : "Generated with the built-in formatter.",
       );
-    } else if (mode === "auto") {
-      setStatus("Auto generation failed; keeping the last successful output.", true);
     } else {
-      lastOutput = result.error;
-      renderOutput(result.error, "python");
-      document.querySelector("#copy").disabled = true;
-      setStatus("Generation failed.", true);
+      renderGenerationFailure(result.error, mode);
     }
   } catch (error) {
-    const message = error?.stack || String(error);
-    if (mode === "auto") {
-      setStatus("Auto generation failed; keeping the last successful output.", true);
-    } else {
-      lastOutput = message;
-      renderOutput(message, "python");
-      document.querySelector("#copy").disabled = true;
-      setStatus("Generation failed.", true);
-    }
+    renderGenerationFailure(error, mode);
   } finally {
     finishGeneration();
   }
@@ -639,16 +665,22 @@ function updateStatusTooltip() {
     return;
   }
   // Reveal the full message on hover only when the text is visually truncated.
-  status.title = status.scrollWidth > status.clientWidth ? status.textContent : "";
+  const explicitTitle = status.dataset.statusTitle || "";
+  status.title = explicitTitle || (status.scrollWidth > status.clientWidth ? status.textContent : "");
 }
 
-function setStatus(text, isError = false) {
+function setStatus(text, isError = false, title = "") {
   const status = document.querySelector("#status");
   if (!status) {
     return;
   }
   status.textContent = text;
   status.classList.toggle("error", isError);
+  if (title) {
+    status.dataset.statusTitle = title;
+  } else {
+    delete status.dataset.statusTitle;
+  }
   requestAnimationFrame(updateStatusTooltip);
 }
 

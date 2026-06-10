@@ -369,6 +369,17 @@ def _options_by_dest() -> dict[str, dict[str, Any]]:
     return {option["dest"]: option for option in UI_METADATA["options"] if option["browser_supported"]}
 
 
+def _options_by_name() -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {}
+    for option in UI_METADATA["options"]:
+        if not option["browser_supported"]:
+            continue
+        result[option["name"]] = option
+        if negative_name := option.get("negative_name"):
+            result[negative_name] = option
+    return result
+
+
 def _split_delimited(value: Any) -> list[str]:
     if isinstance(value, list):
         return [str(item).strip() for item in value if str(item).strip()]
@@ -427,6 +438,40 @@ def _coerce_for_config(option: dict[str, Any], value: Any) -> Any:
     return _coerce_for_generate(option, value)
 
 
+def _relation_source_matches(value: Any, relation: dict[str, Any]) -> bool:
+    value = getattr(value, "value", value)
+    if "when" not in relation:
+        return bool(value)
+    expected = relation["when"]
+    if isinstance(expected, list):
+        return value in expected
+    return value == expected
+
+
+def _apply_generate_option_implications(options: dict[str, Any]) -> None:
+    options_by_name = _options_by_name()
+    changed = True
+    while changed:
+        changed = False
+        for option in UI_METADATA["options"]:
+            if not (relations := option.get("implies")):
+                continue
+            source_key = option.get("config_dest", option["dest"])
+            if source_key not in options:
+                continue
+            for relation in relations:
+                if not _relation_source_matches(options[source_key], relation):
+                    continue
+                if not (target := options_by_name.get(relation["option"])):
+                    continue
+                target_key = relation.get("config_dest", target.get("config_dest", target["dest"]))
+                target_value = relation.get("value", True)
+                if options.get(target_key) == target_value:
+                    continue
+                options[target_key] = target_value
+                changed = True
+
+
 def _normalize_options(
     options: dict[str, Any], *, include_forced: bool = True, for_config: bool = False, for_generate: bool = False
 ) -> dict[str, Any]:
@@ -446,6 +491,8 @@ def _normalize_options(
         if normalized_value is None or normalized_value == []:
             continue
         normalized[option.get("config_dest", key) if for_generate else key] = normalized_value
+    if for_generate:
+        _apply_generate_option_implications(normalized)
     if include_forced:
         normalized.update(GENERATE_FORCED_OPTIONS)
     return normalized
