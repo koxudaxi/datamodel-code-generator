@@ -26,7 +26,7 @@ _BYTES: str = "bytes"
 _STR: str = "str"
 
 
-def _evaluate_member_value(default: Any) -> Any:
+def evaluate_member_value(default: Any) -> Any:
     """Return the runtime value of a member default rendered as a Python literal."""
     if not isinstance(default, str):
         return default
@@ -125,7 +125,7 @@ class Enum(DataModel):
         for field in self.fields:
             if field.default is None:
                 continue
-            member_value = _evaluate_member_value(field.default)
+            member_value = evaluate_member_value(field.default)
             if _json_value_equal(member_value, value):
                 return self.get_member(field)
             if (

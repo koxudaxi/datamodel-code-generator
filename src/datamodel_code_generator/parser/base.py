@@ -77,7 +77,7 @@ from datamodel_code_generator.model.base import (
     DataModel,
     DataModelFieldBase,
 )
-from datamodel_code_generator.model.enum import Enum, Member
+from datamodel_code_generator.model.enum import Enum, Member, evaluate_member_value
 from datamodel_code_generator.model.imports import IMPORT_TYPED_DICT, IMPORT_TYPED_DICT_BACKPORT
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
@@ -1679,11 +1679,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if not member:
             return value
 
-        default = member.field.default
-        if isinstance(default, str):
-            return default.strip("'\"")
-        if isinstance(default, int | bool):
-            return default
+        member_value = evaluate_member_value(member.field.default)
+        if isinstance(member_value, (str, int, bool)):
+            return member_value
         return value
 
     def __apply_discriminator_type(  # noqa: PLR0912, PLR0914, PLR0915

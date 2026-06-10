@@ -754,3 +754,27 @@ def test_needs_validate_default_for_optional_single_model_union() -> None:
     )
 
     assert _needs_validate_default(optional_model_union) is True
+
+
+def test_get_enum_discriminator_literal_with_escaped_value() -> None:
+    """Test discriminator literals use the runtime enum value, not its escaped source."""
+    from datamodel_code_generator.model.enum import Enum
+    from datamodel_code_generator.model.pydantic_v2.base_model import DataModelField
+    from datamodel_code_generator.parser.base import Parser
+    from datamodel_code_generator.reference import Reference
+    from datamodel_code_generator.types import DataType
+
+    enum = Enum(
+        reference=Reference(path="test_path", original_name="TestEnum", name="TestEnum"),
+        fields=[
+            DataModelField(
+                name="DON_T",
+                default="'don\\'t'",
+                data_type=DataType(type="str"),
+                required=True,
+            ),
+        ],
+    )
+
+    assert Parser._get_enum_discriminator_literal(enum, "don't") == "don't"
+    assert Parser._get_enum_discriminator_literal(enum, "missing") == "missing"
