@@ -791,6 +791,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self.reserved_refs: defaultdict[tuple[str, ...], set[str]] = defaultdict(set)
         self._dynamic_anchor_index: dict[tuple[str, ...], dict[str, str]] = {}
         self._recursive_anchor_index: dict[tuple[str, ...], list[str]] = {}
+        self._ref_data_type_facts: dict[str, tuple[Any, bool]] = {}
         self.field_keys: set[str] = {
             *DEFAULT_FIELD_KEYS,
             *self.field_extra_keys,
@@ -1842,14 +1843,26 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return self.data_type.from_import(import_)
 
     def get_ref_data_type(self, ref: str) -> DataType:
-        """Get a data type from a reference string."""
+        """Get a data type from a reference string.
+
+        The referenced schema only contributes its x-python-import extra and
+        null/nullable flags here, so those facts are cached per resolved ref to
+        avoid re-validating the same schema for every occurrence of the ref.
+        """
         # Check external ref mapping before loading the schema
         mapped = self._check_external_ref_mapping(ref)
         if mapped is not None:
             return mapped
 
-        ref_schema = self._load_ref_schema_object(ref)
-        x_python_import = ref_schema.extras.get("x-python-import")
+        resolved_ref = self.model_resolver.resolve_ref(ref)
+        if (facts := self._ref_data_type_facts.get(resolved_ref)) is None:
+            ref_schema = self._load_ref_schema_object(ref)
+            facts = (
+                ref_schema.extras.get("x-python-import"),
+                ref_schema.type == "null" or (self.strict_nullable and ref_schema.nullable is True),
+            )
+            self._ref_data_type_facts[resolved_ref] = facts
+        x_python_import, is_optional = facts
         if isinstance(x_python_import, dict):
             module = x_python_import.get("module")
             type_name = x_python_import.get("name")
@@ -1859,7 +1872,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 self.imports.append(import_)
                 return self.data_type.from_import(import_)
         reference = self.model_resolver.add_ref(ref)
-        is_optional = ref_schema.type == "null" or (self.strict_nullable and ref_schema.nullable is True)
         return self.data_type(reference=reference, is_optional=is_optional)
 
     def set_additional_properties(self, path: str, obj: JsonSchemaObject) -> None:
