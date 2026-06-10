@@ -439,6 +439,28 @@ def test_main_jsonschema_dataclass_frozen_keyword_only(output_file: Path) -> Non
     )
 
 
+def test_main_jsonschema_dataclass_use_annotated(output_file: Path) -> None:
+    """Generate dataclasses with use-annotated enabled.
+
+    Dataclass fields have no Annotated representation, so the output matches
+    the plain dataclass form and no Annotated import is emitted.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="general_dataclass_use_annotated.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--use-annotated",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
 @pytest.mark.benchmark
 def test_main_jsonschema_nested_deep(tmp_path: Path) -> None:
     """Test deeply nested JSON Schema generation."""

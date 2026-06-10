@@ -138,15 +138,17 @@ class DataModelField(DataModelFieldBase):
             return True
         return bool(self.nullable and self.required and not self.use_default_with_required)
 
-    def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
-        if value is None or constraint not in self._COMPARE_EXPRESSIONS:
-            return value
-
-        is_float_type = any(
+    def _has_float_data_type(self) -> bool:
+        """Check whether any nested data type is float-like."""
+        return any(
             data_type.type == "float"
             or (data_type.strict and data_type.import_ and "Float" in data_type.import_.import_)
             for data_type in self.data_type.all_data_types
         )
+
+    def _get_strict_field_constraint_value(self, constraint: str, value: Any, *, is_float_type: bool) -> Any:
+        if value is None or constraint not in self._COMPARE_EXPRESSIONS:
+            return value
         if is_float_type:
             return float(value)
         str_value = str(value)
@@ -191,17 +193,16 @@ class DataModelField(DataModelFieldBase):
             and not self.self_reference()
             and not (self.data_type.strict and has_type_constraints)
         ):
-            data = {
-                **data,
-                **(
-                    {}
-                    if any(d.import_ == IMPORT_ANYURL for d in self.data_type.all_data_types)
-                    else {
-                        k: self._get_strict_field_constraint_value(k, v)
-                        for k, v in self.constraints.model_dump(exclude_unset=True).items()
-                    }
-                ),
-            }
+            if any(d.import_ == IMPORT_ANYURL for d in self.data_type.all_data_types):
+                constraint_data: dict[str, Any] = {}
+            else:
+                dumped = self.constraints._exclude_unset_dump  # noqa: SLF001
+                is_float_type = bool(self._COMPARE_EXPRESSIONS & dumped.keys()) and self._has_float_data_type()
+                constraint_data = {
+                    k: self._get_strict_field_constraint_value(k, v, is_float_type=is_float_type)
+                    for k, v in dumped.items()
+                }
+            data = {**data, **constraint_data}
 
         if self.use_field_description:
             data.pop("description", None)  # Description is part of field docstring
@@ -287,6 +288,17 @@ class DataModelField(DataModelFieldBase):
         if not self.use_annotated or not field or self.is_class_var:
             return None
         return f"Annotated[{self.type_hint}, {field}]"
+
+    @property
+    def needs_annotated_import(self) -> bool:
+        """Check if this field requires the Annotated import.
+
+        Equivalent to bool(self.annotated): str(self) is non-empty exactly when
+        _has_field_statement() is true (both derive from the same Field() data),
+        but this avoids building the type hint and Field() string only to
+        discard them.
+        """
+        return self.use_annotated and not self.is_class_var and self._has_field_statement()
 
     @property
     def imports(self) -> tuple[Import, ...]:
