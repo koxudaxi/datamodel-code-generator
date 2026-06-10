@@ -1,0 +1,16 @@
+{
+    "type": "object",
+    "properties": {
+        "mode": {"allOf": [{"$ref": "#/definitions/Mode"}], "default": "don't"},
+        "modes": {
+            "type": "array",
+            "items": {"$ref": "#/definitions/Mode"},
+            "default": ["don't", "a-b"]
+        },
+        "quoted": {"allOf": [{"$ref": "#/definitions/Quoted"}], "default": "'a'"}
+    },
+    "definitions": {
+        "Mode": {"type": "string", "enum": ["don't", "a-b"]},
+        "Quoted": {"type": "string", "enum": ["a", "'a'"]}
+    }
+}

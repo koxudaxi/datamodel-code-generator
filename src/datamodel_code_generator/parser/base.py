@@ -77,7 +77,7 @@ from datamodel_code_generator.model.base import (
     DataModel,
     DataModelFieldBase,
 )
-from datamodel_code_generator.model.enum import Enum, Member
+from datamodel_code_generator.model.enum import Enum, Member, evaluate_member_value
 from datamodel_code_generator.model.imports import IMPORT_TYPED_DICT, IMPORT_TYPED_DICT_BACKPORT
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
@@ -1655,7 +1655,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 enum_class_name = enum_source.reference.short_name
                 enum_member_literals: list[tuple[str, str]] = []
                 for value in discriminator_values:
-                    member = enum_source.find_member(value)
+                    member = enum_source.find_member(value, coerce_strings=True)
                     if member and member.field.name:
                         enum_member_literals.append((enum_class_name, member.field.name))
                     else:  # pragma: no cover
@@ -1675,15 +1675,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     @staticmethod
     def _get_enum_discriminator_literal(enum_source: Enum, value: DiscriminatorValue) -> DiscriminatorValue:
-        member = enum_source.find_member(value)
+        member = enum_source.find_member(value, coerce_strings=True)
         if not member:
             return value
 
-        default = member.field.default
-        if isinstance(default, str):
-            return default.strip("'\"")
-        if isinstance(default, int | bool):
-            return default
+        member_value = evaluate_member_value(member.field.default)
+        if isinstance(member_value, (str, int, bool)):
+            return member_value
         return value
 
     def __apply_discriminator_type(  # noqa: PLR0912, PLR0914, PLR0915
