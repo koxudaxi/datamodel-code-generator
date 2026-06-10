@@ -11923,12 +11923,27 @@ def test_main_jsonschema_integer_fractional_constraints(
         module_name=module_name,
         model_name="Model",
         valid_json=(
-            '{"ge_field": 1, "any_multiple": 7, "gt_field": -1, "fraction_multiple": 3, "le_field": 2, "lt_field": 2}'
+            '{"ge_field": 1, "any_multiple": 7, "gt_field": -1, "fraction_multiple": 3,'
+            ' "le_field": 2, "lt_field": 2, "combined_min": 3, "combined_max": 2}'
         ),
         invalid_json='{"ge_field": 0}',
         expected_error_type="greater_than_equal",
         expected_attribute_path=("fraction_multiple",),
         expected_attribute_value=3,
+    )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name=module_name,
+        model_name="Model",
+        invalid_json='{"combined_min": 2}',
+        expected_error_type="greater_than_equal",
+    )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name=module_name,
+        model_name="Model",
+        invalid_json='{"combined_max": 3}',
+        expected_error_type="less_than_equal",
     )
 
 

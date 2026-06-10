@@ -221,13 +221,21 @@ def normalize_integer_constraint(constraint: str, value: Any) -> tuple[str, Any]
     return constraint, value
 
 
+def merge_normalized_constraint(constraints: dict[str, Any], key: str, value: Any) -> None:
+    """Merge a normalized constraint, keeping the stronger bound when ge or le collides."""
+    if (current := constraints.get(key)) is None:
+        constraints[key] = value
+        return
+    constraints[key] = max(current, value) if key == "ge" else min(current, value)
+
+
 def normalize_integer_constraints(constraints: dict[str, Any]) -> dict[str, Any]:
     """Return integer-safe pydantic constraints."""
-    return {
-        normalized[0]: normalized[1]
-        for key, value in constraints.items()
-        if (normalized := normalize_integer_constraint(key, value)) is not None
-    }
+    normalized_constraints: dict[str, Any] = {}
+    for key, value in constraints.items():
+        if (normalized := normalize_integer_constraint(key, value)) is not None:
+            merge_normalized_constraint(normalized_constraints, normalized[0], normalized[1])
+    return normalized_constraints
 
 
 def chain_as_tuple(*iterables: Iterable[T]) -> tuple[T, ...]:

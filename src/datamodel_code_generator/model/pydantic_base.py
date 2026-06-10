@@ -25,6 +25,7 @@ from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.types import (
     UnionIntFloat,
     chain_as_tuple,
+    merge_normalized_constraint,
     normalize_integer_constraint,
 )
 
@@ -165,6 +166,23 @@ class DataModelField(DataModelFieldBase):
             return constraint, int(value)
         return constraint, value
 
+    def _get_normalized_constraint_data(self) -> dict[str, Any]:
+        """Build constraint data with integer-safe values, merging colliding bounds."""
+        assert self.constraints is not None
+        dumped = self.constraints._exclude_unset_dump  # noqa: SLF001
+        has_integer_constraints = bool(self._INTEGER_CONSTRAINTS & dumped.keys())
+        is_float_type = has_integer_constraints and self._has_numeric_data_type("float", "Float")
+        is_int_type = has_integer_constraints and not is_float_type and self._has_numeric_data_type("int", "Int")
+        constraint_data: dict[str, Any] = {}
+        for k, v in dumped.items():
+            if (
+                normalized := self._get_strict_field_constraint(
+                    k, v, is_float_type=is_float_type, is_int_type=is_int_type
+                )
+            ) is not None:
+                merge_normalized_constraint(constraint_data, normalized[0], normalized[1])
+        return constraint_data
+
     def _get_default_factory_for_optional_nested_model(self) -> str | None:
         """Get default_factory for optional nested Pydantic model fields.
 
@@ -202,22 +220,7 @@ class DataModelField(DataModelFieldBase):
             if any(d.import_ == IMPORT_ANYURL for d in self.data_type.all_data_types):
                 constraint_data: dict[str, Any] = {}
             else:
-                dumped = self.constraints._exclude_unset_dump  # noqa: SLF001
-                has_integer_constraints = bool(self._INTEGER_CONSTRAINTS & dumped.keys())
-                is_float_type = has_integer_constraints and self._has_numeric_data_type("float", "Float")
-                is_int_type = (
-                    has_integer_constraints and not is_float_type and self._has_numeric_data_type("int", "Int")
-                )
-                constraint_data = {
-                    normalized[0]: normalized[1]
-                    for k, v in dumped.items()
-                    if (
-                        normalized := self._get_strict_field_constraint(
-                            k, v, is_float_type=is_float_type, is_int_type=is_int_type
-                        )
-                    )
-                    is not None
-                }
+                constraint_data = self._get_normalized_constraint_data()
             data = {**data, **constraint_data}
 
         if self.use_field_description:

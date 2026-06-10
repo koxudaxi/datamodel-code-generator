@@ -14,3 +14,5 @@ class Model(BaseModel):
     fraction_multiple: int | None = Field(None, multiple_of=3)
     le_field: int | None = Field(None, le=2)
     lt_field: int | None = Field(None, le=2)
+    combined_min: int | None = Field(None, ge=3)
+    combined_max: int | None = Field(None, le=2)

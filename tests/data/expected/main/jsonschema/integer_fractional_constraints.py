@@ -14,3 +14,5 @@ class Model(BaseModel):
     fraction_multiple: conint(multiple_of=3) | None = None
     le_field: conint(le=2) | None = None
     lt_field: conint(le=2) | None = None
+    combined_min: conint(ge=3) | None = None
+    combined_max: conint(le=2) | None = None
