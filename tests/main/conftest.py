@@ -211,9 +211,13 @@ def _assert_python_module_importable(path: Path, module_name: str, attribute: st
     if spec.loader is None:  # pragma: no cover
         pytest.fail(f"Unable to load generated module loader from {path}")
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    if attribute is not None and not hasattr(module, attribute):  # pragma: no cover
-        pytest.fail(f"Expected generated module {module_name!r} to define {attribute!r}")
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+        if attribute is not None and not hasattr(module, attribute):  # pragma: no cover
+            pytest.fail(f"Expected generated module {module_name!r} to define {attribute!r}")
+    finally:
+        sys.modules.pop(module_name, None)
 
 
 def _get_valid_cli_options() -> frozenset[str]:
