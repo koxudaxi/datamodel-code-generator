@@ -5,6 +5,7 @@ Provides Enum, StrEnum, and specialized enum classes for code generation.
 
 from __future__ import annotations
 
+import ast
 from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, IMPORT_INT_ENUM, IMPORT_STR_ENUM, Import
@@ -23,6 +24,26 @@ _INT: str = "int"
 _FLOAT: str = "float"
 _BYTES: str = "bytes"
 _STR: str = "str"
+
+
+def _evaluate_member_value(default: Any) -> Any:
+    """Return the runtime value of a member default rendered as a Python literal."""
+    if not isinstance(default, str):
+        return default
+    try:
+        return ast.literal_eval(default)
+    except (SyntaxError, ValueError):
+        return default
+
+
+def _json_value_equal(member_value: Any, value: Any) -> bool:
+    """Compare values with JSON semantics: numbers compare across int/float, bool and str only to themselves."""
+    if isinstance(member_value, bool) or isinstance(value, bool):
+        return type(member_value) is type(value) and member_value == value
+    if isinstance(member_value, (int, float)) and isinstance(value, (int, float)):
+        return member_value == value
+    return type(member_value) is type(value) and member_value == value
+
 
 SUBCLASS_BASE_CLASSES: dict[Types, str] = {
     Types.int32: _INT,
@@ -95,24 +116,25 @@ class Enum(DataModel):
         """Create a Member instance for the given field."""
         return Member(self, field)
 
-    def find_member(self, value: Any) -> Member | None:
-        """Find enum member matching the given value."""
-        repr_value = repr(value)
-        # Remove surrounding quotes from the string representation
-        str_value = str(value).strip("'\"")
+    def find_member(self, value: Any, *, coerce_strings: bool = False) -> Member | None:
+        """Find the enum member whose value equals the given schema value.
 
+        coerce_strings lets a string value match a non-string member with the same
+        string representation, as required for OpenAPI discriminator mapping keys.
+        """
         for field in self.fields:
-            # Remove surrounding quotes from field default value
-            field_default = "" if field.default is None else str(field.default).strip("'\"")
-
-            # Compare values after removing quotes
-            if field_default == str_value:
+            if field.default is None:
+                continue
+            member_value = _evaluate_member_value(field.default)
+            if _json_value_equal(member_value, value):
                 return self.get_member(field)
-
-            # Keep original comparison for backwards compatibility
-            if field.default == repr_value:  # pragma: no cover
+            if (
+                coerce_strings
+                and isinstance(value, str)
+                and not isinstance(member_value, str)
+                and str(member_value) == value
+            ):
                 return self.get_member(field)
-
         return None
 
     @property

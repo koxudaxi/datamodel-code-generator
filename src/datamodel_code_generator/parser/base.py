@@ -1655,7 +1655,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 enum_class_name = enum_source.reference.short_name
                 enum_member_literals: list[tuple[str, str]] = []
                 for value in discriminator_values:
-                    member = enum_source.find_member(value)
+                    member = enum_source.find_member(value, coerce_strings=True)
                     if member and member.field.name:
                         enum_member_literals.append((enum_class_name, member.field.name))
                     else:  # pragma: no cover
@@ -1675,7 +1675,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     @staticmethod
     def _get_enum_discriminator_literal(enum_source: Enum, value: DiscriminatorValue) -> DiscriminatorValue:
-        member = enum_source.find_member(value)
+        member = enum_source.find_member(value, coerce_strings=True)
         if not member:
             return value
 
