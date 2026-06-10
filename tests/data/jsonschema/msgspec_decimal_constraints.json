@@ -1,7 +1,7 @@
 {
     "type": "object",
     "properties": {
-        "price": {
+        "p": {
             "type": "string",
             "format": "decimal",
             "minimum": 0.5,
