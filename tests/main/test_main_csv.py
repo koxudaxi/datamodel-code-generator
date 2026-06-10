@@ -21,7 +21,7 @@ assert_file_content = create_assert_file_content(EXPECTED_CSV_PATH)
 
 
 def test_csv_file(output_file: Path) -> None:
-    """Test CSV file input code generation."""
+    """Test CSV file input keeps duplicate-header following columns and missing cells."""
     run_main_and_assert(
         input_path=CSV_DATA_PATH / "simple.csv",
         output_path=output_file,
@@ -32,7 +32,7 @@ def test_csv_file(output_file: Path) -> None:
 
 
 def test_csv_stdin(monkeypatch: pytest.MonkeyPatch, output_file: Path) -> None:
-    """Test CSV stdin input code generation."""
+    """Test CSV stdin input keeps duplicate-header following columns and missing cells."""
     run_main_and_assert(
         stdin_path=CSV_DATA_PATH / "simple.csv",
         output_path=output_file,
