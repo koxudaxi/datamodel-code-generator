@@ -22,6 +22,7 @@ NON_DATAMODEL_FLAGS = frozenset({"--from", "--with"})
 
 
 def _read_frontmatter(path: Path) -> dict[str, Any]:
+    """Read and validate YAML frontmatter from a skill document."""
     text = path.read_text(encoding="utf-8")
     match = re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
     if match is None:
@@ -33,6 +34,7 @@ def _read_frontmatter(path: Path) -> dict[str, Any]:
 
 
 def _documented_flags() -> dict[str, set[Path]]:
+    """Collect datamodel-codegen flags referenced by the skill files."""
     flags: dict[str, set[Path]] = {}
     for path in SKILL_FILES:
         text = path.read_text(encoding="utf-8")
@@ -60,12 +62,15 @@ def test_skill_frontmatter_validates() -> None:
 
 def test_skill_documented_flags_exist_in_cli_help() -> None:
     """Documented datamodel-codegen flags must exist in current CLI help."""
-    result = subprocess.run(
-        ["datamodel-codegen", "--help"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            ["datamodel-codegen", "--help"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        pytest.fail("datamodel-codegen not found; ensure the CLI is installed in the test environment")
     if result.returncode != 0:
         pytest.fail(f"datamodel-codegen --help failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}")
 

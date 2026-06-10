@@ -19,6 +19,7 @@ TARGET_PYTHON = "3.10"
 
 
 def _run_codegen(args: Sequence[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+    """Run datamodel-codegen and fail with captured output on errors."""
     result = subprocess.run(
         ["datamodel-codegen", *args],
         cwd=cwd,
@@ -32,6 +33,7 @@ def _run_codegen(args: Sequence[str], *, cwd: Path | None = None) -> subprocess.
 
 
 def _import_file(path: Path, module_name: str) -> object:
+    """Import a generated Python file by path."""
     spec = importlib.util.spec_from_file_location(module_name, path)
     if spec is None or spec.loader is None:
         pytest.fail(f"Unable to import generated file: {path}")
@@ -42,6 +44,7 @@ def _import_file(path: Path, module_name: str) -> object:
 
 
 def _import_package(tmp_path: Path, package_name: str) -> object:
+    """Import a generated package from a temporary root."""
     sys.path.insert(0, str(tmp_path))
     try:
         sys.modules.pop(package_name, None)

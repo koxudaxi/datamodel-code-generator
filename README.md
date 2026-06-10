@@ -58,6 +58,8 @@ in another Python file to a different output type.
 
 This repository includes an experimental Agent Skill that teaches compatible coding agents to run `datamodel-codegen` when generating Python models from OpenAPI, AsyncAPI, JSON Schema, GraphQL, JSON/YAML/CSV sample data, or existing Python model objects.
 
+See [Coding Agent Skill](docs/coding-agent-skill.md) for detailed guidance and troubleshooting.
+
 Install the directory for your agent:
 
 ```bash
