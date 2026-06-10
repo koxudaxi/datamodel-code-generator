@@ -533,6 +533,34 @@ class GenerationStore:  # noqa: PLR0904
         store = cls()
         return store, store.models
 
+    def _dispose(self, references: Iterable[Reference] = ()) -> None:
+        """Drop all facts and model references so the parsed graph can be reclaimed.
+
+        The store, its model list, and its facts hold strong references to every
+        model and data type; clearing them removes the last anchors keeping the
+        object graph alive once the parser is dropped. Models, fields, data
+        types, and references also point at each other in cycles, so their back
+        references are severed first to let ordinary reference counting reclaim
+        the graph without waiting for a full garbage collection pass.
+        """
+        for model in self.models:
+            for model_field in model.fields:
+                for data_type in list(model_field.data_type.all_data_types):
+                    data_type.parent = None
+                    data_type.reference = None
+                model_field.parent = None
+            for base_class in model.base_classes:
+                for data_type in list(base_class.all_data_types):
+                    data_type.parent = None
+                    data_type.reference = None
+        for reference in references:
+            reference.children.clear()
+            reference.source = None
+        self._facts = GenerationFacts()
+        self._model_ids_by_object.clear()
+        self.models.clear()
+        self._dirty = True
+
     @property
     def facts(self) -> GenerationFacts:
         """Return the current facts snapshot."""

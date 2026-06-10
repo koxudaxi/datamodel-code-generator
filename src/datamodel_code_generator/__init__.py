@@ -999,6 +999,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             all_exports_collision_strategy=config.all_exports_collision_strategy,
             module_split_mode=config.module_split_mode,
         )
+    parser._dispose()  # noqa: SLF001
     if not input_filename:  # pragma: no cover
         match input_:
             case str():

@@ -3565,6 +3565,18 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     future_imports=future_imports_str,
                 )
 
+    def _dispose(self) -> None:
+        """Break reference cycles in the parsed object graph.
+
+        Models, fields, data types, and references point at each other in
+        cycles, which keeps the whole graph alive until a full garbage
+        collection pass. Severing the back references lets ordinary reference
+        counting reclaim the graph as soon as the parser is dropped, which
+        matters for processes that call generate() repeatedly.
+        """
+        self.generation_store._dispose(self.model_resolver.references.values())  # noqa: SLF001
+        self.model_resolver.references.clear()
+
     def parse(  # noqa: PLR0913, PLR0914, PLR0917
         self,
         with_import: bool | None = True,  # noqa: FBT001, FBT002
