@@ -21,7 +21,7 @@ assert_file_content = create_assert_file_content(EXPECTED_CSV_PATH)
 
 
 def test_csv_file(output_file: Path) -> None:
-    """Test CSV file input keeps duplicate-header following columns and missing cells."""
+    """Test CSV file input code generation."""
     run_main_and_assert(
         input_path=CSV_DATA_PATH / "simple.csv",
         output_path=output_file,
@@ -32,7 +32,7 @@ def test_csv_file(output_file: Path) -> None:
 
 
 def test_csv_stdin(monkeypatch: pytest.MonkeyPatch, output_file: Path) -> None:
-    """Test CSV stdin input keeps duplicate-header following columns and missing cells."""
+    """Test CSV stdin input code generation."""
     run_main_and_assert(
         stdin_path=CSV_DATA_PATH / "simple.csv",
         output_path=output_file,
@@ -40,4 +40,26 @@ def test_csv_stdin(monkeypatch: pytest.MonkeyPatch, output_file: Path) -> None:
         input_file_type="csv",
         assert_func=assert_file_content,
         expected_file="csv_stdin_simple.py",
+    )
+
+
+def test_csv_file_missing_trailing_cell(output_file: Path) -> None:
+    """Test CSV file input infers row values, not header names, for short rows."""
+    run_main_and_assert(
+        input_path=CSV_DATA_PATH / "missing_trailing_cell.csv",
+        output_path=output_file,
+        input_file_type="csv",
+        assert_func=assert_file_content,
+        expected_file="csv_file_missing_trailing_cell.py",
+    )
+
+
+def test_csv_file_extra_trailing_cell(output_file: Path) -> None:
+    """Test CSV file input ignores cells beyond the header columns."""
+    run_main_and_assert(
+        input_path=CSV_DATA_PATH / "extra_trailing_cell.csv",
+        output_path=output_file,
+        input_file_type="csv",
+        assert_func=assert_file_content,
+        expected_file="csv_file_extra_trailing_cell.py",
     )

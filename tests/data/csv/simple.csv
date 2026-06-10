@@ -1,4 +1,4 @@
-id,id,name,tel,zip code,missing
-0,1,taro,0123456789,98765
-0,2,ken,234567891,98764
-0,3,ichiro,345678912,98763
+id,name,tel,zip code
+1,taro,0123456789,98765
+2,ken,234567891,98764
+3,ichiro,345678912,98763

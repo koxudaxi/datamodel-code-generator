@@ -12,4 +12,3 @@ class Model(BaseModel):
     name: str
     tel: str
     zip_code: str = Field(..., alias='zip code')
-    missing: None
