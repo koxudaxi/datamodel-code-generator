@@ -1,0 +1,6 @@
+{
+    "type": "object",
+    "properties": {
+        "x": {"type": "string", "pattern": "^don\\'t$"}
+    }
+}

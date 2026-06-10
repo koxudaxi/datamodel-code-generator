@@ -1,0 +1,8 @@
+{
+    "type": "object",
+    "properties": {
+        "big_default": {"type": "number", "default": 1e999},
+        "small_default": {"type": "number", "default": -1e999},
+        "big_min": {"type": "number", "minimum": 1e999}
+    }
+}
