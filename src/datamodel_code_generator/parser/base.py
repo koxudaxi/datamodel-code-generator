@@ -2420,6 +2420,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         rename_type = self.field_type_collision_strategy == FieldTypeCollisionStrategy.RenameType
         all_class_names = {cast("str", m.class_name) for m in models if m.class_name}
 
+        resolver = ModelResolver(
+            snake_case_field=self.snake_case_field,
+            remove_suffix_number=True,
+        )
+
         for model in models:
             if "Enum" in model.base_class or not model.BASE_CLASS:
                 continue
@@ -2437,22 +2442,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         colliding_reference = data_type.reference
 
                 if colliding_reference is not None:
-                    resolver = ModelResolver(
-                        exclude_names=all_class_names.copy(),
-                        snake_case_field=self.snake_case_field,
-                        remove_suffix_number=True,
-                    )
+                    resolver._reset_for_reuse(all_class_names.copy())  # noqa: SLF001
                     source = cast("DataModel", colliding_reference.source)
                     resolver.exclude_names.add(cast("str", filed_name))
                     new_class_name = resolver.add(["type"], cast("str", source.class_name)).name  # ty: ignore
                     source.class_name = new_class_name
                     all_class_names.add(new_class_name)
                 elif not rename_type:
-                    resolver = ModelResolver(
-                        exclude_names=reference_type_names,
-                        snake_case_field=self.snake_case_field,
-                        remove_suffix_number=True,
-                    )
+                    resolver._reset_for_reuse(reference_type_names)  # noqa: SLF001
                     new_filed_name = resolver.add(["field"], cast("str", filed_name)).name
                     if filed_name != new_filed_name:
                         field.alias = filed_name
