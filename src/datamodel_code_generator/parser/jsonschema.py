@@ -5275,22 +5275,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _resolve_root_model_name(self, raw_obj: dict[str, Any]) -> tuple[str, bool]:
         title = raw_obj.get("title")
         title_str = str(title) if title is not None else "Model"
-        preserve_root_class_name = False
-        match (self.custom_class_name_generator, self.class_name):
-            case (custom_generator, _) if custom_generator:
-                obj_name = title_str
-            case (_, class_name) if class_name:
-                if not self.model_resolver.validate_name(class_name):
-                    raise InvalidClassNameError(class_name)
-                obj_name = class_name
-                preserve_root_class_name = self._should_preserve_explicit_root_class_name(class_name)
-            case _:
-                obj_name = title_str
-                if not self.model_resolver.validate_name(obj_name):
-                    obj_name = title_to_class_name(obj_name)
-                if not self.model_resolver.validate_name(obj_name):
-                    raise InvalidClassNameError(obj_name)
-        return obj_name, preserve_root_class_name
+        if self.custom_class_name_generator:
+            return title_str, False
+
+        if class_name := self.class_name:
+            if not self.model_resolver.validate_name(class_name):
+                raise InvalidClassNameError(class_name)
+            return class_name, self._should_preserve_explicit_root_class_name(class_name)
+
+        obj_name = title_str
+        if not self.model_resolver.validate_name(obj_name):
+            obj_name = title_to_class_name(obj_name)
+        if not self.model_resolver.validate_name(obj_name):
+            raise InvalidClassNameError(obj_name)
+        return obj_name, False
 
     def _parse_converted_sources(self, make_converter: Callable[[], Any]) -> None:
         for source, path_parts in self._get_context_source_path_parts():
