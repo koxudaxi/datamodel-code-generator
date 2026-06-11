@@ -123,6 +123,7 @@ def test_graphql_generate_config_path_collection_options_parse(output_file: Path
     )
 
     generate(GRAPHQL_COLLECTION_OPTIONS_PATH, config=config)
+    # generate() emits the file-output variant with the header and TypeAliasType aliases.
     assert_file_content(output_file, GRAPHQL_COLLECTION_OPTIONS_GENERATE_EXPECTED)
 
 
