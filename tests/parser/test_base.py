@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+import datamodel_code_generator._internal_utils as internal_utils
+import datamodel_code_generator.parser.base as parser_base
 from datamodel_code_generator.enums import CollapseRootModelsNameStrategy
 from datamodel_code_generator.imports import Imports
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -700,6 +702,15 @@ def test_to_hashable_simple_values() -> None:
     assert to_hashable("string") == "string"
     assert to_hashable(123) == 123
     assert to_hashable(None) == ""  # noqa: PLC1901
+
+
+def test_parser_base_reexports_internal_utils() -> None:
+    """Test parser.base preserves public helper imports from the leaf module."""
+    assert parser_base.to_hashable is internal_utils.to_hashable
+    assert parser_base.get_most_of_parent is internal_utils.get_most_of_parent
+    assert parser_base.Child is internal_utils.Child
+    assert parser_base.HashableComparable is internal_utils.HashableComparable
+    assert parser_base.T is internal_utils.T
 
 
 def test_to_hashable_list_and_tuple() -> None:

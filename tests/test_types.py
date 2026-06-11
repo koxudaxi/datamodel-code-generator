@@ -207,6 +207,19 @@ def test_datatype_remove_reference_detaches_compatibility_child() -> None:
     assert [child is data_type for child in reference.children] == []
 
 
+def test_hostname_regex_aliases_canonical_data_type_manager() -> None:
+    """Test model modules reuse the canonical hostname regex."""
+    from datamodel_code_generator.model import types as model_types
+    from datamodel_code_generator.model.pydantic_v2 import types as pydantic_v2_types
+    from datamodel_code_generator.types import DataTypeManager as BaseDataTypeManager
+
+    assert model_types.HOSTNAME_REGEX is BaseDataTypeManager.HOSTNAME_REGEX
+    assert model_types.DataTypeManager.HOSTNAME_REGEX is BaseDataTypeManager.HOSTNAME_REGEX
+    assert pydantic_v2_types.HOSTNAME_REGEX is BaseDataTypeManager.HOSTNAME_REGEX
+    assert pydantic_v2_types._PydanticDataTypeManager.HOSTNAME_REGEX is BaseDataTypeManager.HOSTNAME_REGEX
+    assert pydantic_v2_types.DataTypeManager.HOSTNAME_REGEX is BaseDataTypeManager.HOSTNAME_REGEX
+
+
 def test_python_literal_helpers_render_code_and_tuple_values() -> None:
     """Test Python literal rendering for raw code and tuple containers."""
     raw = PythonCode("datetime_module.date.fromisoformat('2026-01-01')", "2026-01-01")

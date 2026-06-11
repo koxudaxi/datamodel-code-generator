@@ -654,11 +654,14 @@ EXCLUDE_FIELD_KEYS = (
 }
 
 
+_DEFAULT_SCHEMA_PATHS = ("#/definitions", "#/$defs")
+
+
 @snooper_to_methods()  # noqa: PLR0904
 class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     """Parser for JSON Schema, JSON, YAML, Dict, and CSV formats."""
 
-    SCHEMA_PATHS: ClassVar[list[str]] = ["#/definitions", "#/$defs"]
+    SCHEMA_PATHS: ClassVar[list[str]] = list(_DEFAULT_SCHEMA_PATHS)
     SCHEMA_OBJECT_TYPE: ClassVar[type[JsonSchemaObject]] = JsonSchemaObject
 
     COMPATIBLE_PYTHON_TYPES: ClassVar[dict[str, frozenset[str]]] = {
@@ -867,7 +870,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         OpenAPI subclass uses its own SCHEMA_PATHS (#/components/schemas).
         """
         # OpenAPI and other subclasses use their own SCHEMA_PATHS
-        if self.SCHEMA_PATHS != ["#/definitions", "#/$defs"]:
+        if list(_DEFAULT_SCHEMA_PATHS) != self.SCHEMA_PATHS:
             return [(s, s.lstrip("#/").split("/")) for s in self.SCHEMA_PATHS]
 
         # JsonSchema: use definitions_key from schema_features

@@ -50,6 +50,20 @@ def test_is_future_false_no_from() -> None:
     assert import_.is_future is False
 
 
+def test_pydantic_import_constants_share_leaf_module() -> None:
+    """Test Pydantic import constants share identity without changing dataclass Field."""
+    from datamodel_code_generator.model import imports as model_imports
+    from datamodel_code_generator.model import pydantic_base
+    from datamodel_code_generator.model.pydantic_v2 import imports as pydantic_v2_imports
+
+    assert pydantic_base.IMPORT_FIELD is pydantic_v2_imports.IMPORT_FIELD
+    assert pydantic_base.IMPORT_ANYURL is pydantic_v2_imports.IMPORT_ANYURL
+    assert Import(import_="Field", from_="pydantic") == pydantic_base.IMPORT_FIELD
+    assert Import(import_="AnyUrl", from_="pydantic") == pydantic_base.IMPORT_ANYURL
+    assert model_imports.IMPORT_FIELD is not pydantic_base.IMPORT_FIELD
+    assert Import(import_="field", from_="dataclasses") == model_imports.IMPORT_FIELD
+
+
 def test_extract_future_with_future_imports() -> None:
     """Test extracting future imports from mixed imports."""
     imports = Imports()

@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional
 from pydantic import Field
 
 from datamodel_code_generator import cached_path_exists
-from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import (
     UNDEFINED,
     ConstraintsBase,
@@ -21,6 +20,7 @@ from datamodel_code_generator.model import (
     DataModelFieldBase,
     _rebuild_model_with_datamodel_namespace,
 )
+from datamodel_code_generator.model._pydantic_imports import IMPORT_ANYURL, IMPORT_FIELD
 from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.types import (
     UnionIntFloat,
@@ -29,14 +29,10 @@ from datamodel_code_generator.types import (
     normalize_integer_constraint,
 )
 
-# Defined here instead of importing from pydantic_v2.imports to avoid circular import
-# (pydantic_base -> pydantic_v2.imports -> pydantic_v2/__init__ -> pydantic_v2.base_model -> pydantic_base)
-IMPORT_ANYURL = Import.from_full_path("pydantic.AnyUrl")
-IMPORT_FIELD = Import.from_full_path("pydantic.Field")
-
 if TYPE_CHECKING:
     from collections import defaultdict
 
+    from datamodel_code_generator.imports import Import
     from datamodel_code_generator.reference import Reference
 
 
