@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
     "GeneratedFilePayload": {
       "additionalProperties": false,
@@ -41,6 +42,22 @@
       "title": "Format",
       "type": "string"
     },
+    "kind": {
+      "const": "generation",
+      "title": "Kind",
+      "type": "string"
+    },
+    "output": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Output"
+    },
     "files": {
       "items": {
         "$ref": "#/$defs/GeneratedFilePayload"
@@ -52,6 +69,8 @@
   "required": [
     "version",
     "format",
+    "kind",
+    "output",
     "files"
   ],
   "title": "GenerationPayload",

@@ -1,6 +1,8 @@
 {
   "version": 1,
   "format": "json",
+  "kind": "generation",
+  "output": null,
   "files": [
     {
       "path": null,

@@ -1,4 +1,5 @@
 {
+  "output": "<OUTPUT_FILE>",
   "files": [
     {
       "path": "<OUTPUT_FILE>",

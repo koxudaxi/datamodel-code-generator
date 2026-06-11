@@ -34,6 +34,7 @@ PROMPT_EXCLUDED_OPTIONS: frozenset[str] = frozenset({
 })
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+JSON_SCHEMA_DRAFT_2020_12 = "https://json-schema.org/draft/2020-12/schema"
 
 
 class CurrentOptionPayload(BaseModel):
@@ -75,6 +76,7 @@ class PromptPayload(BaseModel):
 
     version: Literal[1]
     format: Literal["json"]
+    kind: Literal["prompt"]
     question: str
     current_options: list[CurrentOptionPayload]
     current_options_text: str
@@ -85,7 +87,10 @@ class PromptPayload(BaseModel):
 
 def _prompt_payload_json_schema() -> dict[str, Any]:
     """Return the JSON Schema for structured prompt output."""
-    return PromptPayload.model_json_schema(mode="serialization")
+    return {
+        "$schema": JSON_SCHEMA_DRAFT_2020_12,
+        **PromptPayload.model_json_schema(mode="serialization"),
+    }
 
 
 def _dump_json(value: Any) -> str:
@@ -315,6 +320,7 @@ def _generate_prompt_json(args: Namespace, help_text: str, parser: ArgumentParse
     payload = PromptPayload(
         version=1,
         format="json",
+        kind="prompt",
         question=getattr(args, "generate_prompt", "") or "",
         current_options=_current_options_metadata(args, parser),
         current_options_text=_format_current_options(args, parser),

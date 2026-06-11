@@ -68,11 +68,13 @@ OUTPUT_FILE_PLACEHOLDER = "<OUTPUT_FILE>"
 OUTPUT_DIR_PLACEHOLDER = "<OUTPUT_DIR>"
 
 
-def _normalize_generation_json_output_path(output: str, output_file: Path) -> str:
+def _normalize_generation_json_output_path(output: str, output_path: Path, placeholder: str) -> str:
     payload = json.loads(output)
+    if payload.get("output") == output_path.as_posix():
+        payload["output"] = placeholder
     for file_payload in payload["files"]:
-        if file_payload["path"] == output_file.as_posix():
-            file_payload["path"] = OUTPUT_FILE_PLACEHOLDER
+        if file_payload["path"] == output_path.as_posix():
+            file_payload["path"] = placeholder
     return f"{json.dumps(payload, indent=2, ensure_ascii=False)}\n"
 
 
@@ -2272,7 +2274,7 @@ def test_output_format_json_generation_mapping_payload() -> None:
     """Test mapping generation results become per-module JSON files."""
     output = _generation_output_json(
         _generated_files_from_result({
-            ("models", "user"): "class User:\n    pass\n",
+            ("models", "user.py"): "class User:\n    pass\n",
         })
     )
     assert_output(f"{output}\n", EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_mapping_payload.txt")
@@ -2281,13 +2283,14 @@ def test_output_format_json_generation_mapping_payload() -> None:
 def test_output_format_json_normalizes_multiple_generation_output_paths(output_file: Path) -> None:
     """Test generated output path normalization only replaces matching file paths."""
     output = json.dumps({
+        "output": output_file.as_posix(),
         "files": [
             {"path": output_file.as_posix(), "content": "generated\n"},
             {"path": "pkg/model.py", "content": "keep\n"},
-        ]
+        ],
     })
     assert_output(
-        _normalize_generation_json_output_path(output, output_file),
+        _normalize_generation_json_output_path(output, output_file, OUTPUT_FILE_PLACEHOLDER),
         EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_output_path_normalized.txt",
     )
 
@@ -2312,6 +2315,14 @@ def test_output_format_json_schema_validates_structured_json(payload_name: str) 
     """Test structured JSON outputs conform to their emitted JSON Schema."""
     schema = json.loads((EXPECTED_OUTPUT_FORMAT_JSON_PATH / "structured_output_schema.txt").read_text())
     payload = json.loads((EXPECTED_OUTPUT_FORMAT_JSON_PATH / payload_name).read_text())
+
+    jsonschema.validate(instance=payload, schema=schema)
+
+
+def test_output_format_json_schema_validates_prompt_json_as_structured_output() -> None:
+    """Test prompt JSON output also conforms to the structured-output JSON Schema."""
+    schema = json.loads((EXPECTED_OUTPUT_FORMAT_JSON_PATH / "structured_output_schema.txt").read_text())
+    payload = json.loads((EXPECTED_MAIN_KR_PATH / "generate_prompt" / "json_output.txt").read_text())
 
     jsonschema.validate(instance=payload, schema=schema)
 
@@ -2443,7 +2454,7 @@ def test_output_format_json_generation_output_file(capsys: pytest.CaptureFixture
     captured = capsys.readouterr()
     assert_output(captured.err, EXPECTED_EMPTY_OUTPUT_PATH)
     assert_output(
-        _normalize_generation_json_output_path(captured.out, output_file),
+        _normalize_generation_json_output_path(captured.out, output_file, OUTPUT_FILE_PLACEHOLDER),
         EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_output_file.txt",
     )
     assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "main_no_file" / "output.py")
@@ -2467,7 +2478,10 @@ def test_output_format_json_generation_output_directory(capsys: pytest.CaptureFi
     )
     captured = capsys.readouterr()
     assert_output(captured.err, EXPECTED_EMPTY_OUTPUT_PATH)
-    assert_output(captured.out, EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_output_directory.txt")
+    assert_output(
+        _normalize_generation_json_output_path(captured.out, output_dir, OUTPUT_DIR_PLACEHOLDER),
+        EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_output_directory.txt",
+    )
     assert_directory_content(output_dir, EXPECTED_MAIN_KR_PATH / "main_modular")
 
 

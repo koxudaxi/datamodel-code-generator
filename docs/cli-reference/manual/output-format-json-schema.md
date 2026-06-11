@@ -11,7 +11,8 @@ Currently supported schema targets:
 
 - `generate-prompt`: schema for `--generate-prompt --output-format json`
 - `generation`: schema for normal generation with `--output-format json`
-- `structured-output`: schema for all structured command outputs
+- `structured-output`: tagged union schema for all structured command outputs,
+  discriminated by `kind`
 
 !!! tip "Usage"
 

@@ -7,9 +7,20 @@ agent should inspect structured output.
 
 In normal generation mode, `--output-format json` wraps generated modules in a
 structured payload on stdout. If `--output` is also supplied, files are still
-written to disk and the JSON payload mirrors the generated files. `--check` and
-`--watch` keep their existing text output contracts and do not support
-`--output-format json`.
+written to disk and the JSON payload mirrors the generated files. `--check`
+also supports JSON output for difference reports. `--watch` keeps its existing
+text output contract and does not support `--output-format json`.
+
+Structured JSON is emitted on stdout for successful commands and for `--check`
+difference reports. CLI usage errors, validation errors, and runtime generation
+errors continue to use text on stderr with a non-zero exit code.
+
+Generation JSON includes the normalized requested output path in top-level
+`output` when `--output` is supplied, or `null` for stdout generation.
+`files[].path` is the output file name for single-file disk output, and the
+path relative to the output directory for directory output. For stdout-only
+single-file generation it is `null`, and for multi-module stdout generation it
+is the generated module path.
 
 Use `--output-format json` with `--generate-prompt` to emit structured option
 metadata instead of Markdown. Use `--output-format-json-schema` when an LLM
@@ -19,7 +30,8 @@ Schema targets are intentionally scoped. `generate-prompt` emits the
 `PromptPayload` schema for `--generate-prompt --output-format json`.
 `generation` emits only the `GenerationPayload` schema for generated-file JSON.
 `structured-output` emits the broader `StructuredOutputPayload` schema, a union
-covering `GenerationPayload`, `CommandOutputPayload`, and `CheckOutputPayload`.
+covering `GenerationPayload`, `PromptPayload`, `CommandOutputPayload`, and
+`CheckOutputPayload`. Structured payloads use `kind` as the discriminator.
 
 !!! tip "Usage"
 
@@ -45,6 +57,8 @@ covering `GenerationPayload`, `CommandOutputPayload`, and `CheckOutputPayload`.
     {
       "version": 1,
       "format": "json",
+      "kind": "generation",
+      "output": null,
       "files": [
         {
           "path": null,
