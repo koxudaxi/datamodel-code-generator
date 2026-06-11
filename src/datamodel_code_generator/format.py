@@ -1312,6 +1312,7 @@ def _format_subscript_value(
     value = _source_segment(source, subscript.value)
     elements = _iter_subscript_elements(subscript)
     joined_elements = ", ".join(_source_segment(source, element) for element in elements)
+    trailing_comma = isinstance(subscript.slice, ast.Tuple)
     if len(f"{continuation_indent}{joined_elements}") <= line_length:
         return f"{value}[\n{continuation_indent}{joined_elements}\n{indent}]{closing_suffix}"
 
@@ -1320,13 +1321,14 @@ def _format_subscript_value(
         element_source = _source_segment(source, element)
         if isinstance(element, ast.BinOp) and isinstance(element.op, ast.BitOr):
             element_lines = _format_bit_or_elements(element, continuation_indent, line_length, source)
-            element_lines[-1] = f"{element_lines[-1]},"
+            if trailing_comma:
+                element_lines[-1] = f"{element_lines[-1]},"
             formatted_lines.extend(element_lines)
         elif isinstance(element, ast.Subscript) and len(f"{continuation_indent}{element_source}") > line_length:
             element_lines = _format_subscript_value(element, continuation_indent, line_length, source, ",").splitlines()
             formatted_lines.extend(_indent_first_line(element_lines, continuation_indent))
         else:
-            formatted_lines.append(f"{continuation_indent}{element_source},")
+            formatted_lines.append(f"{continuation_indent}{element_source}{',' if trailing_comma else ''}")
     formatted_lines.append(f"{indent}]{closing_suffix}")
     return "\n".join(formatted_lines)
 

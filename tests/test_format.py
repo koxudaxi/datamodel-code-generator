@@ -535,6 +535,43 @@ def test_apply_builtin_formatter_wraps_module_subscript_assignment() -> None:
     )
 
 
+def test_apply_builtin_formatter_wraps_nested_module_subscript_assignment() -> None:
+    """Test built-in formatter wraps nested subscript assignments."""
+    code = "Model.__annotations__['__pydantic_extra__'] = Dict[str, list[VeryLongName | OtherVeryLongName | None]]\n"
+
+    assert apply_builtin_formatter(code, line_length=40) == (
+        "Model.__annotations__['__pydantic_extra__'] = Dict[\n"
+        "    str,\n"
+        "    list[\n"
+        "        VeryLongName\n"
+        "        | OtherVeryLongName\n"
+        "        | None\n"
+        "    ],\n"
+        "]\n"
+    )
+
+
+def test_apply_builtin_formatter_wraps_module_subscript_union_element() -> None:
+    """Test built-in formatter wraps union elements in module-level subscripts."""
+    code = "Model.__annotations__['__pydantic_extra__'] = Dict[str, VeryLongName | OtherVeryLongName | None]\n"
+
+    assert apply_builtin_formatter(code, line_length=40) == (
+        "Model.__annotations__['__pydantic_extra__'] = Dict[\n"
+        "    str,\n"
+        "    VeryLongName\n"
+        "    | OtherVeryLongName\n"
+        "    | None,\n"
+        "]\n"
+    )
+
+
+def test_apply_builtin_formatter_keeps_one_line_class_annotation_spacing() -> None:
+    """Test post-class annotation spacing ignores one-line classes."""
+    code = "class Model: pass\nModel.__annotations__['__pydantic_extra__'] = Dict[str, int]\n"
+
+    assert apply_builtin_formatter(code) == code
+
+
 def test_apply_builtin_formatter_normalizes_simple_string_quotes() -> None:
     """Test built-in formatter can match black string normalization for generated strings."""
     code = (
