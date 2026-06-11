@@ -1,0 +1,13 @@
+{
+  "output": null,
+  "files": [
+    {
+      "path": "<OUTPUT_FILE>",
+      "content": "generated\n"
+    },
+    {
+      "path": "pkg/model.py",
+      "content": "keep\n"
+    }
+  ]
+}

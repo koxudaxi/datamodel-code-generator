@@ -10,7 +10,8 @@ from __future__ import annotations
 import socket
 import ssl
 from collections.abc import Iterable, Sequence
-from ipaddress import IPv4Address, IPv6Address, ip_address
+from ipaddress import IPv4Address, IPv6Address, IPv6Network, ip_address
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Protocol, cast, overload
 from urllib.parse import urlparse
 
@@ -126,21 +127,48 @@ def _get_httpx() -> _HTTPXModule:
 DEFAULT_HTTP_TIMEOUT = 30.0
 MAX_HTTP_REDIRECTS = 20
 _HTTP_REDIRECT_STATUS_CODES = frozenset({301, 302, 303, 307, 308})
+_SENSITIVE_REDIRECT_HEADERS = frozenset({"authorization", "cookie", "proxy-authorization"})
 _UNSAFE_HOST_NAMES = frozenset({"localhost"})
 _IPV4_PART_COUNT = 4
 _IPV4_OCTET_MAX = 0xFF
 _IPV4_THREE_PART_TAIL_MAX = 0xFFFF
 _IPV4_TWO_PART_TAIL_MAX = 0xFFFFFF
 _IPV4_ADDRESS_MAX = 0xFFFFFFFF
+_DEFAULT_PORTS = MappingProxyType({"http": 80, "https": 443})
 _ADDR_INFO_MIN_LENGTH = 5
+_EMBEDDED_IPV4_PREFIXES = (
+    IPv6Network("::/96"),
+    IPv6Network("::ffff:0:0:0/96"),
+    IPv6Network("64:ff9b::/96"),
+)
+
+
+def _embedded_ipv4(ip: IPv4Address | IPv6Address) -> IPv4Address | None:
+    """Return the IPv4 address embedded in an IPv6 address, if any.
+
+    IPv6 can encode an IPv4 target several ways, including IPv4-mapped, IPv4-compatible,
+    IPv4-translated, and NAT64 well-known prefix addresses. Unwrapping them lets the SSRF guard
+    apply the same private-address checks it already applies to plain and legacy IPv4 literals.
+    """
+    if not isinstance(ip, IPv6Address):
+        return None
+    if (mapped := ip.ipv4_mapped) is not None:
+        return mapped
+    for network in _EMBEDDED_IPV4_PREFIXES:
+        if ip in network:
+            return IPv4Address(int(ip) & _IPV4_ADDRESS_MAX)
+    return None
 
 
 def _is_safe_ip(ip: IPv4Address | IPv6Address) -> bool:
     """Return whether an address is allowed for default remote schema fetches.
 
     Only globally routable addresses are accepted so untrusted schema URLs cannot reach local, private,
-    link-local, reserved, or otherwise non-public networks unless the caller explicitly opts in.
+    link-local, reserved, or otherwise non-public networks unless the caller explicitly opts in. IPv6
+    addresses that embed an IPv4 target are unwrapped so the embedded address is validated too.
     """
+    if (embedded := _embedded_ipv4(ip)) is not None:
+        return ip.is_global and embedded.is_global
     return ip.is_global
 
 
@@ -574,6 +602,52 @@ def _get_redirect_url(httpx_module: _HTTPXModule, current_url: str, response: _H
     return str(httpx_module.URL(current_url).join(location))
 
 
+def _get_url_origin(url: str) -> tuple[str, str, int | None] | None:
+    """Return the normalized URL origin used to decide whether redirect headers are scoped.
+
+    The origin is represented as scheme, canonical DNS host, and effective port. Default ports are normalized
+    so `https://example.com` and `https://example.com:443` are treated as the same scope, and IDN hosts are
+    compared in the same ASCII form used by the DNS pinning guard.
+
+    Sensitive headers are safe to keep only when the origin is unchanged. Invalid origins return `None` so
+    redirect handling can strip scoped credentials instead of guessing.
+    """
+    parsed_url = urlparse(url)
+    host = _normalize_dns_host(parsed_url.hostname)
+    if host is None:
+        return None
+    try:
+        port = parsed_url.port
+    except ValueError:
+        return None
+    return (
+        parsed_url.scheme.lower(),
+        host,
+        port or _DEFAULT_PORTS.get(parsed_url.scheme.lower()),
+    )
+
+
+def _get_redirect_headers(
+    headers: Sequence[tuple[str, str]] | None,
+    current_url: str,
+    redirect_url: str,
+) -> Sequence[tuple[str, str]] | None:
+    """Drop scoped credentials when a redirect crosses origins.
+
+    The input headers are the headers that would be sent on the next redirect hop. If there are no headers, or
+    the redirect target has the same normalized origin, the existing headers are reused unchanged.
+
+    Authorization and cookie headers are scoped to the original origin. Keeping them for a different or
+    unparsable redirect target can leak credentials to an attacker-controlled host, so this function fails
+    closed and removes those headers unless both origins are valid and equal.
+    """
+    current_origin = _get_url_origin(current_url)
+    redirect_origin = _get_url_origin(redirect_url)
+    if not headers or (current_origin is not None and current_origin == redirect_origin):
+        return headers
+    return [(name, value) for name, value in headers if name.lower() not in _SENSITIVE_REDIRECT_HEADERS]
+
+
 def get_body(  # noqa: PLR0913
     url: str,
     headers: Sequence[tuple[str, str]] | None = None,
@@ -588,9 +662,14 @@ def get_body(  # noqa: PLR0913
     The function validates the original URL and each redirect target before connecting. Public DNS results are
     pinned into the transport so a host cannot resolve to a safe address during validation and a private address
     during the actual connection.
+
+    Redirects are followed manually rather than by httpx so each hop can be revalidated and sensitive headers
+    can be narrowed before the next request. Once a redirect crosses origins, scoped credentials are removed
+    from `current_headers` and are not restored on later hops.
     """
     httpx_module = _get_httpx()
     current_url = url
+    current_headers = headers
     for redirect_count in range(MAX_HTTP_REDIRECTS + 1):
         validated_host = _validate_url_for_fetch(current_url, allow_private_network=allow_private_network)
         pinned_host, pinned_ips = validated_host if validated_host is not None else (None, ())
@@ -598,7 +677,7 @@ def get_body(  # noqa: PLR0913
             response = _get_http_response(
                 httpx_module,
                 current_url,
-                headers=headers,
+                headers=current_headers,
                 verify=not ignore_tls,
                 follow_redirects=False,
                 query_parameters=query_parameters if redirect_count == 0 else None,
@@ -611,6 +690,7 @@ def get_body(  # noqa: PLR0913
             raise SchemaFetchError(msg) from e
         if (redirect_url := _get_redirect_url(httpx_module, current_url, response)) is None:
             break
+        current_headers = _get_redirect_headers(current_headers, current_url, redirect_url)
         current_url = redirect_url
     else:
         msg = f"Too many redirects fetching {url}"

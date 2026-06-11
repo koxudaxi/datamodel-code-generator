@@ -26,8 +26,7 @@ def load_toml(path: Path) -> dict[str, Any]:
 
 
 _YAML_1_2_BOOL_PATTERN = re.compile(r"^(?:true|false|True|False|TRUE|FALSE)$")
-_YAML_DEPRECATED_BOOL_VALUES = {"True", "False", "TRUE", "FALSE"}
-_YAML_DEPRECATED_BOOL_WARNING_VALUES = ("True", "False", "TRUE", "FALSE")
+_YAML_DEPRECATED_BOOL_VALUES = ("True", "False", "TRUE", "FALSE")
 _YAML_DEPRECATED_BOOL_LINE_PATTERN = re.compile(r"(?m)(?::|-\s*)\s*(True|False|TRUE|FALSE)(?:\s*(?:#.*)?)$")
 _YAML_DEPRECATED_BOOL_WARNING_MESSAGE = "YAML bool "
 _YAML_DEPRECATED_BOOL_WARNING_MODULE = "datamodel_code_generator"
@@ -51,7 +50,7 @@ def _is_yaml_deprecated_bool_warning_enabled() -> bool:
 def warn_yaml_deprecated_bool_values(text: str) -> None:
     """Warn for YAML 1.1-style boolean scalars when ryaml is used."""
     if not _is_yaml_deprecated_bool_warning_enabled() or not any(
-        value in text for value in _YAML_DEPRECATED_BOOL_WARNING_VALUES
+        value in text for value in _YAML_DEPRECATED_BOOL_VALUES
     ):
         return
 
@@ -159,9 +158,6 @@ def _get_base_model_class() -> type:
     return _BaseModelV2
 
 
-_BaseModel: type | None = None
-
-
 def create_module_getattr(
     module_name: str,
     lazy_imports: dict[str, tuple[str, str]],
@@ -195,11 +191,8 @@ def create_module_getattr(
 
 def __getattr__(name: str) -> Any:
     """Provide lazy access to BaseModel and SafeLoader."""
-    global _BaseModel  # noqa: PLW0603
     if name == "BaseModel":
-        if _BaseModel is None:
-            _BaseModel = _get_base_model_class()
-        return _BaseModel
+        return _get_base_model_class()
     if name == "SafeLoader":
         return get_safe_loader()
     msg = f"module {__name__!r} has no attribute {name!r}"

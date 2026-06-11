@@ -1218,6 +1218,19 @@ general_options.add_argument(
     help="disable colorized output",
 )
 general_options.add_argument(
+    "--output-format",
+    choices=["text", "json"],
+    default=None,
+    help="Format for command output (default: text). Use json for structured output when supported.",
+)
+general_options.add_argument(
+    "--output-format-json-schema",
+    choices=["generate-prompt", "generation", "structured-output"],
+    default=None,
+    metavar="{generate-prompt,generation,structured-output}",
+    help="Output JSON Schema for the selected structured output format and exit.",
+)
+general_options.add_argument(
     "--generate-pyproject-config",
     action="store_true",
     default=None,

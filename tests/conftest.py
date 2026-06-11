@@ -450,7 +450,11 @@ def freeze_time(time_to_freeze: str, **kwargs: Any) -> time_machine.travel:  # n
 
 
 def _normalize_line_endings(text: str) -> str:
-    """Normalize line endings to LF for cross-platform comparison."""
+    """Normalize line endings to LF for cross-platform comparison.
+
+    This keeps snapshot comparisons platform-neutral; byte-level generated-file
+    newline invariants are pinned separately.
+    """
     return text.replace("\r\n", "\n")
 
 
@@ -561,6 +565,15 @@ def _format_diff(expected: str, actual: str, expected_path: Path) -> str:  # pra
     return output.getvalue()
 
 
+def _infer_expected_file(caller_function_name: str) -> str:
+    name = caller_function_name
+    for prefix in ("test_main_", "test_"):  # pragma: no branch
+        if name.startswith(prefix):
+            name = name[len(prefix) :]
+            break
+    return f"{name}.py"
+
+
 def _assert_with_external_file(content: str, expected_path: Path) -> None:
     """Assert content matches external file, handling line endings."""
     __tracebackhide__ = True
@@ -654,14 +667,8 @@ def create_assert_file_content(
             frame = inspect.currentframe()
             assert frame is not None
             assert frame.f_back is not None
-            func_name = frame.f_back.f_code.co_name
+            expected_name = _infer_expected_file(frame.f_back.f_code.co_name)
             del frame
-            name = func_name
-            for prefix in ("test_main_", "test_"):  # pragma: no branch
-                if name.startswith(prefix):
-                    name = name[len(prefix) :]
-                    break
-            expected_name = f"{name}.py"
 
         expected_path = base_path / expected_name
         content = output_file.read_text(encoding=encoding)
@@ -779,8 +786,12 @@ def assert_parser_results(
     __tracebackhide__ = True
     for expected_path in expected_dir.rglob(pattern):
         key = str(expected_path.relative_to(expected_dir))
+        if key not in results:
+            msg = f"Parser result missing expected file: {key}"
+            raise AssertionError(msg)
         result_obj = results.pop(key)
         _assert_with_external_file(_get_full_body(result_obj), expected_path)
+    assert not results, list(results)
 
 
 def assert_parser_modules(
@@ -798,6 +809,15 @@ def assert_parser_modules(
         assert_parser_modules(modules, EXPECTED_PATH / "parser_modular")
     """
     __tracebackhide__ = True
+    output_files = set(starmap(Path, modules))
+    expected_files = {path.relative_to(expected_dir) for path in expected_dir.rglob("*.py")}
+
+    extra = expected_files - output_files
+    assert not extra, f"Expected files not in parser modules: {extra}"
+
+    missing = output_files - expected_files
+    assert not missing, f"Parser modules not in expected files: {missing}"
+
     for paths, result in modules.items():
         expected_path = expected_dir.joinpath(*paths)
         _assert_with_external_file(_get_full_body(result), expected_path)

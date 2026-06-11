@@ -185,6 +185,33 @@ def test_modules_use_shared_assertion_helpers(pytestconfig: pytest.Config) -> No
     pytest.fail(_format_direct_assert_failure(direct_asserts), pytrace=False)  # pragma: no cover
 
 
+def test_configured_exempt_files_exist(pytestconfig: pytest.Config) -> None:
+    """Configured direct-assert exemptions must point to existing test files."""
+    if not (
+        missing := sorted(path for path in _configured_exempt_files(pytestconfig) if not (TESTS_ROOT / path).is_file())
+    ):
+        return
+
+    pytest.fail(  # pragma: no cover
+        "assert_helper_direct_assert_exempt_files contains missing files:\n"
+        + "\n".join(f"  - tests/{path}" for path in missing),
+        pytrace=False,
+    )
+
+
+class _MissingExemptConfig:
+    def getini(self, name: str) -> list[str]:
+        if name == DIRECT_ASSERT_EXEMPT_FILES_INI:
+            return ["missing.py"]
+        raise KeyError(name)  # pragma: no cover
+
+
+def test_configured_exempt_files_exist_reports_missing_file() -> None:
+    """Missing configured direct-assert exemptions are reported clearly."""
+    with pytest.raises(pytest.fail.Exception, match=r"tests/missing\.py"):
+        test_configured_exempt_files_exist(_MissingExemptConfig())  # type: ignore[arg-type]
+
+
 def test_modules_use_shared_assertion_helpers_reports_unmarked_assert(
     tmp_path: Path,
 ) -> None:

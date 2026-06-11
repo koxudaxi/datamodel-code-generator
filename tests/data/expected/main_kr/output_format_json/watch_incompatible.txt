@@ -1,0 +1,1 @@
+Error: --output-format json cannot be used with --watch

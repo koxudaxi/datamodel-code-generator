@@ -390,7 +390,6 @@ class AsyncAPIParser(OpenAPIParser):
                 )
             case _:  # pragma: no cover
                 raise _unsupported_schema_format_error(schema_format or "", path)
-        raise _unsupported_schema_format_error(schema_format or "", path)  # pragma: no cover
 
     def _resolve_ref_object(
         self,
