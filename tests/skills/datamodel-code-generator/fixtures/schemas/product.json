@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SkillProduct",
+  "type": "object",
+  "required": ["sku", "price"],
+  "properties": {
+    "sku": {
+      "type": "string"
+    },
+    "price": {
+      "type": "number"
+    }
+  }
+}

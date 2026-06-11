@@ -302,6 +302,11 @@ paths.other = [
   "*/datamodel-code-generator",
   "*\\datamodel-code-generator",
 ]
+paths.skill_tests = [
+  "tests/skills/datamodel-code-generator",
+  "*/datamodel-code-generator/tests/skills/datamodel-code-generator",
+  "*\\datamodel-code-generator\\tests\\skills\\datamodel-code-generator",
+]
 run.dynamic_context = "none"
 run.omit = [
   "*/_types/*",

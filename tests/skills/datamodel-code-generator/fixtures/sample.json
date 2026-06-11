@@ -1,0 +1,6 @@
+{
+  "id": 1,
+  "name": "Ada",
+  "active": true,
+  "roles": ["admin", "editor"]
+}

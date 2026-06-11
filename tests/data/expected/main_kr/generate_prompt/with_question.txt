@@ -764,6 +764,7 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   -h, --help            show this help message and exit
 
 Documentation: https://datamodel-code-generator.koxudaxi.dev
+Agent skill: https://datamodel-code-generator.koxudaxi.dev/coding-agent-skill/
 GitHub: https://github.com/koxudaxi/datamodel-code-generator
 
 ```

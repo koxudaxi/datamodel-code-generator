@@ -1,0 +1,17 @@
+{
+  "description_present": true,
+  "description_within_limit": true,
+  "license": "MIT",
+  "metadata": {
+    "status": "experimental"
+  },
+  "name": "datamodel-code-generator",
+  "name_matches_directory": true,
+  "name_valid": true,
+  "skill_files": {
+    "SKILL.md": true,
+    "references/cli-options.md": true,
+    "references/troubleshooting.md": true,
+    "references/workflows.md": true
+  }
+}

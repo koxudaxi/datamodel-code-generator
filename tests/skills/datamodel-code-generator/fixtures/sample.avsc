@@ -1,0 +1,18 @@
+{
+  "type": "record",
+  "name": "SkillEvent",
+  "fields": [
+    {
+      "name": "id",
+      "type": "string"
+    },
+    {
+      "name": "count",
+      "type": [
+        "null",
+        "int"
+      ],
+      "default": null
+    }
+  ]
+}

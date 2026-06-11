@@ -1,0 +1,31 @@
+asyncapi: 3.0.0
+info:
+  title: Skill Fixture Events
+  version: 1.0.0
+channels:
+  pet.created:
+    address: pet.created
+    messages:
+      PetCreated:
+        $ref: '#/components/messages/PetCreated'
+operations:
+  receivePetCreated:
+    action: receive
+    channel:
+      $ref: '#/channels/pet.created'
+components:
+  messages:
+    PetCreated:
+      payload:
+        $ref: '#/components/schemas/SkillPetCreated'
+  schemas:
+    SkillPetCreated:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
