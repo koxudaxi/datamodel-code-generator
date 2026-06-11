@@ -207,6 +207,8 @@ def test_payload_max_examples_env_is_configurable(
     """Nightly runs can raise Hypothesis examples without changing PR defaults."""
     monkeypatch.delenv("DCG_PAYLOAD_MAX_EXAMPLES", raising=False)
     assert _max_examples_from_env(raw_examples) == expected_examples
+    monkeypatch.setenv("DCG_PAYLOAD_MAX_EXAMPLES", "50")
+    assert _max_examples_from_env(None) == 50
 
 
 @pytest.mark.parametrize("raw_examples", ["", "0", "-1", "not-an-int"])
