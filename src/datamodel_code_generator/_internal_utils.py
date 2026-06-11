@@ -12,13 +12,20 @@ from pydantic import BaseModel
 class HashableComparable(Hashable, Protocol):
     """Protocol for types that are both hashable and support comparison."""
 
-    def __lt__(self, value: Any, /) -> bool: ...
-    def __le__(self, value: Any, /) -> bool: ...
-    def __gt__(self, value: Any, /) -> bool: ...
-    def __ge__(self, value: Any, /) -> bool: ...
+    def __lt__(self, value: Any, /) -> bool:
+        raise NotImplementedError
+
+    def __le__(self, value: Any, /) -> bool:
+        raise NotImplementedError
+
+    def __gt__(self, value: Any, /) -> bool:
+        raise NotImplementedError
+
+    def __ge__(self, value: Any, /) -> bool:
+        raise NotImplementedError
 
 
-def to_hashable(item: Any) -> HashableComparable:  # noqa: PLR0911
+def to_hashable(item: Any) -> HashableComparable:
     """Convert an item to a hashable and comparable representation."""
     if isinstance(
         item,
@@ -45,8 +52,6 @@ def to_hashable(item: Any) -> HashableComparable:  # noqa: PLR0911
         return frozenset(to_hashable(i) for i in item)  # type: ignore[return-value]
     if isinstance(item, BaseModel):  # pragma: no cover
         return to_hashable(item.model_dump())
-    if item is None:
-        return ""
     return item  # type: ignore[return-value]
 
 
@@ -67,4 +72,6 @@ def get_most_of_parent(value: Any, type_: type[T] | None = None) -> T | None:
     """Traverse parent chain to find the outermost matching parent."""
     if isinstance(value, Child) and (type_ is None or not isinstance(value, type_)):
         return get_most_of_parent(value.parent, type_)
+    if type_ is not None and not isinstance(value, type_):
+        return None
     return value

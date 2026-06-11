@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from collections import OrderedDict
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import datamodel_code_generator._internal_utils as internal_utils
-import datamodel_code_generator.parser.base as parser_base
 from datamodel_code_generator.enums import CollapseRootModelsNameStrategy
 from datamodel_code_generator.imports import Imports
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -20,7 +20,10 @@ from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.model.type_alias import TypeAlias, TypeAliasTypeBackport, TypeStatement
 from datamodel_code_generator.parser.base import (
+    Child,
+    HashableComparable,
     Parser,
+    T,
     _contains_model_reference,
     _find_field,
     _needs_validate_default,
@@ -29,6 +32,7 @@ from datamodel_code_generator.parser.base import (
     escape_characters,
     exact_import,
     get_module_directory,
+    get_most_of_parent,
     relative,
     sort_data_models,
     to_hashable,
@@ -701,16 +705,25 @@ def test_to_hashable_simple_values() -> None:
     """Test to_hashable with simple values."""
     assert to_hashable("string") == "string"
     assert to_hashable(123) == 123
-    assert to_hashable(None) == ""  # noqa: PLC1901
+    assert to_hashable(None) is None
+    assert to_hashable(None) != to_hashable("")
 
 
 def test_parser_base_reexports_internal_utils() -> None:
     """Test parser.base preserves public helper imports from the leaf module."""
-    assert parser_base.to_hashable is internal_utils.to_hashable
-    assert parser_base.get_most_of_parent is internal_utils.get_most_of_parent
-    assert parser_base.Child is internal_utils.Child
-    assert parser_base.HashableComparable is internal_utils.HashableComparable
-    assert parser_base.T is internal_utils.T
+    assert to_hashable is internal_utils.to_hashable
+    assert get_most_of_parent is internal_utils.get_most_of_parent
+    assert Child is internal_utils.Child
+    assert HashableComparable is internal_utils.HashableComparable
+    assert T is internal_utils.T
+
+
+def test_get_most_of_parent_honors_type_filter() -> None:
+    """Test parent traversal returns None when the requested type is absent."""
+    child = SimpleNamespace(parent="root")
+
+    assert get_most_of_parent(child, str) == "root"
+    assert get_most_of_parent(child, int) is None
 
 
 def test_to_hashable_list_and_tuple() -> None:
