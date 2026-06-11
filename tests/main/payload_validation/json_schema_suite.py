@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from collections import Counter
 from copy import deepcopy
 from dataclasses import dataclass
@@ -20,17 +21,30 @@ if TYPE_CHECKING:
 
 
 JSON_SCHEMA_TEST_SUITE_COMMIT = "fe8c2f0de2041943975932b6bf4bd882625b6cfb"
-JSON_SCHEMA_TEST_SUITE_TARGET_DRAFTS = ("draft7", "draft2020-12")
+DEFAULT_JSON_SCHEMA_TEST_SUITE_TARGET_DRAFTS = ("draft7", "draft2020-12")
+ALL_JSON_SCHEMA_TEST_SUITE_TARGET_DRAFTS = ("draft3", "draft4", "draft6", "draft7", "draft2019-09", "draft2020-12")
 JSON_SCHEMA_TEST_SUITE_DIALECTS = {
+    "draft3": "http://json-schema.org/draft-03/schema#",
+    "draft4": "http://json-schema.org/draft-04/schema#",
+    "draft6": "http://json-schema.org/draft-06/schema#",
     "draft7": "http://json-schema.org/draft-07/schema#",
+    "draft2019-09": "https://json-schema.org/draft/2019-09/schema",
     "draft2020-12": "https://json-schema.org/draft/2020-12/schema",
 }
-EXPECTED_JSON_SCHEMA_SUITE_GROUP_COUNTS = {
+EXPECTED_JSON_SCHEMA_SUITE_GROUP_COUNTS_BY_DRAFT = {
+    "draft3": 104,
+    "draft4": 160,
+    "draft6": 232,
     "draft7": 257,
+    "draft2019-09": 372,
     "draft2020-12": 383,
 }
-EXPECTED_JSON_SCHEMA_SUITE_TEST_COUNTS = {
+EXPECTED_JSON_SCHEMA_SUITE_TEST_COUNTS_BY_DRAFT = {
+    "draft3": 435,
+    "draft4": 618,
+    "draft6": 839,
     "draft7": 927,
+    "draft2019-09": 1259,
     "draft2020-12": 1299,
 }
 JSON_SCHEMA_SUITE_EXCLUDED_CASES: dict[str, str] = {}
@@ -68,6 +82,9 @@ UNSUPPORTED_SCHEMA_KEYWORD_REASONS = {
     "dependencies": (
         "draft7 dependencies object dependency semantics are not represented by generated pydantic v2 models"
     ),
+    "disallow": "draft3 disallow semantics are not represented by generated pydantic v2 models",
+    "divisibleBy": "draft3 divisibleBy numeric semantics are not enforced by generated pydantic v2 models by default",
+    "extends": "draft3 extends inheritance semantics are not represented by generated pydantic v2 models",
     "exclusiveMaximum": "exclusive numeric bounds are not enforced by generated pydantic v2 models by default",
     "exclusiveMinimum": "exclusive numeric bounds are not enforced by generated pydantic v2 models by default",
     "if": "if/then/else conditional semantics are not represented by generated pydantic v2 models",
@@ -95,6 +112,38 @@ UNSUPPORTED_SCHEMA_KEYWORD_REASONS = {
     "uniqueItems": "uniqueItems array uniqueness semantics are not represented by generated pydantic v2 models",
 }
 COMBINED_SCHEMA_KEYWORDS = ("allOf", "anyOf", "oneOf")
+
+
+def _target_drafts_from_env(raw_drafts: str | None = None) -> tuple[str, ...]:
+    if raw_drafts is None:
+        raw_drafts = os.environ.get("DCG_JSON_SCHEMA_SUITE_DRAFTS")
+    if not raw_drafts:
+        return DEFAULT_JSON_SCHEMA_TEST_SUITE_TARGET_DRAFTS
+    if raw_drafts == "all":
+        return ALL_JSON_SCHEMA_TEST_SUITE_TARGET_DRAFTS
+    drafts = tuple(draft.strip() for draft in raw_drafts.split(",") if draft.strip())
+    if not drafts:
+        msg = "DCG_JSON_SCHEMA_SUITE_DRAFTS must select at least one draft"
+        raise ValueError(msg)
+    if unknown_drafts := sorted(set(drafts) - set(JSON_SCHEMA_TEST_SUITE_DIALECTS)):
+        msg = f"Unsupported JSON-Schema-Test-Suite drafts: {', '.join(unknown_drafts)}"
+        raise ValueError(msg)
+    return drafts
+
+
+JSON_SCHEMA_TEST_SUITE_TARGET_DRAFTS = _target_drafts_from_env()
+
+
+def _expected_counts_by_target_draft(counts_by_draft: Mapping[str, int]) -> Counter[str]:
+    return Counter({draft: counts_by_draft[draft] for draft in JSON_SCHEMA_TEST_SUITE_TARGET_DRAFTS})
+
+
+EXPECTED_JSON_SCHEMA_SUITE_GROUP_COUNTS = _expected_counts_by_target_draft(
+    EXPECTED_JSON_SCHEMA_SUITE_GROUP_COUNTS_BY_DRAFT
+)
+EXPECTED_JSON_SCHEMA_SUITE_TEST_COUNTS = _expected_counts_by_target_draft(
+    EXPECTED_JSON_SCHEMA_SUITE_TEST_COUNTS_BY_DRAFT
+)
 
 
 @dataclass(frozen=True)

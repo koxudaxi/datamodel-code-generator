@@ -10,10 +10,13 @@ import pytest
 
 from .payload_validation import GeneratedModelCache
 from .payload_validation.json_schema_suite import (
+    ALL_JSON_SCHEMA_TEST_SUITE_TARGET_DRAFTS,
+    DEFAULT_JSON_SCHEMA_TEST_SUITE_TARGET_DRAFTS,
     EXPECTED_JSON_SCHEMA_SUITE_GROUP_COUNTS,
     EXPECTED_JSON_SCHEMA_SUITE_TEST_COUNTS,
     JSON_SCHEMA_TEST_SUITE_COMMIT,
     JsonSchemaSuiteCase,
+    _target_drafts_from_env,
     evaluate_json_schema_suite_cases,
     explicit_json_schema_suite_exclusions,
     format_json_schema_suite_failures,
@@ -60,6 +63,38 @@ def test_json_schema_suite_cases_match_pinned_counts(
             f"Expected JSON-Schema-Test-Suite commit {JSON_SCHEMA_TEST_SUITE_COMMIT} test counts "
             f"{EXPECTED_JSON_SCHEMA_SUITE_TEST_COUNTS}, got {dict(test_counts)}"
         )
+
+
+@pytest.mark.parametrize(
+    ("raw_drafts", "expected_drafts"),
+    [
+        (None, DEFAULT_JSON_SCHEMA_TEST_SUITE_TARGET_DRAFTS),
+        ("", DEFAULT_JSON_SCHEMA_TEST_SUITE_TARGET_DRAFTS),
+        ("all", ALL_JSON_SCHEMA_TEST_SUITE_TARGET_DRAFTS),
+        ("draft7,draft2020-12", ("draft7", "draft2020-12")),
+    ],
+)
+def test_json_schema_suite_target_drafts_are_configurable(
+    monkeypatch: pytest.MonkeyPatch,
+    raw_drafts: str | None,
+    expected_drafts: tuple[str, ...],
+) -> None:
+    """The suite runner can widen target drafts for nightly runs."""
+    monkeypatch.delenv("DCG_JSON_SCHEMA_SUITE_DRAFTS", raising=False)
+    assert _target_drafts_from_env(raw_drafts) == expected_drafts
+
+
+def test_json_schema_suite_target_drafts_read_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Draft selection reads the nightly workflow environment override."""
+    monkeypatch.setenv("DCG_JSON_SCHEMA_SUITE_DRAFTS", "draft4,draft6")
+    assert _target_drafts_from_env() == ("draft4", "draft6")
+
+
+@pytest.mark.parametrize("raw_drafts", ["draft7,draft999", ",", " "])
+def test_json_schema_suite_target_drafts_reject_invalid_drafts(raw_drafts: str) -> None:
+    """Draft selection must fail loudly for unsupported names."""
+    with pytest.raises(ValueError, match=r"draft999|at least one"):
+        _target_drafts_from_env(raw_drafts)
 
 
 def test_json_schema_suite_exclusions_have_reasons() -> None:

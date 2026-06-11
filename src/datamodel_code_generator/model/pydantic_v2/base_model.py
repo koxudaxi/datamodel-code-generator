@@ -155,6 +155,21 @@ class DataModelField(_PydanticBaseDataModelField):
         """Process const field constraint using literal type."""
         self._process_const_as_literal()
 
+    def _requires_null_default_field(self) -> bool:
+        if self.required or self.default is not None or self.has_default_factory:
+            return False
+        return self.data_type.type == "None"
+
+    def _has_field_statement(self) -> bool:
+        return self._requires_null_default_field() or super()._has_field_statement()
+
+    def __str__(self) -> str:
+        """Return Field() for null-only defaults that Pydantic 2.12 can evaluate."""
+        field = super().__str__()
+        if self._requires_null_default_field() and not field:
+            return "Field(None)"
+        return field
+
     def _process_data_in_str(self, data: dict[str, Any]) -> None:
         if self.const:
             # const is removed in pydantic 2.0

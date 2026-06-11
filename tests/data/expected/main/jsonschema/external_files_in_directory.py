@@ -61,7 +61,7 @@ class Person(BaseModel):
     pets: list[Pet] | None = None
     friends: Friends | None = None
     robot: Robot | None = None
-    comment: None = None
+    comment: None = Field(None)
     drink: list[Coffee | Tea] | None = None
     food: list[Noodle | Soup] | None = None
 

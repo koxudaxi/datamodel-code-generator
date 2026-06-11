@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 import pytest
@@ -30,7 +31,24 @@ from .payload_validation import (
     validate_with_source_schema,
 )
 
-MAX_EXAMPLES = 10
+
+def _max_examples_from_env(raw_examples: str | None = None) -> int:
+    if raw_examples is None:
+        raw_examples = os.environ.get("DCG_PAYLOAD_MAX_EXAMPLES")
+    if raw_examples is None:
+        return 10
+    try:
+        max_examples = int(raw_examples)
+    except ValueError as exc:
+        msg = "DCG_PAYLOAD_MAX_EXAMPLES must be a positive integer"
+        raise ValueError(msg) from exc
+    if max_examples < 1:
+        msg = "DCG_PAYLOAD_MAX_EXAMPLES must be a positive integer"
+        raise ValueError(msg)
+    return max_examples
+
+
+MAX_EXAMPLES = _max_examples_from_env()
 REJECTION_ORACLE_CASES = [case for case in SCHEMA_CASES if has_rejection_oracle_constraints(case)]
 SCHEMA_CASE_BY_ID = {case.id: case for case in SCHEMA_CASES}
 ROUND_TRIP_CASES = [case for case in SCHEMA_CASES if case.id not in ROUND_TRIP_EXCLUDED_CASES]
@@ -170,6 +188,31 @@ def test_payload_round_trip_exclusions_are_classified() -> None:
 
     if unknown_cases := sorted(set(ROUND_TRIP_EXCLUDED_CASES) - set(SCHEMA_CASE_BY_ID)):  # pragma: no cover
         pytest.fail("Payload round-trip exclusions reference unknown cases:\n" + "\n".join(unknown_cases))
+
+
+@pytest.mark.parametrize(
+    ("raw_examples", "expected_examples"),
+    [
+        (None, 10),
+        ("1", 1),
+        ("100", 100),
+    ],
+)
+def test_payload_max_examples_env_is_configurable(
+    monkeypatch: pytest.MonkeyPatch,
+    raw_examples: str | None,
+    expected_examples: int,
+) -> None:
+    """Nightly runs can raise Hypothesis examples without changing PR defaults."""
+    monkeypatch.delenv("DCG_PAYLOAD_MAX_EXAMPLES", raising=False)
+    assert _max_examples_from_env(raw_examples) == expected_examples
+
+
+@pytest.mark.parametrize("raw_examples", ["", "0", "-1", "not-an-int"])
+def test_payload_max_examples_env_rejects_invalid_values(raw_examples: str) -> None:
+    """Invalid example-count overrides fail before test settings are created."""
+    with pytest.raises(ValueError, match="positive integer"):
+        _max_examples_from_env(raw_examples)
 
 
 @pytest.mark.parametrize("case", SCHEMA_CASES, ids=lambda case: case.id)

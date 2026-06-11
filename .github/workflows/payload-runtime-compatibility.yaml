@@ -1,0 +1,117 @@
+name: Payload runtime compatibility
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 11 * * *"
+
+concurrency:
+  group: payload-runtime-compatibility-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  payload-runtime:
+    name: ${{ matrix.tox_env }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        tox_env:
+          - py311-payload-runtime-min
+          - py311-payload-runtime-latest
+          - py314-payload-runtime-min
+          - py314-payload-runtime-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          enable-cache: true
+          cache-suffix: ${{ matrix.tox_env }}
+      - name: Install tox
+        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
+      - name: Setup payload runtime suite
+        run: tox run -vv --notest --skip-missing-interpreters false -e ${{ matrix.tox_env }}
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Run payload runtime suite
+        run: tox run --skip-uv-sync --skip-pkg-install -e ${{ matrix.tox_env }}
+        env:
+          DCG_PAYLOAD_MAX_EXAMPLES: "100"
+          UV_PYTHON_PREFERENCE: "only-managed"
+
+  jsonschema-suite-all-drafts:
+    name: JSON-Schema-Test-Suite all drafts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          enable-cache: true
+          cache-suffix: jsonschema-suite-all-drafts
+      - name: Install tox
+        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
+      - name: Setup JSON-Schema-Test-Suite conformance
+        run: tox run -vv --notest --skip-missing-interpreters false -e jsonschema-suite-conformance
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Checkout JSON-Schema-Test-Suite
+        run: |
+          git clone --filter=blob:none https://github.com/json-schema-org/JSON-Schema-Test-Suite.git .tox/json-schema-test-suite
+          git -C .tox/json-schema-test-suite checkout fe8c2f0de2041943975932b6bf4bd882625b6cfb
+      - name: Run JSON-Schema-Test-Suite all drafts
+        run: |
+          tox run --skip-uv-sync --skip-pkg-install -e jsonschema-suite-conformance -- \
+            .tox/json-schema-test-suite
+        env:
+          DCG_JSON_SCHEMA_SUITE_DRAFTS: all
+          UV_PYTHON_PREFERENCE: "only-managed"
+
+  notify-failure:
+    name: Notify scheduled failure
+    if: failure() && github.event_name == 'schedule'
+    needs:
+      - payload-runtime
+      - jsonschema-suite-all-drafts
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Open tracking issue
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const title = "Payload runtime compatibility nightly failed";
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            if (issues.some((issue) => issue.title === title)) {
+              core.info(`Open issue already exists: ${title}`);
+              return;
+            }
+            await github.rest.issues.create({
+              owner,
+              repo,
+              title,
+              body: [
+                "The scheduled payload runtime compatibility workflow failed.",
+                "",
+                `Run: ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`,
+              ].join("\n"),
+            });
