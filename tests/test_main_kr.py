@@ -2282,7 +2282,7 @@ def test_output_format_json_generation_mapping_payload() -> None:
 
 def test_output_format_json_normalizes_multiple_generation_output_paths(output_file: Path) -> None:
     """Test generated output path normalization only replaces matching file paths."""
-    output = json.dumps({
+    disk_output = json.dumps({
         "output": output_file.as_posix(),
         "files": [
             {"path": output_file.as_posix(), "content": "generated\n"},
@@ -2290,8 +2290,19 @@ def test_output_format_json_normalizes_multiple_generation_output_paths(output_f
         ],
     })
     assert_output(
-        _normalize_generation_json_output_path(output, output_file, OUTPUT_FILE_PLACEHOLDER),
+        _normalize_generation_json_output_path(disk_output, output_file, OUTPUT_FILE_PLACEHOLDER),
         EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_output_path_normalized.txt",
+    )
+    stdout_output = json.dumps({
+        "output": None,
+        "files": [
+            {"path": output_file.as_posix(), "content": "generated\n"},
+            {"path": "pkg/model.py", "content": "keep\n"},
+        ],
+    })
+    assert_output(
+        _normalize_generation_json_output_path(stdout_output, output_file, OUTPUT_FILE_PLACEHOLDER),
+        EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_stdout_path_normalized.txt",
     )
 
 
