@@ -1021,6 +1021,40 @@ def test_create_data_model_dataclass_arguments(
     assert result.dataclass_arguments == expected
 
 
+def test_parse_converted_sources_caches_by_resolved_source_path(tmp_path: Path, mocker: MockerFixture) -> None:
+    """Converted files are cached under the same resolved key used by local $ref loading."""
+    schema_dir = tmp_path / "schemas"
+    schema_dir.mkdir()
+    redirect_dir = tmp_path / "redirect"
+    redirect_dir.mkdir()
+    source_path = redirect_dir / ".." / "schemas" / "model.avsc"
+    (schema_dir / "model.avsc").write_text("{}", encoding="utf-8")
+
+    raw_obj = {"title": "Converted", "type": "object"}
+
+    class Converter:
+        def convert(self, _source: Any) -> dict[str, Any]:
+            return raw_obj
+
+    parser = JsonSchemaParser(source_path)
+    parse_file = mocker.patch.object(parser, "_parse_file")
+    mocker.patch.object(parser, "_resolve_unparsed_json_pointer")
+    mocker.patch.object(parser, "_generate_forced_base_models")
+
+    parser._parse_converted_sources(Converter)
+
+    resolved_key = str(source_path.resolve())
+    unresolved_key = str(parser.base_path / "model.avsc")
+    assert parser.remote_object_cache[resolved_key] is raw_obj
+    assert unresolved_key not in parser.remote_object_cache
+    parse_file.assert_called_once_with(
+        raw_obj,
+        "Converted",
+        ["model.avsc"],
+        preserve_root_class_name=False,
+    )
+
+
 def test_get_ref_body_from_url_file_unc_path(mocker: MockerFixture) -> None:
     """Test _get_ref_body_from_url handles UNC file:// URLs correctly."""
     parser = JsonSchemaParser("", allow_remote_refs=True)
