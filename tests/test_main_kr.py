@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from argparse import Namespace
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import black
 import jsonschema
@@ -25,11 +25,20 @@ from tests.conftest import (
     create_assert_file_content,
     freeze_time,
 )
-from tests.main.conftest import LEGACY_BLACK_SKIP, run_main_and_assert, run_main_url_and_assert, run_main_with_args
+from tests.main.conftest import (
+    DATA_PATH,
+    JSON_SCHEMA_DATA_PATH,
+    LEGACY_BLACK_SKIP,
+    OPEN_API_DATA_PATH,
+    TIMESTAMP,
+    run_main_and_assert,
+    run_main_url_and_assert,
+    run_main_with_args,
+)
 
-DATA_PATH: Path = Path(__file__).parent / "data"
-OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
-JSON_SCHEMA_DATA_PATH: Path = DATA_PATH / "jsonschema"
+if TYPE_CHECKING:
+    from pathlib import Path
+
 EXPECTED_MAIN_KR_PATH = DATA_PATH / "expected" / "main_kr"
 EXPECTED_OUTPUT_FORMAT_JSON_PATH = EXPECTED_MAIN_KR_PATH / "output_format_json"
 EXPECTED_EMPTY_OUTPUT_PATH = DATA_PATH / "expected" / "__init__.py"
@@ -52,7 +61,6 @@ GENERATE_PROMPT_JSON_SCHEMA_ARGS = ["--output-format-json-schema", "generate-pro
 assert_file_content = create_assert_file_content(EXPECTED_MAIN_KR_PATH)
 
 
-TIMESTAMP = "1985-10-26T01:21:00-07:00"
 OUTPUT_FILE_PLACEHOLDER = "<OUTPUT_FILE>"
 
 

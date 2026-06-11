@@ -93,7 +93,7 @@ class Imports(defaultdict[str | None, set[str]]):
         if isinstance(imports, Import):
             imports = [imports]
         for import_ in imports:
-            if "." in import_.import_:  # pragma: no cover
+            if "." in import_.import_:
                 key = (None, import_.import_)
                 if self.counter.get(key, 0) <= 0:
                     continue

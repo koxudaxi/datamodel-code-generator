@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional
 
 from pydantic import Field, ValidationError, field_validator, model_validator
 
+from datamodel_code_generator import Error
+from datamodel_code_generator.enums import TargetPydanticVersion
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import (
@@ -31,6 +33,7 @@ from datamodel_code_generator.model.pydantic_base import (
     DataModelField as DataModelFieldV1,
 )
 from datamodel_code_generator.model.pydantic_v2.imports import (
+    IMPORT_ALIAS_CHOICES,
     IMPORT_BASE_MODEL,
     IMPORT_CONFIG_DICT,
     IMPORT_FIELD,
@@ -222,8 +225,6 @@ class DataModelField(DataModelFieldV1):
         if self.is_class_var:
             extra_imports.append(IMPORT_CLASSVAR)
         if self.validation_aliases:
-            from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_ALIAS_CHOICES  # noqa: PLC0415
-
             extra_imports.append(IMPORT_ALIAS_CHOICES)
         if self._has_discriminator_in_data_type():
             extra_imports.append(IMPORT_FIELD)
@@ -383,8 +384,6 @@ class BaseModel(BaseModelBase):
         If target_pydantic_version is V2_11, use validate_by_name.
         Otherwise (V2 or not specified), use populate_by_name for compatibility.
         """
-        from datamodel_code_generator import TargetPydanticVersion  # noqa: PLC0415
-
         target_version = self.extra_template_data.get("target_pydantic_version")
         if target_version == TargetPydanticVersion.V2_11:
             return self._CONFIG_ATTRIBUTES_V2_11
@@ -413,8 +412,6 @@ class BaseModel(BaseModelBase):
         try:
             validators = normalize_validators(validators)
         except ValidationError as e:
-            from datamodel_code_generator import Error  # noqa: PLC0415
-
             msg = f"Invalid validators configuration: {format_validation_error(e)}"
             raise Error(msg) from e
 

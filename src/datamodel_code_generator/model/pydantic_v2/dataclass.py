@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from datamodel_code_generator.enums import TargetPydanticVersion
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.dataclass import has_field_assignment
@@ -121,8 +122,6 @@ class DataClass(DataModel):
 
     def _get_config_attributes(self) -> list[ConfigAttribute]:
         """Get config attributes based on target Pydantic version."""
-        from datamodel_code_generator import TargetPydanticVersion  # noqa: PLC0415
-
         target_version = self.extra_template_data.get("target_pydantic_version")
         if target_version == TargetPydanticVersion.V2_11:
             return self._CONFIG_ATTRIBUTES_V2_11
