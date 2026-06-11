@@ -72,6 +72,24 @@ def test_skill_frontmatter_validates() -> None:
     assert_output(dumps(summary, indent=2, sort_keys=True) + "\n", EXPECTED / "frontmatter.txt")
 
 
+def test_skill_frontmatter_requires_yaml_header(tmp_path: Path) -> None:
+    """Skill frontmatter reader reports files without YAML frontmatter."""
+    skill_file = tmp_path / "SKILL.md"
+    skill_file.write_text("# Missing frontmatter\n", encoding="utf-8")
+
+    with pytest.raises(pytest.fail.Exception, match="missing YAML frontmatter"):
+        _read_frontmatter(skill_file)
+
+
+def test_skill_frontmatter_requires_mapping(tmp_path: Path) -> None:
+    """Skill frontmatter reader reports non-mapping YAML frontmatter."""
+    skill_file = tmp_path / "SKILL.md"
+    skill_file.write_text("---\n- invalid\n---\n", encoding="utf-8")
+
+    with pytest.raises(pytest.fail.Exception, match="frontmatter must be a mapping"):
+        _read_frontmatter(skill_file)
+
+
 def test_skill_cli_options_reference_is_generated(tmp_path: Path) -> None:
     """CLI option reference matches the generated output."""
     output = tmp_path / "references" / "cli-options.md"
@@ -98,3 +116,15 @@ def test_skill_documented_flags_exist_in_cli_help() -> None:
     }
 
     assert_output(dumps(unknown, indent=2, sort_keys=True) + "\n", EXPECTED / "documented_flag_drift.txt")
+
+
+def test_skill_documented_flags_reports_help_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Documented flag check reports subprocess output when help fails."""
+
+    def fake_run(*_args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(["datamodel-codegen"], 2, stdout="out", stderr="err")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    with pytest.raises(pytest.fail.Exception, match="datamodel-codegen --help failed"):
+        test_skill_documented_flags_exist_in_cli_help()

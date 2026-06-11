@@ -42,6 +42,18 @@ def _run_codegen(args: Sequence[str]) -> None:
         pytest.fail(f"datamodel-codegen failed\nargs: {args!r}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}")
 
 
+def test_run_codegen_reports_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Codegen helper reports captured output when the CLI fails."""
+
+    def fake_run(*_args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(["datamodel-codegen"], 2, stdout="out", stderr="err")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    with pytest.raises(pytest.fail.Exception, match="datamodel-codegen failed"):
+        _run_codegen(["--bad-option"])
+
+
 @pytest.mark.parametrize(
     ("fixture_name", "input_type", "expected_file", "extra_args"),
     [
