@@ -146,6 +146,26 @@ EXCLUDED_CASES: dict[str, str] = {
         "top-level nullable object components need a wrapper policy; nullable refs are covered via Parent"
     ),
 }
+ROUND_TRIP_EXCLUDED_CASES: dict[str, str] = {
+    "jsonschema/default_factory_nested_model_with_dict.json": (
+        "pydantic union branch normalization can dump a oneOf value into a shape that matches multiple branches"
+    ),
+    "jsonschema/external_child_root.json": (
+        "schema requires a property absent from properties, so the generated model has no field to dump"
+    ),
+    "jsonschema/nested_json_pointer.json": (
+        "schema requires a property absent from properties, so the generated model has no field to dump"
+    ),
+    "jsonschema/strict_types_matrix.json": (
+        "pydantic serializes Decimal JSON values as strings while the source schema requires number"
+    ),
+    "openapi/allof_array_ref_override.yaml::components.schemas.DataType": (
+        "schema requires a property absent from properties, so the generated model has no field to dump"
+    ),
+    "openapi/issue_2953.yaml::components.schemas.DataType": (
+        "schema requires a property absent from properties, so the generated model has no field to dump"
+    ),
+}
 
 
 def _payload_target_python_version() -> str:

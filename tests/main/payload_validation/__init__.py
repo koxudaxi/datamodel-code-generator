@@ -18,6 +18,7 @@ from .conformance import (
     PYDANTIC_V2_REJECTED_MUTATION_CONSTRAINTS,
     PYDANTIC_V2_UNASSERTED_MUTATION_CONSTRAINTS,
 )
+from .constants import ROUND_TRIP_EXCLUDED_CASES
 from .models import GeneratedModelCache, InvalidPayloadMutation, PayloadBackend, SchemaCase
 from .mutation import (
     PAYLOAD_MUTATION_CONSTRAINTS,
@@ -34,6 +35,7 @@ __all__ = [
     "PAYLOAD_VALIDATION_BACKENDS",
     "PYDANTIC_V2_REJECTED_MUTATION_CONSTRAINTS",
     "PYDANTIC_V2_UNASSERTED_MUTATION_CONSTRAINTS",
+    "ROUND_TRIP_EXCLUDED_CASES",
     "SCHEMA_CASES",
     "GeneratedModelCache",
     "InvalidPayloadMutation",

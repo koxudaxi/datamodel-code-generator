@@ -132,6 +132,33 @@ Future work:
 - Add a dedicated strict/schema-faithful mode if a future backend needs stronger
   JSON Schema runtime validation than the default generated output provides.
 
+## Round-Trip Dump Limits
+
+The pydantic v2 payload test now validates accepted payloads, dumps them with
+`mode="json"`, `by_alias=True`, and `exclude_unset=True`, then checks that the
+dumped value is still valid for the source schema. `exclude_unset=True` keeps
+unset optional fields from being materialized as `null` when the source schema
+does not accept `null`.
+
+Current exclusions are machine-readable in
+`tests/main/payload_validation/constants.py`:
+
+- Schemas that list required names absent from `properties` cannot round-trip
+  those names because the generated model has no field to dump.
+- One `oneOf` case normalizes into a shape that matches multiple branches after
+  dumping.
+- One decimal case serializes a JSON numeric `Decimal` value as a string, while
+  the source schema still requires `type: number`.
+
+Future work:
+
+- Decide whether required names absent from `properties` should be represented
+  by generated fields or remain a documented compatibility boundary.
+- Decide whether decimal JSON mode should preserve JSON numbers for
+  schema-faithful dumps or keep Pydantic's string serialization.
+- Strengthen round-trip from schema validity to payload equivalence modulo
+  defaults once these compatibility categories are resolved.
+
 ## OpenAPI Discriminator Compatibility Policy
 
 The following cases expose a mismatch between OpenAPI discriminator semantics,
