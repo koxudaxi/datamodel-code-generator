@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from pathlib import Path
 
+JsonPath = tuple[str | int, ...]
+
 
 @dataclass(frozen=True)
 class SchemaCase:
@@ -20,6 +22,16 @@ class SchemaCase:
     source_schema: dict[str, Any] = field(repr=False)
     codegen_schema: dict[str, Any] = field(repr=False)
     temp_input_suffix: str
+
+
+@dataclass(frozen=True)
+class InvalidPayloadMutation:
+    """A schema-invalid payload derived from a valid seed payload."""
+
+    constraint: str
+    path: JsonPath
+    payload: Any = field(repr=False)
+    reason: str
 
 
 class GeneratedModelCache(UserDict[str, Any]):
