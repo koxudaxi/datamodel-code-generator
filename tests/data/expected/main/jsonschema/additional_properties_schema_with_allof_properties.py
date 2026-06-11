@@ -13,5 +13,8 @@ class AllOfKnownAndExtra(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    __annotations__ = {'__pydantic_extra__': Dict[str, int]}
     name: str
+
+
+AllOfKnownAndExtra.__annotations__['__pydantic_extra__'] = Dict[str, int]
+AllOfKnownAndExtra.model_rebuild(force=True)

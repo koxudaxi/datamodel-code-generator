@@ -17,4 +17,7 @@ class AllOfInheritedAndExtra(Base):
     model_config = ConfigDict(
         extra='allow',
     )
-    __annotations__ = {'__pydantic_extra__': Dict[str, int]}
+
+
+AllOfInheritedAndExtra.__annotations__['__pydantic_extra__'] = Dict[str, int]
+AllOfInheritedAndExtra.model_rebuild(force=True)

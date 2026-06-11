@@ -13,5 +13,8 @@ class KnownAndConstExtra(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    __annotations__ = {'__pydantic_extra__': Dict[str, Literal['red']]}
     name: str
+
+
+KnownAndConstExtra.__annotations__['__pydantic_extra__'] = Dict[str, Literal['red']]
+KnownAndConstExtra.model_rebuild(force=True)

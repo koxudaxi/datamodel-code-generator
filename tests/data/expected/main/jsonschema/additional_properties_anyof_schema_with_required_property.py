@@ -13,5 +13,8 @@ class AnyOfConfig(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    __annotations__ = {'__pydantic_extra__': Dict[str, int | str | None]}
     type: str
+
+
+AnyOfConfig.__annotations__['__pydantic_extra__'] = Dict[str, int | str | None]
+AnyOfConfig.model_rebuild(force=True)
