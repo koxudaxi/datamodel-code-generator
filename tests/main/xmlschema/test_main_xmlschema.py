@@ -25,6 +25,23 @@ def test_main_xmlschema_purchase_order(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_purchase_order_from_normalized_external_path(tmp_path: Path, output_file: Path) -> None:
+    """Generate XML Schema models when the external input path needs normalization."""
+    redirect_dir = tmp_path / "redirect"
+    redirect_dir.mkdir()
+    run_main_and_assert(
+        input_path=redirect_dir / ".." / "purchase_order.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="purchase_order.py",
+        copy_files=[
+            (XML_SCHEMA_DATA_PATH / "purchase_order.xsd", tmp_path / "purchase_order.xsd"),
+            (XML_SCHEMA_DATA_PATH / "common.xsd", tmp_path / "common.xsd"),
+        ],
+    )
+
+
 def test_main_xmlschema_infer_input_file_type(output_file: Path) -> None:
     """Infer XML Schema input and generate a model."""
     run_main_and_assert(
