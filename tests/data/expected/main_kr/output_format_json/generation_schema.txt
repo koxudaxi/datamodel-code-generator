@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "GeneratedFilePayload": {
+      "additionalProperties": false,
+      "description": "One generated file emitted by --output-format json.",
+      "properties": {
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Path"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "content"
+      ],
+      "title": "GeneratedFilePayload",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Structured JSON payload emitted by generation mode --output-format json.",
+  "properties": {
+    "version": {
+      "const": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "format": {
+      "const": "json",
+      "title": "Format",
+      "type": "string"
+    },
+    "kind": {
+      "const": "generation",
+      "title": "Kind",
+      "type": "string"
+    },
+    "output": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Output"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/$defs/GeneratedFilePayload"
+      },
+      "title": "Files",
+      "type": "array"
+    }
+  },
+  "required": [
+    "version",
+    "format",
+    "kind",
+    "output",
+    "files"
+  ],
+  "title": "GenerationPayload",
+  "type": "object"
+}
