@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "format": "json",
+  "files": [
+    {
+      "path": "models/user",
+      "content": "class User:\n    pass\n"
+    }
+  ]
+}

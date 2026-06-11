@@ -1728,7 +1728,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             )
             + "\n"
         )
-        if temp_context is not None:
+        if temp_context is not None:  # pragma: no branch
             temp_context.cleanup()
             temp_context = None
 
