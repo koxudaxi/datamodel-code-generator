@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Final
 
+from .models import PayloadBackend
+
 PYDANTIC_V2_REJECTED_MUTATION_CONSTRAINTS: Final[dict[str, str]] = {
     "additionalProperties": "generated pydantic v2 models forbid extra object properties for closed schemas",
     "required": "generated pydantic v2 models require schema-required object properties",
@@ -44,7 +46,44 @@ PYDANTIC_V2_UNASSERTED_MUTATION_CONSTRAINTS: Final[dict[str, str]] = {
     "uniqueItems": "array uniqueness semantics are not represented by generated models",
 }
 
+PYDANTIC_V2_DATACLASS_REJECTED_MUTATION_CONSTRAINTS: Final[dict[str, str]] = {
+    "additionalProperties": "generated pydantic v2 dataclasses forbid extra object properties for closed schemas",
+    "required": "generated pydantic v2 dataclasses require schema-required object properties",
+}
+PYDANTIC_V2_DATACLASS_UNASSERTED_MUTATION_CONSTRAINTS: Final[dict[str, str]] = {
+    **PYDANTIC_V2_UNASSERTED_MUTATION_CONSTRAINTS,
+}
 
-def rejected_mutation_reason(constraint: str) -> str | None:
+MSGSPEC_REJECTED_MUTATION_CONSTRAINTS: Final[dict[str, str]] = {
+    "required": "generated msgspec.Struct classes require schema-required object properties",
+}
+MSGSPEC_UNASSERTED_MUTATION_CONSTRAINTS: Final[dict[str, str]] = {
+    **PYDANTIC_V2_UNASSERTED_MUTATION_CONSTRAINTS,
+    "additionalProperties": "generated msgspec.Struct classes ignore unknown object properties by default",
+}
+
+BACKEND_REJECTED_MUTATION_CONSTRAINTS: Final[dict[PayloadBackend, dict[str, str]]] = {
+    PayloadBackend.PYDANTIC_V2: PYDANTIC_V2_REJECTED_MUTATION_CONSTRAINTS,
+    PayloadBackend.PYDANTIC_V2_DATACLASS: PYDANTIC_V2_DATACLASS_REJECTED_MUTATION_CONSTRAINTS,
+    PayloadBackend.MSGSPEC: MSGSPEC_REJECTED_MUTATION_CONSTRAINTS,
+}
+BACKEND_UNASSERTED_MUTATION_CONSTRAINTS: Final[dict[PayloadBackend, dict[str, str]]] = {
+    PayloadBackend.PYDANTIC_V2: PYDANTIC_V2_UNASSERTED_MUTATION_CONSTRAINTS,
+    PayloadBackend.PYDANTIC_V2_DATACLASS: PYDANTIC_V2_DATACLASS_UNASSERTED_MUTATION_CONSTRAINTS,
+    PayloadBackend.MSGSPEC: MSGSPEC_UNASSERTED_MUTATION_CONSTRAINTS,
+}
+PAYLOAD_VALIDATION_BACKENDS: Final[tuple[PayloadBackend, ...]] = (
+    PayloadBackend.PYDANTIC_V2,
+    PayloadBackend.PYDANTIC_V2_DATACLASS,
+    PayloadBackend.MSGSPEC,
+)
+
+
+def rejected_mutation_constraints(backend: PayloadBackend) -> frozenset[str]:
+    """Return mutation constraints asserted for a backend."""
+    return frozenset(BACKEND_REJECTED_MUTATION_CONSTRAINTS.get(backend, {}))
+
+
+def rejected_mutation_reason(constraint: str, backend: PayloadBackend = PayloadBackend.PYDANTIC_V2) -> str | None:
     """Return the policy reason for generated-model rejection."""
-    return PYDANTIC_V2_REJECTED_MUTATION_CONSTRAINTS.get(constraint)
+    return BACKEND_REJECTED_MUTATION_CONSTRAINTS.get(backend, {}).get(constraint)

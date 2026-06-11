@@ -109,6 +109,29 @@ Future work:
   fix, a backend-specific conformance policy entry, or a documented permanent
   subset limitation.
 
+## Backend Payload Matrix Limits
+
+Payload validation now keeps full coverage on the default `pydantic_v2.BaseModel`
+backend and adds a representative backend matrix for `pydantic_v2.dataclass`,
+`msgspec.Struct`, and `dataclasses.dataclass`.
+
+Current scope:
+
+- `pydantic_v2.BaseModel` runs the full schema-derived accept/reject oracle.
+- `pydantic_v2.dataclass` and `msgspec.Struct` run representative accept/reject
+  cases using backend-specific conformance policies.
+- `dataclasses.dataclass` runs representative construction-only cases because
+  standard dataclasses do not provide runtime type validation.
+- `pydantic.BaseModel` / pydantic v1 output is not part of the current matrix
+  because pydantic-v1 output was removed from the generator in #3031.
+
+Future work:
+
+- Expand the representative backend matrix into a full nightly run once CI cost
+  and backend-specific exclusions are classified.
+- Add a dedicated strict/schema-faithful mode if a future backend needs stronger
+  JSON Schema runtime validation than the default generated output provides.
+
 ## OpenAPI Discriminator Compatibility Policy
 
 The following cases expose a mismatch between OpenAPI discriminator semantics,
