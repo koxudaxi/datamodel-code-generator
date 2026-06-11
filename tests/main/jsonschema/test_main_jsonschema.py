@@ -8567,7 +8567,13 @@ def test_main_jsonschema_reuse_scope_tree_dataclass_frozen(output_dir: Path) -> 
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_dataclass",
         output_path=output_dir,
-        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_dataclass_frozen",
+        output_to_expected=[
+            ("__init__.py", "reuse_scope_tree_dataclass_frozen/__init__.py"),
+            ("schema_a.py", "reuse_scope_tree_dataclass_frozen/schema_a.py"),
+            ("schema_b.py", "reuse_scope_tree_dataclass_frozen/schema_b.py"),
+            ("shared.py", "reuse_scope_tree_dataclass_frozen/shared.py"),
+        ],
+        assert_func=assert_file_content,
         input_file_type="jsonschema",
         extra_args=[
             "--reuse-model",
