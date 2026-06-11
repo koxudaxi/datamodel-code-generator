@@ -592,11 +592,9 @@ def detect_asyncapi_version(data: dict[str, Any]) -> AsyncAPIVersion:
 
 DataFormatMapping: TypeAlias = "dict[str, dict[str, Types]]"
 
-_OPENAPI_ONLY_STRING_FORMATS = frozenset({"binary", "password"})
 
-
-def _get_openapi_data_formats() -> DataFormatMapping:
-    """Get data formats used by the JSON Schema parser's OpenAPI-compatible mode."""
+def _get_common_data_formats() -> DataFormatMapping:
+    """Get common data formats valid for both JsonSchema and OpenAPI."""
     from datamodel_code_generator.types import Types  # noqa: PLC0415
 
     return {
@@ -621,7 +619,6 @@ def _get_openapi_data_formats() -> DataFormatMapping:
         "string": {
             "default": Types.string,
             "byte": Types.byte,
-            "binary": Types.binary,
             "date": Types.date,
             "date-time": Types.date_time,
             "timestamp with time zone": Types.date_time,
@@ -629,7 +626,6 @@ def _get_openapi_data_formats() -> DataFormatMapping:
             "duration": Types.timedelta,
             "time": Types.time,
             "time-local": Types.time_local,
-            "password": Types.password,
             "path": Types.path,
             "email": Types.email,
             "idn-email": Types.email,
@@ -665,12 +661,26 @@ def _get_openapi_data_formats() -> DataFormatMapping:
     }
 
 
-def _get_common_data_formats() -> DataFormatMapping:
-    """Get common data formats valid for both JsonSchema and OpenAPI."""
-    formats = _get_openapi_data_formats()
-    formats["string"] = {
-        format_: type_ for format_, type_ in formats["string"].items() if format_ not in _OPENAPI_ONLY_STRING_FORMATS
+def _get_openapi_only_formats() -> DataFormatMapping:
+    """Get formats specific to OpenAPI."""
+    from datamodel_code_generator.types import Types  # noqa: PLC0415
+
+    return {
+        "string": {
+            "binary": Types.binary,
+            "password": Types.password,
+        },
     }
+
+
+def _get_openapi_data_formats() -> DataFormatMapping:
+    """Get common data formats extended with OpenAPI-specific formats."""
+    formats = _get_common_data_formats()
+    for type_key, type_formats in _get_openapi_only_formats().items():
+        if current_type_formats := formats.get(type_key):
+            formats[type_key] = {**current_type_formats, **type_formats}
+            continue
+        formats[type_key] = type_formats  # pragma: no cover
     return formats
 
 
