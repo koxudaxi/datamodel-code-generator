@@ -313,6 +313,7 @@ run.omit = [
   "tests/cli_doc/*",
   "tests/data/*",
   "tests/main/payload_validation/*",
+  "tests/main/test_jsonschema_suite_conformance.py",
   "tests/main/test_performance.py",
 ]
 report.fail_under = 0
