@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "format": "json",
+  "kind": "check",
+  "success": false,
+  "content": "MISSING: __init__.py (should be generated)\nMISSING: _internal.py (should be generated)\nMISSING: bar.py (should be generated)\nMISSING: collections.py (should be generated)\nMISSING: foo/__init__.py (should be generated)\nMISSING: foo/bar.py (should be generated)\nMISSING: models.py (should be generated)\nMISSING: nested/__init__.py (should be generated)\nMISSING: nested/foo.py (should be generated)\nMISSING: woo/__init__.py (should be generated)\nMISSING: woo/boo.py (should be generated)\n",
+  "differences": [
+    {
+      "kind": "missing",
+      "path": "__init__.py",
+      "message": "MISSING: __init__.py (should be generated)",
+      "diff": null
+    },
+    {
+      "kind": "missing",
+      "path": "_internal.py",
+      "message": "MISSING: _internal.py (should be generated)",
+      "diff": null
+    },
+    {
+      "kind": "missing",
+      "path": "bar.py",
+      "message": "MISSING: bar.py (should be generated)",
+      "diff": null
+    },
+    {
+      "kind": "missing",
+      "path": "collections.py",
+      "message": "MISSING: collections.py (should be generated)",
+      "diff": null
+    },
+    {
+      "kind": "missing",
+      "path": "foo/__init__.py",
+      "message": "MISSING: foo/__init__.py (should be generated)",
+      "diff": null
+    },
+    {
+      "kind": "missing",
+      "path": "foo/bar.py",
+      "message": "MISSING: foo/bar.py (should be generated)",
+      "diff": null
+    },
+    {
+      "kind": "missing",
+      "path": "models.py",
+      "message": "MISSING: models.py (should be generated)",
+      "diff": null
+    },
+    {
+      "kind": "missing",
+      "path": "nested/__init__.py",
+      "message": "MISSING: nested/__init__.py (should be generated)",
+      "diff": null
+    },
+    {
+      "kind": "missing",
+      "path": "nested/foo.py",
+      "message": "MISSING: nested/foo.py (should be generated)",
+      "diff": null
+    },
+    {
+      "kind": "missing",
+      "path": "woo/__init__.py",
+      "message": "MISSING: woo/__init__.py (should be generated)",
+      "diff": null
+    },
+    {
+      "kind": "missing",
+      "path": "woo/boo.py",
+      "message": "MISSING: woo/boo.py (should be generated)",
+      "diff": null
+    }
+  ]
+}

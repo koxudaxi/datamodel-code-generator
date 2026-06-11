@@ -1,0 +1,207 @@
+{
+  "$defs": {
+    "CurrentOptionPayload": {
+      "additionalProperties": false,
+      "description": "Machine-readable metadata for a CLI option currently set by the caller.",
+      "properties": {
+        "dest": {
+          "title": "Dest",
+          "type": "string"
+        },
+        "flags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Flags",
+          "type": "array"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value"
+        }
+      },
+      "required": [
+        "name",
+        "dest",
+        "value",
+        "flags"
+      ],
+      "title": "CurrentOptionPayload",
+      "type": "object"
+    },
+    "OptionMetadataPayload": {
+      "additionalProperties": false,
+      "description": "Machine-readable metadata for one argparse option.",
+      "properties": {
+        "action": {
+          "title": "Action",
+          "type": "string"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "choices": {
+          "anyOf": [
+            {
+              "items": {},
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Choices"
+        },
+        "default": {
+          "title": "Default"
+        },
+        "deprecated": {
+          "title": "Deprecated",
+          "type": "boolean"
+        },
+        "deprecated_message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Deprecated Message"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "dest": {
+          "title": "Dest",
+          "type": "string"
+        },
+        "flags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Flags",
+          "type": "array"
+        },
+        "metavar": {
+          "title": "Metavar"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "nargs": {
+          "title": "Nargs"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Type"
+        }
+      },
+      "required": [
+        "name",
+        "flags",
+        "dest",
+        "category",
+        "description",
+        "choices",
+        "nargs",
+        "default",
+        "required",
+        "metavar",
+        "type",
+        "action",
+        "deprecated",
+        "deprecated_message"
+      ],
+      "title": "OptionMetadataPayload",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Structured JSON payload emitted by --generate-prompt --output-format json.",
+  "properties": {
+    "current_options": {
+      "items": {
+        "$ref": "#/$defs/CurrentOptionPayload"
+      },
+      "title": "Current Options",
+      "type": "array"
+    },
+    "current_options_text": {
+      "title": "Current Options Text",
+      "type": "string"
+    },
+    "format": {
+      "const": "json",
+      "title": "Format",
+      "type": "string"
+    },
+    "help_text": {
+      "title": "Help Text",
+      "type": "string"
+    },
+    "kind": {
+      "const": "prompt",
+      "title": "Kind",
+      "type": "string"
+    },
+    "options": {
+      "items": {
+        "$ref": "#/$defs/OptionMetadataPayload"
+      },
+      "title": "Options",
+      "type": "array"
+    },
+    "options_by_category": {
+      "additionalProperties": {
+        "items": {
+          "$ref": "#/$defs/OptionMetadataPayload"
+        },
+        "type": "array"
+      },
+      "title": "Options By Category",
+      "type": "object"
+    },
+    "question": {
+      "title": "Question",
+      "type": "string"
+    },
+    "version": {
+      "const": 1,
+      "title": "Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "version",
+    "format",
+    "kind",
+    "question",
+    "current_options",
+    "current_options_text",
+    "options_by_category",
+    "options",
+    "help_text"
+  ],
+  "title": "PromptPayload",
+  "type": "object"
+}

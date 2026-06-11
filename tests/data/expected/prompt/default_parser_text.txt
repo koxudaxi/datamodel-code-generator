@@ -1,0 +1,198 @@
+# datamodel-code-generator CLI Options Consultation
+
+## Current CLI Options
+
+```
+--input schema.json
+```
+
+## Options by Category
+
+### Base Options
+- `--encoding`: Specify character encoding for input and output files.
+- `--external-ref-mapping`: Map external `$ref` files to Python packages.
+- `--input`: Specify the input schema file path.
+- `--input-file-type`: Specify the input file type for code generation.
+- `--input-model`: Import a Python type or dict schema from a module.
+- `--input-model-ref-strategy`: Strategy for referenced types when using --input-model.
+- `--output`: Specify the destination path for generated Python code.
+- `--schema-version`: Schema version to use for parsing.
+- `--schema-version-mode`: Schema version validation mode.
+- `--url`: Fetch schema from URL with custom HTTP headers.
+
+### Typing Customization
+- `--allof-class-hierarchy`: Controls how allOf schemas are represented in the generated class hierarchy.
+- `--allof-merge-mode`: Merge constraints from root model references in allOf schemas.
+- `--disable-future-imports`: Prevent automatic addition of __future__ imports in generated code.
+- `--enum-field-as-literal`: Convert all enum fields to Literal types instead of Enum classes.
+- `--enum-field-as-literal-map`: Override enum/literal generation per-field via JSON mapping.
+- `--ignore-enum-constraints`: Ignore enum constraints and use base string type instead of Enum classes.
+- `--no-use-annotated`
+- `--no-use-closed-typed-dict`: Disable PEP 728 TypedDict closed/extra_items generation.
+- `--no-use-specialized-enum`: Disable specialized Enum classes for Python 3.11+ code generation.
+- `--no-use-standard-collections`: Use typing.Dict/List instead of built-in dict/list for container types.
+- `--no-use-union-operator`: Use Union[X, Y] / Optional[X] instead of X | Y union operator.
+- `--output-date-class`: Specify date class type for date schema fields.
+- `--output-datetime-class`: Specify datetime class type for date-time schema fields.
+- `--strict-types`: Enable strict type validation for specified Python types.
+- `--type-mappings`: Override default type mappings for schema formats.
+- `--type-overrides`: Replace schema model types with custom Python types via JSON mapping.
+- `--use-annotated`: Use typing.Annotated for Field() with constraints.
+- `--use-closed-typed-dict`: Generate TypedDict with PEP 728 closed/extra_items (default: enabled).
+- `--use-decimal-for-multiple-of`: Generate Decimal types for fields with multipleOf constraint.
+- `--use-generic-container-types`: Use generic container types (Sequence, Mapping) for type hinting.
+- `--use-non-positive-negative-number-constrained-types`: Use NonPositive/NonNegative types for number constraints.
+- `--use-object-type`: Use object instead of Any for unspecified object and array values.
+- `--use-pendulum`: Use pendulum types for date, time, and duration fields.
+- `--use-root-model-type-alias`: Generate RootModel as type alias format for better mypy support.
+- `--use-specialized-enum`: Generate StrEnum/IntEnum for string/integer enums (Python 3.11+).
+- `--use-standard-collections`: Use built-in dict/list instead of typing.Dict/List.
+- `--use-standard-primitive-types`: Use Python standard library types for string formats instead of str.
+- `--use-tuple-for-fixed-items`: Generate tuple types for arrays with items array syntax.
+- `--use-type-alias`: Use TypeAlias instead of root models for type definitions (experimental).
+- `--use-union-operator`: Use | operator for Union types (PEP 604).
+- `--use-unique-items-as-set`: Generate set types for arrays with uniqueItems constraint.
+
+### Field Customization
+- `--aliases`: Apply custom field and class name aliases from JSON file.
+- `--capitalize-enum-members`: Capitalize enum member names to UPPER_CASE format.
+- `--default-values`: Override field default values from external JSON file.
+- `--empty-enum-field-name`: Name for empty string enum field values.
+- `--extra-fields`: Configure how generated models handle extra fields not defined in schema.
+- `--field-constraints`: Generate Field() with validation constraints from schema.
+- `--field-extra-keys`: Include specific extra keys in Field() definitions.
+- `--field-extra-keys-without-x-prefix`: Include schema extension keys in Field() without requiring 'x-' prefix.
+- `--field-include-all-keys`: Include all schema keys in Field() json_schema_extra.
+- `--field-type-collision-strategy`: Rename type class instead of field when names collide (Pydantic v2 only).
+- `--no-alias`: Disable Field alias generation for non-Python-safe property names.
+- `--original-field-name-delimiter`: Specify delimiter for original field names when using snake-case conversion.
+- `--remove-special-field-name-prefix`: Remove the special prefix from field names.
+- `--serialization-aliases`: Apply custom Pydantic v2 serialization aliases from JSON file.
+- `--set-default-enum-member`: Set the first enum member as the default value for enum fields.
+- `--snake-case-field`: Convert field names to snake_case format.
+- `--special-field-name-prefix`: Prefix to add to special field names (like reserved keywords).
+- `--use-attribute-docstrings`: Generate field descriptions as attribute docstrings instead of Field descriptions.
+- `--use-enum-values-in-discriminator`: Use enum values in discriminator mappings for union types.
+- `--use-field-description`: Include schema descriptions as Field docstrings.
+- `--use-field-description-example`: Add field examples to docstrings.
+- `--use-inline-field-description`: Add field descriptions as inline comments.
+- `--use-schema-description`: Use schema description as class docstring.
+- `--use-serialization-alias`: Use serialization_alias instead of alias for field aliasing (Pydantic v2 only).
+- `--use-single-line-docstring`: Emit short docstrings on a single line.
+- `--use-title-as-name`: Use schema title as the generated class name.
+
+### Model Customization
+- `--allow-extra-fields`: Allow extra fields in generated Pydantic models (extra='allow').
+- `--allow-leading-underscore-class-name`: Allow an explicitly specified root class name to start with an unders...
+- `--allow-population-by-field-name`: Allow Pydantic model population by field name (not just alias).
+- `--base-class`: Specify a custom base class for generated models.
+- `--base-class-map`: Specify different base classes for specific models via JSON mapping.
+- `--class-name`: Override the auto-generated class name with a custom name.
+- `--class-name-affix-scope`: Control which classes receive the prefix/suffix.
+- `--class-name-prefix`: Add a prefix to all generated class names.
+- `--class-name-suffix`: Add a suffix to all generated class names.
+- `--collapse-reuse-models`: Collapse duplicate models by replacing references instead of inheritance.
+- `--collapse-root-models`: Inline root model definitions instead of creating separate wrapper classes.
+- `--collapse-root-models-name-strategy`: Select which name to keep when collapsing root models with object refe...
+- `--dataclass-arguments`: Customize dataclass decorator arguments via JSON dictionary.
+- `--duplicate-name-suffix`: Customize suffix for duplicate model names.
+- `--enable-faux-immutability`: Enable faux immutability in Pydantic models (frozen=True).
+- `--force-optional`: Force all fields to be Optional regardless of required status.
+- `--frozen-dataclasses`: Generate frozen dataclasses with optional keyword-only fields.
+- `--keep-model-order`: Keep generated model order deterministic while respecting dependency constraints.
+- `--keyword-only`: Generate dataclasses with keyword-only fields (Python 3.10+).
+- `--model-extra-keys`: Add model-level schema extensions to ConfigDict json_schema_extra.
+- `--model-extra-keys-without-x-prefix`: Strip x- prefix from model-level schema extensions and add to ConfigDic...
+- `--naming-strategy`: Use parent-prefixed naming strategy for duplicate model names.
+- `--output-model-type`: Generate models from GraphQL with different output model types.
+- `--parent-scoped-naming`: Namespace models by their parent scope to avoid naming conflicts.
+- `--reuse-model`: Reuse identical model definitions instead of generating duplicates.
+- `--reuse-scope`: Scope for model reuse detection (root or tree).
+- `--skip-root-model`: Skip generation of root model when schema contains nested definitions.
+- `--strict-nullable`: Treat default field as a non-nullable field.
+- `--strip-default-none`: Remove fields with None as default value from generated models.
+- `--target-pydantic-version`: Target Pydantic version for generated code compatibility.
+- `--target-python-version`: Target Python version for generated code syntax and imports.
+- `--union-mode`: Union mode for combining anyOf/oneOf schemas (smart or left_to_right).
+- `--use-default`: Use default values from schema in generated models.
+- `--use-default-factory-for-optional-nested-models`: Generate default_factory for optional nested model fields.
+- `--use-default-kwarg`: Use default= keyword argument instead of positional argument for fields with defaults.
+- `--use-frozen-field`: Generate frozen (immutable) field definitions for readOnly properties.
+- `--use-generic-base-class`: Generate a shared base class with model configuration to avoid repetition (DRY).
+- `--use-one-literal-as-default`: Use single literal value as default when enum has only one option.
+- `--use-serialize-as-any`: Wrap fields with subtypes in Pydantic's SerializeAsAny.
+- `--use-subclass-enum`: Generate typed Enum subclasses for enums with specific field types.
+
+### Template Customization
+- `--additional-imports`: Add custom imports to generated output files.
+- `--class-decorators`: Add custom decorators to generated model classes.
+- `--custom-file-header`: Add custom header text to the generated file.
+- `--custom-file-header-path`: Add custom header content from file to generated code.
+- `--custom-formatters`: Apply custom Python code formatters to generated output.
+- `--custom-formatters-kwargs`: Pass custom arguments to custom formatters via JSON file.
+- `--custom-template-dir`: Use custom Jinja2 templates for model generation.
+- `--disable-appending-item-suffix`: Disable appending 'Item' suffix to array item types.
+- `--disable-timestamp`: Disable timestamp in generated file header for reproducible output.
+- `--enable-command-header`: Include command-line options in file header for reproducibility.
+- `--enable-generated-header-marker`: Include the @generated marker in file header for generated-code tooling.
+- `--enable-version-header`: Include tool version information in file header.
+- `--extra-template-data`: Pass custom template variables from JSON file for code generation.
+- `--formatters`: Specify code formatters to apply to generated output.
+- `--no-treat-dot-as-module`: Keep dots in schema names as underscores for flat output.
+- `--no-use-type-checking-imports`: Keep generated model imports available at runtime when using Ruff fixes.
+- `--use-double-quotes`: Use double quotes for string literals in generated code.
+- `--use-exact-imports`: Import exact types instead of modules.
+- `--use-type-checking-imports`: Allow Ruff to move typing-only imports into TYPE_CHECKING blocks.
+- `--validators`: Add custom field validators to generated Pydantic v2 models.
+- `--wrap-string-literal`: Wrap long string literals across multiple lines.
+
+### OpenAPI-only Options
+- `--include-path-parameters`: Include OpenAPI path parameters in generated parameter models.
+- `--openapi-include-info-version`: Emit OpenAPI info.version as a generated constant.
+- `--openapi-include-paths`: Filter OpenAPI paths to include in model generation.
+- `--openapi-scopes`: Specify OpenAPI scopes to generate (schemas, paths, parameters).
+- `--read-only-write-only-model-type`: Generate separate request and response models for readOnly/writeOnly fields.
+- `--use-operation-id-as-name`: Use OpenAPI operationId as the generated function/class name.
+- `--use-status-code-in-response-name`: Include HTTP status code in response model names.
+- `--validation`: Enable validation constraints (deprecated, use --field-constraints).
+
+### GraphQL-only Options
+- `--graphql-no-typename`: Exclude __typename field from generated GraphQL models.
+
+### General Options
+- `--all-exports-collision-strategy`: Handle name collisions when exporting recursive module hierarchies.
+- `--all-exports-scope`: Generate __all__ exports for child modules in __init__.py files.
+- `--allow-private-network`: Allow HTTP requests to private network schema endpoints.
+- `--allow-remote-refs`: Enable fetching of `$ref` targets over HTTP/HTTPS.
+- `--check`: Verify generated code matches existing output without modifying files.
+- `--disable-warnings`: Suppress warning messages during code generation.
+- `--generate-cli-command`: Generate CLI command from pyproject.toml configuration.
+- `--generate-pyproject-config`: Generate pyproject.toml configuration from CLI arguments.
+- `--http-headers`: Fetch schema from URL with custom HTTP headers.
+- `--http-ignore-tls`: Disable TLS certificate verification for HTTPS requests.
+- `--http-local-ref-path`: Resolve HTTP references from local schema files.
+- `--http-query-parameters`: Add query parameters to HTTP requests for remote schemas.
+- `--http-timeout`: Set timeout for HTTP requests to remote hosts.
+- `--ignore-pyproject`: Ignore pyproject.toml configuration file.
+- `--module-split-mode`: Split generated models into separate files, one per model class.
+- `--no-allow-private-network`
+- `--no-allow-remote-refs`
+- `--shared-module-name`: Customize the name of the shared module for deduplicated models.
+- `--watch`: Watch input file(s) for changes and regenerate output automatically.
+- `--watch-delay`: Set debounce delay in seconds for watch mode.
+
+## All Available Options (Full Help)
+
+```
+HELP
+```
+
+## Instructions
+
+Based on the above information, please help with the question or suggest
+appropriate CLI options for the use case. Consider:
+
+1. The current options already set
+2. Option descriptions and their purposes
+3. Potential conflicts between options
+4. Best practices for the target output format

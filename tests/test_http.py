@@ -16,9 +16,13 @@ from datamodel_code_generator import SchemaFetchError
 from datamodel_code_generator.http import (
     MAX_HTTP_REDIRECTS,
     _create_ssl_context,
+    _embedded_ipv4,
     _get_addr_info_ip,
     _get_http_response,
     _get_httpx,
+    _get_redirect_headers,
+    _get_url_origin,
+    _is_safe_ip,
     _normalize_dns_host,
     _PinnedNetworkBackend,
     get_body,
@@ -134,6 +138,10 @@ def test_get_body_succeeds_without_content_type(mocker: MockerFixture) -> None:
         "http://0x7f000001/schema.json",
         "http://0177.0.0.1/schema.json",
         "http://[::1]/schema.json",
+        "http://[::7f00:1]/schema.json",
+        "http://[::ffff:0:7f00:1]/schema.json",
+        "http://[64:ff9b::7f00:1]/schema.json",
+        "http://[64:ff9b::a9fe:a9fe]/schema.json",
         "http://169.254.169.254/latest/meta-data",
         "http://localhost/schema.json",
         "http://schema.localhost/schema.json",
@@ -146,6 +154,39 @@ def test_get_body_blocks_unsafe_url_hosts(mocker: MockerFixture, url: str) -> No
     with pytest.raises(SchemaFetchError, match="--allow-private-network"):
         get_body(url)
     assert mock_get.call_count == 0
+
+
+@pytest.mark.parametrize(
+    ("addr", "expected"),
+    [
+        ("8.8.8.8", None),
+        ("2606:4700::1", None),
+        ("::ffff:127.0.0.1", "127.0.0.1"),
+        ("::7f00:1", "127.0.0.1"),
+        ("::ffff:0:7f00:1", "127.0.0.1"),
+        ("64:ff9b::a9fe:a9fe", "169.254.169.254"),
+    ],
+)
+def test_embedded_ipv4(addr: str, expected: str | None) -> None:
+    """Return embedded IPv4 addresses from IPv6 wrapper forms."""
+    result = _embedded_ipv4(ip_address(addr))
+    assert (str(result) if result is not None else None) == expected
+
+
+@pytest.mark.parametrize(
+    ("addr", "safe"),
+    [
+        ("8.8.8.8", True),
+        ("10.0.0.1", False),
+        ("::ffff:8.8.8.8", True),
+        ("64:ff9b::a9fe:a9fe", False),
+        ("64:ff9b::808:808", True),
+        ("::1", False),
+    ],
+)
+def test_is_safe_ip(addr: str, safe: bool) -> None:
+    """Validate embedded IPv4 addresses before trusting an IPv6 address."""
+    assert _is_safe_ip(ip_address(addr)) is safe
 
 
 @pytest.mark.parametrize(
@@ -635,6 +676,177 @@ def test_get_body_follows_relative_redirect(mocker: MockerFixture) -> None:
     ]
     assert mock_fetch.call_args_list[0].kwargs["query_parameters"] == [("version", "v2")]
     assert mock_fetch.call_args_list[1].kwargs["query_parameters"] is None
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://schema.example/root.json", ("https", "schema.example", 443)),
+        ("https://SCHEMA.EXAMPLE.:443/root.json", ("https", "schema.example", 443)),
+        ("http://schema.example/root.json", ("http", "schema.example", 80)),
+        ("https://bücher.example/root.json", ("https", "xn--bcher-kva.example", 443)),
+        ("https:///root.json", None),
+        ("https://schema.example:bad/root.json", None),
+    ],
+)
+def test_get_url_origin_normalizes_redirect_scope(url: str, expected: tuple[str, str, int | None] | None) -> None:
+    """Normalize scheme, host, and effective port for redirect credential scoping."""
+    assert _get_url_origin(url) == expected
+
+
+@pytest.mark.parametrize(
+    ("current_url", "redirect_url", "expected_headers"),
+    [
+        (
+            "https://schema.example/root.json",
+            "https://schema.example/next.json",
+            [
+                ("authorization", "Bearer token"),
+                ("COOKIE", "session=secret"),
+                ("Proxy-Authorization", "Basic secret"),
+                ("X-Trace", "1"),
+            ],
+        ),
+        (
+            "https://schema.example/root.json",
+            "https://schema.example:443/next.json",
+            [
+                ("authorization", "Bearer token"),
+                ("COOKIE", "session=secret"),
+                ("Proxy-Authorization", "Basic secret"),
+                ("X-Trace", "1"),
+            ],
+        ),
+        (
+            "https://schema.example./root.json",
+            "https://SCHEMA.EXAMPLE/next.json",
+            [
+                ("authorization", "Bearer token"),
+                ("COOKIE", "session=secret"),
+                ("Proxy-Authorization", "Basic secret"),
+                ("X-Trace", "1"),
+            ],
+        ),
+        (
+            "https://bücher.example/root.json",
+            "https://xn--bcher-kva.example/next.json",
+            [
+                ("authorization", "Bearer token"),
+                ("COOKIE", "session=secret"),
+                ("Proxy-Authorization", "Basic secret"),
+                ("X-Trace", "1"),
+            ],
+        ),
+        ("https://schema.example/root.json", "http://schema.example/next.json", [("X-Trace", "1")]),
+        ("https://schema.example/root.json", "https://other.example/next.json", [("X-Trace", "1")]),
+        ("https://schema.example/root.json", "https://schema.example:444/next.json", [("X-Trace", "1")]),
+        ("https://schema.example:bad/root.json", "https://other.example/next.json", [("X-Trace", "1")]),
+        ("https://schema.example/root.json", "https://schema.example:bad/next.json", [("X-Trace", "1")]),
+        ("https://schema.example:bad/root.json", "https://other.example:bad/next.json", [("X-Trace", "1")]),
+    ],
+)
+def test_get_redirect_headers_scopes_sensitive_headers(
+    current_url: str,
+    redirect_url: str,
+    expected_headers: list[tuple[str, str]],
+) -> None:
+    """Keep sensitive headers only when redirect origin is unchanged."""
+    headers = [
+        ("authorization", "Bearer token"),
+        ("COOKIE", "session=secret"),
+        ("Proxy-Authorization", "Basic secret"),
+        ("X-Trace", "1"),
+    ]
+
+    assert _get_redirect_headers(headers, current_url, redirect_url) == expected_headers
+
+
+def test_get_redirect_headers_handles_no_headers() -> None:
+    """Preserve no-header inputs without creating a new header list."""
+    assert _get_redirect_headers(None, "https://schema.example/root.json", "https://other.example/next.json") is None
+    assert _get_redirect_headers([], "https://schema.example/root.json", "https://other.example/next.json") == []
+
+
+def test_get_body_drops_sensitive_headers_on_cross_origin_redirect(mocker: MockerFixture) -> None:
+    """Do not forward scoped credentials to a different redirect origin."""
+    redirect_response = Mock()
+    redirect_response.status_code = 302
+    redirect_response.headers = {"location": "https://other.example/schema.json"}
+    success_response = Mock()
+    success_response.status_code = 200
+    success_response.headers = {"content-type": "application/json"}
+    success_response.text = '{"type": "object"}'
+    mock_get = mocker.patch("httpx.get", side_effect=[redirect_response, success_response])
+
+    result = get_body(
+        "https://schema.example/root.json",
+        headers=[
+            ("Authorization", "Bearer token"),
+            ("Cookie", "session=secret"),
+            ("Proxy-Authorization", "Basic secret"),
+            ("X-Trace", "1"),
+        ],
+        allow_private_network=True,
+    )
+
+    assert result == '{"type": "object"}'
+    assert mock_get.call_args_list[0].kwargs["headers"] == [
+        ("Authorization", "Bearer token"),
+        ("Cookie", "session=secret"),
+        ("Proxy-Authorization", "Basic secret"),
+        ("X-Trace", "1"),
+    ]
+    assert mock_get.call_args_list[1].kwargs["headers"] == [("X-Trace", "1")]
+
+
+def test_get_body_does_not_restore_sensitive_headers_after_cross_origin_redirect(mocker: MockerFixture) -> None:
+    """Once sensitive headers are dropped on a redirect chain, later hops do not restore them."""
+    same_origin_redirect = Mock()
+    same_origin_redirect.status_code = 302
+    same_origin_redirect.headers = {"location": "https://schema.example/step1.json"}
+    cross_origin_redirect = Mock()
+    cross_origin_redirect.status_code = 302
+    cross_origin_redirect.headers = {"location": "https://other.example/step2.json"}
+    return_redirect = Mock()
+    return_redirect.status_code = 302
+    return_redirect.headers = {"location": "https://schema.example/final.json"}
+    success_response = Mock()
+    success_response.status_code = 200
+    success_response.headers = {"content-type": "application/json"}
+    success_response.text = '{"type": "object"}'
+    mock_get = mocker.patch(
+        "httpx.get",
+        side_effect=[same_origin_redirect, cross_origin_redirect, return_redirect, success_response],
+    )
+    headers = [("Authorization", "Bearer token"), ("X-Trace", "1")]
+
+    result = get_body("https://schema.example/root.json", headers=headers, allow_private_network=True)
+
+    assert result == '{"type": "object"}'
+    assert [call.kwargs["headers"] for call in mock_get.call_args_list] == [
+        headers,
+        headers,
+        [("X-Trace", "1")],
+        [("X-Trace", "1")],
+    ]
+
+
+def test_get_body_keeps_headers_on_same_origin_redirect(mocker: MockerFixture) -> None:
+    """Keep headers when a redirect stays within the same origin."""
+    redirect_response = Mock()
+    redirect_response.status_code = 302
+    redirect_response.headers = {"location": "https://schema.example/next.json"}
+    success_response = Mock()
+    success_response.status_code = 200
+    success_response.headers = {"content-type": "application/json"}
+    success_response.text = '{"type": "object"}'
+    headers = [("Authorization", "Bearer token")]
+    mock_get = mocker.patch("httpx.get", side_effect=[redirect_response, success_response])
+
+    result = get_body("https://schema.example/root.json", headers=headers, allow_private_network=True)
+
+    assert result == '{"type": "object"}'
+    assert mock_get.call_args_list[1].kwargs["headers"] == headers
 
 
 @pytest.mark.parametrize("url", ["ftp://example.com/schema.json", "https:///schema.json"])

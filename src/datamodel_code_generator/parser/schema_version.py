@@ -554,8 +554,6 @@ def detect_jsonschema_version(data: dict[str, Any]) -> JsonSchemaVersion:
     # to avoid false warnings in Strict mode for features valid in both versions.
     if "$defs" in data:
         return JsonSchemaVersion.Draft202012
-    if "definitions" in data:
-        return JsonSchemaVersion.Draft7
     return JsonSchemaVersion.Draft7
 
 

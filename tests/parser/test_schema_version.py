@@ -506,6 +506,136 @@ def test_get_data_formats_openapi() -> None:
     })
 
 
+def _data_format_key_order(data_formats: dict[str, dict[str, object]]) -> dict[str, list[str]]:
+    return {data_type: list(formats) for data_type, formats in data_formats.items()}
+
+
+def test_get_data_formats_openapi_matches_jsonschema_public_mapping() -> None:
+    """Pin parity and ordering for F07 data-format table deduplication."""
+    from datamodel_code_generator.parser.jsonschema import json_schema_data_formats
+    from datamodel_code_generator.parser.schema_version import get_data_formats
+
+    schema_version_data_formats = get_data_formats(is_openapi=True)
+
+    assert schema_version_data_formats == json_schema_data_formats
+    # Dict equality ignores order. F07 must preserve json_schema_data_formats as
+    # a public importable mapping, while schema_version order is pinned separately.
+    assert _data_format_key_order(schema_version_data_formats) == snapshot({
+        "integer": ["int32", "int64", "default", "date-time", "unix-time", "unixtime"],
+        "number": [
+            "float",
+            "double",
+            "decimal",
+            "date-time",
+            "time",
+            "time-delta",
+            "default",
+            "unixtime",
+        ],
+        "string": [
+            "default",
+            "byte",
+            "date",
+            "date-time",
+            "timestamp with time zone",
+            "date-time-local",
+            "duration",
+            "time",
+            "time-local",
+            "path",
+            "email",
+            "idn-email",
+            "idn-hostname",
+            "iri",
+            "iri-reference",
+            "uuid",
+            "uuid1",
+            "uuid2",
+            "uuid3",
+            "uuid4",
+            "uuid5",
+            "uri",
+            "uri-reference",
+            "uri-template",
+            "json-pointer",
+            "relative-json-pointer",
+            "regex",
+            "hostname",
+            "ipv4",
+            "ipv4-network",
+            "ipv6",
+            "ipv6-network",
+            "decimal",
+            "integer",
+            "unixtime",
+            "ulid",
+            "binary",
+            "password",
+        ],
+        "boolean": ["default"],
+        "object": ["default"],
+        "null": ["default"],
+        "array": ["default"],
+    })
+    assert _data_format_key_order(json_schema_data_formats) == snapshot({
+        "integer": ["int32", "int64", "default", "date-time", "unix-time", "unixtime"],
+        "number": [
+            "float",
+            "double",
+            "decimal",
+            "date-time",
+            "time",
+            "time-delta",
+            "default",
+            "unixtime",
+        ],
+        "string": [
+            "default",
+            "byte",
+            "binary",
+            "date",
+            "date-time",
+            "timestamp with time zone",
+            "date-time-local",
+            "duration",
+            "time",
+            "time-local",
+            "password",
+            "path",
+            "email",
+            "idn-email",
+            "idn-hostname",
+            "iri",
+            "iri-reference",
+            "uuid",
+            "uuid1",
+            "uuid2",
+            "uuid3",
+            "uuid4",
+            "uuid5",
+            "uri",
+            "uri-reference",
+            "uri-template",
+            "json-pointer",
+            "relative-json-pointer",
+            "regex",
+            "hostname",
+            "ipv4",
+            "ipv4-network",
+            "ipv6",
+            "ipv6-network",
+            "decimal",
+            "integer",
+            "unixtime",
+            "ulid",
+        ],
+        "boolean": ["default"],
+        "object": ["default"],
+        "null": ["default"],
+        "array": ["default"],
+    })
+
+
 def test_jsonschema_parser_schema_features_detection() -> None:
     """Test that JsonSchemaParser detects schema version from $schema."""
     from datamodel_code_generator.parser.jsonschema import JsonSchemaParser

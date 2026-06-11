@@ -1,6 +1,6 @@
 # LLM Integration
 
-<!-- related-cli-options: --generate-prompt -->
+<!-- related-cli-options: --generate-prompt, --output-format, --output-format-json-schema -->
 
 The `--generate-prompt` option generates a formatted prompt that you can use
 to consult Large Language Models (LLMs) about datamodel-code-generator CLI options.
@@ -59,6 +59,35 @@ A useful answer should keep the command runnable and explain tradeoffs:
 - Verification command, such as `datamodel-codegen ... --check` or a focused
   generation command against a fixture schema
 
+## Structured Output for Tools
+
+Use `--output-format json` when an LLM agent or tool should consume structured option
+metadata instead of Markdown:
+
+```bash
+datamodel-codegen --generate-prompt "How do I generate strict Pydantic v2 models?" --output-format json
+```
+
+The JSON payload includes the user question, current options, options grouped by
+category, full option metadata from argparse, and help text without ANSI color
+codes.
+
+Use `--output-format-json-schema` when a tool or agent needs a JSON Schema before
+it consumes command output:
+
+```bash
+datamodel-codegen --output-format-json-schema generate-prompt
+datamodel-codegen --output-format-json-schema generation
+datamodel-codegen --output-format-json-schema structured-output
+```
+
+The schema targets are scoped:
+
+- `generate-prompt`: schema for `--generate-prompt --output-format json`
+- `generation`: schema for normal generation with `--output-format json`
+- `structured-output`: tagged union schema for all structured command outputs,
+  including prompt, generation, command metadata, and check result payloads
+
 ## CLI LLM Tools
 
 Pipe the generated prompt directly to CLI-based LLM tools:
@@ -79,6 +108,12 @@ Use `exec` subcommand for non-interactive mode:
 
 ```bash
 datamodel-codegen --generate-prompt "How to handle nullable fields?" | codex exec
+```
+
+For agents that can inspect structured input, prefer JSON:
+
+```bash
+datamodel-codegen --generate-prompt "How to handle nullable fields?" --output-format json | codex exec
 ```
 
 ### Other CLI Tools
@@ -136,6 +171,14 @@ Generate a prompt without a specific question:
 
 ```bash
 datamodel-codegen --generate-prompt
+```
+
+### JSON Output
+
+Generate structured option metadata for automated tools:
+
+```bash
+datamodel-codegen --generate-prompt "Find the minimal strict-model options." --output-format json
 ```
 
 ### With a Question

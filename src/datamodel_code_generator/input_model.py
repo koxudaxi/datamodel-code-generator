@@ -2,14 +2,42 @@
 
 from __future__ import annotations
 
+import importlib.util
+import sys
+import types
+from collections import ChainMap, Counter, OrderedDict, defaultdict, deque
+from collections.abc import (
+    Callable as ABCCallable,
+)
+from collections.abc import (
+    Mapping as ABCMapping,
+)
+from collections.abc import (
+    MutableMapping as ABCMutableMapping,
+)
+from collections.abc import (
+    MutableSequence as ABCMutableSequence,
+)
+from collections.abc import (
+    MutableSet as ABCMutableSet,
+)
+from collections.abc import (
+    Sequence as ABCSequence,
+)
+from collections.abc import (
+    Set as AbstractSet,
+)
+from dataclasses import is_dataclass
+from enum import Enum as PyEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, cast, get_args, get_origin, get_type_hints
 
 from pydantic import BaseModel
 
+from datamodel_code_generator.enums import InputModelRefStrategy
+
 if TYPE_CHECKING:
     from datamodel_code_generator import DataModelType, InputFileType
-    from datamodel_code_generator.arguments import InputModelRefStrategy
 
 
 class Error(Exception):
@@ -33,9 +61,6 @@ _TYPE_FAMILY_OTHER = "other"
 
 def _serialize_python_type_full(tp: type) -> str:  # noqa: PLR0911
     """Serialize ANY Python type to its string representation."""
-    import types  # noqa: PLC0415
-    from typing import Union, get_args, get_origin  # noqa: PLC0415
-
     if tp is type(None):  # pragma: no cover
         return "None"
 
@@ -63,8 +88,6 @@ def _serialize_python_type_full(tp: type) -> str:  # noqa: PLR0911
         parts = [_serialize_python_type_full(arg) for arg in args]
         return " | ".join(parts)
 
-    from typing import Annotated  # noqa: PLC0415
-
     if origin is Annotated:
         if args:
             return _serialize_python_type_full(args[0])
@@ -87,8 +110,6 @@ def _is_callable_origin(origin: type | None) -> bool:
     """Check if origin is Callable."""
     if origin is None:  # pragma: no cover
         return False
-    from collections.abc import Callable as ABCCallable  # noqa: PLC0415
-
     if origin is ABCCallable:
         return True
     origin_str = str(origin)
@@ -162,8 +183,6 @@ def _get_input_model_json_schema_class() -> type:
 
 def _is_type_origin(annotation: type) -> bool:
     """Check if annotation is Type[X]."""
-    from typing import get_origin  # noqa: PLC0415
-
     origin = get_origin(annotation)
     return origin is type
 
@@ -189,8 +208,6 @@ def _process_unserializable_property(prop: dict[str, Any], annotation: type) -> 
 
 def _set_python_type_for_unserializable(item: dict[str, Any], annotation: type) -> None:
     """Set x-python-type and clean up markers."""
-    from typing import Union, get_args, get_origin  # noqa: PLC0415
-
     origin = get_origin(annotation)
     actual_type = annotation
 
@@ -237,14 +254,6 @@ def _add_python_type_for_unserializable(
 
 def _init_preserved_type_origins() -> dict[type, str]:
     """Initialize preserved type origins mapping (lazy initialization)."""
-    from collections import ChainMap, Counter, OrderedDict, defaultdict, deque  # noqa: PLC0415
-    from collections.abc import Mapping as ABCMapping  # noqa: PLC0415
-    from collections.abc import MutableMapping as ABCMutableMapping  # noqa: PLC0415
-    from collections.abc import MutableSequence as ABCMutableSequence  # noqa: PLC0415
-    from collections.abc import MutableSet as ABCMutableSet  # noqa: PLC0415
-    from collections.abc import Sequence as ABCSequence  # noqa: PLC0415
-    from collections.abc import Set as AbstractSet  # noqa: PLC0415
-
     return {
         set: "set",
         frozenset: "frozenset",
@@ -272,14 +281,9 @@ def _get_preserved_type_origins() -> dict[type, str]:
 
 def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
     """Serialize Python type to a string for x-python-type field."""
-    import types  # noqa: PLC0415
-    from typing import get_args, get_origin  # noqa: PLC0415
-
     origin: type | None = get_origin(tp)
     args = get_args(tp)
     preserved_origins = _get_preserved_type_origins()
-
-    from typing import Union  # noqa: PLC0415
 
     is_union = origin is Union or (hasattr(types, "UnionType") and origin is types.UnionType)
     if is_union:
@@ -288,8 +292,6 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
             if any(n is not None for n in nested):
                 return " | ".join(n or _full_type_name(a) for n, a in zip(nested, args, strict=False))
         return None  # pragma: no cover
-
-    from typing import Annotated  # noqa: PLC0415
 
     if origin is Annotated:
         if args:
@@ -319,8 +321,6 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
 
 def _simple_type_name(tp: type) -> str:
     """Get a simple string representation of a type."""
-    from typing import get_origin  # noqa: PLC0415
-
     if tp is type(None):
         return "None"
     if get_origin(tp) is not None:
@@ -336,9 +336,6 @@ def _full_type_name(tp: type) -> str:  # noqa: PLR0911
     For generic types, keeps outer type as short name but FQN-izes the type arguments.
     For non-generic types, returns FQN for non-builtin types.
     """
-    import types  # noqa: PLC0415
-    from typing import ForwardRef, Union, get_args, get_origin  # noqa: PLC0415
-
     if tp is type(None):
         return "None"
 
@@ -405,10 +402,6 @@ def _collect_nested_models(model: type, visited: set[type] | None = None) -> dic
 
 def _find_models_in_type(tp: type, result: dict[str, type], visited: set[type]) -> None:
     """Recursively find BaseModel, Enum, dataclass, TypedDict, and msgspec in a type annotation."""
-    from dataclasses import is_dataclass  # noqa: PLC0415
-    from enum import Enum as PyEnum  # noqa: PLC0415
-    from typing import get_args  # noqa: PLC0415
-
     if isinstance(tp, type) and tp not in visited:
         if issubclass(tp, BaseModel):
             result[tp.__name__] = tp
@@ -427,8 +420,6 @@ def _find_models_in_type(tp: type, result: dict[str, type], visited: set[type]) 
 
 def _get_type_hints_safe(obj: type) -> dict[str, Any]:
     """Safely get type hints from a class, handling forward references."""
-    from typing import get_type_hints  # noqa: PLC0415
-
     try:
         return get_type_hints(obj)
     except Exception:  # noqa: BLE001  # pragma: no cover
@@ -485,9 +476,6 @@ def _add_python_type_info_generic(schema: dict[str, Any], obj: type) -> dict[str
 
 def _get_type_family(tp: type) -> str:  # noqa: PLR0911
     """Determine the type family of a Python type."""
-    from dataclasses import is_dataclass  # noqa: PLC0415
-    from enum import Enum as PyEnum  # noqa: PLC0415
-
     if isinstance(tp, type) and issubclass(tp, PyEnum):
         return _TYPE_FAMILY_ENUM
 
@@ -542,8 +530,6 @@ def _filter_defs_by_strategy(
     strategy: InputModelRefStrategy,
 ) -> dict[str, Any]:
     """Filter $defs based on ref strategy, marking reused types with x-python-import."""
-    from datamodel_code_generator.arguments import InputModelRefStrategy  # noqa: PLC0415
-
     if strategy == InputModelRefStrategy.RegenerateAll:  # pragma: no cover
         return schema
 
@@ -694,14 +680,10 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
     Returns:
         Merged schema dict with anyOf referencing all root models
     """
-    import importlib.util  # noqa: PLC0415
-    import sys  # noqa: PLC0415
-
     from datamodel_code_generator import (  # noqa: PLC0415
         DataModelType,
         InputFileType,
     )
-    from datamodel_code_generator.arguments import InputModelRefStrategy  # noqa: PLC0415
 
     if output_model_type is None:
         output_model_type = DataModelType.PydanticV2BaseModel
@@ -836,11 +818,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
     Raises:
         Error: If format invalid, object cannot be loaded, or input_file_type invalid
     """
-    import importlib.util  # noqa: PLC0415
-    import sys  # noqa: PLC0415
-
     from datamodel_code_generator import InputFileType  # noqa: PLC0415
-    from datamodel_code_generator.arguments import InputModelRefStrategy  # noqa: PLC0415
 
     modname, sep, qualname = input_model.rpartition(":")
     if not sep or not modname:
@@ -915,8 +893,6 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
             schema = _filter_defs_by_strategy(schema, nested_models, output_model_type, ref_strategy)
 
         return schema
-
-    from dataclasses import is_dataclass  # noqa: PLC0415
 
     is_typed_dict = isinstance(obj, type) and hasattr(obj, "__required_keys__")
     if is_dataclass(obj) or is_typed_dict:
