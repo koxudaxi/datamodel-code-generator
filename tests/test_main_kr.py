@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from argparse import Namespace
 from pathlib import Path
 
 import black
+import jsonschema
 import pydantic
 import pytest
 from packaging import version
@@ -28,6 +30,21 @@ DATA_PATH: Path = Path(__file__).parent / "data"
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
 JSON_SCHEMA_DATA_PATH: Path = DATA_PATH / "jsonschema"
 EXPECTED_MAIN_KR_PATH = DATA_PATH / "expected" / "main_kr"
+GENERATE_PROMPT_JSON_ARGS = [
+    "--input",
+    "tests/data/jsonschema/person.json",
+    "--output-model-type",
+    "pydantic_v2.BaseModel",
+    "--no-use-annotated",
+    "--strict-types",
+    "str",
+    "int",
+    "--generate-prompt",
+    "Which strict Pydantic v2 options should I use?",
+    "--output-format",
+    "json",
+]
+GENERATE_PROMPT_JSON_SCHEMA_ARGS = ["--output-format-json-schema", "generate-prompt"]
 
 assert_file_content = create_assert_file_content(EXPECTED_MAIN_KR_PATH)
 
@@ -2145,6 +2162,46 @@ def test_generate_prompt_with_list_options(capsys: pytest.CaptureFixture[str]) -
         expected_exit=Exit.OK,
         capsys=capsys,
         expected_stdout_path=EXPECTED_MAIN_KR_PATH / "generate_prompt" / "with_list_options.txt",
+    )
+
+
+def test_generate_prompt_json(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-prompt --output-format json emits structured option metadata."""
+    run_main_with_args(
+        GENERATE_PROMPT_JSON_ARGS,
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_KR_PATH / "generate_prompt" / "json_output.txt",
+        assert_no_stderr=True,
+    )
+
+
+def test_output_format_json_schema_generate_prompt(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --output-format-json-schema generate-prompt emits the prompt JSON Schema."""
+    run_main_with_args(
+        GENERATE_PROMPT_JSON_SCHEMA_ARGS,
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_KR_PATH / "generate_prompt" / "json_schema.txt",
+        assert_no_stderr=True,
+    )
+
+
+def test_output_format_json_schema_validates_generate_prompt_json() -> None:
+    """Test prompt JSON output conforms to its emitted JSON Schema."""
+    schema = json.loads((EXPECTED_MAIN_KR_PATH / "generate_prompt" / "json_schema.txt").read_text())
+    payload = json.loads((EXPECTED_MAIN_KR_PATH / "generate_prompt" / "json_output.txt").read_text())
+
+    jsonschema.validate(instance=payload, schema=schema)
+
+
+def test_output_format_json_requires_generate_prompt(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --output-format json is only accepted for --generate-prompt."""
+    run_main_with_args(
+        ["--output-format", "json"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr="Error: --output-format json is currently supported only with --generate-prompt\n",
     )
 
 

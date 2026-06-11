@@ -557,6 +557,12 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --list-experimental [{table,json,markdown}]
                         List registered experimental features, then exit.
   --no-color            disable colorized output
+  --output-format {text,json}
+                        Format for command output (default: text). Use json
+                        for structured --generate-prompt output.
+  --output-format-json-schema {generate-prompt}
+                        Output JSON Schema for the selected structured output
+                        format and exit.
   --profile PROFILE     Use a named profile from pyproject.toml
                         [tool.datamodel-codegen.profiles.<name>]
   --version             show version
