@@ -5307,7 +5307,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             raw_obj = make_converter().convert(source)
             source.raw_data = raw_obj
             if source.path.parts:
-                self.remote_object_cache[str(self.base_path / source.path)] = raw_obj
+                self.remote_object_cache[str((self.base_path / source.path).resolve())] = raw_obj
             self.raw_obj = raw_obj
             obj_name, preserve_root_class_name = self._resolve_root_model_name(raw_obj)
             self._parse_file(
