@@ -92,10 +92,10 @@ def test_json_schema_suite_target_drafts_read_env(monkeypatch: pytest.MonkeyPatc
     assert _target_drafts_from_env() == ("draft4", "draft6")
 
 
-@pytest.mark.parametrize("raw_drafts", ["draft7,draft999", ",", " "])
+@pytest.mark.parametrize("raw_drafts", ["draft7,draft999", ",", " ", "draft7,draft7"])
 def test_json_schema_suite_target_drafts_reject_invalid_drafts(raw_drafts: str) -> None:
     """Draft selection must fail loudly for unsupported names."""
-    with pytest.raises(ValueError, match=r"draft999|at least one"):
+    with pytest.raises(ValueError, match=r"draft999|at least one|Duplicate"):
         _target_drafts_from_env(raw_drafts)
 
 

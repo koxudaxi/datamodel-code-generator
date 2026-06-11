@@ -128,6 +128,9 @@ def _target_drafts_from_env(raw_drafts: str | None = None) -> tuple[str, ...]:
     if unknown_drafts := sorted(set(drafts) - set(JSON_SCHEMA_TEST_SUITE_DIALECTS)):
         msg = f"Unsupported JSON-Schema-Test-Suite drafts: {', '.join(unknown_drafts)}"
         raise ValueError(msg)
+    if duplicate_drafts := sorted(draft for draft, count in Counter(drafts).items() if count > 1):
+        msg = f"Duplicate JSON-Schema-Test-Suite drafts: {', '.join(duplicate_drafts)}"
+        raise ValueError(msg)
     return drafts
 
 
