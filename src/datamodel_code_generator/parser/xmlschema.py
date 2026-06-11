@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import codecs
 import contextlib
-import copy
 import datetime as datetime_module
 import io
 import re
@@ -25,7 +24,8 @@ from datamodel_code_generator import Error, YamlValue
 from datamodel_code_generator.enums import VersionMode, XMLSchemaVersion
 from datamodel_code_generator.format import DatetimeClassType
 from datamodel_code_generator.imports import Import
-from datamodel_code_generator.parser._math_imports import add_math_imports_for_non_finite_literals
+from datamodel_code_generator.parser._convert_common import _copy_schema, _namespace_name, _unique_name
+from datamodel_code_generator.parser._math_imports import apply_math_imports_to_parse_result
 from datamodel_code_generator.parser.base import Source, title_to_class_name
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
@@ -194,10 +194,6 @@ def _documentation(element: ET.Element) -> str | None:
             if text:
                 docs.append(text)
     return "\n\n".join(docs) or None
-
-
-def _copy_schema(schema: JsonSchema) -> JsonSchema:
-    return copy.deepcopy(schema)
 
 
 def _to_class_title(name: str) -> str:
@@ -728,14 +724,10 @@ class _XMLSchemaConverter:
                 if len(sorted_keys) == 1:
                     name = local
                 else:
-                    namespace_name = self._namespace_name(key[1]) if len(namespaces) > 1 else ""
+                    namespace_name = _namespace_name(key[1], _to_class_title) if len(namespaces) > 1 else ""
                     kind_name = _to_class_title(key[0]) if same_qname_count > 1 else ""
                     name = f"{namespace_name}{_to_class_title(local)}{kind_name}"
-                candidate = name
-                suffix = 2
-                while candidate in used_names:
-                    candidate = f"{name}{suffix}"
-                    suffix += 1
+                candidate = _unique_name(name, used_names)
                 self._definition_names[key] = candidate
                 used_names.add(candidate)
 
@@ -1042,17 +1034,30 @@ class _XMLSchemaConverter:
     def _is_numeric_schema(schema: JsonSchema) -> bool:
         return schema.get("type") in {"integer", "number"}
 
+    def _new_object_schema(
+        self,
+        owner: ET.Element,
+        *,
+        mixed_owners: tuple[ET.Element, ...] | None = None,
+    ) -> JsonSchema:
+        schema: JsonSchema = {"type": "object", "properties": {}}
+        self._apply_open_content(owner, schema)
+        self._apply_model_group(owner, schema)
+        self._apply_attributes(owner, schema)
+        if mixed_owners:
+            mixed_owner, *additional_owners = mixed_owners
+            self._apply_mixed_content(mixed_owner, schema, *additional_owners)
+        else:
+            self._apply_mixed_content(owner, schema)
+        return schema
+
     def _convert_complex_type(self, complex_type: ET.Element) -> JsonSchema:
         if (complex_content := _first_xsd_child(complex_type, "complexContent")) is not None:
             return self._convert_complex_content(complex_content, complex_type)
         if (simple_content := _first_xsd_child(complex_type, "simpleContent")) is not None:
             return self._convert_simple_content(simple_content, complex_type)
 
-        schema: JsonSchema = {"type": "object", "properties": {}}
-        self._apply_open_content(complex_type, schema)
-        self._apply_model_group(complex_type, schema)
-        self._apply_attributes(complex_type, schema)
-        self._apply_mixed_content(complex_type, schema)
+        schema = self._new_object_schema(complex_type)
         if documentation := _documentation(complex_type):
             schema["description"] = documentation
         return schema
@@ -1062,11 +1067,7 @@ class _XMLSchemaConverter:
         if child is None:
             return self._convert_complex_type_without_content(owner)
 
-        schema: JsonSchema = {"type": "object", "properties": {}}
-        self._apply_open_content(child, schema)
-        self._apply_model_group(child, schema)
-        self._apply_attributes(child, schema)
-        self._apply_mixed_content(complex_content, schema, owner)
+        schema = self._new_object_schema(child, mixed_owners=(complex_content, owner))
         if _local_name(child.tag) == "extension" and (base := child.get("base")):
             owner_key = self._key_for_declaration(self.complex_types, owner)
             base_key = self._resolve_key(base, self.simple_types, self.complex_types, element=child)
@@ -1079,12 +1080,7 @@ class _XMLSchemaConverter:
         return schema
 
     def _convert_complex_type_without_content(self, complex_type: ET.Element) -> JsonSchema:
-        schema: JsonSchema = {"type": "object", "properties": {}}
-        self._apply_open_content(complex_type, schema)
-        self._apply_model_group(complex_type, schema)
-        self._apply_attributes(complex_type, schema)
-        self._apply_mixed_content(complex_type, schema)
-        return schema
+        return self._new_object_schema(complex_type)
 
     def _apply_open_content(self, owner: ET.Element, schema: JsonSchema) -> None:
         open_content = _first_xsd_child(owner, "openContent")
@@ -1492,13 +1488,6 @@ class _XMLSchemaConverter:
         return self._element_namespaces.get(id(element), self.namespaces)
 
     @staticmethod
-    def _namespace_name(namespace: str | None) -> str:
-        if not namespace:
-            return "NoNamespace"
-        parts = re.findall(r"[A-Za-z0-9]+", namespace)
-        return "".join(_to_class_title(part) for part in parts) or "Namespace"
-
-    @staticmethod
     def _sort_key(key: QNameKey) -> tuple[str, str]:
         namespace, local = key
         return namespace or "", local
@@ -1538,12 +1527,7 @@ class XMLSchemaParser(JsonSchemaParser):
 
     def parse(self, *args: Any, **kwargs: Any) -> str | dict[tuple[str, ...], Any]:
         """Parse XML Schema and add imports for non-finite float literals."""
-        result = super().parse(*args, **kwargs)
-        if isinstance(result, str):
-            return add_math_imports_for_non_finite_literals(result)
-        for item in result.values():
-            item.body = add_math_imports_for_non_finite_literals(item.body)
-        return result
+        return apply_math_imports_to_parse_result(super().parse(*args, **kwargs))
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -1568,30 +1552,15 @@ class XMLSchemaParser(JsonSchemaParser):
     def parse_raw(self) -> None:
         """Parse all XML Schema input sources into data models."""
         config = cast("XMLSchemaParserConfig", self.config)
-        for source, path_parts in self._get_context_source_path_parts():
-            converter = _XMLSchemaConverter(
+        self._parse_converted_sources(
+            lambda: _XMLSchemaConverter(
                 base_path=self.base_path,
                 encoding=self.encoding,
                 xmlschema_version=config.xmlschema_version,
                 schema_version_mode=config.schema_version_mode,
                 use_xmlschema_datetime_default=self.use_xmlschema_datetime_default,
             )
-            raw_obj = converter.convert(source)
-            source.raw_data = raw_obj
-            if source.path.parts:
-                self.remote_object_cache[str(self.base_path / source.path)] = raw_obj
-            self.raw_obj = raw_obj
-            title = str(raw_obj.get("title") or "Model")
-            obj_name = self.class_name or title
-            self._parse_file(
-                raw_obj,
-                obj_name,
-                path_parts,
-                preserve_root_class_name=self._should_preserve_explicit_root_class_name(obj_name),
-            )
-
-        self._resolve_unparsed_json_pointer()
-        self._generate_forced_base_models()
+        )
         self._append_python_expression_imports()
 
     def _append_python_expression_imports(self) -> None:

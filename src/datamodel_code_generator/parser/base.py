@@ -78,6 +78,7 @@ from datamodel_code_generator.model.base import (
 )
 from datamodel_code_generator.model.enum import Enum, Member, evaluate_member_value
 from datamodel_code_generator.model.imports import IMPORT_TYPED_DICT, IMPORT_TYPED_DICT_BACKPORT
+from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticV2DataClass
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser._graph import stable_toposort
@@ -923,6 +924,32 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             }
         )
         return config_class.model_validate(options)  # type: ignore[return-value]
+
+    def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
+        """Create data model instance with dataclass_arguments support for DataClass."""
+        # Add class decorators if not already provided
+        if "decorators" not in kwargs and self.class_decorators:
+            kwargs["decorators"] = list(self.class_decorators)
+        data_model_class = model_type or self.data_model_type
+        if issubclass(data_model_class, (dataclass_model.DataClass, PydanticV2DataClass)):
+            # Use dataclass_arguments from kwargs, or fall back to self.dataclass_arguments
+            # If both are None, construct from legacy frozen_dataclasses/keyword_only flags
+            dataclass_arguments = kwargs.pop("dataclass_arguments", None)
+            if dataclass_arguments is None:
+                dataclass_arguments = self.dataclass_arguments
+            if dataclass_arguments is None:
+                # Construct from legacy flags for library API compatibility
+                dataclass_arguments = {}
+                if self.frozen_dataclasses:
+                    dataclass_arguments["frozen"] = True
+                if self.keyword_only:
+                    dataclass_arguments["kw_only"] = True
+            kwargs["dataclass_arguments"] = dataclass_arguments
+            kwargs.pop("frozen", None)
+            kwargs.pop("keyword_only", None)
+        else:
+            kwargs.pop("dataclass_arguments", None)
+        return data_model_class(**kwargs)
 
     def __init__(  # noqa: PLR0912, PLR0915
         self,

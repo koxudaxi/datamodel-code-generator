@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from pydantic import Field, StrictStr, ValidationError
 from typing_extensions import Unpack
 
-from datamodel_code_generator import Error, YamlValue, load_data, snooper_to_methods
+from datamodel_code_generator import Error, YamlValue, snooper_to_methods
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.enums import AsyncAPIVersion
 from datamodel_code_generator.parser.avro import convert_avro_schema_data
@@ -970,9 +970,7 @@ class AsyncAPIParser(OpenAPIParser):
             if self.validation:
                 warn_deprecated("cli.validation", stacklevel=2)
 
-            specification: dict[str, Any] = (
-                dict(source.raw_data) if source.raw_data is not None else load_data(source.text)
-            )
+            specification = self._load_source_dict(source)
             self.raw_obj = specification
             context_sources[tuple(path_parts)] = self._current_asyncapi_context()
             self._collect_discriminator_schemas()

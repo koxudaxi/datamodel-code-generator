@@ -25,7 +25,6 @@ from datamodel_code_generator import (
     Error,
     OpenAPIScope,
     YamlValue,
-    load_data,
     snooper_to_methods,
 )
 from datamodel_code_generator.deprecations import warn_deprecated
@@ -981,9 +980,7 @@ class OpenAPIParser(JsonSchemaParser):
                             stacklevel=2,
                         )
 
-            specification: dict[str, Any] = (
-                dict(source.raw_data) if source.raw_data is not None else load_data(source.text)
-            )
+            specification = self._load_source_dict(source)
             self.raw_obj = specification
             with self.openapi_self_context(specification):
                 self._parse_specification(specification, path_parts)

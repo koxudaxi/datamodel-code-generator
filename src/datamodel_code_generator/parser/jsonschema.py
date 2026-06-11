@@ -49,13 +49,11 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED, get_module_name, sanitize_module_name
-from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.enum import (
     SPECIALIZED_ENUM_TYPE_MATCH,
     Enum,
     StrEnum,
 )
-from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticV2DataClass
 from datamodel_code_generator.model.typed_dict import TypedDict as TypedDictModel
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import (
@@ -3133,32 +3131,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Parse oneOf schema into a list of data types."""
         return self.parse_combined_schema(name, obj, path, "oneOf")
 
-    def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
-        """Create data model instance with dataclass_arguments support for DataClass."""
-        # Add class decorators if not already provided
-        if "decorators" not in kwargs and self.class_decorators:
-            kwargs["decorators"] = list(self.class_decorators)
-        data_model_class = model_type or self.data_model_type
-        if issubclass(data_model_class, (DataClass, PydanticV2DataClass)):
-            # Use dataclass_arguments from kwargs, or fall back to self.dataclass_arguments
-            # If both are None, construct from legacy frozen_dataclasses/keyword_only flags
-            dataclass_arguments = kwargs.pop("dataclass_arguments", None)
-            if dataclass_arguments is None:
-                dataclass_arguments = self.dataclass_arguments
-            if dataclass_arguments is None:
-                # Construct from legacy flags for library API compatibility
-                dataclass_arguments = {}
-                if self.frozen_dataclasses:
-                    dataclass_arguments["frozen"] = True
-                if self.keyword_only:
-                    dataclass_arguments["kw_only"] = True
-            kwargs["dataclass_arguments"] = dataclass_arguments
-            kwargs.pop("frozen", None)
-            kwargs.pop("keyword_only", None)
-        else:
-            kwargs.pop("dataclass_arguments", None)
-        return data_model_class(**kwargs)
-
     def _parse_object_common_part(  # noqa: PLR0912, PLR0913, PLR0915
         self,
         name: str,
@@ -5297,6 +5269,28 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             ):
                 yield source, path_parts
 
+    def _load_source_dict(self, source: Source) -> dict[str, Any]:  # noqa: PLR6301
+        return dict(source.raw_data) if source.raw_data is not None else load_data(source.text)
+
+    def _parse_converted_sources(self, make_converter: Callable[[], Any]) -> None:
+        for source, path_parts in self._get_context_source_path_parts():
+            raw_obj = make_converter().convert(source)
+            source.raw_data = raw_obj
+            if source.path.parts:
+                self.remote_object_cache[str(self.base_path / source.path)] = raw_obj
+            self.raw_obj = raw_obj
+            title = str(raw_obj.get("title") or "Model")
+            obj_name = self.class_name or title
+            self._parse_file(
+                raw_obj,
+                obj_name,
+                path_parts,
+                preserve_root_class_name=self._should_preserve_explicit_root_class_name(obj_name),
+            )
+
+        self._resolve_unparsed_json_pointer()
+        self._generate_forced_base_models()
+
     def parse_raw(self) -> None:
         """Parse all raw input sources into data models."""
         for source, path_parts in self._get_context_source_path_parts():
@@ -5353,7 +5347,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 for reserved_ref in sorted(reserved_refs):
                     if self.model_resolver.add_ref(reserved_ref, resolved=True).loaded:
                         continue
-                    self.raw_obj = dict(source.raw_data) if source.raw_data is not None else load_data(source.text)
+                    self.raw_obj = self._load_source_dict(source)
                     self.parse_json_pointer(self.raw_obj, reserved_ref, path_parts)
 
         if model_count != len(self.results):
