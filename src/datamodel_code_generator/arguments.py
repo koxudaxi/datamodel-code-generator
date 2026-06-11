@@ -1221,13 +1221,13 @@ general_options.add_argument(
     "--output-format",
     choices=["text", "json"],
     default=None,
-    help=("Format for command output (default: text). Use json for structured --generate-prompt output."),
+    help="Format for command output (default: text). Use json for structured output when supported.",
 )
 general_options.add_argument(
     "--output-format-json-schema",
-    choices=["generate-prompt"],
+    choices=["generate-prompt", "generation", "structured-output"],
     default=None,
-    metavar="{generate-prompt}",
+    metavar="{generate-prompt,generation,structured-output}",
     help="Output JSON Schema for the selected structured output format and exit.",
 )
 general_options.add_argument(

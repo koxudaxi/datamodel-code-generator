@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from argparse import Namespace
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import black
 import jsonschema
@@ -13,11 +13,18 @@ import pytest
 from packaging import version
 
 from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
-from datamodel_code_generator.__main__ import Exit
+from datamodel_code_generator.__main__ import (
+    Exit,
+    _generated_files_from_result,
+    _generation_output_json,
+    _json_ready,
+    generate_pyproject_config,
+)
 from datamodel_code_generator.arguments import arg_parser
 from tests.conftest import (
     HttpxGetMockFactory,
     MockHttpxResponse,
+    assert_directory_content,
     assert_error_message,
     assert_httpx_get_kwargs,
     assert_output,
@@ -35,10 +42,9 @@ from tests.main.conftest import (
     run_main_with_args,
 )
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
 EXPECTED_MAIN_KR_PATH = DATA_PATH / "expected" / "main_kr"
+EXPECTED_OUTPUT_FORMAT_JSON_PATH = EXPECTED_MAIN_KR_PATH / "output_format_json"
+EXPECTED_EMPTY_OUTPUT_PATH = DATA_PATH / "expected" / "__init__.py"
 GENERATE_PROMPT_JSON_ARGS = [
     "--input",
     "tests/data/jsonschema/person.json",
@@ -56,6 +62,20 @@ GENERATE_PROMPT_JSON_ARGS = [
 GENERATE_PROMPT_JSON_SCHEMA_ARGS = ["--output-format-json-schema", "generate-prompt"]
 
 assert_file_content = create_assert_file_content(EXPECTED_MAIN_KR_PATH)
+
+
+OUTPUT_FILE_PLACEHOLDER = "<OUTPUT_FILE>"
+OUTPUT_DIR_PLACEHOLDER = "<OUTPUT_DIR>"
+
+
+def _normalize_generation_json_output_path(output: str, output_path: Path, placeholder: str) -> str:
+    payload = json.loads(output)
+    if payload.get("output") == output_path.as_posix():
+        payload["output"] = placeholder
+    for file_payload in payload["files"]:
+        if file_payload["path"] == output_path.as_posix():
+            file_payload["path"] = placeholder
+    return f"{json.dumps(payload, indent=2, ensure_ascii=False)}\n"
 
 
 @pytest.fixture(autouse=True)
@@ -2201,14 +2221,479 @@ def test_output_format_json_schema_validates_generate_prompt_json() -> None:
     jsonschema.validate(instance=payload, schema=schema)
 
 
-def test_output_format_json_requires_generate_prompt(capsys: pytest.CaptureFixture[str]) -> None:
-    """Test --output-format json is only accepted for --generate-prompt."""
+def test_output_format_json_schema_generation(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --output-format-json-schema generation emits the generation JSON Schema."""
     run_main_with_args(
-        ["--output-format", "json"],
-        expected_exit=Exit.ERROR,
+        [
+            "--output-format-json-schema",
+            "generation",
+        ],
+        expected_exit=Exit.OK,
         capsys=capsys,
-        expected_stderr="Error: --output-format json is currently supported only with --generate-prompt\n",
+        expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_schema.txt",
+        assert_no_stderr=True,
     )
+
+
+def test_output_format_json_schema_structured_output(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --output-format-json-schema structured-output emits the JSON Schema for all structured outputs."""
+    run_main_with_args(
+        [
+            "--output-format-json-schema",
+            "structured-output",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "structured_output_schema.txt",
+        assert_no_stderr=True,
+    )
+
+
+def test_output_format_json_schema_validates_generation_json() -> None:
+    """Test generation JSON output conforms to its emitted JSON Schema."""
+    schema = json.loads((EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_schema.txt").read_text())
+    payload = json.loads((EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_stdout.txt").read_text())
+
+    jsonschema.validate(instance=payload, schema=schema)
+
+
+def test_output_format_json_json_ready_values() -> None:
+    """Test JSON output normalization handles CLI values used in configs."""
+    payload = _json_ready({
+        "exit": Exit.OK,
+        "path": Path("schema/person.json"),
+        "items": [Exit.ERROR, Path("model/output.py")],
+    })
+    assert_output(
+        f"{json.dumps(payload, indent=2, ensure_ascii=False)}\n",
+        EXPECTED_OUTPUT_FORMAT_JSON_PATH / "json_ready_values.txt",
+    )
+
+
+def test_output_format_json_generation_mapping_payload() -> None:
+    """Test mapping generation results become per-module JSON files."""
+    output = _generation_output_json(
+        _generated_files_from_result({
+            ("models", "user.py"): "class User:\n    pass\n",
+        })
+    )
+    assert_output(f"{output}\n", EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_mapping_payload.txt")
+
+
+def test_output_format_json_normalizes_multiple_generation_output_paths(output_file: Path) -> None:
+    """Test generated output path normalization only replaces matching file paths."""
+    disk_output = json.dumps({
+        "output": output_file.as_posix(),
+        "files": [
+            {"path": output_file.as_posix(), "content": "generated\n"},
+            {"path": "pkg/model.py", "content": "keep\n"},
+        ],
+    })
+    assert_output(
+        _normalize_generation_json_output_path(disk_output, output_file, OUTPUT_FILE_PLACEHOLDER),
+        EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_output_path_normalized.txt",
+    )
+    stdout_output = json.dumps({
+        "output": None,
+        "files": [
+            {"path": output_file.as_posix(), "content": "generated\n"},
+            {"path": "pkg/model.py", "content": "keep\n"},
+        ],
+    })
+    assert_output(
+        _normalize_generation_json_output_path(stdout_output, output_file, OUTPUT_FILE_PLACEHOLDER),
+        EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_stdout_path_normalized.txt",
+    )
+
+
+@pytest.mark.parametrize(
+    "payload_name",
+    [
+        "generation_stdout.txt",
+        "generation_output_file.txt",
+        "generation_output_directory.txt",
+        "pyproject_config.txt",
+        "cli_command.txt",
+        "list_deprecations.txt",
+        "list_experimental.txt",
+        "check_success.txt",
+        "check_missing_output.txt",
+        "check_output_file_difference_json.txt",
+        "check_output_directory_differences_json.txt",
+    ],
+)
+def test_output_format_json_schema_validates_structured_json(payload_name: str) -> None:
+    """Test structured JSON outputs conform to their emitted JSON Schema."""
+    schema = json.loads((EXPECTED_OUTPUT_FORMAT_JSON_PATH / "structured_output_schema.txt").read_text())
+    payload = json.loads((EXPECTED_OUTPUT_FORMAT_JSON_PATH / payload_name).read_text())
+
+    jsonschema.validate(instance=payload, schema=schema)
+
+
+def test_output_format_json_schema_validates_prompt_json_as_structured_output() -> None:
+    """Test prompt JSON output also conforms to the structured-output JSON Schema."""
+    schema = json.loads((EXPECTED_OUTPUT_FORMAT_JSON_PATH / "structured_output_schema.txt").read_text())
+    payload = json.loads((EXPECTED_MAIN_KR_PATH / "generate_prompt" / "json_output.txt").read_text())
+
+    jsonschema.validate(instance=payload, schema=schema)
+
+
+def test_output_format_json_generation_stdout(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test normal generation can emit generated content as JSON."""
+    run_main_with_args(
+        [
+            "--input",
+            str(OPEN_API_DATA_PATH / "api.yaml"),
+            "--input-file-type",
+            "openapi",
+            "--output-format",
+            "json",
+            "--disable-timestamp",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_stdout.txt",
+        assert_no_stderr=True,
+    )
+
+
+def test_output_format_json_generate_pyproject_config(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-pyproject-config can emit structured JSON."""
+    run_main_with_args(
+        [
+            "--generate-pyproject-config",
+            "--input",
+            "schema.yaml",
+            "--output",
+            "model.py",
+            "--output-format",
+            "json",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "pyproject_config.txt",
+        assert_no_stderr=True,
+    )
+
+
+def test_generate_pyproject_config_helper_uses_default_formatter() -> None:
+    """Test the pyproject config helper returns text output by default."""
+    assert_output(
+        generate_pyproject_config(
+            Namespace(
+                input="schema.yaml",
+                output="model.py",
+                strict_types=["str", "bytes"],
+                output_format="json",
+                output_format_json_schema="structured-output",
+            )
+        ),
+        EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH / "helper_default_formatter.txt",
+    )
+
+
+def test_output_format_json_generate_cli_command(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command can emit structured JSON."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "schema.yaml"
+output = "model.py"
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            [
+                "--generate-cli-command",
+                "--output-format",
+                "json",
+            ],
+            expected_exit=Exit.OK,
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "cli_command.txt",
+            assert_no_stderr=True,
+        )
+
+
+def test_output_format_json_list_deprecations(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --list-deprecations can emit structured JSON."""
+    run_main_with_args(
+        [
+            "--list-deprecations",
+            "--output-format",
+            "json",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "list_deprecations.txt",
+        assert_no_stderr=True,
+    )
+
+
+def test_output_format_json_list_experimental(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --list-experimental can emit structured JSON."""
+    run_main_with_args(
+        [
+            "--list-experimental",
+            "json",
+            "--output-format",
+            "json",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "list_experimental.txt",
+        assert_no_stderr=True,
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_output_format_json_generation_output_file(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
+    """Test --output-format json can mirror a generated single output file."""
+    run_main_with_args(
+        [
+            "--input",
+            str(OPEN_API_DATA_PATH / "api.yaml"),
+            "--input-file-type",
+            "openapi",
+            "--output",
+            str(output_file),
+            "--output-format",
+            "json",
+        ],
+        expected_exit=Exit.OK,
+    )
+    captured = capsys.readouterr()
+    assert_output(captured.err, EXPECTED_EMPTY_OUTPUT_PATH)
+    assert_output(
+        _normalize_generation_json_output_path(captured.out, output_file, OUTPUT_FILE_PLACEHOLDER),
+        EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_output_file.txt",
+    )
+    assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "main_no_file" / "output.py")
+
+
+@freeze_time(TIMESTAMP)
+def test_output_format_json_generation_output_directory(capsys: pytest.CaptureFixture[str], output_dir: Path) -> None:
+    """Test --output-format json reports generated multi-file modules."""
+    run_main_with_args(
+        [
+            "--input",
+            str(OPEN_API_DATA_PATH / "modular.yaml"),
+            "--input-file-type",
+            "openapi",
+            "--output",
+            str(output_dir),
+            "--output-format",
+            "json",
+        ],
+        expected_exit=Exit.OK,
+    )
+    captured = capsys.readouterr()
+    assert_output(captured.err, EXPECTED_EMPTY_OUTPUT_PATH)
+    assert_output(
+        _normalize_generation_json_output_path(captured.out, output_dir, OUTPUT_DIR_PLACEHOLDER),
+        EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_output_directory.txt",
+    )
+    assert_directory_content(output_dir, EXPECTED_MAIN_KR_PATH / "main_modular")
+
+
+def test_output_format_json_check_success(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --check can emit structured JSON when files are up-to-date."""
+    with chdir(tmp_path):
+        run_main_with_args(
+            [
+                "--input",
+                str(OPEN_API_DATA_PATH / "api.yaml"),
+                "--input-file-type",
+                "openapi",
+                "--output",
+                "output.py",
+                "--disable-timestamp",
+            ],
+            expected_exit=Exit.OK,
+        )
+        capsys.readouterr()
+
+        run_main_with_args(
+            [
+                "--input",
+                str(OPEN_API_DATA_PATH / "api.yaml"),
+                "--input-file-type",
+                "openapi",
+                "--output",
+                "output.py",
+                "--check",
+                "--output-format",
+                "json",
+                "--disable-timestamp",
+            ],
+            expected_exit=Exit.OK,
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "check_success.txt",
+            assert_no_stderr=True,
+        )
+
+
+def test_output_format_json_check_missing_output_directory(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --check can emit structured JSON when files differ."""
+    with chdir(tmp_path):
+        run_main_with_args(
+            [
+                "--input",
+                str(OPEN_API_DATA_PATH / "modular.yaml"),
+                "--input-file-type",
+                "openapi",
+                "--output",
+                "model",
+                "--check",
+                "--output-format",
+                "json",
+                "--disable-timestamp",
+            ],
+            expected_exit=Exit.DIFF,
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "check_missing_output.txt",
+            assert_no_stderr=True,
+        )
+
+
+def test_output_format_json_check_output_file_difference(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test --check can emit structured JSON for single-file differences."""
+    with chdir(tmp_path):
+        output_path = Path("output.py")
+        output_path.write_text("outdated\n", encoding="utf-8")
+        run_main_with_args(
+            [
+                "--input",
+                str(OPEN_API_DATA_PATH / "api.yaml"),
+                "--input-file-type",
+                "openapi",
+                "--output",
+                output_path.as_posix(),
+                "--check",
+                "--output-format",
+                "json",
+                "--disable-timestamp",
+            ],
+            expected_exit=Exit.DIFF,
+        )
+    captured = capsys.readouterr()
+    assert_output(
+        captured.out.replace((tmp_path / output_path).as_posix(), OUTPUT_FILE_PLACEHOLDER),
+        EXPECTED_OUTPUT_FORMAT_JSON_PATH / "check_output_file_difference_json.txt",
+    )
+    assert_output(captured.err, EXPECTED_EMPTY_OUTPUT_PATH)
+
+
+def test_output_format_json_check_output_directory_differences(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test --check can emit structured JSON for directory differences."""
+    with chdir(tmp_path):
+        output_dir = Path("model")
+        output_dir.mkdir()
+        (output_dir / "models.py").write_text("outdated\n", encoding="utf-8")
+        (output_dir / "extra.py").write_text("extra\n", encoding="utf-8")
+        run_main_with_args(
+            [
+                "--input",
+                str(OPEN_API_DATA_PATH / "modular.yaml"),
+                "--input-file-type",
+                "openapi",
+                "--output",
+                output_dir.as_posix(),
+                "--check",
+                "--output-format",
+                "json",
+                "--disable-timestamp",
+            ],
+            expected_exit=Exit.DIFF,
+        )
+    captured = capsys.readouterr()
+    assert_output(
+        captured.out.replace((tmp_path / output_dir).as_posix(), OUTPUT_DIR_PLACEHOLDER),
+        EXPECTED_OUTPUT_FORMAT_JSON_PATH / "check_output_directory_differences_json.txt",
+    )
+    assert_output(captured.err, EXPECTED_EMPTY_OUTPUT_PATH)
+
+
+def test_output_format_json_check_text_reports_output_file_difference(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test --check reports single-file differences in text output."""
+    with chdir(tmp_path):
+        output_path = Path("output.py")
+        output_path.write_text("outdated\n", encoding="utf-8")
+        run_main_with_args(
+            [
+                "--input",
+                str(OPEN_API_DATA_PATH / "api.yaml"),
+                "--input-file-type",
+                "openapi",
+                "--output",
+                output_path.as_posix(),
+                "--check",
+                "--disable-timestamp",
+            ],
+            expected_exit=Exit.DIFF,
+        )
+    captured = capsys.readouterr()
+    assert_output(
+        captured.out.replace((tmp_path / output_path).as_posix(), OUTPUT_FILE_PLACEHOLDER),
+        EXPECTED_OUTPUT_FORMAT_JSON_PATH / "check_output_file_difference_text.txt",
+    )
+    assert_output(captured.err, EXPECTED_EMPTY_OUTPUT_PATH)
+
+
+def test_output_format_json_check_text_reports_output_directory_differences(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test --check reports directory differences in text output."""
+    with chdir(tmp_path):
+        output_dir = Path("model")
+        output_dir.mkdir()
+        (output_dir / "models.py").write_text("outdated\n", encoding="utf-8")
+        (output_dir / "extra.py").write_text("extra\n", encoding="utf-8")
+        run_main_with_args(
+            [
+                "--input",
+                str(OPEN_API_DATA_PATH / "modular.yaml"),
+                "--input-file-type",
+                "openapi",
+                "--output",
+                "model",
+                "--check",
+                "--disable-timestamp",
+            ],
+            expected_exit=Exit.DIFF,
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "check_output_directory_differences_text.txt",
+            assert_no_stderr=True,
+        )
+
+
+def test_output_format_json_rejects_watch(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --watch cannot be combined with --output-format json."""
+    run_main_with_args(
+        [
+            "--input",
+            str(OPEN_API_DATA_PATH / "api.yaml"),
+            "--input-file-type",
+            "openapi",
+            "--output-format",
+            "json",
+            "--watch",
+        ],
+        expected_exit=Exit.ERROR,
+    )
+    captured = capsys.readouterr()
+    assert_output(captured.out, EXPECTED_EMPTY_OUTPUT_PATH)
+    assert_output(captured.err, EXPECTED_OUTPUT_FORMAT_JSON_PATH / "watch_incompatible.txt")
 
 
 @freeze_time("2019-07-26")
