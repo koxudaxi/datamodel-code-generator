@@ -793,6 +793,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._dynamic_anchor_index: dict[tuple[str, ...], dict[str, str]] = {}
         self._recursive_anchor_index: dict[tuple[str, ...], list[str]] = {}
         self._ref_data_type_facts: dict[str, tuple[Any, bool]] = {}
+        self._force_base_model_refs: set[str] = set()
+        self._force_base_model_generation = False
         self.field_keys: set[str] = {
             *DEFAULT_FIELD_KEYS,
             *self.field_extra_keys,
@@ -1449,7 +1451,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _should_generate_base_model(self, *, generates_separate_models: bool = False) -> bool:
         """Determine if Base model should be generated."""
-        if getattr(self, "_force_base_model_generation", False):
+        if self._force_base_model_generation:
             return True
         if self.read_only_write_only_model_type is None:
             return True
@@ -1536,8 +1538,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 variant_ref = self.model_resolver.add(path_parts, unique_name, class_name=True, unique=False)
                 self.generation_store.replace_data_type_ref(data_type, variant_ref)
             elif not self._ref_schema_has_model(ref_path):  # pragma: no branch
-                if not hasattr(self, "_force_base_model_refs"):
-                    self._force_base_model_refs: set[str] = set()
                 self._force_base_model_refs.add(ref_path)
         for nested_dt in data_type.data_types:
             self._update_data_type_ref_for_variant(nested_dt, suffix)
@@ -1560,8 +1560,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _generate_forced_base_models(self) -> None:
         """Generate base models for schemas that are referenced as property types but lack models."""
-        if not hasattr(self, "_force_base_model_refs"):
-            return
         if not self._force_base_model_refs:  # pragma: no cover
             return
 
