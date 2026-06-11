@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import ast
+import inspect
 import json
+import platform
 import sys
 import warnings
-from argparse import ArgumentTypeError, Namespace
+from argparse import ArgumentTypeError, BooleanOptionalAction, Namespace
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
 import black
 import pytest
+from inline_snapshot import snapshot
 from packaging import version
 
 import datamodel_code_generator
@@ -25,8 +29,8 @@ from datamodel_code_generator import (
     generate,
     snooper_to_methods,
 )
-from datamodel_code_generator.__main__ import Config, Exit
-from datamodel_code_generator.arguments import _dataclass_arguments
+from datamodel_code_generator.__main__ import BOOLEAN_OPTIONAL_OPTIONS, Config, Exit, run_generate_from_config
+from datamodel_code_generator.arguments import _dataclass_arguments, arg_parser
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
@@ -69,6 +73,39 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
 assert_file_content = create_assert_file_content(EXPECTED_MAIN_PATH)
+
+
+def _generate_call_keyword_source(value: ast.expr) -> str:
+    match value:
+        case ast.Attribute(value=ast.Name(id="config")):
+            return f"config.{value.attr}"
+        case ast.Name():
+            return value.id
+    return ast.unparse(value)
+
+
+def _run_generate_from_config_generate_kwargs() -> list[tuple[str, str]]:
+    source = inspect.getsource(run_generate_from_config)
+    module = ast.parse(source)
+    function = module.body[0]
+    if not isinstance(function, ast.FunctionDef):  # pragma: no cover
+        msg = "run_generate_from_config source did not parse to a function"
+        raise TypeError(msg)
+
+    calls = [
+        node
+        for node in ast.walk(function)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "generate"
+    ]
+    if len(calls) != 1:  # pragma: no cover
+        msg = f"Expected one generate() call, found {len(calls)}"
+        raise AssertionError(msg)
+
+    return [
+        (keyword.arg, _generate_call_keyword_source(keyword.value))
+        for keyword in calls[0].keywords
+        if keyword.arg is not None
+    ]
 
 
 def test_debug(mocker: MockerFixture) -> None:
@@ -194,6 +231,222 @@ def test_no_args_has_default(monkeypatch: pytest.MonkeyPatch) -> None:
     run_main_with_args([], expected_exit=Exit.ERROR)
     for field in Config.get_fields():
         assert getattr(namespace, field, None) is None
+
+
+@pytest.mark.allow_direct_assert
+def test_boolean_optional_option_sets_are_pinned() -> None:
+    """Pin BooleanOptionalAction and the pyproject-generation special subset separately."""
+    boolean_optional_dests = [
+        action.dest for action in arg_parser._actions if isinstance(action, BooleanOptionalAction)
+    ]
+
+    assert sorted(BOOLEAN_OPTIONAL_OPTIONS) == snapshot([
+        "use_specialized_enum",
+        "use_standard_collections",
+        "use_type_checking_imports",
+    ])
+    assert boolean_optional_dests == snapshot([
+        "allow_remote_refs",
+        "allow_private_network",
+        "treat_dot_as_module",
+        "use_annotated",
+        "use_standard_collections",
+        "use_specialized_enum",
+        "use_union_operator",
+        "use_closed_typed_dict",
+        "use_type_checking_imports",
+    ])
+    assert set(boolean_optional_dests) >= BOOLEAN_OPTIONAL_OPTIONS
+
+
+@pytest.mark.allow_direct_assert
+def test_run_generate_from_config_generate_kwargs_are_pinned() -> None:
+    """Pin the exact Config-to-generate forwarding map used by CLI execution."""
+    assert _run_generate_from_config_generate_kwargs() == snapshot([
+        ("input_", "input_"),
+        ("input_file_type", "config.input_file_type"),
+        ("output", "output"),
+        ("output_model_type", "config.output_model_type"),
+        ("target_python_version", "config.target_python_version"),
+        ("target_pydantic_version", "config.target_pydantic_version"),
+        ("base_class", "config.base_class"),
+        ("base_class_map", "config.base_class_map"),
+        ("additional_imports", "config.additional_imports"),
+        ("class_decorators", "config.class_decorators"),
+        ("custom_template_dir", "config.custom_template_dir"),
+        ("validation", "config.validation"),
+        ("field_constraints", "config.field_constraints"),
+        ("snake_case_field", "config.snake_case_field"),
+        ("strip_default_none", "config.strip_default_none"),
+        ("extra_template_data", "extra_template_data"),
+        ("aliases", "aliases"),
+        ("serialization_aliases", "serialization_aliases"),
+        ("disable_timestamp", "config.disable_timestamp"),
+        ("enable_version_header", "config.enable_version_header"),
+        ("enable_command_header", "config.enable_command_header"),
+        ("enable_generated_header_marker", "config.enable_generated_header_marker"),
+        ("command_line", "command_line"),
+        ("allow_population_by_field_name", "config.allow_population_by_field_name"),
+        ("allow_extra_fields", "config.allow_extra_fields"),
+        ("extra_fields", "config.extra_fields"),
+        ("use_generic_base_class", "config.use_generic_base_class"),
+        ("apply_default_values_for_required_fields", "config.use_default"),
+        ("force_optional_for_required_fields", "config.force_optional"),
+        ("class_name", "config.class_name"),
+        (
+            "allow_leading_underscore_class_name",
+            "config.allow_leading_underscore_class_name",
+        ),
+        ("class_name_prefix", "config.class_name_prefix"),
+        ("class_name_suffix", "config.class_name_suffix"),
+        ("class_name_affix_scope", "config.class_name_affix_scope"),
+        ("use_standard_collections", "config.use_standard_collections"),
+        ("use_schema_description", "config.use_schema_description"),
+        ("use_field_description", "config.use_field_description"),
+        ("use_field_description_example", "config.use_field_description_example"),
+        ("use_attribute_docstrings", "config.use_attribute_docstrings"),
+        ("use_inline_field_description", "config.use_inline_field_description"),
+        ("use_single_line_docstring", "config.use_single_line_docstring"),
+        ("use_default_kwarg", "config.use_default_kwarg"),
+        ("reuse_model", "config.reuse_model"),
+        ("reuse_scope", "config.reuse_scope"),
+        ("shared_module_name", "config.shared_module_name"),
+        ("encoding", "config.encoding"),
+        ("enum_field_as_literal", "config.enum_field_as_literal"),
+        ("enum_field_as_literal_map", "config.enum_field_as_literal_map"),
+        ("ignore_enum_constraints", "config.ignore_enum_constraints"),
+        ("use_one_literal_as_default", "config.use_one_literal_as_default"),
+        ("use_enum_values_in_discriminator", "config.use_enum_values_in_discriminator"),
+        ("set_default_enum_member", "config.set_default_enum_member"),
+        ("use_subclass_enum", "config.use_subclass_enum"),
+        ("use_specialized_enum", "config.use_specialized_enum"),
+        ("strict_nullable", "config.strict_nullable"),
+        ("use_generic_container_types", "config.use_generic_container_types"),
+        ("enable_faux_immutability", "config.enable_faux_immutability"),
+        ("disable_appending_item_suffix", "config.disable_appending_item_suffix"),
+        ("strict_types", "config.strict_types"),
+        ("empty_enum_field_name", "config.empty_enum_field_name"),
+        ("field_extra_keys", "config.field_extra_keys"),
+        ("field_include_all_keys", "config.field_include_all_keys"),
+        ("field_extra_keys_without_x_prefix", "config.field_extra_keys_without_x_prefix"),
+        ("model_extra_keys", "config.model_extra_keys"),
+        ("model_extra_keys_without_x_prefix", "config.model_extra_keys_without_x_prefix"),
+        ("openapi_scopes", "config.openapi_scopes"),
+        ("include_path_parameters", "config.include_path_parameters"),
+        ("openapi_include_paths", "config.openapi_include_paths"),
+        ("openapi_include_info_version", "config.openapi_include_info_version"),
+        ("graphql_no_typename", "config.graphql_no_typename"),
+        ("wrap_string_literal", "config.wrap_string_literal"),
+        ("use_title_as_name", "config.use_title_as_name"),
+        ("use_operation_id_as_name", "config.use_operation_id_as_name"),
+        ("use_unique_items_as_set", "config.use_unique_items_as_set"),
+        ("use_tuple_for_fixed_items", "config.use_tuple_for_fixed_items"),
+        ("use_closed_typed_dict", "config.use_closed_typed_dict"),
+        ("allof_merge_mode", "config.allof_merge_mode"),
+        ("allof_class_hierarchy", "config.allof_class_hierarchy"),
+        ("allow_remote_refs", "config.allow_remote_refs"),
+        ("allow_private_network", "config.allow_private_network"),
+        ("http_headers", "config.http_headers"),
+        ("http_local_ref_path", "config.http_local_ref_path"),
+        ("http_ignore_tls", "config.http_ignore_tls"),
+        ("http_timeout", "config.http_timeout"),
+        ("use_annotated", "config.use_annotated"),
+        ("use_serialize_as_any", "config.use_serialize_as_any"),
+        (
+            "use_non_positive_negative_number_constrained_types",
+            "config.use_non_positive_negative_number_constrained_types",
+        ),
+        ("use_decimal_for_multiple_of", "config.use_decimal_for_multiple_of"),
+        ("original_field_name_delimiter", "config.original_field_name_delimiter"),
+        ("use_double_quotes", "config.use_double_quotes"),
+        ("collapse_root_models", "config.collapse_root_models"),
+        ("collapse_root_models_name_strategy", "config.collapse_root_models_name_strategy"),
+        ("collapse_reuse_models", "config.collapse_reuse_models"),
+        ("skip_root_model", "config.skip_root_model"),
+        ("use_type_alias", "config.use_type_alias"),
+        ("use_root_model_type_alias", "config.use_root_model_type_alias"),
+        ("use_union_operator", "config.use_union_operator"),
+        ("special_field_name_prefix", "config.special_field_name_prefix"),
+        ("remove_special_field_name_prefix", "config.remove_special_field_name_prefix"),
+        ("capitalise_enum_members", "config.capitalise_enum_members"),
+        ("keep_model_order", "config.keep_model_order"),
+        ("custom_file_header", "config.custom_file_header"),
+        ("custom_file_header_path", "config.custom_file_header_path"),
+        ("custom_formatters", "config.custom_formatters"),
+        ("custom_formatters_kwargs", "custom_formatters_kwargs"),
+        ("use_pendulum", "config.use_pendulum"),
+        ("use_standard_primitive_types", "config.use_standard_primitive_types"),
+        ("use_object_type", "config.use_object_type"),
+        ("http_query_parameters", "config.http_query_parameters"),
+        ("treat_dot_as_module", "config.treat_dot_as_module"),
+        ("use_exact_imports", "config.use_exact_imports"),
+        ("use_type_checking_imports", "config.use_type_checking_imports"),
+        ("union_mode", "config.union_mode"),
+        ("output_datetime_class", "config.output_datetime_class"),
+        ("output_date_class", "config.output_date_class"),
+        ("keyword_only", "config.keyword_only"),
+        ("frozen_dataclasses", "config.frozen_dataclasses"),
+        ("no_alias", "config.no_alias"),
+        ("use_serialization_alias", "config.use_serialization_alias"),
+        ("use_frozen_field", "config.use_frozen_field"),
+        (
+            "use_default_factory_for_optional_nested_models",
+            "config.use_default_factory_for_optional_nested_models",
+        ),
+        ("formatters", "config.formatters"),
+        ("builtin_format_line_length", "config.builtin_format_line_length"),
+        ("settings_path", "settings_path"),
+        ("parent_scoped_naming", "config.parent_scoped_naming"),
+        ("naming_strategy", "config.naming_strategy"),
+        ("duplicate_name_suffix", "config.duplicate_name_suffix"),
+        ("dataclass_arguments", "config.dataclass_arguments"),
+        ("disable_future_imports", "config.disable_future_imports"),
+        ("type_mappings", "config.type_mappings"),
+        ("type_overrides", "config.type_overrides"),
+        ("read_only_write_only_model_type", "config.read_only_write_only_model_type"),
+        ("use_status_code_in_response_name", "config.use_status_code_in_response_name"),
+        ("all_exports_scope", "config.all_exports_scope"),
+        ("all_exports_collision_strategy", "config.all_exports_collision_strategy"),
+        ("field_type_collision_strategy", "config.field_type_collision_strategy"),
+        ("module_split_mode", "config.module_split_mode"),
+        ("validators", "validators"),
+        ("default_value_overrides", "default_value_overrides"),
+        ("schema_version", "config.schema_version"),
+        ("schema_version_mode", "config.schema_version_mode"),
+        ("external_ref_mapping", "config.external_ref_mapping"),
+    ])
+
+
+@pytest.mark.allow_direct_assert
+def test_generate_call_keyword_source_uses_unparse_fallback() -> None:
+    """Non-trivial generate() keyword expressions are represented by AST source."""
+    expression = ast.parse("generate(value=1 + 2)").body[0]
+    if not isinstance(expression, ast.Expr):  # pragma: no cover
+        raise TypeError
+    call = expression.value
+    if not isinstance(call, ast.Call):  # pragma: no cover
+        raise TypeError
+
+    assert _generate_call_keyword_source(call.keywords[0].value) == "1 + 2"
+
+
+@pytest.mark.allow_direct_assert
+@pytest.mark.skipif(platform.system() == "Windows", reason="text-mode writes use CRLF on Windows")
+def test_generated_file_line_endings_are_lf_with_single_trailing_newline(output_file: Path) -> None:
+    """Generated files use LF line endings and exactly one trailing newline."""
+    result = generate(
+        {"type": "object", "properties": {"name": {"type": "string"}}},
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        disable_timestamp=True,
+        formatters=[Formatter.BLACK, Formatter.ISORT],
+    )
+
+    assert result is None
+    content = output_file.read_bytes()
+    assert b"\r" not in content
+    assert content.endswith(b"\n")
+    assert not content.endswith(b"\n\n")
 
 
 def test_space_and_special_characters_dict(output_file: Path) -> None:

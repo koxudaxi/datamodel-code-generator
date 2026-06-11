@@ -10,6 +10,8 @@
 | [`--list-deprecations`](#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](#list-experimental) | List registered experimental features |
 | [`--no-color`](#no-color) | Disable colorized output |
+| [`--output-format`](#output-format) | Choose the command output format |
+| [`--output-format-json-schema`](#output-format-json-schema) | Output JSON Schema for structured command output |
 | [`--profile`](#profile) | Use a named profile from pyproject.toml |
 | [`--version`](#version) | Show program version and exit |
 
@@ -48,6 +50,11 @@ Outputs a formatted prompt containing your current options, all available
 options by category, and full help text. Pipe to CLI LLM tools or copy
 to clipboard for web-based LLM chats.
 
+Use `--output-format json` when an LLM agent or tool should consume structured
+option metadata instead of Markdown.
+Use `--output-format-json-schema generate-prompt` when the agent needs the JSON
+Schema for that structured payload, such as when defining a tool contract.
+
 **See also:** [LLM Integration](../llm-integration.md) for detailed usage examples
 
 !!! tip "Usage"
@@ -55,10 +62,14 @@ to clipboard for web-based LLM chats.
     ```bash
     datamodel-codegen --generate-prompt # (1)!
     datamodel-codegen --generate-prompt "How do I generate strict types?" # (2)!
+    datamodel-codegen --generate-prompt --output-format json # (3)!
+    datamodel-codegen --output-format-json-schema generate-prompt # (4)!
     ```
 
     1. :material-arrow-left: `--generate-prompt` - generate prompt without a question
     2. :material-arrow-left: Include a specific question in the prompt
+    3. :material-arrow-left: Emit structured JSON for LLM/tool ingestion
+    4. :material-arrow-left: Emit JSON Schema for structured prompt JSON
 
 ??? example "Quick Examples"
 
@@ -66,6 +77,7 @@ to clipboard for web-based LLM chats.
     ```bash
     datamodel-codegen --generate-prompt | claude -p    # Claude Code
     datamodel-codegen --generate-prompt | codex exec   # OpenAI Codex
+    datamodel-codegen --generate-prompt --output-format json | codex exec
     ```
 
     **Copy to clipboard:**
@@ -159,6 +171,122 @@ or when redirecting output to files.
     ```bash
     NO_COLOR=1 datamodel-codegen --input schema.json
     ```
+
+---
+
+## `--output-format` {#output-format}
+
+Choose the command output format.
+
+The default output format is `text`. Use `json` when another program or LLM
+agent should inspect structured output.
+
+In normal generation mode, `--output-format json` wraps generated modules in a
+structured payload on stdout. If `--output` is also supplied, files are still
+written to disk and the JSON payload mirrors the generated files. `--check`
+also supports JSON output for difference reports. `--watch` keeps its existing
+text output contract and does not support `--output-format json`.
+
+Structured JSON is emitted on stdout for successful commands and for `--check`
+difference reports. CLI usage errors, validation errors, and runtime generation
+errors continue to use text on stderr with a non-zero exit code.
+
+Generation JSON includes the normalized requested output path in top-level
+`output` when `--output` is supplied, or `null` for stdout generation.
+`files[].path` is the output file name for single-file disk output, and the
+path relative to the output directory for directory output. For stdout-only
+single-file generation it is `null`, and for multi-module stdout generation it
+is the generated module path.
+
+Use `--output-format json` with `--generate-prompt` to emit structured option
+metadata instead of Markdown. Use `--output-format-json-schema` when an LLM
+agent or tool needs the schema for a structured output payload.
+
+Schema targets are intentionally scoped. `generate-prompt` emits the
+`PromptPayload` schema for `--generate-prompt --output-format json`.
+`generation` emits only the `GenerationPayload` schema for generated-file JSON.
+`structured-output` emits the broader `StructuredOutputPayload` schema, a union
+covering `GenerationPayload`, `PromptPayload`, `CommandOutputPayload`, and
+`CheckOutputPayload`. Structured payloads use `kind` as the discriminator.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --output-format text # (1)!
+    datamodel-codegen --input schema.json --output-format json # (2)!
+    datamodel-codegen --generate-prompt --output-format json # (3)!
+    datamodel-codegen --output-format-json-schema generation # (4)!
+    datamodel-codegen --output-format-json-schema generate-prompt # (5)!
+    datamodel-codegen --output-format-json-schema structured-output # (6)!
+    ```
+
+    1. :material-arrow-left: Emit the default generated Python text
+    2. :material-arrow-left: Emit structured JSON containing generated files
+    3. :material-arrow-left: Emit structured JSON with current options and argparse metadata
+    4. :material-arrow-left: Emit JSON Schema for generated-file JSON output
+    5. :material-arrow-left: Emit JSON Schema for structured prompt JSON
+    6. :material-arrow-left: Emit JSON Schema for any structured command JSON output
+
+??? example "Generation JSON output"
+
+    ```json
+    {
+      "version": 1,
+      "format": "json",
+      "kind": "generation",
+      "output": null,
+      "files": [
+        {
+          "path": null,
+          "content": "# generated by datamodel-codegen:\n..."
+        }
+      ]
+    }
+    ```
+
+??? example "Prompt JSON output"
+
+    ```bash
+    datamodel-codegen \
+        --input schema.json \
+        --output-model-type pydantic_v2.BaseModel \
+        --generate-prompt "Choose strict model options." \
+        --output-format json
+    ```
+
+---
+
+## `--output-format-json-schema` {#output-format-json-schema}
+
+Output JSON Schema for a structured command output format and exit.
+
+Use this when an LLM agent, tool call definition, or validation layer needs the
+contract before consuming JSON output. The schema is emitted separately from the
+JSON payload so tools can fetch the contract once and validate later command
+output independently.
+
+Currently supported schema targets:
+
+- `generate-prompt`: schema for `--generate-prompt --output-format json`
+- `generation`: schema for normal generation with `--output-format json`
+- `structured-output`: tagged union schema for all structured command outputs,
+  discriminated by `kind`
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --output-format-json-schema generate-prompt # (1)!
+    datamodel-codegen --output-format-json-schema generation # (2)!
+    datamodel-codegen --output-format-json-schema structured-output # (3)!
+    datamodel-codegen --generate-prompt --output-format json # (4)!
+    datamodel-codegen --input schema.json --output-format json # (5)!
+    ```
+
+    1. :material-arrow-left: Emit the JSON Schema for structured prompt output
+    2. :material-arrow-left: Emit the JSON Schema for generated-file output
+    3. :material-arrow-left: Emit the JSON Schema for all structured command outputs
+    4. :material-arrow-left: Emit prompt payloads that match the prompt schema
+    5. :material-arrow-left: Emit generation payloads that match the generation schema
 
 ---
 

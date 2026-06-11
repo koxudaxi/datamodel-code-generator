@@ -50,6 +50,7 @@ from datamodel_code_generator import (
     ReuseScope,
     YamlValue,
 )
+from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.format import (
     CodeFormatter,
     Formatter,
@@ -77,7 +78,7 @@ from datamodel_code_generator.model.base import (
     DataModel,
     DataModelFieldBase,
 )
-from datamodel_code_generator.model.enum import Enum, Member
+from datamodel_code_generator.model.enum import Enum, Member, evaluate_member_value
 from datamodel_code_generator.model.imports import IMPORT_TYPED_DICT, IMPORT_TYPED_DICT_BACKPORT
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
@@ -89,7 +90,7 @@ from datamodel_code_generator.types import ANY, DataType, DataTypeManager
 from datamodel_code_generator.util import camel_to_snake
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Iterable, Iterator
 
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
@@ -877,27 +878,27 @@ def title_to_class_name(title: str) -> str:
     return "".join(x for x in classname.title() if not x.isspace())
 
 
-def _find_base_classes(model: DataModel) -> list[DataModel]:  # pragma: no cover
+def _find_base_classes(model: DataModel) -> list[DataModel]:
     """Get direct base class DataModels."""
     return [b.reference.source for b in model.base_classes if b.reference and isinstance(b.reference.source, DataModel)]
 
 
-def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBase | None:  # pragma: no cover
+def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBase | None:
     """Find a field by original_name in the models and their base classes."""
     for model in models:
-        for field in model.iter_all_fields():  # pragma: no cover
+        for field in model.iter_all_fields():
             if field.original_name == original_name:
                 return field
-    return None  # pragma: no cover
+    return None
 
 
-def _copy_data_types(data_types: list[DataType]) -> list[DataType]:  # pragma: no cover
+def _copy_data_types(data_types: list[DataType]) -> list[DataType]:
     """Deep copy a list of DataType objects, preserving references."""
     copied_data_types: list[DataType] = []
     for data_type_ in data_types:
         if data_type_.reference:
             copied_data_types.append(data_type_.__class__(reference=data_type_.reference))
-        elif data_type_.data_types:  # pragma: no cover
+        elif data_type_.data_types:
             copied_data_type = data_type_.model_copy()
             copied_data_type.data_types = _copy_data_types(data_type_.data_types)
             copied_data_types.append(copied_data_type)
@@ -976,17 +977,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         Uses _get_config_class() to determine which config class to instantiate.
         """
-        from datamodel_code_generator import types as types_module  # noqa: PLC0415
-        from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
-
         config_class = cls._get_config_class()
 
         config_class.model_rebuild(
             _types_namespace={
-                "StrictTypes": types_module.StrictTypes,
-                "DataModel": model_base.DataModel,
-                "DataModelFieldBase": model_base.DataModelFieldBase,
-                "DataTypeManager": types_module.DataTypeManager,
+                "StrictTypes": StrictTypes,
+                "DataModel": DataModel,
+                "DataModelFieldBase": DataModelFieldBase,
+                "DataTypeManager": DataTypeManager,
             }
         )
         return config_class.model_validate(options)  # type: ignore[return-value]
@@ -1655,7 +1653,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 enum_class_name = enum_source.reference.short_name
                 enum_member_literals: list[tuple[str, str]] = []
                 for value in discriminator_values:
-                    member = enum_source.find_member(value)
+                    member = enum_source.find_member(value, coerce_strings=True)
                     if member and member.field.name:
                         enum_member_literals.append((enum_class_name, member.field.name))
                     else:  # pragma: no cover
@@ -1675,15 +1673,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     @staticmethod
     def _get_enum_discriminator_literal(enum_source: Enum, value: DiscriminatorValue) -> DiscriminatorValue:
-        member = enum_source.find_member(value)
+        member = enum_source.find_member(value, coerce_strings=True)
         if not member:
             return value
 
-        default = member.field.default
-        if isinstance(default, str):
-            return default.strip("'\"")
-        if isinstance(default, int | bool):
-            return default
+        member_value = evaluate_member_value(member.field.default)
+        if isinstance(member_value, (str, int, bool)):
+            return member_value
         return value
 
     def __apply_discriminator_type(  # noqa: PLR0912, PLR0914, PLR0915
@@ -2354,7 +2350,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     continue
                 model_field.extras["validate_default"] = True
 
-    def __override_required_field(  # pragma: no cover
+    def __override_required_field(
         self,
         models: list[DataModel],
     ) -> None:
@@ -2374,7 +2370,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     continue
 
                 original_field = _find_field(model_field.original_name, _find_base_classes(model))
-                if not original_field:  # pragma: no cover
+                if not original_field:
                     self.generation_store.remove_field(model, model_field)
                     continue
                 copied_original_field = original_field.model_copy()

@@ -656,8 +656,6 @@ class _ProtobufDescriptorConverter:
             TYPE_SFIXED64,
         }:
             return int(value)
-        if field.type == TYPE_ENUM:
-            return value
         return value
 
 

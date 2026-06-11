@@ -143,6 +143,75 @@ def test_remove_cleans_up_reference_paths() -> None:
     assert "/test/path" not in imports.reference_paths
 
 
+def test_remove_dotted_import_decrements_counter_and_cleans_reference_paths() -> None:
+    """Dotted imports keep their public counters and reference paths consistent."""
+    imports = Imports()
+    first_import = Import(from_=None, import_="collections.abc", reference_path="/first/path")
+    second_import = Import(from_=None, import_="collections.abc", reference_path="/second/path")
+    imports.append([first_import, second_import])
+
+    assert str(imports) == "import collections.abc"
+    assert imports.counter[None, "collections.abc"] == 2
+    assert imports.reference_paths == {
+        "/first/path": first_import,
+        "/second/path": second_import,
+    }
+
+    imports.remove(first_import)
+
+    assert str(imports) == "import collections.abc"
+    assert imports.counter[None, "collections.abc"] == 1
+    assert "/first/path" not in imports.reference_paths
+    assert imports.reference_paths["/second/path"] is second_import
+
+    imports.remove(second_import)
+
+    assert not str(imports)
+    assert (None, "collections.abc") not in imports.counter
+    assert None not in imports
+    assert "/second/path" not in imports.reference_paths
+
+
+def test_remove_missing_dotted_import_is_noop() -> None:
+    """Removing a dotted import that was never added leaves imports unchanged."""
+    imports = Imports()
+    imports.append(Import(from_=None, import_="collections.abc"))
+
+    imports.remove(Import(from_=None, import_="pathlib.Path"))
+
+    assert str(imports) == "import collections.abc"
+    assert imports.counter[None, "collections.abc"] == 1
+
+
+def test_remove_dotted_import_keeps_bucket_when_other_dotted_imports_remain() -> None:
+    """Removing one dotted import keeps the import bucket when another remains."""
+    imports = Imports()
+    first_import = Import(from_=None, import_="collections.abc")
+    second_import = Import(from_=None, import_="pathlib.Path")
+    imports.append([first_import, second_import])
+
+    imports.remove(first_import)
+
+    assert str(imports) == "import pathlib.Path"
+    assert imports[None] == {"pathlib.Path"}
+    assert (None, "collections.abc") not in imports.counter
+    assert imports.counter[None, "pathlib.Path"] == 1
+
+
+def test_remove_dotted_import_without_bucket_cleans_reference_path() -> None:
+    """Defensive dotted import removal still clears counters and reference paths."""
+    imports = Imports()
+    import_ = Import(from_=None, import_="collections.abc", reference_path="/stale/path")
+    imports.counter[None, "collections.abc"] = 1
+    imports.reference_paths["/stale/path"] = import_
+
+    imports.remove(import_)
+
+    assert not str(imports)
+    assert (None, "collections.abc") not in imports.counter
+    assert "/stale/path" not in imports.reference_paths
+
+
 def test_extract_future_moves_reference_paths() -> None:
     """Test that extract_future() moves reference_paths for __future__ imports."""
     imports = Imports()

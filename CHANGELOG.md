@@ -5,6 +5,67 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.62.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.62.0) - 2026-06-10
+
+## Breaking Changes
+
+
+### Code Generation Changes
+* msgspec: Required nullable fields no longer receive a spurious default - Previously, required fields with nullable types (e.g., `str | None`) in msgspec Structs were incorrectly rendered with `= None`. They are now correctly rendered without a default assignment (e.g., `label: str | None` instead of `label: str | None = None`), which means callers must provide the value explicitly (#3292)
+* msgspec: Array length constraints now render as Meta annotations - `minItems`/`maxItems` schema constraints on array fields were previously silently ignored for msgspec output. They now render as `Annotated[list[T], Meta(min_length=..., max_length=...)]` when `--use-annotated` is enabled (e.g., `list[Pet]` becomes `Annotated[list[Pet], Meta(max_length=10, min_length=1)]`) (#3292)
+* msgspec: Inherited Structs with field ordering conflicts now use `kw_only=True` - When a child Struct inherits optional fields from a parent and adds required fields, the child now renders with `kw_only=True` as a base class kwarg (e.g., `class Child(Base, kw_only=True):`), changing the calling convention to keyword-only arguments (#3292)
+* Non-finite float values now use `float()` calls instead of `math` imports - Generated code previously rendered `inf`, `-inf`, and `nan` (with `from math import inf, nan`). Now renders `float('inf')`, `float('-inf')`, and `float('nan')` without the `math` import. Semantically equivalent but changes generated output. (#3289)
+* Decimal constraint arguments now use `Decimal()` objects - `condecimal()` constraints previously used bare int/float values (e.g., `condecimal(ge=0, le=1000)`). Now uses `Decimal` objects (e.g., `condecimal(ge=Decimal('0'), le=Decimal('1000'))`) with an added `from decimal import Decimal` import in generated code. (#3289)
+* Integer fields with fractional constraints are normalized to integer-safe bounds - Fractional constraint values on integer types are now converted: `gt: 0.5` becomes `ge: 1`, `lt: 2.5` becomes `le: 2`, and `multiple_of: 1` is dropped entirely. Previously these fractional values were passed through as-is to `conint()` or `Field()`. (#3289)
+* msgspec array length constraints are now rendered - `min_items` and `max_items` schema constraints on array fields are now emitted as `Meta(min_length=..., max_length=...)` annotations in msgspec output. Previously these constraints were silently ignored. (#3289)
+* msgspec required nullable fields no longer get default `= None` - Required nullable fields in msgspec Structs previously received a `= None` default assignment. Now they are rendered without a default, requiring callers to provide the value explicitly. (#3289)
+* TypedDict `extra_items` now uses direct identifiers instead of string forward references - When `additionalProperties` references another type, the generated `extra_items=` keyword argument changed from a quoted string to a bare identifier (e.g., `extra_items='BaseExtra'` → `extra_items=BaseExtra`). The generated code remains valid because files include `from __future__ import annotations`, but the textual output differs (#3301)
+* Functional-syntax TypedDict description placement changed - Description docstrings for functional-syntax TypedDicts (using `TypedDict('Name', {...})`) are now rendered **before** the definition instead of after it. Previously the docstring appeared as a string literal following the assignment; it now appears as a comment block preceding it (#3301)
+* UUID2 format now generates `uuid.UUID` instead of `pydantic.UUID2` - Schemas using `"format": "uuid2"` now generate `UUID` imported from the `uuid` standard library instead of the non-existent `UUID2` from `pydantic`. This is a bug fix since `pydantic.UUID2` was never a valid Pydantic v2 type (the old generated code would raise `ImportError`), but the generated import and type annotation will differ for any schema using this format (#3297)
+
+### Custom Template Update Required
+* msgspec.jinja2 default assignment condition simplified - The Jinja2 template condition for rendering default values was changed from `not field.field and (not field.required or field.use_default_with_required or field.data_type.is_optional or field.nullable)` to `not field.field and (not field.required or field.use_default_with_required)`. Users with custom msgspec templates that replicate the old logic should update accordingly (#3292)
+* msgspec.jinja2 template default value condition changed - The condition for rendering default value assignments changed from `not field.required or field.use_default_with_required or field.data_type.is_optional or field.nullable` to `not field.required or field.use_default_with_required`. Custom templates derived from the built-in msgspec template may need to be updated. (#3289)
+* `TypedDictFunction.jinja2` template restructured - The built-in functional TypedDict template moved the `description` block from after the class definition to before it and added support for field-level docstrings. Users with custom templates that were based on or extend this template may need to update accordingly (#3301)
+
+### Error Handling Changes
+* XML Schema schemaLocation references outside the input base path are now blocked - Any `xs:include`, `xs:import`, `xs:redefine`, or `xs:override` with a `schemaLocation` that resolves outside the input base directory now raises an unconditional error. Previously, these references were silently resolved regardless of location. Users with XML schemas that include files from parent or sibling directories must move the included schemas under the input directory before generating models. (#3308)
+
+### Default Behavior Changes
+* Local JSON Schema `$ref` references outside the input base path now emit deprecation warnings - Relative path refs (e.g., `$ref: "../other/schema.json"`) and `file://` URL refs that resolve outside the input base directory now emit a `FutureWarning` under the default behavior (no `--allow-remote-refs` flag). Previously these were silently resolved. Pass `--allow-remote-refs` to suppress the warning, or move referenced schemas under the input directory. (#3308)
+* `--no-allow-remote-refs` now blocks `file://` URLs and local refs outside the base path - Previously `--no-allow-remote-refs` only blocked HTTP(S) `$ref` fetching. It now also blocks `file://` URL references and relative local `$ref` references that resolve outside the input base path. Users who rely on `file://` refs or out-of-tree local refs with `--no-allow-remote-refs` must switch to `--allow-remote-refs` or restructure their schemas. (#3308)
+
+## What's Changed
+* Add security policy by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3283
+* Update CHANGELOG for 0.61.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3282
+* Optimize DataType prototype copying and import collection by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3291
+* Cache dynamically created context DataType classes by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3294
+* Reuse ModelResolver for field name collision resolution by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3295
+* Reduce redundant Field() data computation in pydantic fields by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3293
+* Fix raw input parsing by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3290
+* Fix msgspec field ordering by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3292
+* Fix pydantic constraint rendering by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3289
+* Break reference cycles in parsed graph after generation by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3298
+* Compute field statement check once when collecting imports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3296
+* Cache ref schema facts in get_ref_data_type by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3301
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3300
+* Fall back uuid2 format to uuid.UUID by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3305
+* Iterate the smaller side in transform_kwargs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3297
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3307
+* Fix msgspec constraint and default rendering by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3302
+* Avoid building unused Field strings and empty extras dicts by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3304
+* Fix TypedDict functional descriptions and extra_items forward references by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3306
+* Fix playground options layout by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3308
+* Improve private network option help by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3309
+* Fix enum member default resolution by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3303
+* Use Claude Opus 4.8 by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3312
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3311
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.61.0...0.62.0
+
+---
+
 ## [0.61.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.61.0) - 2026-06-08
 
 ## Breaking Changes

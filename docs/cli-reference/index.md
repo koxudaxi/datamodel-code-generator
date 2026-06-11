@@ -16,7 +16,7 @@ This documentation is auto-generated from test cases.
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
 | ⚙️ [General Options](general-options.md) | 18 | Utilities and meta options |
-| 📝 [Utility Options](utility-options.md) | 8 | Help, version, debug options |
+| 📝 [Utility Options](utility-options.md) | 10 | Help, version, debug options |
 
 ## All Options
 
@@ -159,6 +159,8 @@ This documentation is auto-generated from test cases.
 - [`--output`](base-options.md#output)
 - [`--output-date-class`](typing-customization.md#output-date-class)
 - [`--output-datetime-class`](typing-customization.md#output-datetime-class)
+- [`--output-format`](utility-options.md#output-format)
+- [`--output-format-json-schema`](utility-options.md#output-format-json-schema)
 - [`--output-model-type`](model-customization.md#output-model-type)
 
 ### P {#p}

@@ -191,16 +191,14 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
     def _get_default(  # noqa: PLR6301
         self,
         field: graphql.GraphQLField | graphql.GraphQLInputField,
-        final_data_type: DataType,
+        final_data_type: DataType,  # noqa: ARG002
         *,
-        required: bool,
+        required: bool,  # noqa: ARG002
     ) -> Any:
         if isinstance(field, graphql.GraphQLInputField):
             if field.default_value == graphql.pyutils.Undefined:
                 return None
             return field.default_value
-        if required is False and final_data_type.is_list:
-            return None
 
         return None
 

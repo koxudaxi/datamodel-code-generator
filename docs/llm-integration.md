@@ -1,6 +1,6 @@
 # LLM Integration
 
-<!-- related-cli-options: --generate-prompt -->
+<!-- related-cli-options: --generate-prompt, --output-format, --output-format-json-schema -->
 
 The `--generate-prompt` option generates a formatted prompt that you can use
 to consult Large Language Models (LLMs) about datamodel-code-generator CLI options.
@@ -22,6 +22,31 @@ The generated prompt includes:
 - All options organized by category with descriptions
 - Full help text for reference
 
+Use `--output-format json` when an LLM agent or tool should consume structured option
+metadata instead of Markdown:
+
+```bash
+datamodel-codegen --generate-prompt "How do I generate strict Pydantic v2 models?" --output-format json
+```
+
+The JSON payload includes the user question, current options, options grouped by
+category, full option metadata from argparse, and help text without ANSI color
+codes.
+
+Use `--output-format-json-schema generate-prompt` when a tool or agent needs the
+schema for the structured prompt payload:
+
+```bash
+datamodel-codegen --output-format-json-schema generate-prompt
+```
+
+Use `--output-format-json-schema generation` for normal generated-file JSON
+output:
+
+```bash
+datamodel-codegen --output-format-json-schema generation
+```
+
 ## CLI LLM Tools
 
 Pipe the generated prompt directly to CLI-based LLM tools:
@@ -42,6 +67,12 @@ Use `exec` subcommand for non-interactive mode:
 
 ```bash
 datamodel-codegen --generate-prompt "How to handle nullable fields?" | codex exec
+```
+
+For agents that can inspect structured input, prefer JSON:
+
+```bash
+datamodel-codegen --generate-prompt "How to handle nullable fields?" --output-format json | codex exec
 ```
 
 ### Other CLI Tools
@@ -99,6 +130,14 @@ Generate a prompt without a specific question:
 
 ```bash
 datamodel-codegen --generate-prompt
+```
+
+### JSON Output
+
+Generate structured option metadata for automated tools:
+
+```bash
+datamodel-codegen --generate-prompt "Find the minimal strict-model options." --output-format json
 ```
 
 ### With a Question
