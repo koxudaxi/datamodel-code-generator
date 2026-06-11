@@ -43,6 +43,7 @@ jobs:
       - name: Run payload runtime suite
         run: tox run --skip-uv-sync --skip-pkg-install -e ${{ matrix.tox_env }}
         env:
+          DCG_PAYLOAD_BACKEND_CASES: all
           DCG_PAYLOAD_MAX_EXAMPLES: "100"
           UV_PYTHON_PREFERENCE: "only-managed"
 
