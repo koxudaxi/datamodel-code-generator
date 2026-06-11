@@ -9,6 +9,6 @@ from dataclasses import dataclass
 from . import shared
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class Model:
     info: shared.SharedModel | None = None

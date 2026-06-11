@@ -12,7 +12,7 @@ import pydantic
 import pytest
 import yaml
 
-from datamodel_code_generator import AllOfMergeMode, Error
+from datamodel_code_generator import AllOfMergeMode, Error, ReadOnlyWriteOnlyModelType
 from datamodel_code_generator.http import _get_httpx
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase
@@ -1440,6 +1440,31 @@ def test_get_python_type_flags(x_python_type: str, expected: dict[str, bool]) ->
     assert result == expected
 
 
+def test_merge_type_modifiers_preserves_container_flags() -> None:
+    """Test inherited field type replacement preserves all container modifiers."""
+    parser = JsonSchemaParser("")
+    new_type = DataType(type="str")
+    current_type = DataType(
+        is_optional=True,
+        is_dict=True,
+        is_list=True,
+        is_set=True,
+        is_frozen_set=True,
+        is_mapping=True,
+        is_sequence=True,
+    )
+
+    parser._merge_type_modifiers(new_type, current_type)
+
+    assert new_type.is_optional
+    assert new_type.is_dict
+    assert new_type.is_list
+    assert new_type.is_set
+    assert new_type.is_frozen_set
+    assert new_type.is_mapping
+    assert new_type.is_sequence
+
+
 def test_resolve_type_import_from_defs() -> None:
     """Test _resolve_type_import_from_defs resolves imports from $defs with x-python-import."""
     schema_dict: dict[str, Any] = {
@@ -1522,6 +1547,40 @@ def test_jsonschema_parser_edge_case_helpers() -> None:
     assert parser._get_data_type_from_json_value(object()).type_hint == "Any"
 
 
+def test_anchor_ref_path_escapes_json_pointer_segments() -> None:
+    """Test anchor ref paths escape JSON Pointer segments."""
+    parser = JsonSchemaParser("")
+
+    assert parser._anchor_ref_path((), ["#", "$defs", "foo/bar", "tilde~key"]) == "#/$defs/foo~1bar/tilde~0key"
+
+    parser.model_resolver.set_current_root([])
+    parser._recursive_anchor_index[()] = ["#/$defs/foo~1bar"]
+    recursive_ref = JsonSchemaObject.model_validate({"$recursiveRef": "#"})
+    assert parser._resolve_recursive_ref(recursive_ref, ["#", "$defs", "foo/bar", "child"]) == "#/$defs/foo~1bar"
+
+
+def test_preload_property_refs_skips_external_ref_mapping(tmp_path: Path, mocker: MockerFixture) -> None:
+    """Test read/write preload does not load refs handled by external mapping."""
+    external_schema = tmp_path / "external.json"
+    parser = JsonSchemaParser(
+        "",
+        external_ref_mapping={str(external_schema): "external.models"},
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.RequestResponse,
+    )
+    load_ref = mocker.patch.object(parser, "_load_ref_schema_object")
+
+    parser._preload_property_refs_for_rw_models(
+        JsonSchemaObject.model_validate({
+            "properties": {
+                "mapped": {"$ref": f"{external_schema}#/External"},
+                "local": {"$ref": "#/$defs/Local"},
+            },
+        })
+    )
+
+    load_ref.assert_called_once_with("#/$defs/Local")
+
+
 def test_json_schema_object_x_property_names_dict() -> None:
     """Test OpenAPI x-propertyNames dict is normalized to propertyNames."""
     obj = JsonSchemaObject.model_validate({"x-propertyNames": {"type": "string", "pattern": "^x-"}})
@@ -1596,6 +1655,14 @@ def test_standard_schema_metadata_is_included_in_field_extras() -> None:
     }
 
 
+def test_field_extra_keys_without_x_prefix_removes_exact_prefix() -> None:
+    """Test x-prefixed field extras remove only the exact extension prefix."""
+    parser = JsonSchemaParser("", field_extra_keys_without_x_prefix={"x-xml"})
+    obj = JsonSchemaObject.model_validate({"type": "string", "x-xml": {"name": "field"}})
+
+    assert parser.get_field_extras(obj) == {"xml": {"name": "field"}}
+
+
 def test_standard_schema_metadata_is_included_in_model_extras() -> None:
     """Test standard metadata keys are preserved as model extras by default."""
     parser = JsonSchemaParser("")
@@ -1620,6 +1687,7 @@ def test_standard_schema_metadata_is_included_in_model_extras() -> None:
     ("schema", "type_hint"),
     [
         ({"allOf": [True]}, "Any"),
+        ({"enum": ["x"]}, "Literal['x']"),
         ({"allOf": [True, {"type": "string"}]}, "str"),
         ({"type": "array", "prefixItems": [{"type": "string"}], "items": True}, "List[Union[str, Any]]"),
         ({"type": "array", "prefixItems": [{"type": "string"}, False], "items": {"type": "integer"}}, "List[str]"),

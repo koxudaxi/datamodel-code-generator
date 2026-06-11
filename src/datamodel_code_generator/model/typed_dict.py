@@ -138,10 +138,8 @@ class TypedDict(DataModel):
         For PEP 728 support, includes closed=True or extra_items=X in the base class.
         """
         base = super().base_class
-        typed_dict_kwargs = self.extra_template_data.get("typed_dict_kwargs")
-        if typed_dict_kwargs:
-            kwargs_str = ", ".join(f"{k}={v}" for k, v in typed_dict_kwargs.items())
-            return f"{base}, {kwargs_str}"
+        if typed_dict_kwargs_suffix := self.extra_template_data.get("typed_dict_kwargs_suffix"):
+            return f"{base}{typed_dict_kwargs_suffix}"
         return base
 
     @property
