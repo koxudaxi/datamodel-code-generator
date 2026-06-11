@@ -291,6 +291,12 @@ See [CI/CD Integration](https://datamodel-code-generator.koxudaxi.dev/ci-cd/) fo
         <p>Astral</p>
       </a>
     </td>
+    <td valign="top" align="center">
+      <a href="https://github.com/openai">
+        <img src="https://avatars.githubusercontent.com/u/14957082?s=200&v=4" alt="OpenAI Logo" style="width: 100px;">
+        <p>OpenAI</p>
+      </a>
+    </td>
   </tr>
 </table>
 
