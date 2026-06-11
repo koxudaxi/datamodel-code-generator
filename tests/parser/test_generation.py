@@ -49,8 +49,8 @@ def test_generation_store_indexes_model_and_reference_order() -> None:
     )
 
 
-def test_generation_facts_keep_legacy_edge_buckets_empty() -> None:
-    """Legacy edge buckets stay empty while reverse edges remain populated."""
+def test_generation_facts_remove_legacy_edge_buckets() -> None:
+    """Legacy edge buckets should be absent while reverse edges remain populated."""
     reference_a = Reference(path="A", original_name="A", name="A")
     reference_b = Reference(path="B", original_name="B", name="B")
     data_type_b = DataType(reference=reference_b)
@@ -62,9 +62,9 @@ def test_generation_facts_keep_legacy_edge_buckets_empty() -> None:
     store.register_model(model_b)
     facts = store.current_facts()
 
-    assert facts.field_edges == {}
-    assert facts.base_edges == {}
-    assert facts.all_edges == {}
+    assert not hasattr(facts, "field_edges")
+    assert not hasattr(facts, "base_edges")
+    assert not hasattr(facts, "all_edges")
     assert [list(data_type_ids) for data_type_ids in facts.reverse_edges.values()] == [[0]]
 
 

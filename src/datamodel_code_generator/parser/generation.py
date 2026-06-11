@@ -130,11 +130,6 @@ class GenerationFacts:
     model_by_path: dict[str, ModelId] = field(default_factory=dict)
     model_by_ref_id: dict[int, ModelId] = field(default_factory=dict)
     data_types_by_model: dict[ModelId, tuple[DataTypeId, ...]] = field(default_factory=dict)
-    # Compatibility edge buckets retained for direct GenerationFacts consumers.
-    # GenerationIndex uses data_types_by_model and reverse_edges for live queries.
-    field_edges: dict[ModelId, OrderedSet[ModelId]] = field(default_factory=dict)
-    base_edges: dict[ModelId, OrderedSet[ModelId]] = field(default_factory=dict)
-    all_edges: dict[ModelId, OrderedSet[ModelId]] = field(default_factory=dict)
     reverse_edges: defaultdict[int, OrderedSet[DataTypeId]] = field(default_factory=lambda: defaultdict(dict))
 
 
