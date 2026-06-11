@@ -871,6 +871,144 @@ class Source(BaseModel):
         return cls(path=Path(), raw_data=data)
 
 
+def _is_any_variant(data_type: DataType) -> bool:
+    return data_type.type == ANY or (
+        not data_type.reference and not data_type.data_types and not data_type.literals and not data_type.type
+    )
+
+
+_DedupItem = TypeVar("_DedupItem")
+
+
+def _iter_first_seen_duplicates(
+    items: Iterable[_DedupItem],
+    key_fn: Callable[[_DedupItem], tuple[HashableComparable, ...]],
+) -> Iterator[tuple[_DedupItem, _DedupItem]]:
+    seen: dict[tuple[HashableComparable, ...], _DedupItem] = {}
+    for item in items:
+        key = key_fn(item)
+        if key in seen:
+            yield seen[key], item
+            continue
+        seen[key] = item
+
+
+def _check_discriminator_mapping_paths(
+    model: pydantic_model_v2.BaseModel | Reference,
+    mapping: dict[str, str],
+    discriminator_values: list[DiscriminatorValue],
+) -> None:
+    for name, path in mapping.items():
+        if (model.path.split("#/")[-1] != path.split("#/")[-1]) and (
+            path.startswith("#/") or model.path[:-1] != path.split("/")[-1]
+        ):
+            t_path = path[str(path).find("/") + 1 :]
+            t_disc = model.path[: str(model.path).find("#")].lstrip("../")  # noqa: B005
+            t_disc_2 = "/".join(t_disc.split("/")[1:])
+            if t_path not in {t_disc, t_disc_2}:  # pragma: no branch
+                continue
+        discriminator_values.append(name)
+
+
+def _get_discriminator_field_value(discriminator_field: DataModelFieldBase) -> DiscriminatorValue | None:
+    const_value = discriminator_field.extras.get("const")
+    if const_value is not None:
+        return const_value
+
+    literals = discriminator_field.data_type.literals
+    if len(literals) == 1:
+        return literals[0]
+
+    enum_source = discriminator_field.data_type.find_source(Enum)
+    if enum_source and len(enum_source.fields) == 1:
+        raw_default = enum_source.fields[0].default
+        if isinstance(raw_default, str):
+            return raw_default.strip("'\"")
+        return raw_default
+    return None
+
+
+def _get_enum_from_base(discriminator_model: DataModel, field_name: str) -> Enum | None:
+    for base_class in discriminator_model.base_classes:
+        if not base_class.reference or not base_class.reference.source:  # pragma: no cover
+            continue
+        base_model = base_class.reference.source
+        if not isinstance(  # pragma: no cover
+            base_model,
+            (
+                pydantic_model_v2.BaseModel,
+                dataclass_model.DataClass,
+                msgspec_model.Struct,
+            ),
+        ):
+            continue
+        for base_field in base_model.fields:  # pragma: no branch
+            if field_name not in {base_field.original_name, base_field.name}:  # pragma: no cover
+                continue
+            if enum_from_base := base_field.data_type.find_source(Enum):  # pragma: no branch
+                return enum_from_base
+    return None
+
+
+def _register_data_type_import(
+    data_type: DataType,
+    model: DataModel,
+    imports: Imports,
+    scoped_model_resolver: ModelResolver,
+) -> None:
+    if data_type.reference is None:
+        return
+    from_, import_ = full_path = relative(model.module_name, data_type.full_name)
+    if imports.use_exact:
+        from_, import_ = full_path = exact_import(from_, import_, data_type.reference.short_name)
+    if from_ and import_:
+        alias = scoped_model_resolver.add(full_path, import_)
+        data_type.alias = (
+            alias.name
+            if data_type.reference.short_name == import_
+            else f"{alias.name}.{data_type.reference.short_name}"
+        )
+        imports.append([
+            Import(
+                from_=from_,
+                import_=import_,
+                alias=alias.name,
+                reference_path=data_type.reference.path,
+            )
+        ])
+
+
+def _resolve_module_file(module_: ModulePath, results: dict[ModulePath, Result]) -> tuple[ModulePath, bool]:
+    is_init = False
+
+    if module_:
+        if len(module_) == 1:
+            parent: ModulePath = ("__init__.py",)
+            if parent not in results:
+                results[parent] = Result(body="")
+        else:
+            for i in range(1, len(module_)):
+                parent = (*module_[:i], "__init__.py")
+                if parent not in results:
+                    results[parent] = Result(body="")
+        if (*module_, "__init__.py") in results:
+            return (*module_, "__init__.py"), True
+        return tuple(part.replace("-", "_") for part in (*module_[:-1], f"{module_[-1]}.py")), is_init
+
+    return ("__init__.py",), is_init
+
+
+def _format_body_safe(body: str, code_formatter: CodeFormatter) -> str:
+    try:
+        return code_formatter.format_code(body)
+    except Exception as exc:  # noqa: BLE001
+        warn(
+            f"Failed to format code: {exc!r}. Emitting unformatted output.",
+            stacklevel=1,
+        )
+        return body
+
+
 class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     """Abstract base class for schema parsers.
 
@@ -1636,10 +1774,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 discriminator["propertyName"] = field_name
                 mapping = discriminator.get("mapping", {})
                 # Any type cannot be a discriminated union variant (Pydantic v2 rejects it)
-                has_any_variant = any(
-                    dt.type == ANY or (not dt.reference and not dt.data_types and not dt.literals and not dt.type)
-                    for dt in field.data_type.data_types
-                )
+                has_any_variant = any(_is_any_variant(dt) for dt in field.data_type.data_types)
                 if has_any_variant:  # pragma: no cover
                     field.extras.pop("discriminator", None)
                     field.data_type.discriminator = None
@@ -1656,46 +1791,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                     discriminator_values: list[DiscriminatorValue] = []
 
-                    def check_paths(
-                        model: pydantic_model_v2.BaseModel | Reference,
-                        mapping: dict[str, str],
-                        discriminator_values: list[DiscriminatorValue] = discriminator_values,
-                    ) -> None:
-                        """Validate discriminator mapping paths for a model."""
-                        for name, path in mapping.items():
-                            if (model.path.split("#/")[-1] != path.split("#/")[-1]) and (
-                                path.startswith("#/") or model.path[:-1] != path.split("/")[-1]
-                            ):
-                                t_path = path[str(path).find("/") + 1 :]
-                                t_disc = model.path[: str(model.path).find("#")].lstrip("../")  # noqa: B005
-                                t_disc_2 = "/".join(t_disc.split("/")[1:])
-                                if t_path not in {t_disc, t_disc_2}:  # pragma: no branch
-                                    continue
-                            discriminator_values.append(name)
-
-                    def get_discriminator_field_value(
-                        discriminator_field: DataModelFieldBase,
-                    ) -> DiscriminatorValue | None:
-                        const_value = discriminator_field.extras.get("const")
-                        if const_value is not None:
-                            return const_value
-
-                        literals = discriminator_field.data_type.literals
-                        if len(literals) == 1:
-                            return literals[0]
-
-                        enum_source = discriminator_field.data_type.find_source(Enum)
-                        if enum_source and len(enum_source.fields) == 1:
-                            raw_default = enum_source.fields[0].default
-                            if isinstance(raw_default, str):
-                                return raw_default.strip("'\"")
-                            return raw_default
-                        return None
-
                     for discriminator_field in discriminator_model.fields:
                         if field_name not in {discriminator_field.original_name, discriminator_field.name}:
                             continue
-                        discriminator_value = get_discriminator_field_value(discriminator_field)
+                        discriminator_value = _get_discriminator_field_value(discriminator_field)
                         if discriminator_value is not None:
                             discriminator_values = [discriminator_value]
                             break
@@ -1705,20 +1804,20 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         for discriminator_field in discriminator_model.iter_all_fields():  # pragma: no branch
                             if field_name not in {discriminator_field.original_name, discriminator_field.name}:
                                 continue
-                            discriminator_value = get_discriminator_field_value(discriminator_field)
+                            discriminator_value = _get_discriminator_field_value(discriminator_field)
                             if discriminator_value is not None:  # pragma: no branch
                                 discriminator_values = [discriminator_value]
                                 break
 
                     if not discriminator_values and mapping:
-                        check_paths(discriminator_model, mapping)  # ty: ignore
+                        _check_discriminator_mapping_paths(discriminator_model, mapping, discriminator_values)  # ty: ignore
 
                         if len(discriminator_values) == 0:
                             for base_class in discriminator_model.base_classes:
                                 if not base_class.reference:
                                     continue
 
-                                check_paths(base_class.reference, mapping)  # ty: ignore
+                                _check_discriminator_mapping_paths(base_class.reference, mapping, discriminator_values)
 
                         if not discriminator_values:
                             discriminator_values = [discriminator_model.path.split("/")[-1]]
@@ -1729,30 +1828,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     if not discriminator_values:  # pragma: no cover
                         msg = f"Discriminator type is not found. {data_type.reference.path}"
                         raise RuntimeError(msg)
-
-                    def get_enum_from_base(
-                        discriminator_model: DataModel = discriminator_model,
-                        field_name: str = field_name,
-                    ) -> Enum | None:
-                        for base_class in discriminator_model.base_classes:
-                            if not base_class.reference or not base_class.reference.source:  # pragma: no cover
-                                continue
-                            base_model = base_class.reference.source
-                            if not isinstance(  # pragma: no cover
-                                base_model,
-                                (
-                                    pydantic_model_v2.BaseModel,
-                                    dataclass_model.DataClass,
-                                    msgspec_model.Struct,
-                                ),
-                            ):
-                                continue
-                            for base_field in base_model.fields:  # pragma: no branch
-                                if field_name not in {base_field.original_name, base_field.name}:  # pragma: no cover
-                                    continue
-                                if enum_from_base := base_field.data_type.find_source(Enum):  # pragma: no branch
-                                    return enum_from_base
-                        return None
 
                     has_one_literal = False
                     for discriminator_field in discriminator_model.fields:
@@ -1786,7 +1861,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                         enum_source = discriminator_field.data_type.find_source(Enum)
                         if self.use_enum_values_in_discriminator:
-                            enum_source = enum_source or get_enum_from_base()
+                            enum_source = enum_source or _get_enum_from_base(discriminator_model, field_name)
 
                         for field_data_type in discriminator_field.data_type.all_data_types:
                             if field_data_type.reference:  # pragma: no cover
@@ -1807,7 +1882,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         has_one_literal = True
                     if not has_one_literal:
                         new_data_type = self._create_discriminator_data_type(
-                            get_enum_from_base(), discriminator_values, discriminator_model, imports
+                            _get_enum_from_base(discriminator_model, field_name),
+                            discriminator_values,
+                            discriminator_model,
+                            imports,
                         )
                         # Handle multiple aliases (Pydantic v2 AliasChoices)
                         single_alias: str | None = None
@@ -1914,25 +1992,23 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     def __reuse_model(self, models: list[DataModel], require_update_action_models: list[str]) -> None:
         if not self.reuse_model or self.reuse_scope == ReuseScope.Tree:
             return
-        model_cache: dict[tuple[HashableComparable, ...], Reference] = {}
         duplicates = []
-        for model in models.copy():
-            if self.collapse_root_models and isinstance(model, self.data_model_root_type):
-                continue
-            model_key = model.get_dedup_key()
-            cached_model_reference = model_cache.get(model_key)
-            if cached_model_reference:
-                if isinstance(model, Enum) or self.collapse_reuse_models:
-                    self.generation_store.redirect_model_reference_users(model, models, cached_model_reference)
-                    duplicates.append(model)
-                else:
-                    inherited_model = model.create_reuse_model(cached_model_reference)
-                    self.generation_store.redirect_model_reference_users(model, models, inherited_model.reference)
-                    if cached_model_reference.path in require_update_action_models:
-                        add_model_path_to_list(require_update_action_models, inherited_model)
-                    self._replace_model_in_list(models, model, inherited_model)
+        reuse_candidates = (
+            model
+            for model in models.copy()
+            if not (self.collapse_root_models and isinstance(model, self.data_model_root_type))
+        )
+        for cached_model, model in _iter_first_seen_duplicates(reuse_candidates, lambda item: item.get_dedup_key()):
+            cached_model_reference = cached_model.reference
+            if isinstance(model, Enum) or self.collapse_reuse_models:
+                self.generation_store.redirect_model_reference_users(model, models, cached_model_reference)
+                duplicates.append(model)
             else:
-                model_cache[model_key] = model.reference
+                inherited_model = model.create_reuse_model(cached_model_reference)
+                self.generation_store.redirect_model_reference_users(model, models, inherited_model.reference)
+                if cached_model_reference.path in require_update_action_models:
+                    add_model_path_to_list(require_update_action_models, inherited_model)
+                self._replace_model_in_list(models, model, inherited_model)
 
         for duplicate in duplicates:
             models.remove(duplicate)
@@ -1946,17 +2022,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         for module, models in module_models:
             all_models.extend((module, model) for model in models)
 
-        model_cache: dict[tuple[HashableComparable, ...], tuple[tuple[str, ...], DataModel]] = {}
         duplicates: list[tuple[tuple[str, ...], DataModel, tuple[str, ...], DataModel]] = []
 
-        for module, model in all_models:
-            model_key = model.get_dedup_key()
-            cached = model_cache.get(model_key)
-            if cached:
-                canonical_module, canonical_model = cached
-                duplicates.append((module, model, canonical_module, canonical_model))
-            else:
-                model_cache[model_key] = (module, model)
+        for (canonical_module, canonical_model), (module, model) in _iter_first_seen_duplicates(
+            all_models,
+            lambda item: item[1].get_dedup_key(),
+        ):
+            duplicates.append((module, model, canonical_module, canonical_model))
 
         return duplicates
 
@@ -2177,11 +2249,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             )
                         discriminator = root_type_field.extras.get("discriminator")
                         if discriminator and isinstance(root_type_field, pydantic_model_v2.DataModelField):
-                            has_any_variant = any(
-                                dt.type == ANY
-                                or (not dt.reference and not dt.data_types and not dt.literals and not dt.type)
-                                for dt in copied_data_type.data_types
-                            )
+                            has_any_variant = any(_is_any_variant(dt) for dt in copied_data_type.data_types)
                             if not has_any_variant:  # pragma: no branch
                                 prop_name = (
                                     discriminator.get("propertyName")
@@ -2203,26 +2271,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         continue
 
                     for d in copied_data_type.all_data_types:
-                        if d.reference is None:
-                            continue
-                        from_, import_ = full_path = relative(model.module_name, d.full_name)
-                        if imports.use_exact:
-                            from_, import_ = full_path = exact_import(from_, import_, d.reference.short_name)
-                        if from_ and import_:
-                            alias = scoped_model_resolver.add(full_path, import_)
-                            d.alias = (
-                                alias.name
-                                if d.reference.short_name == import_
-                                else f"{alias.name}.{d.reference.short_name}"
-                            )
-                            imports.append([
-                                Import(
-                                    from_=from_,
-                                    import_=import_,
-                                    alias=alias.name,
-                                    reference_path=d.reference.path,
-                                )
-                            ])
+                        _register_data_type_import(d, model, imports, scoped_model_resolver)
 
                     original_field = get_most_of_parent(data_type, DataModelFieldBase)
                     if original_field:  # pragma: no cover
@@ -3311,25 +3360,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     ) -> ModuleContext:
         """Process a single module and return its context."""
         imports = Imports(self.use_exact_imports)
-        is_init = False
-
-        if module_:
-            if len(module_) == 1:
-                parent: ModulePath = ("__init__.py",)
-                if parent not in results:
-                    results[parent] = Result(body="")
-            else:
-                for i in range(1, len(module_)):
-                    parent = (*module_[:i], "__init__.py")
-                    if parent not in results:
-                        results[parent] = Result(body="")
-            if (*module_, "__init__.py") in results:
-                module = (*module_, "__init__.py")
-                is_init = True
-            else:
-                module = tuple(part.replace("-", "_") for part in (*module_[:-1], f"{module_[-1]}.py"))
-        else:
-            module = ("__init__.py",)
+        module, is_init = _resolve_module_file(module_, results)
 
         all_module_fields = {field.name for model in models for field in model.fields if field.name is not None}
         scoped_model_resolver = ModelResolver(exclude_names=all_module_fields)
@@ -3463,13 +3494,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         body = "\n".join(result)
         if config.code_formatter:
-            try:
-                body = config.code_formatter.format_code(body)
-            except Exception as exc:  # noqa: BLE001
-                warn(
-                    f"Failed to format code: {exc!r}. Emitting unformatted output.",
-                    stacklevel=1,
-                )
+            body = _format_body_safe(body, config.code_formatter)
 
         return Result(
             body=body,
@@ -3500,13 +3525,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 parts += [str(export_imports), "", export_imports.dump_all(multiline=True)]
                 body = "\n".join(parts)
                 if config.code_formatter:
-                    try:
-                        body = config.code_formatter.format_code(body)
-                    except Exception as exc:  # noqa: BLE001
-                        warn(
-                            f"Failed to format code: {exc!r}. Emitting unformatted output.",
-                            stacklevel=1,
-                        )
+                    body = _format_body_safe(body, config.code_formatter)
                 results[init_module] = Result(
                     body=body,
                     future_imports=future_imports_str,
