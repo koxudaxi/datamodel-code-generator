@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "path": "schema/person.json",
+  "items": [
+    2,
+    "model/output.py"
+  ]
+}
