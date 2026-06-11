@@ -58,6 +58,7 @@ from datamodel_code_generator.imports import (
 )
 from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.reference import Reference, _BaseModel
+from datamodel_code_generator.util import create_module_getattr
 
 T = TypeVar("T")
 SourceT = TypeVar("SourceT")
@@ -93,9 +94,6 @@ NOT_REQUIRED_PREFIX = f"{NOT_REQUIRED}["
 
 READ_ONLY = "ReadOnly"
 READ_ONLY_PREFIX = f"{READ_ONLY}["
-
-
-from datamodel_code_generator.util import create_module_getattr  # noqa: E402
 
 __getattr__ = create_module_getattr(
     __name__,

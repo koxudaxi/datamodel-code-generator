@@ -50,6 +50,7 @@ from datamodel_code_generator import (
     ReuseScope,
     YamlValue,
 )
+from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.format import (
     CodeFormatter,
     Formatter,
@@ -89,7 +90,7 @@ from datamodel_code_generator.types import ANY, DataType, DataTypeManager
 from datamodel_code_generator.util import camel_to_snake
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Iterable, Iterator
 
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
@@ -976,17 +977,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         Uses _get_config_class() to determine which config class to instantiate.
         """
-        from datamodel_code_generator import types as types_module  # noqa: PLC0415
-        from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
-
         config_class = cls._get_config_class()
 
         config_class.model_rebuild(
             _types_namespace={
-                "StrictTypes": types_module.StrictTypes,
-                "DataModel": model_base.DataModel,
-                "DataModelFieldBase": model_base.DataModelFieldBase,
-                "DataTypeManager": types_module.DataTypeManager,
+                "StrictTypes": StrictTypes,
+                "DataModel": DataModel,
+                "DataModelFieldBase": DataModelFieldBase,
+                "DataTypeManager": DataTypeManager,
             }
         )
         return config_class.model_validate(options)  # type: ignore[return-value]

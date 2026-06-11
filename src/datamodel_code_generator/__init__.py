@@ -81,15 +81,11 @@ if TYPE_CHECKING:
     from datamodel_code_generator._types.generate_config_dict import GenerateConfigDict
     from datamodel_code_generator.config import GenerateConfig, ParserConfig
 
-    YamlScalar: TypeAlias = str | int | float | bool | None
-    YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
-
 T = TypeVar("T")
 _ConfigT = TypeVar("_ConfigT", bound="ParserConfig")
 
-if not TYPE_CHECKING:  # pragma: no branch
-    YamlScalar: TypeAlias = str | int | float | bool | None
-    YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
+YamlScalar: TypeAlias = str | int | float | bool | None
+YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
 
 
 GeneratedModules: TypeAlias = dict[tuple[str, ...], str]
