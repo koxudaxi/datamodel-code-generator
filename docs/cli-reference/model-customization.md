@@ -1132,7 +1132,7 @@ naming convention than what's in the schema.
             None, description='Age in years which must be equal to or greater than zero.'
         )
         friends: list[Any] | None = None
-        comment: None = None
+        comment: None = Field(None)
     ```
 
 ---
@@ -5143,7 +5143,7 @@ This prevents breaking changes when generated code is used on older Pydantic ver
             None, description='Age in years which must be equal to or greater than zero.'
         )
         friends: list[Any] | None = None
-        comment: None = None
+        comment: None = Field(None)
     ```
 
 ---
@@ -5225,7 +5225,7 @@ This affects import statements and type annotation syntax in generated code.
                 None, description='Age in years which must be equal to or greater than zero.'
             )
             friends: list[Any] | None = None
-            comment: None = None
+            comment: None = Field(None)
         ```
 
 ---

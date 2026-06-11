@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from typing import Dict
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -11,5 +13,8 @@ class AnyOfNonNullableConfig(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    __pydantic_extra__: dict[str, int | str]
     type: str
+
+
+AnyOfNonNullableConfig.__annotations__['__pydantic_extra__'] = Dict[str, int | str]
+AnyOfNonNullableConfig.model_rebuild(force=True)

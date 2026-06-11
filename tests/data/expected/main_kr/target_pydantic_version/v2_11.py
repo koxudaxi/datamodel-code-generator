@@ -19,4 +19,4 @@ class Person(BaseModel):
         None, description='Age in years which must be equal to or greater than zero.'
     )
     friends: list[Any] | None = None
-    comment: None = None
+    comment: None = Field(None)

@@ -130,6 +130,17 @@ def test_pydantic_v2_base_model_create_typed_extra_field() -> None:
     assert field.required is True
 
 
+def test_pydantic_v2_extra_type_hint_keeps_non_dict_hint() -> None:
+    """Test typed-extra type hint conversion leaves non-dict hints unchanged."""
+    field = PydanticV2DataModelField(
+        name="__pydantic_extra__",
+        data_type=DataType(type="str"),
+        required=True,
+    )
+
+    assert field.pydantic_extra_type_hint == "str"
+
+
 def test_data_model_exception() -> None:
     """Test DataModel raises exception when TEMPLATE_FILE_PATH is undefined."""
     field = DataModelFieldBase(name="a", data_type=DataType(type="str"), default="abc", required=True)

@@ -27,6 +27,6 @@ class Person(BaseModel):
     pets: list[pet_1.Pet] | None = None
     friends: friends_1.Friends | None = None
     robot: Robot | None = None
-    comment: None = None
+    comment: None = Field(None)
     drink: list[coffee.Coffee | tea.Tea] | None = None
     food: list[food_1.Noodle | food_1.Soup] | None = None

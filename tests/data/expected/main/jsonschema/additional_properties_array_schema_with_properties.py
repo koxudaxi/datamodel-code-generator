@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from typing import Dict
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -11,5 +13,8 @@ class KnownAndArrayExtra(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    __pydantic_extra__: dict[str, list[str | int]]
     name: str
+
+
+KnownAndArrayExtra.__annotations__['__pydantic_extra__'] = Dict[str, list[str | int]]
+KnownAndArrayExtra.model_rebuild(force=True)

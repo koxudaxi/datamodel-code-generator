@@ -14,7 +14,7 @@ from pydantic import Field, ValidationError, field_validator, model_validator
 
 from datamodel_code_generator import Error
 from datamodel_code_generator.enums import TargetPydanticVersion
-from datamodel_code_generator.imports import IMPORT_ANY, Import
+from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_DICT, Import
 from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
@@ -138,6 +138,7 @@ class DataModelField(_PydanticBaseDataModelField):
     }
     constraints: Optional[Constraints] = None  # ty: ignore  # noqa: UP045
     can_have_extra_keys: ClassVar[bool] = False
+    _PYDANTIC_EXTRA_FIELD_NAME: ClassVar[str] = "__pydantic_extra__"
 
     @field_validator("extras")
     def validate_extras(cls, values: Any) -> dict[str, Any]:  # noqa: N805
@@ -154,6 +155,34 @@ class DataModelField(_PydanticBaseDataModelField):
     def process_const(self) -> None:
         """Process const field constraint using literal type."""
         self._process_const_as_literal()
+
+    def _requires_null_default_field(self) -> bool:
+        if self.required or self.default is not None or self.has_default_factory:
+            return False
+        return self.data_type.type == "None"
+
+    def _has_field_statement(self) -> bool:
+        return self._requires_null_default_field() or super()._has_field_statement()
+
+    def __str__(self) -> str:
+        """Return Field(None) when stringification would omit an explicit null default."""
+        field = super().__str__()
+        if self._requires_null_default_field() and not field:
+            return "Field(None)"
+        return field
+
+    @property
+    def use_pydantic_extra_annotation_assignment(self) -> bool:
+        """Return whether this field needs runtime annotation assignment."""
+        return self.name == self._PYDANTIC_EXTRA_FIELD_NAME
+
+    @property
+    def pydantic_extra_type_hint(self) -> str:
+        """Return a Dict-based type hint for Pydantic 2.0 typed extras."""
+        type_hint = self.type_hint
+        if not type_hint.startswith("dict["):
+            return type_hint
+        return f"Dict[{type_hint.removeprefix('dict[')}"
 
     def _process_data_in_str(self, data: dict[str, Any]) -> None:
         if self.const:
@@ -224,6 +253,8 @@ class DataModelField(_PydanticBaseDataModelField):
             extra_imports.append(IMPORT_ALIAS_CHOICES)
         if self._has_discriminator_in_data_type():
             extra_imports.append(IMPORT_FIELD)
+        if self.use_pydantic_extra_annotation_assignment:
+            extra_imports.append(IMPORT_DICT)
         if extra_imports:
             return chain_as_tuple(base_imports, tuple(extra_imports))
         return base_imports

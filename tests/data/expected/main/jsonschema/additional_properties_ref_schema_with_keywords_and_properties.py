@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from typing import Dict
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -16,8 +18,13 @@ class KnownAndRefExtra(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    __pydantic_extra__: dict[str, KnownAndRefExtraAdditionalProperty]
     name: str
+
+
+KnownAndRefExtra.__annotations__['__pydantic_extra__'] = Dict[
+    str, KnownAndRefExtraAdditionalProperty
+]
+KnownAndRefExtra.model_rebuild(force=True)
 
 
 class ExtraValue(BaseModel):

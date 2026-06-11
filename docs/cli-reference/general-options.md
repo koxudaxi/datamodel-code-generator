@@ -1300,7 +1300,7 @@ Automatically enabled when using `--url` input.
             None, description='Age in years which must be equal to or greater than zero.'
         )
         friends: list[Any] | None = None
-        comment: None = None
+        comment: None = Field(None)
 
 
     class OriginalPerson(RootModel[Person]):
@@ -1385,7 +1385,7 @@ and generated code stay in sync. Works with both single files and directory outp
             None, description='Age in years which must be equal to or greater than zero.'
         )
         friends: list[Any] | None = None
-        comment: None = None
+        comment: None = Field(None)
     ```
 
 ---
