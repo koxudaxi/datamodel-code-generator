@@ -444,7 +444,7 @@ model_options.add_argument(
 model_options.add_argument(
     "--target-pydantic-version",
     help="Target Pydantic version for generated code. "
-    "'2': Pydantic 2.0+ compatible (default, uses populate_by_name). "
+    "'2': Pydantic 2.7+ compatible (default, uses populate_by_name). "
     "'2.11': Pydantic 2.11+ (uses validate_by_name).",
     choices=[v.value for v in TargetPydanticVersion],
     default=None,

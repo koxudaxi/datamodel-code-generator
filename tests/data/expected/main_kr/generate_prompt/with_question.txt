@@ -600,7 +600,7 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --skip-root-model     Skip generating the model for the root schema element
   --target-pydantic-version {2,2.11}
                         Target Pydantic version for generated code. '2':
-                        Pydantic 2.0+ compatible (default, uses
+                        Pydantic 2.7+ compatible (default, uses
                         populate_by_name). '2.11': Pydantic 2.11+ (uses
                         validate_by_name).
   --target-python-version {3.10,3.11,3.12,3.13,3.14}

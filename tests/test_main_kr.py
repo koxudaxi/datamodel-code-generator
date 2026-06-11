@@ -2087,7 +2087,7 @@ def test_target_python_version_outputs(output_file: Path) -> None:
 
 The `--target-pydantic-version` flag controls Pydantic version-specific config:
 
-- **2**: Uses `populate_by_name=True` (compatible with Pydantic 2.0-2.10)
+- **2**: Uses `populate_by_name=True` (compatible with Pydantic 2.7-2.10)
 - **2.11**: Uses `validate_by_name=True` (for Pydantic 2.11+)
 
 This prevents breaking changes when generated code is used on older Pydantic versions.""",
@@ -2108,7 +2108,7 @@ def test_target_pydantic_version(output_file: Path) -> None:
 
     The `--target-pydantic-version` flag controls Pydantic version-specific config:
 
-    - **2**: Uses `populate_by_name=True` (compatible with Pydantic 2.0-2.10)
+    - **2**: Uses `populate_by_name=True` (compatible with Pydantic 2.7-2.10)
     - **2.11**: Uses `validate_by_name=True` (for Pydantic 2.11+)
 
     This prevents breaking changes when generated code is used on older Pydantic versions.

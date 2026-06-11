@@ -124,6 +124,8 @@ Current scope:
   standard dataclasses do not provide runtime type validation.
 - `pydantic.BaseModel` / pydantic v1 output is not part of the current matrix
   because pydantic-v1 output was removed from the generator in #3031.
+- The Python <3.14 runtime minimum pins `pydantic==2.7.4`, matching the
+  declared package lower bound for generated Pydantic v2 output.
 - The scheduled runtime matrix widens runtime-validating non-default backends
   with `DCG_PAYLOAD_BACKEND_CASES=all`. That mode runs the JSON Schema fixture
   corpus minus classified backend exclusions, plus representative OpenAPI cases;
