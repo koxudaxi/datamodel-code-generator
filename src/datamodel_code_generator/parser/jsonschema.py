@@ -988,7 +988,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Return JSON Schema constraint values without serializing nested schemas."""
         return {
             constraint: value
-            for constraint in JsonSchemaObject.__constraint_field_order__
+            for constraint in obj.__constraint_field_order__
             if (value := getattr(obj, constraint)) is not None
         }
 
