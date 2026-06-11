@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from hypothesis import HealthCheck, given, settings
+from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 from pydantic import ValidationError
 
@@ -120,8 +120,7 @@ def test_generated_pydantic_v2_model_rejects_schema_invalid_payloads(
     payload = data.draw(payload_strategy(case), label=f"{case.id}:valid")
     validate_with_source_schema(case, payload)
     mutations = invalid_payload_mutations(case, payload)
-    if not mutations:
-        return
+    assume(bool(mutations))
 
     mutation = data.draw(st.sampled_from(mutations), label=f"{case.id}:invalid")
     if source_schema_validator(case).is_valid(mutation.payload):
