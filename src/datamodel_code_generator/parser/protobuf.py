@@ -17,7 +17,7 @@ from warnings import warn
 from typing_extensions import Unpack
 
 from datamodel_code_generator import Error, ProtobufVersion, SchemaParseError, VersionMode
-from datamodel_code_generator.parser._math_imports import add_math_imports_for_non_finite_literals
+from datamodel_code_generator.parser._math_imports import apply_math_imports_to_parse_result
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
 if TYPE_CHECKING:
@@ -230,10 +230,6 @@ def _find_option_end(text: str, start: int) -> int | None:
             return index
 
     return None  # pragma: no cover
-
-
-def _add_generated_imports(body: str) -> str:
-    return add_math_imports_for_non_finite_literals(body)
 
 
 def convert_protobuf_schema_data(
@@ -569,12 +565,12 @@ class _ProtobufDescriptorConverter:
 
     def _field_schema(self, field: Any, syntax: ProtobufVersion) -> dict[str, Any]:
         if field.label == LABEL_REPEATED:
-            map_schema = self._map_field_schema(field, syntax)
+            map_schema = self._map_field_schema(field)
             if map_schema is not None:
                 return map_schema
-            return {"type": "array", "items": self._single_field_schema(field, syntax), "default": []}
+            return {"type": "array", "items": self._single_field_schema(field), "default": []}
 
-        schema = self._single_field_schema(field, syntax)
+        schema = self._single_field_schema(field)
         if field.HasField("default_value"):
             schema["default"] = self._parse_default(field)
         elif self._uses_implicit_proto3_default(field, syntax):
@@ -583,7 +579,7 @@ class _ProtobufDescriptorConverter:
                 schema["default"] = default
         return schema
 
-    def _single_field_schema(self, field: Any, syntax: ProtobufVersion) -> dict[str, Any]:  # noqa: ARG002
+    def _single_field_schema(self, field: Any) -> dict[str, Any]:
         if field.type in SCALAR_SCHEMAS:
             return dict(SCALAR_SCHEMAS[field.type])
         if field.type == TYPE_ENUM:
@@ -595,7 +591,7 @@ class _ProtobufDescriptorConverter:
             return {"$ref": f"#/definitions/{self._definition_key(type_name)}"}
         return {}  # pragma: no cover
 
-    def _map_field_schema(self, field: Any, syntax: ProtobufVersion) -> dict[str, Any] | None:
+    def _map_field_schema(self, field: Any) -> dict[str, Any] | None:
         if field.type != TYPE_MESSAGE:
             return None
         entry = self.map_entries.get(_type_name(field.type_name))
@@ -614,7 +610,7 @@ class _ProtobufDescriptorConverter:
         return {
             "type": "object",
             "propertyNames": {"type": "string", "x-python-type": map_key_python_type},
-            "additionalProperties": self._single_field_schema(value_field, syntax),
+            "additionalProperties": self._single_field_schema(value_field),
             "default": {},
         }
 
@@ -676,14 +672,9 @@ class ProtobufParser(JsonSchemaParser):
 
     def parse(self, *args: Any, **kwargs: Any) -> str | dict[tuple[str, ...], Any]:
         """Parse Protocol Buffers schemas and add imports for non-finite defaults."""
-        result = super().parse(*args, **kwargs)
-        if isinstance(result, str):
-            return _add_generated_imports(result)
-        for item in result.values():
-            item.body = _add_generated_imports(item.body)
-        return result
+        return apply_math_imports_to_parse_result(super().parse(*args, **kwargs))
 
-    def _compile_descriptor_set(self) -> Any:
+    def _compile_descriptor_set(self) -> tuple[Any, frozenset[str]]:
         protoc, well_known_include = _load_grpc_tools()
         descriptor_pb2 = _load_descriptor_pb2()
         with _ProtoInputPreparer(self) as (input_files, include_paths, input_file_names):

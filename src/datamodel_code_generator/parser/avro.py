@@ -6,13 +6,13 @@ JSON Schema parser while preserving Avro named type and logical type semantics.
 
 from __future__ import annotations
 
-import copy
 import re
 from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
 from typing_extensions import Unpack
 
 from datamodel_code_generator import Error, YamlValue, load_yaml
+from datamodel_code_generator.parser._convert_common import _copy_schema, _namespace_name, _unique_name
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
 if TYPE_CHECKING:
@@ -120,19 +120,8 @@ def _is_avro_schema_object(schema: JsonSchema) -> bool:
     return False
 
 
-def _copy_schema(schema: JsonSchema) -> JsonSchema:
-    return copy.deepcopy(schema)
-
-
 def _to_class_title(name: str) -> str:
     return f"{name[:1].upper()}{name[1:]}"
-
-
-def _namespace_name(namespace: str | None) -> str:
-    if not namespace:
-        return "NoNamespace"
-    parts = re.findall(r"[A-Za-z0-9]+", namespace)
-    return "".join(_to_class_title(part) for part in parts) or "Namespace"
 
 
 def _is_valid_name(name: str) -> bool:
@@ -248,13 +237,9 @@ class _AvroSchemaConverter:
                 name = (
                     _to_class_title(local)
                     if len(fullnames) == 1
-                    else f"{_namespace_name(name_info.namespace)}{_to_class_title(local)}"
+                    else f"{_namespace_name(name_info.namespace, _to_class_title)}{_to_class_title(local)}"
                 )
-                candidate = name
-                suffix = 2
-                while candidate in used_names:
-                    candidate = f"{name}{suffix}"
-                    suffix += 1
+                candidate = _unique_name(name, used_names)
                 self.definition_names[fullname] = candidate
                 used_names.add(candidate)
 
@@ -570,23 +555,7 @@ class AvroParser(JsonSchemaParser):
 
     def parse_raw(self) -> None:
         """Parse all Avro schema input sources into data models."""
-        for source, path_parts in self._get_context_source_path_parts():
-            raw_obj = _AvroSchemaConverter().convert(source)
-            source.raw_data = raw_obj
-            if source.path.parts:
-                self.remote_object_cache[str(self.base_path / source.path)] = raw_obj
-            self.raw_obj = raw_obj
-            title = str(raw_obj.get("title") or "Model")
-            obj_name = self.class_name or title
-            self._parse_file(
-                raw_obj,
-                obj_name,
-                path_parts,
-                preserve_root_class_name=self._should_preserve_explicit_root_class_name(obj_name),
-            )
-
-        self._resolve_unparsed_json_pointer()
-        self._generate_forced_base_models()
+        self._parse_converted_sources(_AvroSchemaConverter)
 
 
 def convert_avro_schema_data(data: YamlValue) -> dict[str, YamlValue]:

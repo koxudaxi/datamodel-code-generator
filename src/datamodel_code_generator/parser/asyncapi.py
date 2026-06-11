@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from pydantic import Field, StrictStr, ValidationError
 from typing_extensions import Unpack
 
-from datamodel_code_generator import Error, YamlValue, load_data, snooper_to_methods
+from datamodel_code_generator import Error, YamlValue, snooper_to_methods
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.enums import AsyncAPIVersion
 from datamodel_code_generator.parser.avro import convert_avro_schema_data
@@ -27,7 +27,7 @@ from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.util import BaseModel
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
     from urllib.parse import ParseResult
 
     from datamodel_code_generator._types import AsyncAPIParserConfigDict
@@ -116,6 +116,15 @@ class MultiFormatSchemaObject(BaseModel):
 
 def _iter_mapping_items(value: Any) -> list[tuple[str, Any]]:
     return list(value.items()) if isinstance(value, dict) else []
+
+
+def _iter_trait_items(traits: Any, path: list[str]) -> Iterator[tuple[dict[str, Any], list[str]]]:
+    is_trait_list = isinstance(traits, list)
+    trait_items = traits if is_trait_list else [traits]
+    for index, trait in enumerate(trait_items):
+        if not isinstance(trait, dict):
+            continue
+        yield trait, [*path, str(index)] if is_trait_list else path
 
 
 def _path_to_string(path: list[str]) -> str:
@@ -227,6 +236,7 @@ class AsyncAPIParser(OpenAPIParser):
     @property
     def schema_features(self) -> OpenAPISchemaFeatures:
         """Get Schema Object features based on config or detected AsyncAPI version."""
+        # Keep this uncached because AsyncAPI reference parsing swaps raw_obj between document contexts.
         from datamodel_code_generator.parser.schema_version import (  # noqa: PLC0415
             OpenAPISchemaFeatures,
             detect_asyncapi_version,
@@ -246,9 +256,7 @@ class AsyncAPIParser(OpenAPIParser):
         for schema_name, schema in schemas.items():
             if not isinstance(schema, dict):
                 continue
-            discriminator = schema.get("discriminator")
-            if discriminator and not schema.get("oneOf") and not schema.get("anyOf"):
-                self._discriminator_schemas[f"#/components/schemas/{schema_name}"] = discriminator
+            self._register_discriminator_schema(schema_name, schema)
 
     def _current_asyncapi_context(self) -> AsyncAPIContext:
         return AsyncAPIContext(
@@ -400,6 +408,28 @@ class AsyncAPIParser(OpenAPIParser):
         resolved = self._resolve_asyncapi_ref(ref)
         return None if tuple(resolved.path) in seen_paths else resolved
 
+    def _recurse_into_ref(
+        self,
+        value: Any,
+        name: str,
+        seen_paths: set[tuple[str, ...]],
+        recurse: Callable[[Any, str, list[str], set[tuple[str, ...]]], list[AsyncAPISchema]],
+        *,
+        rename: bool = True,
+    ) -> list[AsyncAPISchema] | None:
+        """Return ref recursion results; None means no ref or an already-seen ref."""
+        if (resolved := self._resolve_ref_object(value, seen_paths)) is None:
+            return None
+        resolved_path = resolved.path
+        ref_name = resolved_path[-1] if resolved_path else name
+        with self._asyncapi_context(resolved.context):
+            return recurse(
+                resolved.value,
+                _make_model_name(ref_name) if rename else name,
+                resolved_path,
+                seen_paths | {tuple(resolved_path)},
+            )
+
     def _resolve_asyncapi_ref(self, ref: str) -> AsyncAPIResolvedRef:
         """Resolve an AsyncAPI Reference Object to raw data and a parser path."""
         resolved_ref = self.model_resolver.resolve_ref(ref)
@@ -441,16 +471,10 @@ class AsyncAPIParser(OpenAPIParser):
         seen_paths = seen_paths or set()
         if not isinstance(message, dict):
             return []
-        if resolved := self._resolve_ref_object(message, seen_paths):
-            resolved_path = resolved.path
-            ref_name = resolved_path[-1] if resolved_path else name
-            with self._asyncapi_context(resolved.context):
-                return self._iter_message_payload_schemas(
-                    resolved.value,
-                    _make_model_name(ref_name),
-                    resolved_path,
-                    seen_paths | {tuple(resolved_path)},
-                )
+        if (
+            schemas := self._recurse_into_ref(message, name, seen_paths, self._iter_message_payload_schemas)
+        ) is not None:
+            return schemas
         if isinstance(one_of := message.get("oneOf"), list):
             schemas: list[AsyncAPISchema] = []
             for index, item in enumerate(one_of, start=1):
@@ -518,14 +542,8 @@ class AsyncAPIParser(OpenAPIParser):
         seen_paths = seen_paths or set()
         if not isinstance(bindings, dict):
             return []
-        if resolved := self._resolve_ref_object(bindings, seen_paths):
-            with self._asyncapi_context(resolved.context):
-                return self._iter_binding_schemas(
-                    resolved.value,
-                    _make_model_name(resolved.path[-1] if resolved.path else name),
-                    resolved.path,
-                    seen_paths | {tuple(resolved.path)},
-                )
+        if (schemas := self._recurse_into_ref(bindings, name, seen_paths, self._iter_binding_schemas)) is not None:
+            return schemas
 
         schemas: list[AsyncAPISchema] = []
         for protocol_name, binding in _iter_mapping_items(bindings):
@@ -566,14 +584,8 @@ class AsyncAPIParser(OpenAPIParser):
         seen_paths = seen_paths or set()
         if not isinstance(parameter, dict):
             return []
-        if resolved := self._resolve_ref_object(parameter, seen_paths):
-            with self._asyncapi_context(resolved.context):
-                return self._iter_parameter_schemas(
-                    resolved.value,
-                    _make_model_name(resolved.path[-1] if resolved.path else name),
-                    resolved.path,
-                    seen_paths | {tuple(resolved.path)},
-                )
+        if (schemas := self._recurse_into_ref(parameter, name, seen_paths, self._iter_parameter_schemas)) is not None:
+            return schemas
         if "schema" not in parameter:
             return []
         return self._iter_schema_format_schemas(
@@ -591,12 +603,8 @@ class AsyncAPIParser(OpenAPIParser):
         seen_paths: set[tuple[str, ...]] | None = None,
     ) -> list[AsyncAPISchema]:
         seen_paths = seen_paths or set()
-        trait_items = traits if isinstance(traits, list) else [traits]
         schemas: list[AsyncAPISchema] = []
-        for index, trait in enumerate(trait_items):
-            if not isinstance(trait, dict):
-                continue
-            trait_path = [*path, str(index)] if isinstance(traits, list) else path
+        for trait, trait_path in _iter_trait_items(traits, path):
             if resolved := self._resolve_ref_object(trait, seen_paths):
                 with self._asyncapi_context(resolved.context):
                     schemas.extend(
@@ -639,12 +647,8 @@ class AsyncAPIParser(OpenAPIParser):
         seen_paths: set[tuple[str, ...]] | None = None,
     ) -> list[AsyncAPISchema]:
         seen_paths = seen_paths or set()
-        trait_items = traits if isinstance(traits, list) else [traits]
         schemas: list[AsyncAPISchema] = []
-        for index, trait in enumerate(trait_items):
-            if not isinstance(trait, dict):
-                continue
-            trait_path = [*path, str(index)] if isinstance(traits, list) else path
+        for trait, trait_path in _iter_trait_items(traits, path):
             if resolved := self._resolve_ref_object(trait, seen_paths):
                 with self._asyncapi_context(resolved.context):
                     schemas.extend(
@@ -712,14 +716,10 @@ class AsyncAPIParser(OpenAPIParser):
         seen_paths = seen_paths or set()
         if not isinstance(reply, dict):
             return []
-        if resolved := self._resolve_ref_object(reply, seen_paths):
-            with self._asyncapi_context(resolved.context):
-                return self._iter_operation_reply_schemas(
-                    resolved.value,
-                    name,
-                    resolved.path,
-                    seen_paths | {tuple(resolved.path)},
-                )
+        if (
+            schemas := self._recurse_into_ref(reply, name, seen_paths, self._iter_operation_reply_schemas, rename=False)
+        ) is not None:
+            return schemas
         if "messages" not in reply:
             return []
         return self._iter_operation_message_schemas(
@@ -738,14 +738,8 @@ class AsyncAPIParser(OpenAPIParser):
         seen_paths = seen_paths or set()
         if not isinstance(operation, dict):
             return []
-        if resolved := self._resolve_ref_object(operation, seen_paths):
-            with self._asyncapi_context(resolved.context):
-                return self._iter_operation_schemas(
-                    resolved.value,
-                    _make_model_name(resolved.path[-1] if resolved.path else name),
-                    resolved.path,
-                    seen_paths | {tuple(resolved.path)},
-                )
+        if (schemas := self._recurse_into_ref(operation, name, seen_paths, self._iter_operation_schemas)) is not None:
+            return schemas
         schemas: list[AsyncAPISchema] = []
         if "traits" in operation:
             schemas.extend(
@@ -793,14 +787,8 @@ class AsyncAPIParser(OpenAPIParser):
         seen_paths = seen_paths or set()
         if not isinstance(channel, dict):
             return []
-        if resolved := self._resolve_ref_object(channel, seen_paths):
-            with self._asyncapi_context(resolved.context):
-                return self._iter_channel_schemas(
-                    resolved.value,
-                    _make_model_name(resolved.path[-1] if resolved.path else name),
-                    resolved.path,
-                    seen_paths | {tuple(resolved.path)},
-                )
+        if (schemas := self._recurse_into_ref(channel, name, seen_paths, self._iter_channel_schemas)) is not None:
+            return schemas
         schemas: list[AsyncAPISchema] = []
         if "parameters" in channel:
             for parameter_name, parameter in _iter_mapping_items(channel["parameters"]):
@@ -948,6 +936,7 @@ class AsyncAPIParser(OpenAPIParser):
         self,
         context_sources: dict[tuple[str, ...], AsyncAPIContext],
     ) -> None:
+        """Resolve JSON pointers per AsyncAPI context, preserving sorted reserved-ref fixed-point order."""
         model_count = len(self.results)
         for root_key, context in context_sources.items():
             if not (reserved_refs := self.reserved_refs.get(root_key)):
@@ -970,9 +959,7 @@ class AsyncAPIParser(OpenAPIParser):
             if self.validation:
                 warn_deprecated("cli.validation", stacklevel=2)
 
-            specification: dict[str, Any] = (
-                dict(source.raw_data) if source.raw_data is not None else load_data(source.text)
-            )
+            specification = self._load_source_dict(source)
             self.raw_obj = specification
             context_sources[tuple(path_parts)] = self._current_asyncapi_context()
             self._collect_discriminator_schemas()

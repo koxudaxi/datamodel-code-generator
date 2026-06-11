@@ -49,13 +49,11 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED, get_module_name, sanitize_module_name
-from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.enum import (
     SPECIALIZED_ENUM_TYPE_MATCH,
     Enum,
     StrEnum,
 )
-from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticV2DataClass
 from datamodel_code_generator.model.typed_dict import TypedDict as TypedDictModel
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import (
@@ -2835,6 +2833,27 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return None, alias
         return alias, None
 
+    def _effective_default_state(
+        self,
+        field_name: str,
+        default: Any,
+        *,
+        has_default: bool,
+        required: bool,
+        class_name: str | None,
+    ) -> tuple[Any, bool, bool]:
+        effective_default, effective_has_default = self.model_resolver.resolve_default_value(
+            field_name,
+            default,
+            has_default,
+            class_name=class_name,
+        )
+        return (
+            effective_default,
+            effective_has_default,
+            required and self.apply_default_values_for_required_fields and effective_has_default,
+        )
+
     def _get_inherited_field(self, prop_name: str, base_classes: list[Reference]) -> DataModelFieldBase | None:
         """Get an inherited generated field from parsed base models."""
         for base in base_classes:
@@ -3138,32 +3157,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def parse_one_of(self, name: str, obj: JsonSchemaObject, path: list[str]) -> list[DataType]:
         """Parse oneOf schema into a list of data types."""
         return self.parse_combined_schema(name, obj, path, "oneOf")
-
-    def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
-        """Create data model instance with dataclass_arguments support for DataClass."""
-        # Add class decorators if not already provided
-        if "decorators" not in kwargs and self.class_decorators:
-            kwargs["decorators"] = list(self.class_decorators)
-        data_model_class = model_type or self.data_model_type
-        if issubclass(data_model_class, (DataClass, PydanticV2DataClass)):
-            # Use dataclass_arguments from kwargs, or fall back to self.dataclass_arguments
-            # If both are None, construct from legacy frozen_dataclasses/keyword_only flags
-            dataclass_arguments = kwargs.pop("dataclass_arguments", None)
-            if dataclass_arguments is None:
-                dataclass_arguments = self.dataclass_arguments
-            if dataclass_arguments is None:
-                # Construct from legacy flags for library API compatibility
-                dataclass_arguments = {}
-                if self.frozen_dataclasses:
-                    dataclass_arguments["frozen"] = True
-                if self.keyword_only:
-                    dataclass_arguments["kw_only"] = True
-            kwargs["dataclass_arguments"] = dataclass_arguments
-            kwargs.pop("frozen", None)
-            kwargs.pop("keyword_only", None)
-        else:
-            kwargs.pop("dataclass_arguments", None)
-        return data_model_class(**kwargs)
 
     def _merge_type_modifiers(self, new_type: DataType, current_type: DataType) -> None:  # noqa: PLR6301
         """Merge container modifiers from an overriding field type into an inherited type."""
@@ -3607,19 +3600,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
             field_type = self.parse_item(modular_name, field, [*path, field_name])
 
-            effective_default, effective_has_default = self.model_resolver.resolve_default_value(
-                original_field_name,
-                field.default,
-                field.has_default,
-                class_name=class_name,
-            )
-
             if self.force_optional_for_required_fields:
                 required: bool = False
             else:
                 required = original_field_name in requires
-            use_default_with_required = (
-                required and self.apply_default_values_for_required_fields and effective_has_default
+            effective_default, effective_has_default, use_default_with_required = self._effective_default_state(
+                original_field_name,
+                field.default,
+                has_default=field.has_default,
+                required=required,
+                class_name=class_name,
             )
             fields.append(
                 self.get_object_field(
@@ -5291,6 +5281,45 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             ):
                 yield source, path_parts
 
+    def _load_source_dict(self, source: Source) -> dict[str, Any]:  # noqa: PLR6301
+        return dict(source.raw_data) if source.raw_data is not None else load_data(source.text)
+
+    def _resolve_root_model_name(self, raw_obj: dict[str, Any]) -> tuple[str, bool]:
+        title = raw_obj.get("title")
+        title_str = str(title) if title is not None else "Model"
+        if self.custom_class_name_generator:
+            return title_str, False
+
+        if class_name := self.class_name:
+            if not self.model_resolver.validate_name(class_name):
+                raise InvalidClassNameError(class_name)
+            return class_name, self._should_preserve_explicit_root_class_name(class_name)
+
+        obj_name = title_str
+        if not self.model_resolver.validate_name(obj_name):
+            obj_name = title_to_class_name(obj_name)
+        if not self.model_resolver.validate_name(obj_name):
+            raise InvalidClassNameError(obj_name)
+        return obj_name, False
+
+    def _parse_converted_sources(self, make_converter: Callable[[], Any]) -> None:
+        for source, path_parts in self._get_context_source_path_parts():
+            raw_obj = make_converter().convert(source)
+            source.raw_data = raw_obj
+            if source.path.parts:
+                self.remote_object_cache[str(self.base_path / source.path)] = raw_obj
+            self.raw_obj = raw_obj
+            obj_name, preserve_root_class_name = self._resolve_root_model_name(raw_obj)
+            self._parse_file(
+                raw_obj,
+                obj_name,
+                path_parts,
+                preserve_root_class_name=preserve_root_class_name,
+            )
+
+        self._resolve_unparsed_json_pointer()
+        self._generate_forced_base_models()
+
     def parse_raw(self) -> None:
         """Parse all raw input sources into data models."""
         for source, path_parts in self._get_context_source_path_parts():
@@ -5306,25 +5335,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
                     continue
             self.raw_obj = raw_obj
-            title = self.raw_obj.get("title")
-            title_str = str(title) if title is not None else "Model"
-            preserve_root_class_name = False
-            validate_obj_name = False
-            match (self.custom_class_name_generator, self.class_name):
-                case (custom_generator, _) if custom_generator:
-                    obj_name = title_str
-                case (_, class_name) if class_name:
-                    obj_name = class_name
-                    preserve_root_class_name = self._should_preserve_explicit_root_class_name(obj_name)
-                    validate_obj_name = True
-                case _:
-                    # backward compatible
-                    obj_name = title_str
-                    if not self.model_resolver.validate_name(obj_name):
-                        obj_name = title_to_class_name(obj_name)
-                    validate_obj_name = True
-            if validate_obj_name and not self.model_resolver.validate_name(obj_name):
-                raise InvalidClassNameError(obj_name)
+            obj_name, preserve_root_class_name = self._resolve_root_model_name(self.raw_obj)
             self._parse_file(self.raw_obj, obj_name, path_parts, preserve_root_class_name=preserve_root_class_name)
 
         self._resolve_unparsed_json_pointer()
@@ -5347,7 +5358,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 for reserved_ref in sorted(reserved_refs):
                     if self.model_resolver.add_ref(reserved_ref, resolved=True).loaded:
                         continue
-                    self.raw_obj = dict(source.raw_data) if source.raw_data is not None else load_data(source.text)
+                    self.raw_obj = self._load_source_dict(source)
                     self.parse_json_pointer(self.raw_obj, reserved_ref, path_parts)
 
         if model_count != len(self.results):

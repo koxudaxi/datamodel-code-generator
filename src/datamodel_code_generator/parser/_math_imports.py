@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 NON_FINITE_LITERAL_PATTERN = re.compile(r"(?<![\w.'\"])[+-]?(?P<name>inf|nan)(?![\w'\"])")
 
@@ -29,3 +30,11 @@ def add_math_imports_for_non_finite_literals(body: str) -> str:
         insert_at += 1
     lines.insert(insert_at, import_line)
     return "\n".join(lines)
+
+
+def apply_math_imports_to_parse_result(result: str | dict[tuple[str, ...], Any]) -> str | dict[tuple[str, ...], Any]:
+    if isinstance(result, str):
+        return add_math_imports_for_non_finite_literals(result)
+    for item in result.values():
+        item.body = add_math_imports_for_non_finite_literals(item.body)
+    return result
