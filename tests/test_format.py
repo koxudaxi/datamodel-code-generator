@@ -513,6 +513,28 @@ def test_apply_builtin_formatter_adds_blank_between_assignment_and_class() -> No
     assert apply_builtin_formatter(code) == '__all__ = [\n    "Model",\n]\n\n\nclass Model:\n    id: str\n'
 
 
+def test_apply_builtin_formatter_wraps_module_subscript_assignment() -> None:
+    """Test built-in formatter wraps long module-level subscript assignments."""
+    code = (
+        "class Model:\n"
+        "    id: str\n"
+        "\n"
+        "Model.__annotations__['__pydantic_extra__'] = Dict[str, float | str | bool | dict[str, Any] | None]\n"
+        "Model.model_rebuild(force=True)\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "class Model:\n"
+        "    id: str\n"
+        "\n"
+        "\n"
+        "Model.__annotations__['__pydantic_extra__'] = Dict[\n"
+        "    str, float | str | bool | dict[str, Any] | None\n"
+        "]\n"
+        "Model.model_rebuild(force=True)\n"
+    )
+
+
 def test_apply_builtin_formatter_normalizes_simple_string_quotes() -> None:
     """Test built-in formatter can match black string normalization for generated strings."""
     code = (

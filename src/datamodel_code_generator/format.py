@@ -1301,6 +1301,36 @@ def _format_union_subscript(
     return "\n".join(formatted_lines)
 
 
+def _format_subscript_value(
+    subscript: ast.Subscript,
+    indent: str,
+    line_length: int,
+    source: str,
+    closing_suffix: str = "",
+) -> str:
+    continuation_indent = f"{indent}    "
+    value = _source_segment(source, subscript.value)
+    elements = _iter_subscript_elements(subscript)
+    joined_elements = ", ".join(_source_segment(source, element) for element in elements)
+    if len(f"{continuation_indent}{joined_elements}") <= line_length:
+        return f"{value}[\n{continuation_indent}{joined_elements}\n{indent}]{closing_suffix}"
+
+    formatted_lines = [f"{value}["]
+    for element in elements:
+        element_source = _source_segment(source, element)
+        if isinstance(element, ast.BinOp) and isinstance(element.op, ast.BitOr):
+            element_lines = _format_bit_or_elements(element, continuation_indent, line_length, source)
+            element_lines[-1] = f"{element_lines[-1]},"
+            formatted_lines.extend(element_lines)
+        elif isinstance(element, ast.Subscript) and len(f"{continuation_indent}{element_source}") > line_length:
+            element_lines = _format_subscript_value(element, continuation_indent, line_length, source, ",").splitlines()
+            formatted_lines.extend(_indent_first_line(element_lines, continuation_indent))
+        else:
+            formatted_lines.append(f"{continuation_indent}{element_source},")
+    formatted_lines.append(f"{indent}]{closing_suffix}")
+    return "\n".join(formatted_lines)
+
+
 def _format_type_alias_type_call(call: ast.Call, indent: str, line_length: int, source: str) -> str:
     continuation_indent = f"{indent}    "
     inline_arguments = ", ".join(_source_segment(source, argument) for argument in call.args)
@@ -1474,6 +1504,12 @@ def _format_generated_module_statement(  # noqa: PLR0911
         return f"{indent}type {target} = {_format_annotated(statement.value, indent, line_length, source)}"
     if not isinstance(statement, ast.Assign) or len(statement.targets) != 1:
         return None
+    if isinstance(statement.value, ast.Subscript) and (
+        len(line) > line_length or statement.lineno != (statement.end_lineno or statement.lineno)
+    ):
+        indent = _line_indent(line)
+        target = _source_segment(source, statement.targets[0])
+        return f"{indent}{target} = {_format_subscript_value(statement.value, indent, line_length, source)}"
     if _is_call(statement.value, "TypedDict") and any(
         isinstance(argument, ast.Dict) for argument in statement.value.args
     ):
@@ -1641,6 +1677,30 @@ def _apply_line_replacements(lines: list[str], replacements: list[_LineReplaceme
     return formatted_lines
 
 
+def _previous_non_empty_line_index(lines: list[str]) -> int:
+    index = len(lines) - 1
+    while index >= 0 and not lines[index]:
+        index -= 1
+    return index
+
+
+def _ensure_post_class_annotation_assignment_spacing(
+    formatted_lines: list[str],
+    line: str,
+    *,
+    previous_top_level_class_or_function: bool,
+) -> None:
+    if not previous_top_level_class_or_function or ".__annotations__[" not in line:
+        return
+
+    previous_line_index = _previous_non_empty_line_index(formatted_lines)
+    if previous_line_index < 0 or not formatted_lines[previous_line_index].startswith((" ", "\t")):
+        return
+
+    while len(formatted_lines) - previous_line_index - 1 < MAX_TOP_LEVEL_BLANK_LINES:
+        formatted_lines.append("")
+
+
 def _normalize_top_level_blank_lines(code: str) -> str:
     string_lines: set[int] = set()
     for token in tokenize.generate_tokens(StringIO(code).readline):
@@ -1649,12 +1709,16 @@ def _normalize_top_level_blank_lines(code: str) -> str:
 
     lines = code.splitlines()
     formatted_lines: list[str] = []
+    previous_top_level_class_or_function = False
     for line_number, line in enumerate(lines, start=1):
         if line and not line.startswith((" ", "\t")) and line_number not in string_lines:
+            _ensure_post_class_annotation_assignment_spacing(
+                formatted_lines,
+                line,
+                previous_top_level_class_or_function=previous_top_level_class_or_function,
+            )
             if line.startswith(("@", "class ", "def ", "async def ")):
-                previous_line_index = len(formatted_lines) - 1
-                while previous_line_index >= 0 and not formatted_lines[previous_line_index]:
-                    previous_line_index -= 1
+                previous_line_index = _previous_non_empty_line_index(formatted_lines)
                 if previous_line_index >= 0 and formatted_lines[previous_line_index].startswith("@"):
                     while formatted_lines and not formatted_lines[-1]:
                         formatted_lines.pop()
@@ -1669,6 +1733,7 @@ def _normalize_top_level_blank_lines(code: str) -> str:
                 -(MAX_TOP_LEVEL_BLANK_LINES + 1) :
             ] == [""] * (MAX_TOP_LEVEL_BLANK_LINES + 1):
                 formatted_lines.pop()
+            previous_top_level_class_or_function = line.startswith(("class ", "def ", "async def "))
         formatted_lines.append(line)
     return "\n".join(formatted_lines)
 
