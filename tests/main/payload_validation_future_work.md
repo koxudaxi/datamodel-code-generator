@@ -124,11 +124,19 @@ Current scope:
   standard dataclasses do not provide runtime type validation.
 - `pydantic.BaseModel` / pydantic v1 output is not part of the current matrix
   because pydantic-v1 output was removed from the generator in #3031.
+- The scheduled runtime matrix widens runtime-validating non-default backends
+  with `DCG_PAYLOAD_BACKEND_CASES=all`. That mode runs the JSON Schema fixture
+  corpus minus classified backend exclusions, plus representative OpenAPI cases;
+  the remaining JSON Schema and OpenAPI backend-specific import/runtime limits
+  are machine-classified in
+  `tests/main/payload_validation/conformance.py`. Plain dataclasses stay
+  representative because they do not provide runtime validation and native
+  construction does not implement JSON alias or extra-key handling.
 
 Future work:
 
-- Expand the representative backend matrix into a full nightly run once CI cost
-  and backend-specific exclusions are classified.
+- Reduce the full nightly backend exclusions by fixing backend-specific
+  generator issues where the generated code is invalid for that backend.
 - Add a dedicated strict/schema-faithful mode if a future backend needs stronger
   JSON Schema runtime validation than the default generated output provides.
 

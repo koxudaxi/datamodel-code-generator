@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 from hypothesis import HealthCheck, assume, given, settings
@@ -11,7 +11,9 @@ from hypothesis import strategies as st
 from pydantic import ValidationError
 
 from .payload_validation import (
+    BACKEND_ACCEPTANCE_EXCLUDED_CASES,
     BACKEND_REJECTED_MUTATION_CONSTRAINTS,
+    BACKEND_REJECTION_EXCLUDED_CASES,
     BACKEND_UNASSERTED_MUTATION_CONSTRAINTS,
     PAYLOAD_MUTATION_CONSTRAINTS,
     PAYLOAD_VALIDATION_BACKENDS,
@@ -20,6 +22,8 @@ from .payload_validation import (
     GeneratedModelCache,
     PayloadBackend,
     SchemaCase,
+    backend_acceptance_exclusion_reason,
+    backend_rejection_exclusion_reason,
     discover_unaccounted_files,
     has_rejection_oracle_constraints,
     invalid_payload_mutations,
@@ -48,7 +52,22 @@ def _max_examples_from_env(raw_examples: str | None = None) -> int:
     return max_examples
 
 
+BackendCaseMode = Literal["representative", "all"]
+
+
+def _backend_case_mode_from_env(raw_mode: str | None = None) -> BackendCaseMode:
+    if raw_mode is None:
+        raw_mode = os.environ.get("DCG_PAYLOAD_BACKEND_CASES")
+    if raw_mode in {None, "", "representative"}:
+        return "representative"
+    if raw_mode == "all":
+        return "all"
+    msg = "DCG_PAYLOAD_BACKEND_CASES must be either 'representative' or 'all'"
+    raise ValueError(msg)
+
+
 MAX_EXAMPLES = _max_examples_from_env()
+BACKEND_CASE_MODE = _backend_case_mode_from_env()
 REJECTION_ORACLE_CASES = [case for case in SCHEMA_CASES if has_rejection_oracle_constraints(case)]
 SCHEMA_CASE_BY_ID = {case.id: case for case in SCHEMA_CASES}
 ROUND_TRIP_CASES = [case for case in SCHEMA_CASES if case.id not in ROUND_TRIP_EXCLUDED_CASES]
@@ -90,15 +109,46 @@ BACKEND_REJECTION_CASE_IDS = {
         "openapi/additional_properties.yaml::components.schemas.Error",
     ),
 }
+
+
+def _backend_acceptance_case_ids(
+    backend: PayloadBackend,
+    case_mode: BackendCaseMode = BACKEND_CASE_MODE,
+) -> tuple[str, ...]:
+    if case_mode == "representative" or backend is PayloadBackend.DATACLASSES:
+        return BACKEND_ACCEPTANCE_CASE_IDS[backend]
+    representative_cases = set(BACKEND_ACCEPTANCE_CASE_IDS[backend])
+    return tuple(
+        case.id
+        for case in SCHEMA_CASES
+        if case.id in representative_cases or backend_acceptance_exclusion_reason(case, backend) is None
+    )
+
+
+def _backend_rejection_case_ids(
+    backend: PayloadBackend,
+    case_mode: BackendCaseMode = BACKEND_CASE_MODE,
+) -> tuple[str, ...]:
+    if case_mode == "representative":
+        return BACKEND_REJECTION_CASE_IDS[backend]
+    representative_cases = set(BACKEND_REJECTION_CASE_IDS[backend])
+    return tuple(
+        case.id
+        for case in SCHEMA_CASES
+        if (case.id in representative_cases or backend_rejection_exclusion_reason(case, backend) is None)
+        and has_rejection_oracle_constraints(case, backend)
+    )
+
+
 BACKEND_ACCEPTANCE_CASES = [
     pytest.param(backend, SCHEMA_CASE_BY_ID[case_id], id=f"{backend.value}:{case_id}")
-    for backend, case_ids in BACKEND_ACCEPTANCE_CASE_IDS.items()
-    for case_id in case_ids
+    for backend in BACKEND_ACCEPTANCE_CASE_IDS
+    for case_id in _backend_acceptance_case_ids(backend)
 ]
 BACKEND_REJECTION_CASES = [
     pytest.param(backend, SCHEMA_CASE_BY_ID[case_id], id=f"{backend.value}:{case_id}")
-    for backend, case_ids in BACKEND_REJECTION_CASE_IDS.items()
-    for case_id in case_ids
+    for backend in BACKEND_REJECTION_CASE_IDS
+    for case_id in _backend_rejection_case_ids(backend)
 ]
 
 
@@ -179,6 +229,67 @@ def test_payload_backend_representative_matrix_is_classified() -> None:
         pytest.fail("Payload backend rejection matrix needs representative cases:\n" + "\n".join(missing_rejection))
 
 
+def test_payload_backend_full_matrix_exclusions_are_classified() -> None:
+    """Full backend matrix exclusions must reference existing cases and carry reasons."""
+    known_cases = set(SCHEMA_CASE_BY_ID)
+    exclusion_sets = {
+        "acceptance": BACKEND_ACCEPTANCE_EXCLUDED_CASES,
+        "rejection": BACKEND_REJECTION_EXCLUDED_CASES,
+    }
+    for exclusion_type, backend_exclusions in exclusion_sets.items():
+        for backend, excluded_cases in backend_exclusions.items():
+            if missing_reasons := sorted(  # pragma: no cover
+                case_id for case_id, reason in excluded_cases.items() if not reason
+            ):
+                pytest.fail(
+                    f"{backend.value}: {exclusion_type} exclusions require reasons:\n" + "\n".join(missing_reasons)
+                )
+            if unknown_cases := sorted(set(excluded_cases) - known_cases):  # pragma: no cover
+                pytest.fail(
+                    f"{backend.value}: {exclusion_type} exclusions reference unknown cases:\n"
+                    + "\n".join(unknown_cases)
+                )
+
+    representative_dataclass_cases = set(BACKEND_ACCEPTANCE_CASE_IDS[PayloadBackend.DATACLASSES])
+    if unclassified_dataclasses := [  # pragma: no cover
+        case.id
+        for case in SCHEMA_CASES
+        if case.id not in representative_dataclass_cases
+        and not backend_acceptance_exclusion_reason(case, PayloadBackend.DATACLASSES)
+    ]:
+        pytest.fail(
+            f"{PayloadBackend.DATACLASSES.value}: full-matrix exclusions require reasons:\n"
+            + "\n".join(unclassified_dataclasses)
+        )
+
+    for backend in (PayloadBackend.PYDANTIC_V2_DATACLASS, PayloadBackend.MSGSPEC):
+        representative_acceptance_cases = set(BACKEND_ACCEPTANCE_CASE_IDS[backend])
+        if unclassified_acceptance := sorted(  # pragma: no cover
+            case.id
+            for case in SCHEMA_CASES
+            if case.input_file_type == "openapi"
+            and case.id not in representative_acceptance_cases
+            and not backend_acceptance_exclusion_reason(case, backend)
+        ):
+            pytest.fail(
+                f"{backend.value}: OpenAPI acceptance exclusions require reasons:\n"
+                + "\n".join(unclassified_acceptance)
+            )
+
+        representative_rejection_cases = set(BACKEND_REJECTION_CASE_IDS.get(backend, ()))
+        if unclassified_rejection := sorted(  # pragma: no cover
+            case.id
+            for case in SCHEMA_CASES
+            if case.input_file_type == "openapi"
+            and case.id not in representative_rejection_cases
+            and has_rejection_oracle_constraints(case, backend)
+            and not backend_rejection_exclusion_reason(case, backend)
+        ):
+            pytest.fail(
+                f"{backend.value}: OpenAPI rejection exclusions require reasons:\n" + "\n".join(unclassified_rejection)
+            )
+
+
 def test_payload_round_trip_exclusions_are_classified() -> None:
     """Round-trip dump exclusions must name existing cases and carry reasons."""
     if missing_reasons := sorted(  # pragma: no cover
@@ -216,6 +327,61 @@ def test_payload_max_examples_env_rejects_invalid_values(raw_examples: str) -> N
     """Invalid example-count overrides fail before test settings are created."""
     with pytest.raises(ValueError, match="positive integer"):
         _max_examples_from_env(raw_examples)
+
+
+@pytest.mark.parametrize(
+    ("raw_mode", "expected_mode"),
+    [
+        (None, "representative"),
+        ("", "representative"),
+        ("representative", "representative"),
+        ("all", "all"),
+    ],
+)
+@pytest.mark.allow_direct_assert
+def test_payload_backend_case_mode_env_is_configurable(
+    monkeypatch: pytest.MonkeyPatch,
+    raw_mode: str | None,
+    expected_mode: str,
+) -> None:
+    """Nightly runs can widen non-default backend coverage without changing PR defaults."""
+    monkeypatch.delenv("DCG_PAYLOAD_BACKEND_CASES", raising=False)
+    assert _backend_case_mode_from_env(raw_mode) == expected_mode
+    monkeypatch.setenv("DCG_PAYLOAD_BACKEND_CASES", "all")
+    assert _backend_case_mode_from_env(None) == "all"
+
+
+def test_payload_backend_case_mode_env_rejects_invalid_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Invalid backend matrix modes fail before parametrization."""
+    with pytest.raises(ValueError, match="representative"):
+        _backend_case_mode_from_env("everything")
+    monkeypatch.setenv("DCG_PAYLOAD_BACKEND_CASES", "everything")
+    with pytest.raises(ValueError, match="representative"):
+        _backend_case_mode_from_env(None)
+
+
+@pytest.mark.allow_direct_assert
+def test_payload_backend_all_case_mode_widens_runtime_validating_backends() -> None:
+    """Full backend mode widens runtime-validating backends and leaves plain dataclasses representative-only."""
+    for backend in (PayloadBackend.PYDANTIC_V2_DATACLASS, PayloadBackend.MSGSPEC):
+        representative_acceptance_cases = set(_backend_acceptance_case_ids(backend, "representative"))
+        all_acceptance_cases = set(_backend_acceptance_case_ids(backend, "all"))
+        assert representative_acceptance_cases < all_acceptance_cases
+        assert any(
+            case_id.startswith("jsonschema/") for case_id in all_acceptance_cases - representative_acceptance_cases
+        )
+
+        representative_rejection_cases = set(_backend_rejection_case_ids(backend, "representative"))
+        all_rejection_cases = set(_backend_rejection_case_ids(backend, "all"))
+        assert representative_rejection_cases < all_rejection_cases
+        assert all(
+            has_rejection_oracle_constraints(SCHEMA_CASE_BY_ID[case_id], backend) for case_id in all_rejection_cases
+        )
+
+    assert _backend_acceptance_case_ids(PayloadBackend.DATACLASSES, "all") == _backend_acceptance_case_ids(
+        PayloadBackend.DATACLASSES,
+        "representative",
+    )
 
 
 @pytest.mark.parametrize("case", SCHEMA_CASES, ids=lambda case: case.id)
