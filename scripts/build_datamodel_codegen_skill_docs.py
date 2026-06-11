@@ -161,6 +161,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
         return 0
 
+    output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(content, encoding="utf-8")
     return 0
 
