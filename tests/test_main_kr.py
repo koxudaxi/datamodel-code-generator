@@ -32,6 +32,7 @@ OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
 JSON_SCHEMA_DATA_PATH: Path = DATA_PATH / "jsonschema"
 EXPECTED_MAIN_KR_PATH = DATA_PATH / "expected" / "main_kr"
 EXPECTED_OUTPUT_FORMAT_JSON_PATH = EXPECTED_MAIN_KR_PATH / "output_format_json"
+EXPECTED_EMPTY_OUTPUT_PATH = DATA_PATH / "expected" / "__init__.py"
 GENERATE_PROMPT_JSON_ARGS = [
     "--input",
     "tests/data/jsonschema/person.json",
@@ -2373,8 +2374,7 @@ def test_output_format_json_generation_output_file(capsys: pytest.CaptureFixture
         expected_exit=Exit.OK,
     )
     captured = capsys.readouterr()
-    if captured.err:  # pragma: no cover
-        pytest.fail(f"Expected no stderr, but got:\n{captured.err}")
+    assert_output(captured.err, EXPECTED_EMPTY_OUTPUT_PATH)
     assert_output(
         _normalize_generation_json_output_path(captured.out, output_file),
         EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_output_file.txt",
@@ -2399,8 +2399,7 @@ def test_output_format_json_generation_output_directory(capsys: pytest.CaptureFi
         expected_exit=Exit.OK,
     )
     captured = capsys.readouterr()
-    if captured.err:  # pragma: no cover
-        pytest.fail(f"Expected no stderr, but got:\n{captured.err}")
+    assert_output(captured.err, EXPECTED_EMPTY_OUTPUT_PATH)
     assert_output(captured.out, EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_output_directory.txt")
     assert_directory_content(output_dir, EXPECTED_MAIN_KR_PATH / "main_modular")
 
@@ -2463,6 +2462,25 @@ def test_output_format_json_check_missing_output_directory(tmp_path: Path, capsy
             expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "check_missing_output.txt",
             assert_no_stderr=True,
         )
+
+
+def test_output_format_json_rejects_watch(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --watch cannot be combined with --output-format json."""
+    run_main_with_args(
+        [
+            "--input",
+            str(OPEN_API_DATA_PATH / "api.yaml"),
+            "--input-file-type",
+            "openapi",
+            "--output-format",
+            "json",
+            "--watch",
+        ],
+        expected_exit=Exit.ERROR,
+    )
+    captured = capsys.readouterr()
+    assert_output(captured.out, EXPECTED_EMPTY_OUTPUT_PATH)
+    assert_output(captured.err, EXPECTED_OUTPUT_FORMAT_JSON_PATH / "watch_incompatible.txt")
 
 
 @freeze_time("2019-07-26")

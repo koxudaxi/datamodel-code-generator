@@ -800,8 +800,8 @@ def _compare_directories(
             if "__pycache__" not in path.parts:
                 actual_files.add(path.relative_to(actual_dir))
 
-    missing_files = [str(rel_path) for rel_path in sorted(generated_files - actual_files)]
-    extra_files = [str(rel_path) for rel_path in sorted(actual_files - generated_files)]
+    missing_files = [rel_path.as_posix() for rel_path in sorted(generated_files - actual_files)]
+    extra_files = [rel_path.as_posix() for rel_path in sorted(actual_files - generated_files)]
 
     for rel_path in sorted(generated_files & actual_files):
         generated_content = _normalize_line_endings((generated_dir / rel_path).read_text(encoding=encoding))
@@ -811,8 +811,8 @@ def _compare_directories(
                 difflib.unified_diff(
                     actual_content.splitlines(keepends=True),
                     generated_content.splitlines(keepends=True),
-                    fromfile=str(rel_path),
-                    tofile=f"{rel_path} (expected)",
+                    fromfile=rel_path.as_posix(),
+                    tofile=f"{rel_path.as_posix()} (expected)",
                 )
             )
 
@@ -1048,6 +1048,8 @@ CommandOutputPayload: TypeAlias = (
     PyprojectConfigOutputPayload | CliCommandOutputPayload | DeprecationsOutputPayload | ExperimentalOutputPayload
 )
 StructuredOutputPayload: TypeAlias = GenerationPayload | CommandOutputPayload | CheckOutputPayload
+_DEPRECATION_ITEMS_ADAPTER = TypeAdapter(list[DeprecationItemPayload])
+_EXPERIMENTAL_ITEMS_ADAPTER = TypeAdapter(list[ExperimentalItemPayload])
 
 
 def _dump_json(value: Any) -> str:
@@ -1093,6 +1095,7 @@ def _command_output_json(
     items: list[dict[str, Any]] | None = None,
     arguments: list[str] | None = None,
 ) -> str:
+    payload: CommandOutputPayload
     if kind == "pyproject-config":
         payload = PyprojectConfigOutputPayload(
             version=1,
@@ -1116,7 +1119,7 @@ def _command_output_json(
             format="json",
             kind=kind,
             content=content,
-            items=items or [],
+            items=_DEPRECATION_ITEMS_ADAPTER.validate_python(items or []),
         )
     else:
         payload = ExperimentalOutputPayload(
@@ -1124,7 +1127,7 @@ def _command_output_json(
             format="json",
             kind=kind,
             content=content,
-            items=items or [],
+            items=_EXPERIMENTAL_ITEMS_ADAPTER.validate_python(items or []),
         )
     return _dump_json(payload.model_dump(mode="json"))
 
