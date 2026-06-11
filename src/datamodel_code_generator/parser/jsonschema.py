@@ -2827,6 +2827,27 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return None, alias
         return alias, None
 
+    def _effective_default_state(
+        self,
+        field_name: str,
+        default: Any,
+        *,
+        has_default: bool,
+        required: bool,
+        class_name: str | None,
+    ) -> tuple[Any, bool, bool]:
+        effective_default, effective_has_default = self.model_resolver.resolve_default_value(
+            field_name,
+            default,
+            has_default,
+            class_name=class_name,
+        )
+        return (
+            effective_default,
+            effective_has_default,
+            required and self.apply_default_values_for_required_fields and effective_has_default,
+        )
+
     def _get_inherited_field(self, prop_name: str, base_classes: list[Reference]) -> DataModelFieldBase | None:
         """Get an inherited generated field from parsed base models."""
         for base in base_classes:
@@ -3574,19 +3595,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
             field_type = self.parse_item(modular_name, field, [*path, field_name])
 
-            effective_default, effective_has_default = self.model_resolver.resolve_default_value(
-                original_field_name,
-                field.default,
-                field.has_default,
-                class_name=class_name,
-            )
-
             if self.force_optional_for_required_fields:
                 required: bool = False
             else:
                 required = original_field_name in requires
-            use_default_with_required = (
-                required and self.apply_default_values_for_required_fields and effective_has_default
+            effective_default, effective_has_default, use_default_with_required = self._effective_default_state(
+                original_field_name,
+                field.default,
+                has_default=field.has_default,
+                required=required,
+                class_name=class_name,
             )
             fields.append(
                 self.get_object_field(
