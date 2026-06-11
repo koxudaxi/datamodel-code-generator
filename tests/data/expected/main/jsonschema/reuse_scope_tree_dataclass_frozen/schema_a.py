@@ -9,11 +9,11 @@ from dataclasses import dataclass
 from .shared import SharedModel as SharedModel_1
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class SharedModel(SharedModel_1):
     pass
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class Model:
     data: SharedModel | None = None
