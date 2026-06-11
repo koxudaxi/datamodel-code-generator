@@ -62,6 +62,53 @@ This intentionally avoids deleting the intermediate models in the default
 output while fixing the payload shape, and it does not introduce a new runtime
 validation mechanism.
 
+## JSON-Schema-Test-Suite Conformance Limits
+
+The JSON-Schema-Test-Suite conformance gate currently targets the required
+`draft7` and `draft2020-12` suite directories pinned at
+`fe8c2f0de2041943975932b6bf4bd882625b6cfb`. It checks the generated Pydantic v2
+model against both valid and invalid suite instances for schema groups that are
+within the current generated-model compatibility policy.
+
+Current scope:
+
+- 640 suite schema groups discovered across the two target drafts.
+- 59 schema groups and 301 suite instances are checked end to end.
+- 581 schema groups are excluded by policy with machine-readable reasons in
+  `tests/main/payload_validation/json_schema_suite.py`.
+
+The largest exclusion categories are compatibility-sensitive or unsupported in
+the current default generated model shape:
+
+- Boolean schemas and boolean subschemas are not accepted by the generator input
+  path.
+- Remote `$ref` and `$dynamicRef`/`$dynamicAnchor` need resolver and dynamic-scope
+  policies before they can be made deterministic.
+- JSON Schema object or array keywords without an explicit matching `type` allow
+  other instance types that generated `BaseModel` or collection roots reject.
+- Pydantic v2 default validation is non-strict, so primitive type tests such as
+  string-to-int coercion do not match JSON Schema.
+- Runtime enforcement for keywords such as `contains`, `dependentRequired`,
+  `dependentSchemas`, `not`, `unevaluatedItems`, `unevaluatedProperties`,
+  `patternProperties`, `uniqueItems`, numeric/string bounds, `multipleOf`, and
+  JSON-equality-sensitive `const`/`enum` values is incomplete in the default
+  generated model.
+- Combined applicators (`allOf`, `anyOf`, `oneOf`) need a dedicated compatibility
+  policy before default-output changes are safe.
+
+Future work:
+
+- Move policy exclusions into explicit hand-classified case dictionaries as each
+  class is narrowed to concrete generator behavior.
+- Add deterministic local remote-ref mirroring for suite `remotes/` and enable
+  non-dynamic remote `$ref` groups.
+- Decide whether strict type generation or field constraint generation should be
+  enabled by default, exposed as a schema-faithful mode, or only tested under
+  non-default generator options.
+- Convert each remaining unsupported keyword category into either a generator
+  fix, a backend-specific conformance policy entry, or a documented permanent
+  subset limitation.
+
 ## OpenAPI Discriminator Compatibility Policy
 
 The following cases expose a mismatch between OpenAPI discriminator semantics,
