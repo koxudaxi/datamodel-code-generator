@@ -5,7 +5,7 @@ Generates Python dataclasses using the @dataclass decorator.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from datamodel_code_generator import (
     DataclassArguments,
@@ -14,27 +14,21 @@ from datamodel_code_generator import (
     PythonVersion,
     PythonVersionMin,
 )
-from datamodel_code_generator.imports import (
-    IMPORT_DATE,
-    IMPORT_DATETIME,
-    IMPORT_TIME,
-    IMPORT_TIMEDELTA,
-    Import,
-)
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
-from datamodel_code_generator.model.base import UNDEFINED
+from datamodel_code_generator.model.base import UNDEFINED, _nested_model_default_factory
 from datamodel_code_generator.model.imports import IMPORT_DATACLASS, IMPORT_FIELD
 from datamodel_code_generator.model.pydantic_base import Constraints  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
-from datamodel_code_generator.model.types import standard_primitive_type_map_factory, type_map_factory
 from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import DataType, StrictTypes, Types, chain_as_tuple
+from datamodel_code_generator.types import StrictTypes, chain_as_tuple
 
 if TYPE_CHECKING:
     from collections import defaultdict
     from collections.abc import Sequence
     from pathlib import Path
+
+    from datamodel_code_generator.imports import Import
 
 
 def has_field_assignment(field: DataModelFieldBase) -> bool:
@@ -45,7 +39,33 @@ def has_field_assignment(field: DataModelFieldBase) -> bool:
     )
 
 
-class DataClass(DataModel):
+class _DataclassReuseMixin:
+    def create_reuse_model(self, base_ref: Reference) -> DataModel:
+        """Create inherited model with empty fields pointing to base reference."""
+        model = cast("DataModel", self)
+        model_cls = cast("Any", self.__class__)
+        model_attrs = vars(model)
+        return cast(
+            "DataModel",
+            model_cls(
+                fields=[],
+                base_classes=[base_ref],
+                description=model.description,
+                reference=Reference(
+                    name=model.name,
+                    path=model.reference.path + "/reuse",
+                ),
+                custom_template_dir=model_attrs["_custom_template_dir"],
+                custom_base_class=model.custom_base_class,
+                keyword_only=model.keyword_only,
+                frozen=model.frozen,
+                treat_dot_as_module=model_attrs["_treat_dot_as_module"],
+                dataclass_arguments=model.dataclass_arguments,
+            ),
+        )
+
+
+class DataClass(_DataclassReuseMixin, DataModel):
     """DataModel implementation for Python dataclasses."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "dataclass.jinja2"
@@ -101,24 +121,6 @@ class DataClass(DataModel):
                 self.dataclass_arguments["kw_only"] = True
         self._set_deprecated_decorator()
 
-    def create_reuse_model(self, base_ref: Reference) -> DataClass:
-        """Create inherited model with empty fields pointing to base reference."""
-        return self.__class__(
-            fields=[],
-            base_classes=[base_ref],
-            description=self.description,
-            reference=Reference(
-                name=self.name,
-                path=self.reference.path + "/reuse",
-            ),
-            custom_template_dir=self._custom_template_dir,
-            custom_base_class=self.custom_base_class,
-            keyword_only=self.keyword_only,
-            frozen=self.frozen,
-            treat_dot_as_module=self._treat_dot_as_module,
-            dataclass_arguments=self.dataclass_arguments,
-        )
-
 
 class DataModelField(DataModelFieldBase):
     """Field implementation for dataclass models."""
@@ -160,12 +162,7 @@ class DataModelField(DataModelFieldBase):
         Returns the class name if the field type references a DataClass,
         otherwise returns None.
         """
-        for data_type in self.data_type.data_types or (self.data_type,):
-            if data_type.is_dict:
-                continue
-            if data_type.reference and isinstance(data_type.reference.source, DataClass):
-                return data_type.alias or data_type.reference.source.class_name
-        return None
+        return _nested_model_default_factory(self, DataClass)
 
     def __str__(self) -> str:
         """Generate field() call or default value representation."""
@@ -226,11 +223,11 @@ class DataTypeManager(_DataTypeManager):
         use_standard_primitive_types: bool = False,  # noqa: FBT001, FBT002
         use_object_type: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
-        target_date_class: DateClassType | None = None,  # noqa: ARG002
+        target_date_class: DateClassType | None = None,
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
         use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
-        """Initialize type manager with datetime type mapping."""
+        """Initialize type manager with dataclass datetime defaults."""
         super().__init__(
             python_version=python_version,
             use_standard_collections=use_standard_collections,
@@ -243,30 +240,10 @@ class DataTypeManager(_DataTypeManager):
             use_standard_primitive_types=use_standard_primitive_types,
             use_object_type=use_object_type,
             target_datetime_class=target_datetime_class,
+            target_date_class=target_date_class,
             treat_dot_as_module=treat_dot_as_module,
             use_serialize_as_any=use_serialize_as_any,
         )
-
-        datetime_map = (
-            {
-                Types.time: self.data_type.from_import(IMPORT_TIME),
-                Types.date: self.data_type.from_import(IMPORT_DATE),
-                Types.date_time: self.data_type.from_import(IMPORT_DATETIME),
-                Types.timedelta: self.data_type.from_import(IMPORT_TIMEDELTA),
-            }
-            if target_datetime_class is DatetimeClassType.Datetime
-            else {}
-        )
-
-        standard_primitive_map = (
-            standard_primitive_type_map_factory(self.data_type) if use_standard_primitive_types else {}
-        )
-
-        self.type_map: dict[Types, DataType] = {
-            **type_map_factory(self.data_type, use_object_type=use_object_type),
-            **datetime_map,
-            **standard_primitive_map,
-        }
 
 
 _rebuild_model_with_datamodel_namespace(DataModelField)

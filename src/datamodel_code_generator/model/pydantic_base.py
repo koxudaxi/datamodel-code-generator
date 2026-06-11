@@ -21,6 +21,7 @@ from datamodel_code_generator.model import (
     _rebuild_model_with_datamodel_namespace,
 )
 from datamodel_code_generator.model._pydantic_imports import IMPORT_ANYURL, IMPORT_FIELD
+from datamodel_code_generator.model.base import _nested_model_default_factory
 from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.types import (
     UnionIntFloat,
@@ -184,12 +185,7 @@ class DataModelField(DataModelFieldBase):
         Returns the class name if the field type references a BaseModel,
         otherwise returns None.
         """
-        for data_type in self.data_type.data_types or (self.data_type,):
-            if data_type.is_dict:
-                continue
-            if data_type.reference and isinstance(data_type.reference.source, BaseModelBase):
-                return data_type.alias or data_type.reference.source.class_name
-        return None
+        return _nested_model_default_factory(self, BaseModelBase)
 
     def _process_data_in_str(self, data: dict[str, Any]) -> None:  # pragma: no cover
         if self.const:

@@ -56,20 +56,15 @@ def get_data_model_types(  # noqa: PLR0912
     )
     from .types import DataTypeManager  # noqa: PLC0415
 
-    # Pydantic v2 requires TypeAliasType; other output types use TypeAlias for better compatibility
-    if data_model_type in {DataModelType.PydanticV2BaseModel, DataModelType.PydanticV2Dataclass}:
-        if target_python_version.has_type_statement:
-            type_alias_class = type_alias.TypeStatement
-            scalar_class = scalar.DataTypeScalarTypeStatement
-            union_class = union.DataTypeUnionTypeStatement
-        else:
-            type_alias_class = type_alias.TypeAliasTypeBackport
-            scalar_class = scalar.DataTypeScalarTypeBackport
-            union_class = union.DataTypeUnionTypeBackport
-    elif target_python_version.has_type_statement:
+    pydantic_v2_models = {DataModelType.PydanticV2BaseModel, DataModelType.PydanticV2Dataclass}
+    if target_python_version.has_type_statement:
         type_alias_class = type_alias.TypeStatement
         scalar_class = scalar.DataTypeScalarTypeStatement
         union_class = union.DataTypeUnionTypeStatement
+    elif data_model_type in pydantic_v2_models:
+        type_alias_class = type_alias.TypeAliasTypeBackport
+        scalar_class = scalar.DataTypeScalarTypeBackport
+        union_class = union.DataTypeUnionTypeBackport
     else:  # 3.10+ always has TypeAlias
         type_alias_class = type_alias.TypeAlias
         scalar_class = scalar.DataTypeScalar
@@ -144,4 +139,13 @@ def get_data_model_types(  # noqa: PLR0912
     raise ValueError(msg)  # pragma: no cover
 
 
-__all__ = ["ConstraintsBase", "DataModel", "DataModelFieldBase", "_rebuild_model_with_datamodel_namespace"]
+__all__ = [
+    "DEFAULT_TARGET_PYTHON_VERSION",
+    "UNDEFINED",
+    "ConstraintsBase",
+    "DataModel",
+    "DataModelFieldBase",
+    "DataModelSet",
+    "_rebuild_model_with_datamodel_namespace",
+    "get_data_model_types",
+]

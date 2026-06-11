@@ -7,7 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class SharedModel:
     id: int | None = None
     name: str | None = None
