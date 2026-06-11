@@ -18,6 +18,7 @@ from datamodel_code_generator.arguments import arg_parser
 from tests.conftest import (
     HttpxGetMockFactory,
     MockHttpxResponse,
+    assert_directory_content,
     assert_error_message,
     assert_httpx_get_kwargs,
     assert_output,
@@ -51,6 +52,15 @@ assert_file_content = create_assert_file_content(EXPECTED_MAIN_KR_PATH)
 
 
 TIMESTAMP = "1985-10-26T01:21:00-07:00"
+OUTPUT_FILE_PLACEHOLDER = "<OUTPUT_FILE>"
+
+
+def _normalize_generation_json_output_path(output: str, output_file: Path) -> str:
+    payload = json.loads(output)
+    for file_payload in payload["files"]:
+        if file_payload["path"] == output_file.as_posix():
+            file_payload["path"] = OUTPUT_FILE_PLACEHOLDER
+    return f"{json.dumps(payload, indent=2, ensure_ascii=False)}\n"
 
 
 @pytest.fixture(autouse=True)
@@ -2236,6 +2246,8 @@ def test_output_format_json_schema_validates_generation_json() -> None:
     "payload_name",
     [
         "generation_stdout.txt",
+        "generation_output_file.txt",
+        "generation_output_directory.txt",
         "pyproject_config.txt",
         "cli_command.txt",
         "list_deprecations.txt",
@@ -2344,7 +2356,7 @@ def test_output_format_json_list_experimental(capsys: pytest.CaptureFixture[str]
     )
 
 
-@pytest.mark.allow_direct_assert
+@freeze_time(TIMESTAMP)
 def test_output_format_json_generation_output_file(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Test --output-format json can mirror a generated single output file."""
     run_main_with_args(
@@ -2361,14 +2373,16 @@ def test_output_format_json_generation_output_file(capsys: pytest.CaptureFixture
         expected_exit=Exit.OK,
     )
     captured = capsys.readouterr()
-    payload = json.loads(captured.out)
+    if captured.err:  # pragma: no cover
+        pytest.fail(f"Expected no stderr, but got:\n{captured.err}")
+    assert_output(
+        _normalize_generation_json_output_path(captured.out, output_file),
+        EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_output_file.txt",
+    )
+    assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "main_no_file" / "output.py")
 
-    assert not captured.err
-    assert output_file.read_text(encoding="utf-8") == payload["files"][0]["content"]
-    assert payload["files"][0]["path"] == output_file.as_posix()
 
-
-@pytest.mark.allow_direct_assert
+@freeze_time(TIMESTAMP)
 def test_output_format_json_generation_output_directory(capsys: pytest.CaptureFixture[str], output_dir: Path) -> None:
     """Test --output-format json reports generated multi-file modules."""
     run_main_with_args(
@@ -2385,27 +2399,10 @@ def test_output_format_json_generation_output_directory(capsys: pytest.CaptureFi
         expected_exit=Exit.OK,
     )
     captured = capsys.readouterr()
-    payload = json.loads(captured.out)
-
-    expected_paths = {
-        "__init__.py",
-        "_internal.py",
-        "bar.py",
-        "collections.py",
-        "foo/__init__.py",
-        "foo/bar.py",
-        "models.py",
-        "nested/__init__.py",
-        "nested/foo.py",
-        "woo/__init__.py",
-        "woo/boo.py",
-    }
-    files_by_path = {file["path"]: file["content"] for file in payload["files"]}
-
-    assert not captured.err
-    assert set(files_by_path) == expected_paths
-    for path, content in files_by_path.items():
-        assert (output_dir / path).read_text() == content
+    if captured.err:  # pragma: no cover
+        pytest.fail(f"Expected no stderr, but got:\n{captured.err}")
+    assert_output(captured.out, EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_output_directory.txt")
+    assert_directory_content(output_dir, EXPECTED_MAIN_KR_PATH / "main_modular")
 
 
 def test_output_format_json_check_success(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
