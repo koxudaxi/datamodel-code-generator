@@ -14,6 +14,7 @@ from .payload_validation import (
     BACKEND_UNASSERTED_MUTATION_CONSTRAINTS,
     PAYLOAD_MUTATION_CONSTRAINTS,
     PAYLOAD_VALIDATION_BACKENDS,
+    ROUND_TRIP_EXCLUDED_CASES,
     SCHEMA_CASES,
     GeneratedModelCache,
     PayloadBackend,
@@ -32,6 +33,7 @@ from .payload_validation import (
 MAX_EXAMPLES = 10
 REJECTION_ORACLE_CASES = [case for case in SCHEMA_CASES if has_rejection_oracle_constraints(case)]
 SCHEMA_CASE_BY_ID = {case.id: case for case in SCHEMA_CASES}
+ROUND_TRIP_CASES = [case for case in SCHEMA_CASES if case.id not in ROUND_TRIP_EXCLUDED_CASES]
 BACKEND_ACCEPTANCE_CASE_IDS = {
     PayloadBackend.PYDANTIC_V2_DATACLASS: (
         "jsonschema/pydantic_v2_runtime_value.json",
@@ -159,6 +161,17 @@ def test_payload_backend_representative_matrix_is_classified() -> None:
         pytest.fail("Payload backend rejection matrix needs representative cases:\n" + "\n".join(missing_rejection))
 
 
+def test_payload_round_trip_exclusions_are_classified() -> None:
+    """Round-trip dump exclusions must name existing cases and carry reasons."""
+    if missing_reasons := sorted(  # pragma: no cover
+        case_id for case_id, reason in ROUND_TRIP_EXCLUDED_CASES.items() if not reason
+    ):
+        pytest.fail("Payload round-trip exclusions require reasons:\n" + "\n".join(missing_reasons))
+
+    if unknown_cases := sorted(set(ROUND_TRIP_EXCLUDED_CASES) - set(SCHEMA_CASE_BY_ID)):  # pragma: no cover
+        pytest.fail("Payload round-trip exclusions reference unknown cases:\n" + "\n".join(unknown_cases))
+
+
 @pytest.mark.parametrize("case", SCHEMA_CASES, ids=lambda case: case.id)
 @settings(
     database=None,
@@ -182,6 +195,33 @@ def test_generated_pydantic_v2_model_accepts_schema_derived_payloads(
     validate_with_source_schema(case, payload)
     adapter = load_generated_payload_adapter(case, generated_model_cache)
     adapter.validate_python(payload)
+
+
+@pytest.mark.parametrize("case", ROUND_TRIP_CASES, ids=lambda case: case.id)
+@settings(
+    database=None,
+    deadline=None,
+    derandomize=True,
+    max_examples=MAX_EXAMPLES,
+    suppress_health_check=[
+        HealthCheck.filter_too_much,
+        HealthCheck.function_scoped_fixture,
+        HealthCheck.too_slow,
+    ],
+)
+@given(data=st.data())
+def test_generated_pydantic_v2_model_dumps_schema_valid_payloads(
+    case: SchemaCase,
+    generated_model_cache: dict[str, Any],
+    data: st.DataObject,
+) -> None:
+    """Payloads accepted by generated pydantic v2 code should dump back to source-valid JSON."""
+    payload = data.draw(payload_strategy(case), label=f"{case.id}:round_trip")
+    validate_with_source_schema(case, payload)
+    adapter = load_generated_payload_adapter(case, generated_model_cache)
+    validated_payload = adapter.validate_python(payload)
+    dumped_payload = adapter.dump_python(validated_payload, mode="json", by_alias=True, exclude_unset=True)
+    validate_with_source_schema(case, dumped_payload)
 
 
 @pytest.mark.parametrize("case", REJECTION_ORACLE_CASES, ids=lambda case: case.id)
