@@ -110,16 +110,13 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
         """Initialize the GraphQL parser with configuration options."""
         if config is None and options.get("target_datetime_class") is None:
             options["target_datetime_class"] = DatetimeClassType.Datetime
-        use_standard_collections = (
-            config.use_standard_collections if config else options.get("use_standard_collections", False)
-        )
-        use_union_operator = config.use_union_operator if config else options.get("use_union_operator", False)
         super().__init__(source=source, config=config, **options)
 
+        self.references: dict[str, Reference] = {}
+        self.all_graphql_objects: dict[str, graphql.GraphQLNamedType] = {}
         self.data_model_scalar_type = self.config.data_model_scalar_type
         self.data_model_union_type = self.config.data_model_union_type
-        self.use_standard_collections = use_standard_collections
-        self.use_union_operator = use_union_operator
+        self.use_standard_collections = self.config.use_standard_collections
 
     def _resolve_types(self, paths: list[str], schema: graphql.GraphQLSchema) -> None:
         for type_name, type_ in schema.type_map.items():

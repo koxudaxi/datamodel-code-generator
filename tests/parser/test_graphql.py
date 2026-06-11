@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from datamodel_code_generator import InputFileType, generate
+from datamodel_code_generator.config import GenerateConfig, GraphQLParserConfig
 from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.parser.graphql import GraphQLParser
 from datamodel_code_generator.reference import Reference
@@ -19,6 +21,8 @@ if TYPE_CHECKING:
 EXPECTED_GRAPHQL_PATH: Path = DATA_PATH / "expected" / "parser" / "graphql"
 
 assert_file_content = create_assert_file_content(EXPECTED_GRAPHQL_PATH)
+
+GRAPHQL_COLLECTION_OPTIONS_SCHEMA = "type User { tags: [String] } type Query { user: User }"
 
 
 def test_graphql_field_enum(output_file: Path) -> None:
@@ -65,6 +69,58 @@ def test_graphql_union_with_prefix(output_file: Path) -> None:
         expected_file="union_with_prefix.py",
         extra_args=["--class-name-prefix", "Foo"],
     )
+
+
+def test_graphql_parser_options_path_collection_options_parse() -> None:
+    """Exercise direct GraphQLParser options that are consumed while parsing."""
+    parser = GraphQLParser(
+        source=GRAPHQL_COLLECTION_OPTIONS_SCHEMA,
+        use_standard_collections=True,
+        use_union_operator=True,
+    )
+
+    output = parser.parse(format_=False)
+
+    assert parser.use_standard_collections is True
+    assert parser.use_union_operator is True
+    assert "tags: list[String | None] | None = None" in output
+    assert "typename__: Literal['User'] | None = Field('User', alias='__typename')" in output
+
+
+def test_graphql_parser_config_path_collection_options_parse() -> None:
+    """Exercise GraphQLParser config object options that are consumed while parsing."""
+    parser = GraphQLParser(
+        source=GRAPHQL_COLLECTION_OPTIONS_SCHEMA,
+        config=GraphQLParserConfig(
+            use_standard_collections=True,
+            use_union_operator=True,
+        ),
+    )
+
+    output = parser.parse(format_=False)
+
+    assert parser.config.use_standard_collections is True
+    assert parser.config.use_union_operator is True
+    assert parser.use_standard_collections is True
+    assert parser.use_union_operator is True
+    assert "tags: list[String | None] | None = None" in output
+    assert "typename__: Literal['User'] | None = Field('User', alias='__typename')" in output
+
+
+def test_graphql_generate_config_path_collection_options_parse() -> None:
+    """Exercise generate(config=...) GraphQL options that are consumed while parsing."""
+    config = GenerateConfig(
+        input_file_type=InputFileType.GraphQL,
+        use_standard_collections=True,
+        use_union_operator=True,
+        disable_timestamp=True,
+    )
+
+    output = generate(GRAPHQL_COLLECTION_OPTIONS_SCHEMA, config=config)
+
+    assert isinstance(output, str)
+    assert "tags: list[String | None] | None = None" in output
+    assert "typename__: Literal['User'] | None = Field('User', alias='__typename')" in output
 
 
 @pytest.mark.parametrize(
