@@ -16,11 +16,13 @@ from datamodel_code_generator import SchemaFetchError
 from datamodel_code_generator.http import (
     MAX_HTTP_REDIRECTS,
     _create_ssl_context,
+    _embedded_ipv4,
     _get_addr_info_ip,
     _get_http_response,
     _get_httpx,
     _get_redirect_headers,
     _get_url_origin,
+    _is_safe_ip,
     _normalize_dns_host,
     _PinnedNetworkBackend,
     get_body,
@@ -136,6 +138,10 @@ def test_get_body_succeeds_without_content_type(mocker: MockerFixture) -> None:
         "http://0x7f000001/schema.json",
         "http://0177.0.0.1/schema.json",
         "http://[::1]/schema.json",
+        "http://[::7f00:1]/schema.json",
+        "http://[::ffff:0:7f00:1]/schema.json",
+        "http://[64:ff9b::7f00:1]/schema.json",
+        "http://[64:ff9b::a9fe:a9fe]/schema.json",
         "http://169.254.169.254/latest/meta-data",
         "http://localhost/schema.json",
         "http://schema.localhost/schema.json",
@@ -148,6 +154,39 @@ def test_get_body_blocks_unsafe_url_hosts(mocker: MockerFixture, url: str) -> No
     with pytest.raises(SchemaFetchError, match="--allow-private-network"):
         get_body(url)
     assert mock_get.call_count == 0
+
+
+@pytest.mark.parametrize(
+    ("addr", "expected"),
+    [
+        ("8.8.8.8", None),
+        ("2606:4700::1", None),
+        ("::ffff:127.0.0.1", "127.0.0.1"),
+        ("::7f00:1", "127.0.0.1"),
+        ("::ffff:0:7f00:1", "127.0.0.1"),
+        ("64:ff9b::a9fe:a9fe", "169.254.169.254"),
+    ],
+)
+def test_embedded_ipv4(addr: str, expected: str | None) -> None:
+    """Return embedded IPv4 addresses from IPv6 wrapper forms."""
+    result = _embedded_ipv4(ip_address(addr))
+    assert (str(result) if result is not None else None) == expected
+
+
+@pytest.mark.parametrize(
+    ("addr", "safe"),
+    [
+        ("8.8.8.8", True),
+        ("10.0.0.1", False),
+        ("::ffff:8.8.8.8", True),
+        ("64:ff9b::a9fe:a9fe", False),
+        ("64:ff9b::808:808", True),
+        ("::1", False),
+    ],
+)
+def test_is_safe_ip(addr: str, safe: bool) -> None:
+    """Validate embedded IPv4 addresses before trusting an IPv6 address."""
+    assert _is_safe_ip(ip_address(addr)) is safe
 
 
 @pytest.mark.parametrize(
