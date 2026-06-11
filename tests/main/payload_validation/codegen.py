@@ -80,10 +80,19 @@ def _load_payload_type(module_name: str, output_path: Path) -> type[Any]:
             for value in module.__dict__.values()
             if isinstance(value, type) and getattr(value, "__module__", None) == module_name
         ]
-        if len(generated_types) != 1:
-            msg = f"Generated module did not contain {PAYLOAD_CLASS_NAME}"
-            raise PayloadAdapterError(msg)
-        payload_type = generated_types[0]
+        match len(generated_types):
+            case 0:
+                msg = f"Generated module did not contain {PAYLOAD_CLASS_NAME}"
+                raise PayloadAdapterError(msg)
+            case 1:
+                payload_type = generated_types[0]
+            case generated_type_count:
+                generated_type_names = ", ".join(sorted(generated_type.__name__ for generated_type in generated_types))
+                msg = (
+                    f"Generated module contained {generated_type_count} generated types instead of "
+                    f"{PAYLOAD_CLASS_NAME}: {generated_type_names}"
+                )
+                raise PayloadAdapterError(msg)
     return payload_type
 
 
