@@ -622,7 +622,7 @@ def test_main_xmlschema_blocks_relative_schema_location_outside_base_path(
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Blocked unsafe XML Schema schemaLocation",
-        assert_output_path_not_exists=True,
+        output_should_not_exist=True,
     )
 
 
@@ -662,7 +662,7 @@ def test_main_xmlschema_blocks_absolute_schema_location_outside_base_path(
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Blocked unsafe XML Schema schemaLocation",
-        assert_output_path_not_exists=True,
+        output_should_not_exist=True,
     )
 
 
@@ -675,7 +675,7 @@ def test_main_xmlschema_parse_error(capsys: pytest.CaptureFixture[str], output_f
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Invalid XML Schema document",
-        assert_output_path_not_exists=True,
+        output_should_not_exist=True,
     )
 
 
@@ -688,7 +688,7 @@ def test_main_xmlschema_wrong_root_error(capsys: pytest.CaptureFixture[str], out
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="XML Schema root element must be xs:schema",
-        assert_output_path_not_exists=True,
+        output_should_not_exist=True,
     )
 
 
@@ -700,7 +700,7 @@ def test_main_xmlschema_auto_broken_xml_error(capsys: pytest.CaptureFixture[str]
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Can't infer input file type",
-        assert_output_path_not_exists=True,
+        output_should_not_exist=True,
     )
 
 
@@ -712,5 +712,5 @@ def test_main_xmlschema_auto_wrong_root_error(capsys: pytest.CaptureFixture[str]
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Can't infer input file type",
-        assert_output_path_not_exists=True,
+        output_should_not_exist=True,
     )
