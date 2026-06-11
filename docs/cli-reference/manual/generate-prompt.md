@@ -13,6 +13,11 @@ Schema for that structured payload, such as when defining a tool contract.
 
 **See also:** [LLM Integration](../../llm-integration.md) for detailed usage examples
 
+!!! note "For LLM agents"
+
+    See [LLM Integration: If You Are an LLM Agent](../../llm-integration.md#if-you-are-an-llm-agent)
+    for workflow guidance.
+
 !!! tip "Usage"
 
     ```bash
@@ -41,4 +46,26 @@ Schema for that structured payload, such as when defining a tool contract.
     datamodel-codegen --generate-prompt | pbcopy      # macOS
     datamodel-codegen --generate-prompt | xclip -selection clipboard  # Linux
     datamodel-codegen --generate-prompt | clip.exe    # WSL2
+    ```
+
+    **Ask about an existing OpenAPI command:**
+    ```bash
+    datamodel-codegen \
+        --input openapi.yaml \
+        --input-file-type openapi \
+        --output models.py \
+        --output-model-type pydantic_v2.BaseModel \
+        --target-python-version 3.12 \
+        --generate-prompt "Find the minimal options for strict API response models." \
+        | claude -p
+    ```
+
+    **Review a command with current options:**
+    ```bash
+    datamodel-codegen \
+        --input schema.json \
+        --output models.py \
+        --output-model-type pydantic_v2.BaseModel \
+        --generate-prompt "Review this command for stable generated output in CI." \
+        | claude -p
     ```
