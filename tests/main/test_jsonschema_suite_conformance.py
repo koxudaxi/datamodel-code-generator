@@ -74,6 +74,7 @@ def test_json_schema_suite_cases_match_pinned_counts(
         ("draft7,draft2020-12", ("draft7", "draft2020-12")),
     ],
 )
+@pytest.mark.allow_direct_assert
 def test_json_schema_suite_target_drafts_are_configurable(
     monkeypatch: pytest.MonkeyPatch,
     raw_drafts: str | None,
@@ -84,6 +85,7 @@ def test_json_schema_suite_target_drafts_are_configurable(
     assert _target_drafts_from_env(raw_drafts) == expected_drafts
 
 
+@pytest.mark.allow_direct_assert
 def test_json_schema_suite_target_drafts_read_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Draft selection reads the nightly workflow environment override."""
     monkeypatch.setenv("DCG_JSON_SCHEMA_SUITE_DRAFTS", "draft4,draft6")

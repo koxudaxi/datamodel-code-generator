@@ -164,7 +164,7 @@ class DataModelField(_PydanticBaseDataModelField):
         return self._requires_null_default_field() or super()._has_field_statement()
 
     def __str__(self) -> str:
-        """Return Field() for null-only defaults that Pydantic 2.12 can evaluate."""
+        """Return Field(None) when stringification would omit an explicit null default."""
         field = super().__str__()
         if self._requires_null_default_field() and not field:
             return "Field(None)"

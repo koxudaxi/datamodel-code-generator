@@ -198,6 +198,7 @@ def test_payload_round_trip_exclusions_are_classified() -> None:
         ("100", 100),
     ],
 )
+@pytest.mark.allow_direct_assert
 def test_payload_max_examples_env_is_configurable(
     monkeypatch: pytest.MonkeyPatch,
     raw_examples: str | None,
