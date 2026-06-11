@@ -11,7 +11,12 @@ from datamodel_code_generator.enums import TargetPydanticVersion
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.dataclass import has_field_assignment
-from datamodel_code_generator.model.pydantic_v2.base_model import ConfigAttribute, Constraints
+from datamodel_code_generator.model.pydantic_v2.base_model import (
+    ConfigAttribute,
+)
+from datamodel_code_generator.model.pydantic_v2.base_model import (
+    Constraints as _Constraints,
+)
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     DataModelField as DataModelFieldV2,
 )
@@ -27,6 +32,8 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator import DataclassArguments
     from datamodel_code_generator.imports import Import
+
+Constraints = _Constraints
 
 
 class DataClass(DataModel):
@@ -175,12 +182,6 @@ class DataModelField(DataModelFieldV2):
 
     Inherits pydantic v2 Field() constraint handling from DataModelFieldV2.
     """
-
-    constraints: Constraints | None = None  # ty: ignore
-
-    def process_const(self) -> None:
-        """Process const field constraint using literal type."""
-        self._process_const_as_literal()
 
 
 _rebuild_model_with_datamodel_namespace(DataModelField)

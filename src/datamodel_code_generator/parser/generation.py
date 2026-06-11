@@ -26,7 +26,7 @@ store mutation API, add it to ``GENERATION_STORE_MUTATION_METHODS`` so the
 checker and its tests stay aligned with the public parser-facing surface.
 """
 
-# ruff: noqa: D105, FURB189, PLR0913
+# ruff: noqa: D105, FURB189
 
 from __future__ import annotations
 
@@ -130,6 +130,8 @@ class GenerationFacts:
     model_by_path: dict[str, ModelId] = field(default_factory=dict)
     model_by_ref_id: dict[int, ModelId] = field(default_factory=dict)
     data_types_by_model: dict[ModelId, tuple[DataTypeId, ...]] = field(default_factory=dict)
+    # Compatibility edge buckets retained for direct GenerationFacts consumers.
+    # GenerationIndex uses data_types_by_model and reverse_edges for live queries.
     field_edges: dict[ModelId, OrderedSet[ModelId]] = field(default_factory=dict)
     base_edges: dict[ModelId, OrderedSet[ModelId]] = field(default_factory=dict)
     all_edges: dict[ModelId, OrderedSet[ModelId]] = field(default_factory=dict)
@@ -264,9 +266,6 @@ class GenerationIndexBuilder:
     def _record_data_types(self) -> None:
         for model_id, model_fact in self._facts.model_facts.items():
             data_type_ids: list[DataTypeId] = []
-            field_edges: OrderedSet[ModelId] = {}
-            base_edges: OrderedSet[ModelId] = {}
-            all_edges: OrderedSet[ModelId] = {}
 
             for field_index, field_ in enumerate(model_fact.model.fields):
                 self._record_data_type_tree(
@@ -275,7 +274,6 @@ class GenerationIndexBuilder:
                     owner_field_index=field_index,
                     role="field",
                     data_type_ids=data_type_ids,
-                    edge_bucket=field_edges,
                 )
 
             for base_class in model_fact.model.base_classes:
@@ -285,18 +283,9 @@ class GenerationIndexBuilder:
                     owner_field_index=None,
                     role="base",
                     data_type_ids=data_type_ids,
-                    edge_bucket=base_edges,
                 )
 
-            for edge_model_id in field_edges:
-                all_edges[edge_model_id] = None
-            for edge_model_id in base_edges:
-                all_edges[edge_model_id] = None
-
             self._facts.data_types_by_model[model_id] = tuple(data_type_ids)
-            self._facts.field_edges[model_id] = field_edges
-            self._facts.base_edges[model_id] = base_edges
-            self._facts.all_edges[model_id] = all_edges
 
     def _record_data_type_tree(
         self,
@@ -306,8 +295,6 @@ class GenerationIndexBuilder:
         owner_field_index: int | None,
         role: DataTypeRole,
         data_type_ids: list[DataTypeId],
-        edge_bucket: OrderedSet[ModelId],
-        include_dependency_edges: bool = True,
     ) -> None:
         data_type_id = self._next_data_type_id
         self._next_data_type_id += 1
@@ -324,9 +311,6 @@ class GenerationIndexBuilder:
         data_type_ids.append(data_type_id)
 
         if data_type.reference:
-            target_id = self._facts.model_by_ref_id.get(id(data_type.reference))
-            if include_dependency_edges and target_id is not None:
-                edge_bucket[target_id] = None
             self._facts.reverse_edges[id(data_type.reference)][data_type_id] = None
 
         nested_role: DataTypeRole = "dict_key" if role == "dict_key" else "nested"
@@ -337,8 +321,6 @@ class GenerationIndexBuilder:
                 owner_field_index=owner_field_index,
                 role=nested_role,
                 data_type_ids=data_type_ids,
-                edge_bucket=edge_bucket,
-                include_dependency_edges=include_dependency_edges,
             )
 
         if data_type.dict_key:
@@ -348,8 +330,6 @@ class GenerationIndexBuilder:
                 owner_field_index=owner_field_index,
                 role="dict_key",
                 data_type_ids=data_type_ids,
-                edge_bucket=edge_bucket,
-                include_dependency_edges=False,
             )
 
 
