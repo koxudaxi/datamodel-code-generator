@@ -66,6 +66,7 @@ from datamodel_code_generator.parser.base import (
     get_special_path,
     title_to_class_name,
 )
+from datamodel_code_generator.parser.schema_version import get_data_formats
 from datamodel_code_generator.reference import SPECIAL_PATH_MARKER, ModelType, Reference, is_url
 from datamodel_code_generator.types import (
     ANY,
@@ -166,72 +167,7 @@ def _split_json_pointer(schema: dict[str, YamlValue] | list[YamlValue], pointer:
     return parts, reference_parts
 
 
-# TODO: This dictionary contains formats valid only for OpenAPI and not for
-#       jsonschema and vice versa. They should be separated.
-json_schema_data_formats: dict[str, dict[str, Types]] = {
-    "integer": {
-        "int32": Types.int32,
-        "int64": Types.int64,
-        "default": Types.integer,
-        "date-time": Types.date_time,
-        "unix-time": Types.int64,
-        "unixtime": Types.int64,
-    },
-    "number": {
-        "float": Types.float,
-        "double": Types.double,
-        "decimal": Types.decimal,
-        "date-time": Types.date_time,
-        "time": Types.time,
-        "time-delta": Types.timedelta,
-        "default": Types.number,
-        "unixtime": Types.int64,
-    },
-    "string": {
-        "default": Types.string,
-        "byte": Types.byte,  # base64 encoded string
-        "binary": Types.binary,
-        "date": Types.date,
-        "date-time": Types.date_time,
-        "timestamp with time zone": Types.date_time,  # PostgreSQL format
-        "date-time-local": Types.date_time_local,
-        "duration": Types.timedelta,
-        "time": Types.time,
-        "time-local": Types.time_local,
-        "password": Types.password,
-        "path": Types.path,
-        "email": Types.email,
-        "idn-email": Types.email,
-        "idn-hostname": Types.string,
-        "iri": Types.string,
-        "iri-reference": Types.string,
-        "uuid": Types.uuid,
-        "uuid1": Types.uuid1,
-        "uuid2": Types.uuid2,
-        "uuid3": Types.uuid3,
-        "uuid4": Types.uuid4,
-        "uuid5": Types.uuid5,
-        "uri": Types.uri,
-        "uri-reference": Types.string,
-        "uri-template": Types.string,
-        "json-pointer": Types.string,
-        "relative-json-pointer": Types.string,
-        "regex": Types.string,
-        "hostname": Types.hostname,
-        "ipv4": Types.ipv4,
-        "ipv4-network": Types.ipv4_network,
-        "ipv6": Types.ipv6,
-        "ipv6-network": Types.ipv6_network,
-        "decimal": Types.decimal,
-        "integer": Types.integer,
-        "unixtime": Types.int64,
-        "ulid": Types.ulid,
-    },
-    "boolean": {"default": Types.boolean},
-    "object": {"default": Types.object},
-    "null": {"default": Types.null},
-    "array": {"default": Types.array},
-}
+json_schema_data_formats: dict[str, dict[str, Types]] = get_data_formats(is_openapi=True)
 
 
 class JSONReference(_enum.Enum):
