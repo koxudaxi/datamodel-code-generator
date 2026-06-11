@@ -739,6 +739,15 @@ def test_schema_paths_lenient_mode_draft7() -> None:
     ])
 
 
+def test_jsonschema_default_schema_paths_remain_mutable_list() -> None:
+    """Test default schema paths keep the public mutable list shape."""
+    from datamodel_code_generator.parser.jsonschema import _DEFAULT_SCHEMA_PATHS, JsonSchemaParser
+
+    assert isinstance(JsonSchemaParser.SCHEMA_PATHS, list)
+    assert list(_DEFAULT_SCHEMA_PATHS) == JsonSchemaParser.SCHEMA_PATHS
+    assert JsonSchemaParser.SCHEMA_PATHS is not _DEFAULT_SCHEMA_PATHS
+
+
 def test_schema_paths_lenient_mode_2020_12() -> None:
     """Test schema_paths returns $defs first in Lenient mode for 2020-12."""
     from datamodel_code_generator.parser.jsonschema import JsonSchemaParser

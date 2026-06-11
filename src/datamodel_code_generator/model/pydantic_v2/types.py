@@ -183,10 +183,7 @@ escape_characters = str.maketrans({
     "\t": r"\t",
 })
 
-HOSTNAME_REGEX = (
-    r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*"
-    r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$"
-)
+HOSTNAME_REGEX = _DataTypeManagerBase.HOSTNAME_REGEX
 
 
 def _get_regex_literal(pattern: str) -> str:

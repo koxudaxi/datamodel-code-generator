@@ -5,7 +5,7 @@ Provides DataTypeManager implementation with type mapping factory.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
 from datamodel_code_generator import DateClassType, DatetimeClassType, PythonVersion, PythonVersionMin
 from datamodel_code_generator.imports import (
@@ -28,10 +28,7 @@ from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-HOSTNAME_REGEX = (
-    r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*"
-    r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$"
-)
+HOSTNAME_REGEX = _DataTypeManager.HOSTNAME_REGEX
 
 
 def type_map_factory(data_type: type[DataType], *, use_object_type: bool = False) -> dict[Types, DataType]:
@@ -106,8 +103,6 @@ def standard_primitive_type_map_factory(data_type: type[DataType]) -> dict[Types
 
 class DataTypeManager(_DataTypeManager):
     """Base type manager for model modules."""
-
-    HOSTNAME_REGEX: ClassVar[str] = HOSTNAME_REGEX
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,
