@@ -51,6 +51,10 @@ def _run_codegen(args: Sequence[str]) -> None:
         ("sample.json", "json", "single_file/json.py", ("--class-name", "SampleJson")),
         ("sample.yaml", "yaml", "single_file/yaml.py", ("--class-name", "SampleYaml")),
         ("sample.csv", "csv", "single_file/csv.py", ("--class-name", "SampleCsv")),
+        ("sample.avsc", "avro", "single_file/avro.py", ()),
+        ("sample.xsd", "xmlschema", "single_file/xmlschema.py", ()),
+        ("sample.proto", "protobuf", "single_file/protobuf.py", ()),
+        ("mcp_tools.json", "mcp-tools", "single_file/mcp_tools.py", ()),
     ],
 )
 def test_skill_single_file_recipes_match_expected_output(

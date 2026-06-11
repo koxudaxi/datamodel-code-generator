@@ -207,6 +207,8 @@ General utility, HTTP, checking, and project integration options.
 - `--list-experimental`: List registered experimental features, then exit. Choices: `table`, `json`, `markdown`.
 - `--help` (alias: `-h`): show this help message and exit
 - `--no-color`: disable colorized output
+- `--output-format`: Format for command output (default: text). Use json for structured output when supported. Choices: `text`, `json`.
+- `--output-format-json-schema`: Output JSON Schema for the selected structured output format and exit. Choices: `generate-prompt`, `generation`, `structured-output`.
 - `--generate-pyproject-config`: Generate pyproject.toml configuration from the provided CLI arguments and exit
 - `--generate-cli-command`: Generate CLI command from pyproject.toml configuration and exit
 - `--generate-prompt`: Generate a prompt for consulting LLMs about CLI options. Optionally provide your question as an argument. Pipe to CLI tools (e.g., `| claude -p`, `| codex exec`) or copy to clipboard (e.g., `| pbcopy`, `| xclip`) for web LLM chats.

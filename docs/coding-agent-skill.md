@@ -12,6 +12,16 @@ Agents should run `datamodel-codegen` instead of hand-writing generated models w
 
 The CLI handles refs, enums, nested models, unions, `allOf`, `oneOf`, `anyOf`, and model reuse. It also produces output that can be imported and checked after generation.
 
+Agents should also use the CLI for option discovery. `datamodel-codegen --help` links to this skill documentation, and `--generate-prompt` can produce either Markdown guidance or structured JSON for tool-aware agents.
+
+```bash
+datamodel-codegen [known options] --generate-prompt "Find the minimal options for this schema."
+datamodel-codegen [known options] --generate-prompt "Find the minimal options for this schema." --output-format json
+datamodel-codegen --output-format-json-schema structured-output
+```
+
+Use the generated prompt output before recommending a final command when the correct input type, output model type, strictness, aliasing, module layout, or verification flags are not obvious.
+
 ## Install for Claude Code
 
 Claude Code project skills load from `.claude/skills/` in the starting directory and parent directories up to the repository root. Personal skills can be placed under `~/.claude/skills/`.

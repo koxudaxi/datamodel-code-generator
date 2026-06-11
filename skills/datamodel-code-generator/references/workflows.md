@@ -10,10 +10,14 @@
 6. Raw YAML sample to models
 7. CSV sample to models
 8. GraphQL SDL to models
-9. Remote URL input
-10. Existing Python model or dict schema object
-11. Multiple modules for large specs
-12. Output as dataclasses, TypedDict, or msgspec
+9. Apache Avro schema to models
+10. XML Schema to models
+11. Protocol Buffers to models
+12. MCP tool schemas to models
+13. Remote URL input
+14. Existing Python model or dict schema object
+15. Multiple modules for large specs
+16. Output as dataclasses, TypedDict, or msgspec
 
 ## OpenAPI to Pydantic v2
 
@@ -174,6 +178,74 @@ uvx --from 'datamodel-code-generator[graphql]' datamodel-codegen \
 Common flags: `--graphql-no-typename`, `--type-mappings`, `--field-extra-keys`.
 
 Verify with the single-file import command. Expect Pydantic models for GraphQL object and input types.
+
+## Apache Avro schema to models
+
+Use this for Avro `.avsc` schema files.
+
+```bash
+uvx datamodel-codegen \
+  --input schema.avsc \
+  --input-file-type avro \
+  --output models.py \
+  --output-model-type pydantic_v2.BaseModel \
+  --target-python-version 3.12
+```
+
+Avro support generates Python models from schemas. It does not provide Avro runtime encoding or decoding.
+
+Verify with the single-file import command. Expect model classes for Avro records, enums, fixed values, maps, arrays, and unions when present in the schema.
+
+## XML Schema to models
+
+Use this for XSD documents.
+
+```bash
+uvx datamodel-codegen \
+  --input schema.xsd \
+  --input-file-type xmlschema \
+  --output models.py \
+  --output-model-type pydantic_v2.BaseModel \
+  --target-python-version 3.12
+```
+
+Common flags: `--schema-version`, `--schema-version-mode`, `--class-name`, `--use-title-as-name`.
+
+Verify with the single-file import command. Expect model classes for XML elements and complex types. The CLI does not replace an XML parser or full XML instance validator.
+
+## Protocol Buffers to models
+
+Use this for `.proto` schemas when the user wants Python data models, not generated protobuf runtime classes or gRPC stubs.
+
+```bash
+uvx --from 'datamodel-code-generator[protobuf]' datamodel-codegen \
+  --input schema.proto \
+  --input-file-type protobuf \
+  --output models.py \
+  --output-model-type pydantic_v2.BaseModel \
+  --target-python-version 3.12
+```
+
+Common flags: `--schema-version`, `--schema-version-mode`, `--class-name`, `--type-mappings`.
+
+Verify with the single-file import command. Expect model classes for messages and enums. Use protobuf tooling separately for serialization, descriptors, and gRPC code.
+
+## MCP tool schemas to models
+
+Use this for MCP tool schema exports containing `inputSchema` and optional `outputSchema` objects.
+
+```bash
+uvx datamodel-codegen \
+  --input mcp-tools.json \
+  --input-file-type mcp-tools \
+  --output models.py \
+  --output-model-type pydantic_v2.BaseModel \
+  --target-python-version 3.12
+```
+
+MCP tool schemas are converted into JSON Schema definitions before normal model generation.
+
+Verify with the single-file import command. Expect input and output model classes named from tool names and schema roles.
 
 ## Remote URL input
 

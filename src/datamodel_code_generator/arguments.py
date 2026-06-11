@@ -142,6 +142,7 @@ arg_parser = ArgumentParser(
     description="Generate Python data models from schema definitions or structured data\n\n"
     "For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev",
     epilog="Documentation: https://datamodel-code-generator.koxudaxi.dev\n"
+    "Agent skill: https://datamodel-code-generator.koxudaxi.dev/coding-agent-skill/\n"
     "GitHub: https://github.com/koxudaxi/datamodel-code-generator",
     formatter_class=SortingHelpFormatter,
     add_help=False,

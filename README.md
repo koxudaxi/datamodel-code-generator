@@ -56,7 +56,7 @@ in another Python file to a different output type.
 
 ## Coding agent skill
 
-This repository includes an experimental Agent Skill that teaches compatible coding agents to run `datamodel-codegen` when generating Python models from OpenAPI, AsyncAPI, JSON Schema, GraphQL, JSON/YAML/CSV sample data, or existing Python model objects.
+This repository includes an experimental Agent Skill that teaches compatible coding agents to run `datamodel-codegen` when generating Python models from OpenAPI, AsyncAPI, JSON Schema, GraphQL, JSON/YAML/CSV sample data, MCP tool schemas, Protocol Buffers, XML Schema, Apache Avro, or existing Python model objects.
 
 See [Coding Agent Skill](docs/coding-agent-skill.md) for detailed guidance and troubleshooting.
 

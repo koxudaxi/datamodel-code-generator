@@ -56,6 +56,32 @@ Prefer one-shot execution. Do not add or upgrade datamodel-code-generator in the
 
 If offline and no installed command is available, say that the CLI cannot be run. Only then fall back to hand-written models.
 
+## Option discovery for agents
+
+When the right options are not obvious, use the CLI's own LLM workflow before choosing the final command:
+
+```bash
+datamodel-codegen [known options] --generate-prompt "Find the minimal options for this model-generation task."
+```
+
+Include the options already known from the project or user request. The prompt output explains current options, available options, option relationships, and verification steps.
+
+For agent tooling that consumes structured data, prefer JSON:
+
+```bash
+datamodel-codegen [known options] \
+  --generate-prompt "Find the minimal options for this model-generation task." \
+  --output-format json
+```
+
+When defining or validating tool contracts, fetch the schema separately:
+
+```bash
+datamodel-codegen --output-format-json-schema structured-output
+```
+
+Use `generate-prompt` when the consumer only handles prompt payloads, `generation` when it only handles generated-file payloads, and `structured-output` when it accepts multiple `kind` values.
+
 ## Input type decision table
 
 | User input | Use |
@@ -143,6 +169,18 @@ Do not accept the CLI default if the project clearly declares a Python version.
 ## Verification step
 
 Verification is mandatory.
+
+For CI or agent integrations, prefer check mode when an output path exists:
+
+```bash
+datamodel-codegen [same options] --output models.py --check
+```
+
+If another tool must inspect generated content directly, use structured JSON output:
+
+```bash
+datamodel-codegen [same options] --output-format json
+```
 
 For single-file output:
 
