@@ -195,6 +195,9 @@ class ComponentsObject(BaseModel):
     headers: dict[str, Union[ReferenceObject, HeaderObject]] = Field(default_factory=dict)  # noqa: UP007
 
 
+_FIELD_NAME_RESOLVER = FieldNameResolver()
+
+
 @snooper_to_methods()
 class OpenAPIParser(JsonSchemaParser):
     """Parser for OpenAPI 2.0/3.0/3.1/3.2 and Swagger specifications."""
@@ -204,6 +207,8 @@ class OpenAPIParser(JsonSchemaParser):
     @cached_property
     def schema_features(self) -> OpenAPISchemaFeatures:
         """Get schema features based on config or detected OpenAPI version."""
+        # OpenAPI parses a single document context, so caching is intentional.
+        # AsyncAPI overrides this with a live property because it swaps raw_obj while resolving refs.
         from datamodel_code_generator.parser.schema_version import (  # noqa: PLC0415
             OpenAPISchemaFeatures,
             detect_openapi_version,
@@ -634,6 +639,7 @@ class OpenAPIParser(JsonSchemaParser):
                         else:
                             raw_operation["parameters"] = item_parameters.copy()
                     if security is not None and "security" not in raw_operation:
+                        # fastapi-code-generator depends on inherited global security being materialized here.
                         raw_operation["security"] = security
                     self.parse_operation(raw_operation, [*path, operation_name])
 
@@ -723,7 +729,7 @@ class OpenAPIParser(JsonSchemaParser):
         """Parse operation tags."""
         return tags
 
-    _field_name_resolver: FieldNameResolver = FieldNameResolver()
+    _field_name_resolver: FieldNameResolver = _FIELD_NAME_RESOLVER
 
     @classmethod
     def _get_model_name(cls, path_name: str, method: str, suffix: str) -> str:
@@ -771,15 +777,13 @@ class OpenAPIParser(JsonSchemaParser):
                 param_schema = parameter.schema_
                 if param_schema.has_ref_with_schema_keywords and not param_schema.is_ref_with_nullable_only:
                     param_schema = self._merge_ref_with_schema(param_schema)
-                effective_default, effective_has_default = self.model_resolver.resolve_default_value(
+                effective_required = parameter.required
+                effective_default, effective_has_default, use_default_with_required = self._effective_default_state(
                     parameter_name,
                     param_schema.default,
-                    param_schema.has_default,
+                    has_default=param_schema.has_default,
+                    required=effective_required,
                     class_name=reference.name,
-                )
-                effective_required = parameter.required
-                use_default_with_required = (
-                    effective_required and self.apply_default_values_for_required_fields and effective_has_default
                 )
                 fields.append(
                     self.get_object_field(
@@ -832,23 +836,15 @@ class OpenAPIParser(JsonSchemaParser):
                     object_schema = None
                 original_default = object_schema.default if object_schema else None
                 original_has_default = object_schema.has_default if object_schema else False
-                effective_default, effective_has_default = self.model_resolver.resolve_default_value(
+                effective_required = parameter.required
+                effective_default, effective_has_default, use_default_with_required = self._effective_default_state(
                     parameter_name,
                     original_default,
-                    original_has_default,
+                    has_default=original_has_default,
+                    required=effective_required,
                     class_name=reference.name,
                 )
-                effective_required = parameter.required
-                use_default_with_required = (
-                    effective_required and self.apply_default_values_for_required_fields and effective_has_default
-                )
-                # Handle multiple aliases (Pydantic v2 AliasChoices)
-                single_alias: str | None = None
-                validation_aliases: list[str] | None = None
-                if isinstance(alias, list):
-                    validation_aliases = alias
-                else:
-                    single_alias = alias
+                single_alias, validation_aliases = self._split_alias(alias)
                 fields.append(
                     self.data_model_field_type(
                         name=field_name,
@@ -994,10 +990,7 @@ class OpenAPIParser(JsonSchemaParser):
         potential_subtypes: dict[str, list[str]] = {}
 
         for schema_name, schema in schemas.items():
-            discriminator = schema.get("discriminator")
-            if discriminator and not schema.get("oneOf") and not schema.get("anyOf"):
-                ref = f"#/components/schemas/{schema_name}"
-                self._discriminator_schemas[ref] = discriminator
+            self._register_discriminator_schema(schema_name, schema)
 
             all_of = schema.get("allOf")
             if all_of:
@@ -1010,3 +1003,8 @@ class OpenAPIParser(JsonSchemaParser):
                 if ref_in_allof in self._discriminator_schemas:
                     subtype_ref = f"#/components/schemas/{schema_name}"
                     self._discriminator_subtypes[ref_in_allof].append(subtype_ref)
+
+    def _register_discriminator_schema(self, schema_name: str, schema: dict[str, Any]) -> None:
+        discriminator = schema.get("discriminator")
+        if discriminator and not schema.get("oneOf") and not schema.get("anyOf"):
+            self._discriminator_schemas[f"#/components/schemas/{schema_name}"] = discriminator
