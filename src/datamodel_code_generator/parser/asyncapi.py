@@ -212,7 +212,6 @@ def _move_json_schema_definitions_to_components(
 class AsyncAPIParser(OpenAPIParser):
     """Parser for AsyncAPI 2.x and 3.x documents."""
 
-    SCHEMA_PATHS: ClassVar[list[str]] = ["#/components/schemas"]
     _config_class_name: ClassVar[str] = "AsyncAPIParserConfig"
 
     def __init__(

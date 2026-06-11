@@ -30,7 +30,7 @@ from datamodel_code_generator.model.pydantic_base import (
     Constraints as _Constraints,
 )
 from datamodel_code_generator.model.pydantic_base import (
-    DataModelField as DataModelFieldV1,
+    DataModelField as _PydanticBaseDataModelField,
 )
 from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_ALIAS_CHOICES,
@@ -85,7 +85,10 @@ class Constraints(_Constraints):
         return values
 
 
-class DataModelField(DataModelFieldV1):
+DataModelFieldV1 = _PydanticBaseDataModelField  # deprecated re-export, pydantic-v1 output removed in #3031
+
+
+class DataModelField(_PydanticBaseDataModelField):
     """Pydantic v2 field with Field() constraints and json_schema_extra support."""
 
     _EXCLUDE_FIELD_KEYS: ClassVar[set[str]] = {
@@ -134,7 +137,6 @@ class DataModelField(DataModelFieldV1):
         "deprecated",
     }
     constraints: Optional[Constraints] = None  # ty: ignore  # noqa: UP045
-    _PARSE_METHOD: ClassVar[str] = "model_validate"
     can_have_extra_keys: ClassVar[bool] = False
 
     @field_validator("extras")
@@ -206,12 +208,6 @@ class DataModelField(DataModelFieldV1):
             data["json_schema_extra"] = json_schema_extra
             for key in json_schema_extra:
                 data.pop(key)
-
-    def _process_annotated_field_arguments(  # noqa: PLR6301
-        self,
-        field_arguments: list[str],
-    ) -> list[str]:
-        return field_arguments
 
     def _has_discriminator_in_data_type(self) -> bool:
         """Check if any nested DataType has a discriminator."""

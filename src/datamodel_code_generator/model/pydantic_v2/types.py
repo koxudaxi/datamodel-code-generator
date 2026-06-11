@@ -81,7 +81,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.imports import Import
 
 
-# --- Shared Pydantic type helpers (moved from model/pydantic/types.py) ---
+# --- Shared Pydantic type helpers ---
 
 
 def type_map_factory(
@@ -183,10 +183,7 @@ escape_characters = str.maketrans({
     "\t": r"\t",
 })
 
-HOSTNAME_REGEX = (
-    r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*"
-    r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$"
-)
+HOSTNAME_REGEX = _DataTypeManagerBase.HOSTNAME_REGEX
 
 
 def _get_regex_literal(pattern: str) -> str:
@@ -471,9 +468,6 @@ class PydanticV2DataType(DataType):
 class DataTypeManager(_PydanticDataTypeManager):
     """Type manager for Pydantic v2 with pattern key support."""
 
-    PATTERN_KEY: ClassVar[str] = "pattern"
-    HOSTNAME_REGEX: ClassVar[str] = HOSTNAME_REGEX
-
     def __init__(  # noqa: PLR0913, PLR0917
         self,
         python_version: PythonVersion = PythonVersionMin,
@@ -541,14 +535,6 @@ class DataTypeManager(_PydanticDataTypeManager):
                 pattern_key,
                 target_datetime_class or DatetimeClassType.Datetime,
                 use_object_type or self.use_object_type,
-            ),
-            Types.hostname: self.data_type.from_import(
-                IMPORT_CONSTR,
-                strict=StrictTypes.str in strict_types,
-                kwargs={
-                    pattern_key: _get_regex_literal(HOSTNAME_REGEX),
-                    **({"strict": True} if StrictTypes.str in strict_types else {}),
-                },
             ),
             Types.byte: self.data_type.from_import(
                 IMPORT_BASE64STR,

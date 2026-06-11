@@ -20,6 +20,7 @@ from pydantic import ConfigDict, Field
 from typing_extensions import Self
 
 from datamodel_code_generator import cached_path_exists
+from datamodel_code_generator._internal_utils import get_most_of_parent, to_hashable
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
     IMPORT_OPTIONAL,
@@ -809,8 +810,6 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         if cached is not None:
             return cached
 
-        from datamodel_code_generator.parser.base import to_hashable  # noqa: PLC0415
-
         render_class_name = class_name if class_name is not None or not use_default else "M"
         result = tuple(to_hashable(v) for v in (self.render(class_name=render_class_name), self.imports))
         self._dedup_key_cache[cache_key] = result
@@ -843,8 +842,6 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
 
     def replace_children_in_models(self, models: list[DataModel], new_ref: Reference) -> None:
         """Replace reference children if their parent model is in models list."""
-        from datamodel_code_generator.parser.base import get_most_of_parent  # noqa: PLC0415
-
         for child in self.reference.children[:]:
             if isinstance(child, DataType) and get_most_of_parent(child) in models:
                 child.replace_reference(new_ref)

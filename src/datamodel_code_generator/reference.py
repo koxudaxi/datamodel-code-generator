@@ -1223,6 +1223,9 @@ class ModelResolver:  # noqa: PLR0904
         return original_default, has_default
 
 
+_inflect_engine: inflect.engine | None = None
+
+
 def _get_inflect_engine() -> inflect.engine:
     """Get or create the inflect engine lazily."""
     global _inflect_engine  # noqa: PLW0603
@@ -1231,9 +1234,6 @@ def _get_inflect_engine() -> inflect.engine:
 
         _inflect_engine = inflect.engine()
     return _inflect_engine
-
-
-_inflect_engine: inflect.engine | None = None
 
 
 @lru_cache

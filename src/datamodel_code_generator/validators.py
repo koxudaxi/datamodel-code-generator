@@ -23,6 +23,9 @@ class ValidatorMode(str, Enum):
     PLAIN = "plain"
 
 
+_VALIDATOR_MODE_VALUES = frozenset(mode.value for mode in ValidatorMode)
+
+
 def _is_python_identifier(value: str) -> bool:
     return value.isidentifier() and not keyword.iskeyword(value)
 
@@ -40,10 +43,6 @@ def _validate_dotted_python_identifier_path(value: str) -> str:
         msg = f"must be a dotted Python identifier path: {value!r}"
         raise ValueError(msg)
     return value
-
-
-def _validator_mode_values() -> set[str]:
-    return {mode.value for mode in ValidatorMode}
 
 
 class ValidatorDefinition(BaseModel):
@@ -84,7 +83,7 @@ class ValidatorDefinition(BaseModel):
         """Validate the Pydantic field_validator mode."""
         if isinstance(value, ValidatorMode):
             return value
-        if isinstance(value, str) and value in _validator_mode_values():
+        if isinstance(value, str) and value in _VALIDATOR_MODE_VALUES:
             return value
         allowed_values = ", ".join(repr(mode.value) for mode in ValidatorMode)
         msg = f"must be one of: {allowed_values}"

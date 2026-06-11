@@ -14,7 +14,6 @@ import re
 import sys
 from abc import ABC, abstractmethod
 from collections import Counter, OrderedDict, defaultdict
-from collections.abc import Callable, Hashable, Mapping, Sequence
 from copy import deepcopy
 from itertools import groupby
 from pathlib import Path
@@ -25,11 +24,9 @@ from typing import (
     Generic,
     NamedTuple,
     Optional,
-    Protocol,
     TypeAlias,
     TypeVar,
     cast,
-    runtime_checkable,
 )
 from urllib.parse import ParseResult
 from warnings import warn
@@ -49,6 +46,7 @@ from datamodel_code_generator import (
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     YamlValue,
+    _internal_utils,
 )
 from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.format import (
@@ -85,29 +83,23 @@ from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser._graph import stable_toposort
 from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_connected_components
 from datamodel_code_generator.parser.generation import GenerationIndex, GenerationStore, set_model_base_classes
+from datamodel_code_generator.parser.schema_version import SchemaFeaturesT
 from datamodel_code_generator.reference import ModelResolver, ModelType, Reference
 from datamodel_code_generator.types import ANY, DataType, DataTypeManager
 from datamodel_code_generator.util import camel_to_snake
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
-    from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
-
 ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
-SchemaFeaturesT = TypeVar("SchemaFeaturesT", bound="JsonSchemaFeatures")
 
-
-@runtime_checkable
-class HashableComparable(Hashable, Protocol):
-    """Protocol for types that are both hashable and support comparison."""
-
-    def __lt__(self, value: Any, /) -> bool: ...  # noqa: D105
-    def __le__(self, value: Any, /) -> bool: ...  # noqa: D105
-    def __gt__(self, value: Any, /) -> bool: ...  # noqa: D105
-    def __ge__(self, value: Any, /) -> bool: ...  # noqa: D105
+HashableComparable = _internal_utils.HashableComparable
+to_hashable = _internal_utils.to_hashable
+Child = _internal_utils.Child
+T = _internal_utils.T
+get_most_of_parent = _internal_utils.get_most_of_parent
 
 
 ModelName: TypeAlias = str
@@ -373,43 +365,6 @@ escape_characters = str.maketrans({
     "\r": r"\r",
     "\t": r"\t",
 })
-
-
-def to_hashable(item: Any) -> HashableComparable:  # noqa: PLR0911
-    """Convert an item to a hashable and comparable representation.
-
-    Returns a value that is both hashable and supports comparison operators.
-    Used for caching and deduplication of models.
-    """
-    if isinstance(
-        item,
-        (
-            list,
-            tuple,
-        ),
-    ):
-        try:
-            return tuple(sorted((to_hashable(i) for i in item), key=lambda v: (str(type(v)), v)))
-        except TypeError:
-            # Fallback when mixed, non-comparable types are present; preserve original order
-            return tuple(to_hashable(i) for i in item)
-    if isinstance(item, dict):
-        return tuple(
-            sorted(
-                (
-                    k,
-                    to_hashable(v),
-                )
-                for k, v in item.items()
-            )
-        )
-    if isinstance(item, set):  # pragma: no cover
-        return frozenset(to_hashable(i) for i in item)  # type: ignore[return-value]
-    if isinstance(item, BaseModel):  # pragma: no cover
-        return to_hashable(item.model_dump())
-    if item is None:
-        return ""
-    return item  # type: ignore[return-value]
 
 
 def dump_templates(templates: list[DataModel]) -> str:
@@ -850,26 +805,6 @@ def get_module_directory(module: tuple[str, ...]) -> tuple[str, ...]:
     if len(module) == 1:
         return module
     return module[:-1]
-
-
-@runtime_checkable
-class Child(Protocol):
-    """Protocol for objects with a parent reference."""
-
-    @property
-    def parent(self) -> Any | None:
-        """Get the parent object reference."""
-        raise NotImplementedError
-
-
-T = TypeVar("T")
-
-
-def get_most_of_parent(value: Any, type_: type[T] | None = None) -> T | None:
-    """Traverse parent chain to find the outermost matching parent."""
-    if isinstance(value, Child) and (type_ is None or not isinstance(value, type_)):
-        return get_most_of_parent(value.parent, type_)
-    return value
 
 
 def title_to_class_name(title: str) -> str:

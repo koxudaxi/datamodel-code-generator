@@ -8,8 +8,10 @@ to consult Large Language Models (LLMs) about datamodel-code-generator CLI optio
 ## Overview
 
 When you're unsure which CLI options to use for your specific use case,
-you can generate a prompt containing all available options and their descriptions,
-then ask an LLM for recommendations.
+generate a prompt that includes the options already selected for the command,
+the available options grouped by category, and the full help text. Give that
+prompt to an LLM and ask it to propose the smallest command that satisfies your
+schema and generation goal.
 
 ```bash
 datamodel-codegen --generate-prompt "How do I generate strict Pydantic v2 models?"
@@ -22,6 +24,43 @@ The generated prompt includes:
 - All options organized by category with descriptions
 - Full help text for reference
 
+## If You Are an LLM Agent
+
+Use `--generate-prompt` as an option discovery step before you recommend or run
+a final `datamodel-codegen` command.
+
+1. Inspect the user's goal and the input schema when it is available.
+2. Start from any options the user or existing project already selected.
+3. Run `datamodel-codegen [known options] --generate-prompt "<goal>"`.
+4. Preserve current options unless they conflict with the goal or another option.
+5. Choose the minimal additional options needed for the requested output.
+6. Return the final CLI command, reasons for each non-obvious option, rejected
+   alternatives, and a verification command.
+
+Use current options in the prompt command so the generated prompt reflects the
+real configuration you are improving:
+
+```bash
+datamodel-codegen \
+    --input openapi.yaml \
+    --input-file-type openapi \
+    --output models.py \
+    --output-model-type pydantic_v2.BaseModel \
+    --target-python-version 3.12 \
+    --generate-prompt "Find the minimal options for strict API response models."
+```
+
+A useful answer should keep the command runnable and explain tradeoffs:
+
+- Final command to run
+- Why each added or changed option is needed
+- Current options that should remain unchanged
+- Options considered but rejected, with a short reason
+- Verification command, such as `datamodel-codegen ... --check` or a focused
+  generation command against a fixture schema
+
+## Structured Output for Tools
+
 Use `--output-format json` when an LLM agent or tool should consume structured option
 metadata instead of Markdown:
 
@@ -33,19 +72,21 @@ The JSON payload includes the user question, current options, options grouped by
 category, full option metadata from argparse, and help text without ANSI color
 codes.
 
-Use `--output-format-json-schema generate-prompt` when a tool or agent needs the
-schema for the structured prompt payload:
+Use `--output-format-json-schema` when a tool or agent needs a JSON Schema before
+it consumes command output:
 
 ```bash
 datamodel-codegen --output-format-json-schema generate-prompt
-```
-
-Use `--output-format-json-schema generation` for normal generated-file JSON
-output:
-
-```bash
 datamodel-codegen --output-format-json-schema generation
+datamodel-codegen --output-format-json-schema structured-output
 ```
+
+The schema targets are scoped:
+
+- `generate-prompt`: schema for `--generate-prompt --output-format json`
+- `generation`: schema for normal generation with `--output-format json`
+- `structured-output`: tagged union schema for all structured command outputs,
+  including prompt, generation, command metadata, and check result payloads
 
 ## CLI LLM Tools
 
@@ -160,18 +201,36 @@ datamodel-codegen \
     --generate-prompt "Are there any other options I should consider?"
 ```
 
-### Pipe to Claude with Options
+### Strict Pydantic v2 Models
 
 ```bash
 datamodel-codegen \
     --input openapi.yaml \
-    --output-model-type dataclasses.dataclass \
-    --generate-prompt "How can I add JSON serialization support?" \
+    --input-file-type openapi \
+    --output models.py \
+    --output-model-type pydantic_v2.BaseModel \
+    --target-python-version 3.12 \
+    --strict-types str int float bool \
+    --generate-prompt "Which additional options should I use for strict API response models?" \
     | claude -p
+```
+
+### Review an Existing Command
+
+```bash
+datamodel-codegen \
+    --input schema.json \
+    --output models.py \
+    --output-model-type pydantic_v2.BaseModel \
+    --target-python-version 3.11 \
+    --snake-case-field \
+    --generate-prompt "Review this command and suggest only necessary option changes." \
+    | codex exec
 ```
 
 ## Tips
 
 1. **Be specific** - Include a clear question to get more relevant recommendations
 2. **Show context** - Add your current options so the LLM understands your setup
-3. **Iterate** - Use the suggestions, then ask follow-up questions if needed
+3. **Keep options minimal** - Prefer the fewest options that satisfy the goal
+4. **Verify output** - Run the final command against the target schema or fixture
