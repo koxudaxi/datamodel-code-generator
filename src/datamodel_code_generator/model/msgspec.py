@@ -11,17 +11,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
 
 from pydantic import Field
 
-from datamodel_code_generator import DateClassType, DatetimeClassType, PythonVersion, PythonVersionMin
-from datamodel_code_generator.imports import (
-    IMPORT_DATE,
-    IMPORT_DATETIME,
-    IMPORT_TIME,
-    IMPORT_TIMEDELTA,
-    IMPORT_UNION,
-    Import,
-)
+from datamodel_code_generator.imports import IMPORT_UNION, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
-from datamodel_code_generator.model.base import UNDEFINED, BaseClassDataType
+from datamodel_code_generator.model.base import UNDEFINED, BaseClassDataType, _nested_model_default_factory
 from datamodel_code_generator.model.imports import (
     IMPORT_MSGSPEC_CONVERT,
     IMPORT_MSGSPEC_FIELD,
@@ -35,7 +27,6 @@ from datamodel_code_generator.model.pydantic_base import (
 )
 from datamodel_code_generator.model.type_alias import TypeAliasBase
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
-from datamodel_code_generator.model.types import standard_primitive_type_map_factory, type_map_factory
 from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.types import (
     NONE,
@@ -43,9 +34,6 @@ from datamodel_code_generator.types import (
     UNION_DELIMITER,
     UNION_OPERATOR_DELIMITER,
     UNION_PREFIX,
-    DataType,
-    StrictTypes,
-    Types,
     _remove_none_from_union,
     chain_as_tuple,
     merge_normalized_constraint,
@@ -67,7 +55,6 @@ UNSET = _UNSET()
 
 if TYPE_CHECKING:
     from collections import defaultdict
-    from collections.abc import Sequence
     from pathlib import Path
 
     from datamodel_code_generator.reference import Reference
@@ -96,7 +83,7 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
         # TODO: Improve field detection
         if field and field.startswith("field("):
             extra_imports.append(IMPORT_MSGSPEC_FIELD)
-        if self.field and "lambda: convert" in self.field:
+        if field and "lambda: convert" in field:
             extra_imports.append(IMPORT_MSGSPEC_CONVERT)
         if isinstance(self, DataModelField) and self.needs_meta_import:
             extra_imports.append(IMPORT_MSGSPEC_META)
@@ -513,71 +500,11 @@ class DataModelField(DataModelFieldBase):
         Returns the class name if the field type references a Struct,
         otherwise returns None.
         """
-        for data_type in self.data_type.data_types or (self.data_type,):
-            if data_type.is_dict:
-                continue
-            if data_type.reference and isinstance(data_type.reference.source, Struct):
-                return data_type.alias or data_type.reference.source.class_name
-        return None
+        return _nested_model_default_factory(self, Struct)
 
 
 class DataTypeManager(_DataTypeManager):
     """Type manager for msgspec Struct models."""
-
-    def __init__(  # noqa: PLR0913, PLR0917
-        self,
-        python_version: PythonVersion = PythonVersionMin,
-        use_standard_collections: bool = False,  # noqa: FBT001, FBT002
-        use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
-        strict_types: Sequence[StrictTypes] | None = None,
-        use_non_positive_negative_number_constrained_types: bool = False,  # noqa: FBT001, FBT002
-        use_decimal_for_multiple_of: bool = False,  # noqa: FBT001, FBT002
-        use_union_operator: bool = False,  # noqa: FBT001, FBT002
-        use_pendulum: bool = False,  # noqa: FBT001, FBT002
-        use_standard_primitive_types: bool = False,  # noqa: FBT001, FBT002
-        use_object_type: bool = False,  # noqa: FBT001, FBT002
-        target_datetime_class: DatetimeClassType | None = None,
-        target_date_class: DateClassType | None = None,  # noqa: ARG002
-        treat_dot_as_module: bool | None = None,  # noqa: FBT001
-        use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
-    ) -> None:
-        """Initialize type manager with optional datetime type mapping."""
-        super().__init__(
-            python_version=python_version,
-            use_standard_collections=use_standard_collections,
-            use_generic_container_types=use_generic_container_types,
-            strict_types=strict_types,
-            use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
-            use_decimal_for_multiple_of=use_decimal_for_multiple_of,
-            use_union_operator=use_union_operator,
-            use_pendulum=use_pendulum,
-            use_standard_primitive_types=use_standard_primitive_types,
-            use_object_type=use_object_type,
-            target_datetime_class=target_datetime_class,
-            treat_dot_as_module=treat_dot_as_module,
-            use_serialize_as_any=use_serialize_as_any,
-        )
-
-        datetime_map = (
-            {
-                Types.time: self.data_type.from_import(IMPORT_TIME),
-                Types.date: self.data_type.from_import(IMPORT_DATE),
-                Types.date_time: self.data_type.from_import(IMPORT_DATETIME),
-                Types.timedelta: self.data_type.from_import(IMPORT_TIMEDELTA),
-            }
-            if target_datetime_class is DatetimeClassType.Datetime
-            else {}
-        )
-
-        standard_primitive_map = (
-            standard_primitive_type_map_factory(self.data_type) if use_standard_primitive_types else {}
-        )
-
-        self.type_map: dict[Types, DataType] = {
-            **type_map_factory(self.data_type, use_object_type=use_object_type),
-            **datetime_map,
-            **standard_primitive_map,
-        }
 
 
 _rebuild_model_with_datamodel_namespace(DataModelField)

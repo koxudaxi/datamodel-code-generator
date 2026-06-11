@@ -1584,6 +1584,35 @@ def test_main_json_reuse_enum(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_file"),
+    [
+        ("dataclasses.dataclass", "reuse_model_dataclass_frozen_kw_only.py"),
+        ("pydantic_v2.dataclass", "reuse_model_pydantic_v2_dataclass_frozen_kw_only.py"),
+    ],
+)
+def test_main_jsonschema_reuse_model_dataclass_frozen_kw_only(
+    output_file: Path, output_model_type: str, expected_file: str
+) -> None:
+    """Test --reuse-model keeps dataclass arguments on inherited dataclass models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_model_inline_definitions.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--reuse-model",
+            "--output-model-type",
+            output_model_type,
+            "--frozen-dataclasses",
+            "--keyword-only",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
 def test_main_reuse_model_collapse_inline_definitions(output_file: Path) -> None:
     """Test --reuse-model --collapse-reuse-models deduplicates identical inline definitions."""
     run_main_and_assert(
