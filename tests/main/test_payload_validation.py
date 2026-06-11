@@ -48,19 +48,23 @@ def test_payload_validation_cases_cover_discovered_schema_files() -> None:
 
 def test_payload_rejection_oracle_policy_is_classified() -> None:
     """Every invalid-payload mutation constraint must be machine-classified."""
-    if overlap := sorted(
+    if overlap := sorted(  # pragma: no cover
         set(PYDANTIC_V2_REJECTED_MUTATION_CONSTRAINTS) & set(PYDANTIC_V2_UNASSERTED_MUTATION_CONSTRAINTS)
     ):
         pytest.fail("Mutation constraints cannot be both asserted and unasserted:\n" + "\n".join(overlap))
 
-    if missing := sorted(PAYLOAD_MUTATION_CONSTRAINTS - set(PYDANTIC_V2_REJECTED_MUTATION_CONSTRAINTS)):
+    if missing := sorted(  # pragma: no cover
+        PAYLOAD_MUTATION_CONSTRAINTS - set(PYDANTIC_V2_REJECTED_MUTATION_CONSTRAINTS)
+    ):
         pytest.fail("Mutation constraints need pydantic v2 rejection policy reasons:\n" + "\n".join(missing))
 
     reasons = {
         **PYDANTIC_V2_REJECTED_MUTATION_CONSTRAINTS,
         **PYDANTIC_V2_UNASSERTED_MUTATION_CONSTRAINTS,
     }
-    if unclassified := sorted(constraint for constraint, reason in reasons.items() if not reason):
+    if unclassified := sorted(  # pragma: no cover
+        constraint for constraint, reason in reasons.items() if not reason
+    ):
         pytest.fail("Mutation policy entries need non-empty reasons:\n" + "\n".join(unclassified))
 
 
@@ -69,7 +73,9 @@ def test_payload_rejection_oracle_covers_supported_policy_constraints() -> None:
     covered_constraints = frozenset(
         constraint for case in SCHEMA_CASES for constraint in rejection_constraint_ids(case)
     )
-    if missing := sorted(set(PYDANTIC_V2_REJECTED_MUTATION_CONSTRAINTS) - covered_constraints):
+    if missing := sorted(  # pragma: no cover
+        set(PYDANTIC_V2_REJECTED_MUTATION_CONSTRAINTS) - covered_constraints
+    ):
         pytest.fail("Supported rejection constraints are not covered by schema cases:\n" + "\n".join(missing))
 
 
@@ -123,7 +129,7 @@ def test_generated_pydantic_v2_model_rejects_schema_invalid_payloads(
     assume(bool(mutations))
 
     mutation = data.draw(st.sampled_from(mutations), label=f"{case.id}:invalid")
-    if source_schema_validator(case).is_valid(mutation.payload):
+    if source_schema_validator(case).is_valid(mutation.payload):  # pragma: no cover
         pytest.fail(f"{case.id}: mutation stayed source-valid for {mutation.constraint} at {mutation.path}")
 
     adapter = load_generated_payload_adapter(case, generated_model_cache)
