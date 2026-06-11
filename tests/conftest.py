@@ -565,6 +565,15 @@ def _format_diff(expected: str, actual: str, expected_path: Path) -> str:  # pra
     return output.getvalue()
 
 
+def _infer_expected_file(caller_function_name: str) -> str:
+    name = caller_function_name
+    for prefix in ("test_main_", "test_"):  # pragma: no branch
+        if name.startswith(prefix):
+            name = name[len(prefix) :]
+            break
+    return f"{name}.py"
+
+
 def _assert_with_external_file(content: str, expected_path: Path) -> None:
     """Assert content matches external file, handling line endings."""
     __tracebackhide__ = True
@@ -658,14 +667,8 @@ def create_assert_file_content(
             frame = inspect.currentframe()
             assert frame is not None
             assert frame.f_back is not None
-            func_name = frame.f_back.f_code.co_name
+            expected_name = _infer_expected_file(frame.f_back.f_code.co_name)
             del frame
-            name = func_name
-            for prefix in ("test_main_", "test_"):  # pragma: no branch
-                if name.startswith(prefix):
-                    name = name[len(prefix) :]
-                    break
-            expected_name = f"{name}.py"
 
         expected_path = base_path / expected_name
         content = output_file.read_text(encoding=encoding)
