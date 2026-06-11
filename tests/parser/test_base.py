@@ -20,6 +20,7 @@ from datamodel_code_generator.model.type_alias import TypeAlias, TypeAliasTypeBa
 from datamodel_code_generator.parser.base import (
     Parser,
     _contains_model_reference,
+    _find_field,
     _needs_validate_default,
     _unwrap_type_alias,
     add_model_path_to_list,
@@ -316,6 +317,163 @@ def parser_fixture() -> C:
         base_class="Base",
         source="",
     )
+
+
+def _reference(path: str) -> Reference:
+    return Reference(path=path, original_name=path, name=path)
+
+
+def _create_override_required_models(
+    original_data_type: DataType,
+    *,
+    original_default: object | None = None,
+    original_has_default: bool = False,
+) -> tuple[BaseModel, BaseModel, DataModelField]:
+    base_reference = _reference("BaseModel")
+    base_field = DataModelField(
+        name="value",
+        original_name="value",
+        data_type=original_data_type,
+        required=False,
+        default=original_default,
+        has_default=original_has_default,
+    )
+    base_model = BaseModel(fields=[base_field], reference=base_reference)
+    child_field = DataModelField(
+        name="value",
+        original_name="value",
+        data_type=DataType(),
+        required=False,
+    )
+    child_model = BaseModel(
+        fields=[child_field],
+        base_classes=[base_reference],
+        reference=_reference("ChildModel"),
+    )
+    return base_model, child_model, child_field
+
+
+def _override_required_fields(parser: C, models: list[BaseModel]) -> None:
+    Parser._Parser__override_required_field(parser, models)
+
+
+def test_find_field_skips_non_matching_fields() -> None:
+    """Field lookup checks later fields after a non-matching field."""
+    first_field = DataModelField(
+        name="first",
+        original_name="first",
+        data_type=DataType(type="str"),
+    )
+    second_field = DataModelField(
+        name="second",
+        original_name="second",
+        data_type=DataType(type="int"),
+    )
+    model = BaseModel(fields=[first_field, second_field], reference=_reference("SearchModel"))
+
+    assert _find_field("second", [model]) is second_field
+
+
+def test_override_required_field_copies_reference_type(parser_fixture: C) -> None:
+    """Required inherited placeholders are replaced with reference-backed fields."""
+    target_reference = _reference("TargetModel")
+    BaseModel(fields=[], reference=target_reference)
+    base_model, child_model, child_field = _create_override_required_models(
+        DataType(reference=target_reference),
+    )
+    parser_fixture.generation_store.register_model(base_model)
+    parser_fixture.generation_store.register_model(child_model)
+
+    _override_required_fields(parser_fixture, [base_model, child_model])
+
+    replacement = child_model.fields[0]
+    assert replacement is not child_field
+    assert replacement.original_name == "value"
+    assert replacement.required is True
+    assert replacement.parent is child_model
+    assert replacement.data_type.reference is target_reference
+    assert replacement.data_type.parent is replacement
+
+
+def test_override_required_field_copies_nested_types(parser_fixture: C) -> None:
+    """Nested inherited data types are recursively copied with current parent-link behavior pinned."""
+    target_reference = _reference("NestedTarget")
+    BaseModel(fields=[], reference=target_reference)
+    original_data_type = DataType(
+        data_types=[
+            DataType(reference=target_reference),
+            DataType(data_types=[DataType(type="str")]),
+            DataType(type="int"),
+        ],
+    )
+    base_model, child_model, child_field = _create_override_required_models(original_data_type)
+    parser_fixture.generation_store.register_model(base_model)
+    parser_fixture.generation_store.register_model(child_model)
+
+    _override_required_fields(parser_fixture, [base_model, child_model])
+
+    replacement = child_model.fields[0]
+    copied_data_type = replacement.data_type
+    assert replacement is not child_field
+    assert copied_data_type is not original_data_type
+    assert copied_data_type.parent is replacement
+    assert copied_data_type.data_types[0].reference is target_reference
+    assert copied_data_type.data_types[0] is not original_data_type.data_types[0]
+    assert copied_data_type.data_types[0].parent is copied_data_type
+    assert copied_data_type.data_types[1] is not original_data_type.data_types[1]
+    assert copied_data_type.data_types[1].data_types[0].type == "str"
+    assert copied_data_type.data_types[1].parent is copied_data_type
+    assert copied_data_type.data_types[1].data_types[0].parent is None
+    assert copied_data_type.data_types[2].type == "int"
+    assert copied_data_type.data_types[2] is not original_data_type.data_types[2]
+    assert copied_data_type.data_types[2].parent is copied_data_type
+
+
+def test_override_required_field_copies_plain_type_with_required_default() -> None:
+    """Required inherited fields can keep defaults when that option is enabled."""
+    parser = C(source="", apply_default_values_for_required_fields=True)
+    original_data_type = DataType(type="str")
+    base_model, child_model, child_field = _create_override_required_models(
+        original_data_type,
+        original_default="'fallback'",
+        original_has_default=True,
+    )
+    parser.generation_store.register_model(base_model)
+    parser.generation_store.register_model(child_model)
+
+    _override_required_fields(parser, [base_model, child_model])
+
+    replacement = child_model.fields[0]
+    assert replacement is not child_field
+    assert replacement.data_type is not original_data_type
+    assert replacement.data_type.type == "str"
+    assert replacement.data_type.parent is replacement
+    assert replacement.required is True
+    assert replacement.has_default is True
+    assert replacement.default == "'fallback'"
+    assert replacement.use_default_with_required is True
+
+
+def test_override_required_field_removes_placeholder_without_inherited_field(parser_fixture: C) -> None:
+    """Placeholders without a matching inherited field are removed."""
+    base_reference = _reference("EmptyBase")
+    base_model = BaseModel(fields=[], reference=base_reference)
+    child_field = DataModelField(
+        name="missing",
+        original_name="missing",
+        data_type=DataType(),
+    )
+    child_model = BaseModel(
+        fields=[child_field],
+        base_classes=[base_reference],
+        reference=_reference("MissingChild"),
+    )
+    parser_fixture.generation_store.register_model(base_model)
+    parser_fixture.generation_store.register_model(child_model)
+
+    _override_required_fields(parser_fixture, [base_model, child_model])
+
+    assert child_model.fields == []
 
 
 def test_additional_imports() -> None:

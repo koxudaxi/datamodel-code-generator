@@ -877,27 +877,27 @@ def title_to_class_name(title: str) -> str:
     return "".join(x for x in classname.title() if not x.isspace())
 
 
-def _find_base_classes(model: DataModel) -> list[DataModel]:  # pragma: no cover
+def _find_base_classes(model: DataModel) -> list[DataModel]:
     """Get direct base class DataModels."""
     return [b.reference.source for b in model.base_classes if b.reference and isinstance(b.reference.source, DataModel)]
 
 
-def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBase | None:  # pragma: no cover
+def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBase | None:
     """Find a field by original_name in the models and their base classes."""
     for model in models:
-        for field in model.iter_all_fields():  # pragma: no cover
+        for field in model.iter_all_fields():
             if field.original_name == original_name:
                 return field
-    return None  # pragma: no cover
+    return None
 
 
-def _copy_data_types(data_types: list[DataType]) -> list[DataType]:  # pragma: no cover
+def _copy_data_types(data_types: list[DataType]) -> list[DataType]:
     """Deep copy a list of DataType objects, preserving references."""
     copied_data_types: list[DataType] = []
     for data_type_ in data_types:
         if data_type_.reference:
             copied_data_types.append(data_type_.__class__(reference=data_type_.reference))
-        elif data_type_.data_types:  # pragma: no cover
+        elif data_type_.data_types:
             copied_data_type = data_type_.model_copy()
             copied_data_type.data_types = _copy_data_types(data_type_.data_types)
             copied_data_types.append(copied_data_type)
@@ -2352,7 +2352,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     continue
                 model_field.extras["validate_default"] = True
 
-    def __override_required_field(  # pragma: no cover
+    def __override_required_field(
         self,
         models: list[DataModel],
     ) -> None:
@@ -2372,7 +2372,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     continue
 
                 original_field = _find_field(model_field.original_name, _find_base_classes(model))
-                if not original_field:  # pragma: no cover
+                if not original_field:
                     self.generation_store.remove_field(model, model_field)
                     continue
                 copied_original_field = original_field.model_copy()
