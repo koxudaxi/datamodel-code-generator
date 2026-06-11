@@ -211,6 +211,19 @@ class JsonSchemaObject(BaseModel):
         "pattern",
         "uniqueItems",
     }
+    __constraint_field_order__: ClassVar[tuple[str, ...]] = (
+        "exclusiveMinimum",
+        "minimum",
+        "exclusiveMaximum",
+        "maximum",
+        "multipleOf",
+        "minItems",
+        "maxItems",
+        "minLength",
+        "maxLength",
+        "pattern",
+        "uniqueItems",
+    )
     __extra_key__: str = SPECIAL_PATH_FORMAT.format("extras")
     __metadata_only_fields__: set[str] = {  # noqa: RUF012
         "title",
@@ -971,6 +984,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
         )
 
+    def _get_constraint_values(self, obj: JsonSchemaObject) -> dict[str, Any]:  # noqa: PLR6301
+        """Return JSON Schema constraint values without serializing nested schemas."""
+        return {
+            constraint: value
+            for constraint in JsonSchemaObject.__constraint_field_order__
+            if (value := getattr(obj, constraint)) is not None
+        }
+
     def _is_fixed_length_tuple(self, obj: JsonSchemaObject) -> bool:
         """Check if an array field represents a fixed-length tuple."""
         if obj.prefixItems is not None and (obj.items is None or obj.items is False):
@@ -1624,7 +1645,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         default_value = effective_default if effective_has_default is not None else field.default
         has_default = effective_has_default if effective_has_default is not None else field.has_default
 
-        constraints = field.model_dump(exclude_none=True) if self.is_constraints_field(field) else None
+        constraints = self._get_constraint_values(field) if self.is_constraints_field(field) else None
         consumed = self.data_type_manager.CONSTRAINED_TYPE_CONSUMED_KEYS
         if constraints is not None and field_type.type in consumed:
             for key in consumed[field_type.type]:
@@ -4220,7 +4241,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             data_types.append(self.parse_object(name, obj, get_special_path("object", path)))
         if obj.enum and not self.ignore_enum_constraints:
             data_types.append(self.parse_enum(name, obj, get_special_path("enum", path)))
-        constraints = obj.model_dump(exclude_none=True)
+        constraints = self._get_constraint_values(obj)
         constraints.update(self._get_array_items_constraints(obj))
         if suppress_item_constraints:
             self._suppress_array_length_constraints(constraints, obj)
@@ -4393,7 +4414,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
-        constraints = obj.model_dump(exclude_none=True) if self.field_constraints else {}
+        constraints = self._get_constraint_values(obj) if self.field_constraints else {}
         if self._should_skip_root_field_constraints_for_multiple_types(obj):
             constraints = {}
         elif self.field_constraints and obj.format == "hostname":
@@ -4465,7 +4486,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
 
-        constraints = obj.model_dump(exclude_none=True) if self.field_constraints else {}
+        constraints = self._get_constraint_values(obj) if self.field_constraints else {}
         if self._should_skip_root_field_constraints_for_multiple_types(obj):
             constraints = {}
         data_model_root_type = self.data_model_root_type(

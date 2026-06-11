@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Dict
 
 from pydantic import BaseModel, ConfigDict
 
@@ -18,5 +19,7 @@ class KnownAndEnumExtra(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    __pydantic_extra__: dict[str, KnownAndEnumExtraAdditionalProperty]
+    __annotations__ = {
+        '__pydantic_extra__': Dict[str, KnownAndEnumExtraAdditionalProperty]
+    }
     name: str
