@@ -22,7 +22,15 @@ EXPECTED_GRAPHQL_PATH: Path = DATA_PATH / "expected" / "parser" / "graphql"
 
 assert_file_content = create_assert_file_content(EXPECTED_GRAPHQL_PATH)
 
-GRAPHQL_COLLECTION_OPTIONS_SCHEMA = "type User { tags: [String] } type Query { user: User }"
+GRAPHQL_COLLECTION_OPTIONS_PATH = GRAPHQL_DATA_PATH / "collection-options.graphql"
+GRAPHQL_COLLECTION_OPTIONS_EXPECTED = "collection_options.py"
+GRAPHQL_COLLECTION_OPTIONS_GENERATE_EXPECTED = "collection_options_generate.py"
+
+
+def _assert_collection_options_output(output_file: Path, output: object) -> None:
+    assert isinstance(output, str)
+    output_file.write_text(output, encoding="utf-8")
+    assert_file_content(output_file, GRAPHQL_COLLECTION_OPTIONS_EXPECTED)
 
 
 def test_graphql_field_enum(output_file: Path) -> None:
@@ -71,56 +79,51 @@ def test_graphql_union_with_prefix(output_file: Path) -> None:
     )
 
 
-def test_graphql_parser_options_path_collection_options_parse() -> None:
+def test_graphql_parser_options_path_collection_options_parse(output_file: Path) -> None:
     """Exercise direct GraphQLParser options that are consumed while parsing."""
     parser = GraphQLParser(
-        source=GRAPHQL_COLLECTION_OPTIONS_SCHEMA,
+        source=GRAPHQL_COLLECTION_OPTIONS_PATH,
         use_standard_collections=True,
         use_union_operator=True,
     )
 
-    output = parser.parse(format_=False)
+    output = parser.parse()
 
     assert parser.use_standard_collections is True
     assert parser.use_union_operator is True
-    assert "tags: list[String | None] | None = None" in output
-    assert "typename__: Literal['User'] | None = Field('User', alias='__typename')" in output
+    _assert_collection_options_output(output_file, output)
 
 
-def test_graphql_parser_config_path_collection_options_parse() -> None:
+def test_graphql_parser_config_path_collection_options_parse(output_file: Path) -> None:
     """Exercise GraphQLParser config object options that are consumed while parsing."""
     parser = GraphQLParser(
-        source=GRAPHQL_COLLECTION_OPTIONS_SCHEMA,
+        source=GRAPHQL_COLLECTION_OPTIONS_PATH,
         config=GraphQLParserConfig(
             use_standard_collections=True,
             use_union_operator=True,
         ),
     )
 
-    output = parser.parse(format_=False)
+    output = parser.parse()
 
     assert parser.config.use_standard_collections is True
     assert parser.config.use_union_operator is True
     assert parser.use_standard_collections is True
     assert parser.use_union_operator is True
-    assert "tags: list[String | None] | None = None" in output
-    assert "typename__: Literal['User'] | None = Field('User', alias='__typename')" in output
+    _assert_collection_options_output(output_file, output)
 
 
-def test_graphql_generate_config_path_collection_options_parse() -> None:
+def test_graphql_generate_config_path_collection_options_parse(output_file: Path) -> None:
     """Exercise generate(config=...) GraphQL options that are consumed while parsing."""
     config = GenerateConfig(
         input_file_type=InputFileType.GraphQL,
+        output=output_file,
         use_standard_collections=True,
         use_union_operator=True,
-        disable_timestamp=True,
     )
 
-    output = generate(GRAPHQL_COLLECTION_OPTIONS_SCHEMA, config=config)
-
-    assert isinstance(output, str)
-    assert "tags: list[String | None] | None = None" in output
-    assert "typename__: Literal['User'] | None = Field('User', alias='__typename')" in output
+    generate(GRAPHQL_COLLECTION_OPTIONS_PATH, config=config)
+    assert_file_content(output_file, GRAPHQL_COLLECTION_OPTIONS_GENERATE_EXPECTED)
 
 
 @pytest.mark.parametrize(

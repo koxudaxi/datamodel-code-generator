@@ -1,0 +1,7 @@
+type User {
+  tags: [String]
+}
+
+type Query {
+  user: User
+}

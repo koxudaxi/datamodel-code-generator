@@ -81,7 +81,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
     all_graphql_objects: dict[str, graphql.GraphQLNamedType]
     # a reference for each object
     # mapper from an object name to his reference
-    references: dict[str, Reference] = {}  # noqa: RUF012
+    references: dict[str, Reference]
     # mapper from graphql type to all objects with this type
     # `graphql.type.introspection.TypeKind` -- an enum with all supported types
     # `graphql.GraphQLNamedType` -- base type for each graphql object
@@ -117,6 +117,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
         self.data_model_scalar_type = self.config.data_model_scalar_type
         self.data_model_union_type = self.config.data_model_union_type
         self.use_standard_collections = self.config.use_standard_collections
+        self.use_union_operator = self.config.use_union_operator
 
     def _resolve_types(self, paths: list[str], schema: graphql.GraphQLSchema) -> None:
         for type_name, type_ in schema.type_map.items():
