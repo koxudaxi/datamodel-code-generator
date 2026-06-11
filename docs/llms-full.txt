@@ -23895,10 +23895,7 @@ Allow HTTP requests to private network schema endpoints.
 
 The `--allow-private-network` flag permits trusted HTTP(S) schema requests to
 private, loopback, link-local, or otherwise non-public network hosts. Without
-this flag, those targets are blocked by default to reduce server-side request
-forgery (SSRF) risk. If a trusted internal schema endpoint is blocked, verify
-the URL and pass `--allow-private-network`; otherwise use a local schema file
-or public endpoint.
+this flag, those targets are blocked by default to reduce SSRF risk.
 
 !!! tip "Usage"
 

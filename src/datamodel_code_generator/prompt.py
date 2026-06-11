@@ -36,6 +36,100 @@ PROMPT_EXCLUDED_OPTIONS: frozenset[str] = frozenset({
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 JSON_SCHEMA_DRAFT_2020_12 = "https://json-schema.org/draft/2020-12/schema"
 
+PROMPT_GUIDANCE_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "Agent Task",
+        (
+            "Recommend a final CLI command for the user's schema and target runtime. Include:",
+            "- Final `datamodel-codegen` command in a shell code block.",
+            "- Brief explanation for each selected option.",
+            "- Rejected alternatives with the reason they do not fit.",
+            (
+                "- Verification command, such as `datamodel-codegen ... --output models.py --check` "
+                "(`--check` requires `--output`) or a diff against expected output."
+            ),
+        ),
+    ),
+    (
+        "Decision Checklist",
+        (
+            (
+                "- Input type: auto-detected schema/data, OpenAPI, AsyncAPI, JSON Schema, MCP tools, "
+                "XML Schema, Protocol Buffers, Avro, GraphQL, CSV, Python input model, or raw JSON/YAML/dict data."
+            ),
+            (
+                "- Output model type: `pydantic_v2.BaseModel`, `pydantic_v2.dataclass`, "
+                "`dataclasses.dataclass`, `typing.TypedDict`, or `msgspec.Struct`."
+            ),
+            (
+                "- Python/Pydantic version: align `--target-python-version`, `--output-model-type`, and "
+                "`--target-pydantic-version` when generating Pydantic v2 models."
+            ),
+            (
+                "- Strictness: choose `--strict-types` values, `--strict-nullable`, `--field-constraints`, and "
+                "`--extra-fields`."
+            ),
+            (
+                "- Aliases/naming: decide between API-compatible aliases and normalized names such as "
+                "`--snake-case-field`."
+            ),
+            "- Module layout: choose one file or an output directory with `--module-split-mode` and reuse options.",
+            (
+                "- Structured output: use `--output-format json` for machine-readable prompt or generation output, "
+                "and `--output-format-json-schema structured-output` when a tool needs the full tagged-union schema."
+            ),
+            (
+                "- Runtime model base: use `--base-class` for a custom base class; "
+                "it is separate from `--output-model-type`."
+            ),
+            "- Validation constraints: prefer `--field-constraints`; add `--use-annotated` for Pydantic v2.",
+        ),
+    ),
+    (
+        "Common Recipes",
+        (
+            (
+                "- Strict Pydantic v2: `--output-model-type pydantic_v2.BaseModel --target-pydantic-version 2.11 "
+                "--use-annotated --field-constraints`, plus needed `--strict-types` values."
+            ),
+            (
+                "- OpenAPI request/response models: `--input-file-type openapi --openapi-scopes schemas paths "
+                "--read-only-write-only-model-type request-response`."
+            ),
+            (
+                "- TypedDict modern syntax: `--output-model-type typing.TypedDict --target-python-version 3.12 "
+                "--use-standard-collections --use-union-operator`."
+            ),
+            (
+                "- Multi-module OpenAPI output: set `--output` to a directory and use `--module-split-mode single "
+                "--all-exports-scope recursive --use-exact-imports`."
+            ),
+            (
+                "- Machine-readable agent flow: run `--generate-prompt --output-format json` first, then validate "
+                "tool integration with `--output-format-json-schema generate-prompt` or `structured-output`."
+            ),
+        ),
+    ),
+    (
+        "Important Option Relationships",
+        (
+            "- `--use-annotated` also enables `--field-constraints`; prefer it for constrained Pydantic v2 fields.",
+            "- `--openapi-include-paths` only has an effect when `--openapi-scopes paths` is included.",
+            "- `--strict-types` requires one or more values: `str`, `int`, `float`, `bool`, or `bytes`.",
+            "- `--use-specialized-enum` requires `--target-python-version >= 3.11`.",
+            (
+                "- `--output-format json` is supported for generation, `--generate-prompt`, and `--check`; "
+                "not for `--watch`."
+            ),
+            (
+                "- `--output-format-json-schema` accepts `generate-prompt`, `generation`, or `structured-output`; "
+                "choose the narrow schema unless the consumer handles multiple payload kinds."
+            ),
+            "- `--validation` is deprecated; use `--field-constraints` for generated Field constraints.",
+        ),
+    ),
+)
+
 
 class CurrentOptionPayload(BaseModel):
     """Machine-readable metadata for a CLI option currently set by the caller."""
@@ -315,6 +409,18 @@ def _format_options_by_category() -> str:
     return "\n".join(lines)
 
 
+def _format_guidance_sections() -> str:
+    """Format concise agent guidance sections."""
+    lines: list[str] = []
+
+    for title, entries in PROMPT_GUIDANCE_SECTIONS:
+        lines.extend((f"## {title}", ""))
+        lines.extend(entries)
+        lines.append("")
+
+    return "\n".join(lines)
+
+
 def _generate_prompt_json(args: Namespace, help_text: str, parser: ArgumentParser) -> str:
     """Generate a machine-readable LLM consultation payload."""
     payload = PromptPayload(
@@ -379,6 +485,8 @@ def generate_prompt(args: Namespace, help_text: str, parser: ArgumentParser | No
         help_text,
         "```",
         "",
+        # Concise guidance for LLM agents choosing option combinations
+        _format_guidance_sections(),
         # Instructions for LLM
         "## Instructions",
         "",
