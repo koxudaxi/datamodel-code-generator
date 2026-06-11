@@ -589,6 +589,25 @@ def test_parser_signature_matches_baseline() -> None:
         )
 
 
+def test_pydantic_v2_compatibility_reexports_remain_importable() -> None:
+    """Keep compatibility import paths for pydantic v2 model internals."""
+    from datamodel_code_generator.model.pydantic_base import DataModelField as PydanticBaseDataModelField
+    from datamodel_code_generator.model.pydantic_v2.base_model import (
+        Constraints as PydanticV2BaseConstraints,
+    )
+    from datamodel_code_generator.model.pydantic_v2.base_model import (
+        DataModelField as PydanticV2DataModelField,
+    )
+    from datamodel_code_generator.model.pydantic_v2.base_model import (
+        DataModelFieldV1,
+    )
+    from datamodel_code_generator.model.pydantic_v2.dataclass import Constraints as PydanticV2DataclassConstraints
+
+    assert DataModelFieldV1 is PydanticBaseDataModelField
+    assert issubclass(PydanticV2DataModelField, DataModelFieldV1)
+    assert PydanticV2DataclassConstraints is PydanticV2BaseConstraints
+
+
 def test_generate_config_dict_fields_match_generate_config() -> None:
     """Ensure GenerateConfigDict has same field names as GenerateConfig."""
     from datamodel_code_generator._types import GenerateConfigDict

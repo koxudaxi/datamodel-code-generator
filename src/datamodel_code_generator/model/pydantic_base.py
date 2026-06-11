@@ -76,7 +76,6 @@ class DataModelField(DataModelFieldBase):
     _COMPARE_EXPRESSIONS: ClassVar[set[str]] = {"gt", "ge", "lt", "le"}
     _INTEGER_CONSTRAINTS: ClassVar[set[str]] = _COMPARE_EXPRESSIONS | {"multiple_of"}
     constraints: Optional[Constraints] = None  # noqa: UP045
-    _PARSE_METHOD: ClassVar[str] = "model_validate"
 
     @property
     def has_default_factory_in_field(self) -> bool:
@@ -203,7 +202,7 @@ class DataModelField(DataModelFieldBase):
         if self.use_frozen_field and self.read_only:
             data["allow_mutation"] = False
 
-    def _process_annotated_field_arguments(self, field_arguments: list[str]) -> list[str]:  # noqa: PLR6301  # pragma: no cover
+    def _process_annotated_field_arguments(self, field_arguments: list[str]) -> list[str]:  # noqa: PLR6301
         return field_arguments
 
     def _get_field_data_and_default_factory(self) -> tuple[dict[str, Any], Any]:
