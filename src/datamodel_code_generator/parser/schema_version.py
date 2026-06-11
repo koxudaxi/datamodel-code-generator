@@ -662,7 +662,7 @@ def _get_common_data_formats() -> DataFormatMapping:
 
 
 def _get_openapi_only_formats() -> DataFormatMapping:
-    """Get formats specific to OpenAPI (not valid in pure JsonSchema)."""
+    """Get formats specific to OpenAPI."""
     from datamodel_code_generator.types import Types  # noqa: PLC0415
 
     return {
@@ -671,6 +671,17 @@ def _get_openapi_only_formats() -> DataFormatMapping:
             "password": Types.password,
         },
     }
+
+
+def _get_openapi_data_formats() -> DataFormatMapping:
+    """Get common data formats extended with OpenAPI-specific formats."""
+    formats = _get_common_data_formats()
+    for type_key, type_formats in _get_openapi_only_formats().items():
+        if current_type_formats := formats.get(type_key):
+            formats[type_key] = {**current_type_formats, **type_formats}
+            continue
+        formats[type_key] = type_formats  # pragma: no cover
+    return formats
 
 
 def get_data_formats(*, is_openapi: bool = False) -> DataFormatMapping:
@@ -682,14 +693,9 @@ def get_data_formats(*, is_openapi: bool = False) -> DataFormatMapping:
     Returns:
         Merged dictionary of data formats.
     """
-    formats = _get_common_data_formats()
     if is_openapi:
-        for type_key, type_formats in _get_openapi_only_formats().items():
-            if type_key in formats:
-                formats[type_key] = {**formats[type_key], **type_formats}
-            else:  # pragma: no cover
-                formats[type_key] = type_formats
-    return formats
+        return _get_openapi_data_formats()
+    return _get_common_data_formats()
 
 
 __all__ = [
