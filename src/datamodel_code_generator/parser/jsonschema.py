@@ -5272,6 +5272,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _load_source_dict(self, source: Source) -> dict[str, Any]:  # noqa: PLR6301
         return dict(source.raw_data) if source.raw_data is not None else load_data(source.text)
 
+    def _resolve_root_model_name(self, raw_obj: dict[str, Any]) -> tuple[str, bool]:
+        title = raw_obj.get("title")
+        title_str = str(title) if title is not None else "Model"
+        match (self.custom_class_name_generator, self.class_name):
+            case (custom_generator, _) if custom_generator:
+                return title_str, False
+            case (_, class_name) if class_name:
+                if not self.model_resolver.validate_name(class_name):
+                    raise InvalidClassNameError(class_name)
+                return class_name, self._should_preserve_explicit_root_class_name(class_name)
+            case _:
+                obj_name = title_str
+                if not self.model_resolver.validate_name(obj_name):
+                    obj_name = title_to_class_name(obj_name)
+                if not self.model_resolver.validate_name(obj_name):
+                    raise InvalidClassNameError(obj_name)
+                return obj_name, False
+
     def _parse_converted_sources(self, make_converter: Callable[[], Any]) -> None:
         for source, path_parts in self._get_context_source_path_parts():
             raw_obj = make_converter().convert(source)
@@ -5279,13 +5297,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if source.path.parts:
                 self.remote_object_cache[str(self.base_path / source.path)] = raw_obj
             self.raw_obj = raw_obj
-            title = str(raw_obj.get("title") or "Model")
-            obj_name = self.class_name or title
+            obj_name, preserve_root_class_name = self._resolve_root_model_name(raw_obj)
             self._parse_file(
                 raw_obj,
                 obj_name,
                 path_parts,
-                preserve_root_class_name=self._should_preserve_explicit_root_class_name(obj_name),
+                preserve_root_class_name=preserve_root_class_name,
             )
 
         self._resolve_unparsed_json_pointer()
@@ -5306,25 +5323,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
                     continue
             self.raw_obj = raw_obj
-            title = self.raw_obj.get("title")
-            title_str = str(title) if title is not None else "Model"
-            preserve_root_class_name = False
-            validate_obj_name = False
-            match (self.custom_class_name_generator, self.class_name):
-                case (custom_generator, _) if custom_generator:
-                    obj_name = title_str
-                case (_, class_name) if class_name:
-                    obj_name = class_name
-                    preserve_root_class_name = self._should_preserve_explicit_root_class_name(obj_name)
-                    validate_obj_name = True
-                case _:
-                    # backward compatible
-                    obj_name = title_str
-                    if not self.model_resolver.validate_name(obj_name):
-                        obj_name = title_to_class_name(obj_name)
-                    validate_obj_name = True
-            if validate_obj_name and not self.model_resolver.validate_name(obj_name):
-                raise InvalidClassNameError(obj_name)
+            obj_name, preserve_root_class_name = self._resolve_root_model_name(self.raw_obj)
             self._parse_file(self.raw_obj, obj_name, path_parts, preserve_root_class_name=preserve_root_class_name)
 
         self._resolve_unparsed_json_pointer()
