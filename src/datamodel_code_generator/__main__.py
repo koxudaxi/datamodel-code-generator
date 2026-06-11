@@ -765,8 +765,9 @@ def _compare_single_file(
     """
     generated_content = _normalize_line_endings(generated_path.read_text(encoding=encoding))
 
+    display_path = actual_path.as_posix()
     if not actual_path.exists():
-        return True, [f"MISSING: {actual_path} (file does not exist but should be generated)"]
+        return True, [f"MISSING: {display_path} (file does not exist but should be generated)"]
 
     actual_content = _normalize_line_endings(actual_path.read_text(encoding=encoding))
 
@@ -777,8 +778,8 @@ def _compare_single_file(
         difflib.unified_diff(
             actual_content.splitlines(keepends=True),
             generated_content.splitlines(keepends=True),
-            fromfile=str(actual_path),
-            tofile=f"{actual_path} (expected)",
+            fromfile=display_path,
+            tofile=f"{display_path} (expected)",
         )
     )
     return True, diff_lines
