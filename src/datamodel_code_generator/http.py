@@ -10,7 +10,7 @@ from __future__ import annotations
 import socket
 import ssl
 from collections.abc import Iterable, Sequence
-from ipaddress import IPv4Address, IPv6Address, ip_address
+from ipaddress import IPv4Address, IPv6Address, IPv6Network, ip_address
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Protocol, cast, overload
 from urllib.parse import urlparse
@@ -136,14 +136,39 @@ _IPV4_TWO_PART_TAIL_MAX = 0xFFFFFF
 _IPV4_ADDRESS_MAX = 0xFFFFFFFF
 _DEFAULT_PORTS = MappingProxyType({"http": 80, "https": 443})
 _ADDR_INFO_MIN_LENGTH = 5
+_EMBEDDED_IPV4_PREFIXES = (
+    IPv6Network("::/96"),
+    IPv6Network("::ffff:0:0:0/96"),
+    IPv6Network("64:ff9b::/96"),
+)
+
+
+def _embedded_ipv4(ip: IPv4Address | IPv6Address) -> IPv4Address | None:
+    """Return the IPv4 address embedded in an IPv6 address, if any.
+
+    IPv6 can encode an IPv4 target several ways, including IPv4-mapped, IPv4-compatible,
+    IPv4-translated, and NAT64 well-known prefix addresses. Unwrapping them lets the SSRF guard
+    apply the same private-address checks it already applies to plain and legacy IPv4 literals.
+    """
+    if not isinstance(ip, IPv6Address):
+        return None
+    if (mapped := ip.ipv4_mapped) is not None:
+        return mapped
+    for network in _EMBEDDED_IPV4_PREFIXES:
+        if ip in network:
+            return IPv4Address(int(ip) & _IPV4_ADDRESS_MAX)
+    return None
 
 
 def _is_safe_ip(ip: IPv4Address | IPv6Address) -> bool:
     """Return whether an address is allowed for default remote schema fetches.
 
     Only globally routable addresses are accepted so untrusted schema URLs cannot reach local, private,
-    link-local, reserved, or otherwise non-public networks unless the caller explicitly opts in.
+    link-local, reserved, or otherwise non-public networks unless the caller explicitly opts in. IPv6
+    addresses that embed an IPv4 target are unwrapped so the embedded address is validated too.
     """
+    if (embedded := _embedded_ipv4(ip)) is not None:
+        return ip.is_global and embedded.is_global
     return ip.is_global
 
 
