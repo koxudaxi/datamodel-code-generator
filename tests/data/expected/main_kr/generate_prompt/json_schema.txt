@@ -135,6 +135,7 @@
       "type": "object"
     }
   },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Structured JSON payload emitted by --generate-prompt --output-format json.",
   "properties": {
@@ -156,6 +157,11 @@
     },
     "help_text": {
       "title": "Help Text",
+      "type": "string"
+    },
+    "kind": {
+      "const": "prompt",
+      "title": "Kind",
       "type": "string"
     },
     "options": {
@@ -188,6 +194,7 @@
   "required": [
     "version",
     "format",
+    "kind",
     "question",
     "current_options",
     "current_options_text",

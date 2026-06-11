@@ -34,10 +34,17 @@ category, full option metadata from argparse, and help text without ANSI color
 codes.
 
 Use `--output-format-json-schema generate-prompt` when a tool or agent needs the
-schema for the structured payload:
+schema for the structured prompt payload:
 
 ```bash
 datamodel-codegen --output-format-json-schema generate-prompt
+```
+
+Use `--output-format-json-schema generation` for normal generated-file JSON
+output:
+
+```bash
+datamodel-codegen --output-format-json-schema generation
 ```
 
 ## CLI LLM Tools

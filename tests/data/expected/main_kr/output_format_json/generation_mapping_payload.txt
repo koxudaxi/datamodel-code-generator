@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "format": "json",
+  "kind": "generation",
+  "output": null,
+  "files": [
+    {
+      "path": "models/user.py",
+      "content": "class User:\n    pass\n"
+    }
+  ]
+}

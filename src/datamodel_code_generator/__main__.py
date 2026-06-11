@@ -33,7 +33,7 @@ if any(
 
         sys.stdout.write(f"{generate_prompt_json_schema()}\n")
         sys.exit(0)
-    if namespace.generate_prompt is not None:
+    if namespace.output_format_json_schema is None and namespace.generate_prompt is not None:
         from datamodel_code_generator.prompt import generate_prompt
 
         help_text = arg_parser.format_help()
@@ -45,15 +45,16 @@ import difflib
 import json
 import os
 import shlex
+import shutil
 import signal
 import tempfile
 import warnings
 from collections import defaultdict
 from collections.abc import Callable, Mapping, Sequence  # noqa: TC003  # pydantic needs it
-from enum import IntEnum
+from enum import Enum, IntEnum
 from io import TextIOBase  # noqa: TC003 # needed for pydantic
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeAlias, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
 
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
@@ -107,6 +108,11 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from datamodel_code_generator._structured_output import (
+        CheckDifferencePayload,
+        CommandOutputKind,
+        GeneratedFilePayload,
+    )
     from datamodel_code_generator.validators import ModelValidators
 
 
@@ -697,6 +703,18 @@ def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict
 TomlValue: TypeAlias = str | bool | list["TomlValue"] | tuple["TomlValue", ...]
 
 
+def _json_ready(value: Any) -> Any:
+    if isinstance(value, Enum):
+        return value.value
+    if isinstance(value, Path):
+        return value.as_posix()
+    if isinstance(value, tuple | list):
+        return [_json_ready(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): _json_ready(item) for key, item in value.items()}
+    return value
+
+
 def _format_toml_value(value: TomlValue) -> str:
     """Format a Python value as a TOML value string."""
     if isinstance(value, bool):
@@ -707,10 +725,9 @@ def _format_toml_value(value: TomlValue) -> str:
     return f"[{', '.join(formatted_items)}]"
 
 
-def generate_pyproject_config(args: Namespace) -> str:
-    """Generate pyproject.toml [tool.datamodel-codegen] section from CLI arguments."""
-    lines: list[str] = ["[tool.datamodel-codegen]"]
-
+def _pyproject_config_data(args: Namespace) -> dict[str, TomlValue]:
+    """Return pyproject.toml configuration data from CLI arguments."""
+    config_data: dict[str, TomlValue] = {}
     args_dict: dict[str, object] = vars(args)
     for key, value in sorted(args_dict.items()):
         if value is None:
@@ -718,11 +735,20 @@ def generate_pyproject_config(args: Namespace) -> str:
         if key in EXCLUDED_CONFIG_OPTIONS:
             continue
 
-        toml_key = key.replace("_", "-")
-        toml_value = _format_toml_value(cast("TomlValue", value))
-        lines.append(f"{toml_key} = {toml_value}")
+        config_data[key.replace("_", "-")] = cast("TomlValue", value)
+    return config_data
 
+
+def _format_pyproject_config(config_data: Mapping[str, TomlValue]) -> str:
+    lines: list[str] = ["[tool.datamodel-codegen]"]
+    for key, value in config_data.items():
+        lines.append(f"{key} = {_format_toml_value(value)}")
     return "\n".join(lines) + "\n"
+
+
+def generate_pyproject_config(args: Namespace) -> str:
+    """Generate pyproject.toml [tool.datamodel-codegen] section from CLI arguments."""
+    return _format_pyproject_config(_pyproject_config_data(args))
 
 
 def _normalize_line_endings(text: str) -> str:
@@ -744,8 +770,9 @@ def _compare_single_file(
     """
     generated_content = _normalize_line_endings(generated_path.read_text(encoding=encoding))
 
+    display_path = actual_path.as_posix()
     if not actual_path.exists():
-        return True, [f"MISSING: {actual_path} (file does not exist but should be generated)"]
+        return True, [f"MISSING: {display_path} (file does not exist but should be generated)"]
 
     actual_content = _normalize_line_endings(actual_path.read_text(encoding=encoding))
 
@@ -756,20 +783,27 @@ def _compare_single_file(
         difflib.unified_diff(
             actual_content.splitlines(keepends=True),
             generated_content.splitlines(keepends=True),
-            fromfile=str(actual_path),
-            tofile=f"{actual_path} (expected)",
+            fromfile=display_path,
+            tofile=f"{display_path} (expected)",
         )
     )
     return True, diff_lines
+
+
+class DirectoryChangedFile(NamedTuple):
+    """One changed file found while comparing generated and existing directories."""
+
+    path: str
+    diff_lines: list[str]
 
 
 def _compare_directories(
     generated_dir: Path,
     actual_dir: Path,
     encoding: str,
-) -> tuple[list[str], list[str], list[str]]:
+) -> tuple[list[DirectoryChangedFile], list[str], list[str]]:
     """Compare generated directory with existing directory."""
-    diffs: list[str] = []
+    changed_files: list[DirectoryChangedFile] = []
 
     generated_files = {path.relative_to(generated_dir) for path in generated_dir.rglob("*.py")}
 
@@ -779,23 +813,28 @@ def _compare_directories(
             if "__pycache__" not in path.parts:
                 actual_files.add(path.relative_to(actual_dir))
 
-    missing_files = [str(rel_path) for rel_path in sorted(generated_files - actual_files)]
-    extra_files = [str(rel_path) for rel_path in sorted(actual_files - generated_files)]
+    missing_files = [rel_path.as_posix() for rel_path in sorted(generated_files - actual_files)]
+    extra_files = [rel_path.as_posix() for rel_path in sorted(actual_files - generated_files)]
 
     for rel_path in sorted(generated_files & actual_files):
         generated_content = _normalize_line_endings((generated_dir / rel_path).read_text(encoding=encoding))
         actual_content = _normalize_line_endings((actual_dir / rel_path).read_text(encoding=encoding))
         if generated_content != actual_content:
-            diffs.extend(
-                difflib.unified_diff(
-                    actual_content.splitlines(keepends=True),
-                    generated_content.splitlines(keepends=True),
-                    fromfile=str(rel_path),
-                    tofile=f"{rel_path} (expected)",
+            changed_files.append(
+                DirectoryChangedFile(
+                    path=rel_path.as_posix(),
+                    diff_lines=list(
+                        difflib.unified_diff(
+                            actual_content.splitlines(keepends=True),
+                            generated_content.splitlines(keepends=True),
+                            fromfile=rel_path.as_posix(),
+                            tofile=f"{rel_path.as_posix()} (expected)",
+                        )
+                    ),
                 )
             )
 
-    return diffs, missing_files, extra_files
+    return changed_files, missing_files, extra_files
 
 
 def _format_cli_value(value: str | list[str]) -> str:
@@ -826,6 +865,10 @@ def generate_cli_command(config: dict[str, TomlValue]) -> str:
             parts.extend((f"--{cli_key}", _format_cli_value(str(value))))
 
     return " ".join(parts) + "\n"
+
+
+def _hyphenated_config_data(config: Mapping[str, Any]) -> dict[str, Any]:
+    return {key.replace("_", "-"): _json_ready(value) for key, value in sorted(config.items())}
 
 
 def _load_json_config(
@@ -884,6 +927,112 @@ def _load_validators_config(
         return None, f"Invalid validators configuration: {e}"
 
 
+def _generated_module_path(module: tuple[str, ...]) -> str:
+    return Path(*module).as_posix()
+
+
+def _generated_files_from_result(result: str | Mapping[tuple[str, ...], str]) -> list[GeneratedFilePayload]:
+    from datamodel_code_generator._structured_output import GeneratedFilePayload  # noqa: PLC0415
+
+    if isinstance(result, str):
+        return [GeneratedFilePayload(path=None, content=result)]
+    return [
+        GeneratedFilePayload(path=_generated_module_path(module), content=content)
+        for module, content in sorted(result.items())
+    ]
+
+
+def _generated_files_from_output(
+    output: Path, encoding: str, *, display_output: Path | None = None
+) -> list[GeneratedFilePayload]:
+    from datamodel_code_generator._structured_output import GeneratedFilePayload  # noqa: PLC0415
+
+    if output.is_file():
+        return [
+            GeneratedFilePayload(
+                path=(display_output or output).name,
+                content=output.read_text(encoding=encoding),
+            )
+        ]
+    return [
+        GeneratedFilePayload(path=path.relative_to(output).as_posix(), content=path.read_text(encoding=encoding))
+        for path in sorted(output.rglob("*.py"))
+        if path.is_file()
+    ]
+
+
+def _structured_output_path(output: Path | str | None) -> str | None:
+    if isinstance(output, Path):
+        return output.as_posix()
+    return output
+
+
+def _generation_output_json(files: list[GeneratedFilePayload], output: Path | str | None = None) -> str:
+    from datamodel_code_generator._structured_output import generation_output_json  # noqa: PLC0415
+
+    return generation_output_json(files, output=_structured_output_path(output))
+
+
+def _command_output_json(
+    kind: CommandOutputKind,
+    content: str,
+    *,
+    config: dict[str, Any] | None = None,
+    items: list[dict[str, Any]] | None = None,
+    arguments: list[str] | None = None,
+) -> str:
+    from datamodel_code_generator._structured_output import command_output_json  # noqa: PLC0415
+
+    return command_output_json(kind, content, config=config, items=items, arguments=arguments)
+
+
+def _check_output_json(
+    *,
+    success: bool,
+    content: str,
+    differences: list[CheckDifferencePayload],
+) -> str:
+    from datamodel_code_generator._structured_output import check_output_json  # noqa: PLC0415
+
+    return check_output_json(success=success, content=content, differences=differences)
+
+
+def _generation_output_json_schema() -> str:
+    from datamodel_code_generator._structured_output import generation_output_json_schema  # noqa: PLC0415
+
+    return generation_output_json_schema()
+
+
+def _structured_output_json_schema() -> str:
+    from datamodel_code_generator._structured_output import structured_output_json_schema  # noqa: PLC0415
+
+    return structured_output_json_schema()
+
+
+def _copy_generated_output(generated_output: Path, actual_output: Path, *, is_directory_output: bool) -> None:
+    if is_directory_output:
+        for generated_file in sorted(generated_output.rglob("*")):
+            if not generated_file.is_file():
+                continue
+            target = actual_output / generated_file.relative_to(generated_output)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(generated_file, target)
+        return
+
+    actual_output.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(generated_output, actual_output)
+
+
+def _write_generated_result(result: str | Mapping[tuple[str, ...], str], output_format: str | None) -> None:
+    if output_format == "json":
+        sys.stdout.write(_generation_output_json(_generated_files_from_result(result)) + "\n")
+    elif isinstance(result, str):
+        sys.stdout.write(result + "\n")
+    else:
+        for content in result.values():
+            sys.stdout.write(content + "\n")
+
+
 def run_generate_from_config(  # noqa: PLR0913, PLR0917
     config: Config,
     input_: Path | str | ParseResult,
@@ -896,9 +1045,9 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     settings_path: Path | None = None,
     validators: Mapping[str, ModelValidators] | None = None,
     default_value_overrides: dict[str, Any] | None = None,
-) -> None:
+) -> str | Mapping[tuple[str, ...], str] | None:
     """Run code generation with the given config and parameters."""
-    result = generate(
+    return generate(
         input_=input_,
         input_file_type=config.input_file_type,
         output=output,
@@ -1043,13 +1192,6 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         external_ref_mapping=config.external_ref_mapping,
     )
 
-    if output is None and result is not None:  # pragma: no cover
-        if isinstance(result, str):
-            sys.stdout.write(result + "\n")
-        else:
-            for content in result.values():
-                sys.stdout.write(content + "\n")
-
 
 def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     """Execute datamodel code generation from command-line arguments."""
@@ -1077,17 +1219,26 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
 
         print(generate_prompt_json_schema())  # noqa: T201
         return Exit.OK
-
-    if namespace.generate_prompt is None and namespace.output_format == "json":
-        print(  # noqa: T201
-            f"Error: --output-format {namespace.output_format} is currently supported only with --generate-prompt",
-            file=sys.stderr,
-        )
-        return Exit.ERROR
+    if namespace.output_format_json_schema == "generation":
+        print(_generation_output_json_schema())  # noqa: T201
+        return Exit.OK
+    if namespace.output_format_json_schema == "structured-output":
+        print(_structured_output_json_schema())  # noqa: T201
+        return Exit.OK
 
     if namespace.generate_pyproject_config:
-        config_output = generate_pyproject_config(namespace)
-        print(config_output)  # noqa: T201
+        config_data = _pyproject_config_data(namespace)
+        config_output = _format_pyproject_config(config_data)
+        if namespace.output_format == "json":
+            print(  # noqa: T201
+                _command_output_json(
+                    "pyproject-config",
+                    config_output,
+                    config={"tool": {"datamodel-codegen": _json_ready(config_data)}},
+                )
+            )
+        else:
+            print(config_output)  # noqa: T201
         return Exit.OK
 
     if namespace.generate_prompt is not None:
@@ -1116,7 +1267,17 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             )
             return Exit.ERROR
         command_output = generate_cli_command(pyproject_config)
-        print(command_output)  # noqa: T201
+        if namespace.output_format == "json":
+            print(  # noqa: T201
+                _command_output_json(
+                    "cli-command",
+                    command_output,
+                    config=_hyphenated_config_data(pyproject_config),
+                    arguments=shlex.split(command_output),
+                )
+            )
+        else:
+            print(command_output)  # noqa: T201
         return Exit.OK
 
     try:
@@ -1127,13 +1288,33 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         return Exit.ERROR
 
     if config.list_deprecations:
-        print(render_deprecations(cast("Any", config.list_deprecations)), end="")  # noqa: T201
+        content = render_deprecations(cast("Any", config.list_deprecations))
+        if namespace.output_format == "json":
+            print(  # noqa: T201
+                _command_output_json(
+                    "deprecations",
+                    content,
+                    items=json.loads(render_deprecations("json")),
+                )
+            )
+        else:
+            print(content, end="")  # noqa: T201
         return Exit.OK
 
     if config.list_experimental:
         from datamodel_code_generator.experimental import render_experimental_features  # noqa: PLC0415
 
-        print(render_experimental_features(cast("Any", config.list_experimental)), end="")  # noqa: T201
+        content = render_experimental_features(cast("Any", config.list_experimental))
+        if namespace.output_format == "json":
+            print(  # noqa: T201
+                _command_output_json(
+                    "experimental",
+                    content,
+                    items=json.loads(render_experimental_features("json")),
+                )
+            )
+        else:
+            print(content, end="")  # noqa: T201
         return Exit.OK
 
     if not config.input and not config.url and not config.input_model and sys.stdin.isatty():
@@ -1164,6 +1345,13 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
     if config.watch and config.check:
         print(  # noqa: T201
             "Error: --watch and --check cannot be used together",
+            file=sys.stderr,
+        )
+        return Exit.ERROR
+
+    if config.watch and namespace.output_format == "json":
+        print(  # noqa: T201
+            "Error: --output-format json cannot be used with --watch",
             file=sys.stderr,
         )
         return Exit.ERROR
@@ -1312,7 +1500,8 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(error, file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
-    if config.check:
+    writes_json_output_file = namespace.output_format == "json" and config.output is not None and not config.check
+    if config.check or writes_json_output_file:
         config_output = cast("Path", config.output)
         is_directory_output = not config_output.suffix
         temp_context: tempfile.TemporaryDirectory[str] | None = tempfile.TemporaryDirectory()
@@ -1347,7 +1536,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         else:
             input_ = config.url or config.input or sys.stdin.read()
 
-        run_generate_from_config(
+        result = run_generate_from_config(
             config=config,
             input_=input_,
             output=generate_output,
@@ -1378,28 +1567,113 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             temp_context.cleanup()
         return Exit.ERROR
 
+    if writes_json_output_file and generate_output is not None and config.output is not None:
+        _copy_generated_output(generate_output, config.output, is_directory_output=is_directory_output)
+
+    if generate_output is None and result is not None:
+        _write_generated_result(result, namespace.output_format)
+    elif namespace.output_format == "json" and generate_output is not None and not config.check:
+        display_output = config.output if writes_json_output_file else None
+        sys.stdout.write(
+            _generation_output_json(
+                _generated_files_from_output(generate_output, config.encoding, display_output=display_output),
+                output=config.output,
+            )
+            + "\n"
+        )
+        if temp_context is not None:  # pragma: no branch
+            temp_context.cleanup()
+            temp_context = None
+
     if config.check and config.output is not None and generate_output is not None:
+        from datamodel_code_generator._structured_output import CheckDifferencePayload  # noqa: PLC0415
+
         has_differences = False
+        single_file_diff_lines: list[str] = []
+        changed_files: list[DirectoryChangedFile] = []
+        missing_files: list[str] = []
+        extra_files: list[str] = []
+        difference_items: list[CheckDifferencePayload] = []
 
         if is_directory_output:
-            diffs, missing_files, extra_files = _compare_directories(generate_output, config.output, config.encoding)
-            if diffs:
-                print("".join(diffs), end="")  # noqa: T201
+            changed_files, missing_files, extra_files = _compare_directories(
+                generate_output,
+                config.output,
+                config.encoding,
+            )
+            for changed_file in changed_files:
+                diff_text = "".join(changed_file.diff_lines)
+                difference_items.append(
+                    CheckDifferencePayload(
+                        kind="changed",
+                        path=changed_file.path,
+                        diff=diff_text,
+                    )
+                )
+                if namespace.output_format != "json":
+                    print(diff_text, end="")  # noqa: T201
                 has_differences = True
             for missing in missing_files:
-                print(f"MISSING: {missing} (should be generated)")  # noqa: T201
+                difference_items.append(
+                    CheckDifferencePayload(
+                        kind="missing",
+                        path=missing,
+                        message=f"MISSING: {missing} (should be generated)",
+                    )
+                )
+                if namespace.output_format != "json":
+                    print(f"MISSING: {missing} (should be generated)")  # noqa: T201
                 has_differences = True
             for extra in extra_files:
-                print(f"EXTRA: {extra} (no longer generated)")  # noqa: T201
+                difference_items.append(
+                    CheckDifferencePayload(
+                        kind="extra",
+                        path=extra,
+                        message=f"EXTRA: {extra} (no longer generated)",
+                    )
+                )
+                if namespace.output_format != "json":
+                    print(f"EXTRA: {extra} (no longer generated)")  # noqa: T201
                 has_differences = True
         else:
-            diff_found, diff_lines = _compare_single_file(generate_output, config.output, config.encoding)
+            diff_found, single_file_diff_lines = _compare_single_file(generate_output, config.output, config.encoding)
             if diff_found:
-                print("".join(diff_lines), end="")  # noqa: T201
+                if config.output.exists():
+                    difference_items.append(
+                        CheckDifferencePayload(
+                            kind="changed",
+                            path=config.output.as_posix(),
+                            diff="".join(single_file_diff_lines),
+                        )
+                    )
+                else:
+                    difference_items.append(
+                        CheckDifferencePayload(
+                            kind="missing",
+                            path=config.output.as_posix(),
+                            message="".join(single_file_diff_lines),
+                        )
+                    )
+                if namespace.output_format != "json":
+                    print("".join(single_file_diff_lines), end="")  # noqa: T201
                 has_differences = True
 
         if temp_context is not None:  # pragma: no branch
             temp_context.cleanup()
+
+        if namespace.output_format == "json":
+            content = "".join(single_file_diff_lines)
+            content += "".join("".join(changed_file.diff_lines) for changed_file in changed_files)
+            content += "".join(f"MISSING: {missing} (should be generated)\n" for missing in missing_files)
+            content += "".join(f"EXTRA: {extra} (no longer generated)\n" for extra in extra_files)
+            sys.stdout.write(
+                _check_output_json(
+                    success=not has_differences,
+                    content=content,
+                    differences=difference_items,
+                )
+                + "\n"
+            )
 
         return Exit.DIFF if has_differences else Exit.OK
 
