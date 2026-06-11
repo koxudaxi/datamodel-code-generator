@@ -25086,7 +25086,8 @@ Schema for that structured payload, such as when defining a tool contract.
         --input schema.json \
         --output models.py \
         --output-model-type pydantic_v2.BaseModel \
-        --generate-prompt "Review this command for stable generated output in CI."
+        --generate-prompt "Review this command for stable generated output in CI." \
+        | claude -p
     ```
 
 ---
@@ -26004,7 +26005,8 @@ Schema for that structured payload, such as when defining a tool contract.
         --input schema.json \
         --output models.py \
         --output-model-type pydantic_v2.BaseModel \
-        --generate-prompt "Review this command for stable generated output in CI."
+        --generate-prompt "Review this command for stable generated output in CI." \
+        | claude -p
     ```
 
 ---
