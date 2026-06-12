@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
+from datamodel_code_generator import InputFileType, InvalidFileFormatError, generate
+from datamodel_code_generator.__main__ import Exit
 from tests.conftest import create_assert_file_content
 from tests.main.conftest import (
     CSV_DATA_PATH,
@@ -13,8 +17,6 @@ from tests.main.conftest import (
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    import pytest
 
 
 assert_file_content = create_assert_file_content(EXPECTED_CSV_PATH)
@@ -63,3 +65,26 @@ def test_csv_file_extra_trailing_cell(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="csv_file_extra_trailing_cell.py",
     )
+
+
+def test_csv_file_header_only(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test CSV file input reports header-only data as an invalid file."""
+    run_main_and_assert(
+        input_path=CSV_DATA_PATH / "header_only.csv",
+        output_path=output_file,
+        input_file_type="csv",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Invalid file format for csv: ValueError: CSV file has no data rows",
+        output_should_not_exist=True,
+    )
+
+
+def test_csv_empty_input_raises_invalid_file_format(output_file: Path) -> None:
+    """Test CSV raw input reports missing headers as an invalid file."""
+    with pytest.raises(InvalidFileFormatError, match="CSV file has no header row"):
+        generate(
+            input_="",
+            output=output_file,
+            input_file_type=InputFileType.CSV,
+        )
