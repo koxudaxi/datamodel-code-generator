@@ -109,6 +109,8 @@ def _payload_codegen_args(case: SchemaCase, input_path: Path, output_path: Path,
         "--class-name",
         PAYLOAD_CLASS_NAME,
         "--disable-timestamp",
+        "--formatters",
+        "builtin",
     ]
     if case.input_file_type == "openapi":
         args.extend(["--openapi-scopes", "schemas", "--strict-nullable"])
