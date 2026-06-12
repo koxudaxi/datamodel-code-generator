@@ -9,8 +9,6 @@ from functools import lru_cache, wraps
 from math import isfinite
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
 
-from pydantic import Field
-
 from datamodel_code_generator.imports import IMPORT_UNION, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import UNDEFINED, BaseClassDataType, _nested_model_default_factory
@@ -23,7 +21,7 @@ from datamodel_code_generator.model.imports import (
     IMPORT_MSGSPEC_UNSETTYPE,
 )
 from datamodel_code_generator.model.pydantic_base import (
-    Constraints as _Constraints,
+    PatternConstraints as _Constraints,
 )
 from datamodel_code_generator.model.type_alias import TypeAliasBase
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
@@ -205,10 +203,6 @@ class Struct(DataModel):
 
 class Constraints(_Constraints):
     """Constraint model for msgspec fields."""
-
-    # To override existing pattern alias
-    regex: Optional[str] = Field(None, alias="regex")  # noqa: UP045
-    pattern: Optional[str] = Field(None, alias="pattern")  # noqa: UP045
 
 
 @lru_cache

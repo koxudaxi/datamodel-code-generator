@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
+
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.reference import Reference
@@ -67,3 +69,20 @@ def test_root_model_custom_base_class_is_ignored() -> None:
     assert root_model.base_class == "RootModel"
     assert root_model.custom_base_class is None  # make sure it's ignored
     assert root_model.render() == ("class TestRootModel(RootModel[Optional[str]]):\n    root: Optional[str] = 'abc'")
+
+
+def test_root_model_ignores_extra_config() -> None:
+    """RootModel must not render ConfigDict(extra=...) because Pydantic rejects it."""
+    root_model = RootModel(
+        fields=[
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(type="str"),
+                required=True,
+            )
+        ],
+        reference=Reference(name="TestRootModel", path="test_root_model"),
+        extra_template_data=defaultdict(dict, {"test_root_model": {"additionalProperties": True}}),
+    )
+
+    assert "model_config" not in root_model.render()
