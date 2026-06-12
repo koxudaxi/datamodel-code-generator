@@ -282,6 +282,7 @@ class BaseModel(BaseModelBase):
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
     SUPPORTS_CONFIG_EXTRA: ClassVar[bool] = True
+    SUPPORTS_ARBITRARY_TYPES_ALLOWED: ClassVar[bool] = True
     TYPED_EXTRA_FIELD_NAME: ClassVar[str] = "__pydantic_extra__"
     # In Pydantic 2.11+, populate_by_name is deprecated in favor of validate_by_name + validate_by_alias
     # Default to V2 compatible (populate_by_name) unless target_pydantic_version is specified
@@ -350,7 +351,7 @@ class BaseModel(BaseModelBase):
         )
         config_parameters = build_base_config_parameters(
             extra_template_data=self.extra_template_data,
-            all_data_types=self.all_data_types,
+            all_data_types=self.all_data_types if self.SUPPORTS_ARBITRARY_TYPES_ALLOWED else (),
             config_attributes_v2=self._CONFIG_ATTRIBUTES_V2,
             config_attributes_v2_11=self._CONFIG_ATTRIBUTES_V2_11,
             include_extra=self.SUPPORTS_CONFIG_EXTRA,

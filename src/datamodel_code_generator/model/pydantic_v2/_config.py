@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple
 
 from datamodel_code_generator.enums import TargetPydanticVersion
 
@@ -22,6 +22,12 @@ class ConfigAttribute(NamedTuple):
 
 ConfigExtra = Literal["'allow'", "'forbid'", "'ignore'"]
 ConfigParameterValue = bool | ConfigExtra | Literal['"python-re"'] | dict[str, Any]
+_CONFIG_EXTRA_KEYS: frozenset[str] = frozenset({
+    "additionalProperties",
+    "allow_extra_fields",
+    "extra_fields",
+    "unevaluatedProperties",
+})
 
 
 def get_config_extra(extra_template_data: dict[str, Any]) -> ConfigExtra | None:
@@ -71,19 +77,26 @@ def build_base_config_parameters(
     include_extra: bool = True,
 ) -> dict[str, ConfigParameterValue]:
     """Build shared ConfigDict parameters for Pydantic v2 models."""
-    config_parameters: dict[str, ConfigParameterValue] = {}
-
-    if include_extra and (extra := get_config_extra(extra_template_data)):
-        config_parameters["extra"] = extra
-
     config_attributes = get_config_attributes(
         extra_template_data,
         config_attributes_v2=config_attributes_v2,
         config_attributes_v2_11=config_attributes_v2_11,
     )
+    if (
+        all_data_types == ()
+        and not (include_extra and not _CONFIG_EXTRA_KEYS.isdisjoint(extra_template_data))
+        and not any(from_ in extra_template_data for from_, _, _ in config_attributes)
+    ):
+        return {}
+
+    config_parameters: dict[str, ConfigParameterValue] = {}
+
+    if include_extra and (extra := get_config_extra(extra_template_data)):
+        config_parameters["extra"] = extra
+
     for from_, to, invert in config_attributes:
         if from_ in extra_template_data:
-            value = cast("bool", extra_template_data[from_])
+            value: bool = extra_template_data[from_]
             config_parameters[to] = not value if invert else value
 
     for data_type in all_data_types:

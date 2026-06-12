@@ -89,3 +89,19 @@ def test_root_model_ignores_extra_config(additional_properties: bool) -> None:
     )
 
     assert "model_config" not in root_model.render()
+
+
+def test_root_model_ignores_arbitrary_types_config() -> None:
+    """RootModel must not render arbitrary_types_allowed for custom root types."""
+    root_model = RootModel(
+        fields=[
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(type="ExternalType", is_custom_type=True),
+                required=True,
+            )
+        ],
+        reference=Reference(name="TestRootModel", path="test_root_model"),
+    )
+
+    assert "model_config" not in root_model.render()
