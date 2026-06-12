@@ -3378,6 +3378,21 @@ def test_main_jsonschema_default_factory_rejects_unsafe_value(
             },
             "customTypePath must be a dotted Python identifier path",
         ),
+        (
+            {
+                "type": "object",
+                "properties": {"payload": {"$ref": "#/$defs/Payload"}},
+                "$defs": {
+                    "Payload": {
+                        "type": "object",
+                        "x-python-import": {
+                            "module": "os",
+                        },
+                    }
+                },
+            },
+            "x-python-import requires both module and name",
+        ),
     ],
 )
 def test_main_jsonschema_rejects_unsafe_python_import_extensions(
