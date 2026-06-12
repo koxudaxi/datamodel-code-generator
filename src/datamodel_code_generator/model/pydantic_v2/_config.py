@@ -21,7 +21,7 @@ class ConfigAttribute(NamedTuple):
 
 
 ConfigExtra = Literal["'allow'", "'forbid'", "'ignore'"]
-ConfigParameterValue = bool | ConfigExtra
+ConfigParameterValue = bool | ConfigExtra | Literal['"python-re"'] | dict[str, Any]
 
 
 def get_config_extra(extra_template_data: dict[str, Any]) -> ConfigExtra | None:

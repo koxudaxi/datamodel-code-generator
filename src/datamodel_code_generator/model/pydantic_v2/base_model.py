@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, ClassVar, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from pydantic import ValidationError, field_validator, model_validator
 
@@ -346,26 +346,25 @@ class BaseModel(BaseModelBase):
             keyword_only=keyword_only,
             treat_dot_as_module=treat_dot_as_module,
         )
-        config_parameters: dict[str, Any] = dict(
-            build_base_config_parameters(
-                extra_template_data=self.extra_template_data,
-                all_data_types=self.all_data_types,
-                config_attributes_v2=self._CONFIG_ATTRIBUTES_V2,
-                config_attributes_v2_11=self._CONFIG_ATTRIBUTES_V2_11,
-                include_extra=self.SUPPORTS_CONFIG_EXTRA,
-            )
+        config_parameters = build_base_config_parameters(
+            extra_template_data=self.extra_template_data,
+            all_data_types=self.all_data_types,
+            config_attributes_v2=self._CONFIG_ATTRIBUTES_V2,
+            config_attributes_v2_11=self._CONFIG_ATTRIBUTES_V2_11,
+            include_extra=self.SUPPORTS_CONFIG_EXTRA,
         )
 
         if self._has_lookaround_pattern():
             config_parameters["regex_engine"] = '"python-re"'
 
         if isinstance(config := self.extra_template_data.get("config"), dict):
-            config_parameters.update(config)
+            for key, value in config.items():
+                config_parameters[key] = value
 
         # Handle json_schema_extra from schema extensions (x-* fields)
         model_extras = self.extra_template_data.get("model_extras")
         if model_extras:
-            existing = config_parameters.get("json_schema_extra") or {}
+            existing = cast("dict[str, Any]", config_parameters.get("json_schema_extra") or {})
             config_parameters["json_schema_extra"] = {**existing, **model_extras}
 
         if config_parameters:
