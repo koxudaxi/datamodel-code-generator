@@ -16,7 +16,7 @@ from fractions import Fraction
 from functools import cached_property, lru_cache
 from math import gcd, lcm
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union, cast
 from urllib.parse import ParseResult, unquote, urlparse
 from warnings import warn
 
@@ -4067,7 +4067,174 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         return bool(is_primitive)
 
-    def parse_item(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
+    def _parse_item_root_type_for_constraint(
+        self,
+        name: str,
+        item: JsonSchemaObject,
+        path: list[str],
+        singular_name: bool,  # noqa: FBT001
+    ) -> DataType:
+        root_type_path = get_special_path("array", path)
+        return self.parse_root_type(
+            self.model_resolver.add(
+                root_type_path,
+                name,
+                class_name=True,
+                singular_name=singular_name,
+            ).name,
+            item,
+            root_type_path,
+        )
+
+    def _get_custom_type_path_data_type(self, custom_type_path: str, keyword: str) -> DataType:
+        return self.data_type_manager.get_data_type_from_full_path(
+            _validate_schema_python_import_path(custom_type_path, keyword),
+            is_custom_type=True,
+        )
+
+    def _parse_combined_const_enum(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        combined_items: list[JsonSchemaObject | bool],
+        enum_path: list[str],
+        *,
+        singular_name: bool = False,
+    ) -> DataType | None:
+        const_enum_data = self._extract_const_enum_from_combined(combined_items, obj.type)
+        if const_enum_data is None:
+            return None
+
+        enum_values, varnames, descriptions, enum_type, nullable = const_enum_data
+        synthetic_obj = self._create_synthetic_enum_obj(obj, enum_values, varnames, descriptions, enum_type, nullable)
+        if self.should_parse_enum_as_literal(synthetic_obj, property_name=name, property_obj=obj):
+            return self.parse_enum_as_literal(synthetic_obj)
+        return self.parse_enum(name, synthetic_obj, enum_path, singular_name=singular_name)
+
+    def _parse_item_combined_schema(
+        self,
+        name: str,
+        item: JsonSchemaObject,
+        path: list[str],
+        keyword: Literal["anyOf", "oneOf"],
+        *,
+        singular_name: bool,
+    ) -> DataType:
+        combined_items = item.anyOf if keyword == "anyOf" else item.oneOf
+        const_enum_type = self._parse_combined_const_enum(
+            name,
+            item,
+            combined_items,
+            get_special_path("enum", path),
+            singular_name=singular_name,
+        )
+        if const_enum_type is not None:
+            return const_enum_type
+
+        if keyword == "anyOf":
+            data_types = self.parse_any_of(name, item, get_special_path("anyOf", path))
+        else:
+            data_types = self.parse_one_of(name, item, get_special_path("oneOf", path))
+        return self.data_type(data_types=data_types)
+
+    def _parse_item_all_of(
+        self,
+        name: str,
+        item: JsonSchemaObject,
+        path: list[str],
+        *,
+        singular_name: bool,
+        parent: JsonSchemaObject | None,
+    ) -> DataType:
+        if self._contains_false_schema(item.allOf):
+            self._raise_unsatisfiable_schema(get_special_path("allOf", path), "allOf")
+        all_of_items = [sub_item for sub_item in item.allOf if isinstance(sub_item, JsonSchemaObject)]
+        if len(all_of_items) == 1 and len(all_of_items) != len(item.allOf) and not item.properties:
+            return self.parse_item(name, all_of_items[0], path, singular_name=singular_name, parent=parent)
+        if not self._schema_requires_model_type(item) and not self._allof_requires_model_type(item.allOf):
+            all_of_path = get_special_path("allOf", path)
+            all_of_path = [self.model_resolver.resolve_ref(all_of_path)]
+            root_model_name = self.model_resolver.add(
+                all_of_path, name, singular_name=singular_name, class_name=True
+            ).name
+            return self.parse_root_type(root_model_name, item, all_of_path)
+        if len(item.allOf) == 1 and not item.properties:
+            single_item = item.allOf[0]
+            if isinstance(single_item, JsonSchemaObject) and single_item.ref:
+                return self.get_ref_data_type(single_item.ref)
+        all_of_path = get_special_path("allOf", path)
+        all_of_path = [self.model_resolver.resolve_ref(all_of_path)]
+        return self.parse_all_of(
+            self.model_resolver.add(all_of_path, name, singular_name=singular_name, class_name=True).name,
+            item,
+            all_of_path,
+            ignore_duplicate_model=True,
+        )
+
+    def _parse_object_additional_properties_data_type(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+    ) -> DataType:
+        python_type_flags = self._get_python_type_flags(obj)
+        dict_flags = python_type_flags or {"is_dict": True}
+        additional_properties = cast("JsonSchemaObject", obj.additionalProperties)
+        return self.data_type(
+            data_types=[self.parse_item(name, additional_properties, get_special_path("additionalProperties", path))],
+            **dict_flags,
+        )
+
+    def _parse_item_object_type(
+        self,
+        name: str,
+        item: JsonSchemaObject,
+        path: list[str],
+        *,
+        singular_name: bool,
+    ) -> DataType:
+        object_path = get_special_path("object", path)
+        if item.properties:
+            if item.has_multiple_types and isinstance(item.type, list):
+                data_types: list[DataType] = []
+                data_types.append(self.parse_object(name, item, object_path, singular_name=singular_name))
+                data_types.extend(
+                    self.data_type_manager.get_data_type(
+                        self._get_type_with_mappings(t, item.format or "default"),
+                    )
+                    for t in item.type
+                    if t not in {"object", "null"}
+                )
+                return self.data_type(data_types=data_types)
+            return self.parse_object(name, item, object_path, singular_name=singular_name)
+        if item.patternProperties:
+            # support only single key dict.
+            return self.parse_pattern_properties(
+                name, item.patternProperties, object_path, property_names=item.propertyNames
+            )
+        if item.propertyNames is not None:
+            return self.parse_property_names(
+                name, item.propertyNames, item.additionalProperties, object_path, parent_obj=item
+            )
+        if isinstance(item.additionalProperties, JsonSchemaObject):
+            return self._parse_object_additional_properties_data_type(name, item, object_path)
+        return self.data_type_manager.get_data_type(
+            Types.object,
+        )
+
+    def _parse_item_enum_type(
+        self,
+        name: str,
+        item: JsonSchemaObject,
+        path: list[str],
+        *,
+        singular_name: bool,
+    ) -> DataType:
+        if self.should_parse_enum_as_literal(item, property_name=name):
+            return self.parse_enum_as_literal(item)
+        return self.parse_enum(name, item, get_special_path("enum", path), singular_name=singular_name)
+
+    def parse_item(  # noqa: PLR0911, PLR0912
         self,
         name: str,
         item: JsonSchemaObject,
@@ -4085,17 +4252,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if self._should_create_type_alias_for_title(item, name):
             return self.parse_root_type(name, item, path)
         if parent and not item.enum and item.has_constraint and (parent.has_constraint or self.field_constraints):
-            root_type_path = get_special_path("array", path)
-            return self.parse_root_type(
-                self.model_resolver.add(
-                    root_type_path,
-                    name,
-                    class_name=True,
-                    singular_name=singular_name,
-                ).name,
-                item,
-                root_type_path,
-            )
+            return self._parse_item_root_type_for_constraint(name, item, path, singular_name)
         if item.recursiveRef and not item.ref:
             return self.get_ref_data_type(self._resolve_recursive_ref(item, path) or "#")
         if item.dynamicRef and not item.ref:
@@ -4110,103 +4267,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if item.ref:
             return self.get_ref_data_type(item.ref)
         if item.custom_type_path:  # pragma: no cover
-            return self.data_type_manager.get_data_type_from_full_path(
-                _validate_schema_python_import_path(item.custom_type_path, "customTypePath"),
-                is_custom_type=True,
-            )
+            return self._get_custom_type_path_data_type(item.custom_type_path, "customTypePath")
         if item.is_array:
             return self.parse_array_fields(name, item, get_special_path("array", path)).data_type
         if item.discriminator and parent and parent.is_array and (item.oneOf or item.anyOf):
             return self.parse_root_type(name, item, path)
         if item.anyOf:
-            const_enum_data = self._extract_const_enum_from_combined(item.anyOf, item.type)
-            if const_enum_data is not None:
-                enum_values, varnames, descriptions, enum_type, nullable = const_enum_data
-                synthetic_obj = self._create_synthetic_enum_obj(
-                    item, enum_values, varnames, descriptions, enum_type, nullable
-                )
-                if self.should_parse_enum_as_literal(synthetic_obj, property_name=name, property_obj=item):
-                    return self.parse_enum_as_literal(synthetic_obj)
-                return self.parse_enum(name, synthetic_obj, get_special_path("enum", path), singular_name=singular_name)
-            return self.data_type(data_types=self.parse_any_of(name, item, get_special_path("anyOf", path)))
+            return self._parse_item_combined_schema(name, item, path, "anyOf", singular_name=singular_name)
         if item.oneOf:
-            const_enum_data = self._extract_const_enum_from_combined(item.oneOf, item.type)
-            if const_enum_data is not None:
-                enum_values, varnames, descriptions, enum_type, nullable = const_enum_data
-                synthetic_obj = self._create_synthetic_enum_obj(
-                    item, enum_values, varnames, descriptions, enum_type, nullable
-                )
-                if self.should_parse_enum_as_literal(synthetic_obj, property_name=name, property_obj=item):
-                    return self.parse_enum_as_literal(synthetic_obj)
-                return self.parse_enum(name, synthetic_obj, get_special_path("enum", path), singular_name=singular_name)
-            return self.data_type(data_types=self.parse_one_of(name, item, get_special_path("oneOf", path)))
+            return self._parse_item_combined_schema(name, item, path, "oneOf", singular_name=singular_name)
         if item.allOf:
-            if self._contains_false_schema(item.allOf):
-                self._raise_unsatisfiable_schema(get_special_path("allOf", path), "allOf")
-            all_of_items = [sub_item for sub_item in item.allOf if isinstance(sub_item, JsonSchemaObject)]
-            if len(all_of_items) == 1 and len(all_of_items) != len(item.allOf) and not item.properties:
-                return self.parse_item(name, all_of_items[0], path, singular_name=singular_name, parent=parent)
-            if not self._schema_requires_model_type(item) and not self._allof_requires_model_type(item.allOf):
-                all_of_path = get_special_path("allOf", path)
-                all_of_path = [self.model_resolver.resolve_ref(all_of_path)]
-                root_model_name = self.model_resolver.add(
-                    all_of_path, name, singular_name=singular_name, class_name=True
-                ).name
-                return self.parse_root_type(root_model_name, item, all_of_path)
-            if len(item.allOf) == 1 and not item.properties:
-                single_item = item.allOf[0]
-                if isinstance(single_item, JsonSchemaObject) and single_item.ref:
-                    return self.get_ref_data_type(single_item.ref)
-            all_of_path = get_special_path("allOf", path)
-            all_of_path = [self.model_resolver.resolve_ref(all_of_path)]
-            return self.parse_all_of(
-                self.model_resolver.add(all_of_path, name, singular_name=singular_name, class_name=True).name,
-                item,
-                all_of_path,
-                ignore_duplicate_model=True,
-            )
+            return self._parse_item_all_of(name, item, path, singular_name=singular_name, parent=parent)
         if item.is_object or item.patternProperties or item.propertyNames is not None:
-            object_path = get_special_path("object", path)
-            if item.properties:
-                if item.has_multiple_types and isinstance(item.type, list):
-                    data_types: list[DataType] = []
-                    data_types.append(self.parse_object(name, item, object_path, singular_name=singular_name))
-                    data_types.extend(
-                        self.data_type_manager.get_data_type(
-                            self._get_type_with_mappings(t, item.format or "default"),
-                        )
-                        for t in item.type
-                        if t not in {"object", "null"}
-                    )
-                    return self.data_type(data_types=data_types)
-                return self.parse_object(name, item, object_path, singular_name=singular_name)
-            if item.patternProperties:
-                # support only single key dict.
-                return self.parse_pattern_properties(
-                    name, item.patternProperties, object_path, property_names=item.propertyNames
-                )
-            if item.propertyNames is not None:
-                return self.parse_property_names(
-                    name, item.propertyNames, item.additionalProperties, object_path, parent_obj=item
-                )
-            if isinstance(item.additionalProperties, JsonSchemaObject):
-                python_type_flags = self._get_python_type_flags(item)
-                dict_flags = python_type_flags or {"is_dict": True}
-                return self.data_type(
-                    data_types=[
-                        self.parse_item(
-                            name, item.additionalProperties, get_special_path("additionalProperties", object_path)
-                        )
-                    ],
-                    **dict_flags,
-                )
-            return self.data_type_manager.get_data_type(
-                Types.object,
-            )
+            return self._parse_item_object_type(name, item, path, singular_name=singular_name)
         if item.enum and not self.ignore_enum_constraints:
-            if self.should_parse_enum_as_literal(item, property_name=name):
-                return self.parse_enum_as_literal(item)
-            return self.parse_enum(name, item, get_special_path("enum", path), singular_name=singular_name)
+            return self._parse_item_enum_type(name, item, path, singular_name=singular_name)
         return self.get_data_type(item)
 
     def parse_list_item(
@@ -4343,83 +4418,45 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         return self.data_type(reference=reference)
 
-    def parse_root_type(  # noqa: PLR0912, PLR0914, PLR0915
+    def _parse_root_combined_type(
         self,
         name: str,
         obj: JsonSchemaObject,
         path: list[str],
-    ) -> DataType:
-        """Parse a root-level type into a root model."""
-        reference: Reference | None = None
-        if obj.ref:
-            data_type: DataType = self.get_ref_data_type(obj.ref)
-        elif obj.custom_type_path:
-            data_type = self.data_type_manager.get_data_type_from_full_path(
-                _validate_schema_python_import_path(obj.custom_type_path, "customTypePath"),
-                is_custom_type=True,
-            )  # pragma: no cover
-        elif obj.is_array:
-            data_type = self.parse_array_fields(
-                name, obj, get_special_path("array", path)
-            ).data_type  # pragma: no cover
-        elif obj.anyOf or obj.oneOf:
-            combined_items = obj.anyOf or obj.oneOf
-            const_enum_data = self._extract_const_enum_from_combined(combined_items, obj.type)
-            if const_enum_data is not None:  # pragma: no cover
-                enum_values, varnames, descriptions, enum_type, nullable = const_enum_data
-                synthetic_obj = self._create_synthetic_enum_obj(
-                    obj, enum_values, varnames, descriptions, enum_type, nullable
-                )
-                if self.should_parse_enum_as_literal(synthetic_obj, property_name=name, property_obj=obj):
-                    data_type = self.parse_enum_as_literal(synthetic_obj)
-                else:
-                    data_type = self.parse_enum(name, synthetic_obj, path)
-            else:
-                reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
-                if obj.anyOf:
-                    data_types: list[DataType] = self.parse_any_of(name, obj, get_special_path("anyOf", path))
-                else:
-                    data_types = self.parse_one_of(name, obj, get_special_path("oneOf", path))
+    ) -> tuple[Reference | None, DataType]:
+        combined_items = obj.anyOf or obj.oneOf
+        const_enum_type = self._parse_combined_const_enum(name, obj, combined_items, path)
+        if const_enum_type is not None:  # pragma: no cover
+            return None, const_enum_type
 
-                if len(data_types) > 1:  # pragma: no cover
-                    data_type = self.data_type(data_types=data_types)
-                elif not data_types:  # pragma: no cover
-                    return EmptyDataType()
-                else:  # pragma: no cover
-                    data_type = data_types[0]
-        elif obj.allOf:
-            data_type = self._build_lightweight_type(obj)
-            if data_type is None:  # pragma: no cover
-                data_type = self.data_type_manager.get_data_type(Types.any)
-        elif obj.patternProperties:
-            data_type = self.parse_pattern_properties(
-                name, obj.patternProperties, path, property_names=obj.propertyNames
-            )
-        elif obj.propertyNames is not None:
-            data_type = self.parse_property_names(
-                name, obj.propertyNames, obj.additionalProperties, path, parent_obj=obj
-            )
-        elif obj.is_object and not obj.properties and isinstance(obj.additionalProperties, JsonSchemaObject):
-            python_type_flags = self._get_python_type_flags(obj)
-            dict_flags = python_type_flags or {"is_dict": True}
-            data_type = self.data_type(
-                data_types=[
-                    self.parse_item(name, obj.additionalProperties, get_special_path("additionalProperties", path))
-                ],
-                **dict_flags,
-            )
-        elif obj.enum and not self.ignore_enum_constraints:
-            if self.should_parse_enum_as_literal(obj, property_name=name):
-                data_type = self.parse_enum_as_literal(obj)
-            else:  # pragma: no cover
-                data_type = self.parse_enum(name, obj, path)
-        elif obj.type:
-            data_type = self.get_data_type(obj)
+        reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
+        if obj.anyOf:
+            data_types: list[DataType] = self.parse_any_of(name, obj, get_special_path("anyOf", path))
         else:
-            data_type = self.data_type_manager.get_data_type(
-                Types.any,
-            )
-        is_type_alias = self.data_model_root_type.IS_ALIAS
+            data_types = self.parse_one_of(name, obj, get_special_path("oneOf", path))
+
+        if len(data_types) > 1:  # pragma: no cover
+            data_type = self.data_type(data_types=data_types)
+        elif not data_types:  # pragma: no cover
+            data_type = EmptyDataType()
+        else:  # pragma: no cover
+            data_type = data_types[0]
+        return reference, data_type
+
+    def _parse_root_all_of_type(self, obj: JsonSchemaObject) -> DataType:
+        data_type = self._build_lightweight_type(obj)
+        if data_type is None:  # pragma: no cover
+            data_type = self.data_type_manager.get_data_type(Types.any)
+        return data_type
+
+    def _parse_root_enum_type(self, name: str, obj: JsonSchemaObject, path: list[str]) -> DataType:
+        if self.should_parse_enum_as_literal(obj, property_name=name):
+            return self.parse_enum_as_literal(obj)
+        return self.parse_enum(name, obj, path)  # pragma: no cover
+
+    def _get_root_type_field_state(
+        self, obj: JsonSchemaObject, *, is_type_alias: bool
+    ) -> tuple[bool, bool | None, bool, Any]:
         if self.force_optional_for_required_fields:
             required = False
             nullable = None
@@ -4440,11 +4477,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             nullable = None
             has_default_override = obj.has_default
             default_value = obj.default if obj.has_default else UNDEFINED
-        name = self._apply_title_as_name(name, obj)
-        if not reference:
-            reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
-        self._set_schema_metadata(reference.path, obj)
-        self.set_schema_extensions(reference.path, obj)
+        return required, nullable, has_default_override, default_value
+
+    def _get_root_type_field_constraints(self, obj: JsonSchemaObject, data_type: DataType) -> dict[str, Any]:
         constraints = self._get_constraint_values(obj) if self.field_constraints else {}
         if self._should_skip_root_field_constraints_for_multiple_types(obj):
             constraints = {}
@@ -4452,23 +4487,98 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         if data_type.is_dict or data_type.is_mapping:
             constraints.update(self._get_property_count_constraints(obj))
+        return constraints
+
+    def _build_root_type_field(  # noqa: PLR0913
+        self,
+        obj: JsonSchemaObject,
+        data_type: DataType,
+        *,
+        default_value: Any,
+        required: bool,
+        constraints: dict[str, Any],
+        nullable: bool | None,
+        has_default_override: bool,
+    ) -> DataModelFieldBase:
+        return self.data_model_field_type(
+            data_type=data_type,
+            default=default_value,
+            required=required,
+            constraints=constraints,
+            nullable=nullable,
+            strip_default_none=self.strip_default_none,
+            extras=self.get_field_extras(obj),
+            use_annotated=self.use_annotated,
+            use_field_description=self.use_field_description,
+            use_field_description_example=self.use_field_description_example,
+            use_inline_field_description=self.use_inline_field_description,
+            original_name=None,
+            has_default=has_default_override,
+        )
+
+    def parse_root_type(  # noqa: PLR0912
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+    ) -> DataType:
+        """Parse a root-level type into a root model."""
+        reference: Reference | None = None
+        if obj.ref:
+            data_type: DataType = self.get_ref_data_type(obj.ref)
+        elif obj.custom_type_path:
+            data_type = self._get_custom_type_path_data_type(  # pragma: no cover
+                obj.custom_type_path, "customTypePath"
+            )
+        elif obj.is_array:
+            data_type = self.parse_array_fields(
+                name, obj, get_special_path("array", path)
+            ).data_type  # pragma: no cover
+        elif obj.anyOf or obj.oneOf:
+            reference, data_type = self._parse_root_combined_type(name, obj, path)
+            if isinstance(data_type, EmptyDataType):  # pragma: no cover
+                return data_type
+        elif obj.allOf:
+            data_type = self._parse_root_all_of_type(obj)
+        elif obj.patternProperties:
+            data_type = self.parse_pattern_properties(
+                name, obj.patternProperties, path, property_names=obj.propertyNames
+            )
+        elif obj.propertyNames is not None:
+            data_type = self.parse_property_names(
+                name, obj.propertyNames, obj.additionalProperties, path, parent_obj=obj
+            )
+        elif obj.is_object and not obj.properties and isinstance(obj.additionalProperties, JsonSchemaObject):
+            data_type = self._parse_object_additional_properties_data_type(name, obj, path)
+        elif obj.enum and not self.ignore_enum_constraints:
+            data_type = self._parse_root_enum_type(name, obj, path)
+        elif obj.type:
+            data_type = self.get_data_type(obj)
+        else:
+            data_type = self.data_type_manager.get_data_type(
+                Types.any,
+            )
+        is_type_alias = self.data_model_root_type.IS_ALIAS
+        required, nullable, has_default_override, default_value = self._get_root_type_field_state(
+            obj, is_type_alias=is_type_alias
+        )
+        name = self._apply_title_as_name(name, obj)
+        if not reference:
+            reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
+        self._set_schema_metadata(reference.path, obj)
+        self.set_schema_extensions(reference.path, obj)
+        constraints = self._get_root_type_field_constraints(obj, data_type)
         self._register_root_model(
             reference=reference,
             fields=[
-                self.data_model_field_type(
-                    data_type=data_type,
-                    default=default_value,
+                self._build_root_type_field(
+                    obj,
+                    data_type,
+                    default_value=default_value,
                     required=required,
                     constraints=constraints,
                     nullable=nullable,
-                    strip_default_none=self.strip_default_none,
-                    extras=self.get_field_extras(obj),
-                    use_annotated=self.use_annotated,
-                    use_field_description=self.use_field_description,
-                    use_field_description_example=self.use_field_description_example,
-                    use_inline_field_description=self.use_inline_field_description,
-                    original_name=None,
-                    has_default=has_default_override,
+                    has_default_override=has_default_override,
                 )
             ],
             obj=obj,
@@ -4570,50 +4680,47 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return str(enum_part["const"])
         return f"value_{index}"
 
-    def parse_enum(  # noqa: PLR0912, PLR0915
-        self,
-        name: str,
-        obj: JsonSchemaObject,
-        path: list[str],
-        singular_name: bool = False,  # noqa: FBT001, FBT002
-        unique: bool = True,  # noqa: FBT001, FBT002
-    ) -> DataType:
-        """Parse enum schema into an Enum class."""
-        if not unique:  # pragma: no cover
-            warn(
-                f"{self.__class__.__name__}.parse_enum() ignore `unique` argument."
-                f"An object name must be unique."
-                f"This argument will be removed in a future version",
-                stacklevel=2,
-            )
-        enum_fields: list[DataModelFieldBase] = []
-
+    def _get_enum_members_and_nullable(self, obj: JsonSchemaObject) -> tuple[list[Any], bool]:  # noqa: PLR6301
         if None in obj.enum and obj.type == "string":
             # Nullable is valid in only OpenAPI
-            nullable: bool = True
-            enum_times = [e for e in obj.enum if e is not None]
+            return [e for e in obj.enum if e is not None], True
+        return obj.enum, False
+
+    def _get_enum_field_name_and_default(
+        self,
+        obj: JsonSchemaObject,
+        enum_part: Any,
+        index: int,
+        enum_names: Sequence[str] | None,
+    ) -> tuple[str, Any]:
+        if obj.type == "string" or isinstance(enum_part, str):
+            default = f"'{enum_part.translate(escape_characters)}'" if isinstance(enum_part, str) else enum_part
+            field_name = (
+                enum_names[index] if enum_names and index < len(enum_names) and enum_names[index] else str(enum_part)
+            )
         else:
-            enum_times = obj.enum
-            nullable = False
+            default = enum_part
+            if enum_names and index < len(enum_names) and enum_names[index]:
+                field_name = enum_names[index]
+            elif isinstance(enum_part, dict):
+                field_name = self._get_field_name_from_dict_enum(enum_part, index)
+            else:
+                prefix = obj.type if isinstance(obj.type, str) else type(enum_part).__name__
+                field_name = f"{prefix}_{enum_part}"
+        return field_name, default
 
+    def _build_enum_fields(
+        self,
+        obj: JsonSchemaObject,
+        enum_times: Sequence[Any],
+    ) -> list[DataModelFieldBase]:
+        enum_fields: list[DataModelFieldBase] = []
         exclude_field_names: set[str] = set()
-
         enum_names = obj.x_enum_varnames or obj.x_enum_names
         enum_descriptions = obj.x_enum_descriptions
 
         for i, enum_part in enumerate(enum_times):
-            if obj.type == "string" or isinstance(enum_part, str):
-                default = f"'{enum_part.translate(escape_characters)}'" if isinstance(enum_part, str) else enum_part
-                field_name = enum_names[i] if enum_names and i < len(enum_names) and enum_names[i] else str(enum_part)
-            else:
-                default = enum_part
-                if enum_names and i < len(enum_names) and enum_names[i]:
-                    field_name = enum_names[i]
-                elif isinstance(enum_part, dict):
-                    field_name = self._get_field_name_from_dict_enum(enum_part, i)
-                else:
-                    prefix = obj.type if isinstance(obj.type, str) else type(enum_part).__name__
-                    field_name = f"{prefix}_{enum_part}"
+            field_name, default = self._get_enum_field_name_and_default(obj, enum_part, i, enum_names)
             field_name = self.model_resolver.get_valid_field_name(
                 field_name, excludes=exclude_field_names, model_type=ModelType.ENUM
             )
@@ -4638,79 +4745,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     original_name=None,
                 )
             )
+        return enum_fields
 
-        if not enum_fields:
-            if not nullable:
-                return self.data_type_manager.get_data_type(Types.null)
-            name = self._apply_title_as_name(name, obj)
-            reference = self.model_resolver.add(
-                path,
-                name,
-                class_name=True,
-                singular_name=singular_name,
-                singular_name_suffix="Enum",
-                loaded=True,
-                model_type="enum",
-            )
-            self._set_schema_metadata(reference.path, obj)
-            self.set_schema_extensions(reference.path, obj)
-            self._register_root_model(
-                reference=reference,
-                fields=[
-                    self.data_model_field_type(
-                        data_type=self.data_type_manager.get_data_type(Types.null),
-                        default=obj.default,
-                        required=False,
-                        nullable=True,
-                        strip_default_none=self.strip_default_none,
-                        extras=self.get_field_extras(obj),
-                        use_annotated=self.use_annotated,
-                        has_default=obj.has_default,
-                        use_field_description=self.use_field_description,
-                        use_field_description_example=self.use_field_description_example,
-                        use_inline_field_description=self.use_inline_field_description,
-                        original_name=None,
-                    )
-                ],
-                obj=obj,
-                custom_base_class_name=name,
-                default=obj.default if obj.has_default else UNDEFINED,
-            )
-            return self.data_type(reference=reference)
-
-        def create_enum(reference_: Reference) -> DataType:
-            type_: Types | None = (
-                self._get_type_with_mappings(obj.type, obj.format) if isinstance(obj.type, str) else None
-            )
-
-            enum_cls: type[Enum] = Enum
-            specialized_type = SPECIALIZED_ENUM_TYPE_MATCH.get(type_) if self.use_specialized_enum and type_ else None
-            if specialized_type == StrEnum:
-                # StrEnum is available only in Python 3.11+ and supports string values only.
-                can_use_specialized_type = self.target_python_version.has_strenum and all(
-                    isinstance(enum_part, str) for enum_part in enum_times
-                )
-            else:
-                can_use_specialized_type = specialized_type is not None
-            if can_use_specialized_type and specialized_type is not None:
-                # If specialized enum is available in the target Python version,
-                # use it and ignore `self.use_subclass_enum` setting.
-                type_ = None
-                enum_cls = specialized_type
-
-            enum = enum_cls(
-                reference=reference_,
-                fields=enum_fields,
-                path=self.current_source_path,
-                description=obj.description if self.use_schema_description else None,
-                custom_template_dir=self.custom_template_dir,
-                type_=type_ if self.use_subclass_enum else None,
-                default=obj.default if obj.has_default else UNDEFINED,
-                treat_dot_as_module=self.treat_dot_as_module,
-            )
-            self.generation_store.register_model(enum)
-            return self.data_type(reference=reference_)
-
+    def _parse_empty_enum(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+        *,
+        nullable: bool,
+        singular_name: bool,
+    ) -> DataType:
+        if not nullable:
+            return self.data_type_manager.get_data_type(Types.null)
         name = self._apply_title_as_name(name, obj)
         reference = self.model_resolver.add(
             path,
@@ -4723,25 +4770,78 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
-
-        if not nullable:
-            return create_enum(reference)
-
-        enum_reference = self.model_resolver.add(
-            [*path, "Enum"],
-            f"{reference.name}Enum",
-            class_name=True,
-            singular_name=singular_name,
-            singular_name_suffix="Enum",
-            loaded=True,
-            model_type="enum",
-        )
-
         self._register_root_model(
             reference=reference,
             fields=[
                 self.data_model_field_type(
-                    data_type=create_enum(enum_reference),
+                    data_type=self.data_type_manager.get_data_type(Types.null),
+                    default=obj.default,
+                    required=False,
+                    nullable=True,
+                    strip_default_none=self.strip_default_none,
+                    extras=self.get_field_extras(obj),
+                    use_annotated=self.use_annotated,
+                    has_default=obj.has_default,
+                    use_field_description=self.use_field_description,
+                    use_field_description_example=self.use_field_description_example,
+                    use_inline_field_description=self.use_inline_field_description,
+                    original_name=None,
+                )
+            ],
+            obj=obj,
+            custom_base_class_name=name,
+            default=obj.default if obj.has_default else UNDEFINED,
+        )
+        return self.data_type(reference=reference)
+
+    def _create_enum_data_type(
+        self,
+        reference: Reference,
+        obj: JsonSchemaObject,
+        enum_fields: list[DataModelFieldBase],
+        enum_times: Sequence[Any],
+    ) -> DataType:
+        type_: Types | None = self._get_type_with_mappings(obj.type, obj.format) if isinstance(obj.type, str) else None
+
+        enum_cls: type[Enum] = Enum
+        specialized_type = SPECIALIZED_ENUM_TYPE_MATCH.get(type_) if self.use_specialized_enum and type_ else None
+        if specialized_type == StrEnum:
+            # StrEnum is available only in Python 3.11+ and supports string values only.
+            can_use_specialized_type = self.target_python_version.has_strenum and all(
+                isinstance(enum_part, str) for enum_part in enum_times
+            )
+        else:
+            can_use_specialized_type = specialized_type is not None
+        if can_use_specialized_type and specialized_type is not None:
+            # If specialized enum is available in the target Python version,
+            # use it and ignore `self.use_subclass_enum` setting.
+            type_ = None
+            enum_cls = specialized_type
+
+        enum = enum_cls(
+            reference=reference,
+            fields=enum_fields,
+            path=self.current_source_path,
+            description=obj.description if self.use_schema_description else None,
+            custom_template_dir=self.custom_template_dir,
+            type_=type_ if self.use_subclass_enum else None,
+            default=obj.default if obj.has_default else UNDEFINED,
+            treat_dot_as_module=self.treat_dot_as_module,
+        )
+        self.generation_store.register_model(enum)
+        return self.data_type(reference=reference)
+
+    def _register_nullable_enum_root_model(
+        self,
+        reference: Reference,
+        enum_data_type: DataType,
+        obj: JsonSchemaObject,
+    ) -> None:
+        self._register_root_model(
+            reference=reference,
+            fields=[
+                self.data_model_field_type(
+                    data_type=enum_data_type,
                     default=obj.default,
                     required=False,
                     nullable=True,
@@ -4758,6 +4858,61 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             obj=obj,
             custom_base_class_name=reference.name,
             default=obj.default if obj.has_default else UNDEFINED,
+        )
+
+    def parse_enum(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+        singular_name: bool = False,  # noqa: FBT001, FBT002
+        unique: bool = True,  # noqa: FBT001, FBT002
+    ) -> DataType:
+        """Parse enum schema into an Enum class."""
+        if not unique:  # pragma: no cover
+            warn(
+                f"{self.__class__.__name__}.parse_enum() ignore `unique` argument."
+                f"An object name must be unique."
+                f"This argument will be removed in a future version",
+                stacklevel=2,
+            )
+
+        enum_times, nullable = self._get_enum_members_and_nullable(obj)
+        enum_fields = self._build_enum_fields(obj, enum_times)
+
+        if not enum_fields:
+            return self._parse_empty_enum(name, obj, path, nullable=nullable, singular_name=singular_name)
+
+        name = self._apply_title_as_name(name, obj)
+        reference = self.model_resolver.add(
+            path,
+            name,
+            class_name=True,
+            singular_name=singular_name,
+            singular_name_suffix="Enum",
+            loaded=True,
+            model_type="enum",
+        )
+        self._set_schema_metadata(reference.path, obj)
+        self.set_schema_extensions(reference.path, obj)
+
+        if not nullable:
+            return self._create_enum_data_type(reference, obj, enum_fields, enum_times)
+
+        enum_reference = self.model_resolver.add(
+            [*path, "Enum"],
+            f"{reference.name}Enum",
+            class_name=True,
+            singular_name=singular_name,
+            singular_name_suffix="Enum",
+            loaded=True,
+            model_type="enum",
+        )
+
+        self._register_nullable_enum_root_model(
+            reference,
+            self._create_enum_data_type(enum_reference, obj, enum_fields, enum_times),
+            obj,
         )
         return self.data_type(reference=reference)
 
