@@ -7,7 +7,13 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 import pytest
 
 from datamodel_code_generator.http import join_url
-from datamodel_code_generator.reference import ModelResolver, get_relative_path, is_url
+from datamodel_code_generator.reference import (
+    ModelResolver,
+    get_relative_path,
+    get_singular_name,
+    is_url,
+    snake_to_upper_camel,
+)
 
 
 @pytest.mark.parametrize(
@@ -71,6 +77,28 @@ def test_model_resolver_add_ref_unevaluated() -> None:
     model_resolver = ModelResolver()
     reference = model_resolver.add_ref("meta/unevaluated")
     assert reference.original_name == "unevaluated"
+
+
+def test_model_resolver_add_class_name_generates_class_reference() -> None:
+    """Class-name references still flow through get_class_name."""
+    model_resolver = ModelResolver()
+
+    reference = model_resolver.add(["#", "definitions", "user"], "user", class_name=True)
+
+    assert reference.name == "User"
+    assert reference.duplicate_name is None
+
+
+def test_reference_cache_clear_preserves_helper_values() -> None:
+    """Clearing bounded reference caches must not change helper results."""
+    singular_name = get_singular_name("users")
+    upper_camel = snake_to_upper_camel("user_name")
+
+    get_singular_name.cache_clear()
+    snake_to_upper_camel.cache_clear()
+
+    assert get_singular_name("users") == singular_name
+    assert snake_to_upper_camel("user_name") == upper_camel
 
 
 def test_model_resolver_delete_missing_reference_noop() -> None:
