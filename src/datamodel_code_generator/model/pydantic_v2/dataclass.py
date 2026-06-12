@@ -13,6 +13,7 @@ from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.dataclass import _DataclassReuseMixin, has_field_assignment
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     ConfigAttribute,
+    has_lookaround_pattern,
 )
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     Constraints as _Constraints,
@@ -123,6 +124,9 @@ class DataClass(_DataclassReuseMixin, DataModel):
             if data_type.is_custom_type:  # pragma: no cover
                 config_parameters["arbitrary_types_allowed"] = True
                 break
+
+        if has_lookaround_pattern(self.fields):
+            config_parameters["regex_engine"] = '"python-re"'
 
         if config_parameters:
             self._additional_imports.append(IMPORT_CONFIG_DICT)
