@@ -65,7 +65,7 @@ def warn_yaml_deprecated_bool_values(text: str) -> None:
 
 def _construct_yaml_bool_with_warning(loader: Any, node: Any) -> bool:
     value = loader.construct_scalar(node)
-    if value in _YAML_DEPRECATED_BOOL_VALUES:  # pragma: no cover
+    if value in _YAML_DEPRECATED_BOOL_VALUES:
         warn_deprecated(
             "config.yaml-non-lowercase-bool",
             details=(
