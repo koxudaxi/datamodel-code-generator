@@ -27,6 +27,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import is_supported_in_black
 from datamodel_code_generator.model import base as model_base
+from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK
 from tests.conftest import (
     HttpxGetMockFactory,
     MockHttpxResponse,
@@ -2450,6 +2451,37 @@ def test_main_generate_pydantic_v2_dataclass_required_field_order(output_file: P
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="pydantic_v2_dataclass_required_field_order.py",
+        extra_args=[
+            "--disable-timestamp",
+            "--snake-case-field",
+            "--output-model-type",
+            "pydantic_v2.dataclass",
+            "--formatters",
+            "ruff-format",
+            "ruff-check",
+            "isort",
+            "--no-use-type-checking-imports",
+            "--use-annotated",
+            "--use-union-operator",
+            "--use-standard-collections",
+            "--use-default",
+            "--target-python-version",
+            "3.10",
+        ],
+        force_exec_validation=True,
+    )
+
+
+@pytest.mark.skipif(
+    not PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK,
+    reason="Pydantic 2.4+ accepts non-identifier dataclass aliases without generator fallback",
+)
+def test_main_generate_pydantic_v2_dataclass_required_alias_field_pydantic20(output_file: Path) -> None:
+    """Test pydantic_v2.dataclass keeps non-identifier aliases importable."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_required_alias_field.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
         extra_args=[
             "--disable-timestamp",
             "--snake-case-field",
@@ -5572,6 +5604,7 @@ def test_main_jsonschema_property_names_ref_enum(output_file: Path) -> None:
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
+        force_exec_validation=True,
     )
 
 
@@ -5621,6 +5654,7 @@ def test_main_jsonschema_property_names_anyof_ref(output_file: Path) -> None:
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
+        force_exec_validation=True,
     )
 
 

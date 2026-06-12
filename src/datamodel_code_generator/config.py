@@ -32,6 +32,7 @@ from datamodel_code_generator.enums import (
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     TargetPydanticVersion,
+    UnionMode,
     VersionMode,
     XMLSchemaVersion,
 )
@@ -47,7 +48,6 @@ from datamodel_code_generator.model.base import (  # noqa: TC001 - used by Pydan
     DataModel,
     DataModelFieldBase,
 )
-from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: TC001 - used by Pydantic at runtime
 from datamodel_code_generator.model.scalar import DataTypeScalar
 from datamodel_code_generator.model.union import DataTypeUnion
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType

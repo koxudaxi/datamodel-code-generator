@@ -24,6 +24,7 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_CONFIG_DICT,
     IMPORT_PYDANTIC_DATACLASS,
 )
+from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -159,11 +160,36 @@ class DataClass(_DataclassReuseMixin, DataModel):
         return config_extra
 
 
-class DataModelField(DataModelFieldV2):
-    """Field implementation for Pydantic v2 dataclass models.
+if PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK:
+    import keyword
 
-    Inherits pydantic v2 Field() constraint handling from DataModelFieldV2.
-    """
+    class DataModelField(DataModelFieldV2):
+        """Field implementation for Pydantic v2 dataclass models.
+
+        Inherits pydantic v2 Field() constraint handling from DataModelFieldV2.
+        """
+
+        def __init__(self, **data: Any) -> None:
+            """Initialize and make non-identifier aliases safe for dataclass signatures."""
+            super().__init__(**data)
+            if self.alias is None or (self.alias.isidentifier() and not keyword.iskeyword(self.alias)):
+                return
+
+            validation_aliases = list(self.validation_aliases or ())
+            if self.alias not in validation_aliases:
+                validation_aliases.insert(0, self.alias)
+            if self.serialization_alias is None:
+                self.serialization_alias = self.alias
+            self.validation_aliases = validation_aliases
+            self.alias = None
+
+else:
+
+    class DataModelField(DataModelFieldV2):
+        """Field implementation for Pydantic v2 dataclass models.
+
+        Inherits pydantic v2 Field() constraint handling from DataModelFieldV2.
+        """
 
 
 _rebuild_model_with_datamodel_namespace(DataModelField)

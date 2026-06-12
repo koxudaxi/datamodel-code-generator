@@ -41,6 +41,7 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_VALIDATION_INFO,
     IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER,
 )
+from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA
 from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
 from datamodel_code_generator.validators import format_validation_error, normalize_validators
@@ -87,6 +88,45 @@ class Constraints(_Constraints):
 
 DataModelFieldV1 = _PydanticBaseDataModelField  # deprecated re-export, pydantic-v1 output removed in #3031
 
+_PYDANTIC_V2_BASE_FIELD_KEYS: frozenset[str] = frozenset({
+    "default",
+    "default_factory",
+    "alias",
+    "alias_priority",
+    "validation_alias",
+    "serialization_alias",
+    "title",
+    "description",
+    "examples",
+    "exclude",
+    "discriminator",
+    "json_schema_extra",
+    "frozen",
+    "validate_default",
+    "repr",
+    "init_var",
+    "kw_only",
+    "pattern",
+    "strict",
+    "gt",
+    "ge",
+    "lt",
+    "le",
+    "multiple_of",
+    "allow_inf_nan",
+    "max_digits",
+    "decimal_places",
+    "min_length",
+    "max_length",
+    "union_mode",
+})
+
+
+if PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA:
+    _PYDANTIC_V2_DEFAULT_FIELD_KEYS = _PYDANTIC_V2_BASE_FIELD_KEYS
+else:
+    _PYDANTIC_V2_DEFAULT_FIELD_KEYS = _PYDANTIC_V2_BASE_FIELD_KEYS | {"deprecated"}
+
 
 class DataModelField(_PydanticBaseDataModelField):
     """Pydantic v2 field with Field() constraints and json_schema_extra support."""
@@ -103,39 +143,7 @@ class DataModelField(_PydanticBaseDataModelField):
         "max_length",
         "pattern",
     }
-    _DEFAULT_FIELD_KEYS: ClassVar[set[str]] = {
-        "default",
-        "default_factory",
-        "alias",
-        "alias_priority",
-        "validation_alias",
-        "serialization_alias",
-        "title",
-        "description",
-        "examples",
-        "exclude",
-        "discriminator",
-        "json_schema_extra",
-        "frozen",
-        "validate_default",
-        "repr",
-        "init_var",
-        "kw_only",
-        "pattern",
-        "strict",
-        "gt",
-        "ge",
-        "lt",
-        "le",
-        "multiple_of",
-        "allow_inf_nan",
-        "max_digits",
-        "decimal_places",
-        "min_length",
-        "max_length",
-        "union_mode",
-        "deprecated",
-    }
+    _DEFAULT_FIELD_KEYS: ClassVar[frozenset[str]] = _PYDANTIC_V2_DEFAULT_FIELD_KEYS
     constraints: Optional[Constraints] = None  # ty: ignore  # noqa: UP045
     can_have_extra_keys: ClassVar[bool] = False
     _PYDANTIC_EXTRA_FIELD_NAME: ClassVar[str] = "__pydantic_extra__"
@@ -232,10 +240,15 @@ class DataModelField(_PydanticBaseDataModelField):
                 data["serialization_alias"] = serialization_alias
 
         # **extra is not supported in pydantic 2.0
-        json_schema_extra = {k: v for k, v in data.items() if k not in self._DEFAULT_FIELD_KEYS}
+        extra_field_keys = tuple(k for k in data if k not in self._DEFAULT_FIELD_KEYS)
+        existing_json_schema_extra = data.get("json_schema_extra") or {}
+        json_schema_extra = {
+            **existing_json_schema_extra,
+            **{k: data[k] for k in extra_field_keys},
+        }
         if json_schema_extra:
             data["json_schema_extra"] = json_schema_extra
-            for key in json_schema_extra:
+            for key in extra_field_keys:
                 data.pop(key)
 
     def _has_discriminator_in_data_type(self) -> bool:

@@ -22,8 +22,7 @@ from pydantic import BaseModel
 
 from datamodel_code_generator import Error, generate, is_asyncapi, is_openapi
 from datamodel_code_generator.config import GenerateConfig
-from datamodel_code_generator.enums import DataModelType, InputFileType
-from datamodel_code_generator.model.pydantic_v2 import UnionMode
+from datamodel_code_generator.enums import DataModelType, InputFileType, UnionMode
 from datamodel_code_generator.parser._graph import stable_toposort
 from datamodel_code_generator.types import StrictTypes
 
