@@ -24,7 +24,9 @@ PythonVersionMin = format_module.PythonVersionMin
 _format_constrained_call = format_module._format_constrained_call
 _format_import_node = format_module._format_import_node
 _format_import_node_without_reordering = format_module._format_import_node_without_reordering
+_get_builtin_line_length = format_module._get_builtin_line_length
 _get_builtin_known_first_party = format_module._get_builtin_known_first_party
+_get_builtin_string_normalization = format_module._get_builtin_string_normalization
 _normalize_string_quotes = format_module._normalize_string_quotes
 _split_escaped_string_literal = format_module._split_escaped_string_literal
 apply_builtin_formatter = format_module.apply_builtin_formatter
@@ -235,6 +237,31 @@ def test_format_code_builtin_formatter_rejects_invalid_explicit_line_length(
             formatters=[Formatter.BUILTIN],
             builtin_format_line_length=line_length,
         )
+
+
+def test_builtin_config_helpers_fall_back_without_pyproject(tmp_path: Path) -> None:
+    """Test moved built-in config helpers keep no-pyproject fallback behavior."""
+    assert _get_builtin_line_length(tmp_path) == format_module.DEFAULT_LINE_LENGTH
+    assert _get_builtin_known_first_party(tmp_path) == DEFAULT_KNOWN_FIRST_PARTY
+    assert not _get_builtin_string_normalization(tmp_path, skip_string_normalization=True)
+
+
+def test_builtin_config_helpers_read_pyproject_directly(tmp_path: Path) -> None:
+    """Test moved built-in config helpers still read pyproject for direct callers."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        "[tool.ruff]\nline-length = 120\n[tool.black]\nskip-string-normalization = false\n",
+        encoding="utf-8",
+    )
+
+    assert _get_builtin_line_length(tmp_path) == 120
+    assert _get_builtin_string_normalization(tmp_path, skip_string_normalization=True)
+
+
+def test_builtin_line_length_helper_rejects_invalid_explicit_value(tmp_path: Path) -> None:
+    """Test the moved line length helper still validates direct callers."""
+    with pytest.raises(ValueError, match="builtin_format_line_length must be a positive integer"):
+        _get_builtin_line_length(tmp_path, 0)
 
 
 def test_format_code_builtin_formatter_uses_datamodel_codegen_line_length(

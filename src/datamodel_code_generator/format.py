@@ -231,7 +231,7 @@ _BUILTIN_FORMATTER_REEXPORTS: tuple[tuple[str, Any], ...] = (
 )
 
 for _builtin_formatter_reexport_name, _builtin_formatter_reexport in _BUILTIN_FORMATTER_REEXPORTS:
-    if globals()[_builtin_formatter_reexport_name] is not _builtin_formatter_reexport:
+    if globals()[_builtin_formatter_reexport_name] is not _builtin_formatter_reexport:  # pragma: no cover
         msg = f"Builtin formatter re-export mismatch: {_builtin_formatter_reexport_name}"
         raise RuntimeError(msg)
 del _builtin_formatter_reexport_name, _builtin_formatter_reexport
