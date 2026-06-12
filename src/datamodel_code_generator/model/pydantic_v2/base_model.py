@@ -10,7 +10,7 @@ import re
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from pydantic import ValidationError, field_validator, model_validator
+from pydantic import Field, ValidationError, field_validator, model_validator
 
 from datamodel_code_generator import Error
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_DICT, Import
@@ -23,11 +23,9 @@ from datamodel_code_generator.model.base import (
 )
 from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
 from datamodel_code_generator.model.pydantic_base import BaseModelBase
+from datamodel_code_generator.model.pydantic_base import Constraints as _Constraints
 from datamodel_code_generator.model.pydantic_base import (
     DataModelField as _PydanticBaseDataModelField,
-)
-from datamodel_code_generator.model.pydantic_base import (
-    PatternConstraints as _Constraints,
 )
 from datamodel_code_generator.model.pydantic_v2._config import (
     ConfigAttribute,
@@ -68,6 +66,10 @@ class _RawRepr:
 
 class Constraints(_Constraints):
     """Pydantic v2 field constraints with pattern support."""
+
+    # To override existing pattern alias
+    regex: Optional[str] = Field(None, alias="regex")  # noqa: UP045
+    pattern: Optional[str] = Field(None, alias="pattern")  # noqa: UP045
 
     @model_validator(mode="before")  # ty: ignore
     def validate_min_max_items(cls, values: Any) -> dict[str, Any]:  # noqa: N805
