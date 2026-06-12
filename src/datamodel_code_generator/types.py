@@ -456,7 +456,7 @@ def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # 
     return f"{UNION_PREFIX}{UNION_DELIMITER.join(parts)}]"
 
 
-@lru_cache
+@lru_cache(maxsize=4096)
 def get_optional_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT001
     """Wrap a type string in Optional or add | None suffix."""
     type_ = _remove_none_from_union(type_, use_union_operator=use_union_operator)

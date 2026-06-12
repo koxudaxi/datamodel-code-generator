@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
 from datamodel_code_generator.reference import FieldNameResolver
@@ -225,3 +227,23 @@ def test_empty_list_aliases_scoped() -> None:
     field_name, alias = resolver.get_valid_field_name_and_alias("name", class_name="User")
     assert field_name == "name"
     assert alias is None  # Empty list is ignored
+
+
+def test_unsupported_alias_values_are_ignored() -> None:
+    """Alias values that are neither strings nor non-empty lists fall through."""
+    resolver = FieldNameResolver(aliases=cast("dict[str, str | list[str]]", {"name": ("alias",)}))
+
+    field_name, alias = resolver.get_valid_field_name_and_alias("name")
+
+    assert field_name == "name"
+    assert alias is None
+
+
+def test_alias_lists_with_non_string_values_are_ignored() -> None:
+    """Alias lists must contain only strings before they are used."""
+    resolver = FieldNameResolver(aliases=cast("dict[str, str | list[str]]", {"name": [123, "alias"]}))
+
+    field_name, alias = resolver.get_valid_field_name_and_alias("name")
+
+    assert field_name == "name"
+    assert alias is None
