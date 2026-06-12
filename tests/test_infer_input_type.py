@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from datamodel_code_generator import Error, InputFileType, _is_xml_text, infer_input_type
+from datamodel_code_generator import Error, InputFileType, _is_json_text, _is_xml_text, infer_input_type
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 
@@ -104,6 +104,15 @@ def test_is_xml_text() -> None:
     assert not _is_xml_text("")
     assert not _is_xml_text(" \n\t\ufeff")
     assert not _is_xml_text("name: value")
+
+
+def test_is_json_text() -> None:
+    """Test JSON-looking text detection for input type inference."""
+    assert _is_json_text(' \n\t\ufeff{"name": "Pet"}')
+    assert _is_json_text(" \n\t\ufeff[1, 2]")
+    assert not _is_json_text("")
+    assert not _is_json_text(" \n\t\ufeff")
+    assert not _is_json_text("name: value")
 
 
 def test_infer_input_type_non_schema_xml() -> None:
