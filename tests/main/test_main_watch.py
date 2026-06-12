@@ -117,6 +117,7 @@ def test_watch_without_watchfiles_installed(output_file: Path, mocker: pytest.Mo
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_main_watch_uses_watch_module_import_seam(output_file: Path, mocker: pytest.MockerFixture) -> None:
     """Test main resolves watch_and_regenerate through datamodel_code_generator.watch."""
     mock_generate = mocker.patch("datamodel_code_generator.__main__.run_generate_from_config", return_value=None)
