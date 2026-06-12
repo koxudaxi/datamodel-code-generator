@@ -8,12 +8,11 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from pydantic import Field, ValidationError, field_validator, model_validator
 
 from datamodel_code_generator import Error
-from datamodel_code_generator.enums import TargetPydanticVersion
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_DICT, Import
 from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import (
@@ -23,14 +22,14 @@ from datamodel_code_generator.model.base import (
     DataModelFieldBase,
 )
 from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
-from datamodel_code_generator.model.pydantic_base import (
-    BaseModelBase,
-)
-from datamodel_code_generator.model.pydantic_base import (
-    Constraints as _Constraints,
-)
+from datamodel_code_generator.model.pydantic_base import BaseModelBase
+from datamodel_code_generator.model.pydantic_base import Constraints as _Constraints
 from datamodel_code_generator.model.pydantic_base import (
     DataModelField as _PydanticBaseDataModelField,
+)
+from datamodel_code_generator.model.pydantic_v2._config import (
+    ConfigAttribute,
+    build_base_config_parameters,
 )
 from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_ALIAS_CHOICES,
@@ -273,14 +272,6 @@ class DataModelField(_PydanticBaseDataModelField):
         return base_imports
 
 
-class ConfigAttribute(NamedTuple):
-    """Configuration attribute mapping for ConfigDict conversion."""
-
-    from_: str
-    to: str
-    invert: bool
-
-
 _LOOKAROUND_PATTERN: re.Pattern[str] = re.compile(r"\(\?<?[=!]")
 
 
@@ -306,6 +297,8 @@ class BaseModel(BaseModelBase):
     BASE_CLASS_ALIAS: ClassVar[str] = "_BaseModel"
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
+    SUPPORTS_CONFIG_EXTRA: ClassVar[bool] = True
+    SUPPORTS_ARBITRARY_TYPES_ALLOWED: ClassVar[bool] = True
     TYPED_EXTRA_FIELD_NAME: ClassVar[str] = "__pydantic_extra__"
     # In Pydantic 2.11+, populate_by_name is deprecated in favor of validate_by_name + validate_by_alias
     # Default to V2 compatible (populate_by_name) unless target_pydantic_version is specified
@@ -372,35 +365,25 @@ class BaseModel(BaseModelBase):
             keyword_only=keyword_only,
             treat_dot_as_module=treat_dot_as_module,
         )
-        config_parameters: dict[str, Any] = {}
-
-        extra = self._get_config_extra()
-        if extra:
-            config_parameters["extra"] = extra
-
-        # Select CONFIG_ATTRIBUTES based on target_pydantic_version
-        config_attributes = self._get_config_attributes()
-        for from_, to, invert in config_attributes:
-            if from_ in self.extra_template_data:
-                config_parameters[to] = (
-                    not self.extra_template_data[from_] if invert else self.extra_template_data[from_]
-                )
-        for data_type in self.all_data_types:
-            if data_type.is_custom_type:  # pragma: no cover
-                config_parameters["arbitrary_types_allowed"] = True
-                break
+        config_parameters = build_base_config_parameters(
+            extra_template_data=self.extra_template_data,
+            all_data_types=self.all_data_types if self.SUPPORTS_ARBITRARY_TYPES_ALLOWED else (),
+            config_attributes_v2=self._CONFIG_ATTRIBUTES_V2,
+            config_attributes_v2_11=self._CONFIG_ATTRIBUTES_V2_11,
+            include_extra=self.SUPPORTS_CONFIG_EXTRA,
+        )
 
         if has_lookaround_pattern(self.fields):
             config_parameters["regex_engine"] = '"python-re"'
 
-        if isinstance(self.extra_template_data.get("config"), dict):
-            for key, value in self.extra_template_data["config"].items():
-                config_parameters[key] = value  # noqa: PERF403
+        if isinstance(config := self.extra_template_data.get("config"), dict):
+            for key, value in config.items():
+                config_parameters[key] = value
 
         # Handle json_schema_extra from schema extensions (x-* fields)
         model_extras = self.extra_template_data.get("model_extras")
         if model_extras:
-            existing = config_parameters.get("json_schema_extra") or {}
+            existing = cast("dict[str, Any]", config_parameters.get("json_schema_extra") or {})
             config_parameters["json_schema_extra"] = {**existing, **model_extras}
 
         if config_parameters:
@@ -410,40 +393,6 @@ class BaseModel(BaseModelBase):
             self._additional_imports.append(IMPORT_CONFIG_DICT)
 
         self._process_validators()
-
-    def _get_config_extra(self) -> Literal["'allow'", "'forbid'", "'ignore'"] | None:
-        additional_properties = self.extra_template_data.get("additionalProperties")
-        unevaluated_properties = self.extra_template_data.get("unevaluatedProperties")
-        allow_extra_fields = self.extra_template_data.get("allow_extra_fields")
-        extra_fields = self.extra_template_data.get("extra_fields")
-
-        config_extra = None
-        if allow_extra_fields or extra_fields == "allow":
-            config_extra = "'allow'"
-        elif extra_fields == "forbid":
-            config_extra = "'forbid'"
-        elif extra_fields == "ignore":
-            config_extra = "'ignore'"
-        elif additional_properties is True:
-            config_extra = "'allow'"
-        elif additional_properties is False:
-            config_extra = "'forbid'"
-        elif unevaluated_properties is True:
-            config_extra = "'allow'"
-        elif unevaluated_properties is False:
-            config_extra = "'forbid'"
-        return config_extra
-
-    def _get_config_attributes(self) -> list[ConfigAttribute]:
-        """Get config attributes based on target Pydantic version.
-
-        If target_pydantic_version is V2_11, use validate_by_name.
-        Otherwise (V2 or not specified), use populate_by_name for compatibility.
-        """
-        target_version = self.extra_template_data.get("target_pydantic_version")
-        if target_version == TargetPydanticVersion.V2_11:
-            return self._CONFIG_ATTRIBUTES_V2_11
-        return self._CONFIG_ATTRIBUTES_V2
 
     def _process_validators(self) -> None:
         """Process validator definitions and prepare them for template rendering."""

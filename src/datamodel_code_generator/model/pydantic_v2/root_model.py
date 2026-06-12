@@ -5,7 +5,7 @@ Generates models inheriting from pydantic.RootModel for wrapping single types.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar
 
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
@@ -16,6 +16,8 @@ class RootModel(BaseModel):
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic_v2/RootModel.jinja2"
     BASE_CLASS: ClassVar[str] = "pydantic.RootModel"
+    SUPPORTS_CONFIG_EXTRA: ClassVar[bool] = False
+    SUPPORTS_ARBITRARY_TYPES_ALLOWED: ClassVar[bool] = False
 
     def __init__(
         self,
@@ -39,7 +41,3 @@ class RootModel(BaseModel):
         if not has_meaningful_config:
             self.extra_template_data.pop("config", None)
             self._additional_imports = [imp for imp in self._additional_imports if imp != IMPORT_CONFIG_DICT]
-
-    def _get_config_extra(self) -> Literal["'allow'", "'forbid'"] | None:  # noqa: PLR6301
-        # PydanticV2 RootModels cannot have extra fields
-        return None

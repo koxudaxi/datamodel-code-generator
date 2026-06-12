@@ -7,19 +7,21 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from datamodel_code_generator.enums import TargetPydanticVersion
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.dataclass import _DataclassReuseMixin, has_field_assignment
-from datamodel_code_generator.model.pydantic_v2.base_model import (
+from datamodel_code_generator.model.pydantic_v2._config import (
     ConfigAttribute,
-    has_lookaround_pattern,
+    build_base_config_parameters,
 )
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     Constraints as _Constraints,
 )
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     DataModelField as DataModelFieldV2,
+)
+from datamodel_code_generator.model.pydantic_v2.base_model import (
+    has_lookaround_pattern,
 )
 from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_CONFIG_DICT,
@@ -107,23 +109,12 @@ class DataClass(_DataclassReuseMixin, DataModel):
                 self.dataclass_arguments["kw_only"] = True
         self._set_deprecated_decorator()
 
-        config_parameters: dict[str, Any] = {}
-
-        extra = self._get_config_extra()
-        if extra:
-            config_parameters["extra"] = extra
-
-        config_attributes = self._get_config_attributes()
-        for from_, to, invert in config_attributes:
-            if from_ in self.extra_template_data:
-                config_parameters[to] = (
-                    not self.extra_template_data[from_] if invert else self.extra_template_data[from_]
-                )
-
-        for data_type in self.all_data_types:
-            if data_type.is_custom_type:  # pragma: no cover
-                config_parameters["arbitrary_types_allowed"] = True
-                break
+        config_parameters = build_base_config_parameters(
+            extra_template_data=self.extra_template_data,
+            all_data_types=self.all_data_types,
+            config_attributes_v2=self._CONFIG_ATTRIBUTES_V2,
+            config_attributes_v2_11=self._CONFIG_ATTRIBUTES_V2_11,
+        )
 
         if has_lookaround_pattern(self.fields):
             config_parameters["regex_engine"] = '"python-re"'
@@ -131,37 +122,6 @@ class DataClass(_DataclassReuseMixin, DataModel):
         if config_parameters:
             self._additional_imports.append(IMPORT_CONFIG_DICT)
             self.extra_template_data["config"] = config_parameters
-
-    def _get_config_attributes(self) -> list[ConfigAttribute]:
-        """Get config attributes based on target Pydantic version."""
-        target_version = self.extra_template_data.get("target_pydantic_version")
-        if target_version == TargetPydanticVersion.V2_11:
-            return self._CONFIG_ATTRIBUTES_V2_11
-        return self._CONFIG_ATTRIBUTES_V2
-
-    def _get_config_extra(self) -> str | None:
-        """Get extra field configuration for ConfigDict."""
-        additional_properties = self.extra_template_data.get("additionalProperties")
-        unevaluated_properties = self.extra_template_data.get("unevaluatedProperties")
-        allow_extra_fields = self.extra_template_data.get("allow_extra_fields")
-        extra_fields = self.extra_template_data.get("extra_fields")
-
-        config_extra = None
-        if allow_extra_fields or extra_fields == "allow":
-            config_extra = "'allow'"
-        elif extra_fields == "forbid":
-            config_extra = "'forbid'"
-        elif extra_fields == "ignore":
-            config_extra = "'ignore'"
-        elif additional_properties is True:
-            config_extra = "'allow'"
-        elif additional_properties is False:
-            config_extra = "'forbid'"
-        elif unevaluated_properties is True:
-            config_extra = "'allow'"
-        elif unevaluated_properties is False:
-            config_extra = "'forbid'"
-        return config_extra
 
 
 if PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK:

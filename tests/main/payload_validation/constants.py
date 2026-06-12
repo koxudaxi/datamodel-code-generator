@@ -104,6 +104,10 @@ EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/prefix_items_fixed_unevaluated_tail_schema.json": (
         "hypothesis-jsonschema cannot satisfy fixed prefixItems with unevaluatedItems tail constraints"
     ),
+    "jsonschema/string_min_max_items_compat.json": (
+        "compatibility fixture maps string minItems/maxItems to Pydantic length constraints, "
+        "which is stricter than JSON Schema"
+    ),
     "jsonschema/typed_dict_allof_constraint_extra_items.json": (
         "TypedDict-only e2e fixture intentionally emits a generator warning; Pydantic payload validation "
         "uses the same schema corpus but does not target this output mode"
