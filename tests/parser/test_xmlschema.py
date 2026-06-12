@@ -11,6 +11,7 @@ from datamodel_code_generator.parser import _xmlschema_literals
 from datamodel_code_generator.parser.base import Result
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from datamodel_code_generator.parser.xmlschema import (
+    _XMLSCHEMA_LITERAL_REEXPORTS,
     DAY_TIME_DURATION_PATTERN,
     IMPORT_DATETIME_MODULE,
     XML_DATE_PATTERN,
@@ -52,6 +53,18 @@ from datamodel_code_generator.parser.xmlschema import (
 def test_xmlschema_literal_helpers_are_re_exported_by_identity(reexported: object, original: object) -> None:
     """Keep underscore helper imports stable through the xmlschema shim."""
     assert reexported is original
+
+
+def test_xmlschema_literal_reexport_contract_is_explicit() -> None:
+    """Keep compatibility re-exports listed as an explicit module contract."""
+    assert dict(_XMLSCHEMA_LITERAL_REEXPORTS) == {
+        "DAY_TIME_DURATION_PATTERN": DAY_TIME_DURATION_PATTERN,
+        "IMPORT_DATETIME_MODULE": IMPORT_DATETIME_MODULE,
+        "XML_DATE_PATTERN": XML_DATE_PATTERN,
+        "XSD_WHITESPACE_CHARS": XSD_WHITESPACE_CHARS,
+        "_datetime_expression": _datetime_expression,
+        "_normalize_timezone": _normalize_timezone,
+    }
 
 
 @pytest.mark.allow_direct_assert

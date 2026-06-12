@@ -59,6 +59,20 @@ XSD_WHITESPACE_CHARS = _xmlschema_literals.XSD_WHITESPACE_CHARS
 _datetime_expression = _xmlschema_literals._datetime_expression  # noqa: SLF001
 _normalize_timezone = _xmlschema_literals._normalize_timezone  # noqa: SLF001
 
+_XMLSCHEMA_LITERAL_REEXPORTS: tuple[tuple[str, object], ...] = (
+    ("DAY_TIME_DURATION_PATTERN", DAY_TIME_DURATION_PATTERN),
+    ("IMPORT_DATETIME_MODULE", IMPORT_DATETIME_MODULE),
+    ("XML_DATE_PATTERN", XML_DATE_PATTERN),
+    ("XSD_WHITESPACE_CHARS", XSD_WHITESPACE_CHARS),
+    ("_datetime_expression", _datetime_expression),
+    ("_normalize_timezone", _normalize_timezone),
+)
+for _xmlschema_literal_reexport_name, _xmlschema_literal_reexport in _XMLSCHEMA_LITERAL_REEXPORTS:
+    if globals()[_xmlschema_literal_reexport_name] is not _xmlschema_literal_reexport:  # pragma: no cover
+        msg = f"XML Schema literal re-export mismatch: {_xmlschema_literal_reexport_name}"
+        raise RuntimeError(msg)
+del _xmlschema_literal_reexport_name, _xmlschema_literal_reexport
+
 JsonSchema = dict[str, Any]
 QNameKey = tuple[str | None, str]
 DefinitionKey = tuple[str, str | None, str]
