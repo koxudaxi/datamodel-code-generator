@@ -23,6 +23,7 @@ from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
     Types,
+    _validate_schema_python_import_path,
     get_model_by_path,
 )
 from datamodel_code_generator.reference import SPECIAL_PATH_MARKER, Reference
@@ -56,6 +57,19 @@ def block_dns_by_default(mocker: MockerFixture) -> None:
 def test_get_model_by_path(schema: dict, path: str, model: dict) -> None:
     """Test model retrieval by path."""
     assert get_model_by_path(schema, path.split("/") if path else []) == model
+
+
+def test_get_x_python_import_path_ignores_empty_extension() -> None:
+    """Test empty x-python-import metadata is ignored."""
+    parser = JsonSchemaParser("")
+
+    assert parser._get_x_python_import_path({}) is None
+
+
+def test_validate_schema_python_import_path_rejects_non_string() -> None:
+    """Test schema import path validation rejects non-string values."""
+    with pytest.raises(Error, match="customTypePath must be a dotted Python identifier path: 1"):
+        _validate_schema_python_import_path(1, "customTypePath")
 
 
 def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:
