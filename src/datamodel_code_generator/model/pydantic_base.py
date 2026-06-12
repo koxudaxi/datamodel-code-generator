@@ -52,6 +52,11 @@ class Constraints(ConstraintsBase):
     regex: Optional[str] = Field(None, alias="pattern")  # noqa: UP045
 
 
+class PatternConstraints(Constraints):  # noqa: D101
+    regex: Optional[str] = Field(None, alias="regex")  # noqa: UP045
+    pattern: Optional[str] = Field(None, alias="pattern")  # noqa: UP045
+
+
 class DataModelField(DataModelFieldBase):
     """Field implementation for Pydantic models."""
 
