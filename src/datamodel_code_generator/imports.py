@@ -31,7 +31,7 @@ class Import:
         return self.from_ == "__future__"
 
     @classmethod
-    @lru_cache
+    @lru_cache(maxsize=4096)
     def from_full_path(cls, class_path: str) -> Import:
         """Create an Import from a fully qualified path (e.g., 'typing.Optional')."""
         split_class_path: list[str] = class_path.split(".")
@@ -71,6 +71,12 @@ class Imports(defaultdict[str | None, set[str]]):
         """Render all imports as a string."""
         return "\n".join(starmap(self.create_line, self.items()))
 
+    @staticmethod
+    def _storage_key(import_: Import) -> tuple[str | None, str]:
+        if "." in import_.import_:
+            return None, import_.import_
+        return import_.from_, import_.import_
+
     def append(self, imports: Import | Iterable[Import] | None) -> None:
         """Add one or more imports to the collection."""
         if imports:
@@ -79,45 +85,36 @@ class Imports(defaultdict[str | None, set[str]]):
             for import_ in imports:
                 if import_.reference_path:
                     self.reference_paths[import_.reference_path] = import_
-                if "." in import_.import_:
-                    self[None].add(import_.import_)
-                    self.counter[None, import_.import_] += 1
-                else:
-                    self[import_.from_].add(import_.import_)
-                    self.counter[import_.from_, import_.import_] += 1
-                    if import_.alias:
-                        self.alias[import_.from_][import_.import_] = import_.alias
+                key = self._storage_key(import_)
+                self[key[0]].add(key[1])
+                self.counter[key] += 1
+                if "." not in import_.import_ and import_.alias:
+                    self.alias[key[0]][key[1]] = import_.alias
 
-    def remove(self, imports: Import | Iterable[Import]) -> None:  # noqa: PLR0912
+    def remove(self, imports: Import | Iterable[Import]) -> None:
         """Remove one or more imports from the collection."""
         if isinstance(imports, Import):
             imports = [imports]
         for import_ in imports:
-            if "." in import_.import_:
-                key = (None, import_.import_)
-                if self.counter.get(key, 0) <= 0:
-                    continue
-                self.counter[key] -= 1
-                if self.counter[key] == 0:
-                    del self.counter[key]
-                    if None in self and import_.import_ in self[None]:
-                        self[None].remove(import_.import_)
-                        if not self[None]:
-                            del self[None]
-            else:
-                key = (import_.from_, import_.import_)
-                if self.counter.get(key, 0) <= 0:
-                    continue
-                self.counter[key] -= 1
-                if self.counter[key] == 0:
-                    del self.counter[key]
-                    self[import_.from_].remove(import_.import_)
-                    if not self[import_.from_]:
-                        del self[import_.from_]
-                    if import_.alias and import_.from_ in self.alias and import_.import_ in self.alias[import_.from_]:
-                        del self.alias[import_.from_][import_.import_]
-                        if not self.alias[import_.from_]:
-                            del self.alias[import_.from_]
+            key = self._storage_key(import_)
+            if self.counter.get(key, 0) <= 0:
+                continue
+            self.counter[key] -= 1
+            if self.counter[key] == 0:
+                del self.counter[key]
+                if "." in import_.import_:
+                    if key[0] in self and key[1] in self[key[0]]:
+                        self[key[0]].remove(key[1])
+                        if not self[key[0]]:
+                            del self[key[0]]
+                else:
+                    self[key[0]].remove(key[1])
+                    if not self[key[0]]:
+                        del self[key[0]]
+                    if import_.alias and key[0] in self.alias and key[1] in self.alias[key[0]]:
+                        del self.alias[key[0]][key[1]]
+                        if not self.alias[key[0]]:
+                            del self.alias[key[0]]
             if import_.reference_path and import_.reference_path in self.reference_paths:
                 del self.reference_paths[import_.reference_path]
 
@@ -131,16 +128,20 @@ class Imports(defaultdict[str | None, set[str]]):
         future = Imports(self.use_exact)
         future_key = "__future__"
         if future_key in self:
-            future[future_key] = self.pop(future_key)
-            for key in list(self.counter.keys()):
-                if key[0] == future_key:
-                    future.counter[key] = self.counter.pop(key)
-            if future_key in self.alias:
-                future.alias[future_key] = self.alias.pop(future_key)
-            for ref_path, import_ in list(self.reference_paths.items()):
-                if import_.from_ == future_key:
-                    future.reference_paths[ref_path] = self.reference_paths.pop(ref_path)
+            self._move_module_state(future, future_key)
         return future
+
+    def _move_module_state(self, target: Imports, module_key: str | None) -> None:
+        target[module_key] = self.pop(module_key)
+        for key in list(self.counter.keys()):
+            if key[0] == module_key:
+                target.counter[key] = self.counter.pop(key)
+        if module_key in self.alias:
+            target.alias[module_key] = self.alias.pop(module_key)
+        for ref_path, import_ in list(self.reference_paths.items()):
+            if import_.from_ == module_key:
+                target.reference_paths[ref_path] = self.reference_paths.pop(ref_path)
+        # _exports are local declarations, not import-module state, so they stay on self.
 
     def add_export(self, name: str) -> None:
         """Add a name to export without importing it (for local definitions)."""
@@ -186,7 +187,7 @@ class Imports(defaultdict[str | None, set[str]]):
         ]
         # Build reverse lookup dict for O(1) access instead of O(n) linear scan per import
         reverse_lookup: dict[tuple[str | None, str], str | None] = {
-            (imp.from_, imp.import_): path for path, imp in self.reference_paths.items()
+            self._storage_key(imp): path for path, imp in self.reference_paths.items()
         }
         for from_, import_ in unused:
             alias = self.alias.get(from_, {}).get(import_)

@@ -60,6 +60,15 @@ def test_get_optional_type(input_: str, use_union_operator: bool, expected: str)
     assert get_optional_type(input_, use_union_operator) == expected
 
 
+def test_get_optional_type_cache_clear_preserves_value() -> None:
+    """Clearing the bounded cache must not change get_optional_type results."""
+    optional_type = get_optional_type("str | None", True)
+
+    get_optional_type.cache_clear()
+
+    assert get_optional_type("str | None", True) == optional_type
+
+
 @pytest.mark.parametrize(
     ("type_str", "use_union_operator", "expected"),
     [
@@ -198,6 +207,8 @@ def test_datatype_deepcopy_with_circular_references() -> None:
 
 def test_datatype_remove_reference_detaches_compatibility_child() -> None:
     """Test removing a reference keeps the reference children list in sync."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+
     reference = Reference(path="Model", original_name="Model", name="Model")
     data_type = DataType(reference=reference)
 
