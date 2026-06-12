@@ -31,7 +31,6 @@ from datamodel_code_generator.model.pydantic_base import (
 )
 from datamodel_code_generator.model.pydantic_v2._config import (
     ConfigAttribute,
-    ConfigDict,
     build_base_config_parameters,
 )
 from datamodel_code_generator.model.pydantic_v2.imports import (
@@ -347,20 +346,21 @@ class BaseModel(BaseModelBase):
             keyword_only=keyword_only,
             treat_dot_as_module=treat_dot_as_module,
         )
-        config_parameters = build_base_config_parameters(
-            extra_template_data=self.extra_template_data,
-            all_data_types=self.all_data_types,
-            config_attributes_v2=self._CONFIG_ATTRIBUTES_V2,
-            config_attributes_v2_11=self._CONFIG_ATTRIBUTES_V2_11,
-            include_extra=self.SUPPORTS_CONFIG_EXTRA,
+        config_parameters: dict[str, Any] = dict(
+            build_base_config_parameters(
+                extra_template_data=self.extra_template_data,
+                all_data_types=self.all_data_types,
+                config_attributes_v2=self._CONFIG_ATTRIBUTES_V2,
+                config_attributes_v2_11=self._CONFIG_ATTRIBUTES_V2_11,
+                include_extra=self.SUPPORTS_CONFIG_EXTRA,
+            )
         )
 
         if self._has_lookaround_pattern():
             config_parameters["regex_engine"] = '"python-re"'
 
-        if isinstance(self.extra_template_data.get("config"), dict):
-            for key, value in self.extra_template_data["config"].items():
-                config_parameters[key] = value
+        if isinstance(config := self.extra_template_data.get("config"), dict):
+            config_parameters.update(config)
 
         # Handle json_schema_extra from schema extensions (x-* fields)
         model_extras = self.extra_template_data.get("model_extras")
@@ -369,6 +369,8 @@ class BaseModel(BaseModelBase):
             config_parameters["json_schema_extra"] = {**existing, **model_extras}
 
         if config_parameters:
+            from datamodel_code_generator.model.pydantic_v2 import ConfigDict  # noqa: PLC0415
+
             self.extra_template_data["config"] = ConfigDict.model_validate(config_parameters)  # ty: ignore
             self._additional_imports.append(IMPORT_CONFIG_DICT)
 

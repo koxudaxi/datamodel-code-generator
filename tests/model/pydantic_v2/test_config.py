@@ -10,7 +10,6 @@ import pytest
 from datamodel_code_generator.model import DataModelFieldBase, pydantic_v2
 from datamodel_code_generator.model.msgspec import Constraints as MsgspecConstraints
 from datamodel_code_generator.model.pydantic_base import PatternConstraints
-from datamodel_code_generator.model.pydantic_v2._config import ConfigDict
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
 from datamodel_code_generator.model.pydantic_v2.base_model import Constraints as PydanticV2Constraints
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass
@@ -42,7 +41,7 @@ def _reference() -> Reference:
 @pytest.mark.allow_direct_assert
 def test_config_dict_reexport_preserves_public_surface() -> None:
     """ConfigDict remains importable from the package for compatibility."""
-    assert pydantic_v2.ConfigDict is ConfigDict
+    assert pydantic_v2.ConfigDict.__module__ == "datamodel_code_generator.model.pydantic_v2"
     assert "ConfigDict" not in pydantic_v2.__all__
 
 
@@ -56,7 +55,7 @@ def test_base_model_config_key_order_with_multiple_shared_parameters() -> None:
     )
 
     config = model.extra_template_data["config"]
-    assert isinstance(config, ConfigDict)
+    assert isinstance(config, pydantic_v2.ConfigDict)
     assert list(config.dict(exclude_unset=True)) == ["extra", "populate_by_name", "use_attribute_docstrings"]
     assert (
         "model_config = ConfigDict(\n"

@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, NamedTuple, Optional  # noqa: UP035
-
-from pydantic import BaseModel as _BaseModel
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
 
 from datamodel_code_generator.enums import TargetPydanticVersion
 
@@ -22,14 +20,18 @@ class ConfigAttribute(NamedTuple):
     invert: bool
 
 
-def get_config_extra(extra_template_data: dict[str, Any]) -> str | None:
+ConfigExtra = Literal["'allow'", "'forbid'", "'ignore'"]
+ConfigParameterValue = bool | ConfigExtra
+
+
+def get_config_extra(extra_template_data: dict[str, Any]) -> ConfigExtra | None:
     """Get extra field configuration for ConfigDict."""
     additional_properties = extra_template_data.get("additionalProperties")
     unevaluated_properties = extra_template_data.get("unevaluatedProperties")
     allow_extra_fields = extra_template_data.get("allow_extra_fields")
     extra_fields = extra_template_data.get("extra_fields")
 
-    config_extra = None
+    config_extra: ConfigExtra | None = None
     if allow_extra_fields or extra_fields == "allow":
         config_extra = "'allow'"
     elif extra_fields == "forbid":
@@ -67,9 +69,9 @@ def build_base_config_parameters(
     config_attributes_v2: list[ConfigAttribute],
     config_attributes_v2_11: list[ConfigAttribute],
     include_extra: bool = True,
-) -> dict[str, Any]:
+) -> dict[str, ConfigParameterValue]:
     """Build shared ConfigDict parameters for Pydantic v2 models."""
-    config_parameters: dict[str, Any] = {}
+    config_parameters: dict[str, ConfigParameterValue] = {}
 
     if include_extra and (extra := get_config_extra(extra_template_data)):
         config_parameters["extra"] = extra
@@ -81,7 +83,8 @@ def build_base_config_parameters(
     )
     for from_, to, invert in config_attributes:
         if from_ in extra_template_data:
-            config_parameters[to] = not extra_template_data[from_] if invert else extra_template_data[from_]
+            value = cast("bool", extra_template_data[from_])
+            config_parameters[to] = not value if invert else value
 
     for data_type in all_data_types:
         if data_type.is_custom_type:  # pragma: no cover
@@ -89,28 +92,3 @@ def build_base_config_parameters(
             break
 
     return config_parameters
-
-
-class ConfigDict(_BaseModel):
-    """Pydantic v2 model_config options."""
-
-    extra: Optional[str] = None  # noqa: UP045
-    title: Optional[str] = None  # noqa: UP045
-    populate_by_name: Optional[bool] = None  # noqa: UP045  # deprecated in v2.11+
-    validate_by_name: Optional[bool] = None  # noqa: UP045  # v2.11+
-    validate_by_alias: Optional[bool] = None  # noqa: UP045  # v2.11+
-    allow_extra_fields: Optional[bool] = None  # noqa: UP045
-    extra_fields: Optional[str] = None  # noqa: UP045
-    from_attributes: Optional[bool] = None  # noqa: UP045
-    frozen: Optional[bool] = None  # noqa: UP045
-    arbitrary_types_allowed: Optional[bool] = None  # noqa: UP045
-    protected_namespaces: Optional[tuple[str, ...]] = None  # noqa: UP045
-    regex_engine: Optional[str] = None  # noqa: UP045
-    use_enum_values: Optional[bool] = None  # noqa: UP045
-    coerce_numbers_to_str: Optional[bool] = None  # noqa: UP045
-    use_attribute_docstrings: Optional[bool] = None  # noqa: UP045
-    json_schema_extra: Optional[Dict[str, Any]] = None  # noqa: UP006, UP045
-
-    def dict(self, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
-        """Return dict for templates."""
-        return self.model_dump(**kwargs)
