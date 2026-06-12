@@ -4086,7 +4086,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self.parse_enum_as_literal(synthetic_obj)
         return self.parse_enum(name, synthetic_obj, enum_path, singular_name=singular_name)
 
-    def parse_item(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
+    def parse_item(  # noqa: PLR0911, PLR0912, PLR0915
         self,
         name: str,
         item: JsonSchemaObject,
@@ -4138,26 +4138,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if item.discriminator and parent and parent.is_array and (item.oneOf or item.anyOf):
             return self.parse_root_type(name, item, path)
         if item.anyOf:
-            const_enum_data = self._extract_const_enum_from_combined(item.anyOf, item.type)
-            if const_enum_data is not None:
-                enum_values, varnames, descriptions, enum_type, nullable = const_enum_data
-                synthetic_obj = self._create_synthetic_enum_obj(
-                    item, enum_values, varnames, descriptions, enum_type, nullable
-                )
-                if self.should_parse_enum_as_literal(synthetic_obj, property_name=name, property_obj=item):
-                    return self.parse_enum_as_literal(synthetic_obj)
-                return self.parse_enum(name, synthetic_obj, get_special_path("enum", path), singular_name=singular_name)
+            if combined_const_enum := self._parse_combined_const_enum(
+                name,
+                item,
+                item.anyOf,
+                get_special_path("enum", path),
+                singular_name=singular_name,
+            ):
+                return combined_const_enum
             return self.data_type(data_types=self.parse_any_of(name, item, get_special_path("anyOf", path)))
         if item.oneOf:
-            const_enum_data = self._extract_const_enum_from_combined(item.oneOf, item.type)
-            if const_enum_data is not None:
-                enum_values, varnames, descriptions, enum_type, nullable = const_enum_data
-                synthetic_obj = self._create_synthetic_enum_obj(
-                    item, enum_values, varnames, descriptions, enum_type, nullable
-                )
-                if self.should_parse_enum_as_literal(synthetic_obj, property_name=name, property_obj=item):
-                    return self.parse_enum_as_literal(synthetic_obj)
-                return self.parse_enum(name, synthetic_obj, get_special_path("enum", path), singular_name=singular_name)
+            if combined_const_enum := self._parse_combined_const_enum(
+                name,
+                item,
+                item.oneOf,
+                get_special_path("enum", path),
+                singular_name=singular_name,
+            ):
+                return combined_const_enum
             return self.data_type(data_types=self.parse_one_of(name, item, get_special_path("oneOf", path)))
         if item.allOf:
             if self._contains_false_schema(item.allOf):
@@ -4594,8 +4592,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return f"value_{index}"
 
     def _get_enum_members_and_nullable(self, obj: JsonSchemaObject) -> tuple[list[Any], bool]:  # noqa: PLR6301
-        if None in obj.enum and obj.type == "string":
-            # Nullable is valid in only OpenAPI
+        if None in obj.enum:
             return [e for e in obj.enum if e is not None], True
         return obj.enum, False
 

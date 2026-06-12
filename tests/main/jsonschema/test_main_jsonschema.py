@@ -4333,6 +4333,17 @@ def test_main_jsonschema_oneof_const_enum_nullable(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_oneof_const_enum_int_nullable(output_file: Path) -> None:
+    """Test nullable integer oneOf with const values does not emit a None enum member."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_int_nullable.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_int_nullable.py",
+    )
+
+
 def test_main_jsonschema_oneof_const_enum_nested(output_file: Path) -> None:
     """Test nested oneOf with const values in properties and array items."""
     run_main_and_assert(
