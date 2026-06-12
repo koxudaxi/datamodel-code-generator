@@ -5495,6 +5495,21 @@ def test_main_openapi_deprecated_field(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(
+    version.parse(pydantic.VERSION) >= version.parse("2.7.0"),
+    reason="Pydantic 2.7+ supports Field(deprecated=...) directly",
+)
+def test_main_openapi_deprecated_field_pydantic26(output_file: Path) -> None:
+    """Test OpenAPI deprecated fields stay importable before native Pydantic support."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "deprecated_field.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+
+
 def test_main_openapi_recursive_ref_discriminator(output_file: Path) -> None:
     """Test OpenAPI generation with $recursiveRef and discriminator."""
     run_main_and_assert(

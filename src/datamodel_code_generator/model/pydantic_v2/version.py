@@ -1,0 +1,32 @@
+"""Pydantic v2 runtime feature boundaries used by the generator."""
+
+from __future__ import annotations
+
+import re
+
+from pydantic import VERSION as PYDANTIC_VERSION
+
+
+def _version_tuple(version: str) -> tuple[int, int, int]:
+    match = re.match(r"(\d+)\.(\d+)(?:\.(\d+))?", version)
+    if match is None:  # pragma: no cover
+        return (0, 0, 0)
+    major, minor, patch = match.groups(default="0")
+    return int(major), int(minor), int(patch)
+
+
+PYDANTIC_VERSION_TUPLE = _version_tuple(PYDANTIC_VERSION)
+PYDANTIC_V2_DATACLASS_ALIAS_FIXED_VERSION = (2, 4, 0)
+PYDANTIC_V2_FIELD_DEPRECATED_FIXED_VERSION = (2, 7, 0)
+PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_FIXED_VERSION = (2, 8, 0)
+PYDANTIC_V2_REGEX_ENGINE_FIXED_VERSION = (2, 5, 0)
+PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK = (
+    PYDANTIC_VERSION_TUPLE < PYDANTIC_V2_DATACLASS_ALIAS_FIXED_VERSION
+)
+PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA = (
+    PYDANTIC_VERSION_TUPLE < PYDANTIC_V2_FIELD_DEPRECATED_FIXED_VERSION
+)
+PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING = (
+    PYDANTIC_VERSION_TUPLE < PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_FIXED_VERSION
+)
+PYDANTIC_V2_REGEX_ENGINE_UNSUPPORTED = PYDANTIC_VERSION_TUPLE < PYDANTIC_V2_REGEX_ENGINE_FIXED_VERSION

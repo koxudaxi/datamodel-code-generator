@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datamodel_code_generator.format import PythonVersion, is_supported_in_black
 from tests.main.conftest import CURRENT_PYTHON_VERSION
+from tests.main.payload_validation.models import PayloadBackend
 
 PAYLOAD_CLASS_NAME = "Payload"
 PAYLOAD_CURRENT_PYTHON_VERSION = PythonVersion(CURRENT_PYTHON_VERSION)
@@ -165,6 +166,29 @@ ROUND_TRIP_EXCLUDED_CASES: dict[str, str] = {
     "openapi/issue_2953.yaml::components.schemas.DataType": (
         "schema requires a property absent from properties, so the generated model has no field to dump"
     ),
+}
+PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN_VERSION = "2.5.0"
+PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES: dict[PayloadBackend, dict[str, str]] = {
+    PayloadBackend.PYDANTIC_V2: {
+        "jsonschema/lookaround_anyof_nullable.json": (
+            "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
+        ),
+        "jsonschema/lookaround_dict.json": (
+            "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
+        ),
+        "jsonschema/lookaround_mixed_constraints.json": (
+            "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
+        ),
+        "jsonschema/lookaround_union_types.json": (
+            "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
+        ),
+        "jsonschema/nested_lookaround_array.json": (
+            "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to nested lookaround pattern validators"
+        ),
+        "openapi/pattern_lookaround.yaml::components.schemas.info": (
+            "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to OpenAPI lookaround pattern validators"
+        ),
+    },
 }
 
 

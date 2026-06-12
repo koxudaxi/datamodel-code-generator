@@ -33,6 +33,7 @@ from __future__ import annotations
 from collections import defaultdict
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from functools import cache
 from typing import TYPE_CHECKING, Any, Literal, SupportsIndex, TypeAlias, TypeVar, overload
 
 if TYPE_CHECKING:
@@ -50,6 +51,7 @@ DataTypeRole = Literal["field", "base", "nested", "dict_key"]
 _OrderedSetItem = TypeVar("_OrderedSetItem")
 OrderedSet: TypeAlias = dict[_OrderedSetItem, None]
 Reference: TypeAlias = Any
+_PYDANTIC_V2_MODEL_MODULE_PREFIX = "datamodel_code_generator.model.pydantic_v2."
 
 GENERATION_STORE_MUTATION_METHODS: frozenset[str] = frozenset({
     "append_field",
@@ -92,6 +94,22 @@ def _outermost_parent(value: object) -> object:
     while (parent := getattr(current, "parent", None)) is not None:
         current = parent
     return current
+
+
+@cache
+def _pydantic_v2_dict_key_reference_classes_enabled() -> bool:
+    from datamodel_code_generator.model.pydantic_v2.version import (  # noqa: PLC0415
+        PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
+    )
+
+    return PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING
+
+
+def _include_dict_key_reference_classes(model: DataModel) -> bool:
+    return (
+        model.__class__.__module__.startswith(_PYDANTIC_V2_MODEL_MODULE_PREFIX)
+        and _pydantic_v2_dict_key_reference_classes_enabled()
+    )
 
 
 @dataclass(frozen=True)
@@ -400,11 +418,12 @@ class GenerationIndex:
         self._reset_reference_classes_cache_if_needed()
         if (reference_classes := self._reference_classes_cache.get(model_id)) is not None:
             return reference_classes
+        include_dict_key_references = _include_dict_key_reference_classes(model)
         reference_classes = frozenset(
             reference.path
             for data_type_id in facts.data_types_by_model.get(model_id, ())
-            if (fact := facts.data_type_facts[data_type_id]).role != "dict_key"
-            and (reference := fact.reference) is not None
+            if (reference := (fact := facts.data_type_facts[data_type_id]).reference) is not None
+            if include_dict_key_references or fact.role != "dict_key"
         ) | frozenset(model.extra_template_data.get("additionalPropertiesReferenceClasses", ()))
         self._reference_classes_cache[model_id] = reference_classes
         return reference_classes

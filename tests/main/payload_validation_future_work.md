@@ -140,6 +140,38 @@ Future work:
 - Add a dedicated strict/schema-faithful mode if a future backend needs stronger
   JSON Schema runtime validation than the default generated output provides.
 
+## Runtime Minimum Matrix Limits
+
+The `py311-payload-runtime-min` tox environment pins runtime validation
+dependencies to the declared lower bounds where possible. Pydantic v2 is checked
+with `pydantic==2.0.3` without raising the package lower bound.
+
+Current Pydantic 2.0 compatibility fixes:
+
+- Pydantic v2 dataclass fields with non-identifier aliases move the JSON alias out
+  of `alias` only before Pydantic 2.4, so generated dataclass signatures stay
+  importable under Pydantic 2.0 without changing newer-runtime output.
+- Pydantic v2 `Field(deprecated=True)` is emitted through `json_schema_extra`
+  only before Pydantic 2.7, where `deprecated` was still treated as extra field
+  metadata.
+- Pydantic v2 RootModels whose dictionary keys reference generated enum classes
+  include those key references in dependency sorting only before Pydantic 2.8,
+  where dict-key forward references could not be resolved when adapting the
+  model.
+
+Current version-specific exclusions:
+
+- Pydantic before 2.5.0 does not support generated `regex_engine="python-re"` for
+  lookaround pattern validators, so the Pydantic v2 BaseModel payload runtime
+  matrix skips only the classified lookaround pattern cases under older
+  runtimes.
+
+Future work:
+
+- Revisit the lookaround skips if support for older Pydantic runtimes can be
+  improved without changing the declared dependency lower bound or newer runtime
+  behavior.
+
 ## Round-Trip Dump Limits
 
 The pydantic v2 payload test now validates accepted payloads, dumps them with
