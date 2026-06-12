@@ -4360,31 +4360,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         return self.data_type(reference=reference)
 
-    def _parse_root_combined_type(
-        self,
-        name: str,
-        obj: JsonSchemaObject,
-        path: list[str],
-    ) -> tuple[Reference | None, DataType]:
-        combined_items = obj.anyOf or obj.oneOf
-        const_enum_type = self._parse_combined_const_enum(name, obj, combined_items, path)
-        if const_enum_type is not None:  # pragma: no cover
-            return None, const_enum_type
-
-        reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
-        if obj.anyOf:
-            data_types: list[DataType] = self.parse_any_of(name, obj, get_special_path("anyOf", path))
-        else:
-            data_types = self.parse_one_of(name, obj, get_special_path("oneOf", path))
-
-        if len(data_types) > 1:  # pragma: no cover
-            data_type = self.data_type(data_types=data_types)
-        elif not data_types:  # pragma: no cover
-            data_type = EmptyDataType()
-        else:  # pragma: no cover
-            data_type = data_types[0]
-        return reference, data_type
-
     def parse_root_type(  # noqa: PLR0912, PLR0915
         self,
         name: str,
@@ -4405,9 +4380,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 name, obj, get_special_path("array", path)
             ).data_type  # pragma: no cover
         elif obj.anyOf or obj.oneOf:
-            reference, data_type = self._parse_root_combined_type(name, obj, path)
-            if isinstance(data_type, EmptyDataType):  # pragma: no cover
-                return data_type
+            combined_items = obj.anyOf or obj.oneOf
+            if const_enum_type := self._parse_combined_const_enum(name, obj, combined_items, path):
+                data_type = const_enum_type  # pragma: no cover
+            else:
+                reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
+                if obj.anyOf:
+                    data_types: list[DataType] = self.parse_any_of(name, obj, get_special_path("anyOf", path))
+                else:
+                    data_types = self.parse_one_of(name, obj, get_special_path("oneOf", path))
+
+                if len(data_types) > 1:  # pragma: no cover
+                    data_type = self.data_type(data_types=data_types)
+                elif not data_types:  # pragma: no cover
+                    return EmptyDataType()
+                else:  # pragma: no cover
+                    data_type = data_types[0]
         elif obj.allOf:
             data_type = self._build_lightweight_type(obj)
             if data_type is None:  # pragma: no cover
