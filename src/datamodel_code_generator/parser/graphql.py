@@ -158,19 +158,18 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             use_serialization_alias=self.use_serialization_alias,
         )
 
-    def _get_default(  # noqa: PLR6301
+    def _get_default(
         self,
         field: graphql.GraphQLField | graphql.GraphQLInputField,
         final_data_type: DataType,  # noqa: ARG002
         *,
         required: bool,  # noqa: ARG002
     ) -> Any:
-        if isinstance(field, graphql.GraphQLInputField):
-            if field.default_value == graphql.pyutils.Undefined:
-                return None
-            return field.default_value
+        if not self._has_schema_default(field):
+            return None
 
-        return None
+        assert isinstance(field, graphql.GraphQLInputField)
+        return field.default_value
 
     def _has_schema_default(  # noqa: PLR6301
         self, field: graphql.GraphQLField | graphql.GraphQLInputField
