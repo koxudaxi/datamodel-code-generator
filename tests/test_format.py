@@ -924,6 +924,26 @@ def test_apply_builtin_formatter_wraps_string_default_with_single_quote() -> Non
     )
 
 
+def test_apply_builtin_formatter_formats_hash_inside_field_string() -> None:
+    """Test URL fragments inside generated strings are not treated as comments."""
+    code = (
+        "class ErrorResponse:\n"
+        "    type: AnyUrl | None = Field('about:blank', description='An absolute URI that identifies the problem "
+        "type.  When dereferenced,\\nit SHOULD provide human-readable documentation for the problem type\\n(e.g., "
+        "using HTML).\\n', examples=['https://tools.ietf.org/html/rfc7231#section-6.6.4'])\n"
+    )
+
+    assert apply_builtin_formatter(code, line_length=88) == (
+        "class ErrorResponse:\n"
+        "    type: AnyUrl | None = Field(\n"
+        "        'about:blank',\n"
+        "        description='An absolute URI that identifies the problem type.  When dereferenced,\\nit SHOULD "
+        "provide human-readable documentation for the problem type\\n(e.g., using HTML).\\n',\n"
+        "        examples=['https://tools.ietf.org/html/rfc7231#section-6.6.4'],\n"
+        "    )\n"
+    )
+
+
 def test_apply_builtin_formatter_wraps_union_subscript_annotation() -> None:
     """Test built-in formatter matches black for generated Union annotations."""
     code = (

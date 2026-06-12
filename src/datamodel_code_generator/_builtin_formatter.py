@@ -183,7 +183,15 @@ def _import_category(module: str, level: int, known_first_party: frozenset[str])
 def _has_inline_comment(lines: list[str], node: ast.AST) -> bool:
     lineno = getattr(node, "lineno", 1)
     end_lineno = getattr(node, "end_lineno", None) or lineno
-    return any("#" in line for line in lines[lineno - 1 : end_lineno])
+    return any(_has_comment_token(line) for line in lines[lineno - 1 : end_lineno])
+
+
+def _has_comment_token(line: str) -> bool:
+    try:
+        tokens = tokenize.generate_tokens(StringIO(line).readline)
+        return any(token.type == tokenize.COMMENT for token in tokens)
+    except tokenize.TokenError:
+        return "#" in line
 
 
 def _format_import_node_without_reordering(
@@ -1031,7 +1039,7 @@ def _format_generated_class_statement(
             for keyword in config_dict[1].keywords
         )
     )
-    if (len(line) <= line_length and not config_dict_needs_formatting) or "#" in line:
+    if (len(line) <= line_length and not config_dict_needs_formatting) or _has_comment_token(line):
         return None
 
     if isinstance(statement, ast.FunctionDef):
