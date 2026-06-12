@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import pydantic
+import pytest
+from packaging import version
+
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass, DataModelField
 from datamodel_code_generator.model.pydantic_v2.types import DataTypeManager
@@ -165,6 +169,26 @@ def test_data_model_field() -> None:
 
     assert field.name == "test_field"
     assert field.required is True
+
+
+@pytest.mark.skipif(
+    version.parse(pydantic.VERSION) >= version.parse("2.4.0"),
+    reason="Pydantic 2.4+ accepts non-identifier dataclass aliases without generator fallback",
+)
+def test_data_model_field_keeps_existing_alias_fallback_state_pydantic20() -> None:
+    """Test fallback does not duplicate aliases or overwrite serialization aliases."""
+    field = DataModelField(
+        name="test_field",
+        data_type=DataType(type="str"),
+        required=True,
+        alias="not-valid",
+        validation_aliases=["not-valid"],
+        serialization_alias="wire-name",
+    )
+
+    assert field.alias is None
+    assert field.validation_aliases == ["not-valid"]
+    assert field.serialization_alias == "wire-name"
 
 
 def test_create_reuse_model() -> None:
