@@ -807,7 +807,6 @@ def test_apply_builtin_formatter_normalizes_type_alias_blank_lines_without_impor
     assert apply_builtin_formatter(code) == "type Foo = str\n\n\ntype Bar = Foo\n"
 
 
-@pytest.mark.skipif(sys.version_info < (3, 12), reason="type statements require Python 3.12")
 def test_builtin_formatter_respects_target_python_version_for_ast_parse() -> None:
     """Test built-in formatter parses code using the configured target Python version."""
     code = "type Foo = str\n\n\n\ntype Bar = Foo\n"
@@ -817,6 +816,41 @@ def test_builtin_formatter_respects_target_python_version_for_ast_parse() -> Non
 
     assert py310_formatter.format_code(code) == code
     assert py312_formatter.format_code(code) == "type Foo = str\n\n\ntype Bar = Foo\n"
+
+
+def test_builtin_formatter_formats_type_alias_modules_on_older_runtimes() -> None:
+    """Test built-in formatter handles target Python 3.12 type aliases on older runtimes."""
+    code = (
+        "from typing import Annotated\n"
+        "from pydantic import Field\n"
+        "\n"
+        "\n"
+        "type Alias = Annotated[str | bool, Field(..., "
+        "description='An annotated union type', title='MyAnnotatedType')]\n"
+        "\n"
+        "\n"
+        "\n"
+        "class Model:\n"
+        "    x_value: Annotated[Alias | None, Field(validate_default=True)] = {'type': 'b', 'value': 1}\n"
+    )
+
+    assert apply_builtin_formatter(code, line_length=88, python_version=PythonVersion.PY_312) == (
+        "from typing import Annotated\n"
+        "\n"
+        "from pydantic import Field\n"
+        "\n"
+        "type Alias = Annotated[\n"
+        "    str | bool,\n"
+        "    Field(..., description='An annotated union type', title='MyAnnotatedType'),\n"
+        "]\n"
+        "\n"
+        "\n"
+        "class Model:\n"
+        "    x_value: Annotated[Alias | None, Field(validate_default=True)] = {\n"
+        "        'type': 'b',\n"
+        "        'value': 1,\n"
+        "    }\n"
+    )
 
 
 def test_apply_builtin_formatter_parenthesizes_short_annotated_default() -> None:

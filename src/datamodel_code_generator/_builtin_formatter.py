@@ -45,6 +45,8 @@ MAX_SHORT_DEFAULT_OVERFLOW = 13
 LONG_TARGET_PREFIX_LENGTH = 30
 TYPE_ALIAS_INLINE_ARGUMENT_COUNT = 2
 STRING_PREFIX_PATTERN = re.compile(r"(?i)^([rubf]*)(\"\"\"|'''|\"|')")
+PEP695_TYPE_ALIAS_START_PATTERN = re.compile(r"^(?P<indent>\s*)type\s+(?P<target>[A-Za-z_]\w*(?:\[.*?\])?)\s*=")
+PEP695_TYPE_ALIAS_PLACEHOLDER = "__datamodel_codegen_builtin_type_alias__"
 
 
 def _is_valid_builtin_line_length(line_length: Any) -> TypeGuard[int]:
@@ -192,6 +194,67 @@ def _has_comment_token(line: str) -> bool:
         return any(token.type == tokenize.COMMENT for token in tokens)
     except tokenize.TokenError:
         return "#" in line
+
+
+def _needs_pep695_type_alias_placeholders(python_version: PythonVersion | None) -> bool:
+    return (
+        python_version is not None
+        and python_version.version_key >= (3, 12)
+        and (3, 10) <= sys.version_info[:2] < (3, 12)
+    )
+
+
+def _pep695_type_alias_statement_end(lines: list[str], start_index: int) -> int:
+    bracket_depth = 0
+    try:
+        tokens = tokenize.generate_tokens(StringIO("\n".join(lines[start_index:])).readline)
+        for token in tokens:
+            if token.type == tokenize.OP:
+                if token.string in {"(", "[", "{"}:
+                    bracket_depth += 1
+                elif token.string in {")", "]", "}"}:
+                    bracket_depth -= 1
+            if token.type == tokenize.NEWLINE and bracket_depth <= 0:
+                return start_index + token.end[0] - 1
+    except tokenize.TokenError:
+        return start_index
+    return start_index
+
+
+def _replace_pep695_type_aliases_with_placeholders(code: str) -> str:
+    lines = code.splitlines()
+    placeholder_lines = list(lines)
+    line_index = 0
+    while line_index < len(lines):
+        line = lines[line_index]
+        if not PEP695_TYPE_ALIAS_START_PATTERN.match(line):
+            line_index += 1
+            continue
+
+        indent = _line_indent(line)
+        end_index = _pep695_type_alias_statement_end(lines, line_index)
+        placeholder_lines[line_index] = f"{indent}{PEP695_TYPE_ALIAS_PLACEHOLDER} = None"
+        for continuation_index in range(line_index + 1, end_index + 1):
+            placeholder_lines[continuation_index] = ""
+        line_index = end_index + 1
+    return "\n".join(placeholder_lines)
+
+
+def _parse_builtin_code(code: str, python_version: PythonVersion | None) -> ast.Module | None:
+    feature_version = python_version.version_key if python_version is not None else None
+    try:
+        return ast.parse(code, feature_version=feature_version)
+    except SyntaxError:
+        if not _needs_pep695_type_alias_placeholders(python_version):
+            return None
+
+    placeholder_code = _replace_pep695_type_aliases_with_placeholders(code)
+    if placeholder_code == code:
+        return None
+    try:
+        return ast.parse(placeholder_code, feature_version=feature_version)
+    except SyntaxError:
+        return None
 
 
 def _format_import_node_without_reordering(
@@ -1297,7 +1360,7 @@ def _format_generated_class_definition(
     line_length: int,
     source: str,
 ) -> str | None:
-    if len(line) <= line_length or "#" in line:
+    if len(line) <= line_length or _has_comment_token(line):
         return None
 
     indent = _line_indent(line)
@@ -1329,7 +1392,7 @@ def _format_generated_class_definition(
 def _format_generated_module_statement(  # noqa: PLR0911
     statement: ast.stmt, line: str, line_length: int, source: str
 ) -> str | None:
-    if "#" in line:
+    if _has_comment_token(line):
         return None
     if (
         isinstance(statement, ast.AnnAssign)
@@ -1392,6 +1455,43 @@ def _format_type_checking_block(
 
 
 _LineReplacement = tuple[int, int, list[str]]
+
+
+def _pep695_type_alias_replacement(lines: list[str], start_index: int, line_length: int) -> _LineReplacement | None:
+    line = lines[start_index]
+    if (match := PEP695_TYPE_ALIAS_START_PATTERN.match(line)) is None:
+        return None
+
+    end_index = _pep695_type_alias_statement_end(lines, start_index)
+    statement_lines = lines[start_index : end_index + 1]
+    if any(_has_comment_token(statement_line) for statement_line in statement_lines):
+        return None
+
+    rhs_first_line = line[match.end() :].lstrip()
+    rhs_source = "\n".join([rhs_first_line, *statement_lines[1:]])
+    try:
+        value = ast.parse(rhs_source, mode="eval").body
+    except SyntaxError:
+        return None
+    if not _is_annotated(value) or len(line) <= line_length:
+        return None
+
+    indent = match.group("indent")
+    target = match.group("target")
+    formatted_value = _format_annotated(value, indent, line_length, rhs_source)
+    return start_index + 1, end_index + 1, f"{indent}type {target} = {formatted_value}".splitlines()
+
+
+def _collect_pep695_type_alias_replacements(lines: list[str], line_length: int) -> list[_LineReplacement]:
+    replacements: list[_LineReplacement] = []
+    line_index = 0
+    while line_index < len(lines):
+        if (replacement := _pep695_type_alias_replacement(lines, line_index, line_length)) is None:
+            line_index += 1
+            continue
+        replacements.append(replacement)
+        line_index = replacement[1]
+    return replacements
 
 
 def _collect_builtin_replacements(  # noqa: PLR0912, PLR0913
@@ -1623,9 +1723,8 @@ def apply_builtin_formatter(  # noqa: PLR0913
     if not code:
         return ""
 
-    try:
-        tree = ast.parse(code, feature_version=python_version.version_key if python_version is not None else None)
-    except SyntaxError:
+    tree = _parse_builtin_code(code, python_version)
+    if tree is None:
         return f"{code}\n"
 
     replacements = _collect_builtin_replacements(
@@ -1636,6 +1735,8 @@ def apply_builtin_formatter(  # noqa: PLR0913
         known_first_party,
         wrap_string_literal=wrap_string_literal,
     )
+    if _needs_pep695_type_alias_placeholders(python_version):
+        replacements.extend(_collect_pep695_type_alias_replacements(lines, line_length))
     import_nodes = _iter_module_import_nodes(tree)
 
     if not import_nodes:
