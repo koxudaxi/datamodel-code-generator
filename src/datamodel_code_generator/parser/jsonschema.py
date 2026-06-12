@@ -4591,18 +4591,33 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return str(enum_part["const"])
         return f"value_{index}"
 
-    def _get_enum_members_and_nullable(self, obj: JsonSchemaObject) -> tuple[list[Any], bool]:  # noqa: PLR6301
-        if None in obj.enum:
-            return [e for e in obj.enum if e is not None], True
-        return obj.enum, False
-
-    def _build_enum_fields(
+    def parse_enum(  # noqa: PLR0912, PLR0915
         self,
+        name: str,
         obj: JsonSchemaObject,
-        enum_times: Sequence[Any],
-    ) -> list[DataModelFieldBase]:
+        path: list[str],
+        singular_name: bool = False,  # noqa: FBT001, FBT002
+        unique: bool = True,  # noqa: FBT001, FBT002
+    ) -> DataType:
+        """Parse enum schema into an Enum class."""
+        if not unique:  # pragma: no cover
+            warn(
+                f"{self.__class__.__name__}.parse_enum() ignore `unique` argument."
+                f"An object name must be unique."
+                f"This argument will be removed in a future version",
+                stacklevel=2,
+            )
         enum_fields: list[DataModelFieldBase] = []
+
+        if None in obj.enum:
+            nullable: bool = True
+            enum_times = [e for e in obj.enum if e is not None]
+        else:
+            enum_times = obj.enum
+            nullable = False
+
         exclude_field_names: set[str] = set()
+
         enum_names = obj.x_enum_varnames or obj.x_enum_names
         enum_descriptions = obj.x_enum_descriptions
 
@@ -4643,19 +4658,79 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     original_name=None,
                 )
             )
-        return enum_fields
 
-    def _parse_empty_enum(
-        self,
-        name: str,
-        obj: JsonSchemaObject,
-        path: list[str],
-        *,
-        nullable: bool,
-        singular_name: bool,
-    ) -> DataType:
-        if not nullable:
-            return self.data_type_manager.get_data_type(Types.null)
+        if not enum_fields:
+            if not nullable:
+                return self.data_type_manager.get_data_type(Types.null)
+            name = self._apply_title_as_name(name, obj)
+            reference = self.model_resolver.add(
+                path,
+                name,
+                class_name=True,
+                singular_name=singular_name,
+                singular_name_suffix="Enum",
+                loaded=True,
+                model_type="enum",
+            )
+            self._set_schema_metadata(reference.path, obj)
+            self.set_schema_extensions(reference.path, obj)
+            self._register_root_model(
+                reference=reference,
+                fields=[
+                    self.data_model_field_type(
+                        data_type=self.data_type_manager.get_data_type(Types.null),
+                        default=obj.default,
+                        required=False,
+                        nullable=True,
+                        strip_default_none=self.strip_default_none,
+                        extras=self.get_field_extras(obj),
+                        use_annotated=self.use_annotated,
+                        has_default=obj.has_default,
+                        use_field_description=self.use_field_description,
+                        use_field_description_example=self.use_field_description_example,
+                        use_inline_field_description=self.use_inline_field_description,
+                        original_name=None,
+                    )
+                ],
+                obj=obj,
+                custom_base_class_name=name,
+                default=obj.default if obj.has_default else UNDEFINED,
+            )
+            return self.data_type(reference=reference)
+
+        def create_enum(reference_: Reference) -> DataType:
+            type_: Types | None = (
+                self._get_type_with_mappings(obj.type, obj.format) if isinstance(obj.type, str) else None
+            )
+
+            enum_cls: type[Enum] = Enum
+            specialized_type = SPECIALIZED_ENUM_TYPE_MATCH.get(type_) if self.use_specialized_enum and type_ else None
+            if specialized_type == StrEnum:
+                # StrEnum is available only in Python 3.11+ and supports string values only.
+                can_use_specialized_type = self.target_python_version.has_strenum and all(
+                    isinstance(enum_part, str) for enum_part in enum_times
+                )
+            else:
+                can_use_specialized_type = specialized_type is not None
+            if can_use_specialized_type and specialized_type is not None:
+                # If specialized enum is available in the target Python version,
+                # use it and ignore `self.use_subclass_enum` setting.
+                type_ = None
+                enum_cls = specialized_type
+
+            enum = enum_cls(
+                reference=reference_,
+                fields=enum_fields,
+                path=self.current_source_path,
+                description=obj.description if self.use_schema_description else None,
+                custom_template_dir=self.custom_template_dir,
+                type_=type_ if self.use_subclass_enum else None,
+                default=obj.default if obj.has_default else UNDEFINED,
+                treat_dot_as_module=self.treat_dot_as_module,
+            )
+            self.generation_store.register_model(enum)
+            return self.data_type(reference=reference_)
+
         name = self._apply_title_as_name(name, obj)
         reference = self.model_resolver.add(
             path,
@@ -4668,78 +4743,25 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
+
+        if not nullable:
+            return create_enum(reference)
+
+        enum_reference = self.model_resolver.add(
+            [*path, "Enum"],
+            f"{reference.name}Enum",
+            class_name=True,
+            singular_name=singular_name,
+            singular_name_suffix="Enum",
+            loaded=True,
+            model_type="enum",
+        )
+
         self._register_root_model(
             reference=reference,
             fields=[
                 self.data_model_field_type(
-                    data_type=self.data_type_manager.get_data_type(Types.null),
-                    default=obj.default,
-                    required=False,
-                    nullable=True,
-                    strip_default_none=self.strip_default_none,
-                    extras=self.get_field_extras(obj),
-                    use_annotated=self.use_annotated,
-                    has_default=obj.has_default,
-                    use_field_description=self.use_field_description,
-                    use_field_description_example=self.use_field_description_example,
-                    use_inline_field_description=self.use_inline_field_description,
-                    original_name=None,
-                )
-            ],
-            obj=obj,
-            custom_base_class_name=name,
-            default=obj.default if obj.has_default else UNDEFINED,
-        )
-        return self.data_type(reference=reference)
-
-    def _create_enum_data_type(
-        self,
-        reference: Reference,
-        obj: JsonSchemaObject,
-        enum_fields: list[DataModelFieldBase],
-        enum_times: Sequence[Any],
-    ) -> DataType:
-        type_: Types | None = self._get_type_with_mappings(obj.type, obj.format) if isinstance(obj.type, str) else None
-
-        enum_cls: type[Enum] = Enum
-        specialized_type = SPECIALIZED_ENUM_TYPE_MATCH.get(type_) if self.use_specialized_enum and type_ else None
-        if specialized_type == StrEnum:
-            # StrEnum is available only in Python 3.11+ and supports string values only.
-            can_use_specialized_type = self.target_python_version.has_strenum and all(
-                isinstance(enum_part, str) for enum_part in enum_times
-            )
-        else:
-            can_use_specialized_type = specialized_type is not None
-        if can_use_specialized_type and specialized_type is not None:
-            # If specialized enum is available in the target Python version,
-            # use it and ignore `self.use_subclass_enum` setting.
-            type_ = None
-            enum_cls = specialized_type
-
-        enum = enum_cls(
-            reference=reference,
-            fields=enum_fields,
-            path=self.current_source_path,
-            description=obj.description if self.use_schema_description else None,
-            custom_template_dir=self.custom_template_dir,
-            type_=type_ if self.use_subclass_enum else None,
-            default=obj.default if obj.has_default else UNDEFINED,
-            treat_dot_as_module=self.treat_dot_as_module,
-        )
-        self.generation_store.register_model(enum)
-        return self.data_type(reference=reference)
-
-    def _register_nullable_enum_root_model(
-        self,
-        reference: Reference,
-        enum_data_type: DataType,
-        obj: JsonSchemaObject,
-    ) -> None:
-        self._register_root_model(
-            reference=reference,
-            fields=[
-                self.data_model_field_type(
-                    data_type=enum_data_type,
+                    data_type=create_enum(enum_reference),
                     default=obj.default,
                     required=False,
                     nullable=True,
@@ -4756,61 +4778,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             obj=obj,
             custom_base_class_name=reference.name,
             default=obj.default if obj.has_default else UNDEFINED,
-        )
-
-    def parse_enum(
-        self,
-        name: str,
-        obj: JsonSchemaObject,
-        path: list[str],
-        singular_name: bool = False,  # noqa: FBT001, FBT002
-        unique: bool = True,  # noqa: FBT001, FBT002
-    ) -> DataType:
-        """Parse enum schema into an Enum class."""
-        if not unique:  # pragma: no cover
-            warn(
-                f"{self.__class__.__name__}.parse_enum() ignore `unique` argument."
-                f"An object name must be unique."
-                f"This argument will be removed in a future version",
-                stacklevel=2,
-            )
-
-        enum_times, nullable = self._get_enum_members_and_nullable(obj)
-        enum_fields = self._build_enum_fields(obj, enum_times)
-
-        if not enum_fields:
-            return self._parse_empty_enum(name, obj, path, nullable=nullable, singular_name=singular_name)
-
-        name = self._apply_title_as_name(name, obj)
-        reference = self.model_resolver.add(
-            path,
-            name,
-            class_name=True,
-            singular_name=singular_name,
-            singular_name_suffix="Enum",
-            loaded=True,
-            model_type="enum",
-        )
-        self._set_schema_metadata(reference.path, obj)
-        self.set_schema_extensions(reference.path, obj)
-
-        if not nullable:
-            return self._create_enum_data_type(reference, obj, enum_fields, enum_times)
-
-        enum_reference = self.model_resolver.add(
-            [*path, "Enum"],
-            f"{reference.name}Enum",
-            class_name=True,
-            singular_name=singular_name,
-            singular_name_suffix="Enum",
-            loaded=True,
-            model_type="enum",
-        )
-
-        self._register_nullable_enum_root_model(
-            reference,
-            self._create_enum_data_type(enum_reference, obj, enum_fields, enum_times),
-            obj,
         )
         return self.data_type(reference=reference)
 
