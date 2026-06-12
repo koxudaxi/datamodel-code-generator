@@ -52,6 +52,7 @@ from datamodel_code_generator.enums import (
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     TargetPydanticVersion,
+    UnionMode,
     VersionMode,
     XMLSchemaVersion,
 )
@@ -577,7 +578,6 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         raise ValueError(msg)
 
     if config is None:
-        from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
         from datamodel_code_generator.types import StrictTypes  # noqa: PLC0415
 
         GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})

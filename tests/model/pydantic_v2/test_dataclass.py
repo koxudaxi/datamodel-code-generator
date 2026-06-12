@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import pydantic
 import pytest
-from packaging import version
 
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass, DataModelField
 from datamodel_code_generator.model.pydantic_v2.types import DataTypeManager
+from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, StrictTypes, Types
 
@@ -172,7 +171,7 @@ def test_data_model_field() -> None:
 
 
 @pytest.mark.skipif(
-    version.parse(pydantic.VERSION) >= version.parse("2.4.0"),
+    not PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK,
     reason="Pydantic 2.4+ accepts non-identifier dataclass aliases without generator fallback",
 )
 def test_data_model_field_keeps_existing_alias_fallback_state_pydantic20() -> None:

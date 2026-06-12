@@ -571,8 +571,8 @@ def _try_rebuild_model(obj: type) -> None:
     config_classes = {"GenerateConfig", "ParserConfig", "ParseConfig"}
     main_config_classes = {"Config"}
     if module in {"datamodel_code_generator.config", "config"} and class_name in config_classes:
+        from datamodel_code_generator.enums import UnionMode  # noqa: PLC0415
         from datamodel_code_generator.model.base import DataModel, DataModelFieldBase  # noqa: PLC0415
-        from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
         from datamodel_code_generator.types import DataTypeManager, StrictTypes  # noqa: PLC0415
 
         types_namespace = {
@@ -584,7 +584,7 @@ def _try_rebuild_model(obj: type) -> None:
         }
         obj.model_rebuild(_types_namespace=types_namespace)  # ty: ignore
     elif module == "datamodel_code_generator.__main__" and class_name in main_config_classes:  # pragma: no cover
-        from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
+        from datamodel_code_generator.enums import UnionMode  # noqa: PLC0415
         from datamodel_code_generator.types import StrictTypes  # noqa: PLC0415
 
         types_namespace = {

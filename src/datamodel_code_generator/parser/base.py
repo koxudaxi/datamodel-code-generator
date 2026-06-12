@@ -15,12 +15,14 @@ import sys
 from abc import ABC, abstractmethod
 from collections import Counter, OrderedDict, defaultdict
 from copy import deepcopy
+from functools import cache
 from itertools import groupby
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
+    Final,
     Generic,
     NamedTuple,
     Optional,
@@ -65,7 +67,6 @@ from datamodel_code_generator.imports import (
 )
 from datamodel_code_generator.model import dataclass as dataclass_model
 from datamodel_code_generator.model import msgspec as msgspec_model
-from datamodel_code_generator.model import pydantic_v2 as pydantic_model_v2
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
     GENERIC_BASE_CLASS_NAME,
@@ -78,7 +79,6 @@ from datamodel_code_generator.model.base import (
 )
 from datamodel_code_generator.model.enum import Enum, Member, evaluate_member_value
 from datamodel_code_generator.model.imports import IMPORT_TYPED_DICT, IMPORT_TYPED_DICT_BACKPORT
-from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticV2DataClass
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser._graph import stable_toposort
@@ -98,6 +98,53 @@ ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
 
 HashableComparable = _internal_utils.HashableComparable
 to_hashable = _internal_utils.to_hashable
+
+# Keep these as module-name checks so non-pydantic-v2 outputs do not import the
+# pydantic_v2 generator package and its runtime feature gates.
+_PYDANTIC_V2_BASE_MODEL_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.base_model"
+_PYDANTIC_V2_DATACLASS_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.dataclass"
+_PYDANTIC_V2_MODULE: Final = "datamodel_code_generator.model.pydantic_v2"
+_PYDANTIC_V2_ROOT_MODEL_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.root_model"
+
+
+@cache
+def _type_mro_contains_type(model_type: type[object], *, module: str, name: str) -> bool:
+    return any(base.__module__ == module and base.__name__ == name for base in model_type.__mro__)
+
+
+def _model_type(value: object | type[object]) -> type[object]:
+    return value if isinstance(value, type) else value.__class__
+
+
+def _is_pydantic_v2_base_model(value: object | type[object]) -> bool:
+    return _type_mro_contains_type(_model_type(value), module=_PYDANTIC_V2_BASE_MODEL_MODULE, name="BaseModel")
+
+
+def _is_pydantic_v2_data_model_field(value: object) -> bool:
+    return _type_mro_contains_type(_model_type(value), module=_PYDANTIC_V2_BASE_MODEL_MODULE, name="DataModelField")
+
+
+def _is_pydantic_v2_dataclass(value: object | type[object]) -> bool:
+    return _type_mro_contains_type(_model_type(value), module=_PYDANTIC_V2_DATACLASS_MODULE, name="DataClass")
+
+
+def _get_pydantic_v2_root_model_type(model_type: type[DataModel]) -> type[DataModel] | None:
+    if _type_mro_contains_type(model_type, module=_PYDANTIC_V2_ROOT_MODEL_MODULE, name="RootModel"):
+        return model_type
+    return None
+
+
+def _is_pydantic_v2_root_model(model: DataModel, root_model_type: type[DataModel] | None) -> bool:
+    return root_model_type is not None and isinstance(model, root_model_type)
+
+
+def _is_pydantic_v2_dump_resolve_reference_action(value: object) -> bool:
+    return (
+        getattr(value, "__module__", None) == _PYDANTIC_V2_MODULE
+        and getattr(value, "__name__", None) == "dump_resolve_reference_action"
+    )
+
+
 Child = _internal_utils.Child
 T = _internal_utils.T
 get_most_of_parent = _internal_utils.get_most_of_parent
@@ -196,6 +243,7 @@ def _collect_keep_model_order_deps(
     *,
     model_names: ModelNames,
     imported: ModelNames,
+    pydantic_v2_root_model_type: type[DataModel] | None,
     use_deferred_annotations: bool,
 ) -> tuple[set[ModelName], set[ModelName]]:
     """Collect (strong_deps, all_deps) used by keep_model_order sorting.
@@ -207,7 +255,11 @@ def _collect_keep_model_order_deps(
     base_class_refs = {b.reference.short_name for b in model.base_classes if b.reference}
     field_refs = {t.reference.short_name for f in model.fields for t in f.data_type.all_data_types if t.reference}
 
-    if use_deferred_annotations and not isinstance(model, (TypeAliasBase, pydantic_model_v2.RootModel)):
+    if (
+        use_deferred_annotations
+        and not isinstance(model, TypeAliasBase)
+        and not _is_pydantic_v2_root_model(model, pydantic_v2_root_model_type)
+    ):
         field_refs = set()
 
     strong = {r for r in base_class_refs if r in model_names and r not in imported and r != class_name}
@@ -220,6 +272,7 @@ def _build_keep_model_order_dependency_maps(
     *,
     model_names: ModelNames,
     imported: ModelNames,
+    pydantic_v2_root_model_type: type[DataModel] | None,
     use_deferred_annotations: bool,
 ) -> _KeepModelOrderDeps:
     strong_deps: ModelDeps = {}
@@ -229,6 +282,7 @@ def _build_keep_model_order_dependency_maps(
             model,
             model_names=model_names,
             imported=imported,
+            pydantic_v2_root_model_type=pydantic_v2_root_model_type,
             use_deferred_annotations=use_deferred_annotations,
         )
         strong_deps[model.class_name] = strong
@@ -299,6 +353,7 @@ def _reorder_models_keep_model_order(
     models: list[DataModel],
     imports: Imports,
     *,
+    pydantic_v2_root_model_type: type[DataModel] | None,
     use_deferred_annotations: bool,
 ) -> None:
     """Reorder models deterministically based on their dependencies.
@@ -316,6 +371,7 @@ def _reorder_models_keep_model_order(
         models,
         model_names=model_names,
         imported=imported,
+        pydantic_v2_root_model_type=pydantic_v2_root_model_type,
         use_deferred_annotations=use_deferred_annotations,
     )
     comps = _build_keep_model_order_components(deps.all, order_index)
@@ -325,7 +381,10 @@ def _reorder_models_keep_model_order(
     models[:] = [model_by_name[name] for name in ordered_names]
 
 
-def _sort_internal_module_models(models: list[DataModel]) -> list[DataModel]:
+def _sort_internal_module_models(
+    models: list[DataModel],
+    pydantic_v2_root_model_type: type[DataModel] | None,
+) -> list[DataModel]:
     """Order models moved to _internal.py so runtime base classes are defined first."""
     model_paths = {model.path for model in models}
     order_index = {model.path: index for index, model in enumerate(models)}
@@ -338,7 +397,7 @@ def _sort_internal_module_models(models: list[DataModel]) -> list[DataModel]:
     for model in models:
         for base_class in model.base_classes:
             add_dependency(model, base_class.reference.path if base_class.reference else None)
-        if isinstance(model, pydantic_model_v2.RootModel):
+        if _is_pydantic_v2_root_model(model, pydantic_v2_root_model_type):
             for field in model.fields:
                 for data_type in field.data_type.all_data_types:
                     add_dependency(model, data_type.reference.path if data_type.reference else None)
@@ -476,12 +535,14 @@ def add_model_path_to_list(
     return paths
 
 
-def sort_data_models(  # noqa: PLR0912, PLR0914, PLR0915
+def sort_data_models(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     unsorted_data_models: list[DataModel],
     sorted_data_models: SortedDataModels | None = None,
     require_update_action_models: list[str] | None = None,
     recursion_count: int = MAX_RECURSION_COUNT,
     generation_index: GenerationIndex | None = None,
+    *,
+    pydantic_v2_root_model_type: type[DataModel] | None = None,
 ) -> tuple[list[DataModel], SortedDataModels, list[str]]:
     """Sort data models by dependency order for correct forward references."""
     if sorted_data_models is None:
@@ -535,6 +596,7 @@ def sort_data_models(  # noqa: PLR0912, PLR0914, PLR0915
                     require_update_action_models,
                     recursion_count - 1,
                     generation_index,
+                    pydantic_v2_root_model_type=pydantic_v2_root_model_type,
                 )
             except RecursionError:  # pragma: no cover
                 pass
@@ -546,7 +608,7 @@ def sort_data_models(  # noqa: PLR0912, PLR0914, PLR0915
             # Build lookup dict for O(1) index access instead of O(n) list.index()
             path_to_index = {m.path: idx for idx, m in enumerate(unresolved_references)}
             for model in unresolved_references:
-                if isinstance(model, pydantic_model_v2.RootModel):
+                if _is_pydantic_v2_root_model(model, pydantic_v2_root_model_type):
                     indexes = [
                         path_to_index[ref_path]
                         for f in model.fields
@@ -895,7 +957,7 @@ def _iter_first_seen_duplicates(
 
 
 def _check_discriminator_mapping_paths(
-    model: pydantic_model_v2.BaseModel | Reference,
+    model: DataModel | Reference,
     mapping: dict[str, str],
     discriminator_values: list[DiscriminatorValue],
 ) -> None:
@@ -937,13 +999,13 @@ def _get_enum_from_base(discriminator_model: DataModel, field_name: str) -> Enum
         if not isinstance(  # pragma: no cover
             base_model,
             (
-                pydantic_model_v2.BaseModel,
                 dataclass_model.DataClass,
                 msgspec_model.Struct,
             ),
-        ):
+        ) and not _is_pydantic_v2_base_model(base_model):
             continue
-        for base_field in base_model.fields:  # pragma: no branch
+        base_data_model = cast("DataModel", base_model)
+        for base_field in base_data_model.fields:  # pragma: no branch
             if field_name not in {base_field.original_name, base_field.name}:  # pragma: no cover
                 continue
             if enum_from_base := base_field.data_type.find_source(Enum):  # pragma: no branch
@@ -1069,7 +1131,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if "decorators" not in kwargs and self.class_decorators:
             kwargs["decorators"] = list(self.class_decorators)
         data_model_class = model_type or self.data_model_type
-        if issubclass(data_model_class, (dataclass_model.DataClass, PydanticV2DataClass)):
+        if issubclass(data_model_class, dataclass_model.DataClass) or _is_pydantic_v2_dataclass(data_model_class):
             # Use dataclass_arguments from kwargs, or fall back to self.dataclass_arguments
             # If both are None, construct from legacy frozen_dataclasses/keyword_only flags
             dataclass_arguments = kwargs.pop("dataclass_arguments", None)
@@ -1136,6 +1198,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         )
         self.data_model_type: type[DataModel] = config.data_model_type
         self.data_model_root_type: type[DataModel] = config.data_model_root_type
+        self.pydantic_v2_root_model_type: type[DataModel] | None = _get_pydantic_v2_root_model_type(
+            self.data_model_root_type
+        )
         self.data_model_field_type: type[DataModelFieldBase] = config.data_model_field_type
 
         self.imports: Imports = Imports(config.use_exact_imports)
@@ -1344,10 +1409,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         like 'schema', 'model_fields', etc.), and ModelType.CLASS for other model types
         (TypedDict, dataclass, msgspec) which don't have such constraints.
         """
-        if issubclass(
-            self.data_model_type,
-            (pydantic_model_v2.BaseModel,),
-        ):
+        if _is_pydantic_v2_base_model(self.data_model_type):
             return ModelType.PYDANTIC
         return ModelType.CLASS
 
@@ -2095,12 +2157,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             canonical_to_shared_ref[canonical] = canonical.reference
             shared_models.append(canonical)
 
-        supports_inheritance = issubclass(
+        supports_inheritance = _is_pydantic_v2_base_model(self.data_model_type) or issubclass(
             self.data_model_type,
-            (
-                pydantic_model_v2.BaseModel,
-                dataclass_model.DataClass,
-            ),
+            dataclass_model.DataClass,
         )
 
         module_models_sets: dict[tuple[str, ...], set[DataModel]] = {
@@ -2275,7 +2334,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 root_type_field.constraints, model_field.constraints
                             )
                         discriminator = root_type_field.extras.get("discriminator")
-                        if discriminator and isinstance(root_type_field, pydantic_model_v2.DataModelField):
+                        if discriminator and _is_pydantic_v2_data_model_field(root_type_field):
                             has_any_variant = any(_is_any_variant(dt) for dt in copied_data_type.data_types)
                             if not has_any_variant:  # pragma: no branch
                                 prop_name = (
@@ -2415,7 +2474,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if not self.keep_model_order:
             return
 
-        _reorder_models_keep_model_order(models, imports, use_deferred_annotations=use_deferred_annotations)
+        _reorder_models_keep_model_order(
+            models,
+            imports,
+            pydantic_v2_root_model_type=self.pydantic_v2_root_model_type,
+            use_deferred_annotations=use_deferred_annotations,
+        )
 
     def __change_field_name(
         self,
@@ -2618,12 +2682,19 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             parent = parent.parent
 
     @classmethod
-    def __update_type_aliases(cls, models: list[DataModel]) -> None:
+    def __update_type_aliases(
+        cls,
+        models: list[DataModel],
+        pydantic_v2_root_model_type: type[DataModel] | None,
+    ) -> None:
         """Update type aliases and RootModels to properly handle forward references per PEP 484."""
         model_index: dict[str, int] = {m.class_name: i for i, m in enumerate(models)}
 
         for i, model in enumerate(models):
-            if not isinstance(model, (TypeAliasBase, pydantic_model_v2.RootModel)):
+            if not isinstance(model, TypeAliasBase) and not _is_pydantic_v2_root_model(
+                model,
+                pydantic_v2_root_model_type,
+            ):
                 continue
             if isinstance(model, TypeStatement):
                 continue
@@ -3169,7 +3240,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             module_class_mappings, path_mapping = self.__rename_and_relocate_scc_models(
                 all_scc_models, model_to_original_module, internal_module, internal_path
             )
-            all_scc_models = _sort_internal_module_models(all_scc_models)
+            all_scc_models = _sort_internal_module_models(all_scc_models, self.pydantic_v2_root_model_type)
             all_path_mappings.update(path_mapping)
 
             for scc_module in scc:
@@ -3209,7 +3280,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if (
             use_deferred_annotations
             and required_paths_in_module
-            and self.dump_resolve_reference_action is pydantic_model_v2.dump_resolve_reference_action
+            and _is_pydantic_v2_dump_resolve_reference_action(self.dump_resolve_reference_action)
         ):
             module_positions = {m.reference.short_name: i for i, m in enumerate(models) if m.reference}
             module_model_names = set(module_positions)
@@ -3415,7 +3486,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.__fix_dataclass_field_ordering(models)
         models = self.__remove_overridden_models(models)
         self.__apply_type_overrides(models)
-        self.__update_type_aliases(models)
+        self.__update_type_aliases(models, self.pydantic_v2_root_model_type)
         self.__set_validate_default_on_fields(models)
 
         return ModuleContext(module, module_, models, is_init, imports, scoped_model_resolver)
@@ -3594,6 +3665,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         _, sorted_data_models, require_update_action_models = sort_data_models(
             self.results,
             generation_index=self.generation_store.index,
+            pydantic_v2_root_model_type=self.pydantic_v2_root_model_type,
         )
         sort_base_classes_for_mro(sorted_data_models, self.generation_store)
 

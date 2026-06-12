@@ -30,6 +30,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.model import base as model_base
+from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA
 from tests.conftest import (
     HttpxGetMockFactory,
     MockHttpxResponse,
@@ -5496,7 +5497,7 @@ def test_main_openapi_deprecated_field(output_file: Path) -> None:
 
 
 @pytest.mark.skipif(
-    version.parse(pydantic.VERSION) >= version.parse("2.7.0"),
+    not PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA,
     reason="Pydantic 2.7+ supports Field(deprecated=...) directly",
 )
 def test_main_openapi_deprecated_field_pydantic26(output_file: Path) -> None:

@@ -87,6 +87,7 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.arguments import DEFAULT_ENCODING, arg_parser, namespace
 from datamodel_code_generator.deprecations import render_deprecations, warn_deprecated
+from datamodel_code_generator.enums import UnionMode  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.format import (
     DateClassType,
     DatetimeClassType,
@@ -96,7 +97,6 @@ from datamodel_code_generator.format import (
     _get_black,
     is_supported_in_black,
 )
-from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.parser import LiteralType  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes  # noqa: TC001 # needed for pydantic

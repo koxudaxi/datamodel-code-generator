@@ -10,7 +10,6 @@ from collections import defaultdict
 from pathlib import Path
 
 import black
-import pydantic
 import pytest
 from packaging import version
 
@@ -28,6 +27,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import is_supported_in_black
 from datamodel_code_generator.model import base as model_base
+from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK
 from tests.conftest import (
     HttpxGetMockFactory,
     MockHttpxResponse,
@@ -2473,7 +2473,7 @@ def test_main_generate_pydantic_v2_dataclass_required_field_order(output_file: P
 
 
 @pytest.mark.skipif(
-    version.parse(pydantic.VERSION) >= version.parse("2.4.0"),
+    not PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK,
     reason="Pydantic 2.4+ accepts non-identifier dataclass aliases without generator fallback",
 )
 def test_main_generate_pydantic_v2_dataclass_required_alias_field_pydantic20(output_file: Path) -> None:
