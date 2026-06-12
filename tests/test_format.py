@@ -13,21 +13,22 @@ import black
 import isort
 import pytest
 
-from datamodel_code_generator.format import (
-    DEFAULT_KNOWN_FIRST_PARTY,
-    CodeFormatter,
-    Formatter,
-    PythonVersion,
-    PythonVersionMin,
-    _format_constrained_call,
-    _format_import_node,
-    _format_import_node_without_reordering,
-    _get_builtin_known_first_party,
-    _normalize_string_quotes,
-    _split_escaped_string_literal,
-    apply_builtin_formatter,
-    resolve_use_type_checking_imports,
-)
+import datamodel_code_generator._builtin_formatter as builtin_formatter
+import datamodel_code_generator.format as format_module
+
+DEFAULT_KNOWN_FIRST_PARTY = format_module.DEFAULT_KNOWN_FIRST_PARTY
+CodeFormatter = format_module.CodeFormatter
+Formatter = format_module.Formatter
+PythonVersion = format_module.PythonVersion
+PythonVersionMin = format_module.PythonVersionMin
+_format_constrained_call = format_module._format_constrained_call
+_format_import_node = format_module._format_import_node
+_format_import_node_without_reordering = format_module._format_import_node_without_reordering
+_get_builtin_known_first_party = format_module._get_builtin_known_first_party
+_normalize_string_quotes = format_module._normalize_string_quotes
+_split_escaped_string_literal = format_module._split_escaped_string_literal
+apply_builtin_formatter = format_module.apply_builtin_formatter
+resolve_use_type_checking_imports = format_module.resolve_use_type_checking_imports
 
 EXAMPLE_LICENSE_FILE = str(Path(__file__).parent / "data/python/custom_formatters/license_example.txt")
 
@@ -40,6 +41,23 @@ FAKE_RUFF_PATH = "/opt/fake-ruff/bin/ruff"
 BLACK_VERSION_DEPENDENT_NORMALIZED_EXPECTED_FILES = {
     "main/openapi/custom_file_header_with_docstring_and_import.py",
 }
+
+
+def test_builtin_formatter_moved_names_are_reexported() -> None:
+    """Test format.py keeps an explicit re-export shim for moved builtin formatter names."""
+    assert format_module._BUILTIN_FORMATTER_REEXPORTS
+    assert "__all__" not in vars(format_module)
+    for name, reexported_object in format_module._BUILTIN_FORMATTER_REEXPORTS:
+        assert getattr(format_module, name) is reexported_object
+        assert getattr(builtin_formatter, name) is reexported_object
+
+
+def test_apply_builtin_formatter_keeps_concrete_public_python_version_type() -> None:
+    """Test the public formatter wrapper keeps the concrete PythonVersion annotation."""
+    assert format_module.apply_builtin_formatter.__annotations__["python_version"] == "PythonVersion | None"
+    assert format_module.apply_builtin_formatter("x=1\n", python_version=PythonVersionMin) == (
+        builtin_formatter.apply_builtin_formatter("x=1\n", python_version=PythonVersionMin)
+    )
 
 
 def test_python_version() -> None:
@@ -141,6 +159,44 @@ def test_format_code_ignores_builtin_when_external_formatter_selected(
     assert formatter.format_code("x=1\n") == "x = 1\n"
 
 
+def test_format_code_builtin_formatter_uses_format_module_reexported_callables(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatting call sites resolve through format.py globals."""
+    known_first_party = frozenset({"example"})
+    monkeypatch.chdir(tmp_path)
+
+    with (
+        mock.patch("datamodel_code_generator.format._get_builtin_line_length", return_value=99) as line_length_reader,
+        mock.patch(
+            "datamodel_code_generator.format._get_builtin_known_first_party",
+            return_value=known_first_party,
+        ) as known_first_party_reader,
+        mock.patch(
+            "datamodel_code_generator.format._get_builtin_string_normalization",
+            return_value=True,
+        ) as string_normalization_reader,
+        mock.patch("datamodel_code_generator.format.apply_builtin_formatter", return_value="patched\n") as formatter,
+    ):
+        code_formatter = CodeFormatter(
+            PythonVersionMin,
+            formatters=[Formatter.BUILTIN],
+        )
+        formatted_code = code_formatter.format_code("x=1\n")
+
+    assert code_formatter.builtin_line_length == 99
+    assert code_formatter.builtin_known_first_party == known_first_party
+    assert code_formatter.builtin_string_normalization
+    assert formatted_code == "patched\n"
+    line_length_reader.assert_called_once()
+    known_first_party_reader.assert_called_once()
+    string_normalization_reader.assert_called_once()
+    shared_tool_config = line_length_reader.call_args.kwargs["tool_config"]
+    assert shared_tool_config is known_first_party_reader.call_args.kwargs["tool_config"]
+    assert shared_tool_config is string_normalization_reader.call_args.kwargs["tool_config"]
+    formatter.assert_called_once()
+
+
 def test_format_code_builtin_formatter_uses_explicit_line_length(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -170,6 +226,8 @@ def test_format_code_builtin_formatter_rejects_invalid_explicit_line_length(
     line_length: int | bool, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test built-in formatter rejects invalid explicit line length values."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool\n", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     with pytest.raises(ValueError, match="builtin_format_line_length must be a positive integer"):
         CodeFormatter(
@@ -1155,7 +1213,10 @@ def test_builtin_formatter_private_edge_helpers(tmp_path: Path) -> None:
         '[tool.isort]\nknown_first_party = "not-a-list"\n',
         encoding="utf-8",
     )
-    call = ast.parse("constr()").body[0].value
+    statement = ast.parse("constr()").body[0]
+    assert isinstance(statement, ast.Expr)
+    call = statement.value
+    assert isinstance(call, ast.Call)
 
     assert _get_builtin_known_first_party(tmp_path) == DEFAULT_KNOWN_FIRST_PARTY
     assert _split_escaped_string_literal("abc\\def", 4) == ["abc", "\\def"]
