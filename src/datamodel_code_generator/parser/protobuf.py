@@ -337,7 +337,7 @@ class _ProtoInputPreparer:
                 paths = sorted((path for path in source.rglob("*.proto") if path.is_file()), key=lambda path: path.name)
                 return [self._write_sanitized_file(path, temp_path, source) for path in paths]
             return [self._write_sanitized_file(source, temp_path, self.parser.base_path)]
-        if isinstance(source, list):  # pragma: no cover
+        if isinstance(source, list):
             return [self._write_sanitized_file(path, temp_path, self.parser.base_path) for path in source]
 
         input_files: list[Path] = []
