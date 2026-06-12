@@ -15,6 +15,7 @@ def _clear_caches() -> None:
     get_safe_loader.cache_clear()
 
 
+@pytest.mark.allow_direct_assert
 def test_safe_loader_warns_for_uppercase_yaml_bool() -> None:
     """PyYAML uppercase bool construction emits the deprecation warning."""
     yaml = pytest.importorskip("yaml")
@@ -25,6 +26,7 @@ def test_safe_loader_warns_for_uppercase_yaml_bool() -> None:
     assert result == {"enabled": True}
 
 
+@pytest.mark.allow_direct_assert
 def test_create_module_getattr_imports_lazy_attribute() -> None:
     """create_module_getattr imports and returns configured lazy attributes."""
     module_getattr = create_module_getattr(
@@ -35,6 +37,7 @@ def test_create_module_getattr_imports_lazy_attribute() -> None:
     assert module_getattr("Path") is Path
 
 
+@pytest.mark.allow_direct_assert
 def test_create_module_getattr_raises_attribute_error_for_unknown_attribute() -> None:
     """create_module_getattr raises the normal module AttributeError message."""
     module_getattr = create_module_getattr("example.module", {})
