@@ -7,6 +7,7 @@ import pytest
 from datamodel_code_generator.parser import DefaultPutDict
 
 
+@pytest.mark.allow_direct_assert
 def test_get_or_put_returns_existing_value_without_using_default() -> None:
     """Return cached values without evaluating defaults."""
     cache = DefaultPutDict[str, str]({"schema": "cached"})
@@ -19,6 +20,7 @@ def test_get_or_put_returns_existing_value_without_using_default() -> None:
     assert cache["schema"] == "cached"
 
 
+@pytest.mark.allow_direct_assert
 def test_get_or_put_stores_truthy_default() -> None:
     """Store and return a truthy explicit default."""
     cache = DefaultPutDict[str, str]()
@@ -27,6 +29,17 @@ def test_get_or_put_stores_truthy_default() -> None:
     assert cache["schema"] == "fresh"
 
 
+@pytest.mark.allow_direct_assert
+@pytest.mark.parametrize("default", [0, "", False])
+def test_get_or_put_stores_falsy_default(default: object) -> None:
+    """Store and return falsy explicit defaults."""
+    cache = DefaultPutDict[str, object]()
+
+    assert cache.get_or_put("schema", default=default) == default
+    assert cache["schema"] == default
+
+
+@pytest.mark.allow_direct_assert
 def test_get_or_put_stores_default_factory_value_once() -> None:
     """Store factory output and avoid calling the factory on cache hits."""
     cache = DefaultPutDict[str, str]()
