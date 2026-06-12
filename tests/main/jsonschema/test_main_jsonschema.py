@@ -159,19 +159,20 @@ def test_main_root_ref(output_file: Path) -> None:
     )
 
 
-def test_main_string_array_length_constraints(output_file: Path) -> None:
+def test_main_string_min_max_items_compat(output_file: Path) -> None:
     """A string field carrying minItems/maxItems generates a usable constr().
 
-    minItems/maxItems on a string must map to constr(min_length=, max_length=).
+    Compatibility case: minItems/maxItems are inapplicable to strings in JSON
+    Schema, but when present they map to constr(min_length=, max_length=).
     Mapping them to min_items/max_items produced constr(min_items=...), which
     raises TypeError the moment the generated pydantic v2 model is built.
     """
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "string_array_length_constraints.json",
+        input_path=JSON_SCHEMA_DATA_PATH / "string_min_max_items_compat.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file="string_array_length_constraints.py",
+        expected_file="string_min_max_items_compat.py",
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
@@ -179,6 +180,7 @@ def test_main_string_array_length_constraints(output_file: Path) -> None:
             "3.10",
             "--disable-timestamp",
         ],
+        force_exec_validation=True,
     )
 
 
