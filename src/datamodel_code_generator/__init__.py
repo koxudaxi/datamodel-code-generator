@@ -602,7 +602,7 @@ def _openapi_shared_options(config: GenerateConfig) -> dict[str, Any]:
     }
 
 
-def _normalize_raw_input(  # noqa: PLR0912
+def _normalize_raw_input(  # noqa: PLR0912, PLR0915
     input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     input_text: str | None,
     input_file_type: InputFileType,
@@ -623,8 +623,15 @@ def _normalize_raw_input(  # noqa: PLR0912
 
             def get_header_and_first_line(csv_file: IO[str]) -> dict[str, Any]:
                 csv_reader = csv.DictReader(csv_file)
-                assert csv_reader.fieldnames is not None
-                return {key: value for key, value in next(csv_reader).items() if key is not None}
+                if csv_reader.fieldnames is None:
+                    msg = "CSV file has no header row"
+                    raise ValueError(msg)  # noqa: TRY301
+                try:
+                    first_row = next(csv_reader)
+                except StopIteration:
+                    msg = "CSV file has no data rows"
+                    raise ValueError(msg) from None
+                return {key: value for key, value in first_row.items() if key is not None}
 
             if isinstance(input_, Path):
                 with input_.open(encoding=config.encoding) as f:
@@ -880,6 +887,8 @@ def _build_parser(  # noqa: PLR0911, PLR0913
             }
             parser_config = _create_parser_config(JSONSchemaParserConfig, config, jsonschema_additional_options)
             return JsonSchemaParser(source=source, config=parser_config)  # ty: ignore
+    msg = f"Unsupported input file type: {input_file_type}"
+    raise Error(msg)
 
 
 def _emit_results(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
