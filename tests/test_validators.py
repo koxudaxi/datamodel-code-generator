@@ -35,6 +35,7 @@ def test_format_validation_error_without_location_returns_message() -> None:
     assert_validation_error_message(error, EXPECTED_PATH / "format_validation_error_without_location.txt")
 
 
+@pytest.mark.allow_direct_assert
 def test_normalize_validators_accepts_supported_shapes() -> None:
     """Normalize supported validator config shapes for template rendering."""
     validators = [
@@ -57,6 +58,7 @@ def test_normalize_validators_accepts_supported_shapes() -> None:
     ]
 
 
+@pytest.mark.allow_direct_assert
 @pytest.mark.parametrize(
     ("validators", "expected_message"),
     [
