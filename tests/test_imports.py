@@ -64,6 +64,15 @@ def test_pydantic_import_constants_share_leaf_module() -> None:
     assert Import(import_="field", from_="dataclasses") == model_imports.IMPORT_FIELD
 
 
+def test_import_from_full_path_cache_clear_preserves_value() -> None:
+    """Clearing the bounded cache must not change Import.from_full_path results."""
+    import_ = Import.from_full_path("typing.Optional")
+
+    Import.from_full_path.cache_clear()
+
+    assert Import.from_full_path("typing.Optional") == import_
+
+
 def test_extract_future_with_future_imports() -> None:
     """Test extracting future imports from mixed imports."""
     imports = Imports()
@@ -224,6 +233,40 @@ def test_remove_dotted_import_without_bucket_cleans_reference_path() -> None:
     assert not str(imports)
     assert (None, "collections.abc") not in imports.counter
     assert "/stale/path" not in imports.reference_paths
+
+
+def test_plain_from_none_alias_cleanup_after_remove_and_remove_unused() -> None:
+    """Plain imports without from_ still record and clean aliases."""
+    imports = Imports()
+    aliased_import = Import(from_=None, import_="datetime", alias="datetime_module", reference_path="/datetime")
+    imports.append(aliased_import)
+
+    assert str(imports) == "import datetime as datetime_module"
+    assert imports[None] == {"datetime"}
+    assert imports.alias[None] == {"datetime": "datetime_module"}
+    assert imports.counter[None, "datetime"] == 1
+    assert imports.reference_paths["/datetime"] is aliased_import
+
+    imports.remove(aliased_import)
+
+    assert not str(imports)
+    assert None not in imports
+    assert None not in imports.alias
+    assert (None, "datetime") not in imports.counter
+    assert "/datetime" not in imports.reference_paths
+
+    imports.append(aliased_import)
+    imports.remove_unused(set())
+
+    assert not str(imports)
+    assert None not in imports
+    assert None not in imports.alias
+    assert (None, "datetime") not in imports.counter
+    assert "/datetime" not in imports.reference_paths
+
+    imports.append(Import(from_=None, import_="datetime"))
+
+    assert str(imports) == "import datetime"
 
 
 def test_extract_future_moves_reference_paths() -> None:
