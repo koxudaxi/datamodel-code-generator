@@ -369,6 +369,52 @@ def test_datatype_type_hint_uses_dict_key_render_selector() -> None:
     assert data_type.base_type_hint == "Dict[str, str]"
 
 
+def test_datatype_type_hint_keeps_bare_dict_without_inner_type() -> None:
+    """Pin bare dict rendering when no key or value type is available."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+
+    data_type = DataType(is_dict=True)
+
+    assert data_type.type_hint == "Dict"
+    assert data_type.base_type_hint == "Dict"
+
+
+def test_datatype_type_hint_without_container_flag_returns_inner_type() -> None:
+    """Pin the fallback path when no configured container flag matches."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+
+    data_type = DataType(data_types=[DataType(type="str")])
+
+    assert data_type.type_hint == "str"
+    wrapped_type_hint = data_type._wrap_container_type_hint(
+        "str",
+        ("list",),
+        use_base_type_hint=False,
+    )
+    assert wrapped_type_hint == "str"
+    data_type._apply_nullable_from_reference()
+    assert data_type.is_optional is False
+
+
+def test_datatype_base_type_hint_applies_reference_nullability() -> None:
+    """Pin nullable reference propagation for base type hints."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+
+    class NullableReferenceSource:
+        reference = None
+        nullable = True
+        is_alias = False
+
+    reference = Reference(
+        path="Model",
+        name="Model",
+        source=NullableReferenceSource(),
+    )
+    data_type = DataType(reference=reference)
+
+    assert data_type.base_type_hint == "Optional[Model]"
+
+
 @pytest.mark.parametrize(
     ("data_types", "expected_type_hint", "expected_base_type_hint"),
     [
