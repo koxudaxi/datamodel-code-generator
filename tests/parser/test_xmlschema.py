@@ -55,6 +55,7 @@ def test_xmlschema_literal_helpers_are_re_exported_by_identity(reexported: objec
     assert reexported is original
 
 
+@pytest.mark.allow_direct_assert
 def test_xmlschema_literal_reexport_contract_is_explicit() -> None:
     """Keep compatibility re-exports listed as an explicit module contract."""
     assert dict(_XMLSCHEMA_LITERAL_REEXPORTS) == {
