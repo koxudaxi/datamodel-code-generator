@@ -416,11 +416,13 @@ def _split_escaped_string_literal(content: str, max_length: int) -> list[str]:
 
 
 def _format_wrapped_string_literal(value: str, indent: str, line_length: int) -> str:
-    escaped = repr(value).removeprefix("'").removesuffix("'")
+    value_repr = repr(value)
+    quote = value_repr[0]
+    escaped = value_repr[1:-1] if quote in {"'", '"'} and value_repr.endswith(quote) else value_repr
     literal_indent = f"{indent}    "
     max_content_length = line_length - len(literal_indent) - 2
     literal_lines = "\n".join(
-        f"{literal_indent}'{chunk}'" for chunk in _split_escaped_string_literal(escaped, max_content_length)
+        f"{literal_indent}{quote}{chunk}{quote}" for chunk in _split_escaped_string_literal(escaped, max_content_length)
     )
     return f"(\n{literal_lines}\n{indent})"
 

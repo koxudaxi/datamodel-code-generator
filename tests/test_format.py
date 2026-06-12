@@ -228,8 +228,6 @@ def test_format_code_builtin_formatter_rejects_invalid_explicit_line_length(
     line_length: int | bool, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test built-in formatter rejects invalid explicit line length values."""
-    pyproject = tmp_path / "pyproject.toml"
-    pyproject.write_text("[tool\n", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     with pytest.raises(ValueError, match="builtin_format_line_length must be a positive integer"):
         CodeFormatter(
@@ -904,6 +902,25 @@ def test_apply_builtin_formatter_parenthesizes_union_annotation_with_string_defa
 
     assert apply_builtin_formatter(code, line_length=40) == (
         "class Model:\n    typename__: (\n        Literal['Notification'] | None\n    ) = 'Notification'\n"
+    )
+
+
+def test_apply_builtin_formatter_wraps_string_default_with_single_quote() -> None:
+    """Test wrapped generated string defaults keep values with single quotes intact."""
+    code = (
+        "class Model:\n"
+        '    message: str = Field(..., description="it\'s a generated description with enough words to wrap")\n'
+    )
+
+    assert apply_builtin_formatter(code, line_length=48, wrap_string_literal=True) == (
+        "class Model:\n"
+        "    message: str = Field(\n"
+        "        ...,\n"
+        "        description=(\n"
+        '            "it\'s a generated description with"\n'
+        '            " enough words to wrap"\n'
+        "        ),\n"
+        "    )\n"
     )
 
 
