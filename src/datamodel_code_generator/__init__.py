@@ -474,6 +474,8 @@ def _build_module_content(
     body: str,
     header: str,
     custom_file_header: str | None,
+    *,
+    future_imports: str = "",
 ) -> str:
     """Build module content by combining header and body.
 
@@ -484,11 +486,12 @@ def _build_module_content(
     if custom_file_header and body:
         # Extract future imports from body for correct placement after custom_file_header
         body_without_future = body
-        extracted_future = ""
+        extracted_future = future_imports
         body_lines = body.split("\n")
         future_indices = [i for i, line in enumerate(body_lines) if line.strip().startswith("from __future__")]
         if future_indices:
-            extracted_future = "\n".join(body_lines[i] for i in future_indices)
+            if not extracted_future:
+                extracted_future = "\n".join(body_lines[i] for i in future_indices)
             remaining_lines = [line for i, line in enumerate(body_lines) if i not in future_indices]
             body_without_future = "\n".join(remaining_lines).lstrip("\n")
 
@@ -972,46 +975,20 @@ def _emit_results(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     for path, (body, future_imports, filename) in modules.items():
         if not path.parent.exists():
             path.parent.mkdir(parents=True)
-        file = path.open("wt", encoding=config.encoding)
 
         safe_filename = filename.replace("\n", " ").replace("\r", " ") if filename else ""
         effective_header = custom_file_header or header.format(safe_filename)
-
+        file = path.open("wt", encoding=config.encoding)
         if custom_file_header and body:
-            # Extract future imports from body for correct placement after custom_file_header
-            body_without_future = body
-            extracted_future = future_imports  # Use pre-extracted if available
-            lines = body.split("\n")
-            future_indices = [i for i, line in enumerate(lines) if line.strip().startswith("from __future__")]
-            if future_indices:
-                if not extracted_future:
-                    # Extract future imports from body
-                    extracted_future = "\n".join(lines[i] for i in future_indices)
-                remaining_lines = [line for i, line in enumerate(lines) if i not in future_indices]
-                body_without_future = "\n".join(remaining_lines).lstrip("\n")
-
-            if extracted_future:
-                insertion_point = _find_future_import_insertion_point(custom_file_header)
-                header_before = custom_file_header[:insertion_point].rstrip()
-                header_after = custom_file_header[insertion_point:].strip()
-                if header_after:
-                    content = header_before + "\n" + extracted_future + "\n\n" + header_after
-                else:
-                    content = header_before + "\n\n" + extracted_future
-                print(content, file=file)
-                print(file=file)
-                print(body_without_future.rstrip(), file=file)
-            else:
-                print(effective_header, file=file)
-                print(file=file)
-                print(body.rstrip(), file=file)
+            file.write(
+                _build_module_content(body, effective_header, custom_file_header, future_imports=future_imports) + "\n"
+            )
         else:
-            # Body already contains future imports, just print as-is
-            print(effective_header, file=file)
+            file.write(effective_header)
             if body:
-                print(file=file)
-                print(body.rstrip(), file=file)
-
+                file.write("\n\n")
+                file.write(body.rstrip())
+            file.write("\n")
         file.close()
 
     if (
