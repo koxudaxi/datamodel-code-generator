@@ -3428,19 +3428,39 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             data_type=ref_data_type,
             required=True,
         )
-        data_model_root = self.data_model_root_type(
+        self._register_root_model(
             reference=reference,
             fields=[field],
-            custom_base_class=self._resolve_base_class(name, obj.custom_base_path),
+            obj=obj,
+            custom_base_class_name=name,
+            description=obj.description if self.use_schema_description else None,
+        )
+        return self.data_type(reference=reference)
+
+    def _register_root_model(  # noqa: PLR0913
+        self,
+        *,
+        reference: Reference,
+        fields: list[DataModelFieldBase],
+        obj: JsonSchemaObject,
+        custom_base_class_name: str,
+        description: str | None = None,
+        default: Any = UNDEFINED,
+    ) -> DataModel:
+        data_model_root = self.data_model_root_type(
+            reference=reference,
+            fields=fields,
+            custom_base_class=self._resolve_base_class(custom_base_class_name, obj.custom_base_path),
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
-            description=obj.description if self.use_schema_description else None,
+            description=description,
+            default=default,
             nullable=obj.type_has_null,
             treat_dot_as_module=self.treat_dot_as_module,
         )
         self.generation_store.register_model(data_model_root)
-        return self.data_type(reference=reference)
+        return data_model_root
 
     def _parse_all_of_single_ref(
         self,
@@ -3555,18 +3575,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             alias=None,
             original_field_name=None,
         )
-        data_model_root = self.data_model_root_type(
+        self._register_root_model(
             reference=reference,
             fields=[field],
-            custom_base_class=self._resolve_base_class(name, obj.custom_base_path),
-            custom_template_dir=self.custom_template_dir,
-            extra_template_data=self.extra_template_data,
-            path=self.current_source_path,
+            obj=obj,
+            custom_base_class_name=name,
             description=obj.description if self.use_schema_description else None,
-            nullable=obj.type_has_null,
-            treat_dot_as_module=self.treat_dot_as_module,
         )
-        self.generation_store.register_model(data_model_root)
         return self.data_type(reference=reference)
 
     def parse_object_fields(
@@ -4299,18 +4314,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 has_default=field.has_default,
             )
 
-        data_model_root = self.data_model_root_type(
+        self._register_root_model(
             reference=reference,
             fields=[field],
-            custom_base_class=self._resolve_base_class(name, obj.custom_base_path),
-            custom_template_dir=self.custom_template_dir,
-            extra_template_data=self.extra_template_data,
-            path=self.current_source_path,
+            obj=obj,
+            custom_base_class_name=name,
             description=obj.description if self.use_schema_description else None,
-            nullable=obj.type_has_null,
-            treat_dot_as_module=self.treat_dot_as_module,
         )
-        self.generation_store.register_model(data_model_root)
         return self.data_type(reference=reference)
 
     def parse_root_type(  # noqa: PLR0912, PLR0914, PLR0915
@@ -4421,7 +4431,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         if data_type.is_dict or data_type.is_mapping:
             constraints.update(self._get_property_count_constraints(obj))
-        data_model_root_type = self.data_model_root_type(
+        self._register_root_model(
             reference=reference,
             fields=[
                 self.data_model_field_type(
@@ -4440,15 +4450,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     has_default=has_default_override,
                 )
             ],
-            custom_base_class=self._resolve_base_class(name, obj.custom_base_path),
-            custom_template_dir=self.custom_template_dir,
-            extra_template_data=self.extra_template_data,
-            path=self.current_source_path,
-            nullable=obj.type_has_null,
-            treat_dot_as_module=self.treat_dot_as_module,
+            obj=obj,
+            custom_base_class_name=name,
             default=default_value if has_default_override else UNDEFINED,
         )
-        self.generation_store.register_model(data_model_root_type)
         return self.data_type(reference=reference)
 
     def _should_skip_root_field_constraints_for_multiple_types(self, obj: JsonSchemaObject) -> bool:
@@ -4489,7 +4494,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         constraints = self._get_constraint_values(obj) if self.field_constraints else {}
         if self._should_skip_root_field_constraints_for_multiple_types(obj):
             constraints = {}
-        data_model_root_type = self.data_model_root_type(
+        self._register_root_model(
             reference=reference,
             fields=[
                 self.data_model_field_type(
@@ -4508,15 +4513,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     has_default=obj.has_default,
                 )
             ],
-            custom_base_class=self._resolve_base_class(name, obj.custom_base_path),
-            custom_template_dir=self.custom_template_dir,
-            extra_template_data=self.extra_template_data,
-            path=self.current_source_path,
-            nullable=obj.type_has_null,
-            treat_dot_as_module=self.treat_dot_as_module,
+            obj=obj,
+            custom_base_class_name=name,
             default=obj.default if obj.has_default else UNDEFINED,
         )
-        self.generation_store.register_model(data_model_root_type)
 
     def parse_enum_as_literal(self, obj: JsonSchemaObject) -> DataType:
         """Parse enum values as a Literal type."""
@@ -4633,7 +4633,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
             self._set_schema_metadata(reference.path, obj)
             self.set_schema_extensions(reference.path, obj)
-            data_model_root_type = self.data_model_root_type(
+            self._register_root_model(
                 reference=reference,
                 fields=[
                     self.data_model_field_type(
@@ -4651,15 +4651,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         original_name=None,
                     )
                 ],
-                custom_base_class=self._resolve_base_class(name, obj.custom_base_path),
-                custom_template_dir=self.custom_template_dir,
-                extra_template_data=self.extra_template_data,
-                path=self.current_source_path,
+                obj=obj,
+                custom_base_class_name=name,
                 default=obj.default if obj.has_default else UNDEFINED,
-                nullable=obj.type_has_null,
-                treat_dot_as_module=self.treat_dot_as_module,
             )
-            self.generation_store.register_model(data_model_root_type)
             return self.data_type(reference=reference)
 
         def create_enum(reference_: Reference) -> DataType:
@@ -4721,7 +4716,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             model_type="enum",
         )
 
-        data_model_root_type = self.data_model_root_type(
+        self._register_root_model(
             reference=reference,
             fields=[
                 self.data_model_field_type(
@@ -4739,15 +4734,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     original_name=None,
                 )
             ],
-            custom_base_class=self._resolve_base_class(reference.name, obj.custom_base_path),
-            custom_template_dir=self.custom_template_dir,
-            extra_template_data=self.extra_template_data,
-            path=self.current_source_path,
+            obj=obj,
+            custom_base_class_name=reference.name,
             default=obj.default if obj.has_default else UNDEFINED,
-            nullable=obj.type_has_null,
-            treat_dot_as_module=self.treat_dot_as_module,
         )
-        self.generation_store.register_model(data_model_root_type)
         return self.data_type(reference=reference)
 
     def _get_ref_body(self, resolved_ref: str) -> dict[str, YamlValue]:
