@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Literal
+from collections.abc import Mapping, Sequence
+from typing import Any, Literal, TypeAlias
 
 import pytest
 from hypothesis import HealthCheck, assume, given, settings
@@ -21,6 +22,7 @@ from .payload_validation import (
     PAYLOAD_VALIDATION_BACKENDS,
     PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN_VERSION,
     PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES,
+    PYDANTIC_V2_LEGACY_RUNTIME_ROUND_TRIP_EXCLUDED_CASES,
     ROUND_TRIP_EXCLUDED_CASES,
     SCHEMA_CASES,
     GeneratedModelCache,
@@ -76,6 +78,12 @@ MAX_EXAMPLES = _max_examples_from_env()
 BACKEND_CASE_MODE = _backend_case_mode_from_env()
 PYDANTIC_RUNTIME_VERSION = Version(PYDANTIC_VERSION)
 PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN = Version(PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN_VERSION)
+PydanticV2LegacyRuntimeExclusions: TypeAlias = Mapping[PayloadBackend, Mapping[str, str]]
+PYDANTIC_V2_LEGACY_RUNTIME_EXCLUSION_SETS = (PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES,)
+PYDANTIC_V2_LEGACY_RUNTIME_ROUND_TRIP_EXCLUSION_SETS = (
+    PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES,
+    PYDANTIC_V2_LEGACY_RUNTIME_ROUND_TRIP_EXCLUDED_CASES,
+)
 REJECTION_ORACLE_CASES = [case for case in SCHEMA_CASES if has_rejection_oracle_constraints(case)]
 SCHEMA_CASE_BY_ID = {case.id: case for case in SCHEMA_CASES}
 ROUND_TRIP_CASES = [case for case in SCHEMA_CASES if case.id not in ROUND_TRIP_EXCLUDED_CASES]
@@ -152,18 +160,23 @@ def _pydantic_v2_legacy_runtime_exclusion_reason(
     case: SchemaCase,
     backend: PayloadBackend,
     runtime_version: Version = PYDANTIC_RUNTIME_VERSION,
+    exclusion_sets: Sequence[PydanticV2LegacyRuntimeExclusions] = PYDANTIC_V2_LEGACY_RUNTIME_EXCLUSION_SETS,
 ) -> str | None:
     if runtime_version >= PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN:
         return None
-    return PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES.get(backend, {}).get(case.id)
+    for excluded_cases in exclusion_sets:
+        if reason := excluded_cases.get(backend, {}).get(case.id):
+            return reason
+    return None
 
 
 def _pydantic_v2_legacy_runtime_skip_marks(
     case: SchemaCase,
     backend: PayloadBackend,
     runtime_version: Version = PYDANTIC_RUNTIME_VERSION,
+    exclusion_sets: Sequence[PydanticV2LegacyRuntimeExclusions] = PYDANTIC_V2_LEGACY_RUNTIME_EXCLUSION_SETS,
 ) -> tuple[pytest.MarkDecorator, ...]:
-    if reason := _pydantic_v2_legacy_runtime_exclusion_reason(case, backend, runtime_version):
+    if reason := _pydantic_v2_legacy_runtime_exclusion_reason(case, backend, runtime_version, exclusion_sets):
         return (pytest.mark.skip(reason=reason),)
     return ()
 
@@ -173,6 +186,18 @@ def _pydantic_v2_case_param(case: SchemaCase) -> pytest.ParameterSet:
         case,
         id=case.id,
         marks=_pydantic_v2_legacy_runtime_skip_marks(case, PayloadBackend.PYDANTIC_V2),
+    )
+
+
+def _pydantic_v2_round_trip_case_param(case: SchemaCase) -> pytest.ParameterSet:
+    return pytest.param(
+        case,
+        id=case.id,
+        marks=_pydantic_v2_legacy_runtime_skip_marks(
+            case,
+            PayloadBackend.PYDANTIC_V2,
+            exclusion_sets=PYDANTIC_V2_LEGACY_RUNTIME_ROUND_TRIP_EXCLUSION_SETS,
+        ),
     )
 
 
@@ -186,7 +211,7 @@ def _backend_case_param(backend: PayloadBackend, case: SchemaCase) -> pytest.Par
 
 
 PYDANTIC_V2_ACCEPTANCE_CASES = [_pydantic_v2_case_param(case) for case in SCHEMA_CASES]
-PYDANTIC_V2_ROUND_TRIP_CASES = [_pydantic_v2_case_param(case) for case in ROUND_TRIP_CASES]
+PYDANTIC_V2_ROUND_TRIP_CASES = [_pydantic_v2_round_trip_case_param(case) for case in ROUND_TRIP_CASES]
 PYDANTIC_V2_REJECTION_CASES = [_pydantic_v2_case_param(case) for case in REJECTION_ORACLE_CASES]
 BACKEND_ACCEPTANCE_CASES = [
     _backend_case_param(backend, SCHEMA_CASE_BY_ID[case_id])
@@ -353,25 +378,32 @@ def test_pydantic_v2_legacy_runtime_exclusions_are_classified() -> None:
     """Pydantic-version-specific payload exclusions must name existing cases and carry reasons."""
     known_cases = set(SCHEMA_CASE_BY_ID)
     supported_backends = {PayloadBackend.PYDANTIC_V2, PayloadBackend.PYDANTIC_V2_DATACLASS}
-    if unsupported_backends := sorted(
-        backend.value for backend in PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES if backend not in supported_backends
-    ):  # pragma: no cover
-        pytest.fail(
-            "Pydantic legacy runtime exclusions reference unsupported backends:\n" + "\n".join(unsupported_backends)
-        )
+    exclusion_sets = {
+        "payload": PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES,
+        "round-trip": PYDANTIC_V2_LEGACY_RUNTIME_ROUND_TRIP_EXCLUDED_CASES,
+    }
+    for exclusion_kind, exclusion_set in exclusion_sets.items():
+        if unsupported_backends := sorted(
+            backend.value for backend in exclusion_set if backend not in supported_backends
+        ):  # pragma: no cover
+            pytest.fail(
+                f"Pydantic legacy runtime {exclusion_kind} exclusions reference unsupported backends:\n"
+                + "\n".join(unsupported_backends)
+            )
 
-    for backend, excluded_cases in PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES.items():
-        if missing_reasons := sorted(  # pragma: no cover
-            case_id for case_id, reason in excluded_cases.items() if not reason
-        ):
-            pytest.fail(
-                f"{backend.value}: Pydantic legacy runtime exclusions require reasons:\n" + "\n".join(missing_reasons)
-            )
-        if unknown_cases := sorted(set(excluded_cases) - known_cases):  # pragma: no cover
-            pytest.fail(
-                f"{backend.value}: Pydantic legacy runtime exclusions reference unknown cases:\n"
-                + "\n".join(unknown_cases)
-            )
+        for backend, excluded_cases in exclusion_set.items():
+            if missing_reasons := sorted(  # pragma: no cover
+                case_id for case_id, reason in excluded_cases.items() if not reason
+            ):
+                pytest.fail(
+                    f"{backend.value}: Pydantic legacy runtime {exclusion_kind} exclusions require reasons:\n"
+                    + "\n".join(missing_reasons)
+                )
+            if unknown_cases := sorted(set(excluded_cases) - known_cases):  # pragma: no cover
+                pytest.fail(
+                    f"{backend.value}: Pydantic legacy runtime {exclusion_kind} exclusions reference unknown cases:\n"
+                    + "\n".join(unknown_cases)
+                )
 
 
 @pytest.mark.allow_direct_assert
@@ -389,6 +421,21 @@ def test_pydantic_v2_legacy_runtime_exclusions_are_version_gated() -> None:
     assert _pydantic_v2_legacy_runtime_skip_marks(case, PayloadBackend.PYDANTIC_V2, Version("2.0.3"))
     assert not _pydantic_v2_legacy_runtime_skip_marks(
         case, PayloadBackend.PYDANTIC_V2, PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN
+    )
+    round_trip_case = SCHEMA_CASE_BY_ID["jsonschema/property_names_ref_enum.json"]
+    assert _pydantic_v2_legacy_runtime_exclusion_reason(
+        round_trip_case,
+        PayloadBackend.PYDANTIC_V2,
+        Version("2.0.3"),
+        PYDANTIC_V2_LEGACY_RUNTIME_ROUND_TRIP_EXCLUSION_SETS,
+    )
+    assert (
+        _pydantic_v2_legacy_runtime_exclusion_reason(
+            round_trip_case,
+            PayloadBackend.PYDANTIC_V2,
+            Version("2.0.3"),
+        )
+        is None
     )
 
 

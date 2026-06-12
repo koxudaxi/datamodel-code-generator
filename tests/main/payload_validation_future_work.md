@@ -165,12 +165,20 @@ Current version-specific exclusions:
   lookaround pattern validators, so the Pydantic v2 BaseModel payload runtime
   matrix skips only the classified lookaround pattern cases under older
   runtimes.
+- Pydantic before 2.5.0 can reject schema-valid Decimal `multipleOf` values near
+  float-originated boundaries, so only the classified Decimal `multipleOf` cases
+  are skipped under older runtimes.
+- Pydantic before 2.5.0 can emit JSON-mode serializer warnings for enum
+  dictionary keys during dump, so only the affected round-trip cases are skipped
+  under older runtimes; acceptance coverage remains enabled for those schemas.
 
 Future work:
 
 - Revisit the lookaround skips if support for older Pydantic runtimes can be
   improved without changing the declared dependency lower bound or newer runtime
   behavior.
+- Revisit the Decimal `multipleOf` and enum-key dump skips if older Pydantic
+  runtimes can be supported without changing newer runtime behavior.
 
 ## Round-Trip Dump Limits
 

@@ -188,6 +188,22 @@ PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES: dict[PayloadBackend, dict[str, str]] 
         "openapi/pattern_lookaround.yaml::components.schemas.info": (
             "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to OpenAPI lookaround pattern validators"
         ),
+        "jsonschema/use_decimal_for_multiple_of.json": (
+            "Pydantic before 2.5.0 can reject schema-valid Decimal multipleOf values near float boundaries"
+        ),
+        "openapi/allof_with_required_inherited_coverage.yaml::components.schemas.MultipleOfBase": (
+            "Pydantic before 2.5.0 can reject schema-valid inherited Decimal multipleOf values"
+        ),
+    },
+}
+PYDANTIC_V2_LEGACY_RUNTIME_ROUND_TRIP_EXCLUDED_CASES: dict[PayloadBackend, dict[str, str]] = {
+    PayloadBackend.PYDANTIC_V2: {
+        "jsonschema/property_names_anyof_ref.json": (
+            "Pydantic before 2.5.0 emits JSON-mode serializer warnings for enum dictionary keys"
+        ),
+        "jsonschema/property_names_ref_enum.json": (
+            "Pydantic before 2.5.0 emits JSON-mode serializer warnings for enum dictionary keys"
+        ),
     },
 }
 

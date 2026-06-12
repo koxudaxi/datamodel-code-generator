@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
-from functools import cache
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional
 
 from pydantic import Field, ValidationError, field_validator, model_validator
@@ -42,6 +41,7 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_VALIDATION_INFO,
     IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER,
 )
+from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA
 from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
 from datamodel_code_generator.validators import format_validation_error, normalize_validators
@@ -122,15 +122,10 @@ _PYDANTIC_V2_BASE_FIELD_KEYS: frozenset[str] = frozenset({
 })
 
 
-@cache
-def _pydantic_v2_default_field_keys() -> frozenset[str]:
-    from datamodel_code_generator.model.pydantic_v2.version import (  # noqa: PLC0415
-        PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA,
-    )
-
-    if PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA:
-        return _PYDANTIC_V2_BASE_FIELD_KEYS
-    return _PYDANTIC_V2_BASE_FIELD_KEYS | {"deprecated"}
+if PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA:
+    _PYDANTIC_V2_DEFAULT_FIELD_KEYS = _PYDANTIC_V2_BASE_FIELD_KEYS
+else:
+    _PYDANTIC_V2_DEFAULT_FIELD_KEYS = _PYDANTIC_V2_BASE_FIELD_KEYS | {"deprecated"}
 
 
 class DataModelField(_PydanticBaseDataModelField):
@@ -148,7 +143,7 @@ class DataModelField(_PydanticBaseDataModelField):
         "max_length",
         "pattern",
     }
-    _DEFAULT_FIELD_KEYS: ClassVar[frozenset[str]] = _PYDANTIC_V2_BASE_FIELD_KEYS
+    _DEFAULT_FIELD_KEYS: ClassVar[frozenset[str]] = _PYDANTIC_V2_DEFAULT_FIELD_KEYS
     constraints: Optional[Constraints] = None  # ty: ignore  # noqa: UP045
     can_have_extra_keys: ClassVar[bool] = False
     _PYDANTIC_EXTRA_FIELD_NAME: ClassVar[str] = "__pydantic_extra__"
@@ -245,8 +240,7 @@ class DataModelField(_PydanticBaseDataModelField):
                 data["serialization_alias"] = serialization_alias
 
         # **extra is not supported in pydantic 2.0
-        default_field_keys = _pydantic_v2_default_field_keys()
-        extra_field_keys = tuple(k for k in data if k not in default_field_keys)
+        extra_field_keys = tuple(k for k in data if k not in self._DEFAULT_FIELD_KEYS)
         existing_json_schema_extra = data.get("json_schema_extra") or {}
         json_schema_extra = {
             **existing_json_schema_extra,
