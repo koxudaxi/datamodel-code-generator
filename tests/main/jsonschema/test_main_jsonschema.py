@@ -159,6 +159,29 @@ def test_main_root_ref(output_file: Path) -> None:
     )
 
 
+def test_main_string_array_length_constraints(output_file: Path) -> None:
+    """A string field carrying minItems/maxItems generates a usable constr().
+
+    minItems/maxItems on a string must map to constr(min_length=, max_length=).
+    Mapping them to min_items/max_items produced constr(min_items=...), which
+    raises TypeError the moment the generated pydantic v2 model is built.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "string_array_length_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="string_array_length_constraints.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+            "--disable-timestamp",
+        ],
+    )
+
+
 @pytest.mark.benchmark
 @pytest.mark.cli_doc(
     options=["--keep-model-order"],
