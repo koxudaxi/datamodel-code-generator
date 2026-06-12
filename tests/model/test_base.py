@@ -8,7 +8,6 @@ from typing import Any
 
 import pytest
 
-import datamodel_code_generator.model.base as model_base
 from datamodel_code_generator.model.base import (
     DataModel,
     DataModelFieldBase,
@@ -139,7 +138,7 @@ def test_data_model_dedup_key_uses_model_base_to_hashable_seam(monkeypatch: pyte
         calls.append(value)
         return ("patched", len(calls))
 
-    monkeypatch.setattr(model_base, "to_hashable", fake_to_hashable)
+    monkeypatch.setattr("datamodel_code_generator.model.base.to_hashable", fake_to_hashable)
     model = BaseModel(fields=[], reference=Reference(path="Model", original_name="Model", name="Model"))
 
     assert model.get_dedup_key() == (("patched", 1), ("patched", 2))
