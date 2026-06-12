@@ -51,7 +51,7 @@ from datamodel_code_generator.model.base import (  # noqa: TC001 - used by Pydan
 from datamodel_code_generator.model.scalar import DataTypeScalar
 from datamodel_code_generator.model.union import DataTypeUnion
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-from datamodel_code_generator.types import DataTypeManager, StrictTypes  # noqa: TC001 - used by Pydantic at runtime
+from datamodel_code_generator.types import DataTypeManager, StrictTypes
 from datamodel_code_generator.validators import ModelValidators  # noqa: TC001 - used by Pydantic at runtime
 
 CallableSchema = Callable[[str], str]
@@ -212,6 +212,10 @@ class GenerateConfig(BaseModel):
     schema_version: str | None = None
     schema_version_mode: VersionMode | None = None
     external_ref_mapping: dict[str, str] | None = None
+
+
+def _rebuild_generate_config() -> None:
+    GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
 
 
 class ParserConfig(BaseModel):

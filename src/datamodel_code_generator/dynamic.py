@@ -21,10 +21,9 @@ import pydantic
 from pydantic import BaseModel
 
 from datamodel_code_generator import Error, generate, is_asyncapi, is_openapi
-from datamodel_code_generator.config import GenerateConfig
-from datamodel_code_generator.enums import DataModelType, InputFileType, UnionMode
+from datamodel_code_generator.config import GenerateConfig, _rebuild_generate_config
+from datamodel_code_generator.enums import DataModelType, InputFileType
 from datamodel_code_generator.parser._graph import stable_toposort
-from datamodel_code_generator.types import StrictTypes
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -228,7 +227,7 @@ def generate_dynamic_models(
         msg = f"generate_dynamic_models requires Pydantic v2, found v{pydantic.VERSION}"
         raise Error(msg)
 
-    GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
+    _rebuild_generate_config()
 
     if config is None:
         config = GenerateConfig(
