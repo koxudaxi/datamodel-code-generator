@@ -78,6 +78,7 @@ from datamodel_code_generator.types import (
     is_python_type_annotation,
 )
 from datamodel_code_generator.util import BaseModel
+from datamodel_code_generator.validators import _validate_dotted_python_identifier_path
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
@@ -571,6 +572,17 @@ def _validate_default_factory(default_factory: Any) -> str:
     allowed_values = ", ".join(sorted(ALLOWED_DEFAULT_FACTORIES))
     msg = f"default_factory must be one of: {allowed_values}"
     raise Error(msg)
+
+
+def _validate_schema_python_import_path(value: Any, field_name: str) -> str:
+    if not isinstance(value, str):
+        msg = f"{field_name} must be a dotted Python identifier path: {value!r}"
+        raise Error(msg)
+    try:
+        return _validate_dotted_python_identifier_path(value)
+    except ValueError as exc:
+        msg = f"{field_name} {exc}"
+        raise Error(msg) from None
 
 
 DEFAULT_MODEL_EXTRA_KEYS: set[str] = {
@@ -1818,6 +1830,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self.imports.append(import_)
         return self.data_type.from_import(import_)
 
+    def _get_x_python_import_path(self, x_python_import: dict[str, Any]) -> str | None:  # noqa: PLR6301
+        module = x_python_import.get("module")
+        type_name = x_python_import.get("name")
+        if not module and not type_name:
+            return None
+        if not module or not type_name:
+            msg = "x-python-import requires both module and name"
+            raise Error(msg)
+        return _validate_schema_python_import_path(f"{module}.{type_name}", "x-python-import")
+
     def get_ref_data_type(self, ref: str) -> DataType:
         """Get a data type from a reference string.
 
@@ -1839,14 +1861,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
             self._ref_data_type_facts[resolved_ref] = facts
         x_python_import, is_optional = facts
-        if isinstance(x_python_import, dict):
-            module = x_python_import.get("module")
-            type_name = x_python_import.get("name")
-            if module and type_name:  # pragma: no branch
-                full_path = f"{module}.{type_name}"
-                import_ = Import.from_full_path(full_path)
-                self.imports.append(import_)
-                return self.data_type.from_import(import_)
+        if isinstance(x_python_import, dict) and (full_path := self._get_x_python_import_path(x_python_import)):
+            import_ = Import.from_full_path(full_path)
+            self.imports.append(import_)
+            return self.data_type.from_import(import_)
         reference = self.model_resolver.add_ref(ref)
         return self.data_type(reference=reference, is_optional=is_optional)
 
@@ -2054,11 +2072,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         try:
             ref_schema = self._load_ref_schema_object(f"#/$defs/{type_name}")
             x_python_import = ref_schema.extras.get("x-python-import")
-            if isinstance(x_python_import, dict):
-                module = x_python_import.get("module")
-                name = x_python_import.get("name")
-                if module and name:  # pragma: no branch
-                    return Import.from_full_path(f"{module}.{name}")
+            if isinstance(x_python_import, dict) and (full_path := self._get_x_python_import_path(x_python_import)):
+                return Import.from_full_path(full_path)
+        except Error:
+            raise
         except Exception:  # noqa: BLE001, S110
             pass
         return None
@@ -4093,7 +4110,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if item.ref:
             return self.get_ref_data_type(item.ref)
         if item.custom_type_path:  # pragma: no cover
-            return self.data_type_manager.get_data_type_from_full_path(item.custom_type_path, is_custom_type=True)
+            return self.data_type_manager.get_data_type_from_full_path(
+                _validate_schema_python_import_path(item.custom_type_path, "customTypePath"),
+                is_custom_type=True,
+            )
         if item.is_array:
             return self.parse_array_fields(name, item, get_special_path("array", path)).data_type
         if item.discriminator and parent and parent.is_array and (item.oneOf or item.anyOf):
@@ -4335,7 +4355,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             data_type: DataType = self.get_ref_data_type(obj.ref)
         elif obj.custom_type_path:
             data_type = self.data_type_manager.get_data_type_from_full_path(
-                obj.custom_type_path, is_custom_type=True
+                _validate_schema_python_import_path(obj.custom_type_path, "customTypePath"),
+                is_custom_type=True,
             )  # pragma: no cover
         elif obj.is_array:
             data_type = self.parse_array_fields(

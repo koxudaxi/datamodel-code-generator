@@ -3348,6 +3348,59 @@ def test_main_jsonschema_default_factory_rejects_unsafe_value(
     )
 
 
+@pytest.mark.parametrize(
+    ("schema", "expected_error"),
+    [
+        (
+            {
+                "type": "object",
+                "properties": {"payload": {"$ref": "#/$defs/Payload"}},
+                "$defs": {
+                    "Payload": {
+                        "type": "object",
+                        "x-python-import": {
+                            "module": "os",
+                            "name": "getcwd\nprint('DMCG_EXEC')",
+                        },
+                    }
+                },
+            },
+            "x-python-import must be a dotted Python identifier path",
+        ),
+        (
+            {
+                "type": "object",
+                "properties": {
+                    "payload": {
+                        "customTypePath": "os.getcwd\nprint('DMCG_EXEC')",
+                    }
+                },
+            },
+            "customTypePath must be a dotted Python identifier path",
+        ),
+    ],
+)
+def test_main_jsonschema_rejects_unsafe_python_import_extensions(
+    schema: dict[str, object],
+    expected_error: str,
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject schema-controlled import paths that would break generated import statements."""
+    input_file = output_file.with_suffix(".json")
+    input_file.write_text(json.dumps(schema), encoding="utf-8")
+
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        output_should_not_exist=True,
+        capsys=capsys,
+        expected_stderr_contains=expected_error,
+    )
+
+
 @pytest.mark.parametrize("ref_template", ["../secret/leak.json", "{file_uri}"])
 def test_main_jsonschema_warns_local_ref_outside_base_path(
     ref_template: str,
