@@ -220,6 +220,12 @@ def test_builtin_default_formatter_config(tmp_path: Path) -> None:
         assert (tmp_path / "pyproject.toml").is_file()
     assert not (tmp_path / "pyproject.toml").exists()
 
+    existing_config = "[tool.black]\nline-length = 60\n"
+    (tmp_path / "pyproject.toml").write_text(existing_config, encoding="utf-8")
+    with main_conftest._builtin_default_formatter_config(output_file, enabled=True):
+        assert (tmp_path / "pyproject.toml").read_text(encoding="utf-8") == existing_config
+    assert (tmp_path / "pyproject.toml").read_text(encoding="utf-8") == existing_config
+
 
 def test_default_formatter_main_generation_detection() -> None:
     """Raw main helpers identify only generation commands for builtin defaults."""
