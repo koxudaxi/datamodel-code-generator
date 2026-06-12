@@ -70,8 +70,10 @@ def test_get_x_python_import_path_handles_empty_and_incomplete_metadata() -> Non
     parser = JsonSchemaParser("")
 
     assert parser._get_x_python_import_path({}) is None
-    with pytest.raises(Error, match="x-python-import requires both module and name"):
-        parser._get_x_python_import_path({"module": "os"})
+    for metadata in ({"module": "os"}, {"name": "PathLike"}):
+        with pytest.raises(Error, match="x-python-import requires both module and name"):
+            parser._get_x_python_import_path(metadata)
+    assert parser._get_x_python_import_path({"module": "os", "name": "PathLike"}) == "os.PathLike"
 
 
 def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:
