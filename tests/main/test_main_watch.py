@@ -117,6 +117,28 @@ def test_watch_without_watchfiles_installed(output_file: Path, mocker: pytest.Mo
     )
 
 
+def test_main_watch_uses_watch_module_import_seam(output_file: Path, mocker: pytest.MockerFixture) -> None:
+    """Test main resolves watch_and_regenerate through datamodel_code_generator.watch."""
+    mock_generate = mocker.patch("datamodel_code_generator.__main__.run_generate_from_config", return_value=None)
+    mock_watch = mocker.patch("datamodel_code_generator.watch.watch_and_regenerate", return_value=Exit.OK)
+
+    run_main_with_args(
+        [
+            "--watch",
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "person.json"),
+            "--output",
+            str(output_file),
+        ],
+    )
+
+    mock_generate.assert_called_once()
+    mock_watch.assert_called_once()
+    config = mock_watch.call_args.args[0]
+    assert config.watch is True
+    assert config.input == JSON_SCHEMA_DATA_PATH / "person.json"
+
+
 def test_get_watchfiles_import_error() -> None:
     """Test _get_watchfiles raises exception when watchfiles is not installed."""
     from datamodel_code_generator.watch import _get_watchfiles
