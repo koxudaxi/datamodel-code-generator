@@ -1915,6 +1915,7 @@ def test_main_openapi_pattern_with_lookaround_pydantic_v2_dataclass(
         assert_func=assert_file_content,
         expected_file=expected_output,
         extra_args=["--target-python-version", "3.10", "--output-model-type", "pydantic_v2.dataclass", *args],
+        force_exec_validation=True,
     )
 
 
