@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import socket
+from collections import Counter
 from ipaddress import ip_address
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, Union
@@ -74,6 +75,80 @@ def test_get_x_python_import_path_handles_empty_and_incomplete_metadata() -> Non
         with pytest.raises(Error, match="x-python-import requires both module and name"):
             parser._get_x_python_import_path(metadata)
     assert parser._get_x_python_import_path({"module": "os", "name": "PathLike"}) == "os.PathLike"
+
+
+def test_json_schema_directory_input_reads_each_source_once(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test directory input source text is materialized once per parse."""
+    user_path, pet_path = _write_simple_json_schemas(tmp_path)
+    read_counts = _track_reads(tmp_path, monkeypatch)
+
+    JsonSchemaParser(source=tmp_path).parse(format_=False)
+
+    assert read_counts == {
+        pet_path: 1,
+        user_path: 1,
+    }
+
+
+def test_json_schema_path_list_input_reads_each_source_once(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test list input source text is materialized once per parse."""
+    user_path, pet_path = _write_simple_json_schemas(tmp_path)
+    read_counts = _track_reads(tmp_path, monkeypatch)
+
+    JsonSchemaParser(source=[user_path, pet_path], base_path=tmp_path).parse(format_=False)
+
+    assert read_counts == {
+        pet_path: 1,
+        user_path: 1,
+    }
+
+
+def test_json_schema_iter_local_source_paths_ignores_non_local_source() -> None:
+    """Test local source path iteration is empty for non-local source input."""
+    assert list(JsonSchemaParser("{}")._iter_local_source_paths()) == []
+
+
+def test_track_reads_ignores_paths_outside_tmp_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test read tracking ignores files outside the temporary schema directory."""
+    read_counts = _track_reads(tmp_path, monkeypatch)
+
+    assert Path(__file__).read_text(encoding="utf-8")
+    assert read_counts == {}
+
+
+def _write_simple_json_schemas(tmp_path: Path) -> tuple[Path, Path]:
+    user_path = tmp_path / "user.json"
+    user_path.write_text(
+        json.dumps({
+            "title": "User",
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+        }),
+        encoding="utf-8",
+    )
+    pet_path = tmp_path / "pet.json"
+    pet_path.write_text(
+        json.dumps({
+            "title": "Pet",
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+        }),
+        encoding="utf-8",
+    )
+    return user_path, pet_path
+
+
+def _track_reads(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Counter[Path]:
+    read_counts: Counter[Path] = Counter()
+    original_read_text = Path.read_text
+
+    def read_text(path: Path, *args: Any, **kwargs: Any) -> str:
+        if path.parent == tmp_path:
+            read_counts[path] += 1
+        return original_read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", read_text)
+    return read_counts
 
 
 def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:

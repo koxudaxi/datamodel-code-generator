@@ -969,26 +969,29 @@ class AsyncAPIParser(OpenAPIParser):
         """Parse AsyncAPI component schemas and message payload/header schemas."""
         parsed_paths: set[tuple[str, ...]] = set()
         context_sources: dict[tuple[str, ...], AsyncAPIContext] = {}
-        for source, path_parts in self._get_context_source_path_parts():
-            if self.validation:
-                warn_deprecated("cli.validation", stacklevel=2)
+        try:
+            for source, path_parts in self._get_context_source_path_parts():
+                if self.validation:
+                    warn_deprecated("cli.validation", stacklevel=2)
 
-            specification = self._load_source_dict(source)
-            self.raw_obj = specification
-            context_sources[tuple(path_parts)] = self._current_asyncapi_context()
-            self._collect_discriminator_schemas()
-            for schema in self._iter_asyncapi_schemas(specification, path_parts):
-                context_sources[tuple(schema.context.root_parts)] = schema.context
-                raw_schema = schema.raw_schema
-                path_key = tuple(schema.path)
-                if path_key in parsed_paths:
-                    continue
-                parsed_paths.add(path_key)
-                with self._asyncapi_context(schema.context):
-                    if schema.parse_as_file:
-                        self._parse_file(raw_schema, schema.name, schema.path)
-                    else:
-                        self.parse_raw_obj(schema.name, raw_schema, schema.path)
+                specification = self._load_source_dict(source)
+                self.raw_obj = specification
+                context_sources[tuple(path_parts)] = self._current_asyncapi_context()
+                self._collect_discriminator_schemas()
+                for schema in self._iter_asyncapi_schemas(specification, path_parts):
+                    context_sources[tuple(schema.context.root_parts)] = schema.context
+                    raw_schema = schema.raw_schema
+                    path_key = tuple(schema.path)
+                    if path_key in parsed_paths:
+                        continue
+                    parsed_paths.add(path_key)
+                    with self._asyncapi_context(schema.context):
+                        if schema.parse_as_file:
+                            self._parse_file(raw_schema, schema.name, schema.path)
+                        else:
+                            self.parse_raw_obj(schema.name, raw_schema, schema.path)
 
-        self._resolve_asyncapi_unparsed_json_pointer(context_sources)
-        self._generate_forced_base_models()
+            self._resolve_asyncapi_unparsed_json_pointer(context_sources)
+            self._generate_forced_base_models()
+        finally:
+            self._reset_local_source_cache()
