@@ -470,14 +470,14 @@ def _normalize_generated_text(text: str) -> str:
 def _get_tox_env() -> str:  # pragma: no cover
     """Get the current tox environment name from TOX_ENV_NAME or fallback.
 
-    Strips '-parallel' suffix since inline-snapshot requires -n0 (single process).
+    Strips parallel-only suffixes since inline-snapshot requires -n0 (single process).
     Only called in assertion failure hints.
     """
     import os
 
     env = os.environ.get("TOX_ENV_NAME", "<version>")
-    # Remove -parallel suffix since inline-snapshot needs single process mode
-    return env.removesuffix("-parallel")
+    # Remove parallel-only suffixes since inline-snapshot needs single process mode.
+    return env.removesuffix("-nocov-parallel").removesuffix("-parallel")
 
 
 def _format_snapshot_hint(action: str) -> str:  # pragma: no cover

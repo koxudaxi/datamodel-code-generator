@@ -63,31 +63,33 @@ jobs:
         cache-suffix: "${{ matrix.py || matrix.tox_env }}"
     - name: Install tox
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
-    - name: Setup Python test environment
+    - name: Set tox environment
       run: |
         if [ -n "${{ matrix.py }}" ]; then
           TOX_ENV="py${{ matrix.py }}-parallel"
           TOX_ENV="${TOX_ENV//.}"
+          if [ "${{ matrix.os }}" = "windows-latest" ] || [ "${{ matrix.os }}" = "macos-latest" ]; then
+            TOX_ENV="${TOX_ENV/-parallel/-nocov-parallel}"
+          fi
         else
           TOX_ENV="${{ matrix.tox_env }}"
         fi
+        echo "TOX_ENV=$TOX_ENV" >> "$GITHUB_ENV"
+      shell: bash
+    - name: Setup Python test environment
+      run: |
         tox run -vv --notest --skip-missing-interpreters false -e $TOX_ENV
       shell: bash
       env:
         UV_PYTHON_PREFERENCE: "only-managed"
     - name: Run test suite
       run: |
-        if [ -n "${{ matrix.py }}" ]; then
-          TOX_ENV="py${{ matrix.py }}-parallel"
-          TOX_ENV="${TOX_ENV//.}"
-        else
-          TOX_ENV="${{ matrix.tox_env }}"
-        fi
         tox run --skip-uv-sync --skip-pkg-install -e $TOX_ENV
       shell: bash
       env:
         UV_PYTHON_PREFERENCE: "only-managed"
     - name: Rename coverage report file
+      if: matrix.py == '' || (matrix.os != 'windows-latest' && matrix.os != 'macos-latest')
       run: |
         import os; import sys
         py = "${{ matrix.py }}"
@@ -100,6 +102,7 @@ jobs:
         os.rename(f".tox/.coverage.{env_name}", f".tox/.coverage.{base_name}-${{ matrix.os }}")
       shell: python
     - name: Upload coverage data
+      if: matrix.py == '' || (matrix.os != 'windows-latest' && matrix.os != 'macos-latest')
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         include-hidden-files: true

@@ -165,13 +165,10 @@ DEFAULT_FREEZE_TIME = "2019-07-26"
 @pytest.fixture(autouse=True)
 def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
     """Reset argument namespace before each test."""
-    from datamodel_code_generator.model.base import _get_environment, _get_template_with_custom_dir
-
+    # Template caches are safe to keep because custom-template tests use fixed directories and keyed caches.
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace_)
     monkeypatch.setattr("datamodel_code_generator.arguments.namespace", namespace_)
-    _get_environment.cache_clear()
-    _get_template_with_custom_dir.cache_clear()
 
 
 @pytest.fixture(autouse=True)
