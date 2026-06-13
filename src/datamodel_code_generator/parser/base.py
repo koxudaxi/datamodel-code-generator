@@ -3498,7 +3498,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.__fix_dataclass_field_ordering(models)
         models = self.__remove_overridden_models(models)
         self.__apply_type_overrides(models)
-        self.__update_type_aliases(models, self.pydantic_v2_root_model_type, use_deferred_annotations=config.use_deferred_annotations)
+        self.__update_type_aliases(
+            models, self.pydantic_v2_root_model_type, use_deferred_annotations=config.use_deferred_annotations
+        )
         self.__set_validate_default_on_fields(models)
 
         return ModuleContext(module, module_, models, is_init, imports, scoped_model_resolver)
