@@ -63,31 +63,33 @@ jobs:
         cache-suffix: "${{ matrix.py || matrix.tox_env }}"
     - name: Install tox
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
-    - name: Setup Python test environment
+    - name: Set tox environment
       run: |
         if [ -n "${{ matrix.py }}" ]; then
           TOX_ENV="py${{ matrix.py }}-parallel"
           TOX_ENV="${TOX_ENV//.}"
+          if [ "${{ matrix.os }}" = "windows-latest" ] || [ "${{ matrix.os }}" = "macos-latest" ]; then
+            TOX_ENV="${TOX_ENV/-parallel/-nocov-parallel}"
+          fi
         else
           TOX_ENV="${{ matrix.tox_env }}"
         fi
+        echo "TOX_ENV=$TOX_ENV" >> "$GITHUB_ENV"
+      shell: bash
+    - name: Setup Python test environment
+      run: |
         tox run -vv --notest --skip-missing-interpreters false -e $TOX_ENV
       shell: bash
       env:
         UV_PYTHON_PREFERENCE: "only-managed"
     - name: Run test suite
       run: |
-        if [ -n "${{ matrix.py }}" ]; then
-          TOX_ENV="py${{ matrix.py }}-parallel"
-          TOX_ENV="${TOX_ENV//.}"
-        else
-          TOX_ENV="${{ matrix.tox_env }}"
-        fi
         tox run --skip-uv-sync --skip-pkg-install -e $TOX_ENV
       shell: bash
       env:
         UV_PYTHON_PREFERENCE: "only-managed"
     - name: Rename coverage report file
+      if: matrix.py == '' || (matrix.os != 'windows-latest' && matrix.os != 'macos-latest')
       run: |
         import os; import sys
         py = "${{ matrix.py }}"
@@ -100,6 +102,7 @@ jobs:
         os.rename(f".tox/.coverage.{env_name}", f".tox/.coverage.{base_name}-${{ matrix.os }}")
       shell: python
     - name: Upload coverage data
+      if: matrix.py == '' || (matrix.os != 'windows-latest' && matrix.os != 'macos-latest')
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         include-hidden-files: true
@@ -204,7 +207,14 @@ jobs:
         run: tox r -vv --notest --skip-missing-interpreters false -e w3c-xmlschema-e2e
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Cache W3C XML Schema Test Suite
+        id: cache-w3c-xsdtests
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .tox/w3c-xsdtests
+          key: e2e-xsdtests-7bc3365c652a322f3d762021b3879eb92dae7e30
       - name: Checkout W3C XML Schema Test Suite
+        if: steps.cache-w3c-xsdtests.outputs.cache-hit != 'true'
         run: |
           git clone --filter=blob:none https://github.com/w3c/xsdtests.git .tox/w3c-xsdtests
           git -C .tox/w3c-xsdtests checkout 7bc3365c652a322f3d762021b3879eb92dae7e30
@@ -260,7 +270,14 @@ jobs:
         run: tox r -vv --notest --skip-missing-interpreters false -e asyncapi-spec-json-schemas-e2e
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Cache AsyncAPI spec JSON Schemas
+        id: cache-asyncapi-spec-json-schemas
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .tox/asyncapi-spec-json-schemas
+          key: e2e-asyncapi-spec-json-schemas-469c2b2bf5ed88e0cdf1e48975b93a87c710d229
       - name: Checkout AsyncAPI spec JSON Schemas
+        if: steps.cache-asyncapi-spec-json-schemas.outputs.cache-hit != 'true'
         run: |
           git clone --filter=blob:none https://github.com/asyncapi/spec-json-schemas.git .tox/asyncapi-spec-json-schemas
           git -C .tox/asyncapi-spec-json-schemas checkout 469c2b2bf5ed88e0cdf1e48975b93a87c710d229
@@ -288,7 +305,14 @@ jobs:
         run: tox r -vv --notest --skip-missing-interpreters false -e apache-avro-schema-pass-e2e
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Cache Apache Avro
+        id: cache-apache-avro
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .tox/apache-avro
+          key: e2e-apache-avro-9110c693767c1dde2665b2b57939333478b12036
       - name: Checkout Apache Avro
+        if: steps.cache-apache-avro.outputs.cache-hit != 'true'
         run: |
           git clone --filter=blob:none https://github.com/apache/avro.git .tox/apache-avro
           git -C .tox/apache-avro checkout 9110c693767c1dde2665b2b57939333478b12036
@@ -316,7 +340,14 @@ jobs:
         run: tox r -vv --notest --skip-missing-interpreters false -e protobuf-official-e2e
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Cache Protocol Buffers
+        id: cache-protobuf
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .tox/protobuf
+          key: e2e-protobuf-4376cba55d9e2f44f7e317d9c10e0259d145f8cf
       - name: Checkout Protocol Buffers
+        if: steps.cache-protobuf.outputs.cache-hit != 'true'
         run: |
           git clone --filter=blob:none --no-checkout https://github.com/protocolbuffers/protobuf.git .tox/protobuf
           git -C .tox/protobuf sparse-checkout init --cone
