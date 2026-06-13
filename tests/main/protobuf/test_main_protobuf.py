@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any, cast
 
 import black
@@ -9,6 +10,7 @@ import pytest
 
 from datamodel_code_generator import Error, InputFileType, generate, infer_input_type
 from datamodel_code_generator.__main__ import Exit
+from datamodel_code_generator.parser.protobuf import WELL_KNOWN_SCHEMAS, convert_protobuf_schema_data
 from tests.conftest import assert_output
 from tests.main.conftest import (
     EXPECTED_PROTOBUF_PATH,
@@ -81,6 +83,49 @@ def test_main_protobuf_well_known_wrappers(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="well_known_wrappers.py",
     )
+
+
+@pytest.mark.allow_direct_assert
+def test_convert_protobuf_schema_data_isolates_well_known_schema_templates() -> None:
+    """Keep converted well-known schemas independent from module-level templates."""
+    original_templates = deepcopy(WELL_KNOWN_SCHEMAS)
+    proto = """syntax = "proto3";
+package aliasing;
+import "google/protobuf/struct.proto";
+import "google/protobuf/wrappers.proto";
+
+message UsesWellKnown {
+  google.protobuf.Value value = 1;
+  google.protobuf.ListValue list_value = 2;
+  google.protobuf.StringValue wrapped = 3;
+}
+"""
+
+    try:
+        first = convert_protobuf_schema_data(proto)
+        properties = first["definitions"]["aliasing__UsesWellKnown"]["properties"]
+        value_schema = properties["value"]
+        list_value_schema = properties["list_value"]
+        wrapped_schema = properties["wrapped"]
+
+        assert value_schema["anyOf"] is not WELL_KNOWN_SCHEMAS["google.protobuf.Value"]["anyOf"]
+        assert list_value_schema["items"] is not WELL_KNOWN_SCHEMAS["google.protobuf.ListValue"]["items"]
+        assert wrapped_schema["anyOf"] is not WELL_KNOWN_SCHEMAS["google.protobuf.StringValue"]["anyOf"]
+
+        value_schema["anyOf"][0]["x-mutated"] = True
+        list_value_schema["items"]["x-mutated"] = True
+        wrapped_schema["anyOf"].append({"type": "integer"})
+
+        second = convert_protobuf_schema_data(proto)
+        second_properties = second["definitions"]["aliasing__UsesWellKnown"]["properties"]
+
+        assert original_templates == WELL_KNOWN_SCHEMAS
+        assert second_properties["value"] == original_templates["google.protobuf.Value"]
+        assert second_properties["list_value"] == original_templates["google.protobuf.ListValue"]
+        assert second_properties["wrapped"] == original_templates["google.protobuf.StringValue"]
+    finally:
+        WELL_KNOWN_SCHEMAS.clear()
+        WELL_KNOWN_SCHEMAS.update(original_templates)
 
 
 def test_main_protobuf_spec_proto3(output_file: Path) -> None:

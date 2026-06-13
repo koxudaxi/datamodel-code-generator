@@ -8,6 +8,7 @@ import pytest
 
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import PythonVersion, is_supported_in_black
+from datamodel_code_generator.parser.avro import convert_avro_schema_data
 from tests.main.avro.conftest import assert_file_content
 from tests.main.conftest import (
     AVRO_DATA_PATH,
@@ -26,6 +27,56 @@ _SKIP_BLACK = pytest.mark.skipif(
 
 def _expected_file(expected_file: str) -> str:
     return f"py{CURRENT_PYTHON_VERSION.replace('.', '')}/{expected_file}"
+
+
+@pytest.mark.allow_direct_assert
+def test_convert_avro_schema_data_isolates_raw_lists() -> None:
+    """Keep converted Avro metadata and enum lists independent from raw schema input."""
+    record_aliases = ["LegacyExample"]
+    field_aliases = ["legacy_status"]
+    enum_aliases = ["LegacyStatus"]
+    enum_symbols = ["ACTIVE", "INACTIVE"]
+    raw_schema = {
+        "type": "record",
+        "name": "Example",
+        "aliases": record_aliases,
+        "fields": [
+            {
+                "name": "status",
+                "aliases": field_aliases,
+                "type": {
+                    "type": "enum",
+                    "name": "Status",
+                    "aliases": enum_aliases,
+                    "symbols": enum_symbols,
+                },
+            }
+        ],
+    }
+
+    converted = convert_avro_schema_data(raw_schema)
+    record_schema = converted["definitions"]["Example"]
+    field_schema = record_schema["properties"]["status"]
+    enum_schema = converted["definitions"]["Status"]
+
+    assert record_schema["x-avro-aliases"] == record_aliases
+    assert record_schema["x-avro-aliases"] is not record_aliases
+    assert field_schema["x-avro-aliases"] == field_aliases
+    assert field_schema["x-avro-aliases"] is not field_aliases
+    assert enum_schema["x-avro-aliases"] == enum_aliases
+    assert enum_schema["x-avro-aliases"] is not enum_aliases
+    assert enum_schema["enum"] == enum_symbols
+    assert enum_schema["enum"] is not enum_symbols
+
+    record_schema["x-avro-aliases"].append("MutatedExample")
+    field_schema["x-avro-aliases"].append("mutated_status")
+    enum_schema["x-avro-aliases"].append("MutatedStatus")
+    enum_schema["enum"].append("MUTATED")
+
+    assert record_aliases == ["LegacyExample"]
+    assert field_aliases == ["legacy_status"]
+    assert enum_aliases == ["LegacyStatus"]
+    assert enum_symbols == ["ACTIVE", "INACTIVE"]
 
 
 @_SKIP_BLACK
