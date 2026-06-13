@@ -5,8 +5,7 @@ from __future__ import annotations
 from typing import Any, TypeAlias
 
 JsonSchema = dict[str, Any]
-YamlScalar = str | int | float | bool | None
-YamlValue: TypeAlias = "dict[str, YamlValue] | list[YamlValue] | YamlScalar"
+YamlValue: TypeAlias = "dict[str, YamlValue] | list[YamlValue] | str | int | float | bool | None"
 
 PRIMITIVE_TYPES = frozenset({"null", "boolean", "int", "long", "float", "double", "bytes", "string"})
 NAMED_TYPES = frozenset({"record", "enum", "fixed"})

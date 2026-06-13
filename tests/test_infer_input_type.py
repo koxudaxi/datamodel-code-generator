@@ -20,6 +20,7 @@ HEAVY_INFERENCE_MODULES = (
     "datamodel_code_generator.parser.jsonschema",
     "datamodel_code_generator.parser.xmlschema",
 )
+SUBPROCESS_TIMEOUT_SECONDS = 15
 
 
 def _probe_infer_input_type(text: str) -> dict[str, object]:
@@ -47,7 +48,18 @@ print(json.dumps({{"loaded": loaded, "outcome": outcome}}))
 """
     env = os.environ.copy()
     env.pop("PYTHONWARNINGS", None)
-    return json.loads(subprocess.check_output([sys.executable, "-c", code], env=env, text=True))
+    try:
+        return json.loads(
+            subprocess.check_output(
+                [sys.executable, "-c", code],
+                env=env,
+                text=True,
+                timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            )
+        )
+    except subprocess.TimeoutExpired as exc:
+        message = f"infer_input_type subprocess timed out after {exc.timeout} seconds"
+        raise AssertionError(message) from exc
 
 
 def test_infer_input_type() -> None:  # noqa: PLR0912
@@ -188,6 +200,7 @@ def test_public_detection_helpers_keep_parser_module_surface() -> None:
     from datamodel_code_generator.parser import avro, xmlschema
 
     assert avro.is_avro_schema_data.__module__ == "datamodel_code_generator.parser.avro"
+    assert avro.is_avro_schema_data("string")
     assert frozenset({"null", "boolean", "int", "long", "float", "double", "bytes", "string"}) == avro.PRIMITIVE_TYPES
     assert frozenset({"record", "enum", "fixed"}) == avro.NAMED_TYPES
     assert avro.NAMED_TYPES | {"array", "map"} == avro.COMPLEX_TYPES
@@ -204,5 +217,18 @@ def test_public_detection_helpers_keep_parser_module_surface() -> None:
         == avro.JSON_SCHEMA_MARKER_KEYS
     )
     assert xmlschema.is_xml_schema_text.__module__ == "datamodel_code_generator.parser.xmlschema"
+    assert xmlschema.is_xml_schema_text('<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" />')
     assert xmlschema.XML_SCHEMA_NAMESPACE == "http://www.w3.org/2001/XMLSchema"
     assert xmlschema.XML_SCHEMA_TAG == "{http://www.w3.org/2001/XMLSchema}schema"
+
+
+def test_probe_infer_input_type_reports_subprocess_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test subprocess probe failures surface as bounded assertion failures."""
+
+    def raise_timeout(*_args: object, **_kwargs: object) -> str:
+        raise subprocess.TimeoutExpired(cmd=sys.executable, timeout=SUBPROCESS_TIMEOUT_SECONDS)
+
+    monkeypatch.setattr(subprocess, "check_output", raise_timeout)
+
+    with pytest.raises(AssertionError, match=f"timed out after {SUBPROCESS_TIMEOUT_SECONDS} seconds"):
+        _probe_infer_input_type("{}")

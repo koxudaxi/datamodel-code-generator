@@ -12,12 +12,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple, cast
 from typing_extensions import Unpack
 
 from datamodel_code_generator import Error, YamlValue, load_yaml
-from datamodel_code_generator.parser._avro_detection import (
-    COMPLEX_TYPES as _COMPLEX_TYPES,
-)
-from datamodel_code_generator.parser._avro_detection import (
-    JSON_SCHEMA_MARKER_KEYS as _JSON_SCHEMA_MARKER_KEYS,
-)
+from datamodel_code_generator.parser import _avro_detection
 from datamodel_code_generator.parser._avro_detection import (
     NAMED_TYPES,
     PRIMITIVE_TYPES,
@@ -38,8 +33,6 @@ if TYPE_CHECKING:
 
 JsonSchema = dict[str, Any]
 
-COMPLEX_TYPES = _COMPLEX_TYPES
-JSON_SCHEMA_MARKER_KEYS = _JSON_SCHEMA_MARKER_KEYS
 NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 STRING_SCHEMA: JsonSchema = {"type": "string"}
@@ -62,6 +55,16 @@ PRIMITIVE_SCHEMAS: dict[str, JsonSchema] = {
 def is_avro_schema_data(data: YamlValue) -> bool:
     """Return whether loaded data appears to be an Avro schema."""
     return _is_avro_schema_data(data)
+
+
+def __getattr__(name: str) -> Any:
+    """Return compatibility constants moved to the lightweight detector."""
+    match name:
+        case "COMPLEX_TYPES":
+            return _avro_detection.COMPLEX_TYPES
+        case "JSON_SCHEMA_MARKER_KEYS":
+            return _avro_detection.JSON_SCHEMA_MARKER_KEYS
+    raise AttributeError(name)
 
 
 class _Name(NamedTuple):
