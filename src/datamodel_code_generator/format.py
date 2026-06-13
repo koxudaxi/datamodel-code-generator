@@ -301,24 +301,19 @@ class PythonVersion(Enum):
 
     @cached_property
     def _is_py_311_or_later(self) -> bool:  # pragma: no cover
-        return self.value != self.PY_310.value  # ty: ignore
+        return self.version_key >= (3, 11)
 
     @cached_property
     def _is_py_312_or_later(self) -> bool:  # pragma: no cover
-        return self.value not in {self.PY_310.value, self.PY_311.value}  # ty: ignore
+        return self.version_key >= (3, 12)
 
     @cached_property
     def _is_py_313_or_later(self) -> bool:
-        return self.value not in {self.PY_310.value, self.PY_311.value, self.PY_312.value}  # ty: ignore
+        return self.version_key >= (3, 13)
 
     @cached_property
     def _is_py_314_or_later(self) -> bool:
-        return self.value not in {  # ty: ignore
-            self.PY_310.value,  # ty: ignore
-            self.PY_311.value,  # ty: ignore
-            self.PY_312.value,  # ty: ignore
-            self.PY_313.value,  # ty: ignore
-        }
+        return self.version_key >= (3, 14)
 
     @property
     def has_union_operator(self) -> bool:  # pragma: no cover
