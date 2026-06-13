@@ -410,6 +410,23 @@ def test_datatype_type_hint_without_container_flag_returns_inner_type() -> None:
     assert data_type.is_optional is False
 
 
+def test_datatype_module_name_reads_reference_source_attribute() -> None:
+    """Pin module-name lookup through the reference source."""
+
+    class ModuleReferenceSource:
+        reference = None
+        module_name = "pkg.models"
+
+    reference = Reference(
+        path="Model",
+        name="Model",
+        source=ModuleReferenceSource(),
+    )
+    data_type = DataType(reference=reference)
+
+    assert data_type.module_name == "pkg.models"
+
+
 def test_datatype_base_type_hint_applies_reference_nullability() -> None:
     """Pin nullable reference propagation for base type hints."""
     from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
@@ -427,6 +444,26 @@ def test_datatype_base_type_hint_applies_reference_nullability() -> None:
     data_type = DataType(reference=reference)
 
     assert data_type.base_type_hint == "Optional[Model]"
+
+
+def test_datatype_nullable_reference_keeps_alias_non_optional() -> None:
+    """Pin alias guard before applying reference nullability."""
+
+    class AliasNullableReferenceSource:
+        reference = None
+        nullable = True
+        is_alias = True
+
+    reference = Reference(
+        path="Model",
+        name="Model",
+        source=AliasNullableReferenceSource(),
+    )
+    data_type = DataType(reference=reference)
+
+    data_type._apply_nullable_from_reference()
+
+    assert data_type.is_optional is False
 
 
 @pytest.mark.parametrize(

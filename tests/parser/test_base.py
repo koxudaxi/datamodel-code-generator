@@ -727,6 +727,16 @@ def test_get_most_of_parent_honors_type_filter() -> None:
     assert get_most_of_parent(child, int) is None
 
 
+def test_get_most_of_parent_walks_plain_parent_attributes() -> None:
+    """Test parent traversal with plain objects that expose a parent attribute."""
+    root = SimpleNamespace()
+    middle = SimpleNamespace(parent=root)
+    child = SimpleNamespace(parent=middle)
+
+    assert get_most_of_parent(child) is root
+    assert get_most_of_parent(SimpleNamespace(parent=None)) is None
+
+
 def test_to_hashable_list_and_tuple() -> None:
     """Test to_hashable with list and tuple."""
     result = to_hashable([3, 1, 2])
