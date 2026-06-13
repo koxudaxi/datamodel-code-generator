@@ -75,6 +75,10 @@ if TYPE_CHECKING:
 assert_file_content = create_assert_file_content(EXPECTED_MAIN_PATH)
 
 
+class _GenerateParseAbort(BaseException):
+    """Test-only parse abort that is not an Exception subclass."""
+
+
 def _generate_call_keyword_source(value: ast.expr) -> str:
     match value:
         case ast.Attribute(value=ast.Name(id="config")):
@@ -2960,6 +2964,22 @@ def test_generate_with_config_and_kwargs_raises_error(output_file: Path) -> None
             config=config,
             field_constraints=True,
         )
+
+
+@pytest.mark.allow_direct_assert
+@pytest.mark.parametrize("parse_error", [RuntimeError("parse failed"), _GenerateParseAbort("parse aborted")])
+def test_generate_disposes_parser_when_parse_raises(parse_error: BaseException, mocker: MockerFixture) -> None:
+    """Test generate() releases parser-owned references while preserving parse failures."""
+    parser = mocker.Mock()
+    parser.parse.side_effect = parse_error
+    parser._dispose.side_effect = RuntimeError("dispose failed")
+    mocker.patch.object(datamodel_code_generator, "_build_parser", return_value=parser)
+
+    with pytest.raises(type(parse_error)) as exc_info:
+        generate("{}", input_file_type=InputFileType.JsonSchema, formatters=[])
+
+    assert exc_info.value is parse_error
+    parser._dispose.assert_called_once_with()
 
 
 def test_parser_with_config_and_options_raises_error() -> None:

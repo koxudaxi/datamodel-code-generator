@@ -1216,13 +1216,18 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     )
 
     with chdir(config.output):
-        results = parser.parse(
-            settings_path=config.settings_path,
-            disable_future_imports=config.disable_future_imports,
-            all_exports_scope=config.all_exports_scope,
-            all_exports_collision_strategy=config.all_exports_collision_strategy,
-            module_split_mode=config.module_split_mode,
-        )
+        try:
+            results = parser.parse(
+                settings_path=config.settings_path,
+                disable_future_imports=config.disable_future_imports,
+                all_exports_scope=config.all_exports_scope,
+                all_exports_collision_strategy=config.all_exports_collision_strategy,
+                module_split_mode=config.module_split_mode,
+            )
+        except BaseException:
+            with contextlib.suppress(BaseException):
+                parser._dispose()  # noqa: SLF001
+            raise
     parser._dispose()  # noqa: SLF001
     return _emit_results(
         results,
