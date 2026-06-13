@@ -125,6 +125,38 @@ class TestLoadYaml:
 
         assert _is_yaml_deprecated_bool_warning_enabled()
 
+    def test_yaml_deprecated_bool_warning_enabled_ignores_unmatched_string_filters(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """String warning filter entries for other modules do not crash or disable the YAML warning."""
+        monkeypatch.setattr(
+            warnings,
+            "filters",
+            [
+                ("default", None, DeprecationWarning, "__main__", 0),
+            ],
+        )
+
+        assert _is_yaml_deprecated_bool_warning_enabled()
+
+    def test_yaml_deprecated_bool_warning_enabled_matches_string_filters(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """String warning filter entries can still disable the YAML warning when they match."""
+        monkeypatch.setattr(
+            warnings,
+            "filters",
+            [
+                (
+                    "ignore",
+                    "YAML bool ",
+                    DeprecationWarning,
+                    "datamodel_code_generator",
+                    0,
+                ),
+            ],
+        )
+
+        assert not _is_yaml_deprecated_bool_warning_enabled()
+
     def test_with_ryaml_textio(self) -> None:
         """When ryaml is available, TextIO.read() is called before ryaml.loads()."""
         mock_ryaml = MagicMock()
