@@ -633,15 +633,19 @@ class OpenAPIParser(JsonSchemaParser):
                 for operation_name, raw_operation in methods.items():
                     if operation_name not in OPERATION_NAMES:
                         continue
+                    operation = raw_operation
                     if item_parameters:
+                        operation = operation.copy()
                         if "parameters" in raw_operation:
-                            raw_operation["parameters"].extend(item_parameters)
+                            operation["parameters"] = [*raw_operation["parameters"], *item_parameters]
                         else:
-                            raw_operation["parameters"] = item_parameters.copy()
-                    if security is not None and "security" not in raw_operation:
+                            operation["parameters"] = item_parameters.copy()
+                    if security is not None and "security" not in operation:
                         # fastapi-code-generator depends on inherited global security being materialized here.
-                        raw_operation["security"] = security
-                    self.parse_operation(raw_operation, [*path, operation_name])
+                        if operation is raw_operation:
+                            operation = operation.copy()
+                        operation["security"] = security
+                    self.parse_operation(operation, [*path, operation_name])
 
     def parse_schema(
         self,
