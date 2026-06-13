@@ -2065,3 +2065,120 @@ def test_code_formatter_no_warning_when_formatters_empty(tmp_path: Path, monkeyp
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         CodeFormatter(PythonVersionMin, formatters=[])
+
+
+# ---------------------------------------------------------------------------
+# Tests for auto-fallback when black/isort are not installed (issue #3058)
+# ---------------------------------------------------------------------------
+
+
+def test_black_not_installed_emits_warning_and_removes_black(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When black is requested but not installed, emit UserWarning and drop black."""
+    monkeypatch.chdir(tmp_path)
+
+    def _unavailable_black(formatter: Formatter) -> bool:
+        return formatter is not Formatter.BLACK
+
+    with (
+        mock.patch.object(format_module, "_is_formatter_available", side_effect=_unavailable_black),
+        pytest.warns(UserWarning, match="black is not installed"),
+    ):
+        cf = CodeFormatter(PythonVersionMin, formatters=[Formatter.BLACK, Formatter.ISORT])
+
+    # black removed; isort still available so it stays; BUILTIN not needed
+    assert Formatter.BLACK not in cf.formatters
+    assert Formatter.ISORT in cf.formatters
+    assert not cf.use_builtin_formatter
+
+
+def test_black_not_installed_no_other_formatters_falls_back_to_builtin(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When only black is requested and not installed, CodeFormatter falls back to BUILTIN."""
+    monkeypatch.chdir(tmp_path)
+
+    with (
+        mock.patch.object(format_module, "_is_formatter_available", return_value=False),
+        pytest.warns(UserWarning, match="black is not installed"),
+    ):
+        cf = CodeFormatter(PythonVersionMin, formatters=[Formatter.BLACK])
+
+    assert Formatter.BLACK not in cf.formatters
+    assert cf.use_builtin_formatter
+
+
+def test_isort_not_installed_emits_warning_and_skips_isort(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When isort is not installed, emit UserWarning and skip the isort step."""
+    monkeypatch.chdir(tmp_path)
+
+    with (
+        mock.patch.object(
+            format_module,
+            "_is_formatter_available",
+            side_effect=lambda f: f is not Formatter.ISORT,
+        ),
+        pytest.warns(UserWarning, match="isort is not installed"),
+    ):
+        cf = CodeFormatter(PythonVersionMin, formatters=[Formatter.BLACK, Formatter.ISORT])
+
+    assert Formatter.ISORT not in cf.formatters
+    assert Formatter.BLACK in cf.formatters
+
+
+def test_both_black_and_isort_not_installed_falls_back_to_builtin(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When both black and isort are missing, emit warnings and activate BUILTIN."""
+    monkeypatch.chdir(tmp_path)
+
+    with (
+        mock.patch.object(
+            format_module,
+            "_is_formatter_available",
+            return_value=False,
+        ),
+        pytest.warns(UserWarning, match="not installed"),
+    ):
+        cf = CodeFormatter(PythonVersionMin, formatters=[Formatter.BLACK, Formatter.ISORT])
+
+    assert Formatter.BLACK not in cf.formatters
+    assert Formatter.ISORT not in cf.formatters
+    assert cf.use_builtin_formatter
+
+
+def test_both_installed_no_fallback_warning(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Normal case: both black and isort installed - no fallback warning emitted."""
+    monkeypatch.chdir(tmp_path)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        cf = CodeFormatter(PythonVersionMin, formatters=[Formatter.BLACK, Formatter.ISORT])
+
+    assert Formatter.BLACK in cf.formatters
+    assert Formatter.ISORT in cf.formatters
+    assert not cf.use_builtin_formatter
+
+
+def test_explicit_builtin_formatter_no_warning(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Explicit BUILTIN formatter with no external packages: no fallback warning."""
+    monkeypatch.chdir(tmp_path)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        cf = CodeFormatter(PythonVersionMin, formatters=[Formatter.BUILTIN])
+
+    assert cf.use_builtin_formatter
