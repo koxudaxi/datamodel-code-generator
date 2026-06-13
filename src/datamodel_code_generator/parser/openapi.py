@@ -558,12 +558,12 @@ class OpenAPIParser(JsonSchemaParser):
             return None
 
         if "schema_" in raw_media_obj.model_fields_set:
-            if raw_media_obj.schema_ is None:  # pragma: no cover
+            if raw_media_obj.schema_ is None:
                 return None
             return RawMediaSchemaSource(raw_media_obj.schema_)
         if "itemSchema" not in raw_media_obj.model_fields_set or not self.schema_features.media_item_schema:
             return None
-        if raw_media_obj.itemSchema is None:  # pragma: no cover
+        if raw_media_obj.itemSchema is None:
             return None
         return RawMediaSchemaSource({"type": "array", "items": raw_media_obj.itemSchema}, from_item_schema=True)
 
