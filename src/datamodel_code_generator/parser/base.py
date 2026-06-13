@@ -65,8 +65,6 @@ from datamodel_code_generator.imports import (
     Import,
     Imports,
 )
-from datamodel_code_generator.model import dataclass as dataclass_model
-from datamodel_code_generator.model import msgspec as msgspec_model
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
     GENERIC_BASE_CLASS_NAME,
@@ -101,10 +99,13 @@ to_hashable = _internal_utils.to_hashable
 
 # Keep these as module-name checks so non-pydantic-v2 outputs do not import the
 # pydantic_v2 generator package and its runtime feature gates.
+_DATACLASS_MODULE: Final = "datamodel_code_generator.model.dataclass"
+_MSGSPEC_MODULE: Final = "datamodel_code_generator.model.msgspec"
 _PYDANTIC_V2_BASE_MODEL_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.base_model"
 _PYDANTIC_V2_DATACLASS_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.dataclass"
 _PYDANTIC_V2_MODULE: Final = "datamodel_code_generator.model.pydantic_v2"
 _PYDANTIC_V2_ROOT_MODEL_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.root_model"
+_TYPED_DICT_MODULE: Final = "datamodel_code_generator.model.typed_dict"
 
 
 @cache
@@ -118,6 +119,14 @@ def _model_type(value: object | type[object]) -> type[object]:
 
 def _is_pydantic_v2_base_model(value: object | type[object]) -> bool:
     return _type_mro_contains_type(_model_type(value), module=_PYDANTIC_V2_BASE_MODEL_MODULE, name="BaseModel")
+
+
+def _is_dataclass_data_model(value: object | type[object]) -> bool:
+    return _type_mro_contains_type(_model_type(value), module=_DATACLASS_MODULE, name="DataClass")
+
+
+def _is_msgspec_struct(value: object | type[object]) -> bool:
+    return _type_mro_contains_type(_model_type(value), module=_MSGSPEC_MODULE, name="Struct")
 
 
 def _is_pydantic_v2_data_model_field(value: object) -> bool:
@@ -143,6 +152,28 @@ def _is_pydantic_v2_dump_resolve_reference_action(value: object) -> bool:
         getattr(value, "__module__", None) == _PYDANTIC_V2_MODULE
         and getattr(value, "__name__", None) == "dump_resolve_reference_action"
     )
+
+
+def _is_typed_dict_data_model(value: object | type[object]) -> bool:
+    return _type_mro_contains_type(_model_type(value), module=_TYPED_DICT_MODULE, name="TypedDict")
+
+
+def _add_msgspec_base_class_kwarg(model: DataModel, name: str, value: str) -> None:
+    cast("Any", model).add_base_class_kwarg(name, value)
+
+
+def __getattr__(name: str) -> Any:
+    """Return compatibility model modules without importing them on parser load."""
+    match name:
+        case "dataclass_model":
+            from datamodel_code_generator.model import dataclass as dataclass_model  # noqa: PLC0415
+
+            return dataclass_model
+        case "msgspec_model":
+            from datamodel_code_generator.model import msgspec as msgspec_model  # noqa: PLC0415
+
+            return msgspec_model
+    raise AttributeError(name)
 
 
 Child = _internal_utils.Child
@@ -996,13 +1027,11 @@ def _get_enum_from_base(discriminator_model: DataModel, field_name: str) -> Enum
         if not base_class.reference or not base_class.reference.source:  # pragma: no cover
             continue
         base_model = base_class.reference.source
-        if not isinstance(  # pragma: no cover
-            base_model,
-            (
-                dataclass_model.DataClass,
-                msgspec_model.Struct,
-            ),
-        ) and not _is_pydantic_v2_base_model(base_model):
+        if not (
+            _is_dataclass_data_model(base_model)
+            or _is_msgspec_struct(base_model)
+            or _is_pydantic_v2_base_model(base_model)
+        ):  # pragma: no cover
             continue
         base_data_model = cast("DataModel", base_model)
         for base_field in base_data_model.fields:  # pragma: no branch
@@ -1131,7 +1160,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if "decorators" not in kwargs and self.class_decorators:
             kwargs["decorators"] = list(self.class_decorators)
         data_model_class = model_type or self.data_model_type
-        if issubclass(data_model_class, dataclass_model.DataClass) or _is_pydantic_v2_dataclass(data_model_class):
+        if _is_dataclass_data_model(data_model_class) or _is_pydantic_v2_dataclass(data_model_class):
             # Use dataclass_arguments from kwargs, or fall back to self.dataclass_arguments
             # If both are None, construct from legacy frozen_dataclasses/keyword_only flags
             dataclass_arguments = kwargs.pop("dataclass_arguments", None)
@@ -1899,7 +1928,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 break
 
                     if not discriminator_values and mapping:
-                        _check_discriminator_mapping_paths(discriminator_model, mapping, discriminator_values)  # ty: ignore
+                        _check_discriminator_mapping_paths(  # ty: ignore
+                            discriminator_model,
+                            mapping,
+                            discriminator_values,
+                        )
 
                         if len(discriminator_values) == 0:
                             for base_class in discriminator_model.base_classes:
@@ -1933,18 +1966,18 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                         if literals_match:
                             has_one_literal = True
-                            if isinstance(discriminator_model, msgspec_model.Struct):  # pragma: no cover
-                                discriminator_model.add_base_class_kwarg("tag_field", f"'{field_name}'")
-                                discriminator_model.add_base_class_kwarg("tag", repr(expected_value))
+                            if _is_msgspec_struct(discriminator_model):  # pragma: no cover
+                                _add_msgspec_base_class_kwarg(discriminator_model, "tag_field", f"'{field_name}'")
+                                _add_msgspec_base_class_kwarg(discriminator_model, "tag", repr(expected_value))
                                 discriminator_field.extras["is_classvar"] = True
                             # Found the discriminator field, no need to keep looking
                             break
 
                         # For msgspec with const value but no literal (type: string + const case)
-                        if const_match and isinstance(discriminator_model, msgspec_model.Struct):  # pragma: no cover
+                        if const_match and _is_msgspec_struct(discriminator_model):  # pragma: no cover
                             has_one_literal = True
-                            discriminator_model.add_base_class_kwarg("tag_field", f"'{field_name}'")
-                            discriminator_model.add_base_class_kwarg("tag", repr(const_value))
+                            _add_msgspec_base_class_kwarg(discriminator_model, "tag_field", f"'{field_name}'")
+                            _add_msgspec_base_class_kwarg(discriminator_model, "tag", repr(const_value))
                             discriminator_field.extras["is_classvar"] = True
                             break
 
@@ -2157,9 +2190,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             canonical_to_shared_ref[canonical] = canonical.reference
             shared_models.append(canonical)
 
-        supports_inheritance = _is_pydantic_v2_base_model(self.data_model_type) or issubclass(
-            self.data_model_type,
-            dataclass_model.DataClass,
+        supports_inheritance = _is_pydantic_v2_base_model(self.data_model_type) or _is_dataclass_data_model(
+            self.data_model_type
         )
 
         module_models_sets: dict[tuple[str, ...], set[DataModel]] = {
@@ -2557,8 +2589,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             ):
                 continue
 
-            if isinstance(model, msgspec_model.Struct):
-                model.add_base_class_kwarg("kw_only", "True")
+            if _is_msgspec_struct(model):
+                _add_msgspec_base_class_kwarg(model, "kw_only", "True")
             elif self.target_python_version.has_kw_only_dataclass:
                 for field in model.fields:
                     if self.__is_new_required_field(field, inherited_names, field_has_assignment):
@@ -2580,7 +2612,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if not model.SUPPORTS_KW_ONLY:
             return None
         base_class_kw_only = None
-        if isinstance(model, msgspec_model.Struct):
+        if _is_msgspec_struct(model):
             base_class_kw_only = model.extra_template_data.get("base_class_kwargs", {}).get("kw_only")
         if not model.base_classes or model.dataclass_arguments.get("kw_only") or base_class_kw_only in {True, "True"}:
             return None
@@ -2607,9 +2639,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     @staticmethod
     def _get_field_assignment_checker(model: DataModel) -> Callable[[DataModelFieldBase], bool]:
-        if isinstance(model, msgspec_model.Struct):
-            return msgspec_model.has_field_assignment
-        return dataclass_model.has_field_assignment
+        if _is_msgspec_struct(model):
+            from datamodel_code_generator.model.msgspec import has_field_assignment  # noqa: PLC0415
+
+            return has_field_assignment
+        from datamodel_code_generator.model.dataclass import has_field_assignment  # noqa: PLC0415
+
+        return has_field_assignment
 
     def __is_new_required_field(  # noqa: PLR6301
         self,

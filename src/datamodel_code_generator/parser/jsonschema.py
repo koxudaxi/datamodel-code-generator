@@ -54,12 +54,12 @@ from datamodel_code_generator.model.enum import (
     Enum,
     StrEnum,
 )
-from datamodel_code_generator.model.typed_dict import TypedDict as TypedDictModel
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import (
     SPECIAL_PATH_FORMAT,
     Parser,
     Source,
+    _is_typed_dict_data_model,
     escape_characters,
     get_special_path,
     title_to_class_name,
@@ -88,6 +88,16 @@ if TYPE_CHECKING:
     from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 JsonSchemaLiteral = Union[bool, int, str]  # noqa: UP007
+
+
+def __getattr__(name: str) -> Any:
+    """Return compatibility model classes without importing them on parser load."""
+    match name:
+        case "TypedDictModel":
+            from datamodel_code_generator.model.typed_dict import TypedDict as TypedDictModel  # noqa: PLC0415
+
+            return TypedDictModel
+    raise AttributeError(name)
 
 
 def unescape_json_pointer_segment(segment: str) -> str:
@@ -1895,7 +1905,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             additional_props_type = self._build_lightweight_type(obj.additionalProperties)
             if additional_props_type:  # pragma: no branch
                 self.extra_template_data[path]["additionalPropertiesType"] = additional_props_type.type_hint
-                if issubclass(self.data_model_type, TypedDictModel) and (
+                if _is_typed_dict_data_model(self.data_model_type) and (
                     reference_classes := {
                         data_type.reference.path
                         for data_type in additional_props_type.all_data_types
