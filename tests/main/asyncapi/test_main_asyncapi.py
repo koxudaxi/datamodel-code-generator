@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
 from typing import TYPE_CHECKING
 
 import pytest
@@ -17,9 +20,55 @@ from tests.main.conftest import (
 )
 
 PY310_TARGET_ARGS = ["--target-python-version", "3.10"]
+ASYNCAPI_IMPORT_PROBE_TIMEOUT_SECONDS = 15
+ASYNCAPI_CONVERTER_MODULES = (
+    "datamodel_code_generator.parser.avro",
+    "datamodel_code_generator.parser.protobuf",
+    "datamodel_code_generator.parser.xmlschema",
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+@pytest.mark.allow_direct_assert
+def test_import_asyncapi_parser_does_not_load_embedded_schema_converters() -> None:
+    """Importing AsyncAPI parser does not load converters for optional embedded schema formats."""
+    code = f"""
+import importlib
+import json
+import sys
+
+importlib.import_module("datamodel_code_generator.parser.asyncapi")
+
+converter_modules = {ASYNCAPI_CONVERTER_MODULES!r}
+loaded = sorted(module_name for module_name in converter_modules if module_name in sys.modules)
+print(json.dumps(loaded))
+"""
+
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=ASYNCAPI_IMPORT_PROBE_TIMEOUT_SECONDS,
+    )
+
+    assert json.loads(result.stdout) == []
+
+
+@pytest.mark.allow_direct_assert
+def test_asyncapi_converter_compatibility_attributes_are_lazy() -> None:
+    """Keep existing AsyncAPI converter attributes importable without eager module import."""
+    from datamodel_code_generator.parser.asyncapi import (
+        convert_avro_schema_data,
+        convert_protobuf_schema_data,
+        convert_xml_schema_data,
+    )
+
+    assert convert_avro_schema_data.__module__ == "datamodel_code_generator.parser.avro"
+    assert convert_protobuf_schema_data.__module__ == "datamodel_code_generator.parser.protobuf"
+    assert convert_xml_schema_data.__module__ == "datamodel_code_generator.parser.xmlschema"
 
 
 def test_main_asyncapi_2_yaml(output_file: Path) -> None:

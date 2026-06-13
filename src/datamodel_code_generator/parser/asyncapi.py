@@ -18,13 +18,10 @@ from typing_extensions import Unpack
 from datamodel_code_generator import Error, YamlValue, snooper_to_methods
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.enums import AsyncAPIVersion
-from datamodel_code_generator.parser.avro import convert_avro_schema_data
 from datamodel_code_generator.parser.jsonschema import get_model_by_path, unescape_json_pointer_segment
 from datamodel_code_generator.parser.openapi import OpenAPIParser
-from datamodel_code_generator.parser.protobuf import convert_protobuf_schema_data
-from datamodel_code_generator.parser.xmlschema import convert_xml_schema_data
 from datamodel_code_generator.reference import is_url
-from datamodel_code_generator.util import BaseModel
+from datamodel_code_generator.util import BaseModel, create_module_getattr
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -75,6 +72,17 @@ SCHEMA_FORMAT_KIND_BY_MEDIA_TYPE: dict[str, str] = {
     **dict.fromkeys(XML_SCHEMA_FORMATS, "xmlschema"),
 }
 INTERNAL_SCHEMA_CONTAINER = "x-datamodel-code-generator-asyncapi-schemas"
+__getattr__ = create_module_getattr(
+    __name__,
+    {
+        "convert_avro_schema_data": ("datamodel_code_generator.parser.avro", "convert_avro_schema_data"),
+        "convert_protobuf_schema_data": (
+            "datamodel_code_generator.parser.protobuf",
+            "convert_protobuf_schema_data",
+        ),
+        "convert_xml_schema_data": ("datamodel_code_generator.parser.xmlschema", "convert_xml_schema_data"),
+    },
+)
 
 
 @dataclass(frozen=True)
@@ -368,11 +376,15 @@ class AsyncAPIParser(OpenAPIParser):
                     raise Error(msg)
                 return [self._schema(name, raw_schema, path)]
             case "avro":
+                from datamodel_code_generator.parser.avro import convert_avro_schema_data  # noqa: PLC0415
+
                 converted_schema = convert_avro_schema_data(raw_schema)
                 converted_schema.setdefault("title", name)
                 context = self._schema_context_for_converted_schema(converted_schema, path)
                 return [self._schema(name, converted_schema, context.root_parts, context, parse_as_file=True)]
             case "protobuf":
+                from datamodel_code_generator.parser.protobuf import convert_protobuf_schema_data  # noqa: PLC0415
+
                 context = self._current_asyncapi_context()
                 return self._iter_converted_schema_schemas(
                     name,
@@ -384,6 +396,8 @@ class AsyncAPIParser(OpenAPIParser):
                     path,
                 )
             case "xmlschema":
+                from datamodel_code_generator.parser.xmlschema import convert_xml_schema_data  # noqa: PLC0415
+
                 context = self._current_asyncapi_context()
                 return self._iter_converted_schema_schemas(
                     name,
