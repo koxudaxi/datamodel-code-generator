@@ -15,6 +15,7 @@ from datamodel_code_generator.format import Formatter
 from tests.conftest import (
     _infer_expected_file,
     assert_exact_directory_content,
+    assert_inputs_not_mutated,
     assert_parser_modules,
     assert_parser_results,
 )
@@ -92,6 +93,25 @@ def test_assert_parser_modules_rejects_unexpected_module(tmp_path: Path) -> None
 
     with pytest.raises(AssertionError, match="Parser modules not in expected files"):
         assert_parser_modules({("sample.py",): "value = 1\n"}, expected_dir)
+
+
+def test_assert_inputs_not_mutated_allows_unchanged_nested_values() -> None:
+    """Mutation guard accepts unchanged dict/list inputs and ignores immutable labels."""
+    schema = {"properties": {"name": {"type": "string"}}, "required": ["name"]}
+
+    with assert_inputs_not_mutated({"schema": schema, "description": "ignored"}):
+        assert schema["properties"]["name"]["type"] == "string"
+
+
+def test_assert_inputs_not_mutated_reports_nested_mutation() -> None:
+    """Mutation guard reports the label for nested dict/list mutations."""
+    schema = {"properties": {"name": {"type": "string"}}, "required": ["name"]}
+
+    with (
+        pytest.raises(pytest.fail.Exception, match="schema was mutated"),
+        assert_inputs_not_mutated({"schema": schema}),
+    ):
+        schema["required"].append("age")
 
 
 def test_builtin_parity_mock_call_preservation(mocker: MockerFixture) -> None:
