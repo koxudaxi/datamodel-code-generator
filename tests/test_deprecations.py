@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import warnings
+from pathlib import Path
 
 import pytest
 
@@ -93,3 +95,17 @@ def test_warn_deprecated_uses_registered_message() -> None:
     """Warning helpers emit the registered message and category."""
     with pytest.warns(DeprecationWarning, match=deprecation_message("cli.parent-scoped-naming")):
         warn_deprecated("cli.parent-scoped-naming")
+
+
+def _emit_deprecation_warning() -> None:
+    warn_deprecated("cli.parent-scoped-naming")
+
+
+def test_warn_deprecated_default_stacklevel_points_to_caller() -> None:
+    """The default stacklevel keeps warnings attributed to the call site."""
+    with warnings.catch_warnings(record=True) as recorded_warnings:
+        warnings.simplefilter("always")
+        _emit_deprecation_warning()
+
+    assert len(recorded_warnings) == 1
+    assert Path(recorded_warnings[0].filename).name == "test_deprecations.py"
