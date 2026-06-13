@@ -6,6 +6,7 @@ import difflib
 import importlib
 import inspect
 import json
+import os
 import re
 import socket
 import sys
@@ -34,6 +35,8 @@ if TYPE_CHECKING:
 
 CLI_DOC_COLLECTION_OUTPUT = Path(__file__).parent / "cli_doc" / ".cli_doc_collection.json"
 CLI_DOC_SCHEMA_VERSION = 1
+TEST_DEFAULT_FORMATTER_ENV = "DATAMODEL_CODE_GENERATOR_TEST_DEFAULT_FORMATTER"
+BUILTIN_FORMATTER_VALUE = "builtin"
 _VERSION_PATTERN = re.compile(r"^\d+\.\d+$")
 _MOCK_PUBLIC_IP = "93.184.216.34"
 
@@ -467,14 +470,14 @@ def _normalize_generated_text(text: str) -> str:
 def _get_tox_env() -> str:  # pragma: no cover
     """Get the current tox environment name from TOX_ENV_NAME or fallback.
 
-    Strips '-parallel' suffix since inline-snapshot requires -n0 (single process).
+    Strips parallel-only suffixes since inline-snapshot requires -n0 (single process).
     Only called in assertion failure hints.
     """
     import os
 
     env = os.environ.get("TOX_ENV_NAME", "<version>")
-    # Remove -parallel suffix since inline-snapshot needs single process mode
-    return env.removesuffix("-parallel")
+    # Remove parallel-only suffixes since inline-snapshot needs single process mode.
+    return env.removesuffix("-nocov-parallel").removesuffix("-parallel")
 
 
 def _format_snapshot_hint(action: str) -> str:  # pragma: no cover
@@ -1125,6 +1128,24 @@ def assert_generated_file_matches_output(result: object, output_file: Path) -> N
         diff = _format_diff(expected, actual, output_file)
         msg = f"Generated output differs from {output_file}\n{diff}"
         raise AssertionError(msg)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_builtin_formatter_config(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Keep marked tests from inheriting the repository Ruff formatter config."""
+    if request.node.get_closest_marker("isolate_builtin_formatter_config") is None:
+        return
+    if os.environ.get(TEST_DEFAULT_FORMATTER_ENV) != BUILTIN_FORMATTER_VALUE:
+        return
+
+    settings_path = tmp_path_factory.mktemp("builtin_formatter_config")
+    (settings_path / "pyproject.toml").write_text(
+        "[tool.datamodel-codegen]\nbuiltin-format-line-length = 88\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(settings_path)
 
 
 @pytest.fixture(autouse=True)

@@ -164,6 +164,100 @@ def test_builtin_parity_clear_output_path(tmp_path: Path) -> None:
     assert not stale_dir.exists()
 
 
+def test_default_formatter_cli_args(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Builtin formatter defaults apply only to generation commands without formatter settings."""
+    monkeypatch.delenv("DATAMODEL_CODE_GENERATOR_TEST_DEFAULT_FORMATTER", raising=False)
+    assert main_conftest._default_formatter_cli_args(["--input", "schema.json"]) == ["--input", "schema.json"]
+
+    monkeypatch.setenv("DATAMODEL_CODE_GENERATOR_TEST_DEFAULT_FORMATTER", "builtin")
+    assert main_conftest._default_formatter_cli_args(["--input", "schema.json"]) == [
+        "--input",
+        "schema.json",
+        "--formatters",
+        "builtin",
+    ]
+    assert main_conftest._default_formatter_cli_args(
+        ["--input", "schema.json"],
+        output_path=tmp_path / "output.py",
+    ) == [
+        "--input",
+        "schema.json",
+        "--formatters",
+        "builtin",
+    ]
+    assert not (tmp_path / "pyproject.toml").exists()
+    assert main_conftest._default_formatter_cli_args(["--input", "schema.json", "--formatters=isort"]) == [
+        "--input",
+        "schema.json",
+        "--formatters=isort",
+    ]
+    assert main_conftest._default_formatter_cli_args(["--input", "schema.json"], is_generation_command=False) == [
+        "--input",
+        "schema.json",
+    ]
+    assert main_conftest._default_formatter_cli_args(
+        ["--input", "schema.json"],
+        copy_files=[(tmp_path / "source.toml", tmp_path / "pyproject.toml")],
+        output_path=tmp_path / "output.py",
+    ) == ["--input", "schema.json"]
+    (tmp_path / "pyproject.toml").write_text("[tool.black]\nline-length = 60\n", encoding="utf-8")
+    assert main_conftest._default_formatter_cli_args(
+        ["--input", "schema.json"],
+        output_path=tmp_path / "output.py",
+    ) == ["--input", "schema.json"]
+
+
+def test_builtin_default_formatter_config(tmp_path: Path) -> None:
+    """Builtin formatter config is present only while the generation helper runs."""
+    output_file = tmp_path / "output.py"
+    with main_conftest._builtin_default_formatter_config(output_file, enabled=True):
+        assert (tmp_path / "pyproject.toml").read_text(encoding="utf-8") == (
+            "[tool.datamodel-codegen]\nbuiltin-format-line-length = 88\n"
+        )
+    assert not (tmp_path / "pyproject.toml").exists()
+
+    with main_conftest._builtin_default_formatter_config(tmp_path, enabled=True):
+        assert (tmp_path / "pyproject.toml").is_file()
+    assert not (tmp_path / "pyproject.toml").exists()
+
+    existing_config = "[tool.black]\nline-length = 60\n"
+    (tmp_path / "pyproject.toml").write_text(existing_config, encoding="utf-8")
+    with main_conftest._builtin_default_formatter_config(output_file, enabled=True):
+        assert (tmp_path / "pyproject.toml").read_text(encoding="utf-8") == existing_config
+    assert (tmp_path / "pyproject.toml").read_text(encoding="utf-8") == existing_config
+
+
+def test_default_formatter_main_generation_detection() -> None:
+    """Raw main helpers identify only generation commands for builtin defaults."""
+    assert main_conftest._is_main_generation_command(["--input", "schema.json"])
+    assert main_conftest._is_main_generation_command(["--url=https://example.com/schema.json"])
+    assert not main_conftest._is_main_generation_command(["--input", "schema.json", "--generate-prompt"])
+    assert not main_conftest._is_main_generation_command(["--input", "schema.json", "--output-format=json"])
+    assert not main_conftest._is_main_generation_command(["--version"])
+    assert main_conftest._get_cli_output_path(["--output", "model.py"]) == Path("model.py")
+    assert main_conftest._get_cli_output_path(["--output=model.py"]) == Path("model.py")
+    assert main_conftest._get_cli_output_path(["--input", "schema.json"]) is None
+
+
+def test_default_formatter_generate_options(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """API generation helpers add builtin only when formatter settings are absent."""
+    generate_kwargs: dict[str, object] = {}
+    monkeypatch.delenv("DATAMODEL_CODE_GENERATOR_TEST_DEFAULT_FORMATTER", raising=False)
+    assert main_conftest._default_formatter_generate_options(generate_kwargs) == generate_kwargs
+
+    monkeypatch.setenv("DATAMODEL_CODE_GENERATOR_TEST_DEFAULT_FORMATTER", "builtin")
+    assert main_conftest._default_formatter_generate_options(generate_kwargs) == {
+        "formatters": [Formatter.BUILTIN],
+        "builtin_format_line_length": 88,
+    }
+
+    explicit_kwargs = {"formatters": [Formatter.BLACK]}
+    assert main_conftest._default_formatter_generate_options(explicit_kwargs) == explicit_kwargs
+
+    (tmp_path / "pyproject.toml").write_text("[tool.black]\nline-length = 60\n", encoding="utf-8")
+    assert main_conftest._default_formatter_generate_options({}, output_path=tmp_path / "output.py") == {}
+
+
 def test_builtin_parity_generated_python_comparison(tmp_path: Path) -> None:
     """Generated Python comparison ignores command header differences."""
     expected_file = tmp_path / "expected.py"
