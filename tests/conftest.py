@@ -12,7 +12,9 @@ import socket
 import sys
 import time
 from collections import Counter
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Generator, Mapping, Sequence
+from contextlib import contextmanager
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from itertools import starmap
@@ -700,6 +702,28 @@ def assert_output(
     if not isinstance(output, str):  # pragma: no cover
         pytest.fail(f"Expected generated output to be str, got {type(output).__name__}")
     _assert_with_external_file(output, expected_path)
+
+
+def _tracks_mutation(value: object) -> bool:
+    match value:
+        case dict() | list():
+            return True
+    return False
+
+
+@contextmanager
+def assert_inputs_not_mutated(inputs: Mapping[str, object] | None) -> Generator[None, None, None]:
+    """Assert guarded mutable inputs are unchanged after the wrapped operation."""
+    __tracebackhide__ = True
+    if inputs is None:
+        yield
+        return
+
+    snapshots = {label: deepcopy(value) for label, value in inputs.items() if _tracks_mutation(value)}
+    yield
+    for label, before in snapshots.items():
+        if (current := inputs[label]) != before:  # pragma: no cover - exercised by helper tests
+            pytest.fail(f"{label} was mutated: before={before!r}, after={current!r}")
 
 
 def assert_directory_content(

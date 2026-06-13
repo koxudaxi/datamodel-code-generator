@@ -11,7 +11,7 @@ import textwrap
 import time
 import warnings
 from argparse import Namespace
-from collections.abc import Callable, Generator, Sequence
+from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import contextmanager
 from functools import cache
 from pathlib import Path
@@ -31,6 +31,7 @@ from tests.conftest import (
     _infer_expected_file,
     _validation_stats,
     assert_directory_content,
+    assert_inputs_not_mutated,
     assert_output,
     assert_warnings_contain,
     freeze_time,
@@ -611,6 +612,7 @@ def run_generate_file_and_assert(
     expected_file: str | Path | None = None,
     transform: Callable[[str], str] | None = None,
     expected_warnings: Sequence[str] | None = None,
+    unchanged_inputs: Mapping[str, object] | None = None,
     **generate_kwargs: Any,
 ) -> None:
     """Execute generate() for a file input and assert the generated output."""
@@ -632,19 +634,20 @@ def run_generate_file_and_assert(
     if input_file_type is not None:
         generate_options["input_file_type"] = input_file_type
 
-    if expected_warnings is None:
-        generate(
-            input_=input_,
-            **generate_options,
-        )
-    else:
-        with warnings.catch_warnings(record=True) as warning_records:
-            warnings.simplefilter("always")
+    with assert_inputs_not_mutated(unchanged_inputs):
+        if expected_warnings is None:
             generate(
                 input_=input_,
                 **generate_options,
             )
-        assert_warnings_contain(warning_records, *expected_warnings)
+        else:
+            with warnings.catch_warnings(record=True) as warning_records:
+                warnings.simplefilter("always")
+                generate(
+                    input_=input_,
+                    **generate_options,
+                )
+            assert_warnings_contain(warning_records, *expected_warnings)
 
     if expected_file is None:
         frame = inspect.currentframe()
@@ -654,24 +657,32 @@ def run_generate_file_and_assert(
         del frame
 
     assert_func(output_path, expected_file, transform=transform)
-    _assert_builtin_generate_formatter_parity(
-        input_=input_,
-        output_path=output_path,
-        generate_options=generate_options,
-        expected_warnings=expected_warnings,
-    )
+    with assert_inputs_not_mutated(unchanged_inputs):
+        _assert_builtin_generate_formatter_parity(
+            input_=input_,
+            output_path=output_path,
+            generate_options=generate_options,
+            expected_warnings=expected_warnings,
+        )
 
 
 def run_generate_and_assert(
     *,
     input_: Any,
     expected_file: Path,
+    assert_input_unchanged: bool = False,
+    unchanged_inputs: Mapping[str, object] | None = None,
     **generate_kwargs: Any,
 ) -> None:
     """Execute generate(output=None) and assert the returned text output."""
     __tracebackhide__ = True
 
-    result = generate(input_=input_, **_default_formatter_generate_options(generate_kwargs))
+    guarded_inputs = dict(unchanged_inputs or {})
+    if assert_input_unchanged:
+        guarded_inputs["input_"] = input_
+
+    with assert_inputs_not_mutated(guarded_inputs or None):
+        result = generate(input_=input_, **_default_formatter_generate_options(generate_kwargs))
     if not isinstance(result, str):  # pragma: no cover
         pytest.fail(f"Expected generate() to return str, got {type(result).__name__}")
     assert_output(result, expected_file)

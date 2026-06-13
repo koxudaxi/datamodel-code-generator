@@ -14,6 +14,7 @@ from tests.main.conftest import (
     EXPECTED_PROTOBUF_PATH,
     PROTOBUF_DATA_PATH,
     assert_input_file_type,
+    run_generate_and_assert,
     run_generate_file_and_assert,
     run_main_and_assert,
 )
@@ -163,13 +164,13 @@ def test_generate_api_protobuf_definition_key_collision() -> None:
 
 def test_generate_api_protobuf_from_path_list() -> None:
     """Generate Protocol Buffers models from a list of .proto file paths."""
-    result = generate(
-        cast(Any, [(PROTOBUF_DATA_PATH / "spec_proto3.proto").resolve()]),  # noqa: TC006
+    run_generate_and_assert(
+        input_=cast(Any, [(PROTOBUF_DATA_PATH / "spec_proto3.proto").resolve()]),  # noqa: TC006
         input_file_type=InputFileType.Protobuf,
         disable_timestamp=True,
+        expected_file=EXPECTED_PROTOBUF_PATH / "spec_proto3_list_input.py",
+        assert_input_unchanged=True,
     )
-
-    assert_output(result, EXPECTED_PROTOBUF_PATH / "spec_proto3_list_input.py")
 
 
 def test_generate_api_protobuf_rejects_dict_input() -> None:

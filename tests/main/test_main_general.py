@@ -2711,6 +2711,7 @@ def test_generate_with_dict_jsonschema() -> None:
         input_file_type=InputFileType.JsonSchema,
         disable_timestamp=True,
         expected_file=EXPECTED_MAIN_PATH / "dict_input" / "jsonschema.py",
+        assert_input_unchanged=True,
     )
 
 
@@ -2723,6 +2724,7 @@ def test_generate_with_dict_openapi() -> None:
         input_file_type=InputFileType.OpenAPI,
         disable_timestamp=True,
         expected_file=EXPECTED_MAIN_PATH / "dict_input" / "openapi.py",
+        assert_input_unchanged=True,
     )
 
 

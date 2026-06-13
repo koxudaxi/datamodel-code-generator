@@ -402,30 +402,30 @@ class JsonSchemaObject(BaseModel):
         ignored_types=(cached_property,),
     )
 
-    def __init__(self, **data: Any) -> None:
+    def __init__(__pydantic_self__, **data: Any) -> None:  # noqa: N805
         """Initialize JsonSchemaObject with extra fields handling."""
         super().__init__(**data)
         items = data.get("items")
         if items is False:
-            self.items = False
+            __pydantic_self__.items = False
         elif items == []:
-            self.items = []
+            __pydantic_self__.items = []
         # Restore extras from alias key (for dict -> parse_obj round-trip)
-        alias_extras = data.get(self.__extra_key__, {})
+        alias_extras = data.get(__pydantic_self__.__extra_key__, {})
         # Collect custom keys from raw data
         raw_extras = {k: v for k, v in data.items() if k not in EXCLUDE_FIELD_KEYS}
         if alias_extras or raw_extras:
             # Merge: raw_extras takes precedence (original data is the source of truth)
-            self.extras = {**alias_extras, **raw_extras}
+            __pydantic_self__.extras = {**alias_extras, **raw_extras}
             if "const" in alias_extras:  # pragma: no cover
-                self.extras["const"] = alias_extras["const"]
+                __pydantic_self__.extras["const"] = alias_extras["const"]
         # Support x-propertyNames extension for OpenAPI 3.0
-        if "x-propertyNames" in self.extras and self.propertyNames is None:
-            x_prop_names = self.extras.pop("x-propertyNames")
+        if "x-propertyNames" in __pydantic_self__.extras and __pydantic_self__.propertyNames is None:
+            x_prop_names = __pydantic_self__.extras.pop("x-propertyNames")
             if isinstance(x_prop_names, bool):
-                self.propertyNames = x_prop_names
+                __pydantic_self__.propertyNames = x_prop_names
             elif isinstance(x_prop_names, dict):
-                self.propertyNames = JsonSchemaObject.model_validate(x_prop_names)
+                __pydantic_self__.propertyNames = JsonSchemaObject.model_validate(x_prop_names)
 
     @cached_property
     def is_object(self) -> bool:
@@ -619,6 +619,7 @@ EXCLUDE_FIELD_KEYS = (
     "$recursiveAnchor",
     "$dynamicRef",
     "$dynamicAnchor",
+    "self",
     JsonSchemaObject.__extra_key__,
 }
 
@@ -5459,8 +5460,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 preserve_class_name=preserve_root_class_name,
             ).name
             with self.root_id_context(raw):
-                # Some jsonschema docs include attribute self to have include version details
-                raw.pop("self", None)
                 # parse $id before parsing $ref
                 root_obj = self._validate_schema_object(raw, path_parts or ["#"])
                 self.parse_id(root_obj, [*path_parts, "#"] if path_parts else ["#"])
