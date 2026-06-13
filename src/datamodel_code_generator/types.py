@@ -635,8 +635,8 @@ class DataType(_BaseModel):
     @property
     def module_name(self) -> str | None:
         """Return the module name from the reference source."""
-        if self.reference and isinstance(self.reference.source, Modular):
-            return self.reference.source.module_name
+        if self.reference and (module_name := getattr(self.reference.source, "module_name", None)) is not None:
+            return module_name
         return None  # pragma: no cover
 
     @property
@@ -868,8 +868,9 @@ class DataType(_BaseModel):
             return
 
         source = self.reference.source
-        is_alias = getattr(source, "is_alias", False)
-        if isinstance(source, Nullable) and source.nullable and not is_alias:
+        if getattr(source, "is_alias", False):
+            return
+        if getattr(source, "nullable", False):
             self.is_optional = True
 
     def _wrap_dict_type_hint(
