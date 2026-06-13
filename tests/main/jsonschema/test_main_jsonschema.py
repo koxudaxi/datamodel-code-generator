@@ -10784,6 +10784,7 @@ def test_main_use_root_model_type_alias(output_file: Path) -> None:
     )
 
 
+@pytest.mark.isolate_builtin_formatter_config
 def test_main_jsonschema_schema_id(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -11714,6 +11715,7 @@ def test_jsonschema_classvar_extra_pydantic_v2(output_file: Path) -> None:
     )
 
 
+@pytest.mark.isolate_builtin_formatter_config
 def test_jsonschema_classvar_field_str_custom_template(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

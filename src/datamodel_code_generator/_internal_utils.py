@@ -48,9 +48,9 @@ def to_hashable(item: Any) -> HashableComparable:
                 for k, v in item.items()
             )
         )
-    if isinstance(item, set):  # pragma: no cover
+    if isinstance(item, set):
         return frozenset(to_hashable(i) for i in item)  # type: ignore[return-value]
-    if isinstance(item, BaseModel):  # pragma: no cover
+    if isinstance(item, BaseModel):
         return to_hashable(item.model_dump())
     return item  # type: ignore[return-value]
 
