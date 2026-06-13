@@ -807,7 +807,6 @@ def test_apply_builtin_formatter_normalizes_type_alias_blank_lines_without_impor
     assert apply_builtin_formatter(code) == "type Foo = str\n\n\ntype Bar = Foo\n"
 
 
-@pytest.mark.skipif(sys.version_info < (3, 12), reason="type statements require Python 3.12")
 def test_builtin_formatter_respects_target_python_version_for_ast_parse() -> None:
     """Test built-in formatter parses code using the configured target Python version."""
     code = "type Foo = str\n\n\n\ntype Bar = Foo\n"
@@ -817,6 +816,109 @@ def test_builtin_formatter_respects_target_python_version_for_ast_parse() -> Non
 
     assert py310_formatter.format_code(code) == code
     assert py312_formatter.format_code(code) == "type Foo = str\n\n\ntype Bar = Foo\n"
+
+
+def test_builtin_formatter_formats_type_alias_modules_on_older_runtimes() -> None:
+    """Test built-in formatter handles target Python 3.12 type aliases on older runtimes."""
+    code = (
+        "from typing import Annotated\n"
+        "from pydantic import Field\n"
+        "\n"
+        "\n"
+        "type Alias = Annotated[str | bool, Field(..., "
+        "description='An annotated union type', title='MyAnnotatedType')]\n"
+        "\n"
+        "\n"
+        "\n"
+        "class Model:\n"
+        "    x_value: Annotated[Alias | None, Field(validate_default=True)] = {'type': 'b', 'value': 1}\n"
+    )
+
+    assert apply_builtin_formatter(code, line_length=88, python_version=PythonVersion.PY_312) == (
+        "from typing import Annotated\n"
+        "\n"
+        "from pydantic import Field\n"
+        "\n"
+        "type Alias = Annotated[\n"
+        "    str | bool,\n"
+        "    Field(..., description='An annotated union type', title='MyAnnotatedType'),\n"
+        "]\n"
+        "\n"
+        "\n"
+        "class Model:\n"
+        "    x_value: Annotated[Alias | None, Field(validate_default=True)] = {\n"
+        "        'type': 'b',\n"
+        "        'value': 1,\n"
+        "    }\n"
+    )
+
+
+def test_builtin_formatter_pep695_placeholder_helpers(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test helper branches for parsing Python 3.12 type aliases on older runtimes."""
+    monkeypatch.setattr(builtin_formatter.sys, "version_info", (3, 11, 0, "final", 0))
+
+    assert builtin_formatter._needs_pep695_type_alias_placeholders(PythonVersion.PY_312)
+    assert not builtin_formatter._needs_pep695_type_alias_placeholders(PythonVersion.PY_311)
+    assert not builtin_formatter._needs_pep695_type_alias_placeholders(None)
+
+    alias_lines = [
+        "x = 1",
+        "type Alias = Annotated[",
+        "    str | bool,",
+        "    Field(...),",
+        "]",
+        "y = 2",
+    ]
+    assert builtin_formatter._pep695_type_alias_statement_end(alias_lines, 1) == 4
+    assert builtin_formatter._pep695_type_alias_statement_end([], 0) == 0
+    assert builtin_formatter._pep695_type_alias_statement_end(["type Alias = Annotated["], 0) == 0
+    assert builtin_formatter._replace_pep695_type_aliases_with_placeholders("\n".join(alias_lines)) == (
+        f"x = 1\n{builtin_formatter.PEP695_TYPE_ALIAS_PLACEHOLDER} = None\n\n\n\ny = 2"
+    )
+
+    assert builtin_formatter._parse_builtin_code("type Alias =\n", PythonVersion.PY_312) is not None
+    assert builtin_formatter._parse_builtin_code("if", PythonVersion.PY_312) is None
+    assert builtin_formatter._parse_builtin_code("    type Alias =\n", PythonVersion.PY_312) is None
+
+
+def test_builtin_formatter_pep695_type_alias_replacement_edges() -> None:
+    """Test PEP 695 alias replacement skips unsupported forms and rewrites generated Annotated aliases."""
+    assert builtin_formatter._has_comment_token("value = 'unterminated #")
+    assert not builtin_formatter._has_comment_token("value = 'https://example.com/#fragment'")
+    assert (
+        builtin_formatter._pep695_type_alias_replacement(
+            ["type Alias = Annotated[str, Field(..., description='kept')]  # noqa: F401"],
+            0,
+            40,
+        )
+        is None
+    )
+    assert builtin_formatter._pep695_type_alias_replacement(["type Alias = ["], 0, 40) is None
+    assert builtin_formatter._pep695_type_alias_replacement(["type Alias = str"], 0, 40) is None
+
+    replacements = builtin_formatter._collect_pep695_type_alias_replacements(
+        [
+            "value = 1",
+            "type Alias = Annotated[str, Field(..., description='long generated alias description')]",
+        ],
+        40,
+    )
+
+    assert replacements == [
+        (
+            2,
+            2,
+            [
+                "type Alias = Annotated[",
+                "    str,",
+                "    Field(",
+                "        ...,",
+                "        description='long generated alias description',",
+                "    ),",
+                "]",
+            ],
+        )
+    ]
 
 
 def test_apply_builtin_formatter_parenthesizes_short_annotated_default() -> None:
@@ -920,6 +1022,26 @@ def test_apply_builtin_formatter_wraps_string_default_with_single_quote() -> Non
         '            "it\'s a generated description with"\n'
         '            " enough words to wrap"\n'
         "        ),\n"
+        "    )\n"
+    )
+
+
+def test_apply_builtin_formatter_formats_hash_inside_field_string() -> None:
+    """Test URL fragments inside generated strings are not treated as comments."""
+    code = (
+        "class ErrorResponse:\n"
+        "    type: AnyUrl | None = Field('about:blank', description='An absolute URI that identifies the problem "
+        "type.  When dereferenced,\\nit SHOULD provide human-readable documentation for the problem type\\n(e.g., "
+        "using HTML).\\n', examples=['https://tools.ietf.org/html/rfc7231#section-6.6.4'])\n"
+    )
+
+    assert apply_builtin_formatter(code, line_length=88) == (
+        "class ErrorResponse:\n"
+        "    type: AnyUrl | None = Field(\n"
+        "        'about:blank',\n"
+        "        description='An absolute URI that identifies the problem type.  When dereferenced,\\nit SHOULD "
+        "provide human-readable documentation for the problem type\\n(e.g., using HTML).\\n',\n"
+        "        examples=['https://tools.ietf.org/html/rfc7231#section-6.6.4'],\n"
         "    )\n"
     )
 

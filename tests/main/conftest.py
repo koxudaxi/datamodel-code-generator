@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import inspect
+import os
 import shutil
 import sys
 import textwrap
@@ -24,7 +25,7 @@ from pydantic import ValidationError
 from datamodel_code_generator import InputFileType, generate
 from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.arguments import arg_parser
-from datamodel_code_generator.format import PythonVersion, is_supported_in_black
+from datamodel_code_generator.format import Formatter, PythonVersion, is_supported_in_black
 from tests.conftest import (
     AssertFileContent,
     _infer_expected_file,
@@ -58,23 +59,72 @@ InputFileTypeLiteral = Literal[
 ]
 CopyFilesMapping = Sequence[tuple[Path, Path]]
 
+_TEST_DEFAULT_FORMATTER_ENV = "DATAMODEL_CODE_GENERATOR_TEST_DEFAULT_FORMATTER"
+_BUILTIN_FORMATTER_VALUE = "builtin"
+_BUILTIN_FORMATTER_LINE_LENGTH = 88
+_BUILTIN_FORMATTER_CONFIG = "[tool.datamodel-codegen]\nbuiltin-format-line-length = 88\n"
+_CLI_FORMATTER_RELATED_OPTIONS = frozenset({
+    "--custom-formatters",
+    "--custom-formatters-kwargs",
+    "--formatters",
+    "--profile",
+    "--skip-string-normalization",
+    "--use-double-quotes",
+    "--wrap-string-literal",
+})
+_NON_GENERATION_CLI_OPTIONS = frozenset({
+    "--debug",
+    "--generate-cli-command",
+    "--generate-prompt",
+    "--generate-pyproject-config",
+    "--help",
+    "--list-deprecations",
+    "--list-experimental",
+    "--output-format",
+    "--output-format-json-schema",
+    "--version",
+    "--watch",
+})
+_API_FORMATTER_RELATED_OPTIONS = frozenset({
+    "builtin_format_line_length",
+    "config",
+    "custom_formatters",
+    "custom_formatters_kwargs",
+    "formatters",
+    "settings_path",
+    "use_double_quotes",
+    "use_type_checking_imports",
+    "wrap_string_literal",
+})
+
+
+def _uses_builtin_test_default_formatter() -> bool:
+    return os.environ.get(_TEST_DEFAULT_FORMATTER_ENV) == _BUILTIN_FORMATTER_VALUE
+
+
+def _uses_external_test_default_formatter() -> bool:
+    return not _uses_builtin_test_default_formatter()
+
+
 MSGSPEC_LEGACY_BLACK_SKIP = pytest.mark.skipif(
-    sys.version_info[:2] == (3, 12) and version.parse(black.__version__) < version.parse("24.0.0"),
+    _uses_external_test_default_formatter()
+    and sys.version_info[:2] == (3, 12)
+    and version.parse(black.__version__) < version.parse("24.0.0"),
     reason="msgspec.Struct formatting differs with python3.12 + black < 24",
 )
 
 LEGACY_BLACK_SKIP = pytest.mark.skipif(
-    version.parse(black.__version__) < version.parse("24.0.0"),
+    _uses_external_test_default_formatter() and version.parse(black.__version__) < version.parse("24.0.0"),
     reason="Type annotation formatting differs with black < 24",
 )
 
 BLACK_PY313_SKIP = pytest.mark.skipif(
-    not is_supported_in_black(PythonVersion.PY_313),
+    _uses_external_test_default_formatter() and not is_supported_in_black(PythonVersion.PY_313),
     reason=f"Installed black ({black.__version__}) doesn't support Python 3.13",
 )
 
 BLACK_PY314_SKIP = pytest.mark.skipif(
-    not is_supported_in_black(PythonVersion.PY_314),
+    _uses_external_test_default_formatter() and not is_supported_in_black(PythonVersion.PY_314),
     reason=f"Installed black ({black.__version__}) doesn't support Python 3.14",
 )
 
@@ -115,13 +165,10 @@ DEFAULT_FREEZE_TIME = "2019-07-26"
 @pytest.fixture(autouse=True)
 def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
     """Reset argument namespace before each test."""
-    from datamodel_code_generator.model.base import _get_environment, _get_template_with_custom_dir
-
+    # Template caches are safe to keep because custom-template tests use fixed directories and keyed caches.
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace_)
     monkeypatch.setattr("datamodel_code_generator.arguments.namespace", namespace_)
-    _get_environment.cache_clear()
-    _get_template_with_custom_dir.cache_clear()
 
 
 @pytest.fixture(autouse=True)
@@ -248,6 +295,115 @@ def _validate_extra_args(extra_args: Sequence[str] | None) -> None:
         pytest.fail(f"Invalid CLI options in extra_args: {invalid_args}. Valid options: {sorted(valid_cli_options)}")
 
 
+def _has_formatter_related_cli_options(args: Sequence[str]) -> bool:
+    return any(arg.split("=", maxsplit=1)[0] in _CLI_FORMATTER_RELATED_OPTIONS for arg in args)
+
+
+def _has_formatter_related_copy_files(copy_files: CopyFilesMapping | None) -> bool:
+    return copy_files is not None and any(dst.name == "pyproject.toml" for _, dst in copy_files)
+
+
+def _has_formatter_related_settings_path(output_path: Path | None) -> bool:
+    if output_path is None:
+        return False
+    settings_path = output_path if output_path.is_dir() else output_path.parent
+    for path in (settings_path, *settings_path.parents):
+        pyproject_toml = path / "pyproject.toml"
+        if pyproject_toml.is_file():
+            return True
+    return False
+
+
+def _builtin_default_formatter_config_path(output_path: Path) -> Path:
+    if output_path.is_dir():
+        return output_path / "pyproject.toml"
+    return output_path.parent / "pyproject.toml"
+
+
+@contextmanager
+def _builtin_default_formatter_config(output_path: Path | None, *, enabled: bool) -> Generator[None]:
+    if not enabled or output_path is None:
+        yield
+        return
+    pyproject_toml = _builtin_default_formatter_config_path(output_path)
+    if pyproject_toml.is_file():
+        yield
+        return
+    pyproject_toml.write_text(_BUILTIN_FORMATTER_CONFIG, encoding="utf-8")
+    try:
+        yield
+    finally:
+        pyproject_toml.unlink(missing_ok=True)
+
+
+def _should_use_builtin_default_cli_formatter(
+    args: Sequence[str],
+    *,
+    copy_files: CopyFilesMapping | None = None,
+    output_path: Path | None = None,
+    is_generation_command: bool = True,
+) -> bool:
+    args_list = list(args)
+    return not (
+        not is_generation_command
+        or not _uses_builtin_test_default_formatter()
+        or _has_formatter_related_cli_options(args_list)
+        or _has_formatter_related_copy_files(copy_files)
+        or _has_formatter_related_settings_path(output_path)
+    )
+
+
+def _is_main_generation_command(args: Sequence[str]) -> bool:
+    return any(arg.split("=", maxsplit=1)[0] in {"--input", "--url"} for arg in args) and not any(
+        arg.split("=", maxsplit=1)[0] in _NON_GENERATION_CLI_OPTIONS for arg in args
+    )
+
+
+def _get_cli_output_path(args: Sequence[str]) -> Path | None:
+    args_list = list(args)
+    for index, arg in enumerate(args_list):
+        if arg == "--output" and index + 1 < len(args_list):
+            return Path(args_list[index + 1])
+        if arg.startswith("--output="):
+            return Path(arg.split("=", maxsplit=1)[1])
+    return None
+
+
+def _default_formatter_cli_args(
+    args: Sequence[str],
+    *,
+    copy_files: CopyFilesMapping | None = None,
+    output_path: Path | None = None,
+    is_generation_command: bool = True,
+) -> list[str]:
+    args_list = list(args)
+    if not _should_use_builtin_default_cli_formatter(
+        args_list,
+        copy_files=copy_files,
+        output_path=output_path,
+        is_generation_command=is_generation_command,
+    ):
+        return args_list
+    return [*args_list, "--formatters", _BUILTIN_FORMATTER_VALUE]
+
+
+def _default_formatter_generate_options(
+    generate_kwargs: dict[str, Any], *, output_path: Path | None = None
+) -> dict[str, Any]:
+    output = output_path or generate_kwargs.get("output")
+    if (
+        not _uses_builtin_test_default_formatter()
+        or any(key in generate_kwargs for key in _API_FORMATTER_RELATED_OPTIONS)
+        or (isinstance(output, Path) and _has_formatter_related_settings_path(output))
+    ):
+        return generate_kwargs
+    return {
+        **generate_kwargs,
+        "formatters": [Formatter.BUILTIN],
+        "builtin_format_line_length": _BUILTIN_FORMATTER_LINE_LENGTH,
+    }
+
+
 def _extend_args(
     args: list[str],
     *,
@@ -255,7 +411,8 @@ def _extend_args(
     output_path: Path | None = None,
     input_file_type: InputFileTypeLiteral | None = None,
     extra_args: Sequence[str] | None = None,
-) -> None:
+    copy_files: CopyFilesMapping | None = None,
+) -> bool:
     """Extend args with optional input_path, output_path, input_file_type and extra_args."""
     if input_path is not None:
         args.extend(["--input", str(input_path)])
@@ -266,6 +423,14 @@ def _extend_args(
     _validate_extra_args(extra_args)
     if extra_args is not None:
         args.extend(extra_args)
+    use_builtin_default = _should_use_builtin_default_cli_formatter(
+        args,
+        copy_files=copy_files,
+        output_path=output_path,
+    )
+    if use_builtin_default:
+        args.extend(("--formatters", _BUILTIN_FORMATTER_VALUE))
+    return use_builtin_default
 
 
 def _run_main(
@@ -279,10 +444,16 @@ def _run_main(
     """Execute main() with standard arguments (internal use)."""
     _copy_files(copy_files)
     args: list[str] = []
-    _extend_args(
-        args, input_path=input_path, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args
+    use_builtin_default = _extend_args(
+        args,
+        input_path=input_path,
+        output_path=output_path,
+        input_file_type=input_file_type,
+        extra_args=extra_args,
+        copy_files=copy_files,
     )
-    return main(args)
+    with _builtin_default_formatter_config(output_path, enabled=use_builtin_default):
+        return main(args)
 
 
 def _builtin_cli_formatter_parity_context() -> _BuiltinCliFormatterParityContext:
@@ -303,8 +474,11 @@ def _run_main_url(
 ) -> Exit:
     """Execute main() with URL input (internal use)."""
     args = ["--url", url]
-    _extend_args(args, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args)
-    return main(args)
+    use_builtin_default = _extend_args(
+        args, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args
+    )
+    with _builtin_default_formatter_config(output_path, enabled=use_builtin_default):
+        return main(args)
 
 
 def run_main_with_args(
@@ -332,7 +506,16 @@ def run_main_with_args(
         Exit code from main()
     """
     __tracebackhide__ = True
-    return_code = main(list(args))
+    output_path = _get_cli_output_path(args)
+    is_generation_command = _is_main_generation_command(args)
+    use_builtin_default = _should_use_builtin_default_cli_formatter(
+        args,
+        output_path=output_path,
+        is_generation_command=is_generation_command,
+    )
+    main_args = [*args, "--formatters", _BUILTIN_FORMATTER_VALUE] if use_builtin_default else list(args)
+    with _builtin_default_formatter_config(output_path, enabled=use_builtin_default):
+        return_code = main(main_args)
     _assert_exit_code(return_code, expected_exit, f"Args: {args}")
     _assert_captured_output(
         capsys,
@@ -356,8 +539,19 @@ def run_main_with_system_exit(
 ) -> None:
     """Execute main() expecting argparse/SystemExit and assert captured output."""
     __tracebackhide__ = True
-    with pytest.raises(SystemExit) as exc_info:
-        main(list(args))
+    output_path = _get_cli_output_path(args)
+    is_generation_command = _is_main_generation_command(args)
+    use_builtin_default = _should_use_builtin_default_cli_formatter(
+        args,
+        output_path=output_path,
+        is_generation_command=is_generation_command,
+    )
+    main_args = [*args, "--formatters", _BUILTIN_FORMATTER_VALUE] if use_builtin_default else list(args)
+    with (
+        pytest.raises(SystemExit) as exc_info,
+        _builtin_default_formatter_config(output_path, enabled=use_builtin_default),
+    ):
+        main(main_args)
     if exc_info.value.code != expected_code:  # pragma: no cover
         pytest.fail(f"Expected SystemExit code {expected_code!r}, got {exc_info.value.code!r}\nArgs: {args}")
     _assert_captured_output(
@@ -433,7 +627,7 @@ def run_generate_file_and_assert(
 
     generate_options: dict[str, Any] = {
         "output": output_path,
-        **generate_kwargs,
+        **_default_formatter_generate_options(generate_kwargs, output_path=output_path),
     }
     if input_file_type is not None:
         generate_options["input_file_type"] = input_file_type
@@ -477,7 +671,7 @@ def run_generate_and_assert(
     """Execute generate(output=None) and assert the returned text output."""
     __tracebackhide__ = True
 
-    result = generate(input_=input_, **generate_kwargs)
+    result = generate(input_=input_, **_default_formatter_generate_options(generate_kwargs))
     if not isinstance(result, str):  # pragma: no cover
         pytest.fail(f"Expected generate() to return str, got {type(result).__name__}")
     assert_output(result, expected_file)
@@ -575,15 +769,25 @@ def run_main_and_assert(  # noqa: PLR0912
         _copy_files(copy_files)
         monkeypatch.setattr("sys.stdin", stdin_path.open(encoding="utf-8"))
         args: list[str] = []
-        _extend_args(args, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args)
-        return_code = main(args)
+        use_builtin_default = _extend_args(
+            args,
+            output_path=output_path,
+            input_file_type=input_file_type,
+            extra_args=extra_args,
+            copy_files=copy_files,
+        )
+        with _builtin_default_formatter_config(output_path, enabled=use_builtin_default):
+            return_code = main(args)
     # Handle stdout-only output (no output_path)
     elif output_path is None:
         if input_path is None:  # pragma: no cover
             pytest.fail("input_path is required when output_path is None")
         args = []
-        _extend_args(args, input_path=input_path, input_file_type=input_file_type, extra_args=extra_args)
-        return_code = main(args)
+        use_builtin_default = _extend_args(
+            args, input_path=input_path, input_file_type=input_file_type, extra_args=extra_args
+        )
+        with _builtin_default_formatter_config(output_path, enabled=use_builtin_default):
+            return_code = main(args)
     # Standard file input
     else:
         if input_path is None:  # pragma: no cover
