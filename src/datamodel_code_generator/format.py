@@ -6,6 +6,7 @@ along with PythonVersion enum and DatetimeClassType for output configuration.
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess  # noqa: S404
 import sys
@@ -16,110 +17,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from warnings import warn
 
-from datamodel_code_generator._builtin_formatter import (
-    _CONSTRAINED_CALL_NAMES,
-    DEFAULT_KNOWN_FIRST_PARTY,
-    DEFAULT_LINE_LENGTH,
-    LONG_TARGET_PREFIX_LENGTH,
-    MAX_SHORT_DEFAULT_OVERFLOW,
-    MAX_TOP_LEVEL_BLANK_LINES,
-    STRING_PREFIX_PATTERN,
-    TYPE_ALIAS_INLINE_ARGUMENT_COUNT,
-    _alias_imported_name,
-    _alias_sort_key,
-    _AliasSortCategory,
-    _apply_line_replacements,
-    _build_builtin_import_block,
-    _can_merge_from_imports,
-    _can_parenthesize_field_value,
-    _collect_builtin_replacements,
-    _config_dict_assignment,
-    _contains_annotated,
-    _contains_constrained_string_call,
-    _contains_list_of_annotated,
-    _docstring_node,
-    _ensure_post_class_annotation_assignment_spacing,
-    _finalize_builtin_code,
-    _find_pyproject_toml,
-    _format_alias,
-    _format_annotated,
-    _format_annotated_union,
-    _format_bit_or_annotation_assignment,
-    _format_bit_or_element,
-    _format_bit_or_elements,
-    _format_call,
-    _format_call_argument,
-    _format_call_argument_for_block,
-    _format_constrained_call,
-    _format_constrained_call_union,
-    _format_dict_literal,
-    _format_from_import,
-    _format_generated_annotation_assignment,
-    _format_generated_class_definition,
-    _format_generated_class_statement,
-    _format_generated_module_statement,
-    _format_import_node,
-    _format_import_node_without_reordering,
-    _format_list_literal,
-    _format_list_of_annotated,
-    _format_parenthesized_bit_or_annotation,
-    _format_parenthesized_field_value,
-    _format_root_model_constrained_union_base,
-    _format_root_model_union_base,
-    _format_subscript_value,
-    _format_type_alias_type_call,
-    _format_type_alias_union_assignment,
-    _format_type_checking_block,
-    _format_typed_dict_call,
-    _format_union_subscript,
-    _format_wrapped_string_literal,
-    _from_import_key,
-    _get_builtin_known_first_party,
-    _get_builtin_line_length,
-    _get_builtin_string_normalization,
-    _has_attribute_root,
-    _has_inline_comment,
-    _import_category,
-    _import_line_sort_key,
-    _import_node_category,
-    _ImportCategory,
-    _indent_first_line,
-    _inline_source_segment,
-    _is_annotated,
-    _is_call,
-    _is_constrained_call,
-    _is_constrained_string_call,
-    _is_datetime_module_call,
-    _is_list_of_annotated,
-    _is_name_or_attr,
-    _is_root_model_constrained_union,
-    _is_simple_union_annotation,
-    _is_type_checking_if,
-    _is_union,
-    _is_valid_builtin_line_length,
-    _iter_aliased_from_import_lines,
-    _iter_bit_or_elements,
-    _iter_module_import_nodes,
-    _iter_subscript_elements,
-    _leading_lines_before_imports,
-    _line_indent,
-    _LineReplacement,
-    _module_docstring_node,
-    _modules_with_aliased_imports,
-    _normalize_string_quotes,
-    _normalize_top_level_blank_lines,
-    _previous_non_empty_line_index,
-    _should_format_constrained_call_union,
-    _should_format_field_bit_or_annotation_assignment,
-    _should_format_field_bit_or_value_assignment,
-    _should_format_string_bit_or_annotation_assignment,
-    _should_format_union_annotation,
-    _source_segment,
-    _split_escaped_string_literal,
-)
-from datamodel_code_generator._builtin_formatter import (
-    apply_builtin_formatter as _apply_builtin_formatter,
-)
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.util import load_toml
 
@@ -127,114 +24,141 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
+DEFAULT_LINE_LENGTH = 88
+DEFAULT_KNOWN_FIRST_PARTY = frozenset({"datamodel_code_generator", "tests"})
+MAX_TOP_LEVEL_BLANK_LINES = 2
+MAX_SHORT_DEFAULT_OVERFLOW = 13
+LONG_TARGET_PREFIX_LENGTH = 30
+TYPE_ALIAS_INLINE_ARGUMENT_COUNT = 2
+STRING_PREFIX_PATTERN = re.compile(r"(?i)^([rubf]*)(\"\"\"|'''|\"|')")
+
+
 # Keep the re-export shim visible to auto-fixers without changing star-import behavior.
-_BUILTIN_FORMATTER_REEXPORTS: tuple[tuple[str, Any], ...] = (
-    ("_AliasSortCategory", _AliasSortCategory),
-    ("_ImportCategory", _ImportCategory),
-    ("DEFAULT_LINE_LENGTH", DEFAULT_LINE_LENGTH),
-    ("DEFAULT_KNOWN_FIRST_PARTY", DEFAULT_KNOWN_FIRST_PARTY),
-    ("MAX_TOP_LEVEL_BLANK_LINES", MAX_TOP_LEVEL_BLANK_LINES),
-    ("MAX_SHORT_DEFAULT_OVERFLOW", MAX_SHORT_DEFAULT_OVERFLOW),
-    ("LONG_TARGET_PREFIX_LENGTH", LONG_TARGET_PREFIX_LENGTH),
-    ("TYPE_ALIAS_INLINE_ARGUMENT_COUNT", TYPE_ALIAS_INLINE_ARGUMENT_COUNT),
-    ("STRING_PREFIX_PATTERN", STRING_PREFIX_PATTERN),
-    ("_is_valid_builtin_line_length", _is_valid_builtin_line_length),
-    ("_line_indent", _line_indent),
-    ("_indent_first_line", _indent_first_line),
-    ("_find_pyproject_toml", _find_pyproject_toml),
-    ("_get_builtin_line_length", _get_builtin_line_length),
-    ("_get_builtin_known_first_party", _get_builtin_known_first_party),
-    ("_get_builtin_string_normalization", _get_builtin_string_normalization),
-    ("_format_alias", _format_alias),
-    ("_alias_imported_name", _alias_imported_name),
-    ("_alias_sort_key", _alias_sort_key),
-    ("_format_from_import", _format_from_import),
-    ("_import_category", _import_category),
-    ("_has_inline_comment", _has_inline_comment),
-    ("_format_import_node_without_reordering", _format_import_node_without_reordering),
-    ("_import_node_category", _import_node_category),
-    ("_format_import_node", _format_import_node),
-    ("_from_import_key", _from_import_key),
-    ("_modules_with_aliased_imports", _modules_with_aliased_imports),
-    ("_can_merge_from_imports", _can_merge_from_imports),
-    ("_iter_aliased_from_import_lines", _iter_aliased_from_import_lines),
-    ("_import_line_sort_key", _import_line_sort_key),
-    ("_build_builtin_import_block", _build_builtin_import_block),
-    ("_is_name_or_attr", _is_name_or_attr),
-    ("_is_type_checking_if", _is_type_checking_if),
-    ("_source_segment", _source_segment),
-    ("_inline_source_segment", _inline_source_segment),
-    ("_format_call_argument", _format_call_argument),
-    ("_format_dict_literal", _format_dict_literal),
-    ("_format_list_literal", _format_list_literal),
-    ("_split_escaped_string_literal", _split_escaped_string_literal),
-    ("_format_wrapped_string_literal", _format_wrapped_string_literal),
-    ("_format_call_argument_for_block", _format_call_argument_for_block),
-    ("_format_call", _format_call),
-    ("_format_constrained_call", _format_constrained_call),
-    ("_is_call", _is_call),
-    ("_has_attribute_root", _has_attribute_root),
-    ("_is_datetime_module_call", _is_datetime_module_call),
-    ("_is_annotated", _is_annotated),
-    ("_is_list_of_annotated", _is_list_of_annotated),
-    ("_is_union", _is_union),
-    ("_CONSTRAINED_CALL_NAMES", _CONSTRAINED_CALL_NAMES),
-    ("_is_constrained_string_call", _is_constrained_string_call),
-    ("_is_constrained_call", _is_constrained_call),
-    ("_contains_constrained_string_call", _contains_constrained_string_call),
-    ("_contains_annotated", _contains_annotated),
-    ("_contains_list_of_annotated", _contains_list_of_annotated),
-    ("_is_simple_union_annotation", _is_simple_union_annotation),
-    ("_should_format_constrained_call_union", _should_format_constrained_call_union),
-    ("_can_parenthesize_field_value", _can_parenthesize_field_value),
-    ("_should_format_union_annotation", _should_format_union_annotation),
-    ("_iter_bit_or_elements", _iter_bit_or_elements),
-    ("_format_bit_or_element", _format_bit_or_element),
-    ("_format_bit_or_elements", _format_bit_or_elements),
-    ("_format_parenthesized_bit_or_annotation", _format_parenthesized_bit_or_annotation),
-    ("_should_format_field_bit_or_annotation_assignment", _should_format_field_bit_or_annotation_assignment),
-    ("_should_format_field_bit_or_value_assignment", _should_format_field_bit_or_value_assignment),
-    ("_format_parenthesized_field_value", _format_parenthesized_field_value),
-    ("_should_format_string_bit_or_annotation_assignment", _should_format_string_bit_or_annotation_assignment),
-    ("_format_bit_or_annotation_assignment", _format_bit_or_annotation_assignment),
-    ("_iter_subscript_elements", _iter_subscript_elements),
-    ("_format_annotated", _format_annotated),
-    ("_config_dict_assignment", _config_dict_assignment),
-    ("_format_generated_annotation_assignment", _format_generated_annotation_assignment),
-    ("_format_generated_class_statement", _format_generated_class_statement),
-    ("_format_constrained_call_union", _format_constrained_call_union),
-    ("_format_annotated_union", _format_annotated_union),
-    ("_format_list_of_annotated", _format_list_of_annotated),
-    ("_format_union_subscript", _format_union_subscript),
-    ("_format_subscript_value", _format_subscript_value),
-    ("_format_type_alias_type_call", _format_type_alias_type_call),
-    ("_format_type_alias_union_assignment", _format_type_alias_union_assignment),
-    ("_format_typed_dict_call", _format_typed_dict_call),
-    ("_is_root_model_constrained_union", _is_root_model_constrained_union),
-    ("_format_root_model_constrained_union_base", _format_root_model_constrained_union_base),
-    ("_format_root_model_union_base", _format_root_model_union_base),
-    ("_format_generated_class_definition", _format_generated_class_definition),
-    ("_format_generated_module_statement", _format_generated_module_statement),
-    ("_format_type_checking_block", _format_type_checking_block),
-    ("_LineReplacement", _LineReplacement),
-    ("_collect_builtin_replacements", _collect_builtin_replacements),
-    ("_module_docstring_node", _module_docstring_node),
-    ("_docstring_node", _docstring_node),
-    ("_leading_lines_before_imports", _leading_lines_before_imports),
-    ("_iter_module_import_nodes", _iter_module_import_nodes),
-    ("_apply_line_replacements", _apply_line_replacements),
-    ("_previous_non_empty_line_index", _previous_non_empty_line_index),
-    ("_ensure_post_class_annotation_assignment_spacing", _ensure_post_class_annotation_assignment_spacing),
-    ("_normalize_top_level_blank_lines", _normalize_top_level_blank_lines),
-    ("_normalize_string_quotes", _normalize_string_quotes),
-    ("_finalize_builtin_code", _finalize_builtin_code),
+_BUILTIN_FORMATTER_REEXPORTS: tuple[str, ...] = (
+    "_AliasSortCategory",
+    "_ImportCategory",
+    "DEFAULT_LINE_LENGTH",
+    "DEFAULT_KNOWN_FIRST_PARTY",
+    "MAX_TOP_LEVEL_BLANK_LINES",
+    "MAX_SHORT_DEFAULT_OVERFLOW",
+    "LONG_TARGET_PREFIX_LENGTH",
+    "TYPE_ALIAS_INLINE_ARGUMENT_COUNT",
+    "STRING_PREFIX_PATTERN",
+    "_is_valid_builtin_line_length",
+    "_line_indent",
+    "_indent_first_line",
+    "_find_pyproject_toml",
+    "_get_builtin_line_length",
+    "_get_builtin_known_first_party",
+    "_get_builtin_string_normalization",
+    "_format_alias",
+    "_alias_imported_name",
+    "_alias_sort_key",
+    "_format_from_import",
+    "_import_category",
+    "_has_inline_comment",
+    "_format_import_node_without_reordering",
+    "_import_node_category",
+    "_format_import_node",
+    "_from_import_key",
+    "_modules_with_aliased_imports",
+    "_can_merge_from_imports",
+    "_iter_aliased_from_import_lines",
+    "_import_line_sort_key",
+    "_build_builtin_import_block",
+    "_is_name_or_attr",
+    "_is_type_checking_if",
+    "_source_segment",
+    "_inline_source_segment",
+    "_format_call_argument",
+    "_format_dict_literal",
+    "_format_list_literal",
+    "_split_escaped_string_literal",
+    "_format_wrapped_string_literal",
+    "_format_call_argument_for_block",
+    "_format_call",
+    "_format_constrained_call",
+    "_is_call",
+    "_has_attribute_root",
+    "_is_datetime_module_call",
+    "_is_annotated",
+    "_is_list_of_annotated",
+    "_is_union",
+    "_CONSTRAINED_CALL_NAMES",
+    "_is_constrained_string_call",
+    "_is_constrained_call",
+    "_contains_constrained_string_call",
+    "_contains_annotated",
+    "_contains_list_of_annotated",
+    "_is_simple_union_annotation",
+    "_should_format_constrained_call_union",
+    "_can_parenthesize_field_value",
+    "_should_format_union_annotation",
+    "_iter_bit_or_elements",
+    "_format_bit_or_element",
+    "_format_bit_or_elements",
+    "_format_parenthesized_bit_or_annotation",
+    "_should_format_field_bit_or_annotation_assignment",
+    "_should_format_field_bit_or_value_assignment",
+    "_format_parenthesized_field_value",
+    "_should_format_string_bit_or_annotation_assignment",
+    "_format_bit_or_annotation_assignment",
+    "_iter_subscript_elements",
+    "_format_annotated",
+    "_config_dict_assignment",
+    "_format_generated_annotation_assignment",
+    "_format_generated_class_statement",
+    "_format_constrained_call_union",
+    "_format_annotated_union",
+    "_format_list_of_annotated",
+    "_format_union_subscript",
+    "_format_subscript_value",
+    "_format_type_alias_type_call",
+    "_format_type_alias_union_assignment",
+    "_format_typed_dict_call",
+    "_is_root_model_constrained_union",
+    "_format_root_model_constrained_union_base",
+    "_format_root_model_union_base",
+    "_format_generated_class_definition",
+    "_format_generated_module_statement",
+    "_format_type_checking_block",
+    "_LineReplacement",
+    "_collect_builtin_replacements",
+    "_module_docstring_node",
+    "_docstring_node",
+    "_leading_lines_before_imports",
+    "_iter_module_import_nodes",
+    "_apply_line_replacements",
+    "_previous_non_empty_line_index",
+    "_ensure_post_class_annotation_assignment_spacing",
+    "_normalize_top_level_blank_lines",
+    "_normalize_string_quotes",
+    "_finalize_builtin_code",
 )
 
-for _builtin_formatter_reexport_name, _builtin_formatter_reexport in _BUILTIN_FORMATTER_REEXPORTS:
-    if globals()[_builtin_formatter_reexport_name] is not _builtin_formatter_reexport:  # pragma: no cover
-        msg = f"Builtin formatter re-export mismatch: {_builtin_formatter_reexport_name}"
-        raise RuntimeError(msg)
-del _builtin_formatter_reexport_name, _builtin_formatter_reexport
+
+@lru_cache(maxsize=1)
+def _get_builtin_formatter_module() -> Any:
+    from datamodel_code_generator import _builtin_formatter  # noqa: PLC0415
+
+    return _builtin_formatter
+
+
+def _builtin_formatter_attr(name: str) -> Any:
+    return getattr(_get_builtin_formatter_module(), name)
+
+
+def _builtin_formatter_global(name: str) -> Any:
+    return getattr(sys.modules[__name__], name)
+
+
+def __getattr__(name: str) -> Any:
+    if name not in _BUILTIN_FORMATTER_REEXPORTS:
+        msg = f"module {__name__!r} has no attribute {name!r}"
+        raise AttributeError(msg)
+    value = _builtin_formatter_attr(name)
+    globals()[name] = value
+    return value
 
 
 @lru_cache(maxsize=1)
@@ -382,7 +306,7 @@ def apply_builtin_formatter(  # noqa: PLR0913
     python_version: PythonVersion | None = None,
 ) -> str:
     """Apply dependency-free formatting for generated Python code."""
-    return _apply_builtin_formatter(
+    return _builtin_formatter_attr("apply_builtin_formatter")(
         code,
         line_length=line_length,
         known_first_party=known_first_party,
@@ -515,27 +439,35 @@ class CodeFormatter:
 
         builtin_tool_config: dict[str, Any] | None = None
         if use_builtin:
-            if builtin_format_line_length is not None and not _is_valid_builtin_line_length(builtin_format_line_length):
+            is_valid_builtin_line_length = _builtin_formatter_global("_is_valid_builtin_line_length")
+            if builtin_format_line_length is not None and not is_valid_builtin_line_length(builtin_format_line_length):
                 msg = "builtin_format_line_length must be a positive integer"
                 raise ValueError(msg)
-            if (pyproject_toml_path := _find_pyproject_toml(settings_path)) is not None:
+            if (pyproject_toml_path := _builtin_formatter_global("_find_pyproject_toml")(settings_path)) is not None:
                 builtin_tool_config = load_toml(pyproject_toml_path).get("tool", {})
             else:
                 builtin_tool_config = {}
 
         self.builtin_line_length = (
-            _get_builtin_line_length(settings_path, builtin_format_line_length, tool_config=builtin_tool_config)
+            _builtin_formatter_global("_get_builtin_line_length")(
+                settings_path,
+                builtin_format_line_length,
+                tool_config=builtin_tool_config,
+            )
             if use_builtin
             else DEFAULT_LINE_LENGTH
         )
         self.builtin_known_first_party = (
-            _get_builtin_known_first_party(settings_path, tool_config=builtin_tool_config)
+            _builtin_formatter_global("_get_builtin_known_first_party")(
+                settings_path,
+                tool_config=builtin_tool_config,
+            )
             if use_builtin
             else DEFAULT_KNOWN_FIRST_PARTY
         )
         self.builtin_wrap_string_literal = bool(wrap_string_literal)
         self.builtin_string_normalization = (
-            _get_builtin_string_normalization(
+            _builtin_formatter_global("_get_builtin_string_normalization")(
                 settings_path,
                 skip_string_normalization=skip_string_normalization,
                 tool_config=builtin_tool_config,

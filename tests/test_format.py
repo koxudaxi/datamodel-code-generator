@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import subprocess
 import sys
 import warnings
 from pathlib import Path
@@ -43,15 +44,75 @@ FAKE_RUFF_PATH = "/opt/fake-ruff/bin/ruff"
 BLACK_VERSION_DEPENDENT_NORMALIZED_EXPECTED_FILES = {
     "main/openapi/custom_file_header_with_docstring_and_import.py",
 }
+BUILTIN_FORMATTER_LOCAL_CONSTANTS = {
+    "DEFAULT_LINE_LENGTH",
+    "DEFAULT_KNOWN_FIRST_PARTY",
+    "MAX_TOP_LEVEL_BLANK_LINES",
+    "MAX_SHORT_DEFAULT_OVERFLOW",
+    "LONG_TARGET_PREFIX_LENGTH",
+    "TYPE_ALIAS_INLINE_ARGUMENT_COUNT",
+    "STRING_PREFIX_PATTERN",
+}
 
 
 def test_builtin_formatter_moved_names_are_reexported() -> None:
     """Test format.py keeps an explicit re-export shim for moved builtin formatter names."""
     assert format_module._BUILTIN_FORMATTER_REEXPORTS
     assert "__all__" not in vars(format_module)
-    for name, reexported_object in format_module._BUILTIN_FORMATTER_REEXPORTS:
-        assert getattr(format_module, name) is reexported_object
-        assert getattr(builtin_formatter, name) is reexported_object
+    for name in format_module._BUILTIN_FORMATTER_REEXPORTS:
+        if name in BUILTIN_FORMATTER_LOCAL_CONSTANTS:
+            local_value = getattr(format_module, name)
+            builtin_value = getattr(builtin_formatter, name)
+            if name == "STRING_PREFIX_PATTERN":
+                assert local_value.pattern == builtin_value.pattern
+                assert local_value.flags == builtin_value.flags
+            else:
+                assert local_value == builtin_value
+            continue
+        assert getattr(format_module, name) is getattr(builtin_formatter, name)
+
+
+@pytest.mark.parametrize("module_name", ["datamodel_code_generator.format", "datamodel_code_generator"])
+def test_light_import_does_not_load_builtin_formatter(module_name: str) -> None:
+    """Test light package imports do not import the built-in formatter module."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import importlib, sys; "
+                f"importlib.import_module({module_name!r}); "
+                "print('datamodel_code_generator._builtin_formatter' in sys.modules)"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.stdout == "False\n"
+
+
+def test_format_star_import_keeps_constants_without_loading_builtin_formatter() -> None:
+    """Test star import keeps public constants without loading the built-in formatter module."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; "
+                "namespace = {}; "
+                "exec('from datamodel_code_generator.format import *', namespace); "
+                "print(namespace['DEFAULT_LINE_LENGTH']); "
+                "print('datamodel_code_generator._builtin_formatter' in sys.modules)"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.stdout == "88\nFalse\n"
 
 
 def test_apply_builtin_formatter_keeps_concrete_public_python_version_type() -> None:
