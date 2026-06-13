@@ -17,7 +17,7 @@ def add_math_imports_for_non_finite_literals(body: str) -> str:
         return body
 
     import_line = f"from math import {', '.join(name for name in ('inf', 'nan') if name in names)}"
-    if import_line in body:  # pragma: no cover
+    if import_line in body:
         return body
 
     lines = body.splitlines()
