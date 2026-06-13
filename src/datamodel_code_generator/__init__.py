@@ -56,7 +56,7 @@ from datamodel_code_generator.enums import (
     XMLSchemaVersion,
 )
 from datamodel_code_generator.enums import (
-    UnionMode as UnionMode,  # noqa: PLC0414
+    UnionMode as UnionMode,
 )
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
