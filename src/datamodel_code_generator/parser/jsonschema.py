@@ -281,18 +281,38 @@ class JsonSchemaObject(BaseModel):
             return values
         exclusive_maximum: float | bool | None = values.get("exclusiveMaximum")
         exclusive_minimum: float | bool | None = values.get("exclusiveMinimum")
+        if not isinstance(exclusive_maximum, bool) and not isinstance(exclusive_minimum, bool):
+            return values
 
-        if exclusive_maximum is True:
-            values["exclusiveMaximum"] = values["maximum"]
-            del values["maximum"]
-        elif exclusive_maximum is False:
-            del values["exclusiveMaximum"]
-        if exclusive_minimum is True:
-            values["exclusiveMinimum"] = values["minimum"]
-            del values["minimum"]
-        elif exclusive_minimum is False:
-            del values["exclusiveMinimum"]
+        values = dict(values)
+        match exclusive_maximum:
+            case True:
+                values["exclusiveMaximum"] = values["maximum"]
+                del values["maximum"]
+            case False:
+                del values["exclusiveMaximum"]
+        match exclusive_minimum:
+            case True:
+                values["exclusiveMinimum"] = values["minimum"]
+                del values["minimum"]
+            case False:
+                del values["exclusiveMinimum"]
         return values
+
+    @model_validator(mode="before")
+    @classmethod
+    def collect_extra_fields(cls, values: Any) -> Any:
+        """Collect raw schema extension fields without overriding known schema fields."""
+        if not isinstance(values, dict):
+            return values
+        alias_extras = values.get(cls.__extra_key__, {})
+        raw_extras = {k: v for k, v in values.items() if k not in EXCLUDE_FIELD_KEYS}
+        if not alias_extras and not raw_extras:
+            return values
+        extras = {**alias_extras, **raw_extras}
+        if "const" in alias_extras:  # pragma: no cover
+            extras["const"] = alias_extras["const"]
+        return {**values, cls.__extra_key__: extras}
 
     @field_validator("ref")
     def validate_ref(cls, value: Any) -> Any:  # noqa: N805
@@ -402,30 +422,15 @@ class JsonSchemaObject(BaseModel):
         ignored_types=(cached_property,),
     )
 
-    def __init__(__pydantic_self__, **data: Any) -> None:  # noqa: N805
-        """Initialize JsonSchemaObject with extra fields handling."""
-        super().__init__(**data)
-        items = data.get("items")
-        if items is False:
-            __pydantic_self__.items = False
-        elif items == []:
-            __pydantic_self__.items = []
-        # Restore extras from alias key (for dict -> parse_obj round-trip)
-        alias_extras = data.get(__pydantic_self__.__extra_key__, {})
-        # Collect custom keys from raw data
-        raw_extras = {k: v for k, v in data.items() if k not in EXCLUDE_FIELD_KEYS}
-        if alias_extras or raw_extras:
-            # Merge: raw_extras takes precedence (original data is the source of truth)
-            __pydantic_self__.extras = {**alias_extras, **raw_extras}
-            if "const" in alias_extras:  # pragma: no cover
-                __pydantic_self__.extras["const"] = alias_extras["const"]
+    def model_post_init(self, __context: Any, /) -> None:
+        """Apply post-validation compatibility handling for extension metadata."""
         # Support x-propertyNames extension for OpenAPI 3.0
-        if "x-propertyNames" in __pydantic_self__.extras and __pydantic_self__.propertyNames is None:
-            x_prop_names = __pydantic_self__.extras.pop("x-propertyNames")
+        if "x-propertyNames" in self.extras and self.propertyNames is None:
+            x_prop_names = self.extras.pop("x-propertyNames")
             if isinstance(x_prop_names, bool):
-                __pydantic_self__.propertyNames = x_prop_names
+                self.propertyNames = x_prop_names
             elif isinstance(x_prop_names, dict):
-                __pydantic_self__.propertyNames = JsonSchemaObject.model_validate(x_prop_names)
+                self.propertyNames = JsonSchemaObject.model_validate(x_prop_names)
 
     @cached_property
     def is_object(self) -> bool:
@@ -448,7 +453,7 @@ class JsonSchemaObject(BaseModel):
     def validate_items(cls, values: Any) -> Any:  # noqa: N805
         """Validate items field, converting empty dicts to None."""
         # this condition expects empty dict
-        return values or None
+        return None if values == {} else values
 
     @cached_property
     def has_default(self) -> bool:

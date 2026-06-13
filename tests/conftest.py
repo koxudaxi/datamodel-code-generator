@@ -705,10 +705,7 @@ def assert_output(
 
 
 def _tracks_mutation(value: object) -> bool:
-    match value:
-        case dict() | list():
-            return True
-    return False
+    return isinstance(value, (dict, list))
 
 
 @contextmanager
