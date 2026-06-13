@@ -500,14 +500,14 @@ def get_all_argparse_options() -> frozenset[str]:
     return frozenset(_build_alias_map_from_argparse().keys())
 
 
-def is_manual_doc(option: str) -> bool:  # pragma: no cover
+def is_manual_doc(option: str) -> bool:
     """Check if an option has manual documentation (not auto-generated)."""
     canonical = get_canonical_option(option)
     return canonical in MANUAL_DOCS
 
 
 # Backward compatibility alias
-def is_excluded_from_docs(option: str) -> bool:  # pragma: no cover
+def is_excluded_from_docs(option: str) -> bool:
     """Check if an option is excluded from auto-generated documentation.
 
     Deprecated: Use is_manual_doc() instead.
@@ -515,7 +515,7 @@ def is_excluded_from_docs(option: str) -> bool:  # pragma: no cover
     return is_manual_doc(option)
 
 
-def get_option_meta(option: str) -> CLIOptionMeta | None:  # pragma: no cover
+def get_option_meta(option: str) -> CLIOptionMeta | None:
     """Get documentation metadata for an option.
 
     Uses an exact match first so BooleanOptionalAction variants can carry
