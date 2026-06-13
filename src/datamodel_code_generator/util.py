@@ -13,16 +13,22 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-try:
-    from tomllib import load as load_tomllib  # type: ignore[ignoreMissingImports]
-except ImportError:  # pragma: no cover
-    from tomli import load as load_tomllib  # type: ignore[ignoreMissingImports]
+
+@lru_cache(maxsize=1)
+def _get_toml_loader() -> Callable[[Any], dict[str, Any]]:
+    """Get the TOML parser lazily."""
+    try:
+        from tomllib import load as load_toml_data  # noqa: PLC0415  # type: ignore[ignoreMissingImports]
+    except ImportError:  # pragma: no cover
+        from tomli import load as load_toml_data  # noqa: PLC0415  # type: ignore[ignoreMissingImports]
+
+    return load_toml_data
 
 
 def load_toml(path: Path) -> dict[str, Any]:
     """Load and parse a TOML file."""
     with path.open("rb") as f:
-        return load_tomllib(f)
+        return _get_toml_loader()(f)
 
 
 _YAML_1_2_BOOL_PATTERN = re.compile(r"^(?:true|false|True|False|TRUE|FALSE)$")
