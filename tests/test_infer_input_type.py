@@ -191,15 +191,18 @@ def test_public_detection_helpers_keep_parser_module_surface() -> None:
     assert frozenset({"null", "boolean", "int", "long", "float", "double", "bytes", "string"}) == avro.PRIMITIVE_TYPES
     assert frozenset({"record", "enum", "fixed"}) == avro.NAMED_TYPES
     assert avro.NAMED_TYPES | {"array", "map"} == avro.COMPLEX_TYPES
-    assert frozenset({
-        "$schema",
-        "$defs",
-        "definitions",
-        "properties",
-        "allOf",
-        "anyOf",
-        "oneOf",
-    }) == avro.JSON_SCHEMA_MARKER_KEYS
+    assert (
+        frozenset({
+            "$schema",
+            "$defs",
+            "definitions",
+            "properties",
+            "allOf",
+            "anyOf",
+            "oneOf",
+        })
+        == avro.JSON_SCHEMA_MARKER_KEYS
+    )
     assert xmlschema.is_xml_schema_text.__module__ == "datamodel_code_generator.parser.xmlschema"
     assert xmlschema.XML_SCHEMA_NAMESPACE == "http://www.w3.org/2001/XMLSchema"
     assert xmlschema.XML_SCHEMA_TAG == "{http://www.w3.org/2001/XMLSchema}schema"
