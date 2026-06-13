@@ -147,6 +147,7 @@ def test_main_modular(output_dir: Path) -> None:
         )
 
 
+@pytest.mark.isolate_builtin_formatter_config
 @freeze_time(TIMESTAMP)
 def test_main_modular_no_file(capsys: pytest.CaptureFixture[str]) -> None:
     """Test main function on modular file with no output name outputs to stdout."""
@@ -167,6 +168,7 @@ def test_main_modular_filename(output_file: Path) -> None:
     )
 
 
+@pytest.mark.isolate_builtin_formatter_config
 def test_main_no_file(capsys: pytest.CaptureFixture[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test main function on non-modular file with no output name."""
     monkeypatch.chdir(tmp_path)
@@ -181,6 +183,7 @@ def test_main_no_file(capsys: pytest.CaptureFixture[str], tmp_path: Path, monkey
         )
 
 
+@pytest.mark.isolate_builtin_formatter_config
 def test_main_custom_template_dir(
     capsys: pytest.CaptureFixture[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -681,6 +681,7 @@ def test_main_modular_filename(output_file: Path) -> None:
     )
 
 
+@pytest.mark.isolate_builtin_formatter_config
 def test_main_openapi_no_file(
     capsys: pytest.CaptureFixture[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -701,6 +702,7 @@ def test_main_openapi_no_file(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+@pytest.mark.isolate_builtin_formatter_config
 @pytest.mark.cli_doc(
     options=["--extra-template-data"],
     option_description="""Pass custom template variables from JSON file for code generation.
@@ -743,6 +745,7 @@ def test_main_openapi_extra_template_data_config(
         )
 
 
+@pytest.mark.isolate_builtin_formatter_config
 def test_main_custom_template_dir_old_style(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -777,6 +780,7 @@ to the templates.""",
     cli_args=["--custom-template-dir", "templates", "--extra-template-data", "openapi/extra_data.json"],
     golden_output="openapi/custom_template_dir.py",
 )
+@pytest.mark.isolate_builtin_formatter_config
 def test_main_openapi_custom_template_dir(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -805,6 +809,7 @@ def test_main_openapi_custom_template_dir(
         )
 
 
+@pytest.mark.isolate_builtin_formatter_config
 def test_main_openapi_custom_template_dir_include_override(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -831,6 +836,7 @@ def test_main_openapi_custom_template_dir_include_override(
         )
 
 
+@pytest.mark.isolate_builtin_formatter_config
 def test_main_openapi_schema_extensions(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -99,6 +99,7 @@ Returned by generate() when output=None and multiple modules are generated.
 """
 
 DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
+_IGNORED_TEXT_PREFIX_CHARS: frozenset[str] = frozenset({"\ufeff", " ", "\t", "\r", "\n"})
 
 
 def load_yaml(stream: str | TextIO) -> YamlValue:
@@ -150,26 +151,25 @@ def _load_yaml_dict_from_path_cached(
         return load_yaml_dict(f)
 
 
+def _first_significant_text_char(text: str) -> str | None:
+    for ch in text:
+        if ch not in _IGNORED_TEXT_PREFIX_CHARS:
+            return ch
+    return None
+
+
 def _is_json_text(text: str) -> bool:
     """Check if text likely contains JSON by examining the first non-whitespace character.
 
     Skips BOM, spaces, tabs, carriage returns, and newlines.
     Returns True if the first significant character is '{' or '['.
     """
-    for ch in text:
-        if ch in {"\ufeff", " ", "\t", "\r", "\n"}:
-            continue
-        return ch in {"{", "["}
-    return False
+    return _first_significant_text_char(text) in {"{", "["}
 
 
 def _is_xml_text(text: str) -> bool:
     """Check if text likely contains XML by examining the first non-whitespace character."""
-    for ch in text:
-        if ch in {"\ufeff", " ", "\t", "\r", "\n"}:
-            continue
-        return ch == "<"
-    return False
+    return _first_significant_text_char(text) == "<"
 
 
 def _is_protobuf_text(text: str) -> bool:

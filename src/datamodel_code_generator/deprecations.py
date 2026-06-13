@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import json
 import warnings
 from dataclasses import asdict, dataclass
 from typing import Literal
+
+from datamodel_code_generator._registry_render import _render_registry_json, _render_registry_table
 
 DeprecationKind = Literal["cli-option", "python-api", "config", "behavior", "schema"]
 DeprecationStatus = Literal["active", "scheduled"]
@@ -196,16 +197,12 @@ def deprecation_as_dict(deprecation: Deprecation) -> dict[str, str | None]:
 
 def render_deprecations_json() -> str:
     """Render all deprecations as JSON."""
-    return json.dumps(
-        [deprecation_as_dict(deprecation) for deprecation in iter_deprecations()],
-        indent=2,
-        sort_keys=True,
-    )
+    return _render_registry_json(deprecation_as_dict(deprecation) for deprecation in iter_deprecations())
 
 
 def render_deprecations_table() -> str:
     """Render all deprecations as a plain text table."""
-    rows = [
+    return _render_registry_table([
         [
             "ID",
             "Kind",
@@ -225,14 +222,7 @@ def render_deprecations_table() -> str:
             ]
             for deprecation in iter_deprecations()
         ],
-    ]
-    widths = [max(len(row[index]) for row in rows) for index in range(len(rows[0]))]
-    lines = [
-        "  ".join(value.ljust(widths[index]) for index, value in enumerate(rows[0])),
-        "  ".join("-" * width for width in widths),
-    ]
-    lines.extend("  ".join(value.ljust(widths[index]) for index, value in enumerate(row)) for row in rows[1:])
-    return "\n".join(lines) + "\n"
+    ])
 
 
 def render_deprecations_markdown(*, include_header: bool = True) -> str:
