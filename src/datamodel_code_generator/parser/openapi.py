@@ -948,41 +948,44 @@ class OpenAPIParser(JsonSchemaParser):
 
     def parse_raw(self) -> None:
         """Parse OpenAPI specification including schemas, paths, and operations."""
-        for source, path_parts in self._get_context_source_path_parts():
-            if self.validation:
-                warn_deprecated("cli.validation", stacklevel=2)
+        try:
+            for source, path_parts in self._get_context_source_path_parts():
+                if self.validation:
+                    warn_deprecated("cli.validation", stacklevel=2)
 
-                if source.raw_data is not None:
-                    warn(
-                        "Warning: Validation was skipped for dict input. "
-                        "The --validation option only works with file or text input.\n",
-                        stacklevel=2,
-                    )
-                else:
-                    try:
-                        from prance import BaseParser  # noqa: PLC0415
-
-                        BaseParser(
-                            spec_string=source.text,
-                            backend="openapi-spec-validator",
-                            encoding=self.encoding,
-                        )
-                    except ImportError:  # pragma: no cover
+                    if source.raw_data is not None:
                         warn(
-                            "Warning: Validation was skipped for OpenAPI. "
-                            "`prance` or `openapi-spec-validator` are not installed.\n"
-                            "To use --validation option after datamodel-code-generator 0.24.0, "
-                            "Please run `$pip install 'datamodel-code-generator[validation]'`.\n",
+                            "Warning: Validation was skipped for dict input. "
+                            "The --validation option only works with file or text input.\n",
                             stacklevel=2,
                         )
+                    else:
+                        try:
+                            from prance import BaseParser  # noqa: PLC0415
 
-            specification = self._load_source_dict(source)
-            self.raw_obj = specification
-            with self.openapi_self_context(specification):
-                self._parse_specification(specification, path_parts)
+                            BaseParser(
+                                spec_string=source.text,
+                                backend="openapi-spec-validator",
+                                encoding=self.encoding,
+                            )
+                        except ImportError:  # pragma: no cover
+                            warn(
+                                "Warning: Validation was skipped for OpenAPI. "
+                                "`prance` or `openapi-spec-validator` are not installed.\n"
+                                "To use --validation option after datamodel-code-generator 0.24.0, "
+                                "Please run `$pip install 'datamodel-code-generator[validation]'`.\n",
+                                stacklevel=2,
+                            )
 
-        self._resolve_unparsed_json_pointer()
-        self._generate_forced_base_models()
+                specification = self._load_source_dict(source)
+                self.raw_obj = specification
+                with self.openapi_self_context(specification):
+                    self._parse_specification(specification, path_parts)
+
+            self._resolve_unparsed_json_pointer()
+            self._generate_forced_base_models()
+        finally:
+            self._reset_local_source_cache()
 
     def _collect_discriminator_schemas(self) -> None:
         """Collect schemas with discriminators but no oneOf/anyOf, and find their subtypes."""

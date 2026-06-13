@@ -1123,6 +1123,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         ...
 
     _config_class_name: ClassVar[str] = "ParserConfig"
+    _cache_local_sources_during_parse: ClassVar[bool] = False
 
     @classmethod
     def _get_config_class(cls) -> type[ParserConfig]:
@@ -1297,6 +1298,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             self.base_path = Path.cwd()
 
         self.source: str | Path | list[Path] | ParseResult | dict[str, YamlValue] = source
+        self._cache_local_sources = False
+        self._local_source_cache: tuple[Source, ...] | None = None
         self.custom_template_dir = config.custom_template_dir
         self.extra_template_data: defaultdict[str, Any] = config.extra_template_data or defaultdict(dict)
         self.validators = config.validators
@@ -1494,6 +1497,19 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     @property
     def iter_source(self) -> Iterator[Source]:
         """Iterate over all source files to be parsed."""
+        if self._cache_local_sources:
+            if (cached_sources := self._local_source_cache) is None:
+                cached_sources = tuple(self._iter_source_uncached())
+                self._local_source_cache = cached_sources
+            for source in cached_sources:
+                if source.raw_data is None:
+                    yield Source(path=source.path, text=source.text)
+                else:  # pragma: no cover
+                    yield source.model_copy(deep=True)
+            return
+        yield from self._iter_source_uncached()
+
+    def _iter_source_uncached(self) -> Iterator[Source]:
         match self.source:
             case str():
                 yield Source(path=Path(), text=self.source)
@@ -3676,6 +3692,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """
         self.generation_store._dispose(self.model_resolver.references.values())  # noqa: SLF001
         self.model_resolver.references.clear()
+        self._reset_local_source_cache()
+
+    def _reset_local_source_cache(self) -> None:
+        self._cache_local_sources = False
+        self._local_source_cache = None
 
     def parse(  # noqa: PLR0913, PLR0914, PLR0917
         self,

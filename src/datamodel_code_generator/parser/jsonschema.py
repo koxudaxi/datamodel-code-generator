@@ -633,6 +633,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     SCHEMA_PATHS: ClassVar[list[str]] = list(_DEFAULT_SCHEMA_PATHS)
     SCHEMA_OBJECT_TYPE: ClassVar[type[JsonSchemaObject]] = JsonSchemaObject
+    _cache_local_sources_during_parse: ClassVar[bool] = True
 
     COMPATIBLE_PYTHON_TYPES: ClassVar[dict[str, frozenset[str]]] = {
         "string": frozenset({"str", "String"}),
@@ -5316,8 +5317,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Get source and path parts for each input file with context managers."""
         if isinstance(self.source, list) or (isinstance(self.source, Path) and self.source.is_dir()):
             self.current_source_path = Path()
+            self._cache_local_sources = self._cache_local_sources_during_parse
             self.model_resolver.after_load_files = {
-                self.base_path.joinpath(s.path).resolve().as_posix() for s in self.iter_source
+                path.resolve().as_posix() for path in self._iter_local_source_paths()
             }
 
         for source in self.iter_source:
@@ -5332,6 +5334,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 self.model_resolver.current_root_context(path_parts),
             ):
                 yield source, path_parts
+
+    def _iter_local_source_paths(self) -> Iterator[Path]:
+        match self.source:
+            case Path() as path if path.is_dir():
+                yield from (
+                    file_path
+                    for file_path in sorted(path.rglob("*"), key=lambda item: item.name)
+                    if file_path.is_file()
+                )
+            case list() as paths:
+                yield from ((self.base_path / path) for path in paths)
 
     def _load_source_dict(self, source: Source) -> dict[str, Any]:  # noqa: PLR6301
         return dict(source.raw_data) if source.raw_data is not None else load_data(source.text)
@@ -5355,43 +5368,49 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return obj_name, False
 
     def _parse_converted_sources(self, make_converter: Callable[[], Any]) -> None:
-        for source, path_parts in self._get_context_source_path_parts():
-            raw_obj = make_converter().convert(source)
-            source.raw_data = raw_obj
-            if source.path.parts:
-                self.remote_object_cache[str((self.base_path / source.path).resolve())] = raw_obj
-            self.raw_obj = raw_obj
-            obj_name, preserve_root_class_name = self._resolve_root_model_name(raw_obj)
-            self._parse_file(
-                raw_obj,
-                obj_name,
-                path_parts,
-                preserve_root_class_name=preserve_root_class_name,
-            )
+        try:
+            for source, path_parts in self._get_context_source_path_parts():
+                raw_obj = make_converter().convert(source)
+                source.raw_data = raw_obj
+                if source.path.parts:
+                    self.remote_object_cache[str((self.base_path / source.path).resolve())] = raw_obj
+                self.raw_obj = raw_obj
+                obj_name, preserve_root_class_name = self._resolve_root_model_name(raw_obj)
+                self._parse_file(
+                    raw_obj,
+                    obj_name,
+                    path_parts,
+                    preserve_root_class_name=preserve_root_class_name,
+                )
 
-        self._resolve_unparsed_json_pointer()
-        self._generate_forced_base_models()
+            self._resolve_unparsed_json_pointer()
+            self._generate_forced_base_models()
+        finally:
+            self._reset_local_source_cache()
 
     def parse_raw(self) -> None:
         """Parse all raw input sources into data models."""
-        for source, path_parts in self._get_context_source_path_parts():
-            if source.raw_data is not None:
-                raw_obj = source.raw_data
-                if not isinstance(raw_obj, dict):  # pragma: no cover
-                    warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
-                    continue
-            else:
-                try:
-                    raw_obj = load_data(source.text)
-                except TypeError:
-                    warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
-                    continue
-            self.raw_obj = raw_obj
-            obj_name, preserve_root_class_name = self._resolve_root_model_name(self.raw_obj)
-            self._parse_file(self.raw_obj, obj_name, path_parts, preserve_root_class_name=preserve_root_class_name)
+        try:
+            for source, path_parts in self._get_context_source_path_parts():
+                if source.raw_data is not None:
+                    raw_obj = source.raw_data
+                    if not isinstance(raw_obj, dict):  # pragma: no cover
+                        warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
+                        continue
+                else:
+                    try:
+                        raw_obj = load_data(source.text)
+                    except TypeError:
+                        warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
+                        continue
+                self.raw_obj = raw_obj
+                obj_name, preserve_root_class_name = self._resolve_root_model_name(self.raw_obj)
+                self._parse_file(self.raw_obj, obj_name, path_parts, preserve_root_class_name=preserve_root_class_name)
 
-        self._resolve_unparsed_json_pointer()
-        self._generate_forced_base_models()
+            self._resolve_unparsed_json_pointer()
+            self._generate_forced_base_models()
+        finally:
+            self._reset_local_source_cache()
 
     def _resolve_unparsed_json_pointer(self) -> None:
         """Resolve any remaining unparsed JSON pointer references recursively."""
