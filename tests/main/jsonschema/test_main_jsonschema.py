@@ -12014,6 +12014,29 @@ def test_main_jsonschema_recursive_ref_in_defs_pydantic_v2(output_file: Path) ->
     )
 
 
+def test_main_jsonschema_recursive_ref_in_defs_pydantic_v2_no_future_imports(
+    output_file: Path,
+) -> None:
+    """Self-referencing fields must be quoted when --disable-future-imports is used.
+
+    Without ``from __future__ import annotations``, a self-reference such as
+    ``children: list[TreeNode]`` inside ``class TreeNode`` is an undefined name
+    at class-body evaluation time (Python < 3.14).  The generator must emit a
+    quoted forward reference (``list["TreeNode"]``) in that case so that both
+    static analysers (Ruff F821) and runtimes without PEP 649 are satisfied.
+
+    Regression test for https://github.com/koxudaxi/datamodel-code-generator/issues/2973
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "recursive_ref_in_defs.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="recursive_ref_in_defs_pydantic_v2_no_future_imports.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--disable-future-imports"],
+    )
+
+
 def test_main_jsonschema_dynamic_ref_in_defs(output_file: Path) -> None:
     """Test JSON Schema 2020-12 $dynamicRef with anchor in $defs."""
     run_main_and_assert(

@@ -2686,15 +2686,27 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         cls,
         models: list[DataModel],
         pydantic_v2_root_model_type: type[DataModel] | None,
+        *,
+        use_deferred_annotations: bool = True,
     ) -> None:
-        """Update type aliases and RootModels to properly handle forward references per PEP 484."""
+        """Update type aliases and RootModels to properly handle forward references per PEP 484.
+
+        When annotations are not deferred (no ``from __future__ import annotations`` and no
+        native PEP 649 deferred annotations), self-referencing fields in regular DataModel
+        classes also need their type aliased to a quoted string so that static analysers
+        (e.g. Ruff F821) and older runtimes do not trip over the forward reference.
+        """
         model_index: dict[str, int] = {m.class_name: i for i, m in enumerate(models)}
 
         for i, model in enumerate(models):
-            if not isinstance(model, TypeAliasBase) and not _is_pydantic_v2_root_model(
+            is_type_alias_or_root = isinstance(model, TypeAliasBase) or _is_pydantic_v2_root_model(
                 model,
                 pydantic_v2_root_model_type,
-            ):
+            )
+            # When annotations are deferred (from __future__ or native PEP-649) only
+            # TypeAliasBase / RootModel need quoting; regular DataModels are fine as-is.
+            # Without deferred annotations, self-referencing fields in any model need quoting.
+            if not is_type_alias_or_root and use_deferred_annotations:
                 continue
             if isinstance(model, TypeStatement):
                 continue
@@ -3486,7 +3498,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.__fix_dataclass_field_ordering(models)
         models = self.__remove_overridden_models(models)
         self.__apply_type_overrides(models)
-        self.__update_type_aliases(models, self.pydantic_v2_root_model_type)
+        self.__update_type_aliases(models, self.pydantic_v2_root_model_type, use_deferred_annotations=config.use_deferred_annotations)
         self.__set_validate_default_on_fields(models)
 
         return ModuleContext(module, module_, models, is_init, imports, scoped_model_resolver)
