@@ -370,6 +370,21 @@ def test_non_serializable_schema_skips_cache() -> None:
     assert _make_cache_key(schema, make_config()) is None
 
 
+def test_dynamic_cache_key_does_not_retain_schema_payload() -> None:
+    """Test cache keys keep digests instead of the original schema text."""
+    from datamodel_code_generator import dynamic as dcg
+
+    unique_description = "schema-payload-marker-that-should-not-be-in-cache-key"
+    schema = make_object_schema({"name": {"type": "string", "description": unique_description}})
+
+    generate_dynamic_models(schema)
+
+    assert len(dcg._dynamic_models_cache) == 1
+    cache_key = next(iter(dcg._dynamic_models_cache))
+    assert unique_description not in cache_key
+    assert len(cache_key) < 180
+
+
 def test_cache_hit_inside_lock() -> None:
     """Test cache hit after acquiring lock (double-checked locking)."""
     from datamodel_code_generator import dynamic as dcg
