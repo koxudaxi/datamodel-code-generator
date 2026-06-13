@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+from types import ModuleType
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
@@ -121,7 +123,10 @@ def test_watch_without_watchfiles_installed(output_file: Path, mocker: pytest.Mo
 def test_main_watch_uses_watch_module_import_seam(output_file: Path, mocker: pytest.MockerFixture) -> None:
     """Test main resolves watch_and_regenerate through datamodel_code_generator.watch."""
     mock_generate = mocker.patch("datamodel_code_generator.__main__.run_generate_from_config", return_value=None)
-    mock_watch = mocker.patch("datamodel_code_generator.watch.watch_and_regenerate", return_value=Exit.OK)
+    mock_watch = MagicMock(return_value=Exit.OK)
+    watch_module = ModuleType("datamodel_code_generator.watch")
+    watch_module.watch_and_regenerate = mock_watch
+    mocker.patch.dict(sys.modules, {"datamodel_code_generator.watch": watch_module})
 
     run_main_with_args(
         [
