@@ -6,9 +6,8 @@ import pytest
 
 from datamodel_code_generator.model.pydantic_v2.version import _version_tuple
 
-pytestmark = pytest.mark.allow_direct_assert
 
-
+@pytest.mark.allow_direct_assert
 @pytest.mark.parametrize(
     ("version", "expected"),
     [
