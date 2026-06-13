@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import asdict, dataclass
 from typing import Literal
+
+from datamodel_code_generator._registry_render import _render_registry_json, _render_registry_table
 
 ExperimentalFeatureKind = Literal["input-format", "formatter", "cli-option", "python-api", "behavior"]
 ExperimentalFeatureFormat = Literal["table", "json", "markdown"]
@@ -101,16 +102,12 @@ def experimental_feature_as_dict(feature: ExperimentalFeature) -> dict[str, str 
 
 def render_experimental_features_json() -> str:
     """Render all experimental features as JSON."""
-    return json.dumps(
-        [experimental_feature_as_dict(feature) for feature in iter_experimental_features()],
-        indent=2,
-        sort_keys=True,
-    )
+    return _render_registry_json(experimental_feature_as_dict(feature) for feature in iter_experimental_features())
 
 
 def render_experimental_features_table() -> str:
     """Render all experimental features as a plain text table."""
-    rows = [
+    return _render_registry_table([
         [
             "ID",
             "Kind",
@@ -128,14 +125,7 @@ def render_experimental_features_table() -> str:
             ]
             for feature in iter_experimental_features()
         ],
-    ]
-    widths = [max(len(row[index]) for row in rows) for index in range(len(rows[0]))]
-    lines = [
-        "  ".join(value.ljust(widths[index]) for index, value in enumerate(rows[0])),
-        "  ".join("-" * width for width in widths),
-    ]
-    lines.extend("  ".join(value.ljust(widths[index]) for index, value in enumerate(row)) for row in rows[1:])
-    return "\n".join(lines) + "\n"
+    ])
 
 
 def render_experimental_features_markdown(*, include_header: bool = True) -> str:

@@ -339,6 +339,14 @@ These projects use datamodel-code-generator. See the linked examples for real-wo
 
 See [Development & Contributing](https://datamodel-code-generator.koxudaxi.dev/development-contributing/) for how to get started!
 
+---
+
+## 👤 Maintainer
+
+[Koudai Aono](https://koxudaxi.dev/?utm_source=github_readme&utm_medium=maintainer_section&utm_campaign=open_to_work) ([@koxudaxi](https://github.com/koxudaxi))
+
+---
+
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) for details.

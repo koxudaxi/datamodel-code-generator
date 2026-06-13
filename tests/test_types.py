@@ -254,6 +254,20 @@ def test_add_math_imports_inserts_after_generated_header() -> None:
     )
 
 
+def test_add_math_imports_keeps_existing_import() -> None:
+    """Test non-finite math imports are not duplicated."""
+    body = "from math import inf, nan\n\nvalue = inf\nother = nan\n"
+
+    assert add_math_imports_for_non_finite_literals(body) == body
+
+
+def test_add_math_imports_ignores_non_literal_matches() -> None:
+    """Test non-finite math imports ignore strings, attributes, and longer names."""
+    body = "label = 'inf'\nvalue = math.nan\nname = infinite\n"
+
+    assert add_math_imports_for_non_finite_literals(body) == body
+
+
 def test_decimal_detection_and_integer_constraint_edges() -> None:
     """Test Decimal detection and integer constraint normalization edge cases."""
     sentinel = object()
