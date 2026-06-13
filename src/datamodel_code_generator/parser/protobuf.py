@@ -659,6 +659,7 @@ class ProtobufParser(JsonSchemaParser):
     """Parse Protocol Buffers schemas by converting descriptors to JSON Schema."""
 
     _config_class_name: ClassVar[str] = "ProtobufParserConfig"
+    _cache_local_sources_during_parse: ClassVar[bool] = False
 
     def __init__(
         self,
