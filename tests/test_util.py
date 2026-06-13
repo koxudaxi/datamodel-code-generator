@@ -2,17 +2,52 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
-from datamodel_code_generator.util import create_module_getattr, get_safe_loader
+from datamodel_code_generator.util import _get_toml_loader, create_module_getattr, get_safe_loader, load_toml
 
 
 @pytest.fixture(autouse=True)
 def _clear_caches() -> None:
     """Clear lru_cache state so loader construction is characterized directly."""
     get_safe_loader.cache_clear()
+    _get_toml_loader.cache_clear()
+
+
+@pytest.mark.allow_direct_assert
+def test_import_util_does_not_load_toml_parser() -> None:
+    """Importing util does not import a TOML parser until load_toml is used."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; "
+                "before = {name for name in ('tomli', 'tomllib') if name in sys.modules}; "
+                "import datamodel_code_generator.util; "
+                "after = {name for name in ('tomli', 'tomllib') if name in sys.modules}; "
+                "print(sorted(after - before))"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.stdout == "[]\n"
+
+
+@pytest.mark.allow_direct_assert
+def test_load_toml_parses_file(tmp_path: Path) -> None:
+    """load_toml still parses TOML files through the selected backend."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool.example]\nvalue = 'ok'\n", encoding="utf-8")
+
+    assert load_toml(pyproject) == {"tool": {"example": {"value": "ok"}}}
 
 
 @pytest.mark.allow_direct_assert
