@@ -171,9 +171,7 @@ def _make_cache_key(schema: Mapping[str, Any], config: GenerateConfig) -> str | 
     """
     try:
         schema_json = json.dumps(dict(schema), sort_keys=True, separators=(",", ":"))
-        config_json = json.dumps(
-            config.model_dump(mode="json", exclude_defaults=True), sort_keys=True, separators=(",", ":")
-        )
+        config_json = config.model_dump_json(exclude_defaults=True)
     except (TypeError, ValueError):
         return None
     schema_digest = hashlib.sha256(schema_json.encode()).hexdigest()
