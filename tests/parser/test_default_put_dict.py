@@ -12,7 +12,7 @@ def test_get_or_put_returns_existing_value_without_using_default() -> None:
     """Return cached values without evaluating defaults."""
     cache = DefaultPutDict[str, str]({"schema": "cached"})
 
-    def fail_factory(key: str) -> str:
+    def fail_factory(key: str) -> str:  # pragma: no cover
         msg = f"default factory should not be called for {key}"
         raise AssertionError(msg)
 
