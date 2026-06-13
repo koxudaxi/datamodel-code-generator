@@ -72,12 +72,12 @@ class PayloadRuntime:
         if isinstance(exception, self.rejection_exceptions):
             return True
 
-        match self.backend:
-            case PayloadBackend.MSGSPEC:
-                exception_type = type(exception)
-                return exception_type.__module__ == "msgspec" and exception_type.__name__ == "ValidationError"
-            case _:
-                return False
+        if self.backend is PayloadBackend.MSGSPEC:
+            # Python 3.14 CI has observed msgspec.ValidationError from a different module instance.
+            exception_type = type(exception)
+            return exception_type.__module__ == "msgspec" and exception_type.__name__ == "ValidationError"
+
+        return False
 
     def assert_rejects_python(self, payload: Any) -> None:
         """Assert the backend rejects a Python payload."""
