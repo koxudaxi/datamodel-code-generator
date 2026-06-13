@@ -59,17 +59,21 @@ def test_get_model_by_path(schema: dict, path: str, model: dict) -> None:
     assert get_model_by_path(schema, path.split("/") if path else []) == model
 
 
-def test_get_x_python_import_path_ignores_empty_extension() -> None:
-    """Test empty x-python-import metadata is ignored."""
-    parser = JsonSchemaParser("")
-
-    assert parser._get_x_python_import_path({}) is None
-
-
 def test_validate_schema_python_import_path_rejects_non_string() -> None:
     """Test schema import path validation rejects non-string values."""
     with pytest.raises(Error, match="customTypePath must be a dotted Python identifier path: 1"):
         _validate_schema_python_import_path(1, "customTypePath")
+
+
+def test_get_x_python_import_path_handles_empty_and_incomplete_metadata() -> None:
+    """Test x-python-import accepts an empty object but rejects partial metadata."""
+    parser = JsonSchemaParser("")
+
+    assert parser._get_x_python_import_path({}) is None
+    for metadata in ({"module": "os"}, {"name": "PathLike"}):
+        with pytest.raises(Error, match="x-python-import requires both module and name"):
+            parser._get_x_python_import_path(metadata)
+    assert parser._get_x_python_import_path({"module": "os", "name": "PathLike"}) == "os.PathLike"
 
 
 def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:

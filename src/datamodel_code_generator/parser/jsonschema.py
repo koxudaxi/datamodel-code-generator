@@ -977,6 +977,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return self.SCHEMA_OBJECT_TYPE(
             type=enum_type,
             enum=final_enum,
+            nullable=nullable,
             title=original.title,
             description=original.description,
             **(enum_metadata | ({"default": original.default} if original.has_default else {})),
@@ -4067,7 +4068,26 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         return bool(is_primitive)
 
-    def parse_item(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
+    def _parse_combined_const_enum(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        combined_items: list[JsonSchemaObject | bool],
+        enum_path: list[str],
+        *,
+        singular_name: bool = False,
+    ) -> DataType | None:
+        const_enum_data = self._extract_const_enum_from_combined(combined_items, obj.type)
+        if const_enum_data is None:
+            return None
+
+        enum_values, varnames, descriptions, enum_type, nullable = const_enum_data
+        synthetic_obj = self._create_synthetic_enum_obj(obj, enum_values, varnames, descriptions, enum_type, nullable)
+        if self.should_parse_enum_as_literal(synthetic_obj, property_name=name, property_obj=obj):
+            return self.parse_enum_as_literal(synthetic_obj)
+        return self.parse_enum(name, synthetic_obj, enum_path, singular_name=singular_name)
+
+    def parse_item(  # noqa: PLR0911, PLR0912, PLR0915
         self,
         name: str,
         item: JsonSchemaObject,
@@ -4119,26 +4139,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if item.discriminator and parent and parent.is_array and (item.oneOf or item.anyOf):
             return self.parse_root_type(name, item, path)
         if item.anyOf:
-            const_enum_data = self._extract_const_enum_from_combined(item.anyOf, item.type)
-            if const_enum_data is not None:
-                enum_values, varnames, descriptions, enum_type, nullable = const_enum_data
-                synthetic_obj = self._create_synthetic_enum_obj(
-                    item, enum_values, varnames, descriptions, enum_type, nullable
-                )
-                if self.should_parse_enum_as_literal(synthetic_obj, property_name=name, property_obj=item):
-                    return self.parse_enum_as_literal(synthetic_obj)
-                return self.parse_enum(name, synthetic_obj, get_special_path("enum", path), singular_name=singular_name)
+            if combined_const_enum := self._parse_combined_const_enum(
+                name,
+                item,
+                item.anyOf,
+                get_special_path("enum", path),
+                singular_name=singular_name,
+            ):
+                return combined_const_enum
             return self.data_type(data_types=self.parse_any_of(name, item, get_special_path("anyOf", path)))
         if item.oneOf:
-            const_enum_data = self._extract_const_enum_from_combined(item.oneOf, item.type)
-            if const_enum_data is not None:
-                enum_values, varnames, descriptions, enum_type, nullable = const_enum_data
-                synthetic_obj = self._create_synthetic_enum_obj(
-                    item, enum_values, varnames, descriptions, enum_type, nullable
-                )
-                if self.should_parse_enum_as_literal(synthetic_obj, property_name=name, property_obj=item):
-                    return self.parse_enum_as_literal(synthetic_obj)
-                return self.parse_enum(name, synthetic_obj, get_special_path("enum", path), singular_name=singular_name)
+            if combined_const_enum := self._parse_combined_const_enum(
+                name,
+                item,
+                item.oneOf,
+                get_special_path("enum", path),
+                singular_name=singular_name,
+            ):
+                return combined_const_enum
             return self.data_type(data_types=self.parse_one_of(name, item, get_special_path("oneOf", path)))
         if item.allOf:
             if self._contains_false_schema(item.allOf):
@@ -4343,7 +4361,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         return self.data_type(reference=reference)
 
-    def parse_root_type(  # noqa: PLR0912, PLR0914, PLR0915
+    def parse_root_type(  # noqa: PLR0912, PLR0915
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -4364,16 +4382,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             ).data_type  # pragma: no cover
         elif obj.anyOf or obj.oneOf:
             combined_items = obj.anyOf or obj.oneOf
-            const_enum_data = self._extract_const_enum_from_combined(combined_items, obj.type)
-            if const_enum_data is not None:  # pragma: no cover
-                enum_values, varnames, descriptions, enum_type, nullable = const_enum_data
-                synthetic_obj = self._create_synthetic_enum_obj(
-                    obj, enum_values, varnames, descriptions, enum_type, nullable
-                )
-                if self.should_parse_enum_as_literal(synthetic_obj, property_name=name, property_obj=obj):
-                    data_type = self.parse_enum_as_literal(synthetic_obj)
-                else:
-                    data_type = self.parse_enum(name, synthetic_obj, path)
+            if const_enum_type := self._parse_combined_const_enum(name, obj, combined_items, path):
+                data_type = const_enum_type  # pragma: no cover
             else:
                 reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
                 if obj.anyOf:
@@ -4588,8 +4598,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
         enum_fields: list[DataModelFieldBase] = []
 
-        if None in obj.enum and obj.type == "string":
-            # Nullable is valid in only OpenAPI
+        if None in obj.enum and (obj.type == "string" or obj.nullable):
             nullable: bool = True
             enum_times = [e for e in obj.enum if e is not None]
         else:
