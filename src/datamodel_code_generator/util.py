@@ -41,13 +41,21 @@ _YAML_DEPRECATED_BOOL_WARNING_MODULE = "datamodel_code_generator"
 _YAML_SCIENTIFIC_NOTATION_PATTERN = re.compile(r"^[-+]?[0-9][0-9_]*[eE][-+]?[0-9]+$")
 
 
+def _warning_filter_matches(pattern: Any, text: str) -> bool:
+    if pattern is None:
+        return True
+    if hasattr(pattern, "match"):
+        return bool(pattern.match(text))
+    return re.match(str(pattern), text) is not None
+
+
 def _is_yaml_deprecated_bool_warning_enabled() -> bool:
     for action, message, category, module, _ in warnings.filters:
         if not issubclass(DeprecationWarning, category):
             continue
-        if message is not None and not message.match(_YAML_DEPRECATED_BOOL_WARNING_MESSAGE):
+        if not _warning_filter_matches(message, _YAML_DEPRECATED_BOOL_WARNING_MESSAGE):
             continue
-        if module is not None and not module.match(_YAML_DEPRECATED_BOOL_WARNING_MODULE):
+        if not _warning_filter_matches(module, _YAML_DEPRECATED_BOOL_WARNING_MODULE):
             continue
         return action != "ignore"
     return True
