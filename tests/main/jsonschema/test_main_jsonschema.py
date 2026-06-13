@@ -184,6 +184,25 @@ def test_main_string_min_max_items_compat(output_file: Path) -> None:
     )
 
 
+def test_main_array_uri_items_preserves_min_items(output_file: Path) -> None:
+    """An array of URI-formatted strings keeps array length constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "array_uri_items_min_items.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="array_uri_items_min_items.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.benchmark
 @pytest.mark.cli_doc(
     options=["--keep-model-order"],
@@ -4370,6 +4389,17 @@ def test_main_jsonschema_oneof_const_enum_nullable(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="oneof_const_enum_nullable.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_int_nullable(output_file: Path) -> None:
+    """Test nullable integer oneOf with const values does not emit a None enum member."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_int_nullable.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_int_nullable.py",
     )
 
 
@@ -10784,6 +10814,7 @@ def test_main_use_root_model_type_alias(output_file: Path) -> None:
     )
 
 
+@pytest.mark.isolate_builtin_formatter_config
 def test_main_jsonschema_schema_id(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -11714,6 +11745,7 @@ def test_jsonschema_classvar_extra_pydantic_v2(output_file: Path) -> None:
     )
 
 
+@pytest.mark.isolate_builtin_formatter_config
 def test_jsonschema_classvar_field_str_custom_template(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

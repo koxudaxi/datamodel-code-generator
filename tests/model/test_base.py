@@ -130,6 +130,22 @@ def test_pydantic_v2_base_model_create_typed_extra_field() -> None:
     assert field.required is True
 
 
+def test_data_model_dedup_key_uses_model_base_to_hashable_seam(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test DataModel deduplication resolves to_hashable through model.base."""
+    calls: list[object] = []
+
+    def fake_to_hashable(value: object) -> tuple[str, int]:
+        calls.append(value)
+        return ("patched", len(calls))
+
+    monkeypatch.setattr("datamodel_code_generator.model.base.to_hashable", fake_to_hashable)
+    model = BaseModel(fields=[], reference=Reference(path="Model", original_name="Model", name="Model"))
+
+    assert model.get_dedup_key() == (("patched", 1), ("patched", 2))
+    assert isinstance(calls[0], str)
+    assert calls[1] == model.imports
+
+
 def test_pydantic_v2_extra_type_hint_keeps_non_dict_hint() -> None:
     """Test typed-extra type hint conversion leaves non-dict hints unchanged."""
     field = PydanticV2DataModelField(

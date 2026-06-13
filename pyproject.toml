@@ -285,6 +285,7 @@ markers = [
   "perf: marks tests as performance tests (excluded from CI benchmarks)",
   "benchmark: marks tests as benchmark tests",
   "allow_direct_assert: marks guarded tests where direct assert statements are intentionally allowed",
+  "isolate_builtin_formatter_config: marks tests that must not inherit repository formatter config",
 ]
 
 [tool.coverage]

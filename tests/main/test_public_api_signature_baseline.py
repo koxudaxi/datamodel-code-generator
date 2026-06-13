@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import importlib
 import inspect
 import types
 from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, get_args, get_origin
@@ -48,6 +49,144 @@ if TYPE_CHECKING:
     from datamodel_code_generator.parser import DefaultPutDict, LiteralType
     from datamodel_code_generator.types import StrictTypes
     from datamodel_code_generator.validators import ModelValidators
+
+
+_PUBLIC_MODULE_EXPORTS: dict[str, frozenset[str]] = {
+    "datamodel_code_generator": frozenset({
+        "DEFAULT_FORMATTERS",
+        "DEFAULT_SHARED_MODULE_NAME",
+        "MAX_VERSION",
+        "MIN_VERSION",
+        "AllExportsCollisionStrategy",
+        "AllExportsScope",
+        "AllOfClassHierarchy",
+        "AllOfMergeMode",
+        "AsyncAPIVersion",
+        "ClassNameAffixScope",
+        "CollapseRootModelsNameStrategy",
+        "DateClassType",
+        "DatetimeClassType",
+        "DefaultPutDict",
+        "Error",
+        "FieldTypeCollisionStrategy",
+        "GenerateConfig",
+        "GeneratedModules",
+        "GraphQLScope",
+        "InputFileType",
+        "InputModelRefStrategy",
+        "InvalidClassNameError",
+        "InvalidFileFormatError",
+        "JsonSchemaVersion",
+        "LiteralType",
+        "ModuleSplitMode",
+        "NamingStrategy",
+        "OpenAPIScope",
+        "OpenAPIVersion",
+        "ProtobufVersion",
+        "PythonVersion",
+        "PythonVersionMin",
+        "ReadOnlyWriteOnlyModelType",
+        "ReuseScope",
+        "SchemaParseError",
+        "TargetPydanticVersion",
+        "VersionMode",
+        "XMLSchemaVersion",
+        "clear_dynamic_models_cache",
+        "detect_jsonschema_version",
+        "detect_openapi_version",
+        "detect_xmlschema_version",
+        "generate",
+        "generate_dynamic_models",
+    }),
+    "datamodel_code_generator._types": frozenset({
+        "AsyncAPIParserConfigDict",
+        "AvroParserConfigDict",
+        "GenerateConfigDict",
+        "GraphQLParserConfigDict",
+        "JSONSchemaParserConfigDict",
+        "ModelDict",
+        "OpenAPIParserConfigDict",
+        "ParseConfigDict",
+        "ParserConfigDict",
+        "ProtobufParserConfigDict",
+        "XMLSchemaParserConfigDict",
+    }),
+    "datamodel_code_generator.arguments": frozenset({"DEFAULT_ENCODING", "arg_parser", "namespace"}),
+    "datamodel_code_generator.enums": frozenset({
+        "DEFAULT_SHARED_MODULE_NAME",
+        "MAX_VERSION",
+        "MIN_VERSION",
+        "AllExportsCollisionStrategy",
+        "AllExportsScope",
+        "AllOfClassHierarchy",
+        "AllOfMergeMode",
+        "AsyncAPIVersion",
+        "ClassNameAffixScope",
+        "CollapseRootModelsNameStrategy",
+        "DataModelType",
+        "DataclassArguments",
+        "FieldTypeCollisionStrategy",
+        "GraphQLScope",
+        "InputFileType",
+        "InputModelRefStrategy",
+        "JsonSchemaVersion",
+        "ModuleSplitMode",
+        "NamingStrategy",
+        "OpenAPIScope",
+        "OpenAPIVersion",
+        "ProtobufVersion",
+        "ReadOnlyWriteOnlyModelType",
+        "ReuseScope",
+        "StrictTypes",
+        "TargetPydanticVersion",
+        "UnionMode",
+        "VersionMode",
+        "XMLSchemaVersion",
+    }),
+    "datamodel_code_generator.model": frozenset({
+        "DEFAULT_TARGET_PYTHON_VERSION",
+        "UNDEFINED",
+        "ConstraintsBase",
+        "DataModel",
+        "DataModelFieldBase",
+        "DataModelSet",
+        "_rebuild_model_with_datamodel_namespace",
+        "get_data_model_types",
+    }),
+    "datamodel_code_generator.model.pydantic_v2": frozenset({
+        "BaseModel",
+        "DataModelField",
+        "DataTypeManager",
+        "RootModel",
+        "RootModelTypeAlias",
+        "UnionMode",
+        "dump_resolve_reference_action",
+    }),
+    "datamodel_code_generator.parser": frozenset({"DefaultPutDict", "LiteralType"}),
+    "datamodel_code_generator.parser.avro": frozenset({
+        "AvroParser",
+        "convert_avro_schema_data",
+        "is_avro_schema_data",
+    }),
+    "datamodel_code_generator.parser.protobuf": frozenset({"ProtobufParser", "convert_protobuf_schema_data"}),
+    "datamodel_code_generator.parser.schema_version": frozenset({
+        "DataFormatMapping",
+        "FeatureMetadata",
+        "JsonSchemaFeatures",
+        "OpenAPISchemaFeatures",
+        "SchemaFeaturesT",
+        "detect_asyncapi_version",
+        "detect_jsonschema_version",
+        "detect_openapi_version",
+        "get_data_formats",
+    }),
+    "datamodel_code_generator.parser.xmlschema": frozenset({
+        "XMLSchemaParser",
+        "convert_xml_schema_data",
+        "detect_xmlschema_version",
+        "is_xml_schema_text",
+    }),
+}
 
 
 def _baseline_generate(
@@ -487,6 +626,23 @@ def _normalize_type(tp: Any) -> str:  # noqa: PLR0911  # pragma: no cover
 def _types_match(config_type: Any, dict_type: Any) -> bool:
     """Check if Config type and TypedDict type are equivalent."""
     return _normalize_type(config_type) == _normalize_type(dict_type)
+
+
+@pytest.mark.parametrize(("module_name", "expected_exports"), _PUBLIC_MODULE_EXPORTS.items())
+def test_public_module_all_exports_match_baseline(module_name: str, expected_exports: frozenset[str]) -> None:
+    """Pin focused public module export surfaces used by compatibility shims."""
+    module = importlib.import_module(module_name)
+    module_exports = list(module.__all__)
+    actual_exports = set(module_exports)
+    missing_exports = [name for name in module_exports if not hasattr(module, name)]
+
+    assert len(module_exports) == len(actual_exports), f"{module_name}.__all__ contains duplicate names"
+    assert actual_exports == expected_exports, (
+        f"{module_name}.__all__ changed:\n"
+        f"  removed: {sorted(expected_exports - actual_exports)}\n"
+        f"  added: {sorted(actual_exports - expected_exports)}"
+    )
+    assert missing_exports == [], f"{module_name}.__all__ contains non-importable names: {missing_exports}"
 
 
 def test_generate_signature_matches_baseline() -> None:

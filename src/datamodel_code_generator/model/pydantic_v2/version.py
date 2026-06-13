@@ -9,7 +9,7 @@ from pydantic import VERSION as PYDANTIC_VERSION
 
 def _version_tuple(version: str) -> tuple[int, int, int]:
     match = re.match(r"(\d+)\.(\d+)(?:\.(\d+))?", version)
-    if match is None:  # pragma: no cover
+    if match is None:
         return (0, 0, 0)
     major, minor, patch = match.groups(default="0")
     return int(major), int(minor), int(patch)
