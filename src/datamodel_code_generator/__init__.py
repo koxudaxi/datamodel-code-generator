@@ -1240,7 +1240,7 @@ def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
     from datamodel_code_generator.util import get_yaml_parse_errors  # noqa: PLC0415
 
     if _is_xml_text(text):
-        from datamodel_code_generator.parser.xmlschema import is_xml_schema_text  # noqa: PLC0415
+        from datamodel_code_generator.parser._xmlschema_detection import is_xml_schema_text  # noqa: PLC0415
 
         if is_xml_schema_text(text):
             return InputFileType.XMLSchema
@@ -1254,7 +1254,7 @@ def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
             return InputFileType.AsyncAPI
         if is_openapi(data):
             return InputFileType.OpenAPI
-        from datamodel_code_generator.parser.avro import is_avro_schema_data  # noqa: PLC0415
+        from datamodel_code_generator.parser._avro_detection import is_avro_schema_data  # noqa: PLC0415
 
         if is_avro_schema_data(data):
             return InputFileType.Avro
@@ -1264,12 +1264,12 @@ def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
     if _is_protobuf_text(text):
         return InputFileType.Protobuf
     if isinstance(data, list):
-        from datamodel_code_generator.parser.avro import is_avro_schema_data  # noqa: PLC0415
+        from datamodel_code_generator.parser._avro_detection import is_avro_schema_data  # noqa: PLC0415
 
         if is_avro_schema_data(data):
             return InputFileType.Avro
     if isinstance(data, str):
-        from datamodel_code_generator.parser.avro import is_avro_schema_data  # noqa: PLC0415
+        from datamodel_code_generator.parser._avro_detection import is_avro_schema_data  # noqa: PLC0415
 
         if is_avro_schema_data(data):
             return InputFileType.Avro

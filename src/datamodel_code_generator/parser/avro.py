@@ -12,6 +12,19 @@ from typing import TYPE_CHECKING, Any, NamedTuple, cast
 from typing_extensions import Unpack
 
 from datamodel_code_generator import Error, YamlValue, load_yaml
+from datamodel_code_generator.parser._avro_detection import (
+    COMPLEX_TYPES as _COMPLEX_TYPES,
+)
+from datamodel_code_generator.parser._avro_detection import (
+    JSON_SCHEMA_MARKER_KEYS as _JSON_SCHEMA_MARKER_KEYS,
+)
+from datamodel_code_generator.parser._avro_detection import (
+    NAMED_TYPES,
+    PRIMITIVE_TYPES,
+)
+from datamodel_code_generator.parser._avro_detection import (
+    is_avro_schema_data as _is_avro_schema_data,
+)
 from datamodel_code_generator.parser._convert_common import _copy_schema, _namespace_name, _unique_name
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
@@ -25,10 +38,8 @@ if TYPE_CHECKING:
 
 JsonSchema = dict[str, Any]
 
-PRIMITIVE_TYPES = frozenset({"null", "boolean", "int", "long", "float", "double", "bytes", "string"})
-NAMED_TYPES = frozenset({"record", "enum", "fixed"})
-COMPLEX_TYPES = NAMED_TYPES | {"array", "map"}
-JSON_SCHEMA_MARKER_KEYS = frozenset({"$schema", "$defs", "definitions", "properties", "allOf", "anyOf", "oneOf"})
+COMPLEX_TYPES = _COMPLEX_TYPES
+JSON_SCHEMA_MARKER_KEYS = _JSON_SCHEMA_MARKER_KEYS
 NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 STRING_SCHEMA: JsonSchema = {"type": "string"}
@@ -48,76 +59,15 @@ PRIMITIVE_SCHEMAS: dict[str, JsonSchema] = {
 }
 
 
-def _is_avro_union_item(item: YamlValue) -> bool:
-    match item:
-        case str() as type_name:
-            return type_name in PRIMITIVE_TYPES or "." in type_name
-        case [*_] as union:
-            return _is_avro_union(union)
-        case {"type": [*_] as union}:
-            return _is_avro_union(union)
-        case {"type": dict() as nested_schema}:
-            return _is_avro_union_item(nested_schema)
-        case {"type": str() as type_name}:
-            return _is_avro_typed_schema(item, type_name) or "." in type_name
-    return False
-
-
-def _is_avro_union(union: list[YamlValue]) -> bool:
-    return bool(union) and all(_is_avro_union_item(child) for child in union)
-
-
-def _is_avro_typed_schema(schema: JsonSchema, type_name: str) -> bool:
-    if type_name in PRIMITIVE_TYPES:
-        return True
-
-    match type_name:
-        case "record":
-            required_key, required_type = "fields", list
-        case "enum":
-            required_key, required_type = "symbols", list
-        case "fixed":
-            required_key, required_type = "size", int
-        case "array":
-            return "items" in schema
-        case "map":
-            return "values" in schema
-        case _:
-            return False
-    return isinstance(schema.get("name"), str) and isinstance(schema.get(required_key), required_type)
+def is_avro_schema_data(data: YamlValue) -> bool:
+    """Return whether loaded data appears to be an Avro schema."""
+    return _is_avro_schema_data(data)
 
 
 class _Name(NamedTuple):
     fullname: str
     namespace: str | None
     name: str
-
-
-def is_avro_schema_data(data: YamlValue) -> bool:
-    """Return whether loaded data appears to be an Avro schema."""
-    match data:
-        case [*_] as union:
-            return _is_avro_union(union)
-        case str() as type_name:
-            return type_name in PRIMITIVE_TYPES
-        case dict() as schema if not any(key in schema for key in JSON_SCHEMA_MARKER_KEYS):
-            return _is_avro_schema_object(schema)
-        case _:
-            return False
-    return False
-
-
-def _is_avro_schema_object(schema: JsonSchema) -> bool:
-    match schema.get("type"):
-        case [*_]:
-            return False
-        case dict() as nested_schema:
-            return is_avro_schema_data(nested_schema)
-        case str() as type_name if type_name in PRIMITIVE_TYPES:
-            return any(key in schema for key in ("logicalType", "namespace", "aliases"))
-        case str() as type_name:
-            return _is_avro_typed_schema(schema, type_name) or (type_name not in COMPLEX_TYPES and "." in type_name)
-    return False
 
 
 def _to_class_title(name: str) -> str:
