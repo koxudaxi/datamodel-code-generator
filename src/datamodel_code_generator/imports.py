@@ -96,25 +96,21 @@ class Imports(defaultdict[str | None, set[str]]):
         if isinstance(imports, Import):
             imports = [imports]
         for import_ in imports:
+            is_dotted_import = "." in import_.import_
             key = self._storage_key(import_)
             if self.counter.get(key, 0) <= 0:
                 continue
             self.counter[key] -= 1
             if self.counter[key] == 0:
                 del self.counter[key]
-                if "." in import_.import_:
-                    if key[0] in self and key[1] in self[key[0]]:
-                        self[key[0]].remove(key[1])
-                        if not self[key[0]]:
-                            del self[key[0]]
-                else:
+                if not is_dotted_import or (key[0] in self and key[1] in self[key[0]]):
                     self[key[0]].remove(key[1])
                     if not self[key[0]]:
                         del self[key[0]]
-                    if import_.alias and key[0] in self.alias and key[1] in self.alias[key[0]]:
-                        del self.alias[key[0]][key[1]]
-                        if not self.alias[key[0]]:
-                            del self.alias[key[0]]
+                if not is_dotted_import and import_.alias and key[0] in self.alias and key[1] in self.alias[key[0]]:
+                    del self.alias[key[0]][key[1]]
+                    if not self.alias[key[0]]:
+                        del self.alias[key[0]]
             if import_.reference_path and import_.reference_path in self.reference_paths:
                 del self.reference_paths[import_.reference_path]
 

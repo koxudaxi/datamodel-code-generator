@@ -14,7 +14,7 @@ import pydantic
 import pytest
 from packaging import version
 
-from datamodel_code_generator import DataModelType, OpenAPIScope, PythonVersionMin
+from datamodel_code_generator import DataModelType, OpenAPIScope, OpenAPIVersion, PythonVersionMin
 from datamodel_code_generator.format import Formatter
 from datamodel_code_generator.http import _get_httpx
 from datamodel_code_generator.model import DataModelFieldBase, get_data_model_types
@@ -940,6 +940,14 @@ def test_no_additional_imports() -> None:
         source="",
     )
     assert len(new_parser.imports) == 0
+
+
+@pytest.mark.parametrize("media_obj", [{"schema": None}, {"itemSchema": None}])
+def test_get_raw_media_schema_explicit_null_schema(media_obj: dict[str, Any]) -> None:
+    """Test that explicit null raw media schemas are skipped."""
+    parser = OpenAPIParser(source="", openapi_version=OpenAPIVersion.V32)
+
+    assert parser._get_raw_media_schema(media_obj) is None
 
 
 @pytest.mark.parametrize(

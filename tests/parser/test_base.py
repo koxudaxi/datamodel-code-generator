@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from pydantic import BaseModel as PydanticBaseModel
 
 import datamodel_code_generator._internal_utils as internal_utils
 from datamodel_code_generator.enums import CollapseRootModelsNameStrategy
@@ -743,6 +744,24 @@ def test_to_hashable_dict() -> None:
     assert isinstance(result, tuple)
     # sorted by key
     assert result == (("a", 1), ("b", 2))
+
+
+def test_to_hashable_set() -> None:
+    """Test to_hashable with set."""
+    result = to_hashable({3, 1, 2})
+    assert isinstance(result, frozenset)
+    assert result == frozenset({1, 2, 3})
+
+
+def test_to_hashable_pydantic_base_model() -> None:
+    """Test to_hashable with pydantic BaseModel."""
+
+    class Item(PydanticBaseModel):
+        name: str
+        tags: set[str]
+
+    result = to_hashable(Item(name="item", tags={"blue", "red"}))
+    assert result == (("name", "item"), ("tags", frozenset({"blue", "red"})))
 
 
 def test_to_hashable_mixed_types_fallback() -> None:
