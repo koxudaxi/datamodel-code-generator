@@ -67,6 +67,29 @@ class PayloadRuntime:
                 msg = f"Unsupported payload backend: {self.backend!r}"
                 raise PayloadAdapterError(msg)
 
+    def is_rejection_exception(self, exception: Exception) -> bool:
+        """Return whether an exception means backend validation rejected a payload."""
+        if isinstance(exception, self.rejection_exceptions):
+            return True
+
+        match self.backend:
+            case PayloadBackend.MSGSPEC:
+                exception_type = type(exception)
+                return exception_type.__module__ == "msgspec" and exception_type.__name__ == "ValidationError"
+            case _:
+                return False
+
+    def assert_rejects_python(self, payload: Any) -> None:
+        """Assert the backend rejects a Python payload."""
+        try:
+            self.validate_python(payload)
+        except Exception as exception:
+            if self.is_rejection_exception(exception):
+                return
+            raise
+
+        pytest.fail(f"{self.backend.value} runtime accepted an invalid payload")
+
     def validate_python(self, payload: Any) -> Any:
         """Validate or construct the payload using the generated backend."""
         match self.backend:

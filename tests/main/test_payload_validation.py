@@ -663,5 +663,4 @@ def test_generated_payload_backend_rejects_representative_schema_invalid_payload
         pytest.fail(f"{case.id}: mutation stayed source-valid for {mutation.constraint} at {mutation.path}")
 
     runtime = load_generated_payload_runtime(case, generated_model_cache, backend)
-    with pytest.raises(runtime.rejection_exceptions):
-        runtime.validate_python(mutation.payload)
+    runtime.assert_rejects_python(mutation.payload)
