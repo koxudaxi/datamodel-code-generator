@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -9,6 +13,53 @@ import pytest
 from datamodel_code_generator import Error, InputFileType, _is_json_text, _is_xml_text, infer_input_type
 
 DATA_PATH: Path = Path(__file__).parent / "data"
+HEAVY_INFERENCE_MODULES = (
+    "datamodel_code_generator.model",
+    "datamodel_code_generator.parser.avro",
+    "datamodel_code_generator.parser.base",
+    "datamodel_code_generator.parser.jsonschema",
+    "datamodel_code_generator.parser.xmlschema",
+)
+SUBPROCESS_TIMEOUT_SECONDS = 15
+
+
+def _probe_infer_input_type(text: str) -> dict[str, object]:
+    code = f"""
+import json
+import sys
+import warnings
+
+from datamodel_code_generator import infer_input_type
+
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="datamodel_code_generator")
+
+try:
+    outcome = infer_input_type({text!r}).value
+except Exception as exc:
+    outcome = type(exc).__name__
+
+heavy_modules = {HEAVY_INFERENCE_MODULES!r}
+loaded = sorted(
+    module_name
+    for module_name in sys.modules
+    if module_name in heavy_modules or module_name.startswith("datamodel_code_generator.model.")
+)
+print(json.dumps({{"loaded": loaded, "outcome": outcome}}))
+"""
+    env = os.environ.copy()
+    env.pop("PYTHONWARNINGS", None)
+    try:
+        return json.loads(
+            subprocess.check_output(
+                [sys.executable, "-c", code],
+                env=env,
+                text=True,
+                timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            )
+        )
+    except subprocess.TimeoutExpired as exc:
+        message = f"infer_input_type subprocess timed out after {exc.timeout} seconds"
+        raise AssertionError(message) from exc
 
 
 def test_infer_input_type() -> None:  # noqa: PLR0912
@@ -125,3 +176,59 @@ def test_infer_input_type_non_schema_xml() -> None:
         ),
     ):
         infer_input_type("<root />")
+
+
+@pytest.mark.parametrize(
+    ("text", "expected_outcome"),
+    [
+        ('{"type": "record", "name": "User", "fields": []}', InputFileType.Avro.value),
+        ('{"type": "object"}', InputFileType.JsonSchema.value),
+        ('<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" />', InputFileType.XMLSchema.value),
+        ("<root />", Error.__name__),
+    ],
+)
+def test_infer_input_type_fast_path_does_not_import_heavy_modules(text: str, expected_outcome: str) -> None:
+    """Test input inference avoids concrete parsers and output models."""
+    probe = _probe_infer_input_type(text)
+
+    assert probe["outcome"] == expected_outcome
+    assert probe["loaded"] == []
+
+
+def test_public_detection_helpers_keep_parser_module_surface() -> None:
+    """Test public detection helpers keep their existing parser module surface."""
+    from datamodel_code_generator.parser import avro, xmlschema
+
+    assert avro.is_avro_schema_data.__module__ == "datamodel_code_generator.parser.avro"
+    assert avro.is_avro_schema_data("string")
+    assert frozenset({"null", "boolean", "int", "long", "float", "double", "bytes", "string"}) == avro.PRIMITIVE_TYPES
+    assert frozenset({"record", "enum", "fixed"}) == avro.NAMED_TYPES
+    assert avro.NAMED_TYPES | {"array", "map"} == avro.COMPLEX_TYPES
+    assert (
+        frozenset({
+            "$schema",
+            "$defs",
+            "definitions",
+            "properties",
+            "allOf",
+            "anyOf",
+            "oneOf",
+        })
+        == avro.JSON_SCHEMA_MARKER_KEYS
+    )
+    assert xmlschema.is_xml_schema_text.__module__ == "datamodel_code_generator.parser.xmlschema"
+    assert xmlschema.is_xml_schema_text('<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" />')
+    assert xmlschema.XML_SCHEMA_NAMESPACE == "http://www.w3.org/2001/XMLSchema"
+    assert xmlschema.XML_SCHEMA_TAG == "{http://www.w3.org/2001/XMLSchema}schema"
+
+
+def test_probe_infer_input_type_reports_subprocess_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test subprocess probe failures surface as bounded assertion failures."""
+
+    def raise_timeout(*_args: object, **_kwargs: object) -> str:
+        raise subprocess.TimeoutExpired(cmd=sys.executable, timeout=SUBPROCESS_TIMEOUT_SECONDS)
+
+    monkeypatch.setattr(subprocess, "check_output", raise_timeout)
+
+    with pytest.raises(AssertionError, match=f"timed out after {SUBPROCESS_TIMEOUT_SECONDS} seconds"):
+        _probe_infer_input_type("{}")

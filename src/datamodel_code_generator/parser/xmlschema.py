@@ -24,6 +24,13 @@ from datamodel_code_generator.format import DatetimeClassType
 from datamodel_code_generator.parser import _xmlschema_literals
 from datamodel_code_generator.parser._convert_common import _copy_schema, _namespace_name, _unique_name
 from datamodel_code_generator.parser._math_imports import apply_math_imports_to_parse_result
+from datamodel_code_generator.parser._xmlschema_detection import (
+    XML_SCHEMA_NAMESPACE,
+    XML_SCHEMA_TAG,
+)
+from datamodel_code_generator.parser._xmlschema_detection import (
+    is_xml_schema_text as _is_xml_schema_text,
+)
 from datamodel_code_generator.parser._xmlschema_literals import (
     _collect_python_expression_imports,
     _PythonExpression,
@@ -44,9 +51,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator._types import XMLSchemaParserConfigDict
     from datamodel_code_generator.config import XMLSchemaParserConfig
 
-XML_SCHEMA_NAMESPACE = "http://www.w3.org/2001/XMLSchema"
 XML_SCHEMA_VERSIONING_NAMESPACE = "http://www.w3.org/2007/XMLSchema-versioning"
-XML_SCHEMA_TAG = f"{{{XML_SCHEMA_NAMESPACE}}}schema"
 XSD11_ELEMENTS = frozenset({"alternative", "assert", "assertion", "defaultOpenContent", "openContent", "override"})
 UNBOUNDED = "unbounded"
 INTERNAL_OCCURS_ARRAY = "x-xsd-occurs-array"
@@ -152,11 +157,7 @@ BUILTIN_TYPE_SCHEMAS: dict[str, JsonSchema] = {
 
 def is_xml_schema_text(text: str) -> bool:
     """Return whether text is an XML Schema document."""
-    try:
-        root = ET.fromstring(text)  # noqa: S314
-    except ET.ParseError:
-        return False
-    return root.tag == XML_SCHEMA_TAG
+    return _is_xml_schema_text(text)
 
 
 def _local_name(tag_or_qname: str) -> str:
