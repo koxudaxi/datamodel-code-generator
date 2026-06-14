@@ -170,26 +170,102 @@ def test_generation_store_defer_refresh_batches_mutations() -> None:
     model = BaseModel(fields=[DataModelField(data_type=data_type)], reference=reference_a)
     store = GenerationStore()
     store.register_model(model)
+    store.refresh()
+    version_before_mutation = store.facts_version
 
     with store.defer_refresh():
         store.replace_data_type_ref(data_type, reference_c)
         store.update_model_reference(model, reference_name="Renamed", new_path="Renamed")
         dirty_after_mutation = store._dirty
-        reference_classes = sorted(store.index.reference_classes_for_model(model))
-        dirty_after_query = store._dirty
+        version_after_mutation = store.facts_version
+        reference_classes_inside_defer = sorted(store.index.reference_classes_for_model(model))
+
+    version_after_defer = store.facts_version
+    reference_classes_after_defer = sorted(store.index.reference_classes_for_model(model))
 
     assert {
+        "version_before_mutation": version_before_mutation,
         "dirty_after_mutation": dirty_after_mutation,
-        "dirty_after_query": dirty_after_query,
+        "version_after_mutation": version_after_mutation,
+        "version_after_defer": version_after_defer,
         "model_path": model.path,
         "reference_name": model.reference.name,
+        "reference_classes_inside_defer": reference_classes_inside_defer,
+        "reference_classes_after_defer": reference_classes_after_defer,
+    } == snapshot(
+        {
+            "version_before_mutation": 1,
+            "dirty_after_mutation": True,
+            "version_after_mutation": 1,
+            "version_after_defer": 2,
+            "model_path": "Renamed",
+            "reference_name": "Renamed",
+            "reference_classes_inside_defer": ["B"],
+            "reference_classes_after_defer": ["C"],
+        },
+    )
+
+
+def test_generation_store_refresh_now_updates_facts_inside_defer() -> None:
+    """Callers that need fresh facts inside a mutation block can refresh explicitly."""
+    reference_a = Reference(path="A", original_name="A", name="A")
+    reference_b = Reference(path="B", original_name="B", name="B")
+    reference_c = Reference(path="C", original_name="C", name="C")
+    data_type = DataType(reference=reference_b)
+    model = BaseModel(fields=[DataModelField(data_type=data_type)], reference=reference_a)
+    store = GenerationStore()
+    store.register_model(model)
+    store.refresh()
+
+    with store.defer_refresh():
+        store.replace_data_type_ref(data_type, reference_c)
+        version_after_mutation = store.facts_version
+        store.refresh_now()
+        version_after_refresh_now = store.facts_version
+        reference_classes = sorted(store.index.reference_classes_for_model(model))
+
+    assert {
+        "version_after_mutation": version_after_mutation,
+        "version_after_refresh_now": version_after_refresh_now,
+        "version_after_defer": store.facts_version,
         "reference_classes": reference_classes,
     } == snapshot(
         {
-            "dirty_after_mutation": True,
-            "dirty_after_query": False,
-            "model_path": "Renamed",
-            "reference_name": "Renamed",
+            "version_after_mutation": 1,
+            "version_after_refresh_now": 2,
+            "version_after_defer": 2,
+            "reference_classes": ["C"],
+        },
+    )
+
+
+def test_generation_store_nested_defer_refresh_rebuilds_on_outer_exit() -> None:
+    """Nested deferred blocks should rebuild facts only when the outer block exits."""
+    reference_a = Reference(path="A", original_name="A", name="A")
+    reference_b = Reference(path="B", original_name="B", name="B")
+    reference_c = Reference(path="C", original_name="C", name="C")
+    data_type = DataType(reference=reference_b)
+    model = BaseModel(fields=[DataModelField(data_type=data_type)], reference=reference_a)
+    store = GenerationStore()
+    store.register_model(model)
+    store.refresh()
+
+    with store.defer_refresh():
+        with store.defer_refresh():
+            store.replace_data_type_ref(data_type, reference_c)
+        version_after_inner_exit = store.facts_version
+        dirty_after_inner_exit = store._dirty
+
+    assert {
+        "version_after_inner_exit": version_after_inner_exit,
+        "dirty_after_inner_exit": dirty_after_inner_exit,
+        "version_after_outer_exit": store.facts_version,
+        "reference_classes": sorted(store.index.reference_classes_for_model(model)),
+    } == snapshot(
+        {
+            "version_after_inner_exit": 1,
+            "dirty_after_inner_exit": True,
+            "version_after_outer_exit": 2,
             "reference_classes": ["C"],
         },
     )
