@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 from pydantic import Field, ValidationError, field_validator, model_validator
 
 from datamodel_code_generator import Error
-from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_DICT, Import
+from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_ANY, IMPORT_DICT, Import
 from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
@@ -265,7 +265,7 @@ class DataModelField(_PydanticBaseDataModelField):
             extra_imports.append(IMPORT_CLASSVAR)
         if self.validation_aliases:
             extra_imports.append(IMPORT_ALIAS_CHOICES)
-        if self._has_discriminator_in_data_type():
+        if IMPORT_ANNOTATED in base_imports and self._has_discriminator_in_data_type():
             extra_imports.append(IMPORT_FIELD)
         if self.use_pydantic_extra_annotation_assignment:
             extra_imports.append(IMPORT_DICT)
