@@ -107,6 +107,12 @@ def _load_input_model_module(modname: str) -> tuple[types.ModuleType, _ModuleRes
         raise Error(msg) from e
 
 
+def _is_input_model_base_schema(value: object) -> bool:
+    if not isinstance(value, dict):
+        return False
+    return bool(cast("dict[str, object]", value).get("x-is-base-class"))
+
+
 # Types that are lost during JSON Schema conversion and need to be preserved
 _PRESERVED_TYPE_ORIGINS: dict[type, str] = {}
 
@@ -812,11 +818,9 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
             if "$defs" in schema:
                 schema_defs = cast("dict[str, object]", schema["$defs"])
                 for k, v in schema_defs.items():
-                    new_is_base = isinstance(v, dict) and v.get("x-is-base-class")  # ty: ignore
+                    new_is_base = _is_input_model_base_schema(v)
                     existing = merged_defs.get(k)
-                    existing_is_base = (
-                        isinstance(existing, dict) and existing.get("x-is-base-class") if existing else False
-                    )  # ty: ignore
+                    existing_is_base = _is_input_model_base_schema(existing) if existing is not None else False
                     if k not in merged_defs or (new_is_base and not existing_is_base):
                         merged_defs[k] = v
 
