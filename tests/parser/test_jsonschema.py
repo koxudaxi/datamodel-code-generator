@@ -77,6 +77,75 @@ def test_get_x_python_import_path_handles_empty_and_incomplete_metadata() -> Non
     assert parser._get_x_python_import_path({"module": "os", "name": "PathLike"}) == "os.PathLike"
 
 
+def test_get_ref_data_type_reuses_definition_facts(mocker: MockerFixture) -> None:
+    """Test refs to prevalidated definitions reuse cached lightweight facts."""
+    schema_dict: dict[str, Any] = {
+        "type": "object",
+        "$defs": {
+            "Status": {
+                "type": "string",
+                "enum": ["active", "inactive"],
+                "x-python-import": {"module": "myapp.enums", "name": "Status"},
+            }
+        },
+    }
+    parser = JsonSchemaParser(json.dumps(schema_dict))
+    parser._parse_file(schema_dict, "Model", [])
+    load_ref = mocker.patch.object(parser, "_load_ref_schema_object", side_effect=AssertionError)
+
+    data_type = parser.get_ref_data_type("#/$defs/Status")
+
+    load_ref.assert_not_called()
+    assert data_type.import_ == Import.from_full_path("myapp.enums.Status")
+
+
+def test_get_ref_data_type_reuses_external_definition_facts(mocker: MockerFixture) -> None:
+    """Test prevalidated external definitions are cached with their resolved root path."""
+    schema_dict: dict[str, Any] = {
+        "type": "object",
+        "$defs": {
+            "Maybe": {
+                "type": "object",
+                "nullable": True,
+                "properties": {"name": {"type": "string"}},
+            }
+        },
+    }
+    parser = JsonSchemaParser(json.dumps(schema_dict), strict_nullable=True)
+    external_root = ["external.json"]
+    parser._parse_file(schema_dict, "External", external_root)
+    load_ref = mocker.patch.object(parser, "_load_ref_schema_object", side_effect=AssertionError)
+
+    with parser.model_resolver.current_root_context(external_root):
+        data_type = parser.get_ref_data_type("#/$defs/Maybe")
+
+    load_ref.assert_not_called()
+    assert data_type.is_optional
+    assert data_type.reference is not None
+    assert data_type.reference.path == "external.json#/$defs/Maybe"
+
+
+def test_resolve_type_import_from_defs_reuses_definition_facts(mocker: MockerFixture) -> None:
+    """Test $defs import lookup reads cached x-python-import facts."""
+    schema_dict: dict[str, Any] = {
+        "type": "object",
+        "$defs": {
+            "Status": {
+                "type": "string",
+                "x-python-import": {"module": "myapp.enums", "name": "Status"},
+            }
+        },
+    }
+    parser = JsonSchemaParser(json.dumps(schema_dict))
+    parser._parse_file(schema_dict, "Model", [])
+    load_ref = mocker.patch.object(parser, "_load_ref_schema_object", side_effect=AssertionError)
+
+    result = parser._resolve_type_import_from_defs("Status")
+
+    load_ref.assert_not_called()
+    assert result == Import.from_full_path("myapp.enums.Status")
+
+
 def test_json_schema_directory_input_reads_each_source_once(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test directory input source text is materialized once per parse."""
     user_path, pet_path = _write_simple_json_schemas(tmp_path)

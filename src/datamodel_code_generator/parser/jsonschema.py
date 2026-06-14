@@ -88,6 +88,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 JsonSchemaLiteral = Union[bool, int, str]  # noqa: UP007
+_RefDataTypeFacts = tuple[Any, bool]
 
 
 def __getattr__(name: str) -> Any:
@@ -772,7 +773,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self.reserved_refs: defaultdict[tuple[str, ...], set[str]] = defaultdict(set)
         self._dynamic_anchor_index: dict[tuple[str, ...], dict[str, str]] = {}
         self._recursive_anchor_index: dict[tuple[str, ...], list[str]] = {}
-        self._ref_data_type_facts: dict[str, tuple[Any, bool]] = {}
+        self._ref_data_type_facts: dict[str, _RefDataTypeFacts] = {}
         self._force_base_model_refs: set[str] = set()
         self._force_base_model_generation = False
         self.field_keys: set[str] = {
@@ -1859,6 +1860,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             raise Error(msg)
         return _validate_schema_python_import_path(f"{module}.{type_name}", "x-python-import")
 
+    def _get_ref_data_type_facts(self, obj: JsonSchemaObject) -> _RefDataTypeFacts:
+        return (
+            obj.extras.get("x-python-import"),
+            obj.type == "null" or (self.strict_nullable and obj.nullable is True),
+        )
+
+    def _cache_ref_data_type_facts(self, resolved_ref: str, obj: JsonSchemaObject) -> None:
+        self._ref_data_type_facts.setdefault(resolved_ref, self._get_ref_data_type_facts(obj))
+
+    def _resolved_local_ref_path(self, root_key: tuple[str, ...], path: list[str]) -> str:
+        local_ref = self._anchor_ref_path(root_key, path)
+        return f"{'/'.join(root_key)}{local_ref}" if root_key else local_ref
+
     def get_ref_data_type(self, ref: str) -> DataType:
         """Get a data type from a reference string.
 
@@ -1874,10 +1888,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         resolved_ref = self.model_resolver.resolve_ref(ref)
         if (facts := self._ref_data_type_facts.get(resolved_ref)) is None:
             ref_schema = self._load_ref_schema_object(ref)
-            facts = (
-                ref_schema.extras.get("x-python-import"),
-                ref_schema.type == "null" or (self.strict_nullable and ref_schema.nullable is True),
-            )
+            facts = self._get_ref_data_type_facts(ref_schema)
             self._ref_data_type_facts[resolved_ref] = facts
         x_python_import, is_optional = facts
         if isinstance(x_python_import, dict) and (full_path := self._get_x_python_import_path(x_python_import)):
@@ -2089,8 +2100,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _resolve_type_import_from_defs(self, type_name: str) -> Import | None:
         """Resolve import for a type name from $defs with x-python-import."""
         try:
-            ref_schema = self._load_ref_schema_object(f"#/$defs/{type_name}")
-            x_python_import = ref_schema.extras.get("x-python-import")
+            ref = f"#/$defs/{type_name}"
+            resolved_ref = self.model_resolver.resolve_ref(ref)
+            if (facts := self._ref_data_type_facts.get(resolved_ref)) is None:
+                ref_schema = self._load_ref_schema_object(ref)
+                facts = self._get_ref_data_type_facts(ref_schema)
+                self._ref_data_type_facts[resolved_ref] = facts
+            x_python_import = facts[0]
             if isinstance(x_python_import, dict) and (full_path := self._get_x_python_import_path(x_python_import)):
                 return Import.from_full_path(full_path)
         except Error:
@@ -5488,6 +5504,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 root_obj = self._validate_schema_object(raw, path_parts or ["#"])
                 self.parse_id(root_obj, [*path_parts, "#"] if path_parts else ["#"])
                 root_key = tuple(path_parts)
+                self._cache_ref_data_type_facts(self._resolved_local_ref_path(root_key, path_parts), root_obj)
                 if root_obj.recursiveAnchor:
                     self._recursive_anchor_index.setdefault(root_key, []).append(
                         self._anchor_ref_path(root_key, path_parts)
@@ -5510,6 +5527,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     definition_path = [*path_parts, schema_path, key]
                     obj = self._validate_schema_object(model, definition_path)
                     self.parse_id(obj, definition_path)
+                    self._cache_ref_data_type_facts(
+                        self._resolved_local_ref_path(root_key, definition_path),
+                        obj,
+                    )
                     if obj.recursiveAnchor:
                         ref_path = self._anchor_ref_path(root_key, definition_path)
                         self._recursive_anchor_index.setdefault(root_key, []).append(ref_path)
