@@ -97,9 +97,7 @@ def test_read_xml_text_evicts_lru_entries(tmp_path: Path, monkeypatch: pytest.Mo
     assert _read_xml_text(second_path, "utf-8") == second_text
 
 
-def test_load_xml_schema_data_from_path_evicts_lru_entries(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_load_xml_schema_data_from_path_evicts_lru_entries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Evict old converted XML Schema cache entries after the configured limit."""
     monkeypatch.setattr(xmlschema_parser, "_XML_SCHEMA_DATA_CACHE_MAX_SIZE", 1)
     _clear_xml_schema_data_cache()
