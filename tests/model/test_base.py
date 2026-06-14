@@ -194,12 +194,15 @@ def test_pydantic_v2_leaf_field_imports_skip_discriminator_scan(monkeypatch: pyt
         required=True,
     )
 
-    def fail_all_data_types(self: DataType) -> None:
-        pytest.fail(f"unexpected discriminator scan for {self!r}")
+    def fail_all_data_types(_self: DataType) -> tuple[DataType, ...]:
+        message = "unexpected discriminator scan"
+        raise AssertionError(message)
 
     monkeypatch.setattr(DataType, "all_data_types", property(fail_all_data_types))
 
     assert IMPORT_FIELD not in field.imports
+    with pytest.raises(AssertionError, match="unexpected discriminator scan"):
+        tuple(DataType(type="str").all_data_types)
 
 
 def test_pydantic_v2_nested_discriminator_still_imports_field() -> None:
