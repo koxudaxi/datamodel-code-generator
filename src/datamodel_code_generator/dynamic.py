@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ast
 import builtins
+import hashlib
 import itertools
 import json
 import sys
@@ -169,10 +170,13 @@ def _make_cache_key(schema: Mapping[str, Any], config: GenerateConfig) -> str | 
     Returns None if the schema is not JSON-serializable.
     """
     try:
-        key_data = {"schema": dict(schema), "config": config.model_dump(mode="json", exclude_defaults=True)}
-        return json.dumps(key_data, sort_keys=True, separators=(",", ":"))
+        schema_json = json.dumps(dict(schema), sort_keys=True, separators=(",", ":"))
+        config_json = config.model_dump_json(exclude_defaults=True)
     except (TypeError, ValueError):
         return None
+    schema_digest = hashlib.sha256(schema_json.encode()).hexdigest()
+    config_digest = hashlib.sha256(config_json.encode()).hexdigest()
+    return f"{schema_digest}:{len(schema_json)}:{config_digest}:{len(config_json)}"
 
 
 def _detect_schema_input_file_type(input_: Mapping[str, Any]) -> InputFileType:
