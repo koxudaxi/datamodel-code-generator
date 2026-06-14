@@ -55,19 +55,6 @@ from datamodel_code_generator.enums import (
     VersionMode,
     XMLSchemaVersion,
 )
-from datamodel_code_generator.enums import (
-    UnionMode as UnionMode,
-)
-from datamodel_code_generator.format import (
-    DEFAULT_FORMATTERS,
-    CodeFormatter,
-    DateClassType,
-    DatetimeClassType,
-    Formatter,
-    PythonVersion,
-    PythonVersionMin,
-    resolve_use_type_checking_imports,
-)
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 
 if TYPE_CHECKING:
@@ -83,6 +70,13 @@ if TYPE_CHECKING:
     )
     from datamodel_code_generator._types.generate_config_dict import GenerateConfigDict
     from datamodel_code_generator.config import GenerateConfig, ParserConfig
+    from datamodel_code_generator.format import (
+        DEFAULT_FORMATTERS,
+        DateClassType,
+        DatetimeClassType,
+        PythonVersion,
+        PythonVersionMin,
+    )
 
 T = TypeVar("T")
 _ConfigT = TypeVar("_ConfigT", bound="ParserConfig")
@@ -369,7 +363,12 @@ class InvalidClassNameError(Error):
 def _validate_output_datetime_class(
     output_model_type: DataModelType, output_datetime_class: DatetimeClassType | None
 ) -> None:
-    if output_datetime_class is None or output_datetime_class is DatetimeClassType.Datetime:
+    if output_datetime_class is None:
+        return
+
+    from datamodel_code_generator.format import DatetimeClassType  # noqa: PLC0415
+
+    if output_datetime_class is DatetimeClassType.Datetime:
         return
     if output_model_type in {DataModelType.DataclassesDataclass, DataModelType.TypingTypedDict}:
         msg = f'`--output-datetime-class` only allows "datetime" for `--output-model-type` {output_model_type.value}'
@@ -760,6 +759,18 @@ def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
 
     defer_formatting = config.output is not None and not config.output.suffix
 
+    target_datetime_class = config.output_datetime_class
+    if target_datetime_class is None:
+        from datamodel_code_generator.format import DatetimeClassType  # noqa: PLC0415
+
+        match input_file_type:
+            case InputFileType.GraphQL:
+                target_datetime_class = DatetimeClassType.Datetime
+            case InputFileType.XMLSchema:
+                target_datetime_class = None
+            case _:
+                target_datetime_class = DatetimeClassType.Awaredatetime
+
     additional_options: ParserConfigDict = {
         "data_model_type": data_model_types.data_model,
         "data_model_root_type": data_model_types.root_model,
@@ -772,17 +783,7 @@ def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
         "remote_text_cache": remote_text_cache,
         "known_third_party": data_model_types.known_third_party,
         "default_field_extras": default_field_extras,
-        "target_datetime_class": (
-            config.output_datetime_class
-            if config.output_datetime_class is not None
-            else (
-                DatetimeClassType.Datetime
-                if input_file_type == InputFileType.GraphQL
-                else None
-                if input_file_type == InputFileType.XMLSchema
-                else DatetimeClassType.Awaredatetime
-            )
-        ),
+        "target_datetime_class": target_datetime_class,
         "target_date_class": config.output_date_class,
         "dataclass_arguments": dataclass_arguments,
         "defer_formatting": defer_formatting,
@@ -988,11 +989,16 @@ def _emit_results(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             file.write("\n")
         file.close()
 
-    if (
-        defer_formatting
-        and config.formatters
-        and (Formatter.RUFF_CHECK in config.formatters or Formatter.RUFF_FORMAT in config.formatters)
-    ):
+    if defer_formatting and config.formatters:
+        from datamodel_code_generator.format import (  # noqa: PLC0415
+            CodeFormatter,
+            Formatter,
+            resolve_use_type_checking_imports,
+        )
+
+        if Formatter.RUFF_CHECK not in config.formatters and Formatter.RUFF_FORMAT not in config.formatters:
+            return None
+
         effective_use_type_checking_imports = resolve_use_type_checking_imports(
             config.use_type_checking_imports,
             is_multi_module_output=True,
@@ -1303,6 +1309,15 @@ _LAZY_IMPORTS = {
     "detect_openapi_version": "datamodel_code_generator.parser.schema_version",
     "generate_dynamic_models": "datamodel_code_generator.dynamic",
     "GenerateConfig": "datamodel_code_generator.config",
+    "UnionMode": "datamodel_code_generator.enums",
+    "CodeFormatter": "datamodel_code_generator.format",
+    "DateClassType": "datamodel_code_generator.format",
+    "DatetimeClassType": "datamodel_code_generator.format",
+    "DEFAULT_FORMATTERS": "datamodel_code_generator.format",
+    "Formatter": "datamodel_code_generator.format",
+    "PythonVersion": "datamodel_code_generator.format",
+    "PythonVersionMin": "datamodel_code_generator.format",
+    "resolve_use_type_checking_imports": "datamodel_code_generator.format",
 }
 
 
@@ -1311,7 +1326,9 @@ def __getattr__(name: str) -> Any:
         import importlib  # noqa: PLC0415
 
         module = importlib.import_module(_LAZY_IMPORTS[name])
-        return getattr(module, name)
+        value = getattr(module, name)
+        globals()[name] = value
+        return value
     msg = f"module {__name__!r} has no attribute {name!r}"
     raise AttributeError(msg)
 
