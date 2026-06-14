@@ -159,6 +159,13 @@ class _RenderedDataModelField:
         try:
             return self._cache[name]
         except KeyError:
+            if name in {"annotated", "field"} and (
+                rendered_field_values := getattr(self._field, "_rendered_field_values", None)
+            ):
+                field, annotated = rendered_field_values()
+                self._cache["field"] = field
+                self._cache["annotated"] = annotated
+                return self._cache[name]
             value = getattr(self._field, name)
             self._cache[name] = value
             return value
