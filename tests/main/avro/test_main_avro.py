@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 import pytest
 
@@ -33,21 +33,23 @@ def _expected_file(expected_file: str) -> str:
 
 
 def _append_mutation_marker(value: object) -> None:
-    cast("list[Any]", value).append("__mutated__")
+    cast("list[object]", value).append("__mutated__")
 
 
 def test_convert_avro_schema_data_isolates_raw_lists() -> None:
     """Keep converted Avro metadata and enum lists independent from raw schema input."""
-    raw_schema = cast("dict[str, Any]", load_data((AVRO_DATA_PATH / "constructs.avsc").read_text(encoding="utf-8")))
+    raw_schema = cast("dict[str, object]", load_data((AVRO_DATA_PATH / "constructs.avsc").read_text(encoding="utf-8")))
     converted = convert_avro_schema_data(raw_schema)
-    raw_id_field = next(field for field in cast("list[dict[str, Any]]", raw_schema["fields"]) if field["name"] == "id")
-    raw_status_field = next(
-        field for field in cast("list[dict[str, Any]]", raw_schema["fields"]) if field["name"] == "status"
+    raw_id_field = next(
+        field for field in cast("list[dict[str, object]]", raw_schema["fields"]) if field["name"] == "id"
     )
-    raw_status_type = cast("dict[str, Any]", raw_status_field["type"])
-    definitions = cast("dict[str, dict[str, Any]]", converted["definitions"])
+    raw_status_field = next(
+        field for field in cast("list[dict[str, object]]", raw_schema["fields"]) if field["name"] == "status"
+    )
+    raw_status_type = cast("dict[str, object]", raw_status_field["type"])
+    definitions = cast("dict[str, dict[str, object]]", converted["definitions"])
     record_schema = definitions["User"]
-    field_schema = cast("dict[str, Any]", record_schema["properties"])["id"]
+    field_schema = cast("dict[str, object]", record_schema["properties"])["id"]
     enum_schema = converted["definitions"]["Status"]
 
     assert_mutable_copy_is_isolated(
