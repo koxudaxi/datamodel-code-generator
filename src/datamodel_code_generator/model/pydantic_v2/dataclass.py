@@ -20,6 +20,9 @@ from datamodel_code_generator.model.pydantic_v2.base_model import (
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     DataModelField as DataModelFieldV2,
 )
+from datamodel_code_generator.model.pydantic_v2.base_model import (
+    has_lookaround_pattern,
+)
 from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_CONFIG_DICT,
     IMPORT_PYDANTIC_DATACLASS,
@@ -112,6 +115,9 @@ class DataClass(_DataclassReuseMixin, DataModel):
             config_attributes_v2=self._CONFIG_ATTRIBUTES_V2,
             config_attributes_v2_11=self._CONFIG_ATTRIBUTES_V2_11,
         )
+
+        if has_lookaround_pattern(self.fields):
+            config_parameters["regex_engine"] = '"python-re"'
 
         if config_parameters:
             self._additional_imports.append(IMPORT_CONFIG_DICT)
