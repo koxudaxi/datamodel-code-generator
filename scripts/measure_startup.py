@@ -40,6 +40,14 @@ CASES = (
     Case("import-config", ("-c", "import datamodel_code_generator.config"), "import datamodel_code_generator.config"),
     Case("cli-version", ("-m", "datamodel_code_generator.__main__", "--version")),
     Case("cli-help", ("-m", "datamodel_code_generator.__main__", "--help")),
+    Case(
+        "cli-schema-generation",
+        ("-m", "datamodel_code_generator.__main__", "--output-format-json-schema=generation"),
+    ),
+    Case(
+        "cli-schema-structured-output",
+        ("-m", "datamodel_code_generator.__main__", "--output-format-json-schema=structured-output"),
+    ),
 )
 
 

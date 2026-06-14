@@ -32,6 +32,8 @@ EXPECTED_STARTUP_MEASUREMENT_CASES = {
     "import-config",
     "cli-version",
     "cli-help",
+    "cli-schema-generation",
+    "cli-schema-structured-output",
 }
 
 
