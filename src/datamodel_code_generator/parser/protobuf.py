@@ -10,6 +10,7 @@ import contextlib
 import io
 import re
 import tempfile
+from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 from warnings import warn
@@ -587,7 +588,7 @@ class _ProtobufDescriptorConverter:
         if field.type in {TYPE_MESSAGE, TYPE_GROUP}:
             type_name = _type_name(field.type_name)
             if type_name in WELL_KNOWN_SCHEMAS:
-                return dict(WELL_KNOWN_SCHEMAS[type_name])
+                return deepcopy(WELL_KNOWN_SCHEMAS[type_name])
             return {"$ref": f"#/definitions/{self._definition_key(type_name)}"}
         return {}  # pragma: no cover
 
@@ -659,6 +660,8 @@ class ProtobufParser(JsonSchemaParser):
     """Parse Protocol Buffers schemas by converting descriptors to JSON Schema."""
 
     _config_class_name: ClassVar[str] = "ProtobufParserConfig"
+    _cache_local_sources_during_parse: ClassVar[bool] = False
+    _cache_parsed_sources_from_path: ClassVar[bool] = False
 
     def __init__(
         self,

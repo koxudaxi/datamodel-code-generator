@@ -54,12 +54,12 @@ from datamodel_code_generator.model.enum import (
     Enum,
     StrEnum,
 )
-from datamodel_code_generator.model.typed_dict import TypedDict as TypedDictModel
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import (
     SPECIAL_PATH_FORMAT,
     Parser,
     Source,
+    _is_typed_dict_data_model,
     escape_characters,
     get_special_path,
     title_to_class_name,
@@ -88,6 +88,16 @@ if TYPE_CHECKING:
     from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 JsonSchemaLiteral = Union[bool, int, str]  # noqa: UP007
+
+
+def __getattr__(name: str) -> Any:
+    """Return compatibility model classes without importing them on parser load."""
+    match name:
+        case "TypedDictModel":
+            from datamodel_code_generator.model.typed_dict import TypedDict as TypedDictModel  # noqa: PLC0415
+
+            return TypedDictModel
+    raise AttributeError(name)
 
 
 def unescape_json_pointer_segment(segment: str) -> str:
@@ -271,18 +281,38 @@ class JsonSchemaObject(BaseModel):
             return values
         exclusive_maximum: float | bool | None = values.get("exclusiveMaximum")
         exclusive_minimum: float | bool | None = values.get("exclusiveMinimum")
+        if not isinstance(exclusive_maximum, bool) and not isinstance(exclusive_minimum, bool):
+            return values
 
-        if exclusive_maximum is True:
-            values["exclusiveMaximum"] = values["maximum"]
-            del values["maximum"]
-        elif exclusive_maximum is False:
-            del values["exclusiveMaximum"]
-        if exclusive_minimum is True:
-            values["exclusiveMinimum"] = values["minimum"]
-            del values["minimum"]
-        elif exclusive_minimum is False:
-            del values["exclusiveMinimum"]
+        values = dict(values)
+        match exclusive_maximum:
+            case True:
+                values["exclusiveMaximum"] = values["maximum"]
+                del values["maximum"]
+            case False:
+                del values["exclusiveMaximum"]
+        match exclusive_minimum:
+            case True:
+                values["exclusiveMinimum"] = values["minimum"]
+                del values["minimum"]
+            case False:
+                del values["exclusiveMinimum"]
         return values
+
+    @model_validator(mode="before")
+    @classmethod
+    def collect_extra_fields(cls, values: Any) -> Any:
+        """Collect raw schema extension fields without overriding known schema fields."""
+        if not isinstance(values, dict):
+            return values
+        alias_extras = values.get(cls.__extra_key__, {})
+        raw_extras = {k: v for k, v in values.items() if k not in EXCLUDE_FIELD_KEYS}
+        if not alias_extras and not raw_extras:
+            return values
+        extras = {**alias_extras, **raw_extras}
+        if "const" in alias_extras:  # pragma: no cover
+            extras["const"] = alias_extras["const"]
+        return {**values, cls.__extra_key__: extras}
 
     @field_validator("ref")
     def validate_ref(cls, value: Any) -> Any:  # noqa: N805
@@ -392,23 +422,8 @@ class JsonSchemaObject(BaseModel):
         ignored_types=(cached_property,),
     )
 
-    def __init__(self, **data: Any) -> None:
-        """Initialize JsonSchemaObject with extra fields handling."""
-        super().__init__(**data)
-        items = data.get("items")
-        if items is False:
-            self.items = False
-        elif items == []:
-            self.items = []
-        # Restore extras from alias key (for dict -> parse_obj round-trip)
-        alias_extras = data.get(self.__extra_key__, {})
-        # Collect custom keys from raw data
-        raw_extras = {k: v for k, v in data.items() if k not in EXCLUDE_FIELD_KEYS}
-        if alias_extras or raw_extras:
-            # Merge: raw_extras takes precedence (original data is the source of truth)
-            self.extras = {**alias_extras, **raw_extras}
-            if "const" in alias_extras:  # pragma: no cover
-                self.extras["const"] = alias_extras["const"]
+    def model_post_init(self, __context: Any, /) -> None:
+        """Apply post-validation compatibility handling for extension metadata."""
         # Support x-propertyNames extension for OpenAPI 3.0
         if "x-propertyNames" in self.extras and self.propertyNames is None:
             x_prop_names = self.extras.pop("x-propertyNames")
@@ -438,7 +453,7 @@ class JsonSchemaObject(BaseModel):
     def validate_items(cls, values: Any) -> Any:  # noqa: N805
         """Validate items field, converting empty dicts to None."""
         # this condition expects empty dict
-        return values or None
+        return None if values == {} else values
 
     @cached_property
     def has_default(self) -> bool:
@@ -609,6 +624,7 @@ EXCLUDE_FIELD_KEYS = (
     "$recursiveAnchor",
     "$dynamicRef",
     "$dynamicAnchor",
+    "self",
     JsonSchemaObject.__extra_key__,
 }
 
@@ -622,6 +638,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     SCHEMA_PATHS: ClassVar[list[str]] = list(_DEFAULT_SCHEMA_PATHS)
     SCHEMA_OBJECT_TYPE: ClassVar[type[JsonSchemaObject]] = JsonSchemaObject
+    _cache_local_sources_during_parse: ClassVar[bool] = True
+    _cache_parsed_sources_from_path: ClassVar[bool] = True
 
     COMPATIBLE_PYTHON_TYPES: ClassVar[dict[str, frozenset[str]]] = {
         "string": frozenset({"str", "String"}),
@@ -1895,7 +1913,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             additional_props_type = self._build_lightweight_type(obj.additionalProperties)
             if additional_props_type:  # pragma: no branch
                 self.extra_template_data[path]["additionalPropertiesType"] = additional_props_type.type_hint
-                if issubclass(self.data_model_type, TypedDictModel) and (
+                if _is_typed_dict_data_model(self.data_model_type) and (
                     reference_classes := {
                         data_type.reference.path
                         for data_type in additional_props_type.all_data_types
@@ -5305,8 +5323,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Get source and path parts for each input file with context managers."""
         if isinstance(self.source, list) or (isinstance(self.source, Path) and self.source.is_dir()):
             self.current_source_path = Path()
+            self._cache_local_sources = self._cache_local_sources_during_parse
             self.model_resolver.after_load_files = {
-                self.base_path.joinpath(s.path).resolve().as_posix() for s in self.iter_source
+                path.resolve().as_posix() for path in self._iter_local_source_paths()
             }
 
         for source in self.iter_source:
@@ -5322,8 +5341,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             ):
                 yield source, path_parts
 
+    def _iter_local_source_paths(self) -> Iterator[Path]:
+        match self.source:
+            case Path() as path if path.is_dir():
+                yield from (
+                    file_path
+                    for file_path in sorted(path.rglob("*"), key=lambda item: item.name)
+                    if file_path.is_file()
+                )
+            case list() as paths:
+                yield from ((self.base_path / path) for path in paths)
+
     def _load_source_dict(self, source: Source) -> dict[str, Any]:  # noqa: PLR6301
-        return dict(source.raw_data) if source.raw_data is not None else load_data(source.text)
+        if source.raw_data is None:
+            return load_data(source.text)
+        if not isinstance(source.raw_data, dict):
+            msg = f"Expected dict, got {type(source.raw_data).__name__}"
+            raise TypeError(msg)
+        return dict(source.raw_data)
 
     def _resolve_root_model_name(self, raw_obj: dict[str, Any]) -> tuple[str, bool]:
         title = raw_obj.get("title")
@@ -5344,43 +5379,43 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return obj_name, False
 
     def _parse_converted_sources(self, make_converter: Callable[[], Any]) -> None:
-        for source, path_parts in self._get_context_source_path_parts():
-            raw_obj = make_converter().convert(source)
-            source.raw_data = raw_obj
-            if source.path.parts:
-                self.remote_object_cache[str((self.base_path / source.path).resolve())] = raw_obj
-            self.raw_obj = raw_obj
-            obj_name, preserve_root_class_name = self._resolve_root_model_name(raw_obj)
-            self._parse_file(
-                raw_obj,
-                obj_name,
-                path_parts,
-                preserve_root_class_name=preserve_root_class_name,
-            )
+        try:
+            for source, path_parts in self._get_context_source_path_parts():
+                raw_obj = make_converter().convert(source)
+                source.raw_data = raw_obj
+                if source.path.parts:
+                    self.remote_object_cache[str((self.base_path / source.path).resolve())] = raw_obj
+                self.raw_obj = raw_obj
+                obj_name, preserve_root_class_name = self._resolve_root_model_name(raw_obj)
+                self._parse_file(
+                    raw_obj,
+                    obj_name,
+                    path_parts,
+                    preserve_root_class_name=preserve_root_class_name,
+                )
 
-        self._resolve_unparsed_json_pointer()
-        self._generate_forced_base_models()
+            self._resolve_unparsed_json_pointer()
+            self._generate_forced_base_models()
+        finally:
+            self._reset_local_source_cache()
 
     def parse_raw(self) -> None:
         """Parse all raw input sources into data models."""
-        for source, path_parts in self._get_context_source_path_parts():
-            if source.raw_data is not None:
-                raw_obj = source.raw_data
-                if not isinstance(raw_obj, dict):  # pragma: no cover
-                    warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
-                    continue
-            else:
+        try:
+            for source, path_parts in self._get_context_source_path_parts():
                 try:
-                    raw_obj = load_data(source.text)
+                    raw_obj = self._load_source_dict(source)
                 except TypeError:
                     warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
                     continue
-            self.raw_obj = raw_obj
-            obj_name, preserve_root_class_name = self._resolve_root_model_name(self.raw_obj)
-            self._parse_file(self.raw_obj, obj_name, path_parts, preserve_root_class_name=preserve_root_class_name)
+                self.raw_obj = raw_obj
+                obj_name, preserve_root_class_name = self._resolve_root_model_name(self.raw_obj)
+                self._parse_file(self.raw_obj, obj_name, path_parts, preserve_root_class_name=preserve_root_class_name)
 
-        self._resolve_unparsed_json_pointer()
-        self._generate_forced_base_models()
+            self._resolve_unparsed_json_pointer()
+            self._generate_forced_base_models()
+        finally:
+            self._reset_local_source_cache()
 
     def _resolve_unparsed_json_pointer(self) -> None:
         """Resolve any remaining unparsed JSON pointer references recursively."""
@@ -5449,8 +5484,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 preserve_class_name=preserve_root_class_name,
             ).name
             with self.root_id_context(raw):
-                # Some jsonschema docs include attribute self to have include version details
-                raw.pop("self", None)
                 # parse $id before parsing $ref
                 root_obj = self._validate_schema_object(raw, path_parts or ["#"])
                 self.parse_id(root_obj, [*path_parts, "#"] if path_parts else ["#"])

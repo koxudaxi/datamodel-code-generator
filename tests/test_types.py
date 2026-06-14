@@ -412,6 +412,7 @@ def test_datatype_type_hint_without_container_flag_returns_inner_type() -> None:
 
 def test_datatype_module_name_reads_reference_source_attribute() -> None:
     """Pin module-name lookup through the reference source."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
 
     class ModuleReferenceSource:
         reference = None
@@ -448,6 +449,7 @@ def test_datatype_base_type_hint_applies_reference_nullability() -> None:
 
 def test_datatype_nullable_reference_keeps_alias_non_optional() -> None:
     """Pin alias guard before applying reference nullability."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
 
     class AliasNullableReferenceSource:
         reference = None

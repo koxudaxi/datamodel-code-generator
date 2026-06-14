@@ -33,6 +33,16 @@ if any(
 
         sys.stdout.write(f"{generate_prompt_json_schema()}\n")
         sys.exit(0)
+    if namespace.output_format_json_schema == "generation":
+        from datamodel_code_generator._structured_output import generation_output_json_schema
+
+        sys.stdout.write(f"{generation_output_json_schema()}\n")
+        sys.exit(0)
+    if namespace.output_format_json_schema == "structured-output":
+        from datamodel_code_generator._structured_output import structured_output_json_schema
+
+        sys.stdout.write(f"{structured_output_json_schema()}\n")
+        sys.exit(0)
     if namespace.output_format_json_schema is None and namespace.generate_prompt is not None:
         from datamodel_code_generator.prompt import generate_prompt
 

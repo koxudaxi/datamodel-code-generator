@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import sys
+import types
 from argparse import Namespace
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -15,10 +17,11 @@ from datamodel_code_generator.__main__ import Exit, main
 from tests.conftest import assert_output, freeze_time
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
 
 EXPECTED_INPUT_MODEL_PATH = Path(__file__).parent / "data" / "expected" / "main" / "input_model"
 TIMESTAMP = "1985-10-26T01:21:00-07:00"
+_MISSING_SYS_MODULE = object()
 
 
 def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> None:
@@ -40,6 +43,42 @@ def _assert_file_exists(path: Path) -> None:
     __tracebackhide__ = True
     if not path.exists():  # pragma: no cover
         pytest.fail(f"Expected file to exist: {path}")
+
+
+def _assert_sys_module_missing(module_name: str) -> None:
+    """Assert sys.modules does not contain module_name."""
+    __tracebackhide__ = True
+    if module_name in sys.modules:  # pragma: no cover
+        pytest.fail(f"Expected sys.modules to not contain {module_name!r}")
+
+
+def _assert_sys_module_is(module_name: str, expected_module: types.ModuleType) -> None:
+    """Assert sys.modules contains the expected module object."""
+    __tracebackhide__ = True
+    actual_module = sys.modules.get(module_name)
+    if actual_module is not expected_module:  # pragma: no cover
+        pytest.fail(f"Expected sys.modules[{module_name!r}] to be restored")
+
+
+def _assert_sys_modules_with_prefix(module_prefix: str, expected_modules: set[str]) -> None:
+    """Assert sys.modules keys with module_prefix match the expected set."""
+    __tracebackhide__ = True
+    actual_modules = {module_name for module_name in sys.modules if module_name.startswith(module_prefix)}
+    if actual_modules != expected_modules:  # pragma: no cover
+        pytest.fail(f"Expected sys.modules keys with prefix {module_prefix!r} to be restored")
+
+
+@contextmanager
+def _without_sys_module(module_name: str) -> Iterator[None]:
+    """Temporarily remove a sys.modules entry and restore the previous state."""
+    previous_module = sys.modules.pop(module_name, _MISSING_SYS_MODULE)
+    try:
+        yield
+    finally:
+        if previous_module is _MISSING_SYS_MODULE:
+            sys.modules.pop(module_name, None)
+        else:
+            sys.modules[module_name] = previous_module
 
 
 def run_input_model_and_assert(
@@ -317,6 +356,63 @@ def test_input_model_path_format(tmp_path: Path) -> None:
     )
 
 
+def test_input_model_path_format_restores_sys_modules(tmp_path: Path) -> None:
+    """Test path-based --input-model does not keep temporary modules alive."""
+    model_path = tmp_path / "temporary_input_model.py"
+    model_path.write_text(
+        "from pydantic import BaseModel\n\nclass User(BaseModel):\n    name: str\n    age: int\n",
+        encoding="utf-8",
+    )
+    module_name = model_path.stem
+
+    with _without_sys_module(module_name):
+        run_input_model_and_assert(
+            input_model=f"{model_path}:User",
+            output_path=tmp_path / "output.py",
+            expected_file=EXPECTED_INPUT_MODEL_PATH / "path_format.py",
+        )
+
+        _assert_sys_module_missing(module_name)
+
+
+def test_input_model_path_format_restores_existing_sys_modules(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test path-based --input-model restores a pre-existing sys.modules entry."""
+    model_path = tmp_path / "existing_input_model.py"
+    model_path.write_text(
+        "from pydantic import BaseModel\n\nclass User(BaseModel):\n    name: str\n    age: int\n",
+        encoding="utf-8",
+    )
+    module_name = model_path.stem
+    existing_module = types.ModuleType(module_name)
+    monkeypatch.setitem(sys.modules, module_name, existing_module)
+
+    run_input_model_and_assert(
+        input_model=f"{model_path}:User",
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "path_format.py",
+    )
+
+    _assert_sys_module_is(module_name, existing_module)
+
+
+def test_without_sys_module_restores_existing_module() -> None:
+    """Test _without_sys_module restores the previous sys.modules entry."""
+    module_name = "temporary_existing_input_model"
+    existing_module = types.ModuleType(module_name)
+
+    with _without_sys_module(module_name):
+        sys.modules[module_name] = existing_module
+        with _without_sys_module(module_name):
+            _assert_sys_module_missing(module_name)
+
+        _assert_sys_module_is(module_name, existing_module)
+
+    _assert_sys_module_missing(module_name)
+
+
 def test_input_model_path_format_filename_only(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -387,6 +483,68 @@ def test_input_model_module_import_error(
         capsys=capsys,
         expected_stderr_contains="Cannot import module",
     )
+
+
+def test_path_module_name_keeps_same_file_module(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test path module naming keeps the stem when the loaded module is the same file."""
+    from datamodel_code_generator.input_model import _get_path_module_name
+
+    model_path = (tmp_path / "same_file_model.py").resolve()
+    model_path.write_text("class Model: pass\n", encoding="utf-8")
+    module_name = model_path.stem
+    existing_module = types.ModuleType(module_name)
+    existing_module.__file__ = str(model_path)
+    monkeypatch.setitem(sys.modules, module_name, existing_module)
+
+    assert _get_path_module_name(model_path) == module_name
+
+
+def test_path_module_name_falls_back_when_existing_file_cannot_resolve(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test path module naming keeps the stem when an existing module file cannot resolve."""
+    from datamodel_code_generator.input_model import _get_path_module_name
+
+    model_path = (tmp_path / "unresolvable_existing_model.py").resolve()
+    model_path.write_text("class Model: pass\n", encoding="utf-8")
+    module_name = model_path.stem
+    existing_module = types.ModuleType(module_name)
+    existing_module.__file__ = "__unresolvable_existing_model__"
+    monkeypatch.setitem(sys.modules, module_name, existing_module)
+
+    def fake_resolve(_path: Path, *_args: object, **_kwargs: object) -> Path:
+        msg = "cannot resolve"
+        raise OSError(msg)
+
+    monkeypatch.setattr(Path, "resolve", fake_resolve)
+
+    assert _get_path_module_name(model_path) == module_name
+
+
+def test_load_module_from_path_restores_sys_modules_on_exec_error(tmp_path: Path) -> None:
+    """Test path module loading restores sys.modules when module execution fails."""
+    from datamodel_code_generator.input_model import _load_module_from_path
+
+    model_path = (tmp_path / "failing_input_model.py").resolve()
+    model_path.write_text("raise RuntimeError('module failed')\n", encoding="utf-8")
+    module_name = model_path.stem
+
+    with _without_sys_module(module_name):
+        with pytest.raises(RuntimeError, match="module failed"):
+            _load_module_from_path(model_path, str(model_path))
+
+        _assert_sys_module_missing(module_name)
+
+
+def test_is_input_model_base_schema_requires_dict() -> None:
+    """Test base schema detection returns false for non-dict values."""
+    from datamodel_code_generator.input_model import _is_input_model_base_schema
+
+    assert not _is_input_model_base_schema("not a schema")
 
 
 # ============================================================================
@@ -618,6 +776,21 @@ def test_input_model_ref_strategy_reuse_all(tmp_path: Path) -> None:
         input_model="tests.data.python.input_model.nested_models:User",
         output_path=tmp_path / "output.py",
         expected_file=EXPECTED_INPUT_MODEL_PATH / "ref_strategy_reuse_all.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--input-model-ref-strategy",
+            "reuse-all",
+        ],
+    )
+
+
+def test_input_model_path_ref_strategy_reuse_all_keeps_stem_imports(tmp_path: Path) -> None:
+    """Test path-based reuse-all keeps the existing stem-based import path."""
+    run_input_model_and_assert(
+        input_model="tests/data/python/input_model/nested_models.py:User",
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "path_ref_strategy_reuse_all.py",
         extra_args=[
             "--output-model-type",
             "typing.TypedDict",
@@ -1101,6 +1274,83 @@ def test_input_model_multiple_file_path_format(tmp_path: Path) -> None:
         expected_file=EXPECTED_INPUT_MODEL_PATH / "forked_inheritance.py",
         extra_args=["--output-model-type", "typing.TypedDict"],
     )
+
+
+def test_input_model_multiple_file_path_same_basename_forward_refs(tmp_path: Path) -> None:
+    """Test same-basename path modules keep separate namespaces for forward refs."""
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    first_model_path = first_dir / "models.py"
+    second_model_path = second_dir / "models.py"
+    first_model_path.write_text(
+        "from __future__ import annotations\n\n"
+        "from pydantic import BaseModel\n\n"
+        "class UserA(BaseModel):\n"
+        "    friend: FriendA\n\n"
+        "class FriendA(BaseModel):\n"
+        "    alpha: str\n",
+        encoding="utf-8",
+    )
+    second_model_path.write_text(
+        "from __future__ import annotations\n\n"
+        "from pydantic import BaseModel\n\n"
+        "class UserB(BaseModel):\n"
+        "    friend: FriendB\n\n"
+        "class FriendB(BaseModel):\n"
+        "    beta: int\n",
+        encoding="utf-8",
+    )
+    module_name = first_model_path.stem
+    temporary_module_prefix = "_datamodel_code_generator_input_model_"
+    existing_temporary_modules = {
+        module_name for module_name in sys.modules if module_name.startswith(temporary_module_prefix)
+    }
+
+    with _without_sys_module(module_name):
+        run_multiple_input_models_and_assert(
+            input_models=[
+                f"{first_model_path}:UserA",
+                f"{second_model_path}:UserB",
+            ],
+            output_path=tmp_path / "output.py",
+            expected_file=EXPECTED_INPUT_MODEL_PATH / "multiple_same_basename_paths.py",
+        )
+
+        _assert_sys_module_missing(module_name)
+        _assert_sys_modules_with_prefix(temporary_module_prefix, existing_temporary_modules)
+
+
+def test_input_model_multiple_file_path_format_restores_sys_modules(tmp_path: Path) -> None:
+    """Test multiple path-based --input-model entries do not keep temporary modules alive."""
+    model_path = tmp_path / "multiple_input_model.py"
+    model_path.write_text(
+        "from pydantic import BaseModel\n\n"
+        "class GrandParent(BaseModel):\n"
+        "    grand_field: str\n\n"
+        "class Parent(GrandParent):\n"
+        "    parent_field: int\n\n"
+        "class ChildA(Parent):\n"
+        "    child_a_field: float\n\n"
+        "class ChildB(Parent):\n"
+        "    child_b_field: bool\n",
+        encoding="utf-8",
+    )
+    module_name = model_path.stem
+
+    with _without_sys_module(module_name):
+        run_multiple_input_models_and_assert(
+            input_models=[
+                f"{model_path}:ChildA",
+                f"{model_path}:ChildB",
+            ],
+            output_path=tmp_path / "output.py",
+            expected_file=EXPECTED_INPUT_MODEL_PATH / "forked_inheritance.py",
+            extra_args=["--output-model-type", "typing.TypedDict"],
+        )
+
+        _assert_sys_module_missing(module_name)
 
 
 def test_input_model_multiple_with_ref_strategy(tmp_path: Path) -> None:

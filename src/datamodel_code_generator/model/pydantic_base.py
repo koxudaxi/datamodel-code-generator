@@ -102,6 +102,9 @@ class DataModelField(DataModelFieldBase):
         if self.is_class_var:
             return None
         result = str(self)
+        return self._field_from_rendered(result)
+
+    def _field_from_rendered(self, result: str) -> str | None:
         if (
             self.use_default_kwarg
             and not result.startswith("Field(...")
@@ -114,6 +117,16 @@ class DataModelField(DataModelFieldBase):
         if not result:
             return None
         return result
+
+    def _rendered_field_values(self) -> tuple[str | None, str | None]:
+        """Render field and annotated values from one Field() string for built-in templates."""
+        if self.is_class_var:
+            return None, None
+        result = str(self)
+        field = self._field_from_rendered(result)
+        if not self.use_annotated or not result:
+            return field, None
+        return field, f"Annotated[{self.type_hint}, {result}]"
 
     def _has_field_statement(self) -> bool:
         """Return whether rendering this field will require a Field() call."""

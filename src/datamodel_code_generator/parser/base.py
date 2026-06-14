@@ -49,6 +49,8 @@ from datamodel_code_generator import (
     ReuseScope,
     YamlValue,
     _internal_utils,
+    _is_parsed_source_cache_enabled,
+    _read_parser_source_data_from_path,
 )
 from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.format import (
@@ -65,8 +67,6 @@ from datamodel_code_generator.imports import (
     Import,
     Imports,
 )
-from datamodel_code_generator.model import dataclass as dataclass_model
-from datamodel_code_generator.model import msgspec as msgspec_model
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
     GENERIC_BASE_CLASS_NAME,
@@ -101,10 +101,13 @@ to_hashable = _internal_utils.to_hashable
 
 # Keep these as module-name checks so non-pydantic-v2 outputs do not import the
 # pydantic_v2 generator package and its runtime feature gates.
+_DATACLASS_MODULE: Final = "datamodel_code_generator.model.dataclass"
+_MSGSPEC_MODULE: Final = "datamodel_code_generator.model.msgspec"
 _PYDANTIC_V2_BASE_MODEL_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.base_model"
 _PYDANTIC_V2_DATACLASS_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.dataclass"
 _PYDANTIC_V2_MODULE: Final = "datamodel_code_generator.model.pydantic_v2"
 _PYDANTIC_V2_ROOT_MODEL_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.root_model"
+_TYPED_DICT_MODULE: Final = "datamodel_code_generator.model.typed_dict"
 
 
 @cache
@@ -118,6 +121,14 @@ def _model_type(value: object | type[object]) -> type[object]:
 
 def _is_pydantic_v2_base_model(value: object | type[object]) -> bool:
     return _type_mro_contains_type(_model_type(value), module=_PYDANTIC_V2_BASE_MODEL_MODULE, name="BaseModel")
+
+
+def _is_dataclass_data_model(value: object | type[object]) -> bool:
+    return _type_mro_contains_type(_model_type(value), module=_DATACLASS_MODULE, name="DataClass")
+
+
+def _is_msgspec_struct(value: object | type[object]) -> bool:
+    return _type_mro_contains_type(_model_type(value), module=_MSGSPEC_MODULE, name="Struct")
 
 
 def _is_pydantic_v2_data_model_field(value: object) -> bool:
@@ -143,6 +154,28 @@ def _is_pydantic_v2_dump_resolve_reference_action(value: object) -> bool:
         getattr(value, "__module__", None) == _PYDANTIC_V2_MODULE
         and getattr(value, "__name__", None) == "dump_resolve_reference_action"
     )
+
+
+def _is_typed_dict_data_model(value: object | type[object]) -> bool:
+    return _type_mro_contains_type(_model_type(value), module=_TYPED_DICT_MODULE, name="TypedDict")
+
+
+def _add_msgspec_base_class_kwarg(model: DataModel, name: str, value: str) -> None:
+    cast("Any", model).add_base_class_kwarg(name, value)
+
+
+def __getattr__(name: str) -> Any:
+    """Return compatibility model modules without importing them on parser load."""
+    match name:
+        case "dataclass_model":
+            from datamodel_code_generator.model import dataclass as dataclass_model  # noqa: PLC0415
+
+            return dataclass_model
+        case "msgspec_model":
+            from datamodel_code_generator.model import msgspec as msgspec_model  # noqa: PLC0415
+
+            return msgspec_model
+    raise AttributeError(name)
 
 
 Child = _internal_utils.Child
@@ -918,14 +951,29 @@ class Source(BaseModel):
 
     path: Path
     text: str = ""
-    raw_data: dict[str, YamlValue] | None = None
+    raw_data: Any | None = None
 
     @classmethod
-    def from_path(cls, path: Path, base_path: Path, encoding: str) -> Source:
+    def from_path(
+        cls,
+        path: Path,
+        base_path: Path,
+        encoding: str,
+    ) -> Source:
         """Create a Source from a file path relative to base_path."""
         return cls(
             path=path.relative_to(base_path),
             text=path.read_text(encoding=encoding),
+        )
+
+    @classmethod
+    def from_cached_path(cls, path: Path, base_path: Path, encoding: str, *, keep_text: bool = False) -> Source:
+        """Create a Source from a cached parsed file path relative to base_path."""
+        data, raw_data = _read_parser_source_data_from_path(path, encoding)
+        return cls(
+            path=path.relative_to(base_path),
+            text=data.decode(encoding) if keep_text else "",
+            raw_data=raw_data,
         )
 
     @classmethod
@@ -996,13 +1044,11 @@ def _get_enum_from_base(discriminator_model: DataModel, field_name: str) -> Enum
         if not base_class.reference or not base_class.reference.source:  # pragma: no cover
             continue
         base_model = base_class.reference.source
-        if not isinstance(  # pragma: no cover
-            base_model,
-            (
-                dataclass_model.DataClass,
-                msgspec_model.Struct,
-            ),
-        ) and not _is_pydantic_v2_base_model(base_model):
+        if not (
+            _is_dataclass_data_model(base_model)
+            or _is_msgspec_struct(base_model)
+            or _is_pydantic_v2_base_model(base_model)
+        ):  # pragma: no cover
             continue
         base_data_model = cast("DataModel", base_model)
         for base_field in base_data_model.fields:  # pragma: no branch
@@ -1094,6 +1140,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         ...
 
     _config_class_name: ClassVar[str] = "ParserConfig"
+    _cache_local_sources_during_parse: ClassVar[bool] = False
+    _cache_parsed_sources_from_path: ClassVar[bool] = False
 
     @classmethod
     def _get_config_class(cls) -> type[ParserConfig]:
@@ -1131,7 +1179,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if "decorators" not in kwargs and self.class_decorators:
             kwargs["decorators"] = list(self.class_decorators)
         data_model_class = model_type or self.data_model_type
-        if issubclass(data_model_class, dataclass_model.DataClass) or _is_pydantic_v2_dataclass(data_model_class):
+        if _is_dataclass_data_model(data_model_class) or _is_pydantic_v2_dataclass(data_model_class):
             # Use dataclass_arguments from kwargs, or fall back to self.dataclass_arguments
             # If both are None, construct from legacy frozen_dataclasses/keyword_only flags
             dataclass_arguments = kwargs.pop("dataclass_arguments", None)
@@ -1268,6 +1316,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             self.base_path = Path.cwd()
 
         self.source: str | Path | list[Path] | ParseResult | dict[str, YamlValue] = source
+        self._cache_local_sources = False
+        self._local_source_cache: tuple[Source, ...] | None = None
+        self._use_parsed_source_cache = (
+            _is_parsed_source_cache_enabled()
+            and self._cache_parsed_sources_from_path
+            and isinstance(source, Path | list)
+        )
         self.custom_template_dir = config.custom_template_dir
         self.extra_template_data: defaultdict[str, Any] = config.extra_template_data or defaultdict(dict)
         self.validators = config.validators
@@ -1465,6 +1520,19 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     @property
     def iter_source(self) -> Iterator[Source]:
         """Iterate over all source files to be parsed."""
+        if self._cache_local_sources:
+            if (cached_sources := self._local_source_cache) is None:
+                cached_sources = tuple(self._iter_source_uncached())
+                self._local_source_cache = cached_sources
+            for source in cached_sources:
+                if source.raw_data is None:
+                    yield Source(path=source.path, text=source.text)
+                else:  # pragma: no cover
+                    yield source.model_copy(deep=True)
+            return
+        yield from self._iter_source_uncached()
+
+    def _iter_source_uncached(self) -> Iterator[Source]:
         match self.source:
             case str():
                 yield Source(path=Path(), text=self.source)
@@ -1474,12 +1542,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 if path.is_dir():
                     for p in sorted(path.rglob("*"), key=lambda p: p.name):
                         if p.is_file():
-                            yield Source.from_path(p, self.base_path, self.encoding)
+                            yield self._source_from_path(p)
                 else:
-                    yield Source.from_path(path, self.base_path, self.encoding)
+                    yield self._source_from_path(path)
             case list() as paths:  # pragma: no cover
                 for path in paths:
-                    yield Source.from_path(path, self.base_path, self.encoding)
+                    yield self._source_from_path(path)
             case _:
                 yield Source(
                     path=Path(self.source.path),
@@ -1487,6 +1555,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         self.source.geturl(), default_factory=self._get_text_from_url
                     ),
                 )
+
+    def _source_from_path(self, path: Path) -> Source:
+        if self._use_parsed_source_cache:
+            return Source.from_cached_path(path, self.base_path, self.encoding, keep_text=self.validation)
+        return Source.from_path(path, self.base_path, self.encoding)
 
     def _append_additional_imports(self, additional_imports: list[str] | None) -> None:
         if additional_imports is None:
@@ -1899,7 +1972,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 break
 
                     if not discriminator_values and mapping:
-                        _check_discriminator_mapping_paths(discriminator_model, mapping, discriminator_values)  # ty: ignore
+                        _check_discriminator_mapping_paths(  # ty: ignore
+                            discriminator_model,
+                            mapping,
+                            discriminator_values,
+                        )
 
                         if len(discriminator_values) == 0:
                             for base_class in discriminator_model.base_classes:
@@ -1933,18 +2010,18 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                         if literals_match:
                             has_one_literal = True
-                            if isinstance(discriminator_model, msgspec_model.Struct):  # pragma: no cover
-                                discriminator_model.add_base_class_kwarg("tag_field", f"'{field_name}'")
-                                discriminator_model.add_base_class_kwarg("tag", repr(expected_value))
+                            if _is_msgspec_struct(discriminator_model):  # pragma: no cover
+                                _add_msgspec_base_class_kwarg(discriminator_model, "tag_field", f"'{field_name}'")
+                                _add_msgspec_base_class_kwarg(discriminator_model, "tag", repr(expected_value))
                                 discriminator_field.extras["is_classvar"] = True
                             # Found the discriminator field, no need to keep looking
                             break
 
                         # For msgspec with const value but no literal (type: string + const case)
-                        if const_match and isinstance(discriminator_model, msgspec_model.Struct):  # pragma: no cover
+                        if const_match and _is_msgspec_struct(discriminator_model):  # pragma: no cover
                             has_one_literal = True
-                            discriminator_model.add_base_class_kwarg("tag_field", f"'{field_name}'")
-                            discriminator_model.add_base_class_kwarg("tag", repr(const_value))
+                            _add_msgspec_base_class_kwarg(discriminator_model, "tag_field", f"'{field_name}'")
+                            _add_msgspec_base_class_kwarg(discriminator_model, "tag", repr(const_value))
                             discriminator_field.extras["is_classvar"] = True
                             break
 
@@ -2157,9 +2234,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             canonical_to_shared_ref[canonical] = canonical.reference
             shared_models.append(canonical)
 
-        supports_inheritance = _is_pydantic_v2_base_model(self.data_model_type) or issubclass(
-            self.data_model_type,
-            dataclass_model.DataClass,
+        supports_inheritance = _is_pydantic_v2_base_model(self.data_model_type) or _is_dataclass_data_model(
+            self.data_model_type
         )
 
         module_models_sets: dict[tuple[str, ...], set[DataModel]] = {
@@ -2557,8 +2633,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             ):
                 continue
 
-            if isinstance(model, msgspec_model.Struct):
-                model.add_base_class_kwarg("kw_only", "True")
+            if _is_msgspec_struct(model):
+                _add_msgspec_base_class_kwarg(model, "kw_only", "True")
             elif self.target_python_version.has_kw_only_dataclass:
                 for field in model.fields:
                     if self.__is_new_required_field(field, inherited_names, field_has_assignment):
@@ -2580,7 +2656,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if not model.SUPPORTS_KW_ONLY:
             return None
         base_class_kw_only = None
-        if isinstance(model, msgspec_model.Struct):
+        if _is_msgspec_struct(model):
             base_class_kw_only = model.extra_template_data.get("base_class_kwargs", {}).get("kw_only")
         if not model.base_classes or model.dataclass_arguments.get("kw_only") or base_class_kw_only in {True, "True"}:
             return None
@@ -2607,9 +2683,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     @staticmethod
     def _get_field_assignment_checker(model: DataModel) -> Callable[[DataModelFieldBase], bool]:
-        if isinstance(model, msgspec_model.Struct):
-            return msgspec_model.has_field_assignment
-        return dataclass_model.has_field_assignment
+        if _is_msgspec_struct(model):
+            from datamodel_code_generator.model.msgspec import has_field_assignment  # noqa: PLC0415
+
+            return has_field_assignment
+        from datamodel_code_generator.model.dataclass import has_field_assignment  # noqa: PLC0415
+
+        return has_field_assignment
 
     def __is_new_required_field(  # noqa: PLR6301
         self,
@@ -3016,7 +3096,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         return export_imports
 
     @classmethod
-    def _collect_used_names_from_models(cls, models: list[DataModel]) -> set[str]:
+    def _collect_used_names_from_models(
+        cls,
+        models: list[DataModel],
+        model_imports: Mapping[DataModel, tuple[Import, ...]] | None = None,
+    ) -> set[str]:
         """Collect identifiers referenced by models before rendering."""
         names: set[str] = set()
 
@@ -3035,7 +3119,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             add(model.duplicate_class_name)
             for base in model.base_classes:
                 add(base.type_hint)
-            for import_ in model.imports:
+            imports = model_imports[model] if model_imports is not None else model.imports
+            for import_ in imports:
                 add(import_.alias or import_.import_.split(".")[-1])
             for field in model.fields:
                 if field.extras.get("is_classvar"):
@@ -3516,27 +3601,28 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         all_models = [model for ctx in contexts for model in ctx.models]
         self.__mark_set_item_models_hashable(all_models)
         self.__apply_generic_base_class(contexts)
+        model_imports = {model: model.imports for ctx in contexts for model in ctx.models}
 
         for ctx in contexts:
             for model in ctx.models:
-                ctx.imports.append(model.imports)
+                ctx.imports.append(model_imports[model])
 
         for unused_model in unused_models:
             module, models = model_to_module_models[unused_model]
             if unused_model in models:  # pragma: no branch
                 imports = module_to_import[module]
-                imports.remove(unused_model.imports)
+                imports.remove(model_imports.get(unused_model, unused_model.imports))
                 models.remove(unused_model)
 
         for ctx in contexts:
-            used_names = self._collect_used_names_from_models(ctx.models)
+            used_names = self._collect_used_names_from_models(ctx.models, model_imports)
             ctx.imports.remove_unused(used_names)
 
         for ctx in contexts:
             # If any model in this module needs typing_extensions.TypedDict (e.g. for PEP 728
             # closed/extra_items backport), remove typing.TypedDict to avoid duplicate imports.
             if (
-                any(IMPORT_TYPED_DICT_BACKPORT in model.imports for model in ctx.models)
+                any(IMPORT_TYPED_DICT_BACKPORT in model_imports[model] for model in ctx.models)
                 and IMPORT_TYPED_DICT_BACKPORT.import_ in ctx.imports.get(IMPORT_TYPED_DICT_BACKPORT.from_, set())
                 and IMPORT_TYPED_DICT.import_ in ctx.imports.get(IMPORT_TYPED_DICT.from_, set())
             ):
@@ -3654,6 +3740,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """
         self.generation_store._dispose(self.model_resolver.references.values())  # noqa: SLF001
         self.model_resolver.references.clear()
+        self._reset_local_source_cache()
+
+    def _reset_local_source_cache(self) -> None:
+        self._cache_local_sources = False
+        self._local_source_cache = None
 
     def parse(  # noqa: PLR0913, PLR0914, PLR0917
         self,

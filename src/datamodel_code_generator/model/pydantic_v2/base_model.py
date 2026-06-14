@@ -252,6 +252,8 @@ class DataModelField(_PydanticBaseDataModelField):
 
     def _has_discriminator_in_data_type(self) -> bool:
         """Check if any nested DataType has a discriminator."""
+        if not self.data_type.discriminator and not self.data_type.data_types and self.data_type.dict_key is None:
+            return False
         return any(dt.discriminator for dt in self.data_type.all_data_types)
 
     @property

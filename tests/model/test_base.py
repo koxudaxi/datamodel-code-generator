@@ -12,6 +12,7 @@ from datamodel_code_generator.model.base import (
     DataModel,
     DataModelFieldBase,
     TemplateBase,
+    _RenderedDataModelField,
     comment_safe,
     escape_docstring,
     format_docstring,
@@ -21,6 +22,7 @@ from datamodel_code_generator.model.base import (
 )
 from datamodel_code_generator.model.pydantic_v2 import BaseModel
 from datamodel_code_generator.model.pydantic_v2 import DataModelField as PydanticV2DataModelField
+from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_FIELD
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
 
@@ -155,6 +157,79 @@ def test_pydantic_v2_extra_type_hint_keeps_non_dict_hint() -> None:
     )
 
     assert field.pydantic_extra_type_hint == "str"
+
+
+def test_rendered_pydantic_v2_field_reuses_field_string(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test built-in field proxy computes field and annotated values from one Field() string."""
+    field = PydanticV2DataModelField(
+        name="name",
+        data_type=DataType(type="str"),
+        required=True,
+        extras={"title": "Name"},
+        use_annotated=True,
+    )
+    expected_field = field.field
+    expected_annotated = field.annotated
+    calls = 0
+    original_str = PydanticV2DataModelField.__str__
+
+    def count_str(self: PydanticV2DataModelField) -> str:
+        nonlocal calls
+        calls += 1
+        return original_str(self)
+
+    monkeypatch.setattr(PydanticV2DataModelField, "__str__", count_str)
+    rendered_field = _RenderedDataModelField(field, "")
+
+    assert rendered_field.annotated == expected_annotated
+    assert rendered_field.field == expected_field
+    assert calls == 1
+
+
+def test_rendered_pydantic_v2_class_var_field_values_are_none() -> None:
+    """Test class variable fields do not render Field or Annotated values."""
+    field = PydanticV2DataModelField(
+        name="name",
+        data_type=DataType(type="str"),
+        required=True,
+        extras={"x-is-classvar": True},
+        use_annotated=True,
+    )
+    rendered_field = _RenderedDataModelField(field, "")
+
+    assert field.field is None
+    assert rendered_field.field is None
+    assert rendered_field.annotated is None
+
+
+def test_pydantic_v2_leaf_field_imports_skip_discriminator_scan(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test leaf fields do not walk all nested data types for impossible discriminators."""
+    field = PydanticV2DataModelField(
+        name="name",
+        data_type=DataType(type="str"),
+        required=True,
+    )
+
+    def fail_all_data_types(_self: DataType) -> tuple[DataType, ...]:
+        message = "unexpected discriminator scan"
+        raise AssertionError(message)
+
+    monkeypatch.setattr(DataType, "all_data_types", property(fail_all_data_types))
+
+    assert IMPORT_FIELD not in field.imports
+    with pytest.raises(AssertionError, match="unexpected discriminator scan"):
+        tuple(DataType(type="str").all_data_types)
+
+
+def test_pydantic_v2_nested_discriminator_still_imports_field() -> None:
+    """Test discriminator imports still work for nested data types."""
+    field = PydanticV2DataModelField(
+        name="item",
+        data_type=DataType(data_types=[DataType(type="Pet", discriminator="pet_type")]),
+        required=True,
+    )
+
+    assert IMPORT_FIELD in field.imports
 
 
 def test_data_model_exception() -> None:
