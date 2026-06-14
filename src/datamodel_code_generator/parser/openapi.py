@@ -957,7 +957,7 @@ class OpenAPIParser(JsonSchemaParser):
                 if self.validation:
                     warn_deprecated("cli.validation", stacklevel=2)
 
-                    if source.raw_data is not None:
+                    if source.raw_data is not None and not source.text:
                         warn(
                             "Warning: Validation was skipped for dict input. "
                             "The --validation option only works with file or text input.\n",

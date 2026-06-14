@@ -275,6 +275,7 @@ class GenerateConfig(TypedDict, closed=True):
     schema_version: NotRequired[str | None]
     schema_version_mode: NotRequired[VersionMode | None]
     external_ref_mapping: NotRequired[dict[str, str] | None]
+    enable_parsed_source_cache: NotRequired[bool]
 
 
 class ValidatorDefinition(TypedDict):

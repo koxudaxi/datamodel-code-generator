@@ -11,9 +11,12 @@ import contextlib
 import io
 import re
 import warnings
+from collections import OrderedDict
 from decimal import Decimal, InvalidOperation
+from hashlib import sha256
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NamedTuple, cast
+from threading import RLock
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, cast
 from xml.etree import ElementTree as ET  # noqa: S405
 
 from typing_extensions import Unpack
@@ -82,6 +85,25 @@ JsonSchema = dict[str, Any]
 QNameKey = tuple[str | None, str]
 DefinitionKey = tuple[str, str | None, str]
 PYTHON_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_XML_TEXT_CACHE_MAX_SIZE = 128
+_XMLTextCacheKey = tuple[Path, str, str]
+_XMLTextSeenKey = tuple[Path, str]
+_xml_text_cache: OrderedDict[_XMLTextCacheKey, str] = OrderedDict()
+_xml_text_seen_keys: OrderedDict[_XMLTextSeenKey, None] = OrderedDict()
+_xml_text_cache_lock = RLock()
+_XML_SCHEMA_DATA_CACHE_MAX_SIZE = 128
+_XMLSchemaDataCacheKey = tuple[Path, Path, str, str, XMLSchemaVersion | None, VersionMode | None, bool]
+_XMLSchemaDataSeenKey = tuple[Path, Path, str, XMLSchemaVersion | None, VersionMode | None, bool]
+
+
+class _XMLSchemaDataCacheEntry(NamedTuple):
+    data: dict[str, YamlValue]
+    dependencies: tuple[tuple[Path, str], ...]
+
+
+_xml_schema_data_cache: OrderedDict[_XMLSchemaDataCacheKey, _XMLSchemaDataCacheEntry] = OrderedDict()
+_xml_schema_data_seen_keys: OrderedDict[_XMLSchemaDataSeenKey, None] = OrderedDict()
+_xml_schema_data_cache_lock = RLock()
 
 
 STRING_SCHEMA: JsonSchema = {"type": "string"}
@@ -238,8 +260,38 @@ def _has_xmlschema_versioning_attribute(element: ET.Element) -> bool:
     return any(_namespace(attribute) == XML_SCHEMA_VERSIONING_NAMESPACE for attribute in element.attrib)
 
 
-def _read_xml_text(path: Path, encoding: str) -> str:
-    data = path.read_bytes()
+def _read_xml_text(path: Path, encoding: str, *, cache_on_first_load: bool = False) -> str:
+    resolved_path = path.resolve()
+    seen_key = (resolved_path, encoding)
+    with _xml_text_cache_lock:
+        use_cache = cache_on_first_load or seen_key in _xml_text_seen_keys
+        if not cache_on_first_load:
+            _xml_text_seen_keys[seen_key] = None
+            _xml_text_seen_keys.move_to_end(seen_key)
+            while len(_xml_text_seen_keys) > _XML_TEXT_CACHE_MAX_SIZE:
+                _xml_text_seen_keys.popitem(last=False)
+
+    data = resolved_path.read_bytes()
+    if not use_cache:
+        return _decode_xml_bytes(data, encoding)
+
+    cache_key = (resolved_path, _digest_bytes(data), encoding)
+
+    with _xml_text_cache_lock:
+        if cache_key in _xml_text_cache:
+            _xml_text_cache.move_to_end(cache_key)
+            return _xml_text_cache[cache_key]
+
+    text = _decode_xml_bytes(data, encoding)
+    with _xml_text_cache_lock:
+        _xml_text_cache[cache_key] = text
+        _xml_text_cache.move_to_end(cache_key)
+        while len(_xml_text_cache) > _XML_TEXT_CACHE_MAX_SIZE:
+            _xml_text_cache.popitem(last=False)
+    return text
+
+
+def _decode_xml_bytes(data: bytes, encoding: str) -> str:
     for bom, xml_encoding in (
         (codecs.BOM_UTF8, "utf-8-sig"),
         (codecs.BOM_UTF32_LE, "utf-32"),
@@ -250,6 +302,104 @@ def _read_xml_text(path: Path, encoding: str) -> str:
         if data.startswith(bom):
             return data.decode(xml_encoding)
     return data.decode(encoding)
+
+
+def _clear_xml_text_cache() -> None:
+    with _xml_text_cache_lock:
+        _xml_text_cache.clear()
+        _xml_text_seen_keys.clear()
+
+
+def _digest_bytes(data: bytes) -> str:
+    return sha256(data).hexdigest()
+
+
+def _digest_path(path: Path) -> str:
+    return _digest_bytes(path.read_bytes())
+
+
+def _xml_schema_cache_dependencies(paths: set[Path]) -> tuple[tuple[Path, str], ...]:
+    return tuple((path, _digest_path(path)) for path in sorted(paths))
+
+
+def _xml_schema_cache_entry_is_fresh(entry: _XMLSchemaDataCacheEntry) -> bool:
+    return all(path.is_file() and _digest_path(path) == digest for path, digest in entry.dependencies)
+
+
+def _load_xml_schema_data_from_path(  # noqa: PLR0913
+    path: Path,
+    base_path: Path,
+    encoding: str,
+    *,
+    xmlschema_version: XMLSchemaVersion | None,
+    schema_version_mode: VersionMode | None,
+    use_xmlschema_datetime_default: bool,
+) -> dict[str, YamlValue]:
+    resolved_path = path.resolve()
+    resolved_base_path = base_path.resolve()
+    seen_key = (
+        resolved_path,
+        resolved_base_path,
+        encoding,
+        xmlschema_version,
+        schema_version_mode,
+        use_xmlschema_datetime_default,
+    )
+    with _xml_schema_data_cache_lock:
+        use_cache = seen_key in _xml_schema_data_seen_keys
+        _xml_schema_data_seen_keys[seen_key] = None
+        _xml_schema_data_seen_keys.move_to_end(seen_key)
+        while len(_xml_schema_data_seen_keys) > _XML_SCHEMA_DATA_CACHE_MAX_SIZE:
+            _xml_schema_data_seen_keys.popitem(last=False)
+
+    if not use_cache:
+        converter = _XMLSchemaConverter(
+            base_path=base_path,
+            encoding=encoding,
+            xmlschema_version=xmlschema_version,
+            schema_version_mode=schema_version_mode,
+            use_xmlschema_datetime_default=use_xmlschema_datetime_default,
+        )
+        return converter.convert(Source(path=path.relative_to(base_path), text=_read_xml_text(path, encoding)))
+
+    cache_key = (
+        resolved_path,
+        resolved_base_path,
+        _digest_path(resolved_path),
+        encoding,
+        xmlschema_version,
+        schema_version_mode,
+        use_xmlschema_datetime_default,
+    )
+    with _xml_schema_data_cache_lock:
+        if (entry := _xml_schema_data_cache.get(cache_key)) is not None and _xml_schema_cache_entry_is_fresh(entry):
+            _xml_schema_data_cache.move_to_end(cache_key)
+            return _copy_schema(entry.data)
+
+    converter = _XMLSchemaConverter(
+        base_path=base_path,
+        encoding=encoding,
+        xmlschema_version=xmlschema_version,
+        schema_version_mode=schema_version_mode,
+        use_xmlschema_datetime_default=use_xmlschema_datetime_default,
+    )
+    data = converter.convert(Source(path=path.relative_to(base_path), text=_read_xml_text(path, encoding)))
+    dependencies = _xml_schema_cache_dependencies(converter.loaded_source_paths)
+    with _xml_schema_data_cache_lock:
+        _xml_schema_data_cache[cache_key] = _XMLSchemaDataCacheEntry(
+            data=_copy_schema(data),
+            dependencies=dependencies,
+        )
+        _xml_schema_data_cache.move_to_end(cache_key)
+        while len(_xml_schema_data_cache) > _XML_SCHEMA_DATA_CACHE_MAX_SIZE:
+            _xml_schema_data_cache.popitem(last=False)
+    return data
+
+
+def _clear_xml_schema_data_cache() -> None:
+    with _xml_schema_data_cache_lock:
+        _xml_schema_data_cache.clear()
+        _xml_schema_data_seen_keys.clear()
 
 
 def detect_xmlschema_version(source: ET.Element | str) -> XMLSchemaVersion:
@@ -323,9 +473,16 @@ class _XMLSchemaConverter:
         self._built_definitions: dict[DefinitionKey, JsonSchema] = {}
         self._definitions: dict[str, JsonSchema] = {}
         self._definition_names: dict[DefinitionKey, str] = {}
+        self.loaded_source_paths: set[Path] = set()
 
     def convert(self, source: Source) -> dict[str, YamlValue]:
+        if source.raw_data is not None:
+            if not isinstance(source.raw_data, dict):  # pragma: no cover
+                msg = f"Expected dict, got {type(source.raw_data).__name__}"
+                raise TypeError(msg)
+            return source.raw_data
         source_path = self.base_path / source.path
+        self.loaded_source_paths.add(source_path.resolve())
         root = self._parse_schema(source.text, source_path)
         version = self._detect_effective_xmlschema_version(root, source_path)
         self._resolved_xmlschema_version = version
@@ -408,6 +565,7 @@ class _XMLSchemaConverter:
             location = self._resolve_schema_location(source_dir, schema_location)
             if location in seen or not location.is_file():
                 continue
+            self.loaded_source_paths.add(location)
             seen.add(location)
             included_root = self._parse_schema(_read_xml_text(location, self.encoding), location)
             included_version = self._detect_effective_xmlschema_version(included_root, location, seen)
@@ -518,6 +676,7 @@ class _XMLSchemaConverter:
             location = self._resolve_schema_location(source_dir, schema_location)
             if not location.is_file():
                 continue
+            self.loaded_source_paths.add(location)
             included_root = self._parse_schema(_read_xml_text(location, self.encoding), location)
             self._prepare_schema_root(
                 included_root, self._resolved_xmlschema_version or self._resolve_xmlschema_version(included_root)
@@ -1405,6 +1564,7 @@ class XMLSchemaParser(JsonSchemaParser):
     """Parse XML Schema documents by converting them to JSON Schema first."""
 
     _config_class_name = "XMLSchemaParserConfig"
+    _cache_parsed_sources_from_path: ClassVar[bool] = True
 
     def __init__(
         self,
@@ -1428,6 +1588,24 @@ class XMLSchemaParser(JsonSchemaParser):
         """Parse XML Schema and add imports for non-finite float literals."""
         return apply_math_imports_to_parse_result(super().parse(*args, **kwargs))
 
+    def _source_from_xml_path(self, path: Path) -> Source:
+        relative_path = path.relative_to(self.base_path)
+        if not self.enable_parsed_source_cache:
+            return Source(path=relative_path, text=_read_xml_text(path, self.encoding))
+
+        config = cast("XMLSchemaParserConfig", self.config)
+        return Source(
+            path=relative_path,
+            raw_data=_load_xml_schema_data_from_path(
+                path,
+                self.base_path,
+                self.encoding,
+                xmlschema_version=config.xmlschema_version,
+                schema_version_mode=config.schema_version_mode,
+                use_xmlschema_datetime_default=self.use_xmlschema_datetime_default,
+            ),
+        )
+
     @property
     def iter_source(self) -> Iterator[Source]:
         """Iterate over XML Schema sources with XML encoding detection for local files."""
@@ -1436,15 +1614,12 @@ class XMLSchemaParser(JsonSchemaParser):
                 if path.is_dir():  # pragma: no cover
                     for file_path in sorted(path.rglob("*"), key=lambda item: item.name):
                         if file_path.is_file():
-                            yield Source(
-                                path=file_path.relative_to(self.base_path),
-                                text=_read_xml_text(file_path, self.encoding),
-                            )
+                            yield self._source_from_xml_path(file_path)
                 else:
-                    yield Source(path=path.relative_to(self.base_path), text=_read_xml_text(path, self.encoding))
+                    yield self._source_from_xml_path(path)
             case list() as paths:  # pragma: no cover
                 for path in paths:
-                    yield Source(path=path.relative_to(self.base_path), text=_read_xml_text(path, self.encoding))
+                    yield self._source_from_xml_path(path)
             case _:
                 yield from super().iter_source
 

@@ -49,6 +49,7 @@ from datamodel_code_generator import (
     ReuseScope,
     YamlValue,
     _internal_utils,
+    _load_parser_source_data_from_path,
 )
 from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.format import (
@@ -949,11 +950,25 @@ class Source(BaseModel):
 
     path: Path
     text: str = ""
-    raw_data: dict[str, YamlValue] | None = None
+    raw_data: YamlValue | None = None
 
     @classmethod
-    def from_path(cls, path: Path, base_path: Path, encoding: str) -> Source:
+    def from_path(
+        cls,
+        path: Path,
+        base_path: Path,
+        encoding: str,
+        *,
+        enable_parsed_source_cache: bool = False,
+        keep_text: bool = False,
+    ) -> Source:
         """Create a Source from a file path relative to base_path."""
+        if enable_parsed_source_cache:
+            return cls(
+                path=path.relative_to(base_path),
+                text=path.read_text(encoding=encoding) if keep_text else "",
+                raw_data=_load_parser_source_data_from_path(path, encoding, cache_on_first_load=False),
+            )
         return cls(
             path=path.relative_to(base_path),
             text=path.read_text(encoding=encoding),
@@ -1124,6 +1139,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     _config_class_name: ClassVar[str] = "ParserConfig"
     _cache_local_sources_during_parse: ClassVar[bool] = False
+    _cache_parsed_sources_from_path: ClassVar[bool] = False
 
     @classmethod
     def _get_config_class(cls) -> type[ParserConfig]:
@@ -1300,6 +1316,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.source: str | Path | list[Path] | ParseResult | dict[str, YamlValue] = source
         self._cache_local_sources = False
         self._local_source_cache: tuple[Source, ...] | None = None
+        self.enable_parsed_source_cache: bool = (
+            config.enable_parsed_source_cache and self._cache_parsed_sources_from_path
+        )
         self.custom_template_dir = config.custom_template_dir
         self.extra_template_data: defaultdict[str, Any] = config.extra_template_data or defaultdict(dict)
         self.validators = config.validators
@@ -1519,12 +1538,30 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 if path.is_dir():
                     for p in sorted(path.rglob("*"), key=lambda p: p.name):
                         if p.is_file():
-                            yield Source.from_path(p, self.base_path, self.encoding)
+                            yield Source.from_path(
+                                p,
+                                self.base_path,
+                                self.encoding,
+                                enable_parsed_source_cache=self.enable_parsed_source_cache,
+                                keep_text=self.validation,
+                            )
                 else:
-                    yield Source.from_path(path, self.base_path, self.encoding)
+                    yield Source.from_path(
+                        path,
+                        self.base_path,
+                        self.encoding,
+                        enable_parsed_source_cache=self.enable_parsed_source_cache,
+                        keep_text=self.validation,
+                    )
             case list() as paths:  # pragma: no cover
                 for path in paths:
-                    yield Source.from_path(path, self.base_path, self.encoding)
+                    yield Source.from_path(
+                        path,
+                        self.base_path,
+                        self.encoding,
+                        enable_parsed_source_cache=self.enable_parsed_source_cache,
+                        keep_text=self.validation,
+                    )
             case _:
                 yield Source(
                     path=Path(self.source.path),

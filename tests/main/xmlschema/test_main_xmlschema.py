@@ -4,8 +4,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from datamodel_code_generator import InputFileType
 from datamodel_code_generator.__main__ import Exit
-from tests.main.conftest import XML_SCHEMA_DATA_PATH, run_main_and_assert
+from datamodel_code_generator.parser.xmlschema import (
+    _clear_xml_schema_data_cache,
+    _clear_xml_text_cache,
+    _read_xml_text,
+)
+from tests.main.conftest import (
+    XML_SCHEMA_DATA_PATH,
+    assert_path_cache_invalidates_after_write,
+    assert_path_cache_reuses_value,
+    run_generate_file_and_assert,
+    run_main_and_assert,
+)
 from tests.main.xmlschema.conftest import assert_file_content
 
 if TYPE_CHECKING:
@@ -22,6 +34,46 @@ def test_main_xmlschema_purchase_order(output_file: Path) -> None:
         input_file_type="xmlschema",
         assert_func=assert_file_content,
         expected_file="purchase_order.py",
+    )
+
+
+def test_main_xmlschema_with_parsed_source_cache(output_file: Path) -> None:
+    """Generate XML Schema models with process-local parsed source cache enabled."""
+    _clear_xml_schema_data_cache()
+    run_generate_file_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "purchase_order.xsd",
+        output_path=output_file,
+        input_file_type=InputFileType.XMLSchema,
+        assert_func=assert_file_content,
+        expected_file="purchase_order.py",
+        enable_parsed_source_cache=True,
+    )
+
+
+def test_read_xml_text_caches_raw_source(tmp_path: Path) -> None:
+    """Reuse raw XML source text by path and content hash."""
+    schema_path = tmp_path / "schema.xsd"
+    schema_path.write_text(
+        (XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    _clear_xml_text_cache()
+
+    assert_path_cache_reuses_value(_read_xml_text, schema_path, warmups=1)
+
+
+def test_read_xml_text_invalidates_updated_raw_source(tmp_path: Path) -> None:
+    """Reload raw XML source text when the local file changes."""
+    schema_path = tmp_path / "schema.xsd"
+    schema_path.write_text(
+        (XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    _clear_xml_text_cache()
+
+    assert_path_cache_invalidates_after_write(
+        _read_xml_text,
+        schema_path,
+        (XML_SCHEMA_DATA_PATH / "inline_root.xsd").read_text(encoding="utf-8"),
+        (XML_SCHEMA_DATA_PATH / "inline_root.xsd").read_text(encoding="utf-8"),
     )
 
 

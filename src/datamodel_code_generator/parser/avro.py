@@ -7,7 +7,7 @@ JSON Schema parser while preserving Avro named type and logical type semantics.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, NamedTuple, cast
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, cast
 
 from typing_extensions import Unpack
 
@@ -500,6 +500,7 @@ class AvroParser(JsonSchemaParser):
     """
 
     _config_class_name = "AvroParserConfig"
+    _cache_parsed_sources_from_path: ClassVar[bool] = False
 
     def __init__(
         self,

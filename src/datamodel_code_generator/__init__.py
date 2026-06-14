@@ -9,11 +9,13 @@ from __future__ import annotations
 import contextlib
 import os
 import sys
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from collections.abc import Callable, Iterator, Mapping
 from datetime import datetime, timezone
 from functools import lru_cache as _lru_cache
+from hashlib import sha256
 from pathlib import Path
+from threading import RLock
 from typing import (
     IO,
     TYPE_CHECKING,
@@ -94,6 +96,12 @@ Returned by generate() when output=None and multiple modules are generated.
 
 DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 _IGNORED_TEXT_PREFIX_CHARS: frozenset[str] = frozenset({"\ufeff", " ", "\t", "\r", "\n"})
+_PARSER_SOURCE_DATA_CACHE_MAX_SIZE = 128
+_ParserSourceDataCacheKey: TypeAlias = tuple[Path, str, str, str]
+_ParserSourceDataSeenKey: TypeAlias = tuple[Path, str]
+_parser_source_data_cache: OrderedDict[_ParserSourceDataCacheKey, YamlValue] = OrderedDict()
+_parser_source_data_seen_keys: OrderedDict[_ParserSourceDataSeenKey, None] = OrderedDict()
+_parser_source_data_cache_lock = RLock()
 
 
 def load_yaml(stream: str | TextIO) -> YamlValue:
@@ -202,16 +210,99 @@ def load_data_from_path(path: Path, encoding: str) -> dict[str, YamlValue]:
 
     For file input: tries json.load() for .json files (more efficient than
     read_text + json.loads), falls back to YAML if JSON parsing fails
-    (e.g., trailing commas) or if content is not a dict. Uses YAML for all other extensions.
+    (e.g., trailing commas), and requires the parsed content to be a dict.
+    Uses YAML for all other extensions.
     """
+    result = _load_parser_source_data_from_path(path, encoding, cache_on_first_load=False)
+    if not isinstance(result, dict):
+        msg = f"Expected dict, got {type(result).__name__}"
+        raise TypeError(msg)
+    return result
+
+
+def _load_parser_source_data_from_path(
+    path: Path,
+    encoding: str,
+    *,
+    cache_on_first_load: bool = False,
+) -> YamlValue:
+    resolved_path = path.resolve()
+    seen_key = (resolved_path, encoding)
+    with _parser_source_data_cache_lock:
+        use_cache = cache_on_first_load or seen_key in _parser_source_data_seen_keys
+        if not cache_on_first_load:
+            _parser_source_data_seen_keys[seen_key] = None
+            _parser_source_data_seen_keys.move_to_end(seen_key)
+            while len(_parser_source_data_seen_keys) > _PARSER_SOURCE_DATA_CACHE_MAX_SIZE:
+                _parser_source_data_seen_keys.popitem(last=False)
+
+    data = resolved_path.read_bytes()
+    if not use_cache:
+        return _load_parser_source_data_from_bytes(resolved_path, data, encoding)
+
+    digest = sha256(data).hexdigest()
+    return _load_parser_source_data_from_bytes_with_cache(resolved_path, data, digest, encoding)
+
+
+def _load_cached_parser_source_data(cache_key: _ParserSourceDataCacheKey) -> YamlValue | None:
+    with _parser_source_data_cache_lock:
+        if cache_key in _parser_source_data_cache:
+            _parser_source_data_cache.move_to_end(cache_key)
+            return _parser_source_data_cache[cache_key]
+    return None
+
+
+def _store_parser_source_data(cache_key: _ParserSourceDataCacheKey, parsed_data: YamlValue) -> YamlValue:
+    with _parser_source_data_cache_lock:
+        _parser_source_data_cache[cache_key] = parsed_data
+        _parser_source_data_cache.move_to_end(cache_key)
+        while len(_parser_source_data_cache) > _PARSER_SOURCE_DATA_CACHE_MAX_SIZE:
+            _parser_source_data_cache.popitem(last=False)
+    return parsed_data
+
+
+def _load_parser_source_data_from_bytes_with_cache(
+    path: Path,
+    data: bytes,
+    digest: str,
+    encoding: str,
+) -> YamlValue:
     import json  # noqa: PLC0415
 
+    text = data.decode(encoding)
     if path.suffix.lower() == ".json":
-        with contextlib.suppress(json.JSONDecodeError), path.open(encoding=encoding) as f:
-            result = json.load(f)
-            if isinstance(result, dict):
-                return result
-    return load_yaml_dict_from_path(path, encoding)
+        cache_key = (path, digest, encoding, "json")
+        if (cached_data := _load_cached_parser_source_data(cache_key)) is not None:
+            return cached_data
+
+        with contextlib.suppress(json.JSONDecodeError):
+            return _store_parser_source_data(cache_key, json.loads(text))
+
+    from datamodel_code_generator.util import get_yaml_backend  # noqa: PLC0415
+
+    parser_backend = f"yaml:{get_yaml_backend()}"
+    cache_key = (path, digest, encoding, parser_backend)
+    if (cached_data := _load_cached_parser_source_data(cache_key)) is not None:
+        return cached_data
+
+    return _store_parser_source_data(cache_key, load_yaml(text))
+
+
+def _load_parser_source_data_from_bytes(path: Path, data: bytes, encoding: str) -> YamlValue:
+    import json  # noqa: PLC0415
+
+    text = data.decode(encoding)
+    if path.suffix.lower() == ".json":
+        with contextlib.suppress(json.JSONDecodeError):
+            return json.loads(text)
+
+    return load_yaml(text)
+
+
+def _clear_parser_source_data_cache() -> None:
+    with _parser_source_data_cache_lock:
+        _parser_source_data_cache.clear()
+        _parser_source_data_seen_keys.clear()
 
 
 @_lru_cache(maxsize=256)

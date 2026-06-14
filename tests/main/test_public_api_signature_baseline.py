@@ -337,6 +337,7 @@ def _baseline_generate(
     schema_version: str | None = None,
     schema_version_mode: VersionMode | None = None,
     external_ref_mapping: dict[str, str] | None = None,
+    enable_parsed_source_cache: bool = False,
 ) -> str | object | None:
     raise NotImplementedError
 
@@ -474,6 +475,7 @@ class _BaselineParser:
         field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
         target_pydantic_version: TargetPydanticVersion | None = None,
         external_ref_mapping: dict[str, str] | None = None,
+        enable_parsed_source_cache: bool = False,
     ) -> None:
         raise NotImplementedError
 

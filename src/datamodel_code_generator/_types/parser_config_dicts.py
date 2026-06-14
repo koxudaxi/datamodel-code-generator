@@ -175,6 +175,7 @@ class ParserConfigDict(TypedDict):
     target_pydantic_version: NotRequired[TargetPydanticVersion | None]
     default_value_overrides: NotRequired[Mapping[str, Any] | None]
     external_ref_mapping: NotRequired[dict[str, str] | None]
+    enable_parsed_source_cache: NotRequired[bool]
 
 
 class GraphQLParserConfigDict(ParserConfigDict, closed=True):

@@ -15,7 +15,7 @@ from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import contextmanager
 from functools import cache
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import black
 import pytest
@@ -576,6 +576,74 @@ def assert_input_file_type(result: object, expected: InputFileType) -> None:
     __tracebackhide__ = True
     if result != expected:  # pragma: no cover
         pytest.fail(f"Expected input file type {expected!r}, got {result!r}")
+
+
+def _value_at_path(value: object, path: Sequence[str | int]) -> object:
+    __tracebackhide__ = True
+    current = value
+    for key in path:
+        match current, key:
+            case Mapping(), _:
+                current = cast("Mapping[object, object]", current)[key]
+            case Sequence(), int() if not isinstance(current, str | bytes | bytearray):
+                current = cast("Sequence[object]", current)[key]
+            case _:
+                pytest.fail(f"Expected cached value to contain path {path!r}, got {value!r}")
+    return current
+
+
+def assert_path_cache_reuses_value(
+    loader: Callable[[Path, str], object],
+    path: Path,
+    *,
+    encoding: str = "utf-8",
+    warmups: int = 0,
+) -> None:
+    """Assert a path-based cache reuses the parsed or decoded value."""
+    __tracebackhide__ = True
+    for _ in range(warmups):
+        loader(path, encoding)
+
+    first = loader(path, encoding)
+    second = loader(path, encoding)
+
+    if first is second:
+        return
+
+    pytest.fail(f"Expected cached value for {path} to be reused")
+
+
+def assert_path_cache_invalidates_after_write(
+    loader: Callable[[Path, str], object],
+    path: Path,
+    new_text: str,
+    expected_value: object,
+    *,
+    encoding: str = "utf-8",
+    expected_value_path: Sequence[str | int] = (),
+    warmups: int = 0,
+) -> None:
+    """Assert a path-based cache reloads after file content changes."""
+    __tracebackhide__ = True
+    for _ in range(warmups):
+        loader(path, encoding)
+
+    first = loader(path, encoding)
+    path.write_text(new_text, encoding=encoding)
+    second = loader(path, encoding)
+
+    if first is second:
+        pytest.fail(f"Expected cached value for {path} to be invalidated after write")
+
+    actual_value = _value_at_path(second, expected_value_path)
+    if actual_value != expected_value:
+        pytest.fail(f"Expected cached value {expected_value!r}, got {actual_value!r}")
+
+    third = loader(path, encoding)
+    if second is third:
+        return
+
+    pytest.fail(f"Expected updated cached value for {path} to be reused")
 
 
 def assert_watch_called(
