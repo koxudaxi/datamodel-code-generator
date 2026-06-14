@@ -115,6 +115,26 @@ def test_format_star_import_keeps_constants_without_loading_builtin_formatter() 
     assert result.stdout == "88\nFalse\n"
 
 
+def test_package_import_does_not_load_format_module() -> None:
+    """Test package root import keeps formatter exports lazy."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; "
+                "import datamodel_code_generator; "
+                "print('datamodel_code_generator.format' in sys.modules)"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.stdout == "False\n"
+
+
 def test_apply_builtin_formatter_keeps_concrete_public_python_version_type() -> None:
     """Test the public formatter wrapper keeps the concrete PythonVersion annotation."""
     assert format_module.apply_builtin_formatter.__annotations__["python_version"] == "PythonVersion | None"
