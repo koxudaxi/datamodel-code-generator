@@ -94,12 +94,11 @@ def _validate_recipe_items(items: Any) -> list[dict[str, int | str]]:
 
 
 def _load_recipe_items(path: Path) -> list[dict[str, int | str]]:
-    match json.loads(path.read_text(encoding="utf-8")):
-        case {"version": int(version), "items": items} if version == RECIPE_VERSION:
-            return _validate_recipe_items(items)
-        case recipe:
-            msg = f"unsupported shard recipe: {recipe!r}"
-            raise SystemExit(msg)
+    recipe = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(recipe, dict) or recipe.get("version") != RECIPE_VERSION or "items" not in recipe:
+        msg = f"unsupported shard recipe: {recipe!r}"
+        raise SystemExit(msg)
+    return _validate_recipe_items(recipe["items"])
 
 
 def _write_recipe(path: Path, items: list[dict[str, int | str]]) -> None:
