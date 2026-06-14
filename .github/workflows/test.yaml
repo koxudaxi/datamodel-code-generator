@@ -36,15 +36,23 @@ jobs:
             os: ubuntu-24.04
           - py: "3.10"
             os: ubuntu-24.04
-          - py: "3.13"
-            os: windows-latest
-          - py: "3.12"
-            os: windows-latest
-          - py: "3.11"
-            os: windows-latest
-          - py: "3.10"
-            os: windows-latest
         include:
+          - tox_env: py312-blacklatest-parallel
+            name: py312-black-latest
+          - tox_env: py312-black24-parallel
+            name: py312-black24
+          - tox_env: py312-black23-parallel
+            name: py312-black23
+          - tox_env: py312-black22-parallel
+            name: py312-black22
+          - tox_env: py312-isort8-parallel
+            name: py312-isort8
+          - tox_env: py312-isort7-parallel
+            name: py312-isort7
+          - tox_env: py312-isort6-parallel
+            name: py312-isort6
+          - tox_env: py312-isort5-parallel
+            name: py312-isort5
           - tox_env: pydantic20
             name: pydantic20
           - tox_env: pydantic25
@@ -115,81 +123,33 @@ jobs:
     name: >-
       ${{ matrix.target.name }} on
       ${{ matrix.target.os == 'windows-latest' && 'Windows' || (matrix.target.os == 'macos-latest' && 'macOS' || 'Ubuntu') }}
-      shard ${{ matrix.shard }}/4
+      shard ${{ matrix.shard }}/2
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2]
         target:
-          - tox_env: py313
+          - tox_env: py313-parallel
             name: "3.13"
             os: ubuntu-24.04
             coverage: true
-          - tox_env: py312
+          - tox_env: py312-parallel
             name: "3.12"
             os: ubuntu-24.04
             coverage: true
-          - tox_env: py311
+          - tox_env: py311-parallel
             name: "3.11"
             os: ubuntu-24.04
             coverage: true
-          - tox_env: py310
+          - tox_env: py310-parallel
             name: "3.10"
-            os: ubuntu-24.04
-            coverage: true
-          - tox_env: py313-nocov
-            name: "3.13"
-            os: windows-latest
-            coverage: false
-          - tox_env: py312-nocov
-            name: "3.12"
-            os: windows-latest
-            coverage: false
-          - tox_env: py311-nocov
-            name: "3.11"
-            os: windows-latest
-            coverage: false
-          - tox_env: py310-nocov
-            name: "3.10"
-            os: windows-latest
-            coverage: false
-          - tox_env: py312-blacklatest
-            name: py312-black-latest
-            os: ubuntu-24.04
-            coverage: true
-          - tox_env: py312-black24
-            name: py312-black24
-            os: ubuntu-24.04
-            coverage: true
-          - tox_env: py312-black23
-            name: py312-black23
-            os: ubuntu-24.04
-            coverage: true
-          - tox_env: py312-black22
-            name: py312-black22
-            os: ubuntu-24.04
-            coverage: true
-          - tox_env: py312-isort8
-            name: py312-isort8
-            os: ubuntu-24.04
-            coverage: true
-          - tox_env: py312-isort7
-            name: py312-isort7
-            os: ubuntu-24.04
-            coverage: true
-          - tox_env: py312-isort6
-            name: py312-isort6
-            os: ubuntu-24.04
-            coverage: true
-          - tox_env: py312-isort5
-            name: py312-isort5
             os: ubuntu-24.04
             coverage: true
     runs-on: ${{ matrix.target.os }}
     env:
       OS: ${{ matrix.target.os }}
       SHARD_INDEX: ${{ matrix.shard }}
-      SHARD_TOTAL: 4
+      SHARD_TOTAL: 2
       TOX_ENV: ${{ matrix.target.tox_env }}
     steps:
     - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -218,7 +178,7 @@ jobs:
       run: |
         test_paths=$(tr '\n' ' ' < .tox/ci-shard-tests.txt)
         tox run --skip-uv-sync --skip-pkg-install -e "$TOX_ENV" -- \
-          -n0 \
+          -n auto \
           --color=yes \
           -m "not perf" \
           --cov datamodel_code_generator \
@@ -227,18 +187,6 @@ jobs:
           --cov-fail-under=0 \
           --no-cov-on-fail \
           --cov-report term-missing:skip-covered \
-          $test_paths
-      shell: bash
-      env:
-        UV_PYTHON_PREFERENCE: "only-managed"
-    - name: Run sharded test suite without coverage
-      if: matrix.target.coverage != true
-      run: |
-        test_paths=$(tr '\n' ' ' < .tox/ci-shard-tests.txt)
-        tox run --skip-uv-sync --skip-pkg-install -e "$TOX_ENV" -- \
-          -n0 \
-          --color=yes \
-          -m "not perf" \
           $test_paths
       shell: bash
       env:
