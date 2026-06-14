@@ -3569,7 +3569,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             module, models = model_to_module_models[unused_model]
             if unused_model in models:  # pragma: no branch
                 imports = module_to_import[module]
-                imports.remove(model_imports[unused_model])
+                imports.remove(model_imports.get(unused_model, unused_model.imports))
                 models.remove(unused_model)
 
         for ctx in contexts:
