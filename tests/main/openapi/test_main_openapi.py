@@ -26,6 +26,7 @@ from datamodel_code_generator import (
     generate,
     get_version,
     inferred_message,
+    load_data_from_path,
 )
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.config import GenerateConfig
@@ -49,6 +50,7 @@ from tests.main.conftest import (
     MSGSPEC_LEGACY_BLACK_SKIP,
     OPEN_API_DATA_PATH,
     TIMESTAMP,
+    run_generate_file_and_assert,
     run_main_and_assert,
     run_main_url_and_assert,
     run_main_with_args,
@@ -4215,6 +4217,24 @@ def test_main_openapi_non_operations_and_security(output_file: Path) -> None:
         input_file_type="openapi",
         assert_func=assert_file_content,
         extra_args=["--openapi-scopes", "schemas", "paths", "webhooks"],
+    )
+
+
+def test_generate_openapi_keeps_referenced_path_item_original_unchanged(output_file: Path) -> None:
+    """Keep cached referenced OpenAPI path items unchanged while inheriting operation metadata."""
+    input_path = OPEN_API_DATA_PATH / "referenced_path_item_mutation_guard" / "openapi.yaml"
+    path_item_path = OPEN_API_DATA_PATH / "referenced_path_item_mutation_guard" / "path-item.yml"
+    cached_path_item = load_data_from_path(path_item_path.resolve(), "utf-8")
+
+    run_generate_file_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type=InputFileType.OpenAPI,
+        assert_func=assert_file_content,
+        expected_file="referenced_path_item_mutation_guard.py",
+        disable_timestamp=True,
+        openapi_scopes=[OpenAPIScope.Schemas, OpenAPIScope.Paths],
+        unchanged_inputs={"cached path-item.yml": cached_path_item},
     )
 
 
