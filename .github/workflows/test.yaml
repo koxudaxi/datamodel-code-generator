@@ -296,7 +296,9 @@ jobs:
         UV_PYTHON_PREFERENCE: "only-managed"
     - name: Select test shard
       run: |
-        python scripts/select_ci_test_shard.py "$SHARD_INDEX" "$SHARD_TOTAL" | tee .tox/ci-shard-tests.txt
+        python scripts/select_ci_test_shard.py --write-recipe .tox/ci-shard-recipe.json
+        python scripts/select_ci_test_shard.py "$SHARD_INDEX" "$SHARD_TOTAL" \
+          --recipe .tox/ci-shard-recipe.json | tee .tox/ci-shard-tests.txt
       shell: bash
     - name: Run sharded test suite with coverage
       if: matrix.target.coverage == true
