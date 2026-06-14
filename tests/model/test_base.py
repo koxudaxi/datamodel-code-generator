@@ -186,6 +186,22 @@ def test_rendered_pydantic_v2_field_reuses_field_string(monkeypatch: pytest.Monk
     assert calls == 1
 
 
+def test_rendered_pydantic_v2_class_var_field_values_are_none() -> None:
+    """Test class variable fields do not render Field or Annotated values."""
+    field = PydanticV2DataModelField(
+        name="name",
+        data_type=DataType(type="str"),
+        required=True,
+        extras={"x-is-classvar": True},
+        use_annotated=True,
+    )
+    rendered_field = _RenderedDataModelField(field, "")
+
+    assert field.field is None
+    assert rendered_field.field is None
+    assert rendered_field.annotated is None
+
+
 def test_pydantic_v2_leaf_field_imports_skip_discriminator_scan(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test leaf fields do not walk all nested data types for impossible discriminators."""
     field = PydanticV2DataModelField(
