@@ -14,13 +14,80 @@ Core tests are also marked with @pytest.mark.benchmark for CodSpeed integration.
 
 from __future__ import annotations
 
+import json
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
-from datamodel_code_generator import DataModelType, InputFileType, generate
+from datamodel_code_generator import DataModelType, Formatter, InputFileType, generate
 
 PERFORMANCE_DATA_PATH: Path = Path(__file__).parent.parent / "data" / "performance"
+EXPECTED_STARTUP_MEASUREMENT_CASES = {
+    "import-package",
+    "import-arguments",
+    "import-main",
+    "import-config",
+    "cli-version",
+    "cli-help",
+}
+
+
+def _run_python(args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, *args],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+
+
+@pytest.mark.perf
+@pytest.mark.parametrize(
+    ("args", "expected_text"),
+    [
+        (["-m", "datamodel_code_generator.__main__", "--version"], "datamodel-codegen "),
+        (["-m", "datamodel_code_generator.__main__", "--help"], "usage:"),
+        (["-m", "datamodel_code_generator.__main__", "--list-deprecations"], "Warning since"),
+    ],
+)
+def test_perf_cli_fast_path_subprocesses(args: list[str], expected_text: str) -> None:
+    """Performance smoke: CLI utility paths work in a fresh process."""
+    result = _run_python(args)
+    assert expected_text in result.stdout
+
+
+@pytest.mark.perf
+@pytest.mark.parametrize(
+    "schema_option",
+    [
+        "--output-format-json-schema=generation",
+        "--output-format-json-schema=structured-output",
+    ],
+)
+def test_perf_cli_schema_fast_path_subprocesses(schema_option: str) -> None:
+    """Performance smoke: CLI schema utility paths return valid JSON in a fresh process."""
+    result = _run_python(["-m", "datamodel_code_generator.__main__", schema_option])
+    schema = json.loads(result.stdout)
+    assert "$schema" in schema
+    assert "properties" in schema or "$defs" in schema
+
+
+@pytest.mark.perf
+def test_perf_startup_measurement_script() -> None:
+    """Performance smoke: startup measurement script emits comparable metrics."""
+    result = _run_python(["scripts/measure_startup.py", "--runs", "1", "--json"])
+    payload = json.loads(result.stdout)
+    cases = payload["cases"]
+    case_names = {case["name"] for case in cases}
+    assert case_names >= EXPECTED_STARTUP_MEASUREMENT_CASES
+    for case in cases:
+        assert case["runs"] == 1
+        assert case["median_ms"] >= 0
+        assert case["importtime_top"]
 
 
 @pytest.mark.perf
@@ -52,6 +119,39 @@ def test_perf_large_models_pydantic_v2(tmp_path: Path) -> None:
         output=output_file,
         output_model_type=DataModelType.PydanticV2BaseModel,
     )
+    content = output_file.read_text()
+    assert content.count("class Model") >= 500
+
+
+@pytest.mark.perf
+@pytest.mark.parametrize(
+    ("formatter_case", "formatters"),
+    [
+        ("default", None),
+        ("none", []),
+        ("builtin", [Formatter.BUILTIN]),
+        ("ruff", [Formatter.RUFF_FORMAT, Formatter.RUFF_CHECK]),
+    ],
+)
+def test_perf_formatter_matrix_large_models_pydantic_v2(
+    tmp_path: Path,
+    formatter_case: str,
+    formatters: list[Formatter] | None,
+) -> None:
+    """Performance test: compare formatter cost against no-formatter parser/render cost."""
+    if formatter_case == "ruff" and shutil.which("ruff") is None:
+        pytest.skip("ruff executable is not available")
+
+    output_file = tmp_path / "output.py"
+    options = {
+        "input_file_type": InputFileType.JsonSchema,
+        "output": output_file,
+        "output_model_type": DataModelType.PydanticV2BaseModel,
+    }
+    if formatters is not None:
+        options["formatters"] = formatters
+
+    generate(PERFORMANCE_DATA_PATH / "large_models.json", **options)
     content = output_file.read_text()
     assert content.count("class Model") >= 500
 
