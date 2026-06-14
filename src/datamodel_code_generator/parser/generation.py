@@ -112,7 +112,7 @@ def _include_dict_key_reference_classes(model: DataModel) -> bool:
     )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ModelFact:
     """A parsed model and the stable facts derived from its reference."""
 
@@ -126,7 +126,7 @@ class ModelFact:
     file_path: Path | None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class DataTypeFact:
     """A data type occurrence owned by a parsed model."""
 
@@ -138,7 +138,7 @@ class DataTypeFact:
     reference: Reference | None
 
 
-@dataclass
+@dataclass(slots=True)
 class GenerationFacts:
     """A complete snapshot of derived generation facts."""
 
@@ -151,7 +151,7 @@ class GenerationFacts:
     reverse_edges: defaultdict[int, OrderedSet[DataTypeId]] = field(default_factory=lambda: defaultdict(dict))
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class GenerationBuildResult:
     """Facts and stable id state produced by an index rebuild."""
 
@@ -191,7 +191,11 @@ class _GenerationModelList(list["DataModel"]):
     def __setitem__(self, index: slice, item: Iterable[Any]) -> None:  # pragma: no cover
         pass
 
-    def __setitem__(self, index: SupportsIndex | slice, item: Any | Iterable[Any]) -> None:  # ty: ignore[invalid-method-override]
+    def __setitem__(
+        self,
+        index: SupportsIndex | slice,
+        item: Any | Iterable[Any],
+    ) -> None:  # ty: ignore[invalid-method-override]
         super().__setitem__(index, item)  # type: ignore[arg-type]
         self._invalidate()
 
