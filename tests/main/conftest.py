@@ -15,14 +15,14 @@ from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import contextmanager
 from functools import cache
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import black
 import pytest
 from packaging import version
 from pydantic import ValidationError
 
-from datamodel_code_generator import InputFileType, generate
+from datamodel_code_generator import InputFileType, enable_parsed_source_cache, generate
 from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.arguments import arg_parser
 from datamodel_code_generator.format import Formatter, PythonVersion, is_supported_in_black
@@ -405,6 +405,15 @@ def _default_formatter_generate_options(
     }
 
 
+@contextmanager
+def _enable_test_parsed_source_cache() -> Generator[None, None, None]:
+    restore = enable_parsed_source_cache()
+    try:
+        yield
+    finally:
+        restore()
+
+
 def _extend_args(
     args: list[str],
     *,
@@ -453,7 +462,10 @@ def _run_main(
         extra_args=extra_args,
         copy_files=copy_files,
     )
-    with _builtin_default_formatter_config(output_path, enabled=use_builtin_default):
+    with (
+        _enable_test_parsed_source_cache(),
+        _builtin_default_formatter_config(output_path, enabled=use_builtin_default),
+    ):
         return main(args)
 
 
@@ -478,7 +490,10 @@ def _run_main_url(
     use_builtin_default = _extend_args(
         args, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args
     )
-    with _builtin_default_formatter_config(output_path, enabled=use_builtin_default):
+    with (
+        _enable_test_parsed_source_cache(),
+        _builtin_default_formatter_config(output_path, enabled=use_builtin_default),
+    ):
         return main(args)
 
 
@@ -515,7 +530,10 @@ def run_main_with_args(
         is_generation_command=is_generation_command,
     )
     main_args = [*args, "--formatters", _BUILTIN_FORMATTER_VALUE] if use_builtin_default else list(args)
-    with _builtin_default_formatter_config(output_path, enabled=use_builtin_default):
+    with (
+        _enable_test_parsed_source_cache(),
+        _builtin_default_formatter_config(output_path, enabled=use_builtin_default),
+    ):
         return_code = main(main_args)
     _assert_exit_code(return_code, expected_exit, f"Args: {args}")
     _assert_captured_output(
@@ -550,6 +568,7 @@ def run_main_with_system_exit(
     main_args = [*args, "--formatters", _BUILTIN_FORMATTER_VALUE] if use_builtin_default else list(args)
     with (
         pytest.raises(SystemExit) as exc_info,
+        _enable_test_parsed_source_cache(),
         _builtin_default_formatter_config(output_path, enabled=use_builtin_default),
     ):
         main(main_args)
@@ -576,6 +595,94 @@ def assert_input_file_type(result: object, expected: InputFileType) -> None:
     __tracebackhide__ = True
     if result != expected:  # pragma: no cover
         pytest.fail(f"Expected input file type {expected!r}, got {result!r}")
+
+
+def _value_at_path(value: object, path: Sequence[str | int]) -> object:
+    __tracebackhide__ = True
+    current = value
+    for key in path:
+        match current, key:
+            case Mapping(), _:
+                current = cast("Mapping[object, object]", current)[key]
+            case Sequence(), int() if not isinstance(current, str | bytes | bytearray):
+                current = cast("Sequence[object]", current)[key]
+            case _:
+                pytest.fail(f"Expected cached value to contain path {path!r}, got {value!r}")
+    return current
+
+
+def assert_path_cache_reuses_value(
+    loader: Callable[[Path, str], object],
+    path: Path,
+    *,
+    encoding: str = "utf-8",
+    warmups: int = 0,
+) -> None:
+    """Assert a path-based cache reuses the parsed or decoded value."""
+    __tracebackhide__ = True
+    for _ in range(warmups):
+        loader(path, encoding)
+
+    first = loader(path, encoding)
+    second = loader(path, encoding)
+
+    if first is second:
+        return
+
+    pytest.fail(f"Expected cached value for {path} to be reused")
+
+
+def assert_path_cache_invalidates_after_write(
+    loader: Callable[[Path, str], object],
+    path: Path,
+    new_text: str,
+    expected_value: object,
+    *,
+    encoding: str = "utf-8",
+    expected_value_path: Sequence[str | int] = (),
+    warmups: int = 0,
+) -> None:
+    """Assert a path-based cache reloads after file content changes."""
+    __tracebackhide__ = True
+    for _ in range(warmups):
+        loader(path, encoding)
+
+    first = loader(path, encoding)
+    path.write_text(new_text, encoding=encoding)
+    second = loader(path, encoding)
+
+    if first is second:
+        pytest.fail(f"Expected cached value for {path} to be invalidated after write")
+
+    actual_value = _value_at_path(second, expected_value_path)
+    if actual_value != expected_value:
+        pytest.fail(f"Expected cached value {expected_value!r}, got {actual_value!r}")
+
+    third = loader(path, encoding)
+    if second is third:
+        return
+
+    pytest.fail(f"Expected updated cached value for {path} to be reused")
+
+
+def assert_path_cache_evicts_lru_entries(
+    loader: Callable[[Path, str], object],
+    first_path: Path,
+    second_path: Path,
+    *,
+    encoding: str = "utf-8",
+) -> None:
+    """Assert a path-based LRU cache remains valid while evicting older entries."""
+    __tracebackhide__ = True
+    first_value = loader(first_path, encoding)
+    if loader(first_path, encoding) != first_value:
+        pytest.fail(f"Expected cached value for {first_path} to stay stable")
+
+    second_value = loader(second_path, encoding)
+    if loader(second_path, encoding) == second_value:
+        return
+
+    pytest.fail(f"Expected cached value for {second_path} to stay stable")
 
 
 def assert_watch_called(
@@ -634,7 +741,7 @@ def run_generate_file_and_assert(
     if input_file_type is not None:
         generate_options["input_file_type"] = input_file_type
 
-    with assert_inputs_not_mutated(unchanged_inputs):
+    with _enable_test_parsed_source_cache(), assert_inputs_not_mutated(unchanged_inputs):
         if expected_warnings is None:
             generate(
                 input_=input_,
@@ -657,7 +764,7 @@ def run_generate_file_and_assert(
         del frame
 
     assert_func(output_path, expected_file, transform=transform)
-    with assert_inputs_not_mutated(unchanged_inputs):
+    with _enable_test_parsed_source_cache(), assert_inputs_not_mutated(unchanged_inputs):
         _assert_builtin_generate_formatter_parity(
             input_=input_,
             output_path=output_path,
@@ -681,7 +788,7 @@ def run_generate_and_assert(
     if assert_input_unchanged:
         guarded_inputs["input_"] = input_
 
-    with assert_inputs_not_mutated(guarded_inputs or None):
+    with _enable_test_parsed_source_cache(), assert_inputs_not_mutated(guarded_inputs or None):
         result = generate(input_=input_, **_default_formatter_generate_options(generate_kwargs))
     if not isinstance(result, str):  # pragma: no cover
         pytest.fail(f"Expected generate() to return str, got {type(result).__name__}")
@@ -787,7 +894,10 @@ def run_main_and_assert(  # noqa: PLR0912
             extra_args=extra_args,
             copy_files=copy_files,
         )
-        with _builtin_default_formatter_config(output_path, enabled=use_builtin_default):
+        with (
+            _enable_test_parsed_source_cache(),
+            _builtin_default_formatter_config(output_path, enabled=use_builtin_default),
+        ):
             return_code = main(args)
     # Handle stdout-only output (no output_path)
     elif output_path is None:
@@ -797,7 +907,10 @@ def run_main_and_assert(  # noqa: PLR0912
         use_builtin_default = _extend_args(
             args, input_path=input_path, input_file_type=input_file_type, extra_args=extra_args
         )
-        with _builtin_default_formatter_config(output_path, enabled=use_builtin_default):
+        with (
+            _enable_test_parsed_source_cache(),
+            _builtin_default_formatter_config(output_path, enabled=use_builtin_default),
+        ):
             return_code = main(args)
     # Standard file input
     else:
@@ -877,16 +990,17 @@ def run_main_and_assert(  # noqa: PLR0912
             del frame
         assert_func(output_path, expected_file, transform=transform)
 
-    _assert_builtin_cli_formatter_parity(
-        input_path=input_path,
-        output_path=output_path,
-        input_file_type=input_file_type,
-        extra_args=extra_args,
-        copy_files=copy_files,
-        stdin_path=stdin_path,
-        monkeypatch=monkeypatch,
-        context=_builtin_cli_formatter_parity_context(),
-    )
+    with _enable_test_parsed_source_cache():
+        _assert_builtin_cli_formatter_parity(
+            input_path=input_path,
+            output_path=output_path,
+            input_file_type=input_file_type,
+            extra_args=extra_args,
+            copy_files=copy_files,
+            stdin_path=stdin_path,
+            monkeypatch=monkeypatch,
+            context=_builtin_cli_formatter_parity_context(),
+        )
 
     if output_path is not None and not skip_code_validation:
         _validate_output_files(output_path, extra_args, force_exec_validation=force_exec_validation)

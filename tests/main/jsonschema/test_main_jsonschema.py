@@ -21,6 +21,7 @@ from datamodel_code_generator import (
     PythonVersion,
     PythonVersionMin,
     TargetPydanticVersion,
+    _clear_parser_source_data_cache,
     chdir,
     generate,
     load_data_from_path,
@@ -50,6 +51,8 @@ from tests.main.conftest import (
     TIMESTAMP,
     assert_generated_model_json_invalid,
     assert_generated_model_json_validation,
+    assert_path_cache_invalidates_after_write,
+    assert_path_cache_reuses_value,
     run_generate_and_assert,
     run_generate_file_and_assert,
     run_main_and_assert,
@@ -2225,6 +2228,41 @@ def test_main_generate(output_file: Path) -> None:
         input_file_type=InputFileType.JsonSchema,
         assert_func=assert_file_content,
         expected_file="general.py",
+    )
+
+
+def test_main_generate_with_parsed_source_cache(output_file: Path) -> None:
+    """Test code generation function with process-local parsed source cache enabled."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="general.py",
+    )
+
+
+def test_load_data_from_path_caches_json_source(tmp_path: Path) -> None:
+    """Reuse parsed JSON file data by path and content hash for local reference loading."""
+    schema_path = tmp_path / "schema.json"
+    schema_path.write_text((JSON_SCHEMA_DATA_PATH / "person.json").read_text(encoding="utf-8"), encoding="utf-8")
+    _clear_parser_source_data_cache()
+
+    assert_path_cache_reuses_value(load_data_from_path, schema_path, warmups=1)
+
+
+def test_load_data_from_path_invalidates_updated_json_source(tmp_path: Path) -> None:
+    """Reload parsed JSON data when a cached local reference file changes."""
+    schema_path = tmp_path / "schema.json"
+    schema_path.write_text((JSON_SCHEMA_DATA_PATH / "person.json").read_text(encoding="utf-8"), encoding="utf-8")
+    _clear_parser_source_data_cache()
+
+    assert_path_cache_invalidates_after_write(
+        load_data_from_path,
+        schema_path,
+        (JSON_SCHEMA_DATA_PATH / "simple_string.json").read_text(encoding="utf-8"),
+        ["s"],
+        expected_value_path=("required",),
     )
 
 

@@ -639,6 +639,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     SCHEMA_PATHS: ClassVar[list[str]] = list(_DEFAULT_SCHEMA_PATHS)
     SCHEMA_OBJECT_TYPE: ClassVar[type[JsonSchemaObject]] = JsonSchemaObject
     _cache_local_sources_during_parse: ClassVar[bool] = True
+    _cache_parsed_sources_from_path: ClassVar[bool] = True
 
     COMPATIBLE_PYTHON_TYPES: ClassVar[dict[str, frozenset[str]]] = {
         "string": frozenset({"str", "String"}),
@@ -5352,7 +5353,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 yield from ((self.base_path / path) for path in paths)
 
     def _load_source_dict(self, source: Source) -> dict[str, Any]:  # noqa: PLR6301
-        return dict(source.raw_data) if source.raw_data is not None else load_data(source.text)
+        if source.raw_data is None:
+            return load_data(source.text)
+        if not isinstance(source.raw_data, dict):
+            msg = f"Expected dict, got {type(source.raw_data).__name__}"
+            raise TypeError(msg)
+        return dict(source.raw_data)
 
     def _resolve_root_model_name(self, raw_obj: dict[str, Any]) -> tuple[str, bool]:
         title = raw_obj.get("title")
@@ -5397,17 +5403,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Parse all raw input sources into data models."""
         try:
             for source, path_parts in self._get_context_source_path_parts():
-                if source.raw_data is not None:
-                    raw_obj = source.raw_data
-                    if not isinstance(raw_obj, dict):  # pragma: no cover
-                        warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
-                        continue
-                else:
-                    try:
-                        raw_obj = load_data(source.text)
-                    except TypeError:
-                        warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
-                        continue
+                try:
+                    raw_obj = self._load_source_dict(source)
+                except TypeError:
+                    warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
+                    continue
                 self.raw_obj = raw_obj
                 obj_name, preserve_root_class_name = self._resolve_root_model_name(self.raw_obj)
                 self._parse_file(self.raw_obj, obj_name, path_parts, preserve_root_class_name=preserve_root_class_name)

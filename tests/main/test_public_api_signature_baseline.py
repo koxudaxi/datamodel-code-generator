@@ -95,6 +95,7 @@ _PUBLIC_MODULE_EXPORTS: dict[str, frozenset[str]] = {
         "detect_jsonschema_version",
         "detect_openapi_version",
         "detect_xmlschema_version",
+        "enable_parsed_source_cache",
         "generate",
         "generate_dynamic_models",
     }),

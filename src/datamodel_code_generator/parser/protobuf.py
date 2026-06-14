@@ -661,6 +661,7 @@ class ProtobufParser(JsonSchemaParser):
 
     _config_class_name: ClassVar[str] = "ProtobufParserConfig"
     _cache_local_sources_during_parse: ClassVar[bool] = False
+    _cache_parsed_sources_from_path: ClassVar[bool] = False
 
     def __init__(
         self,

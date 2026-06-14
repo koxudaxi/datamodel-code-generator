@@ -114,6 +114,120 @@ def test_assert_inputs_not_mutated_reports_nested_mutation() -> None:
         schema["required"].append("age")
 
 
+def test_path_cache_value_at_path_handles_sequences() -> None:
+    """Path cache helper can traverse mapping and sequence values."""
+    value = {"items": [{"name": "first"}]}
+
+    assert main_conftest._value_at_path(value, ("items", 0, "name")) == "first"
+
+
+def test_path_cache_value_at_path_reports_invalid_path() -> None:
+    """Path cache helper reports paths that cannot be traversed."""
+    with pytest.raises(pytest.fail.Exception, match="Expected cached value to contain path"):
+        main_conftest._value_at_path({"items": []}, ("items", "name"))
+
+
+def test_assert_path_cache_reuses_value_reports_cache_miss(tmp_path: Path) -> None:
+    """Path cache reuse helper fails when the loader returns a new object."""
+    path = tmp_path / "schema.json"
+    path.write_text("{}", encoding="utf-8")
+
+    def load_new_value(path: Path, encoding: str) -> object:  # noqa: ARG001
+        return {}
+
+    with pytest.raises(pytest.fail.Exception, match=r"Expected cached value .* to be reused"):
+        main_conftest.assert_path_cache_reuses_value(load_new_value, path)
+
+
+def test_assert_path_cache_evicts_lru_entries_reports_first_mismatch(tmp_path: Path) -> None:
+    """LRU helper fails when the first path value is unstable."""
+    first_path = tmp_path / "first.json"
+    second_path = tmp_path / "second.json"
+    first_path.write_text("first", encoding="utf-8")
+    second_path.write_text("second", encoding="utf-8")
+    calls = 0
+
+    def load_unstable_first(path: Path, encoding: str) -> object:  # noqa: ARG001
+        nonlocal calls
+        if path == first_path:
+            calls += 1
+            return calls
+        return "stable"
+
+    assert load_unstable_first(second_path, "utf-8") == "stable"
+    with pytest.raises(pytest.fail.Exception, match=r"Expected cached value .* to stay stable"):
+        main_conftest.assert_path_cache_evicts_lru_entries(load_unstable_first, first_path, second_path)
+
+
+def test_assert_path_cache_evicts_lru_entries_reports_second_mismatch(tmp_path: Path) -> None:
+    """LRU helper fails when the second path value is unstable."""
+    first_path = tmp_path / "first.json"
+    second_path = tmp_path / "second.json"
+    first_path.write_text("first", encoding="utf-8")
+    second_path.write_text("second", encoding="utf-8")
+    calls = 0
+
+    def load_unstable_second(path: Path, encoding: str) -> object:  # noqa: ARG001
+        nonlocal calls
+        if path == second_path:
+            calls += 1
+            return calls
+        return "stable"
+
+    with pytest.raises(pytest.fail.Exception, match=r"Expected cached value .* to stay stable"):
+        main_conftest.assert_path_cache_evicts_lru_entries(load_unstable_second, first_path, second_path)
+
+
+def test_assert_path_cache_invalidates_after_write_reports_stale_identity(tmp_path: Path) -> None:
+    """Path cache invalidation helper fails when a loader returns the stale object."""
+    path = tmp_path / "schema.json"
+    path.write_text("old", encoding="utf-8")
+    cached_value: dict[str, str] = {}
+
+    def load_stale_value(path: Path, encoding: str) -> object:  # noqa: ARG001
+        return cached_value
+
+    with pytest.raises(pytest.fail.Exception, match=r"Expected cached value .* to be invalidated after write"):
+        main_conftest.assert_path_cache_invalidates_after_write(load_stale_value, path, "new", "new")
+
+
+def test_assert_path_cache_invalidates_after_write_reports_unexpected_value(tmp_path: Path) -> None:
+    """Path cache invalidation helper fails when the updated value is unexpected."""
+    path = tmp_path / "schema.json"
+    path.write_text("old", encoding="utf-8")
+
+    def load_text_value(path: Path, encoding: str) -> object:
+        return {"value": path.read_text(encoding=encoding)}
+
+    with pytest.raises(pytest.fail.Exception, match="Expected cached value 'expected', got 'actual'"):
+        main_conftest.assert_path_cache_invalidates_after_write(
+            load_text_value,
+            path,
+            "actual",
+            "expected",
+            expected_value_path=("value",),
+        )
+
+
+def test_assert_path_cache_invalidates_after_write_reports_updated_cache_miss(tmp_path: Path) -> None:
+    """Path cache invalidation helper fails when the updated value is not reused."""
+    path = tmp_path / "schema.json"
+    path.write_text("old", encoding="utf-8")
+
+    def load_text_value(path: Path, encoding: str) -> object:
+        return {"value": path.read_text(encoding=encoding)}
+
+    with pytest.raises(pytest.fail.Exception, match=r"Expected updated cached value .* to be reused"):
+        main_conftest.assert_path_cache_invalidates_after_write(
+            load_text_value,
+            path,
+            "new",
+            "new",
+            expected_value_path=("value",),
+            warmups=1,
+        )
+
+
 def test_builtin_parity_mock_call_preservation(mocker: MockerFixture) -> None:
     """Mock call history is restored after parity-only calls."""
     mocked_callable = mocker.Mock()

@@ -2,10 +2,26 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
+from datamodel_code_generator import InputFileType
 from datamodel_code_generator.__main__ import Exit
-from tests.main.conftest import XML_SCHEMA_DATA_PATH, run_main_and_assert
+from datamodel_code_generator.parser import xmlschema as xmlschema_parser
+from datamodel_code_generator.parser.xmlschema import (
+    _clear_xml_schema_data_cache,
+    _clear_xml_text_cache,
+    _load_xml_schema_data_from_path,
+    _read_xml_text,
+)
+from tests.main.conftest import (
+    XML_SCHEMA_DATA_PATH,
+    assert_path_cache_evicts_lru_entries,
+    assert_path_cache_invalidates_after_write,
+    assert_path_cache_reuses_value,
+    run_generate_file_and_assert,
+    run_main_and_assert,
+)
 from tests.main.xmlschema.conftest import assert_file_content
 
 if TYPE_CHECKING:
@@ -23,6 +39,84 @@ def test_main_xmlschema_purchase_order(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="purchase_order.py",
     )
+
+
+def test_main_xmlschema_with_parsed_source_cache(output_file: Path) -> None:
+    """Generate XML Schema models with process-local parsed source cache enabled."""
+    _clear_xml_schema_data_cache()
+    run_generate_file_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "purchase_order.xsd",
+        output_path=output_file,
+        input_file_type=InputFileType.XMLSchema,
+        assert_func=assert_file_content,
+        expected_file="purchase_order.py",
+    )
+
+
+def test_read_xml_text_caches_raw_source(tmp_path: Path) -> None:
+    """Reuse raw XML source text by path and content hash."""
+    schema_path = tmp_path / "schema.xsd"
+    schema_path.write_text(
+        (XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    _clear_xml_text_cache()
+
+    assert_path_cache_reuses_value(_read_xml_text, schema_path, warmups=1)
+
+
+def test_read_xml_text_invalidates_updated_raw_source(tmp_path: Path) -> None:
+    """Reload raw XML source text when the local file changes."""
+    schema_path = tmp_path / "schema.xsd"
+    schema_path.write_text(
+        (XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    _clear_xml_text_cache()
+
+    updated_text = (XML_SCHEMA_DATA_PATH / "inline_root.xsd").read_text(encoding="utf-8")
+    assert_path_cache_invalidates_after_write(
+        _read_xml_text,
+        schema_path,
+        updated_text,
+        updated_text.replace("\n", os.linesep),
+    )
+
+
+def test_read_xml_text_evicts_lru_entries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Evict old raw XML text cache entries after the configured limit."""
+    monkeypatch.setattr(xmlschema_parser, "_XML_TEXT_CACHE_MAX_SIZE", 1)
+    _clear_xml_text_cache()
+    first_path = tmp_path / "first.xsd"
+    second_path = tmp_path / "second.xsd"
+    first_text = (XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8")
+    second_text = (XML_SCHEMA_DATA_PATH / "inline_root.xsd").read_text(encoding="utf-8")
+    first_path.write_text(first_text, encoding="utf-8")
+    second_path.write_text(second_text, encoding="utf-8")
+
+    assert_path_cache_evicts_lru_entries(_read_xml_text, first_path, second_path)
+
+
+def test_load_xml_schema_data_from_path_evicts_lru_entries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Evict old converted XML Schema cache entries after the configured limit."""
+    monkeypatch.setattr(xmlschema_parser, "_XML_SCHEMA_DATA_CACHE_MAX_SIZE", 1)
+    _clear_xml_schema_data_cache()
+    _clear_xml_text_cache()
+    first_path = tmp_path / "first.xsd"
+    second_path = tmp_path / "second.xsd"
+    first_path.write_text((XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8"), encoding="utf-8")
+    second_path.write_text((XML_SCHEMA_DATA_PATH / "inline_root.xsd").read_text(encoding="utf-8"), encoding="utf-8")
+
+    kwargs = {
+        "base_path": tmp_path,
+        "encoding": "utf-8",
+        "xmlschema_version": None,
+        "schema_version_mode": None,
+        "use_xmlschema_datetime_default": False,
+    }
+
+    def load_schema_data(path: Path, encoding: str) -> object:  # noqa: ARG001
+        return _load_xml_schema_data_from_path(path, **kwargs)
+
+    assert_path_cache_evicts_lru_entries(load_schema_data, first_path, second_path)
 
 
 def test_main_xmlschema_purchase_order_from_normalized_external_path(tmp_path: Path, output_file: Path) -> None:
