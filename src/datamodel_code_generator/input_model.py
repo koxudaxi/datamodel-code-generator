@@ -29,7 +29,6 @@ from collections.abc import (
 )
 from dataclasses import is_dataclass
 from enum import Enum as PyEnum
-from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, cast, get_args, get_origin, get_type_hints
 
@@ -70,6 +69,8 @@ def _get_path_module_name(file_path: Path) -> str:
         return module_name
     if previous_file == file_path:
         return module_name
+
+    from hashlib import sha256  # noqa: PLC0415
 
     digest = sha256(str(file_path).encode()).hexdigest()[:16]
     return f"_datamodel_code_generator_input_model_{digest}"
