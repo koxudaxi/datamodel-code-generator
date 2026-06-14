@@ -18,6 +18,31 @@ if len(sys.argv) == 2 and sys.argv[1] in {"--help", "-h"}:  # pragma: no cover  
     arg_parser.print_help()
     sys.exit(0)
 
+match sys.argv:
+    case [_, "--output-format-json-schema", schema_output_name] if schema_output_name in {
+        "generation",
+        "structured-output",
+    }:
+        pass
+    case [_, schema_output_option] if schema_output_option.startswith("--output-format-json-schema=") and (
+        schema_output_name := schema_output_option.partition("=")[2]
+    ) in {"generation", "structured-output"}:
+        pass
+    case _:
+        schema_output_name = None
+
+match schema_output_name:
+    case "generation":  # pragma: no cover
+        from datamodel_code_generator._structured_output import generation_output_json_schema
+
+        sys.stdout.write(f"{generation_output_json_schema()}\n")
+        sys.exit(0)
+    case "structured-output":  # pragma: no cover
+        from datamodel_code_generator._structured_output import structured_output_json_schema
+
+        sys.stdout.write(f"{structured_output_json_schema()}\n")
+        sys.exit(0)
+
 # Fast path for prompt helper outputs
 if any(
     arg.startswith(("--generate-prompt", "--output-format-json-schema=")) or arg == "--output-format-json-schema"
