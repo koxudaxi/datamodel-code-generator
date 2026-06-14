@@ -154,6 +154,7 @@ def test_assert_path_cache_evicts_lru_entries_reports_first_mismatch(tmp_path: P
             return calls
         return "stable"
 
+    assert load_unstable_first(second_path, "utf-8") == "stable"
     with pytest.raises(pytest.fail.Exception, match=r"Expected cached value .* to stay stable"):
         main_conftest.assert_path_cache_evicts_lru_entries(load_unstable_first, first_path, second_path)
 
