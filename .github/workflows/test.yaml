@@ -212,7 +212,7 @@ jobs:
       shell: bash
     - name: Run formatter coverage tests
       run: |
-        test_paths=$(tr '\n' ' ' < .tox/formatter-coverage-tests.txt)
+        mapfile -t test_paths < .tox/formatter-coverage-tests.txt
         tox run --skip-uv-sync --skip-pkg-install -e "$TOX_ENV" -- \
           -n auto \
           --dist=worksteal \
@@ -224,7 +224,7 @@ jobs:
           --cov-fail-under=0 \
           --no-cov-on-fail \
           --cov-report term-missing:skip-covered \
-          $test_paths
+          "${test_paths[@]}"
       shell: bash
       env:
         UV_PYTHON_PREFERENCE: "only-managed"
@@ -304,7 +304,7 @@ jobs:
     - name: Run sharded test suite with coverage
       if: matrix.target.coverage == true
       run: |
-        test_paths=$(tr '\n' ' ' < .tox/ci-shard-tests.txt)
+        mapfile -t test_paths < .tox/ci-shard-tests.txt
         tox run --skip-uv-sync --skip-pkg-install -e "$TOX_ENV" -- \
           -n auto \
           --dist=worksteal \
@@ -316,7 +316,7 @@ jobs:
           --cov-fail-under=0 \
           --no-cov-on-fail \
           --cov-report term-missing:skip-covered \
-          $test_paths
+          "${test_paths[@]}"
       shell: bash
       env:
         UV_PYTHON_PREFERENCE: "only-managed"
