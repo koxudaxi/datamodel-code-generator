@@ -233,7 +233,7 @@ def load_data_from_path(path: Path, encoding: str) -> dict[str, YamlValue]:
     (e.g., trailing commas), and requires the parsed content to be a dict.
     Uses YAML for all other extensions.
     """
-    result = _load_parser_source_data_from_path(path, encoding, cache_on_first_load=False)
+    result = _load_parser_source_data_from_path(path, encoding)
     if not isinstance(result, dict):
         msg = f"Expected dict, got {type(result).__name__}"
         raise TypeError(msg)
@@ -243,18 +243,15 @@ def load_data_from_path(path: Path, encoding: str) -> dict[str, YamlValue]:
 def _load_parser_source_data_from_path(
     path: Path,
     encoding: str,
-    *,
-    cache_on_first_load: bool = False,
 ) -> YamlValue:
     resolved_path = path.resolve()
     seen_key = (resolved_path, encoding)
     with _parser_source_data_cache_lock:
-        use_cache = cache_on_first_load or seen_key in _parser_source_data_seen_keys
-        if not cache_on_first_load:
-            _parser_source_data_seen_keys[seen_key] = None
-            _parser_source_data_seen_keys.move_to_end(seen_key)
-            while len(_parser_source_data_seen_keys) > _PARSER_SOURCE_DATA_CACHE_MAX_SIZE:
-                _parser_source_data_seen_keys.popitem(last=False)
+        use_cache = seen_key in _parser_source_data_seen_keys
+        _parser_source_data_seen_keys[seen_key] = None
+        _parser_source_data_seen_keys.move_to_end(seen_key)
+        while len(_parser_source_data_seen_keys) > _PARSER_SOURCE_DATA_CACHE_MAX_SIZE:
+            _parser_source_data_seen_keys.popitem(last=False)
 
     data = resolved_path.read_bytes()
     if not use_cache:

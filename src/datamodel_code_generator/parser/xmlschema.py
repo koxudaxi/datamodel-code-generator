@@ -260,16 +260,15 @@ def _has_xmlschema_versioning_attribute(element: ET.Element) -> bool:
     return any(_namespace(attribute) == XML_SCHEMA_VERSIONING_NAMESPACE for attribute in element.attrib)
 
 
-def _read_xml_text(path: Path, encoding: str, *, cache_on_first_load: bool = False) -> str:
+def _read_xml_text(path: Path, encoding: str) -> str:
     resolved_path = path.resolve()
     seen_key = (resolved_path, encoding)
     with _xml_text_cache_lock:
-        use_cache = cache_on_first_load or seen_key in _xml_text_seen_keys
-        if not cache_on_first_load:
-            _xml_text_seen_keys[seen_key] = None
-            _xml_text_seen_keys.move_to_end(seen_key)
-            while len(_xml_text_seen_keys) > _XML_TEXT_CACHE_MAX_SIZE:
-                _xml_text_seen_keys.popitem(last=False)
+        use_cache = seen_key in _xml_text_seen_keys
+        _xml_text_seen_keys[seen_key] = None
+        _xml_text_seen_keys.move_to_end(seen_key)
+        while len(_xml_text_seen_keys) > _XML_TEXT_CACHE_MAX_SIZE:
+            _xml_text_seen_keys.popitem(last=False)
 
     data = resolved_path.read_bytes()
     if not use_cache:

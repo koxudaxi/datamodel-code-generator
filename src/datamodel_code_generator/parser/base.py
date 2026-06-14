@@ -972,7 +972,7 @@ class Source(BaseModel):
         return cls(
             path=path.relative_to(base_path),
             text=path.read_text(encoding=encoding) if keep_text else "",
-            raw_data=_load_parser_source_data_from_path(path, encoding, cache_on_first_load=False),
+            raw_data=_load_parser_source_data_from_path(path, encoding),
         )
 
     @classmethod
