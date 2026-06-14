@@ -27,23 +27,24 @@ jobs:
         py: ["3.14", "3.13", "3.12", "3.11", "3.10"]
         os: [ubuntu-24.04, windows-latest, macos-latest]
         tox_env: ['']
+        exclude:
+          - py: "3.13"
+            os: ubuntu-24.04
+          - py: "3.12"
+            os: ubuntu-24.04
+          - py: "3.11"
+            os: ubuntu-24.04
+          - py: "3.10"
+            os: ubuntu-24.04
+          - py: "3.13"
+            os: windows-latest
+          - py: "3.12"
+            os: windows-latest
+          - py: "3.11"
+            os: windows-latest
+          - py: "3.10"
+            os: windows-latest
         include:
-          - tox_env: py312-blacklatest-parallel
-            name: py312-black-latest
-          - tox_env: py312-black24-parallel
-            name: py312-black24
-          - tox_env: py312-black23-parallel
-            name: py312-black23
-          - tox_env: py312-black22-parallel
-            name: py312-black22
-          - tox_env: py312-isort8-parallel
-            name: py312-isort8
-          - tox_env: py312-isort7-parallel
-            name: py312-isort7
-          - tox_env: py312-isort6-parallel
-            name: py312-isort6
-          - tox_env: py312-isort5-parallel
-            name: py312-isort5
           - tox_env: pydantic20
             name: pydantic20
           - tox_env: pydantic25
@@ -110,10 +111,163 @@ jobs:
         path: ".tox/.coverage.*"
         retention-days: 3
 
+  test-shard:
+    name: >-
+      ${{ matrix.target.name }} on
+      ${{ matrix.target.os == 'windows-latest' && 'Windows' || (matrix.target.os == 'macos-latest' && 'macOS' || 'Ubuntu') }}
+      shard ${{ matrix.shard }}/4
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+        target:
+          - tox_env: py313
+            name: "3.13"
+            os: ubuntu-24.04
+            coverage: true
+          - tox_env: py312
+            name: "3.12"
+            os: ubuntu-24.04
+            coverage: true
+          - tox_env: py311
+            name: "3.11"
+            os: ubuntu-24.04
+            coverage: true
+          - tox_env: py310
+            name: "3.10"
+            os: ubuntu-24.04
+            coverage: true
+          - tox_env: py313-nocov
+            name: "3.13"
+            os: windows-latest
+            coverage: false
+          - tox_env: py312-nocov
+            name: "3.12"
+            os: windows-latest
+            coverage: false
+          - tox_env: py311-nocov
+            name: "3.11"
+            os: windows-latest
+            coverage: false
+          - tox_env: py310-nocov
+            name: "3.10"
+            os: windows-latest
+            coverage: false
+          - tox_env: py312-blacklatest
+            name: py312-black-latest
+            os: ubuntu-24.04
+            coverage: true
+          - tox_env: py312-black24
+            name: py312-black24
+            os: ubuntu-24.04
+            coverage: true
+          - tox_env: py312-black23
+            name: py312-black23
+            os: ubuntu-24.04
+            coverage: true
+          - tox_env: py312-black22
+            name: py312-black22
+            os: ubuntu-24.04
+            coverage: true
+          - tox_env: py312-isort8
+            name: py312-isort8
+            os: ubuntu-24.04
+            coverage: true
+          - tox_env: py312-isort7
+            name: py312-isort7
+            os: ubuntu-24.04
+            coverage: true
+          - tox_env: py312-isort6
+            name: py312-isort6
+            os: ubuntu-24.04
+            coverage: true
+          - tox_env: py312-isort5
+            name: py312-isort5
+            os: ubuntu-24.04
+            coverage: true
+    runs-on: ${{ matrix.target.os }}
+    env:
+      OS: ${{ matrix.target.os }}
+      SHARD_INDEX: ${{ matrix.shard }}
+      SHARD_TOTAL: 4
+      TOX_ENV: ${{ matrix.target.tox_env }}
+    steps:
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      with:
+        enable-cache: true
+        cache-suffix: "${{ matrix.target.tox_env }}-shard-${{ matrix.shard }}"
+    - name: Install tox
+      run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
+    - name: Setup Python test environment
+      run: |
+        tox run -vv --notest --skip-missing-interpreters false -e "$TOX_ENV"
+      shell: bash
+      env:
+        UV_PYTHON_PREFERENCE: "only-managed"
+    - name: Select test shard
+      run: |
+        python scripts/select_ci_test_shard.py "$SHARD_INDEX" "$SHARD_TOTAL" | tee .tox/ci-shard-tests.txt
+      shell: bash
+    - name: Run sharded test suite with coverage
+      if: matrix.target.coverage == true
+      run: |
+        test_paths=$(tr '\n' ' ' < .tox/ci-shard-tests.txt)
+        tox run --skip-uv-sync --skip-pkg-install -e "$TOX_ENV" -- \
+          -n0 \
+          --color=yes \
+          -m "not perf" \
+          --cov datamodel_code_generator \
+          --cov tests \
+          --cov-config=pyproject.toml \
+          --cov-fail-under=0 \
+          --no-cov-on-fail \
+          --cov-report term-missing:skip-covered \
+          $test_paths
+      shell: bash
+      env:
+        UV_PYTHON_PREFERENCE: "only-managed"
+    - name: Run sharded test suite without coverage
+      if: matrix.target.coverage != true
+      run: |
+        test_paths=$(tr '\n' ' ' < .tox/ci-shard-tests.txt)
+        tox run --skip-uv-sync --skip-pkg-install -e "$TOX_ENV" -- \
+          -n0 \
+          --color=yes \
+          -m "not perf" \
+          $test_paths
+      shell: bash
+      env:
+        UV_PYTHON_PREFERENCE: "only-managed"
+    - name: Rename coverage report file
+      if: matrix.target.coverage == true
+      run: |
+        import os
+
+        os.rename(
+            f".tox/.coverage.{os.environ['TOX_ENV']}",
+            f".tox/.coverage.{os.environ['TOX_ENV']}-shard{os.environ['SHARD_INDEX']}-{os.environ['OS']}",
+        )
+      shell: python
+    - name: Upload coverage data
+      if: matrix.target.coverage == true
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        include-hidden-files: true
+        name: .coverage.${{ matrix.target.tox_env }}-shard${{ matrix.shard }}-${{ matrix.target.os }}
+        path: ".tox/.coverage.*"
+        retention-days: 3
+
   coverage:
     name: combine coverage
     runs-on: ubuntu-latest
-    needs: test
+    needs:
+      - test
+      - test-shard
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -367,6 +521,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - test
+      - test-shard
       - coverage
       - check
       - w3c-xmlschema-e2e
@@ -378,6 +533,7 @@ jobs:
       - name: Fail if any test workflow job failed
         run: |
           test_result='${{ needs.test.result }}'
+          test_shard_result='${{ needs.test-shard.result }}'
           coverage_result='${{ needs.coverage.result }}'
           check_result='${{ needs.check.result }}'
           w3c_xmlschema_e2e_result='${{ needs.w3c-xmlschema-e2e.result }}'
@@ -387,6 +543,7 @@ jobs:
           protobuf_official_e2e_result='${{ needs.protobuf-official-e2e.result }}'
 
           echo "test: ${test_result}"
+          echo "test shard: ${test_shard_result}"
           echo "coverage: ${coverage_result}"
           echo "check: ${check_result}"
           echo "w3c xmlschema e2e: ${w3c_xmlschema_e2e_result}"
@@ -396,6 +553,7 @@ jobs:
           echo "protobuf official e2e: ${protobuf_official_e2e_result}"
 
           [ "${test_result}" = "success" ] || exit 1
+          [ "${test_shard_result}" = "success" ] || exit 1
           [ "${coverage_result}" = "success" ] || exit 1
           [ "${check_result}" = "success" ] || exit 1
           [ "${w3c_xmlschema_e2e_result}" = "success" ] || exit 1
