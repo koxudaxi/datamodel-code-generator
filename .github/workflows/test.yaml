@@ -25,45 +25,32 @@ jobs:
       fail-fast: false
       matrix:
         py: ["3.14", "3.13", "3.12", "3.11", "3.10"]
-        os: [ubuntu-24.04, windows-latest, macos-latest]
+        os: [windows-latest, macos-latest]
         tox_env: ['']
-        exclude:
-          - py: "3.13"
-            os: ubuntu-24.04
-          - py: "3.12"
-            os: ubuntu-24.04
-          - py: "3.11"
-            os: ubuntu-24.04
-          - py: "3.10"
-            os: ubuntu-24.04
         include:
-          - tox_env: py312-blacklatest-parallel
+          - tox_env: py312-blacklatest-nocov-parallel
             name: py312-black-latest
-          - tox_env: py312-black24-parallel
+          - tox_env: py312-black24-nocov-parallel
             name: py312-black24
-          - tox_env: py312-black23-parallel
+          - tox_env: py312-black23-nocov-parallel
             name: py312-black23
-          - tox_env: py312-black22-parallel
+          - tox_env: py312-black22-nocov-parallel
             name: py312-black22
-          - tox_env: py312-isort8-parallel
+          - tox_env: py312-isort8-nocov-parallel
             name: py312-isort8
-          - tox_env: py312-isort7-parallel
+          - tox_env: py312-isort7-nocov-parallel
             name: py312-isort7
-          - tox_env: py312-isort6-parallel
+          - tox_env: py312-isort6-nocov-parallel
             name: py312-isort6
-          - tox_env: py312-isort5-parallel
+          - tox_env: py312-isort5-nocov-parallel
             name: py312-isort5
-          - tox_env: pydantic20
-            name: pydantic20
-          - tox_env: pydantic25
-            name: pydantic25
     runs-on: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os }}
     env:
       OS: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os}}
     steps:
     - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       with:
-        fetch-depth: 0
+        fetch-depth: 1
         persist-credentials: false
     - name: Install the latest version of uv
       uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
@@ -97,25 +84,64 @@ jobs:
       shell: bash
       env:
         UV_PYTHON_PREFERENCE: "only-managed"
-    - name: Rename coverage report file
-      if: matrix.py == '' || (matrix.os != 'windows-latest' && matrix.os != 'macos-latest')
+
+  test-coverage:
+    name: ${{ matrix.name }} on Ubuntu
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tox_env: py314-parallel
+            name: "3.14"
+            coverage_name: "3.14"
+          - tox_env: pydantic20
+            name: pydantic20
+            coverage_name: pydantic20
+          - tox_env: pydantic25
+            name: pydantic25
+            coverage_name: pydantic25
+    runs-on: ubuntu-24.04
+    env:
+      OS: ubuntu-24.04
+      TOX_ENV: ${{ matrix.tox_env }}
+    steps:
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        fetch-depth: 1
+        persist-credentials: false
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      with:
+        enable-cache: true
+        cache-suffix: "${{ matrix.tox_env }}"
+    - name: Install tox
+      run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
+    - name: Setup Python test environment
       run: |
-        import os; import sys
-        py = "${{ matrix.py }}"
-        if py:
-            env_name = f"py{py.replace('.', '')}-parallel"
-            base_name = py
-        else:
-            env_name = "${{ matrix.tox_env }}"
-            base_name = "${{ matrix.tox_env }}"
-        os.rename(f".tox/.coverage.{env_name}", f".tox/.coverage.{base_name}-${{ matrix.os }}")
+        tox run -vv --notest --skip-missing-interpreters false -e "$TOX_ENV"
+      shell: bash
+      env:
+        UV_PYTHON_PREFERENCE: "only-managed"
+    - name: Run test suite
+      run: |
+        tox run --skip-uv-sync --skip-pkg-install -e "$TOX_ENV"
+      shell: bash
+      env:
+        UV_PYTHON_PREFERENCE: "only-managed"
+    - name: Rename coverage report file
+      run: |
+        import os
+
+        os.rename(
+            f".tox/.coverage.{os.environ['TOX_ENV']}",
+            f".tox/.coverage.${{ matrix.coverage_name }}-{os.environ['OS']}",
+        )
       shell: python
     - name: Upload coverage data
-      if: matrix.py == '' || (matrix.os != 'windows-latest' && matrix.os != 'macos-latest')
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         include-hidden-files: true
-        name: .coverage.${{ matrix.py || matrix.tox_env }}-${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os }}
+        name: .coverage.${{ matrix.coverage_name }}-ubuntu-24.04
         path: ".tox/.coverage.*"
         retention-days: 3
 
@@ -123,11 +149,11 @@ jobs:
     name: >-
       ${{ matrix.target.name }} on
       ${{ matrix.target.os == 'windows-latest' && 'Windows' || (matrix.target.os == 'macos-latest' && 'macOS' || 'Ubuntu') }}
-      shard ${{ matrix.shard }}/2
+      shard ${{ matrix.shard }}/3
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
         target:
           - tox_env: py313-parallel
             name: "3.13"
@@ -149,12 +175,12 @@ jobs:
     env:
       OS: ${{ matrix.target.os }}
       SHARD_INDEX: ${{ matrix.shard }}
-      SHARD_TOTAL: 2
+      SHARD_TOTAL: 3
       TOX_ENV: ${{ matrix.target.tox_env }}
     steps:
     - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       with:
-        fetch-depth: 0
+        fetch-depth: 1
         persist-credentials: false
     - name: Install the latest version of uv
       uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
@@ -214,7 +240,7 @@ jobs:
     name: combine coverage
     runs-on: ubuntu-latest
     needs:
-      - test
+      - test-coverage
       - test-shard
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -469,6 +495,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - test
+      - test-coverage
       - test-shard
       - coverage
       - check
@@ -481,6 +508,7 @@ jobs:
       - name: Fail if any test workflow job failed
         run: |
           test_result='${{ needs.test.result }}'
+          test_coverage_result='${{ needs.test-coverage.result }}'
           test_shard_result='${{ needs.test-shard.result }}'
           coverage_result='${{ needs.coverage.result }}'
           check_result='${{ needs.check.result }}'
@@ -491,6 +519,7 @@ jobs:
           protobuf_official_e2e_result='${{ needs.protobuf-official-e2e.result }}'
 
           echo "test: ${test_result}"
+          echo "test coverage: ${test_coverage_result}"
           echo "test shard: ${test_shard_result}"
           echo "coverage: ${coverage_result}"
           echo "check: ${check_result}"
@@ -501,6 +530,7 @@ jobs:
           echo "protobuf official e2e: ${protobuf_official_e2e_result}"
 
           [ "${test_result}" = "success" ] || exit 1
+          [ "${test_coverage_result}" = "success" ] || exit 1
           [ "${test_shard_result}" = "success" ] || exit 1
           [ "${coverage_result}" = "success" ] || exit 1
           [ "${check_result}" = "success" ] || exit 1
