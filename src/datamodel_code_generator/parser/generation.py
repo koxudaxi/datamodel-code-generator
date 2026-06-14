@@ -524,6 +524,7 @@ class GenerationStore:  # noqa: PLR0904
         self._next_model_id = 0
         self._facts_version = 0
         self._dirty = True
+        self._defer_refresh_depth = 0
 
     @classmethod
     def create_with_results(cls) -> tuple[GenerationStore, list[DataModel]]:
@@ -630,6 +631,13 @@ class GenerationStore:  # noqa: PLR0904
 
     def refresh(self) -> None:
         """Rebuild facts from the live model list."""
+        if self._defer_refresh_depth:
+            return
+
+        self.refresh_now()
+
+    def refresh_now(self) -> None:
+        """Rebuild facts immediately, even inside a deferred mutation block."""
         if not self._dirty:
             return
 
@@ -777,9 +785,19 @@ class GenerationStore:  # noqa: PLR0904
                     self.detach_data_type_ref(data_type)
 
     @contextmanager
-    def defer_refresh(self) -> Generator[None, None, None]:  # noqa: PLR6301
-        """Mark a group of mutations as one logical generation-state update."""
-        yield
+    def defer_refresh(self) -> Generator[None, None, None]:
+        """Batch mutation invalidations and rebuild derived facts once on exit."""
+        self._defer_refresh_depth += 1
+        completed = False
+        try:
+            yield
+            completed = True
+        finally:
+            try:
+                if completed and self._defer_refresh_depth == 1:
+                    self.refresh_now()
+            finally:
+                self._defer_refresh_depth -= 1
 
     @staticmethod
     def _replace_data_type_reference(data_type: DataType, new_reference: Reference | None) -> None:
