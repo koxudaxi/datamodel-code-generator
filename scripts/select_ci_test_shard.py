@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-EXCLUDED_PARTS = frozenset({"__pycache__", "data"})
+EXCLUDED_PARTS = frozenset({"__pycache__", "cli_doc", "data"})
 TESTS_ROOT = Path("tests")
 
 
