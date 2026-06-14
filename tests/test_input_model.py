@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 import types
 from argparse import Namespace
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -16,10 +17,11 @@ from datamodel_code_generator.__main__ import Exit, main
 from tests.conftest import assert_output, freeze_time
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
 
 EXPECTED_INPUT_MODEL_PATH = Path(__file__).parent / "data" / "expected" / "main" / "input_model"
 TIMESTAMP = "1985-10-26T01:21:00-07:00"
+_MISSING_SYS_MODULE = object()
 
 
 def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> None:
@@ -64,6 +66,19 @@ def _assert_sys_modules_with_prefix(module_prefix: str, expected_modules: set[st
     actual_modules = {module_name for module_name in sys.modules if module_name.startswith(module_prefix)}
     if actual_modules != expected_modules:  # pragma: no cover
         pytest.fail(f"Expected sys.modules keys with prefix {module_prefix!r} to be restored")
+
+
+@contextmanager
+def _without_sys_module(module_name: str) -> Iterator[None]:
+    """Temporarily remove a sys.modules entry and restore the previous state."""
+    previous_module = sys.modules.pop(module_name, _MISSING_SYS_MODULE)
+    try:
+        yield
+    finally:
+        if previous_module is _MISSING_SYS_MODULE:
+            sys.modules.pop(module_name, None)
+        else:
+            sys.modules[module_name] = previous_module
 
 
 def run_input_model_and_assert(
@@ -349,15 +364,15 @@ def test_input_model_path_format_restores_sys_modules(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     module_name = model_path.stem
-    sys.modules.pop(module_name, None)
 
-    run_input_model_and_assert(
-        input_model=f"{model_path}:User",
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "path_format.py",
-    )
+    with _without_sys_module(module_name):
+        run_input_model_and_assert(
+            input_model=f"{model_path}:User",
+            output_path=tmp_path / "output.py",
+            expected_file=EXPECTED_INPUT_MODEL_PATH / "path_format.py",
+        )
 
-    _assert_sys_module_missing(module_name)
+        _assert_sys_module_missing(module_name)
 
 
 def test_input_model_path_format_restores_existing_sys_modules(
@@ -1215,19 +1230,19 @@ def test_input_model_multiple_file_path_same_basename_forward_refs(tmp_path: Pat
     existing_temporary_modules = {
         module_name for module_name in sys.modules if module_name.startswith(temporary_module_prefix)
     }
-    sys.modules.pop(module_name, None)
 
-    run_multiple_input_models_and_assert(
-        input_models=[
-            f"{first_model_path}:UserA",
-            f"{second_model_path}:UserB",
-        ],
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "multiple_same_basename_paths.py",
-    )
+    with _without_sys_module(module_name):
+        run_multiple_input_models_and_assert(
+            input_models=[
+                f"{first_model_path}:UserA",
+                f"{second_model_path}:UserB",
+            ],
+            output_path=tmp_path / "output.py",
+            expected_file=EXPECTED_INPUT_MODEL_PATH / "multiple_same_basename_paths.py",
+        )
 
-    _assert_sys_module_missing(module_name)
-    _assert_sys_modules_with_prefix(temporary_module_prefix, existing_temporary_modules)
+        _assert_sys_module_missing(module_name)
+        _assert_sys_modules_with_prefix(temporary_module_prefix, existing_temporary_modules)
 
 
 def test_input_model_multiple_file_path_format_restores_sys_modules(tmp_path: Path) -> None:
@@ -1246,19 +1261,19 @@ def test_input_model_multiple_file_path_format_restores_sys_modules(tmp_path: Pa
         encoding="utf-8",
     )
     module_name = model_path.stem
-    sys.modules.pop(module_name, None)
 
-    run_multiple_input_models_and_assert(
-        input_models=[
-            f"{model_path}:ChildA",
-            f"{model_path}:ChildB",
-        ],
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "forked_inheritance.py",
-        extra_args=["--output-model-type", "typing.TypedDict"],
-    )
+    with _without_sys_module(module_name):
+        run_multiple_input_models_and_assert(
+            input_models=[
+                f"{model_path}:ChildA",
+                f"{model_path}:ChildB",
+            ],
+            output_path=tmp_path / "output.py",
+            expected_file=EXPECTED_INPUT_MODEL_PATH / "forked_inheritance.py",
+            extra_args=["--output-model-type", "typing.TypedDict"],
+        )
 
-    _assert_sys_module_missing(module_name)
+        _assert_sys_module_missing(module_name)
 
 
 def test_input_model_multiple_with_ref_strategy(tmp_path: Path) -> None:
