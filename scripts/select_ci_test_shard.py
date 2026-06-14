@@ -28,16 +28,20 @@ def _main() -> None:
     parser.add_argument("shard_index", type=int)
     parser.add_argument("shard_total", type=int)
     args = parser.parse_args()
+    shard_index = args.shard_index
+    shard_total = args.shard_total
 
-    match args:
-        case argparse.Namespace(shard_index=shard_index, shard_total=shard_total) if 1 <= shard_index <= shard_total:
-            if not (paths := _select_shard(_collect_test_files(), shard_index, shard_total)):
-                msg = f"No tests selected for shard {shard_index}/{shard_total}"
-                raise SystemExit(msg)
-            print(*(path.as_posix() for path in paths), sep="\n")
-        case _:
+    match 1 <= shard_index <= shard_total:
+        case False:
             msg = "shard_index must be between 1 and shard_total"
             raise SystemExit(msg)
+        case True:
+            if paths := _select_shard(_collect_test_files(), shard_index, shard_total):
+                print(*(path.as_posix() for path in paths), sep="\n")
+                return
+
+    msg = f"No tests selected for shard {shard_index}/{shard_total}"
+    raise SystemExit(msg)
 
 
 if __name__ == "__main__":
