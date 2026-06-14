@@ -215,6 +215,7 @@ jobs:
         test_paths=$(tr '\n' ' ' < .tox/formatter-coverage-tests.txt)
         tox run --skip-uv-sync --skip-pkg-install -e "$TOX_ENV" -- \
           -n auto \
+          --dist=worksteal \
           --color=yes \
           -m "not perf" \
           --cov datamodel_code_generator \
@@ -306,6 +307,7 @@ jobs:
         test_paths=$(tr '\n' ' ' < .tox/ci-shard-tests.txt)
         tox run --skip-uv-sync --skip-pkg-install -e "$TOX_ENV" -- \
           -n auto \
+          --dist=worksteal \
           --color=yes \
           -m "not perf" \
           --cov datamodel_code_generator \
