@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
-from datamodel_code_generator import InputFileType, infer_input_type, load_yaml
+from datamodel_code_generator import InputFileType, infer_input_type, load_yaml, load_yaml_dict_from_path
 from datamodel_code_generator.util import (
     _is_yaml_deprecated_bool_warning_enabled,
     get_yaml_backend,
@@ -21,6 +21,7 @@ from datamodel_code_generator.util import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
 
 @pytest.fixture(autouse=True)
@@ -70,6 +71,13 @@ class TestGetYamlParseErrors:
 
 class TestLoadYaml:
     """Tests for load_yaml() with backend switching."""
+
+    def test_load_yaml_dict_from_path_reads_yaml_dict(self, tmp_path: Path) -> None:
+        """Read YAML dict data from a local path."""
+        path = tmp_path / "schema.yaml"
+        path.write_text("key: value\n", encoding="utf-8")
+
+        assert load_yaml_dict_from_path(path, "utf-8") == {"key": "value"}
 
     def test_pyyaml_fallback_string(self) -> None:
         """When ryaml is unavailable, PyYAML is used for string input."""

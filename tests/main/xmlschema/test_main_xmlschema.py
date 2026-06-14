@@ -7,9 +7,11 @@ from typing import TYPE_CHECKING
 
 from datamodel_code_generator import InputFileType
 from datamodel_code_generator.__main__ import Exit
+from datamodel_code_generator.parser import xmlschema as xmlschema_parser
 from datamodel_code_generator.parser.xmlschema import (
     _clear_xml_schema_data_cache,
     _clear_xml_text_cache,
+    _load_xml_schema_data_from_path,
     _read_xml_text,
 )
 from tests.main.conftest import (
@@ -76,6 +78,49 @@ def test_read_xml_text_invalidates_updated_raw_source(tmp_path: Path) -> None:
         updated_text,
         updated_text.replace("\n", os.linesep),
     )
+
+
+def test_read_xml_text_evicts_lru_entries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Evict old raw XML text cache entries after the configured limit."""
+    monkeypatch.setattr(xmlschema_parser, "_XML_TEXT_CACHE_MAX_SIZE", 1)
+    _clear_xml_text_cache()
+    first_path = tmp_path / "first.xsd"
+    second_path = tmp_path / "second.xsd"
+    first_text = (XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8")
+    second_text = (XML_SCHEMA_DATA_PATH / "inline_root.xsd").read_text(encoding="utf-8")
+    first_path.write_text(first_text, encoding="utf-8")
+    second_path.write_text(second_text, encoding="utf-8")
+
+    assert _read_xml_text(first_path, "utf-8") == first_text
+    assert _read_xml_text(first_path, "utf-8") == first_text
+    assert _read_xml_text(second_path, "utf-8") == second_text
+    assert _read_xml_text(second_path, "utf-8") == second_text
+
+
+def test_load_xml_schema_data_from_path_evicts_lru_entries(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Evict old converted XML Schema cache entries after the configured limit."""
+    monkeypatch.setattr(xmlschema_parser, "_XML_SCHEMA_DATA_CACHE_MAX_SIZE", 1)
+    _clear_xml_schema_data_cache()
+    _clear_xml_text_cache()
+    first_path = tmp_path / "first.xsd"
+    second_path = tmp_path / "second.xsd"
+    first_path.write_text((XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8"), encoding="utf-8")
+    second_path.write_text((XML_SCHEMA_DATA_PATH / "inline_root.xsd").read_text(encoding="utf-8"), encoding="utf-8")
+
+    kwargs = {
+        "base_path": tmp_path,
+        "encoding": "utf-8",
+        "xmlschema_version": None,
+        "schema_version_mode": None,
+        "use_xmlschema_datetime_default": False,
+    }
+
+    first_data = _load_xml_schema_data_from_path(first_path, **kwargs)
+    assert _load_xml_schema_data_from_path(first_path, **kwargs) == first_data
+    second_data = _load_xml_schema_data_from_path(second_path, **kwargs)
+    assert _load_xml_schema_data_from_path(second_path, **kwargs) == second_data
 
 
 def test_main_xmlschema_purchase_order_from_normalized_external_path(tmp_path: Path, output_file: Path) -> None:

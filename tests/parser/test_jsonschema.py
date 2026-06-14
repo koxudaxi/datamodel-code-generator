@@ -19,7 +19,7 @@ from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
-from datamodel_code_generator.parser.base import Parser, dump_templates
+from datamodel_code_generator.parser.base import Parser, Source, dump_templates
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
@@ -107,6 +107,14 @@ def test_json_schema_parser_warns_for_non_dict_text_source() -> None:
     """Test non-dict text sources are skipped with a warning."""
     with pytest.warns(UserWarning, match=r"\. is empty or not a dict\. Skipping this file"):
         JsonSchemaParser("[1]").parse(format_=False)
+
+
+def test_json_schema_parser_load_source_dict_rejects_non_dict_text_source() -> None:
+    """Reject non-dict text data before parsing a JSON Schema source."""
+    parser = JsonSchemaParser("")
+
+    with pytest.raises(TypeError, match="Expected dict, got list"):
+        parser._load_source_dict(Source(path=Path(), text="[1]"))
 
 
 def test_json_schema_iter_local_source_paths_ignores_non_local_source() -> None:
