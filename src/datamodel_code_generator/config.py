@@ -212,7 +212,6 @@ class GenerateConfig(BaseModel):
     schema_version: str | None = None
     schema_version_mode: VersionMode | None = None
     external_ref_mapping: dict[str, str] | None = None
-    enable_parsed_source_cache: bool = False
 
 
 def _rebuild_generate_config() -> None:
@@ -352,7 +351,6 @@ class ParserConfig(BaseModel):
     target_pydantic_version: TargetPydanticVersion | None = None
     default_value_overrides: Mapping[str, Any] | None = None
     external_ref_mapping: dict[str, str] | None = None
-    enable_parsed_source_cache: bool = False
 
 
 class GraphQLParserConfig(ParserConfig):

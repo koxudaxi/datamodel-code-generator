@@ -1590,7 +1590,7 @@ class XMLSchemaParser(JsonSchemaParser):
 
     def _source_from_xml_path(self, path: Path) -> Source:
         relative_path = path.relative_to(self.base_path)
-        if not self.enable_parsed_source_cache:
+        if not self._use_parsed_source_cache:
             return Source(path=relative_path, text=_read_xml_text(path, self.encoding))
 
         config = cast("XMLSchemaParserConfig", self.config)

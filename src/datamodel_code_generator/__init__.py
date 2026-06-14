@@ -102,6 +102,26 @@ _ParserSourceDataSeenKey: TypeAlias = tuple[Path, str]
 _parser_source_data_cache: OrderedDict[_ParserSourceDataCacheKey, YamlValue] = OrderedDict()
 _parser_source_data_seen_keys: OrderedDict[_ParserSourceDataSeenKey, None] = OrderedDict()
 _parser_source_data_cache_lock = RLock()
+_enable_parsed_source_cache = False
+
+
+def enable_parsed_source_cache() -> Callable[[], None]:
+    """Enable the process-local parsed source cache and return a restore callback."""
+    global _enable_parsed_source_cache  # noqa: PLW0603
+
+    previous = _enable_parsed_source_cache
+    _enable_parsed_source_cache = True
+
+    def restore() -> None:
+        global _enable_parsed_source_cache  # noqa: PLW0603
+
+        _enable_parsed_source_cache = previous
+
+    return restore
+
+
+def _is_parsed_source_cache_enabled() -> bool:
+    return _enable_parsed_source_cache
 
 
 def load_yaml(stream: str | TextIO) -> YamlValue:
@@ -1466,6 +1486,7 @@ __all__ = [
     "detect_jsonschema_version",  # noqa: F822
     "detect_openapi_version",  # noqa: F822
     "detect_xmlschema_version",
+    "enable_parsed_source_cache",
     "generate",
     "generate_dynamic_models",  # noqa: F822
 ]

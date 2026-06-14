@@ -95,6 +95,7 @@ _PUBLIC_MODULE_EXPORTS: dict[str, frozenset[str]] = {
         "detect_jsonschema_version",
         "detect_openapi_version",
         "detect_xmlschema_version",
+        "enable_parsed_source_cache",
         "generate",
         "generate_dynamic_models",
     }),
@@ -337,7 +338,6 @@ def _baseline_generate(
     schema_version: str | None = None,
     schema_version_mode: VersionMode | None = None,
     external_ref_mapping: dict[str, str] | None = None,
-    enable_parsed_source_cache: bool = False,
 ) -> str | object | None:
     raise NotImplementedError
 
@@ -475,7 +475,6 @@ class _BaselineParser:
         field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
         target_pydantic_version: TargetPydanticVersion | None = None,
         external_ref_mapping: dict[str, str] | None = None,
-        enable_parsed_source_cache: bool = False,
     ) -> None:
         raise NotImplementedError
 

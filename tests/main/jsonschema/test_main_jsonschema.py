@@ -2239,7 +2239,6 @@ def test_main_generate_with_parsed_source_cache(output_file: Path) -> None:
         input_file_type=InputFileType.JsonSchema,
         assert_func=assert_file_content,
         expected_file="general.py",
-        enable_parsed_source_cache=True,
     )
 
 
@@ -2328,7 +2327,6 @@ class Root(BaseModel):
         assert_func=create_assert_file_content(tmp_path),
         expected_file=expected_path.name,
         disable_timestamp=True,
-        enable_parsed_source_cache=True,
         unchanged_inputs={"cached schema.yaml": cached_schema},
     )
 

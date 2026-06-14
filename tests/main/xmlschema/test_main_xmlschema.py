@@ -47,7 +47,6 @@ def test_main_xmlschema_with_parsed_source_cache(output_file: Path) -> None:
         input_file_type=InputFileType.XMLSchema,
         assert_func=assert_file_content,
         expected_file="purchase_order.py",
-        enable_parsed_source_cache=True,
     )
 
 
