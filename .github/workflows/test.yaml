@@ -25,7 +25,7 @@ jobs:
       fail-fast: false
       matrix:
         py: ["3.14", "3.13", "3.12", "3.11", "3.10"]
-        os: [ubuntu-24.04, windows-latest, macos-latest]
+        os: [windows-latest, macos-latest]
         tox_env: ['']
         include:
           - tox_env: py312-blacklatest-parallel
@@ -110,10 +110,39 @@ jobs:
         path: ".tox/.coverage.*"
         retention-days: 3
 
+  test-ubuntu-python:
+    name: Python versions on Ubuntu
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      with:
+        enable-cache: true
+        cache-suffix: python-versions
+    - name: Install tox
+      run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
+    - name: Run Python test suites
+      run: |
+        tox run-parallel -p 5 -o \
+          -e py314 -e py313 -e py312 -e py311 -e py310
+      env:
+        UV_PYTHON_PREFERENCE: "only-managed"
+    - name: Upload coverage data
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        include-hidden-files: true
+        name: .coverage.python-versions-ubuntu-24.04
+        path: ".tox/.coverage.py*"
+        retention-days: 3
+
   coverage:
     name: combine coverage
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, test-ubuntu-python]
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -367,6 +396,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - test
+      - test-ubuntu-python
       - coverage
       - check
       - w3c-xmlschema-e2e
@@ -378,6 +408,7 @@ jobs:
       - name: Fail if any test workflow job failed
         run: |
           test_result='${{ needs.test.result }}'
+          test_ubuntu_python_result='${{ needs.test-ubuntu-python.result }}'
           coverage_result='${{ needs.coverage.result }}'
           check_result='${{ needs.check.result }}'
           w3c_xmlschema_e2e_result='${{ needs.w3c-xmlschema-e2e.result }}'
@@ -387,6 +418,7 @@ jobs:
           protobuf_official_e2e_result='${{ needs.protobuf-official-e2e.result }}'
 
           echo "test: ${test_result}"
+          echo "test ubuntu python: ${test_ubuntu_python_result}"
           echo "coverage: ${coverage_result}"
           echo "check: ${check_result}"
           echo "w3c xmlschema e2e: ${w3c_xmlschema_e2e_result}"
@@ -396,6 +428,7 @@ jobs:
           echo "protobuf official e2e: ${protobuf_official_e2e_result}"
 
           [ "${test_result}" = "success" ] || exit 1
+          [ "${test_ubuntu_python_result}" = "success" ] || exit 1
           [ "${coverage_result}" = "success" ] || exit 1
           [ "${check_result}" = "success" ] || exit 1
           [ "${w3c_xmlschema_e2e_result}" = "success" ] || exit 1
