@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import types
 from argparse import Namespace
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -40,6 +41,21 @@ def _assert_file_exists(path: Path) -> None:
     __tracebackhide__ = True
     if not path.exists():  # pragma: no cover
         pytest.fail(f"Expected file to exist: {path}")
+
+
+def _assert_sys_module_missing(module_name: str) -> None:
+    """Assert sys.modules does not contain module_name."""
+    __tracebackhide__ = True
+    if module_name in sys.modules:  # pragma: no cover
+        pytest.fail(f"Expected sys.modules to not contain {module_name!r}")
+
+
+def _assert_sys_module_is(module_name: str, expected_module: types.ModuleType) -> None:
+    """Assert sys.modules contains the expected module object."""
+    __tracebackhide__ = True
+    actual_module = sys.modules.get(module_name)
+    if actual_module is not expected_module:  # pragma: no cover
+        pytest.fail(f"Expected sys.modules[{module_name!r}] to be restored")
 
 
 def run_input_model_and_assert(
@@ -315,6 +331,52 @@ def test_input_model_path_format(tmp_path: Path) -> None:
         output_path=tmp_path / "output.py",
         expected_file=EXPECTED_INPUT_MODEL_PATH / "path_format.py",
     )
+
+
+def test_input_model_path_format_restores_sys_modules(tmp_path: Path) -> None:
+    """Test path-based --input-model does not keep temporary modules alive."""
+    model_path = tmp_path / "temporary_input_model.py"
+    model_path.write_text(
+        "from pydantic import BaseModel\n\n"
+        "class User(BaseModel):\n"
+        "    name: str\n"
+        "    age: int\n",
+        encoding="utf-8",
+    )
+    sys.modules.pop(model_path.stem, None)
+
+    run_input_model_and_assert(
+        input_model=f"{model_path}:User",
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "path_format.py",
+    )
+
+    _assert_sys_module_missing(model_path.stem)
+
+
+def test_input_model_path_format_restores_existing_sys_modules(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test path-based --input-model restores a pre-existing sys.modules entry."""
+    model_path = tmp_path / "existing_input_model.py"
+    model_path.write_text(
+        "from pydantic import BaseModel\n\n"
+        "class User(BaseModel):\n"
+        "    name: str\n"
+        "    age: int\n",
+        encoding="utf-8",
+    )
+    existing_module = types.ModuleType(model_path.stem)
+    monkeypatch.setitem(sys.modules, model_path.stem, existing_module)
+
+    run_input_model_and_assert(
+        input_model=f"{model_path}:User",
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "path_format.py",
+    )
+
+    _assert_sys_module_is(model_path.stem, existing_module)
 
 
 def test_input_model_path_format_filename_only(
@@ -1101,6 +1163,36 @@ def test_input_model_multiple_file_path_format(tmp_path: Path) -> None:
         expected_file=EXPECTED_INPUT_MODEL_PATH / "forked_inheritance.py",
         extra_args=["--output-model-type", "typing.TypedDict"],
     )
+
+
+def test_input_model_multiple_file_path_format_restores_sys_modules(tmp_path: Path) -> None:
+    """Test multiple path-based --input-model entries do not keep temporary modules alive."""
+    model_path = tmp_path / "multiple_input_model.py"
+    model_path.write_text(
+        "from pydantic import BaseModel\n\n"
+        "class GrandParent(BaseModel):\n"
+        "    grand_field: str\n\n"
+        "class Parent(GrandParent):\n"
+        "    parent_field: int\n\n"
+        "class ChildA(Parent):\n"
+        "    child_a_field: float\n\n"
+        "class ChildB(Parent):\n"
+        "    child_b_field: bool\n",
+        encoding="utf-8",
+    )
+    sys.modules.pop(model_path.stem, None)
+
+    run_multiple_input_models_and_assert(
+        input_models=[
+            f"{model_path}:ChildA",
+            f"{model_path}:ChildB",
+        ],
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "forked_inheritance.py",
+        extra_args=["--output-model-type", "typing.TypedDict"],
+    )
+
+    _assert_sys_module_missing(model_path.stem)
 
 
 def test_input_model_multiple_with_ref_strategy(tmp_path: Path) -> None:
