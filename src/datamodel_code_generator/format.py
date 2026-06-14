@@ -572,10 +572,11 @@ class CodeFormatter:
             if isort.__version__.startswith("4."):  # pragma: no cover
                 self.isort_config = None
             else:
+                isort_settings_path = str(Path(self.settings_path).resolve())
                 self.isort_config = _get_cached_isort_config(
-                    self.settings_path,
+                    isort_settings_path,
                     known_third_party_key,
-                    _get_isort_config_file_stats(self.settings_path),
+                    _get_isort_config_file_stats(isort_settings_path),
                 )
         else:
             self.isort_config_kwargs = {}

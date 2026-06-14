@@ -1797,13 +1797,14 @@ def test_settings_path_with_deeply_nested_nonexistent_path(tmp_path: Path) -> No
     assert formatter.settings_path == str(tmp_path)
 
 
-def test_code_formatter_reuses_equivalent_isort_config(tmp_path: Path) -> None:
+def test_code_formatter_reuses_equivalent_isort_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test equivalent isort formatter settings share the same cached Config."""
     format_module._get_cached_isort_config.cache_clear()
+    monkeypatch.chdir(tmp_path)
 
     formatter = CodeFormatter(
         PythonVersionMin,
-        settings_path=tmp_path,
+        settings_path=Path(),
         formatters=[Formatter.ISORT],
         known_third_party=["fastapi"],
     )
@@ -1815,6 +1816,26 @@ def test_code_formatter_reuses_equivalent_isort_config(tmp_path: Path) -> None:
     )
 
     assert formatter.isort_config is equivalent_formatter.isort_config
+
+
+def test_isort_config_file_stats_handles_candidate_dirs_and_vcs_stop(tmp_path: Path) -> None:
+    """Test isort config stats include files, skip directories, and stop at VCS roots."""
+    project_dir = tmp_path / "project"
+    package_dir = project_dir / "package"
+    package_dir.mkdir(parents=True)
+    parent_pyproject = tmp_path / "pyproject.toml"
+    project_pyproject = project_dir / "pyproject.toml"
+    parent_pyproject.write_text("[tool.isort]\nline_length = 88\n", encoding="utf-8")
+    project_pyproject.write_text("[tool.isort]\nline_length = 79\n", encoding="utf-8")
+    (project_dir / ".isort.cfg").mkdir()
+    (project_dir / ".git").mkdir()
+
+    stats = format_module._get_isort_config_file_stats(str(package_dir / "models.py"))
+    stat_paths = {stat_path for stat_path, *_ in stats}
+
+    assert str(project_pyproject) in stat_paths
+    assert str(parent_pyproject) not in stat_paths
+    assert str(project_dir / ".isort.cfg") not in stat_paths
 
 
 def test_code_formatter_isort_config_cache_reflects_pyproject_changes(tmp_path: Path) -> None:
