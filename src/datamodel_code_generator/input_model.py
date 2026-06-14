@@ -80,8 +80,7 @@ def _split_input_model(input_model: str) -> tuple[str, str]:
             return modname, qualname
         case _:
             msg = (
-                f"Invalid --input-model format: {input_model!r}. "
-                f"Expected 'module:Object' or 'path/to/file.py:Object'."
+                f"Invalid --input-model format: {input_model!r}. Expected 'module:Object' or 'path/to/file.py:Object'."
             )
             raise Error(msg)
 

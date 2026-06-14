@@ -337,10 +337,7 @@ def test_input_model_path_format_restores_sys_modules(tmp_path: Path) -> None:
     """Test path-based --input-model does not keep temporary modules alive."""
     model_path = tmp_path / "temporary_input_model.py"
     model_path.write_text(
-        "from pydantic import BaseModel\n\n"
-        "class User(BaseModel):\n"
-        "    name: str\n"
-        "    age: int\n",
+        "from pydantic import BaseModel\n\nclass User(BaseModel):\n    name: str\n    age: int\n",
         encoding="utf-8",
     )
     sys.modules.pop(model_path.stem, None)
@@ -361,10 +358,7 @@ def test_input_model_path_format_restores_existing_sys_modules(
     """Test path-based --input-model restores a pre-existing sys.modules entry."""
     model_path = tmp_path / "existing_input_model.py"
     model_path.write_text(
-        "from pydantic import BaseModel\n\n"
-        "class User(BaseModel):\n"
-        "    name: str\n"
-        "    age: int\n",
+        "from pydantic import BaseModel\n\nclass User(BaseModel):\n    name: str\n    age: int\n",
         encoding="utf-8",
     )
     existing_module = types.ModuleType(model_path.stem)
