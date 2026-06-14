@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
+from datamodel_code_generator import load_data
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import PythonVersion, is_supported_in_black
 from datamodel_code_generator.parser.avro import convert_avro_schema_data
+from tests.conftest import assert_mutable_copy_is_isolated
 from tests.main.avro.conftest import assert_file_content
 from tests.main.conftest import (
     AVRO_DATA_PATH,
@@ -29,54 +32,42 @@ def _expected_file(expected_file: str) -> str:
     return f"py{CURRENT_PYTHON_VERSION.replace('.', '')}/{expected_file}"
 
 
-@pytest.mark.allow_direct_assert
+def _append_mutation_marker(value: object) -> None:
+    cast("list[Any]", value).append("__mutated__")
+
+
 def test_convert_avro_schema_data_isolates_raw_lists() -> None:
     """Keep converted Avro metadata and enum lists independent from raw schema input."""
-    record_aliases = ["LegacyExample"]
-    field_aliases = ["legacy_status"]
-    enum_aliases = ["LegacyStatus"]
-    enum_symbols = ["ACTIVE", "INACTIVE"]
-    raw_schema = {
-        "type": "record",
-        "name": "Example",
-        "aliases": record_aliases,
-        "fields": [
-            {
-                "name": "status",
-                "aliases": field_aliases,
-                "type": {
-                    "type": "enum",
-                    "name": "Status",
-                    "aliases": enum_aliases,
-                    "symbols": enum_symbols,
-                },
-            }
-        ],
-    }
-
+    raw_schema = cast("dict[str, Any]", load_data((AVRO_DATA_PATH / "constructs.avsc").read_text(encoding="utf-8")))
     converted = convert_avro_schema_data(raw_schema)
-    record_schema = converted["definitions"]["Example"]
-    field_schema = record_schema["properties"]["status"]
+    raw_id_field = next(field for field in cast("list[dict[str, Any]]", raw_schema["fields"]) if field["name"] == "id")
+    raw_status_field = next(
+        field for field in cast("list[dict[str, Any]]", raw_schema["fields"]) if field["name"] == "status"
+    )
+    raw_status_type = cast("dict[str, Any]", raw_status_field["type"])
+    definitions = cast("dict[str, dict[str, Any]]", converted["definitions"])
+    record_schema = definitions["User"]
+    field_schema = cast("dict[str, Any]", record_schema["properties"])["id"]
     enum_schema = converted["definitions"]["Status"]
 
-    assert record_schema["x-avro-aliases"] == record_aliases
-    assert record_schema["x-avro-aliases"] is not record_aliases
-    assert field_schema["x-avro-aliases"] == field_aliases
-    assert field_schema["x-avro-aliases"] is not field_aliases
-    assert enum_schema["x-avro-aliases"] == enum_aliases
-    assert enum_schema["x-avro-aliases"] is not enum_aliases
-    assert enum_schema["enum"] == enum_symbols
-    assert enum_schema["enum"] is not enum_symbols
-
-    record_schema["x-avro-aliases"].append("MutatedExample")
-    field_schema["x-avro-aliases"].append("mutated_status")
-    enum_schema["x-avro-aliases"].append("MutatedStatus")
-    enum_schema["enum"].append("MUTATED")
-
-    assert record_aliases == ["LegacyExample"]
-    assert field_aliases == ["legacy_status"]
-    assert enum_aliases == ["LegacyStatus"]
-    assert enum_symbols == ["ACTIVE", "INACTIVE"]
+    assert_mutable_copy_is_isolated(
+        original=raw_schema["aliases"],
+        copied=record_schema["x-avro-aliases"],
+        mutate_copied=_append_mutation_marker,
+        label="Avro record aliases",
+    )
+    assert_mutable_copy_is_isolated(
+        original=raw_id_field["aliases"],
+        copied=field_schema["x-avro-aliases"],
+        mutate_copied=_append_mutation_marker,
+        label="Avro field aliases",
+    )
+    assert_mutable_copy_is_isolated(
+        original=raw_status_type["symbols"],
+        copied=enum_schema["enum"],
+        mutate_copied=_append_mutation_marker,
+        label="Avro enum symbols",
+    )
 
 
 @_SKIP_BLACK
