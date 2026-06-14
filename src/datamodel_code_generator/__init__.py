@@ -244,7 +244,16 @@ def _load_parser_source_data_from_path(
     path: Path,
     encoding: str,
 ) -> YamlValue:
+    return _read_parser_source_data_from_path(path, encoding)[1]
+
+
+def _read_parser_source_data_from_path(path: Path, encoding: str) -> tuple[bytes, YamlValue]:
     resolved_path = path.resolve()
+    data = resolved_path.read_bytes()
+    return data, _load_parser_source_data_from_path_bytes(resolved_path, data, encoding)
+
+
+def _load_parser_source_data_from_path_bytes(resolved_path: Path, data: bytes, encoding: str) -> YamlValue:
     seen_key = (resolved_path, encoding)
     with _parser_source_data_cache_lock:
         use_cache = seen_key in _parser_source_data_seen_keys
@@ -253,7 +262,6 @@ def _load_parser_source_data_from_path(
         while len(_parser_source_data_seen_keys) > _PARSER_SOURCE_DATA_CACHE_MAX_SIZE:
             _parser_source_data_seen_keys.popitem(last=False)
 
-    data = resolved_path.read_bytes()
     if not use_cache:
         return _load_parser_source_data_from_bytes(resolved_path, data, encoding)
 

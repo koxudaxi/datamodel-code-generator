@@ -50,7 +50,7 @@ from datamodel_code_generator import (
     YamlValue,
     _internal_utils,
     _is_parsed_source_cache_enabled,
-    _load_parser_source_data_from_path,
+    _read_parser_source_data_from_path,
 )
 from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.format import (
@@ -969,10 +969,11 @@ class Source(BaseModel):
     @classmethod
     def from_cached_path(cls, path: Path, base_path: Path, encoding: str, *, keep_text: bool = False) -> Source:
         """Create a Source from a cached parsed file path relative to base_path."""
+        data, raw_data = _read_parser_source_data_from_path(path, encoding)
         return cls(
             path=path.relative_to(base_path),
-            text=path.read_text(encoding=encoding) if keep_text else "",
-            raw_data=_load_parser_source_data_from_path(path, encoding),
+            text=data.decode(encoding) if keep_text else "",
+            raw_data=raw_data,
         )
 
     @classmethod

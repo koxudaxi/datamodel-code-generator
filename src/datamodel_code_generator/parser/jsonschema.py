@@ -5354,7 +5354,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _load_source_dict(self, source: Source) -> dict[str, Any]:  # noqa: PLR6301
         if source.raw_data is None:
-            return load_data(source.text)
+            loaded = load_data(source.text)
+            if not isinstance(loaded, dict):
+                msg = f"Expected dict, got {type(loaded).__name__}"
+                raise TypeError(msg)
+            return loaded
         if not isinstance(source.raw_data, dict):
             msg = f"Expected dict, got {type(source.raw_data).__name__}"
             raise TypeError(msg)
