@@ -704,6 +704,28 @@ def assert_output(
     _assert_with_external_file(output, expected_path)
 
 
+def assert_mutable_copy_is_isolated(
+    *,
+    original: object,
+    copied: object,
+    mutate_copied: Callable[[Any], None],
+    label: str,
+) -> None:
+    """Assert that mutating a copied mutable value does not mutate its original."""
+    __tracebackhide__ = True
+    original_snapshot = deepcopy(original)
+    copied_snapshot = deepcopy(copied)
+    if copied != original:  # pragma: no cover
+        pytest.fail(f"{label} copy differs from original before mutation: original={original!r}, copied={copied!r}")
+    if copied is original:  # pragma: no cover
+        pytest.fail(f"{label} copy reuses the original object")
+    mutate_copied(copied)
+    if copied == copied_snapshot:  # pragma: no cover
+        pytest.fail(f"{label} mutation did not change the copied value")
+    if original != original_snapshot:  # pragma: no cover
+        pytest.fail(f"{label} mutation changed the original: before={original_snapshot!r}, after={original!r}")
+
+
 def _tracks_mutation(value: object) -> bool:
     return isinstance(value, (dict, list))
 

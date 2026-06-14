@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import pytest
 
+from datamodel_code_generator import load_data
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import PythonVersion, is_supported_in_black
+from datamodel_code_generator.parser.avro import convert_avro_schema_data
+from tests.conftest import assert_mutable_copy_is_isolated
 from tests.main.avro.conftest import assert_file_content
 from tests.main.conftest import (
     AVRO_DATA_PATH,
@@ -26,6 +30,46 @@ _SKIP_BLACK = pytest.mark.skipif(
 
 def _expected_file(expected_file: str) -> str:
     return f"py{CURRENT_PYTHON_VERSION.replace('.', '')}/{expected_file}"
+
+
+def _append_mutation_marker(value: object) -> None:
+    cast("list[object]", value).append("__mutated__")
+
+
+def test_convert_avro_schema_data_isolates_raw_lists() -> None:
+    """Keep converted Avro metadata and enum lists independent from raw schema input."""
+    raw_schema = cast("dict[str, object]", load_data((AVRO_DATA_PATH / "constructs.avsc").read_text(encoding="utf-8")))
+    converted = convert_avro_schema_data(raw_schema)
+    raw_id_field = next(
+        field for field in cast("list[dict[str, object]]", raw_schema["fields"]) if field["name"] == "id"
+    )
+    raw_status_field = next(
+        field for field in cast("list[dict[str, object]]", raw_schema["fields"]) if field["name"] == "status"
+    )
+    raw_status_type = cast("dict[str, object]", raw_status_field["type"])
+    definitions = cast("dict[str, dict[str, object]]", converted["definitions"])
+    record_schema = definitions["User"]
+    field_schema = cast("dict[str, object]", record_schema["properties"])["id"]
+    enum_schema = converted["definitions"]["Status"]
+
+    assert_mutable_copy_is_isolated(
+        original=raw_schema["aliases"],
+        copied=record_schema["x-avro-aliases"],
+        mutate_copied=_append_mutation_marker,
+        label="Avro record aliases",
+    )
+    assert_mutable_copy_is_isolated(
+        original=raw_id_field["aliases"],
+        copied=field_schema["x-avro-aliases"],
+        mutate_copied=_append_mutation_marker,
+        label="Avro field aliases",
+    )
+    assert_mutable_copy_is_isolated(
+        original=raw_status_type["symbols"],
+        copied=enum_schema["enum"],
+        mutate_copied=_append_mutation_marker,
+        label="Avro enum symbols",
+    )
 
 
 @_SKIP_BLACK

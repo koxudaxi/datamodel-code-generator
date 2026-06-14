@@ -355,8 +355,7 @@ class _AvroSchemaConverter:
             field_schema = self._convert_schema(field.get("type"), name_info.namespace)
             if "doc" in field and isinstance(field["doc"], str):
                 field_schema["description"] = field["doc"]
-            if "aliases" in field:
-                field_schema["x-avro-aliases"] = field["aliases"]
+            self._copy_aliases(field, field_schema)
             if "order" in field:
                 field_schema["x-avro-order"] = field["order"]
             required.append(field_name)
@@ -386,7 +385,7 @@ class _AvroSchemaConverter:
                 msg = f"Duplicate Avro enum symbol: {fullname}.{symbol}"
                 raise Error(msg)
             seen_symbols.add(symbol)
-        converted: JsonSchema = {"type": "string", "enum": symbols}
+        converted: JsonSchema = {"type": "string", "enum": list(symbols)}
         self._copy_common_metadata(schema, converted)
         converted["x-avro-fullname"] = fullname
         return converted
@@ -410,10 +409,16 @@ class _AvroSchemaConverter:
     def _copy_common_metadata(source: JsonSchema, target: JsonSchema) -> None:
         if isinstance(doc := source.get("doc"), str):
             target["description"] = doc
-        if "aliases" in source:
-            target["x-avro-aliases"] = source["aliases"]
+        _AvroSchemaConverter._copy_aliases(source, target)
         if isinstance(logical_type := source.get("logicalType"), str):
             target["x-avro-logicalType"] = logical_type
+
+    @staticmethod
+    def _copy_aliases(source: JsonSchema, target: JsonSchema) -> None:
+        if "aliases" not in source:
+            return
+        aliases = source["aliases"]
+        target["x-avro-aliases"] = list(aliases) if isinstance(aliases, list) else aliases
 
     def _apply_logical_type(self, source: JsonSchema, target: JsonSchema, *, avro_type: str) -> JsonSchema:
         logical_type = source.get("logicalType")
