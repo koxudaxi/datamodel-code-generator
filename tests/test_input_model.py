@@ -398,6 +398,21 @@ def test_input_model_path_format_restores_existing_sys_modules(
     _assert_sys_module_is(module_name, existing_module)
 
 
+def test_without_sys_module_restores_existing_module() -> None:
+    """Test _without_sys_module restores the previous sys.modules entry."""
+    module_name = "temporary_existing_input_model"
+    existing_module = types.ModuleType(module_name)
+
+    with _without_sys_module(module_name):
+        sys.modules[module_name] = existing_module
+        with _without_sys_module(module_name):
+            _assert_sys_module_missing(module_name)
+
+        _assert_sys_module_is(module_name, existing_module)
+
+    _assert_sys_module_missing(module_name)
+
+
 def test_input_model_path_format_filename_only(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -468,6 +483,72 @@ def test_input_model_module_import_error(
         capsys=capsys,
         expected_stderr_contains="Cannot import module",
     )
+
+
+def test_path_module_name_keeps_same_file_module(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test path module naming keeps the stem when the loaded module is the same file."""
+    from datamodel_code_generator.input_model import _get_path_module_name
+
+    model_path = (tmp_path / "same_file_model.py").resolve()
+    model_path.write_text("class Model: pass\n", encoding="utf-8")
+    module_name = model_path.stem
+    existing_module = types.ModuleType(module_name)
+    existing_module.__file__ = str(model_path)
+    monkeypatch.setitem(sys.modules, module_name, existing_module)
+
+    assert _get_path_module_name(model_path) == module_name
+
+
+def test_path_module_name_falls_back_when_existing_file_cannot_resolve(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test path module naming keeps the stem when an existing module file cannot resolve."""
+    from datamodel_code_generator.input_model import _get_path_module_name
+
+    model_path = (tmp_path / "unresolvable_existing_model.py").resolve()
+    model_path.write_text("class Model: pass\n", encoding="utf-8")
+    module_name = model_path.stem
+    existing_module = types.ModuleType(module_name)
+    existing_module.__file__ = "__unresolvable_existing_model__"
+    monkeypatch.setitem(sys.modules, module_name, existing_module)
+
+    original_resolve = Path.resolve
+
+    def fake_resolve(path: Path, *args: object, **kwargs: object) -> Path:
+        if str(path) == "__unresolvable_existing_model__":
+            msg = "cannot resolve"
+            raise OSError(msg)
+        return original_resolve(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", fake_resolve)
+
+    assert _get_path_module_name(model_path) == module_name
+
+
+def test_load_module_from_path_restores_sys_modules_on_exec_error(tmp_path: Path) -> None:
+    """Test path module loading restores sys.modules when module execution fails."""
+    from datamodel_code_generator.input_model import _load_module_from_path
+
+    model_path = (tmp_path / "failing_input_model.py").resolve()
+    model_path.write_text("raise RuntimeError('module failed')\n", encoding="utf-8")
+    module_name = model_path.stem
+
+    with _without_sys_module(module_name):
+        with pytest.raises(RuntimeError, match="module failed"):
+            _load_module_from_path(model_path, str(model_path))
+
+        _assert_sys_module_missing(module_name)
+
+
+def test_is_input_model_base_schema_requires_dict() -> None:
+    """Test base schema detection returns false for non-dict values."""
+    from datamodel_code_generator.input_model import _is_input_model_base_schema
+
+    assert not _is_input_model_base_schema("not a schema")
 
 
 # ============================================================================
