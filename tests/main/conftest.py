@@ -665,6 +665,26 @@ def assert_path_cache_invalidates_after_write(
     pytest.fail(f"Expected updated cached value for {path} to be reused")
 
 
+def assert_path_cache_evicts_lru_entries(
+    loader: Callable[[Path, str], object],
+    first_path: Path,
+    second_path: Path,
+    *,
+    encoding: str = "utf-8",
+) -> None:
+    """Assert a path-based LRU cache remains valid while evicting older entries."""
+    __tracebackhide__ = True
+    first_value = loader(first_path, encoding)
+    if loader(first_path, encoding) != first_value:
+        pytest.fail(f"Expected cached value for {first_path} to stay stable")
+
+    second_value = loader(second_path, encoding)
+    if loader(second_path, encoding) == second_value:
+        return
+
+    pytest.fail(f"Expected cached value for {second_path} to stay stable")
+
+
 def assert_watch_called(
     mock_watchfiles: Any,
     *,

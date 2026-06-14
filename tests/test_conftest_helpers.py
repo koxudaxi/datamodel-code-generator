@@ -139,6 +139,44 @@ def test_assert_path_cache_reuses_value_reports_cache_miss(tmp_path: Path) -> No
         main_conftest.assert_path_cache_reuses_value(load_new_value, path)
 
 
+def test_assert_path_cache_evicts_lru_entries_reports_first_mismatch(tmp_path: Path) -> None:
+    """LRU helper fails when the first path value is unstable."""
+    first_path = tmp_path / "first.json"
+    second_path = tmp_path / "second.json"
+    first_path.write_text("first", encoding="utf-8")
+    second_path.write_text("second", encoding="utf-8")
+    calls = 0
+
+    def load_unstable_first(path: Path, encoding: str) -> object:  # noqa: ARG001
+        nonlocal calls
+        if path == first_path:
+            calls += 1
+            return calls
+        return "stable"
+
+    with pytest.raises(pytest.fail.Exception, match=r"Expected cached value .* to stay stable"):
+        main_conftest.assert_path_cache_evicts_lru_entries(load_unstable_first, first_path, second_path)
+
+
+def test_assert_path_cache_evicts_lru_entries_reports_second_mismatch(tmp_path: Path) -> None:
+    """LRU helper fails when the second path value is unstable."""
+    first_path = tmp_path / "first.json"
+    second_path = tmp_path / "second.json"
+    first_path.write_text("first", encoding="utf-8")
+    second_path.write_text("second", encoding="utf-8")
+    calls = 0
+
+    def load_unstable_second(path: Path, encoding: str) -> object:  # noqa: ARG001
+        nonlocal calls
+        if path == second_path:
+            calls += 1
+            return calls
+        return "stable"
+
+    with pytest.raises(pytest.fail.Exception, match=r"Expected cached value .* to stay stable"):
+        main_conftest.assert_path_cache_evicts_lru_entries(load_unstable_second, first_path, second_path)
+
+
 def test_assert_path_cache_invalidates_after_write_reports_stale_identity(tmp_path: Path) -> None:
     """Path cache invalidation helper fails when a loader returns the stale object."""
     path = tmp_path / "schema.json"

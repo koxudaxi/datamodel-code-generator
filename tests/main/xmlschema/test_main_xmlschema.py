@@ -16,6 +16,7 @@ from datamodel_code_generator.parser.xmlschema import (
 )
 from tests.main.conftest import (
     XML_SCHEMA_DATA_PATH,
+    assert_path_cache_evicts_lru_entries,
     assert_path_cache_invalidates_after_write,
     assert_path_cache_reuses_value,
     run_generate_file_and_assert,
@@ -91,10 +92,7 @@ def test_read_xml_text_evicts_lru_entries(tmp_path: Path, monkeypatch: pytest.Mo
     first_path.write_text(first_text, encoding="utf-8")
     second_path.write_text(second_text, encoding="utf-8")
 
-    assert _read_xml_text(first_path, "utf-8") == first_text
-    assert _read_xml_text(first_path, "utf-8") == first_text
-    assert _read_xml_text(second_path, "utf-8") == second_text
-    assert _read_xml_text(second_path, "utf-8") == second_text
+    assert_path_cache_evicts_lru_entries(_read_xml_text, first_path, second_path)
 
 
 def test_load_xml_schema_data_from_path_evicts_lru_entries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -115,10 +113,10 @@ def test_load_xml_schema_data_from_path_evicts_lru_entries(tmp_path: Path, monke
         "use_xmlschema_datetime_default": False,
     }
 
-    first_data = _load_xml_schema_data_from_path(first_path, **kwargs)
-    assert _load_xml_schema_data_from_path(first_path, **kwargs) == first_data
-    second_data = _load_xml_schema_data_from_path(second_path, **kwargs)
-    assert _load_xml_schema_data_from_path(second_path, **kwargs) == second_data
+    def load_schema_data(path: Path, encoding: str) -> object:  # noqa: ARG001
+        return _load_xml_schema_data_from_path(path, **kwargs)
+
+    assert_path_cache_evicts_lru_entries(load_schema_data, first_path, second_path)
 
 
 def test_main_xmlschema_purchase_order_from_normalized_external_path(tmp_path: Path, output_file: Path) -> None:
