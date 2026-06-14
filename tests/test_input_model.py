@@ -58,6 +58,14 @@ def _assert_sys_module_is(module_name: str, expected_module: types.ModuleType) -
         pytest.fail(f"Expected sys.modules[{module_name!r}] to be restored")
 
 
+def _assert_sys_modules_with_prefix(module_prefix: str, expected_modules: set[str]) -> None:
+    """Assert sys.modules keys with module_prefix match the expected set."""
+    __tracebackhide__ = True
+    actual_modules = {module_name for module_name in sys.modules if module_name.startswith(module_prefix)}
+    if actual_modules != expected_modules:  # pragma: no cover
+        pytest.fail(f"Expected sys.modules keys with prefix {module_prefix!r} to be restored")
+
+
 def run_input_model_and_assert(
     *,
     input_model: str,
@@ -340,7 +348,8 @@ def test_input_model_path_format_restores_sys_modules(tmp_path: Path) -> None:
         "from pydantic import BaseModel\n\nclass User(BaseModel):\n    name: str\n    age: int\n",
         encoding="utf-8",
     )
-    sys.modules.pop(model_path.stem, None)
+    module_name = model_path.stem
+    sys.modules.pop(module_name, None)
 
     run_input_model_and_assert(
         input_model=f"{model_path}:User",
@@ -348,7 +357,7 @@ def test_input_model_path_format_restores_sys_modules(tmp_path: Path) -> None:
         expected_file=EXPECTED_INPUT_MODEL_PATH / "path_format.py",
     )
 
-    _assert_sys_module_missing(model_path.stem)
+    _assert_sys_module_missing(module_name)
 
 
 def test_input_model_path_format_restores_existing_sys_modules(
@@ -361,8 +370,9 @@ def test_input_model_path_format_restores_existing_sys_modules(
         "from pydantic import BaseModel\n\nclass User(BaseModel):\n    name: str\n    age: int\n",
         encoding="utf-8",
     )
-    existing_module = types.ModuleType(model_path.stem)
-    monkeypatch.setitem(sys.modules, model_path.stem, existing_module)
+    module_name = model_path.stem
+    existing_module = types.ModuleType(module_name)
+    monkeypatch.setitem(sys.modules, module_name, existing_module)
 
     run_input_model_and_assert(
         input_model=f"{model_path}:User",
@@ -370,7 +380,7 @@ def test_input_model_path_format_restores_existing_sys_modules(
         expected_file=EXPECTED_INPUT_MODEL_PATH / "path_format.py",
     )
 
-    _assert_sys_module_is(model_path.stem, existing_module)
+    _assert_sys_module_is(module_name, existing_module)
 
 
 def test_input_model_path_format_filename_only(
@@ -674,6 +684,21 @@ def test_input_model_ref_strategy_reuse_all(tmp_path: Path) -> None:
         input_model="tests.data.python.input_model.nested_models:User",
         output_path=tmp_path / "output.py",
         expected_file=EXPECTED_INPUT_MODEL_PATH / "ref_strategy_reuse_all.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--input-model-ref-strategy",
+            "reuse-all",
+        ],
+    )
+
+
+def test_input_model_path_ref_strategy_reuse_all_keeps_stem_imports(tmp_path: Path) -> None:
+    """Test path-based reuse-all keeps the existing stem-based import path."""
+    run_input_model_and_assert(
+        input_model="tests/data/python/input_model/nested_models.py:User",
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "path_ref_strategy_reuse_all.py",
         extra_args=[
             "--output-model-type",
             "typing.TypedDict",
@@ -1159,6 +1184,52 @@ def test_input_model_multiple_file_path_format(tmp_path: Path) -> None:
     )
 
 
+def test_input_model_multiple_file_path_same_basename_forward_refs(tmp_path: Path) -> None:
+    """Test same-basename path modules keep separate namespaces for forward refs."""
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    first_model_path = first_dir / "models.py"
+    second_model_path = second_dir / "models.py"
+    first_model_path.write_text(
+        "from __future__ import annotations\n\n"
+        "from pydantic import BaseModel\n\n"
+        "class UserA(BaseModel):\n"
+        "    friend: FriendA\n\n"
+        "class FriendA(BaseModel):\n"
+        "    alpha: str\n",
+        encoding="utf-8",
+    )
+    second_model_path.write_text(
+        "from __future__ import annotations\n\n"
+        "from pydantic import BaseModel\n\n"
+        "class UserB(BaseModel):\n"
+        "    friend: FriendB\n\n"
+        "class FriendB(BaseModel):\n"
+        "    beta: int\n",
+        encoding="utf-8",
+    )
+    module_name = first_model_path.stem
+    temporary_module_prefix = "_datamodel_code_generator_input_model_"
+    existing_temporary_modules = {
+        module_name for module_name in sys.modules if module_name.startswith(temporary_module_prefix)
+    }
+    sys.modules.pop(module_name, None)
+
+    run_multiple_input_models_and_assert(
+        input_models=[
+            f"{first_model_path}:UserA",
+            f"{second_model_path}:UserB",
+        ],
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "multiple_same_basename_paths.py",
+    )
+
+    _assert_sys_module_missing(module_name)
+    _assert_sys_modules_with_prefix(temporary_module_prefix, existing_temporary_modules)
+
+
 def test_input_model_multiple_file_path_format_restores_sys_modules(tmp_path: Path) -> None:
     """Test multiple path-based --input-model entries do not keep temporary modules alive."""
     model_path = tmp_path / "multiple_input_model.py"
@@ -1174,7 +1245,8 @@ def test_input_model_multiple_file_path_format_restores_sys_modules(tmp_path: Pa
         "    child_b_field: bool\n",
         encoding="utf-8",
     )
-    sys.modules.pop(model_path.stem, None)
+    module_name = model_path.stem
+    sys.modules.pop(module_name, None)
 
     run_multiple_input_models_and_assert(
         input_models=[
@@ -1186,7 +1258,7 @@ def test_input_model_multiple_file_path_format_restores_sys_modules(tmp_path: Pa
         extra_args=["--output-model-type", "typing.TypedDict"],
     )
 
-    _assert_sys_module_missing(model_path.stem)
+    _assert_sys_module_missing(module_name)
 
 
 def test_input_model_multiple_with_ref_strategy(tmp_path: Path) -> None:

@@ -29,6 +29,7 @@ from collections.abc import (
 )
 from dataclasses import is_dataclass
 from enum import Enum as PyEnum
+from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, cast, get_args, get_origin, get_type_hints
 
@@ -56,8 +57,26 @@ def _restore_path_module(state: _ModuleRestoreState) -> None:
     sys.modules[module_name] = cast("types.ModuleType", previous_module)
 
 
-def _load_module_from_path(file_path: Path, modname: str) -> tuple[types.ModuleType, _ModuleRestoreState]:
+def _get_path_module_name(file_path: Path) -> str:
     module_name = file_path.stem
+    previous_module = sys.modules.get(module_name)
+    if not isinstance(previous_module, types.ModuleType):
+        return module_name
+    if not (module_file := getattr(previous_module, "__file__", None)):
+        return module_name
+    try:
+        previous_file = Path(module_file).resolve()
+    except OSError:
+        return module_name
+    if previous_file == file_path:
+        return module_name
+
+    digest = sha256(str(file_path).encode()).hexdigest()[:16]
+    return f"_datamodel_code_generator_input_model_{digest}"
+
+
+def _load_module_from_path(file_path: Path, modname: str) -> tuple[types.ModuleType, _ModuleRestoreState]:
+    module_name = _get_path_module_name(file_path)
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     if spec is None or spec.loader is None:
         msg = f"Cannot load module from {modname!r}"
