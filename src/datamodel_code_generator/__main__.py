@@ -43,6 +43,61 @@ match schema_output_name:
         sys.stdout.write(f"{structured_output_json_schema()}\n")
         sys.exit(0)
 
+match sys.argv:
+    case [_, "--list-deprecations"]:
+        list_output_kind = "deprecations"
+        list_output_format = "table"
+    case [_, "--list-deprecations", list_output_format] if list_output_format in {"table", "json", "markdown"}:
+        list_output_kind = "deprecations"
+    case [_, list_output_option] if list_output_option.startswith("--list-deprecations=") and (
+        list_output_format := list_output_option.partition("=")[2]
+    ) in {"table", "json", "markdown"}:
+        list_output_kind = "deprecations"
+    case [_, "--list-experimental"]:
+        list_output_kind = "experimental"
+        list_output_format = "table"
+    case [_, "--list-experimental", list_output_format] if list_output_format in {"table", "json", "markdown"}:
+        list_output_kind = "experimental"
+    case [_, list_output_option] if list_output_option.startswith("--list-experimental=") and (
+        list_output_format := list_output_option.partition("=")[2]
+    ) in {"table", "json", "markdown"}:
+        list_output_kind = "experimental"
+    case _:
+        list_output_kind = None
+        list_output_format = None
+
+match (list_output_kind, list_output_format):
+    case ("deprecations", "table"):  # pragma: no cover
+        from datamodel_code_generator.deprecations import render_deprecations
+
+        sys.stdout.write(render_deprecations("table"))
+        sys.exit(0)
+    case ("deprecations", "json"):  # pragma: no cover
+        from datamodel_code_generator.deprecations import render_deprecations
+
+        sys.stdout.write(render_deprecations("json"))
+        sys.exit(0)
+    case ("deprecations", "markdown"):  # pragma: no cover
+        from datamodel_code_generator.deprecations import render_deprecations
+
+        sys.stdout.write(render_deprecations("markdown"))
+        sys.exit(0)
+    case ("experimental", "table"):  # pragma: no cover
+        from datamodel_code_generator.experimental import render_experimental_features
+
+        sys.stdout.write(render_experimental_features("table"))
+        sys.exit(0)
+    case ("experimental", "json"):  # pragma: no cover
+        from datamodel_code_generator.experimental import render_experimental_features
+
+        sys.stdout.write(render_experimental_features("json"))
+        sys.exit(0)
+    case ("experimental", "markdown"):  # pragma: no cover
+        from datamodel_code_generator.experimental import render_experimental_features
+
+        sys.stdout.write(render_experimental_features("markdown"))
+        sys.exit(0)
+
 # Fast path for prompt helper outputs
 if any(
     arg.startswith(("--generate-prompt", "--output-format-json-schema=")) or arg == "--output-format-json-schema"
