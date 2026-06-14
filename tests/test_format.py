@@ -1797,6 +1797,40 @@ def test_settings_path_with_deeply_nested_nonexistent_path(tmp_path: Path) -> No
     assert formatter.settings_path == str(tmp_path)
 
 
+def test_code_formatter_reuses_equivalent_isort_config(tmp_path: Path) -> None:
+    """Test equivalent isort formatter settings share the same cached Config."""
+    format_module._get_cached_isort_config.cache_clear()
+
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        settings_path=tmp_path,
+        formatters=[Formatter.ISORT],
+        known_third_party=["fastapi"],
+    )
+    equivalent_formatter = CodeFormatter(
+        PythonVersionMin,
+        settings_path=tmp_path,
+        formatters=[Formatter.ISORT],
+        known_third_party=["fastapi"],
+    )
+
+    assert formatter.isort_config is equivalent_formatter.isort_config
+
+
+def test_code_formatter_isort_config_cache_reflects_pyproject_changes(tmp_path: Path) -> None:
+    """Test cached isort Config is invalidated when local pyproject settings change."""
+    format_module._get_cached_isort_config.cache_clear()
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool.isort]\nline_length = 79\n", encoding="utf-8")
+    formatter = CodeFormatter(PythonVersionMin, settings_path=tmp_path, formatters=[Formatter.ISORT])
+
+    pyproject.write_text("[tool.isort]\nline_length = 120\n", encoding="utf-8")
+    updated_formatter = CodeFormatter(PythonVersionMin, settings_path=tmp_path, formatters=[Formatter.ISORT])
+
+    assert formatter.isort_config is not updated_formatter.isort_config
+    assert updated_formatter.isort_config.line_length == 120
+
+
 def test_format_directory_ruff_check(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test format_directory with ruff check."""
     monkeypatch.chdir(tmp_path)

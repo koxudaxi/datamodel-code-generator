@@ -186,6 +186,46 @@ def _get_isort() -> Any:
     return _isort
 
 
+_ISORT_CONFIG_FILENAMES = ("pyproject.toml", ".isort.cfg", "setup.cfg", "tox.ini", ".editorconfig")
+_ISORT_CONFIG_STOP_DIRS = (".git", ".hg")
+_IsortConfigFileStats = tuple[tuple[str, int, int], ...]
+
+
+def _get_isort_config_file_stats(settings_path: str) -> _IsortConfigFileStats:
+    """Return file stats for isort config candidates that can invalidate cached configs."""
+    current_path = Path(settings_path).resolve()
+    search_path = current_path if current_path.is_dir() else current_path.parent
+    config_stats: list[tuple[str, int, int]] = []
+
+    for directory in (search_path, *search_path.parents):
+        for filename in _ISORT_CONFIG_FILENAMES:
+            candidate = directory / filename
+            try:
+                stat = candidate.stat()
+            except FileNotFoundError:
+                continue
+            if candidate.is_file():
+                config_stats.append((str(candidate), stat.st_mtime_ns, stat.st_size))
+        if any((directory / stop_dir).exists() for stop_dir in _ISORT_CONFIG_STOP_DIRS):
+            break
+
+    return tuple(config_stats)
+
+
+@lru_cache(maxsize=128)
+def _get_cached_isort_config(
+    settings_path: str,
+    known_third_party: tuple[str, ...],
+    config_file_stats: _IsortConfigFileStats,
+) -> Any:
+    """Return a reusable isort Config for equivalent formatter settings."""
+    del config_file_stats
+    kwargs: dict[str, Any] = {}
+    if known_third_party:
+        kwargs["known_third_party"] = list(known_third_party)
+    return _get_isort().Config(settings_path=settings_path, **kwargs)
+
+
 class DatetimeClassType(Enum):
     """Output datetime class type options."""
 
@@ -524,13 +564,19 @@ class CodeFormatter:
         if use_isort:
             isort = _get_isort()
             self.isort_config_kwargs: dict[str, Any] = {}
+            known_third_party_key: tuple[str, ...] = ()
             if known_third_party:
                 self.isort_config_kwargs["known_third_party"] = known_third_party
+                known_third_party_key = tuple(known_third_party)
 
             if isort.__version__.startswith("4."):  # pragma: no cover
                 self.isort_config = None
             else:
-                self.isort_config = isort.Config(settings_path=self.settings_path, **self.isort_config_kwargs)
+                self.isort_config = _get_cached_isort_config(
+                    self.settings_path,
+                    known_third_party_key,
+                    _get_isort_config_file_stats(self.settings_path),
+                )
         else:
             self.isort_config_kwargs = {}
             self.isort_config = None
