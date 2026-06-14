@@ -6,7 +6,7 @@ security:
   - api_key: []
 paths:
   /cached:
-    $ref: ./path-item.yaml#/paths/~1items
+    $ref: ./path-item.yml#/paths/~1items
 components:
   schemas:
     Item:
