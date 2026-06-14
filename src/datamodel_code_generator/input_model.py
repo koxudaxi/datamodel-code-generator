@@ -102,6 +102,8 @@ def _split_input_model(input_model: str) -> tuple[str, str]:
                 f"Invalid --input-model format: {input_model!r}. Expected 'module:Object' or 'path/to/file.py:Object'."
             )
             raise Error(msg)
+    msg = "unreachable"
+    raise AssertionError(msg)  # pragma: no cover
 
 
 def _is_path_input_model_module(modname: str) -> bool:
