@@ -815,15 +815,9 @@ def _build_parser(  # noqa: PLR0911, PLR0913
     xmlschema_version: XMLSchemaVersion | None,
     protobuf_version: ProtobufVersion | None,
 ) -> Any:
-    from datamodel_code_generator.config import (  # noqa: PLC0415
-        AsyncAPIParserConfig,
-        GraphQLParserConfig,
-        JSONSchemaParserConfig,
-        OpenAPIParserConfig,
-    )
-
     match input_file_type:
         case InputFileType.OpenAPI:
+            from datamodel_code_generator.config import OpenAPIParserConfig  # noqa: PLC0415
             from datamodel_code_generator.parser.openapi import OpenAPIParser  # noqa: PLC0415
 
             openapi_additional_options: OpenAPIParserConfigDict = {
@@ -834,6 +828,7 @@ def _build_parser(  # noqa: PLR0911, PLR0913
             parser_config = _create_parser_config(OpenAPIParserConfig, config, openapi_additional_options)
             return OpenAPIParser(source=source, config=parser_config)  # ty: ignore
         case InputFileType.AsyncAPI:
+            from datamodel_code_generator.config import AsyncAPIParserConfig  # noqa: PLC0415
             from datamodel_code_generator.parser.asyncapi import AsyncAPIParser  # noqa: PLC0415
 
             asyncapi_additional_options: AsyncAPIParserConfigDict = {
@@ -872,6 +867,7 @@ def _build_parser(  # noqa: PLR0911, PLR0913
             parser_config = _create_parser_config(AvroParserConfig, config, avro_additional_options)
             return AvroParser(source=source, config=parser_config)  # ty: ignore
         case InputFileType.GraphQL:
+            from datamodel_code_generator.config import GraphQLParserConfig  # noqa: PLC0415
             from datamodel_code_generator.parser.graphql import GraphQLParser  # noqa: PLC0415
 
             graphql_additional_options: GraphQLParserConfigDict = {
@@ -882,6 +878,7 @@ def _build_parser(  # noqa: PLR0911, PLR0913
             parser_config = _create_parser_config(GraphQLParserConfig, config, graphql_additional_options)
             return GraphQLParser(source=source, config=parser_config)  # ty: ignore
         case _:
+            from datamodel_code_generator.config import JSONSchemaParserConfig  # noqa: PLC0415
             from datamodel_code_generator.parser.jsonschema import JsonSchemaParser  # noqa: PLC0415
 
             jsonschema_additional_options: JSONSchemaParserConfigDict = {
