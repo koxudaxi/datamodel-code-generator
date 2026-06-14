@@ -121,11 +121,7 @@ def test_package_import_does_not_load_format_module() -> None:
         [
             sys.executable,
             "-c",
-            (
-                "import sys; "
-                "import datamodel_code_generator; "
-                "print('datamodel_code_generator.format' in sys.modules)"
-            ),
+            ("import sys; import datamodel_code_generator; print('datamodel_code_generator.format' in sys.modules)"),
         ],
         check=True,
         capture_output=True,
