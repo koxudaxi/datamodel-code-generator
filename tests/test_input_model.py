@@ -516,13 +516,9 @@ def test_path_module_name_falls_back_when_existing_file_cannot_resolve(
     existing_module.__file__ = "__unresolvable_existing_model__"
     monkeypatch.setitem(sys.modules, module_name, existing_module)
 
-    original_resolve = Path.resolve
-
-    def fake_resolve(path: Path, *args: object, **kwargs: object) -> Path:
-        if str(path) == "__unresolvable_existing_model__":
-            msg = "cannot resolve"
-            raise OSError(msg)
-        return original_resolve(path, *args, **kwargs)
+    def fake_resolve(_path: Path, *_args: object, **_kwargs: object) -> Path:
+        msg = "cannot resolve"
+        raise OSError(msg)
 
     monkeypatch.setattr(Path, "resolve", fake_resolve)
 
