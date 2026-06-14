@@ -103,6 +103,12 @@ def test_json_schema_path_list_input_reads_each_source_once(tmp_path: Path, monk
     }
 
 
+def test_json_schema_parser_warns_for_non_dict_text_source() -> None:
+    """Test non-dict text sources are skipped with a warning."""
+    with pytest.warns(UserWarning, match=r"\. is empty or not a dict\. Skipping this file"):
+        JsonSchemaParser("[1]").parse(format_=False)
+
+
 def test_json_schema_iter_local_source_paths_ignores_non_local_source() -> None:
     """Test local source path iteration is empty for non-local source input."""
     assert list(JsonSchemaParser("{}")._iter_local_source_paths()) == []

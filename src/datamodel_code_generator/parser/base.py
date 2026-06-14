@@ -1318,7 +1318,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.source: str | Path | list[Path] | ParseResult | dict[str, YamlValue] = source
         self._cache_local_sources = False
         self._local_source_cache: tuple[Source, ...] | None = None
-        self._use_parsed_source_cache = _is_parsed_source_cache_enabled() and self._cache_parsed_sources_from_path
+        self._use_parsed_source_cache = (
+            _is_parsed_source_cache_enabled()
+            and self._cache_parsed_sources_from_path
+            and isinstance(source, Path | list)
+        )
         self.custom_template_dir = config.custom_template_dir
         self.extra_template_data: defaultdict[str, Any] = config.extra_template_data or defaultdict(dict)
         self.validators = config.validators
