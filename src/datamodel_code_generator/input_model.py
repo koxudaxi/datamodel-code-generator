@@ -94,15 +94,13 @@ def _load_module_from_path(file_path: Path, modname: str) -> tuple[types.ModuleT
     return module, (module_name, previous_module)
 
 
-def _split_input_model(input_model: str) -> tuple[str, str]:  # lgtm[py/mixed-returns]
-    match input_model.rpartition(":"):
-        case (modname, ":", qualname) if modname:
-            return modname, qualname
-        case _:
-            msg = (
-                f"Invalid --input-model format: {input_model!r}. Expected 'module:Object' or 'path/to/file.py:Object'."
-            )
-            raise Error(msg)
+def _split_input_model(input_model: str) -> tuple[str, str]:
+    modname, separator, qualname = input_model.rpartition(":")
+    if separator and modname:
+        return modname, qualname
+
+    msg = f"Invalid --input-model format: {input_model!r}. Expected 'module:Object' or 'path/to/file.py:Object'."
+    raise Error(msg)
 
 
 def _is_path_input_model_module(modname: str) -> bool:
