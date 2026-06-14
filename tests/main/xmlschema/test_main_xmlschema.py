@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 from datamodel_code_generator import InputFileType
@@ -69,11 +70,12 @@ def test_read_xml_text_invalidates_updated_raw_source(tmp_path: Path) -> None:
     )
     _clear_xml_text_cache()
 
+    updated_text = (XML_SCHEMA_DATA_PATH / "inline_root.xsd").read_text(encoding="utf-8")
     assert_path_cache_invalidates_after_write(
         _read_xml_text,
         schema_path,
-        (XML_SCHEMA_DATA_PATH / "inline_root.xsd").read_text(encoding="utf-8"),
-        (XML_SCHEMA_DATA_PATH / "inline_root.xsd").read_text(encoding="utf-8"),
+        updated_text,
+        updated_text.replace("\n", os.linesep),
     )
 
 
