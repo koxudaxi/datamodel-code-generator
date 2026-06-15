@@ -10208,6 +10208,29 @@ def test_main_lookaround_anyof_nullable_pydantic_v2(output_file: Path) -> None:
     )
 
 
+@pytest.mark.benchmark
+def test_main_lookaround_anyof_nullable_pydantic_v2_dataclass(output_file: Path) -> None:
+    """Lookaround reachable only through a referenced alias sets regex_engine on the dataclass.
+
+    The alias becomes a bare ``TypeAliasType`` that carries no config, so the consuming
+    pydantic v2 dataclass must emit ``ConfigDict(regex_engine="python-re")`` or fail to
+    import under pydantic's default rust regex engine. ``force_exec_validation`` proves the
+    generated module actually constructs.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "lookaround_anyof_nullable.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="lookaround_anyof_nullable_pydantic_v2_dataclass.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.dataclass",
+        ],
+        force_exec_validation=True,
+    )
+
+
 @LEGACY_BLACK_SKIP
 @pytest.mark.benchmark
 def test_main_lookaround_mixed_constraints_pydantic_v2(output_file: Path) -> None:

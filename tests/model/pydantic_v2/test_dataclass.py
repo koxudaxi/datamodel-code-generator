@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from datamodel_code_generator.model import DataModelFieldBase
+from datamodel_code_generator.model.pydantic_v2.base_model import has_lookaround_pattern
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass, DataModelField
 from datamodel_code_generator.model.pydantic_v2.types import DataTypeManager
 from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK
@@ -190,40 +191,13 @@ def test_data_model_field_keeps_existing_alias_fallback_state_pydantic20() -> No
     assert field.serialization_alias == "wire-name"
 
 
-def test_data_class_regex_engine_via_referenced_alias() -> None:
-    """A lookaround pattern reachable through a referenced alias sets regex_engine."""
-    alias_ref = Reference(name="Alias", path="alias")
-    alias_model = DataClass(
-        fields=[
-            DataModelFieldBase(
-                name="root",
-                data_type=DataType(type="str", kwargs={"pattern": r"^(?=.*[A-Z]).+$"}),
-                required=True,
-            )
-        ],
-        reference=alias_ref,
-    )
-    alias_ref.source = alias_model
-
-    data_class = DataClass(
-        fields=[DataModelFieldBase(name="value", data_type=DataType(reference=alias_ref), required=False)],
-        reference=Reference(name="test_model", path="test_model"),
-    )
-
-    assert 'regex_engine="python-re"' in data_class.render()
-
-
-def test_data_class_regex_engine_skips_reference_without_fields() -> None:
-    """A reference whose source is not a model (no fields) is traversed safely."""
+def test_has_lookaround_pattern_skips_reference_without_fields() -> None:
+    """Following a reference whose source is not a model (no ``fields``) is safe."""
     sourceless_ref = Reference(name="Plain", path="plain")
     sourceless_ref.source = DataType(type="str")
+    field = DataModelFieldBase(name="value", data_type=DataType(reference=sourceless_ref), required=False)
 
-    data_class = DataClass(
-        fields=[DataModelFieldBase(name="value", data_type=DataType(reference=sourceless_ref), required=False)],
-        reference=Reference(name="test_model", path="test_model"),
-    )
-
-    assert "regex_engine" not in data_class.render()
+    assert has_lookaround_pattern([field], follow_references=True) is False
 
 
 def test_create_reuse_model() -> None:
