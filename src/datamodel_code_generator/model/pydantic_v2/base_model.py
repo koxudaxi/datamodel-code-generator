@@ -275,8 +275,20 @@ class DataModelField(_PydanticBaseDataModelField):
 _LOOKAROUND_PATTERN: re.Pattern[str] = re.compile(r"\(\?<?[=!]")
 
 
-def has_lookaround_pattern(fields: list[DataModelFieldBase]) -> bool:
-    """Check if any field has a regex pattern with lookaround assertions."""
+def has_lookaround_pattern(
+    fields: list[DataModelFieldBase],
+    *,
+    follow_references: bool = False,
+    _visited: set[int] | None = None,
+) -> bool:
+    """Check if any field has a regex pattern with lookaround assertions.
+
+    When ``follow_references`` is True, also inspect patterns reachable through referenced
+    models (generated type aliases/root types) -- needed for Pydantic v2 dataclasses, where
+    alias patterns are compiled with the consuming dataclass's config rather than their own.
+    """
+    if _visited is None:
+        _visited = set()
     for field in fields:
         pattern = isinstance(field.constraints, Constraints) and field.constraints.pattern
         if pattern and _LOOKAROUND_PATTERN.search(pattern):
@@ -285,6 +297,14 @@ def has_lookaround_pattern(fields: list[DataModelFieldBase]) -> bool:
             pattern = (data_type.kwargs or {}).get("pattern")
             if pattern and _LOOKAROUND_PATTERN.search(pattern):
                 return True
+            if not follow_references or data_type.reference is None:
+                continue
+            source = data_type.reference.source
+            source_fields = getattr(source, "fields", None)
+            if source_fields is not None and id(source) not in _visited:
+                _visited.add(id(source))
+                if has_lookaround_pattern(source_fields, follow_references=True, _visited=_visited):
+                    return True
     return False
 
 

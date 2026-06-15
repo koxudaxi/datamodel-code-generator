@@ -90,18 +90,9 @@ PYDANTIC_V2_DATACLASS_BUILTIN_NAME_EXCLUDED_CASES: Final[dict[str, str]] = {
     ),
 }
 PYDANTIC_V2_DATACLASS_REGEX_EXCLUDED_CASES: Final[dict[str, str]] = {
-    "jsonschema/lookaround_anyof_nullable.json": (
-        "pydantic dataclass schema construction rejects lookaround regex constraints"
-    ),
-    "jsonschema/lookaround_dict.json": "pydantic dataclass schema construction rejects lookaround regex constraints",
     "jsonschema/lookaround_mixed_constraints.json": (
-        "pydantic dataclass TypeAdapter construction rejects lookaround regex constraints"
-    ),
-    "jsonschema/lookaround_union_types.json": (
-        "pydantic dataclass schema construction rejects lookaround regex constraints"
-    ),
-    "jsonschema/nested_lookaround_array.json": (
-        "pydantic dataclass schema construction rejects lookaround regex constraints"
+        "root-level oneOf generates a bare TypeAliasType with no consuming dataclass to carry "
+        "ConfigDict(regex_engine='python-re'), so TypeAdapter construction still rejects the lookaround pattern"
     ),
     "openapi/pattern_lookaround.yaml::components.schemas.info": (
         "pydantic dataclass schema construction rejects lookaround regex constraints"

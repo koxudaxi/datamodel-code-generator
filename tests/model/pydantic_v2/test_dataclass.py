@@ -190,6 +190,42 @@ def test_data_model_field_keeps_existing_alias_fallback_state_pydantic20() -> No
     assert field.serialization_alias == "wire-name"
 
 
+def test_data_class_regex_engine_via_referenced_alias() -> None:
+    """A lookaround pattern reachable through a referenced alias sets regex_engine."""
+    alias_ref = Reference(name="Alias", path="alias")
+    alias_model = DataClass(
+        fields=[
+            DataModelFieldBase(
+                name="root",
+                data_type=DataType(type="str", kwargs={"pattern": r"^(?=.*[A-Z]).+$"}),
+                required=True,
+            )
+        ],
+        reference=alias_ref,
+    )
+    alias_ref.source = alias_model
+
+    data_class = DataClass(
+        fields=[DataModelFieldBase(name="value", data_type=DataType(reference=alias_ref), required=False)],
+        reference=Reference(name="test_model", path="test_model"),
+    )
+
+    assert 'regex_engine="python-re"' in data_class.render()
+
+
+def test_data_class_regex_engine_skips_reference_without_fields() -> None:
+    """A reference whose source is not a model (no fields) is traversed safely."""
+    sourceless_ref = Reference(name="Plain", path="plain")
+    sourceless_ref.source = DataType(type="str")
+
+    data_class = DataClass(
+        fields=[DataModelFieldBase(name="value", data_type=DataType(reference=sourceless_ref), required=False)],
+        reference=Reference(name="test_model", path="test_model"),
+    )
+
+    assert "regex_engine" not in data_class.render()
+
+
 def test_create_reuse_model() -> None:
     """Test creating a reuse model from existing DataClass."""
     field = DataModelFieldBase(name="a", data_type=DataType(type="str"), required=True)
