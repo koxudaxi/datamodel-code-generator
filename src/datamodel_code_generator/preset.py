@@ -189,7 +189,7 @@ def _preset_name_sort_key(name: str) -> tuple[str, str]:
     prefix, separator, version = name.rpartition("-")
     if separator and version.isdecimal():
         return prefix, version
-    return name, ""
+    return name, ""  # pragma: no cover
 
 
 def preset_info_as_dict(info: PresetInfo) -> dict[str, object]:
@@ -273,7 +273,7 @@ def resolve_preset(preset: PresetName | str, context: PresetContext) -> PresetPa
     match preset_name:
         case PresetName.Standard20260617:
             return _resolve_standard_20260617(context)
-        case _:
+        case _:  # pragma: no cover
             msg = f"Unsupported preset: {preset_name.value}"
             raise PresetError(msg)
 
@@ -292,7 +292,7 @@ def _resolve_standard_20260617(context: PresetContext) -> PresetPatch:
             return patch.merge(_STANDARD_DATACLASS_PATCH)
         case DataModelType.TypingTypedDict:
             return patch.merge(_STANDARD_TYPED_DICT_PATCH)
-        case _:
+        case _:  # pragma: no cover
             msg = (
                 f"Unsupported output model type for preset {PresetName.Standard20260617.value}: "
                 f"{context.output_model_type.value}"
