@@ -414,6 +414,40 @@ def _enable_test_parsed_source_cache() -> Generator[None, None, None]:
         restore()
 
 
+@contextmanager
+def _optional_test_parsed_source_cache(enabled: bool) -> Generator[None, None, None]:
+    if not enabled:
+        yield
+        return
+    with _enable_test_parsed_source_cache():
+        yield
+
+
+def _clear_model_template_cache() -> None:
+    from datamodel_code_generator.model import base as model_base
+
+    for cached in (
+        model_base.get_template,
+        model_base._get_template_with_custom_dir,
+        model_base._get_environment,
+        model_base._get_template_with_absolute_path,
+        model_base._get_environment_with_absolute_path,
+    ):
+        cached.cache_clear()
+
+
+@contextmanager
+def _optional_model_template_cache_isolation(enabled: bool) -> Generator[None, None, None]:
+    if not enabled:
+        yield
+        return
+    _clear_model_template_cache()
+    try:
+        yield
+    finally:
+        _clear_model_template_cache()
+
+
 def _extend_args(
     args: list[str],
     *,
@@ -506,6 +540,9 @@ def run_main_with_args(
     expected_stderr: str | None = None,
     expected_stderr_contains: str | None = None,
     assert_no_stderr: bool = False,
+    use_parsed_source_cache: bool = True,
+    use_builtin_default_formatter: bool = True,
+    isolate_model_template_cache: bool = False,
 ) -> Exit:
     """Execute main() with custom arguments.
 
@@ -517,6 +554,9 @@ def run_main_with_args(
         expected_stderr: Exact expected stderr
         expected_stderr_contains: Expected stderr substring
         assert_no_stderr: Assert stderr is empty
+        use_parsed_source_cache: Enable the process-local parsed source cache for generation-style commands
+        use_builtin_default_formatter: Add the test-suite builtin formatter default when applicable
+        isolate_model_template_cache: Clear cached Jinja model templates before and after execution
 
     Returns:
         Exit code from main()
@@ -524,14 +564,15 @@ def run_main_with_args(
     __tracebackhide__ = True
     output_path = _get_cli_output_path(args)
     is_generation_command = _is_main_generation_command(args)
-    use_builtin_default = _should_use_builtin_default_cli_formatter(
+    use_builtin_default = use_builtin_default_formatter and _should_use_builtin_default_cli_formatter(
         args,
         output_path=output_path,
         is_generation_command=is_generation_command,
     )
     main_args = [*args, "--formatters", _BUILTIN_FORMATTER_VALUE] if use_builtin_default else list(args)
     with (
-        _enable_test_parsed_source_cache(),
+        _optional_test_parsed_source_cache(use_parsed_source_cache),
+        _optional_model_template_cache_isolation(isolate_model_template_cache),
         _builtin_default_formatter_config(output_path, enabled=use_builtin_default),
     ):
         return_code = main(main_args)

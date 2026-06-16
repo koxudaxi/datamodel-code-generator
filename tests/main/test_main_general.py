@@ -175,53 +175,44 @@ def test_generated_pydantic_v2_model_accepts_runtime_value(output_file: Path) ->
     )
 
 
-@pytest.mark.allow_direct_assert
 def test_list_deprecations(capsys: pytest.CaptureFixture[str]) -> None:
     """List registered deprecations without requiring an input schema."""
-    run_main_with_args(["--list-deprecations"])
-    captured = capsys.readouterr()
+    run_main_with_args(
+        ["--list-deprecations"],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_PATH / "list_deprecations.txt",
+        assert_no_stderr=True,
+    )
 
-    assert "cli.parent-scoped-naming" in captured.out
-    assert "--parent-scoped-naming" in captured.out
-    assert "Removal" in captured.out
-    assert not captured.err
 
-
-@pytest.mark.allow_direct_assert
 def test_list_deprecations_json(capsys: pytest.CaptureFixture[str]) -> None:
     """List registered deprecations as JSON."""
-    run_main_with_args(["--list-deprecations", "json"])
-    captured = capsys.readouterr()
+    run_main_with_args(
+        ["--list-deprecations", "json"],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_PATH / "list_deprecations_json.txt",
+        assert_no_stderr=True,
+    )
 
-    deprecations = json.loads(captured.out)
-    assert any(item["id"] == "cli.parent-scoped-naming" for item in deprecations)
-    assert not captured.err
 
-
-@pytest.mark.allow_direct_assert
 def test_list_experimental(capsys: pytest.CaptureFixture[str]) -> None:
     """List registered experimental features without requiring an input schema."""
-    run_main_with_args(["--list-experimental"])
-    captured = capsys.readouterr()
-
-    assert "input-format.avro" in captured.out
-    assert "--input-file-type avro" in captured.out
-    assert "formatter.builtin" in captured.out
-    assert "--formatters builtin" in captured.out
-    assert "Since" in captured.out
-    assert not captured.err
+    run_main_with_args(
+        ["--list-experimental"],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_PATH / "list_experimental.txt",
+        assert_no_stderr=True,
+    )
 
 
-@pytest.mark.allow_direct_assert
 def test_list_experimental_json(capsys: pytest.CaptureFixture[str]) -> None:
     """List registered experimental features as JSON."""
-    run_main_with_args(["--list-experimental", "json"])
-    captured = capsys.readouterr()
-
-    features = json.loads(captured.out)
-    assert any(item["id"] == "input-format.xmlschema" for item in features)
-    assert any(item["id"] == "formatter.builtin" for item in features)
-    assert not captured.err
+    run_main_with_args(
+        ["--list-experimental", "json"],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_PATH / "list_experimental_json.txt",
+        assert_no_stderr=True,
+    )
 
 
 @pytest.mark.allow_direct_assert

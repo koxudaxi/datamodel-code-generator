@@ -5,7 +5,6 @@ from __future__ import annotations
 import sys
 from types import ModuleType
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -123,7 +122,7 @@ def test_watch_without_watchfiles_installed(output_file: Path, mocker: pytest.Mo
 def test_main_watch_uses_watch_module_import_seam(output_file: Path, mocker: pytest.MockerFixture) -> None:
     """Test main resolves watch_and_regenerate through datamodel_code_generator.watch."""
     mock_generate = mocker.patch("datamodel_code_generator.__main__.run_generate_from_config", return_value=None)
-    mock_watch = MagicMock(return_value=Exit.OK)
+    mock_watch = mocker.Mock(return_value=Exit.OK)
     watch_module = ModuleType("datamodel_code_generator.watch")
     watch_module.watch_and_regenerate = mock_watch
     mocker.patch.dict(sys.modules, {"datamodel_code_generator.watch": watch_module})
@@ -145,11 +144,12 @@ def test_main_watch_uses_watch_module_import_seam(output_file: Path, mocker: pyt
     assert config.input == JSON_SCHEMA_DATA_PATH / "person.json"
 
 
-def test_get_watchfiles_import_error() -> None:
+def test_get_watchfiles_import_error(mocker: pytest.MockerFixture) -> None:
     """Test _get_watchfiles raises exception when watchfiles is not installed."""
     from datamodel_code_generator.watch import _get_watchfiles
 
-    with patch.dict("sys.modules", {"watchfiles": None}), pytest.raises(Exception, match="pip install"):
+    mocker.patch.dict("sys.modules", {"watchfiles": None})
+    with pytest.raises(Exception, match="pip install"):
         _get_watchfiles()
 
 
@@ -175,7 +175,7 @@ the generator waits the specified time before regenerating.
     cli_args=["--watch", "--watch-delay", "1.5"],
     expected_stdout="Watching",
 )
-def test_watch_and_regenerate_starts_and_stops() -> None:
+def test_watch_and_regenerate_starts_and_stops(mocker: pytest.MockerFixture) -> None:
     """Watch mode starts file watcher and handles clean exit.
 
     The `--watch` flag starts a file watcher that monitors the input file
@@ -185,69 +185,57 @@ def test_watch_and_regenerate_starts_and_stops() -> None:
     """
     from datamodel_code_generator.__main__ import Config
 
-    mock_watchfiles = MagicMock()
+    mock_watchfiles = mocker.Mock()
     mock_watchfiles.watch.return_value = iter([])
     config = Config(input=str(JSON_SCHEMA_DATA_PATH / "person.json"), watch_delay=0.5)
 
-    with patch(
-        "datamodel_code_generator.watch._get_watchfiles",
-        return_value=mock_watchfiles,
-    ):
-        run_watch_and_assert(config)
-        assert_watch_called(mock_watchfiles, debounce=500, recursive=False)
+    mocker.patch("datamodel_code_generator.watch._get_watchfiles", return_value=mock_watchfiles)
+    run_watch_and_assert(config)
+    assert_watch_called(mock_watchfiles, debounce=500, recursive=False)
 
 
-def test_watch_and_regenerate_without_input() -> None:
+def test_watch_and_regenerate_without_input(mocker: pytest.MockerFixture) -> None:
     """Test watch_and_regenerate returns error when input is None."""
     from datamodel_code_generator.__main__ import Config
 
-    mock_watchfiles = MagicMock()
+    mock_watchfiles = mocker.Mock()
     config = Config(input=None)
 
-    with patch(
-        "datamodel_code_generator.watch._get_watchfiles",
-        return_value=mock_watchfiles,
-    ):
-        run_watch_and_assert(config, expected_exit=Exit.ERROR)
+    mocker.patch("datamodel_code_generator.watch._get_watchfiles", return_value=mock_watchfiles)
+    run_watch_and_assert(config, expected_exit=Exit.ERROR)
 
 
-def test_watch_and_regenerate_with_directory() -> None:
+def test_watch_and_regenerate_with_directory(mocker: pytest.MockerFixture) -> None:
     """Test that watch_and_regenerate handles directory input with recursive watching."""
     from datamodel_code_generator.__main__ import Config
 
-    mock_watchfiles = MagicMock()
+    mock_watchfiles = mocker.Mock()
     mock_watchfiles.watch.return_value = iter([])
     config = Config(input=str(JSON_SCHEMA_DATA_PATH), watch_delay=0.1)
 
-    with patch(
-        "datamodel_code_generator.watch._get_watchfiles",
-        return_value=mock_watchfiles,
-    ):
-        run_watch_and_assert(config)
-        assert_watch_called(mock_watchfiles, recursive=True)
+    mocker.patch("datamodel_code_generator.watch._get_watchfiles", return_value=mock_watchfiles)
+    run_watch_and_assert(config)
+    assert_watch_called(mock_watchfiles, recursive=True)
 
 
-def test_watch_and_regenerate_handles_keyboard_interrupt() -> None:
+def test_watch_and_regenerate_handles_keyboard_interrupt(mocker: pytest.MockerFixture) -> None:
     """Test that watch_and_regenerate handles KeyboardInterrupt gracefully."""
     from datamodel_code_generator.__main__ import Config
 
-    mock_watchfiles = MagicMock()
+    mock_watchfiles = mocker.Mock()
     mock_watchfiles.watch.side_effect = KeyboardInterrupt()
     config = Config(input=str(JSON_SCHEMA_DATA_PATH / "person.json"))
 
-    with patch(
-        "datamodel_code_generator.watch._get_watchfiles",
-        return_value=mock_watchfiles,
-    ):
-        run_watch_and_assert(config)
+    mocker.patch("datamodel_code_generator.watch._get_watchfiles", return_value=mock_watchfiles)
+    run_watch_and_assert(config)
 
 
-def test_watch_and_regenerate_on_change(tmp_path: Path) -> None:
+def test_watch_and_regenerate_on_change(tmp_path: Path, mocker: pytest.MockerFixture) -> None:
     """Test that watch_and_regenerate calls generate on file change."""
     from datamodel_code_generator.__main__ import Config
 
     output_file = tmp_path / "output.py"
-    mock_watchfiles = MagicMock()
+    mock_watchfiles = mocker.Mock()
     mock_watchfiles.watch.return_value = iter([
         {("modified", str(JSON_SCHEMA_DATA_PATH / "person.json"))},
     ])
@@ -255,41 +243,31 @@ def test_watch_and_regenerate_on_change(tmp_path: Path) -> None:
         input=str(JSON_SCHEMA_DATA_PATH / "person.json"),
         output=output_file,
     )
-    mock_generate = MagicMock()
+    mock_generate = mocker.Mock()
 
-    with (
-        patch(
-            "datamodel_code_generator.watch._get_watchfiles",
-            return_value=mock_watchfiles,
-        ),
-        patch(
-            "datamodel_code_generator.__main__.run_generate_from_config",
-            mock_generate,
-        ),
-    ):
-        run_watch_and_assert(config)
-        mock_generate.assert_called_once()
+    mocker.patch("datamodel_code_generator.watch._get_watchfiles", return_value=mock_watchfiles)
+    mocker.patch("datamodel_code_generator.__main__.run_generate_from_config", new=mock_generate)
+    run_watch_and_assert(config)
+    mock_generate.assert_called_once()
 
 
-def test_watch_and_regenerate_handles_generation_error(capsys: pytest.CaptureFixture[str]) -> None:
+def test_watch_and_regenerate_handles_generation_error(
+    capsys: pytest.CaptureFixture[str],
+    mocker: pytest.MockerFixture,
+) -> None:
     """Test that watch_and_regenerate continues after generation error."""
     from datamodel_code_generator.__main__ import Config
 
-    mock_watchfiles = MagicMock()
+    mock_watchfiles = mocker.Mock()
     mock_watchfiles.watch.return_value = iter([
         {("modified", str(JSON_SCHEMA_DATA_PATH / "person.json"))},
     ])
     config = Config(input=str(JSON_SCHEMA_DATA_PATH / "person.json"))
 
-    with (
-        patch(
-            "datamodel_code_generator.watch._get_watchfiles",
-            return_value=mock_watchfiles,
-        ),
-        patch(
-            "datamodel_code_generator.__main__.run_generate_from_config",
-            side_effect=Exception("Generation failed"),
-        ),
-    ):
-        run_watch_and_assert(config)
-        assert_error_message(capsys, "Generation failed")
+    mocker.patch("datamodel_code_generator.watch._get_watchfiles", return_value=mock_watchfiles)
+    mocker.patch(
+        "datamodel_code_generator.__main__.run_generate_from_config",
+        side_effect=Exception("Generation failed"),
+    )
+    run_watch_and_assert(config)
+    assert_error_message(capsys, "Generation failed")
