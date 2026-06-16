@@ -1,0 +1,56 @@
+[
+  {
+    "id": "formatter.builtin",
+    "kind": "formatter",
+    "message": "The internal formatter is experimental and may change as generated-output coverage is expanded.",
+    "note": "The formatter is designed for generated model modules and is not a general-purpose Python formatter.",
+    "since_version": "0.59.0",
+    "target": "--formatters builtin",
+    "tracking_issue": null
+  },
+  {
+    "id": "input-format.asyncapi",
+    "kind": "input-format",
+    "message": "AsyncAPI input support is experimental and may change as real-world usage is validated.",
+    "note": "The parser focuses on message payload model generation from AsyncAPI documents.",
+    "since_version": "0.59.0",
+    "target": "--input-file-type asyncapi",
+    "tracking_issue": null
+  },
+  {
+    "id": "input-format.avro",
+    "kind": "input-format",
+    "message": "Apache Avro schema input support is experimental and may change as real-world usage is validated.",
+    "note": "The parser generates Python models from Avro schemas; it does not provide Avro runtime validation.",
+    "since_version": "0.59.0",
+    "target": "--input-file-type avro",
+    "tracking_issue": null
+  },
+  {
+    "id": "input-format.mcp-tools",
+    "kind": "input-format",
+    "message": "MCP tool schema profile input support is experimental and may change as MCP schemas evolve.",
+    "note": "The input is converted from MCP tool inputSchema/outputSchema entries into JSON Schema definitions before model generation.",
+    "since_version": "0.60.0",
+    "target": "--input-file-type mcp-tools",
+    "tracking_issue": null
+  },
+  {
+    "id": "input-format.protobuf",
+    "kind": "input-format",
+    "message": "Protocol Buffers input support is experimental and may change as real-world usage is validated.",
+    "note": "The parser generates Python models from .proto schemas; it does not provide protobuf runtime validation or gRPC code generation.",
+    "since_version": "0.59.0",
+    "target": "--input-file-type protobuf",
+    "tracking_issue": null
+  },
+  {
+    "id": "input-format.xmlschema",
+    "kind": "input-format",
+    "message": "XML Schema input support is experimental and may change as real-world usage is validated.",
+    "note": "The parser focuses on model generation from XSD documents, not full XML instance validation.",
+    "since_version": "0.59.0",
+    "target": "--input-file-type xmlschema",
+    "tracking_issue": null
+  }
+]

@@ -29,7 +29,12 @@ from datamodel_code_generator import (
     generate,
     snooper_to_methods,
 )
-from datamodel_code_generator.__main__ import BOOLEAN_OPTIONAL_OPTIONS, Config, Exit, run_generate_from_config
+from datamodel_code_generator.__main__ import (
+    BOOLEAN_OPTIONAL_OPTIONS,
+    Config,
+    Exit,
+    run_generate_from_config,
+)
 from datamodel_code_generator.arguments import _dataclass_arguments, arg_parser
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersion
@@ -248,15 +253,6 @@ def test_standard_preset_allows_original_field_name_delimiter_after_merge(output
 @freeze_time(TIMESTAMP)
 def test_standard_preset_cli_overrides_pyproject_option(output_file: Path, tmp_path: Path) -> None:
     """CLI --preset overrides pyproject values unless the same option is explicit on CLI."""
-    (tmp_path / "pyproject.toml").write_text(
-        """
-[tool.datamodel-codegen]
-target-python-version = "3.10"
-snake-case-field = false
-""",
-        encoding="utf-8",
-    )
-
     with chdir(tmp_path):
         run_main_and_assert(
             input_path=JSON_SCHEMA_DATA_PATH / "person.json",
@@ -265,21 +261,15 @@ snake-case-field = false
             extra_args=["--preset", "standard-20260617"],
             assert_func=assert_file_content,
             expected_file="standard_preset_pydantic_v2.py",
+            copy_files=[
+                (DATA_PATH / "config" / "pyproject_standard_preset_cli_override.toml", tmp_path / "pyproject.toml")
+            ],
         )
 
 
 @freeze_time(TIMESTAMP)
 def test_standard_preset_pyproject_uses_final_output_model_type(output_file: Path, tmp_path: Path) -> None:
     """Pyproject preset adapters resolve after CLI output-model-type overrides."""
-    (tmp_path / "pyproject.toml").write_text(
-        """
-[tool.datamodel-codegen]
-preset = "standard-20260617"
-target-python-version = "3.10"
-""",
-        encoding="utf-8",
-    )
-
     with chdir(tmp_path):
         run_main_and_assert(
             input_path=JSON_SCHEMA_DATA_PATH / "person.json",
@@ -288,6 +278,7 @@ target-python-version = "3.10"
             extra_args=["--output-model-type", "dataclasses.dataclass"],
             assert_func=assert_file_content,
             expected_file="standard_preset_dataclass.py",
+            copy_files=[(DATA_PATH / "config" / "pyproject_standard_preset.toml", tmp_path / "pyproject.toml")],
         )
 
 
@@ -341,53 +332,44 @@ def test_generated_pydantic_v2_model_accepts_runtime_value(output_file: Path) ->
     )
 
 
-@pytest.mark.allow_direct_assert
 def test_list_deprecations(capsys: pytest.CaptureFixture[str]) -> None:
     """List registered deprecations without requiring an input schema."""
-    run_main_with_args(["--list-deprecations"])
-    captured = capsys.readouterr()
+    run_main_with_args(
+        ["--list-deprecations"],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_PATH / "list_deprecations.txt",
+        assert_no_stderr=True,
+    )
 
-    assert "cli.parent-scoped-naming" in captured.out
-    assert "--parent-scoped-naming" in captured.out
-    assert "Removal" in captured.out
-    assert not captured.err
 
-
-@pytest.mark.allow_direct_assert
 def test_list_deprecations_json(capsys: pytest.CaptureFixture[str]) -> None:
     """List registered deprecations as JSON."""
-    run_main_with_args(["--list-deprecations", "json"])
-    captured = capsys.readouterr()
+    run_main_with_args(
+        ["--list-deprecations", "json"],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_PATH / "list_deprecations_json.txt",
+        assert_no_stderr=True,
+    )
 
-    deprecations = json.loads(captured.out)
-    assert any(item["id"] == "cli.parent-scoped-naming" for item in deprecations)
-    assert not captured.err
 
-
-@pytest.mark.allow_direct_assert
 def test_list_experimental(capsys: pytest.CaptureFixture[str]) -> None:
     """List registered experimental features without requiring an input schema."""
-    run_main_with_args(["--list-experimental"])
-    captured = capsys.readouterr()
-
-    assert "input-format.avro" in captured.out
-    assert "--input-file-type avro" in captured.out
-    assert "formatter.builtin" in captured.out
-    assert "--formatters builtin" in captured.out
-    assert "Since" in captured.out
-    assert not captured.err
+    run_main_with_args(
+        ["--list-experimental"],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_PATH / "list_experimental.txt",
+        assert_no_stderr=True,
+    )
 
 
-@pytest.mark.allow_direct_assert
 def test_list_experimental_json(capsys: pytest.CaptureFixture[str]) -> None:
     """List registered experimental features as JSON."""
-    run_main_with_args(["--list-experimental", "json"])
-    captured = capsys.readouterr()
-
-    features = json.loads(captured.out)
-    assert any(item["id"] == "input-format.xmlschema" for item in features)
-    assert any(item["id"] == "formatter.builtin" for item in features)
-    assert not captured.err
+    run_main_with_args(
+        ["--list-experimental", "json"],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_PATH / "list_experimental_json.txt",
+        assert_no_stderr=True,
+    )
 
 
 @pytest.mark.allow_direct_assert
@@ -401,6 +383,18 @@ def test_no_args_has_default(monkeypatch: pytest.MonkeyPatch) -> None:
     run_main_with_args([], expected_exit=Exit.ERROR)
     for field in Config.get_fields():
         assert getattr(namespace, field, None) is None
+
+
+def test_cli_pyproject_ignores_generate_only_options(output_file: Path, tmp_path: Path) -> None:
+    """CLI pyproject config should keep ignoring API-only generate() options."""
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "force_optional_required.json",
+            output_path=output_file,
+            assert_func=assert_file_content,
+            expected_file="jsonschema/cli_pyproject_ignores_generate_only_options.py",
+            copy_files=[(DATA_PATH / "config" / "pyproject_generate_only_options.toml", tmp_path / "pyproject.toml")],
+        )
 
 
 @pytest.mark.allow_direct_assert

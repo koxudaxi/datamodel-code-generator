@@ -92,47 +92,32 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
 
-from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
+from pydantic import ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from datamodel_code_generator import (
-    DEFAULT_SHARED_MODULE_NAME,
-    AllExportsCollisionStrategy,
     AllExportsScope,
-    AllOfClassHierarchy,
-    AllOfMergeMode,
     ClassNameAffixScope,
-    CollapseRootModelsNameStrategy,
-    DataclassArguments,
     DataModelType,
     Error,
-    FieldTypeCollisionStrategy,
     InputFileType,
     InputModelRefStrategy,
     InvalidClassNameError,
-    ModuleSplitMode,
     NamingStrategy,
     OpenAPIScope,
-    ReadOnlyWriteOnlyModelType,
     ReuseScope,
-    TargetPydanticVersion,
-    VersionMode,
     _validate_output_datetime_class,
     enable_debug_message,
     generate,
 )
-from datamodel_code_generator.arguments import DEFAULT_ENCODING, arg_parser, namespace
+from datamodel_code_generator.arguments import arg_parser, namespace
+from datamodel_code_generator.config import BaseGenerateConfig
 from datamodel_code_generator.deprecations import render_deprecations, warn_deprecated
-from datamodel_code_generator.enums import UnionMode  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.format import (
-    DateClassType,
-    DatetimeClassType,
     Formatter,
     PythonVersion,
-    PythonVersionMin,
     _get_black,
     is_supported_in_black,
 )
-from datamodel_code_generator.parser import LiteralType  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.preset import PresetContext, PresetError, PresetName, resolve_preset
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes  # noqa: TC001 # needed for pydantic
@@ -237,10 +222,10 @@ def _validate_http_key_value_options(
     raise Error(msg)  # pragma: no cover
 
 
-class Config(BaseModel):  # noqa: PLR0904
+class Config(BaseGenerateConfig):  # noqa: PLR0904
     """Configuration model for code generation."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True, protected_namespaces=())  # ty: ignore
+    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True, protected_namespaces=())  # ty: ignore
 
     def get(self, item: str) -> Any:  # pragma: no cover
         """Get attribute value by name."""
@@ -494,147 +479,21 @@ class Config(BaseModel):  # noqa: PLR0904
     check: bool = False
     debug: bool = False
     disable_warnings: bool = False
-    target_python_version: PythonVersion = PythonVersionMin
-    target_pydantic_version: Optional[TargetPydanticVersion] = None  # noqa: UP045
-    base_class: str = ""
-    base_class_map: Optional[dict[str, str | list[str]]] = None  # noqa: UP045
-    additional_imports: Optional[list[str]] = None  # noqa: UP045
-    class_decorators: Optional[list[str]] = None  # noqa: UP045
-    custom_template_dir: Optional[Path] = None  # noqa: UP045
     extra_template_data: Optional[TextIOBase] = None  # noqa: UP045
     validators: Optional[TextIOBase] = None  # noqa: UP045
-    validation: bool = False
-    field_constraints: bool = False
-    snake_case_field: bool = False
-    strip_default_none: bool = False
     aliases: Optional[TextIOBase] = None  # noqa: UP045
     serialization_aliases: Optional[TextIOBase] = None  # noqa: UP045
     default_values: Optional[TextIOBase] = None  # noqa: UP045
-    disable_timestamp: bool = False
-    enable_version_header: bool = False
-    enable_command_header: bool = False
-    enable_generated_header_marker: bool = False
-    allow_population_by_field_name: bool = False
-    allow_extra_fields: bool = False
-    extra_fields: Optional[str] = None  # noqa: UP045
-    use_generic_base_class: bool = False
     use_default: bool = False
     force_optional: bool = False
-    class_name: Optional[str] = None  # noqa: UP045
-    allow_leading_underscore_class_name: bool = False
-    class_name_prefix: Optional[str] = None  # noqa: UP045
-    class_name_suffix: Optional[str] = None  # noqa: UP045
-    class_name_affix_scope: ClassNameAffixScope = ClassNameAffixScope.All
-    use_standard_collections: bool = True
-    use_schema_description: bool = False
-    use_field_description: bool = False
-    use_field_description_example: bool = False
-    use_attribute_docstrings: bool = False
-    use_inline_field_description: bool = False
-    use_single_line_docstring: bool = False
-    use_default_kwarg: bool = False
-    reuse_model: bool = False
-    reuse_scope: ReuseScope = ReuseScope.Module
-    shared_module_name: str = DEFAULT_SHARED_MODULE_NAME
-    encoding: str = DEFAULT_ENCODING
-    enum_field_as_literal: Optional[LiteralType] = None  # noqa: UP045
-    enum_field_as_literal_map: Optional[dict[str, str]] = None  # noqa: UP045
-    ignore_enum_constraints: bool = False
-    use_one_literal_as_default: bool = False
-    use_enum_values_in_discriminator: bool = False
-    set_default_enum_member: bool = False
-    use_subclass_enum: bool = False
-    use_specialized_enum: bool = True
-    strict_nullable: bool = False
-    use_generic_container_types: bool = False
-    use_union_operator: bool = True
-    enable_faux_immutability: bool = False
     url: Optional[ParseResult] = None  # noqa: UP045
-    disable_appending_item_suffix: bool = False
-    strict_types: list[StrictTypes] = []
-    empty_enum_field_name: Optional[str] = None  # noqa: UP045
-    field_extra_keys: Optional[set[str]] = None  # noqa: UP045
-    field_include_all_keys: bool = False
-    field_extra_keys_without_x_prefix: Optional[set[str]] = None  # noqa: UP045
-    model_extra_keys: Optional[set[str]] = None  # noqa: UP045
-    model_extra_keys_without_x_prefix: Optional[set[str]] = None  # noqa: UP045
-    openapi_scopes: Optional[list[OpenAPIScope]] = [OpenAPIScope.Schemas]  # noqa: UP045
-    include_path_parameters: bool = False
-    openapi_include_paths: Optional[list[str]] = None  # noqa: UP045
-    openapi_include_info_version: bool = False
-    graphql_no_typename: bool = False
-    wrap_string_literal: Optional[bool] = None  # noqa: UP045
-    use_title_as_name: bool = False
-    use_operation_id_as_name: bool = False
-    use_unique_items_as_set: bool = False
-    use_tuple_for_fixed_items: bool = False
-    use_closed_typed_dict: bool = True
-    allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
-    allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
-    allow_remote_refs: Optional[bool] = None  # noqa: UP045
-    allow_private_network: bool = False
-    http_headers: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
-    http_local_ref_path: Optional[Path] = None  # noqa: UP045
-    http_ignore_tls: bool = False
-    http_timeout: Optional[float] = None  # noqa: UP045
-    use_annotated: bool = False
-    use_serialize_as_any: bool = False
-    use_non_positive_negative_number_constrained_types: bool = False
-    use_decimal_for_multiple_of: bool = False
-    original_field_name_delimiter: Optional[str] = None  # noqa: UP045
-    use_double_quotes: bool = False
-    collapse_root_models: bool = False
-    collapse_root_models_name_strategy: Optional[CollapseRootModelsNameStrategy] = None  # noqa: UP045
-    collapse_reuse_models: bool = False
-    skip_root_model: bool = False
-    use_type_alias: bool = False
-    use_root_model_type_alias: bool = False
-    special_field_name_prefix: Optional[str] = None  # noqa: UP045
-    remove_special_field_name_prefix: bool = False
-    capitalise_enum_members: bool = False
-    keep_model_order: bool = False
-    custom_file_header: Optional[str] = None  # noqa: UP045
-    custom_file_header_path: Optional[Path] = None  # noqa: UP045
-    custom_formatters: Optional[list[str]] = None  # noqa: UP045
+    strict_types: list[StrictTypes] = Field(default_factory=list)
+    openapi_scopes: Optional[list[OpenAPIScope]] = Field(default_factory=lambda: [OpenAPIScope.Schemas])  # noqa: UP045
     custom_formatters_kwargs: Optional[TextIOBase] = None  # noqa: UP045
-    use_pendulum: bool = False
-    use_standard_primitive_types: bool = False
-    use_object_type: bool = False
-    http_query_parameters: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
-    treat_dot_as_module: Optional[bool] = None  # noqa: UP045
-    use_exact_imports: bool = False
-    use_type_checking_imports: Optional[bool] = None  # noqa: UP045
-    union_mode: Optional[UnionMode] = None  # noqa: UP045
-    output_datetime_class: Optional[DatetimeClassType] = None  # noqa: UP045
-    output_date_class: Optional[DateClassType] = None  # noqa: UP045
-    keyword_only: bool = False
-    frozen_dataclasses: bool = False
-    dataclass_arguments: Optional[DataclassArguments] = None  # noqa: UP045
-    no_alias: bool = False
-    use_serialization_alias: bool = False
-    use_frozen_field: bool = False
-    use_default_factory_for_optional_nested_models: bool = False
-    formatters: list[Formatter] | None = None
-    builtin_format_line_length: Optional[int] = None  # noqa: UP045
-    parent_scoped_naming: bool = False
-    naming_strategy: Optional[NamingStrategy] = None  # noqa: UP045
-    duplicate_name_suffix: Optional[dict[str, str]] = None  # noqa: UP045
-    disable_future_imports: bool = False
-    type_mappings: Optional[list[str]] = None  # noqa: UP045
-    type_overrides: Optional[dict[str, str]] = None  # noqa: UP045
-    read_only_write_only_model_type: Optional[ReadOnlyWriteOnlyModelType] = None  # noqa: UP045
-    use_status_code_in_response_name: bool = False
-    all_exports_scope: Optional[AllExportsScope] = None  # noqa: UP045
-    all_exports_collision_strategy: Optional[AllExportsCollisionStrategy] = None  # noqa: UP045
-    field_type_collision_strategy: Optional[FieldTypeCollisionStrategy] = None  # noqa: UP045
-    module_split_mode: Optional[ModuleSplitMode] = None  # noqa: UP045
     watch: bool = False
     watch_delay: float = 0.5
     list_deprecations: Optional[str] = None  # noqa: UP045
     list_experimental: Optional[str] = None  # noqa: UP045
-    schema_version: Optional[str] = None  # noqa: UP045
-    schema_version_mode: Optional[VersionMode] = None  # noqa: UP045
-    external_ref_mapping: Optional[dict[str, str]] = None  # noqa: UP045
 
     def merge_args(self, args: Namespace) -> None:
         """Merge command-line arguments into config."""
