@@ -137,6 +137,14 @@ datamodel-codegen --input pet.json --input-file-type jsonschema --output-model-t
 
 ---
 
+## ✅ Conformance Signals
+
+CI exercises datamodel-code-generator against pinned external corpora for XML Schema, JSON Schema, AsyncAPI, Apache
+Avro, and Protocol Buffers. See the [Conformance Dashboard](conformance.md) for the generated summary of runner scripts,
+tox environments, CI jobs, expected corpus counts, and upstream sources.
+
+---
+
 ## 📤 Choose Your Output
 
 ```bash
@@ -214,6 +222,7 @@ See [CI/CD Integration](ci-cd.md) for more options.
 - ⚙️ **[pyproject.toml Configuration](pyproject_toml.md)** - Configure via pyproject.toml
 - 🚀 **[One-liner Usage](oneliner.md)** - uvx, pipx, clipboard integration
 - 🔄 **[CI/CD Integration](ci-cd.md)** - GitHub Actions and CI validation
+- ✅ **[Conformance Dashboard](conformance.md)** - External corpus and CI coverage signals
 - 🎨 **[Custom Templates](custom_template.md)** - Customize generated code with Jinja2
 - 🖌️ **[Code Formatting](formatting.md)** - Configure black, isort, and ruff
 - ❓ **[FAQ](faq.md)** - Common questions and troubleshooting

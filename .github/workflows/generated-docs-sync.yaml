@@ -11,6 +11,7 @@ on:
       - 'scripts/build_cli_docs.py'
       - 'scripts/build_prompt_data.py'
       - 'scripts/build_schema_docs.py'
+      - 'scripts/build_conformance_docs.py'
       - 'scripts/build_llms_txt.py'
       - 'scripts/update_generate_prompt_snapshots.py'
       - 'scripts/update_docs_version.py'
@@ -59,6 +60,7 @@ jobs:
           generated_paths=(
             README.md
             docs/index.md
+            docs/conformance.md
             docs/cli-reference/
             docs/llms.txt
             docs/llms-full.txt
