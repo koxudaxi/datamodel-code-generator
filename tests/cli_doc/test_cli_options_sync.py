@@ -26,7 +26,7 @@ from datamodel_code_generator.cli_options import (
     is_excluded_from_docs,
     is_manual_doc,
 )
-from scripts.build_cli_docs import _documented_related_option
+from scripts.build_cli_docs import _documented_related_option, scan_docs_for_cli_option_tags
 
 
 def test_get_canonical_option() -> None:
@@ -85,6 +85,23 @@ def test_documented_related_option_prefers_existing_generated_section() -> None:
     assert _documented_related_option("--collapse-root-models", documented_options) == "--collapse-root-models"
     assert _documented_related_option("--snake-case-field", documented_options) == "--snake-case-field"
     assert _documented_related_option("--use-union-operator", documented_options) == "--no-use-union-operator"
+
+
+def test_related_page_tags_prefer_existing_generated_section() -> None:
+    """Related page tags should keep links on generated positive BooleanOptionalAction sections."""
+    documented_options = frozenset({
+        "--collapse-root-models",
+        "--disable-warnings",
+        "--reuse-model",
+        "--reuse-scope",
+        "--shared-module-name",
+        "--use-type-alias",
+    })
+
+    option_related_pages = scan_docs_for_cli_option_tags(documented_options)
+
+    assert ("model-reuse.md", "Model Reuse and Deduplication") in option_related_pages["--collapse-root-models"]
+    assert "--no-collapse-root-models" not in option_related_pages
 
 
 class TestCLIOptionMetaSync:

@@ -275,7 +275,9 @@ def parse_docstring(docstring: str) -> ParsedDocstring:
     )
 
 
-def scan_docs_for_cli_option_tags() -> dict[str, list[tuple[str, str]]]:
+def scan_docs_for_cli_option_tags(
+    documented_options: frozenset[str] | None = None,
+) -> dict[str, list[tuple[str, str]]]:
     """Scan markdown files in docs/ for related-cli-options tags.
 
     Returns:
@@ -313,11 +315,12 @@ def scan_docs_for_cli_option_tags() -> dict[str, list[tuple[str, str]]]:
         page_path = str(md_file.relative_to(DOCS_ROOT))
 
         # Parse all matched tags
+        available_options = documented_options or frozenset()
         for match in matches:
             options = [opt.strip() for opt in match.split(",")]
             for option in options:
                 if option.startswith("--"):
-                    canonical = get_canonical_option(option)
+                    canonical = _documented_related_option(option, available_options)
                     option_to_pages[canonical].append((page_path, page_title))
 
     # Sort the page lists for each option to ensure consistent ordering
@@ -1001,7 +1004,8 @@ def build_docs(*, check: bool = False) -> int:
             categories[OptionCategory.GENERAL][option] = cli_doc_option
 
     # Scan markdown files for CLI option tags
-    option_related_pages = scan_docs_for_cli_option_tags()
+    documented_options = frozenset(options_map)
+    option_related_pages = scan_docs_for_cli_option_tags(documented_options)
 
     if not check:
         DOCS_OUTPUT.mkdir(parents=True, exist_ok=True)
@@ -1011,7 +1015,6 @@ def build_docs(*, check: bool = False) -> int:
     generated = 0
     errors = 0
     mismatches: list[str] = []
-    documented_options = frozenset(options_map)
 
     def write_or_check(output_path: Path, content: str, label: str) -> bool:
         """Write content to file or check if it matches existing content."""

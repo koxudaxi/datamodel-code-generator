@@ -2560,8 +2560,6 @@ Keep dots in schema names as underscores for flat output.
 
 The `--no-treat-dot-as-module` flag prevents splitting dotted schema names.
 
-**See also:** [Module Structure and Exports](../module-exports.md)
-
 !!! tip "Usage"
 
     ```bash
@@ -3006,6 +3004,8 @@ require manual `model_rebuild()` calls for cross-module runtime references.
 Treat dots in schema names as module separators.
 
 The `--treat-dot-as-module` flag configures the code generation behavior.
+
+**See also:** [Module Structure and Exports](../module-exports.md)
 
 !!! tip "Usage"
 

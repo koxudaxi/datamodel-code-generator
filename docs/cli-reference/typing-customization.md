@@ -2080,8 +2080,6 @@ versions or when explicit typing imports are preferred.
 
 **Related:** [`--use-standard-collections`](typing-customization.md#use-standard-collections)
 
-**See also:** [Python Version Compatibility](../python-version-compatibility.md)
-
 !!! tip "Usage"
 
     ```bash
@@ -2289,8 +2287,6 @@ and typing.Optional instead of the | operator (PEP 604). This is useful
 for older Python versions or when explicit typing imports are preferred.
 
 **Related:** [`--use-union-operator`](typing-customization.md#use-union-operator)
-
-**See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
 
@@ -2884,6 +2880,8 @@ Use [`--use-unique-items-as-set`](#use-unique-items-as-set) when you need the
 generated type to enforce uniqueness for array schemas.
 
 **Related:** [`--field-constraints`](field-customization.md#field-constraints)
+
+**See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
 
@@ -4141,6 +4139,8 @@ code for Python 3.10+ where built-in types support subscripting.
 
 **Related:** [`--use-generic-container-types`](typing-customization.md#use-generic-container-types)
 
+**See also:** [Python Version Compatibility](../python-version-compatibility.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -4667,6 +4667,8 @@ The `--use-union-operator` flag generates union types using the | operator
 This is the default behavior.
 
 **Related:** [`--no-use-union-operator`](typing-customization.md#no-use-union-operator)
+
+**See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
 

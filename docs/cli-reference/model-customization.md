@@ -1457,6 +1457,8 @@ The `--collapse-root-models` option generates simpler output by inlining root mo
 directly instead of creating separate wrapper types. This shows how different output
 model types (Pydantic v2, dataclass, TypedDict, msgspec) handle const fields.
 
+**See also:** [Model Reuse and Deduplication](../model-reuse.md)
+
 !!! tip "Usage"
 
     ```bash
