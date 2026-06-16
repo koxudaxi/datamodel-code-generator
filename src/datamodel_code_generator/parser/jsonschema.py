@@ -4587,6 +4587,30 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             is_optional=has_null,
         )
 
+    def _get_enum_model_class(self, type_: Types | None, enum_values: list[Any]) -> tuple[type[Enum], Types | None]:
+        """Return the enum model class and remaining subtype for schema enum generation."""
+        if not (self.use_specialized_enum and type_ and (specialized_type := SPECIALIZED_ENUM_TYPE_MATCH.get(type_))):
+            return Enum, type_
+
+        match specialized_type:
+            case _ if specialized_type is StrEnum:
+                if not self.target_python_version.has_strenum or not all(
+                    isinstance(enum_value, str) for enum_value in enum_values
+                ):
+                    return Enum, type_
+            case _:
+                pass
+
+        return specialized_type, None
+
+    def _extra_template_data_for_reference(self, reference: Reference) -> defaultdict[str, dict[str, Any]] | None:
+        """Return shared template data only when the enum reference has relevant entries."""
+        if not (extra_template_data := self.extra_template_data):
+            return None
+        if extra_template_data.get(reference.path) or extra_template_data.get(reference.name):
+            return extra_template_data
+        return None
+
     @classmethod
     def _get_field_name_from_dict_enum(cls, enum_part: dict[str, Any], index: int) -> str:
         """Extract field name from dict enum value using title, name, or const keys."""
@@ -4709,21 +4733,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             type_: Types | None = (
                 self._get_type_with_mappings(obj.type, obj.format) if isinstance(obj.type, str) else None
             )
-
-            enum_cls: type[Enum] = Enum
-            specialized_type = SPECIALIZED_ENUM_TYPE_MATCH.get(type_) if self.use_specialized_enum and type_ else None
-            if specialized_type == StrEnum:
-                # StrEnum is available only in Python 3.11+ and supports string values only.
-                can_use_specialized_type = self.target_python_version.has_strenum and all(
-                    isinstance(enum_part, str) for enum_part in enum_times
-                )
-            else:
-                can_use_specialized_type = specialized_type is not None
-            if can_use_specialized_type and specialized_type is not None:
-                # If specialized enum is available in the target Python version,
-                # use it and ignore `self.use_subclass_enum` setting.
-                type_ = None
-                enum_cls = specialized_type
+            enum_cls, type_ = self._get_enum_model_class(type_, enum_times)
+            self._set_schema_metadata(reference_.path, obj)
+            self.set_schema_extensions(reference_.path, obj)
 
             enum = enum_cls(
                 reference=reference_,
@@ -4731,6 +4743,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 path=self.current_source_path,
                 description=obj.description if self.use_schema_description else None,
                 custom_template_dir=self.custom_template_dir,
+                extra_template_data=self._extra_template_data_for_reference(reference_),
                 type_=type_ if self.use_subclass_enum else None,
                 default=obj.default if obj.has_default else UNDEFINED,
                 treat_dot_as_module=self.treat_dot_as_module,
@@ -4748,11 +4761,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             loaded=True,
             model_type="enum",
         )
-        self._set_schema_metadata(reference.path, obj)
-        self.set_schema_extensions(reference.path, obj)
 
         if not nullable:
             return create_enum(reference)
+
+        self._set_schema_metadata(reference.path, obj)
+        self.set_schema_extensions(reference.path, obj)
 
         enum_reference = self.model_resolver.add(
             [*path, "Enum"],
