@@ -20,7 +20,7 @@ from typing import Any, Literal, cast
 import black
 import pytest
 from packaging import version
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from datamodel_code_generator import InputFileType, enable_parsed_source_cache, generate
 from datamodel_code_generator.__main__ import Exit, main
@@ -1236,9 +1236,19 @@ def _generated_model(output_path: Path, module_name: str, model_name: str) -> Ge
             sys.modules[spec.name] = previous_module
 
 
-def _assert_model_json_invalid(model: Any, invalid_json: str, expected_error_type: str) -> None:
+def _model_json_validator(model: Any) -> Callable[[str], Any]:
+    """Return a JSON validation callable for a generated Pydantic model or dataclass."""
+    if callable(validate_json := getattr(model, "model_validate_json", None)):
+        return validate_json
+    return TypeAdapter(model).validate_json
+
+
+def _assert_model_json_invalid(
+    validate_json: Callable[[str], Any], invalid_json: str, expected_error_type: str
+) -> None:
+    """Assert that a generated model JSON validator rejects invalid JSON with the expected error."""
     with pytest.raises(ValidationError) as exc_info:
-        model.model_validate_json(invalid_json)
+        validate_json(invalid_json)
     errors = exc_info.value.errors()
     if not errors:  # pragma: no cover
         pytest.fail("Expected validation error but got an empty errors list", pytrace=False)
@@ -1261,9 +1271,10 @@ def assert_generated_model_json_validation(
     expected_attribute_path: Sequence[str] = (),
     expected_attribute_value: Any = None,
 ) -> None:
-    """Import a generated module and validate JSON data through a generated Pydantic model."""
+    """Import a generated module and validate JSON data through a generated Pydantic model or dataclass."""
     with _generated_model(output_path, module_name, model_name) as model:
-        parsed = model.model_validate_json(valid_json)
+        validate_json = _model_json_validator(model)
+        parsed = validate_json(valid_json)
 
         if expected_attribute_path:
             actual: Any = parsed
@@ -1275,7 +1286,7 @@ def assert_generated_model_json_validation(
                     pytrace=False,
                 )
 
-        _assert_model_json_invalid(model, invalid_json, expected_error_type)
+        _assert_model_json_invalid(validate_json, invalid_json, expected_error_type)
 
 
 def assert_generated_model_json_invalid(
@@ -1288,7 +1299,7 @@ def assert_generated_model_json_invalid(
 ) -> None:
     """Import a generated module and assert JSON data is rejected by a generated Pydantic model."""
     with _generated_model(output_path, module_name, model_name) as model:
-        _assert_model_json_invalid(model, invalid_json, expected_error_type)
+        _assert_model_json_invalid(_model_json_validator(model), invalid_json, expected_error_type)
 
 
 def run_main_url_and_assert(
