@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Final
+from fractions import Fraction
+from typing import TYPE_CHECKING, Final
 
 from .models import PayloadBackend, SchemaCase
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 PYDANTIC_V2_REJECTED_MUTATION_CONSTRAINTS: Final[dict[str, str]] = {
     "additionalProperties": "generated pydantic v2 models forbid extra object properties for closed schemas",
@@ -355,6 +359,177 @@ PAYLOAD_VALIDATION_BACKENDS: Final[tuple[PayloadBackend, ...]] = (
     PayloadBackend.PYDANTIC_V2_DATACLASS,
     PayloadBackend.MSGSPEC,
 )
+MSGSPEC_BINARY_FORMAT_EXCLUSION_REASON: Final[str] = (
+    "msgspec conversion treats binary format strings as strict bytes while JSON Schema treats format as annotation"
+)
+MSGSPEC_FRACTIONAL_MULTIPLE_OF_EXCLUSION_REASON: Final[str] = (
+    "msgspec conversion rejects schema-valid float values for fractional multipleOf metadata"
+)
+MSGSPEC_OPTIONAL_NULL_ONLY_EXCLUSION_REASON: Final[str] = (
+    "msgspec conversion treats optional null-only properties as omitted-only Unset fields"
+)
+SCHEMA_KEYWORD_KINDS: Final[dict[str, str]] = {
+    **dict.fromkeys(
+        {
+            "additionalItems",
+            "additionalProperties",
+            "allOf",
+            "anyOf",
+            "contains",
+            "contentSchema",
+            "else",
+            "if",
+            "items",
+            "not",
+            "oneOf",
+            "prefixItems",
+            "propertyNames",
+            "then",
+            "unevaluatedItems",
+            "unevaluatedProperties",
+        },
+        "schema",
+    ),
+    **dict.fromkeys(
+        {
+            "$defs",
+            "definitions",
+            "dependentSchemas",
+            "patternProperties",
+            "properties",
+        },
+        "schema_map",
+    ),
+    "dependencies": "dependencies",
+}
+
+
+def _schema_keyword_kind(keyword: object) -> str | None:
+    if not isinstance(keyword, str):
+        return None
+    return SCHEMA_KEYWORD_KINDS.get(keyword)
+
+
+def _iter_keyword_schema_nodes(keyword: object, value: object) -> Iterable[dict[str, object]]:
+    """Yield child schemas for JSON Schema keywords that carry subschemas."""
+    match _schema_keyword_kind(keyword):
+        case "schema":
+            yield from _iter_schema_nodes(value)
+            return
+        case "schema_map":
+            if not isinstance(value, dict):
+                return
+            for subschema in value.values():
+                yield from _iter_schema_nodes(subschema)
+            return
+        case "dependencies":
+            if not isinstance(value, dict):
+                return
+            for dependency in value.values():
+                if isinstance(dependency, dict):
+                    yield from _iter_schema_nodes(dependency)
+            return
+        case _:
+            return
+
+
+def _iter_schema_nodes(schema: object) -> Iterable[dict[str, object]]:
+    """Yield nested JSON Schema objects."""
+    match schema:
+        case dict() as mapping:
+            yield mapping
+            for keyword, value in mapping.items():
+                yield from _iter_keyword_schema_nodes(keyword, value)
+            return
+        case list() | tuple() as values:
+            for item in values:
+                yield from _iter_schema_nodes(item)
+            return
+        case _:
+            return
+
+
+def _schema_types(schema: dict[str, object]) -> frozenset[str]:
+    """Return the normalized string values from a schema's type keyword."""
+    match schema.get("type"):
+        case str() as schema_type:
+            return frozenset((schema_type,))
+        case list() | tuple() as schema_types:
+            return frozenset(schema_type for schema_type in schema_types if isinstance(schema_type, str))
+    return frozenset()
+
+
+def _is_null_only_schema(schema: object) -> bool:
+    """Return whether a schema accepts only JSON null."""
+    if not isinstance(schema, dict):
+        return False
+
+    match _schema_types(schema):
+        case schema_types if schema_types == {"null"}:
+            return True
+        case _:
+            return schema.get("enum") == [None] or ("const" in schema and schema["const"] is None)
+
+
+def _has_optional_null_only_property(schema: dict[str, object]) -> bool:
+    """Return whether an object schema has a non-required property that only accepts null."""
+    if not isinstance(properties := schema.get("properties"), dict):
+        return False
+
+    required = schema.get("required", ())
+    required_properties = set(required) if isinstance(required, list | tuple | set) else set()
+    return any(
+        isinstance(property_name, str)
+        and property_name not in required_properties
+        and _is_null_only_schema(property_schema)
+        for property_name, property_schema in properties.items()
+    )
+
+
+def _has_binary_format(schema: dict[str, object]) -> bool:
+    """Return whether a string schema uses the binary format annotation."""
+    return "string" in _schema_types(schema) and schema.get("format") == "binary"
+
+
+def _has_fractional_number_multiple_of(schema: dict[str, object]) -> bool:
+    """Return whether a number schema uses fractional multipleOf metadata."""
+    if (multiple_of := schema.get("multipleOf")) is None:
+        return False
+
+    if (schema_types := _schema_types(schema)) and schema_types.isdisjoint({"integer", "number"}):
+        return False
+
+    try:
+        return Fraction(str(multiple_of)).denominator != 1
+    except (TypeError, ValueError):
+        return False
+
+
+def _msgspec_schema_exclusion_reason(case: SchemaCase) -> str | None:
+    """Return a schema-derived msgspec compatibility exclusion reason."""
+    if case.input_file_type != "jsonschema":
+        return None
+
+    for schema in _iter_schema_nodes(case.source_schema):
+        match schema:
+            case _ if _has_optional_null_only_property(schema):
+                return MSGSPEC_OPTIONAL_NULL_ONLY_EXCLUSION_REASON
+            case _ if _has_binary_format(schema):
+                return MSGSPEC_BINARY_FORMAT_EXCLUSION_REASON
+            case _ if _has_fractional_number_multiple_of(schema):
+                return MSGSPEC_FRACTIONAL_MULTIPLE_OF_EXCLUSION_REASON
+            case _:
+                continue
+    return None
+
+
+def _backend_schema_exclusion_reason(case: SchemaCase, backend: PayloadBackend) -> str | None:
+    """Return dynamic full-matrix exclusions derived from schema/runtime semantics."""
+    match backend:
+        case PayloadBackend.MSGSPEC:
+            return _msgspec_schema_exclusion_reason(case)
+        case _:
+            return None
 
 
 def rejected_mutation_constraints(backend: PayloadBackend) -> frozenset[str]:
@@ -373,6 +548,8 @@ def backend_acceptance_exclusion_reason(case: SchemaCase, backend: PayloadBacken
         return DATACLASSES_FULL_MATRIX_EXCLUSION_REASON
     if reason := BACKEND_ACCEPTANCE_EXCLUDED_CASES.get(backend, {}).get(case.id):
         return reason
+    if reason := _backend_schema_exclusion_reason(case, backend):
+        return reason
     if case.input_file_type == "openapi":
         return OPENAPI_FULL_MATRIX_EXCLUSION_REASONS.get(backend)
     return None
@@ -381,6 +558,8 @@ def backend_acceptance_exclusion_reason(case: SchemaCase, backend: PayloadBacken
 def backend_rejection_exclusion_reason(case: SchemaCase, backend: PayloadBackend) -> str | None:
     """Return why a backend rejection case is outside the full scheduled matrix."""
     if reason := BACKEND_REJECTION_EXCLUDED_CASES.get(backend, {}).get(case.id):
+        return reason
+    if reason := _backend_schema_exclusion_reason(case, backend):
         return reason
     if case.input_file_type == "openapi":
         return OPENAPI_FULL_MATRIX_EXCLUSION_REASONS.get(backend)

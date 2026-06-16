@@ -161,6 +161,10 @@ ROUND_TRIP_EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/nested_json_pointer.json": (
         "schema requires a property absent from properties, so the generated model has no field to dump"
     ),
+    "jsonschema/one_of_with_sub_schema_array_item.json": (
+        "pydantic serializes URI values in JSON mode, which can collapse distinct source-valid strings and violate "
+        "uniqueItems"
+    ),
     "jsonschema/strict_types_matrix.json": (
         "pydantic serializes Decimal JSON values as strings while the source schema requires number"
     ),
@@ -197,6 +201,11 @@ PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES: dict[PayloadBackend, dict[str, str]] 
         ),
         "openapi/allof_with_required_inherited_coverage.yaml::components.schemas.MultipleOfBase": (
             "Pydantic before 2.5.0 can reject schema-valid inherited Decimal multipleOf values"
+        ),
+    },
+    PayloadBackend.PYDANTIC_V2_DATACLASS: {
+        "jsonschema/use_decimal_for_multiple_of.json": (
+            "Pydantic before 2.5.0 can reject schema-valid dataclass float multipleOf values near float boundaries"
         ),
     },
 }
