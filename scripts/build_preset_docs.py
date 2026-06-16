@@ -15,7 +15,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS_PATH = ROOT / "docs" / "presets.md"
@@ -32,7 +32,10 @@ QUICK_START_END_MARKER = "<!-- END AUTO-GENERATED PRESET QUICK START -->"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
-from datamodel_code_generator.preset import PresetFormat, get_latest_preset_name, render_presets  # noqa: E402
+from datamodel_code_generator.preset import get_latest_preset_name, render_presets  # noqa: E402
+
+if TYPE_CHECKING:
+    from datamodel_code_generator.preset import PresetFormat
 
 
 @dataclass(frozen=True, slots=True)

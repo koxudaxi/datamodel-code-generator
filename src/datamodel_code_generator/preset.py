@@ -273,6 +273,9 @@ def resolve_preset(preset: PresetName | str, context: PresetContext) -> PresetPa
     match preset_name:
         case PresetName.Standard20260617:
             return _resolve_standard_20260617(context)
+        case _:
+            msg = f"Unsupported preset: {preset_name.value}"
+            raise PresetError(msg)
 
 
 def _resolve_standard_20260617(context: PresetContext) -> PresetPatch:
@@ -289,3 +292,9 @@ def _resolve_standard_20260617(context: PresetContext) -> PresetPatch:
             return patch.merge(_STANDARD_DATACLASS_PATCH)
         case DataModelType.TypingTypedDict:
             return patch.merge(_STANDARD_TYPED_DICT_PATCH)
+        case _:
+            msg = (
+                f"Unsupported output model type for preset {PresetName.Standard20260617.value}: "
+                f"{context.output_model_type.value}"
+            )
+            raise PresetError(msg)
