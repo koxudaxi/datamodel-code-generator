@@ -863,6 +863,31 @@ def test_main_openapi_schema_extensions(
         )
 
 
+@pytest.mark.isolate_builtin_formatter_config
+def test_main_openapi_schema_extensions_enum(
+    capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that enum schema extensions (x-* fields) are passed to custom enum templates."""
+    model_base._get_environment.cache_clear()
+    model_base._get_template_with_custom_dir.cache_clear()
+    monkeypatch.chdir(tmp_path)
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "schema_extensions_enum.yaml",
+            output_path=None,
+            expected_stdout_path=EXPECTED_OPENAPI_PATH / "schema_extensions_enum.py",
+            capsys=capsys,
+            input_file_type=None,
+            extra_args=[
+                "--custom-template-dir",
+                str(DATA_PATH / "templates_extensions"),
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+            ],
+            expected_stderr=inferred_message.format("openapi") + "\n",
+        )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] >= "24",
     reason="Installed black doesn't support the old style",
