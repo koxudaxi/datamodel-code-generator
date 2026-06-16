@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from datamodel_code_generator.model import DataModelFieldBase
+from datamodel_code_generator.model.pydantic_v2.base_model import has_lookaround_pattern
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass, DataModelField
 from datamodel_code_generator.model.pydantic_v2.types import DataTypeManager
 from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK
@@ -188,6 +189,15 @@ def test_data_model_field_keeps_existing_alias_fallback_state_pydantic20() -> No
     assert field.alias is None
     assert field.validation_aliases == ["not-valid"]
     assert field.serialization_alias == "wire-name"
+
+
+def test_has_lookaround_pattern_skips_reference_without_fields() -> None:
+    """Following a reference whose source is not a model (no ``fields``) is safe."""
+    sourceless_ref = Reference(name="Plain", path="plain")
+    sourceless_ref.source = DataType(type="str")
+    field = DataModelFieldBase(name="value", data_type=DataType(reference=sourceless_ref), required=False)
+
+    assert has_lookaround_pattern([field], follow_references=True) is False
 
 
 def test_create_reuse_model() -> None:

@@ -20,6 +20,9 @@ from datamodel_code_generator.model.pydantic_v2.base_model import (
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     DataModelField as DataModelFieldV2,
 )
+from datamodel_code_generator.model.pydantic_v2.base_model import (
+    has_lookaround_pattern,
+)
 from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_CONFIG_DICT,
     IMPORT_PYDANTIC_DATACLASS,
@@ -116,6 +119,35 @@ class DataClass(_DataclassReuseMixin, DataModel):
         if config_parameters:
             self._additional_imports.append(IMPORT_CONFIG_DICT)
             self.extra_template_data["config"] = config_parameters
+
+        self._lookaround_regex_engine_checked = False
+
+    def _apply_lookaround_regex_engine(self) -> None:
+        """Force the python-re regex engine when a lookaround pattern is reachable.
+
+        Runs lazily because referenced patterns are only linked after ``__init__``; the
+        result is memoized to keep ``imports`` cheap.
+        """
+        if self._lookaround_regex_engine_checked:
+            return
+        self._lookaround_regex_engine_checked = True
+        if not has_lookaround_pattern(self.fields, follow_references=True):
+            return
+        # Merge into any config from __init__; a duplicate ConfigDict import is deduped on render.
+        config = self.extra_template_data.setdefault("config", {})
+        config["regex_engine"] = '"python-re"'
+        self._additional_imports.append(IMPORT_CONFIG_DICT)
+
+    @property
+    def imports(self) -> tuple[Import, ...]:
+        """Return model imports, ensuring the lookaround regex engine config is applied."""
+        self._apply_lookaround_regex_engine()
+        return super().imports
+
+    def render(self, *, class_name: str | None = None) -> str:
+        """Render the dataclass, ensuring the lookaround regex engine config is applied."""
+        self._apply_lookaround_regex_engine()
+        return super().render(class_name=class_name)
 
 
 if PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK:

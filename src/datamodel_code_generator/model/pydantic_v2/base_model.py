@@ -274,6 +274,42 @@ class DataModelField(_PydanticBaseDataModelField):
         return base_imports
 
 
+_LOOKAROUND_PATTERN: re.Pattern[str] = re.compile(r"\(\?<?[=!]")
+
+
+def has_lookaround_pattern(
+    fields: list[DataModelFieldBase],
+    *,
+    follow_references: bool = False,
+    _visited: set[int] | None = None,
+) -> bool:
+    """Check if any field has a regex pattern with lookaround assertions.
+
+    When ``follow_references`` is True, also inspect patterns reachable through referenced
+    models (generated type aliases/root types) -- needed for Pydantic v2 dataclasses, where
+    alias patterns are compiled with the consuming dataclass's config rather than their own.
+    """
+    if _visited is None:
+        _visited = set()
+    for field in fields:
+        pattern = isinstance(field.constraints, Constraints) and field.constraints.pattern
+        if pattern and _LOOKAROUND_PATTERN.search(pattern):
+            return True
+        for data_type in field.data_type.all_data_types:
+            pattern = (data_type.kwargs or {}).get("pattern")
+            if pattern and _LOOKAROUND_PATTERN.search(pattern):
+                return True
+            if not follow_references or data_type.reference is None:
+                continue
+            source = data_type.reference.source
+            source_fields = getattr(source, "fields", None)
+            if source_fields is not None and id(source) not in _visited:
+                _visited.add(id(source))
+                if has_lookaround_pattern(source_fields, follow_references=True, _visited=_visited):
+                    return True
+    return False
+
+
 class BaseModel(BaseModelBase):
     """Pydantic v2 BaseModel with ConfigDict and pattern-based regex_engine support."""
 
@@ -359,7 +395,7 @@ class BaseModel(BaseModelBase):
             include_extra=self.SUPPORTS_CONFIG_EXTRA,
         )
 
-        if self._has_lookaround_pattern():
+        if has_lookaround_pattern(self.fields):
             config_parameters["regex_engine"] = '"python-re"'
 
         if isinstance(config := self.extra_template_data.get("config"), dict):
@@ -379,19 +415,6 @@ class BaseModel(BaseModelBase):
             self._additional_imports.append(IMPORT_CONFIG_DICT)
 
         self._process_validators()
-
-    def _has_lookaround_pattern(self) -> bool:
-        """Check if any field has a regex pattern with lookaround assertions."""
-        lookaround_regex = re.compile(r"\(\?<?[=!]")
-        for field in self.fields:
-            pattern = isinstance(field.constraints, Constraints) and field.constraints.pattern
-            if pattern and lookaround_regex.search(pattern):
-                return True
-            for data_type in field.data_type.all_data_types:
-                pattern = (data_type.kwargs or {}).get("pattern")
-                if pattern and lookaround_regex.search(pattern):
-                    return True
-        return False
 
     def _process_validators(self) -> None:
         """Process validator definitions and prepare them for template rendering."""

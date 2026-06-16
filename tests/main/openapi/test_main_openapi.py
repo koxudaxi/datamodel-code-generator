@@ -1902,6 +1902,31 @@ def test_main_openapi_pattern_with_lookaround_pydantic_v2(
     )
 
 
+@pytest.mark.parametrize(
+    ("expected_output", "args"),
+    [
+        ("pattern_with_lookaround_pydantic_v2_dataclass.py", []),
+        (
+            "pattern_with_lookaround_pydantic_v2_dataclass_field_constraints.py",
+            ["--field-constraints"],
+        ),
+    ],
+)
+def test_main_openapi_pattern_with_lookaround_pydantic_v2_dataclass(
+    expected_output: str, args: list[str], output_file: Path
+) -> None:
+    """Test OpenAPI generation with pattern lookaround for Pydantic v2 dataclasses."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "pattern_lookaround.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--target-python-version", "3.10", "--output-model-type", "pydantic_v2.dataclass", *args],
+        force_exec_validation=True,
+    )
+
+
 def test_main_generate_custom_class_name_generator_modular(
     tmp_path: Path,
 ) -> None:
