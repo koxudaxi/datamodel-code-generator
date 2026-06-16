@@ -29,7 +29,14 @@ from datamodel_code_generator import (
     generate,
     snooper_to_methods,
 )
-from datamodel_code_generator.__main__ import BOOLEAN_OPTIONAL_OPTIONS, Config, Exit, run_generate_from_config
+from datamodel_code_generator.__main__ import (
+    BOOLEAN_OPTIONAL_OPTIONS,
+    CLI_GENERATE_CONFIG_OVERRIDES,
+    GENERATE_CONFIG_ONLY_OPTIONS,
+    Config,
+    Exit,
+    run_generate_from_config,
+)
 from datamodel_code_generator.arguments import _dataclass_arguments, arg_parser
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersion
@@ -235,6 +242,20 @@ def test_no_args_has_default(monkeypatch: pytest.MonkeyPatch) -> None:
     run_main_with_args([], expected_exit=Exit.ERROR)
     for field in Config.get_fields():
         assert getattr(namespace, field, None) is None
+
+
+@pytest.mark.allow_direct_assert
+def test_cli_config_reuses_generate_config_fields() -> None:
+    """CLI Config should not redeclare generation options already owned by GenerateConfig."""
+    config_annotations = set(inspect.get_annotations(Config))
+    generate_config_fields = set(GenerateConfig.model_fields)
+
+    assert config_annotations & generate_config_fields == CLI_GENERATE_CONFIG_OVERRIDES
+    assert set(Config.model_fields) - set(Config.get_fields()) == GENERATE_CONFIG_ONLY_OPTIONS
+
+    config = Config.model_validate({field_name: object() for field_name in GENERATE_CONFIG_ONLY_OPTIONS})
+    for field_name in GENERATE_CONFIG_ONLY_OPTIONS:
+        assert getattr(config, field_name) == GenerateConfig.model_fields[field_name].default
 
 
 @pytest.mark.allow_direct_assert
