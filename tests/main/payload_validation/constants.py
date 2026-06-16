@@ -205,6 +205,7 @@ PYDANTIC_V2_DATACLASS_LEGACY_LOOKAROUND_CASE_IDS = (
 
 
 def _pydantic_v2_legacy_lookaround_excluded_cases(backend: PayloadBackend) -> dict[str, str]:
+    """Return old-runtime lookaround exclusions supported by the selected payload backend."""
     match backend:
         case PayloadBackend.PYDANTIC_V2:
             return dict(PYDANTIC_V2_LEGACY_LOOKAROUND_EXCLUDED_CASES)

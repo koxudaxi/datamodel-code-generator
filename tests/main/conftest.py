@@ -1237,6 +1237,7 @@ def _generated_model(output_path: Path, module_name: str, model_name: str) -> Ge
 
 
 def _model_json_validator(model: Any) -> Callable[[str], Any]:
+    """Return a JSON validation callable for a generated Pydantic model or dataclass."""
     if callable(validate_json := getattr(model, "model_validate_json", None)):
         return validate_json
     return TypeAdapter(model).validate_json
@@ -1245,6 +1246,7 @@ def _model_json_validator(model: Any) -> Callable[[str], Any]:
 def _assert_model_json_invalid(
     validate_json: Callable[[str], Any], invalid_json: str, expected_error_type: str
 ) -> None:
+    """Assert that a generated model JSON validator rejects invalid JSON with the expected error."""
     with pytest.raises(ValidationError) as exc_info:
         validate_json(invalid_json)
     errors = exc_info.value.errors()
