@@ -209,13 +209,12 @@ def _pydantic_v2_legacy_lookaround_excluded_cases(backend: PayloadBackend) -> di
         case PayloadBackend.PYDANTIC_V2:
             return dict(PYDANTIC_V2_LEGACY_LOOKAROUND_EXCLUDED_CASES)
         case PayloadBackend.PYDANTIC_V2_DATACLASS:
-            return {
-                case_id: reason
-                for case_id in PYDANTIC_V2_DATACLASS_LEGACY_LOOKAROUND_CASE_IDS
-                if (reason := PYDANTIC_V2_LEGACY_LOOKAROUND_EXCLUDED_CASES.get(case_id))
-            }
+            case_ids = PYDANTIC_V2_DATACLASS_LEGACY_LOOKAROUND_CASE_IDS
         case _:
             return {}
+    return {
+        case_id: reason for case_id in case_ids if (reason := PYDANTIC_V2_LEGACY_LOOKAROUND_EXCLUDED_CASES.get(case_id))
+    }
 
 
 PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES: dict[PayloadBackend, dict[str, str]] = {
