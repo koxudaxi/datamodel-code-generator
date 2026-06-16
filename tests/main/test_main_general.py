@@ -257,6 +257,8 @@ def test_cli_config_reuses_generate_config_fields() -> None:
     for field_name in GENERATE_CONFIG_ONLY_OPTIONS:
         assert getattr(config, field_name) == GenerateConfig.model_fields[field_name].default
 
+    assert Config.discard_generate_config_only_options("raw") == "raw"
+
 
 @pytest.mark.allow_direct_assert
 def test_boolean_optional_option_sets_are_pinned() -> None:
