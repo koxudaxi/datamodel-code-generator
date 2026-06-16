@@ -106,6 +106,22 @@ def unescape_json_pointer_segment(segment: str) -> str:
     return unquote(segment.replace("~1", "/").replace("~0", "~"))
 
 
+_JSON_POINTER_ARRAY_INDEX = re.compile(r"0|[1-9][0-9]*")
+
+
+def _resolve_json_pointer_array_index(sequence: list[YamlValue], segment: object) -> YamlValue:
+    """Resolve a JSON-pointer segment against a list per the RFC 6901 array-index grammar."""
+    text = str(segment)
+    if not _JSON_POINTER_ARRAY_INDEX.fullmatch(text):
+        msg = f"Invalid JSON pointer array index {text!r}: expected a non-negative integer."
+        raise Error(msg)
+    index = int(text)
+    if index >= len(sequence):
+        msg = f"JSON pointer array index {index} is out of range (array length {len(sequence)})."
+        raise Error(msg)
+    return sequence[index]
+
+
 def get_model_by_path(schema: dict[str, YamlValue] | list[YamlValue], keys: list[str] | list[int]) -> YamlValue:
     """Retrieve a model from schema by traversing the given path keys."""
     if not keys:
@@ -117,7 +133,13 @@ def get_model_by_path(schema: dict[str, YamlValue] | list[YamlValue], keys: list
     key = keys[0]
     if isinstance(key, str):  # pragma: no branch
         key = unescape_json_pointer_segment(key)
-    value = schema.get(str(key), {}) if isinstance(schema, dict) else schema[int(key)]
+    if isinstance(schema, dict):
+        value = schema.get(str(key), {})
+    elif isinstance(schema, list):
+        value = _resolve_json_pointer_array_index(schema, key)
+    else:
+        msg = f"Cannot traverse non-container schema. schema={schema}, key={key}"
+        raise NotImplementedError(msg)
     if len(keys) == 1:
         return value
     if isinstance(value, (dict, list)):
@@ -171,7 +193,7 @@ def _split_json_pointer(schema: dict[str, YamlValue] | list[YamlValue], pointer:
         parts.append(part)
         reference_parts.append(raw_parts[index])
         if isinstance(current, list):  # pragma: no branch
-            current = current[int(part)]
+            current = _resolve_json_pointer_array_index(current, part)
         index += 1
     return parts, reference_parts
 
