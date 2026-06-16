@@ -162,9 +162,9 @@ Current Pydantic 2.0 compatibility fixes:
 Current version-specific exclusions:
 
 - Pydantic before 2.5.0 does not support generated `regex_engine="python-re"` for
-  lookaround pattern validators, so the Pydantic v2 BaseModel payload runtime
-  matrix skips only the classified lookaround pattern cases under older
-  runtimes.
+  lookaround pattern validators, so the Pydantic v2 BaseModel and dataclass
+  payload runtime matrices skip only the classified lookaround pattern cases
+  under older runtimes.
 - Pydantic before 2.5.0 can reject schema-valid Decimal `multipleOf` values near
   float-originated boundaries, so only the classified Decimal `multipleOf` cases
   are skipped under older runtimes.

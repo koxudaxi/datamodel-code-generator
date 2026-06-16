@@ -176,26 +176,51 @@ ROUND_TRIP_EXCLUDED_CASES: dict[str, str] = {
     ),
 }
 PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN_VERSION = "2.5.0"
+PYDANTIC_V2_LEGACY_LOOKAROUND_EXCLUDED_CASES: dict[str, str] = {
+    "jsonschema/lookaround_anyof_nullable.json": (
+        "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
+    ),
+    "jsonschema/lookaround_dict.json": (
+        "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
+    ),
+    "jsonschema/lookaround_mixed_constraints.json": (
+        "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
+    ),
+    "jsonschema/lookaround_union_types.json": (
+        "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
+    ),
+    "jsonschema/nested_lookaround_array.json": (
+        "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to nested lookaround pattern validators"
+    ),
+    "openapi/pattern_lookaround.yaml::components.schemas.info": (
+        "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to OpenAPI lookaround pattern validators"
+    ),
+}
+PYDANTIC_V2_DATACLASS_LEGACY_LOOKAROUND_CASE_IDS = (
+    "jsonschema/lookaround_anyof_nullable.json",
+    "jsonschema/lookaround_dict.json",
+    "jsonschema/lookaround_union_types.json",
+    "jsonschema/nested_lookaround_array.json",
+)
+
+
+def _pydantic_v2_legacy_lookaround_excluded_cases(backend: PayloadBackend) -> dict[str, str]:
+    match backend:
+        case PayloadBackend.PYDANTIC_V2:
+            return dict(PYDANTIC_V2_LEGACY_LOOKAROUND_EXCLUDED_CASES)
+        case PayloadBackend.PYDANTIC_V2_DATACLASS:
+            return {
+                case_id: reason
+                for case_id in PYDANTIC_V2_DATACLASS_LEGACY_LOOKAROUND_CASE_IDS
+                if (reason := PYDANTIC_V2_LEGACY_LOOKAROUND_EXCLUDED_CASES.get(case_id))
+            }
+        case _:
+            return {}
+
+
 PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES: dict[PayloadBackend, dict[str, str]] = {
     PayloadBackend.PYDANTIC_V2: {
-        "jsonschema/lookaround_anyof_nullable.json": (
-            "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
-        ),
-        "jsonschema/lookaround_dict.json": (
-            "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
-        ),
-        "jsonschema/lookaround_mixed_constraints.json": (
-            "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
-        ),
-        "jsonschema/lookaround_union_types.json": (
-            "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
-        ),
-        "jsonschema/nested_lookaround_array.json": (
-            "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to nested lookaround pattern validators"
-        ),
-        "openapi/pattern_lookaround.yaml::components.schemas.info": (
-            "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to OpenAPI lookaround pattern validators"
-        ),
+        **_pydantic_v2_legacy_lookaround_excluded_cases(PayloadBackend.PYDANTIC_V2),
         "jsonschema/use_decimal_for_multiple_of.json": (
             "Pydantic before 2.5.0 can reject schema-valid Decimal multipleOf values near float boundaries"
         ),
@@ -204,6 +229,7 @@ PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES: dict[PayloadBackend, dict[str, str]] 
         ),
     },
     PayloadBackend.PYDANTIC_V2_DATACLASS: {
+        **_pydantic_v2_legacy_lookaround_excluded_cases(PayloadBackend.PYDANTIC_V2_DATACLASS),
         "jsonschema/use_decimal_for_multiple_of.json": (
             "Pydantic before 2.5.0 can reject schema-valid dataclass float multipleOf values near float boundaries"
         ),
