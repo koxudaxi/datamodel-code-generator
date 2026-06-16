@@ -13,8 +13,9 @@ import pytest
 
 from datamodel_code_generator import __main__ as main_module
 from datamodel_code_generator import arguments
-from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.__main__ import Exit
 from tests.conftest import assert_output, freeze_time
+from tests.main.conftest import run_main_with_args
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -22,27 +23,6 @@ if TYPE_CHECKING:
 EXPECTED_INPUT_MODEL_PATH = Path(__file__).parent / "data" / "expected" / "main" / "input_model"
 TIMESTAMP = "1985-10-26T01:21:00-07:00"
 _MISSING_SYS_MODULE = object()
-
-
-def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> None:
-    """Assert exit code matches expected value."""
-    __tracebackhide__ = True
-    if return_code != expected_exit:  # pragma: no cover
-        pytest.fail(f"Expected exit code {expected_exit!r}, got {return_code!r}\n{context}")
-
-
-def _assert_stderr_contains(captured_err: str, expected: str) -> None:
-    """Assert stderr contains expected string."""
-    __tracebackhide__ = True
-    if expected not in captured_err:  # pragma: no cover
-        pytest.fail(f"Expected stderr to contain: {expected!r}\n\nActual stderr:\n{captured_err}")
-
-
-def _assert_file_exists(path: Path) -> None:
-    """Assert file exists."""
-    __tracebackhide__ = True
-    if not path.exists():  # pragma: no cover
-        pytest.fail(f"Expected file to exist: {path}")
 
 
 def _assert_sys_module_missing(module_name: str) -> None:
@@ -81,6 +61,27 @@ def _without_sys_module(module_name: str) -> Iterator[None]:
             sys.modules[module_name] = previous_module
 
 
+def _input_model_args(
+    input_models: str | Sequence[str],
+    *,
+    output_path: Path | None = None,
+    extra_args: Sequence[str] | None = None,
+) -> list[str]:
+    args: list[str] = []
+    match input_models:
+        case str():
+            args.extend(["--input-model", input_models])
+        case _:
+            for input_model in input_models:
+                args.extend(["--input-model", input_model])
+    if output_path is not None:
+        args.extend(["--output", str(output_path)])
+    if not (extra := list(extra_args or ())):
+        return args
+    args.extend(extra)
+    return args
+
+
 def run_input_model_and_assert(
     *,
     input_model: str,
@@ -90,14 +91,13 @@ def run_input_model_and_assert(
 ) -> None:
     """Run main with --input-model and assert results."""
     __tracebackhide__ = True
-    args = ["--input-model", input_model, "--output", str(output_path)]
-    if extra_args:
-        args.extend(extra_args)
-
     with freeze_time(TIMESTAMP):
-        return_code = main(args)
-    _assert_exit_code(return_code, Exit.OK, f"--input-model {input_model}")
-    _assert_file_exists(output_path)
+        run_main_with_args(
+            _input_model_args(input_model, output_path=output_path, extra_args=extra_args),
+            use_parsed_source_cache=False,
+            use_builtin_default_formatter=False,
+            isolate_model_template_cache=True,
+        )
     assert_output(output_path.read_text(encoding="utf-8"), expected_file)
 
 
@@ -110,14 +110,15 @@ def run_input_model_error_and_assert(
 ) -> None:
     """Run main with --input-model expecting error and assert stderr."""
     __tracebackhide__ = True
-    args = ["--input-model", input_model]
-    if extra_args:
-        args.extend(extra_args)
-
-    return_code = main(args)
-    _assert_exit_code(return_code, Exit.ERROR, f"--input-model {input_model}")
-    captured = capsys.readouterr()
-    _assert_stderr_contains(captured.err, expected_stderr_contains)
+    run_main_with_args(
+        _input_model_args(input_model, extra_args=extra_args),
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains=expected_stderr_contains,
+        use_parsed_source_cache=False,
+        use_builtin_default_formatter=False,
+        isolate_model_template_cache=True,
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -828,8 +829,12 @@ def test_input_model_ref_strategy_without_input_model(tmp_path: Path) -> None:
         "--input-model-ref-strategy",
         "reuse-all",
     ]
-    return_code = main(args)
-    assert return_code == Exit.OK
+    run_main_with_args(
+        args,
+        use_parsed_source_cache=False,
+        use_builtin_default_formatter=False,
+        isolate_model_template_cache=True,
+    )
 
 
 def test_input_model_ref_strategy_no_nested_types(tmp_path: Path) -> None:
@@ -1006,17 +1011,13 @@ def run_multiple_input_models_and_assert(
 ) -> None:
     """Run main with multiple --input-model and assert results."""
     __tracebackhide__ = True
-    args: list[str] = []
-    for input_model in input_models:
-        args.extend(["--input-model", input_model])
-    args.extend(["--output", str(output_path)])
-    if extra_args:
-        args.extend(extra_args)
-
     with freeze_time(TIMESTAMP):
-        return_code = main(args)
-    _assert_exit_code(return_code, Exit.OK, f"--input-model {input_models}")
-    _assert_file_exists(output_path)
+        run_main_with_args(
+            _input_model_args(input_models, output_path=output_path, extra_args=extra_args),
+            use_parsed_source_cache=False,
+            use_builtin_default_formatter=False,
+            isolate_model_template_cache=True,
+        )
     assert_output(output_path.read_text(encoding="utf-8"), expected_file)
 
 
@@ -1029,109 +1030,70 @@ def run_multiple_input_models_error_and_assert(
 ) -> None:
     """Run main with multiple --input-model expecting error and assert stderr."""
     __tracebackhide__ = True
-    args: list[str] = []
-    for input_model in input_models:
-        args.extend(["--input-model", input_model])
-    if extra_args:
-        args.extend(extra_args)
-
-    return_code = main(args)
-    _assert_exit_code(return_code, Exit.ERROR, f"--input-model {input_models}")
-    captured = capsys.readouterr()
-    _assert_stderr_contains(captured.err, expected_stderr_contains)
+    run_main_with_args(
+        _input_model_args(input_models, extra_args=extra_args),
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains=expected_stderr_contains,
+        use_parsed_source_cache=False,
+        use_builtin_default_formatter=False,
+        isolate_model_template_cache=True,
+    )
 
 
 def test_input_model_single_with_inheritance(tmp_path: Path) -> None:
     """Test single --input-model with inherited model generates inheritance chain."""
-    with freeze_time(TIMESTAMP):
-        return_code = main([
-            "--input-model",
-            "tests.data.python.input_model.inheritance_models:ChildA",
-            "--output-model-type",
-            "typing.TypedDict",
-            "--output",
-            str(tmp_path / "output.py"),
-        ])
-    assert return_code == Exit.OK
-    assert_output(
-        (tmp_path / "output.py").read_text(encoding="utf-8"),
-        EXPECTED_INPUT_MODEL_PATH / "single_inheritance.py",
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.inheritance_models:ChildA",
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "single_inheritance.py",
+        extra_args=["--output-model-type", "typing.TypedDict"],
     )
 
 
 def test_input_model_single_multi_level_inheritance(tmp_path: Path) -> None:
     """Test single --input-model with multi-level inheritance."""
-    with freeze_time(TIMESTAMP):
-        return_code = main([
-            "--input-model",
-            "tests.data.python.input_model.inheritance_models:GrandChild",
-            "--output-model-type",
-            "typing.TypedDict",
-            "--output",
-            str(tmp_path / "output.py"),
-        ])
-    assert return_code == Exit.OK
-    assert_output(
-        (tmp_path / "output.py").read_text(encoding="utf-8"),
-        EXPECTED_INPUT_MODEL_PATH / "multi_level_inheritance.py",
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.inheritance_models:GrandChild",
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "multi_level_inheritance.py",
+        extra_args=["--output-model-type", "typing.TypedDict"],
     )
 
 
 def test_input_model_single_no_inheritance(tmp_path: Path) -> None:
     """Test single --input-model with model that has no inheritance."""
-    with freeze_time(TIMESTAMP):
-        return_code = main([
-            "--input-model",
-            "tests.data.python.input_model.inheritance_models:NoInheritance",
-            "--output-model-type",
-            "typing.TypedDict",
-            "--output",
-            str(tmp_path / "output.py"),
-        ])
-    assert return_code == Exit.OK
-    assert_output(
-        (tmp_path / "output.py").read_text(encoding="utf-8"),
-        EXPECTED_INPUT_MODEL_PATH / "no_inheritance.py",
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.inheritance_models:NoInheritance",
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "no_inheritance.py",
+        extra_args=["--output-model-type", "typing.TypedDict"],
     )
 
 
 def test_input_model_multiple_forked_inheritance(tmp_path: Path) -> None:
     """Test multiple --input-model with forked inheritance shares common parent."""
-    with freeze_time(TIMESTAMP):
-        return_code = main([
-            "--input-model",
+    run_multiple_input_models_and_assert(
+        input_models=[
             "tests.data.python.input_model.inheritance_models:ChildA",
-            "--input-model",
             "tests.data.python.input_model.inheritance_models:ChildB",
-            "--output-model-type",
-            "typing.TypedDict",
-            "--output",
-            str(tmp_path / "output.py"),
-        ])
-    assert return_code == Exit.OK
-    assert_output(
-        (tmp_path / "output.py").read_text(encoding="utf-8"),
-        EXPECTED_INPUT_MODEL_PATH / "forked_inheritance.py",
+        ],
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "forked_inheritance.py",
+        extra_args=["--output-model-type", "typing.TypedDict"],
     )
 
 
 def test_input_model_multiple_mixed_inheritance(tmp_path: Path) -> None:
     """Test multiple --input-model with different inheritance depths."""
-    with freeze_time(TIMESTAMP):
-        return_code = main([
-            "--input-model",
+    run_multiple_input_models_and_assert(
+        input_models=[
             "tests.data.python.input_model.inheritance_models:ChildA",
-            "--input-model",
             "tests.data.python.input_model.inheritance_models:GrandChild",
-            "--output-model-type",
-            "typing.TypedDict",
-            "--output",
-            str(tmp_path / "output.py"),
-        ])
-    assert return_code == Exit.OK
-    assert_output(
-        (tmp_path / "output.py").read_text(encoding="utf-8"),
-        EXPECTED_INPUT_MODEL_PATH / "mixed_inheritance.py",
+        ],
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "mixed_inheritance.py",
+        extra_args=["--output-model-type", "typing.TypedDict"],
     )
 
 
@@ -1504,23 +1466,14 @@ class TempModel(BaseModel):
 
     monkeypatch.chdir(tmp_path)
 
-    output_path = tmp_path / "output.py"
-    with freeze_time(TIMESTAMP):
-        return_code = main([
-            "--input-model",
+    run_multiple_input_models_and_assert(
+        input_models=[
             "tests.data.python.input_model.inheritance_models:ChildA",
-            "--input-model",
             "temp_model.py:TempModel",
-            "--output",
-            str(output_path),
-        ])
-    assert return_code == Exit.OK
-    content = output_path.read_text(encoding="utf-8")
-    assert "class ChildA(Parent):" in content
-    assert "class Parent(GrandParent):" in content
-    assert "class GrandParent(BaseModel):" in content
-    assert "class TempModel(BaseModel):" in content
-    assert "value:" in content
+        ],
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "multiple_py_file_without_path_separator.py",
+    )
 
 
 def test_input_model_config_string_coercion(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1536,8 +1489,12 @@ output-model-type = "typing.TypedDict"
 
     output_path = tmp_path / "output.py"
     with freeze_time(TIMESTAMP):
-        return_code = main(["--output", str(output_path)])
-    assert return_code == Exit.OK
+        run_main_with_args(
+            ["--output", str(output_path)],
+            use_parsed_source_cache=False,
+            use_builtin_default_formatter=False,
+            isolate_model_template_cache=True,
+        )
     assert_output(
         output_path.read_text(encoding="utf-8"),
         EXPECTED_INPUT_MODEL_PATH / "no_inheritance.py",
