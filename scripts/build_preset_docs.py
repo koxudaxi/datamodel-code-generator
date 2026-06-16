@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -26,6 +27,7 @@ QUICK_START_SCHEMA_PATH = ROOT / "tests" / "data" / "jsonschema" / "tutorial_pet
 QUICK_START_SCHEMA_NAME = "schema.json"
 QUICK_START_OUTPUT_NAME = "model.py"
 QUICK_START_TARGET_PYTHON_VERSION = "3.12"
+QUICK_START_GENERATION_TIMEOUT_SECONDS = 30
 QUICK_START_BEGIN_MARKER = "<!-- BEGIN AUTO-GENERATED PRESET QUICK START -->"
 QUICK_START_END_MARKER = "<!-- END AUTO-GENERATED PRESET QUICK START -->"
 
@@ -140,21 +142,39 @@ def _generate_quick_start_model(preset_name: str) -> str:
         env = os.environ.copy()
         env["PYTHONPATH"] = _prepend_path(env.get("PYTHONPATH"), SRC_PATH)
         env["PYTHONWARNINGS"] = _prepend_warning_filter(env.get("PYTHONWARNINGS"))
-        result = subprocess.run(
-            [sys.executable, "-m", "datamodel_code_generator", *_quick_start_args(preset_name)],
-            cwd=tmp_path,
-            env=env,
-            text=True,
-            capture_output=True,
-            check=False,
-        )
+        command = (sys.executable, "-m", "datamodel_code_generator", *_quick_start_args(preset_name))
+        try:
+            result = subprocess.run(
+                command,
+                cwd=tmp_path,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=QUICK_START_GENERATION_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired as exc:
+            _print_process_output(exc.stdout, exc.stderr)
+            msg = (
+                f"Timed out after {QUICK_START_GENERATION_TIMEOUT_SECONDS}s generating preset "
+                f"quick-start example: {shlex.join(command)}"
+            )
+            raise RuntimeError(msg) from exc
+
         if result.returncode == 0:
             return (tmp_path / QUICK_START_OUTPUT_NAME).read_text(encoding="utf-8").rstrip()
 
-        print(result.stdout, file=sys.stderr, end="")
-        print(result.stderr, file=sys.stderr, end="")
-        msg = "Failed to generate preset quick-start example."
+        _print_process_output(result.stdout, result.stderr)
+        msg = f"Failed to generate preset quick-start example (exit {result.returncode}): {shlex.join(command)}"
         raise RuntimeError(msg)
+
+
+def _print_process_output(stdout: str | bytes | None, stderr: str | bytes | None) -> None:
+    for stream in (stdout, stderr):
+        if stream is None:
+            continue
+        output = stream.decode() if isinstance(stream, bytes) else stream
+        print(output, file=sys.stderr, end="" if output.endswith("\n") else "\n")
 
 
 def _prepend_path(current: str | None, path: Path) -> str:
@@ -223,7 +243,11 @@ def _render_docs_index_quick_start(preset_name: str, model_output: str) -> str:
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="Build preset documentation")
-    parser.add_argument("--check", action="store_true", help="Check whether docs/presets.md is up to date")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Check whether preset docs and preset-powered quick-start examples are up to date",
+    )
     parser.add_argument(
         "--format",
         choices=("markdown", "json"),

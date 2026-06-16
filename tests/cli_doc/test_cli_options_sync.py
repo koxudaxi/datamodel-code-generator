@@ -26,6 +26,7 @@ from datamodel_code_generator.cli_options import (
     is_excluded_from_docs,
     is_manual_doc,
 )
+from scripts.build_cli_docs import _documented_related_option
 
 
 def test_get_canonical_option() -> None:
@@ -71,6 +72,19 @@ def test_get_option_meta_returns_default_for_known_argparse_option(monkeypatch: 
     monkeypatch.setattr(cli_options, "get_all_canonical_options", get_future_options)
 
     assert get_option_meta(option) == CLIOptionMeta(name=option, category=OptionCategory.GENERAL)
+
+
+def test_documented_related_option_prefers_existing_generated_section() -> None:
+    """Related links should target generated sections, not argparse's longest alias."""
+    documented_options = frozenset({
+        "--collapse-root-models",
+        "--no-use-union-operator",
+        "--snake-case-field",
+    })
+
+    assert _documented_related_option("--collapse-root-models", documented_options) == "--collapse-root-models"
+    assert _documented_related_option("--snake-case-field", documented_options) == "--snake-case-field"
+    assert _documented_related_option("--use-union-operator", documented_options) == "--no-use-union-operator"
 
 
 class TestCLIOptionMetaSync:

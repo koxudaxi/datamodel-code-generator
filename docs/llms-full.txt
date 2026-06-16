@@ -3120,7 +3120,7 @@ Select which name to keep when collapsing root models with object references.
 The --collapse-root-models-name-strategy option controls naming when collapsing
 root models. 'child' keeps the inner model's name, 'parent' uses the wrapper's name.
 
-**Related:** [`--no-collapse-root-models`](model-customization.md#no-collapse-root-models)
+**Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
 
 !!! tip "Usage"
 
@@ -4271,7 +4271,7 @@ order either. Inheritance and other runtime ordering requirements can force a
 non-alphabetical arrangement. The value of the flag is that repeated runs on the
 same schema produce the same ordering, which keeps diffs stable.
 
-**Related:** [`--no-collapse-root-models`](model-customization.md#no-collapse-root-models)
+**Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
 
 !!! tip "Usage"
 
@@ -5751,7 +5751,7 @@ The `--reuse-model` flag detects identical enum or model definitions
 across the schema and generates a single shared definition, reducing
 code duplication in the output.
 
-**Related:** [`--no-collapse-root-models`](model-customization.md#no-collapse-root-models)
+**Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
 
 **See also:** [Model Reuse and Deduplication](../model-reuse.md)
 
@@ -8240,7 +8240,7 @@ The `--capitalize-enum-members` flag converts enum member names to
 UPPER_CASE format (e.g., `active` becomes `ACTIVE`), following Python
 naming conventions for constants.
 
-**Aliases:** `--capitalise-enum-members` | **Related:** [`--no-snake-case-field`](field-customization.md#no-snake-case-field)
+**Aliases:** `--capitalise-enum-members` | **Related:** [`--snake-case-field`](field-customization.md#snake-case-field)
 
 !!! tip "Usage"
 
@@ -13701,7 +13701,7 @@ The `--no-use-specialized-enum` flag prevents the generator from using
 specialized Enum classes (StrEnum, IntEnum) when generating code for
 Python 3.11+, falling back to standard Enum classes instead.
 
-**Related:** [`--target-python-version`](model-customization.md#target-python-version), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
+**Related:** [`--target-python-version`](model-customization.md#target-python-version), [`--use-specialized-enum`](typing-customization.md#use-specialized-enum), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 
 !!! tip "Usage"
 
@@ -13976,6 +13976,8 @@ The `--no-use-standard-collections` flag generates typing module containers
 (Dict, List) instead of built-in types. This is useful for older Python
 versions or when explicit typing imports are preferred.
 
+**Related:** [`--use-standard-collections`](typing-customization.md#use-standard-collections)
+
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
@@ -14183,6 +14185,8 @@ Use Union[X, Y] / Optional[X] instead of X | Y union operator.
 The `--no-use-union-operator` flag generates union types using typing.Union
 and typing.Optional instead of the | operator (PEP 604). This is useful
 for older Python versions or when explicit typing imports are preferred.
+
+**Related:** [`--use-union-operator`](typing-customization.md#use-union-operator)
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
@@ -15314,7 +15318,7 @@ The `--use-generic-container-types` flag generates abstract container types
 If `--use-standard-collections` is set, imports from `collections.abc`;
 otherwise imports from `typing`.
 
-**Related:** [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections)
+**Related:** [`--use-standard-collections`](typing-customization.md#use-standard-collections)
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
@@ -19604,7 +19608,7 @@ In the multi-module Pydantic + `ruff-check` case, runtime imports are preserved 
 `--use-type-checking-imports` opts back into the old TYPE_CHECKING-only behavior, which can
 require manual `model_rebuild()` calls for cross-module runtime references.
 
-**Related:** [`--formatters`](template-customization.md#formatters), [`--use-exact-imports`](template-customization.md#use-exact-imports)
+**Related:** [`--formatters`](template-customization.md#formatters), [`--use-exact-imports`](template-customization.md#use-exact-imports), [`--use-type-checking-imports`](template-customization.md#use-type-checking-imports)
 
 !!! tip "Usage"
 

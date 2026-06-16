@@ -581,6 +581,7 @@ def generate_option_section(
     option: str,
     cli_doc_option: CLIDocOption,
     option_related_pages: dict[str, list[tuple[str, str]]] | None = None,
+    documented_options: frozenset[str] | None = None,
 ) -> str:
     """Generate Markdown section for a single CLI option."""
     meta = get_option_meta(option)
@@ -617,7 +618,7 @@ def generate_option_section(
             # Skip self-references
             if r == option:
                 continue
-            canonical = get_canonical_option(r)
+            canonical = _documented_related_option(r, documented_options or frozenset())
             # Also skip if canonical form is the current option
             if canonical == option:
                 continue
@@ -711,10 +712,20 @@ def generate_option_section(
     return md
 
 
+def _documented_related_option(option: str, documented_options: frozenset[str]) -> str:
+    """Return the related option name that has a generated section."""
+    canonical = get_canonical_option(option)
+    for candidate in (option, canonical):
+        if candidate in documented_options:
+            return candidate
+    return canonical
+
+
 def generate_category_page(
     category: OptionCategory,
     options: dict[str, CLIDocOption],
     option_related_pages: dict[str, list[tuple[str, str]]] | None = None,
+    documented_options: frozenset[str] | None = None,
 ) -> str:
     """Generate a category page with all options."""
     emoji = CATEGORY_EMOJIS.get(category, "📋")
@@ -729,9 +740,15 @@ def generate_category_page(
         md += f"| [`{option}`](#{slugify(option)}) | {desc} |\n"
     md += "\n---\n\n"
 
+    category_documented_options = documented_options or frozenset(options)
     for option in sorted(options.keys()):
         cli_doc_option = options[option]
-        md += generate_option_section(option, cli_doc_option, option_related_pages)
+        md += generate_option_section(
+            option,
+            cli_doc_option,
+            option_related_pages,
+            category_documented_options,
+        )
 
     return md
 
@@ -994,6 +1011,7 @@ def build_docs(*, check: bool = False) -> int:
     generated = 0
     errors = 0
     mismatches: list[str] = []
+    documented_options = frozenset(options_map)
 
     def write_or_check(output_path: Path, content: str, label: str) -> bool:
         """Write content to file or check if it matches existing content."""
@@ -1020,7 +1038,7 @@ def build_docs(*, check: bool = False) -> int:
         if not options:
             continue
         try:
-            md = generate_category_page(category, options, option_related_pages)
+            md = generate_category_page(category, options, option_related_pages, documented_options)
             output_path = DOCS_OUTPUT / f"{slugify(category.value)}.md"
             write_or_check(output_path, md, f"{output_path.name} ({len(options)} options)")
         except (OSError, ValueError, KeyError) as e:

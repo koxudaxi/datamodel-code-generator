@@ -1803,7 +1803,7 @@ The `--no-use-specialized-enum` flag prevents the generator from using
 specialized Enum classes (StrEnum, IntEnum) when generating code for
 Python 3.11+, falling back to standard Enum classes instead.
 
-**Related:** [`--target-python-version`](model-customization.md#target-python-version), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
+**Related:** [`--target-python-version`](model-customization.md#target-python-version), [`--use-specialized-enum`](typing-customization.md#use-specialized-enum), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 
 !!! tip "Usage"
 
@@ -2078,6 +2078,8 @@ The `--no-use-standard-collections` flag generates typing module containers
 (Dict, List) instead of built-in types. This is useful for older Python
 versions or when explicit typing imports are preferred.
 
+**Related:** [`--use-standard-collections`](typing-customization.md#use-standard-collections)
+
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
@@ -2285,6 +2287,8 @@ Use Union[X, Y] / Optional[X] instead of X | Y union operator.
 The `--no-use-union-operator` flag generates union types using typing.Union
 and typing.Optional instead of the | operator (PEP 604). This is useful
 for older Python versions or when explicit typing imports are preferred.
+
+**Related:** [`--use-union-operator`](typing-customization.md#use-union-operator)
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
@@ -3416,7 +3420,7 @@ The `--use-generic-container-types` flag generates abstract container types
 If `--use-standard-collections` is set, imports from `collections.abc`;
 otherwise imports from `typing`.
 
-**Related:** [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections)
+**Related:** [`--use-standard-collections`](typing-customization.md#use-standard-collections)
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 

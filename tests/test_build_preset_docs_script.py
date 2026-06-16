@@ -46,6 +46,39 @@ def test_build_preset_docs_json_format() -> None:
     assert presets[0]["requires_target_python_version"] is True
 
 
+def test_build_preset_docs_check_help_mentions_all_generated_targets() -> None:
+    """The --check help text covers all generated preset docs outputs."""
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), "--help"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "preset docs and preset-powered quick-" in result.stdout
+    assert "start examples are up to date" in result.stdout
+
+
+def test_build_preset_docs_quick_start_generation_timeout_has_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Timeout errors include the command that failed."""
+    from scripts import build_preset_docs
+
+    def timeout_run(*args: object, **kwargs: object) -> None:
+        raise subprocess.TimeoutExpired(
+            cmd=args[0],
+            timeout=kwargs["timeout"],
+            output="stdout\n",
+            stderr="stderr\n",
+        )
+
+    monkeypatch.setattr(build_preset_docs.subprocess, "run", timeout_run)
+
+    with pytest.raises(RuntimeError, match=r"Timed out after .* datamodel_code_generator"):
+        build_preset_docs._generate_quick_start_model("standard-20260617")
+
+
 def test_preset_metadata_renderers() -> None:
     """Preset metadata renderers expose the committed preset reference."""
     markdown = render_presets("markdown")
