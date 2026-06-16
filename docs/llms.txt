@@ -7,6 +7,7 @@
 ## CLI Reference
 
 - [CLI Reference](https://datamodel-code-generator.koxudaxi.dev/cli-reference/): This documentation is auto-generated from test cases.
+- [Presets](https://datamodel-code-generator.koxudaxi.dev/presets/): Presets are immutable named groups of CLI options. A preset name never changes behavior; new recommendations are published as new dated preset names.
 - [Base Options](https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options/)
 - [Model Customization](https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-customization/)
 - [Field Customization](https://datamodel-code-generator.koxudaxi.dev/cli-reference/field-customization/)

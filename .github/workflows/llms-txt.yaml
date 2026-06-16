@@ -6,9 +6,11 @@ on:
     paths:
       - 'src/datamodel_code_generator/**'
       - 'tests/main/**'
+      - 'tests/data/jsonschema/tutorial_pet.json'
       - 'tests/test_main_kr.py'
       - 'scripts/build_cli_docs.py'
       - 'scripts/build_prompt_data.py'
+      - 'scripts/build_preset_docs.py'
       - 'src/datamodel_code_generator/parser/schema_version.py'
       - 'scripts/build_schema_docs.py'
       - 'docs/**/*.md'
@@ -45,6 +47,10 @@ jobs:
         run: tox run -vv --notest --skip-missing-interpreters false -e schema-docs
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Setup preset docs environment
+        run: tox run -vv --notest --skip-missing-interpreters false -e preset-docs
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
       - name: Setup llms.txt environment
         run: tox run -vv --notest --skip-missing-interpreters false -e llms-txt
         env:
@@ -52,12 +58,14 @@ jobs:
       - name: Update README
         run: .tox/readme/bin/python scripts/update_command_help_on_markdown.py
       - name: Collect CLI doc metadata
-        run: .tox/cli-docs/bin/pytest --collect-cli-docs -p no:xdist -q
+        run: .tox/cli-docs/bin/pytest tests --collect-cli-docs -p no:xdist -q
       - name: Build CLI docs
         run: .tox/cli-docs/bin/python scripts/build_cli_docs.py
       - name: Build prompt data
         run: .tox/cli-docs/bin/python scripts/build_prompt_data.py
       - name: Build schema docs
         run: .tox/schema-docs/bin/python scripts/build_schema_docs.py
+      - name: Build preset docs
+        run: .tox/preset-docs/bin/python scripts/build_preset_docs.py
       - name: Build llms.txt
         run: .tox/llms-txt/bin/python scripts/build_llms_txt.py

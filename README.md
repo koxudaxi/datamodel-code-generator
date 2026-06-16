@@ -136,8 +136,16 @@ docker pull koxudaxi/datamodel-code-generator
 
 ## 🏃 Quick Start
 
+<!-- BEGIN AUTO-GENERATED PRESET QUICK START -->
 ```bash
-datamodel-codegen --input schema.json --input-file-type jsonschema --output-model-type pydantic_v2.BaseModel --output model.py
+datamodel-codegen \
+  --input schema.json \
+  --input-file-type jsonschema \
+  --output-model-type pydantic_v2.BaseModel \
+  --target-python-version 3.12 \
+  --preset standard-20260617 \
+  --disable-timestamp \
+  --output model.py
 ```
 
 <details>
@@ -182,13 +190,13 @@ datamodel-codegen --input schema.json --input-file-type jsonschema --output-mode
 
 from __future__ import annotations
 
-from enum import Enum
-from typing import Optional
+from enum import StrEnum
+from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class Species(Enum):
+class Species(StrEnum):
     dog = 'dog'
     cat = 'cat'
     bird = 'bird'
@@ -196,13 +204,17 @@ class Species(Enum):
 
 
 class Pet(BaseModel):
-    name: str = Field(..., description="The pet's name")
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+    name: Annotated[str, Field(description="The pet's name")]
     species: Species
-    age: Optional[int] = Field(None, description='Age in years', ge=0)
-    vaccinated: Optional[bool] = False
+    age: Annotated[int | None, Field(description='Age in years', ge=0)] = None
+    vaccinated: bool | None = False
 ```
 
 </details>
+<!-- END AUTO-GENERATED PRESET QUICK START -->
 
 ---
 

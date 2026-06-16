@@ -1,0 +1,246 @@
+"""Generate preset documentation and preset-powered quick-start examples.
+
+Usage:
+    python scripts/build_preset_docs.py
+    python scripts/build_preset_docs.py --check
+    python scripts/build_preset_docs.py --format json
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import subprocess
+import sys
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path
+from typing import cast
+
+ROOT = Path(__file__).resolve().parents[1]
+DOCS_PATH = ROOT / "docs" / "presets.md"
+DOCS_INDEX_PATH = ROOT / "docs" / "index.md"
+README_PATH = ROOT / "README.md"
+SRC_PATH = ROOT / "src"
+QUICK_START_SCHEMA_PATH = ROOT / "tests" / "data" / "jsonschema" / "tutorial_pet.json"
+QUICK_START_SCHEMA_NAME = "schema.json"
+QUICK_START_OUTPUT_NAME = "model.py"
+QUICK_START_TARGET_PYTHON_VERSION = "3.12"
+QUICK_START_BEGIN_MARKER = "<!-- BEGIN AUTO-GENERATED PRESET QUICK START -->"
+QUICK_START_END_MARKER = "<!-- END AUTO-GENERATED PRESET QUICK START -->"
+
+if str(SRC_PATH) not in sys.path:
+    sys.path.insert(0, str(SRC_PATH))
+
+from datamodel_code_generator.preset import PresetFormat, get_latest_preset_name, render_presets  # noqa: E402
+
+
+@dataclass(frozen=True, slots=True)
+class GeneratedDoc:
+    """Generated file content."""
+
+    path: Path
+    content: str
+
+
+def build_docs(*, check: bool) -> int:
+    """Generate or check preset documentation outputs."""
+    docs = _generate_docs()
+    if not check:
+        for doc in docs:
+            doc.path.write_text(doc.content, encoding="utf-8")
+        return 0
+
+    out_of_date = [
+        doc.path for doc in docs if not doc.path.exists() or doc.path.read_text(encoding="utf-8") != doc.content
+    ]
+    if not out_of_date:
+        return 0
+
+    for path in out_of_date:
+        print(f"Preset docs are out of date: {path.relative_to(ROOT)}", file=sys.stderr)
+    print("Run 'python scripts/build_preset_docs.py' to update.", file=sys.stderr)
+    return 1
+
+
+def _generate_docs() -> tuple[GeneratedDoc, ...]:
+    preset_name = get_latest_preset_name()
+    model_output = _generate_quick_start_model(preset_name)
+    return (
+        GeneratedDoc(DOCS_PATH, render_presets("markdown")),
+        GeneratedDoc(
+            README_PATH,
+            _replace_quick_start_section(
+                README_PATH.read_text(encoding="utf-8"),
+                _render_readme_quick_start(preset_name, model_output),
+            ),
+        ),
+        GeneratedDoc(
+            DOCS_INDEX_PATH,
+            _replace_quick_start_section(
+                DOCS_INDEX_PATH.read_text(encoding="utf-8"),
+                _render_docs_index_quick_start(preset_name, model_output),
+            ),
+        ),
+    )
+
+
+def _replace_quick_start_section(markdown_text: str, generated: str) -> str:
+    start = markdown_text.find(QUICK_START_BEGIN_MARKER)
+    end = markdown_text.find(QUICK_START_END_MARKER)
+    if start == -1 or end == -1 or end < start:
+        msg = f"Could not find quick-start markers: {QUICK_START_BEGIN_MARKER} / {QUICK_START_END_MARKER}"
+        raise ValueError(msg)
+    return (
+        markdown_text[: start + len(QUICK_START_BEGIN_MARKER)] + "\n" + generated.rstrip() + "\n" + markdown_text[end:]
+    )
+
+
+def _quick_start_args(preset_name: str) -> tuple[str, ...]:
+    return (
+        "--input",
+        QUICK_START_SCHEMA_NAME,
+        "--input-file-type",
+        "jsonschema",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--target-python-version",
+        QUICK_START_TARGET_PYTHON_VERSION,
+        "--preset",
+        preset_name,
+        "--disable-timestamp",
+        "--output",
+        QUICK_START_OUTPUT_NAME,
+    )
+
+
+def _render_quick_start_command(preset_name: str) -> str:
+    return "\n".join((
+        "datamodel-codegen \\",
+        f"  --input {QUICK_START_SCHEMA_NAME} \\",
+        "  --input-file-type jsonschema \\",
+        "  --output-model-type pydantic_v2.BaseModel \\",
+        f"  --target-python-version {QUICK_START_TARGET_PYTHON_VERSION} \\",
+        f"  --preset {preset_name} \\",
+        "  --disable-timestamp \\",
+        f"  --output {QUICK_START_OUTPUT_NAME}",
+    ))
+
+
+def _generate_quick_start_model(preset_name: str) -> str:
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        (tmp_path / QUICK_START_SCHEMA_NAME).write_text(
+            QUICK_START_SCHEMA_PATH.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        env = os.environ.copy()
+        env["PYTHONPATH"] = _prepend_path(env.get("PYTHONPATH"), SRC_PATH)
+        env["PYTHONWARNINGS"] = _prepend_warning_filter(env.get("PYTHONWARNINGS"))
+        result = subprocess.run(
+            [sys.executable, "-m", "datamodel_code_generator", *_quick_start_args(preset_name)],
+            cwd=tmp_path,
+            env=env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            return (tmp_path / QUICK_START_OUTPUT_NAME).read_text(encoding="utf-8").rstrip()
+
+        print(result.stdout, file=sys.stderr, end="")
+        print(result.stderr, file=sys.stderr, end="")
+        msg = "Failed to generate preset quick-start example."
+        raise RuntimeError(msg)
+
+
+def _prepend_path(current: str | None, path: Path) -> str:
+    if current:
+        return f"{path}{os.pathsep}{current}"
+    return str(path)
+
+
+def _prepend_warning_filter(current: str | None) -> str:
+    filter_ = "ignore::FutureWarning"
+    if current:
+        return f"{filter_},{current}"
+    return filter_
+
+
+def _render_readme_quick_start(preset_name: str, model_output: str) -> str:
+    schema = QUICK_START_SCHEMA_PATH.read_text(encoding="utf-8").rstrip()
+    command = _render_quick_start_command(preset_name)
+    return f"""```bash
+{command}
+```
+
+<details>
+<summary>📄 {QUICK_START_SCHEMA_NAME} (input)</summary>
+
+```json
+{schema}
+```
+
+</details>
+
+<details>
+<summary>🐍 {QUICK_START_OUTPUT_NAME} (output)</summary>
+
+```python
+{model_output}
+```
+
+</details>"""
+
+
+def _render_docs_index_quick_start(preset_name: str, model_output: str) -> str:
+    schema = QUICK_START_SCHEMA_PATH.read_text(encoding="utf-8").rstrip()
+    command = _render_quick_start_command(preset_name)
+    return f"""### 1️⃣ Create a schema file
+
+```json title="{QUICK_START_SCHEMA_NAME}"
+{schema}
+```
+
+### 2️⃣ Run the generator
+
+```bash
+{command}
+```
+
+### 3️⃣ Use your models
+
+```python title="{QUICK_START_OUTPUT_NAME}"
+{model_output}
+```
+
+🎉 That's it! Your schema is now a fully-typed Python model."""
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(description="Build preset documentation")
+    parser.add_argument("--check", action="store_true", help="Check whether docs/presets.md is up to date")
+    parser.add_argument(
+        "--format",
+        choices=("markdown", "json"),
+        default=None,
+        help="Print presets in the selected format instead of writing docs",
+    )
+    return parser.parse_args()
+
+
+def main() -> int:
+    """Script entrypoint."""
+    args = parse_args()
+    if args.check and args.format:
+        print("Error: --check cannot be used with --format", file=sys.stderr)
+        return 2
+    if args.format:
+        print(render_presets(cast("PresetFormat", args.format)), end="")
+        return 0
+    return build_docs(check=args.check)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

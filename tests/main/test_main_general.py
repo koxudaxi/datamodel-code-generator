@@ -155,6 +155,147 @@ def test_show_help_when_no_input(mocker: MockerFixture) -> None:
     print_help_mock.assert_called()
 
 
+@pytest.mark.cli_doc(
+    options=["--preset"],
+    option_description="""Apply an immutable built-in option preset.
+
+The `standard-20260617` preset enables the recommended modern Python output style for
+new projects. Presets require an explicit `--target-python-version` so generated
+syntax and backports are pinned.""",
+    input_schema="jsonschema/person.json",
+    cli_args=["--preset", "standard-20260617", "--target-python-version", "3.12"],
+    golden_output="main/standard_preset_pydantic_v2.py",
+    related_options=["--target-python-version"],
+    primary=True,
+)
+@freeze_time(TIMESTAMP)
+def test_standard_preset_pydantic_v2(output_file: Path) -> None:
+    """Generate Pydantic v2 output using the standard preset."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--preset", "standard-20260617", "--target-python-version", "3.12"],
+        assert_func=assert_file_content,
+        expected_file="standard_preset_pydantic_v2.py",
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_standard_preset_no_snake_case_cli_override(output_file: Path) -> None:
+    """CLI --no-* flags override preset-supplied options."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--preset",
+            "standard-20260617",
+            "--target-python-version",
+            "3.12",
+            "--no-snake-case-field",
+        ],
+        assert_func=assert_file_content,
+        expected_file="standard_preset_no_snake_case.py",
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_standard_preset_allows_original_field_name_delimiter_after_merge(output_file: Path) -> None:
+    """Preset-supplied snake-case conversion is visible to final validation."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--preset",
+            "standard-20260617",
+            "--target-python-version",
+            "3.12",
+            "--original-field-name-delimiter",
+            "-",
+        ],
+        assert_func=assert_file_content,
+        expected_file="standard_preset_pydantic_v2.py",
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_standard_preset_cli_overrides_pyproject_option(output_file: Path, tmp_path: Path) -> None:
+    """CLI --preset overrides pyproject values unless the same option is explicit on CLI."""
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[tool.datamodel-codegen]
+target-python-version = "3.12"
+snake-case-field = false
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--preset", "standard-20260617"],
+            assert_func=assert_file_content,
+            expected_file="standard_preset_pydantic_v2.py",
+        )
+
+
+@freeze_time(TIMESTAMP)
+def test_standard_preset_pyproject_uses_final_output_model_type(output_file: Path, tmp_path: Path) -> None:
+    """Pyproject preset adapters resolve after CLI output-model-type overrides."""
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[tool.datamodel-codegen]
+preset = "standard-20260617"
+target-python-version = "3.12"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--output-model-type", "dataclasses.dataclass"],
+            assert_func=assert_file_content,
+            expected_file="standard_preset_dataclass.py",
+        )
+
+
+@freeze_time(TIMESTAMP)
+def test_standard_preset_target_py310_does_not_force_specialized_enum(output_file: Path) -> None:
+    """The standard preset does not force StrEnum when target Python is 3.10."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "string_enum.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--preset", "standard-20260617", "--target-python-version", "3.10"],
+        assert_func=assert_file_content,
+        expected_file="standard_preset_string_enum_py310.py",
+    )
+
+
+def test_standard_preset_requires_target_python_version(
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Preset use requires target Python version pinning."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--preset", "standard-20260617"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="--preset standard-20260617 requires an explicit --target-python-version",
+        file_should_not_exist=output_file,
+    )
+
+
 def test_generated_pydantic_v2_model_accepts_runtime_value(output_file: Path) -> None:
     """Generated Pydantic v2 model validates a schema-valid payload at runtime."""
     run_main_and_assert(
@@ -245,19 +386,29 @@ def test_boolean_optional_option_sets_are_pinned() -> None:
     ]
 
     assert sorted(BOOLEAN_OPTIONAL_OPTIONS) == snapshot([
+        "allow_population_by_field_name",
+        "collapse_root_models",
+        "snake_case_field",
+        "use_frozen_field",
         "use_specialized_enum",
         "use_standard_collections",
+        "use_standard_primitive_types",
         "use_type_checking_imports",
     ])
     assert boolean_optional_dests == snapshot([
         "allow_remote_refs",
         "allow_private_network",
+        "allow_population_by_field_name",
+        "collapse_root_models",
         "treat_dot_as_module",
+        "use_standard_primitive_types",
         "use_annotated",
         "use_standard_collections",
         "use_specialized_enum",
         "use_union_operator",
         "use_closed_typed_dict",
+        "snake_case_field",
+        "use_frozen_field",
         "use_type_checking_imports",
     ])
     assert set(boolean_optional_dests) >= BOOLEAN_OPTIONAL_OPTIONS

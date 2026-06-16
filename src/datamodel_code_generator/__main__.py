@@ -133,6 +133,7 @@ from datamodel_code_generator.format import (
     is_supported_in_black,
 )
 from datamodel_code_generator.parser import LiteralType  # noqa: TC001 # needed for pydantic
+from datamodel_code_generator.preset import PresetContext, PresetError, PresetName, resolve_preset
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.util import load_toml
@@ -173,10 +174,17 @@ EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
 })
 
 BOOLEAN_OPTIONAL_OPTIONS: frozenset[str] = frozenset({
+    "allow_population_by_field_name",
+    "collapse_root_models",
+    "snake_case_field",
+    "use_frozen_field",
     "use_type_checking_imports",
     "use_specialized_enum",
     "use_standard_collections",
+    "use_standard_primitive_types",
 })
+
+ORIGINAL_FIELD_NAME_DELIMITER_ERROR = "`--original-field-name-delimiter` can not be used without `--snake-case-field`."
 
 
 class Exit(IntEnum):
@@ -400,10 +408,6 @@ class Config(BaseModel):  # noqa: PLR0904
             values["external_ref_mapping"] = mapping
         return values
 
-    __validate_original_field_name_delimiter_err: ClassVar[str] = (
-        "`--original-field-name-delimiter` can not be used without `--snake-case-field`."
-    )
-
     __validate_custom_file_header_err: ClassVar[str] = (
         "`--custom_file_header_path` can not be used with `--custom_file_header`."
     )
@@ -421,12 +425,12 @@ class Config(BaseModel):  # noqa: PLR0904
         _validate_output_datetime_class(self.output_model_type, self.output_datetime_class)
         return self
 
-    @model_validator(mode="after")  # ty: ignore
-    def validate_original_field_name_delimiter(self: Self) -> Self:  # ty: ignore
-        """Validate original field name delimiter requires snake case."""
+    __validate_original_field_name_delimiter_err: ClassVar[str] = ORIGINAL_FIELD_NAME_DELIMITER_ERROR
+
+    def validate_original_field_name_delimiter(self) -> None:
+        """Validate original field name delimiter requires snake case after preset merging."""
         if self.original_field_name_delimiter is not None and not self.snake_case_field:
             raise Error(self.__validate_original_field_name_delimiter_err)
-        return self
 
     @model_validator(mode="after")  # ty: ignore
     def validate_custom_file_header(self: Self) -> Self:  # ty: ignore
@@ -486,6 +490,7 @@ class Config(BaseModel):  # noqa: PLR0904
     input_file_type: InputFileType = InputFileType.Auto
     output_model_type: DataModelType = DataModelType.PydanticV2BaseModel
     output: Optional[Path] = None  # noqa: UP045
+    preset: Optional[PresetName] = None  # noqa: UP045
     check: bool = False
     debug: bool = False
     disable_warnings: bool = False
@@ -633,7 +638,7 @@ class Config(BaseModel):  # noqa: PLR0904
 
     def merge_args(self, args: Namespace) -> None:
         """Merge command-line arguments into config."""
-        set_args = {f: value for f in self.get_fields() if (value := getattr(args, f, None)) is not None}
+        set_args = _explicit_config_args(args)
         explicit_input_sources = {
             field_name for field_name in ("input", "url", "input_model") if field_name in set_args
         }
@@ -651,6 +656,50 @@ class Config(BaseModel):  # noqa: PLR0904
         parsed_args = Config.model_validate(set_args)
         for field_name in set_args:
             setattr(self, field_name, getattr(parsed_args, field_name))
+
+
+def _explicit_config_args(args: Namespace) -> dict[str, Any]:
+    """Return command-line values that explicitly target Config fields."""
+    return {field: value for field in Config.get_fields() if (value := getattr(args, field, None)) is not None}
+
+
+def _apply_preset(
+    config: Config,
+    pyproject_config: Mapping[str, Any],
+    cli_config_args: Mapping[str, Any],
+) -> None:
+    """Apply the selected preset to the final CLI/pyproject config."""
+    preset_from_cli = "preset" in cli_config_args
+    preset_name = cli_config_args.get("preset") if preset_from_cli else config.preset
+    if preset_name is None:
+        return
+
+    if "target_python_version" not in pyproject_config and "target_python_version" not in cli_config_args:
+        msg = (
+            f"--preset {preset_name} requires an explicit --target-python-version "
+            "or target-python-version in pyproject.toml."
+        )
+        raise PresetError(msg)
+
+    explicit_fields = set(cli_config_args) if preset_from_cli else set(pyproject_config) | set(cli_config_args)
+    explicit_fields.discard("preset")
+
+    context = PresetContext(
+        input_file_type=config.input_file_type,
+        output_model_type=config.output_model_type,
+        target_python_version=config.target_python_version,
+    )
+    for field_name, value in resolve_preset(preset_name, context).updates().items():
+        if field_name not in explicit_fields:
+            setattr(config, field_name, value)
+
+    if config.use_annotated:
+        config.field_constraints = True
+
+
+def _validate_final_config(config: Config) -> None:
+    """Validate invariants that depend on CLI, pyproject, and preset merging."""
+    config.validate_original_field_name_delimiter()
 
 
 def _extract_additional_imports(extra_template_data: defaultdict[str, dict[str, Any]]) -> list[str]:
@@ -1327,10 +1376,13 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         return Exit.OK
 
     try:
+        cli_config_args = _explicit_config_args(namespace)
         config = Config.model_validate(pyproject_config)
         config.merge_args(namespace)
-    except Error as e:
-        print(e.message, file=sys.stderr)  # noqa: T201
+        _apply_preset(config, pyproject_config, cli_config_args)
+        _validate_final_config(config)
+    except (Error, PresetError) as e:
+        print(str(e), file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
     if config.list_deprecations:

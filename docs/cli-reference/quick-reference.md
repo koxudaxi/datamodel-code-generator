@@ -23,6 +23,7 @@ datamodel-codegen [OPTIONS]
 | [`--input-model`](base-options.md#input-model) | Import a Python type or dict schema from a module. |
 | [`--input-model-ref-strategy`](base-options.md#input-model-ref-strategy) | Strategy for referenced types when using --input-model. |
 | [`--output`](base-options.md#output) | Specify the destination path for generated Python code. |
+| [`--preset`](base-options.md#preset) | Apply an immutable built-in option preset. |
 | [`--schema-version`](base-options.md#schema-version) | Schema version to use for parsing. |
 | [`--schema-version-mode`](base-options.md#schema-version-mode) | Schema version validation mode. |
 | [`--url`](base-options.md#url) | Fetch schema from URL with custom HTTP headers. |
@@ -327,6 +328,7 @@ All options sorted alphabetically:
 - [`--output-format-json-schema`](utility-options.md#output-format-json-schema) - Output JSON Schema for structured command output
 - [`--output-model-type`](model-customization.md#output-model-type) - Select the output model type (Pydantic v2, Pydantic v2 datac...
 - [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) - Namespace models by their parent scope to avoid naming confl...
+- [`--preset`](base-options.md#preset) - Apply an immutable built-in option preset.
 - [`--profile`](utility-options.md#profile) - Use a named profile from pyproject.toml
 - [`--read-only-write-only-model-type`](openapi-only-options.md#read-only-write-only-model-type) - Generate separate request and response models for readOnly/w...
 - [`--remove-special-field-name-prefix`](field-customization.md#remove-special-field-name-prefix) - Remove the special prefix from field names.

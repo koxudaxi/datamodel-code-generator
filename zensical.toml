@@ -11,6 +11,7 @@ nav = [
   { "Playground" = "playground.md" },
   { "CLI Reference" = [
     { "Overview" = "cli-reference/index.md" },
+    { "Presets" = "presets.md" },
     { "Base Options" = "cli-reference/base-options.md" },
     { "Model Customization" = "cli-reference/model-customization.md" },
     { "Field Customization" = "cli-reference/field-customization.md" },

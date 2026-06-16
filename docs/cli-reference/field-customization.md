@@ -442,7 +442,7 @@ The `--capitalize-enum-members` flag converts enum member names to
 UPPER_CASE format (e.g., `active` becomes `ACTIVE`), following Python
 naming conventions for constants.
 
-**Aliases:** `--capitalise-enum-members` | **Related:** [`--snake-case-field`](field-customization.md#snake-case-field)
+**Aliases:** `--capitalise-enum-members` | **Related:** [`--no-snake-case-field`](field-customization.md#no-snake-case-field)
 
 !!! tip "Usage"
 

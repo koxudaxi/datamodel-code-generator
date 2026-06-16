@@ -85,6 +85,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --output OUTPUT       Output file (default: stdout)
   --output-model-type {pydantic_v2.BaseModel,pydantic_v2.dataclass,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
                         Output model type (default: pydantic_v2.BaseModel)
+  --preset {standard-20260617}
+                        Apply an immutable built-in option preset. Presets
+                        require an explicit --target-python-version so
+                        generated syntax is pinned.
   --schema-version SCHEMA_VERSION
                         Schema version. Valid values depend on input type:
                         JsonSchema: auto, draft-04, draft-06, draft-07,
@@ -253,7 +257,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         formats: Flat: {'name': 'fullName'} applies to all
                         occurrences. Scoped: {'User.name': 'fullName'} applies
                         to specific class.
-  --snake-case-field    Change camel-case field name to snake-case
+  --snake-case-field, --no-snake-case-field
+                        Change camel-case field name to snake-case
   --special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX
                         Set field name prefix when first character can't be
                         used as Python field name (default: `field`)
@@ -276,7 +281,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Use schema description to populate field docstring
   --use-field-description-example
                         Use schema example to populate field docstring
-  --use-frozen-field    Use Field(frozen=True) for readOnly fields (Pydantic
+  --use-frozen-field, --no-use-frozen-field
+                        Use Field(frozen=True) for readOnly fields (Pydantic
                         v2).
   --use-inline-field-description
                         Use schema description to populate field docstring as
@@ -306,7 +312,7 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --allow-leading-underscore-class-name
                         Allow an explicitly specified root class name to start
                         with an underscore
-  --allow-population-by-field-name
+  --allow-population-by-field-name, --no-allow-population-by-field-name
                         Allow population by field name
   --class-name CLASS_NAME
                         Set class name of root model
@@ -328,7 +334,7 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         models by replacing references instead of creating
                         empty inheritance subclasses. This eliminates 'class
                         Foo(Bar): pass' patterns
-  --collapse-root-models
+  --collapse-root-models, --no-collapse-root-models
                         Models generated with a root-type field will be merged
                         into the models using that root-type model
   --collapse-root-models-name-strategy {child,parent}
@@ -431,7 +437,7 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --use-pendulum        use pendulum instead of datetime
   --use-schema-description
                         Use schema description to populate class docstring
-  --use-standard-primitive-types
+  --use-standard-primitive-types, --no-use-standard-primitive-types
                         Use Python standard library types for string formats
                         (UUID, IPv4Address, etc.) instead of str. Affects
                         dataclass, msgspec, TypedDict output. Pydantic already

@@ -1457,8 +1457,6 @@ The `--collapse-root-models` option generates simpler output by inlining root mo
 directly instead of creating separate wrapper types. This shows how different output
 model types (Pydantic v2, dataclass, TypedDict, msgspec) handle const fields.
 
-**See also:** [Model Reuse and Deduplication](../model-reuse.md)
-
 !!! tip "Usage"
 
     ```bash
@@ -1636,7 +1634,7 @@ Select which name to keep when collapsing root models with object references.
 The --collapse-root-models-name-strategy option controls naming when collapsing
 root models. 'child' keeps the inner model's name, 'parent' uses the wrapper's name.
 
-**Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
+**Related:** [`--no-collapse-root-models`](model-customization.md#no-collapse-root-models)
 
 !!! tip "Usage"
 
@@ -2787,7 +2785,7 @@ order either. Inheritance and other runtime ordering requirements can force a
 non-alphabetical arrangement. The value of the flag is that repeated runs on the
 same schema produce the same ordering, which keeps diffs stable.
 
-**Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
+**Related:** [`--no-collapse-root-models`](model-customization.md#no-collapse-root-models)
 
 !!! tip "Usage"
 
@@ -4267,7 +4265,7 @@ The `--reuse-model` flag detects identical enum or model definitions
 across the schema and generates a single shared definition, reducing
 code duplication in the output.
 
-**Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
+**Related:** [`--no-collapse-root-models`](model-customization.md#no-collapse-root-models)
 
 **See also:** [Model Reuse and Deduplication](../model-reuse.md)
 

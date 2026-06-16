@@ -22,6 +22,7 @@ What other options should I use?
 - `--input-model`: Import a Python type or dict schema from a module.
 - `--input-model-ref-strategy`: Strategy for referenced types when using --input-model.
 - `--output`: Specify the destination path for generated Python code.
+- `--preset`: Apply an immutable built-in option preset.
 - `--schema-version`: Schema version to use for parsing.
 - `--schema-version-mode`: Schema version validation mode.
 - `--url`: Fetch schema from URL with custom HTTP headers.
@@ -37,6 +38,7 @@ What other options should I use?
 - `--no-use-closed-typed-dict`: Disable PEP 728 TypedDict closed/extra_items generation.
 - `--no-use-specialized-enum`: Disable specialized Enum classes for Python 3.11+ code generation.
 - `--no-use-standard-collections`: Use typing.Dict/List instead of built-in dict/list for container types.
+- `--no-use-standard-primitive-types`
 - `--no-use-union-operator`: Use Union[X, Y] / Optional[X] instead of X | Y union operator.
 - `--output-date-class`: Specify date class type for date schema fields.
 - `--output-datetime-class`: Specify datetime class type for date-time schema fields.
@@ -71,6 +73,7 @@ What other options should I use?
 - `--field-include-all-keys`: Include all schema keys in Field() json_schema_extra.
 - `--field-type-collision-strategy`: Rename type class instead of field when names collide (Pydantic v2 only).
 - `--no-alias`: Disable Field alias generation for non-Python-safe property names.
+- `--no-snake-case-field`
 - `--original-field-name-delimiter`: Specify delimiter for original field names when using snake-case conversion.
 - `--remove-special-field-name-prefix`: Remove the special prefix from field names.
 - `--serialization-aliases`: Apply custom Pydantic v2 serialization aliases from JSON file.
@@ -110,6 +113,9 @@ What other options should I use?
 - `--model-extra-keys`: Add model-level schema extensions to ConfigDict json_schema_extra.
 - `--model-extra-keys-without-x-prefix`: Strip x- prefix from model-level schema extensions and add to ConfigDic...
 - `--naming-strategy`: Use parent-prefixed naming strategy for duplicate model names.
+- `--no-allow-population-by-field-name`
+- `--no-collapse-root-models`
+- `--no-use-frozen-field`
 - `--output-model-type`: Generate models from GraphQL with different output model types.
 - `--parent-scoped-naming`: Namespace models by their parent scope to avoid naming conflicts.
 - `--reuse-model`: Reuse identical model definitions instead of generating duplicates.
@@ -277,6 +283,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --output OUTPUT       Output file (default: stdout)
   --output-model-type {pydantic_v2.BaseModel,pydantic_v2.dataclass,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
                         Output model type (default: pydantic_v2.BaseModel)
+  --preset {standard-20260617}
+                        Apply an immutable built-in option preset. Presets
+                        require an explicit --target-python-version so
+                        generated syntax is pinned.
   --schema-version SCHEMA_VERSION
                         Schema version. Valid values depend on input type:
                         JsonSchema: auto, draft-04, draft-06, draft-07,
@@ -445,7 +455,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         formats: Flat: {'name': 'fullName'} applies to all
                         occurrences. Scoped: {'User.name': 'fullName'} applies
                         to specific class.
-  --snake-case-field    Change camel-case field name to snake-case
+  --snake-case-field, --no-snake-case-field
+                        Change camel-case field name to snake-case
   --special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX
                         Set field name prefix when first character can't be
                         used as Python field name (default: `field`)
@@ -468,7 +479,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Use schema description to populate field docstring
   --use-field-description-example
                         Use schema example to populate field docstring
-  --use-frozen-field    Use Field(frozen=True) for readOnly fields (Pydantic
+  --use-frozen-field, --no-use-frozen-field
+                        Use Field(frozen=True) for readOnly fields (Pydantic
                         v2).
   --use-inline-field-description
                         Use schema description to populate field docstring as
@@ -498,7 +510,7 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --allow-leading-underscore-class-name
                         Allow an explicitly specified root class name to start
                         with an underscore
-  --allow-population-by-field-name
+  --allow-population-by-field-name, --no-allow-population-by-field-name
                         Allow population by field name
   --class-name CLASS_NAME
                         Set class name of root model
@@ -520,7 +532,7 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         models by replacing references instead of creating
                         empty inheritance subclasses. This eliminates 'class
                         Foo(Bar): pass' patterns
-  --collapse-root-models
+  --collapse-root-models, --no-collapse-root-models
                         Models generated with a root-type field will be merged
                         into the models using that root-type model
   --collapse-root-models-name-strategy {child,parent}
@@ -623,7 +635,7 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --use-pendulum        use pendulum instead of datetime
   --use-schema-description
                         Use schema description to populate class docstring
-  --use-standard-primitive-types
+  --use-standard-primitive-types, --no-use-standard-primitive-types
                         Use Python standard library types for string formats
                         (UUID, IPv4Address, etc.) instead of str. Affects
                         dataclass, msgspec, TypedDict output. Pydantic already

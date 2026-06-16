@@ -103,6 +103,16 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--schema-version": CLIOptionMeta(name="--schema-version", category=OptionCategory.BASE),
     "--schema-version-mode": CLIOptionMeta(name="--schema-version-mode", category=OptionCategory.BASE),
     "--external-ref-mapping": CLIOptionMeta(name="--external-ref-mapping", category=OptionCategory.BASE),
+    "--preset": CLIOptionMeta(
+        name="--preset",
+        category=OptionCategory.BASE,
+        requires=(
+            CLIOptionRelation(
+                option="--target-python-version",
+                message="`--preset` requires an explicit target Python version.",
+            ),
+        ),
+    ),
     # ==========================================================================
     # Model Customization
     # ==========================================================================
@@ -157,6 +167,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
         ),
     ),
     "--collapse-root-models": CLIOptionMeta(name="--collapse-root-models", category=OptionCategory.MODEL),
+    "--no-collapse-root-models": CLIOptionMeta(name="--no-collapse-root-models", category=OptionCategory.MODEL),
     "--collapse-root-models-name-strategy": CLIOptionMeta(
         name="--collapse-root-models-name-strategy",
         category=OptionCategory.MODEL,
@@ -180,6 +191,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--allow-population-by-field-name": CLIOptionMeta(
         name="--allow-population-by-field-name", category=OptionCategory.MODEL
     ),
+    "--no-allow-population-by-field-name": CLIOptionMeta(
+        name="--no-allow-population-by-field-name", category=OptionCategory.MODEL
+    ),
     "--enable-faux-immutability": CLIOptionMeta(name="--enable-faux-immutability", category=OptionCategory.MODEL),
     "--use-subclass-enum": CLIOptionMeta(name="--use-subclass-enum", category=OptionCategory.MODEL),
     "--force-optional": CLIOptionMeta(name="--force-optional", category=OptionCategory.MODEL),
@@ -189,6 +203,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--strip-default-none": CLIOptionMeta(name="--strip-default-none", category=OptionCategory.MODEL),
     "--dataclass-arguments": CLIOptionMeta(name="--dataclass-arguments", category=OptionCategory.MODEL),
     "--use-frozen-field": CLIOptionMeta(name="--use-frozen-field", category=OptionCategory.MODEL),
+    "--no-use-frozen-field": CLIOptionMeta(name="--no-use-frozen-field", category=OptionCategory.MODEL),
     "--use-default-factory-for-optional-nested-models": CLIOptionMeta(
         name="--use-default-factory-for-optional-nested-models", category=OptionCategory.MODEL
     ),
@@ -224,6 +239,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # Field Customization
     # ==========================================================================
     "--snake-case-field": CLIOptionMeta(name="--snake-case-field", category=OptionCategory.FIELD),
+    "--no-snake-case-field": CLIOptionMeta(name="--no-snake-case-field", category=OptionCategory.FIELD),
     "--original-field-name-delimiter": CLIOptionMeta(
         name="--original-field-name-delimiter",
         category=OptionCategory.FIELD,
@@ -299,6 +315,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--use-pendulum": CLIOptionMeta(name="--use-pendulum", category=OptionCategory.TYPING),
     "--use-standard-primitive-types": CLIOptionMeta(
         name="--use-standard-primitive-types", category=OptionCategory.TYPING
+    ),
+    "--no-use-standard-primitive-types": CLIOptionMeta(
+        name="--no-use-standard-primitive-types", category=OptionCategory.TYPING
     ),
     "--use-object-type": CLIOptionMeta(name="--use-object-type", category=OptionCategory.TYPING),
     "--use-type-checking-imports": CLIOptionMeta(name="--use-type-checking-imports", category=OptionCategory.TEMPLATE),

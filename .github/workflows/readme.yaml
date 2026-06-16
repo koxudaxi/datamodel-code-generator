@@ -7,6 +7,9 @@ on:
       - 'src/datamodel_code_generator/**'
       - 'README.md'
       - 'docs/index.md'
+      - 'docs/presets.md'
+      - 'scripts/build_preset_docs.py'
+      - 'tests/data/jsonschema/tutorial_pet.json'
 
 permissions:
   contents: read
@@ -29,5 +32,11 @@ jobs:
         run: tox run -vv --notest --skip-missing-interpreters false -e readme
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Setup preset docs environment
+        run: tox run -vv --notest --skip-missing-interpreters false -e preset-docs
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
       - name: Update README
         run: .tox/readme/bin/python scripts/update_command_help_on_markdown.py
+      - name: Check preset docs
+        run: .tox/preset-docs/bin/python scripts/build_preset_docs.py --check
