@@ -726,22 +726,6 @@ def assert_path_cache_evicts_lru_entries(
     pytest.fail(f"Expected cached value for {second_path} to stay stable")
 
 
-def assert_watch_called(
-    mock_watchfiles: Any,
-    *,
-    debounce: int | None = None,
-    recursive: bool | None = None,
-) -> None:
-    """Assert watchfiles.watch was called with expected options."""
-    __tracebackhide__ = True
-    mock_watchfiles.watch.assert_called_once()
-    call_kwargs = mock_watchfiles.watch.call_args.kwargs
-    if debounce is not None and call_kwargs.get("debounce") != debounce:  # pragma: no cover
-        pytest.fail(f"Expected watch debounce {debounce!r}, got {call_kwargs.get('debounce')!r}")
-    if recursive is not None and call_kwargs.get("recursive") is not recursive:  # pragma: no cover
-        pytest.fail(f"Expected watch recursive {recursive!r}, got {call_kwargs.get('recursive')!r}")
-
-
 def run_watch_and_assert(config: Any, *, expected_exit: Exit = Exit.OK) -> None:
     """Run watch mode with the standard no-op callback arguments and assert its exit code."""
     __tracebackhide__ = True

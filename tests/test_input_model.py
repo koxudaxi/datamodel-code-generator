@@ -13,7 +13,7 @@ import pytest
 
 from datamodel_code_generator import __main__ as main_module
 from datamodel_code_generator import arguments
-from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.__main__ import Exit
 from tests.conftest import assert_output, freeze_time
 from tests.main.conftest import run_main_with_args
 
@@ -1466,23 +1466,14 @@ class TempModel(BaseModel):
 
     monkeypatch.chdir(tmp_path)
 
-    output_path = tmp_path / "output.py"
-    with freeze_time(TIMESTAMP):
-        return_code = main([
-            "--input-model",
+    run_multiple_input_models_and_assert(
+        input_models=[
             "tests.data.python.input_model.inheritance_models:ChildA",
-            "--input-model",
             "temp_model.py:TempModel",
-            "--output",
-            str(output_path),
-        ])
-    assert return_code == Exit.OK
-    content = output_path.read_text(encoding="utf-8")
-    assert "class ChildA(Parent):" in content
-    assert "class Parent(GrandParent):" in content
-    assert "class GrandParent(BaseModel):" in content
-    assert "class TempModel(BaseModel):" in content
-    assert "value:" in content
+        ],
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "multiple_py_file_without_path_separator.py",
+    )
 
 
 def test_input_model_config_string_coercion(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
