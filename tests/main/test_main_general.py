@@ -207,6 +207,25 @@ def test_standard_preset_no_snake_case_cli_override(output_file: Path) -> None:
 
 
 @freeze_time(TIMESTAMP)
+def test_standard_preset_no_use_annotated_cli_override(output_file: Path) -> None:
+    """CLI --no-use-annotated overrides the preset and keeps field constraints off."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--preset",
+            "standard-20260617",
+            "--target-python-version",
+            "3.10",
+            "--no-use-annotated",
+        ],
+        assert_func=assert_file_content,
+        expected_file="standard_preset_no_use_annotated.py",
+    )
+
+
+@freeze_time(TIMESTAMP)
 def test_standard_preset_allows_original_field_name_delimiter_after_merge(output_file: Path) -> None:
     """Preset-supplied snake-case conversion is visible to final validation."""
     run_main_and_assert(
@@ -1216,21 +1235,22 @@ use-specialized-enum = false
         )
 
 
+@pytest.mark.allow_direct_assert
 def test_generate_cli_command_with_false_boolean(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-cli-command with regular boolean set to false (should be skipped)."""
     pyproject_toml = """
 [tool.datamodel-codegen]
 input = "schema.yaml"
-snake-case-field = false
+reuse-model = false
 """
     (tmp_path / "pyproject.toml").write_text(pyproject_toml)
 
     with chdir(tmp_path):
-        run_main_with_args(
-            ["--generate-cli-command"],
-            capsys=capsys,
-            expected_stdout_path=EXPECTED_MAIN_PATH / "generate_cli_command" / "false_boolean.txt",
-        )
+        run_main_with_args(["--generate-cli-command"])
+
+    captured = capsys.readouterr()
+    assert captured.out == "datamodel-codegen --input schema.yaml\n\n"
+    assert not captured.err
 
 
 def test_generate_cli_command_with_true_boolean(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
