@@ -39,8 +39,14 @@ if TYPE_CHECKING:
     from datamodel_code_generator.validators import ModelValidators, ValidatorMode
 
 
-class GenerateConfigDict(TypedDict, closed=True):
-    input_filename: NotRequired[str | None]
+class ValidatorDefinition(TypedDict):
+    field: NotRequired[str | None]
+    fields: NotRequired[list[str] | None]
+    function: str
+    mode: NotRequired[ValidatorMode]
+
+
+class BaseGenerateConfig(TypedDict):
     input_file_type: NotRequired[InputFileType]
     output: NotRequired[Path | None]
     output_model_type: NotRequired[DataModelType]
@@ -51,25 +57,18 @@ class GenerateConfigDict(TypedDict, closed=True):
     additional_imports: NotRequired[list[str] | None]
     class_decorators: NotRequired[list[str] | None]
     custom_template_dir: NotRequired[Path | None]
-    extra_template_data: NotRequired[defaultdict[str, dict[str, Any]] | None]
-    validators: NotRequired[Mapping[str, ModelValidators] | None]
     validation: NotRequired[bool]
     field_constraints: NotRequired[bool]
     snake_case_field: NotRequired[bool]
     strip_default_none: NotRequired[bool]
-    aliases: NotRequired[Mapping[str, str | list[str]] | None]
-    serialization_aliases: NotRequired[Mapping[str, str] | None]
     disable_timestamp: NotRequired[bool]
     enable_version_header: NotRequired[bool]
     enable_command_header: NotRequired[bool]
     enable_generated_header_marker: NotRequired[bool]
-    command_line: NotRequired[str | None]
     allow_population_by_field_name: NotRequired[bool]
     allow_extra_fields: NotRequired[bool]
     extra_fields: NotRequired[str | None]
     use_generic_base_class: NotRequired[bool]
-    apply_default_values_for_required_fields: NotRequired[bool]
-    force_optional_for_required_fields: NotRequired[bool]
     class_name: NotRequired[str | None]
     allow_leading_underscore_class_name: NotRequired[bool]
     class_name_prefix: NotRequired[str | None]
@@ -99,19 +98,15 @@ class GenerateConfigDict(TypedDict, closed=True):
     use_generic_container_types: NotRequired[bool]
     enable_faux_immutability: NotRequired[bool]
     disable_appending_item_suffix: NotRequired[bool]
-    strict_types: NotRequired[Sequence[StrictTypes] | None]
     empty_enum_field_name: NotRequired[str | None]
-    custom_class_name_generator: NotRequired[Callable[[str], str] | None]
     field_extra_keys: NotRequired[set[str] | None]
     field_include_all_keys: NotRequired[bool]
     field_extra_keys_without_x_prefix: NotRequired[set[str] | None]
     model_extra_keys: NotRequired[set[str] | None]
     model_extra_keys_without_x_prefix: NotRequired[set[str] | None]
-    openapi_scopes: NotRequired[list[OpenAPIScope] | None]
     include_path_parameters: NotRequired[bool]
     openapi_include_paths: NotRequired[list[str] | None]
     openapi_include_info_version: NotRequired[bool]
-    graphql_scopes: NotRequired[list[GraphQLScope] | None]
     graphql_no_typename: NotRequired[bool]
     wrap_string_literal: NotRequired[bool | None]
     use_title_as_name: NotRequired[bool]
@@ -147,7 +142,6 @@ class GenerateConfigDict(TypedDict, closed=True):
     custom_file_header: NotRequired[str | None]
     custom_file_header_path: NotRequired[Path | None]
     custom_formatters: NotRequired[list[str] | None]
-    custom_formatters_kwargs: NotRequired[dict[str, Any] | None]
     use_pendulum: NotRequired[bool]
     use_standard_primitive_types: NotRequired[bool]
     use_object_type: NotRequired[bool]
@@ -166,7 +160,6 @@ class GenerateConfigDict(TypedDict, closed=True):
     use_default_factory_for_optional_nested_models: NotRequired[bool]
     formatters: NotRequired[list[Formatter] | None]
     builtin_format_line_length: NotRequired[int | None]
-    settings_path: NotRequired[Path | None]
     parent_scoped_naming: NotRequired[bool]
     naming_strategy: NotRequired[NamingStrategy | None]
     duplicate_name_suffix: NotRequired[dict[str, str] | None]
@@ -180,17 +173,27 @@ class GenerateConfigDict(TypedDict, closed=True):
     all_exports_collision_strategy: NotRequired[AllExportsCollisionStrategy | None]
     field_type_collision_strategy: NotRequired[FieldTypeCollisionStrategy | None]
     module_split_mode: NotRequired[ModuleSplitMode | None]
-    default_value_overrides: NotRequired[Mapping[str, Any] | None]
     schema_version: NotRequired[str | None]
     schema_version_mode: NotRequired[VersionMode | None]
     external_ref_mapping: NotRequired[dict[str, str] | None]
 
 
-class ValidatorDefinition(TypedDict):
-    field: NotRequired[str | None]
-    fields: NotRequired[list[str] | None]
-    function: str
-    mode: NotRequired[ValidatorMode]
+class GenerateConfigDict(BaseGenerateConfig, closed=True):
+    input_filename: NotRequired[str | None]
+    extra_template_data: NotRequired[defaultdict[str, dict[str, Any]] | None]
+    validators: NotRequired[Mapping[str, ModelValidators] | None]
+    aliases: NotRequired[Mapping[str, str | list[str]] | None]
+    serialization_aliases: NotRequired[Mapping[str, str] | None]
+    command_line: NotRequired[str | None]
+    apply_default_values_for_required_fields: NotRequired[bool]
+    force_optional_for_required_fields: NotRequired[bool]
+    strict_types: NotRequired[Sequence[StrictTypes] | None]
+    custom_class_name_generator: NotRequired[Callable[[str], str] | None]
+    openapi_scopes: NotRequired[list[OpenAPIScope] | None]
+    graphql_scopes: NotRequired[list[GraphQLScope] | None]
+    custom_formatters_kwargs: NotRequired[dict[str, Any] | None]
+    settings_path: NotRequired[Path | None]
+    default_value_overrides: NotRequired[Mapping[str, Any] | None]
 
 
 class ModelValidatorsModel(TypedDict):

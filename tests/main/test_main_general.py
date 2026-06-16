@@ -29,7 +29,12 @@ from datamodel_code_generator import (
     generate,
     snooper_to_methods,
 )
-from datamodel_code_generator.__main__ import BOOLEAN_OPTIONAL_OPTIONS, Config, Exit, run_generate_from_config
+from datamodel_code_generator.__main__ import (
+    BOOLEAN_OPTIONAL_OPTIONS,
+    Config,
+    Exit,
+    run_generate_from_config,
+)
 from datamodel_code_generator.arguments import _dataclass_arguments, arg_parser
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersion
@@ -226,6 +231,18 @@ def test_no_args_has_default(monkeypatch: pytest.MonkeyPatch) -> None:
     run_main_with_args([], expected_exit=Exit.ERROR)
     for field in Config.get_fields():
         assert getattr(namespace, field, None) is None
+
+
+def test_cli_pyproject_ignores_generate_only_options(output_file: Path, tmp_path: Path) -> None:
+    """CLI pyproject config should keep ignoring API-only generate() options."""
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "force_optional_required.json",
+            output_path=output_file,
+            assert_func=assert_file_content,
+            expected_file="jsonschema/cli_pyproject_ignores_generate_only_options.py",
+            copy_files=[(DATA_PATH / "config" / "pyproject_generate_only_options.toml", tmp_path / "pyproject.toml")],
+        )
 
 
 @pytest.mark.allow_direct_assert
