@@ -829,7 +829,12 @@ def test_input_model_ref_strategy_without_input_model(tmp_path: Path) -> None:
         "--input-model-ref-strategy",
         "reuse-all",
     ]
-    run_main_with_args(args, use_builtin_default_formatter=False, isolate_model_template_cache=True)
+    run_main_with_args(
+        args,
+        use_parsed_source_cache=False,
+        use_builtin_default_formatter=False,
+        isolate_model_template_cache=True,
+    )
 
 
 def test_input_model_ref_strategy_no_nested_types(tmp_path: Path) -> None:

@@ -101,6 +101,7 @@ def test_watch_without_input_error(mocker: pytest.MockerFixture) -> None:
 
 def test_watch_without_watchfiles_installed(output_file: Path, mocker: pytest.MockerFixture) -> None:
     """Test error message when watchfiles is not installed."""
+    mock_generate = mocker.patch("datamodel_code_generator.__main__.run_generate_from_config", return_value=None)
     mocker.patch.dict("sys.modules", {"watchfiles": None})
     mocker.patch(
         "datamodel_code_generator.watch._get_watchfiles",
@@ -116,6 +117,7 @@ def test_watch_without_watchfiles_installed(output_file: Path, mocker: pytest.Mo
         ],
         expected_exit=Exit.ERROR,
     )
+    mock_generate.assert_called_once()
 
 
 @pytest.mark.allow_direct_assert
