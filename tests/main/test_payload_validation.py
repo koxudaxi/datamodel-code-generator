@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any, Literal, TypeAlias
 
 import pytest
@@ -87,6 +88,19 @@ PYDANTIC_V2_LEGACY_RUNTIME_ROUND_TRIP_EXCLUSION_SETS = (
 REJECTION_ORACLE_CASES = [case for case in SCHEMA_CASES if has_rejection_oracle_constraints(case)]
 SCHEMA_CASE_BY_ID = {case.id: case for case in SCHEMA_CASES}
 ROUND_TRIP_CASES = [case for case in SCHEMA_CASES if case.id not in ROUND_TRIP_EXCLUDED_CASES]
+
+
+def _synthetic_schema_case(source_schema: dict[str, Any]) -> SchemaCase:
+    return SchemaCase(
+        id="jsonschema/synthetic_payload_validation_case.json",
+        input_file_type="jsonschema",
+        source_path=Path("synthetic_payload_validation_case.json"),
+        source_schema=source_schema,
+        codegen_schema=source_schema,
+        temp_input_suffix=".json",
+    )
+
+
 BACKEND_ACCEPTANCE_CASE_IDS = {
     PayloadBackend.PYDANTIC_V2_DATACLASS: (
         "jsonschema/pydantic_v2_runtime_value.json",
@@ -363,6 +377,47 @@ def test_payload_backend_full_matrix_exclusions_are_classified() -> None:
             )
 
 
+@pytest.mark.parametrize(
+    "case_id",
+    [
+        "jsonschema/constrained_types_keyword_order.json",
+        "jsonschema/strict_types.json",
+        "jsonschema/type_array_only_null.json",
+        "jsonschema/type_mappings.json",
+    ],
+)
+@pytest.mark.allow_direct_assert
+def test_msgspec_schema_runtime_exclusions_cover_known_semantic_gaps(case_id: str) -> None:
+    """Known msgspec runtime semantic gaps must stay outside the full payload matrix."""
+    case = SCHEMA_CASE_BY_ID[case_id]
+    assert backend_acceptance_exclusion_reason(case, PayloadBackend.MSGSPEC)
+    assert backend_rejection_exclusion_reason(case, PayloadBackend.MSGSPEC)
+
+
+@pytest.mark.allow_direct_assert
+def test_msgspec_schema_runtime_exclusions_ignore_literal_payloads() -> None:
+    """Literal payload values must not be traversed as nested JSON Schemas."""
+    case = _synthetic_schema_case({
+        "type": "object",
+        "properties": {"value": {"type": "string"}},
+        "enum": [{"type": "object", "properties": {"value": {"type": "null"}}}],
+        "default": {"type": "string", "format": "binary"},
+        "examples": [{"type": "number", "multipleOf": 0.5}],
+    })
+
+    assert backend_acceptance_exclusion_reason(case, PayloadBackend.MSGSPEC) is None
+    assert backend_rejection_exclusion_reason(case, PayloadBackend.MSGSPEC) is None
+
+
+@pytest.mark.allow_direct_assert
+def test_msgspec_schema_runtime_exclusions_detect_untyped_fractional_multiple_of() -> None:
+    """JSON Schema multipleOf remains numeric metadata when type is omitted."""
+    case = _synthetic_schema_case({"multipleOf": 0.5})
+
+    assert backend_acceptance_exclusion_reason(case, PayloadBackend.MSGSPEC)
+    assert backend_rejection_exclusion_reason(case, PayloadBackend.MSGSPEC)
+
+
 def test_payload_round_trip_exclusions_are_classified() -> None:
     """Round-trip dump exclusions must name existing cases and carry reasons."""
     if missing_reasons := sorted(  # pragma: no cover
@@ -372,6 +427,14 @@ def test_payload_round_trip_exclusions_are_classified() -> None:
 
     if unknown_cases := sorted(set(ROUND_TRIP_EXCLUDED_CASES) - set(SCHEMA_CASE_BY_ID)):  # pragma: no cover
         pytest.fail("Payload round-trip exclusions reference unknown cases:\n" + "\n".join(unknown_cases))
+
+
+@pytest.mark.allow_direct_assert
+def test_pydantic_round_trip_exclusions_cover_uri_unique_items_normalization() -> None:
+    """URI normalization can collapse distinct JSON Schema uniqueItems values."""
+    case_id = "jsonschema/one_of_with_sub_schema_array_item.json"
+    assert ROUND_TRIP_EXCLUDED_CASES[case_id]
+    assert case_id not in {case.id for case in ROUND_TRIP_CASES}
 
 
 def test_pydantic_v2_legacy_runtime_exclusions_are_classified() -> None:
@@ -434,6 +497,21 @@ def test_pydantic_v2_legacy_runtime_exclusions_are_version_gated() -> None:
             round_trip_case,
             PayloadBackend.PYDANTIC_V2,
             Version("2.0.3"),
+        )
+        is None
+    )
+
+
+@pytest.mark.allow_direct_assert
+def test_pydantic_v2_dataclass_legacy_exclusions_cover_fractional_multiple_of() -> None:
+    """Pydantic v2 dataclasses inherit old-runtime fractional multipleOf behavior."""
+    case = SCHEMA_CASE_BY_ID["jsonschema/use_decimal_for_multiple_of.json"]
+    assert _pydantic_v2_legacy_runtime_exclusion_reason(case, PayloadBackend.PYDANTIC_V2_DATACLASS, Version("2.0.3"))
+    assert (
+        _pydantic_v2_legacy_runtime_exclusion_reason(
+            case,
+            PayloadBackend.PYDANTIC_V2_DATACLASS,
+            PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN,
         )
         is None
     )
