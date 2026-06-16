@@ -10404,6 +10404,31 @@ def test_main_lookaround_anyof_nullable_pydantic_v2_dataclass(output_file: Path)
     )
 
 
+@pytest.mark.benchmark
+def test_main_lookaround_anyof_nullable_pydantic_v2_dataclass_json_validation(output_file: Path) -> None:
+    """Generated pydantic v2 dataclasses validate lookaround patterns through the shared JSON helper."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "lookaround_anyof_nullable.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.dataclass",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="lookaround_anyof_nullable_dataclass_json_validation",
+        model_name="Model",
+        valid_json='{"value": "ABC"}',
+        invalid_json='{"value": "abc"}',
+        expected_error_type="string_pattern_mismatch",
+        expected_attribute_path=("value",),
+        expected_attribute_value="ABC",
+    )
+
+
 @LEGACY_BLACK_SKIP
 @pytest.mark.benchmark
 def test_main_lookaround_mixed_constraints_pydantic_v2(output_file: Path) -> None:
