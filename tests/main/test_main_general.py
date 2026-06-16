@@ -73,6 +73,9 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
 assert_file_content = create_assert_file_content(EXPECTED_MAIN_PATH)
+BLACK_VERSION = version.parse(black.__version__)
+BLACK_LT_233 = version.parse("23.3.0") > BLACK_VERSION
+BLACK_LT_24 = version.parse("24.0.0") > BLACK_VERSION
 
 
 class _GenerateParseAbort(BaseException):
@@ -168,6 +171,7 @@ syntax and backports are pinned.""",
     related_options=["--target-python-version"],
     primary=True,
 )
+@pytest.mark.skipif(BLACK_LT_233, reason="Installed black doesn't support Python 3.12 target version")
 @freeze_time(TIMESTAMP)
 def test_standard_preset_pydantic_v2(output_file: Path) -> None:
     """Generate Pydantic v2 output using the standard preset."""
@@ -192,11 +196,13 @@ def test_standard_preset_no_snake_case_cli_override(output_file: Path) -> None:
             "--preset",
             "standard-20260617",
             "--target-python-version",
-            "3.12",
+            "3.10",
             "--no-snake-case-field",
         ],
         assert_func=assert_file_content,
-        expected_file="standard_preset_no_snake_case.py",
+        expected_file=(
+            "standard_preset_no_snake_case_black_lt_24.py" if BLACK_LT_24 else "standard_preset_no_snake_case.py"
+        ),
     )
 
 
@@ -211,7 +217,7 @@ def test_standard_preset_allows_original_field_name_delimiter_after_merge(output
             "--preset",
             "standard-20260617",
             "--target-python-version",
-            "3.12",
+            "3.10",
             "--original-field-name-delimiter",
             "-",
         ],
@@ -226,7 +232,7 @@ def test_standard_preset_cli_overrides_pyproject_option(output_file: Path, tmp_p
     (tmp_path / "pyproject.toml").write_text(
         """
 [tool.datamodel-codegen]
-target-python-version = "3.12"
+target-python-version = "3.10"
 snake-case-field = false
 """,
         encoding="utf-8",
@@ -250,7 +256,7 @@ def test_standard_preset_pyproject_uses_final_output_model_type(output_file: Pat
         """
 [tool.datamodel-codegen]
 preset = "standard-20260617"
-target-python-version = "3.12"
+target-python-version = "3.10"
 """,
         encoding="utf-8",
     )

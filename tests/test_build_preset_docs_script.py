@@ -7,9 +7,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+import black
+import pytest
+from packaging import version
+
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "build_preset_docs.py"
+BLACK_LT_233 = version.parse("23.3.0") > version.parse(black.__version__)
 
 
+@pytest.mark.skipif(BLACK_LT_233, reason="Installed black doesn't support the Python 3.12 quick-start target")
 def test_build_preset_docs_check_is_up_to_date() -> None:
     """Generated preset docs and quick-start examples are committed."""
     subprocess.run([sys.executable, str(SCRIPT), "--check"], check=True)
