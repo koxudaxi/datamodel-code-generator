@@ -16,7 +16,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import Literal, cast
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS_PATH = ROOT / "docs" / "presets.md"
@@ -36,8 +36,7 @@ if str(SRC_PATH) not in sys.path:
 
 from datamodel_code_generator.preset import get_latest_preset_name, render_presets  # noqa: E402
 
-if TYPE_CHECKING:
-    from datamodel_code_generator.preset import PresetFormat
+PresetDocsFormat = Literal["markdown", "json"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -246,7 +245,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--check",
         action="store_true",
-        help="Check whether preset docs and preset-powered quick-start examples are up to date",
+        help=(
+            "Check whether preset docs and preset-powered quick-start examples are up to date "
+            "(docs/presets.md plus quick-start sections in README.md and docs/index.md)"
+        ),
     )
     parser.add_argument(
         "--format",
@@ -264,7 +266,7 @@ def main() -> int:
         print("Error: --check cannot be used with --format", file=sys.stderr)
         return 2
     if args.format:
-        print(render_presets(cast("PresetFormat", args.format)), end="")
+        print(render_presets(cast("PresetDocsFormat", args.format)), end="")
         return 0
     return build_docs(check=args.check)
 
