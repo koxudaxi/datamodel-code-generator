@@ -76,6 +76,7 @@ nav = [
       { "Coding Agent Skill" = "coding-agent-skill.md" }
     ]}
   ]},
+  { "Conformance Dashboard" = "conformance.md" },
   { "Deprecations" = "deprecations.md" },
   { "Experimental Features" = "experimental.md" },
   { "FAQ" = "faq.md" },

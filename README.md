@@ -49,6 +49,7 @@ in another Python file to a different output type.
 - 🧪 [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/) - Try generation in your browser
 - ⚙️ [pyproject.toml](https://datamodel-code-generator.koxudaxi.dev/pyproject_toml/) - Configuration file
 - 🔄 [CI/CD Integration](https://datamodel-code-generator.koxudaxi.dev/ci-cd/) - GitHub Actions, pre-commit hooks
+- ✅ [Conformance Dashboard](https://datamodel-code-generator.koxudaxi.dev/conformance/) - External corpus coverage signals
 - 🚀 [One-liner Usage](https://datamodel-code-generator.koxudaxi.dev/oneliner/) - uvx, pipx, clipboard integration
 - ❓ [FAQ](https://datamodel-code-generator.koxudaxi.dev/faq/) - Common questions
 
@@ -231,6 +232,12 @@ class Pet(BaseModel):
 - GraphQL schema
 - Python types (Pydantic, dataclass, TypedDict) via `--input-model`
 - Python dictionary
+
+## ✅ Conformance Signals
+
+CI exercises datamodel-code-generator against pinned external corpora for XML Schema, JSON Schema, AsyncAPI, Apache
+Avro, and Protocol Buffers. See the [Conformance Dashboard](https://datamodel-code-generator.koxudaxi.dev/conformance/)
+for the generated summary of runner scripts, tox environments, CI jobs, expected corpus counts, and upstream sources.
 
 ## 📤 Supported Output
 
