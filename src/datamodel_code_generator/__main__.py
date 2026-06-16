@@ -110,7 +110,7 @@ from datamodel_code_generator import (
     generate,
 )
 from datamodel_code_generator.arguments import arg_parser, namespace
-from datamodel_code_generator.config import GenerateConfig
+from datamodel_code_generator.config import BaseGenerateConfig
 from datamodel_code_generator.deprecations import render_deprecations, warn_deprecated
 from datamodel_code_generator.format import (
     Formatter,
@@ -161,30 +161,6 @@ BOOLEAN_OPTIONAL_OPTIONS: frozenset[str] = frozenset({
     "use_type_checking_imports",
     "use_specialized_enum",
     "use_standard_collections",
-})
-
-# API-only GenerateConfig fields stay ignored by the CLI Config for backwards compatibility.
-GENERATE_CONFIG_ONLY_OPTIONS: frozenset[str] = frozenset({
-    "apply_default_values_for_required_fields",
-    "command_line",
-    "custom_class_name_generator",
-    "default_value_overrides",
-    "force_optional_for_required_fields",
-    "graphql_scopes",
-    "input_filename",
-    "settings_path",
-})
-
-# GenerateConfig fields that the CLI intentionally overrides because argparse receives
-# file handles or keeps historically different CLI defaults.
-CLI_GENERATE_CONFIG_OVERRIDES: frozenset[str] = frozenset({
-    "aliases",
-    "custom_formatters_kwargs",
-    "extra_template_data",
-    "openapi_scopes",
-    "serialization_aliases",
-    "strict_types",
-    "validators",
 })
 
 
@@ -238,7 +214,7 @@ def _validate_http_key_value_options(
     raise Error(msg)  # pragma: no cover
 
 
-class Config(GenerateConfig):  # noqa: PLR0904
+class Config(BaseGenerateConfig):  # noqa: PLR0904
     """Configuration model for code generation."""
 
     model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True, protected_namespaces=())  # ty: ignore
@@ -254,15 +230,7 @@ class Config(GenerateConfig):  # noqa: PLR0904
     @classmethod
     def get_fields(cls) -> dict[str, Any]:
         """Get model fields."""
-        return {key: field for key, field in cls.model_fields.items() if key not in GENERATE_CONFIG_ONLY_OPTIONS}
-
-    @model_validator(mode="before")  # ty: ignore
-    @classmethod
-    def discard_generate_config_only_options(cls, values: Any) -> Any:
-        """Keep GenerateConfig-only fields ignored when validating CLI config."""
-        if not isinstance(values, dict):
-            return values
-        return {key: value for key, value in values.items() if key not in GENERATE_CONFIG_ONLY_OPTIONS}
+        return cls.model_fields
 
     @field_validator(
         "aliases",
