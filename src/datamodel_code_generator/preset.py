@@ -50,11 +50,15 @@ class PresetInfo:
     option_groups: tuple[PresetOptionGroup, ...]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, init=False)
 class PresetConfig:
     """Typed immutable config updates supplied by a preset group."""
 
     values: MappingProxyType[str, object]
+
+    def __init__(self, **values: Unpack[BaseGenerateConfigDict]) -> None:
+        """Build immutable preset updates from statically checked GenerateConfig fields."""
+        object.__setattr__(self, "values", MappingProxyType(cast("dict[str, object]", values)))
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,11 +89,6 @@ class PresetOptionGroup:
         if self.output_model_types and context.output_model_type not in self.output_model_types:
             return False
         return not self.requires_python_strenum or context.target_python_version.has_strenum
-
-
-def _preset_config(**values: Unpack[BaseGenerateConfigDict]) -> PresetConfig:
-    """Build immutable preset updates from statically checked GenerateConfig fields."""
-    return PresetConfig(MappingProxyType(cast("dict[str, object]", values)))
 
 
 def preset_config_updates(config: BaseGenerateConfig) -> dict[str, object]:
@@ -135,7 +134,7 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
         option_groups=(
             PresetOptionGroup(
                 title="All output model types",
-                config=_preset_config(
+                config=PresetConfig(
                     use_standard_collections=True,
                     use_union_operator=True,
                     use_annotated=True,
@@ -147,13 +146,13 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
             ),
             PresetOptionGroup(
                 title="Python 3.11+ targets",
-                config=_preset_config(use_specialized_enum=True),
+                config=PresetConfig(use_specialized_enum=True),
                 description="Use StrEnum or IntEnum only when the selected target Python version supports it.",
                 requires_python_strenum=True,
             ),
             PresetOptionGroup(
                 title="Pydantic v2 BaseModel and dataclass output",
-                config=_preset_config(
+                config=PresetConfig(
                     snake_case_field=True,
                     allow_population_by_field_name=True,
                     use_frozen_field=True,
@@ -168,7 +167,7 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
             ),
             PresetOptionGroup(
                 title="msgspec Struct output",
-                config=_preset_config(
+                config=PresetConfig(
                     snake_case_field=True,
                     use_standard_primitive_types=True,
                 ),
@@ -177,7 +176,7 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
             ),
             PresetOptionGroup(
                 title="stdlib dataclass output",
-                config=_preset_config(use_standard_primitive_types=True),
+                config=PresetConfig(use_standard_primitive_types=True),
                 description=(
                     "Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases."
                 ),
@@ -185,7 +184,7 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
             ),
             PresetOptionGroup(
                 title="TypedDict output",
-                config=_preset_config(
+                config=PresetConfig(
                     use_standard_primitive_types=True,
                     use_frozen_field=True,
                 ),
