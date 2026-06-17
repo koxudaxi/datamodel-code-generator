@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import socket
+import sys
 from collections import Counter
 from ipaddress import ip_address
 from pathlib import Path
@@ -83,6 +84,18 @@ def test_get_model_by_path_rejects_invalid_list_index(path: str, match: str) -> 
     schema = {"a": [{"x": 1}, {"y": 2}]}
     with pytest.raises(Error, match=match):
         get_model_by_path(schema, path.split("/"))
+
+
+@pytest.mark.skipif(
+    not hasattr(sys, "set_int_max_str_digits"),
+    reason="int string-conversion length limit requires Python 3.11+",
+)
+def test_get_model_by_path_rejects_overlong_list_index() -> None:
+    """Test a digit string above the int conversion limit raises Error, not ValueError."""
+    schema = {"a": [{"x": 1}]}
+    overlong = "9" * (sys.get_int_max_str_digits() + 1)
+    with pytest.raises(Error, match="integer string is too long to parse"):
+        get_model_by_path(schema, ["a", overlong])
 
 
 def test_split_json_pointer_slow_path_rejects_invalid_list_index() -> None:

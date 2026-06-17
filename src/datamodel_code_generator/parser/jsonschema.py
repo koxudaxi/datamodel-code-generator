@@ -115,7 +115,11 @@ def _resolve_json_pointer_array_index(sequence: list[YamlValue], segment: object
     if not _JSON_POINTER_ARRAY_INDEX.fullmatch(text):
         msg = f"Invalid JSON pointer array index {text!r}: expected a non-negative integer."
         raise Error(msg)
-    index = int(text)
+    try:
+        index = int(text)
+    except ValueError as exc:
+        msg = f"Invalid JSON pointer array index {text!r}: integer string is too long to parse."
+        raise Error(msg) from exc
     if index >= len(sequence):
         msg = f"JSON pointer array index {index} is out of range (array length {len(sequence)})."
         raise Error(msg)
