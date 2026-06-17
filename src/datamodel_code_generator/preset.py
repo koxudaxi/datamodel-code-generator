@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Literal
 
 from datamodel_code_generator._registry_render import _render_registry_json
+from datamodel_code_generator.cli_options import CLI_OPTION_META
 from datamodel_code_generator.config import BaseGenerateConfig
 from datamodel_code_generator.enums import DataModelType, InputFileType
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from typing_extensions import Unpack
 
     from datamodel_code_generator._types.generate_config_dict import BaseGenerateConfig as BaseGenerateConfigDict
@@ -54,11 +57,11 @@ class PresetInfo:
 class PresetConfig:
     """Typed immutable config updates supplied by a preset group."""
 
-    values: MappingProxyType[str, object]
+    values: Mapping[str, object]
 
     def __init__(self, **values: Unpack[BaseGenerateConfigDict]) -> None:
         """Build immutable preset updates from statically checked GenerateConfig fields."""
-        object.__setattr__(self, "values", MappingProxyType(cast("dict[str, object]", values)))
+        object.__setattr__(self, "values", MappingProxyType(dict(values)))
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,16 +74,14 @@ class PresetOptionGroup:
     input_file_types: frozenset[InputFileType] = frozenset()
     output_model_types: frozenset[DataModelType] = frozenset()
     requires_python_strenum: bool = False
+    options: tuple[str, ...] = field(init=False)
 
     def __post_init__(self) -> None:
-        """Validate that each documented field maps to a Boolean CLI option."""
-        for field_name, value in self.config.values.items():
-            _config_field_to_cli_option(field_name, value=value)
-
-    @property
-    def options(self) -> tuple[str, ...]:
-        """Return documented CLI options derived from typed config fields."""
-        return tuple(_preset_config_cli_options(self.config))
+        """Cache documented CLI options derived from typed config fields."""
+        options = tuple(
+            _config_field_to_cli_option(field_name, value=value) for field_name, value in self.config.values.items()
+        )
+        object.__setattr__(self, "options", options)
 
     def applies_to(self, context: PresetContext) -> bool:
         """Return whether this option group applies to a preset context."""
@@ -91,23 +92,17 @@ class PresetOptionGroup:
         return not self.requires_python_strenum or context.target_python_version.has_strenum
 
 
-def preset_config_updates(config: BaseGenerateConfig) -> dict[str, object]:
-    """Return only config values explicitly supplied by a preset."""
-    values = config.model_dump(exclude_unset=True)
-    return {field_name: values[field_name] for field_name in BaseGenerateConfig.model_fields if field_name in values}
-
-
-def _merge_preset_configs(*configs: PresetConfig) -> BaseGenerateConfig:
-    """Merge preset configs, with later configs taking precedence."""
+def _merge_preset_configs(*configs: PresetConfig) -> PresetConfig:
+    """Merge preset configs, rejecting conflicting explicit updates."""
     values: dict[str, object] = {}
     for config in configs:
-        values.update(config.values)
-    return BaseGenerateConfig.model_validate(values)
-
-
-def _preset_config_cli_options(config: PresetConfig) -> tuple[str, ...]:
-    """Return CLI option names represented by the explicit config fields."""
-    return tuple(_config_field_to_cli_option(field_name, value=value) for field_name, value in config.values.items())
+        for field_name, value in config.values.items():
+            if field_name in values and values[field_name] != value:  # pragma: no cover
+                msg = f"Preset field {field_name!r} is configured with both {values[field_name]!r} and {value!r}"
+                raise PresetError(msg)
+            values[field_name] = value
+    BaseGenerateConfig.model_validate(values)
+    return PresetConfig(**values)
 
 
 def _config_field_to_cli_option(field_name: str, *, value: object) -> str:
@@ -119,7 +114,18 @@ def _config_field_to_cli_option(field_name: str, *, value: object) -> str:
         msg = f"Preset field {field_name!r} cannot be rendered as a Boolean CLI option"
         raise PresetError(msg)
     option_name = field_name.replace("_", "-")
-    return f"--no-{option_name}" if value is False else f"--{option_name}"
+    option = f"--{option_name}"
+    if option not in CLI_OPTION_META:  # pragma: no cover
+        msg = f"Preset field {field_name!r} does not map to a documented CLI option"
+        raise PresetError(msg)
+    if value is True:
+        return option
+
+    negative_option = f"--no-{option_name}"  # pragma: no cover
+    if negative_option not in CLI_OPTION_META:  # pragma: no cover
+        msg = f"Preset field {field_name!r} does not map to a documented negative CLI option"
+        raise PresetError(msg)
+    return negative_option  # pragma: no cover
 
 
 _PRESET_INFOS: tuple[PresetInfo, ...] = (
@@ -309,12 +315,17 @@ def render_presets_markdown() -> str:
 
 def render_presets(format_: PresetFormat) -> str:
     """Render presets in the requested format."""
-    if format_ == "json":
-        return render_presets_json() + "\n"
-    return render_presets_markdown().rstrip() + "\n"
+    match format_:
+        case "json":
+            return render_presets_json() + "\n"
+        case "markdown":
+            return render_presets_markdown().rstrip() + "\n"
+        case _:  # pragma: no cover
+            msg = f"Unsupported preset docs format: {format_!r}"
+            raise PresetError(msg)
 
 
-def resolve_preset(preset: PresetName | str, context: PresetContext) -> BaseGenerateConfig:
+def resolve_preset(preset: PresetName | str, context: PresetContext) -> PresetConfig:
     """Resolve a preset into config updates for the given context."""
     try:
         preset_name = preset if isinstance(preset, PresetName) else PresetName(preset)
@@ -336,7 +347,7 @@ def _get_preset_info(preset_name: PresetName) -> PresetInfo:
     raise PresetError(msg)  # pragma: no cover
 
 
-def _resolve_preset_info(info: PresetInfo, context: PresetContext) -> BaseGenerateConfig:
+def _resolve_preset_info(info: PresetInfo, context: PresetContext) -> PresetConfig:
     """Resolve preset metadata into config updates for the given context."""
     applicable_groups = tuple(group for group in info.option_groups if group.applies_to(context))
     if not any(group.output_model_types for group in applicable_groups):

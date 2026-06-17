@@ -139,16 +139,28 @@ def _quick_start_args(preset_name: str) -> tuple[str, ...]:
 
 
 def _render_quick_start_command(preset_name: str) -> str:
-    return "\n".join((
-        "datamodel-codegen \\",
-        f"  --input {QUICK_START_SCHEMA_NAME} \\",
-        "  --input-file-type jsonschema \\",
-        "  --output-model-type pydantic_v2.BaseModel \\",
-        f"  --target-python-version {QUICK_START_TARGET_PYTHON_VERSION} \\",
-        f"  --preset {preset_name} \\",
-        "  --disable-timestamp \\",
-        f"  --output {QUICK_START_OUTPUT_NAME}",
-    ))
+    return _render_shell_command(("datamodel-codegen", *_quick_start_args(preset_name)))
+
+
+def _render_shell_command(command: tuple[str, ...]) -> str:
+    lines: list[str] = []
+    index = 0
+    while index < len(command):
+        token = command[index]
+        if index == 0:
+            argument = token
+            index += 1
+        elif index + 1 < len(command) and token.startswith("-") and not command[index + 1].startswith("-"):
+            argument = f"{token} {command[index + 1]}"
+            index += 2
+        else:
+            argument = token
+            index += 1
+
+        indent = "" if not lines else "  "
+        continuation = " \\" if index < len(command) else ""
+        lines.append(f"{indent}{argument}{continuation}")
+    return "\n".join(lines)
 
 
 def _generate_quick_start_model(preset_name: str) -> str:

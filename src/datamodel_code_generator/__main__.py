@@ -545,7 +545,6 @@ def _apply_preset(
     from datamodel_code_generator.preset import (  # noqa: PLC0415
         PresetContext,
         PresetError,
-        preset_config_updates,
         resolve_preset,
     )
 
@@ -555,7 +554,7 @@ def _apply_preset(
         target_python_version=config.target_python_version,
     )
     try:
-        preset_updates = preset_config_updates(resolve_preset(preset_name, context))
+        preset_updates = resolve_preset(preset_name, context).values
     except PresetError as e:
         raise Error(str(e)) from e
 
