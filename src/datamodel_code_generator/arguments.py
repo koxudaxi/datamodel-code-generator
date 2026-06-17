@@ -39,7 +39,7 @@ from datamodel_code_generator.enums import (
 )
 from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
 from datamodel_code_generator.parser import LiteralType
-from datamodel_code_generator.preset import get_preset_names
+from datamodel_code_generator.preset_names import PRESET_NAMES
 
 if TYPE_CHECKING:
     from argparse import Action
@@ -253,7 +253,7 @@ base_options.add_argument(
         "Apply an immutable built-in option preset. "
         "Presets require an explicit --target-python-version so generated syntax is pinned."
     ),
-    choices=get_preset_names(),
+    choices=PRESET_NAMES,
 )
 base_options.add_argument(
     "--url",

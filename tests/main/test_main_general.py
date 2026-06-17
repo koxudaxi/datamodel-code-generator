@@ -283,6 +283,46 @@ def test_standard_preset_pyproject_uses_final_output_model_type(output_file: Pat
 
 
 @freeze_time(TIMESTAMP)
+def test_standard_preset_msgspec_struct(output_file: Path) -> None:
+    """Generate msgspec.Struct output using the standard preset."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--preset",
+            "standard-20260617",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "msgspec.Struct",
+        ],
+        assert_func=assert_file_content,
+        expected_file="standard_preset_msgspec_struct.py",
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_standard_preset_typed_dict(output_file: Path) -> None:
+    """Generate TypedDict output using the standard preset."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--preset",
+            "standard-20260617",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "typing.TypedDict",
+        ],
+        assert_func=assert_file_content,
+        expected_file="standard_preset_typed_dict.py",
+    )
+
+
+@freeze_time(TIMESTAMP)
 def test_standard_preset_target_py310_does_not_force_specialized_enum(output_file: Path) -> None:
     """The standard preset does not force StrEnum when target Python is 3.10."""
     run_main_and_assert(

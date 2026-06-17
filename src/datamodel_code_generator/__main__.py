@@ -118,13 +118,6 @@ from datamodel_code_generator.format import (
     _get_black,
     is_supported_in_black,
 )
-from datamodel_code_generator.preset import (
-    PresetContext,
-    PresetError,
-    PresetName,
-    preset_config_updates,
-    resolve_preset,
-)
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.util import load_toml
@@ -481,7 +474,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
     input_file_type: InputFileType = InputFileType.Auto
     output_model_type: DataModelType = DataModelType.PydanticV2BaseModel
     output: Optional[Path] = None  # noqa: UP045
-    preset: Optional[PresetName] = None  # noqa: UP045
+    preset: Optional[str] = None  # noqa: UP045
     check: bool = False
     debug: bool = False
     disable_warnings: bool = False
@@ -544,17 +537,29 @@ def _apply_preset(
             f"--preset {preset_name} requires an explicit --target-python-version "
             "or target-python-version in pyproject.toml."
         )
-        raise PresetError(msg)
+        raise Error(msg)
 
     explicit_fields = set(cli_config_args) if preset_from_cli else set(pyproject_config) | set(cli_config_args)
     explicit_fields.discard("preset")
+
+    from datamodel_code_generator.preset import (  # noqa: PLC0415
+        PresetContext,
+        PresetError,
+        preset_config_updates,
+        resolve_preset,
+    )
 
     context = PresetContext(
         input_file_type=config.input_file_type,
         output_model_type=config.output_model_type,
         target_python_version=config.target_python_version,
     )
-    for field_name, value in preset_config_updates(resolve_preset(preset_name, context)).items():
+    try:
+        preset_updates = preset_config_updates(resolve_preset(preset_name, context))
+    except PresetError as e:
+        raise Error(str(e)) from e
+
+    for field_name, value in preset_updates.items():
         if field_name not in explicit_fields:
             setattr(config, field_name, value)
 
@@ -1246,7 +1251,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         config.merge_args(namespace)
         _apply_preset(config, pyproject_config, cli_config_args)
         _validate_final_config(config)
-    except (Error, PresetError) as e:
+    except Error as e:
         print(str(e), file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Literal
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Literal, cast
 
 from datamodel_code_generator._registry_render import _render_registry_json
 from datamodel_code_generator.config import BaseGenerateConfig
@@ -50,48 +51,45 @@ class PresetInfo:
 
 
 @dataclass(frozen=True, slots=True)
+class PresetConfig:
+    """Typed immutable config updates supplied by a preset group."""
+
+    values: MappingProxyType[str, object]
+
+
+@dataclass(frozen=True, slots=True)
 class PresetOptionGroup:
     """Documented option group for a preset."""
 
     title: str
-    configs: tuple[BaseGenerateConfig, ...]
+    config: PresetConfig
     description: str
     input_file_types: frozenset[InputFileType] = frozenset()
     output_model_types: frozenset[DataModelType] = frozenset()
     requires_python_strenum: bool = False
 
     def __post_init__(self) -> None:
-        """Validate that each documented config maps to one Boolean CLI option."""
-        seen_fields: set[str] = set()
-        for config in self.configs:
-            updates = preset_config_updates(config)
-            if len(updates) != 1:
-                msg = f"Preset option group {self.title!r} contains a config with {len(updates)} explicit fields"
-                raise PresetError(msg)
-            field_name, value = next(iter(updates.items()))
-            if field_name in seen_fields:
-                msg = f"Preset option group {self.title!r} defines {field_name!r} more than once"
-                raise PresetError(msg)
-            seen_fields.add(field_name)
+        """Validate that each documented field maps to a Boolean CLI option."""
+        for field_name, value in self.config.values.items():
             _config_field_to_cli_option(field_name, value=value)
 
     @property
     def options(self) -> tuple[str, ...]:
         """Return documented CLI options derived from typed config fields."""
-        return tuple(option for config in self.configs for option in _preset_config_cli_options(config))
+        return tuple(_preset_config_cli_options(self.config))
 
     def applies_to(self, context: PresetContext) -> bool:
         """Return whether this option group applies to a preset context."""
-        if self.input_file_types and context.input_file_type not in self.input_file_types:
+        if self.input_file_types and context.input_file_type not in self.input_file_types:  # pragma: no cover
             return False
         if self.output_model_types and context.output_model_type not in self.output_model_types:
             return False
         return not self.requires_python_strenum or context.target_python_version.has_strenum
 
 
-def _preset_config(**values: Unpack[BaseGenerateConfigDict]) -> BaseGenerateConfig:
-    """Build a preset config from statically checked GenerateConfig fields."""
-    return BaseGenerateConfig.model_validate(values)
+def _preset_config(**values: Unpack[BaseGenerateConfigDict]) -> PresetConfig:
+    """Build immutable preset updates from statically checked GenerateConfig fields."""
+    return PresetConfig(MappingProxyType(cast("dict[str, object]", values)))
 
 
 def preset_config_updates(config: BaseGenerateConfig) -> dict[str, object]:
@@ -100,20 +98,17 @@ def preset_config_updates(config: BaseGenerateConfig) -> dict[str, object]:
     return {field_name: values[field_name] for field_name in BaseGenerateConfig.model_fields if field_name in values}
 
 
-def _merge_preset_configs(*configs: BaseGenerateConfig) -> BaseGenerateConfig:
+def _merge_preset_configs(*configs: PresetConfig) -> BaseGenerateConfig:
     """Merge preset configs, with later configs taking precedence."""
     values: dict[str, object] = {}
     for config in configs:
-        values.update(preset_config_updates(config))
+        values.update(config.values)
     return BaseGenerateConfig.model_validate(values)
 
 
-def _preset_config_cli_options(config: BaseGenerateConfig) -> tuple[str, ...]:
+def _preset_config_cli_options(config: PresetConfig) -> tuple[str, ...]:
     """Return CLI option names represented by the explicit config fields."""
-    return tuple(
-        _config_field_to_cli_option(field_name, value=value)
-        for field_name, value in preset_config_updates(config).items()
-    )
+    return tuple(_config_field_to_cli_option(field_name, value=value) for field_name, value in config.values.items())
 
 
 def _config_field_to_cli_option(field_name: str, *, value: object) -> str:
@@ -128,16 +123,6 @@ def _config_field_to_cli_option(field_name: str, *, value: object) -> str:
     return f"--no-{option_name}" if value is False else f"--{option_name}"
 
 
-_USE_STANDARD_COLLECTIONS = _preset_config(use_standard_collections=True)
-_USE_UNION_OPERATOR = _preset_config(use_union_operator=True)
-_USE_ANNOTATED = _preset_config(use_annotated=True)
-_COLLAPSE_ROOT_MODELS = _preset_config(collapse_root_models=True)
-_USE_SPECIALIZED_ENUM = _preset_config(use_specialized_enum=True)
-_SNAKE_CASE_FIELD = _preset_config(snake_case_field=True)
-_ALLOW_POPULATION_BY_FIELD_NAME = _preset_config(allow_population_by_field_name=True)
-_USE_FROZEN_FIELD = _preset_config(use_frozen_field=True)
-_USE_STANDARD_PRIMITIVE_TYPES = _preset_config(use_standard_primitive_types=True)
-
 _PRESET_INFOS: tuple[PresetInfo, ...] = (
     PresetInfo(
         name=PresetName.Standard20260617,
@@ -150,11 +135,11 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
         option_groups=(
             PresetOptionGroup(
                 title="All output model types",
-                configs=(
-                    _USE_STANDARD_COLLECTIONS,
-                    _USE_UNION_OPERATOR,
-                    _USE_ANNOTATED,
-                    _COLLAPSE_ROOT_MODELS,
+                config=_preset_config(
+                    use_standard_collections=True,
+                    use_union_operator=True,
+                    use_annotated=True,
+                    collapse_root_models=True,
                 ),
                 description=(
                     "Use built-in collection syntax, PEP 604 unions, Annotated constraints, and inline root wrappers."
@@ -162,16 +147,16 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
             ),
             PresetOptionGroup(
                 title="Python 3.11+ targets",
-                configs=(_USE_SPECIALIZED_ENUM,),
+                config=_preset_config(use_specialized_enum=True),
                 description="Use StrEnum or IntEnum only when the selected target Python version supports it.",
                 requires_python_strenum=True,
             ),
             PresetOptionGroup(
                 title="Pydantic v2 BaseModel and dataclass output",
-                configs=(
-                    _SNAKE_CASE_FIELD,
-                    _ALLOW_POPULATION_BY_FIELD_NAME,
-                    _USE_FROZEN_FIELD,
+                config=_preset_config(
+                    snake_case_field=True,
+                    allow_population_by_field_name=True,
+                    use_frozen_field=True,
                 ),
                 description=(
                     "Generate Pythonic field names while preserving input aliases and readOnly immutability metadata."
@@ -183,16 +168,16 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
             ),
             PresetOptionGroup(
                 title="msgspec Struct output",
-                configs=(
-                    _SNAKE_CASE_FIELD,
-                    _USE_STANDARD_PRIMITIVE_TYPES,
+                config=_preset_config(
+                    snake_case_field=True,
+                    use_standard_primitive_types=True,
                 ),
                 description="Generate Pythonic field names with aliases and stdlib primitive types for schema formats.",
                 output_model_types=frozenset({DataModelType.MsgspecStruct}),
             ),
             PresetOptionGroup(
                 title="stdlib dataclass output",
-                configs=(_USE_STANDARD_PRIMITIVE_TYPES,),
+                config=_preset_config(use_standard_primitive_types=True),
                 description=(
                     "Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases."
                 ),
@@ -200,9 +185,9 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
             ),
             PresetOptionGroup(
                 title="TypedDict output",
-                configs=(
-                    _USE_STANDARD_PRIMITIVE_TYPES,
-                    _USE_FROZEN_FIELD,
+                config=_preset_config(
+                    use_standard_primitive_types=True,
+                    use_frozen_field=True,
                 ),
                 description="Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys.",
                 output_model_types=frozenset({DataModelType.TypingTypedDict}),
@@ -216,18 +201,18 @@ def _validate_preset_infos(infos: tuple[PresetInfo, ...]) -> None:
     """Validate preset metadata invariants at import time."""
     preset_names: set[PresetName] = set()
     for info in infos:
-        if info.name in preset_names:
+        if info.name in preset_names:  # pragma: no cover
             msg = f"Preset {info.name.value!r} is defined more than once"
             raise PresetError(msg)
         preset_names.add(info.name)
 
         output_model_groups: dict[DataModelType, str] = {}
         for group in info.option_groups:
-            if not group.configs:
-                msg = f"Preset option group {group.title!r} does not define any configs"
+            if not group.config.values:  # pragma: no cover
+                msg = f"Preset option group {group.title!r} does not define any config fields"
                 raise PresetError(msg)
             for output_model_type in group.output_model_types:
-                if output_model_type in output_model_groups:
+                if output_model_type in output_model_groups:  # pragma: no cover
                     msg = (
                         f"Preset {info.name.value!r} maps {output_model_type.value!r} to both "
                         f"{output_model_groups[output_model_type]!r} and {group.title!r}"
@@ -334,7 +319,7 @@ def resolve_preset(preset: PresetName | str, context: PresetContext) -> BaseGene
     """Resolve a preset into config updates for the given context."""
     try:
         preset_name = preset if isinstance(preset, PresetName) else PresetName(preset)
-    except ValueError as exc:
+    except ValueError as exc:  # pragma: no cover
         names = ", ".join(get_preset_names())
         msg = f"Unknown preset: {preset!r}. Available presets: {names}"
         raise PresetError(msg) from exc
@@ -345,7 +330,7 @@ def resolve_preset(preset: PresetName | str, context: PresetContext) -> BaseGene
 def _get_preset_info(preset_name: PresetName) -> PresetInfo:
     """Return preset metadata for a known preset name."""
     for info in _PRESET_INFOS:
-        if info.name is preset_name:
+        if info.name is preset_name:  # pragma: no branch
             return info
 
     msg = f"Unsupported preset: {preset_name.value}"  # pragma: no cover
@@ -361,4 +346,4 @@ def _resolve_preset_info(info: PresetInfo, context: PresetContext) -> BaseGenera
         )
         raise PresetError(msg)  # pragma: no cover
 
-    return _merge_preset_configs(*(config for group in applicable_groups for config in group.configs))
+    return _merge_preset_configs(*(group.config for group in applicable_groups))
