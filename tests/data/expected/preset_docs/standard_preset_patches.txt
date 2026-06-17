@@ -1,0 +1,28 @@
+{
+  "msgspec": {
+    "collapse_root_models": true,
+    "snake_case_field": true,
+    "use_annotated": true,
+    "use_standard_collections": true,
+    "use_standard_primitive_types": true,
+    "use_union_operator": true
+  },
+  "py311": {
+    "allow_population_by_field_name": true,
+    "collapse_root_models": true,
+    "snake_case_field": true,
+    "use_annotated": true,
+    "use_frozen_field": true,
+    "use_specialized_enum": true,
+    "use_standard_collections": true,
+    "use_union_operator": true
+  },
+  "typed_dict": {
+    "collapse_root_models": true,
+    "use_annotated": true,
+    "use_frozen_field": true,
+    "use_standard_collections": true,
+    "use_standard_primitive_types": true,
+    "use_union_operator": true
+  }
+}

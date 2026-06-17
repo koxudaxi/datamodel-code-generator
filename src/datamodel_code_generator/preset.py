@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Literal
 
 from datamodel_code_generator._registry_render import _render_registry_json
+from datamodel_code_generator.config import BaseGenerateConfig
 from datamodel_code_generator.enums import DataModelType, InputFileType
 
 if TYPE_CHECKING:
+    from typing_extensions import Unpack
+
+    from datamodel_code_generator._types.generate_config_dict import BaseGenerateConfig as BaseGenerateConfigDict
     from datamodel_code_generator.format import PythonVersion
 
 PresetFormat = Literal["json", "markdown"]
@@ -35,15 +39,6 @@ class PresetContext:
 
 
 @dataclass(frozen=True, slots=True)
-class PresetOptionGroup:
-    """Documented option group for a preset."""
-
-    title: str
-    options: tuple[str, ...]
-    description: str
-
-
-@dataclass(frozen=True, slots=True)
 class PresetInfo:
     """Public preset metadata used by CLI docs."""
 
@@ -55,53 +50,88 @@ class PresetInfo:
 
 
 @dataclass(frozen=True, slots=True)
-class PresetPatch:
-    """Config values supplied by a preset.
+class PresetOptionGroup:
+    """Documented option group for a preset."""
 
-    ``None`` means the preset leaves the option untouched.
-    """
+    title: str
+    configs: tuple[BaseGenerateConfig, ...]
+    description: str
 
-    use_standard_collections: bool | None = None
-    use_union_operator: bool | None = None
-    use_annotated: bool | None = None
-    use_specialized_enum: bool | None = None
-    snake_case_field: bool | None = None
-    allow_population_by_field_name: bool | None = None
-    collapse_root_models: bool | None = None
-    use_standard_primitive_types: bool | None = None
-    use_frozen_field: bool | None = None
-
-    def merge(self, other: PresetPatch) -> PresetPatch:
-        """Merge two patches, with ``other`` taking precedence."""
-        values = self.updates()
-        values.update(other.updates())
-        return PresetPatch(**values)
-
-    def updates(self) -> dict[str, Any]:
-        """Return only values explicitly supplied by the patch."""
-        return {field.name: value for field in fields(self) if (value := getattr(self, field.name)) is not None}
+    @property
+    def options(self) -> tuple[str, ...]:
+        """Return documented CLI options derived from typed config fields."""
+        return tuple(option for config in self.configs for option in _preset_config_cli_options(config))
 
 
-_STANDARD_BASE_PATCH = PresetPatch(
-    use_standard_collections=True,
-    use_union_operator=True,
-    use_annotated=True,
-    collapse_root_models=True,
+def _preset_config(**values: Unpack[BaseGenerateConfigDict]) -> BaseGenerateConfig:
+    """Build a preset config from statically checked GenerateConfig fields."""
+    return BaseGenerateConfig.model_validate(values)
+
+
+def preset_config_updates(config: BaseGenerateConfig) -> dict[str, object]:
+    """Return only config values explicitly supplied by a preset."""
+    values = config.model_dump(exclude_unset=True)
+    return {field_name: values[field_name] for field_name in BaseGenerateConfig.model_fields if field_name in values}
+
+
+def _merge_preset_configs(*configs: BaseGenerateConfig) -> BaseGenerateConfig:
+    """Merge preset configs, with later configs taking precedence."""
+    values: dict[str, object] = {}
+    for config in configs:
+        values.update(preset_config_updates(config))
+    return BaseGenerateConfig.model_validate(values)
+
+
+def _preset_config_cli_options(config: BaseGenerateConfig) -> tuple[str, ...]:
+    """Return CLI option names represented by the explicit config fields."""
+    return tuple(
+        _config_field_to_cli_option(field_name, value=value)
+        for field_name, value in preset_config_updates(config).items()
+    )
+
+
+def _config_field_to_cli_option(field_name: str, *, value: object) -> str:
+    """Translate a typed config field name to its CLI option spelling."""
+    if field_name not in BaseGenerateConfig.model_fields:  # pragma: no cover
+        msg = f"Preset field {field_name!r} is not a BaseGenerateConfig field"
+        raise PresetError(msg)
+    if not isinstance(value, bool):  # pragma: no cover
+        msg = f"Preset field {field_name!r} cannot be rendered as a Boolean CLI option"
+        raise PresetError(msg)
+    option_name = field_name.replace("_", "-")
+    return f"--no-{option_name}" if value is False else f"--{option_name}"
+
+
+_USE_STANDARD_COLLECTIONS = _preset_config(use_standard_collections=True)
+_USE_UNION_OPERATOR = _preset_config(use_union_operator=True)
+_USE_ANNOTATED = _preset_config(use_annotated=True)
+_COLLAPSE_ROOT_MODELS = _preset_config(collapse_root_models=True)
+_USE_SPECIALIZED_ENUM = _preset_config(use_specialized_enum=True)
+_SNAKE_CASE_FIELD = _preset_config(snake_case_field=True)
+_ALLOW_POPULATION_BY_FIELD_NAME = _preset_config(allow_population_by_field_name=True)
+_USE_FROZEN_FIELD = _preset_config(use_frozen_field=True)
+_USE_STANDARD_PRIMITIVE_TYPES = _preset_config(use_standard_primitive_types=True)
+
+_STANDARD_BASE_CONFIG = _merge_preset_configs(
+    _USE_STANDARD_COLLECTIONS,
+    _USE_UNION_OPERATOR,
+    _USE_ANNOTATED,
+    _COLLAPSE_ROOT_MODELS,
 )
-_STANDARD_SPECIALIZED_ENUM_PATCH = PresetPatch(use_specialized_enum=True)
-_STANDARD_PYDANTIC_PATCH = PresetPatch(
-    snake_case_field=True,
-    allow_population_by_field_name=True,
-    use_frozen_field=True,
+_STANDARD_SPECIALIZED_ENUM_CONFIG = _USE_SPECIALIZED_ENUM
+_STANDARD_PYDANTIC_CONFIG = _merge_preset_configs(
+    _SNAKE_CASE_FIELD,
+    _ALLOW_POPULATION_BY_FIELD_NAME,
+    _USE_FROZEN_FIELD,
 )
-_STANDARD_MSGSPEC_PATCH = PresetPatch(
-    snake_case_field=True,
-    use_standard_primitive_types=True,
+_STANDARD_MSGSPEC_CONFIG = _merge_preset_configs(
+    _SNAKE_CASE_FIELD,
+    _USE_STANDARD_PRIMITIVE_TYPES,
 )
-_STANDARD_DATACLASS_PATCH = PresetPatch(use_standard_primitive_types=True)
-_STANDARD_TYPED_DICT_PATCH = PresetPatch(
-    use_standard_primitive_types=True,
-    use_frozen_field=True,
+_STANDARD_DATACLASS_CONFIG = _USE_STANDARD_PRIMITIVE_TYPES
+_STANDARD_TYPED_DICT_CONFIG = _merge_preset_configs(
+    _USE_STANDARD_PRIMITIVE_TYPES,
+    _USE_FROZEN_FIELD,
 )
 
 _PRESET_INFOS: tuple[PresetInfo, ...] = (
@@ -116,11 +146,11 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
         option_groups=(
             PresetOptionGroup(
                 title="All output model types",
-                options=(
-                    "--use-standard-collections",
-                    "--use-union-operator",
-                    "--use-annotated",
-                    "--collapse-root-models",
+                configs=(
+                    _USE_STANDARD_COLLECTIONS,
+                    _USE_UNION_OPERATOR,
+                    _USE_ANNOTATED,
+                    _COLLAPSE_ROOT_MODELS,
                 ),
                 description=(
                     "Use built-in collection syntax, PEP 604 unions, Annotated constraints, and inline root wrappers."
@@ -128,15 +158,15 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
             ),
             PresetOptionGroup(
                 title="Python 3.11+ targets",
-                options=("--use-specialized-enum",),
+                configs=(_USE_SPECIALIZED_ENUM,),
                 description="Use StrEnum or IntEnum only when the selected target Python version supports it.",
             ),
             PresetOptionGroup(
                 title="Pydantic v2 BaseModel and dataclass output",
-                options=(
-                    "--snake-case-field",
-                    "--allow-population-by-field-name",
-                    "--use-frozen-field",
+                configs=(
+                    _SNAKE_CASE_FIELD,
+                    _ALLOW_POPULATION_BY_FIELD_NAME,
+                    _USE_FROZEN_FIELD,
                 ),
                 description=(
                     "Generate Pythonic field names while preserving input aliases and readOnly immutability metadata."
@@ -144,24 +174,24 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
             ),
             PresetOptionGroup(
                 title="msgspec Struct output",
-                options=(
-                    "--snake-case-field",
-                    "--use-standard-primitive-types",
+                configs=(
+                    _SNAKE_CASE_FIELD,
+                    _USE_STANDARD_PRIMITIVE_TYPES,
                 ),
                 description="Generate Pythonic field names with aliases and stdlib primitive types for schema formats.",
             ),
             PresetOptionGroup(
                 title="stdlib dataclass output",
-                options=("--use-standard-primitive-types",),
+                configs=(_USE_STANDARD_PRIMITIVE_TYPES,),
                 description=(
                     "Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases."
                 ),
             ),
             PresetOptionGroup(
                 title="TypedDict output",
-                options=(
-                    "--use-standard-primitive-types",
-                    "--use-frozen-field",
+                configs=(
+                    _USE_STANDARD_PRIMITIVE_TYPES,
+                    _USE_FROZEN_FIELD,
                 ),
                 description="Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys.",
             ),
@@ -261,7 +291,7 @@ def render_presets(format_: PresetFormat) -> str:
     return render_presets_markdown().rstrip() + "\n"
 
 
-def resolve_preset(preset: PresetName | str, context: PresetContext) -> PresetPatch:
+def resolve_preset(preset: PresetName | str, context: PresetContext) -> BaseGenerateConfig:
     """Resolve a preset into config updates for the given context."""
     try:
         preset_name = preset if isinstance(preset, PresetName) else PresetName(preset)
@@ -278,20 +308,20 @@ def resolve_preset(preset: PresetName | str, context: PresetContext) -> PresetPa
     raise PresetError(msg)  # pragma: no cover
 
 
-def _resolve_standard_20260617(context: PresetContext) -> PresetPatch:
-    patch = _STANDARD_BASE_PATCH
+def _resolve_standard_20260617(context: PresetContext) -> BaseGenerateConfig:
+    config = _STANDARD_BASE_CONFIG
     if context.target_python_version.has_strenum:
-        patch = patch.merge(_STANDARD_SPECIALIZED_ENUM_PATCH)
+        config = _merge_preset_configs(config, _STANDARD_SPECIALIZED_ENUM_CONFIG)
 
     match context.output_model_type:
         case DataModelType.PydanticV2BaseModel | DataModelType.PydanticV2Dataclass:
-            return patch.merge(_STANDARD_PYDANTIC_PATCH)
+            return _merge_preset_configs(config, _STANDARD_PYDANTIC_CONFIG)
         case DataModelType.MsgspecStruct:
-            return patch.merge(_STANDARD_MSGSPEC_PATCH)
+            return _merge_preset_configs(config, _STANDARD_MSGSPEC_CONFIG)
         case DataModelType.DataclassesDataclass:
-            return patch.merge(_STANDARD_DATACLASS_PATCH)
+            return _merge_preset_configs(config, _STANDARD_DATACLASS_CONFIG)
         case DataModelType.TypingTypedDict:
-            return patch.merge(_STANDARD_TYPED_DICT_PATCH)
+            return _merge_preset_configs(config, _STANDARD_TYPED_DICT_CONFIG)
 
     msg = (  # pragma: no cover
         f"Unsupported output model type for preset {PresetName.Standard20260617.value}: "

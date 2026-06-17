@@ -1229,7 +1229,6 @@ use-specialized-enum = false
         )
 
 
-@pytest.mark.allow_direct_assert
 def test_generate_cli_command_with_false_boolean(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-cli-command with regular boolean set to false (should be skipped)."""
     pyproject_toml = """
@@ -1240,11 +1239,11 @@ reuse-model = false
     (tmp_path / "pyproject.toml").write_text(pyproject_toml)
 
     with chdir(tmp_path):
-        run_main_with_args(["--generate-cli-command"])
-
-    captured = capsys.readouterr()
-    assert captured.out == "datamodel-codegen --input schema.yaml\n\n"
-    assert not captured.err
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_MAIN_PATH / "generate_cli_command" / "regular_false_boolean.txt",
+        )
 
 
 def test_generate_cli_command_with_true_boolean(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

@@ -267,7 +267,6 @@ assert_helper_direct_assert_exempt_files = [
   "test_build_conformance_docs_script.py",
   "test_build_deprecation_docs_script.py",
   "test_build_experimental_docs_script.py",
-  "test_build_preset_docs_script.py",
   "test_conftest_helpers.py",
   "test_deprecations.py",
   "test_experimental.py",

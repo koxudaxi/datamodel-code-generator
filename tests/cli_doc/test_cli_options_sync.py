@@ -29,6 +29,21 @@ from datamodel_code_generator.cli_options import (
 from scripts.build_cli_docs import _documented_related_option, scan_docs_for_cli_option_tags
 
 
+def _fail_if_not_equal(actual: object, expected: object, context: str) -> None:
+    if actual != expected:
+        pytest.fail(f"{context}: expected {expected!r}, got {actual!r}")
+
+
+def _fail_if_missing(item: object, collection: object, context: str) -> None:
+    if item not in collection:
+        pytest.fail(f"{context}: expected {item!r} in {collection!r}")
+
+
+def _fail_if_present(item: object, collection: object, context: str) -> None:
+    if item in collection:
+        pytest.fail(f"{context}: expected {item!r} not to be present in {collection!r}")
+
+
 def test_get_canonical_option() -> None:
     """Test that get_canonical_option normalizes option aliases."""
     assert get_canonical_option("--help") == "--help"
@@ -82,9 +97,21 @@ def test_documented_related_option_prefers_existing_generated_section() -> None:
         "--snake-case-field",
     })
 
-    assert _documented_related_option("--collapse-root-models", documented_options) == "--collapse-root-models"
-    assert _documented_related_option("--snake-case-field", documented_options) == "--snake-case-field"
-    assert _documented_related_option("--use-union-operator", documented_options) == "--no-use-union-operator"
+    _fail_if_not_equal(
+        _documented_related_option("--collapse-root-models", documented_options),
+        "--collapse-root-models",
+        "--collapse-root-models related option target",
+    )
+    _fail_if_not_equal(
+        _documented_related_option("--snake-case-field", documented_options),
+        "--snake-case-field",
+        "--snake-case-field related option target",
+    )
+    _fail_if_not_equal(
+        _documented_related_option("--use-union-operator", documented_options),
+        "--no-use-union-operator",
+        "--use-union-operator related option target",
+    )
 
 
 def test_related_page_tags_prefer_existing_generated_section() -> None:
@@ -100,8 +127,16 @@ def test_related_page_tags_prefer_existing_generated_section() -> None:
 
     option_related_pages = scan_docs_for_cli_option_tags(documented_options)
 
-    assert ("model-reuse.md", "Model Reuse and Deduplication") in option_related_pages["--collapse-root-models"]
-    assert "--no-collapse-root-models" not in option_related_pages
+    _fail_if_missing(
+        ("model-reuse.md", "Model Reuse and Deduplication"),
+        option_related_pages["--collapse-root-models"],
+        "--collapse-root-models related page",
+    )
+    _fail_if_present(
+        "--no-collapse-root-models",
+        option_related_pages,
+        "--no-collapse-root-models related page key",
+    )
 
 
 class TestCLIOptionMetaSync:

@@ -18,11 +18,14 @@ from datamodel_code_generator.preset import (
     PresetError,
     get_latest_preset_name,
     get_preset_infos,
+    preset_config_updates,
     render_presets,
     resolve_preset,
 )
+from tests.conftest import assert_output
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "build_preset_docs.py"
+EXPECTED_PRESET_DOCS_PATH = Path(__file__).resolve().parent / "data" / "expected" / "preset_docs"
 BLACK_LT_233 = version.parse("23.3.0") > version.parse(black.__version__)
 
 
@@ -41,9 +44,7 @@ def test_build_preset_docs_json_format() -> None:
         text=True,
     )
 
-    presets = json.loads(result.stdout)
-    assert presets[0]["name"] == "standard-20260617"
-    assert presets[0]["requires_target_python_version"] is True
+    assert_output(result.stdout, EXPECTED_PRESET_DOCS_PATH / "presets_json.txt")
 
 
 def test_build_preset_docs_check_help_mentions_all_generated_targets() -> None:
@@ -55,8 +56,7 @@ def test_build_preset_docs_check_help_mentions_all_generated_targets() -> None:
         text=True,
     )
 
-    assert "preset docs and preset-powered quick-" in result.stdout
-    assert "start examples are up to date" in result.stdout
+    assert_output(result.stdout, EXPECTED_PRESET_DOCS_PATH / "build_preset_docs_help.txt")
 
 
 def test_build_preset_docs_quick_start_generation_timeout_has_context(
@@ -81,20 +81,17 @@ def test_build_preset_docs_quick_start_generation_timeout_has_context(
 
 def test_preset_metadata_renderers() -> None:
     """Preset metadata renderers expose the committed preset reference."""
-    markdown = render_presets("markdown")
-    presets = json.loads(render_presets("json"))
-
-    assert get_latest_preset_name() == "standard-20260617"
-    assert get_preset_infos()[0].name.value == "standard-20260617"
-    assert "# Presets" in markdown
-    assert "`standard-20260617`" in markdown
-    assert presets[0]["name"] == "standard-20260617"
-    assert presets[0]["option_groups"]
+    assert_output(render_presets("markdown"), EXPECTED_PRESET_DOCS_PATH / "presets_markdown.txt")
+    assert_output(render_presets("json"), EXPECTED_PRESET_DOCS_PATH / "presets_json.txt")
+    assert_output(
+        f"{get_latest_preset_name()}\n{get_preset_infos()[0].name.value}\n",
+        EXPECTED_PRESET_DOCS_PATH / "preset_names.txt",
+    )
 
 
-def test_standard_preset_resolver_output_specific_patches() -> None:
+def test_standard_preset_resolver_output_specific_configs() -> None:
     """The standard preset resolves output-specific option groups."""
-    msgspec_patch = resolve_preset(
+    msgspec_config = resolve_preset(
         "standard-20260617",
         PresetContext(
             input_file_type=InputFileType.JsonSchema,
@@ -102,7 +99,7 @@ def test_standard_preset_resolver_output_specific_patches() -> None:
             target_python_version=PythonVersion.PY_310,
         ),
     )
-    typed_dict_patch = resolve_preset(
+    typed_dict_config = resolve_preset(
         "standard-20260617",
         PresetContext(
             input_file_type=InputFileType.JsonSchema,
@@ -110,7 +107,7 @@ def test_standard_preset_resolver_output_specific_patches() -> None:
             target_python_version=PythonVersion.PY_310,
         ),
     )
-    py311_patch = resolve_preset(
+    py311_config = resolve_preset(
         "standard-20260617",
         PresetContext(
             input_file_type=InputFileType.JsonSchema,
@@ -119,11 +116,16 @@ def test_standard_preset_resolver_output_specific_patches() -> None:
         ),
     )
 
-    assert msgspec_patch.snake_case_field is True
-    assert msgspec_patch.use_standard_primitive_types is True
-    assert typed_dict_patch.snake_case_field is None
-    assert typed_dict_patch.use_frozen_field is True
-    assert py311_patch.use_specialized_enum is True
+    assert_output(
+        (
+            json_dumps({
+                "msgspec": preset_config_updates(msgspec_config),
+                "typed_dict": preset_config_updates(typed_dict_config),
+                "py311": preset_config_updates(py311_config),
+            })
+        ),
+        EXPECTED_PRESET_DOCS_PATH / "standard_preset_patches.txt",
+    )
 
     with pytest.raises(PresetError, match="Unknown preset"):
         resolve_preset(
@@ -134,3 +136,8 @@ def test_standard_preset_resolver_output_specific_patches() -> None:
                 target_python_version=PythonVersion.PY_310,
             ),
         )
+
+
+def json_dumps(value: object) -> str:
+    """Serialize expected fixture payloads consistently."""
+    return json.dumps(value, indent=2, sort_keys=True) + "\n"

@@ -1,0 +1,59 @@
+[
+  {
+    "description": "This immutable preset enables the project-recommended Python output style for new code. It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names.",
+    "name": "standard-20260617",
+    "option_groups": [
+      {
+        "description": "Use built-in collection syntax, PEP 604 unions, Annotated constraints, and inline root wrappers.",
+        "options": [
+          "--use-standard-collections",
+          "--use-union-operator",
+          "--use-annotated",
+          "--collapse-root-models"
+        ],
+        "title": "All output model types"
+      },
+      {
+        "description": "Use StrEnum or IntEnum only when the selected target Python version supports it.",
+        "options": [
+          "--use-specialized-enum"
+        ],
+        "title": "Python 3.11+ targets"
+      },
+      {
+        "description": "Generate Pythonic field names while preserving input aliases and readOnly immutability metadata.",
+        "options": [
+          "--snake-case-field",
+          "--allow-population-by-field-name",
+          "--use-frozen-field"
+        ],
+        "title": "Pydantic v2 BaseModel and dataclass output"
+      },
+      {
+        "description": "Generate Pythonic field names with aliases and stdlib primitive types for schema formats.",
+        "options": [
+          "--snake-case-field",
+          "--use-standard-primitive-types"
+        ],
+        "title": "msgspec Struct output"
+      },
+      {
+        "description": "Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases.",
+        "options": [
+          "--use-standard-primitive-types"
+        ],
+        "title": "stdlib dataclass output"
+      },
+      {
+        "description": "Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys.",
+        "options": [
+          "--use-standard-primitive-types",
+          "--use-frozen-field"
+        ],
+        "title": "TypedDict output"
+      }
+    ],
+    "requires_target_python_version": true,
+    "summary": "Recommended modern Python output for new projects."
+  }
+]

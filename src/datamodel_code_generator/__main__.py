@@ -118,7 +118,13 @@ from datamodel_code_generator.format import (
     _get_black,
     is_supported_in_black,
 )
-from datamodel_code_generator.preset import PresetContext, PresetError, PresetName, resolve_preset
+from datamodel_code_generator.preset import (
+    PresetContext,
+    PresetError,
+    PresetName,
+    preset_config_updates,
+    resolve_preset,
+)
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.util import load_toml
@@ -548,7 +554,7 @@ def _apply_preset(
         output_model_type=config.output_model_type,
         target_python_version=config.target_python_version,
     )
-    for field_name, value in resolve_preset(preset_name, context).updates().items():
+    for field_name, value in preset_config_updates(resolve_preset(preset_name, context)).items():
         if field_name not in explicit_fields:
             setattr(config, field_name, value)
 
