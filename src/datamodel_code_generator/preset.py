@@ -56,11 +56,37 @@ class PresetOptionGroup:
     title: str
     configs: tuple[BaseGenerateConfig, ...]
     description: str
+    input_file_types: frozenset[InputFileType] = frozenset()
+    output_model_types: frozenset[DataModelType] = frozenset()
+    requires_python_strenum: bool = False
+
+    def __post_init__(self) -> None:
+        """Validate that each documented config maps to one Boolean CLI option."""
+        seen_fields: set[str] = set()
+        for config in self.configs:
+            updates = preset_config_updates(config)
+            if len(updates) != 1:
+                msg = f"Preset option group {self.title!r} contains a config with {len(updates)} explicit fields"
+                raise PresetError(msg)
+            field_name, value = next(iter(updates.items()))
+            if field_name in seen_fields:
+                msg = f"Preset option group {self.title!r} defines {field_name!r} more than once"
+                raise PresetError(msg)
+            seen_fields.add(field_name)
+            _config_field_to_cli_option(field_name, value=value)
 
     @property
     def options(self) -> tuple[str, ...]:
         """Return documented CLI options derived from typed config fields."""
         return tuple(option for config in self.configs for option in _preset_config_cli_options(config))
+
+    def applies_to(self, context: PresetContext) -> bool:
+        """Return whether this option group applies to a preset context."""
+        if self.input_file_types and context.input_file_type not in self.input_file_types:
+            return False
+        if self.output_model_types and context.output_model_type not in self.output_model_types:
+            return False
+        return not self.requires_python_strenum or context.target_python_version.has_strenum
 
 
 def _preset_config(**values: Unpack[BaseGenerateConfigDict]) -> BaseGenerateConfig:
@@ -112,28 +138,6 @@ _ALLOW_POPULATION_BY_FIELD_NAME = _preset_config(allow_population_by_field_name=
 _USE_FROZEN_FIELD = _preset_config(use_frozen_field=True)
 _USE_STANDARD_PRIMITIVE_TYPES = _preset_config(use_standard_primitive_types=True)
 
-_STANDARD_BASE_CONFIG = _merge_preset_configs(
-    _USE_STANDARD_COLLECTIONS,
-    _USE_UNION_OPERATOR,
-    _USE_ANNOTATED,
-    _COLLAPSE_ROOT_MODELS,
-)
-_STANDARD_SPECIALIZED_ENUM_CONFIG = _USE_SPECIALIZED_ENUM
-_STANDARD_PYDANTIC_CONFIG = _merge_preset_configs(
-    _SNAKE_CASE_FIELD,
-    _ALLOW_POPULATION_BY_FIELD_NAME,
-    _USE_FROZEN_FIELD,
-)
-_STANDARD_MSGSPEC_CONFIG = _merge_preset_configs(
-    _SNAKE_CASE_FIELD,
-    _USE_STANDARD_PRIMITIVE_TYPES,
-)
-_STANDARD_DATACLASS_CONFIG = _USE_STANDARD_PRIMITIVE_TYPES
-_STANDARD_TYPED_DICT_CONFIG = _merge_preset_configs(
-    _USE_STANDARD_PRIMITIVE_TYPES,
-    _USE_FROZEN_FIELD,
-)
-
 _PRESET_INFOS: tuple[PresetInfo, ...] = (
     PresetInfo(
         name=PresetName.Standard20260617,
@@ -160,6 +164,7 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
                 title="Python 3.11+ targets",
                 configs=(_USE_SPECIALIZED_ENUM,),
                 description="Use StrEnum or IntEnum only when the selected target Python version supports it.",
+                requires_python_strenum=True,
             ),
             PresetOptionGroup(
                 title="Pydantic v2 BaseModel and dataclass output",
@@ -171,6 +176,10 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
                 description=(
                     "Generate Pythonic field names while preserving input aliases and readOnly immutability metadata."
                 ),
+                output_model_types=frozenset({
+                    DataModelType.PydanticV2BaseModel,
+                    DataModelType.PydanticV2Dataclass,
+                }),
             ),
             PresetOptionGroup(
                 title="msgspec Struct output",
@@ -179,6 +188,7 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
                     _USE_STANDARD_PRIMITIVE_TYPES,
                 ),
                 description="Generate Pythonic field names with aliases and stdlib primitive types for schema formats.",
+                output_model_types=frozenset({DataModelType.MsgspecStruct}),
             ),
             PresetOptionGroup(
                 title="stdlib dataclass output",
@@ -186,6 +196,7 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
                 description=(
                     "Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases."
                 ),
+                output_model_types=frozenset({DataModelType.DataclassesDataclass}),
             ),
             PresetOptionGroup(
                 title="TypedDict output",
@@ -194,10 +205,38 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
                     _USE_FROZEN_FIELD,
                 ),
                 description="Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys.",
+                output_model_types=frozenset({DataModelType.TypingTypedDict}),
             ),
         ),
     ),
 )
+
+
+def _validate_preset_infos(infos: tuple[PresetInfo, ...]) -> None:
+    """Validate preset metadata invariants at import time."""
+    preset_names: set[PresetName] = set()
+    for info in infos:
+        if info.name in preset_names:
+            msg = f"Preset {info.name.value!r} is defined more than once"
+            raise PresetError(msg)
+        preset_names.add(info.name)
+
+        output_model_groups: dict[DataModelType, str] = {}
+        for group in info.option_groups:
+            if not group.configs:
+                msg = f"Preset option group {group.title!r} does not define any configs"
+                raise PresetError(msg)
+            for output_model_type in group.output_model_types:
+                if output_model_type in output_model_groups:
+                    msg = (
+                        f"Preset {info.name.value!r} maps {output_model_type.value!r} to both "
+                        f"{output_model_groups[output_model_type]!r} and {group.title!r}"
+                    )
+                    raise PresetError(msg)
+                output_model_groups[output_model_type] = group.title
+
+
+_validate_preset_infos(_PRESET_INFOS)
 
 
 def get_preset_names() -> tuple[str, ...]:
@@ -300,31 +339,26 @@ def resolve_preset(preset: PresetName | str, context: PresetContext) -> BaseGene
         msg = f"Unknown preset: {preset!r}. Available presets: {names}"
         raise PresetError(msg) from exc
 
-    match preset_name:
-        case PresetName.Standard20260617:
-            return _resolve_standard_20260617(context)
+    return _resolve_preset_info(_get_preset_info(preset_name), context)
+
+
+def _get_preset_info(preset_name: PresetName) -> PresetInfo:
+    """Return preset metadata for a known preset name."""
+    for info in _PRESET_INFOS:
+        if info.name is preset_name:
+            return info
 
     msg = f"Unsupported preset: {preset_name.value}"  # pragma: no cover
     raise PresetError(msg)  # pragma: no cover
 
 
-def _resolve_standard_20260617(context: PresetContext) -> BaseGenerateConfig:
-    config = _STANDARD_BASE_CONFIG
-    if context.target_python_version.has_strenum:
-        config = _merge_preset_configs(config, _STANDARD_SPECIALIZED_ENUM_CONFIG)
+def _resolve_preset_info(info: PresetInfo, context: PresetContext) -> BaseGenerateConfig:
+    """Resolve preset metadata into config updates for the given context."""
+    applicable_groups = tuple(group for group in info.option_groups if group.applies_to(context))
+    if not any(group.output_model_types for group in applicable_groups):
+        msg = (  # pragma: no cover
+            f"Unsupported output model type for preset {info.name.value}: {context.output_model_type.value}"
+        )
+        raise PresetError(msg)  # pragma: no cover
 
-    match context.output_model_type:
-        case DataModelType.PydanticV2BaseModel | DataModelType.PydanticV2Dataclass:
-            return _merge_preset_configs(config, _STANDARD_PYDANTIC_CONFIG)
-        case DataModelType.MsgspecStruct:
-            return _merge_preset_configs(config, _STANDARD_MSGSPEC_CONFIG)
-        case DataModelType.DataclassesDataclass:
-            return _merge_preset_configs(config, _STANDARD_DATACLASS_CONFIG)
-        case DataModelType.TypingTypedDict:
-            return _merge_preset_configs(config, _STANDARD_TYPED_DICT_CONFIG)
-
-    msg = (  # pragma: no cover
-        f"Unsupported output model type for preset {PresetName.Standard20260617.value}: "
-        f"{context.output_model_type.value}"
-    )
-    raise PresetError(msg)  # pragma: no cover
+    return _merge_preset_configs(*(config for group in applicable_groups for config in group.configs))
