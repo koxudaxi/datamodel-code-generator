@@ -283,6 +283,7 @@ def test_standard_preset_pyproject_uses_final_output_model_type(output_file: Pat
 
 
 @freeze_time(TIMESTAMP)
+@pytest.mark.skipif(BLACK_LT_233, reason="Installed black doesn't support Python 3.12 target version")
 def test_standard_preset_msgspec_struct(output_file: Path) -> None:
     """Generate msgspec.Struct output using the standard preset."""
     run_main_and_assert(
@@ -298,11 +299,14 @@ def test_standard_preset_msgspec_struct(output_file: Path) -> None:
             "msgspec.Struct",
         ],
         assert_func=assert_file_content,
-        expected_file="standard_preset_msgspec_struct.py",
+        expected_file=(
+            "standard_preset_msgspec_struct_black_lt_24.py" if BLACK_LT_24 else "standard_preset_msgspec_struct.py"
+        ),
     )
 
 
 @freeze_time(TIMESTAMP)
+@pytest.mark.skipif(BLACK_LT_233, reason="Installed black doesn't support Python 3.12 target version")
 def test_standard_preset_typed_dict(output_file: Path) -> None:
     """Generate TypedDict output using the standard preset."""
     run_main_and_assert(
