@@ -356,6 +356,25 @@ def test_standard_preset_requires_target_python_version(
     )
 
 
+def test_standard_preset_reports_unknown_pyproject_preset(
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    """Unknown pyproject presets fail with a CLI error instead of leaking resolver exceptions."""
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="Unknown preset: 'unknown-preset'. Available presets: standard-20260617",
+            file_should_not_exist=output_file,
+            copy_files=[(DATA_PATH / "config" / "pyproject_unknown_preset.toml", tmp_path / "pyproject.toml")],
+        )
+
+
 def test_generated_pydantic_v2_model_accepts_runtime_value(output_file: Path) -> None:
     """Generated Pydantic v2 model validates a schema-valid payload at runtime."""
     run_main_and_assert(
