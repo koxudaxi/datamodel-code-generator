@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import socket
+import sys
 from collections import Counter
 from ipaddress import ip_address
 from pathlib import Path
@@ -26,6 +27,7 @@ from datamodel_code_generator.parser.jsonschema import (
     Types,
     _validate_schema_python_import_path,
     get_model_by_path,
+    split_json_pointer,
 )
 from datamodel_code_generator.reference import SPECIAL_PATH_MARKER, Reference
 from datamodel_code_generator.types import DataType
@@ -53,11 +55,56 @@ def block_dns_by_default(mocker: MockerFixture) -> None:
         ({"a": {"b": {"foo": "bar"}}}, "a/b", {"foo": "bar"}),
         ({"a": {"b": {"c": {"foo": "bar"}}}}, "a/b", {"c": {"foo": "bar"}}),
         ({"a": {"b": {"c": {"foo": "bar"}}}}, "a/b/c", {"foo": "bar"}),
+        ({"a": [{"x": 1}, {"y": 2}]}, "a/0", {"x": 1}),
+        ({"a": [{"x": 1}, {"y": 2}]}, "a/1", {"y": 2}),
     ],
 )
 def test_get_model_by_path(schema: dict, path: str, model: dict) -> None:
     """Test model retrieval by path."""
     assert get_model_by_path(schema, path.split("/") if path else []) == model
+
+
+@pytest.mark.parametrize(
+    ("path", "match"),
+    [
+        ("a/foo", "Invalid JSON pointer array index 'foo'"),
+        ("a/-1", "Invalid JSON pointer array index '-1'"),
+        ("a/01", "Invalid JSON pointer array index '01'"),
+        ("a/99999", "JSON pointer array index 99999 is out of range"),
+        ("a/0x1", "Invalid JSON pointer array index '0x1'"),
+        ("a/0o1", "Invalid JSON pointer array index '0o1'"),
+        ("a/0b1", "Invalid JSON pointer array index '0b1'"),
+        ("a/017", "Invalid JSON pointer array index '017'"),
+        ("a/1_0", "Invalid JSON pointer array index '1_0'"),
+        ("a/+1", r"Invalid JSON pointer array index '\+1'"),
+    ],
+)
+def test_get_model_by_path_rejects_invalid_list_index(path: str, match: str) -> None:
+    """Test list-index pointer segments are validated, not fed to raw list indexing."""
+    schema = {"a": [{"x": 1}, {"y": 2}]}
+    with pytest.raises(Error, match=match):
+        get_model_by_path(schema, path.split("/"))
+
+
+@pytest.mark.skipif(
+    not hasattr(sys, "set_int_max_str_digits"),
+    reason="int string-conversion length limit requires Python 3.11+",
+)
+def test_get_model_by_path_rejects_overlong_list_index() -> None:
+    """Test a digit string above the int conversion limit raises Error, not ValueError."""
+    schema = {"a": [{"x": 1}]}
+    overlong = "9" * (sys.get_int_max_str_digits() + 1)
+    with pytest.raises(Error, match="integer string is too long to parse"):
+        get_model_by_path(schema, ["a", overlong])
+
+
+def test_split_json_pointer_slow_path_rejects_invalid_list_index() -> None:
+    """Test the slow-path pointer traversal applies the same list-index guard."""
+    # "~1" forces the slow path; the escaped key resolves to a list, then the next
+    # segment is an invalid index.
+    schema = {"weird/key": ["x", "y"]}
+    with pytest.raises(Error, match="Invalid JSON pointer array index 'foo'"):
+        split_json_pointer(schema, "weird~1key/foo")
 
 
 def test_validate_schema_python_import_path_rejects_non_string() -> None:
