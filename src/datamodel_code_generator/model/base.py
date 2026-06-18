@@ -291,15 +291,23 @@ class DataModelFieldBase(_BaseModel):
             return
         const = self.extras["const"]
         self.const = True
-        self.nullable = False
         if const is None:
+            self.nullable = False
             self.replace_data_type(self.data_type.__class__(type=NONE), clear_old_parent=False)
             return
         if not isinstance(const, (bool, int, str)):
+            self.nullable = False
             return
         self.replace_data_type(self.data_type.__class__(literals=[const]), clear_old_parent=False)
-        if not self.default:
-            self.default = const
+        # A const is only a generated Python default when the field would carry one anyway:
+        # a required field (whose default the renderer suppresses) or a schema that also
+        # defines a default. An optional const without a schema default follows the normal
+        # optional path (nullable + ``None`` default) so an omitted field stays unset rather
+        # than being silently filled with the const value.
+        if self.required or self.has_default or self.default is not None:
+            self.nullable = False
+            if not self.default:
+                self.default = const
 
     def self_reference(self) -> bool:
         """Check if field references its parent model.

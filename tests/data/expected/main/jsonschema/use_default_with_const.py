@@ -10,4 +10,4 @@ from pydantic import BaseModel
 
 
 class UseDefaultWithConst(BaseModel):
-    foo: Literal['foo'] = 'foo'
+    foo: Literal['foo'] | None = None
