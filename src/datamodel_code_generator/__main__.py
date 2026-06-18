@@ -577,13 +577,13 @@ def _apply_preset(
         target_python_version=config.target_python_version,
     )
     try:
-        preset_updates = resolve_preset(preset_name, context).updates()
+        preset_config = resolve_preset(preset_name, context)
     except PresetError as e:
         raise Error(str(e)) from e
 
-    for field_name, value in preset_updates.items():
-        if field_name not in explicit_fields:
-            setattr(config, field_name, value)
+    for item in preset_config.items():
+        if item.field_name not in explicit_fields:
+            setattr(config, item.field_name, item.value)
 
     if config.use_annotated:
         config.field_constraints = True

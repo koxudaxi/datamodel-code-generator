@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from types import MappingProxyType
 from typing import TYPE_CHECKING, Literal, cast
 
+from pydantic import ConfigDict, PrivateAttr
 from typing_extensions import TypedDict
 
 from datamodel_code_generator._registry_render import _render_registry_json
@@ -15,8 +15,6 @@ from datamodel_code_generator.config import BaseGenerateConfig
 from datamodel_code_generator.enums import DataModelType, InputFileType
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from typing_extensions import Unpack
 
     from datamodel_code_generator._types.generate_config_dict import BaseGenerateConfig as BaseGenerateConfigDict
@@ -77,28 +75,31 @@ class PresetConfigItem:
     value: bool
 
 
-class PresetConfig:
+class PresetConfig(BaseGenerateConfig):
     """Typed immutable config updates supplied by a preset group."""
 
-    __slots__ = ("_items", "_values")
+    model_config = ConfigDict(frozen=True)
 
-    _items: tuple[PresetConfigItem, ...]
-    _values: Mapping[str, bool]
+    _items: tuple[PresetConfigItem, ...] = PrivateAttr(default=())
 
     def __init__(self, **values: Unpack[BaseGenerateConfigDict]) -> None:
         """Build immutable preset updates from statically checked GenerateConfig fields."""
-        items: list[PresetConfigItem] = []
-        for field_name, value in values.items():
-            if field_name not in BaseGenerateConfig.model_fields:  # pragma: no cover
+        for field_name in values:
+            if field_name not in type(self).model_fields:  # pragma: no cover
                 msg = f"Preset field {field_name!r} is not a BaseGenerateConfig field"
                 raise PresetError(msg)
+
+        super().__init__(**values)
+
+        items: list[PresetConfigItem] = []
+        for field_name in values:
+            value = getattr(self, field_name)
             if not isinstance(value, bool):  # pragma: no cover
                 msg = f"Preset field {field_name!r} cannot be rendered as a Boolean CLI option"
                 raise PresetError(msg)
             items.append(PresetConfigItem(field_name=field_name, value=value))
 
         self._items = tuple(items)
-        self._values = MappingProxyType({item.field_name: item.value for item in self._items})
 
     def __bool__(self) -> bool:
         """Return whether the preset config carries any updates."""
@@ -107,10 +108,6 @@ class PresetConfig:
     def items(self) -> tuple[PresetConfigItem, ...]:
         """Return typed config field updates for internal preset processing."""
         return self._items
-
-    def updates(self) -> BaseGenerateConfigDict:
-        """Return a mutable typed copy of the config updates."""
-        return cast("BaseGenerateConfigDict", dict(self._values))
 
 
 @dataclass(frozen=True, slots=True)
@@ -150,7 +147,6 @@ def _merge_preset_configs(*configs: PresetConfig) -> PresetConfig:
                 )
                 raise PresetError(msg)
             values[item.field_name] = item.value
-    BaseGenerateConfig.model_validate(values)
     return PresetConfig(**cast("BaseGenerateConfigDict", values))
 
 
