@@ -16,7 +16,7 @@ This immutable preset enables the project-recommended Python output style for ne
 
 | Scope | Options | Notes |
 |-------|---------|-------|
-| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--collapse-root-models` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, and inline root wrappers. |
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--collapse-root-models` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, and inline root wrappers. |
 | Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
 | Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
 | msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |

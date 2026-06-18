@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from pydantic import ConfigDict, PrivateAttr
 from typing_extensions import TypedDict
@@ -13,6 +13,7 @@ from datamodel_code_generator._registry_render import _render_registry_json
 from datamodel_code_generator.cli_options import CLI_OPTION_META
 from datamodel_code_generator.config import BaseGenerateConfig
 from datamodel_code_generator.enums import DataModelType, InputFileType
+from datamodel_code_generator.parser import LiteralType
 
 if TYPE_CHECKING:
     from typing_extensions import Unpack
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.format import PythonVersion
 
 PresetFormat = Literal["json", "markdown"]
+PresetConfigValue: TypeAlias = bool | LiteralType
 
 
 class _PresetOptionGroupDict(TypedDict):
@@ -69,10 +71,10 @@ class PresetInfo:
 
 @dataclass(frozen=True, slots=True)
 class PresetConfigItem:
-    """A boolean config update that can be rendered as a CLI option."""
+    """A typed config update that can be rendered as a CLI option."""
 
     field_name: str
-    value: bool
+    value: PresetConfigValue
 
 
 class PresetConfig(BaseGenerateConfig):
@@ -94,8 +96,8 @@ class PresetConfig(BaseGenerateConfig):
         items: list[PresetConfigItem] = []
         for field_name in values:
             value = getattr(self, field_name)
-            if not isinstance(value, bool):  # pragma: no cover
-                msg = f"Preset field {field_name!r} cannot be rendered as a Boolean CLI option"
+            if not isinstance(value, bool | LiteralType):  # pragma: no cover
+                msg = f"Preset field {field_name!r} cannot be rendered as a preset CLI option"
                 raise PresetError(msg)
             items.append(PresetConfigItem(field_name=field_name, value=value))
 
@@ -137,7 +139,7 @@ class PresetOptionGroup:
 
 def _merge_preset_configs(*configs: PresetConfig) -> PresetConfig:
     """Merge preset configs, rejecting conflicting explicit updates."""
-    values: dict[str, bool] = {}
+    values: dict[str, PresetConfigValue] = {}
     for config in configs:
         for item in config.items():
             if item.field_name in values and values[item.field_name] != item.value:  # pragma: no cover
@@ -159,6 +161,8 @@ def _config_item_to_cli_option(item: PresetConfigItem) -> str:
         raise PresetError(msg)
     if item.value is True:
         return option
+    if isinstance(item.value, LiteralType):
+        return f"{option} {item.value.value}"
 
     negative_option = f"--no-{option_name}"  # pragma: no cover
     if negative_option not in CLI_OPTION_META:  # pragma: no cover
@@ -183,10 +187,12 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
                     use_standard_collections=True,
                     use_union_operator=True,
                     use_annotated=True,
+                    enum_field_as_literal=LiteralType.One,
                     collapse_root_models=True,
                 ),
                 description=(
-                    "Use built-in collection syntax, PEP 604 unions, Annotated constraints, and inline root wrappers."
+                    "Use built-in collection syntax, PEP 604 unions, Annotated constraints, "
+                    "single-value enum Literals, and inline root wrappers."
                 ),
             ),
             PresetOptionGroup(

@@ -191,6 +191,19 @@ def test_standard_preset_pydantic_v2(output_file: Path) -> None:
 
 
 @freeze_time(TIMESTAMP)
+def test_standard_preset_uses_literal_for_single_value_enum(output_file: Path) -> None:
+    """The standard preset renders single-value enum fields as Literal."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_literal_typed_dict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--preset", "standard-20260617", "--target-python-version", "3.12"],
+        assert_func=assert_file_content,
+        expected_file="standard_preset_enum_literal_one.py",
+    )
+
+
+@freeze_time(TIMESTAMP)
 def test_standard_preset_no_snake_case_cli_override(output_file: Path) -> None:
     """CLI --no-* flags override preset-supplied options."""
     run_main_and_assert(
