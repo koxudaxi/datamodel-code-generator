@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 from datamodel_code_generator._registry_render import _render_registry_json
 from datamodel_code_generator.cli_options import CLI_OPTION_META
@@ -13,7 +13,7 @@ from datamodel_code_generator.config import BaseGenerateConfig
 from datamodel_code_generator.enums import DataModelType, InputFileType
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import ItemsView
 
     from typing_extensions import Unpack
 
@@ -57,11 +57,23 @@ class PresetInfo:
 class PresetConfig:
     """Typed immutable config updates supplied by a preset group."""
 
-    values: Mapping[str, object]
+    _values: BaseGenerateConfigDict
 
     def __init__(self, **values: Unpack[BaseGenerateConfigDict]) -> None:
         """Build immutable preset updates from statically checked GenerateConfig fields."""
-        object.__setattr__(self, "values", MappingProxyType(dict(values)))
+        object.__setattr__(self, "_values", MappingProxyType(values.copy()))
+
+    def __bool__(self) -> bool:
+        """Return whether the preset config carries any updates."""
+        return bool(self._values)
+
+    def items(self) -> ItemsView[str, object]:
+        """Return typed config field updates for internal preset processing."""
+        return self._values.items()
+
+    def updates(self) -> BaseGenerateConfigDict:
+        """Return a mutable typed copy of the config updates."""
+        return self._values.copy()
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,7 +91,7 @@ class PresetOptionGroup:
     def __post_init__(self) -> None:
         """Cache documented CLI options derived from typed config fields."""
         options = tuple(
-            _config_field_to_cli_option(field_name, value=value) for field_name, value in self.config.values.items()
+            _config_field_to_cli_option(field_name, value=value) for field_name, value in self.config.items()
         )
         object.__setattr__(self, "options", options)
 
@@ -96,13 +108,13 @@ def _merge_preset_configs(*configs: PresetConfig) -> PresetConfig:
     """Merge preset configs, rejecting conflicting explicit updates."""
     values: dict[str, object] = {}
     for config in configs:
-        for field_name, value in config.values.items():
+        for field_name, value in config.items():
             if field_name in values and values[field_name] != value:  # pragma: no cover
                 msg = f"Preset field {field_name!r} is configured with both {values[field_name]!r} and {value!r}"
                 raise PresetError(msg)
             values[field_name] = value
     BaseGenerateConfig.model_validate(values)
-    return PresetConfig(**values)
+    return PresetConfig(**cast("BaseGenerateConfigDict", values))
 
 
 def _config_field_to_cli_option(field_name: str, *, value: object) -> str:
@@ -213,7 +225,7 @@ def _validate_preset_infos(infos: tuple[PresetInfo, ...]) -> None:
 
         output_model_groups: dict[DataModelType, str] = {}
         for group in info.option_groups:
-            if not group.config.values:  # pragma: no cover
+            if not group.config:  # pragma: no cover
                 msg = f"Preset option group {group.title!r} does not define any config fields"
                 raise PresetError(msg)
             for output_model_type in group.output_model_types:
