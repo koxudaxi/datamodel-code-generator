@@ -416,6 +416,8 @@ syntax and backports are pinned.
 
 **Related:** [`--target-python-version`](model-customization.md#target-python-version)
 
+**See also:** [pyproject.toml Configuration](../pyproject_toml.md)
+
 !!! tip "Usage"
 
     ```bash

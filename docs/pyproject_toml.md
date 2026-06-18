@@ -1,4 +1,4 @@
-<!-- related-cli-options: --ignore-pyproject, --generate-pyproject-config, --generate-cli-command, --profile -->
+<!-- related-cli-options: --ignore-pyproject, --generate-pyproject-config, --generate-cli-command, --profile, --preset -->
 
 # ⚙️ pyproject.toml Configuration
 
@@ -141,6 +141,7 @@ datamodel-codegen --profile api --generate-cli-command
 
 ## 📖 See Also
 
+- 🧰 [Presets](presets.md) - Recommended immutable option bundles for modern output
 - 🖥️ [CLI Reference: `--ignore-pyproject`](cli-reference/general-options.md#ignore-pyproject) - Ignore pyproject.toml configuration
 - 🔧 [CLI Reference: `--generate-pyproject-config`](cli-reference/general-options.md#generate-pyproject-config) - Generate pyproject.toml from CLI arguments
 - 🖥️ [CLI Reference: `--generate-cli-command`](cli-reference/general-options.md#generate-cli-command) - Generate CLI command from pyproject.toml

@@ -35,7 +35,7 @@ QUICK_START_END_MARKER = "<!-- END AUTO-GENERATED PRESET QUICK START -->"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
-from datamodel_code_generator.preset import get_latest_preset_name, get_preset_names, render_presets  # noqa: E402
+from datamodel_code_generator.preset import get_preset_names, render_presets  # noqa: E402
 
 PresetDocsFormat = Literal["markdown", "json"]
 
@@ -69,8 +69,10 @@ def build_docs(*, check: bool) -> int:
 
 
 def _generate_docs() -> tuple[GeneratedDoc, ...]:
-    preset_name = get_latest_preset_name()
-    model_output = _generate_quick_start_model(preset_name)
+    standard_preset_name = _get_latest_preset_name_by_prefix("standard")
+    practical_preset_name = _get_latest_preset_name_by_prefix("practical")
+    standard_model_output = _generate_quick_start_model(standard_preset_name)
+    practical_model_output = _generate_quick_start_model(practical_preset_name)
     return (
         GeneratedDoc(PRESET_NAMES_PATH, _render_preset_names_module()),
         GeneratedDoc(DOCS_PATH, render_presets("markdown")),
@@ -78,17 +80,43 @@ def _generate_docs() -> tuple[GeneratedDoc, ...]:
             README_PATH,
             _replace_quick_start_section(
                 README_PATH.read_text(encoding="utf-8"),
-                _render_readme_quick_start(preset_name, model_output),
+                _render_readme_quick_start(
+                    standard_preset_name,
+                    standard_model_output,
+                    practical_preset_name,
+                    practical_model_output,
+                ),
             ),
         ),
         GeneratedDoc(
             DOCS_INDEX_PATH,
             _replace_quick_start_section(
                 DOCS_INDEX_PATH.read_text(encoding="utf-8"),
-                _render_docs_index_quick_start(preset_name, model_output),
+                _render_docs_index_quick_start(
+                    standard_preset_name,
+                    standard_model_output,
+                    practical_preset_name,
+                    practical_model_output,
+                ),
             ),
         ),
     )
+
+
+def _get_latest_preset_name_by_prefix(prefix: str) -> str:
+    prefix_with_separator = f"{prefix}-"
+    matching_names = tuple(name for name in get_preset_names() if name.startswith(prefix_with_separator))
+    if not matching_names:  # pragma: no cover
+        msg = f"No built-in preset starts with {prefix_with_separator!r}"
+        raise RuntimeError(msg)
+    return max(matching_names, key=_preset_version_sort_key)
+
+
+def _preset_version_sort_key(name: str) -> tuple[str, str]:
+    prefix, separator, version = name.rpartition("-")
+    if separator and version.isdecimal():
+        return prefix, version
+    return name, ""  # pragma: no cover
 
 
 def _render_preset_names_module() -> str:
@@ -221,9 +249,15 @@ def _prepend_warning_filter(current: str | None) -> str:
     return filter_
 
 
-def _render_readme_quick_start(preset_name: str, model_output: str) -> str:
+def _render_readme_quick_start(
+    preset_name: str,
+    model_output: str,
+    practical_preset_name: str,
+    practical_model_output: str,
+) -> str:
     schema = QUICK_START_SCHEMA_PATH.read_text(encoding="utf-8").rstrip()
     command = _render_quick_start_command(preset_name)
+    practical_command = _render_quick_start_command(practical_preset_name)
     return f"""```bash
 {command}
 ```
@@ -244,12 +278,33 @@ def _render_readme_quick_start(preset_name: str, model_output: str) -> str:
 {model_output}
 ```
 
+</details>
+
+<details>
+<summary>🧰 {practical_preset_name} variant</summary>
+
+Use `{practical_preset_name}` when you also want schema-authored names, model reuse, and generated documentation.
+
+```bash
+{practical_command}
+```
+
+```python
+{practical_model_output}
+```
+
 </details>"""
 
 
-def _render_docs_index_quick_start(preset_name: str, model_output: str) -> str:
+def _render_docs_index_quick_start(
+    preset_name: str,
+    model_output: str,
+    practical_preset_name: str,
+    practical_model_output: str,
+) -> str:
     schema = QUICK_START_SCHEMA_PATH.read_text(encoding="utf-8").rstrip()
     command = _render_quick_start_command(preset_name)
+    practical_command = _render_quick_start_command(practical_preset_name)
     return f"""### 1️⃣ Create a schema file
 
 ```json title="{QUICK_START_SCHEMA_NAME}"
@@ -267,6 +322,21 @@ def _render_docs_index_quick_start(preset_name: str, model_output: str) -> str:
 ```python title="{QUICK_START_OUTPUT_NAME}"
 {model_output}
 ```
+
+<details>
+<summary>🧰 Use {practical_preset_name}</summary>
+
+Use `{practical_preset_name}` when you also want schema-authored names, model reuse, and generated documentation.
+
+```bash
+{practical_command}
+```
+
+```python title="{QUICK_START_OUTPUT_NAME}"
+{practical_model_output}
+```
+
+</details>
 
 🎉 That's it! Your schema is now a fully-typed Python model."""
 

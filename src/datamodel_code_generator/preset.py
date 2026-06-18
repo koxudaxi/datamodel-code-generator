@@ -373,11 +373,140 @@ def render_presets_markdown() -> str:
             "`pyproject.toml` so generated Python syntax is pinned."
         ),
         "",
+        (
+            "See also: "
+            "[`--preset`](cli-reference/base-options.md#preset), "
+            "[`--target-python-version`](cli-reference/model-customization.md#target-python-version), "
+            "[`--output-model-type`](cli-reference/model-customization.md#output-model-type), "
+            "[`--profile`](cli-reference/utility-options.md#profile), "
+            "[`--generate-pyproject-config`](cli-reference/general-options.md#generate-pyproject-config), "
+            "[`--generate-cli-command`](cli-reference/general-options.md#generate-cli-command), "
+            "[pyproject.toml configuration](pyproject_toml.md), and "
+            "[CI/CD integration](ci-cd.md)."
+        ),
+        "",
+        "## Usage",
+        "",
+        "Use a preset by passing its immutable name with an explicit target Python version:",
+        "",
+        "```bash",
+        "datamodel-codegen \\",
+        "  --input schema.json \\",
+        "  --input-file-type jsonschema \\",
+        "  --output-model-type pydantic_v2.BaseModel \\",
+        "  --target-python-version 3.12 \\",
+        "  --preset standard-20260617 \\",
+        "  --output model.py",
+        "```",
+        "",
+        (
+            "Use `standard-20260617` for the project-recommended modern Python baseline. "
+            "Use `practical-20260617` when you also want schema-authored names, model reuse, and schema descriptions "
+            "embedded in the generated code."
+        ),
+        "",
+        "## Override Preset Options",
+        "",
+        "Preset options are defaults, not locks. Explicit options override preset-supplied values.",
+        "",
+        "```bash",
+        "datamodel-codegen \\",
+        "  --input schema.json \\",
+        "  --target-python-version 3.12 \\",
+        "  --preset standard-20260617 \\",
+        "  --no-snake-case-field \\",
+        "  --no-use-annotated \\",
+        "  --enum-field-as-literal none",
+        "```",
+        "",
+        (
+            "Use documented `--no-*` options for boolean settings that support negation. "
+            "For value options, pass the replacement value explicitly, such as `--enum-field-as-literal none`."
+        ),
+        "",
+        "## Add Options On Top",
+        "",
+        (
+            "You can add any normal CLI option to a preset command. "
+            "This is the recommended way to start from a preset and make a project-specific choice:"
+        ),
+        "",
+        "```bash",
+        "datamodel-codegen \\",
+        "  --input schema.json \\",
+        "  --target-python-version 3.12 \\",
+        "  --preset standard-20260617 \\",
+        "  --extra-fields forbid \\",
+        "  --use-title-as-name \\",
+        "  --output model.py",
+        "```",
+        "",
+        "## Use Presets With Profiles",
+        "",
+        (
+            "Presets can live in `[tool.datamodel-codegen]` or in a named profile. "
+            "Profiles are useful when one repository generates several model sets:"
+        ),
+        "",
+        '```toml title="pyproject.toml"',
+        "[tool.datamodel-codegen]",
+        'output-model-type = "pydantic_v2.BaseModel"',
+        'target-python-version = "3.12"',
+        'preset = "standard-20260617"',
+        "",
+        "[tool.datamodel-codegen.profiles.api]",
+        'input = "schemas/api.json"',
+        'output = "src/models/api.py"',
+        'preset = "practical-20260617"',
+        'extra-fields = "forbid"',
+        "",
+        "[tool.datamodel-codegen.profiles.events]",
+        'input = "schemas/events.json"',
+        'output = "src/models/events.py"',
+        "use-title-as-name = true",
+        "```",
+        "",
+        "```bash",
+        "datamodel-codegen --profile api",
+        "datamodel-codegen --profile events",
+        "```",
+        "",
+        (
+            "If `--preset` is passed on the CLI, it overrides pyproject preset settings and pyproject options unless "
+            "the same option is also explicit on the CLI. If `preset` is configured in `pyproject.toml`, "
+            "pyproject/profile options and CLI options override preset-supplied values."
+        ),
+        "",
+        "## Export Configuration",
+        "",
+        "To convert a working preset command into `pyproject.toml`, use `--generate-pyproject-config`:",
+        "",
+        "```bash",
+        "datamodel-codegen \\",
+        "  --input schema.json \\",
+        "  --output model.py \\",
+        "  --output-model-type pydantic_v2.BaseModel \\",
+        "  --target-python-version 3.12 \\",
+        "  --preset practical-20260617 \\",
+        "  --extra-fields forbid \\",
+        "  --generate-pyproject-config",
+        "```",
+        "",
+        "To inspect the effective CLI command for an existing pyproject profile, use `--generate-cli-command`:",
+        "",
+        "```bash",
+        "datamodel-codegen --profile api --generate-cli-command",
+        "```",
+        "",
+        "Use `--ignore-pyproject` when you want to test a preset command without loading project configuration.",
+        "",
+        "## Built-in Presets",
+        "",
     ]
     for info in _PRESET_INFOS:
         target_required = "yes" if info.requires_target_python_version else "no"
         lines.extend((
-            f"## `{info.name.value}`",
+            f"### `{info.name.value}`",
             "",
             info.summary,
             "",
