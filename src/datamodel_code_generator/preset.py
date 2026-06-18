@@ -315,14 +315,16 @@ def render_presets_markdown() -> str:
 
 def render_presets(format_: PresetFormat) -> str:
     """Render presets in the requested format."""
+    rendered: str
     match format_:
         case "json":
-            return render_presets_json() + "\n"
+            rendered = render_presets_json() + "\n"
         case "markdown":
-            return render_presets_markdown().rstrip() + "\n"
-
-    msg = f"Unsupported preset docs format: {format_!r}"  # pragma: no cover
-    raise PresetError(msg)  # pragma: no cover
+            rendered = render_presets_markdown().rstrip() + "\n"
+        case _:  # pragma: no cover
+            msg = f"Unsupported preset docs format: {format_!r}"
+            raise PresetError(msg)
+    return rendered
 
 
 def resolve_preset(preset: PresetName | str, context: PresetContext) -> PresetConfig:
