@@ -20,6 +20,7 @@ from datamodel_code_generator.model.base import (
     inline_comment_safe,
     sanitize_module_name,
 )
+from datamodel_code_generator.model.pydantic_base import DataModelField as PydanticBaseDataModelField
 from datamodel_code_generator.model.pydantic_v2 import BaseModel
 from datamodel_code_generator.model.pydantic_v2 import DataModelField as PydanticV2DataModelField
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_FIELD
@@ -200,6 +201,20 @@ def test_rendered_pydantic_v2_class_var_field_values_are_none() -> None:
     assert field.field is None
     assert rendered_field.field is None
     assert rendered_field.annotated is None
+
+
+def test_pydantic_base_class_var_imports_do_not_require_field() -> None:
+    """Test common Pydantic ClassVar fields skip Field() and clear cached factories."""
+    field = PydanticBaseDataModelField(
+        name="name",
+        data_type=DataType(type="str"),
+        required=True,
+        extras={"x-is-classvar": True},
+    )
+    field.__dict__["_computed_default_factory"] = "NestedModel"
+
+    assert IMPORT_FIELD not in field.imports
+    assert field.__dict__["_computed_default_factory"] is None
 
 
 def test_pydantic_v2_leaf_field_imports_skip_discriminator_scan(monkeypatch: pytest.MonkeyPatch) -> None:

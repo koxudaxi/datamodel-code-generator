@@ -12,6 +12,9 @@ from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.validators import ModelValidators
 from typing_extensions import NotRequired, TypedDict
 
+AliasGenerator: TypeAlias = Literal['to_camel', 'to_pascal', 'to_snake']
+
+
 AllExportsCollisionStrategy: TypeAlias = Literal[
     'error', 'minimal-prefix', 'full-prefix'
 ]
@@ -141,6 +144,7 @@ class BaseGenerateConfig(TypedDict):
     custom_template_dir: NotRequired[str | None]
     validation: NotRequired[bool]
     field_constraints: NotRequired[bool]
+    alias_generator: NotRequired[AliasGenerator | None]
     snake_case_field: NotRequired[bool]
     strip_default_none: NotRequired[bool]
     disable_timestamp: NotRequired[bool]

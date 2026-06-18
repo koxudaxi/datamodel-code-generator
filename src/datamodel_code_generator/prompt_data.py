@@ -8,6 +8,7 @@ from __future__ import annotations
 # Option descriptions extracted from cli_doc markers
 OPTION_DESCRIPTIONS: dict[str, str] = {
     "--additional-imports": "Add custom imports to generated output files.",
+    "--alias-generator": "Use a Pydantic v2 alias generator in model_config.",
     "--aliases": "Apply custom field and class name aliases from JSON file.",
     "--all-exports-collision-strategy": "Handle name collisions when exporting recursive module hierarchies.",
     "--all-exports-scope": "Generate __all__ exports for child modules in __init__.py files.",

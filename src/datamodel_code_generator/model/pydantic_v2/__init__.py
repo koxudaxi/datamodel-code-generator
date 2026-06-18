@@ -34,6 +34,7 @@ class ConfigDict(_BaseModel):
     populate_by_name: Optional[bool] = None  # noqa: UP045  # deprecated in v2.11+
     validate_by_name: Optional[bool] = None  # noqa: UP045  # v2.11+
     validate_by_alias: Optional[bool] = None  # noqa: UP045  # v2.11+
+    alias_generator: Optional[str] = None  # noqa: UP045
     allow_extra_fields: Optional[bool] = None  # noqa: UP045
     extra_fields: Optional[str] = None  # noqa: UP045
     from_attributes: Optional[bool] = None  # noqa: UP045

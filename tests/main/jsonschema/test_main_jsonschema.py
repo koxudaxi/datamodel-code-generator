@@ -1607,6 +1607,77 @@ def test_main_invalid_enum_name_snake_case_field(output_file: Path) -> None:
 
 
 @pytest.mark.cli_doc(
+    options=["--alias-generator"],
+    option_description="""Use a Pydantic v2 alias generator in model_config.
+
+The `--alias-generator` option emits a per-model ConfigDict alias generator for
+Pydantic v2 BaseModel output and omits matching per-field aliases.""",
+    input_schema="jsonschema/alias_generator.json",
+    cli_args=["--snake-case-field", "--alias-generator", "to_camel", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="jsonschema/alias_generator_pydantic_v2.py",
+    related_options=["--snake-case-field", "--output-model-type"],
+)
+def test_main_alias_generator_pydantic_v2(output_file: Path) -> None:
+    """Use a Pydantic v2 alias generator in model_config."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "alias_generator.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="alias_generator_pydantic_v2.py",
+        extra_args=[
+            "--snake-case-field",
+            "--alias-generator",
+            "to_camel",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_alias_generator_requires_pydantic_v2(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Reject --alias-generator for non-Pydantic v2 output models."""
+    run_main_with_args(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "alias_generator.json"),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--alias-generator",
+            "to_camel",
+        ],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains=(
+            "`--alias-generator` is only supported for `--output-model-type pydantic_v2.BaseModel`"
+        ),
+    )
+
+
+def test_main_alias_generator_no_alias(output_file: Path) -> None:
+    """Keep --no-alias behavior when --alias-generator is enabled."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "alias_generator.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="alias_generator_no_alias.py",
+        extra_args=[
+            "--snake-case-field",
+            "--alias-generator",
+            "to_camel",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--no-alias",
+        ],
+    )
+
+
+@pytest.mark.cli_doc(
     options=["--reuse-model"],
     option_description="""Reuse identical model definitions instead of generating duplicates.
 
@@ -7665,6 +7736,25 @@ def test_main_use_generic_base_class_populate_by_name(output_file: Path) -> None
         expected_file="use_generic_base_class_populate_by_name.py",
         extra_args=[
             "--allow-population-by-field-name",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+        ],
+    )
+
+
+def test_main_use_generic_base_class_alias_generator(output_file: Path) -> None:
+    """Test --use-generic-base-class with --alias-generator."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "alias_generator.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="alias_generator_generic_base.py",
+        extra_args=[
+            "--snake-case-field",
+            "--alias-generator",
+            "to_camel",
             "--output-model-type",
             "pydantic_v2.BaseModel",
             "--use-generic-base-class",
