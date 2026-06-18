@@ -167,11 +167,11 @@ def test_show_help_when_no_input(mocker: MockerFixture) -> None:
     options=["--preset"],
     option_description="""Apply an immutable built-in option preset.
 
-The `standard-20260617` preset enables the recommended modern Python output style for
+The `standard-20260619` preset enables the recommended modern Python output style for
 new projects. Presets require an explicit `--target-python-version` so generated
 syntax and backports are pinned.""",
     input_schema="jsonschema/person.json",
-    cli_args=["--preset", "standard-20260617", "--target-python-version", "3.12"],
+    cli_args=["--preset", "standard-20260619", "--target-python-version", "3.12"],
     golden_output="main/standard_preset_pydantic_v2.py",
     related_options=["--target-python-version"],
     primary=True,
@@ -184,7 +184,7 @@ def test_standard_preset_pydantic_v2(output_file: Path) -> None:
         input_path=JSON_SCHEMA_DATA_PATH / "person.json",
         output_path=output_file,
         input_file_type="jsonschema",
-        extra_args=["--preset", "standard-20260617", "--target-python-version", "3.12"],
+        extra_args=["--preset", "standard-20260619", "--target-python-version", "3.12"],
         assert_func=assert_file_content,
         expected_file="standard_preset_pydantic_v2.py",
     )
@@ -197,7 +197,7 @@ def test_standard_preset_uses_literal_for_single_value_enum(output_file: Path) -
         input_path=JSON_SCHEMA_DATA_PATH / "enum_literal_typed_dict.json",
         output_path=output_file,
         input_file_type="jsonschema",
-        extra_args=["--preset", "standard-20260617", "--target-python-version", "3.10"],
+        extra_args=["--preset", "standard-20260619", "--target-python-version", "3.10"],
         assert_func=assert_file_content,
         expected_file="standard_preset_enum_literal_one.py",
     )
@@ -212,7 +212,7 @@ def test_standard_preset_no_snake_case_cli_override(output_file: Path) -> None:
         input_file_type="jsonschema",
         extra_args=[
             "--preset",
-            "standard-20260617",
+            "standard-20260619",
             "--target-python-version",
             "3.10",
             "--no-snake-case-field",
@@ -233,7 +233,7 @@ def test_standard_preset_no_use_annotated_cli_override(output_file: Path) -> Non
         input_file_type="jsonschema",
         extra_args=[
             "--preset",
-            "standard-20260617",
+            "standard-20260619",
             "--target-python-version",
             "3.10",
             "--no-use-annotated",
@@ -252,7 +252,7 @@ def test_standard_preset_allows_original_field_name_delimiter_after_merge(output
         input_file_type="jsonschema",
         extra_args=[
             "--preset",
-            "standard-20260617",
+            "standard-20260619",
             "--target-python-version",
             "3.10",
             "--original-field-name-delimiter",
@@ -271,7 +271,7 @@ def test_standard_preset_cli_overrides_pyproject_option(output_file: Path, tmp_p
             input_path=JSON_SCHEMA_DATA_PATH / "person.json",
             output_path=output_file,
             input_file_type="jsonschema",
-            extra_args=["--preset", "standard-20260617"],
+            extra_args=["--preset", "standard-20260619"],
             assert_func=assert_file_content,
             expected_file="standard_preset_pydantic_v2.py",
             copy_files=[
@@ -305,7 +305,7 @@ def test_standard_preset_msgspec_struct(output_file: Path) -> None:
         input_file_type="jsonschema",
         extra_args=[
             "--preset",
-            "standard-20260617",
+            "standard-20260619",
             "--target-python-version",
             "3.12",
             "--output-model-type",
@@ -328,7 +328,7 @@ def test_standard_preset_typed_dict(output_file: Path) -> None:
         input_file_type="jsonschema",
         extra_args=[
             "--preset",
-            "standard-20260617",
+            "standard-20260619",
             "--target-python-version",
             "3.12",
             "--output-model-type",
@@ -346,7 +346,7 @@ def test_standard_preset_target_py310_does_not_force_specialized_enum(output_fil
         input_path=JSON_SCHEMA_DATA_PATH / "string_enum.json",
         output_path=output_file,
         input_file_type="jsonschema",
-        extra_args=["--preset", "standard-20260617", "--target-python-version", "3.10"],
+        extra_args=["--preset", "standard-20260619", "--target-python-version", "3.10"],
         assert_func=assert_file_content,
         expected_file="standard_preset_string_enum_py310.py",
     )
@@ -359,7 +359,7 @@ def test_practical_preset_pydantic_v2(output_file: Path) -> None:
         input_path=JSON_SCHEMA_DATA_PATH / "practical_preset.json",
         output_path=output_file,
         input_file_type="jsonschema",
-        extra_args=["--preset", "practical-20260617", "--target-python-version", "3.10"],
+        extra_args=["--preset", "practical-20260619", "--target-python-version", "3.10"],
         assert_func=assert_file_content,
         expected_file="practical_preset_pydantic_v2.py",
     )
@@ -374,10 +374,10 @@ def test_standard_preset_requires_target_python_version(
         input_path=JSON_SCHEMA_DATA_PATH / "person.json",
         output_path=output_file,
         input_file_type="jsonschema",
-        extra_args=["--preset", "standard-20260617"],
+        extra_args=["--preset", "standard-20260619"],
         expected_exit=Exit.ERROR,
         capsys=capsys,
-        expected_stderr_contains="--preset standard-20260617 requires an explicit --target-python-version",
+        expected_stderr_contains="--preset standard-20260619 requires an explicit --target-python-version",
         file_should_not_exist=output_file,
     )
 
@@ -396,7 +396,7 @@ def test_standard_preset_reports_unknown_pyproject_preset(
             expected_exit=Exit.ERROR,
             capsys=capsys,
             expected_stderr_contains=(
-                "Unknown preset: 'unknown-preset'. Available presets: standard-20260617, practical-20260617"
+                "Unknown preset: 'unknown-preset'. Available presets: standard-20260619, practical-20260619"
             ),
             file_should_not_exist=output_file,
             copy_files=[(DATA_PATH / "config" / "pyproject_unknown_preset.toml", tmp_path / "pyproject.toml")],

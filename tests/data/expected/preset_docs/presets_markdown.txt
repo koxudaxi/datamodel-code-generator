@@ -18,11 +18,11 @@ datamodel-codegen \
   --input-file-type jsonschema \
   --output-model-type pydantic_v2.BaseModel \
   --target-python-version 3.12 \
-  --preset standard-20260617 \
+  --preset standard-20260619 \
   --output model.py
 ```
 
-Use `standard-20260617` for the project-recommended modern Python baseline. Use `practical-20260617` when you also want schema-authored names, model reuse, and schema descriptions embedded in the generated code.
+Use `standard-20260619` for the project-recommended modern Python baseline. Use `practical-20260619` when you also want schema-authored names, model reuse, and schema descriptions embedded in the generated code.
 
 ## Override Preset Options
 
@@ -32,7 +32,7 @@ Preset options are defaults, not locks. Explicit options override preset-supplie
 datamodel-codegen \
   --input schema.json \
   --target-python-version 3.12 \
-  --preset standard-20260617 \
+  --preset standard-20260619 \
   --no-snake-case-field \
   --no-use-annotated \
   --enum-field-as-literal none
@@ -48,7 +48,7 @@ You can add any normal CLI option to a preset command. This is the recommended w
 datamodel-codegen \
   --input schema.json \
   --target-python-version 3.12 \
-  --preset standard-20260617 \
+  --preset standard-20260619 \
   --extra-fields forbid \
   --use-title-as-name \
   --output model.py
@@ -62,12 +62,12 @@ Presets can live in `[tool.datamodel-codegen]` or in a named profile. Profiles a
 [tool.datamodel-codegen]
 output-model-type = "pydantic_v2.BaseModel"
 target-python-version = "3.12"
-preset = "standard-20260617"
+preset = "standard-20260619"
 
 [tool.datamodel-codegen.profiles.api]
 input = "schemas/api.json"
 output = "src/models/api.py"
-preset = "practical-20260617"
+preset = "practical-20260619"
 extra-fields = "forbid"
 
 [tool.datamodel-codegen.profiles.events]
@@ -93,7 +93,7 @@ datamodel-codegen \
   --output model.py \
   --output-model-type pydantic_v2.BaseModel \
   --target-python-version 3.12 \
-  --preset practical-20260617 \
+  --preset practical-20260619 \
   --extra-fields forbid \
   --generate-pyproject-config
 ```
@@ -108,7 +108,7 @@ Use `--ignore-pyproject` when you want to test a preset command without loading 
 
 ## Built-in Presets
 
-### `standard-20260617`
+### `standard-20260619`
 
 Recommended modern Python output for new projects.
 
@@ -125,11 +125,11 @@ This immutable preset enables the project-recommended Python output style for ne
 | stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
 | TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
 
-### `practical-20260617`
+### `practical-20260619`
 
 Standard output plus practical naming, deduplication, and schema documentation.
 
-This immutable preset extends `standard-20260617` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
+This immutable preset extends `standard-20260619` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
 
 - **Requires explicit target Python version:** yes
 

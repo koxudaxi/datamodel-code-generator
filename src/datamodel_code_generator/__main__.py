@@ -577,11 +577,11 @@ def _apply_preset(
         target_python_version=config.target_python_version,
     )
     try:
-        preset_config = resolve_preset(preset_name, context)
+        preset_config_items = resolve_preset(preset_name, context)
     except PresetError as e:
         raise Error(str(e)) from e
 
-    for item in preset_config.items():
+    for item in preset_config_items:
         if item.field_name not in explicit_fields:
             setattr(config, item.field_name, item.value)
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from pydantic import ConfigDict, PrivateAttr
 from typing_extensions import TypedDict
@@ -46,8 +46,8 @@ class PresetError(Exception):
 class PresetName(str, Enum):
     """Available immutable preset names."""
 
-    Standard20260617 = "standard-20260617"
-    Practical20260617 = "practical-20260617"
+    Standard20260619 = "standard-20260619"
+    Practical20260619 = "practical-20260619"
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,19 +138,19 @@ class PresetOptionGroup:
         return not self.requires_python_strenum or context.target_python_version.has_strenum
 
 
-def _merge_preset_configs(*configs: PresetConfig) -> PresetConfig:
+def _merge_preset_configs(*configs: PresetConfig) -> tuple[PresetConfigItem, ...]:
     """Merge preset configs, rejecting conflicting explicit updates."""
-    values: dict[str, PresetConfigValue] = {}
+    items: dict[str, PresetConfigItem] = {}
     for config in configs:
         for item in config.items():
-            if item.field_name in values and values[item.field_name] != item.value:  # pragma: no cover
-                msg = (
-                    f"Preset field {item.field_name!r} is configured with both "
-                    f"{values[item.field_name]!r} and {item.value!r}"
-                )
+            existing = items.get(item.field_name)
+            if existing is None:
+                items[item.field_name] = item
+                continue
+            if existing.value != item.value:  # pragma: no cover
+                msg = f"Preset field {item.field_name!r} is configured with both {existing.value!r} and {item.value!r}"
                 raise PresetError(msg)
-            values[item.field_name] = item.value
-    return PresetConfig(**cast("BaseGenerateConfigDict", values))
+    return tuple(items.values())
 
 
 def _config_item_to_cli_option(item: PresetConfigItem) -> str:
@@ -172,7 +172,7 @@ def _config_item_to_cli_option(item: PresetConfigItem) -> str:
     return negative_option  # pragma: no cover
 
 
-_STANDARD_20260617_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
+_STANDARD_20260619_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
     PresetOptionGroup(
         title="All output model types",
         config=PresetConfig(
@@ -233,8 +233,8 @@ _STANDARD_20260617_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
     ),
 )
 
-_PRACTICAL_20260617_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
-    *_STANDARD_20260617_OPTION_GROUPS,
+_PRACTICAL_20260619_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
+    *_STANDARD_20260619_OPTION_GROUPS,
     PresetOptionGroup(
         title="Practical model structure and names",
         config=PresetConfig(
@@ -260,25 +260,25 @@ _PRACTICAL_20260617_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
 
 _PRESET_INFOS: tuple[PresetInfo, ...] = (
     PresetInfo(
-        name=PresetName.Standard20260617,
+        name=PresetName.Standard20260619,
         summary="Recommended modern Python output for new projects.",
         description=(
             "This immutable preset enables the project-recommended Python output style for new code. "
             "It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names."
         ),
         requires_target_python_version=True,
-        option_groups=_STANDARD_20260617_OPTION_GROUPS,
+        option_groups=_STANDARD_20260619_OPTION_GROUPS,
     ),
     PresetInfo(
-        name=PresetName.Practical20260617,
+        name=PresetName.Practical20260619,
         summary="Standard output plus practical naming, deduplication, and schema documentation.",
         description=(
-            "This immutable preset extends `standard-20260617` with options that make generated models easier to "
+            "This immutable preset extends `standard-20260619` with options that make generated models easier to "
             "read and use in real projects. It favors schema-authored names, model reuse, and embedded schema "
             "documentation over the most conservative output-shape stability."
         ),
         requires_target_python_version=True,
-        option_groups=_PRACTICAL_20260617_OPTION_GROUPS,
+        option_groups=_PRACTICAL_20260619_OPTION_GROUPS,
     ),
 )
 
@@ -395,13 +395,13 @@ def render_presets_markdown() -> str:
         "  --input-file-type jsonschema \\",
         "  --output-model-type pydantic_v2.BaseModel \\",
         "  --target-python-version 3.12 \\",
-        "  --preset standard-20260617 \\",
+        "  --preset standard-20260619 \\",
         "  --output model.py",
         "```",
         "",
         (
-            "Use `standard-20260617` for the project-recommended modern Python baseline. "
-            "Use `practical-20260617` when you also want schema-authored names, model reuse, and schema descriptions "
+            "Use `standard-20260619` for the project-recommended modern Python baseline. "
+            "Use `practical-20260619` when you also want schema-authored names, model reuse, and schema descriptions "
             "embedded in the generated code."
         ),
         "",
@@ -413,7 +413,7 @@ def render_presets_markdown() -> str:
         "datamodel-codegen \\",
         "  --input schema.json \\",
         "  --target-python-version 3.12 \\",
-        "  --preset standard-20260617 \\",
+        "  --preset standard-20260619 \\",
         "  --no-snake-case-field \\",
         "  --no-use-annotated \\",
         "  --enum-field-as-literal none",
@@ -435,7 +435,7 @@ def render_presets_markdown() -> str:
         "datamodel-codegen \\",
         "  --input schema.json \\",
         "  --target-python-version 3.12 \\",
-        "  --preset standard-20260617 \\",
+        "  --preset standard-20260619 \\",
         "  --extra-fields forbid \\",
         "  --use-title-as-name \\",
         "  --output model.py",
@@ -452,12 +452,12 @@ def render_presets_markdown() -> str:
         "[tool.datamodel-codegen]",
         'output-model-type = "pydantic_v2.BaseModel"',
         'target-python-version = "3.12"',
-        'preset = "standard-20260617"',
+        'preset = "standard-20260619"',
         "",
         "[tool.datamodel-codegen.profiles.api]",
         'input = "schemas/api.json"',
         'output = "src/models/api.py"',
-        'preset = "practical-20260617"',
+        'preset = "practical-20260619"',
         'extra-fields = "forbid"',
         "",
         "[tool.datamodel-codegen.profiles.events]",
@@ -487,7 +487,7 @@ def render_presets_markdown() -> str:
         "  --output model.py \\",
         "  --output-model-type pydantic_v2.BaseModel \\",
         "  --target-python-version 3.12 \\",
-        "  --preset practical-20260617 \\",
+        "  --preset practical-20260619 \\",
         "  --extra-fields forbid \\",
         "  --generate-pyproject-config",
         "```",
@@ -538,7 +538,7 @@ def render_presets(format_: PresetFormat) -> str:
     return rendered
 
 
-def resolve_preset(preset: PresetName | str, context: PresetContext) -> PresetConfig:
+def resolve_preset(preset: PresetName | str, context: PresetContext) -> tuple[PresetConfigItem, ...]:
     """Resolve a preset into config updates for the given context."""
     try:
         preset_name = preset if isinstance(preset, PresetName) else PresetName(preset)
@@ -560,7 +560,7 @@ def _get_preset_info(preset_name: PresetName) -> PresetInfo:
     raise PresetError(msg)  # pragma: no cover
 
 
-def _resolve_preset_info(info: PresetInfo, context: PresetContext) -> PresetConfig:
+def _resolve_preset_info(info: PresetInfo, context: PresetContext) -> tuple[PresetConfigItem, ...]:
     """Resolve preset metadata into config updates for the given context."""
     applicable_groups = tuple(group for group in info.option_groups if group.applies_to(context))
     if not any(group.output_model_types for group in applicable_groups):

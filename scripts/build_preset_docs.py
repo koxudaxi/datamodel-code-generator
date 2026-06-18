@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -29,6 +30,7 @@ QUICK_START_SCHEMA_NAME = "schema.json"
 QUICK_START_OUTPUT_NAME = "model.py"
 QUICK_START_TARGET_PYTHON_VERSION = "3.12"
 QUICK_START_GENERATION_TIMEOUT_SECONDS = 30
+PRESET_VERSION_DATE_LENGTH = 8
 QUICK_START_BEGIN_MARKER = "<!-- BEGIN AUTO-GENERATED PRESET QUICK START -->"
 QUICK_START_END_MARKER = "<!-- END AUTO-GENERATED PRESET QUICK START -->"
 
@@ -148,8 +150,8 @@ def _replace_quick_start_section(markdown_text: str, generated: str) -> str:
     )
 
 
-def _quick_start_args(preset_name: str, *, disable_timestamp: bool) -> tuple[str, ...]:
-    args = (
+def _quick_start_args(preset_name: str) -> tuple[str, ...]:
+    return (
         "--input",
         QUICK_START_SCHEMA_NAME,
         "--input-file-type",
@@ -163,13 +165,10 @@ def _quick_start_args(preset_name: str, *, disable_timestamp: bool) -> tuple[str
         "--output",
         QUICK_START_OUTPUT_NAME,
     )
-    if disable_timestamp:
-        return (*args[:-2], "--disable-timestamp", *args[-2:])
-    return args
 
 
 def _render_quick_start_command(preset_name: str) -> str:
-    return _render_shell_command(("datamodel-codegen", *_quick_start_args(preset_name, disable_timestamp=False)))
+    return _render_shell_command(("datamodel-codegen", *_quick_start_args(preset_name)))
 
 
 def _render_shell_command(command: tuple[str, ...]) -> str:
@@ -203,12 +202,7 @@ def _generate_quick_start_model(preset_name: str) -> str:
         env = os.environ.copy()
         env["PYTHONPATH"] = _prepend_path(env.get("PYTHONPATH"), SRC_PATH)
         env["PYTHONWARNINGS"] = _prepend_warning_filter(env.get("PYTHONWARNINGS"))
-        command = (
-            sys.executable,
-            "-m",
-            "datamodel_code_generator",
-            *_quick_start_args(preset_name, disable_timestamp=True),
-        )
+        command = (sys.executable, "-m", "datamodel_code_generator", *_quick_start_args(preset_name))
         try:
             result = subprocess.run(
                 command,
@@ -228,11 +222,36 @@ def _generate_quick_start_model(preset_name: str) -> str:
             raise RuntimeError(msg) from exc
 
         if result.returncode == 0:
-            return (tmp_path / QUICK_START_OUTPUT_NAME).read_text(encoding="utf-8").rstrip()
+            model_output = (tmp_path / QUICK_START_OUTPUT_NAME).read_text(encoding="utf-8").rstrip()
+            return _normalize_quick_start_timestamp(model_output, preset_name)
 
         _print_process_output(result.stdout, result.stderr)
         msg = f"Failed to generate preset quick-start example (exit {result.returncode}): {shlex.join(command)}"
         raise RuntimeError(msg)
+
+
+def _normalize_quick_start_timestamp(model_output: str, preset_name: str) -> str:
+    """Pin generated quick-start examples to the immutable preset date."""
+    timestamp = _preset_timestamp(preset_name)
+    normalized = re.sub(
+        r"^#   timestamp: .+$",
+        f"#   timestamp: {timestamp}",
+        model_output,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    if normalized != model_output:
+        return normalized
+    msg = f"Generated quick-start example has no timestamp header: {preset_name}"
+    raise RuntimeError(msg)
+
+
+def _preset_timestamp(preset_name: str) -> str:
+    _prefix, separator, version = preset_name.rpartition("-")
+    if separator and len(version) == PRESET_VERSION_DATE_LENGTH and version.isdecimal():
+        return f"{version[:4]}-{version[4:6]}-{version[6:8]}T00:00:00+00:00"
+    msg = f"Preset name does not end with YYYYMMDD: {preset_name}"
+    raise RuntimeError(msg)
 
 
 def _print_process_output(stdout: str | bytes | None, stderr: str | bytes | None) -> None:
