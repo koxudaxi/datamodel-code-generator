@@ -352,6 +352,19 @@ def test_standard_preset_target_py310_does_not_force_specialized_enum(output_fil
     )
 
 
+@freeze_time(TIMESTAMP)
+def test_practical_preset_pydantic_v2(output_file: Path) -> None:
+    """Generate Pydantic v2 output using the practical preset."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "practical_preset.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--preset", "practical-20260617", "--target-python-version", "3.10"],
+        assert_func=assert_file_content,
+        expected_file="practical_preset_pydantic_v2.py",
+    )
+
+
 def test_standard_preset_requires_target_python_version(
     output_file: Path,
     capsys: pytest.CaptureFixture[str],
@@ -382,7 +395,9 @@ def test_standard_preset_reports_unknown_pyproject_preset(
             input_file_type="jsonschema",
             expected_exit=Exit.ERROR,
             capsys=capsys,
-            expected_stderr_contains="Unknown preset: 'unknown-preset'. Available presets: standard-20260617",
+            expected_stderr_contains=(
+                "Unknown preset: 'unknown-preset'. Available presets: standard-20260617, practical-20260617"
+            ),
             file_should_not_exist=output_file,
             copy_files=[(DATA_PATH / "config" / "pyproject_unknown_preset.toml", tmp_path / "pyproject.toml")],
         )

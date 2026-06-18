@@ -57,5 +57,82 @@
     ],
     "requires_target_python_version": true,
     "summary": "Recommended modern Python output for new projects."
+  },
+  {
+    "description": "This immutable preset extends `standard-20260617` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.",
+    "name": "practical-20260617",
+    "option_groups": [
+      {
+        "description": "Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, inline root wrappers, and schema-accurate nullability.",
+        "options": [
+          "--use-standard-collections",
+          "--use-union-operator",
+          "--use-annotated",
+          "--enum-field-as-literal one",
+          "--collapse-root-models",
+          "--strict-nullable"
+        ],
+        "title": "All output model types"
+      },
+      {
+        "description": "Use StrEnum or IntEnum only when the selected target Python version supports it.",
+        "options": [
+          "--use-specialized-enum"
+        ],
+        "title": "Python 3.11+ targets"
+      },
+      {
+        "description": "Generate Pythonic field names while preserving input aliases and readOnly immutability metadata.",
+        "options": [
+          "--snake-case-field",
+          "--allow-population-by-field-name",
+          "--use-frozen-field"
+        ],
+        "title": "Pydantic v2 BaseModel and dataclass output"
+      },
+      {
+        "description": "Generate Pythonic field names with aliases and stdlib primitive types for schema formats.",
+        "options": [
+          "--snake-case-field",
+          "--use-standard-primitive-types"
+        ],
+        "title": "msgspec Struct output"
+      },
+      {
+        "description": "Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases.",
+        "options": [
+          "--use-standard-primitive-types"
+        ],
+        "title": "stdlib dataclass output"
+      },
+      {
+        "description": "Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys.",
+        "options": [
+          "--use-standard-primitive-types",
+          "--use-frozen-field"
+        ],
+        "title": "TypedDict output"
+      },
+      {
+        "description": "Deduplicate identical models, prefer schema titles for class names, and keep primary definitions ahead of inline duplicate names.",
+        "options": [
+          "--reuse-model",
+          "--use-title-as-name",
+          "--naming-strategy primary-first"
+        ],
+        "title": "Practical model structure and names"
+      },
+      {
+        "description": "Preserve schema and field descriptions, including examples, in generated model documentation.",
+        "options": [
+          "--use-schema-description",
+          "--use-field-description",
+          "--use-field-description-example"
+        ],
+        "title": "Schema documentation"
+      }
+    ],
+    "requires_target_python_version": true,
+    "summary": "Standard output plus practical naming, deduplication, and schema documentation."
   }
 ]

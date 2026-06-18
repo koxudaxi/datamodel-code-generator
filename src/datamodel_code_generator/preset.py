@@ -12,7 +12,7 @@ from typing_extensions import TypedDict
 from datamodel_code_generator._registry_render import _render_registry_json
 from datamodel_code_generator.cli_options import CLI_OPTION_META
 from datamodel_code_generator.config import BaseGenerateConfig
-from datamodel_code_generator.enums import DataModelType, InputFileType
+from datamodel_code_generator.enums import DataModelType, InputFileType, NamingStrategy
 from datamodel_code_generator.parser import LiteralType
 
 if TYPE_CHECKING:
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.format import PythonVersion
 
 PresetFormat = Literal["json", "markdown"]
-PresetConfigValue: TypeAlias = bool | LiteralType
+PresetConfigValue: TypeAlias = bool | LiteralType | NamingStrategy
 
 
 class _PresetOptionGroupDict(TypedDict):
@@ -47,6 +47,7 @@ class PresetName(str, Enum):
     """Available immutable preset names."""
 
     Standard20260617 = "standard-20260617"
+    Practical20260617 = "practical-20260617"
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,7 +97,7 @@ class PresetConfig(BaseGenerateConfig):
         items: list[PresetConfigItem] = []
         for field_name in values:
             value = getattr(self, field_name)
-            if not isinstance(value, bool | LiteralType):  # pragma: no cover
+            if not isinstance(value, bool | LiteralType | NamingStrategy):  # pragma: no cover
                 msg = f"Preset field {field_name!r} cannot be rendered as a preset CLI option"
                 raise PresetError(msg)
             items.append(PresetConfigItem(field_name=field_name, value=value))
@@ -161,7 +162,7 @@ def _config_item_to_cli_option(item: PresetConfigItem) -> str:
         raise PresetError(msg)
     if item.value is True:
         return option
-    if isinstance(item.value, LiteralType):
+    if isinstance(item.value, LiteralType | NamingStrategy):
         return f"{option} {item.value.value}"
 
     negative_option = f"--no-{option_name}"  # pragma: no cover
@@ -170,6 +171,92 @@ def _config_item_to_cli_option(item: PresetConfigItem) -> str:
         raise PresetError(msg)
     return negative_option  # pragma: no cover
 
+
+_STANDARD_20260617_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
+    PresetOptionGroup(
+        title="All output model types",
+        config=PresetConfig(
+            use_standard_collections=True,
+            use_union_operator=True,
+            use_annotated=True,
+            enum_field_as_literal=LiteralType.One,
+            collapse_root_models=True,
+            strict_nullable=True,
+        ),
+        description=(
+            "Use built-in collection syntax, PEP 604 unions, Annotated constraints, "
+            "single-value enum Literals, inline root wrappers, and schema-accurate nullability."
+        ),
+    ),
+    PresetOptionGroup(
+        title="Python 3.11+ targets",
+        config=PresetConfig(use_specialized_enum=True),
+        description="Use StrEnum or IntEnum only when the selected target Python version supports it.",
+        requires_python_strenum=True,
+    ),
+    PresetOptionGroup(
+        title="Pydantic v2 BaseModel and dataclass output",
+        config=PresetConfig(
+            snake_case_field=True,
+            allow_population_by_field_name=True,
+            use_frozen_field=True,
+        ),
+        description="Generate Pythonic field names while preserving input aliases and readOnly immutability metadata.",
+        output_model_types=frozenset({
+            DataModelType.PydanticV2BaseModel,
+            DataModelType.PydanticV2Dataclass,
+        }),
+    ),
+    PresetOptionGroup(
+        title="msgspec Struct output",
+        config=PresetConfig(
+            snake_case_field=True,
+            use_standard_primitive_types=True,
+        ),
+        description="Generate Pythonic field names with aliases and stdlib primitive types for schema formats.",
+        output_model_types=frozenset({DataModelType.MsgspecStruct}),
+    ),
+    PresetOptionGroup(
+        title="stdlib dataclass output",
+        config=PresetConfig(use_standard_primitive_types=True),
+        description="Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases.",
+        output_model_types=frozenset({DataModelType.DataclassesDataclass}),
+    ),
+    PresetOptionGroup(
+        title="TypedDict output",
+        config=PresetConfig(
+            use_standard_primitive_types=True,
+            use_frozen_field=True,
+        ),
+        description="Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys.",
+        output_model_types=frozenset({DataModelType.TypingTypedDict}),
+    ),
+)
+
+_PRACTICAL_20260617_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
+    *_STANDARD_20260617_OPTION_GROUPS,
+    PresetOptionGroup(
+        title="Practical model structure and names",
+        config=PresetConfig(
+            reuse_model=True,
+            use_title_as_name=True,
+            naming_strategy=NamingStrategy.PrimaryFirst,
+        ),
+        description=(
+            "Deduplicate identical models, prefer schema titles for class names, and keep primary definitions "
+            "ahead of inline duplicate names."
+        ),
+    ),
+    PresetOptionGroup(
+        title="Schema documentation",
+        config=PresetConfig(
+            use_schema_description=True,
+            use_field_description=True,
+            use_field_description_example=True,
+        ),
+        description="Preserve schema and field descriptions, including examples, in generated model documentation.",
+    ),
+)
 
 _PRESET_INFOS: tuple[PresetInfo, ...] = (
     PresetInfo(
@@ -180,70 +267,18 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
             "It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names."
         ),
         requires_target_python_version=True,
-        option_groups=(
-            PresetOptionGroup(
-                title="All output model types",
-                config=PresetConfig(
-                    use_standard_collections=True,
-                    use_union_operator=True,
-                    use_annotated=True,
-                    enum_field_as_literal=LiteralType.One,
-                    collapse_root_models=True,
-                    strict_nullable=True,
-                ),
-                description=(
-                    "Use built-in collection syntax, PEP 604 unions, Annotated constraints, "
-                    "single-value enum Literals, inline root wrappers, and schema-accurate nullability."
-                ),
-            ),
-            PresetOptionGroup(
-                title="Python 3.11+ targets",
-                config=PresetConfig(use_specialized_enum=True),
-                description="Use StrEnum or IntEnum only when the selected target Python version supports it.",
-                requires_python_strenum=True,
-            ),
-            PresetOptionGroup(
-                title="Pydantic v2 BaseModel and dataclass output",
-                config=PresetConfig(
-                    snake_case_field=True,
-                    allow_population_by_field_name=True,
-                    use_frozen_field=True,
-                ),
-                description=(
-                    "Generate Pythonic field names while preserving input aliases and readOnly immutability metadata."
-                ),
-                output_model_types=frozenset({
-                    DataModelType.PydanticV2BaseModel,
-                    DataModelType.PydanticV2Dataclass,
-                }),
-            ),
-            PresetOptionGroup(
-                title="msgspec Struct output",
-                config=PresetConfig(
-                    snake_case_field=True,
-                    use_standard_primitive_types=True,
-                ),
-                description="Generate Pythonic field names with aliases and stdlib primitive types for schema formats.",
-                output_model_types=frozenset({DataModelType.MsgspecStruct}),
-            ),
-            PresetOptionGroup(
-                title="stdlib dataclass output",
-                config=PresetConfig(use_standard_primitive_types=True),
-                description=(
-                    "Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases."
-                ),
-                output_model_types=frozenset({DataModelType.DataclassesDataclass}),
-            ),
-            PresetOptionGroup(
-                title="TypedDict output",
-                config=PresetConfig(
-                    use_standard_primitive_types=True,
-                    use_frozen_field=True,
-                ),
-                description="Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys.",
-                output_model_types=frozenset({DataModelType.TypingTypedDict}),
-            ),
+        option_groups=_STANDARD_20260617_OPTION_GROUPS,
+    ),
+    PresetInfo(
+        name=PresetName.Practical20260617,
+        summary="Standard output plus practical naming, deduplication, and schema documentation.",
+        description=(
+            "This immutable preset extends `standard-20260617` with options that make generated models easier to "
+            "read and use in real projects. It favors schema-authored names, model reuse, and embedded schema "
+            "documentation over the most conservative output-shape stability."
         ),
+        requires_target_python_version=True,
+        option_groups=_PRACTICAL_20260617_OPTION_GROUPS,
     ),
 )
 
