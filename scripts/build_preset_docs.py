@@ -148,8 +148,8 @@ def _replace_quick_start_section(markdown_text: str, generated: str) -> str:
     )
 
 
-def _quick_start_args(preset_name: str) -> tuple[str, ...]:
-    return (
+def _quick_start_args(preset_name: str, *, disable_timestamp: bool) -> tuple[str, ...]:
+    args = (
         "--input",
         QUICK_START_SCHEMA_NAME,
         "--input-file-type",
@@ -160,14 +160,16 @@ def _quick_start_args(preset_name: str) -> tuple[str, ...]:
         QUICK_START_TARGET_PYTHON_VERSION,
         "--preset",
         preset_name,
-        "--disable-timestamp",
         "--output",
         QUICK_START_OUTPUT_NAME,
     )
+    if disable_timestamp:
+        return (*args[:-2], "--disable-timestamp", *args[-2:])
+    return args
 
 
 def _render_quick_start_command(preset_name: str) -> str:
-    return _render_shell_command(("datamodel-codegen", *_quick_start_args(preset_name)))
+    return _render_shell_command(("datamodel-codegen", *_quick_start_args(preset_name, disable_timestamp=False)))
 
 
 def _render_shell_command(command: tuple[str, ...]) -> str:
@@ -201,7 +203,12 @@ def _generate_quick_start_model(preset_name: str) -> str:
         env = os.environ.copy()
         env["PYTHONPATH"] = _prepend_path(env.get("PYTHONPATH"), SRC_PATH)
         env["PYTHONWARNINGS"] = _prepend_warning_filter(env.get("PYTHONWARNINGS"))
-        command = (sys.executable, "-m", "datamodel_code_generator", *_quick_start_args(preset_name))
+        command = (
+            sys.executable,
+            "-m",
+            "datamodel_code_generator",
+            *_quick_start_args(preset_name, disable_timestamp=True),
+        )
         try:
             result = subprocess.run(
                 command,
@@ -262,6 +269,8 @@ def _render_readme_quick_start(
 {command}
 ```
 
+This quick start uses `{preset_name}`, the recommended immutable preset for modern Python output.
+
 <details>
 <summary>📄 {QUICK_START_SCHEMA_NAME} (input)</summary>
 
@@ -316,6 +325,8 @@ def _render_docs_index_quick_start(
 ```bash
 {command}
 ```
+
+This quick start uses `{preset_name}`, the recommended immutable preset for modern Python output.
 
 ### 3️⃣ Use your models
 

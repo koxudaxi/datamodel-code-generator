@@ -146,9 +146,10 @@ datamodel-codegen \
   --output-model-type pydantic_v2.BaseModel \
   --target-python-version 3.12 \
   --preset standard-20260617 \
-  --disable-timestamp \
   --output model.py
 ```
+
+This quick start uses `standard-20260617`, the recommended immutable preset for modern Python output.
 
 <details>
 <summary>📄 schema.json (input)</summary>
@@ -229,7 +230,6 @@ datamodel-codegen \
   --output-model-type pydantic_v2.BaseModel \
   --target-python-version 3.12 \
   --preset practical-20260617 \
-  --disable-timestamp \
   --output model.py
 ```
 
