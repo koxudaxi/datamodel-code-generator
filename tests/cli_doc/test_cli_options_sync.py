@@ -8,6 +8,8 @@ These tests verify that:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, TypeVar
+
 import pytest
 
 from datamodel_code_generator import cli_options
@@ -28,18 +30,23 @@ from datamodel_code_generator.cli_options import (
 )
 from scripts.build_cli_docs import _documented_related_option, scan_docs_for_cli_option_tags
 
+if TYPE_CHECKING:
+    from collections.abc import Collection
 
-def _fail_if_not_equal(actual: object, expected: object, context: str) -> None:
+_T = TypeVar("_T")
+
+
+def _fail_if_not_equal(actual: _T, expected: _T, context: str) -> None:
     if actual != expected:
         pytest.fail(f"{context}: expected {expected!r}, got {actual!r}")
 
 
-def _fail_if_missing(item: object, collection: object, context: str) -> None:
+def _fail_if_missing(item: _T, collection: Collection[_T], context: str) -> None:
     if item not in collection:
         pytest.fail(f"{context}: expected {item!r} in {collection!r}")
 
 
-def _fail_if_present(item: object, collection: object, context: str) -> None:
+def _fail_if_present(item: _T, collection: Collection[_T], context: str) -> None:
     if item in collection:
         pytest.fail(f"{context}: expected {item!r} not to be present in {collection!r}")
 

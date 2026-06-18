@@ -85,9 +85,9 @@ import signal
 import tempfile
 import warnings
 from collections import defaultdict
-from collections.abc import Callable, Mapping, Sequence  # noqa: TC003  # pydantic needs it
+from collections.abc import Callable, Mapping, Sequence
 from enum import Enum, IntEnum
-from io import TextIOBase  # noqa: TC003 # needed for pydantic
+from io import TextIOBase
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
@@ -119,7 +119,7 @@ from datamodel_code_generator.format import (
     is_supported_in_black,
 )
 from datamodel_code_generator.reference import is_url
-from datamodel_code_generator.types import StrictTypes  # noqa: TC001 # needed for pydantic
+from datamodel_code_generator.types import StrictTypes
 from datamodel_code_generator.util import load_toml
 from datamodel_code_generator.validators import ValidatorsConfig
 
@@ -193,6 +193,22 @@ _HttpKeyValueInput: TypeAlias = str | _HttpKeyValuePair
 _HttpSeparator: TypeAlias = Literal[":", "="]
 _HttpItemErrorName: TypeAlias = Literal["http header", "http query parameter"]
 _HttpValueErrorName: TypeAlias = Literal["http_headers", "http_query_parameters"]
+_RawConfigValue: TypeAlias = (
+    str
+    | bool
+    | int
+    | float
+    | Path
+    | ParseResult
+    | TextIOBase
+    | Enum
+    | Sequence[str]
+    | Sequence[StrictTypes]
+    | Sequence[OpenAPIScope]
+    | Sequence[tuple[str, str]]
+    | Mapping[str, str]
+    | Mapping[str, str | list[str]]
+)
 
 
 def _validate_http_key_value_options(
@@ -516,19 +532,26 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
             setattr(self, field_name, getattr(parsed_args, field_name))
 
 
-def _explicit_config_args(args: Namespace) -> dict[str, Any]:
+def _explicit_config_args(args: Namespace) -> dict[str, _RawConfigValue]:
     """Return command-line values that explicitly target Config fields."""
     return {field: value for field in Config.get_fields() if (value := getattr(args, field, None)) is not None}
 
 
 def _apply_preset(
     config: Config,
-    pyproject_config: Mapping[str, Any],
-    cli_config_args: Mapping[str, Any],
+    pyproject_config: Mapping[str, _RawConfigValue],
+    cli_config_args: Mapping[str, _RawConfigValue],
 ) -> None:
     """Apply the selected preset to the final CLI/pyproject config."""
     preset_from_cli = "preset" in cli_config_args
-    preset_name = cli_config_args.get("preset") if preset_from_cli else config.preset
+    if preset_from_cli:
+        preset_value = cli_config_args["preset"]
+        if not isinstance(preset_value, str):  # pragma: no cover
+            msg = f"--preset must be a string, got {preset_value!r}"
+            raise Error(msg)
+        preset_name = preset_value
+    else:
+        preset_name = config.preset
     if preset_name is None:
         return
 
