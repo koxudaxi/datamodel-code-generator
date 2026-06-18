@@ -315,7 +315,7 @@ def render_presets_markdown() -> str:
 
 def render_presets(format_: PresetFormat) -> str:
     """Render presets in the requested format."""
-    rendered: str
+    rendered = ""
     match format_:
         case "json":
             rendered = render_presets_json() + "\n"
