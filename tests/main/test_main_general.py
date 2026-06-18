@@ -197,7 +197,7 @@ def test_standard_preset_uses_literal_for_single_value_enum(output_file: Path) -
         input_path=JSON_SCHEMA_DATA_PATH / "enum_literal_typed_dict.json",
         output_path=output_file,
         input_file_type="jsonschema",
-        extra_args=["--preset", "standard-20260617", "--target-python-version", "3.12"],
+        extra_args=["--preset", "standard-20260617", "--target-python-version", "3.10"],
         assert_func=assert_file_content,
         expected_file="standard_preset_enum_literal_one.py",
     )

@@ -4,13 +4,13 @@
 
 from __future__ import annotations
 
-from enum import StrEnum
+from enum import Enum
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class Status(StrEnum):
+class Status(Enum):
     active = 'active'
     inactive = 'inactive'
     pending = 'pending'
