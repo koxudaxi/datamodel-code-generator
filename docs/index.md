@@ -170,7 +170,7 @@ class Pet(BaseModel):
     name: Annotated[str, Field(description="The pet's name")]
     species: Species
     age: Annotated[int | None, Field(description='Age in years', ge=0)] = None
-    vaccinated: bool | None = False
+    vaccinated: bool = False
 ```
 
 🎉 That's it! Your schema is now a fully-typed Python model.

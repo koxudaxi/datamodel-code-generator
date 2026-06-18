@@ -4,13 +4,14 @@
     "name": "standard-20260617",
     "option_groups": [
       {
-        "description": "Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, and inline root wrappers.",
+        "description": "Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, inline root wrappers, and schema-accurate nullability.",
         "options": [
           "--use-standard-collections",
           "--use-union-operator",
           "--use-annotated",
           "--enum-field-as-literal one",
-          "--collapse-root-models"
+          "--collapse-root-models",
+          "--strict-nullable"
         ],
         "title": "All output model types"
       },

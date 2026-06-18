@@ -189,10 +189,11 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
                     use_annotated=True,
                     enum_field_as_literal=LiteralType.One,
                     collapse_root_models=True,
+                    strict_nullable=True,
                 ),
                 description=(
                     "Use built-in collection syntax, PEP 604 unions, Annotated constraints, "
-                    "single-value enum Literals, and inline root wrappers."
+                    "single-value enum Literals, inline root wrappers, and schema-accurate nullability."
                 ),
             ),
             PresetOptionGroup(
