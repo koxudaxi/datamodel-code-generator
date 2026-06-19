@@ -41,45 +41,6 @@ in another Python file to a different output type.
 
 ---
 
-## 📖 Documentation
-
-**👉 [datamodel-code-generator.koxudaxi.dev](https://datamodel-code-generator.koxudaxi.dev)**
-
-- 🖥️ [CLI Reference](https://datamodel-code-generator.koxudaxi.dev/cli-reference/) - All command-line options
-- 🧰 [Presets](https://datamodel-code-generator.koxudaxi.dev/presets/) - Recommended option bundles for modern output
-- 🧪 [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/) - Try generation in your browser
-- ⚙️ [pyproject.toml](https://datamodel-code-generator.koxudaxi.dev/pyproject_toml/) - Configuration file
-- 🔄 [CI/CD Integration](https://datamodel-code-generator.koxudaxi.dev/ci-cd/) - GitHub Actions, pre-commit hooks
-- ✅ [Conformance Dashboard](https://datamodel-code-generator.koxudaxi.dev/conformance/) - External corpus coverage signals
-- 🚀 [One-liner Usage](https://datamodel-code-generator.koxudaxi.dev/oneliner/) - uvx, pipx, clipboard integration
-- ❓ [FAQ](https://datamodel-code-generator.koxudaxi.dev/faq/) - Common questions
-
----
-
-## Coding agent skill
-
-This repository includes an experimental Agent Skill that teaches compatible coding agents to run `datamodel-codegen` when generating Python models from OpenAPI, AsyncAPI, JSON Schema, GraphQL, JSON/YAML/CSV sample data, MCP tool schemas, Protocol Buffers, XML Schema, Apache Avro, or existing Python model objects.
-
-See [Coding Agent Skill](docs/coding-agent-skill.md) for detailed guidance and troubleshooting.
-
-Install the directory for your agent:
-
-```bash
-# Codex, project-local
-mkdir -p .agents/skills
-cp -R skills/datamodel-code-generator .agents/skills/datamodel-code-generator
-
-# Claude Code, project-local
-mkdir -p .claude/skills
-cp -R skills/datamodel-code-generator .claude/skills/datamodel-code-generator
-```
-
-For a personal install, copy the same directory to `$HOME/.agents/skills/datamodel-code-generator/` for Codex or `~/.claude/skills/datamodel-code-generator/` for Claude Code.
-
-Check your agent's current documentation for exact search paths.
-
----
-
 ## 📦 Installation
 
 Recommended for standalone CLI use:
@@ -267,6 +228,21 @@ class Pet(BaseModel):
 
 ---
 
+## 📖 Documentation
+
+**👉 [datamodel-code-generator.koxudaxi.dev](https://datamodel-code-generator.koxudaxi.dev)**
+
+- 🧰 [Presets](https://datamodel-code-generator.koxudaxi.dev/presets/) - Recommended option bundles for modern output
+- 🖥️ [CLI Reference](https://datamodel-code-generator.koxudaxi.dev/cli-reference/) - All command-line options
+- 🧪 [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/) - Try generation in your browser
+- ⚙️ [pyproject.toml](https://datamodel-code-generator.koxudaxi.dev/pyproject_toml/) - Configuration file
+- 🔄 [CI/CD Integration](https://datamodel-code-generator.koxudaxi.dev/ci-cd/) - GitHub Actions, pre-commit hooks
+- ✅ [Conformance Dashboard](https://datamodel-code-generator.koxudaxi.dev/conformance/) - External corpus coverage signals
+- 🚀 [One-liner Usage](https://datamodel-code-generator.koxudaxi.dev/oneliner/) - uvx, pipx, clipboard integration
+- ❓ [FAQ](https://datamodel-code-generator.koxudaxi.dev/faq/) - Common questions
+
+---
+
 ## 📥 Supported Input
 
 - OpenAPI 3 (YAML/JSON)
@@ -281,12 +257,6 @@ class Pet(BaseModel):
 - Python types (Pydantic, dataclass, TypedDict) via `--input-model`
 - Python dictionary
 
-## ✅ Conformance Signals
-
-CI exercises datamodel-code-generator against pinned external corpora for XML Schema, JSON Schema, AsyncAPI, Apache
-Avro, and Protocol Buffers. See the [Conformance Dashboard](https://datamodel-code-generator.koxudaxi.dev/conformance/)
-for the generated summary of runner scripts, tox environments, CI jobs, expected corpus counts, and upstream sources.
-
 ## 📤 Supported Output
 
 - [pydantic v2](https://docs.pydantic.dev/) BaseModel
@@ -294,6 +264,12 @@ for the generated summary of runner scripts, tox environments, CI jobs, expected
 - [dataclasses](https://docs.python.org/3/library/dataclasses.html)
 - [TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict)
 - [msgspec](https://github.com/jcrist/msgspec) Struct
+
+## ✅ Conformance Signals
+
+CI exercises datamodel-code-generator against pinned external corpora for XML Schema, JSON Schema, AsyncAPI, Apache
+Avro, and Protocol Buffers. See the [Conformance Dashboard](https://datamodel-code-generator.koxudaxi.dev/conformance/)
+for the generated summary of runner scripts, tox environments, CI jobs, expected corpus counts, and upstream sources.
 
 ---
 
@@ -345,6 +321,30 @@ Validate generated models in your CI pipeline:
 ```
 
 See [CI/CD Integration](https://datamodel-code-generator.koxudaxi.dev/ci-cd/) for more options.
+
+---
+
+## Coding agent skill
+
+This repository includes an experimental Agent Skill that teaches compatible coding agents to run `datamodel-codegen` when generating Python models from OpenAPI, AsyncAPI, JSON Schema, GraphQL, JSON/YAML/CSV sample data, MCP tool schemas, Protocol Buffers, XML Schema, Apache Avro, or existing Python model objects.
+
+See [Coding Agent Skill](docs/coding-agent-skill.md) for detailed guidance and troubleshooting.
+
+Install the directory for your agent:
+
+```bash
+# Codex, project-local
+mkdir -p .agents/skills
+cp -R skills/datamodel-code-generator .agents/skills/datamodel-code-generator
+
+# Claude Code, project-local
+mkdir -p .claude/skills
+cp -R skills/datamodel-code-generator .claude/skills/datamodel-code-generator
+```
+
+For a personal install, copy the same directory to `$HOME/.agents/skills/datamodel-code-generator/` for Codex or `~/.claude/skills/datamodel-code-generator/` for Claude Code.
+
+Check your agent's current documentation for exact search paths.
 
 ---
 
