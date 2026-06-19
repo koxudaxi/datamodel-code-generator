@@ -523,11 +523,6 @@ def get_preset_infos() -> tuple[PresetInfo, ...]:
     return _PRESET_INFOS
 
 
-def get_preset_target_python_version(preset: PresetName | str) -> PythonVersion:
-    """Return the target Python version encoded in a preset name."""
-    return _get_preset_info(_coerce_preset_name(preset)).target_python_version
-
-
 def _preset_name_sort_key(name: str) -> tuple[str, str]:
     prefix, separator, version = name.rpartition("-")
     if separator and version.isdecimal():
@@ -829,13 +824,6 @@ def render_presets(format_: PresetFormat) -> str:
             msg = f"Unsupported preset docs format: {format_!r}"
             raise PresetError(msg)
     return rendered
-
-
-def resolve_preset(preset: PresetName | str, context: PresetContext) -> tuple[PresetConfigItem, ...]:
-    """Resolve a preset into config updates for the given context."""
-    preset_name = _coerce_preset_name(preset)
-    info = _get_preset_info(preset_name)
-    return _resolve_preset_info_for_context(info, context)
 
 
 def resolve_preset_config_updates(
