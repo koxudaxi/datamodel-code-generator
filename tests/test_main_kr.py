@@ -827,27 +827,22 @@ def test_generate_pyproject_config_with_enum_option(capsys: pytest.CaptureFixtur
     )
 
 
-@pytest.mark.allow_direct_assert
-def test_generate_pyproject_config_escapes_toml_strings() -> None:
-    """Test --generate-pyproject-config escapes TOML basic strings."""
-    try:
-        import tomllib
-    except ModuleNotFoundError:  # pragma: no cover
-        import tomli as tomllib  # type: ignore[no-redef]
-
-    custom_header = 'say "hi" on C:\\tmp\nnext'
-    http_headers = ['Authorization: Bearer "abc"', "X-Path: C:\\tmp"]
-    output = generate_pyproject_config(
-        Namespace(
-            custom_file_header=custom_header,
-            http_headers=http_headers,
-        )
+def test_generate_pyproject_config_escapes_toml_strings(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-pyproject-config escapes special characters in TOML basic strings."""
+    run_main_with_args(
+        [
+            "--generate-pyproject-config",
+            "--input",
+            "schema.yaml",
+            "--custom-file-header",
+            'say "hi" on C:\\tmp\nnext',
+            "--http-headers",
+            'Authorization: Bearer "abc"',
+            "X-Path: C:\\tmp",
+        ],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH / "escapes_toml_strings.txt",
     )
-
-    config = tomllib.loads(output)["tool"]["datamodel-codegen"]
-
-    assert config["custom-file-header"] == custom_header
-    assert config["http-headers"] == http_headers
 
 
 EXPECTED_GENERATE_CLI_COMMAND_PATH = EXPECTED_MAIN_KR_PATH / "generate_cli_command"
