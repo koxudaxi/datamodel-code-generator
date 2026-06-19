@@ -567,36 +567,30 @@ def _apply_preset(
     from datamodel_code_generator.preset import (  # noqa: PLC0415
         PresetContext,
         PresetError,
-        get_preset_target_python_version,
-        resolve_preset,
+        resolve_preset_config_updates,
     )
 
     try:
-        preset_target_python_version = get_preset_target_python_version(preset_name)
+        preset_config = resolve_preset_config_updates(
+            preset_name,
+            context=PresetContext(
+                input_file_type=config.input_file_type,
+                output_model_type=config.output_model_type,
+                target_python_version=config.target_python_version,
+            ),
+            use_annotated=config.use_annotated,
+            explicit_fields=explicit_fields,
+        )
     except PresetError as e:
         raise Error(str(e)) from e
 
-    target_python_version_is_explicit = "target_python_version" in cli_config_args or (
-        not preset_from_cli and "target_python_version" in pyproject_config
-    )
-    if not target_python_version_is_explicit:
-        config.target_python_version = preset_target_python_version
+    if preset_config.target_python_version is not None:
+        config.target_python_version = preset_config.target_python_version
 
-    context = PresetContext(
-        input_file_type=config.input_file_type,
-        output_model_type=config.output_model_type,
-        target_python_version=config.target_python_version,
-    )
-    try:
-        preset_config_items = resolve_preset(preset_name, context)
-    except PresetError as e:
-        raise Error(str(e)) from e
+    for item in preset_config.items:
+        setattr(config, item.field_name, item.applied_value)
 
-    for item in preset_config_items:
-        if item.field_name not in explicit_fields:
-            setattr(config, item.field_name, item.applied_value)
-
-    if config.use_annotated:
+    if preset_config.force_field_constraints:
         config.field_constraints = True
 
 

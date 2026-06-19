@@ -146,6 +146,15 @@ class PresetConfigItem:
         return self.value
 
 
+@dataclass(frozen=True, slots=True)
+class ResolvedPresetConfig:
+    """Typed config updates resolved for a concrete generation context."""
+
+    target_python_version: PythonVersion | None
+    items: tuple[PresetConfigItem, ...]
+    force_field_constraints: bool
+
+
 class PresetConfig(BaseGenerateConfig):
     """Typed immutable config updates supplied by a preset group."""
 
@@ -826,6 +835,56 @@ def resolve_preset(preset: PresetName | str, context: PresetContext) -> tuple[Pr
     """Resolve a preset into config updates for the given context."""
     preset_name = _coerce_preset_name(preset)
     info = _get_preset_info(preset_name)
+    return _resolve_preset_info_for_context(info, context)
+
+
+def resolve_preset_config_updates(
+    preset: PresetName | str,
+    *,
+    context: PresetContext,
+    use_annotated: bool,
+    explicit_fields: set[str],
+) -> ResolvedPresetConfig:
+    """Resolve preset updates while preserving caller-explicit config fields."""
+    preset_name = _coerce_preset_name(preset)
+    info = _get_preset_info(preset_name)
+    explicit_field_names = set(explicit_fields)
+    explicit_field_names.discard("preset")
+
+    target_python_version_update = None
+    effective_target_python_version = context.target_python_version
+    if "target_python_version" not in explicit_field_names:
+        target_python_version_update = info.target_python_version
+        effective_target_python_version = info.target_python_version
+
+    effective_context = PresetContext(
+        input_file_type=context.input_file_type,
+        output_model_type=context.output_model_type,
+        target_python_version=effective_target_python_version,
+    )
+    items = tuple(
+        item
+        for item in _resolve_preset_info_for_context(info, effective_context)
+        if item.field_name not in explicit_field_names
+    )
+    return ResolvedPresetConfig(
+        target_python_version=target_python_version_update,
+        items=items,
+        force_field_constraints=_resolve_force_field_constraints(use_annotated=use_annotated, items=items),
+    )
+
+
+def _resolve_force_field_constraints(*, use_annotated: bool, items: tuple[PresetConfigItem, ...]) -> bool:
+    for item in items:
+        if item.field_name != "use_annotated":
+            continue
+        value = item.applied_value
+        if isinstance(value, bool):  # pragma: no branch
+            return value
+    return use_annotated
+
+
+def _resolve_preset_info_for_context(info: PresetInfo, context: PresetContext) -> tuple[PresetConfigItem, ...]:
     if info.target_python_version is not context.target_python_version:
         msg = (
             f"--preset {info.name.value} targets Python {info.target_python_version.value}; "

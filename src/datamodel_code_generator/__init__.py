@@ -106,39 +106,33 @@ def _apply_generate_config_preset(config: GenerateConfig) -> GenerateConfig:
         PresetConfigValue,
         PresetContext,
         PresetError,
-        get_preset_target_python_version,
-        resolve_preset,
+        resolve_preset_config_updates,
     )
 
-    explicit_fields = set(config.model_fields_set)
-    explicit_fields.discard("preset")
-
     try:
-        preset_target_python_version = get_preset_target_python_version(preset_name)
+        preset_config = resolve_preset_config_updates(
+            preset_name,
+            context=PresetContext(
+                input_file_type=config.input_file_type,
+                output_model_type=config.output_model_type,
+                target_python_version=config.target_python_version,
+            ),
+            use_annotated=config.use_annotated,
+            explicit_fields=config.model_fields_set,
+        )
     except PresetError as e:
         raise Error(str(e)) from e
 
-    if "target_python_version" not in explicit_fields:
-        config = config.model_copy(update={"target_python_version": preset_target_python_version})
-
-    context = PresetContext(
-        input_file_type=config.input_file_type,
-        output_model_type=config.output_model_type,
-        target_python_version=config.target_python_version,
-    )
-    try:
-        preset_config_items = resolve_preset(preset_name, context)
-    except PresetError as e:
-        raise Error(str(e)) from e
+    if preset_config.target_python_version is not None:
+        config = config.model_copy(update={"target_python_version": preset_config.target_python_version})
 
     updates: dict[str, PresetConfigValue] = {}
-    for item in preset_config_items:
-        if item.field_name not in explicit_fields:
-            updates[item.field_name] = item.applied_value
+    for item in preset_config.items:
+        updates[item.field_name] = item.applied_value
 
     if updates:
         config = config.model_copy(update=updates)
-    if config.use_annotated:
+    if preset_config.force_field_constraints:
         return config.model_copy(update={"field_constraints": True})
     return config
 
