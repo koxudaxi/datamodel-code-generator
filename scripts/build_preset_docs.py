@@ -314,7 +314,9 @@ def _render_readme_quick_start(
     schema = QUICK_START_SCHEMA_PATH.read_text(encoding="utf-8").rstrip()
     command = _render_quick_start_command(preset_name)
     practical_command = _render_quick_start_command(practical_preset_name)
-    return f"""```bash
+    return f"""**Command**
+
+```bash
 {command}
 ```
 
@@ -323,15 +325,6 @@ This quick start uses `{preset_name}`, the recommended immutable preset for mode
 See [Presets]({README_PRESETS_LINK}), [`--preset`]({README_PRESET_OPTION_LINK}),
 [`--input-file-type`]({README_INPUT_FILE_TYPE_OPTION_LINK}), and
 [`--output-model-type`]({README_OUTPUT_MODEL_TYPE_OPTION_LINK}) for details.
-
-<details>
-<summary>📄 {QUICK_START_SCHEMA_NAME} (input)</summary>
-
-```json
-{schema}
-```
-
-</details>
 
 <details>
 <summary>🧰 {practical_preset_name} variant</summary>
@@ -348,14 +341,18 @@ Use `{practical_preset_name}` when you also want schema-authored names, model re
 
 </details>
 
-<details>
-<summary>🐍 {QUICK_START_OUTPUT_NAME} (output)</summary>
+**Input (`{QUICK_START_SCHEMA_NAME}`)**
+
+```json
+{schema}
+```
+
+**Output (`{QUICK_START_OUTPUT_NAME}`)**
 
 ```python
 {model_output}
 ```
-
-</details>"""
+"""
 
 
 def _render_docs_index_quick_start(
@@ -367,13 +364,7 @@ def _render_docs_index_quick_start(
     schema = QUICK_START_SCHEMA_PATH.read_text(encoding="utf-8").rstrip()
     command = _render_quick_start_command(preset_name)
     practical_command = _render_quick_start_command(practical_preset_name)
-    return f"""### 1️⃣ Create a schema file
-
-```json title="{QUICK_START_SCHEMA_NAME}"
-{schema}
-```
-
-### 2️⃣ Run the generator
+    return f"""### Command
 
 ```bash
 {command}
@@ -400,7 +391,13 @@ Use `{practical_preset_name}` when you also want schema-authored names, model re
 
 </details>
 
-### 3️⃣ Use your models
+### Input
+
+```json title="{QUICK_START_SCHEMA_NAME}"
+{schema}
+```
+
+### Output
 
 ```python title="{QUICK_START_OUTPUT_NAME}"
 {model_output}
