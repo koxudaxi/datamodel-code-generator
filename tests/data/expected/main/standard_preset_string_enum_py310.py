@@ -7,6 +7,6 @@ from __future__ import annotations
 from enum import Enum
 
 
-class Model(Enum):
+class Model(str, Enum):
     a = 'A'
     b = 'B'

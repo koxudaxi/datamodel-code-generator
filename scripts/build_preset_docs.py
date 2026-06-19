@@ -17,7 +17,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, cast
+from typing import Literal
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS_PATH = ROOT / "docs" / "presets.md"
@@ -52,31 +52,51 @@ class GeneratedDoc:
 
 def build_docs(*, check: bool) -> int:
     """Generate or check preset documentation outputs."""
-    docs = _generate_docs()
+    preset_names_doc = GeneratedDoc(PRESET_NAMES_PATH, _render_preset_names_module())
+    if check:
+        if not _doc_is_current(preset_names_doc):
+            _print_out_of_date((preset_names_doc.path,))
+            return 1
+    else:
+        preset_names_doc.path.write_text(preset_names_doc.content, encoding="utf-8")
+
+    docs = _generate_docs(preset_names_doc)
     if not check:
         for doc in docs:
             doc.path.write_text(doc.content, encoding="utf-8")
         return 0
 
-    out_of_date = [
-        doc.path for doc in docs if not doc.path.exists() or doc.path.read_text(encoding="utf-8") != doc.content
-    ]
+    out_of_date = [doc.path for doc in docs if not _doc_is_current(doc)]
     if not out_of_date:
         return 0
 
-    for path in out_of_date:
-        print(f"Preset docs are out of date: {path.relative_to(ROOT)}", file=sys.stderr)
-    print("Run 'python scripts/build_preset_docs.py' to update.", file=sys.stderr)
+    _print_out_of_date(tuple(out_of_date))
     return 1
 
 
-def _generate_docs() -> tuple[GeneratedDoc, ...]:
-    standard_preset_name = _get_latest_preset_name_by_prefix("standard")
-    practical_preset_name = _get_latest_preset_name_by_prefix("practical")
+def _doc_is_current(doc: GeneratedDoc) -> bool:
+    return doc.path.exists() and doc.path.read_text(encoding="utf-8") == doc.content
+
+
+def _print_out_of_date(paths: tuple[Path, ...]) -> None:
+    for path in paths:
+        print(f"Preset docs are out of date: {path.relative_to(ROOT)}", file=sys.stderr)
+    print("Run 'python scripts/build_preset_docs.py' to update.", file=sys.stderr)
+
+
+def _generate_docs(preset_names_doc: GeneratedDoc) -> tuple[GeneratedDoc, ...]:
+    standard_preset_name = _get_latest_preset_name_by_prefix(
+        "standard",
+        target_python_version=QUICK_START_TARGET_PYTHON_VERSION,
+    )
+    practical_preset_name = _get_latest_preset_name_by_prefix(
+        "practical",
+        target_python_version=QUICK_START_TARGET_PYTHON_VERSION,
+    )
     standard_model_output = _generate_quick_start_model(standard_preset_name)
     practical_model_output = _generate_quick_start_model(practical_preset_name)
     return (
-        GeneratedDoc(PRESET_NAMES_PATH, _render_preset_names_module()),
+        preset_names_doc,
         GeneratedDoc(DOCS_PATH, render_presets("markdown")),
         GeneratedDoc(
             README_PATH,
@@ -105,8 +125,9 @@ def _generate_docs() -> tuple[GeneratedDoc, ...]:
     )
 
 
-def _get_latest_preset_name_by_prefix(prefix: str) -> str:
-    prefix_with_separator = f"{prefix}-"
+def _get_latest_preset_name_by_prefix(prefix: str, *, target_python_version: str) -> str:
+    target = target_python_version.replace(".", "")
+    prefix_with_separator = f"{prefix}-py{target}-"
     matching_names = tuple(name for name in get_preset_names() if name.startswith(prefix_with_separator))
     if not matching_names:  # pragma: no cover
         msg = f"No built-in preset starts with {prefix_with_separator!r}"
@@ -398,7 +419,12 @@ def main() -> int:
         print("Error: --check cannot be used with --format", file=sys.stderr)
         return 2
     if args.format:
-        print(render_presets(cast("PresetDocsFormat", args.format)), end="")
+        match args.format:
+            case "markdown" | "json":
+                print(render_presets(args.format), end="")
+            case _:  # pragma: no cover
+                print(f"Error: unsupported format {args.format!r}", file=sys.stderr)
+                return 2
         return 0
     return build_docs(check=args.check)
 

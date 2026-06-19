@@ -137,11 +137,11 @@ datamodel-codegen \
   --input-file-type jsonschema \
   --output-model-type pydantic_v2.BaseModel \
   --target-python-version 3.12 \
-  --preset standard-20260619 \
+  --preset standard-py312-20260619 \
   --output model.py
 ```
 
-This quick start uses `standard-20260619`, the recommended immutable preset for modern Python output.
+This quick start uses `standard-py312-20260619`, the recommended immutable preset for modern Python output.
 
 ### 3️⃣ Use your models
 
@@ -176,9 +176,9 @@ class Pet(BaseModel):
 ```
 
 <details>
-<summary>🧰 Use practical-20260619</summary>
+<summary>🧰 Use practical-py312-20260619</summary>
 
-Use `practical-20260619` when you also want schema-authored names, model reuse, and generated documentation.
+Use `practical-py312-20260619` when you also want schema-authored names, model reuse, and generated documentation.
 
 ```bash
 datamodel-codegen \
@@ -186,7 +186,7 @@ datamodel-codegen \
   --input-file-type jsonschema \
   --output-model-type pydantic_v2.BaseModel \
   --target-python-version 3.12 \
-  --preset practical-20260619 \
+  --preset practical-py312-20260619 \
   --output model.py
 ```
 
@@ -215,14 +215,10 @@ class Pet(BaseModel):
         populate_by_name=True,
     )
     name: str
-    """
-    The pet's name
-    """
+    """The pet's name"""
     species: Species
     age: Annotated[int | None, Field(ge=0)] = None
-    """
-    Age in years
-    """
+    """Age in years"""
     vaccinated: bool = False
 ```
 

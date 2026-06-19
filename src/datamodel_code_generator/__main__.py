@@ -583,7 +583,7 @@ def _apply_preset(
 
     for item in preset_config_items:
         if item.field_name not in explicit_fields:
-            setattr(config, item.field_name, item.value)
+            setattr(config, item.field_name, item.applied_value)
 
     if config.use_annotated:
         config.field_constraints = True

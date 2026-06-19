@@ -10,7 +10,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class Status(Enum):
+class Status(str, Enum):
     active = 'active'
     inactive = 'inactive'
     pending = 'pending'

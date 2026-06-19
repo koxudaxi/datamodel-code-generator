@@ -410,7 +410,7 @@ is written to stdout.
 
 Apply an immutable built-in option preset.
 
-The `standard-20260619` preset enables the recommended modern Python output style for
+The `standard-py312-20260619` preset enables the recommended modern Python output style for
 new projects. Presets require an explicit `--target-python-version` so generated
 syntax and backports are pinned.
 
@@ -421,7 +421,7 @@ syntax and backports are pinned.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --preset standard-20260619 --target-python-version 3.12 # (1)!
+    datamodel-codegen --input schema.json --preset standard-py312-20260619 --target-python-version 3.12 # (1)!
     ```
 
     1. :material-arrow-left: `--preset` - the option documented here

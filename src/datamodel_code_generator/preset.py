@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from argparse import Namespace
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Literal, TypeAlias
@@ -12,17 +13,50 @@ from typing_extensions import TypedDict
 from datamodel_code_generator._registry_render import _render_registry_json
 from datamodel_code_generator.cli_options import CLI_OPTION_META
 from datamodel_code_generator.config import BaseGenerateConfig
-from datamodel_code_generator.enums import DataModelType, InputFileType, NamingStrategy
+from datamodel_code_generator.enums import (
+    AllOfClassHierarchy,
+    AllOfMergeMode,
+    CollapseRootModelsNameStrategy,
+    DataModelType,
+    ExtraFields,
+    FieldTypeCollisionStrategy,
+    InputFileType,
+    NamingStrategy,
+    ReadOnlyWriteOnlyModelType,
+    ReuseScope,
+    TargetPydanticVersion,
+    UnionMode,
+    VersionMode,
+)
+from datamodel_code_generator.format import DateClassType, DatetimeClassType, PythonVersion
 from datamodel_code_generator.parser import LiteralType
 
 if TYPE_CHECKING:
     from typing_extensions import Unpack
 
+    from datamodel_code_generator.__main__ import TomlValue
     from datamodel_code_generator._types.generate_config_dict import BaseGenerateConfig as BaseGenerateConfigDict
-    from datamodel_code_generator.format import PythonVersion
 
 PresetFormat = Literal["json", "markdown"]
-PresetConfigValue: TypeAlias = bool | LiteralType | NamingStrategy
+PresetEnumConfigValue: TypeAlias = (
+    LiteralType
+    | NamingStrategy
+    | TargetPydanticVersion
+    | ReuseScope
+    | AllOfMergeMode
+    | AllOfClassHierarchy
+    | CollapseRootModelsNameStrategy
+    | UnionMode
+    | ReadOnlyWriteOnlyModelType
+    | FieldTypeCollisionStrategy
+    | VersionMode
+    | DateClassType
+    | DatetimeClassType
+    | ExtraFields
+)
+PresetConfigValue: TypeAlias = bool | PresetEnumConfigValue
+PresetAppliedConfigValue: TypeAlias = bool | PresetEnumConfigValue | str
+PresetRawConfigValue: TypeAlias = PresetConfigValue | str | None
 
 
 class _PresetOptionGroupDict(TypedDict):
@@ -31,12 +65,26 @@ class _PresetOptionGroupDict(TypedDict):
     description: str
 
 
+class _PresetCopyableConfigContextDict(TypedDict):
+    input_file_type: str
+    output_model_type: str
+    target_python_version: str
+
+
+class _PresetCopyableConfigDict(TypedDict):
+    context: _PresetCopyableConfigContextDict
+    pyproject_toml: str
+    cli: str
+
+
 class _PresetInfoDict(TypedDict):
     name: str
     summary: str
     description: str
     requires_target_python_version: bool
+    target_python_version: str
     option_groups: list[_PresetOptionGroupDict]
+    copyable_config: _PresetCopyableConfigDict
 
 
 class PresetError(Exception):
@@ -46,8 +94,16 @@ class PresetError(Exception):
 class PresetName(str, Enum):
     """Available immutable preset names."""
 
-    Standard20260619 = "standard-20260619"
-    Practical20260619 = "practical-20260619"
+    StandardPy31020260619 = "standard-py310-20260619"
+    StandardPy31120260619 = "standard-py311-20260619"
+    StandardPy31220260619 = "standard-py312-20260619"
+    StandardPy31320260619 = "standard-py313-20260619"
+    StandardPy31420260619 = "standard-py314-20260619"
+    PracticalPy31020260619 = "practical-py310-20260619"
+    PracticalPy31120260619 = "practical-py311-20260619"
+    PracticalPy31220260619 = "practical-py312-20260619"
+    PracticalPy31320260619 = "practical-py313-20260619"
+    PracticalPy31420260619 = "practical-py314-20260619"
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,6 +123,7 @@ class PresetInfo:
     summary: str
     description: str
     requires_target_python_version: bool
+    target_python_version: PythonVersion
     option_groups: tuple[PresetOptionGroup, ...]
 
 
@@ -76,6 +133,20 @@ class PresetConfigItem:
 
     field_name: str
     value: PresetConfigValue
+
+    @property
+    def applied_value(self) -> PresetAppliedConfigValue:
+        """Return the value to assign to the existing runtime Config object."""
+        if isinstance(self.value, ExtraFields):
+            return self.value.value
+        return self.value
+
+    @property
+    def pyproject_value(self) -> bool | str:
+        """Return the value to render through existing config export helpers."""
+        if isinstance(self.value, Enum):
+            return str(self.value.value)
+        return self.value
 
 
 class PresetConfig(BaseGenerateConfig):
@@ -95,11 +166,8 @@ class PresetConfig(BaseGenerateConfig):
         super().__init__(**values)
 
         items: list[PresetConfigItem] = []
-        for field_name in values:
-            value = getattr(self, field_name)
-            if not isinstance(value, bool | LiteralType | NamingStrategy):  # pragma: no cover
-                msg = f"Preset field {field_name!r} cannot be rendered as a preset CLI option"
-                raise PresetError(msg)
+        for field_name, raw_value in values.items():
+            value = _normalize_preset_config_value(field_name, raw_value, getattr(self, field_name))
             items.append(PresetConfigItem(field_name=field_name, value=value))
 
         self._items = tuple(items)
@@ -153,6 +221,49 @@ def _merge_preset_configs(*configs: PresetConfig) -> tuple[PresetConfigItem, ...
     return tuple(items.values())
 
 
+def _normalize_preset_config_value(
+    field_name: str,
+    raw_value: PresetRawConfigValue,
+    validated_value: PresetRawConfigValue,
+) -> PresetConfigValue:
+    """Normalize BaseGenerateConfig values that keep legacy string API types."""
+    if field_name == "extra_fields":
+        value = raw_value if isinstance(raw_value, ExtraFields) else validated_value
+        if isinstance(value, ExtraFields):
+            return value
+        if isinstance(value, str):
+            try:
+                return ExtraFields(value)
+            except ValueError as exc:  # pragma: no cover
+                msg = f"Unsupported extra_fields preset value: {value!r}"
+                raise PresetError(msg) from exc
+    return _ensure_preset_config_value(field_name, validated_value)
+
+
+def _ensure_preset_config_value(field_name: str, value: PresetRawConfigValue) -> PresetConfigValue:
+    match value:
+        case bool():
+            return value
+        case (
+            LiteralType()
+            | NamingStrategy()
+            | TargetPydanticVersion()
+            | ReuseScope()
+            | AllOfMergeMode()
+            | AllOfClassHierarchy()
+            | CollapseRootModelsNameStrategy()
+            | UnionMode()
+            | ReadOnlyWriteOnlyModelType()
+            | FieldTypeCollisionStrategy()
+            | VersionMode()
+            | DateClassType()
+            | DatetimeClassType()
+        ):
+            return value
+    msg = f"Preset field {field_name!r} cannot be rendered as a preset CLI option"
+    raise PresetError(msg)
+
+
 def _config_item_to_cli_option(item: PresetConfigItem) -> str:
     """Translate a typed config field name to its CLI option spelling."""
     option_name = item.field_name.replace("_", "-")
@@ -162,7 +273,7 @@ def _config_item_to_cli_option(item: PresetConfigItem) -> str:
         raise PresetError(msg)
     if item.value is True:
         return option
-    if isinstance(item.value, LiteralType | NamingStrategy):
+    if isinstance(item.value, Enum):
         return f"{option} {item.value.value}"
 
     negative_option = f"--no-{option_name}"  # pragma: no cover
@@ -180,12 +291,15 @@ _STANDARD_20260619_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
             use_union_operator=True,
             use_annotated=True,
             enum_field_as_literal=LiteralType.One,
+            use_subclass_enum=True,
             collapse_root_models=True,
             strict_nullable=True,
+            set_default_enum_member=True,
         ),
         description=(
             "Use built-in collection syntax, PEP 604 unions, Annotated constraints, "
-            "single-value enum Literals, inline root wrappers, and schema-accurate nullability."
+            "single-value enum Literals, typed enum subclasses, enum-member defaults, "
+            "inline root wrappers, and schema-accurate nullability."
         ),
     ),
     PresetOptionGroup(
@@ -233,8 +347,7 @@ _STANDARD_20260619_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
     ),
 )
 
-_PRACTICAL_20260619_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
-    *_STANDARD_20260619_OPTION_GROUPS,
+_PRACTICAL_20260619_EXTRA_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
     PresetOptionGroup(
         title="Practical model structure and names",
         config=PresetConfig(
@@ -248,6 +361,20 @@ _PRACTICAL_20260619_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
         ),
     ),
     PresetOptionGroup(
+        title="Practical typing and defaults",
+        config=PresetConfig(
+            use_default_kwarg=True,
+            use_object_type=True,
+            use_tuple_for_fixed_items=True,
+            use_unique_items_as_set=True,
+            use_single_line_docstring=True,
+        ),
+        description=(
+            "Render defaults explicitly, prefer object for unconstrained values, preserve fixed and unique arrays, "
+            "and keep short docstrings concise."
+        ),
+    ),
+    PresetOptionGroup(
         title="Schema documentation",
         config=PresetConfig(
             use_schema_description=True,
@@ -258,29 +385,89 @@ _PRACTICAL_20260619_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
     ),
 )
 
+_STANDARD_PRESET_NAMES_BY_TARGET: dict[PythonVersion, PresetName] = {
+    PythonVersion.PY_310: PresetName.StandardPy31020260619,
+    PythonVersion.PY_311: PresetName.StandardPy31120260619,
+    PythonVersion.PY_312: PresetName.StandardPy31220260619,
+    PythonVersion.PY_313: PresetName.StandardPy31320260619,
+    PythonVersion.PY_314: PresetName.StandardPy31420260619,
+}
+_PRACTICAL_PRESET_NAMES_BY_TARGET: dict[PythonVersion, PresetName] = {
+    PythonVersion.PY_310: PresetName.PracticalPy31020260619,
+    PythonVersion.PY_311: PresetName.PracticalPy31120260619,
+    PythonVersion.PY_312: PresetName.PracticalPy31220260619,
+    PythonVersion.PY_313: PresetName.PracticalPy31320260619,
+    PythonVersion.PY_314: PresetName.PracticalPy31420260619,
+}
+
+
+def _standard_option_groups_for_target(target_python_version: PythonVersion) -> tuple[PresetOptionGroup, ...]:
+    return tuple(
+        group
+        for group in _STANDARD_20260619_OPTION_GROUPS
+        if not group.requires_python_strenum or target_python_version.has_strenum
+    )
+
+
+def _practical_option_groups_for_target(target_python_version: PythonVersion) -> tuple[PresetOptionGroup, ...]:
+    return (*_standard_option_groups_for_target(target_python_version), *_PRACTICAL_20260619_EXTRA_OPTION_GROUPS)
+
+
+def _build_preset_info(
+    *,
+    name: PresetName,
+    target_python_version: PythonVersion,
+    summary: str,
+    description: str,
+    option_groups: tuple[PresetOptionGroup, ...],
+) -> PresetInfo:
+    return PresetInfo(
+        name=name,
+        summary=summary,
+        description=description,
+        requires_target_python_version=True,
+        target_python_version=target_python_version,
+        option_groups=option_groups,
+    )
+
+
 _PRESET_INFOS: tuple[PresetInfo, ...] = (
-    PresetInfo(
-        name=PresetName.Standard20260619,
-        summary="Recommended modern Python output for new projects.",
-        description=(
-            "This immutable preset enables the project-recommended Python output style for new code. "
-            "It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names."
-        ),
-        requires_target_python_version=True,
-        option_groups=_STANDARD_20260619_OPTION_GROUPS,
+    *(
+        _build_preset_info(
+            name=name,
+            target_python_version=target_python_version,
+            summary=f"Recommended modern Python {target_python_version.value} output for new projects.",
+            description=(
+                "This immutable preset enables the project-recommended Python output style for new code targeting "
+                f"Python {target_python_version.value}. It is output-model aware and keeps stdlib dataclass and "
+                "TypedDict keys compatible with their input names."
+            ),
+            option_groups=_standard_option_groups_for_target(target_python_version),
+        )
+        for target_python_version, name in _STANDARD_PRESET_NAMES_BY_TARGET.items()
     ),
-    PresetInfo(
-        name=PresetName.Practical20260619,
-        summary="Standard output plus practical naming, deduplication, and schema documentation.",
-        description=(
-            "This immutable preset extends `standard-20260619` with options that make generated models easier to "
-            "read and use in real projects. It favors schema-authored names, model reuse, and embedded schema "
-            "documentation over the most conservative output-shape stability."
-        ),
-        requires_target_python_version=True,
-        option_groups=_PRACTICAL_20260619_OPTION_GROUPS,
+    *(
+        _build_preset_info(
+            name=name,
+            target_python_version=target_python_version,
+            summary=(
+                f"Standard Python {target_python_version.value} output plus practical naming, deduplication, "
+                "and schema documentation."
+            ),
+            description=(
+                f"This immutable preset extends `{_STANDARD_PRESET_NAMES_BY_TARGET[target_python_version].value}` "
+                "with options that make generated models easier to read and use in real projects. It favors "
+                "schema-authored names, model reuse, and embedded schema documentation over the most conservative "
+                "output-shape stability."
+            ),
+            option_groups=_practical_option_groups_for_target(target_python_version),
+        )
+        for target_python_version, name in _PRACTICAL_PRESET_NAMES_BY_TARGET.items()
     ),
 )
+
+_COPYABLE_INPUT_FILE_TYPE = InputFileType.JsonSchema
+_COPYABLE_OUTPUT_MODEL_TYPE = DataModelType.PydanticV2BaseModel
 
 
 def _validate_preset_infos(infos: tuple[PresetInfo, ...]) -> None:
@@ -291,6 +478,9 @@ def _validate_preset_infos(infos: tuple[PresetInfo, ...]) -> None:
             msg = f"Preset {info.name.value!r} is defined more than once"
             raise PresetError(msg)
         preset_names.add(info.name)
+        if info.target_python_version.value.replace(".", "") not in info.name.value:  # pragma: no cover
+            msg = f"Preset {info.name.value!r} does not include its Python target in the name"
+            raise PresetError(msg)
 
         output_model_groups: dict[DataModelType, str] = {}
         for group in info.option_groups:
@@ -347,7 +537,9 @@ def preset_info_as_dict(info: PresetInfo) -> _PresetInfoDict:
         summary=info.summary,
         description=info.description,
         requires_target_python_version=info.requires_target_python_version,
+        target_python_version=info.target_python_version.value,
         option_groups=option_groups,
+        copyable_config=_render_copyable_config(info),
     )
 
 
@@ -395,14 +587,14 @@ def render_presets_markdown() -> str:
         "  --input-file-type jsonschema \\",
         "  --output-model-type pydantic_v2.BaseModel \\",
         "  --target-python-version 3.12 \\",
-        "  --preset standard-20260619 \\",
+        "  --preset standard-py312-20260619 \\",
         "  --output model.py",
         "```",
         "",
         (
-            "Use `standard-20260619` for the project-recommended modern Python baseline. "
-            "Use `practical-20260619` when you also want schema-authored names, model reuse, and schema descriptions "
-            "embedded in the generated code."
+            "Use `standard-py312-20260619` for the project-recommended modern Python 3.12 baseline. "
+            "Use `practical-py312-20260619` when you also want schema-authored names, model reuse, and schema "
+            "descriptions embedded in the generated code."
         ),
         "",
         "## Override Preset Options",
@@ -413,7 +605,7 @@ def render_presets_markdown() -> str:
         "datamodel-codegen \\",
         "  --input schema.json \\",
         "  --target-python-version 3.12 \\",
-        "  --preset standard-20260619 \\",
+        "  --preset standard-py312-20260619 \\",
         "  --no-snake-case-field \\",
         "  --no-use-annotated \\",
         "  --enum-field-as-literal none",
@@ -435,7 +627,7 @@ def render_presets_markdown() -> str:
         "datamodel-codegen \\",
         "  --input schema.json \\",
         "  --target-python-version 3.12 \\",
-        "  --preset standard-20260619 \\",
+        "  --preset standard-py312-20260619 \\",
         "  --extra-fields forbid \\",
         "  --use-title-as-name \\",
         "  --output model.py",
@@ -452,12 +644,12 @@ def render_presets_markdown() -> str:
         "[tool.datamodel-codegen]",
         'output-model-type = "pydantic_v2.BaseModel"',
         'target-python-version = "3.12"',
-        'preset = "standard-20260619"',
+        'preset = "standard-py312-20260619"',
         "",
         "[tool.datamodel-codegen.profiles.api]",
         'input = "schemas/api.json"',
         'output = "src/models/api.py"',
-        'preset = "practical-20260619"',
+        'preset = "practical-py312-20260619"',
         'extra-fields = "forbid"',
         "",
         "[tool.datamodel-codegen.profiles.events]",
@@ -487,7 +679,7 @@ def render_presets_markdown() -> str:
         "  --output model.py \\",
         "  --output-model-type pydantic_v2.BaseModel \\",
         "  --target-python-version 3.12 \\",
-        "  --preset practical-20260619 \\",
+        "  --preset practical-py312-20260619 \\",
         "  --extra-fields forbid \\",
         "  --generate-pyproject-config",
         "```",
@@ -502,7 +694,30 @@ def render_presets_markdown() -> str:
         "",
         "## Built-in Presets",
         "",
+        "### Target Matrix",
+        "",
+        "| Python target | Standard preset | Practical preset |",
+        "|---------------|-----------------|------------------|",
     ]
+    lines.extend(
+        (
+            "| "
+            f"{target_python_version.value} | "
+            f"`{_STANDARD_PRESET_NAMES_BY_TARGET[target_python_version].value}` | "
+            f"`{_PRACTICAL_PRESET_NAMES_BY_TARGET[target_python_version].value}` |"
+        )
+        for target_python_version in PythonVersion
+    )
+    lines.extend((
+        "",
+        (
+            "Each preset name includes its Python target. The same target must also be passed as "
+            "`--target-python-version` or `target-python-version` in `pyproject.toml`."
+        ),
+        "",
+        "### Preset Reference",
+        "",
+    ))
     for info in _PRESET_INFOS:
         target_required = "yes" if info.requires_target_python_version else "no"
         lines.extend((
@@ -513,7 +728,18 @@ def render_presets_markdown() -> str:
             info.description,
             "",
             f"- **Requires explicit target Python version:** {target_required}",
+            f"- **Target Python version:** {info.target_python_version.value}",
             "",
+            "#### Included Options",
+            "",
+            (
+                "These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel output, "
+                f"and Python {info.target_python_version.value}. Replace the input and output paths for your project."
+            ),
+            "",
+        ))
+        lines.extend(_render_copyable_config_markdown(_render_copyable_config(info)))
+        lines.extend((
             "| Scope | Options | Notes |",
             "|-------|---------|-------|",
         ))
@@ -522,6 +748,61 @@ def render_presets_markdown() -> str:
             lines.append(f"| {group.title} | {options} | {group.description} |")
         lines.append("")
     return "\n".join(lines)
+
+
+def _render_copyable_config(info: PresetInfo) -> _PresetCopyableConfigDict:
+    """Render a copyable expanded config through the existing CLI/config exporters."""
+    from datamodel_code_generator.__main__ import generate_cli_command, generate_pyproject_config  # noqa: PLC0415
+
+    config_data = _copyable_config_data(info)
+    return _PresetCopyableConfigDict(
+        context=_PresetCopyableConfigContextDict(
+            input_file_type=_COPYABLE_INPUT_FILE_TYPE.value,
+            output_model_type=_COPYABLE_OUTPUT_MODEL_TYPE.value,
+            target_python_version=info.target_python_version.value,
+        ),
+        pyproject_toml=generate_pyproject_config(Namespace(**config_data)).rstrip(),
+        cli=generate_cli_command(config_data).rstrip(),
+    )
+
+
+def _copyable_config_data(info: PresetInfo) -> dict[str, TomlValue]:
+    context = PresetContext(
+        input_file_type=_COPYABLE_INPUT_FILE_TYPE,
+        output_model_type=_COPYABLE_OUTPUT_MODEL_TYPE,
+        target_python_version=info.target_python_version,
+    )
+    config_data: dict[str, TomlValue] = {
+        "input": "schema.json",
+        "input_file_type": _COPYABLE_INPUT_FILE_TYPE.value,
+        "output": "model.py",
+        "output_model_type": _COPYABLE_OUTPUT_MODEL_TYPE.value,
+        "target_python_version": info.target_python_version.value,
+    }
+    for item in _resolve_preset_info(info, context):
+        config_data[item.field_name] = item.pyproject_value
+    return dict(sorted(config_data.items()))
+
+
+def _render_copyable_config_markdown(copyable_config: _PresetCopyableConfigDict) -> list[str]:
+    return [
+        '=== "pyproject.toml"',
+        "",
+        "    ```toml",
+        *_indent_markdown_code(copyable_config["pyproject_toml"]),
+        "    ```",
+        "",
+        '=== "CLI"',
+        "",
+        "    ```bash",
+        *_indent_markdown_code(copyable_config["cli"]),
+        "    ```",
+        "",
+    ]
+
+
+def _indent_markdown_code(text: str) -> list[str]:
+    return [f"    {line}" for line in text.splitlines()]
 
 
 def render_presets(format_: PresetFormat) -> str:
@@ -547,7 +828,14 @@ def resolve_preset(preset: PresetName | str, context: PresetContext) -> tuple[Pr
         msg = f"Unknown preset: {preset!r}. Available presets: {names}"
         raise PresetError(msg) from exc
 
-    return _resolve_preset_info(_get_preset_info(preset_name), context)
+    info = _get_preset_info(preset_name)
+    if info.target_python_version is not context.target_python_version:
+        msg = (
+            f"--preset {info.name.value} targets Python {info.target_python_version.value}; "
+            f"current --target-python-version is {context.target_python_version.value}."
+        )
+        raise PresetError(msg)
+    return _resolve_preset_info(info, context)
 
 
 def _get_preset_info(preset_name: PresetName) -> PresetInfo:

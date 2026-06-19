@@ -1,3 +1,3 @@
 [tool.datamodel-codegen]
-preset = "standard-20260619"
+preset = "standard-py310-20260619"
 target-python-version = "3.10"

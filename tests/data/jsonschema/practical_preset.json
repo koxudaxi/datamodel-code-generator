@@ -64,6 +64,47 @@
         }
       }
     },
+    "metadata": {
+      "description": "Additional metadata stored without a declared shape.",
+      "type": "object"
+    },
+    "coordinates": {
+      "description": "Fixed latitude and longitude pair.",
+      "type": "array",
+      "items": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "labels": {
+      "description": "Unique labels attached to the catalog entry.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "tier": {
+      "description": "Default catalog tier.",
+      "type": "string",
+      "enum": [
+        "standard",
+        "premium"
+      ],
+      "default": "standard"
+    },
+    "rank": {
+      "description": "Display rank with a default value.",
+      "type": "integer",
+      "minimum": 1,
+      "default": 1
+    },
     "status": {
       "description": "Single allowed catalog status.",
       "type": "string",

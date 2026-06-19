@@ -1,2 +1,2 @@
-standard-20260619
-standard-20260619
+standard-py314-20260619
+standard-py310-20260619

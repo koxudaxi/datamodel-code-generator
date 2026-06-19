@@ -4,15 +4,14 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class Address2(BaseModel):
-    """
-    Inline billing address that should not take the primary Address name.
-    """
+    """Inline billing address that should not take the primary Address name."""
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -29,9 +28,7 @@ class Address2(BaseModel):
 
 
 class AuditActor(BaseModel):
-    """
-    Actor associated with the catalog entry.
-    """
+    """Actor associated with the catalog entry."""
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -47,40 +44,39 @@ class AuditActor(BaseModel):
     identifier: str | None = None
 
 
+class Tier(str, Enum):
+    """
+    Default catalog tier.
+    """
+
+    standard = 'standard'
+    premium = 'premium'
+
+
 class Address1(BaseModel):
-    """
-    External address definition that should not take the primary Address name.
-    """
+    """External address definition that should not take the primary Address name."""
 
     model_config = ConfigDict(
         populate_by_name=True,
     )
     street_name: Annotated[str | None, Field(alias='streetName')] = None
-    """
-    Street name stored by an upstream service.
-    """
+    """Street name stored by an upstream service."""
     region_code: Annotated[str | None, Field(alias='regionCode')] = None
 
 
 class Address(BaseModel):
-    """
-    Primary reusable address definition.
-    """
+    """Primary reusable address definition."""
 
     model_config = ConfigDict(
         populate_by_name=True,
     )
     street_name: Annotated[str | None, Field(alias='streetName')] = None
-    """
-    Street name stored in the canonical address.
-    """
+    """Street name stored in the canonical address."""
     country_code: Annotated[str | None, Field(alias='countryCode')] = None
 
 
 class CatalogDocument(BaseModel):
-    """
-    Catalog payload accepted by the public API.
-    """
+    """Catalog payload accepted by the public API."""
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -90,22 +86,24 @@ class CatalogDocument(BaseModel):
     billing_address: Annotated[
         Address2 | None, Field(alias='billingAddress', title='Address')
     ] = None
-    """
-    Inline billing address that should not take the primary Address name.
-    """
+    """Inline billing address that should not take the primary Address name."""
     created_by: Annotated[
         AuditActor | None, Field(alias='createdBy', title='AuditActor')
     ] = None
-    """
-    Actor associated with the catalog entry.
-    """
+    """Actor associated with the catalog entry."""
     updated_by: Annotated[
         AuditActor | None, Field(alias='updatedBy', title='AuditActor')
     ] = None
-    """
-    Actor associated with the catalog entry.
-    """
+    """Actor associated with the catalog entry."""
+    metadata: dict[str, object] | None = None
+    """Additional metadata stored without a declared shape."""
+    coordinates: tuple[float, float] | None = None
+    """Fixed latitude and longitude pair."""
+    labels: set[str] | None = None
+    """Unique labels attached to the catalog entry."""
+    tier: Tier = Tier.standard
+    """Default catalog tier."""
+    rank: Annotated[int, Field(ge=1)] = 1
+    """Display rank with a default value."""
     status: Literal['active'] | None = None
-    """
-    Single allowed catalog status.
-    """
+    """Single allowed catalog status."""
