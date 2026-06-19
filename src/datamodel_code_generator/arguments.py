@@ -244,6 +244,11 @@ base_options.add_argument(
     help="Output file (default: stdout)",
 )
 base_options.add_argument(
+    "--emit-model-metadata",
+    type=Path,
+    help="Write a separate JSON map from source schema references to generated models and fields.",
+)
+base_options.add_argument(
     "--output-model-type",
     help="Output model type (default: pydantic_v2.BaseModel)",
     choices=[i.value for i in DataModelType],

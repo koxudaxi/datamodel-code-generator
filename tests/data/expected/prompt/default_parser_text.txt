@@ -9,6 +9,7 @@
 ## Options by Category
 
 ### Base Options
+- `--emit-model-metadata`: Write a separate JSON map from source schema references to the final generated models...
 - `--encoding`: Specify character encoding for input and output files.
 - `--external-ref-mapping`: Map external `$ref` files to Python packages.
 - `--input`: Specify the input schema file path.

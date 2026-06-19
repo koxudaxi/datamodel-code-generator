@@ -1043,6 +1043,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         input_=input_,
         input_file_type=config.input_file_type,
         output=output,
+        emit_model_metadata=config.emit_model_metadata,
         output_model_type=config.output_model_type,
         target_python_version=config.target_python_version,
         target_pydantic_version=config.target_pydantic_version,
@@ -1334,6 +1335,12 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
     if config.check and config.output is None:
         print(  # noqa: T201
             "Error: --check cannot be used with stdout output (no --output specified)",
+            file=sys.stderr,
+        )
+        return Exit.ERROR
+    if config.check and config.emit_model_metadata is not None:
+        print(  # noqa: T201
+            "Error: --check cannot be used with --emit-model-metadata",
             file=sys.stderr,
         )
         return Exit.ERROR

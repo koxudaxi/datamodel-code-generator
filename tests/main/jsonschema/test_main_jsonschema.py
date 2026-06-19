@@ -35,6 +35,7 @@ from tests.conftest import (
     MockHttpxResponse,
     assert_directory_content,
     assert_httpx_get_kwargs,
+    assert_output,
     create_assert_file_content,
     freeze_time,
     validate_generated_code,
@@ -205,6 +206,101 @@ def test_main_array_uri_items_preserves_min_items(output_file: Path) -> None:
             "--disable-timestamp",
         ],
         force_exec_validation=True,
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--emit-model-metadata"],
+    option_description=(
+        "Write a separate JSON map from source schema references to the final generated models, modules, fields, "
+        "and type hints."
+    ),
+    input_schema="jsonschema/model_metadata.json",
+    cli_args=["--emit-model-metadata", "model-map.json", "--module-split-mode", "single", "--disable-timestamp"],
+    golden_output="jsonschema/model_metadata_module_split/root_title.py",
+)
+def test_main_emit_model_metadata(output_file: Path) -> None:
+    """Write generated model metadata to a separate JSON file."""
+    output_dir = output_file.with_suffix("")
+    metadata_path = output_file.parent / "metadata" / "model-map.json"
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_metadata.json",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "model_metadata_module_split",
+        extra_args=[
+            "--emit-model-metadata",
+            str(metadata_path),
+            "--module-split-mode",
+            "single",
+            "--disable-timestamp",
+        ],
+    )
+    assert_output(metadata_path.read_text(encoding="utf-8"), EXPECTED_JSON_SCHEMA_PATH / "model_metadata_map.txt")
+
+
+def test_main_emit_model_metadata_rejects_check(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Reject metadata output in no-write check mode."""
+    metadata_path = output_file.parent / "metadata" / "model-map.json"
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_metadata.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        file_should_not_exist=(output_file, metadata_path),
+        capsys=capsys,
+        expected_stderr_contains="Error: --check cannot be used with --emit-model-metadata",
+        extra_args=["--check", "--emit-model-metadata", str(metadata_path)],
+    )
+
+
+def test_main_emit_model_metadata_preserves_source_ref_for_internal_modules(output_dir: Path) -> None:
+    """Keep source refs stable when circular import resolution relocates models."""
+    metadata_path = output_dir.parent / "metadata" / "model-map.json"
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_circular.json",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "use_generic_base_class_circular",
+        extra_args=[
+            "--emit-model-metadata",
+            str(metadata_path),
+            "--extra-fields",
+            "forbid",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--module-split-mode",
+            "single",
+            "--use-generic-base-class",
+        ],
+    )
+    assert_output(
+        metadata_path.read_text(encoding="utf-8"),
+        EXPECTED_JSON_SCHEMA_PATH / "use_generic_base_class_circular_metadata_map.txt",
+    )
+
+
+def test_main_emit_model_metadata_keeps_source_model_named_base_model(output_file: Path) -> None:
+    """Keep a legitimate source model named BaseModel in metadata."""
+    metadata_path = output_file.parent / "metadata" / "model-map.json"
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_metadata_base_model_name.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_file=EXPECTED_JSON_SCHEMA_PATH / "model_metadata_base_model_name.py",
+        extra_args=[
+            "--emit-model-metadata",
+            str(metadata_path),
+            "--disable-timestamp",
+        ],
+    )
+    assert_output(
+        metadata_path.read_text(encoding="utf-8"),
+        EXPECTED_JSON_SCHEMA_PATH / "model_metadata_base_model_name_map.txt",
     )
 
 

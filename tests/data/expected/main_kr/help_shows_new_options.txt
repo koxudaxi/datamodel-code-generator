@@ -35,6 +35,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --custom-formatters CUSTOM_FORMATTERS
                         List of modules with custom formatter (delimited list
                         input).
+  --emit-model-metadata EMIT_MODEL_METADATA
+                        Write a separate JSON map from source schema
+                        references to generated models and fields.
   --external-ref-mapping FILE_PATH=PYTHON_PACKAGE [FILE_PATH=PYTHON_PACKAGE ...]
                         Map external $ref file paths to Python import packages
                         instead of generating duplicate classes. Accepts one
