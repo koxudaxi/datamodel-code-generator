@@ -6,7 +6,7 @@ Presets are immutable named groups of CLI options. A preset name never changes b
 
 Every preset name includes its Python target, so generated Python syntax is pinned without an extra `--target-python-version` argument. Choose the preset name instead of adding a separate target option to normal preset commands; if an explicit target is already present in CLI or pyproject configuration, it must match the preset name.
 
-See also: [`--preset`](cli-reference/base-options.md#preset), [`--target-python-version`](cli-reference/model-customization.md#target-python-version), [`--output-model-type`](cli-reference/model-customization.md#output-model-type), [`--profile`](cli-reference/utility-options.md#profile), [`--generate-pyproject-config`](cli-reference/general-options.md#generate-pyproject-config), [`--generate-cli-command`](cli-reference/general-options.md#generate-cli-command), [pyproject.toml configuration](pyproject_toml.md), and [CI/CD integration](ci-cd.md).
+See also: [CLI Reference](cli-reference/index.md), [`--preset`](cli-reference/base-options.md#preset), [`--target-python-version`](cli-reference/model-customization.md#target-python-version), [`--output-model-type`](cli-reference/model-customization.md#output-model-type), [`--profile`](cli-reference/utility-options.md#profile), [`--generate-pyproject-config`](cli-reference/general-options.md#generate-pyproject-config), [`--generate-cli-command`](cli-reference/general-options.md#generate-cli-command), [pyproject.toml configuration](pyproject_toml.md), and [CI/CD integration](ci-cd.md).
 
 ## Usage
 

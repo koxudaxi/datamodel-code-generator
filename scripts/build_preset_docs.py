@@ -25,7 +25,7 @@ DOCS_INDEX_PATH = ROOT / "docs" / "index.md"
 README_PATH = ROOT / "README.md"
 SRC_PATH = ROOT / "src"
 PRESET_NAMES_PATH = SRC_PATH / "datamodel_code_generator" / "preset_names.py"
-QUICK_START_SCHEMA_PATH = ROOT / "tests" / "data" / "jsonschema" / "tutorial_pet.json"
+QUICK_START_SCHEMA_PATH = ROOT / "tests" / "data" / "jsonschema" / "preset_quick_start_pet.json"
 QUICK_START_SCHEMA_NAME = "schema.json"
 QUICK_START_OUTPUT_NAME = "model.py"
 QUICK_START_TARGET_PYTHON_VERSION = "3.12"
@@ -34,6 +34,7 @@ PRESET_VERSION_DATE_LENGTH = 8
 QUICK_START_BEGIN_MARKER = "<!-- BEGIN AUTO-GENERATED PRESET QUICK START -->"
 QUICK_START_END_MARKER = "<!-- END AUTO-GENERATED PRESET QUICK START -->"
 README_PRESETS_LINK = "https://datamodel-code-generator.koxudaxi.dev/presets/"
+README_CLI_REFERENCE_LINK = "https://datamodel-code-generator.koxudaxi.dev/cli-reference/"
 README_PRESET_OPTION_LINK = "https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options/#preset"
 README_INPUT_FILE_TYPE_OPTION_LINK = (
     "https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options/#input-file-type"
@@ -42,6 +43,7 @@ README_OUTPUT_MODEL_TYPE_OPTION_LINK = (
     "https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-customization/#output-model-type"
 )
 DOCS_PRESETS_LINK = "presets.md"
+DOCS_CLI_REFERENCE_LINK = "cli-reference/index.md"
 DOCS_PRESET_OPTION_LINK = "cli-reference/base-options.md#preset"
 DOCS_INPUT_FILE_TYPE_OPTION_LINK = "cli-reference/base-options.md#input-file-type"
 DOCS_OUTPUT_MODEL_TYPE_OPTION_LINK = "cli-reference/model-customization.md#output-model-type"
@@ -106,7 +108,6 @@ def _generate_docs(preset_names_doc: GeneratedDoc) -> tuple[GeneratedDoc, ...]:
         target_python_version=QUICK_START_TARGET_PYTHON_VERSION,
     )
     standard_model_output = _generate_quick_start_model(standard_preset_name)
-    practical_model_output = _generate_quick_start_model(practical_preset_name)
     return (
         preset_names_doc,
         GeneratedDoc(DOCS_PATH, render_presets("markdown")),
@@ -118,7 +119,6 @@ def _generate_docs(preset_names_doc: GeneratedDoc) -> tuple[GeneratedDoc, ...]:
                     standard_preset_name,
                     standard_model_output,
                     practical_preset_name,
-                    practical_model_output,
                 ),
             ),
         ),
@@ -130,7 +130,6 @@ def _generate_docs(preset_names_doc: GeneratedDoc) -> tuple[GeneratedDoc, ...]:
                     standard_preset_name,
                     standard_model_output,
                     practical_preset_name,
-                    practical_model_output,
                 ),
             ),
         ),
@@ -309,11 +308,10 @@ def _render_readme_quick_start(
     preset_name: str,
     model_output: str,
     practical_preset_name: str,
-    practical_model_output: str,
 ) -> str:
     schema = QUICK_START_SCHEMA_PATH.read_text(encoding="utf-8").rstrip()
     command = _render_quick_start_command(preset_name)
-    practical_command = _render_quick_start_command(practical_preset_name)
+    practical_preset_url = f"{README_PRESETS_LINK}#{practical_preset_name}"
     return f"""**Command**
 
 ```bash
@@ -321,25 +319,14 @@ def _render_readme_quick_start(
 ```
 
 This quick start uses `{preset_name}` as the modern Python {QUICK_START_TARGET_PYTHON_VERSION} baseline.
+Preset names include the target Python version: `py312` means Python 3.12.
 
-See [Presets]({README_PRESETS_LINK}), [`--preset`]({README_PRESET_OPTION_LINK}),
-[`--input-file-type`]({README_INPUT_FILE_TYPE_OPTION_LINK}), and
-[`--output-model-type`]({README_OUTPUT_MODEL_TYPE_OPTION_LINK}) for details.
+See [CLI Reference]({README_CLI_REFERENCE_LINK}) for all options. See [Presets]({README_PRESETS_LINK}),
+[`--preset`]({README_PRESET_OPTION_LINK}), [`--input-file-type`]({README_INPUT_FILE_TYPE_OPTION_LINK}), and
+[`--output-model-type`]({README_OUTPUT_MODEL_TYPE_OPTION_LINK}) for this command.
 
-<details>
-<summary>🧰 {practical_preset_name} variant</summary>
-
-Use `{practical_preset_name}` when you also want schema-authored names, model reuse, and generated documentation.
-
-```bash
-{practical_command}
-```
-
-```python
-{practical_model_output}
-```
-
-</details>
+For schema-authored names, model reuse, and generated documentation, see
+[`{practical_preset_name}`]({practical_preset_url}).
 
 **Input (`{QUICK_START_SCHEMA_NAME}`)**
 
@@ -359,11 +346,10 @@ def _render_docs_index_quick_start(
     preset_name: str,
     model_output: str,
     practical_preset_name: str,
-    practical_model_output: str,
 ) -> str:
     schema = QUICK_START_SCHEMA_PATH.read_text(encoding="utf-8").rstrip()
     command = _render_quick_start_command(preset_name)
-    practical_command = _render_quick_start_command(practical_preset_name)
+    practical_preset_link = f"{DOCS_PRESETS_LINK}#{practical_preset_name}"
     return f"""### Command
 
 ```bash
@@ -371,25 +357,14 @@ def _render_docs_index_quick_start(
 ```
 
 This quick start uses `{preset_name}` as the modern Python {QUICK_START_TARGET_PYTHON_VERSION} baseline.
+Preset names include the target Python version: `py312` means Python 3.12.
 
-See [Presets]({DOCS_PRESETS_LINK}), [`--preset`]({DOCS_PRESET_OPTION_LINK}),
-[`--input-file-type`]({DOCS_INPUT_FILE_TYPE_OPTION_LINK}), and
-[`--output-model-type`]({DOCS_OUTPUT_MODEL_TYPE_OPTION_LINK}) for details.
+See [CLI Reference]({DOCS_CLI_REFERENCE_LINK}) for all options. See [Presets]({DOCS_PRESETS_LINK}),
+[`--preset`]({DOCS_PRESET_OPTION_LINK}), [`--input-file-type`]({DOCS_INPUT_FILE_TYPE_OPTION_LINK}), and
+[`--output-model-type`]({DOCS_OUTPUT_MODEL_TYPE_OPTION_LINK}) for this command.
 
-<details>
-<summary>🧰 Use {practical_preset_name}</summary>
-
-Use `{practical_preset_name}` when you also want schema-authored names, model reuse, and generated documentation.
-
-```bash
-{practical_command}
-```
-
-```python title="{QUICK_START_OUTPUT_NAME}"
-{practical_model_output}
-```
-
-</details>
+For schema-authored names, model reuse, and generated documentation, see
+[`{practical_preset_name}`]({practical_preset_link}).
 
 ### Input
 

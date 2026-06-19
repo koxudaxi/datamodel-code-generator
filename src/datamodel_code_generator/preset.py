@@ -573,6 +573,7 @@ def render_presets_markdown() -> str:
         "",
         (
             "See also: "
+            "[CLI Reference](cli-reference/index.md), "
             "[`--preset`](cli-reference/base-options.md#preset), "
             "[`--target-python-version`](cli-reference/model-customization.md#target-python-version), "
             "[`--output-model-type`](cli-reference/model-customization.md#output-model-type), "
