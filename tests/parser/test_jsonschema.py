@@ -640,13 +640,44 @@ def test_infer_union_variant_names_uses_discriminator_literals() -> None:
     assert parser._infer_union_variant_names("pkg.Event", parent, variants) == [None, "pkg.Event_ready"]
 
 
-def test_union_variant_literal_helpers_handle_refs_and_invalid_fields() -> None:
+def test_infer_union_variant_names_distinguishes_literal_types() -> None:
+    """Use type-aware names for non-string literal tags."""
+    parser = JsonSchemaParser("", infer_union_variant_names=True)
+    parent = _json_schema_object({"discriminator": {"propertyName": "kind"}})
+    variants = [
+        _json_schema_object({"properties": {"kind": {"const": 1}}}),
+        _json_schema_object({"properties": {"kind": {"const": "1"}}}),
+        _json_schema_object({"properties": {"kind": {"const": True}}}),
+    ]
+
+    assert parser._infer_union_variant_names("Event", parent, variants) == [
+        "Event_int_1",
+        "Event__1",
+        "Event_bool_true",
+    ]
+
+
+def test_union_variant_literal_helpers_handle_refs_and_invalid_fields(
+    tmp_path: Path, mocker: MockerFixture
+) -> None:
     """Literal collection rejects ambiguous branches and resolves simple refs."""
     parser = JsonSchemaParser("", infer_union_variant_names=True)
     ref = "#/$defs/Kind"
     parser.raw_obj = {"$defs": {"Kind": {"const": "from_ref"}}}
+    external_schema = tmp_path / "external.json"
+    external_parser = JsonSchemaParser(
+        "",
+        external_ref_mapping={str(external_schema): "external.models"},
+        infer_union_variant_names=True,
+    )
+    load_ref = mocker.patch.object(external_parser, "_load_ref_schema_object")
 
     assert parser._get_single_literal_value(_json_schema_object({"$ref": ref})) == "from_ref"
+    assert (
+        external_parser._get_single_literal_value(_json_schema_object({"$ref": f"{external_schema}#/External"}))
+        is None
+    )
+    load_ref.assert_not_called()
     assert (
         parser._get_single_literal_value(
             _json_schema_object({"$ref": ref}),

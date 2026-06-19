@@ -108,7 +108,14 @@ def _literal_uniqueness_key(value: JsonSchemaLiteral) -> tuple[type[object], Jso
 
 def _get_union_variant_name(name: str, literal: JsonSchemaLiteral) -> str | None:
     module_name, separator, class_name = name.rpartition(".")
-    literal_name = sanitize_module_name(str(literal), treat_dot_as_module=False)
+    match literal:
+        case str():
+            literal_text = literal
+        case bool():
+            literal_text = f"bool_{str(literal).lower()}"
+        case int():
+            literal_text = f"int_{literal}"
+    literal_name = sanitize_module_name(literal_text, treat_dot_as_module=False)
     if not literal_name:
         return None
     variant_name = f"{class_name or name}_{literal_name}"
@@ -2212,6 +2219,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             seen_refs = seen_refs or set()
             resolved_ref = self.model_resolver.resolve_ref(obj.ref)
             if resolved_ref in seen_refs:
+                return None
+            if self._resolve_external_ref_mapping(obj.ref):
                 return None
             seen_refs.add(resolved_ref)
             return self._get_single_literal_value(self._load_ref_schema_object(obj.ref), seen_refs)
