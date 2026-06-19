@@ -863,7 +863,7 @@ def generate_cli_command(config: dict[str, TomlValue]) -> str:
         else:
             parts.extend((f"--{cli_key}", _format_cli_value(str(value))))
 
-    return " ".join(parts) + "\n"
+    return " ".join(parts)
 
 
 def _hyphenated_config_data(config: Mapping[str, Any]) -> dict[str, Any]:

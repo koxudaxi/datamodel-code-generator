@@ -33,6 +33,18 @@ QUICK_START_GENERATION_TIMEOUT_SECONDS = 30
 PRESET_VERSION_DATE_LENGTH = 8
 QUICK_START_BEGIN_MARKER = "<!-- BEGIN AUTO-GENERATED PRESET QUICK START -->"
 QUICK_START_END_MARKER = "<!-- END AUTO-GENERATED PRESET QUICK START -->"
+README_PRESETS_LINK = "https://datamodel-code-generator.koxudaxi.dev/presets/"
+README_PRESET_OPTION_LINK = "https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options/#preset"
+README_INPUT_FILE_TYPE_OPTION_LINK = (
+    "https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options/#input-file-type"
+)
+README_OUTPUT_MODEL_TYPE_OPTION_LINK = (
+    "https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-customization/#output-model-type"
+)
+DOCS_PRESETS_LINK = "presets.md"
+DOCS_PRESET_OPTION_LINK = "cli-reference/base-options.md#preset"
+DOCS_INPUT_FILE_TYPE_OPTION_LINK = "cli-reference/base-options.md#input-file-type"
+DOCS_OUTPUT_MODEL_TYPE_OPTION_LINK = "cli-reference/model-customization.md#output-model-type"
 
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
@@ -308,20 +320,15 @@ def _render_readme_quick_start(
 
 This quick start uses `{preset_name}`, the recommended immutable preset for modern Python output.
 
+See [Presets]({README_PRESETS_LINK}), [`--preset`]({README_PRESET_OPTION_LINK}),
+[`--input-file-type`]({README_INPUT_FILE_TYPE_OPTION_LINK}), and
+[`--output-model-type`]({README_OUTPUT_MODEL_TYPE_OPTION_LINK}) for details.
+
 <details>
 <summary>📄 {QUICK_START_SCHEMA_NAME} (input)</summary>
 
 ```json
 {schema}
-```
-
-</details>
-
-<details>
-<summary>🐍 {QUICK_START_OUTPUT_NAME} (output)</summary>
-
-```python
-{model_output}
 ```
 
 </details>
@@ -337,6 +344,15 @@ Use `{practical_preset_name}` when you also want schema-authored names, model re
 
 ```python
 {practical_model_output}
+```
+
+</details>
+
+<details>
+<summary>🐍 {QUICK_START_OUTPUT_NAME} (output)</summary>
+
+```python
+{model_output}
 ```
 
 </details>"""
@@ -365,11 +381,9 @@ def _render_docs_index_quick_start(
 
 This quick start uses `{preset_name}`, the recommended immutable preset for modern Python output.
 
-### 3️⃣ Use your models
-
-```python title="{QUICK_START_OUTPUT_NAME}"
-{model_output}
-```
+See [Presets]({DOCS_PRESETS_LINK}), [`--preset`]({DOCS_PRESET_OPTION_LINK}),
+[`--input-file-type`]({DOCS_INPUT_FILE_TYPE_OPTION_LINK}), and
+[`--output-model-type`]({DOCS_OUTPUT_MODEL_TYPE_OPTION_LINK}) for details.
 
 <details>
 <summary>🧰 Use {practical_preset_name}</summary>
@@ -385,6 +399,12 @@ Use `{practical_preset_name}` when you also want schema-authored names, model re
 ```
 
 </details>
+
+### 3️⃣ Use your models
+
+```python title="{QUICK_START_OUTPUT_NAME}"
+{model_output}
+```
 
 🎉 That's it! Your schema is now a fully-typed Python model."""
 
