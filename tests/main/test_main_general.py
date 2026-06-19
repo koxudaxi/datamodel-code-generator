@@ -39,6 +39,7 @@ from datamodel_code_generator.arguments import _dataclass_arguments, arg_parser
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
+from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.parser.openapi import OpenAPIParser
 from tests.conftest import (
     HttpxGetMockFactory,
@@ -220,6 +221,42 @@ def test_generate_standard_preset_public_api_config(output_file: Path) -> None:
 
 
 @freeze_time(TIMESTAMP)
+def test_generate_standard_preset_public_api_explicit_options(output_file: Path) -> None:
+    """Generate output when every preset option is already explicit."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        preset="standard-py310-20260619",
+        target_python_version=PythonVersion.PY_310,
+        use_standard_collections=True,
+        use_union_operator=True,
+        use_annotated=False,
+        enum_field_as_literal=LiteralType.One,
+        use_subclass_enum=True,
+        collapse_root_models=True,
+        strict_nullable=True,
+        set_default_enum_member=True,
+        disable_timestamp=True,
+        snake_case_field=True,
+        allow_population_by_field_name=True,
+        use_frozen_field=True,
+        assert_func=assert_file_content,
+        expected_file="standard_preset_no_use_annotated.py",
+    )
+
+
+def test_generate_standard_preset_public_api_reports_unknown_preset() -> None:
+    """Unknown public API presets raise the same user-facing error type as CLI presets."""
+    with pytest.raises(Error, match="Unknown preset: 'unknown-preset'"):
+        generate(
+            input_=JSON_SCHEMA_DATA_PATH / "person.json",
+            input_file_type=InputFileType.JsonSchema,
+            preset="unknown-preset",
+        )
+
+
+@freeze_time(TIMESTAMP)
 def test_standard_preset_uses_literal_for_single_value_enum(output_file: Path) -> None:
     """The standard preset renders single-value enum fields as Literal."""
     run_main_and_assert(
@@ -368,6 +405,19 @@ def test_standard_preset_target_py310_does_not_force_specialized_enum(output_fil
         extra_args=["--preset", "standard-py310-20260619"],
         assert_func=assert_file_content,
         expected_file="standard_preset_string_enum_py310.py",
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_standard_preset_accepts_matching_target_python_version(output_file: Path) -> None:
+    """Explicit target Python version is accepted when it matches the preset name."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--preset", "standard-py310-20260619", "--target-python-version", "3.10"],
+        assert_func=assert_file_content,
+        expected_file="standard_preset_pydantic_v2.py",
     )
 
 
