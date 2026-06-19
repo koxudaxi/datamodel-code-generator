@@ -5,6 +5,32 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.64.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.64.1) - 2026-06-19
+
+## What's Changed
+* Update CHANGELOG for 0.64.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3414
+* Fix pydantic v2 dataclass lookaround regex engine by @DarkaMaul in https://github.com/koxudaxi/datamodel-code-generator/pull/3370
+* Pass enum schema extensions to templates by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3417
+* Fix payload runtime validation exclusions by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3418
+* Add conformance dashboard by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3423
+* Skip legacy dataclass lookaround payloads by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3428
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3425
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3429
+* Use shared test helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3424
+* Consolidate CLI config fields by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3430
+* Guard JSON-pointer list indexing against invalid segments by @DarkaMaul in https://github.com/koxudaxi/datamodel-code-generator/pull/3420
+* Add Pydantic v2 alias generator by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3432
+* Fix optional primitive const emitting injected non-None default by @tangentlin in https://github.com/koxudaxi/datamodel-code-generator/pull/3434
+* Escape generated pyproject TOML strings by @DarkaMaul in https://github.com/koxudaxi/datamodel-code-generator/pull/3436
+* Add standard preset by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3422
+
+## New Contributors
+* @tangentlin made their first contribution in https://github.com/koxudaxi/datamodel-code-generator/pull/3434
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.64.0...0.64.1
+
+---
+
 ## [0.64.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.64.0) - 2026-06-14
 
 ## Breaking Changes
