@@ -3521,8 +3521,54 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             nullable=obj.type_has_null,
             treat_dot_as_module=self.treat_dot_as_module,
         )
+        self._apply_root_model_sequence_methods(data_model_root, fields)
         self.generation_store.register_model(data_model_root)
         return data_model_root
+
+    def _apply_root_model_sequence_methods(
+        self,
+        data_model_root: DataModel,
+        fields: list[DataModelFieldBase],
+    ) -> None:
+        if not self.use_root_model_sequence_methods or data_model_root.is_alias or not fields:
+            return
+
+        root_field = fields[0]
+        if not root_field.required or root_field.nullable:
+            return
+
+        root_type = self._get_root_model_sequence_type(root_field.data_type)
+        if root_type is None:
+            return
+
+        add_sequence_methods = getattr(data_model_root, "add_sequence_methods", None)
+        if add_sequence_methods is None:
+            return
+
+        item_type = root_type.data_types[0].type_hint if root_type.data_types else ANY
+        item_type = item_type or ANY
+        add_sequence_methods(item_type)
+
+    def _get_root_model_sequence_type(self, data_type: DataType) -> DataType | None:  # noqa: PLR6301
+        """Return a sequence data type for RootModel helpers.
+
+        This is an instance method because snooper_to_methods does not preserve
+        staticmethod descriptors.
+        """
+        if data_type.is_optional:
+            return None
+
+        root_type = data_type
+        if not (root_type.is_list or root_type.is_sequence):
+            if len(root_type.data_types) != 1:
+                return None
+            root_type = root_type.data_types[0]
+            if root_type.is_optional:
+                return None
+
+        if root_type.is_list or root_type.is_sequence:
+            return root_type
+        return None
 
     def _parse_all_of_single_ref(
         self,

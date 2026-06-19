@@ -43,6 +43,57 @@ def test_root_model() -> None:
     assert root_model.render() == ("class TestRootModel(RootModel[Optional[str]]):\n    root: Optional[str] = 'abc'")
 
 
+def test_root_model_sequence_methods() -> None:
+    """RootModel can render sequence helpers."""
+    root_model = RootModel(
+        fields=[
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(
+                    type="str",
+                    is_list=True,
+                    data_types=[DataType(type="str")],
+                    use_standard_collections=True,
+                ),
+                required=True,
+            )
+        ],
+        reference=Reference(name="TestRootModel", path="test_root_model"),
+    )
+
+    root_model.add_sequence_methods("str")
+
+    assert root_model.render() == (
+        "class TestRootModel(RootModel[list[str]]):\n"
+        "    root: list[str]\n\n"
+        "    def __iter__(self) -> Iterator[str]:\n"
+        "        return iter(self.root)\n\n"
+        "    def __getitem__(self, index: int) -> str:\n"
+        "        return self.root[index]\n\n"
+        "    def __len__(self) -> int:\n"
+        "        return len(self.root)"
+    )
+
+
+def test_root_model_sequence_methods_add_any_import() -> None:
+    """Sequence helpers import Any when the wrapped item type is Any."""
+    root_model = RootModel(
+        fields=[
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(is_list=True, data_types=[DataType()]),
+                required=True,
+            )
+        ],
+        reference=Reference(name="TestRootModel", path="test_root_model"),
+    )
+
+    root_model.add_sequence_methods("Any")
+
+    assert "def __iter__(self) -> Iterator[Any]" in root_model.render()
+    assert any(import_.import_ == "Any" for import_ in root_model.imports)
+
+
 def test_root_model_custom_base_class_is_ignored() -> None:
     """Verify that passing a custom_base_class is ignored."""
     root_model = RootModel(

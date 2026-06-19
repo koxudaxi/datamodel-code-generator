@@ -104,6 +104,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--remove-special-field-name-prefix": "Remove the special prefix from field names.",
     "--reuse-model": "Reuse identical model definitions instead of generating duplicates.",
     "--reuse-scope": "Scope for model reuse detection (root or tree).",
+    "--use-root-model-sequence-methods": "Add sequence helper methods to Pydantic v2 RootModel classes.",
     "--schema-version": "Schema version to use for parsing.",
     "--schema-version-mode": "Schema version validation mode.",
     "--serialization-aliases": "Apply custom Pydantic v2 serialization aliases from JSON file.",

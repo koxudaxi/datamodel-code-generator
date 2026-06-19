@@ -439,6 +439,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         (e.g., extra='forbid') instead of repeating the
                         configuration in each model. Keeps code DRY.
   --use-pendulum        use pendulum instead of datetime
+  --use-root-model-sequence-methods
+                        Add __iter__, __getitem__, and __len__ methods to
+                        sequence-like RootModel classes (Pydantic v2 only)
   --use-schema-description
                         Use schema description to populate class docstring
   --use-standard-primitive-types, --no-use-standard-primitive-types

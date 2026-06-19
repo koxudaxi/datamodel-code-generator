@@ -133,6 +133,7 @@ What other options should I use?
 - `--use-frozen-field`: Generate frozen (immutable) field definitions for readOnly properties.
 - `--use-generic-base-class`: Generate a shared base class with model configuration to avoid repetition (DRY).
 - `--use-one-literal-as-default`: Use single literal value as default when enum has only one option.
+- `--use-root-model-sequence-methods`: Add sequence helper methods to Pydantic v2 RootModel classes.
 - `--use-serialize-as-any`: Wrap fields with subtypes in Pydantic's SerializeAsAny.
 - `--use-subclass-enum`: Generate typed Enum subclasses for enums with specific field types.
 
@@ -638,6 +639,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         (e.g., extra='forbid') instead of repeating the
                         configuration in each model. Keeps code DRY.
   --use-pendulum        use pendulum instead of datetime
+  --use-root-model-sequence-methods
+                        Add __iter__, __getitem__, and __len__ methods to
+                        sequence-like RootModel classes (Pydantic v2 only)
   --use-schema-description
                         Use schema description to populate class docstring
   --use-standard-primitive-types, --no-use-standard-primitive-types

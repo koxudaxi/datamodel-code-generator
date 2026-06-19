@@ -358,6 +358,12 @@ model_options.add_argument(
     help="Skip generating the model for the root schema element",
 )
 model_options.add_argument(
+    "--use-root-model-sequence-methods",
+    action="store_true",
+    default=None,
+    help="Add __iter__, __getitem__, and __len__ methods to sequence-like RootModel classes (Pydantic v2 only)",
+)
+model_options.add_argument(
     "--disable-appending-item-suffix",
     help="Disable appending `Item` suffix to model name in an array",
     action="store_true",

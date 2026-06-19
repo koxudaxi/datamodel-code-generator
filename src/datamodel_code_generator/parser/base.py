@@ -1435,6 +1435,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.collapse_root_models_name_strategy = config.collapse_root_models_name_strategy
         self.collapse_reuse_models = config.collapse_reuse_models
         self.skip_root_model = config.skip_root_model
+        self.use_root_model_sequence_methods = config.use_root_model_sequence_methods
         self.use_type_alias = config.use_type_alias
         self.capitalise_enum_members = config.capitalise_enum_members
         self.keep_model_order = config.keep_model_order

@@ -222,6 +222,7 @@ class BaseGenerateConfig(TypedDict):
     ]
     collapse_reuse_models: NotRequired[bool]
     skip_root_model: NotRequired[bool]
+    use_root_model_sequence_methods: NotRequired[bool]
     use_type_alias: NotRequired[bool]
     use_root_model_type_alias: NotRequired[bool]
     special_field_name_prefix: NotRequired[str | None]

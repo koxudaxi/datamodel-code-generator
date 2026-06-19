@@ -50,4 +50,8 @@ class {{ class_name }}({{ base_class }}{%- if fields -%}[{{get_type_hint(fields,
     {{ field.inline_field_docstring }}
 
     {%- endif %}
+{%- for method in methods %}
+
+    {{ method }}
+{%- endfor %}
 {%- endif %}

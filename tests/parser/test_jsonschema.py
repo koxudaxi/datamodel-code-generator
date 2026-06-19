@@ -20,6 +20,8 @@ from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
+from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
+from datamodel_code_generator.model.type_alias import TypeAlias
 from datamodel_code_generator.parser.base import Parser, Source, dump_templates
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
@@ -622,6 +624,148 @@ def test_parse_any_root_object(source_obj: dict[str, Any], generated_classes: st
     parser = JsonSchemaParser("")
     parser.parse_root_type("AnyObject", JsonSchemaObject.model_validate(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
+
+
+def _root_model_sequence_field(
+    data_type: DataType,
+    *,
+    required: bool = True,
+    nullable: bool | None = None,
+) -> DataModelFieldBase:
+    return DataModelFieldBase(name="root", data_type=data_type, required=required, nullable=nullable)
+
+
+def _root_model_sequence_type(item_type: DataType | None = None) -> DataType:
+    return DataType(is_list=True, data_types=[] if item_type is None else [item_type])
+
+
+def _root_model(fields: list[DataModelFieldBase] | None = None) -> RootModel:
+    return RootModel(fields=fields or [], reference=Reference(name="Pets", path="pets"))
+
+
+@pytest.mark.parametrize(
+    ("parser", "data_model_root", "fields"),
+    [
+        (
+            JsonSchemaParser("", use_root_model_sequence_methods=False),
+            _root_model([_root_model_sequence_field(_root_model_sequence_type(DataType(type="str")))]),
+            [_root_model_sequence_field(_root_model_sequence_type(DataType(type="str")))],
+        ),
+        (
+            JsonSchemaParser("", use_root_model_sequence_methods=True),
+            TypeAlias(
+                fields=[_root_model_sequence_field(_root_model_sequence_type(DataType(type="str")))],
+                reference=Reference(name="Pets", path="pets"),
+            ),
+            [_root_model_sequence_field(_root_model_sequence_type(DataType(type="str")))],
+        ),
+        (
+            JsonSchemaParser("", use_root_model_sequence_methods=True),
+            _root_model(),
+            [],
+        ),
+    ],
+)
+def test_apply_root_model_sequence_methods_skips_disabled_alias_and_empty_fields(
+    parser: JsonSchemaParser,
+    data_model_root: RootModel | TypeAlias,
+    fields: list[DataModelFieldBase],
+) -> None:
+    """Sequence helpers are skipped unless the opt-in target is a concrete RootModel with a field."""
+    parser._apply_root_model_sequence_methods(data_model_root, fields)
+
+    assert data_model_root.methods == []
+
+
+def test_apply_root_model_sequence_methods_skips_non_sequence_root() -> None:
+    """Sequence helpers are skipped for scalar RootModel classes."""
+    parser = JsonSchemaParser("", use_root_model_sequence_methods=True)
+    root_model = _root_model([_root_model_sequence_field(DataType(type="str"))])
+
+    parser._apply_root_model_sequence_methods(root_model, root_model.fields)
+
+    assert root_model.methods == []
+
+
+@pytest.mark.parametrize(
+    ("required", "nullable"),
+    [
+        (False, None),
+        (True, True),
+    ],
+)
+def test_apply_root_model_sequence_methods_skips_optional_root_field(
+    required: bool,
+    nullable: bool | None,
+) -> None:
+    """Sequence helpers are skipped when the root field can be None."""
+    parser = JsonSchemaParser("", use_root_model_sequence_methods=True)
+    root_model = _root_model([
+        _root_model_sequence_field(
+            _root_model_sequence_type(DataType(type="str")),
+            required=required,
+            nullable=nullable,
+        )
+    ])
+
+    parser._apply_root_model_sequence_methods(root_model, root_model.fields)
+
+    assert root_model.methods == []
+
+
+def test_apply_root_model_sequence_methods_skips_models_without_sequence_method() -> None:
+    """The parser only applies helpers to RootModel implementations that expose the method."""
+    parser = JsonSchemaParser("", use_root_model_sequence_methods=True)
+    base_model = BaseModel(
+        fields=[_root_model_sequence_field(_root_model_sequence_type(DataType(type="str")))],
+        reference=Reference(name="Pets", path="pets"),
+    )
+
+    parser._apply_root_model_sequence_methods(base_model, base_model.fields)
+
+    assert base_model.methods == []
+
+
+@pytest.mark.parametrize(
+    ("data_type", "expected_item_hint"),
+    [
+        (_root_model_sequence_type(DataType(type="str")), "str"),
+        (_root_model_sequence_type(), "Any"),
+        (_root_model_sequence_type(DataType()), "Any"),
+    ],
+)
+def test_apply_root_model_sequence_methods_adds_sequence_helpers(
+    data_type: DataType,
+    expected_item_hint: str,
+) -> None:
+    """Sequence helpers use the wrapped item hint, falling back to Any when needed."""
+    parser = JsonSchemaParser("", use_root_model_sequence_methods=True)
+    root_model = _root_model([_root_model_sequence_field(data_type)])
+
+    parser._apply_root_model_sequence_methods(root_model, root_model.fields)
+
+    assert root_model.methods[0].startswith(f"def __iter__(self) -> Iterator[{expected_item_hint}]")
+
+
+@pytest.mark.parametrize(
+    ("data_type", "expected_type"),
+    [
+        (DataType(is_optional=True), None),
+        (DataType(type="str"), None),
+        (DataType(data_types=[DataType(type="str", is_optional=True)]), None),
+        (DataType(data_types=[DataType(type="str")]), None),
+        (_root_model_sequence_type(DataType(type="str")), "List[str]"),
+        (DataType(is_sequence=True, data_types=[DataType(type="str")]), "Sequence[str]"),
+        (DataType(data_types=[_root_model_sequence_type(DataType(type="str"))]), "List[str]"),
+    ],
+)
+def test_get_root_model_sequence_type(data_type: DataType, expected_type: str | None) -> None:
+    """The parser recognizes only non-optional list and sequence RootModel types."""
+    parser = JsonSchemaParser("")
+
+    result = parser._get_root_model_sequence_type(data_type)
+
+    assert (result.type_hint if result is not None else None) == expected_type
 
 
 @pytest.mark.parametrize(

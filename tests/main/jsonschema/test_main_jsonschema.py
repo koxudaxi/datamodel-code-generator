@@ -3448,6 +3448,61 @@ def test_main_jsonschema_root_model_ordering(output_file: Path, extra_args: list
 
 
 @pytest.mark.cli_doc(
+    options=["--use-root-model-sequence-methods"],
+    option_description="""Add sequence helper methods to Pydantic v2 RootModel classes.
+
+When enabled, list-like RootModel classes include __iter__, __getitem__,
+and __len__ methods that delegate to the wrapped root value.""",
+    input_schema="jsonschema/root_model_sequence_methods.json",
+    cli_args=[
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--use-root-model-sequence-methods",
+        "--class-name",
+        "Pets",
+    ],
+    golden_output="jsonschema/root_model_sequence_methods.py",
+)
+def test_main_jsonschema_root_model_sequence_methods(output_file: Path) -> None:
+    """Generate sequence helpers for list RootModel classes."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_sequence_methods.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_sequence_methods.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-root-model-sequence-methods",
+            "--class-name",
+            "Pets",
+            "--disable-timestamp",
+        ],
+    )
+
+
+def test_main_jsonschema_root_model_sequence_methods_type_alias(output_file: Path) -> None:
+    """Sequence helpers are skipped for RootModel type aliases."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_sequence_methods.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_sequence_methods_type_alias.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-root-model-sequence-methods",
+            "--use-root-model-type-alias",
+            "--class-name",
+            "Pets",
+            "--disable-timestamp",
+        ],
+    )
+
+
+@pytest.mark.cli_doc(
     options=["--field-include-all-keys"],
     option_description="""Include all schema keys in Field() json_schema_extra.
 

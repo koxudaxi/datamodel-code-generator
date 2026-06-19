@@ -7,8 +7,11 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
+from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model.pydantic_v2.base_model import _CONFIG_ITEMS_TEMPLATE_DATA_KEY, BaseModel
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
+
+IMPORT_ABC_ITERATOR = Import.from_full_path("collections.abc.Iterator")
 
 
 class RootModel(BaseModel):
@@ -42,3 +45,14 @@ class RootModel(BaseModel):
             self.extra_template_data.pop("config", None)
             self.extra_template_data.pop(_CONFIG_ITEMS_TEMPLATE_DATA_KEY, None)
             self._additional_imports = [imp for imp in self._additional_imports if imp != IMPORT_CONFIG_DICT]
+
+    def add_sequence_methods(self, item_type: str) -> None:
+        """Add sequence helper methods that delegate to the wrapped root value."""
+        self._additional_imports.append(IMPORT_ABC_ITERATOR)
+        if item_type == "Any":
+            self._additional_imports.append(IMPORT_ANY)
+        self.methods.extend([
+            f"def __iter__(self) -> Iterator[{item_type}]:\n        return iter(self.root)",
+            f"def __getitem__(self, index: int) -> {item_type}:\n        return self.root[index]",
+            "def __len__(self) -> int:\n        return len(self.root)",
+        ])

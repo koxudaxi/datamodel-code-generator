@@ -221,6 +221,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--use-one-literal-as-default": CLIOptionMeta(name="--use-one-literal-as-default", category=OptionCategory.MODEL),
     "--use-serialize-as-any": CLIOptionMeta(name="--use-serialize-as-any", category=OptionCategory.MODEL),
     "--skip-root-model": CLIOptionMeta(name="--skip-root-model", category=OptionCategory.MODEL),
+    "--use-root-model-sequence-methods": CLIOptionMeta(
+        name="--use-root-model-sequence-methods", category=OptionCategory.MODEL
+    ),
     "--use-generic-base-class": CLIOptionMeta(name="--use-generic-base-class", category=OptionCategory.MODEL),
     "--model-extra-keys": CLIOptionMeta(name="--model-extra-keys", category=OptionCategory.MODEL),
     "--model-extra-keys-without-x-prefix": CLIOptionMeta(
