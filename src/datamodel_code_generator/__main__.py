@@ -134,7 +134,10 @@ if TYPE_CHECKING:
         CommandOutputKind,
         GeneratedFilePayload,
     )
+    from datamodel_code_generator.preset_names import PresetName as PresetNameValue
     from datamodel_code_generator.validators import ModelValidators
+else:
+    PresetNameValue: TypeAlias = str
 
 
 # Options that should be excluded from pyproject.toml config generation
@@ -497,7 +500,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
     input_file_type: InputFileType = InputFileType.Auto
     output_model_type: DataModelType = DataModelType.PydanticV2BaseModel
     output: Optional[Path] = None  # noqa: UP045
-    preset: Optional[str] = None  # noqa: UP045
+    preset: Optional[PresetNameValue] = None  # noqa: UP045
     check: bool = False
     debug: bool = False
     disable_warnings: bool = False
