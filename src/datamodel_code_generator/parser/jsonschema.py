@@ -5624,14 +5624,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     except KeyError:  # pragma: no cover
                         continue
 
-                definition_entries = list(
-                    self._iter_schema_definition_entries(definitions, [*path_parts, schema_path])
-                )
+                definition_entries = list(self._iter_schema_definition_entries(definitions, [*path_parts, schema_path]))
                 definition_metadata_entries = [
-                    *(
-                        (str(key), model, [*path_parts, schema_path, str(key)])
-                        for key, model in definitions.items()
-                    ),
+                    *((str(key), model, [*path_parts, schema_path, str(key)]) for key, model in definitions.items()),
                     *definition_entries,
                 ]
                 seen_definition_metadata_paths: set[tuple[str, ...]] = set()
