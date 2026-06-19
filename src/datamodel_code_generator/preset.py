@@ -566,8 +566,9 @@ def render_presets_markdown() -> str:
         "",
         (
             "Every preset name includes its Python target, so generated Python syntax is pinned without an extra "
-            "`--target-python-version` argument. If you also pass `--target-python-version` or "
-            "`target-python-version`, it must match the preset name."
+            "`--target-python-version` argument. Choose the preset name instead of adding a separate target option "
+            "to normal preset commands; if an explicit target is already present in CLI or pyproject configuration, "
+            "it must match the preset name."
         ),
         "",
         (
@@ -711,8 +712,8 @@ def render_presets_markdown() -> str:
     lines.extend((
         "",
         (
-            "Each preset name includes its Python target. You can still pass `--target-python-version` or "
-            "`target-python-version` explicitly; when present, it must match the preset target."
+            "Each preset name includes its Python target. Do not add `--target-python-version` just to use a preset; "
+            "only expanded configuration without `--preset` needs a separate target option."
         ),
         "",
         "### Preset Reference",
@@ -733,10 +734,9 @@ def render_presets_markdown() -> str:
             "#### Included Options",
             "",
             (
-                "These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel output, "
-                f"and Python {info.target_python_version.value}. The preset name pins the Python target, so "
-                "`target-python-version` is not shown as a separate option. Replace the input and output paths for "
-                "your project."
+                "These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, "
+                f"Pydantic v2 BaseModel output, and Python {info.target_python_version.value}. Replace the input and "
+                "output paths for your project."
             ),
             "",
         ))
@@ -779,6 +779,7 @@ def _copyable_config_data(info: PresetInfo) -> dict[str, TomlValue]:
         "input_file_type": _COPYABLE_INPUT_FILE_TYPE.value,
         "output": "model.py",
         "output_model_type": _COPYABLE_OUTPUT_MODEL_TYPE.value,
+        "target_python_version": info.target_python_version.value,
     }
     for item in _resolve_preset_info(info, context):
         config_data[item.field_name] = item.pyproject_value

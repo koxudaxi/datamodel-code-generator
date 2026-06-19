@@ -4,7 +4,7 @@
 
 Presets are immutable named groups of CLI options. A preset name never changes behavior; new recommendations are published as new dated preset names.
 
-Every preset name includes its Python target, so generated Python syntax is pinned without an extra `--target-python-version` argument. If you also pass `--target-python-version` or `target-python-version`, it must match the preset name.
+Every preset name includes its Python target, so generated Python syntax is pinned without an extra `--target-python-version` argument. Choose the preset name instead of adding a separate target option to normal preset commands; if an explicit target is already present in CLI or pyproject configuration, it must match the preset name.
 
 See also: [`--preset`](cli-reference/base-options.md#preset), [`--target-python-version`](cli-reference/model-customization.md#target-python-version), [`--output-model-type`](cli-reference/model-customization.md#output-model-type), [`--profile`](cli-reference/utility-options.md#profile), [`--generate-pyproject-config`](cli-reference/general-options.md#generate-pyproject-config), [`--generate-cli-command`](cli-reference/general-options.md#generate-cli-command), [pyproject.toml configuration](pyproject_toml.md), and [CI/CD integration](ci-cd.md).
 
@@ -113,7 +113,7 @@ Use `--ignore-pyproject` when you want to test a preset command without loading 
 | 3.13 | `standard-py313-20260619` | `practical-py313-20260619` |
 | 3.14 | `standard-py314-20260619` | `practical-py314-20260619` |
 
-Each preset name includes its Python target. You can still pass `--target-python-version` or `target-python-version` explicitly; when present, it must match the preset target.
+Each preset name includes its Python target. Do not add `--target-python-version` just to use a preset; only expanded configuration without `--preset` needs a separate target option.
 
 ### Preset Reference
 
@@ -128,7 +128,7 @@ This immutable preset enables the project-recommended Python output style for ne
 
 #### Included Options
 
-These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.10. The preset name pins the Python target, so `target-python-version` is not shown as a separate option. Replace the input and output paths for your project.
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.10. Replace the input and output paths for your project.
 
 === "pyproject.toml"
 
@@ -145,6 +145,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
     set-default-enum-member = true
     snake-case-field = true
     strict-nullable = true
+    target-python-version = "3.10"
     use-annotated = true
     use-frozen-field = true
     use-standard-collections = true
@@ -155,7 +156,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
 === "CLI"
 
     ```bash
-    datamodel-codegen --allow-population-by-field-name --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --set-default-enum-member --snake-case-field --strict-nullable --use-annotated --use-frozen-field --use-standard-collections --use-subclass-enum --use-union-operator
+    datamodel-codegen --allow-population-by-field-name --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.10 --use-annotated --use-frozen-field --use-standard-collections --use-subclass-enum --use-union-operator
     ```
 
 | Scope | Options | Notes |
@@ -177,7 +178,7 @@ This immutable preset enables the project-recommended Python output style for ne
 
 #### Included Options
 
-These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.11. The preset name pins the Python target, so `target-python-version` is not shown as a separate option. Replace the input and output paths for your project.
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.11. Replace the input and output paths for your project.
 
 === "pyproject.toml"
 
@@ -194,6 +195,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
     set-default-enum-member = true
     snake-case-field = true
     strict-nullable = true
+    target-python-version = "3.11"
     use-annotated = true
     use-frozen-field = true
     use-specialized-enum = true
@@ -205,7 +207,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
 === "CLI"
 
     ```bash
-    datamodel-codegen --allow-population-by-field-name --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --set-default-enum-member --snake-case-field --strict-nullable --use-annotated --use-frozen-field --use-specialized-enum --use-standard-collections --use-subclass-enum --use-union-operator
+    datamodel-codegen --allow-population-by-field-name --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.11 --use-annotated --use-frozen-field --use-specialized-enum --use-standard-collections --use-subclass-enum --use-union-operator
     ```
 
 | Scope | Options | Notes |
@@ -228,7 +230,7 @@ This immutable preset enables the project-recommended Python output style for ne
 
 #### Included Options
 
-These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.12. The preset name pins the Python target, so `target-python-version` is not shown as a separate option. Replace the input and output paths for your project.
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.12. Replace the input and output paths for your project.
 
 === "pyproject.toml"
 
@@ -245,6 +247,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
     set-default-enum-member = true
     snake-case-field = true
     strict-nullable = true
+    target-python-version = "3.12"
     use-annotated = true
     use-frozen-field = true
     use-specialized-enum = true
@@ -256,7 +259,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
 === "CLI"
 
     ```bash
-    datamodel-codegen --allow-population-by-field-name --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --set-default-enum-member --snake-case-field --strict-nullable --use-annotated --use-frozen-field --use-specialized-enum --use-standard-collections --use-subclass-enum --use-union-operator
+    datamodel-codegen --allow-population-by-field-name --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.12 --use-annotated --use-frozen-field --use-specialized-enum --use-standard-collections --use-subclass-enum --use-union-operator
     ```
 
 | Scope | Options | Notes |
@@ -279,7 +282,7 @@ This immutable preset enables the project-recommended Python output style for ne
 
 #### Included Options
 
-These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.13. The preset name pins the Python target, so `target-python-version` is not shown as a separate option. Replace the input and output paths for your project.
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.13. Replace the input and output paths for your project.
 
 === "pyproject.toml"
 
@@ -296,6 +299,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
     set-default-enum-member = true
     snake-case-field = true
     strict-nullable = true
+    target-python-version = "3.13"
     use-annotated = true
     use-frozen-field = true
     use-specialized-enum = true
@@ -307,7 +311,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
 === "CLI"
 
     ```bash
-    datamodel-codegen --allow-population-by-field-name --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --set-default-enum-member --snake-case-field --strict-nullable --use-annotated --use-frozen-field --use-specialized-enum --use-standard-collections --use-subclass-enum --use-union-operator
+    datamodel-codegen --allow-population-by-field-name --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.13 --use-annotated --use-frozen-field --use-specialized-enum --use-standard-collections --use-subclass-enum --use-union-operator
     ```
 
 | Scope | Options | Notes |
@@ -330,7 +334,7 @@ This immutable preset enables the project-recommended Python output style for ne
 
 #### Included Options
 
-These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.14. The preset name pins the Python target, so `target-python-version` is not shown as a separate option. Replace the input and output paths for your project.
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.14. Replace the input and output paths for your project.
 
 === "pyproject.toml"
 
@@ -347,6 +351,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
     set-default-enum-member = true
     snake-case-field = true
     strict-nullable = true
+    target-python-version = "3.14"
     use-annotated = true
     use-frozen-field = true
     use-specialized-enum = true
@@ -358,7 +363,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
 === "CLI"
 
     ```bash
-    datamodel-codegen --allow-population-by-field-name --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --set-default-enum-member --snake-case-field --strict-nullable --use-annotated --use-frozen-field --use-specialized-enum --use-standard-collections --use-subclass-enum --use-union-operator
+    datamodel-codegen --allow-population-by-field-name --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.14 --use-annotated --use-frozen-field --use-specialized-enum --use-standard-collections --use-subclass-enum --use-union-operator
     ```
 
 | Scope | Options | Notes |
@@ -381,7 +386,7 @@ This immutable preset extends `standard-py310-20260619` with options that make g
 
 #### Included Options
 
-These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.10. The preset name pins the Python target, so `target-python-version` is not shown as a separate option. Replace the input and output paths for your project.
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.10. Replace the input and output paths for your project.
 
 === "pyproject.toml"
 
@@ -401,6 +406,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
     set-default-enum-member = true
     snake-case-field = true
     strict-nullable = true
+    target-python-version = "3.10"
     use-annotated = true
     use-default-kwarg = true
     use-field-description = true
@@ -420,7 +426,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
 === "CLI"
 
     ```bash
-    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --set-default-enum-member --snake-case-field --strict-nullable --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
+    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.10 --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
     ```
 
 | Scope | Options | Notes |
@@ -445,7 +451,7 @@ This immutable preset extends `standard-py311-20260619` with options that make g
 
 #### Included Options
 
-These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.11. The preset name pins the Python target, so `target-python-version` is not shown as a separate option. Replace the input and output paths for your project.
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.11. Replace the input and output paths for your project.
 
 === "pyproject.toml"
 
@@ -465,6 +471,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
     set-default-enum-member = true
     snake-case-field = true
     strict-nullable = true
+    target-python-version = "3.11"
     use-annotated = true
     use-default-kwarg = true
     use-field-description = true
@@ -485,7 +492,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
 === "CLI"
 
     ```bash
-    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --set-default-enum-member --snake-case-field --strict-nullable --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-specialized-enum --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
+    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.11 --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-specialized-enum --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
     ```
 
 | Scope | Options | Notes |
@@ -511,7 +518,7 @@ This immutable preset extends `standard-py312-20260619` with options that make g
 
 #### Included Options
 
-These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.12. The preset name pins the Python target, so `target-python-version` is not shown as a separate option. Replace the input and output paths for your project.
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.12. Replace the input and output paths for your project.
 
 === "pyproject.toml"
 
@@ -531,6 +538,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
     set-default-enum-member = true
     snake-case-field = true
     strict-nullable = true
+    target-python-version = "3.12"
     use-annotated = true
     use-default-kwarg = true
     use-field-description = true
@@ -551,7 +559,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
 === "CLI"
 
     ```bash
-    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --set-default-enum-member --snake-case-field --strict-nullable --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-specialized-enum --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
+    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.12 --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-specialized-enum --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
     ```
 
 | Scope | Options | Notes |
@@ -577,7 +585,7 @@ This immutable preset extends `standard-py313-20260619` with options that make g
 
 #### Included Options
 
-These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.13. The preset name pins the Python target, so `target-python-version` is not shown as a separate option. Replace the input and output paths for your project.
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.13. Replace the input and output paths for your project.
 
 === "pyproject.toml"
 
@@ -597,6 +605,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
     set-default-enum-member = true
     snake-case-field = true
     strict-nullable = true
+    target-python-version = "3.13"
     use-annotated = true
     use-default-kwarg = true
     use-field-description = true
@@ -617,7 +626,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
 === "CLI"
 
     ```bash
-    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --set-default-enum-member --snake-case-field --strict-nullable --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-specialized-enum --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
+    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.13 --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-specialized-enum --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
     ```
 
 | Scope | Options | Notes |
@@ -643,7 +652,7 @@ This immutable preset extends `standard-py314-20260619` with options that make g
 
 #### Included Options
 
-These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.14. The preset name pins the Python target, so `target-python-version` is not shown as a separate option. Replace the input and output paths for your project.
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.14. Replace the input and output paths for your project.
 
 === "pyproject.toml"
 
@@ -663,6 +672,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
     set-default-enum-member = true
     snake-case-field = true
     strict-nullable = true
+    target-python-version = "3.14"
     use-annotated = true
     use-default-kwarg = true
     use-field-description = true
@@ -683,7 +693,7 @@ These snippets expand the preset for JSON Schema input, Pydantic v2 BaseModel ou
 === "CLI"
 
     ```bash
-    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --set-default-enum-member --snake-case-field --strict-nullable --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-specialized-enum --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
+    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.14 --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-specialized-enum --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
     ```
 
 | Scope | Options | Notes |
