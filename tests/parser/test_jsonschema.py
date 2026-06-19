@@ -47,6 +47,10 @@ def block_dns_by_default(mocker: MockerFixture) -> None:
     mocker.patch("socket.getaddrinfo", side_effect=OSError)
 
 
+def _json_schema_object(data: dict[str, Any]) -> JsonSchemaObject:
+    return JsonSchemaObject.model_validate(data)
+
+
 @pytest.mark.parametrize(
     ("schema", "path", "model"),
     [
@@ -622,6 +626,94 @@ def test_parse_any_root_object(source_obj: dict[str, Any], generated_classes: st
     parser = JsonSchemaParser("")
     parser.parse_root_type("AnyObject", JsonSchemaObject.model_validate(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
+
+
+def test_infer_union_variant_names_uses_discriminator_literals() -> None:
+    """Infer variant names from discriminator literals without mutating schemas."""
+    parser = JsonSchemaParser("", infer_union_variant_names=True)
+    parent = _json_schema_object({"discriminator": {"propertyName": "kind"}})
+    variants = [
+        _json_schema_object({"properties": {"kind": {"const": ""}}}),
+        _json_schema_object({"properties": {"kind": {"enum": ["ready"]}}}),
+    ]
+
+    assert parser._infer_union_variant_names("pkg.Event", parent, variants) == [None, "pkg.Event_ready"]
+
+
+def test_union_variant_literal_helpers_handle_refs_and_invalid_fields() -> None:
+    """Literal collection rejects ambiguous branches and resolves simple refs."""
+    parser = JsonSchemaParser("", infer_union_variant_names=True)
+    ref = "#/$defs/Kind"
+    parser.raw_obj = {"$defs": {"Kind": {"const": "from_ref"}}}
+
+    assert parser._get_single_literal_value(_json_schema_object({"$ref": ref})) == "from_ref"
+    assert parser._get_single_literal_value(
+        _json_schema_object({"$ref": ref}),
+        {parser.model_resolver.resolve_ref(ref)},
+    ) is None
+    assert parser._get_single_literal_value(_json_schema_object({"type": "string"})) is None
+    assert parser._get_union_variant_literal_values(
+        [
+            _json_schema_object({}),
+            _json_schema_object({"properties": {"kind": {"const": "only"}}}),
+        ],
+        "kind",
+    ) is None
+    assert parser._get_union_variant_literal_values(
+        [
+            _json_schema_object({"properties": {"kind": True}}),
+            _json_schema_object({"properties": {"kind": {"const": "ready"}}}),
+        ],
+        "kind",
+    ) is None
+    assert parser._get_union_variant_literal_values(
+        [
+            _json_schema_object({"properties": {"kind": {"type": "string"}}}),
+            _json_schema_object({"properties": {"kind": {"const": "ready"}}}),
+        ],
+        "kind",
+    ) is None
+
+
+def test_iter_union_variant_literal_field_names_skips_duplicates() -> None:
+    """Field name scanning prefers discriminator names and keeps fallbacks stable."""
+    parser = JsonSchemaParser("", infer_union_variant_names=True)
+
+    assert list(parser._iter_union_variant_literal_field_names(_json_schema_object({"discriminator": "kind"}), [])) == [
+        "kind"
+    ]
+    assert list(
+        parser._iter_union_variant_literal_field_names(
+            _json_schema_object({}),
+            [
+                _json_schema_object({}),
+                _json_schema_object({"properties": {"kind": {"const": "a"}, "reason": {"const": "x"}}}),
+                _json_schema_object({"properties": {"kind": {"const": "b"}}}),
+            ],
+        )
+    ) == ["kind", "reason"]
+
+
+def test_infer_union_variant_names_returns_none_when_no_literal_field_matches() -> None:
+    """Keep default generated names when no field has unique literal values."""
+    parser = JsonSchemaParser("", infer_union_variant_names=True)
+    variants = [
+        _json_schema_object({"properties": {"kind": {"type": "string"}}}),
+        _json_schema_object({"properties": {"kind": {"const": "ready"}}}),
+    ]
+
+    assert parser._infer_union_variant_names("Event", _json_schema_object({}), variants) is None
+
+
+def test_infer_union_variant_names_disabled() -> None:
+    """Leave default variant naming unchanged unless explicitly enabled."""
+    parser = JsonSchemaParser("")
+    variants = [
+        _json_schema_object({"properties": {"kind": {"const": "created"}}}),
+        _json_schema_object({"properties": {"kind": {"const": "deleted"}}}),
+    ]
+
+    assert parser._infer_union_variant_names("Event", _json_schema_object({}), variants) is None
 
 
 @pytest.mark.parametrize(
