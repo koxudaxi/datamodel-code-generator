@@ -674,6 +674,18 @@ def test_infer_union_variant_names_distinguishes_literal_types() -> None:
     assert _get_union_variant_name("Event", object()) is None
 
 
+def test_infer_union_variant_names_skips_generated_name_collisions() -> None:
+    """Try the next literal field when generated variant names collide."""
+    parser = JsonSchemaParser("", infer_union_variant_names=True)
+    parent = _json_schema_object({"discriminator": {"propertyName": "kind"}})
+    variants = [
+        _json_schema_object({"properties": {"kind": {"const": 1}, "fallback": {"const": "created"}}}),
+        _json_schema_object({"properties": {"kind": {"const": "int_1"}, "fallback": {"const": "updated"}}}),
+    ]
+
+    assert parser._infer_union_variant_names("Event", parent, variants) == ["Event_created", "Event_updated"]
+
+
 def test_union_variant_literal_helpers_handle_refs_and_invalid_fields(tmp_path: Path, mocker: MockerFixture) -> None:
     """Literal collection rejects ambiguous branches and resolves simple refs."""
     parser = JsonSchemaParser("", infer_union_variant_names=True)

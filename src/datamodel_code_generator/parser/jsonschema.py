@@ -2283,6 +2283,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             variant_names: list[str | None] = [None] * len(combined_schemas)
             for index, literal in values.items():
                 variant_names[index] = _get_union_variant_name(name, literal)
+            generated_names = [variant_name for variant_name in variant_names if variant_name]
+            if len(set(generated_names)) != len(generated_names):
+                continue
             return variant_names
         return None
 
