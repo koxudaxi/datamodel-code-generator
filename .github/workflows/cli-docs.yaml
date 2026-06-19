@@ -35,7 +35,7 @@ jobs:
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
       - name: Collect CLI doc metadata
-        run: .tox/cli-docs/bin/pytest --collect-cli-docs -p no:xdist -q
+        run: .tox/cli-docs/bin/pytest tests --collect-cli-docs -p no:xdist -q
       - name: Build CLI docs
         run: .tox/cli-docs/bin/python scripts/build_cli_docs.py
       - name: Build prompt data

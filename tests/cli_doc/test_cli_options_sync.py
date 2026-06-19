@@ -8,6 +8,8 @@ These tests verify that:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, TypeVar
+
 import pytest
 
 from datamodel_code_generator import cli_options
@@ -26,6 +28,27 @@ from datamodel_code_generator.cli_options import (
     is_excluded_from_docs,
     is_manual_doc,
 )
+from scripts.build_cli_docs import _documented_related_option, scan_docs_for_cli_option_tags
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
+
+_T = TypeVar("_T")
+
+
+def _fail_if_not_equal(actual: _T, expected: _T, context: str) -> None:
+    if actual != expected:
+        pytest.fail(f"{context}: expected {expected!r}, got {actual!r}")
+
+
+def _fail_if_missing(item: _T, collection: Collection[_T], context: str) -> None:
+    if item not in collection:
+        pytest.fail(f"{context}: expected {item!r} in {collection!r}")
+
+
+def _fail_if_present(item: _T, collection: Collection[_T], context: str) -> None:
+    if item in collection:
+        pytest.fail(f"{context}: expected {item!r} not to be present in {collection!r}")
 
 
 def test_get_canonical_option() -> None:
@@ -71,6 +94,56 @@ def test_get_option_meta_returns_default_for_known_argparse_option(monkeypatch: 
     monkeypatch.setattr(cli_options, "get_all_canonical_options", get_future_options)
 
     assert get_option_meta(option) == CLIOptionMeta(name=option, category=OptionCategory.GENERAL)
+
+
+def test_documented_related_option_prefers_existing_generated_section() -> None:
+    """Related links should target generated sections, not argparse's longest alias."""
+    documented_options = frozenset({
+        "--collapse-root-models",
+        "--no-use-union-operator",
+        "--snake-case-field",
+    })
+
+    _fail_if_not_equal(
+        _documented_related_option("--collapse-root-models", documented_options),
+        "--collapse-root-models",
+        "--collapse-root-models related option target",
+    )
+    _fail_if_not_equal(
+        _documented_related_option("--snake-case-field", documented_options),
+        "--snake-case-field",
+        "--snake-case-field related option target",
+    )
+    _fail_if_not_equal(
+        _documented_related_option("--use-union-operator", documented_options),
+        "--no-use-union-operator",
+        "--use-union-operator related option target",
+    )
+
+
+def test_related_page_tags_prefer_existing_generated_section() -> None:
+    """Related page tags should keep links on generated positive BooleanOptionalAction sections."""
+    documented_options = frozenset({
+        "--collapse-root-models",
+        "--disable-warnings",
+        "--reuse-model",
+        "--reuse-scope",
+        "--shared-module-name",
+        "--use-type-alias",
+    })
+
+    option_related_pages = scan_docs_for_cli_option_tags(documented_options)
+
+    _fail_if_missing(
+        ("model-reuse.md", "Model Reuse and Deduplication"),
+        option_related_pages["--collapse-root-models"],
+        "--collapse-root-models related page",
+    )
+    _fail_if_present(
+        "--no-collapse-root-models",
+        option_related_pages,
+        "--no-collapse-root-models related page key",
+    )
 
 
 class TestCLIOptionMetaSync:

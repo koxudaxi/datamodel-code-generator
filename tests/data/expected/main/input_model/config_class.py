@@ -135,6 +135,7 @@ class BaseGenerateConfig(TypedDict):
     input_file_type: NotRequired[InputFileType]
     output: NotRequired[str | None]
     output_model_type: NotRequired[DataModelType]
+    preset: NotRequired[str | None]
     target_python_version: NotRequired[PythonVersion]
     target_pydantic_version: NotRequired[TargetPydanticVersion | None]
     base_class: NotRequired[str]

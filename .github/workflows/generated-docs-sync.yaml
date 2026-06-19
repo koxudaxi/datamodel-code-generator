@@ -7,9 +7,11 @@ on:
     paths:
       - 'src/datamodel_code_generator/**'
       - 'tests/main/**'
+      - 'tests/data/jsonschema/tutorial_pet.json'
       - 'tests/test_main_kr.py'
       - 'scripts/build_cli_docs.py'
       - 'scripts/build_prompt_data.py'
+      - 'scripts/build_preset_docs.py'
       - 'scripts/build_schema_docs.py'
       - 'scripts/build_conformance_docs.py'
       - 'scripts/build_llms_txt.py'
@@ -60,6 +62,7 @@ jobs:
           generated_paths=(
             README.md
             docs/index.md
+            docs/presets.md
             docs/conformance.md
             docs/cli-reference/
             docs/llms.txt

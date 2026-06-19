@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.model.dataclass import DataclassArguments
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
     from datamodel_code_generator.parser import DefaultPutDict, LiteralType
+    from datamodel_code_generator.preset_names import PresetName
     from datamodel_code_generator.types import StrictTypes
     from datamodel_code_generator.validators import ModelValidators
 
@@ -201,6 +202,7 @@ def _baseline_generate(
     input_file_type: InputFileType = InputFileType.Auto,
     output: Path | None = None,
     output_model_type: DataModelType = DataModelType.PydanticV2BaseModel,
+    preset: PresetName | None = None,
     target_python_version: PythonVersion = PythonVersionMin,
     target_pydantic_version: TargetPydanticVersion | None = None,
     base_class: str = "",
@@ -788,6 +790,10 @@ def test_generate_config_dict_types_match_generate_config() -> None:
     for field_name, field_info in GenerateConfig.model_fields.items():
         config_type = field_info.annotation
         dict_type = GenerateConfigDict.__annotations__[field_name]
+        if field_name == "preset":
+            assert _normalize_type(config_type) == "None | str"
+            assert _normalize_type(dict_type) == "None | PresetName"
+            continue
         assert _types_match(config_type, dict_type), (
             f"Type mismatch for {field_name}: Config={_normalize_type(config_type)}, Dict={_normalize_type(dict_type)}"
         )

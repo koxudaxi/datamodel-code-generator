@@ -8,7 +8,7 @@ This documentation is auto-generated from test cases.
 
 | Category | Options | Description |
 |----------|---------|-------------|
-| 📁 [Base Options](base-options.md) | 10 | Input/output configuration |
+| 📁 [Base Options](base-options.md) | 11 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 30 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 26 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 41 | Model generation behavior |
@@ -167,6 +167,7 @@ This documentation is auto-generated from test cases.
 ### P {#p}
 
 - [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming)
+- [`--preset`](base-options.md#preset)
 - [`--profile`](utility-options.md#profile)
 
 ### R {#r}

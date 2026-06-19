@@ -117,6 +117,14 @@ class FieldTypeCollisionStrategy(Enum):
     RenameType = "rename-type"
 
 
+class ExtraFields(str, Enum):
+    """Generated model behavior for unknown input fields."""
+
+    Allow = "allow"
+    Ignore = "ignore"
+    Forbid = "forbid"
+
+
 class NamingStrategy(Enum):
     """Strategy for generating unique model names when duplicates occur.
 

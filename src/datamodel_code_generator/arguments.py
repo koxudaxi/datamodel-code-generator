@@ -40,6 +40,7 @@ from datamodel_code_generator.enums import (
 )
 from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
 from datamodel_code_generator.parser import LiteralType
+from datamodel_code_generator.preset_names import PRESET_NAMES
 
 if TYPE_CHECKING:
     from argparse import Action
@@ -248,6 +249,14 @@ base_options.add_argument(
     choices=[i.value for i in DataModelType],
 )
 base_options.add_argument(
+    "--preset",
+    help=(
+        "Apply an immutable built-in option preset. "
+        "Preset names include the target Python version so generated syntax is pinned."
+    ),
+    choices=PRESET_NAMES,
+)
+base_options.add_argument(
     "--url",
     help="Input file URL. `--input` is ignored when `--url` is used",
 )
@@ -284,7 +293,7 @@ extra_fields_model_options.add_argument(
 model_options.add_argument(
     "--allow-population-by-field-name",
     help="Allow population by field name",
-    action="store_true",
+    action=BooleanOptionalAction,
     default=None,
 )
 model_options.add_argument(
@@ -323,7 +332,7 @@ model_options.add_argument(
 )
 model_options.add_argument(
     "--collapse-root-models",
-    action="store_true",
+    action=BooleanOptionalAction,
     default=None,
     help="Models generated with a root-type field will be merged into the models using that root-type model",
 )
@@ -494,7 +503,7 @@ model_options.add_argument(
     help="Use Python standard library types for string formats (UUID, IPv4Address, etc.) "
     "instead of str. Affects dataclass, msgspec, TypedDict output. "
     "Pydantic already uses these types by default.",
-    action="store_true",
+    action=BooleanOptionalAction,
     default=None,
 )
 model_options.add_argument(
@@ -845,7 +854,7 @@ field_options.add_argument(
 field_options.add_argument(
     "--snake-case-field",
     help="Change camel-case field name to snake-case",
-    action="store_true",
+    action=BooleanOptionalAction,
     default=None,
 )
 field_options.add_argument(
@@ -939,7 +948,7 @@ field_options.add_argument(
 field_options.add_argument(
     "--use-frozen-field",
     help="Use Field(frozen=True) for readOnly fields (Pydantic v2).",
-    action="store_true",
+    action=BooleanOptionalAction,
     default=None,
 )
 field_options.add_argument(

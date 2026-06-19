@@ -1,0 +1,395 @@
+"""Generate preset documentation and preset-powered quick-start examples.
+
+Usage:
+    python scripts/build_preset_docs.py
+    python scripts/build_preset_docs.py --check
+    python scripts/build_preset_docs.py --format json
+"""
+
+from __future__ import annotations
+
+import argparse
+import re
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING, Literal, cast
+
+ROOT = Path(__file__).resolve().parents[1]
+DOCS_PATH = ROOT / "docs" / "presets.md"
+DOCS_INDEX_PATH = ROOT / "docs" / "index.md"
+README_PATH = ROOT / "README.md"
+SRC_PATH = ROOT / "src"
+PRESET_NAMES_PATH = SRC_PATH / "datamodel_code_generator" / "preset_names.py"
+QUICK_START_SCHEMA_PATH = ROOT / "tests" / "data" / "jsonschema" / "preset_quick_start_pet.json"
+QUICK_START_SCHEMA_NAME = "schema.json"
+QUICK_START_OUTPUT_NAME = "model.py"
+QUICK_START_TARGET_PYTHON_VERSION = "3.12"
+PRESET_VERSION_DATE_LENGTH = 8
+QUICK_START_BEGIN_MARKER = "<!-- BEGIN AUTO-GENERATED PRESET QUICK START -->"
+QUICK_START_END_MARKER = "<!-- END AUTO-GENERATED PRESET QUICK START -->"
+README_PRESETS_LINK = "https://datamodel-code-generator.koxudaxi.dev/presets/"
+README_CLI_REFERENCE_LINK = "https://datamodel-code-generator.koxudaxi.dev/cli-reference/"
+README_PRESET_OPTION_LINK = "https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options/#preset"
+README_INPUT_FILE_TYPE_OPTION_LINK = (
+    "https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options/#input-file-type"
+)
+README_OUTPUT_MODEL_TYPE_OPTION_LINK = (
+    "https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-customization/#output-model-type"
+)
+DOCS_PRESETS_LINK = "presets.md"
+DOCS_CLI_REFERENCE_LINK = "cli-reference/index.md"
+DOCS_PRESET_OPTION_LINK = "cli-reference/base-options.md#preset"
+DOCS_INPUT_FILE_TYPE_OPTION_LINK = "cli-reference/base-options.md#input-file-type"
+DOCS_OUTPUT_MODEL_TYPE_OPTION_LINK = "cli-reference/model-customization.md#output-model-type"
+
+if str(SRC_PATH) not in sys.path:
+    sys.path.insert(0, str(SRC_PATH))
+
+from datamodel_code_generator.preset import get_preset_names, render_presets  # noqa: E402
+
+if TYPE_CHECKING:
+    from datamodel_code_generator.preset_names import PresetName
+
+PresetDocsFormat = Literal["markdown", "json"]
+
+
+@dataclass(frozen=True, slots=True)
+class GeneratedDoc:
+    """Generated file content."""
+
+    path: Path
+    content: str
+
+
+def build_docs(*, check: bool) -> int:
+    """Generate or check preset documentation outputs."""
+    preset_names_doc = GeneratedDoc(PRESET_NAMES_PATH, _render_preset_names_module())
+    if check:
+        if not _doc_is_current(preset_names_doc):
+            _print_out_of_date((preset_names_doc.path,))
+            return 1
+    else:
+        preset_names_doc.path.write_text(preset_names_doc.content, encoding="utf-8")
+
+    docs = _generate_docs(preset_names_doc)
+    if not check:
+        for doc in docs:
+            doc.path.write_text(doc.content, encoding="utf-8")
+        return 0
+
+    out_of_date = [doc.path for doc in docs if not _doc_is_current(doc)]
+    if not out_of_date:
+        return 0
+
+    _print_out_of_date(tuple(out_of_date))
+    return 1
+
+
+def _doc_is_current(doc: GeneratedDoc) -> bool:
+    return doc.path.exists() and doc.path.read_text(encoding="utf-8") == doc.content
+
+
+def _print_out_of_date(paths: tuple[Path, ...]) -> None:
+    for path in paths:
+        print(f"Preset docs are out of date: {path.relative_to(ROOT)}", file=sys.stderr)
+    print("Run 'python scripts/build_preset_docs.py' to update.", file=sys.stderr)
+
+
+def _generate_docs(preset_names_doc: GeneratedDoc) -> tuple[GeneratedDoc, ...]:
+    standard_preset_name = _get_latest_preset_name_by_prefix(
+        "standard",
+        target_python_version=QUICK_START_TARGET_PYTHON_VERSION,
+    )
+    practical_preset_name = _get_latest_preset_name_by_prefix(
+        "practical",
+        target_python_version=QUICK_START_TARGET_PYTHON_VERSION,
+    )
+    standard_model_output = _generate_quick_start_model(standard_preset_name)
+    return (
+        preset_names_doc,
+        GeneratedDoc(DOCS_PATH, render_presets("markdown")),
+        GeneratedDoc(
+            README_PATH,
+            _replace_quick_start_section(
+                README_PATH.read_text(encoding="utf-8"),
+                _render_readme_quick_start(
+                    standard_preset_name,
+                    standard_model_output,
+                    practical_preset_name,
+                ),
+            ),
+        ),
+        GeneratedDoc(
+            DOCS_INDEX_PATH,
+            _replace_quick_start_section(
+                DOCS_INDEX_PATH.read_text(encoding="utf-8"),
+                _render_docs_index_quick_start(
+                    standard_preset_name,
+                    standard_model_output,
+                    practical_preset_name,
+                ),
+            ),
+        ),
+    )
+
+
+def _get_latest_preset_name_by_prefix(prefix: str, *, target_python_version: str) -> PresetName:
+    target = target_python_version.replace(".", "")
+    prefix_with_separator = f"{prefix}-py{target}-"
+    matching_names = tuple(name for name in get_preset_names() if name.startswith(prefix_with_separator))
+    if not matching_names:  # pragma: no cover
+        msg = f"No built-in preset starts with {prefix_with_separator!r}"
+        raise RuntimeError(msg)
+    return cast("PresetName", max(matching_names, key=_preset_version_sort_key))
+
+
+def _preset_version_sort_key(name: str) -> tuple[str, str]:
+    prefix, separator, version = name.rpartition("-")
+    if separator and version.isdecimal():
+        return prefix, version
+    return name, ""  # pragma: no cover
+
+
+def _render_preset_names_module() -> str:
+    preset_names = get_preset_names()
+    if len(preset_names) == 1:
+        names_literal = f'("{preset_names[0]}",)'
+        preset_name_type = f'Literal["{preset_names[0]}"]'
+    else:
+        names = "\n".join(f'    "{name}",' for name in preset_names)
+        names_literal = f"(\n{names}\n)"
+        literal_names = "\n".join(f'    "{name}",' for name in preset_names)
+        preset_name_type = f"Literal[\n{literal_names}\n]"
+    return f'''"""Generated built-in preset names for CLI choices.
+
+Generated by scripts/build_preset_docs.py. Do not edit manually.
+"""
+
+from __future__ import annotations
+
+from typing import Final, Literal, TypeAlias
+
+PresetName: TypeAlias = {preset_name_type}
+PRESET_NAMES: Final[tuple[PresetName, ...]] = {names_literal}
+'''
+
+
+def _replace_quick_start_section(markdown_text: str, generated: str) -> str:
+    start = markdown_text.find(QUICK_START_BEGIN_MARKER)
+    end = markdown_text.find(QUICK_START_END_MARKER)
+    if start == -1 or end == -1 or end < start:
+        msg = f"Could not find quick-start markers: {QUICK_START_BEGIN_MARKER} / {QUICK_START_END_MARKER}"
+        raise ValueError(msg)
+    return (
+        markdown_text[: start + len(QUICK_START_BEGIN_MARKER)] + "\n" + generated.rstrip() + "\n" + markdown_text[end:]
+    )
+
+
+def _quick_start_args(preset_name: str) -> tuple[str, ...]:
+    return (
+        "--input",
+        QUICK_START_SCHEMA_NAME,
+        "--input-file-type",
+        "jsonschema",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--preset",
+        preset_name,
+        "--output",
+        QUICK_START_OUTPUT_NAME,
+    )
+
+
+def _render_quick_start_command(preset_name: str) -> str:
+    return _render_shell_command(("datamodel-codegen", *_quick_start_args(preset_name)))
+
+
+def _render_shell_command(command: tuple[str, ...]) -> str:
+    lines: list[str] = []
+    index = 0
+    while index < len(command):
+        token = command[index]
+        if index == 0:
+            argument = token
+            index += 1
+        elif index + 1 < len(command) and token.startswith("-") and not command[index + 1].startswith("-"):
+            argument = f"{token} {command[index + 1]}"
+            index += 2
+        else:
+            argument = token
+            index += 1
+
+        indent = "" if not lines else "  "
+        continuation = " \\" if index < len(command) else ""
+        lines.append(f"{indent}{argument}{continuation}")
+    return "\n".join(lines)
+
+
+def _generate_quick_start_model(preset_name: PresetName) -> str:
+    from datamodel_code_generator import generate  # noqa: PLC0415
+    from datamodel_code_generator.config import GenerateConfig  # noqa: PLC0415
+    from datamodel_code_generator.enums import DataModelType, InputFileType  # noqa: PLC0415
+    from datamodel_code_generator.format import Formatter  # noqa: PLC0415
+
+    config = GenerateConfig(
+        input_filename=QUICK_START_SCHEMA_NAME,
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        preset=preset_name,
+        formatters=[Formatter.BLACK, Formatter.ISORT],
+    )
+
+    schema = QUICK_START_SCHEMA_PATH.read_text(encoding="utf-8")
+    model_output = generate(input_=schema, config=config)
+    if not isinstance(model_output, str):  # pragma: no cover
+        msg = f"Expected quick-start generation to return a single module string, got {type(model_output).__name__}"
+        raise TypeError(msg)
+    return _normalize_quick_start_timestamp(model_output.rstrip(), preset_name)
+
+
+def _normalize_quick_start_timestamp(model_output: str, preset_name: str) -> str:
+    """Pin generated quick-start timestamps when the selected preset emits one."""
+    timestamp = _preset_timestamp(preset_name)
+    normalized = re.sub(
+        r"^#   timestamp: .+$",
+        f"#   timestamp: {timestamp}",
+        model_output,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    if normalized != model_output:
+        return normalized
+    return model_output
+
+
+def _preset_timestamp(preset_name: str) -> str:
+    _prefix, separator, version = preset_name.rpartition("-")
+    if separator and len(version) == PRESET_VERSION_DATE_LENGTH and version.isdecimal():
+        return f"{version[:4]}-{version[4:6]}-{version[6:8]}T00:00:00+00:00"
+    msg = f"Preset name does not end with YYYYMMDD: {preset_name}"
+    raise RuntimeError(msg)
+
+
+def _render_readme_quick_start(
+    preset_name: str,
+    model_output: str,
+    practical_preset_name: str,
+) -> str:
+    schema = QUICK_START_SCHEMA_PATH.read_text(encoding="utf-8").rstrip()
+    command = _render_quick_start_command(preset_name)
+    practical_preset_url = f"{README_PRESETS_LINK}#{practical_preset_name}"
+    return f"""**Command**
+
+```bash
+{command}
+```
+
+This quick start uses `{preset_name}` as the modern Python {QUICK_START_TARGET_PYTHON_VERSION} baseline.
+Preset names include the target Python version: `py312` means Python 3.12.
+
+See [CLI Reference]({README_CLI_REFERENCE_LINK}) for all options. See [Presets]({README_PRESETS_LINK}),
+[`--preset`]({README_PRESET_OPTION_LINK}), [`--input-file-type`]({README_INPUT_FILE_TYPE_OPTION_LINK}), and
+[`--output-model-type`]({README_OUTPUT_MODEL_TYPE_OPTION_LINK}) for this command.
+
+For more schema-aware output that preserves schema-authored names, reuses models, and embeds generated
+documentation, use [`{practical_preset_name}`]({practical_preset_url}).
+
+<details>
+<summary>Input (<code>{QUICK_START_SCHEMA_NAME}</code>)</summary>
+
+```json
+{schema}
+```
+
+</details>
+
+**Output (`{QUICK_START_OUTPUT_NAME}`)**
+
+```python
+{model_output}
+```
+"""
+
+
+def _render_docs_index_quick_start(
+    preset_name: str,
+    model_output: str,
+    practical_preset_name: str,
+) -> str:
+    schema = QUICK_START_SCHEMA_PATH.read_text(encoding="utf-8").rstrip()
+    command = _render_quick_start_command(preset_name)
+    practical_preset_link = f"{DOCS_PRESETS_LINK}#{practical_preset_name}"
+    return f"""### Command
+
+```bash
+{command}
+```
+
+This quick start uses `{preset_name}` as the modern Python {QUICK_START_TARGET_PYTHON_VERSION} baseline.
+Preset names include the target Python version: `py312` means Python 3.12.
+
+See [CLI Reference]({DOCS_CLI_REFERENCE_LINK}) for all options. See [Presets]({DOCS_PRESETS_LINK}),
+[`--preset`]({DOCS_PRESET_OPTION_LINK}), [`--input-file-type`]({DOCS_INPUT_FILE_TYPE_OPTION_LINK}), and
+[`--output-model-type`]({DOCS_OUTPUT_MODEL_TYPE_OPTION_LINK}) for this command.
+
+For more schema-aware output that preserves schema-authored names, reuses models, and embeds generated
+documentation, use [`{practical_preset_name}`]({practical_preset_link}).
+
+<details>
+<summary>Input (<code>{QUICK_START_SCHEMA_NAME}</code>)</summary>
+
+```json
+{schema}
+```
+
+</details>
+
+### Output
+
+```python title="{QUICK_START_OUTPUT_NAME}"
+{model_output}
+```
+
+🎉 That's it! Your schema is now a fully-typed Python model."""
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(description="Build preset documentation")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help=(
+            "Check whether preset docs and preset-powered quick-start examples are up to date "
+            "(docs/presets.md plus quick-start sections in README.md and docs/index.md)"
+        ),
+    )
+    parser.add_argument(
+        "--format",
+        choices=("markdown", "json"),
+        default=None,
+        help="Print presets in the selected format instead of writing docs",
+    )
+    return parser.parse_args()
+
+
+def main() -> int:
+    """Script entrypoint."""
+    args = parse_args()
+    if args.check and args.format:
+        print("Error: --check cannot be used with --format", file=sys.stderr)
+        return 2
+    if args.format:
+        match args.format:
+            case "markdown" | "json":
+                print(render_presets(args.format), end="")
+            case _:  # pragma: no cover
+                print(f"Error: unsupported format {args.format!r}", file=sys.stderr)
+                return 2
+        return 0
+    return build_docs(check=args.check)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

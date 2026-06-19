@@ -8,6 +8,7 @@ copyright = 'Maintained by <a href="https://koxudaxi.dev/?utm_source=dm_docs&utm
 
 nav = [
   { "Overview" = "index.md" },
+  { "Presets" = "presets.md" },
   { "Playground" = "playground.md" },
   { "CLI Reference" = [
     { "Overview" = "cli-reference/index.md" },

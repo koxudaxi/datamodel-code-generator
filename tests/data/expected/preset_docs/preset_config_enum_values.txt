@@ -1,0 +1,2 @@
+extra_fields: value=forbid, applied=forbid, pyproject=forbid
+extra_fields: value=allow, applied=allow, pyproject=allow
