@@ -5515,11 +5515,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return keys
 
     def _has_schema_affecting_keywords(self, raw: dict[str, Any]) -> bool:
-        obj = self._validate_schema_object(raw, [])
-        schema_fields = obj.model_fields_set - obj.__metadata_only_fields__ - {"extras"}
-        if schema_fields:
-            return True
-        return bool(obj.extras and any(key in obj.__schema_affecting_extras__ for key in obj.extras))
+        metadata_keys = {
+            *self.SCHEMA_OBJECT_TYPE.__metadata_only_fields__,
+            "extras",
+            self.SCHEMA_OBJECT_TYPE.__extra_key__,
+        }
+        schema_affecting_keys = {
+            *self._known_schema_object_raw_keys(),
+            *self.SCHEMA_OBJECT_TYPE.__schema_affecting_extras__,
+        } - metadata_keys
+        return any(str(key) in schema_affecting_keys for key in raw)
 
     def _is_version_definition_namespace_name(self, name: str) -> bool:  # noqa: PLR6301
         return re.fullmatch(r"v\d+(?:[._-]\d+)*", name, flags=re.IGNORECASE) is not None
