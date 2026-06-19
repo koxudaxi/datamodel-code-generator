@@ -111,7 +111,7 @@ datamodel-codegen \
   --output model.py
 ```
 
-This quick start uses `standard-py312-20260619`, the recommended immutable preset for modern Python output.
+This quick start uses `standard-py312-20260619` as the modern Python 3.12 baseline.
 
 See [Presets](https://datamodel-code-generator.koxudaxi.dev/presets/), [`--preset`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options/#preset),
 [`--input-file-type`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options/#input-file-type), and

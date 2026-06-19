@@ -320,7 +320,7 @@ def _render_readme_quick_start(
 {command}
 ```
 
-This quick start uses `{preset_name}`, the recommended immutable preset for modern Python output.
+This quick start uses `{preset_name}` as the modern Python {QUICK_START_TARGET_PYTHON_VERSION} baseline.
 
 See [Presets]({README_PRESETS_LINK}), [`--preset`]({README_PRESET_OPTION_LINK}),
 [`--input-file-type`]({README_INPUT_FILE_TYPE_OPTION_LINK}), and
@@ -370,7 +370,7 @@ def _render_docs_index_quick_start(
 {command}
 ```
 
-This quick start uses `{preset_name}`, the recommended immutable preset for modern Python output.
+This quick start uses `{preset_name}` as the modern Python {QUICK_START_TARGET_PYTHON_VERSION} baseline.
 
 See [Presets]({DOCS_PRESETS_LINK}), [`--preset`]({DOCS_PRESET_OPTION_LINK}),
 [`--input-file-type`]({DOCS_INPUT_FILE_TYPE_OPTION_LINK}), and
