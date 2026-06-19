@@ -581,12 +581,6 @@ def _apply_preset(
         "target_python_version" in cli_config_args
         or (not preset_from_cli and "target_python_version" in pyproject_config)
     )
-    if target_python_version_is_explicit and config.target_python_version is not preset_target_python_version:
-        msg = (
-            f"--preset {preset_name} targets Python {preset_target_python_version.value}; "
-            f"current --target-python-version is {config.target_python_version.value}."
-        )
-        raise Error(msg)
     if not target_python_version_is_explicit:
         config.target_python_version = preset_target_python_version
 

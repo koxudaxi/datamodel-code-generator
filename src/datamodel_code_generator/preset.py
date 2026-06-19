@@ -834,8 +834,6 @@ def resolve_preset(preset: PresetName | str, context: PresetContext) -> tuple[Pr
 
 def _coerce_preset_name(preset: PresetName | str) -> PresetName:
     """Return a typed preset name or raise a user-facing preset error."""
-    if isinstance(preset, PresetName):
-        return preset
     try:
         return PresetName(preset)
     except ValueError as exc:  # pragma: no cover
