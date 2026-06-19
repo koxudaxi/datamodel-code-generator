@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from datamodel_code_generator.model.dataclass import DataModelField
 from datamodel_code_generator.types import DataType
 
@@ -31,3 +33,33 @@ def test_data_model_field_process_const_no_const() -> None:
     assert field.const == original_const
     assert field.nullable == original_nullable
     assert field.default == original_default
+
+
+@pytest.mark.parametrize(
+    ("const", "default", "type_"),
+    [
+        (True, False, "bool"),
+        (3, 0, "int"),
+        ("fast", "", "str"),
+    ],
+)
+def test_data_model_field_process_const_preserves_explicit_falsy_default(
+    const: bool | int | str,
+    default: bool | int | str,
+    type_: str,
+) -> None:
+    """Do not treat explicit falsy schema defaults as missing defaults."""
+    field = DataModelField(
+        name="test_field",
+        data_type=DataType(type=type_),
+        default=default,
+        has_default=True,
+        extras={"const": const},
+    )
+
+    field.process_const()
+
+    assert field.const is True
+    assert field.nullable is False
+    assert field.data_type.literals == [const]
+    assert field.default == default
