@@ -15,20 +15,23 @@
 {% endfor -%}
 
 {#- Use base_type_hint in generic when regex_engine is set to avoid evaluating pattern before config is processed -#}
+{%- set root_config_items = config_items if config_items is defined and config_items is iterable else [] -%}
+{%- set root_class_body_lines = class_body_lines if class_body_lines is defined and class_body_lines is iterable else [] -%}
 {%- set use_base_type = config and config.regex_engine -%}
 class {{ class_name }}({{ base_class }}{%- if fields -%}[{{get_type_hint(fields, use_base_type)}}]{%- endif -%}):{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
     {{ description }}
 {%- endif %}
-{%- if config %}
+{%- if root_config_items %}
+{%- set config_items = root_config_items %}
 {%- filter indent(4) %}
 {% include 'ConfigDict.jinja2' %}
 {%- endfilter %}
 {%- endif %}
-{%- for line in class_body_lines %}
+{%- for line in root_class_body_lines %}
     {{ line }}
 {%- endfor %}
-{%- if not fields and not description and not config and not class_body_lines %}
+{%- if not fields and not description and not root_config_items and not root_class_body_lines %}
     pass
 {%- else %}
     {%- set field = fields[0] %}

@@ -73,6 +73,7 @@ if TYPE_CHECKING:
     )
     from datamodel_code_generator._types.generate_config_dict import GenerateConfigDict
     from datamodel_code_generator.config import GenerateConfig, ParserConfig
+    from datamodel_code_generator.dynamic import generate_dynamic_model
     from datamodel_code_generator.format import (
         DEFAULT_FORMATTERS,
         DateClassType,
@@ -169,12 +170,14 @@ def _is_parsed_source_cache_enabled() -> bool:
 
 def load_yaml(stream: str | TextIO) -> YamlValue:
     """Load YAML content using ryaml (if available) or PyYAML."""
-    from datamodel_code_generator.util import get_yaml_backend  # noqa: PLC0415
+    from datamodel_code_generator.util import get_yaml_backend, reject_unsupported_yaml_tags  # noqa: PLC0415
+
+    text = stream if isinstance(stream, str) else stream.read()
+    reject_unsupported_yaml_tags(text)
 
     if get_yaml_backend() == "ryaml":
         import ryaml  # noqa: PLC0415  # ty: ignore[unresolved-import]
 
-        text = stream if isinstance(stream, str) else stream.read()
         from datamodel_code_generator.util import warn_yaml_deprecated_bool_values  # noqa: PLC0415
 
         warn_yaml_deprecated_bool_values(text)
@@ -184,7 +187,7 @@ def load_yaml(stream: str | TextIO) -> YamlValue:
 
     from datamodel_code_generator.util import SafeLoader  # noqa: PLC0415
 
-    return yaml.load(stream, Loader=SafeLoader)  # noqa: S506
+    return yaml.load(text, Loader=SafeLoader)  # noqa: S506
 
 
 def load_yaml_dict(stream: str | TextIO) -> dict[str, YamlValue]:
@@ -1477,6 +1480,7 @@ _LAZY_IMPORTS = {
     "clear_dynamic_models_cache": "datamodel_code_generator.dynamic",
     "detect_jsonschema_version": "datamodel_code_generator.parser.schema_version",
     "detect_openapi_version": "datamodel_code_generator.parser.schema_version",
+    "generate_dynamic_model": "datamodel_code_generator.dynamic",
     "generate_dynamic_models": "datamodel_code_generator.dynamic",
     "GenerateConfig": "datamodel_code_generator.config",
     "UnionMode": "datamodel_code_generator.enums",
@@ -1548,6 +1552,7 @@ __all__ = [
     "detect_xmlschema_version",
     "enable_parsed_source_cache",
     "generate",
+    "generate_dynamic_model",
     "generate_dynamic_models",  # noqa: F822
 ]
 

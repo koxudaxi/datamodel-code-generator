@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from datamodel_code_generator.deprecations import warn_deprecated
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
     from pathlib import Path
 
 
@@ -36,6 +36,8 @@ _YAML_DEPRECATED_BOOL_VALUES = ("True", "False", "TRUE", "FALSE")
 _YAML_DEPRECATED_BOOL_LINE_PATTERN = re.compile(r"(?m)(?::|-\s*)\s*(True|False|TRUE|FALSE)(?:\s*(?:#.*)?)$")
 _YAML_DEPRECATED_BOOL_WARNING_MESSAGE = "YAML bool "
 _YAML_DEPRECATED_BOOL_WARNING_MODULE = "datamodel_code_generator"
+_YAML_UNSUPPORTED_TAGS = {"tag:yaml.org,2002:set"}
+_YAML_UNSUPPORTED_TAG_MARKERS = ("!!set", "tag:yaml.org,2002:set")
 # Pattern for scientific notation without decimal point (e.g., 1e-5, 1E+10)
 # Standard YAML only matches floats with decimal points, missing patterns like "1e-5"
 _YAML_SCIENTIFIC_NOTATION_PATTERN = re.compile(r"^[-+]?[0-9][0-9_]*[eE][-+]?[0-9]+$")
@@ -75,6 +77,33 @@ def warn_yaml_deprecated_bool_values(text: str) -> None:
             DeprecationWarning,
             stacklevel=3,
         )
+
+
+def _iter_yaml_nodes(node: Any) -> Iterator[Any]:
+    yield node
+    for item in getattr(node, "value", []) or []:
+        if isinstance(item, tuple):
+            for child in item:
+                yield from _iter_yaml_nodes(child)
+        else:
+            yield from _iter_yaml_nodes(item)
+
+
+def reject_unsupported_yaml_tags(text: str) -> None:
+    """Reject YAML tags that cannot be represented by generated JSON-like schemas."""
+    if not any(marker in text for marker in _YAML_UNSUPPORTED_TAG_MARKERS):
+        return
+
+    import yaml  # noqa: PLC0415
+
+    root = yaml.compose(text)
+    if root is None:
+        return
+
+    for node in _iter_yaml_nodes(root):
+        if getattr(node, "tag", None) in _YAML_UNSUPPORTED_TAGS:
+            msg = f"Unsupported YAML tag: {node.tag}"
+            raise yaml.YAMLError(msg)
 
 
 def _construct_yaml_bool_with_warning(loader: Any, node: Any) -> bool:

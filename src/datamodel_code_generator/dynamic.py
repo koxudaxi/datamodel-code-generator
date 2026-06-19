@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 _dynamic_models_cache: dict[str, dict[str, type]] = {}
 _dynamic_models_lock = threading.Lock()
 _dynamic_module_counter = itertools.count(1)
+_MISSING_MODULE = object()
 
 
 def _is_init_file(path_tuple: tuple[str, ...]) -> bool:
@@ -48,9 +49,17 @@ def _path_to_module_name(package_name: str, path_tuple: tuple[str, ...]) -> str:
     return ".".join(parts)
 
 
-def _execute_single_module(code: str, *, include_private_models: bool = False) -> dict[str, type]:
+def _execute_single_module(
+    code: str,
+    *,
+    include_private_models: bool = False,
+    module_name: str | None = None,
+) -> dict[str, type]:
     """Execute single module code and extract models."""
     namespace: dict[str, Any] = {"__builtins__": builtins.__dict__}
+    if module_name is not None:
+        namespace["__name__"] = module_name
+        namespace["__package__"] = module_name.rpartition(".")[0]
     exec(code, namespace)  # noqa: S102
 
     models = _extract_models(namespace, include_private=include_private_models)
@@ -97,12 +106,19 @@ def _execute_multi_module(
     modules: dict[tuple[str, ...], str],
     *,
     include_private_models: bool = False,
+    module_name: str | None = None,
 ) -> dict[str, type]:
     """Execute multiple modules and extract models."""
-    package_name = f"_dcg_dynamic_{next(_dynamic_module_counter)}"
+    package_name = module_name or f"_dcg_dynamic_{next(_dynamic_module_counter)}"
 
     created_modules: list[str] = []
+    previous_modules: dict[str, types.ModuleType | object] = {}
     all_namespaces: dict[str, dict[str, Any]] = {}
+
+    def register_module(name: str, module: types.ModuleType) -> None:
+        previous_modules[name] = sys.modules.get(name, _MISSING_MODULE)
+        sys.modules[name] = module
+        created_modules.append(name)
 
     try:
         nodes = list(modules.keys())
@@ -112,24 +128,24 @@ def _execute_multi_module(
         sorted_paths = stable_toposort(nodes, edges, key=node_index.__getitem__)
 
         for path_tuple in sorted_paths:
-            module_name = _path_to_module_name(package_name, path_tuple)
-            module = types.ModuleType(module_name)
+            generated_module_name = _path_to_module_name(package_name, path_tuple)
+            module = types.ModuleType(generated_module_name)
             module.__dict__["__builtins__"] = builtins.__dict__
-            module.__package__ = package_name if _is_init_file(path_tuple) else ".".join(module_name.split(".")[:-1])
-            sys.modules[module_name] = module
-            created_modules.append(module_name)
-            all_namespaces[module_name] = module.__dict__
+            module.__package__ = (
+                package_name if _is_init_file(path_tuple) else ".".join(generated_module_name.split(".")[:-1])
+            )
+            register_module(generated_module_name, module)
+            all_namespaces[generated_module_name] = module.__dict__
 
         if package_name not in sys.modules:
             pkg = types.ModuleType(package_name)
             pkg.__path__ = []
             pkg.__package__ = package_name
-            sys.modules[package_name] = pkg
-            created_modules.insert(0, package_name)
+            register_module(package_name, pkg)
 
         for path_tuple in sorted_paths:
-            module_name = _path_to_module_name(package_name, path_tuple)
-            exec(modules[path_tuple], all_namespaces[module_name])  # noqa: S102
+            generated_module_name = _path_to_module_name(package_name, path_tuple)
+            exec(modules[path_tuple], all_namespaces[generated_module_name])  # noqa: S102
 
         models: dict[str, type] = {}
         combined_namespace: dict[str, Any] = {}
@@ -143,8 +159,12 @@ def _execute_multi_module(
 
         return models
     finally:
-        for module_name in reversed(created_modules):
-            sys.modules.pop(module_name, None)
+        for created_module_name in reversed(created_modules):
+            previous_module = previous_modules[created_module_name]
+            if previous_module is _MISSING_MODULE:
+                sys.modules.pop(created_module_name, None)
+            else:
+                sys.modules[created_module_name] = previous_module  # type: ignore[assignment]
 
 
 def _should_extract_model_name(name: str, *, include_private: bool = False) -> bool:
@@ -164,7 +184,7 @@ def _extract_models(namespace: dict[str, Any], *, include_private: bool = False)
     }
 
 
-def _make_cache_key(schema: Mapping[str, Any], config: GenerateConfig) -> str | None:
+def _make_cache_key(schema: Mapping[str, Any], config: GenerateConfig, module_name: str | None = None) -> str | None:
     """Create cache key from schema and config.
 
     Returns None if the schema is not JSON-serializable.
@@ -172,11 +192,20 @@ def _make_cache_key(schema: Mapping[str, Any], config: GenerateConfig) -> str | 
     try:
         schema_json = json.dumps(dict(schema), sort_keys=True, separators=(",", ":"))
         config_json = config.model_dump_json(exclude_defaults=True)
+        module_name_json = (
+            json.dumps({"module_name": module_name}, sort_keys=True, separators=(",", ":"))
+            if module_name is not None
+            else None
+        )
     except (TypeError, ValueError):
         return None
     schema_digest = hashlib.sha256(schema_json.encode()).hexdigest()
     config_digest = hashlib.sha256(config_json.encode()).hexdigest()
-    return f"{schema_digest}:{len(schema_json)}:{config_digest}:{len(config_json)}"
+    cache_key = f"{schema_digest}:{len(schema_json)}:{config_digest}:{len(config_json)}"
+    if module_name_json is None:
+        return cache_key
+    module_name_digest = hashlib.sha256(module_name_json.encode()).hexdigest()
+    return f"{cache_key}:{module_name_digest}:{len(module_name_json)}"
 
 
 def _detect_schema_input_file_type(input_: Mapping[str, Any]) -> InputFileType:
@@ -193,6 +222,7 @@ def generate_dynamic_models(
     *,
     config: GenerateConfig | None = None,
     cache_size: int = 128,
+    module_name: str | None = None,
 ) -> dict[str, type]:
     """Generate actual Python model classes from schema at runtime.
 
@@ -204,6 +234,7 @@ def generate_dynamic_models(
         input_: JSON Schema or OpenAPI schema as dict.
         config: A GenerateConfig object with generation options. If None, uses defaults.
         cache_size: Maximum number of schemas to cache. Set to 0 to disable caching.
+        module_name: Optional module/package name to assign to generated classes.
 
     Returns:
         Dictionary mapping class names to model classes.
@@ -241,7 +272,7 @@ def generate_dynamic_models(
     elif config.input_file_type == InputFileType.Auto:
         config = config.model_copy(update={"input_file_type": _detect_schema_input_file_type(input_)})
 
-    cache_key = _make_cache_key(input_, config)
+    cache_key = _make_cache_key(input_, config, module_name)
     use_cache = cache_size > 0 and cache_key is not None
 
     with _dynamic_models_lock:
@@ -256,9 +287,9 @@ def generate_dynamic_models(
             raise Error(msg)
         include_private_models = config.allow_leading_underscore_class_name
         models = (
-            _execute_single_module(result, include_private_models=include_private_models)
+            _execute_single_module(result, include_private_models=include_private_models, module_name=module_name)
             if isinstance(result, str)
-            else _execute_multi_module(result, include_private_models=include_private_models)
+            else _execute_multi_module(result, include_private_models=include_private_models, module_name=module_name)
         )
 
         if use_cache:
@@ -268,6 +299,40 @@ def generate_dynamic_models(
             _dynamic_models_cache[cache_key] = models  # type: ignore[index]
 
         return models
+
+
+def generate_dynamic_model(
+    input_: Mapping[str, Any],
+    *,
+    class_name: str | None = None,
+    config: GenerateConfig | None = None,
+    cache_size: int = 128,
+    module_name: str | None = None,
+) -> type:
+    """Generate a single Python model class from schema at runtime."""
+    target_class_name = class_name or (config.class_name if config is not None else None) or "Model"
+    if config is None:
+        config = GenerateConfig(
+            class_name=target_class_name,
+            input_file_type=_detect_schema_input_file_type(input_),
+            output_model_type=DataModelType.PydanticV2BaseModel,
+        )
+    elif config.class_name != target_class_name:
+        config = config.model_copy(update={"class_name": target_class_name})
+
+    models = generate_dynamic_models(input_, config=config, cache_size=cache_size, module_name=module_name)
+    if model := models.get(target_class_name):
+        return model
+    if len(models) == 1:
+        return next(iter(models.values()))
+
+    available_models = ", ".join(sorted(models)) or "<none>"
+    msg = (
+        f"Expected a generated dynamic model named {target_class_name!r}, "
+        f"but generated models are: {available_models}. "
+        "Use generate_dynamic_models() to handle multi-model schemas, or pass class_name/config.class_name."
+    )
+    raise Error(msg)
 
 
 def clear_dynamic_models_cache() -> int:
