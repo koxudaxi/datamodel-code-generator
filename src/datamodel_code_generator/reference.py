@@ -568,10 +568,14 @@ class ModelResolver:  # noqa: PLR0904
             return None
 
         _, separator, fragment = path.partition("#")
-        candidates = (path, f"#{fragment}", generated_name, original_name) if separator else (
-            path,
-            generated_name,
-            original_name,
+        candidates = (
+            (path, f"#{fragment}", generated_name, original_name)
+            if separator
+            else (
+                path,
+                generated_name,
+                original_name,
+            )
         )
         for candidate in candidates:
             if (mapped_name := self.model_name_map.get(candidate)) is not None:
@@ -591,16 +595,10 @@ class ModelResolver:  # noqa: PLR0904
 
         reference_names = self._get_reference_names()
         if mapped_name != reserved_name and mapped_name in reference_names:
-            msg = (
-                f"--model-name-map maps {path!r} to {mapped_name!r}, "
-                f"but that model name is already used"
-            )
+            msg = f"--model-name-map maps {path!r} to {mapped_name!r}, but that model name is already used"
             raise Error(msg)
         if mapped_name != generated_name and mapped_name in self.exclude_names:
-            msg = (
-                f"--model-name-map maps {path!r} to {mapped_name!r}, "
-                f"but that model name is reserved"
-            )
+            msg = f"--model-name-map maps {path!r} to {mapped_name!r}, but that model name is reserved"
             raise Error(msg)
 
     def _apply_model_name_map(

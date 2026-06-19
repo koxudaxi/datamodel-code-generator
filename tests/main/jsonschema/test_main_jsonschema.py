@@ -3902,13 +3902,11 @@ def test_main_jsonschema_model_name_map_from_file(output_file: Path, tmp_path: P
     """Test model_name_map loaded from a JSON file."""
     mapping_path = tmp_path / "model_name_map.json"
     mapping_path.write_text(
-        json.dumps(
-            {
-                "#/definitions/Foo": "RenamedFoo",
-                "Bar": "RenamedBar",
-                "model-name": "OriginalMapped",
-            }
-        ),
+        json.dumps({
+            "#/definitions/Foo": "RenamedFoo",
+            "Bar": "RenamedBar",
+            "model-name": "OriginalMapped",
+        }),
         encoding="utf-8",
     )
     run_main_and_assert(
