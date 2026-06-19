@@ -424,7 +424,7 @@ def _build_preset_info(
         name=name,
         summary=summary,
         description=description,
-        requires_target_python_version=True,
+        requires_target_python_version=False,
         target_python_version=target_python_version,
         option_groups=option_groups,
     )
@@ -514,6 +514,11 @@ def get_preset_infos() -> tuple[PresetInfo, ...]:
     return _PRESET_INFOS
 
 
+def get_preset_target_python_version(preset: PresetName | str) -> PythonVersion:
+    """Return the target Python version encoded in a preset name."""
+    return _get_preset_info(_coerce_preset_name(preset)).target_python_version
+
+
 def _preset_name_sort_key(name: str) -> tuple[str, str]:
     prefix, separator, version = name.rpartition("-")
     if separator and version.isdecimal():
@@ -560,8 +565,9 @@ def render_presets_markdown() -> str:
         ),
         "",
         (
-            "Every preset requires an explicit `--target-python-version` or `target-python-version` in "
-            "`pyproject.toml` so generated Python syntax is pinned."
+            "Every preset name includes its Python target, so generated Python syntax is pinned without an extra "
+            "`--target-python-version` argument. If you also pass `--target-python-version` or "
+            "`target-python-version`, it must match the preset name."
         ),
         "",
         (
@@ -578,14 +584,13 @@ def render_presets_markdown() -> str:
         "",
         "## Usage",
         "",
-        "Use a preset by passing its immutable name with an explicit target Python version:",
+        "Use a preset by passing its immutable name:",
         "",
         "```bash",
         "datamodel-codegen \\",
         "  --input schema.json \\",
         "  --input-file-type jsonschema \\",
         "  --output-model-type pydantic_v2.BaseModel \\",
-        "  --target-python-version 3.12 \\",
         "  --preset standard-py312-20260619 \\",
         "  --output model.py",
         "```",
@@ -603,7 +608,6 @@ def render_presets_markdown() -> str:
         "```bash",
         "datamodel-codegen \\",
         "  --input schema.json \\",
-        "  --target-python-version 3.12 \\",
         "  --preset standard-py312-20260619 \\",
         "  --no-snake-case-field \\",
         "  --no-use-annotated \\",
@@ -625,7 +629,6 @@ def render_presets_markdown() -> str:
         "```bash",
         "datamodel-codegen \\",
         "  --input schema.json \\",
-        "  --target-python-version 3.12 \\",
         "  --preset standard-py312-20260619 \\",
         "  --extra-fields forbid \\",
         "  --use-title-as-name \\",
@@ -642,7 +645,6 @@ def render_presets_markdown() -> str:
         '```toml title="pyproject.toml"',
         "[tool.datamodel-codegen]",
         'output-model-type = "pydantic_v2.BaseModel"',
-        'target-python-version = "3.12"',
         'preset = "standard-py312-20260619"',
         "",
         "[tool.datamodel-codegen.profiles.api]",
@@ -677,7 +679,6 @@ def render_presets_markdown() -> str:
         "  --input schema.json \\",
         "  --output model.py \\",
         "  --output-model-type pydantic_v2.BaseModel \\",
-        "  --target-python-version 3.12 \\",
         "  --preset practical-py312-20260619 \\",
         "  --extra-fields forbid \\",
         "  --generate-pyproject-config",
@@ -710,8 +711,8 @@ def render_presets_markdown() -> str:
     lines.extend((
         "",
         (
-            "Each preset name includes its Python target. The same target must also be passed as "
-            "`--target-python-version` or `target-python-version` in `pyproject.toml`."
+            "Each preset name includes its Python target. You can still pass `--target-python-version` or "
+            "`target-python-version` explicitly; when present, it must match the preset target."
         ),
         "",
         "### Preset Reference",
@@ -726,7 +727,7 @@ def render_presets_markdown() -> str:
             "",
             info.description,
             "",
-            f"- **Requires explicit target Python version:** {target_required}",
+            f"- **Requires separate target Python version:** {target_required}",
             f"- **Target Python version:** {info.target_python_version.value}",
             "",
             "#### Included Options",
@@ -820,13 +821,7 @@ def render_presets(format_: PresetFormat) -> str:
 
 def resolve_preset(preset: PresetName | str, context: PresetContext) -> tuple[PresetConfigItem, ...]:
     """Resolve a preset into config updates for the given context."""
-    try:
-        preset_name = preset if isinstance(preset, PresetName) else PresetName(preset)
-    except ValueError as exc:  # pragma: no cover
-        names = ", ".join(get_preset_names())
-        msg = f"Unknown preset: {preset!r}. Available presets: {names}"
-        raise PresetError(msg) from exc
-
+    preset_name = _coerce_preset_name(preset)
     info = _get_preset_info(preset_name)
     if info.target_python_version is not context.target_python_version:
         msg = (
@@ -835,6 +830,18 @@ def resolve_preset(preset: PresetName | str, context: PresetContext) -> tuple[Pr
         )
         raise PresetError(msg)
     return _resolve_preset_info(info, context)
+
+
+def _coerce_preset_name(preset: PresetName | str) -> PresetName:
+    """Return a typed preset name or raise a user-facing preset error."""
+    if isinstance(preset, PresetName):
+        return preset
+    try:
+        return PresetName(preset)
+    except ValueError as exc:  # pragma: no cover
+        names = ", ".join(get_preset_names())
+        msg = f"Unknown preset: {preset!r}. Available presets: {names}"
+        raise PresetError(msg) from exc
 
 
 def _get_preset_info(preset_name: PresetName) -> PresetInfo:

@@ -562,21 +562,33 @@ def _apply_preset(
     if preset_name is None:
         return
 
-    if "target_python_version" not in pyproject_config and "target_python_version" not in cli_config_args:
-        msg = (
-            f"--preset {preset_name} requires an explicit --target-python-version "
-            "or target-python-version in pyproject.toml."
-        )
-        raise Error(msg)
-
     explicit_fields = set(cli_config_args) if preset_from_cli else set(pyproject_config) | set(cli_config_args)
     explicit_fields.discard("preset")
 
     from datamodel_code_generator.preset import (  # noqa: PLC0415
         PresetContext,
         PresetError,
+        get_preset_target_python_version,
         resolve_preset,
     )
+
+    try:
+        preset_target_python_version = get_preset_target_python_version(preset_name)
+    except PresetError as e:
+        raise Error(str(e)) from e
+
+    target_python_version_is_explicit = (
+        "target_python_version" in cli_config_args
+        or (not preset_from_cli and "target_python_version" in pyproject_config)
+    )
+    if target_python_version_is_explicit and config.target_python_version is not preset_target_python_version:
+        msg = (
+            f"--preset {preset_name} targets Python {preset_target_python_version.value}; "
+            f"current --target-python-version is {config.target_python_version.value}."
+        )
+        raise Error(msg)
+    if not target_python_version_is_explicit:
+        config.target_python_version = preset_target_python_version
 
     context = PresetContext(
         input_file_type=config.input_file_type,

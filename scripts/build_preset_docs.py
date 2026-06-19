@@ -179,8 +179,6 @@ def _quick_start_args(preset_name: str) -> tuple[str, ...]:
         "jsonschema",
         "--output-model-type",
         "pydantic_v2.BaseModel",
-        "--target-python-version",
-        QUICK_START_TARGET_PYTHON_VERSION,
         "--preset",
         preset_name,
         "--output",

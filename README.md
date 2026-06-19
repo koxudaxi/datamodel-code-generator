@@ -144,7 +144,6 @@ datamodel-codegen \
   --input schema.json \
   --input-file-type jsonschema \
   --output-model-type pydantic_v2.BaseModel \
-  --target-python-version 3.12 \
   --preset standard-py312-20260619 \
   --output model.py
 ```
@@ -228,7 +227,6 @@ datamodel-codegen \
   --input schema.json \
   --input-file-type jsonschema \
   --output-model-type pydantic_v2.BaseModel \
-  --target-python-version 3.12 \
   --preset practical-py312-20260619 \
   --output model.py
 ```

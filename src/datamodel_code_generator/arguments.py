@@ -252,7 +252,7 @@ base_options.add_argument(
     "--preset",
     help=(
         "Apply an immutable built-in option preset. "
-        "Presets require an explicit --target-python-version so generated syntax is pinned."
+        "Preset names include the target Python version so generated syntax is pinned."
     ),
     choices=PRESET_NAMES,
 )

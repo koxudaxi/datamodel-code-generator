@@ -168,10 +168,9 @@ def test_show_help_when_no_input(mocker: MockerFixture) -> None:
     option_description="""Apply an immutable built-in option preset.
 
 The `standard-py312-20260619` preset enables the recommended modern Python output style for
-new projects. Presets require an explicit `--target-python-version` so generated
-syntax and backports are pinned.""",
+new projects. The preset name pins generated Python syntax and backports.""",
     input_schema="jsonschema/person.json",
-    cli_args=["--preset", "standard-py312-20260619", "--target-python-version", "3.12"],
+    cli_args=["--preset", "standard-py312-20260619"],
     golden_output="main/standard_preset_pydantic_v2.py",
     related_options=["--target-python-version"],
     primary=True,
@@ -184,7 +183,7 @@ def test_standard_preset_pydantic_v2(output_file: Path) -> None:
         input_path=JSON_SCHEMA_DATA_PATH / "person.json",
         output_path=output_file,
         input_file_type="jsonschema",
-        extra_args=["--preset", "standard-py312-20260619", "--target-python-version", "3.12"],
+        extra_args=["--preset", "standard-py312-20260619"],
         assert_func=assert_file_content,
         expected_file="standard_preset_pydantic_v2.py",
     )
@@ -197,7 +196,7 @@ def test_standard_preset_uses_literal_for_single_value_enum(output_file: Path) -
         input_path=JSON_SCHEMA_DATA_PATH / "enum_literal_typed_dict.json",
         output_path=output_file,
         input_file_type="jsonschema",
-        extra_args=["--preset", "standard-py310-20260619", "--target-python-version", "3.10"],
+        extra_args=["--preset", "standard-py310-20260619"],
         assert_func=assert_file_content,
         expected_file="standard_preset_enum_literal_one.py",
     )
@@ -213,8 +212,6 @@ def test_standard_preset_no_snake_case_cli_override(output_file: Path) -> None:
         extra_args=[
             "--preset",
             "standard-py310-20260619",
-            "--target-python-version",
-            "3.10",
             "--no-snake-case-field",
         ],
         assert_func=assert_file_content,
@@ -234,8 +231,6 @@ def test_standard_preset_no_use_annotated_cli_override(output_file: Path) -> Non
         extra_args=[
             "--preset",
             "standard-py310-20260619",
-            "--target-python-version",
-            "3.10",
             "--no-use-annotated",
         ],
         assert_func=assert_file_content,
@@ -253,8 +248,6 @@ def test_standard_preset_allows_original_field_name_delimiter_after_merge(output
         extra_args=[
             "--preset",
             "standard-py310-20260619",
-            "--target-python-version",
-            "3.10",
             "--original-field-name-delimiter",
             "-",
         ],
@@ -306,8 +299,6 @@ def test_standard_preset_msgspec_struct(output_file: Path) -> None:
         extra_args=[
             "--preset",
             "standard-py312-20260619",
-            "--target-python-version",
-            "3.12",
             "--output-model-type",
             "msgspec.Struct",
         ],
@@ -329,8 +320,6 @@ def test_standard_preset_typed_dict(output_file: Path) -> None:
         extra_args=[
             "--preset",
             "standard-py312-20260619",
-            "--target-python-version",
-            "3.12",
             "--output-model-type",
             "typing.TypedDict",
         ],
@@ -346,7 +335,7 @@ def test_standard_preset_target_py310_does_not_force_specialized_enum(output_fil
         input_path=JSON_SCHEMA_DATA_PATH / "string_enum.json",
         output_path=output_file,
         input_file_type="jsonschema",
-        extra_args=["--preset", "standard-py310-20260619", "--target-python-version", "3.10"],
+        extra_args=["--preset", "standard-py310-20260619"],
         assert_func=assert_file_content,
         expected_file="standard_preset_string_enum_py310.py",
     )
@@ -359,26 +348,9 @@ def test_practical_preset_pydantic_v2(output_file: Path) -> None:
         input_path=JSON_SCHEMA_DATA_PATH / "practical_preset.json",
         output_path=output_file,
         input_file_type="jsonschema",
-        extra_args=["--preset", "practical-py310-20260619", "--target-python-version", "3.10"],
+        extra_args=["--preset", "practical-py310-20260619"],
         assert_func=assert_file_content,
         expected_file="practical_preset_pydantic_v2.py",
-    )
-
-
-def test_standard_preset_requires_target_python_version(
-    output_file: Path,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """Preset use requires target Python version pinning."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        extra_args=["--preset", "standard-py310-20260619"],
-        expected_exit=Exit.ERROR,
-        capsys=capsys,
-        expected_stderr_contains="--preset standard-py310-20260619 requires an explicit --target-python-version",
-        file_should_not_exist=output_file,
     )
 
 

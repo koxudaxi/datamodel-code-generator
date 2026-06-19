@@ -4,20 +4,19 @@
 
 Presets are immutable named groups of CLI options. A preset name never changes behavior; new recommendations are published as new dated preset names.
 
-Every preset requires an explicit `--target-python-version` or `target-python-version` in `pyproject.toml` so generated Python syntax is pinned.
+Every preset name includes its Python target, so generated Python syntax is pinned without an extra `--target-python-version` argument. If you also pass `--target-python-version` or `target-python-version`, it must match the preset name.
 
 See also: [`--preset`](cli-reference/base-options.md#preset), [`--target-python-version`](cli-reference/model-customization.md#target-python-version), [`--output-model-type`](cli-reference/model-customization.md#output-model-type), [`--profile`](cli-reference/utility-options.md#profile), [`--generate-pyproject-config`](cli-reference/general-options.md#generate-pyproject-config), [`--generate-cli-command`](cli-reference/general-options.md#generate-cli-command), [pyproject.toml configuration](pyproject_toml.md), and [CI/CD integration](ci-cd.md).
 
 ## Usage
 
-Use a preset by passing its immutable name with an explicit target Python version:
+Use a preset by passing its immutable name:
 
 ```bash
 datamodel-codegen \
   --input schema.json \
   --input-file-type jsonschema \
   --output-model-type pydantic_v2.BaseModel \
-  --target-python-version 3.12 \
   --preset standard-py312-20260619 \
   --output model.py
 ```
@@ -31,7 +30,6 @@ Preset options are defaults, not locks. Explicit options override preset-supplie
 ```bash
 datamodel-codegen \
   --input schema.json \
-  --target-python-version 3.12 \
   --preset standard-py312-20260619 \
   --no-snake-case-field \
   --no-use-annotated \
@@ -47,7 +45,6 @@ You can add any normal CLI option to a preset command. This is the recommended w
 ```bash
 datamodel-codegen \
   --input schema.json \
-  --target-python-version 3.12 \
   --preset standard-py312-20260619 \
   --extra-fields forbid \
   --use-title-as-name \
@@ -61,7 +58,6 @@ Presets can live in `[tool.datamodel-codegen]` or in a named profile. Profiles a
 ```toml title="pyproject.toml"
 [tool.datamodel-codegen]
 output-model-type = "pydantic_v2.BaseModel"
-target-python-version = "3.12"
 preset = "standard-py312-20260619"
 
 [tool.datamodel-codegen.profiles.api]
@@ -92,7 +88,6 @@ datamodel-codegen \
   --input schema.json \
   --output model.py \
   --output-model-type pydantic_v2.BaseModel \
-  --target-python-version 3.12 \
   --preset practical-py312-20260619 \
   --extra-fields forbid \
   --generate-pyproject-config
@@ -118,7 +113,7 @@ Use `--ignore-pyproject` when you want to test a preset command without loading 
 | 3.13 | `standard-py313-20260619` | `practical-py313-20260619` |
 | 3.14 | `standard-py314-20260619` | `practical-py314-20260619` |
 
-Each preset name includes its Python target. The same target must also be passed as `--target-python-version` or `target-python-version` in `pyproject.toml`.
+Each preset name includes its Python target. You can still pass `--target-python-version` or `target-python-version` explicitly; when present, it must match the preset target.
 
 ### Preset Reference
 
@@ -128,7 +123,7 @@ Recommended modern Python 3.10 output for new projects.
 
 This immutable preset enables the project-recommended Python output style for new code targeting Python 3.10. It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names.
 
-- **Requires explicit target Python version:** yes
+- **Requires separate target Python version:** no
 - **Target Python version:** 3.10
 
 #### Included Options
@@ -178,7 +173,7 @@ Recommended modern Python 3.11 output for new projects.
 
 This immutable preset enables the project-recommended Python output style for new code targeting Python 3.11. It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names.
 
-- **Requires explicit target Python version:** yes
+- **Requires separate target Python version:** no
 - **Target Python version:** 3.11
 
 #### Included Options
@@ -230,7 +225,7 @@ Recommended modern Python 3.12 output for new projects.
 
 This immutable preset enables the project-recommended Python output style for new code targeting Python 3.12. It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names.
 
-- **Requires explicit target Python version:** yes
+- **Requires separate target Python version:** no
 - **Target Python version:** 3.12
 
 #### Included Options
@@ -282,7 +277,7 @@ Recommended modern Python 3.13 output for new projects.
 
 This immutable preset enables the project-recommended Python output style for new code targeting Python 3.13. It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names.
 
-- **Requires explicit target Python version:** yes
+- **Requires separate target Python version:** no
 - **Target Python version:** 3.13
 
 #### Included Options
@@ -334,7 +329,7 @@ Recommended modern Python 3.14 output for new projects.
 
 This immutable preset enables the project-recommended Python output style for new code targeting Python 3.14. It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names.
 
-- **Requires explicit target Python version:** yes
+- **Requires separate target Python version:** no
 - **Target Python version:** 3.14
 
 #### Included Options
@@ -386,7 +381,7 @@ Standard Python 3.10 output plus practical naming, deduplication, and schema doc
 
 This immutable preset extends `standard-py310-20260619` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
 
-- **Requires explicit target Python version:** yes
+- **Requires separate target Python version:** no
 - **Target Python version:** 3.10
 
 #### Included Options
@@ -451,7 +446,7 @@ Standard Python 3.11 output plus practical naming, deduplication, and schema doc
 
 This immutable preset extends `standard-py311-20260619` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
 
-- **Requires explicit target Python version:** yes
+- **Requires separate target Python version:** no
 - **Target Python version:** 3.11
 
 #### Included Options
@@ -518,7 +513,7 @@ Standard Python 3.12 output plus practical naming, deduplication, and schema doc
 
 This immutable preset extends `standard-py312-20260619` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
 
-- **Requires explicit target Python version:** yes
+- **Requires separate target Python version:** no
 - **Target Python version:** 3.12
 
 #### Included Options
@@ -585,7 +580,7 @@ Standard Python 3.13 output plus practical naming, deduplication, and schema doc
 
 This immutable preset extends `standard-py313-20260619` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
 
-- **Requires explicit target Python version:** yes
+- **Requires separate target Python version:** no
 - **Target Python version:** 3.13
 
 #### Included Options
@@ -652,7 +647,7 @@ Standard Python 3.14 output plus practical naming, deduplication, and schema doc
 
 This immutable preset extends `standard-py314-20260619` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
 
-- **Requires explicit target Python version:** yes
+- **Requires separate target Python version:** no
 - **Target Python version:** 3.14
 
 #### Included Options

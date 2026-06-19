@@ -5452,6 +5452,21 @@ as `str = 'value'`, not `str | None = 'value'`, unless the schema allows null.
         "properties": {
             "foo": {
                 "const": "foo"
+            },
+            "bool_default": {
+                "type": "boolean",
+                "const": true,
+                "default": false
+            },
+            "int_default": {
+                "type": "integer",
+                "const": 3,
+                "default": 0
+            },
+            "str_default": {
+                "type": "string",
+                "const": "fast",
+                "default": ""
             }
         }
     }
@@ -5472,7 +5487,10 @@ as `str = 'value'`, not `str | None = 'value'`, unless the schema allows null.
 
 
     class UseDefaultWithConst(BaseModel):
-        foo: Literal['foo'] = 'foo'
+        foo: Literal['foo'] | None = None
+        bool_default: Literal[True] = False
+        int_default: Literal[3] = 0
+        str_default: Literal['fast'] = ''
     ```
 
 ---

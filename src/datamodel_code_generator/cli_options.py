@@ -103,16 +103,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--schema-version": CLIOptionMeta(name="--schema-version", category=OptionCategory.BASE),
     "--schema-version-mode": CLIOptionMeta(name="--schema-version-mode", category=OptionCategory.BASE),
     "--external-ref-mapping": CLIOptionMeta(name="--external-ref-mapping", category=OptionCategory.BASE),
-    "--preset": CLIOptionMeta(
-        name="--preset",
-        category=OptionCategory.BASE,
-        requires=(
-            CLIOptionRelation(
-                option="--target-python-version",
-                message="`--preset` requires an explicit target Python version.",
-            ),
-        ),
-    ),
+    "--preset": CLIOptionMeta(name="--preset", category=OptionCategory.BASE),
     # ==========================================================================
     # Model Customization
     # ==========================================================================

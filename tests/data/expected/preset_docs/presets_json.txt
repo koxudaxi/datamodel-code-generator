@@ -60,7 +60,7 @@
         "title": "TypedDict output"
       }
     ],
-    "requires_target_python_version": true,
+    "requires_target_python_version": false,
     "summary": "Recommended modern Python 3.10 output for new projects.",
     "target_python_version": "3.10"
   },
@@ -132,7 +132,7 @@
         "title": "TypedDict output"
       }
     ],
-    "requires_target_python_version": true,
+    "requires_target_python_version": false,
     "summary": "Recommended modern Python 3.11 output for new projects.",
     "target_python_version": "3.11"
   },
@@ -204,7 +204,7 @@
         "title": "TypedDict output"
       }
     ],
-    "requires_target_python_version": true,
+    "requires_target_python_version": false,
     "summary": "Recommended modern Python 3.12 output for new projects.",
     "target_python_version": "3.12"
   },
@@ -276,7 +276,7 @@
         "title": "TypedDict output"
       }
     ],
-    "requires_target_python_version": true,
+    "requires_target_python_version": false,
     "summary": "Recommended modern Python 3.13 output for new projects.",
     "target_python_version": "3.13"
   },
@@ -348,7 +348,7 @@
         "title": "TypedDict output"
       }
     ],
-    "requires_target_python_version": true,
+    "requires_target_python_version": false,
     "summary": "Recommended modern Python 3.14 output for new projects.",
     "target_python_version": "3.14"
   },
@@ -443,7 +443,7 @@
         "title": "Schema documentation"
       }
     ],
-    "requires_target_python_version": true,
+    "requires_target_python_version": false,
     "summary": "Standard Python 3.10 output plus practical naming, deduplication, and schema documentation.",
     "target_python_version": "3.10"
   },
@@ -545,7 +545,7 @@
         "title": "Schema documentation"
       }
     ],
-    "requires_target_python_version": true,
+    "requires_target_python_version": false,
     "summary": "Standard Python 3.11 output plus practical naming, deduplication, and schema documentation.",
     "target_python_version": "3.11"
   },
@@ -647,7 +647,7 @@
         "title": "Schema documentation"
       }
     ],
-    "requires_target_python_version": true,
+    "requires_target_python_version": false,
     "summary": "Standard Python 3.12 output plus practical naming, deduplication, and schema documentation.",
     "target_python_version": "3.12"
   },
@@ -749,7 +749,7 @@
         "title": "Schema documentation"
       }
     ],
-    "requires_target_python_version": true,
+    "requires_target_python_version": false,
     "summary": "Standard Python 3.13 output plus practical naming, deduplication, and schema documentation.",
     "target_python_version": "3.13"
   },
@@ -851,7 +851,7 @@
         "title": "Schema documentation"
       }
     ],
-    "requires_target_python_version": true,
+    "requires_target_python_version": false,
     "summary": "Standard Python 3.14 output plus practical naming, deduplication, and schema documentation.",
     "target_python_version": "3.14"
   }
