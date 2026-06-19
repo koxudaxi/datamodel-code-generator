@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from pathlib import Path  # noqa: TC003 - used at runtime by Pydantic
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -59,8 +59,11 @@ CallableSchema = Callable[[str], str]
 DumpResolveReferenceAction = Callable[[Iterable[str]], str]
 DefaultPutDictSchema = DefaultPutDict[str, str]
 if TYPE_CHECKING:
+    from datamodel_code_generator.preset_names import PresetName as PresetNameValue
+
     ExtraTemplateDataType = defaultdict[str, dict[str, Any]]
 else:
+    PresetNameValue: TypeAlias = str
     ExtraTemplateDataType = defaultdict[str, Annotated[dict[str, Any], Field(default_factory=dict)]]
 
 
@@ -72,6 +75,7 @@ class BaseGenerateConfig(BaseModel):
     input_file_type: InputFileType = InputFileType.Auto
     output: Path | None = None
     output_model_type: DataModelType = DataModelType.PydanticV2BaseModel
+    preset: PresetNameValue | None = None
     target_python_version: PythonVersion = PythonVersionMin
     target_pydantic_version: TargetPydanticVersion | None = None
     base_class: str = ""

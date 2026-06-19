@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     )
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
     from datamodel_code_generator.parser import LiteralType
+    from datamodel_code_generator.preset_names import PresetName
     from datamodel_code_generator.validators import ModelValidators, ValidatorMode
 
 
@@ -51,6 +52,7 @@ class BaseGenerateConfig(TypedDict):
     input_file_type: NotRequired[InputFileType]
     output: NotRequired[Path | None]
     output_model_type: NotRequired[DataModelType]
+    preset: NotRequired[PresetName | None]
     target_python_version: NotRequired[PythonVersion]
     target_pydantic_version: NotRequired[TargetPydanticVersion | None]
     base_class: NotRequired[str]

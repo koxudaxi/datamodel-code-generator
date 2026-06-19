@@ -189,6 +189,36 @@ def test_standard_preset_pydantic_v2(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(BLACK_LT_233, reason="Installed black doesn't support Python 3.12 target version")
+@freeze_time(TIMESTAMP)
+def test_generate_standard_preset_public_api_kwargs(output_file: Path) -> None:
+    """Generate Pydantic v2 output using preset through public generate() kwargs."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        preset="standard-py312-20260619",
+        assert_func=assert_file_content,
+        expected_file="standard_preset_pydantic_v2.py",
+    )
+
+
+@pytest.mark.skipif(BLACK_LT_233, reason="Installed black doesn't support Python 3.12 target version")
+@freeze_time(TIMESTAMP)
+def test_generate_standard_preset_public_api_config(output_file: Path) -> None:
+    """Generate Pydantic v2 output using preset through GenerateConfig."""
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        preset="standard-py312-20260619",
+        formatters=[Formatter.BUILTIN],
+        builtin_format_line_length=88,
+    )
+    generate(input_=JSON_SCHEMA_DATA_PATH / "person.json", config=config)
+    assert_file_content(output_file, "standard_preset_pydantic_v2.py")
+
+
 @freeze_time(TIMESTAMP)
 def test_standard_preset_uses_literal_for_single_value_enum(output_file: Path) -> None:
     """The standard preset renders single-value enum fields as Literal."""

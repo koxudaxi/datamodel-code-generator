@@ -9,15 +9,11 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import os
 import re
-import shlex
-import subprocess
 import sys
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS_PATH = ROOT / "docs" / "presets.md"
@@ -29,7 +25,6 @@ QUICK_START_SCHEMA_PATH = ROOT / "tests" / "data" / "jsonschema" / "preset_quick
 QUICK_START_SCHEMA_NAME = "schema.json"
 QUICK_START_OUTPUT_NAME = "model.py"
 QUICK_START_TARGET_PYTHON_VERSION = "3.12"
-QUICK_START_GENERATION_TIMEOUT_SECONDS = 30
 PRESET_VERSION_DATE_LENGTH = 8
 QUICK_START_BEGIN_MARKER = "<!-- BEGIN AUTO-GENERATED PRESET QUICK START -->"
 QUICK_START_END_MARKER = "<!-- END AUTO-GENERATED PRESET QUICK START -->"
@@ -52,6 +47,9 @@ if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
 from datamodel_code_generator.preset import get_preset_names, render_presets  # noqa: E402
+
+if TYPE_CHECKING:
+    from datamodel_code_generator.preset_names import PresetName
 
 PresetDocsFormat = Literal["markdown", "json"]
 
@@ -136,14 +134,14 @@ def _generate_docs(preset_names_doc: GeneratedDoc) -> tuple[GeneratedDoc, ...]:
     )
 
 
-def _get_latest_preset_name_by_prefix(prefix: str, *, target_python_version: str) -> str:
+def _get_latest_preset_name_by_prefix(prefix: str, *, target_python_version: str) -> PresetName:
     target = target_python_version.replace(".", "")
     prefix_with_separator = f"{prefix}-py{target}-"
     matching_names = tuple(name for name in get_preset_names() if name.startswith(prefix_with_separator))
     if not matching_names:  # pragma: no cover
         msg = f"No built-in preset starts with {prefix_with_separator!r}"
         raise RuntimeError(msg)
-    return max(matching_names, key=_preset_version_sort_key)
+    return cast("PresetName", max(matching_names, key=_preset_version_sort_key))
 
 
 def _preset_version_sort_key(name: str) -> tuple[str, str]:
@@ -228,42 +226,26 @@ def _render_shell_command(command: tuple[str, ...]) -> str:
     return "\n".join(lines)
 
 
-def _generate_quick_start_model(preset_name: str) -> str:
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp_path = Path(tmp)
-        (tmp_path / QUICK_START_SCHEMA_NAME).write_text(
-            QUICK_START_SCHEMA_PATH.read_text(encoding="utf-8"),
-            encoding="utf-8",
-        )
-        env = os.environ.copy()
-        env["PYTHONPATH"] = _prepend_path(env.get("PYTHONPATH"), SRC_PATH)
-        env["PYTHONWARNINGS"] = _prepend_warning_filter(env.get("PYTHONWARNINGS"))
-        command = (sys.executable, "-m", "datamodel_code_generator", *_quick_start_args(preset_name))
-        try:
-            result = subprocess.run(
-                command,
-                cwd=tmp_path,
-                env=env,
-                text=True,
-                capture_output=True,
-                check=False,
-                timeout=QUICK_START_GENERATION_TIMEOUT_SECONDS,
-            )
-        except subprocess.TimeoutExpired as exc:
-            _print_process_output(exc.stdout, exc.stderr)
-            msg = (
-                f"Timed out after {QUICK_START_GENERATION_TIMEOUT_SECONDS}s generating preset "
-                f"quick-start example: {shlex.join(command)}"
-            )
-            raise RuntimeError(msg) from exc
+def _generate_quick_start_model(preset_name: PresetName) -> str:
+    from datamodel_code_generator import generate  # noqa: PLC0415
+    from datamodel_code_generator.config import GenerateConfig  # noqa: PLC0415
+    from datamodel_code_generator.enums import DataModelType, InputFileType  # noqa: PLC0415
+    from datamodel_code_generator.format import Formatter  # noqa: PLC0415
 
-        if result.returncode == 0:
-            model_output = (tmp_path / QUICK_START_OUTPUT_NAME).read_text(encoding="utf-8").rstrip()
-            return _normalize_quick_start_timestamp(model_output, preset_name)
+    config = GenerateConfig(
+        input_filename=QUICK_START_SCHEMA_NAME,
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        preset=preset_name,
+        formatters=[Formatter.BLACK, Formatter.ISORT],
+    )
 
-        _print_process_output(result.stdout, result.stderr)
-        msg = f"Failed to generate preset quick-start example (exit {result.returncode}): {shlex.join(command)}"
-        raise RuntimeError(msg)
+    schema = QUICK_START_SCHEMA_PATH.read_text(encoding="utf-8")
+    model_output = generate(input_=schema, config=config)
+    if not isinstance(model_output, str):  # pragma: no cover
+        msg = f"Expected quick-start generation to return a single module string, got {type(model_output).__name__}"
+        raise TypeError(msg)
+    return _normalize_quick_start_timestamp(model_output.rstrip(), preset_name)
 
 
 def _normalize_quick_start_timestamp(model_output: str, preset_name: str) -> str:
@@ -287,27 +269,6 @@ def _preset_timestamp(preset_name: str) -> str:
         return f"{version[:4]}-{version[4:6]}-{version[6:8]}T00:00:00+00:00"
     msg = f"Preset name does not end with YYYYMMDD: {preset_name}"
     raise RuntimeError(msg)
-
-
-def _print_process_output(stdout: str | bytes | None, stderr: str | bytes | None) -> None:
-    for stream in (stdout, stderr):
-        if stream is None:
-            continue
-        output = stream.decode() if isinstance(stream, bytes) else stream
-        print(output, file=sys.stderr, end="" if output.endswith("\n") else "\n")
-
-
-def _prepend_path(current: str | None, path: Path) -> str:
-    if current:
-        return f"{path}{os.pathsep}{current}"
-    return str(path)
-
-
-def _prepend_warning_filter(current: str | None) -> str:
-    filter_ = "ignore::FutureWarning"
-    if current:
-        return f"{filter_},{current}"
-    return filter_
 
 
 def _render_readme_quick_start(

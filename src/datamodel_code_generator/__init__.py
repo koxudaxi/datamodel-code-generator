@@ -95,6 +95,54 @@ Maps module path tuples (e.g., ("models", "user.py")) to generated code strings.
 Returned by generate() when output=None and multiple modules are generated.
 """
 
+
+def _apply_generate_config_preset(config: GenerateConfig) -> GenerateConfig:
+    """Return a generate config with preset defaults applied."""
+    preset_name = config.preset
+    if preset_name is None:
+        return config
+
+    from datamodel_code_generator.preset import (  # noqa: PLC0415
+        PresetConfigValue,
+        PresetContext,
+        PresetError,
+        get_preset_target_python_version,
+        resolve_preset,
+    )
+
+    explicit_fields = set(config.model_fields_set)
+    explicit_fields.discard("preset")
+
+    try:
+        preset_target_python_version = get_preset_target_python_version(preset_name)
+    except PresetError as e:
+        raise Error(str(e)) from e
+
+    if "target_python_version" not in explicit_fields:
+        config = config.model_copy(update={"target_python_version": preset_target_python_version})
+
+    context = PresetContext(
+        input_file_type=config.input_file_type,
+        output_model_type=config.output_model_type,
+        target_python_version=config.target_python_version,
+    )
+    try:
+        preset_config_items = resolve_preset(preset_name, context)
+    except PresetError as e:
+        raise Error(str(e)) from e
+
+    updates: dict[str, PresetConfigValue] = {}
+    for item in preset_config_items:
+        if item.field_name not in explicit_fields:
+            updates[item.field_name] = item.applied_value
+
+    if updates:
+        config = config.model_copy(update=updates)
+    if config.use_annotated:
+        return config.model_copy(update={"field_constraints": True})
+    return config
+
+
 DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 _IGNORED_TEXT_PREFIX_CHARS: frozenset[str] = frozenset({"\ufeff", " ", "\t", "\r", "\n"})
 _PARSER_SOURCE_DATA_CACHE_MAX_SIZE = 128
@@ -1191,6 +1239,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
 
         _rebuild_generate_config()
         config = GenerateConfig.model_validate(options)
+    config = _apply_generate_config_preset(config)
 
     _validate_output_datetime_class(config.output_model_type, config.output_datetime_class)
     _validate_alias_generator(config.output_model_type, config.alias_generator)
