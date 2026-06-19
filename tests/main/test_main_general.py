@@ -564,6 +564,7 @@ def test_run_generate_from_config_generate_kwargs_are_pinned() -> None:
         ("custom_template_dir", "config.custom_template_dir"),
         ("validation", "config.validation"),
         ("field_constraints", "config.field_constraints"),
+        ("alias_generator", "config.alias_generator"),
         ("snake_case_field", "config.snake_case_field"),
         ("strip_default_none", "config.strip_default_none"),
         ("extra_template_data", "extra_template_data"),

@@ -32,6 +32,7 @@ from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     MAX_VERSION,
     MIN_VERSION,
+    AliasGenerator,
     AllExportsCollisionStrategy,
     AllExportsScope,
     AllOfClassHierarchy,
@@ -489,6 +490,15 @@ def _validate_output_datetime_class(
     if output_model_type in {DataModelType.DataclassesDataclass, DataModelType.TypingTypedDict}:
         msg = f'`--output-datetime-class` only allows "datetime" for `--output-model-type` {output_model_type.value}'
         raise Error(msg)
+
+
+def _validate_alias_generator(output_model_type: DataModelType, alias_generator: AliasGenerator | None) -> None:
+    if alias_generator is None:
+        return
+    if output_model_type is DataModelType.PydanticV2BaseModel:
+        return
+    msg = "`--alias-generator` is only supported for `--output-model-type pydantic_v2.BaseModel`"
+    raise Error(msg)
 
 
 class InvalidFileFormatError(Error):
@@ -1183,6 +1193,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         config = GenerateConfig.model_validate(options)
 
     _validate_output_datetime_class(config.output_model_type, config.output_datetime_class)
+    _validate_alias_generator(config.output_model_type, config.alias_generator)
 
     # Variables that may be modified during processing
     input_filename = config.input_filename
@@ -1454,6 +1465,7 @@ __all__ = [
     "DEFAULT_SHARED_MODULE_NAME",
     "MAX_VERSION",
     "MIN_VERSION",
+    "AliasGenerator",
     "AllExportsCollisionStrategy",
     "AllExportsScope",
     "AllOfClassHierarchy",

@@ -7,6 +7,7 @@ from collections import defaultdict
 import pytest
 
 from datamodel_code_generator.model import DataModelFieldBase
+from datamodel_code_generator.model.pydantic_v2.base_model import _CONFIG_ITEMS_TEMPLATE_DATA_KEY
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
@@ -89,6 +90,7 @@ def test_root_model_ignores_extra_config(additional_properties: bool) -> None:
     )
 
     assert "model_config" not in root_model.render()
+    assert _CONFIG_ITEMS_TEMPLATE_DATA_KEY not in root_model.extra_template_data
 
 
 def test_root_model_ignores_arbitrary_types_config() -> None:

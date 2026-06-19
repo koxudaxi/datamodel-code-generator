@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from datamodel_code_generator.enums import (
+        AliasGenerator,
         AllExportsCollisionStrategy,
         AllExportsScope,
         AllOfClassHierarchy,
@@ -59,6 +60,7 @@ class BaseGenerateConfig(TypedDict):
     custom_template_dir: NotRequired[Path | None]
     validation: NotRequired[bool]
     field_constraints: NotRequired[bool]
+    alias_generator: NotRequired[AliasGenerator | None]
     snake_case_field: NotRequired[bool]
     strip_default_none: NotRequired[bool]
     disable_timestamp: NotRequired[bool]

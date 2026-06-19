@@ -261,6 +261,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--aliases": CLIOptionMeta(name="--aliases", category=OptionCategory.FIELD),
     "--serialization-aliases": CLIOptionMeta(name="--serialization-aliases", category=OptionCategory.FIELD),
     "--default-values": CLIOptionMeta(name="--default-values", category=OptionCategory.FIELD),
+    "--alias-generator": CLIOptionMeta(name="--alias-generator", category=OptionCategory.MODEL),
     "--no-alias": CLIOptionMeta(name="--no-alias", category=OptionCategory.FIELD),
     "--use-serialization-alias": CLIOptionMeta(name="--use-serialization-alias", category=OptionCategory.FIELD),
     "--use-title-as-name": CLIOptionMeta(name="--use-title-as-name", category=OptionCategory.FIELD),

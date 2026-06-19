@@ -105,6 +105,7 @@ from datamodel_code_generator import (
     NamingStrategy,
     OpenAPIScope,
     ReuseScope,
+    _validate_alias_generator,
     _validate_output_datetime_class,
     enable_debug_message,
     generate,
@@ -426,6 +427,12 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
         return self
 
     __validate_original_field_name_delimiter_err: ClassVar[str] = ORIGINAL_FIELD_NAME_DELIMITER_ERROR
+
+    @model_validator(mode="after")  # ty: ignore
+    def validate_alias_generator(self: Self) -> Self:  # ty: ignore
+        """Validate alias generator compatibility."""
+        _validate_alias_generator(self.output_model_type, self.alias_generator)
+        return self
 
     def validate_original_field_name_delimiter(self) -> None:
         """Validate original field name delimiter requires snake case after preset merging."""
@@ -1048,6 +1055,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         custom_template_dir=config.custom_template_dir,
         validation=config.validation,
         field_constraints=config.field_constraints,
+        alias_generator=config.alias_generator,
         snake_case_field=config.snake_case_field,
         strip_default_none=config.strip_default_none,
         extra_template_data=extra_template_data,  # ty: ignore
