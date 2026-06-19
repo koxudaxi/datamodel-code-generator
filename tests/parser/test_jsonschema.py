@@ -657,9 +657,7 @@ def test_infer_union_variant_names_distinguishes_literal_types() -> None:
     ]
 
 
-def test_union_variant_literal_helpers_handle_refs_and_invalid_fields(
-    tmp_path: Path, mocker: MockerFixture
-) -> None:
+def test_union_variant_literal_helpers_handle_refs_and_invalid_fields(tmp_path: Path, mocker: MockerFixture) -> None:
     """Literal collection rejects ambiguous branches and resolves simple refs."""
     parser = JsonSchemaParser("", infer_union_variant_names=True)
     ref = "#/$defs/Kind"
@@ -674,8 +672,7 @@ def test_union_variant_literal_helpers_handle_refs_and_invalid_fields(
 
     assert parser._get_single_literal_value(_json_schema_object({"$ref": ref})) == "from_ref"
     assert (
-        external_parser._get_single_literal_value(_json_schema_object({"$ref": f"{external_schema}#/External"}))
-        is None
+        external_parser._get_single_literal_value(_json_schema_object({"$ref": f"{external_schema}#/External"})) is None
     )
     load_ref.assert_not_called()
     assert (
