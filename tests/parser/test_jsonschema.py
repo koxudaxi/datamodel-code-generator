@@ -647,32 +647,44 @@ def test_union_variant_literal_helpers_handle_refs_and_invalid_fields() -> None:
     parser.raw_obj = {"$defs": {"Kind": {"const": "from_ref"}}}
 
     assert parser._get_single_literal_value(_json_schema_object({"$ref": ref})) == "from_ref"
-    assert parser._get_single_literal_value(
-        _json_schema_object({"$ref": ref}),
-        {parser.model_resolver.resolve_ref(ref)},
-    ) is None
+    assert (
+        parser._get_single_literal_value(
+            _json_schema_object({"$ref": ref}),
+            {parser.model_resolver.resolve_ref(ref)},
+        )
+        is None
+    )
     assert parser._get_single_literal_value(_json_schema_object({"type": "string"})) is None
-    assert parser._get_union_variant_literal_values(
-        [
-            _json_schema_object({}),
-            _json_schema_object({"properties": {"kind": {"const": "only"}}}),
-        ],
-        "kind",
-    ) is None
-    assert parser._get_union_variant_literal_values(
-        [
-            _json_schema_object({"properties": {"kind": True}}),
-            _json_schema_object({"properties": {"kind": {"const": "ready"}}}),
-        ],
-        "kind",
-    ) is None
-    assert parser._get_union_variant_literal_values(
-        [
-            _json_schema_object({"properties": {"kind": {"type": "string"}}}),
-            _json_schema_object({"properties": {"kind": {"const": "ready"}}}),
-        ],
-        "kind",
-    ) is None
+    assert (
+        parser._get_union_variant_literal_values(
+            [
+                _json_schema_object({}),
+                _json_schema_object({"properties": {"kind": {"const": "only"}}}),
+            ],
+            "kind",
+        )
+        is None
+    )
+    assert (
+        parser._get_union_variant_literal_values(
+            [
+                _json_schema_object({"properties": {"kind": True}}),
+                _json_schema_object({"properties": {"kind": {"const": "ready"}}}),
+            ],
+            "kind",
+        )
+        is None
+    )
+    assert (
+        parser._get_union_variant_literal_values(
+            [
+                _json_schema_object({"properties": {"kind": {"type": "string"}}}),
+                _json_schema_object({"properties": {"kind": {"const": "ready"}}}),
+            ],
+            "kind",
+        )
+        is None
+    )
 
 
 def test_iter_union_variant_literal_field_names_skips_duplicates() -> None:
