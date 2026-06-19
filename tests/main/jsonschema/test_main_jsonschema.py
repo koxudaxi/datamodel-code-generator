@@ -6276,6 +6276,23 @@ def test_main_const_optional_values(output_file: Path) -> None:
     )
 
 
+def test_main_const_optional_primitive(output_file: Path) -> None:
+    """Optional primitive const fields must not inject the const as a default.
+
+    A single-value ``const`` on a bool/int/str property that is not ``required`` and
+    has no schema-defined default follows the normal optional path
+    (``Literal[...] | None = None``) so an omitted field stays unset instead of being
+    silently filled with the const value. A required const keeps its no-default literal.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "const_optional_primitive.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
 @pytest.mark.skipif(
     version.parse(black.__version__) < version.parse("23.3.0"),
     reason="Require Black version 23.3.0 or later ",

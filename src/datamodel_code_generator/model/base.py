@@ -287,18 +287,30 @@ class DataModelFieldBase(_BaseModel):
 
     def _process_const_as_literal(self) -> None:
         """Process const values by converting to literal type. Used by subclasses."""
-        if "const" not in self.extras:
+        if (const := self.extras.get("const", UNDEFINED)) is UNDEFINED:
             return
-        const = self.extras["const"]
         self.const = True
+
+        match const:
+            case None:
+                self.nullable = False
+                self.replace_data_type(self.data_type.__class__(type=NONE), clear_old_parent=False)
+                return
+            case bool() | int() | str():
+                self.replace_data_type(self.data_type.__class__(literals=[const]), clear_old_parent=False)
+            case _:
+                self.nullable = False
+                return
+
+        # A const is only a generated Python default when the field would carry one anyway:
+        # a required field (whose default the renderer suppresses) or a schema that also
+        # defines a default. An optional const without a schema default follows the normal
+        # optional path (nullable + ``None`` default) so an omitted field stays unset rather
+        # than being silently filled with the const value.
+        if not (self.required or self.has_default or self.default is not None):
+            return
         self.nullable = False
-        if const is None:
-            self.replace_data_type(self.data_type.__class__(type=NONE), clear_old_parent=False)
-            return
-        if not isinstance(const, (bool, int, str)):
-            return
-        self.replace_data_type(self.data_type.__class__(literals=[const]), clear_old_parent=False)
-        if not self.default:
+        if self.default is None and not self.has_default:
             self.default = const
 
     def self_reference(self) -> bool:
