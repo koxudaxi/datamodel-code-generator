@@ -81,6 +81,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--keyword-only": "Generate dataclasses with keyword-only fields (Python 3.10+).",
     "--model-extra-keys": "Add model-level schema extensions to ConfigDict json_schema_extra.",
     "--model-extra-keys-without-x-prefix": "Strip x- prefix from model-level schema extensions and add to ConfigDic...",
+    "--model-name-map": "Rename generated model classes from a JSON mapping.",
     "--module-split-mode": "Split generated models into separate files, one per model class.",
     "--naming-strategy": "Use parent-prefixed naming strategy for duplicate model names.",
     "--no-alias": "Disable Field alias generation for non-Python-safe property names.",

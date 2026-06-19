@@ -1390,6 +1390,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             base_url=source.geturl() if isinstance(source, ParseResult) else None,
             singular_name_suffix="" if config.disable_appending_item_suffix else None,
             aliases=config.aliases,
+            model_name_map=config.model_name_map,
             empty_field_name=config.empty_enum_field_name,
             snake_case_field=config.snake_case_field,
             custom_class_name_generator=config.custom_class_name_generator,
