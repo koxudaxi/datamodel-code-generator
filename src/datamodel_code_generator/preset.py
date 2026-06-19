@@ -55,7 +55,6 @@ PresetEnumConfigValue: TypeAlias = (
     | ExtraFields
 )
 PresetConfigValue: TypeAlias = bool | PresetEnumConfigValue
-PresetAppliedConfigValue: TypeAlias = bool | PresetEnumConfigValue | str
 PresetRawConfigValue: TypeAlias = PresetConfigValue | str | None
 
 
@@ -135,10 +134,8 @@ class PresetConfigItem:
     value: PresetConfigValue
 
     @property
-    def applied_value(self) -> PresetAppliedConfigValue:
+    def applied_value(self) -> PresetConfigValue:
         """Return the value to assign to the existing runtime Config object."""
-        if isinstance(self.value, ExtraFields):
-            return self.value.value
         return self.value
 
     @property
@@ -231,7 +228,7 @@ def _normalize_preset_config_value(
         value = raw_value if isinstance(raw_value, ExtraFields) else validated_value
         if isinstance(value, ExtraFields):
             return value
-        if isinstance(value, str):
+        if isinstance(value, str):  # pragma: no branch
             try:
                 return ExtraFields(value)
             except ValueError as exc:  # pragma: no cover
@@ -260,8 +257,8 @@ def _ensure_preset_config_value(field_name: str, value: PresetRawConfigValue) ->
             | DatetimeClassType()
         ):
             return value
-    msg = f"Preset field {field_name!r} cannot be rendered as a preset CLI option"
-    raise PresetError(msg)
+    msg = f"Preset field {field_name!r} cannot be rendered as a preset CLI option"  # pragma: no cover
+    raise PresetError(msg)  # pragma: no cover
 
 
 def _config_item_to_cli_option(item: PresetConfigItem) -> str:

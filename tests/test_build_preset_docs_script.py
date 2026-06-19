@@ -10,7 +10,10 @@ import black
 import pytest
 from packaging import version
 
+from datamodel_code_generator.enums import ExtraFields
 from datamodel_code_generator.preset import (
+    PresetConfig,
+    PresetConfigItem,
     get_latest_preset_name,
     get_preset_infos,
     render_presets,
@@ -60,3 +63,29 @@ def test_preset_metadata_renderers() -> None:
         f"{get_latest_preset_name()}\n{get_preset_infos()[0].name.value}\n",
         EXPECTED_PRESET_DOCS_PATH / "preset_names.txt",
     )
+
+
+def test_preset_config_supports_enum_backed_string_options() -> None:
+    """Preset config keeps string-backed enum options typed after validation."""
+    enum_item = PresetConfig(extra_fields=ExtraFields.Forbid).items()[0]
+    string_item = PresetConfig(extra_fields="allow").items()[0]
+    output = "\n".join((
+        _render_preset_config_item(enum_item),
+        _render_preset_config_item(string_item),
+        "",
+    ))
+
+    assert_output(output, EXPECTED_PRESET_DOCS_PATH / "preset_config_enum_values.txt")
+
+
+def _render_preset_config_item(item: PresetConfigItem) -> str:
+    match item.value, item.applied_value:
+        case ExtraFields(), ExtraFields():
+            return (
+                f"{item.field_name}: "
+                f"value={item.value.value}, "
+                f"applied={item.applied_value.value}, "
+                f"pyproject={item.pyproject_value}"
+            )
+    msg = f"Expected extra_fields preset config item, got {item!r}"  # pragma: no cover
+    raise TypeError(msg)  # pragma: no cover
