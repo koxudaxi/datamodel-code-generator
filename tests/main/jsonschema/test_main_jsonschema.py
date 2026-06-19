@@ -1932,6 +1932,42 @@ def test_main_nested_json_pointer(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_definitions_namespace(output_file: Path) -> None:
+    """Test nested namespace-like definitions are parsed without wrapper models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "definitions_v2_namespace.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="definitions_v2_namespace.py",
+        extra_args=["--disable-timestamp"],
+    )
+
+
+def test_main_jsonschema_nested_defs_namespace_ref(output_file: Path) -> None:
+    """Test nested $defs/definitions namespace references skip wrapper models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nested_defs_namespace_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nested_defs_namespace_ref.py",
+        extra_args=["--disable-timestamp"],
+    )
+
+
+def test_main_jsonschema_root_ref_self_with_keywords(output_file: Path) -> None:
+    """Test root $ref '#' with local schema keywords parses the local schema."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_ref_self_with_keywords.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_ref_self_with_keywords.py",
+        extra_args=["--disable-timestamp"],
+    )
+
+
 def test_main_jsonschema_multiple_files_json_pointer(output_dir: Path) -> None:
     """Test JSON pointer with multiple files."""
     run_main_and_assert(

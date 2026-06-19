@@ -5292,13 +5292,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _is_named_schema_definition_path(self, path: list[str]) -> bool:
         """Check if path points to a named schema entry under definitions/$defs."""
         current_root = list(self.model_resolver.current_root)
-        expected_path_length = len(current_root) + 2
-        if len(path) != expected_path_length:
+        if len(path) < len(current_root) + 2:
             return False
 
         schema_container_path = path[len(current_root)]
         return path[: len(current_root)] == current_root and any(
             schema_container_path == schema_path for schema_path, _ in self.schema_paths
+        )
+
+    def _is_current_root_schema_path(self, path: list[str]) -> bool:
+        current_root = list(self.model_resolver.current_root)
+        return path == (current_root or ["#"])
+
+    def _drop_ref_from_schema(self, obj: JsonSchemaObject) -> JsonSchemaObject:
+        return self.SCHEMA_OBJECT_TYPE.model_validate(
+            obj.model_dump(exclude={"ref"}, exclude_unset=True, by_alias=True)
         )
 
     def parse_obj(  # noqa: PLR0912
@@ -5309,7 +5317,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     ) -> None:
         """Parse a JsonSchemaObject by dispatching to appropriate parse methods."""
         if obj.has_ref_with_schema_keywords and not obj.is_ref_with_nullable_only:
-            obj = self._merge_ref_with_schema(obj)
+            if obj.ref == "#" and self._is_current_root_schema_path(path):
+                obj = self._drop_ref_from_schema(obj)
+            else:
+                obj = self._merge_ref_with_schema(obj)
             if obj.ref:
                 if self._is_named_schema_definition_path(path):
                     self.parse_root_type(name, obj, path)
@@ -5495,6 +5506,73 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         self.parse_raw_obj(model_name, models, [*path_parts, f"#/{reference_paths[0]}", *reference_paths[1:]])
 
+    def _known_schema_object_raw_keys(self) -> set[str]:
+        keys = {"definitions", "$defs"}
+        for name, field in self.SCHEMA_OBJECT_TYPE.get_fields().items():  # ty: ignore
+            keys.add(name)
+            if alias := getattr(field, "alias", None):
+                keys.add(alias)
+        return keys
+
+    def _has_schema_affecting_keywords(self, raw: dict[str, Any]) -> bool:
+        obj = self._validate_schema_object(raw, [])
+        schema_fields = obj.model_fields_set - obj.__metadata_only_fields__ - {"extras"}
+        if schema_fields:
+            return True
+        return bool(obj.extras and any(key in obj.__schema_affecting_extras__ for key in obj.extras))
+
+    def _is_version_definition_namespace_name(self, name: str) -> bool:  # noqa: PLR6301
+        return re.fullmatch(r"v\d+(?:[._-]\d+)*", name, flags=re.IGNORECASE) is not None
+
+    def _iter_definition_namespace_entries(
+        self,
+        raw: dict[str, Any],
+        path: list[str],
+        *,
+        include_direct_children: bool,
+    ) -> Iterator[tuple[str, YamlValue, list[str]]]:
+        for schema_key in ("definitions", "$defs"):
+            if isinstance(definitions := raw.get(schema_key), dict):
+                yield from self._iter_schema_definition_entries(definitions, [*path, schema_key])
+
+        if not include_direct_children:
+            return
+
+        known_keys = self._known_schema_object_raw_keys()
+        for key, value in raw.items():
+            key_str = str(key)
+            if key_str in known_keys or key_str.startswith("x-") or not isinstance(value, (dict, bool)):
+                continue
+            yield from self._iter_schema_definition_entry(key_str, value, [*path, key_str])
+
+    def _iter_schema_definition_entry(
+        self,
+        name: str,
+        raw: YamlValue,
+        path: list[str],
+    ) -> Iterator[tuple[str, YamlValue, list[str]]]:
+        if isinstance(raw, dict) and not self._has_schema_affecting_keywords(raw):
+            entries = list(
+                self._iter_definition_namespace_entries(
+                    raw,
+                    path,
+                    include_direct_children=self._is_version_definition_namespace_name(name),
+                )
+            )
+            if entries:
+                yield from entries
+                return
+        yield name, raw, path
+
+    def _iter_schema_definition_entries(
+        self,
+        definitions: dict[str, YamlValue],
+        base_path: list[str],
+    ) -> Iterator[tuple[str, YamlValue, list[str]]]:
+        for key, model in definitions.items():
+            name = str(key)
+            yield from self._iter_schema_definition_entry(name, model, [*base_path, name])
+
     def _parse_file(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         self,
         raw: dict[str, Any],
@@ -5546,8 +5624,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     except KeyError:  # pragma: no cover
                         continue
 
-                for key, model in definitions.items():
-                    definition_path = [*path_parts, schema_path, key]
+                definition_entries = list(
+                    self._iter_schema_definition_entries(definitions, [*path_parts, schema_path])
+                )
+                definition_metadata_entries = [
+                    *(
+                        (str(key), model, [*path_parts, schema_path, str(key)])
+                        for key, model in definitions.items()
+                    ),
+                    *definition_entries,
+                ]
+                seen_definition_metadata_paths: set[tuple[str, ...]] = set()
+                for _key, model, definition_path in definition_metadata_entries:
+                    if (definition_path_key := tuple(definition_path)) in seen_definition_metadata_paths:
+                        continue
+                    seen_definition_metadata_paths.add(definition_path_key)
                     obj = self._validate_schema_object(model, definition_path)
                     self.parse_id(obj, definition_path)
                     if obj.recursiveAnchor:
@@ -5563,8 +5654,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     self.parse_obj(model_name, self._validate_schema_object(models, path), path)
                 elif not self.skip_root_model:
                     self.parse_obj(obj_name, root_obj, path_parts or ["#"])
-                for key, model in definitions.items():
-                    path = [*path_parts, schema_path, key]
+                for key, model, path in definition_entries:
                     reference = self.model_resolver.get(path)
                     if not reference or not reference.loaded:
                         self.parse_raw_obj(key, model, path)
