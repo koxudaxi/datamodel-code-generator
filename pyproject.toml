@@ -352,6 +352,7 @@ extends = "config-types-base"
 input-model = "src/datamodel_code_generator/config.py:GenerateConfig"
 output = "src/datamodel_code_generator/_types/generate_config_dict.py"
 class-name = "GenerateConfigDict"
+type-overrides = { "BaseGenerateConfig.preset" = "datamodel_code_generator.preset_names.PresetName" }
 
 [tool.datamodel-codegen.profiles.parser-config-dicts]
 extends = "config-types-base"
