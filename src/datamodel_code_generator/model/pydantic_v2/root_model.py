@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
+from datamodel_code_generator.model.pydantic_v2.base_model import _CONFIG_ITEMS_TEMPLATE_DATA_KEY, BaseModel
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
 
 
@@ -40,4 +40,5 @@ class RootModel(BaseModel):
         )
         if not has_meaningful_config:
             self.extra_template_data.pop("config", None)
+            self.extra_template_data.pop(_CONFIG_ITEMS_TEMPLATE_DATA_KEY, None)
             self._additional_imports = [imp for imp in self._additional_imports if imp != IMPORT_CONFIG_DICT]

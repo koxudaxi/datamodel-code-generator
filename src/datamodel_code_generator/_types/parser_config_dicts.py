@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from datamodel_code_generator.enums import (
+        AliasGenerator,
         AllOfClassHierarchy,
         AllOfMergeMode,
         AsyncAPIVersion,
@@ -62,6 +63,7 @@ class ParserConfigDict(TypedDict):
     dump_resolve_reference_action: NotRequired[Callable[[Iterable[str]], str] | None]
     validation: NotRequired[bool]
     field_constraints: NotRequired[bool]
+    alias_generator: NotRequired[AliasGenerator | None]
     snake_case_field: NotRequired[bool]
     strip_default_none: NotRequired[bool]
     aliases: NotRequired[Mapping[str, str | list[str]] | None]

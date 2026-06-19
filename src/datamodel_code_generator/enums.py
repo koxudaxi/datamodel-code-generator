@@ -213,6 +213,14 @@ class TargetPydanticVersion(Enum):
     V2_11 = "2.11"
 
 
+class AliasGenerator(Enum):
+    """Supported Pydantic v2 alias generator helpers."""
+
+    ToCamel = "to_camel"
+    ToPascal = "to_pascal"
+    ToSnake = "to_snake"
+
+
 class UnionMode(Enum):
     """Union discriminator mode for Pydantic v2."""
 
@@ -319,6 +327,7 @@ __all__ = [
     "DEFAULT_SHARED_MODULE_NAME",
     "MAX_VERSION",
     "MIN_VERSION",
+    "AliasGenerator",
     "AllExportsCollisionStrategy",
     "AllExportsScope",
     "AllOfClassHierarchy",

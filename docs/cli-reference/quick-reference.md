@@ -97,6 +97,7 @@ datamodel-codegen [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
+| [`--alias-generator`](model-customization.md#alias-generator) | Use a Pydantic v2 alias generator in model_config. |
 | [`--allow-extra-fields`](model-customization.md#allow-extra-fields) | Allow extra fields in generated Pydantic models (extra='allow'). |
 | [`--allow-leading-underscore-class-name`](model-customization.md#allow-leading-underscore-class-name) | Allow an explicitly specified root class name to start with an underscore. |
 | [`--allow-population-by-field-name`](model-customization.md#allow-population-by-field-name) | Allow Pydantic model population by field name (not just alias). |
@@ -229,6 +230,7 @@ datamodel-codegen [OPTIONS]
 All options sorted alphabetically:
 
 - [`--additional-imports`](template-customization.md#additional-imports) - Add custom imports to generated output files.
+- [`--alias-generator`](model-customization.md#alias-generator) - Use a Pydantic v2 alias generator in model_config.
 - [`--aliases`](field-customization.md#aliases) - Apply custom field and class name aliases from JSON file.
 - [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy) - Handle name collisions when exporting recursive module hiera...
 - [`--all-exports-scope`](general-options.md#all-exports-scope) - Generate __all__ exports for child modules in __init__.py fi...

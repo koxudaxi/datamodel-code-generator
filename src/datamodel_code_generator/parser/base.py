@@ -1342,6 +1342,18 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             else:
                 self.extra_template_data[ALL_MODEL]["allow_population_by_field_name"] = True
 
+        if config.alias_generator:
+            if config.use_generic_base_class:
+                self.generic_base_class_config["allow_population_by_field_name"] = True
+                self.generic_base_class_config["alias_generator"] = config.alias_generator
+                self.extra_template_data[ALL_MODEL]["_alias_generator"] = config.alias_generator
+            else:
+                self.extra_template_data[ALL_MODEL]["allow_population_by_field_name"] = True
+                self.extra_template_data[ALL_MODEL]["alias_generator"] = config.alias_generator
+
+        if config.no_alias:
+            self.extra_template_data[ALL_MODEL]["_no_alias"] = True
+
         if config.allow_extra_fields:
             if config.use_generic_base_class:
                 self.generic_base_class_config["allow_extra_fields"] = True

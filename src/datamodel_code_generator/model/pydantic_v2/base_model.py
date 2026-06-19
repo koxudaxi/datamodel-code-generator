@@ -11,8 +11,10 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from pydantic import Field, ValidationError, field_validator, model_validator
+from pydantic.alias_generators import to_camel, to_pascal, to_snake
 
 from datamodel_code_generator import Error
+from datamodel_code_generator.enums import AliasGenerator
 from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_ANY, IMPORT_DICT, Import
 from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import (
@@ -33,6 +35,9 @@ from datamodel_code_generator.model.pydantic_v2._config import (
 )
 from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_ALIAS_CHOICES,
+    IMPORT_ALIAS_GENERATOR_TO_CAMEL,
+    IMPORT_ALIAS_GENERATOR_TO_PASCAL,
+    IMPORT_ALIAS_GENERATOR_TO_SNAKE,
     IMPORT_BASE_MODEL,
     IMPORT_CONFIG_DICT,
     IMPORT_FIELD,
@@ -86,6 +91,55 @@ class Constraints(_Constraints):
 
 
 DataModelFieldV1 = _PydanticBaseDataModelField  # deprecated re-export, pydantic-v1 output removed in #3031
+
+_ALIAS_GENERATOR_TEMPLATE_DATA_KEY = "alias_generator"
+_ALIAS_GENERATOR_INTERNAL_KEY = "_alias_generator"
+_NO_ALIAS_INTERNAL_KEY = "_no_alias"
+_CONFIG_ITEMS_TEMPLATE_DATA_KEY = "config_items"
+_ALIAS_GENERATOR_IMPORTS: dict[str, Import] = {
+    AliasGenerator.ToCamel.value: IMPORT_ALIAS_GENERATOR_TO_CAMEL,
+    AliasGenerator.ToPascal.value: IMPORT_ALIAS_GENERATOR_TO_PASCAL,
+    AliasGenerator.ToSnake.value: IMPORT_ALIAS_GENERATOR_TO_SNAKE,
+}
+
+
+def _alias_generator_name(value: Any) -> str | None:
+    generator_name: str | None = None
+    match value:
+        case AliasGenerator():
+            generator_name = value.value
+        case str() if value in _ALIAS_GENERATOR_IMPORTS:
+            generator_name = value
+    return generator_name
+
+
+def _generate_alias(generator_name: str, field_name: str) -> str:
+    generated_alias = field_name
+    match generator_name:
+        case AliasGenerator.ToCamel.value:
+            generated_alias = to_camel(field_name)
+        case AliasGenerator.ToPascal.value:
+            generated_alias = to_pascal(field_name)
+        case AliasGenerator.ToSnake.value:
+            generated_alias = to_snake(field_name)
+    return generated_alias
+
+
+def _config_dict_items(config: Any) -> list[tuple[str, Any]]:
+    if config is None:
+        return []
+
+    if isinstance(config, dict):
+        return list(config.items())
+
+    if model_dump := getattr(config, "model_dump", None):
+        return list(model_dump(exclude_unset=True).items())
+
+    if dict_ := getattr(config, "dict", None):
+        return list(dict_(exclude_unset=True).items())
+
+    return []
+
 
 _PYDANTIC_V2_BASE_FIELD_KEYS: frozenset[str] = frozenset({
     "default",
@@ -169,7 +223,21 @@ class DataModelField(_PydanticBaseDataModelField):
         return self.data_type.type == "None"
 
     def _has_field_statement(self) -> bool:
-        return self._requires_null_default_field() or super()._has_field_statement()
+        if self._requires_null_default_field():
+            return True
+        if self.is_class_var:
+            self.__dict__["_computed_default_factory"] = None
+            return False
+        if self._alias_generator_name_from_parent() is None:
+            return super()._has_field_statement()
+        return self._has_processed_field_statement()
+
+    def _has_processed_field_statement(self) -> bool:
+        """Return whether processed Field() data will render a Field() call."""
+        data, default_factory = self._get_field_data_and_default_factory()
+        if default_factory or any(v is not None for v in data.values()):
+            return True
+        return bool(self.nullable and self.required and not self.use_default_with_required)
 
     def __str__(self) -> str:
         """Return Field(None) when stringification would omit an explicit null default."""
@@ -208,6 +276,7 @@ class DataModelField(_PydanticBaseDataModelField):
             else:
                 data.pop("union_mode")
 
+        self._update_alias_for_alias_generator(data)
         has_alias = "alias" in data
         alias = data.get("alias")
 
@@ -249,6 +318,34 @@ class DataModelField(_PydanticBaseDataModelField):
             data["json_schema_extra"] = json_schema_extra
             for key in extra_field_keys:
                 data.pop(key)
+
+    def _update_alias_for_alias_generator(self, data: dict[str, Any]) -> None:
+        if self.name is None or self.use_pydantic_extra_annotation_assignment:
+            return
+        if (generator_name := self._alias_generator_name_from_parent()) is None:
+            return
+        alias = data.get("alias")
+        if alias is None and self._automatic_alias_disabled_for_alias_generator():
+            return
+        if (wire_name := alias if alias is not None else self.original_name) is None:
+            return
+        if _generate_alias(generator_name, self.name) == wire_name:
+            data.pop("alias", None)
+            return
+        data["alias"] = wire_name
+
+    def _alias_generator_name_from_parent(self) -> str | None:
+        if self.parent is None:
+            return None
+        alias_generator = self.parent.extra_template_data.get(_ALIAS_GENERATOR_TEMPLATE_DATA_KEY)
+        if alias_generator is None:
+            alias_generator = self.parent.extra_template_data.get(_ALIAS_GENERATOR_INTERNAL_KEY)
+        return _alias_generator_name(alias_generator)
+
+    def _automatic_alias_disabled_for_alias_generator(self) -> bool:
+        if self.parent is None:
+            return False
+        return bool(self.parent.extra_template_data.get(_NO_ALIAS_INTERNAL_KEY))
 
     def _has_discriminator_in_data_type(self) -> bool:
         """Check if any nested DataType has a discriminator."""
@@ -387,20 +484,25 @@ class BaseModel(BaseModelBase):
             keyword_only=keyword_only,
             treat_dot_as_module=treat_dot_as_module,
         )
-        config_parameters = build_base_config_parameters(
-            extra_template_data=self.extra_template_data,
-            all_data_types=self.all_data_types if self.SUPPORTS_ARBITRARY_TYPES_ALLOWED else (),
-            config_attributes_v2=self._CONFIG_ATTRIBUTES_V2,
-            config_attributes_v2_11=self._CONFIG_ATTRIBUTES_V2_11,
-            include_extra=self.SUPPORTS_CONFIG_EXTRA,
+        config_parameters: dict[str, Any] = dict(
+            build_base_config_parameters(
+                extra_template_data=self.extra_template_data,
+                all_data_types=self.all_data_types if self.SUPPORTS_ARBITRARY_TYPES_ALLOWED else (),
+                config_attributes_v2=self._CONFIG_ATTRIBUTES_V2,
+                config_attributes_v2_11=self._CONFIG_ATTRIBUTES_V2_11,
+                include_extra=self.SUPPORTS_CONFIG_EXTRA,
+            )
         )
 
         if has_lookaround_pattern(self.fields):
             config_parameters["regex_engine"] = '"python-re"'
 
+        if alias_generator := _alias_generator_name(self.extra_template_data.get(_ALIAS_GENERATOR_TEMPLATE_DATA_KEY)):
+            config_parameters[_ALIAS_GENERATOR_TEMPLATE_DATA_KEY] = alias_generator
+            self._additional_imports.append(_ALIAS_GENERATOR_IMPORTS[alias_generator])
+
         if isinstance(config := self.extra_template_data.get("config"), dict):
-            for key, value in config.items():
-                config_parameters[key] = value
+            config_parameters.update(dict(config.items()))
 
         # Handle json_schema_extra from schema extensions (x-* fields)
         model_extras = self.extra_template_data.get("model_extras")
@@ -412,7 +514,12 @@ class BaseModel(BaseModelBase):
             from datamodel_code_generator.model.pydantic_v2 import ConfigDict  # noqa: PLC0415
 
             self.extra_template_data["config"] = ConfigDict.model_validate(config_parameters)  # ty: ignore
+            self.extra_template_data[_CONFIG_ITEMS_TEMPLATE_DATA_KEY] = _config_dict_items(
+                self.extra_template_data["config"]
+            )
             self._additional_imports.append(IMPORT_CONFIG_DICT)
+        else:
+            self.extra_template_data.pop(_CONFIG_ITEMS_TEMPLATE_DATA_KEY, None)
 
         self._process_validators()
 
