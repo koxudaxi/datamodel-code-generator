@@ -77,6 +77,7 @@ datamodel-codegen [OPTIONS]
 | [`--field-extra-keys-without-x-prefix`](field-customization.md#field-extra-keys-without-x-prefix) | Include schema extension keys in Field() without requiring 'x-' prefix. |
 | [`--field-include-all-keys`](field-customization.md#field-include-all-keys) | Include all schema keys in Field() json_schema_extra. |
 | [`--field-type-collision-strategy`](field-customization.md#field-type-collision-strategy) | Rename type class instead of field when names collide (Pydantic v2 only). |
+| [`--infer-union-variant-names`](field-customization.md#infer-union-variant-names) | Infer names for inline oneOf/anyOf object variants from literal fields. |
 | [`--no-alias`](field-customization.md#no-alias) | Disable Field alias generation for non-Python-safe property names. |
 | [`--original-field-name-delimiter`](field-customization.md#original-field-name-delimiter) | Specify delimiter for original field names when using snake-case conversion. |
 | [`--remove-special-field-name-prefix`](field-customization.md#remove-special-field-name-prefix) | Remove the special prefix from field names. |
@@ -299,6 +300,7 @@ All options sorted alphabetically:
 - [`--ignore-enum-constraints`](typing-customization.md#ignore-enum-constraints) - Ignore enum constraints and use base string type instead of ...
 - [`--ignore-pyproject`](general-options.md#ignore-pyproject) - Ignore pyproject.toml configuration file.
 - [`--include-path-parameters`](openapi-only-options.md#include-path-parameters) - Include OpenAPI path parameters in generated parameter model...
+- [`--infer-union-variant-names`](field-customization.md#infer-union-variant-names) - Infer names for inline oneOf/anyOf object variants from lite...
 - [`--input`](base-options.md#input) - Specify the input schema file path.
 - [`--input-file-type`](base-options.md#input-file-type) - Specify the input file type for code generation.
 - [`--input-model`](base-options.md#input-model) - Import a Python type or dict schema from a module.

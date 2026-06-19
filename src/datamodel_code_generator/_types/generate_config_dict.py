@@ -114,6 +114,7 @@ class BaseGenerateConfig(TypedDict):
     graphql_no_typename: NotRequired[bool]
     wrap_string_literal: NotRequired[bool | None]
     use_title_as_name: NotRequired[bool]
+    infer_union_variant_names: NotRequired[bool]
     use_operation_id_as_name: NotRequired[bool]
     use_unique_items_as_set: NotRequired[bool]
     use_tuple_for_fixed_items: NotRequired[bool]

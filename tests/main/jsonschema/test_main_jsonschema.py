@@ -4135,6 +4135,30 @@ def test_jsonschema_titles_use_title_as_name(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--infer-union-variant-names"],
+    option_description="""Infer names for inline oneOf/anyOf object variants from literal fields.
+
+The `--infer-union-variant-names` flag uses branch-local `const` values or
+single-value enums on a shared discriminator-style property to name generated
+inline union models, while preserving existing generated output by default.""",
+    input_schema="jsonschema/infer_union_variant_names.json",
+    cli_args=["--infer-union-variant-names"],
+    golden_output="jsonschema/infer_union_variant_names.py",
+    related_options=["--use-title-as-name"],
+)
+def test_jsonschema_infer_union_variant_names(output_file: Path) -> None:
+    """Infer inline union variant model names from literal branch fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "infer_union_variant_names.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="infer_union_variant_names.py",
+        extra_args=["--infer-union-variant-names"],
+    )
+
+
 @LEGACY_BLACK_SKIP
 def test_jsonschema_without_titles_use_title_as_name(output_file: Path) -> None:
     """Test title as name without titles present."""

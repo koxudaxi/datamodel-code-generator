@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WebhookEnvelope",
+  "type": "object",
+  "required": ["event", "delivery"],
+  "properties": {
+    "event": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "id"],
+          "properties": {
+            "type": {"const": "message.created"},
+            "id": {"type": "string"}
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "reason"],
+          "properties": {
+            "type": {"$ref": "#/$defs/failedMessageType"},
+            "reason": {"type": "string"}
+          }
+        }
+      ]
+    },
+    "delivery": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": ["type", "address"],
+          "properties": {
+            "type": {"enum": ["email.sent"]},
+            "address": {"type": "string"}
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "phone"],
+          "properties": {
+            "type": {"enum": ["sms.sent"]},
+            "phone": {"type": "string"}
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "failedMessageType": {
+      "type": "string",
+      "enum": ["message.failed"]
+    }
+  }
+}
