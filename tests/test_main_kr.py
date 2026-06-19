@@ -827,6 +827,7 @@ def test_generate_pyproject_config_with_enum_option(capsys: pytest.CaptureFixtur
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_generate_pyproject_config_escapes_toml_strings() -> None:
     """Test --generate-pyproject-config escapes TOML basic strings."""
     try:
