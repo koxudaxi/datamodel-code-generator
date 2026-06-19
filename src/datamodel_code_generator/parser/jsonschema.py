@@ -2286,6 +2286,46 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return variant_names
         return None
 
+    def _get_inferred_union_variant_names(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        combined_schemas: Sequence[JsonSchemaObject],
+    ) -> list[str | None] | None:
+        if not self.infer_union_variant_names:
+            return None
+        return self._infer_union_variant_names(name, obj, combined_schemas)
+
+    def _parse_combined_schema_items(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+        combined_schemas: Sequence[JsonSchemaObject],
+        variant_names: Sequence[str | None] | None,
+    ) -> list[DataType]:
+        if variant_names:
+            return [
+                self.parse_item(
+                    variant_names[index] or name,
+                    item,
+                    [*path, str(index)],
+                    singular_name=False,
+                    parent=obj,
+                )
+                for index, item in enumerate(combined_schemas)
+            ]
+        return [
+            self.parse_item(
+                name,
+                item,
+                [*path, str(index)],
+                singular_name=False,
+                parent=obj,
+            )
+            for index, item in enumerate(combined_schemas)
+        ]
+
     def _deep_merge(self, dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
         """Deep merge two dictionaries, combining nested dicts and lists."""
         result = dict1.copy()
@@ -3321,17 +3361,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     )
                 )
 
-        variant_names = self._infer_union_variant_names(name, obj, combined_schemas)
-        parsed_schemas = [
-            self.parse_item(
-                (variant_names[index] if variant_names else None) or name,
-                item,
-                [*path, str(index)],
-                singular_name=False,
-                parent=obj,
-            )
-            for index, item in enumerate(combined_schemas)
-        ]
+        variant_names = self._get_inferred_union_variant_names(name, obj, combined_schemas)
+        parsed_schemas = self._parse_combined_schema_items(name, obj, path, combined_schemas, variant_names)
         if not parsed_schemas:
             self._raise_unsatisfiable_schema(path, target_attribute_name)
         common_path_keyword = f"{target_attribute_name}Common"
