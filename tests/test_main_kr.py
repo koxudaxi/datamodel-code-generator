@@ -827,6 +827,24 @@ def test_generate_pyproject_config_with_enum_option(capsys: pytest.CaptureFixtur
     )
 
 
+def test_generate_pyproject_config_escapes_toml_strings(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-pyproject-config escapes special characters in TOML basic strings."""
+    run_main_with_args(
+        [
+            "--generate-pyproject-config",
+            "--input",
+            "schema.yaml",
+            "--custom-file-header",
+            'say "hi" on C:\\tmp\nnext',
+            "--http-headers",
+            'Authorization: Bearer "abc"',
+            "X-Path: C:\\tmp",
+        ],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH / "escapes_toml_strings.txt",
+    )
+
+
 EXPECTED_GENERATE_CLI_COMMAND_PATH = EXPECTED_MAIN_KR_PATH / "generate_cli_command"
 
 
