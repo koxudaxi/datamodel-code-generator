@@ -117,12 +117,13 @@ See [CLI Reference](cli-reference/index.md) for all options. See [Presets](prese
 [`--preset`](cli-reference/base-options.md#preset), [`--input-file-type`](cli-reference/base-options.md#input-file-type), and
 [`--output-model-type`](cli-reference/model-customization.md#output-model-type) for this command.
 
-For schema-authored names, model reuse, and generated documentation, see
-[`practical-py312-20260619`](presets.md#practical-py312-20260619).
+For more schema-aware output that preserves schema-authored names, reuses models, and embeds generated
+documentation, use [`practical-py312-20260619`](presets.md#practical-py312-20260619).
 
-### Input
+<details>
+<summary>Input (<code>schema.json</code>)</summary>
 
-```json title="schema.json"
+```json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Pet",
@@ -150,6 +151,8 @@ For schema-authored names, model reuse, and generated documentation, see
   }
 }
 ```
+
+</details>
 
 ### Output
 

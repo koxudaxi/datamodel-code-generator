@@ -325,14 +325,17 @@ See [CLI Reference]({README_CLI_REFERENCE_LINK}) for all options. See [Presets](
 [`--preset`]({README_PRESET_OPTION_LINK}), [`--input-file-type`]({README_INPUT_FILE_TYPE_OPTION_LINK}), and
 [`--output-model-type`]({README_OUTPUT_MODEL_TYPE_OPTION_LINK}) for this command.
 
-For schema-authored names, model reuse, and generated documentation, see
-[`{practical_preset_name}`]({practical_preset_url}).
+For more schema-aware output that preserves schema-authored names, reuses models, and embeds generated
+documentation, use [`{practical_preset_name}`]({practical_preset_url}).
 
-**Input (`{QUICK_START_SCHEMA_NAME}`)**
+<details>
+<summary>Input (<code>{QUICK_START_SCHEMA_NAME}</code>)</summary>
 
 ```json
 {schema}
 ```
+
+</details>
 
 **Output (`{QUICK_START_OUTPUT_NAME}`)**
 
@@ -363,14 +366,17 @@ See [CLI Reference]({DOCS_CLI_REFERENCE_LINK}) for all options. See [Presets]({D
 [`--preset`]({DOCS_PRESET_OPTION_LINK}), [`--input-file-type`]({DOCS_INPUT_FILE_TYPE_OPTION_LINK}), and
 [`--output-model-type`]({DOCS_OUTPUT_MODEL_TYPE_OPTION_LINK}) for this command.
 
-For schema-authored names, model reuse, and generated documentation, see
-[`{practical_preset_name}`]({practical_preset_link}).
+For more schema-aware output that preserves schema-authored names, reuses models, and embeds generated
+documentation, use [`{practical_preset_name}`]({practical_preset_link}).
 
-### Input
+<details>
+<summary>Input (<code>{QUICK_START_SCHEMA_NAME}</code>)</summary>
 
-```json title="{QUICK_START_SCHEMA_NAME}"
+```json
 {schema}
 ```
+
+</details>
 
 ### Output
 

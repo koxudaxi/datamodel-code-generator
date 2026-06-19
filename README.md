@@ -118,10 +118,11 @@ See [CLI Reference](https://datamodel-code-generator.koxudaxi.dev/cli-reference/
 [`--preset`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options/#preset), [`--input-file-type`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options/#input-file-type), and
 [`--output-model-type`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-customization/#output-model-type) for this command.
 
-For schema-authored names, model reuse, and generated documentation, see
-[`practical-py312-20260619`](https://datamodel-code-generator.koxudaxi.dev/presets/#practical-py312-20260619).
+For more schema-aware output that preserves schema-authored names, reuses models, and embeds generated
+documentation, use [`practical-py312-20260619`](https://datamodel-code-generator.koxudaxi.dev/presets/#practical-py312-20260619).
 
-**Input (`schema.json`)**
+<details>
+<summary>Input (<code>schema.json</code>)</summary>
 
 ```json
 {
@@ -151,6 +152,8 @@ For schema-authored names, model reuse, and generated documentation, see
   }
 }
 ```
+
+</details>
 
 **Output (`model.py`)**
 
