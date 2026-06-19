@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, cast
 from datamodel_code_generator.deprecations import deprecation_message
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
+    AliasGenerator,
     AllExportsCollisionStrategy,
     AllExportsScope,
     AllOfClassHierarchy,
@@ -447,6 +448,13 @@ model_options.add_argument(
     "'2': Pydantic 2.0+ compatible (default, uses populate_by_name). "
     "'2.11': Pydantic 2.11+ (uses validate_by_name).",
     choices=[v.value for v in TargetPydanticVersion],
+    default=None,
+)
+model_options.add_argument(
+    "--alias-generator",
+    help="Pydantic v2 BaseModel alias generator to use in ConfigDict. "
+    "Matching generated aliases are omitted from individual Field() calls.",
+    choices=[a.value for a in AliasGenerator],
     default=None,
 )
 model_options.add_argument(

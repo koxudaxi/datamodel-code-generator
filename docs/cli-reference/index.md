@@ -11,7 +11,7 @@ This documentation is auto-generated from test cases.
 | 📁 [Base Options](base-options.md) | 10 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 30 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 26 | Field naming and docstring behavior |
-| 🏗️ [Model Customization](model-customization.md) | 40 | Model generation behavior |
+| 🏗️ [Model Customization](model-customization.md) | 41 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 22 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
@@ -26,6 +26,7 @@ This documentation is auto-generated from test cases.
 ### A {#a}
 
 - [`--additional-imports`](template-customization.md#additional-imports)
+- [`--alias-generator`](model-customization.md#alias-generator)
 - [`--aliases`](field-customization.md#aliases)
 - [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy)
 - [`--all-exports-scope`](general-options.md#all-exports-scope)

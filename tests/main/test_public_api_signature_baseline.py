@@ -13,6 +13,7 @@ from typing_extensions import NotRequired
 
 from datamodel_code_generator import DEFAULT_SHARED_MODULE_NAME, generate
 from datamodel_code_generator.enums import (
+    AliasGenerator,
     AllExportsCollisionStrategy,
     AllExportsScope,
     AllOfClassHierarchy,
@@ -61,6 +62,7 @@ _PUBLIC_MODULE_EXPORTS: dict[str, frozenset[str]] = {
         "AllExportsScope",
         "AllOfClassHierarchy",
         "AllOfMergeMode",
+        "AliasGenerator",
         "AsyncAPIVersion",
         "ClassNameAffixScope",
         "CollapseRootModelsNameStrategy",
@@ -121,6 +123,7 @@ _PUBLIC_MODULE_EXPORTS: dict[str, frozenset[str]] = {
         "AllExportsScope",
         "AllOfClassHierarchy",
         "AllOfMergeMode",
+        "AliasGenerator",
         "AsyncAPIVersion",
         "ClassNameAffixScope",
         "CollapseRootModelsNameStrategy",
@@ -209,6 +212,7 @@ def _baseline_generate(
     validators: Mapping[str, ModelValidators] | None = None,
     validation: bool = False,
     field_constraints: bool = False,
+    alias_generator: AliasGenerator | None = None,
     snake_case_field: bool = False,
     strip_default_none: bool = False,
     aliases: Mapping[str, str | list[str]] | None = None,
@@ -362,6 +366,7 @@ class _BaselineParser:
         dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = None,
         validation: bool = False,
         field_constraints: bool = False,
+        alias_generator: AliasGenerator | None = None,
         snake_case_field: bool = False,
         strip_default_none: bool = False,
         aliases: Mapping[str, str | list[str]] | None = None,

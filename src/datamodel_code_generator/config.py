@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
+    AliasGenerator,
     AllExportsCollisionStrategy,
     AllExportsScope,
     AllOfClassHierarchy,
@@ -80,6 +81,7 @@ class BaseGenerateConfig(BaseModel):
     custom_template_dir: Path | None = None
     validation: bool = False
     field_constraints: bool = False
+    alias_generator: AliasGenerator | None = None
     snake_case_field: bool = False
     strip_default_none: bool = False
     disable_timestamp: bool = False
@@ -243,6 +245,7 @@ class ParserConfig(BaseModel):
     dump_resolve_reference_action: DumpResolveReferenceAction | None = None
     validation: bool = False
     field_constraints: bool = False
+    alias_generator: AliasGenerator | None = None
     snake_case_field: bool = False
     strip_default_none: bool = False
     aliases: Mapping[str, str | list[str]] | None = None
