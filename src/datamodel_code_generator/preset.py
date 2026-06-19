@@ -292,11 +292,12 @@ _STANDARD_20260619_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
             collapse_root_models=True,
             strict_nullable=True,
             set_default_enum_member=True,
+            disable_timestamp=True,
         ),
         description=(
             "Use built-in collection syntax, PEP 604 unions, Annotated constraints, "
             "single-value enum Literals, typed enum subclasses, enum-member defaults, "
-            "inline root wrappers, and schema-accurate nullability."
+            "inline root wrappers, schema-accurate nullability, and reproducible file headers."
         ),
     ),
     PresetOptionGroup(
@@ -349,12 +350,13 @@ _PRACTICAL_20260619_EXTRA_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
         title="Practical model structure and names",
         config=PresetConfig(
             reuse_model=True,
+            collapse_reuse_models=True,
             use_title_as_name=True,
             naming_strategy=NamingStrategy.PrimaryFirst,
         ),
         description=(
-            "Deduplicate identical models, prefer schema titles for class names, and keep primary definitions "
-            "ahead of inline duplicate names."
+            "Deduplicate identical models without empty inheritance wrappers, prefer schema titles for class names, "
+            "and keep primary definitions ahead of inline duplicate names."
         ),
     ),
     PresetOptionGroup(

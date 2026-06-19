@@ -252,7 +252,7 @@ def _generate_quick_start_model(preset_name: str) -> str:
 
 
 def _normalize_quick_start_timestamp(model_output: str, preset_name: str) -> str:
-    """Pin generated quick-start examples to the immutable preset date."""
+    """Pin generated quick-start timestamps when the selected preset emits one."""
     timestamp = _preset_timestamp(preset_name)
     normalized = re.sub(
         r"^#   timestamp: .+$",
@@ -263,8 +263,7 @@ def _normalize_quick_start_timestamp(model_output: str, preset_name: str) -> str
     )
     if normalized != model_output:
         return normalized
-    msg = f"Generated quick-start example has no timestamp header: {preset_name}"
-    raise RuntimeError(msg)
+    return model_output
 
 
 def _preset_timestamp(preset_name: str) -> str:
