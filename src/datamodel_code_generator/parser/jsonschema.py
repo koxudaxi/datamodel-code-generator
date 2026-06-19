@@ -88,7 +88,6 @@ if TYPE_CHECKING:
     from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 JsonSchemaLiteral = Union[bool, int, str]  # noqa: UP007
-_UNION_VARIANT_LITERAL_MISSING = object()
 _MIN_UNION_VARIANT_LITERAL_VALUES = 2
 
 
@@ -103,7 +102,7 @@ def _get_discriminator_property_name(obj: JsonSchemaObject) -> str | None:
             return None
 
 
-def _literal_uniqueness_key(value: JsonSchemaLiteral) -> tuple[type[JsonSchemaLiteral], JsonSchemaLiteral]:
+def _literal_uniqueness_key(value: JsonSchemaLiteral) -> tuple[type[object], JsonSchemaLiteral]:
     return type(value), value
 
 
@@ -2203,19 +2202,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self,
         obj: JsonSchemaObject,
         seen_refs: set[str] | None = None,
-    ) -> JsonSchemaLiteral | object:
-        if (const := obj.extras.get("const", _UNION_VARIANT_LITERAL_MISSING)) is not _UNION_VARIANT_LITERAL_MISSING:
-            return const if isinstance(const, (bool, int, str)) else _UNION_VARIANT_LITERAL_MISSING
+    ) -> JsonSchemaLiteral | None:
+        if "const" in obj.extras:
+            const = obj.extras["const"]
+            return const if isinstance(const, (bool, int, str)) else None
         if len(obj.enum) == 1 and isinstance(obj.enum[0], (bool, int, str)):
             return obj.enum[0]
         if obj.ref:
             seen_refs = seen_refs or set()
             resolved_ref = self.model_resolver.resolve_ref(obj.ref)
             if resolved_ref in seen_refs:
-                return _UNION_VARIANT_LITERAL_MISSING
+                return None
             seen_refs.add(resolved_ref)
             return self._get_single_literal_value(self._load_ref_schema_object(obj.ref), seen_refs)
-        return _UNION_VARIANT_LITERAL_MISSING
+        return None
 
     def _get_union_variant_literal_values(
         self,
@@ -2230,7 +2230,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if not isinstance(field, JsonSchemaObject):
                 return None
             value = self._get_single_literal_value(field)
-            if value is _UNION_VARIANT_LITERAL_MISSING:
+            if value is None:
                 return None
             values[index] = value
 
