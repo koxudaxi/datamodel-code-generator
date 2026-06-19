@@ -25,6 +25,7 @@ from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
     Types,
+    _get_union_variant_name,
     _validate_schema_python_import_path,
     get_model_by_path,
     split_json_pointer,
@@ -655,6 +656,7 @@ def test_infer_union_variant_names_distinguishes_literal_types() -> None:
         "Event__1",
         "Event_bool_true",
     ]
+    assert _get_union_variant_name("Event", object()) is None
 
 
 def test_union_variant_literal_helpers_handle_refs_and_invalid_fields(tmp_path: Path, mocker: MockerFixture) -> None:

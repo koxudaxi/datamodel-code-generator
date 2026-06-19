@@ -106,7 +106,7 @@ def _literal_uniqueness_key(value: JsonSchemaLiteral) -> tuple[type[object], Jso
     return type(value), value
 
 
-def _get_union_variant_name(name: str, literal: JsonSchemaLiteral) -> str | None:
+def _get_union_variant_name(name: str, literal: object) -> str | None:
     module_name, separator, class_name = name.rpartition(".")
     match literal:
         case str():
@@ -115,6 +115,8 @@ def _get_union_variant_name(name: str, literal: JsonSchemaLiteral) -> str | None
             literal_text = f"bool_{str(literal).lower()}"
         case int():
             literal_text = f"int_{literal}"
+        case _:
+            return None
     literal_name = sanitize_module_name(literal_text, treat_dot_as_module=False)
     if not literal_name:
         return None
