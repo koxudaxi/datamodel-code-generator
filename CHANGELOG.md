@@ -7,6 +7,11 @@ This changelog is automatically generated from GitHub Releases.
 
 ## [0.64.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.64.1) - 2026-06-19
 
+## Breaking Changes
+
+### Code Generation Changes
+* Optional primitive `const` fields no longer emit the const value as an injected default - Optional primitive `const` properties without a schema `default` now render as nullable/omittable (`Literal[...] | None = None`) instead of being populated with the const value when the input key is omitted. Regenerated code and snapshot tests may change. (#3434)
+
 ## What's Changed
 * Update CHANGELOG for 0.64.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3414
 * Fix pydantic v2 dataclass lookaround regex engine by @DarkaMaul in https://github.com/koxudaxi/datamodel-code-generator/pull/3370
