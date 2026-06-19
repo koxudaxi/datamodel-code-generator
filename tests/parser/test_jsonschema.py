@@ -25,6 +25,7 @@ from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
     Types,
+    _get_discriminator_property_name,
     _get_union_variant_name,
     _validate_schema_python_import_path,
     get_model_by_path,
@@ -50,6 +51,19 @@ def block_dns_by_default(mocker: MockerFixture) -> None:
 
 def _json_schema_object(data: dict[str, Any]) -> JsonSchemaObject:
     return JsonSchemaObject.model_validate(data)
+
+
+@pytest.mark.parametrize(
+    ("schema", "expected"),
+    [
+        ({"discriminator": {"propertyName": "kind"}}, "kind"),
+        ({"discriminator": "kind"}, "kind"),
+        ({}, None),
+    ],
+)
+def test_get_discriminator_property_name(schema: dict[str, Any], expected: str | None) -> None:
+    """Return discriminator property names from supported schema shapes."""
+    assert _get_discriminator_property_name(_json_schema_object(schema)) == expected
 
 
 @pytest.mark.parametrize(
@@ -656,6 +670,7 @@ def test_infer_union_variant_names_distinguishes_literal_types() -> None:
         "Event__1",
         "Event_bool_true",
     ]
+    assert _get_union_variant_name("Event", "") is None
     assert _get_union_variant_name("Event", object()) is None
 
 

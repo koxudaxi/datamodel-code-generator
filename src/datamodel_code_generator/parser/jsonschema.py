@@ -93,13 +93,12 @@ _MIN_UNION_VARIANT_LITERAL_VALUES = 2
 
 def _get_discriminator_property_name(obj: JsonSchemaObject) -> str | None:
     """Return the discriminator property name from either JSON Schema or OpenAPI shape."""
-    match obj.discriminator:
-        case Discriminator(propertyName=property_name):
-            return property_name
-        case str() as property_name:
-            return property_name
-        case _:
-            return None
+    discriminator = obj.discriminator
+    if isinstance(discriminator, Discriminator):
+        return discriminator.propertyName
+    if isinstance(discriminator, str):
+        return discriminator
+    return None
 
 
 def _literal_uniqueness_key(value: JsonSchemaLiteral) -> tuple[type[object], JsonSchemaLiteral]:
@@ -108,15 +107,14 @@ def _literal_uniqueness_key(value: JsonSchemaLiteral) -> tuple[type[object], Jso
 
 def _get_union_variant_name(name: str, literal: object) -> str | None:
     module_name, separator, class_name = name.rpartition(".")
-    match literal:
-        case str():
-            literal_text = literal
-        case bool():
-            literal_text = f"bool_{str(literal).lower()}"
-        case int():
-            literal_text = f"int_{literal}"
-        case _:
-            return None
+    if isinstance(literal, str):
+        literal_text = literal
+    elif isinstance(literal, bool):
+        literal_text = f"bool_{str(literal).lower()}"
+    elif isinstance(literal, int):
+        literal_text = f"int_{literal}"
+    else:
+        return None
     literal_name = sanitize_module_name(literal_text, treat_dot_as_module=False)
     if not literal_name:
         return None
