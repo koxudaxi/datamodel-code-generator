@@ -40,19 +40,27 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Keep trusted verifier inputs outside Claude's writable workspace.
           diff_dir="$RUNNER_TEMP/release-draft-pr"
+          claude_diff_dir="$(mktemp -d "${GITHUB_WORKSPACE:?}/.release-draft-pr.XXXXXX")"
           mkdir -p "$diff_dir"
+          chmod 700 "$diff_dir"
+          chmod 700 "$claude_diff_dir"
 
           diff_path="$diff_dir/pr.diff"
           diffstat_path="$diff_dir/pr.diffstat"
           files_path="$diff_dir/pr.files"
           deleted_lines_path="$diff_dir/deleted-lines.txt"
           context_path="$diff_dir/analysis-context.md"
+          claude_diff_path="$claude_diff_dir/pr.diff"
+          claude_files_path="$claude_diff_dir/pr.files"
+          claude_deleted_lines_path="$claude_diff_dir/deleted-lines.txt"
+          claude_context_path="$claude_diff_dir/analysis-context.md"
 
           write_pull_request_diff() {
             gh pr diff "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" > "$diff_path"
             gh pr diff "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --name-only > "$files_path"
-            sed -n '/^-[^-]/ s/^-//p' "$diff_path" > "$deleted_lines_path"
+            awk '/^--- / { next } /^-/ { print substr($0, 2) }' "$diff_path" > "$deleted_lines_path"
             printf '%s lines\n' "$(wc -l < "$diff_path")" > "$diffstat_path"
           }
 
@@ -67,11 +75,15 @@ jobs:
             git diff --name-status "$base_sha" "$MERGE_SHA" > "$files_path"
             git diff --no-ext-diff --find-renames --unified=80 "$base_sha" "$MERGE_SHA" > "$diff_path"
             git diff --no-ext-diff --find-renames --unified=0 "$base_sha" "$MERGE_SHA" \
-              | awk '/^-[^-]/ { print substr($0, 2) }' > "$deleted_lines_path"
+              | awk '/^--- / { next } /^-/ { print substr($0, 2) }' > "$deleted_lines_path"
           else
             base_sha=""
             write_pull_request_diff
           fi
+
+          cp "$diff_path" "$claude_diff_path"
+          cp "$files_path" "$claude_files_path"
+          cp "$deleted_lines_path" "$claude_deleted_lines_path"
 
           {
             printf '# Release Draft Analysis Context\n\n'
@@ -81,20 +93,23 @@ jobs:
             printf 'Base SHA: %s\n\n' "${base_sha:-unknown}"
             printf 'Use only these prepared artifacts when deciding whether this PR has breaking changes.\n'
             printf 'Do not infer changes from unrelated refs, branches, or commits.\n\n'
-            printf 'Diff path: `%s`\n' "$diff_path"
-            printf 'Changed files path: `%s`\n' "$files_path"
-            printf 'Deleted lines path: `%s`\n\n' "$deleted_lines_path"
+            printf 'Diff path: `%s`\n' "$claude_diff_path"
+            printf 'Changed files path: `%s`\n' "$claude_files_path"
+            printf 'Deleted lines path: `%s`\n\n' "$claude_deleted_lines_path"
             printf '## Diffstat\n\n```text\n'
             cat "$diffstat_path"
             printf '\n```\n\n## Changed Files\n\n```text\n'
             cat "$files_path"
             printf '\n```\n'
           } > "$context_path"
+          cp "$context_path" "$claude_context_path"
+          chmod 600 "$claude_diff_path" "$claude_files_path" "$claude_deleted_lines_path" "$claude_context_path"
 
           {
-            echo "diff_path=$diff_path"
-            echo "deleted_lines_path=$deleted_lines_path"
-            echo "analysis_context_path=$context_path"
+            echo "diff_path=$claude_diff_path"
+            echo "deleted_lines_path=$claude_deleted_lines_path"
+            echo "analysis_context_path=$claude_context_path"
+            echo "trusted_deleted_lines_path=$deleted_lines_path"
           } >> "$GITHUB_OUTPUT"
 
       - name: Run Claude Code Analysis
@@ -148,6 +163,7 @@ jobs:
           claude_args: |
             --model claude-opus-4-8
             --max-turns 50
+            --allowedTools Read
             --json-schema '{"type":"object","properties":{"has_breaking_changes":{"type":"boolean","description":"Whether this PR contains breaking changes"},"breaking_changes_content":{"type":"string","description":"Formatted breaking changes section content (without ## Breaking Changes header), or empty string if none"},"reasoning":{"type":"string","description":"Brief explanation of why this is or is not a breaking change"}},"required":["has_breaking_changes","breaking_changes_content","reasoning"]}'
 
       - name: Parse Claude output
@@ -155,57 +171,12 @@ jobs:
         env:
           CLAUDE_OUTPUT: ${{ steps.claude.outputs.structured_output }}
           ANALYSIS_PATH: ${{ runner.temp }}/release-draft-analysis.json
-          DELETED_LINES_PATH: ${{ steps.pr-diff.outputs.deleted_lines_path }}
+          DELETED_LINES_PATH: ${{ steps.pr-diff.outputs.trusted_deleted_lines_path }}
         run: |
           set -euo pipefail
-          # Parse structured output from Claude using env var to avoid shell injection
-          HAS_BC=$(printf '%s\n' "$CLAUDE_OUTPUT" | jq -r '.has_breaking_changes // false')
-          BC_CONTENT=$(printf '%s\n' "$CLAUDE_OUTPUT" | jq -r '.breaking_changes_content // ""')
-          REASONING=$(printf '%s\n' "$CLAUDE_OUTPUT" | jq -r '.reasoning // ""')
-
-          # Guard against release-note hallucinations caused by comparing against
-          # unrelated branches: if the analysis claims a backticked option/API was
-          # removed, that token must be present in the actual deleted lines.
-          if [ "$HAS_BC" = "true" ] && printf '%s\n' "$BC_CONTENT" | grep -Eiq '(^|\b)(removed|removal|deleted|no longer)\b'; then
-            if [ ! -s "$DELETED_LINES_PATH" ]; then
-              {
-                echo "Release draft analysis claimed removals, but the exact PR diff has no deleted lines:"
-                printf '%s\n' "$BC_CONTENT"
-              } >&2
-              exit 1
-            fi
-
-            invalid_claims=""
-            while IFS= read -r line; do
-              if ! printf '%s\n' "$line" | grep -Eiq '(^|\b)(removed|removal|deleted|no longer)\b'; then
-                continue
-              fi
-              while IFS= read -r token; do
-                if ! printf '%s\n' "$token" | grep -Eq '^[[:alnum:]_.-]+(\(\))?$'; then
-                  continue
-                fi
-                normalized_token="${token%()}"
-                if ! grep -F -- "$normalized_token" "$DELETED_LINES_PATH" >/dev/null; then
-                  invalid_claims="${invalid_claims}"$'\n'"${line}"$'\n'"  Missing deleted token: ${normalized_token}"
-                fi
-              done < <(printf '%s\n' "$line" | grep -oE '`[^`]+`' | tr -d '`' || true)
-            done < <(printf '%s\n' "$BC_CONTENT")
-
-            if [ -n "$invalid_claims" ]; then
-              {
-                echo "Release draft analysis claimed removals that are not present in the exact PR diff:"
-                printf '%s\n' "$invalid_claims"
-              } >&2
-              exit 1
-            fi
-          fi
-
-          jq -n \
-            --argjson has_breaking_changes "$HAS_BC" \
-            --arg breaking_changes_content "$BC_CONTENT" \
-            --arg reasoning "$REASONING" \
-            '{has_breaking_changes: $has_breaking_changes, breaking_changes_content: $breaking_changes_content, reasoning: $reasoning}' \
-            > "$ANALYSIS_PATH"
+          python3 scripts/validate_release_draft_analysis.py \
+            --analysis-path "$ANALYSIS_PATH" \
+            --deleted-lines-path "$DELETED_LINES_PATH"
 
       - name: Upload analysis artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
