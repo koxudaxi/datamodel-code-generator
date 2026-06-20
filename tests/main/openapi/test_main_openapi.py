@@ -488,6 +488,22 @@ def test_main_openapi_discriminator_short_mapping_names(output_file: Path) -> No
     )
 
 
+def test_main_openapi_discriminator_external_mapping(output_file: Path) -> None:
+    """Mapping-only discriminator subtypes can be external refs."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_external_mapping" / "openapi.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "external_mapping.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+    )
+
+
 def test_main_openapi_discriminator_partial_mapping(output_file: Path) -> None:
     """Missing discriminator mappings fall back to the subtype name."""
     run_main_and_assert(
