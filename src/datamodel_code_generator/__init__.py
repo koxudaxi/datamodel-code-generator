@@ -80,6 +80,7 @@ if TYPE_CHECKING:
         PythonVersion,
         PythonVersionMin,
     )
+    from datamodel_code_generator.model_metadata import ModelMetadata
 
 T = TypeVar("T")
 _ConfigT = TypeVar("_ConfigT", bound="ParserConfig")
@@ -1195,6 +1196,13 @@ def _emit_results(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     return None
 
 
+def _write_model_metadata(metadata_path: Path, metadata: ModelMetadata | None, encoding: str) -> None:
+    from datamodel_code_generator.model_metadata import dump_model_metadata  # noqa: PLC0415
+
+    metadata_path.parent.mkdir(parents=True, exist_ok=True)
+    metadata_path.write_text(f"{dump_model_metadata(metadata)}\n", encoding=encoding)
+
+
 def generate(  # noqa: PLR0912, PLR0914, PLR0915
     input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     *,
@@ -1397,13 +1405,15 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
                 all_exports_scope=config.all_exports_scope,
                 all_exports_collision_strategy=config.all_exports_collision_strategy,
                 module_split_mode=config.module_split_mode,
+                collect_model_metadata=config.emit_model_metadata is not None,
             )
         except BaseException:
             with contextlib.suppress(BaseException):
                 parser._dispose()  # noqa: SLF001
             raise
+    model_metadata = parser.model_metadata
     parser._dispose()  # noqa: SLF001
-    return _emit_results(
+    generated = _emit_results(
         results,
         input_,
         input_filename,
@@ -1412,6 +1422,9 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         defer_formatting=defer_formatting,
         data_model_types=data_model_types,
     )
+    if config.emit_model_metadata is not None:
+        _write_model_metadata(config.emit_model_metadata, model_metadata, config.encoding)
+    return generated
 
 
 def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912

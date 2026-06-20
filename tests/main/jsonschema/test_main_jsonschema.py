@@ -35,6 +35,7 @@ from tests.conftest import (
     MockHttpxResponse,
     assert_directory_content,
     assert_httpx_get_kwargs,
+    assert_output,
     create_assert_file_content,
     freeze_time,
     validate_generated_code,
@@ -205,6 +206,108 @@ def test_main_array_uri_items_preserves_min_items(output_file: Path) -> None:
             "--disable-timestamp",
         ],
         force_exec_validation=True,
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--emit-model-metadata"],
+    option_description=(
+        "Write a separate JSON map from source schema references to the final generated models, modules, fields, "
+        "and type hints."
+    ),
+    input_schema="jsonschema/model_metadata.json",
+    cli_args=["--emit-model-metadata", "model-map.json", "--module-split-mode", "single", "--disable-timestamp"],
+    golden_output="jsonschema/model_metadata_module_split/root_title.py",
+    extra_outputs=[
+        {
+            "title": "Generated metadata (`model-map.json`)",
+            "path": "main/jsonschema/model_metadata_map.txt",
+            "language": "json",
+        }
+    ],
+)
+def test_main_emit_model_metadata(output_file: Path) -> None:
+    """Write generated model metadata to a separate JSON file."""
+    output_dir = output_file.with_suffix("")
+    metadata_path = output_file.parent / "metadata" / "model-map.json"
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_metadata.json",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "model_metadata_module_split",
+        extra_args=[
+            "--emit-model-metadata",
+            str(metadata_path),
+            "--module-split-mode",
+            "single",
+            "--disable-timestamp",
+        ],
+    )
+    assert_output(metadata_path.read_text(encoding="utf-8"), EXPECTED_JSON_SCHEMA_PATH / "model_metadata_map.txt")
+
+
+def test_main_emit_model_metadata_rejects_check(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Reject metadata output in no-write check mode."""
+    metadata_path = output_file.parent / "metadata" / "model-map.json"
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_metadata.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        file_should_not_exist=(output_file, metadata_path),
+        capsys=capsys,
+        expected_stderr_contains="Error: --check cannot be used with --emit-model-metadata",
+        extra_args=["--check", "--emit-model-metadata", str(metadata_path)],
+    )
+
+
+def test_main_emit_model_metadata_preserves_source_ref_for_internal_modules(output_dir: Path) -> None:
+    """Keep source refs stable when circular import resolution relocates models."""
+    metadata_path = output_dir.parent / "metadata" / "model-map.json"
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_circular.json",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "use_generic_base_class_circular",
+        extra_args=[
+            "--emit-model-metadata",
+            str(metadata_path),
+            "--extra-fields",
+            "forbid",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--module-split-mode",
+            "single",
+            "--use-generic-base-class",
+        ],
+    )
+    assert_output(
+        metadata_path.read_text(encoding="utf-8"),
+        EXPECTED_JSON_SCHEMA_PATH / "use_generic_base_class_circular_metadata_map.txt",
+    )
+
+
+def test_main_emit_model_metadata_keeps_source_model_named_base_model(output_file: Path) -> None:
+    """Keep a legitimate source model named BaseModel in metadata."""
+    metadata_path = output_file.parent / "metadata" / "model-map.json"
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_metadata_base_model_name.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_file=EXPECTED_JSON_SCHEMA_PATH / "model_metadata_base_model_name.py",
+        extra_args=[
+            "--emit-model-metadata",
+            str(metadata_path),
+            "--disable-timestamp",
+        ],
+    )
+    assert_output(
+        metadata_path.read_text(encoding="utf-8"),
+        EXPECTED_JSON_SCHEMA_PATH / "model_metadata_base_model_name_map.txt",
     )
 
 
@@ -4225,6 +4328,46 @@ def test_jsonschema_titles_use_title_as_name(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="titles_use_title_as_name.py",
         extra_args=["--use-title-as-name"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--infer-union-variant-names"],
+    option_description="""Infer names for inline oneOf/anyOf object variants from literal fields.
+
+The `--infer-union-variant-names` flag uses branch-local `const` values or
+single-value enums on a shared discriminator-style property to name generated
+inline union models. This is useful when inline union branches would otherwise
+receive position-based names such as `Event` and `Event1`.
+
+The literal value can also come from a single-value enum or an internal `$ref`.
+Existing generated output is preserved unless this option is enabled.""",
+    input_schema="jsonschema/infer_union_variant_names.json",
+    cli_args=["--infer-union-variant-names"],
+    golden_output="jsonschema/infer_union_variant_names.py",
+    comparison_output="jsonschema/infer_union_variant_names_baseline.py",
+    related_options=["--use-title-as-name"],
+)
+def test_jsonschema_infer_union_variant_names(output_file: Path) -> None:
+    """Infer inline union variant model names from literal branch fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "infer_union_variant_names.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="infer_union_variant_names.py",
+        extra_args=["--infer-union-variant-names"],
+    )
+
+
+def test_jsonschema_infer_union_variant_names_default_names(output_file: Path) -> None:
+    """Keep default inline union model names unless variant name inference is enabled."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "infer_union_variant_names.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="infer_union_variant_names_baseline.py",
     )
 
 

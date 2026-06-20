@@ -244,6 +244,11 @@ base_options.add_argument(
     help="Output file (default: stdout)",
 )
 base_options.add_argument(
+    "--emit-model-metadata",
+    type=Path,
+    help="Write a separate JSON map from source schema references to generated models and fields.",
+)
+base_options.add_argument(
     "--output-model-type",
     help="Output model type (default: pydantic_v2.BaseModel)",
     choices=[i.value for i in DataModelType],
@@ -496,6 +501,12 @@ model_options.add_argument(
 model_options.add_argument(
     "--use-title-as-name",
     help="use titles as class names of models",
+    action="store_true",
+    default=None,
+)
+model_options.add_argument(
+    "--infer-union-variant-names",
+    help="Infer inline oneOf/anyOf branch model names from literal discriminator-style fields",
     action="store_true",
     default=None,
 )
@@ -1250,10 +1261,10 @@ general_options.add_argument(
 )
 general_options.add_argument(
     "--output-format-json-schema",
-    choices=["generate-prompt", "generation", "structured-output"],
+    choices=["generate-prompt", "generation", "model-metadata", "structured-output"],
     default=None,
-    metavar="{generate-prompt,generation,structured-output}",
-    help="Output JSON Schema for the selected structured output format and exit.",
+    metavar="{generate-prompt,generation,model-metadata,structured-output}",
+    help="Output JSON Schema for the selected JSON output format and exit.",
 )
 general_options.add_argument(
     "--generate-pyproject-config",

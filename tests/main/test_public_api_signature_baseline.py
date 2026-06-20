@@ -201,6 +201,7 @@ def _baseline_generate(
     input_filename: str | None = None,
     input_file_type: InputFileType = InputFileType.Auto,
     output: Path | None = None,
+    emit_model_metadata: Path | None = None,
     output_model_type: DataModelType = DataModelType.PydanticV2BaseModel,
     preset: PresetName | None = None,
     target_python_version: PythonVersion = PythonVersionMin,
@@ -277,6 +278,7 @@ def _baseline_generate(
     graphql_no_typename: bool = False,
     wrap_string_literal: bool | None = None,
     use_title_as_name: bool = False,
+    infer_union_variant_names: bool = False,
     use_operation_id_as_name: bool = False,
     use_unique_items_as_set: bool = False,
     use_tuple_for_fixed_items: bool = False,
@@ -421,6 +423,7 @@ class _BaselineParser:
         model_extra_keys_without_x_prefix: set[str] | None = None,
         wrap_string_literal: bool | None = None,
         use_title_as_name: bool = False,
+        infer_union_variant_names: bool = False,
         use_operation_id_as_name: bool = False,
         use_unique_items_as_set: bool = False,
         use_tuple_for_fixed_items: bool = False,
@@ -496,6 +499,7 @@ class _BaselineParser:
         all_exports_scope: AllExportsScope | None = None,
         all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
         module_split_mode: ModuleSplitMode | None = None,
+        collect_model_metadata: bool = False,
     ) -> str | dict[tuple[str, ...], Any]:
         raise NotImplementedError
 
