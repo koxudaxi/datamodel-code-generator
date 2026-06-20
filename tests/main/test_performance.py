@@ -33,7 +33,6 @@ EXPECTED_STARTUP_MEASUREMENT_CASES = {
     "cli-version",
     "cli-help",
     "cli-schema-generation",
-    "cli-schema-model-metadata",
     "cli-schema-structured-output",
 }
 
@@ -68,7 +67,6 @@ def test_perf_cli_fast_path_subprocesses(args: list[str], expected_text: str) ->
     "schema_option",
     [
         "--output-format-json-schema=generation",
-        "--output-format-json-schema=model-metadata",
         "--output-format-json-schema=structured-output",
     ],
 )

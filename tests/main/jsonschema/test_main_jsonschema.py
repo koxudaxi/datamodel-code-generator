@@ -259,7 +259,7 @@ def test_main_emit_model_metadata_rejects_check(output_file: Path, capsys: pytes
         output_path=output_file,
         input_file_type="jsonschema",
         expected_exit=Exit.ERROR,
-        file_should_not_exist=(output_file, metadata_path),
+        file_should_not_exist=(metadata_path, output_file),
         capsys=capsys,
         expected_stderr_contains="Error: --check cannot be used with --emit-model-metadata",
         extra_args=["--check", "--emit-model-metadata", str(metadata_path)],
@@ -4247,6 +4247,25 @@ def test_main_jsonschema_base_class_map_inline_requires_json_object(
     )
 
 
+def test_main_jsonschema_base_class_map_rejects_invalid_mapping_value(
+    output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test invalid base-class-map values fail with the option name."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "base_class_map.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        file_should_not_exist=output_file,
+        capsys=capsys,
+        expected_stderr_contains="Invalid --base-class-map",
+        extra_args=[
+            "--base-class-map",
+            '{"Person": 1}',
+        ],
+    )
+
+
 def test_main_jsonschema_custom_base_paths_list(output_file: Path) -> None:
     """Test customBasePath with list of base classes."""
     run_main_and_assert(
@@ -4491,6 +4510,24 @@ def test_jsonschema_infer_union_variant_names_default_names(output_file: Path) -
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="infer_union_variant_names_baseline.py",
+    )
+
+
+@LEGACY_BLACK_SKIP
+def test_jsonschema_infer_union_variant_names_edges(output_file: Path) -> None:
+    """Infer variant names for discriminator, scalar literal, ref, and fallback cases."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "infer_union_variant_names_edges.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="infer_union_variant_names_edges.py",
+        extra_args=[
+            "--infer-union-variant-names",
+            "--external-ref-mapping",
+            "external_kind.json=external.models",
+            "--disable-timestamp",
+        ],
     )
 
 
@@ -7207,6 +7244,44 @@ def test_main_enum_field_as_literal_map_inline_requires_json_object(
     )
 
 
+@pytest.mark.filterwarnings(
+    "ignore:JSON configuration values that do not match the documented schema are deprecated:FutureWarning"
+)
+def test_main_enum_field_as_literal_map_legacy_value_remains_compatible(output_file: Path) -> None:
+    """Test legacy enum-field map values remain compatible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_field_as_literal_map_legacy.py",
+        extra_args=[
+            "--enum-field-as-literal-map",
+            '{"status": "legacy"}',
+            "--disable-timestamp",
+        ],
+    )
+
+
+def test_main_enum_field_as_literal_map_legacy_value_rejects_invalid_type(
+    output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test legacy enum-field map fallback still rejects invalid value types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+        output_path=output_file,
+        input_file_type=None,
+        expected_exit=Exit.ERROR,
+        file_should_not_exist=output_file,
+        capsys=capsys,
+        expected_stderr_contains="Invalid --enum-field-as-literal-map",
+        extra_args=[
+            "--enum-field-as-literal-map",
+            '{"status": 1}',
+        ],
+    )
+
+
 def test_main_x_enum_field_as_literal(output_file: Path) -> None:
     """Test x-enum-field-as-literal schema extension for per-field control."""
     run_main_and_assert(
@@ -9775,9 +9850,9 @@ def test_main_jsonschema_contains_false_min_contains_zero(output_file: Path) -> 
 
 @pytest.mark.cli_doc(
     options=["--aliases"],
-    option_description="""Apply custom field and class name aliases from JSON file.
+    option_description="""Apply custom field and class name aliases via inline JSON or a JSON file path.
 
-The `--aliases` option allows renaming fields and classes via a JSON mapping file,
+The `--aliases` option allows renaming fields and classes via an inline JSON object or JSON mapping file,
 providing fine-grained control over generated names independent of schema definitions.
 Supports scoped format (ClassName.field) for hierarchical aliasing.""",
     input_schema="jsonschema/hierarchical_aliases.json",
@@ -9794,6 +9869,21 @@ def test_main_jsonschema_hierarchical_aliases_scoped(output_file: Path) -> None:
         extra_args=[
             "--aliases",
             str(ALIASES_DATA_PATH / "hierarchical_aliases_scoped.json"),
+        ],
+    )
+
+
+def test_main_jsonschema_hierarchical_aliases_inline_json(output_file: Path) -> None:
+    """Test aliases mapping loaded from inline JSON."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "hierarchical_aliases.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="jsonschema_hierarchical_aliases_scoped.py",
+        extra_args=[
+            "--aliases",
+            '{"Root.name": "root_name", "User.name": "user_name", "Address.name": "address_name"}',
         ],
     )
 
@@ -9881,7 +9971,7 @@ def test_main_jsonschema_serialization_alias_same_name_pydantic_v2(output_file: 
 
 @pytest.mark.cli_doc(
     options=["--serialization-aliases"],
-    option_description="""Apply custom Pydantic v2 serialization aliases from JSON file.
+    option_description="""Apply custom Pydantic v2 serialization aliases via inline JSON or a JSON file path.
 
 The `--serialization-aliases` option lets Pydantic v2 models keep input aliases
 or validation aliases while using separate output-only names for serialization.""",
@@ -9909,6 +9999,25 @@ def test_main_jsonschema_serialization_aliases_pydantic_v2(output_file: Path) ->
             str(ALIASES_DATA_PATH / "serialization_aliases.json"),
             "--serialization-aliases",
             str(ALIASES_DATA_PATH / "serialization_aliases_output.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_jsonschema_serialization_aliases_inline_json_pydantic_v2(output_file: Path) -> None:
+    """Test explicit serialization aliases from inline JSON."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "serialization_aliases.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="serialization_aliases.py",
+        extra_args=[
+            "--aliases",
+            (ALIASES_DATA_PATH / "serialization_aliases.json").read_text(encoding="utf-8"),
+            "--serialization-aliases",
+            (ALIASES_DATA_PATH / "serialization_aliases_output.json").read_text(encoding="utf-8"),
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
@@ -11835,16 +11944,16 @@ def test_x_python_type_union_anyof(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--default-values"],
-    option_description="""Override field default values from external JSON file.
+    option_description="""Override field default values via inline JSON or a JSON file path.
 
-The `--default-values` option allows specifying default values for fields via a JSON file.
+The `--default-values` option allows specifying default values for fields via an inline JSON object or JSON file.
 Supports scoped format (ClassName.field) for hierarchical overrides.""",
     input_schema="jsonschema/default_values_override.json",
     cli_args=["--default-values", "default_values/scoped_defaults.json"],
     golden_output="jsonschema/jsonschema_default_values_override.py",
 )
 def test_main_jsonschema_default_values_override(output_file: Path) -> None:
-    """Test default value overrides from external JSON file."""
+    """Test default value overrides from a JSON file path."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "default_values_override.json",
         output_path=output_file,
@@ -11854,6 +11963,21 @@ def test_main_jsonschema_default_values_override(output_file: Path) -> None:
         extra_args=[
             "--default-values",
             str(DEFAULT_VALUES_DATA_PATH / "scoped_defaults.json"),
+        ],
+    )
+
+
+def test_main_jsonschema_default_values_override_inline_json(output_file: Path) -> None:
+    """Test default value overrides from inline JSON."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "default_values_override.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="jsonschema_default_values_override.py",
+        extra_args=[
+            "--default-values",
+            (DEFAULT_VALUES_DATA_PATH / "scoped_defaults.json").read_text(encoding="utf-8"),
         ],
     )
 
@@ -11981,7 +12105,7 @@ def test_reduce_duplicate_field_types(output_file: Path) -> None:
     options=["--validators"],
     option_description="""Add custom field validators to generated Pydantic v2 models.
 
-The `--validators` option takes a JSON file defining validators per model.
+The `--validators` option takes an inline JSON object or JSON file defining validators per model.
 Each validator specifies the field(s) to validate, the validation function
 to import, and optionally the mode (before/after/wrap/plain).
 This allows injecting custom validation logic into generated models.""",
@@ -11998,7 +12122,7 @@ This allows injecting custom validation logic into generated models.""",
 def test_field_validators(output_file: Path) -> None:
     """Add custom field validators to generated Pydantic v2 models.
 
-    The `--validators` option takes a JSON file defining validators per model.
+    The `--validators` option takes an inline JSON object or JSON file defining validators per model.
     Each validator specifies the field(s) to validate, the validation function
     to import, and optionally the mode (before/after/wrap/plain).
     This allows injecting custom validation logic into generated models.
@@ -12012,6 +12136,25 @@ def test_field_validators(output_file: Path) -> None:
         extra_args=[
             "--validators",
             str(JSON_SCHEMA_DATA_PATH / "field_validators_config.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        skip_code_validation=True,
+    )
+
+
+def test_field_validators_inline_json(output_file: Path) -> None:
+    """Test validators configuration from inline JSON."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_validators.py",
+        extra_args=[
+            "--validators",
+            (JSON_SCHEMA_DATA_PATH / "field_validators_config.json").read_text(encoding="utf-8"),
             "--output-model-type",
             "pydantic_v2.BaseModel",
             "--disable-timestamp",

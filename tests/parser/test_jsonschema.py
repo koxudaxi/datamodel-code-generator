@@ -27,7 +27,6 @@ from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
     Types,
-    _get_discriminator_property_name,
     _get_union_variant_name,
     _validate_schema_python_import_path,
     get_model_by_path,
@@ -42,30 +41,15 @@ if TYPE_CHECKING:
 
 DATA_PATH: Path = Path(__file__).parents[1] / "data" / "jsonschema"
 
-EXPECTED_JSONSCHEMA_PATH = Path(__file__).parents[1] / "data" / "expected" / "parser" / "jsonschema"
+
+def _json_schema_object(data: dict[str, Any]) -> JsonSchemaObject:
+    return JsonSchemaObject.model_validate(data)
 
 
 @pytest.fixture(autouse=True)
 def block_dns_by_default(mocker: MockerFixture) -> None:
     """Keep tests that mock httpx.get independent from external DNS."""
     mocker.patch("socket.getaddrinfo", side_effect=OSError)
-
-
-def _json_schema_object(data: dict[str, Any]) -> JsonSchemaObject:
-    return JsonSchemaObject.model_validate(data)
-
-
-@pytest.mark.parametrize(
-    ("schema", "expected"),
-    [
-        ({"discriminator": {"propertyName": "kind"}}, "kind"),
-        ({"discriminator": "kind"}, "kind"),
-        ({}, None),
-    ],
-)
-def test_get_discriminator_property_name(schema: dict[str, Any], expected: str | None) -> None:
-    """Return discriminator property names from supported schema shapes."""
-    assert _get_discriminator_property_name(_json_schema_object(schema)) == expected
 
 
 @pytest.mark.parametrize(
@@ -832,7 +816,6 @@ def test_infer_union_variant_names_distinguishes_literal_types() -> None:
         "Event_bool_true",
     ]
     assert _get_union_variant_name("Event", "") is None
-    assert _get_union_variant_name("Event", object()) is None
 
 
 def test_infer_union_variant_names_skips_generated_name_collisions() -> None:
@@ -943,7 +926,7 @@ def test_infer_union_variant_names_disabled() -> None:
         _json_schema_object({"properties": {"kind": {"const": "deleted"}}}),
     ]
 
-    assert parser._infer_union_variant_names("Event", _json_schema_object({}), variants) is None
+    assert parser._get_inferred_union_variant_names("Event", _json_schema_object({}), variants) is None
 
 
 @pytest.mark.parametrize(
@@ -2021,27 +2004,6 @@ def test_jsonschema_parser_edge_case_helpers() -> None:
         JsonSchemaObject.model_validate({"contains": True, "minContains": 1, "minItems": 2})
     ) == {"minItems": 2}
     assert parser._get_data_type_from_json_value(object()).type_hint == "Any"
-
-
-@pytest.mark.parametrize(
-    ("current_root", "path", "expected"),
-    [
-        ([], [], True),
-        ([], ["#"], True),
-        (["schema.json"], ["schema.json"], True),
-        (["schema.json"], ["schema.json", "#"], True),
-        (["schema.json"], ["schema.json#"], True),
-        (["schema.json"], ["other.json#"], False),
-    ],
-)
-def test_is_current_root_schema_path_normalizes_root_spellings(
-    current_root: list[str], path: list[str], *, expected: bool
-) -> None:
-    """Treat equivalent root path spellings as the current schema root."""
-    parser = JsonSchemaParser("")
-    parser.model_resolver.set_current_root(current_root)
-
-    assert parser._is_current_root_schema_path(path) is expected
 
 
 def test_anchor_ref_path_escapes_json_pointer_segments() -> None:

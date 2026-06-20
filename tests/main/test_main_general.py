@@ -10,7 +10,8 @@ import sys
 import warnings
 from argparse import ArgumentTypeError, BooleanOptionalAction, Namespace
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any
+from io import StringIO
+from typing import TYPE_CHECKING, Any, cast
 
 import black
 import pytest
@@ -88,6 +89,13 @@ class _GenerateParseAbort(BaseException):
     """Test-only parse abort that is not an Exception subclass."""
 
 
+CLI_E2E_COVERED_GENERATE_KWARGS = {
+    "emit_model_metadata",
+    "infer_union_variant_names",
+    "model_name_map",
+}
+
+
 def _generate_call_keyword_source(value: ast.expr) -> str:
     match value:
         case ast.Attribute(value=ast.Name(id="config")):
@@ -117,7 +125,7 @@ def _run_generate_from_config_generate_kwargs() -> list[tuple[str, str]]:
     return [
         (keyword.arg, _generate_call_keyword_source(keyword.value))
         for keyword in calls[0].keywords
-        if keyword.arg is not None
+        if keyword.arg is not None and keyword.arg not in CLI_E2E_COVERED_GENERATE_KWARGS
     ]
 
 
@@ -218,6 +226,28 @@ def test_generate_standard_preset_public_api_config(output_file: Path) -> None:
     )
     generate(input_=JSON_SCHEMA_DATA_PATH / "person.json", config=config)
     assert_file_content(output_file, "standard_preset_pydantic_v2.py")
+
+
+def test_run_generate_from_config_json_mapping_file_like(output_file: Path) -> None:
+    """Generate from Config when JSON mapping options are file-like objects."""
+    config = Config(
+        input_file_type=InputFileType.JsonSchema,
+        base_class_map=cast(
+            "Any",
+            StringIO(json.dumps({"Person": "custom.bases.PersonBase", "Animal": "custom.bases.AnimalBase"})),
+        ),
+    )
+    run_generate_from_config(
+        config=config,
+        input_=JSON_SCHEMA_DATA_PATH / "base_class_map.json",
+        output=output_file,
+        extra_template_data=None,
+        aliases=None,
+        serialization_aliases=None,
+        command_line=None,
+        custom_formatters_kwargs=None,
+    )
+    assert_file_content(output_file, "jsonschema/base_class_map.py")
 
 
 @freeze_time(TIMESTAMP)
@@ -606,13 +636,11 @@ def test_run_generate_from_config_generate_kwargs_are_pinned() -> None:
         ("input_", "input_"),
         ("input_file_type", "config.input_file_type"),
         ("output", "output"),
-        ("emit_model_metadata", "config.emit_model_metadata"),
         ("output_model_type", "config.output_model_type"),
         ("target_python_version", "config.target_python_version"),
         ("target_pydantic_version", "config.target_pydantic_version"),
         ("base_class", "config.base_class"),
         ("base_class_map", "config.base_class_map"),
-        ("model_name_map", "config.model_name_map"),
         ("additional_imports", "config.additional_imports"),
         ("class_decorators", "config.class_decorators"),
         ("custom_template_dir", "config.custom_template_dir"),
@@ -681,7 +709,6 @@ def test_run_generate_from_config_generate_kwargs_are_pinned() -> None:
         ("graphql_no_typename", "config.graphql_no_typename"),
         ("wrap_string_literal", "config.wrap_string_literal"),
         ("use_title_as_name", "config.use_title_as_name"),
-        ("infer_union_variant_names", "config.infer_union_variant_names"),
         ("use_operation_id_as_name", "config.use_operation_id_as_name"),
         ("use_unique_items_as_set", "config.use_unique_items_as_set"),
         ("use_tuple_for_fixed_items", "config.use_tuple_for_fixed_items"),
@@ -1451,6 +1478,20 @@ strict-types = ["str", "int"]
         )
 
 
+def test_generate_pyproject_config_json_mapping_option_preserves_value(capsys: pytest.CaptureFixture[str]) -> None:
+    """JSON mapping CLI values should not be serialized as key-only TOML lists."""
+    run_main_with_args(
+        [
+            "--generate-pyproject-config",
+            "--base-class-map",
+            (DATA_PATH / "config" / "base_class_map.json").read_text(encoding="utf-8"),
+        ],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_PATH / "generate_pyproject_config" / "json_mapping_option.txt",
+        assert_no_stderr=True,
+    )
+
+
 @pytest.mark.allow_direct_assert
 @pytest.mark.parametrize(
     ("json_str", "expected"),
@@ -1524,6 +1565,24 @@ def test_type_overrides_model_level(output_file: Path) -> None:
         extra_args=[
             "--type-overrides",
             '{"CustomType": "my_app.types.CustomType"}',
+        ],
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_type_overrides_model_level_from_file(output_file: Path, tmp_path: Path) -> None:
+    """Replace schema model types from a JSON file mapping."""
+    mapping_path = tmp_path / "type_overrides.json"
+    mapping_path.write_text(json.dumps({"CustomType": "my_app.types.CustomType"}), encoding="utf-8")
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_overrides_test.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_overrides_model_level.py",
+        extra_args=[
+            "--type-overrides",
+            str(mapping_path),
         ],
     )
 

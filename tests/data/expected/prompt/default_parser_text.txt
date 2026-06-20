@@ -57,9 +57,9 @@
 - `--use-unique-items-as-set`: Generate set types for arrays with uniqueItems constraint.
 
 ### Field Customization
-- `--aliases`: Apply custom field and class name aliases from JSON file.
+- `--aliases`: Apply custom field and class name aliases via inline JSON or a JSON file path.
 - `--capitalize-enum-members`: Capitalize enum member names to UPPER_CASE format.
-- `--default-values`: Override field default values from external JSON file.
+- `--default-values`: Override field default values via inline JSON or a JSON file path.
 - `--empty-enum-field-name`: Name for empty string enum field values.
 - `--extra-fields`: Configure how generated models handle extra fields not defined in schema.
 - `--field-constraints`: Generate Field() with validation constraints from schema.
@@ -72,7 +72,7 @@
 - `--no-snake-case-field`
 - `--original-field-name-delimiter`: Specify delimiter for original field names when using snake-case conversion.
 - `--remove-special-field-name-prefix`: Remove the special prefix from field names.
-- `--serialization-aliases`: Apply custom Pydantic v2 serialization aliases from JSON file.
+- `--serialization-aliases`: Apply custom Pydantic v2 serialization aliases via inline JSON or a JSON file path.
 - `--set-default-enum-member`: Set the first enum member as the default value for enum fields.
 - `--snake-case-field`: Convert field names to snake_case format.
 - `--special-field-name-prefix`: Prefix to add to special field names (like reserved keywords).
@@ -140,14 +140,14 @@
 - `--custom-file-header`: Add custom header text to the generated file.
 - `--custom-file-header-path`: Add custom header content from file to generated code.
 - `--custom-formatters`: Apply custom Python code formatters to generated output.
-- `--custom-formatters-kwargs`: Pass custom arguments to custom formatters via JSON file.
+- `--custom-formatters-kwargs`: Pass custom arguments to custom formatters via inline JSON or a JSON file path.
 - `--custom-template-dir`: Use custom Jinja2 templates for model generation.
 - `--disable-appending-item-suffix`: Disable appending 'Item' suffix to array item types.
 - `--disable-timestamp`: Disable timestamp in generated file header for reproducible output.
 - `--enable-command-header`: Include command-line options in file header for reproducibility.
 - `--enable-generated-header-marker`: Include the @generated marker in file header for generated-code tooling.
 - `--enable-version-header`: Include tool version information in file header.
-- `--extra-template-data`: Pass custom template variables from JSON file for code generation.
+- `--extra-template-data`: Pass custom template variables via inline JSON or a JSON file path.
 - `--formatters`: Specify code formatters to apply to generated output.
 - `--no-treat-dot-as-module`: Keep dots in schema names as underscores for flat output.
 - `--no-use-type-checking-imports`: Keep generated model imports available at runtime when using Ruff fixes.
@@ -233,7 +233,7 @@ Recommend a final CLI command for the user's schema and target runtime. Include:
 - `--strict-types` requires one or more values: `str`, `int`, `float`, `bool`, or `bytes`.
 - `--use-specialized-enum` requires `--target-python-version >= 3.11`.
 - `--output-format json` is supported for generation, `--generate-prompt`, and `--check`; not for `--watch`.
-- `--output-format-json-schema` accepts `generate-prompt`, `generation`, `model-metadata`, or `structured-output`; choose the narrow schema unless the consumer handles multiple payload kinds.
+- `--output-format-json-schema` accepts `config`, `generate-prompt`, `generation`, `model-metadata`, or `structured-output`; use `config` for JSON configuration schemas.
 - `--validation` is deprecated; use `--field-constraints` for generated Field constraints.
 
 ## Instructions

@@ -105,16 +105,14 @@ def _literal_uniqueness_key(value: JsonSchemaLiteral) -> tuple[type[object], Jso
     return type(value), value
 
 
-def _get_union_variant_name(name: str, literal: object) -> str | None:
+def _get_union_variant_name(name: str, literal: JsonSchemaLiteral) -> str | None:
     module_name, separator, class_name = name.rpartition(".")
     if isinstance(literal, str):
         literal_text = literal
     elif isinstance(literal, bool):
         literal_text = f"bool_{str(literal).lower()}"
-    elif isinstance(literal, int):
-        literal_text = f"int_{literal}"
     else:
-        return None
+        literal_text = f"int_{literal}"
     literal_name = sanitize_module_name(literal_text, treat_dot_as_module=False)
     if not literal_name:
         return None
@@ -2218,9 +2216,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if obj.ref:
             seen_refs = seen_refs or set()
             resolved_ref = self.model_resolver.resolve_ref(obj.ref)
-            if resolved_ref in seen_refs:
-                return None
-            if self._resolve_external_ref_mapping(obj.ref):
+            if self._resolve_external_ref_mapping(obj.ref) or resolved_ref in seen_refs:
                 return None
             seen_refs.add(resolved_ref)
             return self._get_single_literal_value(self._load_ref_schema_object(obj.ref), seen_refs)
@@ -2273,9 +2269,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         obj: JsonSchemaObject,
         combined_schemas: Sequence[JsonSchemaObject],
     ) -> list[str | None] | None:
-        if not self.infer_union_variant_names:
-            return None
-
         for field_name in self._iter_union_variant_literal_field_names(obj, combined_schemas):
             values = self._get_union_variant_literal_values(combined_schemas, field_name)
             if values is None:
@@ -5506,9 +5499,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _is_current_root_schema_path(self, path: list[str]) -> bool:
         current_root = list(self.model_resolver.current_root)
-        if path == (current_root or ["#"]):
-            return True
-        return self.model_resolver.resolve_ref(path) == self.model_resolver.resolve_ref(current_root or "#")
+        current_root_path = current_root or ["#"]
+        return path == current_root_path or self.model_resolver.resolve_ref(path) == self.model_resolver.resolve_ref(
+            current_root or "#"
+        )
 
     def _drop_ref_from_schema(self, obj: JsonSchemaObject) -> JsonSchemaObject:
         return self.SCHEMA_OBJECT_TYPE.model_validate(
@@ -5828,12 +5822,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 definitions: dict[str, YamlValue] = {}
                 schema_path = ""
                 for schema_path_candidate, split_schema_path in self.schema_paths:
-                    try:
-                        if definitions := get_model_by_path(raw, split_schema_path):
-                            schema_path = schema_path_candidate
-                            break
-                    except KeyError:  # pragma: no cover
-                        continue
+                    if definitions := get_model_by_path(raw, split_schema_path):
+                        schema_path = schema_path_candidate
+                        break
 
                 definition_entries = list(self._iter_schema_definition_entries(definitions, [*path_parts, schema_path]))
                 definition_metadata_entries = [

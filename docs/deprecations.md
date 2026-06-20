@@ -12,6 +12,7 @@ This page lists deprecations and scheduled breaking changes.
 | `cli.allow-extra-fields` | cli-option | `--allow-extra-fields` | 0.31.0 | TBD | --extra-fields=allow |
 | `cli.parent-scoped-naming` | cli-option | `--parent-scoped-naming` | 0.48.0 | TBD | --naming-strategy parent-prefixed |
 | `cli.validation` | cli-option | `--validation` | 0.24.0 | TBD | --field-constraints |
+| `config.json-config-strict-validation` | config | `JSON configuration values accepted by legacy validation` | 0.64.2 | TBD | Update the JSON configuration to match --output-format-json-schema config. |
 | `config.yaml-non-lowercase-bool` | config | `YAML bool values True, False, TRUE, FALSE` | 0.48.0 | TBD | Use lowercase true or false. |
 | `python-api.python-version-has-type-alias` | python-api | `PythonVersion.has_type_alias` | 0.52.1 | TBD | - |
 | `schema.jsonschema-items-array` | schema | `JSON Schema Draft 2020-12 items array tuple validation` | 0.53.0 | TBD | Use prefixItems. |
@@ -88,6 +89,17 @@ The replacement supports allow, forbid, and ignore modes.
 - **Replacement:** --field-constraints
 
 The `--validation` option is deprecated and will be removed in a future release. Use --field-constraints instead.
+
+### `config.json-config-strict-validation`
+
+- **Kind:** config
+- **Target:** `JSON configuration values accepted by legacy validation`
+- **Warning since:** 0.64.2
+- **Planned removal:** TBD
+- **Warning category:** `FutureWarning`
+- **Replacement:** Update the JSON configuration to match --output-format-json-schema config.
+
+JSON configuration values that do not match the documented schema are deprecated and will become validation errors in a future release.
 
 ### `config.yaml-non-lowercase-bool`
 

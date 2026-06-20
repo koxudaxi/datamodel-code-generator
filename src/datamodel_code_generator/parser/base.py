@@ -268,13 +268,13 @@ def _decode_json_pointer_part(value: str) -> str:
 
 def _source_path_from_reference_path(reference_path: str) -> list[str] | None:
     _, separator, fragment = reference_path.partition("#")
-    if not separator:
-        return None
-    if not fragment:
-        return []
-    if not fragment.startswith("/"):
-        return None
-    return [_decode_json_pointer_part(part) for part in fragment[1:].split("/")]
+    return (
+        None
+        if not separator or (fragment and not fragment.startswith("/"))
+        else []
+        if not fragment
+        else [_decode_json_pointer_part(part) for part in fragment[1:].split("/")]
+    )
 
 
 def _module_name_from_module_path(module: ModulePath) -> str:
@@ -282,11 +282,9 @@ def _module_name_from_module_path(module: ModulePath) -> str:
         return ""
 
     parts = [*module]
-    if parts and parts[-1].endswith(".py"):
+    if parts and parts[-1].endswith(".py"):  # pragma: no branch - Module paths are Python files.
         parts[-1] = parts[-1][:-3]
-    if parts and parts[-1] == "__init__":
-        parts.pop()
-    return ".".join(parts)
+    return ".".join(parts[:-1] if parts[-1:] == ["__init__"] else parts)
 
 
 class _KeepModelOrderDeps(NamedTuple):
