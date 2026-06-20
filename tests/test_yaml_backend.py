@@ -114,6 +114,11 @@ class TestLoadYaml:
         with pytest.raises(yaml.YAMLError, match=r"Unsupported YAML tag: tag:yaml\.org,2002:set"):
             load_yaml("fruits: !!set\n  ? apple\n")
 
+    def test_load_yaml_rejects_yaml_set_tag_with_custom_handle(self) -> None:
+        """YAML set tags are rejected even when declared through a custom YAML tag handle."""
+        with pytest.raises(yaml.YAMLError, match=r"Unsupported YAML tag: tag:yaml\.org,2002:set"):
+            load_yaml("%TAG !e! tag:yaml.org,2002:\n---\nfruits: !e!set\n  ? apple\n")
+
     def test_with_ryaml_string(self) -> None:
         """When ryaml is available, ryaml.loads() is used for string input."""
         mock_ryaml = MagicMock()
