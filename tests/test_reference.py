@@ -105,6 +105,17 @@ def test_reference_cache_clear_preserves_helper_values() -> None:
     assert snake_to_upper_camel("user_name") == upper_camel
 
 
+def test_inflect_import_does_not_leave_typeguard_loaded(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The optimized inflect import path should not leak the temporary typeguard stub."""
+    monkeypatch.delitem(sys.modules, "inflect", raising=False)
+    monkeypatch.delitem(sys.modules, "typeguard", raising=False)
+    monkeypatch.setattr(reference_module, "_inflect_engine", None)
+    get_singular_name.cache_clear()
+
+    assert get_singular_name("Users") == "User"
+    assert "typeguard" not in sys.modules
+
+
 def test_inflect_import_falls_back_to_normal_import(monkeypatch: pytest.MonkeyPatch) -> None:
     """If the optimized import path fails, inflect should be imported normally."""
     monkeypatch.delitem(sys.modules, "inflect", raising=False)
