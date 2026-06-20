@@ -2355,10 +2355,16 @@ def test_output_format_json_schema_validates_model_metadata_json(
 
 def test_output_format_json_json_ready_values() -> None:
     """Test JSON output normalization handles CLI values used in configs."""
+
+    class Payload(pydantic.BaseModel):
+        name: str
+        skipped: str | None = None
+
     payload = _json_ready({
         "exit": Exit.OK,
         "path": Path("schema/person.json"),
         "items": [Exit.ERROR, Path("model/output.py")],
+        "model": Payload(name="value"),
     })
     assert_output(
         f"{json.dumps(payload, indent=2, ensure_ascii=False)}\n",

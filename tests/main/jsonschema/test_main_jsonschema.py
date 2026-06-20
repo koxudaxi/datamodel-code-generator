@@ -4435,7 +4435,12 @@ def test_jsonschema_infer_union_variant_names_edges(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="infer_union_variant_names_edges.py",
-        extra_args=["--infer-union-variant-names", "--disable-timestamp"],
+        extra_args=[
+            "--infer-union-variant-names",
+            "--external-ref-mapping",
+            "external_kind.json=external.models",
+            "--disable-timestamp",
+        ],
     )
 
 

@@ -6,6 +6,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Literal
 
+from external.models import ExternalKind
 from pydantic import BaseModel, Field, RootModel
 
 
@@ -93,6 +94,16 @@ class MissingProperties(BaseModel):
     b: str
 
 
+class ExternalRef(BaseModel):
+    kind: ExternalKind
+    a: str
+
+
+class ExternalRef1(BaseModel):
+    kind: Literal['ok']
+    b: str
+
+
 class BooleanSchemaField(BaseModel):
     kind: Any | None = None
     a: str
@@ -126,4 +137,5 @@ class UnionVariantNameEdges(BaseModel):
     duplicate_literal: DuplicateLiteral | DuplicateLiteral1
     missing_literal: MissingLiteral | MissingLiteral1
     missing_properties: dict[str, Any] | MissingProperties
+    external_ref: ExternalRef | ExternalRef1
     boolean_schema_field: BooleanSchemaField | BooleanSchemaField1

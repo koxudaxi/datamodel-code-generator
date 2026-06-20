@@ -121,17 +121,11 @@ def _loads_json(value: str, *, option_name: str, load_error_name: str | None) ->
 
 def _load_json_source(value: JsonConfigSource, *, option_name: str, load_error_name: str | None = None) -> Any:
     match value:
-        case None:  # pragma: no cover - Config validators return before loading None.
-            return None
-        case dict():
+        case None | dict():
             return value
-        case TextIOBase() as data:  # pragma: no cover - Programmatic compatibility path; CLI passes strings.
+        case TextIOBase() as data:
             with data:
-                try:
-                    return json.load(data)
-                except json.JSONDecodeError as e:  # pragma: no cover
-                    msg = _invalid_json_message(option_name, e, load_error_name)
-                    raise JsonConfigError(msg) from e
+                return _loads_json(data.read(), option_name=option_name, load_error_name=load_error_name)
 
     return _loads_json(_read_json_or_inline(str(value)), option_name=option_name, load_error_name=load_error_name)
 
@@ -266,10 +260,8 @@ def load_json_config_field(
 ) -> Any:
     """Load and validate a JSON configuration field by Config field name."""
     spec = JsonConfigSpecs.by_field_name[field_name]
-    if (raw := _load_json_source(value, option_name=spec.option_name, load_error_name=spec.load_error_name)) is None:
-        # Config validators skip None before this helper; this remains for direct compatibility.
-        return None  # pragma: no cover
-    return spec.validate(raw)
+    raw = _load_json_source(value, option_name=spec.option_name, load_error_name=spec.load_error_name)
+    return None if raw is None else spec.validate(raw)
 
 
 def validate_json_value_or_file(value: str, *, option_name: str = "") -> dict[str, object]:

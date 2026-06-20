@@ -12,6 +12,7 @@
     "duplicate_literal",
     "missing_literal",
     "missing_properties",
+    "external_ref",
     "boolean_schema_field"
   ],
   "properties": {
@@ -247,6 +248,34 @@
       "oneOf": [
         {
           "type": "object"
+        },
+        {
+          "type": "object",
+          "required": ["kind", "b"],
+          "properties": {
+            "kind": {
+              "const": "ok"
+            },
+            "b": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "external_ref": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["kind", "a"],
+          "properties": {
+            "kind": {
+              "$ref": "external_kind.json#/definitions/ExternalKind"
+            },
+            "a": {
+              "type": "string"
+            }
+          }
         },
         {
           "type": "object",

@@ -34,7 +34,7 @@ match sys.argv:
         schema_output_name = None
 
 match schema_output_name:
-    case "config":  # pragma: no cover
+    case "config":
         from datamodel_code_generator.json_config import json_config_json_schema
 
         sys.stdout.write(f"{json_config_json_schema()}\n")
@@ -44,7 +44,7 @@ match schema_output_name:
 
         sys.stdout.write(f"{generation_output_json_schema()}\n")
         sys.exit(0)
-    case "model-metadata":  # pragma: no cover
+    case "model-metadata":
         from datamodel_code_generator.model_metadata import model_metadata_json_schema
 
         sys.stdout.write(f"{model_metadata_json_schema()}\n")
@@ -297,10 +297,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
         """Load and validate JSON configuration values from inline JSON or file paths."""
         if value is None:  # pragma: no cover
             return value
-        field_name = info.field_name
-        if field_name is None:  # pragma: no cover
-            msg = "JSON configuration validator was called without a field name."
-            raise Error(msg)
+        field_name = cast("str", info.field_name)
         try:
             return load_json_config_field(field_name, cast("JsonConfigSource", value))
         except JsonConfigError as e:
@@ -720,7 +717,7 @@ def _json_ready(value: Any) -> Any:
         return value.value
     if isinstance(value, Path):
         return value.as_posix()
-    if isinstance(value, BaseModel):  # pragma: no cover - Defensive for structured outputs that carry Pydantic data.
+    if isinstance(value, BaseModel):
         return value.model_dump(mode="json", exclude_none=True)
     if isinstance(value, tuple | list):
         return [_json_ready(item) for item in value]

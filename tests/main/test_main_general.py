@@ -10,7 +10,8 @@ import sys
 import warnings
 from argparse import ArgumentTypeError, BooleanOptionalAction, Namespace
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any
+from io import StringIO
+from typing import TYPE_CHECKING, Any, cast
 
 import black
 import pytest
@@ -225,6 +226,28 @@ def test_generate_standard_preset_public_api_config(output_file: Path) -> None:
     )
     generate(input_=JSON_SCHEMA_DATA_PATH / "person.json", config=config)
     assert_file_content(output_file, "standard_preset_pydantic_v2.py")
+
+
+def test_run_generate_from_config_json_mapping_file_like(output_file: Path) -> None:
+    """Generate from Config when JSON mapping options are file-like objects."""
+    config = Config(
+        input_file_type=InputFileType.JsonSchema,
+        base_class_map=cast(
+            "Any",
+            StringIO(json.dumps({"Person": "custom.bases.PersonBase", "Animal": "custom.bases.AnimalBase"})),
+        ),
+    )
+    run_generate_from_config(
+        config=config,
+        input_=JSON_SCHEMA_DATA_PATH / "base_class_map.json",
+        output=output_file,
+        extra_template_data=None,
+        aliases=None,
+        serialization_aliases=None,
+        command_line=None,
+        custom_formatters_kwargs=None,
+    )
+    assert_file_content(output_file, "jsonschema/base_class_map.py")
 
 
 @freeze_time(TIMESTAMP)

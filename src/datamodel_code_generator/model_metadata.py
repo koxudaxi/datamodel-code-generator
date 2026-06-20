@@ -40,14 +40,12 @@ class ModelMetadata(TypedDict, closed=True):
     models: list[GeneratedModelMetadata]
 
 
-def empty_model_metadata() -> ModelMetadata:
-    """Return an empty model metadata payload."""
-    return {"version": 1, "models": []}  # pragma: no cover
+_EMPTY_MODEL_METADATA: ModelMetadata = {"version": 1, "models": []}
 
 
 def dump_model_metadata(metadata: ModelMetadata | None) -> str:
     """Serialize model metadata as pretty JSON."""
-    payload = metadata or empty_model_metadata()
+    payload = metadata if metadata is not None else _EMPTY_MODEL_METADATA
     return json.dumps(payload, indent=2, ensure_ascii=False)
 
 
