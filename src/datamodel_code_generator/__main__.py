@@ -158,7 +158,6 @@ if TYPE_CHECKING:
     )
     from datamodel_code_generator.json_config import JsonConfigFieldName, JsonConfigSource
 
-
 # Options that should be excluded from pyproject.toml config generation
 EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
     "check",
@@ -297,9 +296,10 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
         """Load and validate JSON configuration values from inline JSON or file paths."""
         if value is None:  # pragma: no cover
             return value
-        field_name = cast("JsonConfigFieldName", info.field_name)
+        field_name: JsonConfigFieldName = cast("JsonConfigFieldName", info.field_name)
         try:
-            return load_json_config_field(field_name, cast("JsonConfigSource", value))
+            json_config_source: JsonConfigSource = cast("JsonConfigSource", value)
+            return load_json_config_field(field_name, json_config_source)
         except JsonConfigError as e:
             raise Error(str(e)) from e
 
