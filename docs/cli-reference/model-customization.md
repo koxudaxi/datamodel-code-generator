@@ -6313,8 +6313,8 @@ The `--use-one-literal-as-default` flag configures the code generation behavior.
 
 Add sequence helper methods to Pydantic v2 RootModel classes.
 
-When enabled, list-like RootModel classes include __iter__, __getitem__,
-and __len__ methods that delegate to the wrapped root value.
+When enabled, list-like RootModel classes inherit from collections.abc.Sequence
+and include __iter__, __getitem__, and __len__ methods that delegate to the wrapped root value.
 
 !!! tip "Usage"
 
@@ -6359,7 +6359,8 @@ and __len__ methods that delegate to the wrapped root value.
 
     from __future__ import annotations
 
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Sequence
+    from typing import SupportsIndex, overload
 
     from pydantic import BaseModel, RootModel
 
@@ -6368,13 +6369,19 @@ and __len__ methods that delegate to the wrapped root value.
         name: str
 
 
-    class Pets(RootModel[list[Pet]]):
+    class Pets(RootModel[list[Pet]], Sequence[Pet]):
         root: list[Pet]
 
         def __iter__(self) -> Iterator[Pet]:
             return iter(self.root)
 
-        def __getitem__(self, index: int) -> Pet:
+        @overload
+        def __getitem__(self, index: SupportsIndex) -> Pet: ...
+
+        @overload
+        def __getitem__(self, index: slice) -> list[Pet]: ...
+
+        def __getitem__(self, index: SupportsIndex | slice) -> Pet | list[Pet]:
             return self.root[index]
 
         def __len__(self) -> int:

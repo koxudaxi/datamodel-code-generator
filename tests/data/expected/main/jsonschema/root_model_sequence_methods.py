@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from typing import SupportsIndex, overload
 
 from pydantic import BaseModel, RootModel
@@ -13,7 +13,7 @@ class Pet(BaseModel):
     name: str
 
 
-class Pets(RootModel[list[Pet]]):
+class Pets(RootModel[list[Pet]], Sequence[Pet]):
     root: list[Pet]
 
     def __iter__(self) -> Iterator[Pet]:

@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import importlib.util
 import itertools
 import json
 import os
+import sys
 import tempfile
 from collections import defaultdict
+from collections.abc import Sequence
 from pathlib import Path
 
 import black
@@ -3590,8 +3593,8 @@ def test_main_jsonschema_root_model_ordering(output_file: Path, extra_args: list
     options=["--use-root-model-sequence-methods"],
     option_description="""Add sequence helper methods to Pydantic v2 RootModel classes.
 
-When enabled, list-like RootModel classes include __iter__, __getitem__,
-and __len__ methods that delegate to the wrapped root value.""",
+When enabled, list-like RootModel classes inherit from collections.abc.Sequence
+and include __iter__, __getitem__, and __len__ methods that delegate to the wrapped root value.""",
     input_schema="jsonschema/root_model_sequence_methods.json",
     cli_args=[
         "--output-model-type",
@@ -3618,7 +3621,25 @@ def test_main_jsonschema_root_model_sequence_methods(output_file: Path) -> None:
             "Pets",
             "--disable-timestamp",
         ],
+        force_exec_validation=True,
     )
+
+    module_name = "generated_root_model_sequence_methods"
+    spec = importlib.util.spec_from_file_location(module_name, output_file)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+        pet = module.Pet(name="dog")
+        pets = module.Pets(root=[pet])
+        assert isinstance(pets, Sequence)
+        assert pets.count(pet) == 1
+        assert pets.index(pet) == 0
+        assert list(reversed(pets)) == [pet]
+    finally:
+        sys.modules.pop(module_name, None)
 
 
 def test_main_jsonschema_root_model_sequence_methods_type_alias(output_file: Path) -> None:

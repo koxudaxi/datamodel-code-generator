@@ -775,6 +775,7 @@ def test_apply_root_model_sequence_methods_adds_sequence_helpers(
     )
     assert root_model.methods[3].startswith("def __getitem__(self, index: SupportsIndex | slice)")
     assert root_model.methods[4].startswith("def __len__(self) -> int")
+    assert root_model.extra_template_data["sequence_base_class"] == f"Sequence[{expected_item_hint}]"
 
 
 @pytest.mark.parametrize(

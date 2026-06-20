@@ -64,7 +64,7 @@ def test_root_model_sequence_methods() -> None:
     root_model.add_sequence_methods("str", "list[str]")
 
     assert root_model.render() == (
-        "class TestRootModel(RootModel[list[str]]):\n"
+        "class TestRootModel(RootModel[list[str]], Sequence[str]):\n"
         "    root: list[str]\n\n"
         "    def __iter__(self) -> Iterator[str]:\n"
         "        return iter(self.root)\n\n"
@@ -78,6 +78,7 @@ def test_root_model_sequence_methods() -> None:
         "        return len(self.root)"
     )
     assert any(import_.import_ == "Iterator" for import_ in root_model.imports)
+    assert any(import_.import_ == "Sequence" for import_ in root_model.imports)
     assert any(import_.import_ == "overload" for import_ in root_model.imports)
     assert any(import_.import_ == "SupportsIndex" for import_ in root_model.imports)
 
