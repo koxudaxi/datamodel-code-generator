@@ -186,6 +186,21 @@ def _get_isort() -> Any:
     return _isort
 
 
+def _is_formatter_available(formatter: Formatter) -> bool:
+    """Return True if the external package required by *formatter* can be imported."""
+    if formatter.value == "black":
+        try:
+            import black  # noqa: F401, PLC0415
+        except ImportError:
+            return False
+    elif formatter.value == "isort":
+        try:
+            import isort  # noqa: F401, PLC0415
+        except ImportError:
+            return False
+    return True
+
+
 class DatetimeClassType(Enum):
     """Output datetime class type options."""
 
@@ -419,11 +434,35 @@ class CodeFormatter:
                 settings_path = Path.cwd()  # pragma: no cover
 
         self.settings_path: str = str(settings_path)
-        self.formatters = formatters
         self.defer_formatting = defer_formatting
         self.encoding = encoding
         self.use_type_checking_imports = use_type_checking_imports
         self.python_version = python_version
+
+        # Auto-disable black/isort when not installed, fall back to built-in.
+        if Formatter.BLACK in formatters and not _is_formatter_available(Formatter.BLACK):
+            warn(
+                "black is not installed; falling back to the built-in formatter. "
+                "Install black or pass formatters=[Formatter.BUILTIN] to suppress this warning.",
+                UserWarning,
+                stacklevel=2,
+            )
+            formatters = [f for f in formatters if f is not Formatter.BLACK]
+            if Formatter.BUILTIN not in formatters and not EXTERNAL_FORMATTERS.intersection(formatters):
+                formatters = [*formatters, Formatter.BUILTIN]
+
+        if Formatter.ISORT in formatters and not _is_formatter_available(Formatter.ISORT):
+            warn(
+                "isort is not installed; the isort formatting step will be skipped. "
+                "Install isort or pass formatters=[Formatter.BUILTIN] to suppress this warning.",
+                UserWarning,
+                stacklevel=2,
+            )
+            formatters = [f for f in formatters if f is not Formatter.ISORT]
+            if Formatter.BUILTIN not in formatters and not EXTERNAL_FORMATTERS.intersection(formatters):
+                formatters = [*formatters, Formatter.BUILTIN]
+
+        self.formatters = formatters
 
         has_external_formatter = bool(EXTERNAL_FORMATTERS.intersection(formatters))
         if Formatter.BUILTIN in formatters and has_external_formatter:
