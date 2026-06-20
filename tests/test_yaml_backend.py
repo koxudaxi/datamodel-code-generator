@@ -91,6 +91,34 @@ class TestLoadYaml:
             result = load_yaml(io.StringIO("key: value"))
             assert result == {"key": "value"}
 
+    def test_load_yaml_allows_literal_unsupported_tag_marker_text(self) -> None:
+        """Literal marker text is valid YAML data when it is not a YAML tag."""
+        result = load_yaml("description: 'literal !!set text'\n")
+
+        assert result == {"description": "literal !!set text"}
+
+    def test_load_yaml_allows_literal_unsupported_tag_marker_text_in_sequence(self) -> None:
+        """Literal marker text is valid YAML sequence data when it is not a YAML tag."""
+        result = load_yaml("descriptions:\n  - 'literal !!set text'\n")
+
+        assert result == {"descriptions": ["literal !!set text"]}
+
+    def test_load_yaml_allows_comment_only_unsupported_tag_marker_text(self) -> None:
+        """Comment-only marker text is not a YAML tag."""
+        result = load_yaml("# !!set\n")
+
+        assert result is None
+
+    def test_load_yaml_rejects_yaml_set_tag(self) -> None:
+        """YAML set tags are rejected through the public YAML loader."""
+        with pytest.raises(yaml.YAMLError, match=r"Unsupported YAML tag: tag:yaml\.org,2002:set"):
+            load_yaml("fruits: !!set\n  ? apple\n")
+
+    def test_load_yaml_rejects_yaml_set_tag_with_custom_handle(self) -> None:
+        """YAML set tags are rejected even when declared through a custom YAML tag handle."""
+        with pytest.raises(yaml.YAMLError, match=r"Unsupported YAML tag: tag:yaml\.org,2002:set"):
+            load_yaml("%TAG !e! tag:yaml.org,2002:\n---\nfruits: !e!set\n  ? apple\n")
+
     def test_with_ryaml_string(self) -> None:
         """When ryaml is available, ryaml.loads() is used for string input."""
         mock_ryaml = MagicMock()
