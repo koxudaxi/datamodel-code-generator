@@ -9,6 +9,7 @@
 ## Options by Category
 
 ### Base Options
+- `--emit-model-metadata`: Write a separate JSON map from source schema references to the final generated models...
 - `--encoding`: Specify character encoding for input and output files.
 - `--external-ref-mapping`: Map external `$ref` files to Python packages.
 - `--input`: Specify the input schema file path.
@@ -66,6 +67,7 @@
 - `--field-extra-keys-without-x-prefix`: Include schema extension keys in Field() without requiring 'x-' prefix.
 - `--field-include-all-keys`: Include all schema keys in Field() json_schema_extra.
 - `--field-type-collision-strategy`: Rename type class instead of field when names collide (Pydantic v2 only).
+- `--infer-union-variant-names`: Infer names for inline oneOf/anyOf object variants from literal fields.
 - `--no-alias`: Disable Field alias generation for non-Python-safe property names.
 - `--no-snake-case-field`
 - `--original-field-name-delimiter`: Specify delimiter for original field names when using snake-case conversion.
@@ -107,6 +109,7 @@
 - `--keyword-only`: Generate dataclasses with keyword-only fields (Python 3.10+).
 - `--model-extra-keys`: Add model-level schema extensions to ConfigDict json_schema_extra.
 - `--model-extra-keys-without-x-prefix`: Strip x- prefix from model-level schema extensions and add to ConfigDic...
+- `--model-name-map`: Rename generated model classes from a JSON mapping.
 - `--naming-strategy`: Use parent-prefixed naming strategy for duplicate model names.
 - `--no-allow-population-by-field-name`
 - `--no-collapse-root-models`
@@ -211,7 +214,7 @@ Recommend a final CLI command for the user's schema and target runtime. Include:
 - Strictness: choose `--strict-types` values, `--strict-nullable`, `--field-constraints`, and `--extra-fields`.
 - Aliases/naming: decide between API-compatible aliases and normalized names such as `--snake-case-field`.
 - Module layout: choose one file or an output directory with `--module-split-mode` and reuse options.
-- Structured output: use `--output-format json` for machine-readable prompt or generation output, and `--output-format-json-schema structured-output` when a tool needs the full tagged-union schema.
+- Structured output: use `--output-format json` for machine-readable prompt or generation output, `--emit-model-metadata` for generated model maps, and `--output-format-json-schema` when a tool needs a validation schema.
 - Runtime model base: use `--base-class` for a custom base class; it is separate from `--output-model-type`.
 - Validation constraints: prefer `--field-constraints`; add `--use-annotated` for Pydantic v2.
 
@@ -230,7 +233,7 @@ Recommend a final CLI command for the user's schema and target runtime. Include:
 - `--strict-types` requires one or more values: `str`, `int`, `float`, `bool`, or `bytes`.
 - `--use-specialized-enum` requires `--target-python-version >= 3.11`.
 - `--output-format json` is supported for generation, `--generate-prompt`, and `--check`; not for `--watch`.
-- `--output-format-json-schema` accepts `generate-prompt`, `generation`, or `structured-output`; choose the narrow schema unless the consumer handles multiple payload kinds.
+- `--output-format-json-schema` accepts `generate-prompt`, `generation`, `model-metadata`, or `structured-output`; choose the narrow schema unless the consumer handles multiple payload kinds.
 - `--validation` is deprecated; use `--field-constraints` for generated Field constraints.
 
 ## Instructions

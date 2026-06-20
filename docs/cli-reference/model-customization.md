@@ -26,6 +26,7 @@
 | [`--keyword-only`](#keyword-only) | Generate dataclasses with keyword-only fields (Python 3.10+)... |
 | [`--model-extra-keys`](#model-extra-keys) | Add model-level schema extensions to ConfigDict json_schema_... |
 | [`--model-extra-keys-without-x-prefix`](#model-extra-keys-without-x-prefix) | Strip x- prefix from model-level schema extensions and add t... |
+| [`--model-name-map`](#model-name-map) | Rename generated model classes from a JSON mapping. |
 | [`--naming-strategy`](#naming-strategy) | Use parent-prefixed naming strategy for duplicate model name... |
 | [`--output-model-type`](#output-model-type) | Select the output model type (Pydantic v2, Pydantic v2 datac... |
 | [`--parent-scoped-naming`](#parent-scoped-naming) | Namespace models by their parent scope to avoid naming confl... |
@@ -43,6 +44,7 @@
 | [`--use-frozen-field`](#use-frozen-field) | Generate frozen (immutable) field definitions for readOnly p... |
 | [`--use-generic-base-class`](#use-generic-base-class) | Generate a shared base class with model configuration to avo... |
 | [`--use-one-literal-as-default`](#use-one-literal-as-default) | Use single literal value as default when enum has only one o... |
+| [`--use-root-model-sequence-methods`](#use-root-model-sequence-methods) | Add sequence helper methods to Pydantic v2 RootModel classes... |
 | [`--use-serialize-as-any`](#use-serialize-as-any) | Wrap fields with subtypes in Pydantic's SerializeAsAny. |
 | [`--use-subclass-enum`](#use-subclass-enum) | Generate typed Enum subclasses for enums with specific field... |
 
@@ -1091,7 +1093,7 @@ adding `BaseModel`. Ensure your mixins inherit from `BaseModel` if needed.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --base-class-map "{"Person": "custom.bases.PersonBase", "Animal": "custom.bases.AnimalBase"}" # (1)!
+    datamodel-codegen --input schema.json --base-class-map '{"Person": "custom.bases.PersonBase", "Animal": "custom.bases.AnimalBase"}' # (1)!
     ```
 
     1. :material-arrow-left: `--base-class-map` - the option documented here
@@ -1785,7 +1787,7 @@ control over dataclass generation.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --output-model-type dataclasses.dataclass --dataclass-arguments "{"slots": true, "order": true}" # (1)!
+    datamodel-codegen --input schema.json --output-model-type dataclasses.dataclass --dataclass-arguments '{"slots": true, "order": true}' # (1)!
     ```
 
     1. :material-arrow-left: `--dataclass-arguments` - the option documented here
@@ -2119,7 +2121,7 @@ For example, `{"model": "Schema"}` changes `Item1` to `ItemSchema`.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --duplicate-name-suffix "{"model": "Schema"}" # (1)!
+    datamodel-codegen --input schema.json --duplicate-name-suffix '{"model": "Schema"}' # (1)!
     ```
 
     1. :material-arrow-left: `--duplicate-name-suffix` - the option documented here
@@ -3530,6 +3532,108 @@ from the schema to the model's ConfigDict json_schema_extra with the x- prefix s
             )
             name: str | None = None
         ```
+
+---
+
+## `--model-name-map` {#model-name-map}
+
+Rename generated model classes from a JSON mapping.
+
+The `--model-name-map` option applies explicit class names to generated models.
+Mapping keys can be canonical schema refs such as `#/definitions/Foo` or the
+current generated class name such as `Foo1`. Values are final Python class names.
+
+This is useful when a schema cannot be edited but generated model names must be
+stable for public APIs or downstream code. Colliding mapped names fail instead
+of being silently suffixed.
+
+**Related:** [`--naming-strategy`](model-customization.md#naming-strategy), [`--use-title-as-name`](field-customization.md#use-title-as-name)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --model-name-map '{"#/definitions/Foo": "RenamedFoo", "Bar": "RenamedBar", "model-name": "OriginalMapped"}' # (1)!
+    ```
+
+    1. :material-arrow-left: `--model-name-map` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "item": {
+          "$ref": "#/definitions/Foo"
+        },
+        "related": {
+          "$ref": "#/definitions/Bar"
+        },
+        "original": {
+          "$ref": "#/definitions/model-name"
+        }
+      },
+      "definitions": {
+        "Foo": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            }
+          }
+        },
+        "Bar": {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "$ref": "#/definitions/Foo"
+            }
+          }
+        },
+        "model-name": {
+          "type": "object",
+          "properties": {
+            "bar": {
+              "$ref": "#/definitions/Bar"
+            }
+          }
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  model_name_map.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+
+    from __future__ import annotations
+
+    from pydantic import BaseModel
+
+
+    class RenamedFoo(BaseModel):
+        value: str | None = None
+
+
+    class RenamedBar(BaseModel):
+        foo: RenamedFoo | None = None
+
+
+    class OriginalMapped(BaseModel):
+        bar: RenamedBar | None = None
+
+
+    class Model(BaseModel):
+        item: RenamedFoo | None = None
+        related: RenamedBar | None = None
+        original: OriginalMapped | None = None
+    ```
 
 ---
 
@@ -6201,6 +6305,80 @@ The `--use-one-literal-as-default` flag configures the code generation behavior.
         root: VersionEnum | None = Field(
             'RC1', description='nullable enum', examples=['RC2']
         )
+    ```
+
+---
+
+## `--use-root-model-sequence-methods` {#use-root-model-sequence-methods}
+
+Add sequence helper methods to Pydantic v2 RootModel classes.
+
+When enabled, list-like RootModel classes include __iter__, __getitem__,
+and __len__ methods that delegate to the wrapped root value.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --output-model-type pydantic_v2.BaseModel --use-root-model-sequence-methods --class-name Pets # (1)!
+    ```
+
+    1. :material-arrow-left: `--use-root-model-sequence-methods` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Pet"
+      },
+      "definitions": {
+        "Pet": {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  root_model_sequence_methods.json
+
+    from __future__ import annotations
+
+    from collections.abc import Iterator
+
+    from pydantic import BaseModel, RootModel
+
+
+    class Pet(BaseModel):
+        name: str
+
+
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
+
+        def __iter__(self) -> Iterator[Pet]:
+            return iter(self.root)
+
+        def __getitem__(self, index: int) -> Pet:
+            return self.root[index]
+
+        def __len__(self) -> int:
+            return len(self.root)
     ```
 
 ---

@@ -24,11 +24,12 @@ is the generated module path.
 
 Use `--output-format json` with `--generate-prompt` to emit structured option
 metadata instead of Markdown. Use `--output-format-json-schema` when an LLM
-agent or tool needs the schema for a structured output payload.
+agent or tool needs the schema for a JSON payload.
 
 Schema targets are intentionally scoped. `generate-prompt` emits the
 `PromptPayload` schema for `--generate-prompt --output-format json`.
 `generation` emits only the `GenerationPayload` schema for generated-file JSON.
+`model-metadata` emits the schema for files written by `--emit-model-metadata`.
 `structured-output` emits the broader `StructuredOutputPayload` schema, a union
 covering `GenerationPayload`, `PromptPayload`, `CommandOutputPayload`, and
 `CheckOutputPayload`. Structured payloads use `kind` as the discriminator.
@@ -41,7 +42,8 @@ covering `GenerationPayload`, `PromptPayload`, `CommandOutputPayload`, and
     datamodel-codegen --generate-prompt --output-format json # (3)!
     datamodel-codegen --output-format-json-schema generation # (4)!
     datamodel-codegen --output-format-json-schema generate-prompt # (5)!
-    datamodel-codegen --output-format-json-schema structured-output # (6)!
+    datamodel-codegen --output-format-json-schema model-metadata # (6)!
+    datamodel-codegen --output-format-json-schema structured-output # (7)!
     ```
 
     1. :material-arrow-left: Emit the default generated Python text
@@ -49,7 +51,8 @@ covering `GenerationPayload`, `PromptPayload`, `CommandOutputPayload`, and
     3. :material-arrow-left: Emit structured JSON with current options and argparse metadata
     4. :material-arrow-left: Emit JSON Schema for generated-file JSON output
     5. :material-arrow-left: Emit JSON Schema for structured prompt JSON
-    6. :material-arrow-left: Emit JSON Schema for any structured command JSON output
+    6. :material-arrow-left: Emit JSON Schema for generated model metadata JSON
+    7. :material-arrow-left: Emit JSON Schema for any structured command JSON output
 
 ??? example "Generation JSON output"
 

@@ -2256,6 +2256,20 @@ def test_output_format_json_schema_generation(capsys: pytest.CaptureFixture[str]
     )
 
 
+def test_output_format_json_schema_model_metadata(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --output-format-json-schema model-metadata emits the metadata JSON Schema."""
+    run_main_with_args(
+        [
+            "--output-format-json-schema",
+            "model-metadata",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "model_metadata_schema.txt",
+        assert_no_stderr=True,
+    )
+
+
 def test_output_format_json_schema_structured_output(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --output-format-json-schema structured-output emits the JSON Schema for all structured outputs."""
     run_main_with_args(
@@ -2274,6 +2288,14 @@ def test_output_format_json_schema_validates_generation_json() -> None:
     """Test generation JSON output conforms to its emitted JSON Schema."""
     schema = json.loads((EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_schema.txt").read_text())
     payload = json.loads((EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_stdout.txt").read_text())
+
+    jsonschema.validate(instance=payload, schema=schema)
+
+
+def test_output_format_json_schema_validates_model_metadata_json() -> None:
+    """Test emitted model metadata conforms to its emitted JSON Schema."""
+    schema = json.loads((EXPECTED_OUTPUT_FORMAT_JSON_PATH / "model_metadata_schema.txt").read_text())
+    payload = json.loads((DATA_PATH / "expected" / "main" / "jsonschema" / "model_metadata_map.txt").read_text())
 
     jsonschema.validate(instance=payload, schema=schema)
 

@@ -16,6 +16,7 @@ datamodel-codegen [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
+| [`--emit-model-metadata`](base-options.md#emit-model-metadata) | Write a separate JSON map from source schema references to the final generated m... |
 | [`--encoding`](base-options.md#encoding) | Specify character encoding for input and output files. |
 | [`--external-ref-mapping`](base-options.md#external-ref-mapping) | Map external `$ref` files to Python packages. |
 | [`--input`](base-options.md#input) | Specify the input schema file path. |
@@ -77,6 +78,7 @@ datamodel-codegen [OPTIONS]
 | [`--field-extra-keys-without-x-prefix`](field-customization.md#field-extra-keys-without-x-prefix) | Include schema extension keys in Field() without requiring 'x-' prefix. |
 | [`--field-include-all-keys`](field-customization.md#field-include-all-keys) | Include all schema keys in Field() json_schema_extra. |
 | [`--field-type-collision-strategy`](field-customization.md#field-type-collision-strategy) | Rename type class instead of field when names collide (Pydantic v2 only). |
+| [`--infer-union-variant-names`](field-customization.md#infer-union-variant-names) | Infer names for inline oneOf/anyOf object variants from literal fields. |
 | [`--no-alias`](field-customization.md#no-alias) | Disable Field alias generation for non-Python-safe property names. |
 | [`--original-field-name-delimiter`](field-customization.md#original-field-name-delimiter) | Specify delimiter for original field names when using snake-case conversion. |
 | [`--remove-special-field-name-prefix`](field-customization.md#remove-special-field-name-prefix) | Remove the special prefix from field names. |
@@ -120,6 +122,7 @@ datamodel-codegen [OPTIONS]
 | [`--keyword-only`](model-customization.md#keyword-only) | Generate dataclasses with keyword-only fields (Python 3.10+). |
 | [`--model-extra-keys`](model-customization.md#model-extra-keys) | Add model-level schema extensions to ConfigDict json_schema_extra. |
 | [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix) | Strip x- prefix from model-level schema extensions and add to ConfigDict json_sc... |
+| [`--model-name-map`](model-customization.md#model-name-map) | Rename generated model classes from a JSON mapping. |
 | [`--naming-strategy`](model-customization.md#naming-strategy) | Use parent-prefixed naming strategy for duplicate model names. |
 | [`--output-model-type`](model-customization.md#output-model-type) | Select the output model type (Pydantic v2, Pydantic v2 dataclass, dataclasses, T... |
 | [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) | Namespace models by their parent scope to avoid naming conflicts. |
@@ -137,6 +140,7 @@ datamodel-codegen [OPTIONS]
 | [`--use-frozen-field`](model-customization.md#use-frozen-field) | Generate frozen (immutable) field definitions for readOnly properties. |
 | [`--use-generic-base-class`](model-customization.md#use-generic-base-class) | Generate a shared base class with model configuration to avoid repetition (DRY). |
 | [`--use-one-literal-as-default`](model-customization.md#use-one-literal-as-default) | Use single literal value as default when enum has only one option. |
+| [`--use-root-model-sequence-methods`](model-customization.md#use-root-model-sequence-methods) | Add sequence helper methods to Pydantic v2 RootModel classes. |
 | [`--use-serialize-as-any`](model-customization.md#use-serialize-as-any) | Wrap fields with subtypes in Pydantic's SerializeAsAny. |
 | [`--use-subclass-enum`](model-customization.md#use-subclass-enum) | Generate typed Enum subclasses for enums with specific field types. |
 
@@ -220,7 +224,7 @@ datamodel-codegen [OPTIONS]
 | [`--list-experimental`](utility-options.md#list-experimental) | List registered experimental features |
 | [`--no-color`](utility-options.md#no-color) | Disable colorized output |
 | [`--output-format`](utility-options.md#output-format) | Choose the command output format |
-| [`--output-format-json-schema`](utility-options.md#output-format-json-schema) | Output JSON Schema for structured command output |
+| [`--output-format-json-schema`](utility-options.md#output-format-json-schema) | Output JSON Schema for JSON output payloads |
 | [`--profile`](utility-options.md#profile) | Use a named profile from pyproject.toml |
 | [`--version`](utility-options.md#version) | Show program version and exit |
 
@@ -267,6 +271,7 @@ All options sorted alphabetically:
 - [`--disable-timestamp`](template-customization.md#disable-timestamp) - Disable timestamp in generated file header for reproducible ...
 - [`--disable-warnings`](general-options.md#disable-warnings) - Suppress warning messages during code generation.
 - [`--duplicate-name-suffix`](model-customization.md#duplicate-name-suffix) - Customize suffix for duplicate model names.
+- [`--emit-model-metadata`](base-options.md#emit-model-metadata) - Write a separate JSON map from source schema references to t...
 - [`--empty-enum-field-name`](field-customization.md#empty-enum-field-name) - Name for empty string enum field values.
 - [`--enable-command-header`](template-customization.md#enable-command-header) - Include command-line options in file header for reproducibil...
 - [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability) - Enable faux immutability in Pydantic models (frozen=True).
@@ -299,6 +304,7 @@ All options sorted alphabetically:
 - [`--ignore-enum-constraints`](typing-customization.md#ignore-enum-constraints) - Ignore enum constraints and use base string type instead of ...
 - [`--ignore-pyproject`](general-options.md#ignore-pyproject) - Ignore pyproject.toml configuration file.
 - [`--include-path-parameters`](openapi-only-options.md#include-path-parameters) - Include OpenAPI path parameters in generated parameter model...
+- [`--infer-union-variant-names`](field-customization.md#infer-union-variant-names) - Infer names for inline oneOf/anyOf object variants from lite...
 - [`--input`](base-options.md#input) - Specify the input schema file path.
 - [`--input-file-type`](base-options.md#input-file-type) - Specify the input file type for code generation.
 - [`--input-model`](base-options.md#input-model) - Import a Python type or dict schema from a module.
@@ -309,6 +315,7 @@ All options sorted alphabetically:
 - [`--list-experimental`](utility-options.md#list-experimental) - List registered experimental features
 - [`--model-extra-keys`](model-customization.md#model-extra-keys) - Add model-level schema extensions to ConfigDict json_schema_...
 - [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix) - Strip x- prefix from model-level schema extensions and add t...
+- [`--model-name-map`](model-customization.md#model-name-map) - Rename generated model classes from a JSON mapping.
 - [`--module-split-mode`](general-options.md#module-split-mode) - Split generated models into separate files, one per model cl...
 - [`--naming-strategy`](model-customization.md#naming-strategy) - Use parent-prefixed naming strategy for duplicate model name...
 - [`--no-alias`](field-customization.md#no-alias) - Disable Field alias generation for non-Python-safe property ...
@@ -327,7 +334,7 @@ All options sorted alphabetically:
 - [`--output-date-class`](typing-customization.md#output-date-class) - Specify date class type for date schema fields.
 - [`--output-datetime-class`](typing-customization.md#output-datetime-class) - Specify datetime class type for date-time schema fields.
 - [`--output-format`](utility-options.md#output-format) - Choose the command output format
-- [`--output-format-json-schema`](utility-options.md#output-format-json-schema) - Output JSON Schema for structured command output
+- [`--output-format-json-schema`](utility-options.md#output-format-json-schema) - Output JSON Schema for JSON output payloads
 - [`--output-model-type`](model-customization.md#output-model-type) - Select the output model type (Pydantic v2, Pydantic v2 datac...
 - [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) - Namespace models by their parent scope to avoid naming confl...
 - [`--preset`](base-options.md#preset) - Apply an immutable built-in option preset.
@@ -375,6 +382,7 @@ All options sorted alphabetically:
 - [`--use-one-literal-as-default`](model-customization.md#use-one-literal-as-default) - Use single literal value as default when enum has only one o...
 - [`--use-operation-id-as-name`](openapi-only-options.md#use-operation-id-as-name) - Use OpenAPI operationId as the generated function/class name...
 - [`--use-pendulum`](typing-customization.md#use-pendulum) - Use pendulum types for date, time, and duration fields.
+- [`--use-root-model-sequence-methods`](model-customization.md#use-root-model-sequence-methods) - Add sequence helper methods to Pydantic v2 RootModel classes...
 - [`--use-root-model-type-alias`](typing-customization.md#use-root-model-type-alias) - Generate RootModel as type alias format for better mypy supp...
 - [`--use-schema-description`](field-customization.md#use-schema-description) - Use schema description as class docstring.
 - [`--use-serialization-alias`](field-customization.md#use-serialization-alias) - Use serialization_alias instead of alias for field aliasing ...
