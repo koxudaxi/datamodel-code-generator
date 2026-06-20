@@ -85,6 +85,27 @@ def test_root_model_sequence_interface() -> None:
     assert any(import_.import_ == "SupportsIndex" for import_ in root_model.imports)
 
 
+def test_root_model_sequence_interface_with_decorator() -> None:
+    """RootModel sequence interface keeps decorators before the class definition."""
+    root_model = RootModel(
+        decorators=["@some_decorator"],
+        fields=[
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(type="str", is_list=True, data_types=[DataType(type="str")]),
+                required=True,
+            )
+        ],
+        reference=Reference(name="TestRootModel", path="test_root_model"),
+    )
+
+    root_model.add_sequence_interface("str", "list[str]")
+
+    rendered_lines = root_model.render().splitlines()
+    assert rendered_lines[0] == "@some_decorator"
+    assert rendered_lines[1] == "class TestRootModel(RootModel[List[str]], Sequence[str]):"
+
+
 def test_root_model_sequence_interface_add_any_import() -> None:
     """Sequence interface helpers import Any when the wrapped item type is Any."""
     root_model = RootModel(

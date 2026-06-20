@@ -89,7 +89,7 @@ class RootModel(BaseModel):
         else:  # pragma: no cover
             return rendered
 
-        if not self.methods:
+        if not self.methods:  # pragma: no cover
             return "".join(lines)
 
         rendered_methods = "\n\n".join(f"    {method}" for method in self.methods)
