@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, RootModel
@@ -26,6 +27,20 @@ class ScalarSuffixesBoolTrue(BaseModel):
 class ScalarSuffixesInt7(BaseModel):
     kind: Literal[7]
     count: int
+
+
+class Kind(Enum):
+    enum_kind = 'enum.kind'
+
+
+class EnumLiteralEnumKind(BaseModel):
+    kind: Kind
+    label: str
+
+
+class EnumLiteralDirect(BaseModel):
+    kind: Literal['direct']
+    label: str
 
 
 class EmptyLiteral(BaseModel):
@@ -104,6 +119,7 @@ class UnionVariantNameEdges(BaseModel):
     scalar_suffixes: ScalarSuffixesBoolTrue | ScalarSuffixesInt7 = Field(
         ..., discriminator='kind'
     )
+    enum_literal: EnumLiteralEnumKind | EnumLiteralDirect
     empty_literal: EmptyLiteral | EmptyLiteralNamed
     ref_literal: RefLiteralRefKind | RefLiteralDirect
     duplicate_generated: DuplicateGenerated | DuplicateGenerated1

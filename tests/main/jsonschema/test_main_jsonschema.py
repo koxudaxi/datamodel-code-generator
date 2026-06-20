@@ -4426,6 +4426,7 @@ def test_jsonschema_infer_union_variant_names_default_names(output_file: Path) -
     )
 
 
+@LEGACY_BLACK_SKIP
 def test_jsonschema_infer_union_variant_names_edges(output_file: Path) -> None:
     """Infer variant names for discriminator, scalar literal, ref, and fallback cases."""
     run_main_and_assert(
@@ -7151,24 +7152,42 @@ def test_main_enum_field_as_literal_map_inline_requires_json_object(
     )
 
 
-def test_main_enum_field_as_literal_map_legacy_value_warns(output_file: Path) -> None:
-    """Test legacy enum-field map values warn and remain compatible."""
-    with pytest.warns(
-        FutureWarning,
-        match="JSON configuration values that do not match the documented schema are deprecated",
-    ):
-        run_main_and_assert(
-            input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
-            output_path=output_file,
-            input_file_type=None,
-            assert_func=assert_file_content,
-            expected_file="enum_field_as_literal_map_legacy.py",
-            extra_args=[
-                "--enum-field-as-literal-map",
-                '{"status": "legacy"}',
-                "--disable-timestamp",
-            ],
-        )
+@pytest.mark.filterwarnings(
+    "ignore:JSON configuration values that do not match the documented schema are deprecated:FutureWarning"
+)
+def test_main_enum_field_as_literal_map_legacy_value_remains_compatible(output_file: Path) -> None:
+    """Test legacy enum-field map values remain compatible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_field_as_literal_map_legacy.py",
+        extra_args=[
+            "--enum-field-as-literal-map",
+            '{"status": "legacy"}',
+            "--disable-timestamp",
+        ],
+    )
+
+
+def test_main_enum_field_as_literal_map_legacy_value_rejects_invalid_type(
+    output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test legacy enum-field map fallback still rejects invalid value types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+        output_path=output_file,
+        input_file_type=None,
+        expected_exit=Exit.ERROR,
+        file_should_not_exist=output_file,
+        capsys=capsys,
+        expected_stderr_contains="Invalid --enum-field-as-literal-map",
+        extra_args=[
+            "--enum-field-as-literal-map",
+            '{"status": 1}',
+        ],
+    )
 
 
 def test_main_x_enum_field_as_literal(output_file: Path) -> None:

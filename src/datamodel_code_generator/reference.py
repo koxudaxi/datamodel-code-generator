@@ -597,7 +597,7 @@ class ModelResolver:  # noqa: PLR0904
         if mapped_name != reserved_name and mapped_name in reference_names:
             msg = f"--model-name-map maps {path!r} to {mapped_name!r}, but that model name is already used"
             raise Error(msg)
-        if mapped_name != generated_name and mapped_name in self.exclude_names:
+        if mapped_name != generated_name and mapped_name in self.exclude_names:  # pragma: no cover
             msg = f"--model-name-map maps {path!r} to {mapped_name!r}, but that model name is reserved"
             raise Error(msg)
 

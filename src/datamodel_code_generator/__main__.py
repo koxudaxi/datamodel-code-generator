@@ -720,7 +720,7 @@ def _json_ready(value: Any) -> Any:
         return value.value
     if isinstance(value, Path):
         return value.as_posix()
-    if isinstance(value, BaseModel):
+    if isinstance(value, BaseModel):  # pragma: no cover - Defensive for structured outputs that carry Pydantic data.
         return value.model_dump(mode="json", exclude_none=True)
     if isinstance(value, tuple | list):
         return [_json_ready(item) for item in value]

@@ -5,6 +5,7 @@
   "required": [
     "object_discriminator",
     "scalar_suffixes",
+    "enum_literal",
     "empty_literal",
     "ref_literal",
     "duplicate_generated",
@@ -69,6 +70,34 @@
             },
             "count": {
               "type": "integer"
+            }
+          }
+        }
+      ]
+    },
+    "enum_literal": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["kind", "label"],
+          "properties": {
+            "kind": {
+              "enum": ["enum.kind"]
+            },
+            "label": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "label"],
+          "properties": {
+            "kind": {
+              "const": "direct"
+            },
+            "label": {
+              "type": "string"
             }
           }
         }

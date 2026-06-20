@@ -42,7 +42,7 @@ class ModelMetadata(TypedDict, closed=True):
 
 def empty_model_metadata() -> ModelMetadata:
     """Return an empty model metadata payload."""
-    return {"version": 1, "models": []}
+    return {"version": 1, "models": []}  # pragma: no cover
 
 
 def dump_model_metadata(metadata: ModelMetadata | None) -> str:

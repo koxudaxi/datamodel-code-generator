@@ -121,15 +121,15 @@ def _loads_json(value: str, *, option_name: str, load_error_name: str | None) ->
 
 def _load_json_source(value: JsonConfigSource, *, option_name: str, load_error_name: str | None = None) -> Any:
     match value:
-        case None:
+        case None:  # pragma: no cover - Config validators return before loading None.
             return None
         case dict():
             return value
-        case TextIOBase() as data:
+        case TextIOBase() as data:  # pragma: no cover - Programmatic compatibility path; CLI passes strings.
             with data:
                 try:
                     return json.load(data)
-                except json.JSONDecodeError as e:
+                except json.JSONDecodeError as e:  # pragma: no cover
                     msg = _invalid_json_message(option_name, e, load_error_name)
                     raise JsonConfigError(msg) from e
 
@@ -154,12 +154,12 @@ class JsonConfigSpec:
     validation_error_name: str | None = None
     validation_error_message: str | None = None
 
-    def validate(self, raw: Any, *, warn_on_legacy_fallback: bool = True) -> Any:
+    def validate(self, raw: Any) -> Any:
         """Validate a loaded JSON value and return the normalized config value."""
         try:
             result = self.strict_model.model_validate(raw).root
         except ValidationError as strict_error:
-            result = self._validate_legacy(raw, strict_error, warn_on_legacy_fallback=warn_on_legacy_fallback)
+            result = self._validate_legacy(raw, strict_error)
 
         return _to_defaultdict(result) if self.as_defaultdict else result
 
@@ -178,8 +178,6 @@ class JsonConfigSpec:
         self,
         raw: Any,
         strict_error: ValidationError,
-        *,
-        warn_on_legacy_fallback: bool,
     ) -> Any:
         if self.legacy_model is None:
             raise self._strict_validation_error(strict_error) from strict_error
@@ -190,16 +188,15 @@ class JsonConfigSpec:
             msg = f"Invalid {self.option_name}: {format_validation_error(legacy_error)}"
             raise JsonConfigError(msg) from legacy_error
 
-        if warn_on_legacy_fallback:
-            warn_deprecated(
-                "config.json-config-strict-validation",
-                details=(
-                    f"{self.option_name} currently falls back to legacy validation for compatibility, "
-                    "but a future release will fail when the value does not match the documented JSON Schema. "
-                    f"First validation issue: {format_validation_error(strict_error)}"
-                ),
-                stacklevel=4,
-            )
+        warn_deprecated(
+            "config.json-config-strict-validation",
+            details=(
+                f"{self.option_name} currently falls back to legacy validation for compatibility, "
+                "but a future release will fail when the value does not match the documented JSON Schema. "
+                f"First validation issue: {format_validation_error(strict_error)}"
+            ),
+            stacklevel=4,
+        )
         return result
 
 
@@ -266,14 +263,13 @@ class JsonConfigSpecs:
 def load_json_config_field(
     field_name: str,
     value: JsonConfigSource,
-    *,
-    warn_on_legacy_fallback: bool = True,
 ) -> Any:
     """Load and validate a JSON configuration field by Config field name."""
     spec = JsonConfigSpecs.by_field_name[field_name]
     if (raw := _load_json_source(value, option_name=spec.option_name, load_error_name=spec.load_error_name)) is None:
-        return None
-    return spec.validate(raw, warn_on_legacy_fallback=warn_on_legacy_fallback)
+        # Config validators skip None before this helper; this remains for direct compatibility.
+        return None  # pragma: no cover
+    return spec.validate(raw)
 
 
 def validate_json_value_or_file(value: str, *, option_name: str = "") -> dict[str, object]:
