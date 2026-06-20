@@ -13,6 +13,7 @@ from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DIC
 
 IMPORT_ABC_ITERATOR = Import.from_full_path("collections.abc.Iterator")
 IMPORT_OVERLOAD = Import.from_full_path("typing.overload")
+IMPORT_SUPPORTS_INDEX = Import.from_full_path("typing.SupportsIndex")
 
 
 class RootModel(BaseModel):
@@ -51,12 +52,13 @@ class RootModel(BaseModel):
         """Add sequence helper methods that delegate to the wrapped root value."""
         self._additional_imports.append(IMPORT_ABC_ITERATOR)
         self._additional_imports.append(IMPORT_OVERLOAD)
+        self._additional_imports.append(IMPORT_SUPPORTS_INDEX)
         if item_type == "Any":
             self._additional_imports.append(IMPORT_ANY)
         self.methods.extend([
             f"def __iter__(self) -> Iterator[{item_type}]:\n        return iter(self.root)",
-            f"@overload\n    def __getitem__(self, index: int) -> {item_type}: ...",
+            f"@overload\n    def __getitem__(self, index: SupportsIndex) -> {item_type}: ...",
             f"@overload\n    def __getitem__(self, index: slice) -> {slice_type}: ...",
-            f"def __getitem__(self, index: int | slice) -> {item_type} | {slice_type}:\n        return self.root[index]",
+            f"def __getitem__(self, index: SupportsIndex | slice) -> {item_type} | {slice_type}:\n        return self.root[index]",
             "def __len__(self) -> int:\n        return len(self.root)",
         ])

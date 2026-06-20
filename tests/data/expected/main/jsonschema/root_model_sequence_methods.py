@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import overload
+from typing import SupportsIndex, overload
 
 from pydantic import BaseModel, RootModel
 
@@ -20,12 +20,12 @@ class Pets(RootModel[list[Pet]]):
         return iter(self.root)
 
     @overload
-    def __getitem__(self, index: int) -> Pet: ...
+    def __getitem__(self, index: SupportsIndex) -> Pet: ...
 
     @overload
     def __getitem__(self, index: slice) -> list[Pet]: ...
 
-    def __getitem__(self, index: int | slice) -> Pet | list[Pet]:
+    def __getitem__(self, index: SupportsIndex | slice) -> Pet | list[Pet]:
         return self.root[index]
 
     def __len__(self) -> int:

@@ -767,11 +767,13 @@ def test_apply_root_model_sequence_methods_adds_sequence_helpers(
 
     assert len(root_model.methods) == 5
     assert root_model.methods[0].startswith(f"def __iter__(self) -> Iterator[{expected_item_hint}]")
-    assert root_model.methods[1].startswith(f"@overload\n    def __getitem__(self, index: int) -> {expected_item_hint}")
+    assert root_model.methods[1].startswith(
+        f"@overload\n    def __getitem__(self, index: SupportsIndex) -> {expected_item_hint}"
+    )
     assert root_model.methods[2].startswith(
         f"@overload\n    def __getitem__(self, index: slice) -> {expected_slice_hint}"
     )
-    assert root_model.methods[3].startswith("def __getitem__(self, index: int | slice)")
+    assert root_model.methods[3].startswith("def __getitem__(self, index: SupportsIndex | slice)")
     assert root_model.methods[4].startswith("def __len__(self) -> int")
 
 

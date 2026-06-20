@@ -69,16 +69,17 @@ def test_root_model_sequence_methods() -> None:
         "    def __iter__(self) -> Iterator[str]:\n"
         "        return iter(self.root)\n\n"
         "    @overload\n"
-        "    def __getitem__(self, index: int) -> str: ...\n\n"
+        "    def __getitem__(self, index: SupportsIndex) -> str: ...\n\n"
         "    @overload\n"
         "    def __getitem__(self, index: slice) -> list[str]: ...\n\n"
-        "    def __getitem__(self, index: int | slice) -> str | list[str]:\n"
+        "    def __getitem__(self, index: SupportsIndex | slice) -> str | list[str]:\n"
         "        return self.root[index]\n\n"
         "    def __len__(self) -> int:\n"
         "        return len(self.root)"
     )
     assert any(import_.import_ == "Iterator" for import_ in root_model.imports)
     assert any(import_.import_ == "overload" for import_ in root_model.imports)
+    assert any(import_.import_ == "SupportsIndex" for import_ in root_model.imports)
 
 
 def test_root_model_sequence_methods_add_any_import() -> None:
