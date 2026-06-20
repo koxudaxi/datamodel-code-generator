@@ -833,7 +833,7 @@ def run_main_and_assert(  # noqa: PLR0912
     expected_output: str | None = None,
     expected_directory: Path | None = None,
     output_to_expected: Sequence[tuple[str, str | Path]] | None = None,
-    file_should_not_exist: Path | None = None,
+    file_should_not_exist: Path | Sequence[Path] | None = None,
     output_should_not_exist: bool = False,
     # Verification options
     ignore_whitespace: bool = False,
@@ -973,7 +973,12 @@ def run_main_and_assert(  # noqa: PLR0912
             pytest.fail("output_path is required when using output_should_not_exist")
         _assert_file_does_not_exist(output_path)
     if file_should_not_exist is not None:
-        _assert_file_does_not_exist(file_should_not_exist)
+        match file_should_not_exist:
+            case Path() as missing_path:
+                _assert_file_does_not_exist(missing_path)
+            case missing_paths:
+                for missing_path in missing_paths:
+                    _assert_file_does_not_exist(missing_path)
 
     # Skip output verification if expected_exit is not OK
     if expected_exit != Exit.OK:

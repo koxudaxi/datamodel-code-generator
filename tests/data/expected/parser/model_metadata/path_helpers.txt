@@ -1,0 +1,19 @@
+{
+  "module_names": {
+    "package_file": "models.user",
+    "package_init": "models",
+    "package_name": "models.user",
+    "root_init": "",
+    "single_file": "models"
+  },
+  "source_paths": {
+    "empty_fragment": [],
+    "escaped_fragment": [
+      "$defs",
+      "foo/bar",
+      "tilde~key"
+    ],
+    "no_fragment": null,
+    "relative_fragment": null
+  }
+}

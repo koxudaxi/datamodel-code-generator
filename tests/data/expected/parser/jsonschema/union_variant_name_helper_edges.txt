@@ -1,0 +1,10 @@
+{
+  "discriminator_missing": null,
+  "discriminator_object": "kind",
+  "discriminator_string": "type",
+  "variant_bool": "pkg.Event_bool_true",
+  "variant_empty": null,
+  "variant_int": "pkg.Event_int_7",
+  "variant_object": null,
+  "variant_string": "pkg.Event_message_created"
+}

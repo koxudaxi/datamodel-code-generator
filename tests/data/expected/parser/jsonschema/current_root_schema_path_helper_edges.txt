@@ -1,0 +1,6 @@
+{
+  "current_root": true,
+  "defs_path": false,
+  "hash_current_root": true,
+  "other_path": false
+}

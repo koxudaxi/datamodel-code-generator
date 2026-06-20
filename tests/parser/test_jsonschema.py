@@ -25,6 +25,8 @@ from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
     Types,
+    _get_discriminator_property_name,
+    _get_union_variant_name,
     _validate_schema_python_import_path,
     get_model_by_path,
     split_json_pointer,
@@ -111,6 +113,146 @@ def test_validate_schema_python_import_path_rejects_non_string() -> None:
     """Test schema import path validation rejects non-string values."""
     with pytest.raises(Error, match="customTypePath must be a dotted Python identifier path: 1"):
         _validate_schema_python_import_path(1, "customTypePath")
+
+
+def _dump_json_payload(value: object) -> str:
+    return f"{json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False)}\n"
+
+
+def _json_schema_object(value: dict[str, object]) -> JsonSchemaObject:
+    return JsonSchemaObject.model_validate(value)
+
+
+def test_union_variant_name_helper_edges() -> None:
+    """Pin edge behavior not reached by generated-output union naming cases."""
+    assert_output(
+        _dump_json_payload({
+            "discriminator_missing": _get_discriminator_property_name(_json_schema_object({})),
+            "discriminator_object": _get_discriminator_property_name(
+                _json_schema_object({"discriminator": {"propertyName": "kind"}})
+            ),
+            "discriminator_string": _get_discriminator_property_name(_json_schema_object({"discriminator": "type"})),
+            "variant_bool": _get_union_variant_name("pkg.Event", True),
+            "variant_empty": _get_union_variant_name("Event", ""),
+            "variant_int": _get_union_variant_name("pkg.Event", 7),
+            "variant_object": _get_union_variant_name("Event", object()),
+            "variant_string": _get_union_variant_name("pkg.Event", "message.created"),
+        }),
+        EXPECTED_JSONSCHEMA_PATH / "union_variant_name_helper_edges.txt",
+    )
+
+
+def test_union_variant_literal_helper_edges() -> None:
+    """Pin defensive union literal inference branches outside normal e2e output."""
+    schema = {
+        "$defs": {
+            "Kind": {"const": "ref.kind"},
+            "Loop": {"$ref": "#/$defs/Loop"},
+        }
+    }
+    parser = JsonSchemaParser(json.dumps(schema))
+    parser.raw_obj = schema
+    parser.model_resolver.set_current_root([])
+
+    external_path = Path("external.json").resolve()
+    external_parser = JsonSchemaParser("", external_ref_mapping={str(external_path): "external.models"})
+    external_parser.model_resolver.set_current_root([])
+
+    enabled_parser = JsonSchemaParser("", infer_union_variant_names=True)
+
+    assert_output(
+        _dump_json_payload({
+            "const_ignored_object": parser._get_single_literal_value(
+                _json_schema_object({"const": {"kind": "object"}})
+            ),
+            "const_string": parser._get_single_literal_value(_json_schema_object({"const": "direct"})),
+            "enum_string": parser._get_single_literal_value(_json_schema_object({"enum": ["enum.kind"]})),
+            "external_ref": external_parser._get_single_literal_value(
+                _json_schema_object({"$ref": f"{external_path}#/Kind"})
+            ),
+            "inferred_collision_skips": enabled_parser._infer_union_variant_names(
+                "Event",
+                _json_schema_object({}),
+                [
+                    _json_schema_object({"properties": {"kind": {"const": 1}}}),
+                    _json_schema_object({"properties": {"kind": {"const": "int_1"}}}),
+                ],
+            ),
+            "inferred_disabled": JsonSchemaParser("", infer_union_variant_names=False)._infer_union_variant_names(
+                "Event", _json_schema_object({}), []
+            ),
+            "inferred_discriminator": enabled_parser._infer_union_variant_names(
+                "Event",
+                _json_schema_object({"discriminator": "kind"}),
+                [
+                    _json_schema_object({"properties": {"kind": {"const": "created"}}}),
+                    _json_schema_object({"properties": {"kind": {"const": "failed"}}}),
+                ],
+            ),
+            "inferred_first_invalid_then_status": enabled_parser._infer_union_variant_names(
+                "Event",
+                _json_schema_object({}),
+                [
+                    _json_schema_object({"properties": {"kind": {"type": "string"}, "status": {"const": "open"}}}),
+                    _json_schema_object({"properties": {"kind": {"type": "string"}, "status": {"const": "closed"}}}),
+                ],
+            ),
+            "iter_fields": list(
+                parser._iter_union_variant_literal_field_names(
+                    _json_schema_object({"discriminator": "kind"}),
+                    [
+                        _json_schema_object({}),
+                        _json_schema_object({"properties": {"kind": {"const": "created"}, "status": {"const": "new"}}}),
+                        _json_schema_object({"properties": {"status": {"const": "old"}, "kind": {"const": "failed"}}}),
+                    ],
+                )
+            ),
+            "ref_loop": parser._get_single_literal_value(_json_schema_object({"$ref": "#/$defs/Loop"})),
+            "ref_string": parser._get_single_literal_value(_json_schema_object({"$ref": "#/$defs/Kind"})),
+            "values_duplicate_literals": parser._get_union_variant_literal_values(
+                [
+                    _json_schema_object({"properties": {"kind": {"const": "same"}}}),
+                    _json_schema_object({"properties": {"kind": {"const": "same"}}}),
+                ],
+                "kind",
+            ),
+            "values_missing_literal": parser._get_union_variant_literal_values(
+                [
+                    _json_schema_object({"properties": {"kind": {"type": "string"}}}),
+                    _json_schema_object({"properties": {"kind": {"const": "ok"}}}),
+                ],
+                "kind",
+            ),
+            "values_missing_properties": parser._get_union_variant_literal_values(
+                [_json_schema_object({}), _json_schema_object({"properties": {"kind": {"const": "ok"}}})],
+                "kind",
+            ),
+            "values_non_schema_field": parser._get_union_variant_literal_values(
+                [
+                    _json_schema_object({"properties": {"kind": True}}),
+                    _json_schema_object({"properties": {"kind": {"const": "ok"}}}),
+                ],
+                "kind",
+            ),
+        }),
+        EXPECTED_JSONSCHEMA_PATH / "union_variant_literal_helper_edges.txt",
+    )
+
+
+def test_current_root_schema_path_helper_edges() -> None:
+    """Pin root path normalization used by root-ref schema rewriting."""
+    parser = JsonSchemaParser("")
+    parser.model_resolver.set_current_root(["schemas", "root.json"])
+
+    assert_output(
+        _dump_json_payload({
+            "current_root": parser._is_current_root_schema_path(["schemas", "root.json"]),
+            "defs_path": parser._is_current_root_schema_path(["schemas", "root.json", "#", "$defs", "User"]),
+            "hash_current_root": parser._is_current_root_schema_path(["schemas", "root.json", "#"]),
+            "other_path": parser._is_current_root_schema_path(["schemas", "other.json", "#"]),
+        }),
+        EXPECTED_JSONSCHEMA_PATH / "current_root_schema_path_helper_edges.txt",
+    )
 
 
 def test_get_x_python_import_path_handles_empty_and_incomplete_metadata() -> None:

@@ -21,6 +21,7 @@ from datamodel_code_generator.__main__ import (
     generate_pyproject_config,
 )
 from datamodel_code_generator.arguments import arg_parser
+from datamodel_code_generator.validators import ModelValidators
 from tests.conftest import (
     HttpxGetMockFactory,
     MockHttpxResponse,
@@ -2336,6 +2337,15 @@ def test_output_format_json_json_ready_values() -> None:
         "exit": Exit.OK,
         "path": Path("schema/person.json"),
         "items": [Exit.ERROR, Path("model/output.py")],
+        "validators": ModelValidators.model_validate({
+            "validators": [
+                {
+                    "field": "name",
+                    "function": "pkg.validators.clean",
+                    "mode": "before",
+                }
+            ]
+        }),
     })
     assert_output(
         f"{json.dumps(payload, indent=2, ensure_ascii=False)}\n",

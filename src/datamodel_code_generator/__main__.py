@@ -517,7 +517,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
     check: bool = False
     debug: bool = False
     disable_warnings: bool = False
-    extra_template_data: Optional[dict[str, dict[str, Any]]] = None  # noqa: UP045
+    extra_template_data: Mapping[str, dict[str, Any]] | None = None
     validators: Optional[Mapping[str, ModelValidators]] = None  # noqa: UP045
     aliases: Optional[Mapping[str, str | list[str]]] = None  # noqa: UP045
     serialization_aliases: Optional[Mapping[str, str]] = None  # noqa: UP045

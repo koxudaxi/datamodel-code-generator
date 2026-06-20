@@ -256,7 +256,7 @@ def test_main_emit_model_metadata_rejects_check(output_file: Path, capsys: pytes
         output_path=output_file,
         input_file_type="jsonschema",
         expected_exit=Exit.ERROR,
-        file_should_not_exist=metadata_path,
+        file_should_not_exist=(metadata_path, output_file),
         capsys=capsys,
         expected_stderr_contains="Error: --check cannot be used with --emit-model-metadata",
         extra_args=["--check", "--emit-model-metadata", str(metadata_path)],

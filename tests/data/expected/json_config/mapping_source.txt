@@ -1,0 +1,6 @@
+{
+  "User": [
+    "custom.Base",
+    "custom.Mixin"
+  ]
+}
