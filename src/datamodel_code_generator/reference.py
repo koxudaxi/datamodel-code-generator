@@ -492,6 +492,7 @@ class ModelResolver:  # noqa: PLR0904
         class_name_suffix: str | None = None,
         class_name_affix_scope: ClassNameAffixScope | None = None,
         skip_affix_for_root: bool = False,  # noqa: FBT001, FBT002
+        model_name_map: Mapping[str, str] | None = None,
         default_value_overrides: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize model resolver with naming and resolution options."""
@@ -551,6 +552,7 @@ class ModelResolver:  # noqa: PLR0904
             raise ValueError(msg)
         self.class_name_affix_scope: ClassNameAffixScope = class_name_affix_scope or ClassNameAffixScope.All
         self.skip_affix_for_root: bool = skip_affix_for_root
+        self.model_name_map: Mapping[str, str] = {} if model_name_map is None else {**model_name_map}
 
         # Incrementally maintained set of reference names for O(1) uniqueness checking
         self._reference_names_cache: set[str] = set()
@@ -559,6 +561,63 @@ class ModelResolver:  # noqa: PLR0904
         self.default_value_overrides: Mapping[str, Any] = (
             {} if default_value_overrides is None else {**default_value_overrides}
         )
+
+    def _get_model_name_map_value(self, path: str, generated_name: str, original_name: str) -> str | None:
+        """Return an explicit model rename for a source path or generated name."""
+        if not self.model_name_map:
+            return None
+
+        _, separator, fragment = path.partition("#")
+        candidates = (
+            (path, f"#{fragment}", generated_name, original_name)
+            if separator
+            else (
+                path,
+                generated_name,
+                original_name,
+            )
+        )
+        for candidate in candidates:
+            if (mapped_name := self.model_name_map.get(candidate)) is not None:
+                return mapped_name
+        return None
+
+    def _ensure_model_name_map_value(
+        self,
+        path: str,
+        generated_name: str,
+        mapped_name: str,
+        reserved_name: str | None,
+    ) -> None:
+        if not self.validate_name(mapped_name):
+            msg = f"--model-name-map maps {path!r} to invalid class name {mapped_name!r}"
+            raise Error(msg)
+
+        reference_names = self._get_reference_names()
+        conflict_reason = (
+            "already used"
+            if mapped_name != reserved_name and mapped_name in reference_names
+            else "reserved"
+            if mapped_name != generated_name and mapped_name in self.exclude_names
+            else None
+        )
+        if conflict_reason:
+            msg = f"--model-name-map maps {path!r} to {mapped_name!r}, but that model name is {conflict_reason}"
+            raise Error(msg)
+
+    def _apply_model_name_map(
+        self,
+        path: str,
+        original_name: str,
+        class_name: ClassName,
+        *,
+        reserved_name: str | None = None,
+    ) -> ClassName:
+        if (mapped_name := self._get_model_name_map_value(path, class_name.name, original_name)) is None:
+            return class_name
+
+        self._ensure_model_name_map_value(path, class_name.name, mapped_name, reserved_name)
+        return ClassName(name=mapped_name, duplicate_name=None)
 
     def _reset_for_reuse(self, exclude_names: set[str]) -> None:
         """Reset naming state so this resolver behaves like a freshly constructed one.
@@ -839,7 +898,8 @@ class ModelResolver:  # noqa: PLR0904
         has_affix_config = bool(self.class_name_prefix or self.class_name_suffix)
         needs_scope = self.class_name_affix_scope != ClassNameAffixScope.All
         skip_affix = has_affix_config and needs_scope
-        name = self.get_class_name(original_name, unique=use_unique, skip_affix=skip_affix).name
+        class_name = self.get_class_name(original_name, unique=use_unique, skip_affix=skip_affix)
+        name = self._apply_model_name_map(path, original_name, class_name).name
         reference = Reference(
             path=path,
             original_name=original_name,
@@ -969,7 +1029,7 @@ class ModelResolver:  # noqa: PLR0904
                 # For primary definitions, try to use the clean name first
                 # If an external reference has the same name, rename it
                 self._rename_external_ref_with_same_name(name, joined_path)
-            name, duplicate_name = self.get_class_name(
+            class_name_result = self.get_class_name(
                 name=name,
                 unique=unique,
                 reserved_name=reference.name if reference else None,
@@ -979,6 +1039,13 @@ class ModelResolver:  # noqa: PLR0904
                 is_root=is_root,
                 preserve_name=preserve_class_name,
             )
+            class_name_result = self._apply_model_name_map(
+                joined_path,
+                original_name,
+                class_name_result,
+                reserved_name=reference.name if reference else None,
+            )
+            name, duplicate_name = class_name_result
         else:
             # TODO: create a validate for module name
             name = self.get_valid_field_name(name, model_type=ModelType.CLASS)

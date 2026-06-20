@@ -95,6 +95,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # ==========================================================================
     "--input": CLIOptionMeta(name="--input", category=OptionCategory.BASE),
     "--output": CLIOptionMeta(name="--output", category=OptionCategory.BASE),
+    "--emit-model-metadata": CLIOptionMeta(name="--emit-model-metadata", category=OptionCategory.BASE),
     "--url": CLIOptionMeta(name="--url", category=OptionCategory.BASE),
     "--input-model": CLIOptionMeta(name="--input-model", category=OptionCategory.BASE),
     "--input-model-ref-strategy": CLIOptionMeta(name="--input-model-ref-strategy", category=OptionCategory.BASE),
@@ -123,6 +124,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--base-class": CLIOptionMeta(name="--base-class", category=OptionCategory.MODEL),
     "--base-class-map": CLIOptionMeta(name="--base-class-map", category=OptionCategory.MODEL),
     "--class-name": CLIOptionMeta(name="--class-name", category=OptionCategory.MODEL),
+    "--model-name-map": CLIOptionMeta(name="--model-name-map", category=OptionCategory.MODEL),
     "--allow-leading-underscore-class-name": CLIOptionMeta(
         name="--allow-leading-underscore-class-name", category=OptionCategory.MODEL
     ),
@@ -221,6 +223,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--use-one-literal-as-default": CLIOptionMeta(name="--use-one-literal-as-default", category=OptionCategory.MODEL),
     "--use-serialize-as-any": CLIOptionMeta(name="--use-serialize-as-any", category=OptionCategory.MODEL),
     "--skip-root-model": CLIOptionMeta(name="--skip-root-model", category=OptionCategory.MODEL),
+    "--use-root-model-sequence-interface": CLIOptionMeta(
+        name="--use-root-model-sequence-interface", category=OptionCategory.MODEL
+    ),
     "--use-generic-base-class": CLIOptionMeta(name="--use-generic-base-class", category=OptionCategory.MODEL),
     "--model-extra-keys": CLIOptionMeta(name="--model-extra-keys", category=OptionCategory.MODEL),
     "--model-extra-keys-without-x-prefix": CLIOptionMeta(
@@ -256,6 +261,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--no-alias": CLIOptionMeta(name="--no-alias", category=OptionCategory.FIELD),
     "--use-serialization-alias": CLIOptionMeta(name="--use-serialization-alias", category=OptionCategory.FIELD),
     "--use-title-as-name": CLIOptionMeta(name="--use-title-as-name", category=OptionCategory.FIELD),
+    "--infer-union-variant-names": CLIOptionMeta(name="--infer-union-variant-names", category=OptionCategory.FIELD),
     "--use-schema-description": CLIOptionMeta(name="--use-schema-description", category=OptionCategory.FIELD),
     "--use-field-description": CLIOptionMeta(name="--use-field-description", category=OptionCategory.FIELD),
     "--use-field-description-example": CLIOptionMeta(

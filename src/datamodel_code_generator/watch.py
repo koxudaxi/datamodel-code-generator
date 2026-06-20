@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from collections import defaultdict
+    from collections.abc import Mapping
+
     from datamodel_code_generator.__main__ import Config, Exit
 
 
@@ -22,11 +25,11 @@ def _get_watchfiles() -> Any:
 
 def watch_and_regenerate(  # noqa: PLR0913, PLR0917
     config: Config,
-    extra_template_data: dict[str, Any] | None,
-    aliases: dict[str, str] | None,
-    serialization_aliases: dict[str, str] | None,
-    custom_formatters_kwargs: dict[str, str] | None,
-    default_value_overrides: dict[str, Any] | None = None,
+    extra_template_data: defaultdict[str, dict[str, Any]] | None,
+    aliases: Mapping[str, str | list[str]] | None,
+    serialization_aliases: Mapping[str, str] | None,
+    custom_formatters_kwargs: Mapping[str, str] | None,
+    default_value_overrides: Mapping[str, Any] | None = None,
 ) -> Exit:
     """Watch input files and regenerate on changes."""
     from datamodel_code_generator.__main__ import Exit, run_generate_from_config  # noqa: PLC0415
@@ -57,7 +60,9 @@ def watch_and_regenerate(  # noqa: PLR0913, PLR0917
                     aliases=aliases,
                     serialization_aliases=serialization_aliases,
                     command_line=None,
-                    custom_formatters_kwargs=custom_formatters_kwargs,
+                    custom_formatters_kwargs=dict(formatter_kwargs)
+                    if (formatter_kwargs := custom_formatters_kwargs) is not None
+                    else None,
                     default_value_overrides=default_value_overrides,
                 )
                 print("Done.")  # noqa: T201

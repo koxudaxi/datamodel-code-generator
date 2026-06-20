@@ -12,9 +12,17 @@ datamodel-codegen --input schema.json --output model.py \
   --output-model-type pydantic_v2.BaseModel
 ```
 
-## Validators File Format
+You can also pass the same JSON object inline:
 
-The validators file is a JSON file that maps model names to their validator definitions.
+```bash
+datamodel-codegen --input schema.json --output model.py \
+  --validators '{"User":{"validators":[{"field":"name","function":"myapp.validators.validate_name"}]}}' \
+  --output-model-type pydantic_v2.BaseModel
+```
+
+## Validators Format
+
+The validators JSON maps model names to their validator definitions. Pass it either inline or as a JSON file path.
 
 ### Structure
 
@@ -187,7 +195,7 @@ class User(BaseModel):
 ## Notes
 
 - This feature only supports Pydantic v2 (`--output-model-type pydantic_v2.BaseModel`)
-- The `ModelName` in the validators file must match the generated Python class name
+- The `ModelName` in the validators JSON must match the generated Python class name
 - Validator functions are imported automatically based on the `function` path
 - When the same validator function is used multiple times, an incrementing suffix (`_1`, `_2`, etc.) is added to ensure method name uniqueness
 

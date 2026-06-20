@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import importlib.util
 import itertools
 import json
 import os
+import sys
 import tempfile
 from collections import defaultdict
+from collections.abc import Sequence
 from pathlib import Path
 
 import black
@@ -35,6 +38,7 @@ from tests.conftest import (
     MockHttpxResponse,
     assert_directory_content,
     assert_httpx_get_kwargs,
+    assert_output,
     create_assert_file_content,
     freeze_time,
     validate_generated_code,
@@ -205,6 +209,108 @@ def test_main_array_uri_items_preserves_min_items(output_file: Path) -> None:
             "--disable-timestamp",
         ],
         force_exec_validation=True,
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--emit-model-metadata"],
+    option_description=(
+        "Write a separate JSON map from source schema references to the final generated models, modules, fields, "
+        "and type hints."
+    ),
+    input_schema="jsonschema/model_metadata.json",
+    cli_args=["--emit-model-metadata", "model-map.json", "--module-split-mode", "single", "--disable-timestamp"],
+    golden_output="jsonschema/model_metadata_module_split/root_title.py",
+    extra_outputs=[
+        {
+            "title": "Generated metadata (`model-map.json`)",
+            "path": "main/jsonschema/model_metadata_map.txt",
+            "language": "json",
+        }
+    ],
+)
+def test_main_emit_model_metadata(output_file: Path) -> None:
+    """Write generated model metadata to a separate JSON file."""
+    output_dir = output_file.with_suffix("")
+    metadata_path = output_file.parent / "metadata" / "model-map.json"
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_metadata.json",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "model_metadata_module_split",
+        extra_args=[
+            "--emit-model-metadata",
+            str(metadata_path),
+            "--module-split-mode",
+            "single",
+            "--disable-timestamp",
+        ],
+    )
+    assert_output(metadata_path.read_text(encoding="utf-8"), EXPECTED_JSON_SCHEMA_PATH / "model_metadata_map.txt")
+
+
+def test_main_emit_model_metadata_rejects_check(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Reject metadata output in no-write check mode."""
+    metadata_path = output_file.parent / "metadata" / "model-map.json"
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_metadata.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        file_should_not_exist=(metadata_path, output_file),
+        capsys=capsys,
+        expected_stderr_contains="Error: --check cannot be used with --emit-model-metadata",
+        extra_args=["--check", "--emit-model-metadata", str(metadata_path)],
+    )
+
+
+def test_main_emit_model_metadata_preserves_source_ref_for_internal_modules(output_dir: Path) -> None:
+    """Keep source refs stable when circular import resolution relocates models."""
+    metadata_path = output_dir.parent / "metadata" / "model-map.json"
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_circular.json",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "use_generic_base_class_circular",
+        extra_args=[
+            "--emit-model-metadata",
+            str(metadata_path),
+            "--extra-fields",
+            "forbid",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--module-split-mode",
+            "single",
+            "--use-generic-base-class",
+        ],
+    )
+    assert_output(
+        metadata_path.read_text(encoding="utf-8"),
+        EXPECTED_JSON_SCHEMA_PATH / "use_generic_base_class_circular_metadata_map.txt",
+    )
+
+
+def test_main_emit_model_metadata_keeps_source_model_named_base_model(output_file: Path) -> None:
+    """Keep a legitimate source model named BaseModel in metadata."""
+    metadata_path = output_file.parent / "metadata" / "model-map.json"
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_metadata_base_model_name.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_file=EXPECTED_JSON_SCHEMA_PATH / "model_metadata_base_model_name.py",
+        extra_args=[
+            "--emit-model-metadata",
+            str(metadata_path),
+            "--disable-timestamp",
+        ],
+    )
+    assert_output(
+        metadata_path.read_text(encoding="utf-8"),
+        EXPECTED_JSON_SCHEMA_PATH / "model_metadata_base_model_name_map.txt",
     )
 
 
@@ -1932,6 +2038,42 @@ def test_main_nested_json_pointer(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_definitions_namespace(output_file: Path) -> None:
+    """Test nested namespace-like definitions are parsed without wrapper models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "definitions_v2_namespace.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="definitions_v2_namespace.py",
+        extra_args=["--disable-timestamp"],
+    )
+
+
+def test_main_jsonschema_nested_defs_namespace_ref(output_file: Path) -> None:
+    """Test nested $defs/definitions namespace references skip wrapper models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nested_defs_namespace_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nested_defs_namespace_ref.py",
+        extra_args=["--disable-timestamp"],
+    )
+
+
+def test_main_jsonschema_root_ref_self_with_keywords(output_file: Path) -> None:
+    """Test root $ref '#' with local schema keywords parses the local schema."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_ref_self_with_keywords.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_ref_self_with_keywords.py",
+        extra_args=["--disable-timestamp"],
+    )
+
+
 def test_main_jsonschema_multiple_files_json_pointer(output_dir: Path) -> None:
     """Test JSON pointer with multiple files."""
     run_main_and_assert(
@@ -3448,6 +3590,109 @@ def test_main_jsonschema_root_model_ordering(output_file: Path, extra_args: list
 
 
 @pytest.mark.cli_doc(
+    options=["--use-root-model-sequence-interface"],
+    option_description="""Make non-null sequence-like Pydantic v2 RootModel classes implement collections.abc.Sequence.
+
+When enabled, a RootModel whose root is list[T] or Sequence[T] inherits from Sequence[T]
+and includes __iter__, __getitem__, and __len__ methods that delegate to the wrapped root value.
+Scalar, optional, nullable, and RootModel type-alias outputs are unchanged.
+
+This makes generated RootModel wrappers convenient to use anywhere a typed sequence is expected,
+without unpacking `.root` at every call site:
+
+```python
+from collections.abc import Sequence
+
+pets = Pets(root=[Pet(name="dog")])
+
+first_pet: Pet = pets[0]
+selected_pets: list[Pet] = pets[:1]
+pet_names = [pet.name for pet in pets]
+
+def render_pet_names(pets: Sequence[Pet]) -> list[str]:
+    return [pet.name for pet in pets]
+
+render_pet_names(pets)
+```
+
+When used with `--custom-template-dir`, a custom `pydantic_v2/RootModel.jinja2` template must render both
+`sequence_base_class` and the helper methods using `sequence_item_type` and `sequence_slice_type`. If the custom
+RootModel template does not render the sequence base class and helper methods, generation fails with an error
+instead of silently ignoring this option.""",
+    input_schema="jsonschema/root_model_sequence_interface.json",
+    cli_args=[
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--use-root-model-sequence-interface",
+        "--class-name",
+        "Pets",
+    ],
+    golden_output="jsonschema/root_model_sequence_interface.py",
+)
+def test_main_jsonschema_root_model_sequence_interface(output_file: Path) -> None:
+    """Generate the Sequence interface for list RootModel classes."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_sequence_interface.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_sequence_interface.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-root-model-sequence-interface",
+            "--class-name",
+            "Pets",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+    module_name = "generated_root_model_sequence_interface"
+    spec = importlib.util.spec_from_file_location(module_name, output_file)
+    if spec is None:  # pragma: no cover
+        pytest.fail(f"Unable to load generated module from {output_file}", pytrace=False)
+    if spec.loader is None:  # pragma: no cover
+        pytest.fail(f"Unable to load generated module loader from {output_file}", pytrace=False)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+        pet = module.Pet(name="dog")
+        pets = module.Pets(root=[pet])
+        if not isinstance(pets, Sequence):  # pragma: no cover
+            pytest.fail("Generated RootModel does not implement collections.abc.Sequence")
+        if pets.count(pet) != 1:  # pragma: no cover
+            pytest.fail("Generated RootModel Sequence.count does not delegate to root")
+        if pets.index(pet) != 0:  # pragma: no cover
+            pytest.fail("Generated RootModel Sequence.index does not delegate to root")
+        if list(reversed(pets)) != [pet]:  # pragma: no cover
+            pytest.fail("Generated RootModel Sequence.__reversed__ does not delegate to root")
+    finally:
+        sys.modules.pop(module_name, None)
+
+
+def test_main_jsonschema_root_model_sequence_interface_type_alias(output_file: Path) -> None:
+    """Sequence interface is skipped for RootModel type aliases."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_sequence_interface.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_sequence_interface_type_alias.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-root-model-sequence-interface",
+            "--use-root-model-type-alias",
+            "--class-name",
+            "Pets",
+            "--disable-timestamp",
+        ],
+    )
+
+
+@pytest.mark.cli_doc(
     options=["--field-include-all-keys"],
     option_description="""Include all schema keys in Field() json_schema_extra.
 
@@ -3864,6 +4109,99 @@ def test_main_jsonschema_base_class_map_from_file(output_file: Path, tmp_path: P
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--model-name-map"],
+    option_description="""Rename generated model classes from a JSON mapping.
+
+The `--model-name-map` option applies explicit class names to generated models.
+Mapping keys can be canonical schema refs such as `#/definitions/Foo` or the
+current generated class name such as `Foo1`. Values are final Python class names.
+
+This is useful when a schema cannot be edited but generated model names must be
+stable for public APIs or downstream code. Colliding mapped names fail instead
+of being silently suffixed.""",
+    input_schema="jsonschema/model_name_map.json",
+    cli_args=[
+        "--model-name-map",
+        '{"#/definitions/Foo": "RenamedFoo", "Bar": "RenamedBar", "model-name": "OriginalMapped"}',
+    ],
+    golden_output="jsonschema/model_name_map.py",
+    related_options=["--use-title-as-name", "--naming-strategy"],
+)
+def test_main_jsonschema_model_name_map(output_file: Path) -> None:
+    """Test class renames by schema ref, generated class name, and original schema name."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_name_map.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="model_name_map.py",
+        extra_args=[
+            "--model-name-map",
+            '{"#/definitions/Foo": "RenamedFoo", "Bar": "RenamedBar", "model-name": "OriginalMapped"}',
+        ],
+    )
+
+
+def test_main_jsonschema_model_name_map_from_file(output_file: Path, tmp_path: Path) -> None:
+    """Test model_name_map loaded from a JSON file."""
+    mapping_path = tmp_path / "model_name_map.json"
+    mapping_path.write_text(
+        json.dumps({
+            "#/definitions/Foo": "RenamedFoo",
+            "Bar": "RenamedBar",
+            "model-name": "OriginalMapped",
+        }),
+        encoding="utf-8",
+    )
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_name_map.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="model_name_map.py",
+        extra_args=["--model-name-map", str(mapping_path)],
+    )
+
+
+def test_main_jsonschema_model_name_map_rejects_collision(
+    output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test mapped class name collisions fail instead of adding a suffix."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_name_map.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        file_should_not_exist=output_file,
+        capsys=capsys,
+        expected_stderr_contains="but that model name is already used",
+        extra_args=[
+            "--model-name-map",
+            '{"#/definitions/Foo": "Renamed", "#/definitions/Bar": "Renamed"}',
+        ],
+    )
+
+
+def test_main_jsonschema_model_name_map_rejects_invalid_name(
+    output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test mapped class names must be valid Python identifiers."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_name_map.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        file_should_not_exist=output_file,
+        capsys=capsys,
+        expected_stderr_contains="to invalid class name",
+        extra_args=[
+            "--model-name-map",
+            '{"#/definitions/Foo": "not valid"}',
+        ],
+    )
+
+
 def test_main_jsonschema_base_class_map_from_file_invalid_json(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -3925,6 +4263,25 @@ def test_main_jsonschema_base_class_map_inline_requires_json_object(
         ],
         capsys,
         "Expected a JSON object",
+    )
+
+
+def test_main_jsonschema_base_class_map_rejects_invalid_mapping_value(
+    output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test invalid base-class-map values fail with the option name."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "base_class_map.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        file_should_not_exist=output_file,
+        capsys=capsys,
+        expected_stderr_contains="Invalid --base-class-map",
+        extra_args=[
+            "--base-class-map",
+            '{"Person": 1}',
+        ],
     )
 
 
@@ -4132,6 +4489,64 @@ def test_jsonschema_titles_use_title_as_name(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="titles_use_title_as_name.py",
         extra_args=["--use-title-as-name"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--infer-union-variant-names"],
+    option_description="""Infer names for inline oneOf/anyOf object variants from literal fields.
+
+The `--infer-union-variant-names` flag uses branch-local `const` values or
+single-value enums on a shared discriminator-style property to name generated
+inline union models. This is useful when inline union branches would otherwise
+receive position-based names such as `Event` and `Event1`.
+
+The literal value can also come from a single-value enum or an internal `$ref`.
+Existing generated output is preserved unless this option is enabled.""",
+    input_schema="jsonschema/infer_union_variant_names.json",
+    cli_args=["--infer-union-variant-names"],
+    golden_output="jsonschema/infer_union_variant_names.py",
+    comparison_output="jsonschema/infer_union_variant_names_baseline.py",
+    related_options=["--use-title-as-name"],
+)
+def test_jsonschema_infer_union_variant_names(output_file: Path) -> None:
+    """Infer inline union variant model names from literal branch fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "infer_union_variant_names.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="infer_union_variant_names.py",
+        extra_args=["--infer-union-variant-names"],
+    )
+
+
+def test_jsonschema_infer_union_variant_names_default_names(output_file: Path) -> None:
+    """Keep default inline union model names unless variant name inference is enabled."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "infer_union_variant_names.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="infer_union_variant_names_baseline.py",
+    )
+
+
+@LEGACY_BLACK_SKIP
+def test_jsonschema_infer_union_variant_names_edges(output_file: Path) -> None:
+    """Infer variant names for discriminator, scalar literal, ref, and fallback cases."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "infer_union_variant_names_edges.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="infer_union_variant_names_edges.py",
+        extra_args=[
+            "--infer-union-variant-names",
+            "--external-ref-mapping",
+            "external_kind.json=external.models",
+            "--disable-timestamp",
+        ],
     )
 
 
@@ -6848,6 +7263,44 @@ def test_main_enum_field_as_literal_map_inline_requires_json_object(
     )
 
 
+@pytest.mark.filterwarnings(
+    "ignore:JSON configuration values that do not match the documented schema are deprecated:FutureWarning"
+)
+def test_main_enum_field_as_literal_map_legacy_value_remains_compatible(output_file: Path) -> None:
+    """Test legacy enum-field map values remain compatible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_field_as_literal_map_legacy.py",
+        extra_args=[
+            "--enum-field-as-literal-map",
+            '{"status": "legacy"}',
+            "--disable-timestamp",
+        ],
+    )
+
+
+def test_main_enum_field_as_literal_map_legacy_value_rejects_invalid_type(
+    output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test legacy enum-field map fallback still rejects invalid value types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+        output_path=output_file,
+        input_file_type=None,
+        expected_exit=Exit.ERROR,
+        file_should_not_exist=output_file,
+        capsys=capsys,
+        expected_stderr_contains="Invalid --enum-field-as-literal-map",
+        extra_args=[
+            "--enum-field-as-literal-map",
+            '{"status": 1}',
+        ],
+    )
+
+
 def test_main_x_enum_field_as_literal(output_file: Path) -> None:
     """Test x-enum-field-as-literal schema extension for per-field control."""
     run_main_and_assert(
@@ -9416,9 +9869,9 @@ def test_main_jsonschema_contains_false_min_contains_zero(output_file: Path) -> 
 
 @pytest.mark.cli_doc(
     options=["--aliases"],
-    option_description="""Apply custom field and class name aliases from JSON file.
+    option_description="""Apply custom field and class name aliases via inline JSON or a JSON file path.
 
-The `--aliases` option allows renaming fields and classes via a JSON mapping file,
+The `--aliases` option allows renaming fields and classes via an inline JSON object or JSON mapping file,
 providing fine-grained control over generated names independent of schema definitions.
 Supports scoped format (ClassName.field) for hierarchical aliasing.""",
     input_schema="jsonschema/hierarchical_aliases.json",
@@ -9435,6 +9888,21 @@ def test_main_jsonschema_hierarchical_aliases_scoped(output_file: Path) -> None:
         extra_args=[
             "--aliases",
             str(ALIASES_DATA_PATH / "hierarchical_aliases_scoped.json"),
+        ],
+    )
+
+
+def test_main_jsonschema_hierarchical_aliases_inline_json(output_file: Path) -> None:
+    """Test aliases mapping loaded from inline JSON."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "hierarchical_aliases.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="jsonschema_hierarchical_aliases_scoped.py",
+        extra_args=[
+            "--aliases",
+            '{"Root.name": "root_name", "User.name": "user_name", "Address.name": "address_name"}',
         ],
     )
 
@@ -9522,7 +9990,7 @@ def test_main_jsonschema_serialization_alias_same_name_pydantic_v2(output_file: 
 
 @pytest.mark.cli_doc(
     options=["--serialization-aliases"],
-    option_description="""Apply custom Pydantic v2 serialization aliases from JSON file.
+    option_description="""Apply custom Pydantic v2 serialization aliases via inline JSON or a JSON file path.
 
 The `--serialization-aliases` option lets Pydantic v2 models keep input aliases
 or validation aliases while using separate output-only names for serialization.""",
@@ -9550,6 +10018,25 @@ def test_main_jsonschema_serialization_aliases_pydantic_v2(output_file: Path) ->
             str(ALIASES_DATA_PATH / "serialization_aliases.json"),
             "--serialization-aliases",
             str(ALIASES_DATA_PATH / "serialization_aliases_output.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_jsonschema_serialization_aliases_inline_json_pydantic_v2(output_file: Path) -> None:
+    """Test explicit serialization aliases from inline JSON."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "serialization_aliases.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="serialization_aliases.py",
+        extra_args=[
+            "--aliases",
+            (ALIASES_DATA_PATH / "serialization_aliases.json").read_text(encoding="utf-8"),
+            "--serialization-aliases",
+            (ALIASES_DATA_PATH / "serialization_aliases_output.json").read_text(encoding="utf-8"),
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
@@ -11476,16 +11963,16 @@ def test_x_python_type_union_anyof(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--default-values"],
-    option_description="""Override field default values from external JSON file.
+    option_description="""Override field default values via inline JSON or a JSON file path.
 
-The `--default-values` option allows specifying default values for fields via a JSON file.
+The `--default-values` option allows specifying default values for fields via an inline JSON object or JSON file.
 Supports scoped format (ClassName.field) for hierarchical overrides.""",
     input_schema="jsonschema/default_values_override.json",
     cli_args=["--default-values", "default_values/scoped_defaults.json"],
     golden_output="jsonschema/jsonschema_default_values_override.py",
 )
 def test_main_jsonschema_default_values_override(output_file: Path) -> None:
-    """Test default value overrides from external JSON file."""
+    """Test default value overrides from a JSON file path."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "default_values_override.json",
         output_path=output_file,
@@ -11495,6 +11982,21 @@ def test_main_jsonschema_default_values_override(output_file: Path) -> None:
         extra_args=[
             "--default-values",
             str(DEFAULT_VALUES_DATA_PATH / "scoped_defaults.json"),
+        ],
+    )
+
+
+def test_main_jsonschema_default_values_override_inline_json(output_file: Path) -> None:
+    """Test default value overrides from inline JSON."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "default_values_override.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="jsonschema_default_values_override.py",
+        extra_args=[
+            "--default-values",
+            (DEFAULT_VALUES_DATA_PATH / "scoped_defaults.json").read_text(encoding="utf-8"),
         ],
     )
 
@@ -11622,7 +12124,7 @@ def test_reduce_duplicate_field_types(output_file: Path) -> None:
     options=["--validators"],
     option_description="""Add custom field validators to generated Pydantic v2 models.
 
-The `--validators` option takes a JSON file defining validators per model.
+The `--validators` option takes an inline JSON object or JSON file defining validators per model.
 Each validator specifies the field(s) to validate, the validation function
 to import, and optionally the mode (before/after/wrap/plain).
 This allows injecting custom validation logic into generated models.""",
@@ -11639,7 +12141,7 @@ This allows injecting custom validation logic into generated models.""",
 def test_field_validators(output_file: Path) -> None:
     """Add custom field validators to generated Pydantic v2 models.
 
-    The `--validators` option takes a JSON file defining validators per model.
+    The `--validators` option takes an inline JSON object or JSON file defining validators per model.
     Each validator specifies the field(s) to validate, the validation function
     to import, and optionally the mode (before/after/wrap/plain).
     This allows injecting custom validation logic into generated models.
@@ -11653,6 +12155,25 @@ def test_field_validators(output_file: Path) -> None:
         extra_args=[
             "--validators",
             str(JSON_SCHEMA_DATA_PATH / "field_validators_config.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        skip_code_validation=True,
+    )
+
+
+def test_field_validators_inline_json(output_file: Path) -> None:
+    """Test validators configuration from inline JSON."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_validators.py",
+        extra_args=[
+            "--validators",
+            (JSON_SCHEMA_DATA_PATH / "field_validators_config.json").read_text(encoding="utf-8"),
             "--output-model-type",
             "pydantic_v2.BaseModel",
             "--disable-timestamp",

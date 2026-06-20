@@ -14,9 +14,19 @@ datamodel-codegen \
     --aliases aliases.json
 ```
 
-## 📋 Alias File Format
+You can also pass the same mapping inline:
 
-The alias file is a JSON file that maps original field names to their Python aliases.
+```bash
+datamodel-codegen \
+    --input schema.json \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py \
+    --aliases '{"id": "id_", "type": "type_"}'
+```
+
+## 📋 Alias Format
+
+The alias JSON maps original field names to their Python aliases. Pass it either inline or as a JSON file path.
 
 ### 📝 Flat Format (Traditional)
 
@@ -80,7 +90,7 @@ When you have the same field name in multiple classes but want different aliases
 }
 ```
 
-### 🏷️ Alias File
+### 🏷️ Alias Mapping
 
 ```json
 {

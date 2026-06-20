@@ -33,6 +33,7 @@ PACKAGE_ROOT = Path(datamodel_code_generator.__file__).parent
 WATCH_CLI_TIMEOUT_SECONDS = 15.0
 WATCH_CLI_STOP_TIMEOUT_SECONDS = 5.0
 WATCH_CLI_READY_DELAY_SECONDS = 0.3
+WATCH_CLI_CHANGE_RETRY_SECONDS = 0.75
 WATCH_SCHEMA_INITIAL = """\
 {
   "title": "WatchedPerson",
@@ -176,6 +177,33 @@ def _wait_for_watch_cli(
             )
         time.sleep(0.05)
     pytest.fail(f"Timed out waiting for {description}\n{_watch_cli_output(stdout_lines, stderr_lines)}")
+
+
+def _write_watch_cli_input_and_wait(
+    process: subprocess.Popen[str],
+    stdout_lines: list[str],
+    stderr_lines: list[str],
+    input_file: Path,
+    content: str,
+    condition: Callable[[], bool],
+    description: str,
+) -> None:
+    last_write = 0.0
+    input_file.write_text(content, encoding="utf-8")
+
+    def condition_after_write() -> bool:
+        nonlocal last_write
+
+        if condition():
+            return True
+
+        now = time.monotonic()
+        if now - last_write >= WATCH_CLI_CHANGE_RETRY_SECONDS:
+            input_file.touch()
+            last_write = now
+        return False
+
+    _wait_for_watch_cli(process, stdout_lines, stderr_lines, condition_after_write, description)
 
 
 def _lines_contain(lines: list[str], expected_text: str) -> bool:
@@ -598,11 +626,12 @@ def test_watch_cli_regenerates_file_output_on_change(tmp_path: Path) -> None:
     )
 
     try:
-        input_file.write_text(WATCH_SCHEMA_CHANGED, encoding="utf-8")
-        _wait_for_watch_cli(
+        _write_watch_cli_input_and_wait(
             process,
             stdout_lines,
             stderr_lines,
+            input_file,
+            WATCH_SCHEMA_CHANGED,
             lambda: _file_contains(output_file, "age: int | None = None"),
             "file output to be regenerated",
         )
@@ -645,11 +674,12 @@ def test_watch_cli_regenerates_directory_output_on_change(tmp_path: Path) -> Non
     )
 
     try:
-        input_file.write_text(WATCH_SCHEMA_CHANGED, encoding="utf-8")
-        _wait_for_watch_cli(
+        _write_watch_cli_input_and_wait(
             process,
             stdout_lines,
             stderr_lines,
+            input_file,
+            WATCH_SCHEMA_CHANGED,
             lambda: _file_contains(output_file, "age: int | None = None"),
             "directory output to be regenerated",
         )
@@ -681,11 +711,12 @@ def test_watch_cli_reports_generation_error_after_change(tmp_path: Path) -> None
     )
 
     try:
-        input_file.write_text(WATCH_SCHEMA_INVALID, encoding="utf-8")
-        _wait_for_watch_cli(
+        _write_watch_cli_input_and_wait(
             process,
             stdout_lines,
             stderr_lines,
+            input_file,
+            WATCH_SCHEMA_INVALID,
             lambda: _lines_contain(stderr_lines, "Error:"),
             "generation error to be reported",
         )

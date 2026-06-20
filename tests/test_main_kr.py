@@ -1803,9 +1803,9 @@ def test_formatters_option(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--custom-formatters-kwargs"],
-    option_description="""Pass custom arguments to custom formatters via JSON file.
+    option_description="""Pass custom arguments to custom formatters via inline JSON or a JSON file path.
 
-The `--custom-formatters-kwargs` flag accepts a path to a JSON file containing
+The `--custom-formatters-kwargs` flag accepts an inline JSON object or a path to a JSON file containing
 custom configuration for custom formatters (used with --custom-formatters).
 The file should contain a JSON object mapping formatter names to their kwargs.
 
@@ -1817,9 +1817,9 @@ configuration to user-defined formatter modules.""",
 )
 @freeze_time("2019-07-26")
 def test_custom_formatters_kwargs_option(output_file: Path) -> None:
-    """Pass custom arguments to custom formatters via JSON file.
+    """Pass custom arguments to custom formatters via inline JSON or a JSON file path.
 
-    The `--custom-formatters-kwargs` flag accepts a path to a JSON file containing
+    The `--custom-formatters-kwargs` flag accepts an inline JSON object or a path to a JSON file containing
     custom configuration for custom formatters (used with --custom-formatters).
     The file should contain a JSON object mapping formatter names to their kwargs.
 
@@ -1834,6 +1834,22 @@ def test_custom_formatters_kwargs_option(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file=EXPECTED_MAIN_KR_PATH / "input_output" / "output.py",
         extra_args=["--custom-formatters-kwargs", str(DATA_PATH / "config" / "formatter_kwargs.json")],
+    )
+
+
+@freeze_time("2019-07-26")
+def test_custom_formatters_kwargs_inline_json_option(output_file: Path) -> None:
+    """Pass custom formatter kwargs via inline JSON."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "input_output" / "output.py",
+        extra_args=[
+            "--custom-formatters-kwargs",
+            (DATA_PATH / "config" / "formatter_kwargs.json").read_text(encoding="utf-8"),
+        ],
     )
 
 
@@ -2256,6 +2272,20 @@ def test_output_format_json_schema_generation(capsys: pytest.CaptureFixture[str]
     )
 
 
+def test_output_format_json_schema_model_metadata(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --output-format-json-schema model-metadata emits the metadata JSON Schema."""
+    run_main_with_args(
+        [
+            "--output-format-json-schema",
+            "model-metadata",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "model_metadata_schema.txt",
+        assert_no_stderr=True,
+    )
+
+
 def test_output_format_json_schema_structured_output(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --output-format-json-schema structured-output emits the JSON Schema for all structured outputs."""
     run_main_with_args(
@@ -2270,6 +2300,20 @@ def test_output_format_json_schema_structured_output(capsys: pytest.CaptureFixtu
     )
 
 
+def test_output_format_json_schema_config(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --output-format-json-schema config emits the JSON config schema."""
+    run_main_with_args(
+        [
+            "--output-format-json-schema",
+            "config",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "config_schema.txt",
+        assert_no_stderr=True,
+    )
+
+
 def test_output_format_json_schema_validates_generation_json() -> None:
     """Test generation JSON output conforms to its emitted JSON Schema."""
     schema = json.loads((EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_schema.txt").read_text())
@@ -2278,12 +2322,49 @@ def test_output_format_json_schema_validates_generation_json() -> None:
     jsonschema.validate(instance=payload, schema=schema)
 
 
+def test_output_format_json_schema_validates_model_metadata_json(
+    output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test generated model metadata conforms to the emitted JSON Schema."""
+    metadata_path = output_file.parent / "metadata" / "model-map.json"
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_metadata_base_model_name.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=DATA_PATH / "expected" / "main" / "jsonschema" / "model_metadata_base_model_name.py",
+        extra_args=[
+            "--emit-model-metadata",
+            str(metadata_path),
+            "--disable-timestamp",
+        ],
+    )
+    run_main_with_args(
+        [
+            "--output-format-json-schema",
+            "model-metadata",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+    )
+    schema = json.loads(capsys.readouterr().out)
+    payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+
+    jsonschema.validate(instance=payload, schema=schema)
+
+
 def test_output_format_json_json_ready_values() -> None:
     """Test JSON output normalization handles CLI values used in configs."""
+
+    class Payload(pydantic.BaseModel):
+        name: str
+        skipped: str | None = None
+
     payload = _json_ready({
         "exit": Exit.OK,
         "path": Path("schema/person.json"),
         "items": [Exit.ERROR, Path("model/output.py")],
+        "model": Payload(name="value"),
     })
     assert_output(
         f"{json.dumps(payload, indent=2, ensure_ascii=False)}\n",

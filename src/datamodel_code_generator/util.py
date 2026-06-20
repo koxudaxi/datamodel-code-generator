@@ -80,29 +80,31 @@ def warn_yaml_deprecated_bool_values(text: str) -> None:
 
 
 def _iter_yaml_nodes(node: Any) -> Iterator[Any]:
+    import yaml  # noqa: PLC0415
+
     yield node
-    for item in getattr(node, "value", []) or []:
-        if isinstance(item, tuple):
-            for child in item:
-                yield from _iter_yaml_nodes(child)
-        else:
-            yield from _iter_yaml_nodes(item)
+    if isinstance(node, yaml.MappingNode):
+        for key_node, value_node in node.value:
+            yield from _iter_yaml_nodes(key_node)
+            yield from _iter_yaml_nodes(value_node)
+    elif isinstance(node, yaml.SequenceNode):
+        for item_node in node.value:
+            yield from _iter_yaml_nodes(item_node)
 
 
 def reject_unsupported_yaml_tags(text: str) -> None:
-    """Reject YAML tags that cannot be represented by generated JSON-like schemas."""
+    """Reject YAML tags that cannot be represented by JSON-compatible sample data."""
     if not any(marker in text for marker in _YAML_UNSUPPORTED_TAG_MARKERS):
         return
 
     import yaml  # noqa: PLC0415
 
-    root = yaml.compose(text)
-    if root is None:
+    node = yaml.compose(text, Loader=get_safe_loader())
+    if node is None:
         return
-
-    for node in _iter_yaml_nodes(root):
-        if getattr(node, "tag", None) in _YAML_UNSUPPORTED_TAGS:
-            msg = f"Unsupported YAML tag: {node.tag}"
+    for yaml_node in _iter_yaml_nodes(node):
+        if yaml_node.tag in _YAML_UNSUPPORTED_TAGS:
+            msg = f"Unsupported YAML tag: {yaml_node.tag}"
             raise yaml.YAMLError(msg)
 
 

@@ -76,7 +76,8 @@ PROMPT_GUIDANCE_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "- Module layout: choose one file or an output directory with `--module-split-mode` and reuse options.",
             (
                 "- Structured output: use `--output-format json` for machine-readable prompt or generation output, "
-                "and `--output-format-json-schema structured-output` when a tool needs the full tagged-union schema."
+                "`--emit-model-metadata` for generated model maps, and `--output-format-json-schema` when a tool "
+                "needs a validation schema."
             ),
             (
                 "- Runtime model base: use `--base-class` for a custom base class; "
@@ -122,8 +123,8 @@ PROMPT_GUIDANCE_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
                 "not for `--watch`."
             ),
             (
-                "- `--output-format-json-schema` accepts `generate-prompt`, `generation`, or `structured-output`; "
-                "choose the narrow schema unless the consumer handles multiple payload kinds."
+                "- `--output-format-json-schema` accepts `config`, `generate-prompt`, `generation`, "
+                "`model-metadata`, or `structured-output`; use `config` for JSON configuration schemas."
             ),
             "- `--validation` is deprecated; use `--field-constraints` for generated Field constraints.",
         ),

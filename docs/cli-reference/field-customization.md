@@ -4,9 +4,9 @@
 
 | Option | Description |
 |--------|-------------|
-| [`--aliases`](#aliases) | Apply custom field and class name aliases from JSON file. |
+| [`--aliases`](#aliases) | Apply custom field and class name aliases via inline JSON or... |
 | [`--capitalize-enum-members`](#capitalize-enum-members) | Capitalize enum member names to UPPER_CASE format. |
-| [`--default-values`](#default-values) | Override field default values from external JSON file. |
+| [`--default-values`](#default-values) | Override field default values via inline JSON or a JSON file... |
 | [`--empty-enum-field-name`](#empty-enum-field-name) | Name for empty string enum field values. |
 | [`--extra-fields`](#extra-fields) | Configure how generated models handle extra fields not defin... |
 | [`--field-constraints`](#field-constraints) | Generate Field() with validation constraints from schema. |
@@ -14,10 +14,11 @@
 | [`--field-extra-keys-without-x-prefix`](#field-extra-keys-without-x-prefix) | Include schema extension keys in Field() without requiring '... |
 | [`--field-include-all-keys`](#field-include-all-keys) | Include all schema keys in Field() json_schema_extra. |
 | [`--field-type-collision-strategy`](#field-type-collision-strategy) | Rename type class instead of field when names collide (Pydan... |
+| [`--infer-union-variant-names`](#infer-union-variant-names) | Infer names for inline oneOf/anyOf object variants from lite... |
 | [`--no-alias`](#no-alias) | Disable Field alias generation for non-Python-safe property ... |
 | [`--original-field-name-delimiter`](#original-field-name-delimiter) | Specify delimiter for original field names when using snake-... |
 | [`--remove-special-field-name-prefix`](#remove-special-field-name-prefix) | Remove the special prefix from field names. |
-| [`--serialization-aliases`](#serialization-aliases) | Apply custom Pydantic v2 serialization aliases from JSON fil... |
+| [`--serialization-aliases`](#serialization-aliases) | Apply custom Pydantic v2 serialization aliases via inline JS... |
 | [`--set-default-enum-member`](#set-default-enum-member) | Set the first enum member as the default value for enum fiel... |
 | [`--snake-case-field`](#snake-case-field) | Convert field names to snake_case format. |
 | [`--special-field-name-prefix`](#special-field-name-prefix) | Prefix to add to special field names (like reserved keywords... |
@@ -35,9 +36,9 @@
 
 ## `--aliases` {#aliases}
 
-Apply custom field and class name aliases from JSON file.
+Apply custom field and class name aliases via inline JSON or a JSON file path.
 
-The `--aliases` option allows renaming fields and classes via a JSON mapping file,
+The `--aliases` option allows renaming fields and classes via an inline JSON object or JSON mapping file,
 providing fine-grained control over generated names independent of schema definitions.
 
 **See also:** [Field Aliases](../aliases.md)
@@ -492,9 +493,9 @@ naming conventions for constants.
 
 ## `--default-values` {#default-values}
 
-Override field default values from external JSON file.
+Override field default values via inline JSON or a JSON file path.
 
-The `--default-values` option allows specifying default values for fields via a JSON file.
+The `--default-values` option allows specifying default values for fields via an inline JSON object or JSON file.
 Supports scoped format (ClassName.field) for hierarchical overrides.
 
 !!! tip "Usage"
@@ -1742,6 +1743,123 @@ to preserve the original field name, instead of renaming the field and adding an
 
 ---
 
+## `--infer-union-variant-names` {#infer-union-variant-names}
+
+Infer names for inline oneOf/anyOf object variants from literal fields.
+
+The `--infer-union-variant-names` flag uses branch-local `const` values or
+single-value enums on a shared discriminator-style property to name generated
+inline union models. This is useful when inline union branches would otherwise
+receive position-based names such as `Event` and `Event1`.
+
+The literal value can also come from a single-value enum or an internal `$ref`.
+Existing generated output is preserved unless this option is enabled.
+
+**Related:** [`--use-title-as-name`](field-customization.md#use-title-as-name)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --infer-union-variant-names # (1)!
+    ```
+
+    1. :material-arrow-left: `--infer-union-variant-names` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "WebhookEnvelope",
+      "type": "object",
+      "required": ["event"],
+      "properties": {
+        "event": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["type", "id"],
+              "properties": {
+                "type": {"const": "message.created"},
+                "id": {"type": "string"}
+              }
+            },
+            {
+              "type": "object",
+              "required": ["type", "reason"],
+              "properties": {
+                "type": {"const": "message.failed"},
+                "reason": {"type": "string"}
+              }
+            }
+          ]
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    === "With Option"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  infer_union_variant_names.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+
+        from __future__ import annotations
+
+        from typing import Literal
+
+        from pydantic import BaseModel
+
+
+        class EventMessageCreated(BaseModel):
+            type: Literal['message.created']
+            id: str
+
+
+        class EventMessageFailed(BaseModel):
+            type: Literal['message.failed']
+            reason: str
+
+
+        class WebhookEnvelope(BaseModel):
+            event: EventMessageCreated | EventMessageFailed
+        ```
+
+    === "Without Option"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  infer_union_variant_names.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+
+        from __future__ import annotations
+
+        from typing import Literal
+
+        from pydantic import BaseModel
+
+
+        class Event(BaseModel):
+            type: Literal['message.created']
+            id: str
+
+
+        class Event1(BaseModel):
+            type: Literal['message.failed']
+            reason: str
+
+
+        class WebhookEnvelope(BaseModel):
+            event: Event | Event1
+        ```
+
+---
+
 ## `--no-alias` {#no-alias}
 
 Disable Field alias generation for non-Python-safe property names.
@@ -1954,7 +2072,7 @@ The `--remove-special-field-name-prefix` flag configures the code generation beh
 
 ## `--serialization-aliases` {#serialization-aliases}
 
-Apply custom Pydantic v2 serialization aliases from JSON file.
+Apply custom Pydantic v2 serialization aliases via inline JSON or a JSON file path.
 
 The `--serialization-aliases` option lets Pydantic v2 models keep input aliases
 or validation aliases while using separate output-only names for serialization.
