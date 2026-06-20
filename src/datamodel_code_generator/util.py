@@ -37,7 +37,6 @@ _YAML_DEPRECATED_BOOL_LINE_PATTERN = re.compile(r"(?m)(?::|-\s*)\s*(True|False|T
 _YAML_DEPRECATED_BOOL_WARNING_MESSAGE = "YAML bool "
 _YAML_DEPRECATED_BOOL_WARNING_MODULE = "datamodel_code_generator"
 _YAML_UNSUPPORTED_TAGS = {"tag:yaml.org,2002:set"}
-_YAML_UNSUPPORTED_TAG_MARKERS = ("!!set", "tag:yaml.org,2002:set")
 # Pattern for scientific notation without decimal point (e.g., 1e-5, 1E+10)
 # Standard YAML only matches floats with decimal points, missing patterns like "1e-5"
 _YAML_SCIENTIFIC_NOTATION_PATTERN = re.compile(r"^[-+]?[0-9][0-9_]*[eE][-+]?[0-9]+$")
@@ -94,9 +93,6 @@ def _iter_yaml_nodes(node: Any) -> Iterator[Any]:
 
 def reject_unsupported_yaml_tags(text: str) -> None:
     """Reject YAML tags that cannot be represented by JSON-compatible sample data."""
-    if not any(marker in text for marker in _YAML_UNSUPPORTED_TAG_MARKERS):
-        return
-
     import yaml  # noqa: PLC0415
 
     node = yaml.compose(text, Loader=get_safe_loader())

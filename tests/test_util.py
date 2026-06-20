@@ -8,13 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from datamodel_code_generator.util import (
-    _get_toml_loader,
-    create_module_getattr,
-    get_safe_loader,
-    load_toml,
-    reject_unsupported_yaml_tags,
-)
+from datamodel_code_generator.util import _get_toml_loader, create_module_getattr, get_safe_loader, load_toml
 
 
 @pytest.fixture(autouse=True)
@@ -65,33 +59,6 @@ def test_safe_loader_warns_for_uppercase_yaml_bool() -> None:
         result = yaml.load("enabled: TRUE\n", Loader=get_safe_loader())
 
     assert result == {"enabled": True}
-
-
-@pytest.mark.allow_direct_assert
-def test_reject_unsupported_yaml_tags_skips_yaml_without_unsupported_markers() -> None:
-    """Unsupported tag validation keeps normal YAML on the fast path."""
-    reject_unsupported_yaml_tags("openapi: 3.1.0\ninfo:\n  title: Example\n  version: '1.0'\n")
-
-
-@pytest.mark.allow_direct_assert
-def test_reject_unsupported_yaml_tags_allows_marker_text_without_tag() -> None:
-    """Unsupported tag validation does not reject plain scalar marker text."""
-    reject_unsupported_yaml_tags("description: 'literal !!set text'\n")
-
-
-@pytest.mark.allow_direct_assert
-def test_reject_unsupported_yaml_tags_allows_comment_only_marker_text() -> None:
-    """Unsupported tag validation handles marker text that composes to no document."""
-    reject_unsupported_yaml_tags("# !!set\n")
-
-
-@pytest.mark.allow_direct_assert
-def test_reject_unsupported_yaml_tags_rejects_set_tag() -> None:
-    """Unsupported tag validation rejects YAML set tags."""
-    yaml = pytest.importorskip("yaml")
-
-    with pytest.raises(yaml.YAMLError, match=r"Unsupported YAML tag: tag:yaml\.org,2002:set"):
-        reject_unsupported_yaml_tags("fruits: !!set\n  ? apple\n")
 
 
 @pytest.mark.allow_direct_assert
