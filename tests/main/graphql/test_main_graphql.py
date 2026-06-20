@@ -553,6 +553,25 @@ def test_main_graphql_additional_imports_in_extra_template_data(output_file: Pat
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+def test_main_graphql_additional_imports_in_extra_template_data_inline_json(output_file: Path) -> None:
+    """Test extra-template-data loaded from inline JSON."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "additional-imports.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="additional_imports.py",
+        extra_args=[
+            "--extra-template-data",
+            (GRAPHQL_DATA_PATH / "additional-imports-in-extra-template-data.json").read_text(encoding="utf-8"),
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_additional_imports_in_extra_template_data_list_format(output_file: Path) -> None:
     """Test additional_imports specified in extra-template-data JSON file (list format)."""
     run_main_and_assert(
@@ -960,6 +979,22 @@ def test_main_graphql_use_default_with_default_values(output_file: Path) -> None
             "--use-default",
             "--default-values",
             str(DEFAULT_VALUES_DATA_PATH / "graphql_user_defaults.json"),
+        ],
+    )
+
+
+def test_main_graphql_use_default_with_default_values_inline_json(output_file: Path) -> None:
+    """Test --default-values loaded from inline JSON for GraphQL."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "default_values_required.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="default_values_required_use_default.py",
+        extra_args=[
+            "--use-default",
+            "--default-values",
+            (DEFAULT_VALUES_DATA_PATH / "graphql_user_defaults.json").read_text(encoding="utf-8"),
         ],
     )
 

@@ -112,7 +112,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
 
-from pydantic import ConfigDict, Field, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 from datamodel_code_generator import (
     AllExportsScope,
@@ -139,7 +139,7 @@ from datamodel_code_generator.format import (
     _get_black,
     is_supported_in_black,
 )
-from datamodel_code_generator.json_config import JsonConfigError, load_json_config_field
+from datamodel_code_generator.json_config import JsonConfigError, JsonConfigSpecs, load_json_config_field
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes
 from datamodel_code_generator.util import load_toml
@@ -720,11 +720,19 @@ def _json_ready(value: Any) -> Any:
         return value.value
     if isinstance(value, Path):
         return value.as_posix()
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode="json", exclude_none=True)
     if isinstance(value, tuple | list):
         return [_json_ready(item) for item in value]
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
         return {str(key): _json_ready(item) for key, item in value.items()}
     return value
+
+
+def _pyproject_toml_value(key: str, value: object) -> TomlValue:
+    if key not in JsonConfigSpecs.by_field_name or not isinstance(value, Mapping):
+        return cast("TomlValue", value)
+    return json.dumps(_json_ready(value), ensure_ascii=False, separators=(",", ":"))
 
 
 def _format_toml_value(value: TomlValue) -> str:
@@ -747,7 +755,7 @@ def _pyproject_config_data(args: Namespace) -> dict[str, TomlValue]:
         if key in EXCLUDED_CONFIG_OPTIONS:
             continue
 
-        config_data[key.replace("_", "-")] = cast("TomlValue", value)
+        config_data[key.replace("_", "-")] = _pyproject_toml_value(key, value)
     return config_data
 
 

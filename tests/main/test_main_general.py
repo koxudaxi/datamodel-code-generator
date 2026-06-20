@@ -33,7 +33,6 @@ from datamodel_code_generator.__main__ import (
     BOOLEAN_OPTIONAL_OPTIONS,
     Config,
     Exit,
-    generate_pyproject_config,
     run_generate_from_config,
 )
 from datamodel_code_generator.arguments import _dataclass_arguments, arg_parser
@@ -1451,14 +1450,18 @@ strict-types = ["str", "int"]
         )
 
 
-@pytest.mark.allow_direct_assert
-def test_generate_pyproject_config_json_mapping_option_preserves_value() -> None:
+def test_generate_pyproject_config_json_mapping_option_preserves_value(capsys: pytest.CaptureFixture[str]) -> None:
     """JSON mapping CLI values should not be serialized as key-only TOML lists."""
-    config = generate_pyproject_config(
-        Namespace(generate_pyproject_config=True, base_class_map='{"User":"custom.Base"}')
+    run_main_with_args(
+        [
+            "--generate-pyproject-config",
+            "--base-class-map",
+            (DATA_PATH / "config" / "base_class_map.json").read_text(encoding="utf-8"),
+        ],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_PATH / "generate_pyproject_config" / "json_mapping_option.txt",
+        assert_no_stderr=True,
     )
-
-    assert config == '[tool.datamodel-codegen]\nbase-class-map = "{\\"User\\":\\"custom.Base\\"}"\n'
 
 
 @pytest.mark.allow_direct_assert

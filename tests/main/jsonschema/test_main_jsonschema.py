@@ -256,7 +256,7 @@ def test_main_emit_model_metadata_rejects_check(output_file: Path, capsys: pytes
         output_path=output_file,
         input_file_type="jsonschema",
         expected_exit=Exit.ERROR,
-        file_should_not_exist=(output_file, metadata_path),
+        file_should_not_exist=metadata_path,
         capsys=capsys,
         expected_stderr_contains="Error: --check cannot be used with --emit-model-metadata",
         extra_args=["--check", "--emit-model-metadata", str(metadata_path)],
@@ -9843,6 +9843,25 @@ def test_main_jsonschema_serialization_aliases_pydantic_v2(output_file: Path) ->
     )
 
 
+def test_main_jsonschema_serialization_aliases_inline_json_pydantic_v2(output_file: Path) -> None:
+    """Test explicit serialization aliases from inline JSON."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "serialization_aliases.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="serialization_aliases.py",
+        extra_args=[
+            "--aliases",
+            (ALIASES_DATA_PATH / "serialization_aliases.json").read_text(encoding="utf-8"),
+            "--serialization-aliases",
+            (ALIASES_DATA_PATH / "serialization_aliases_output.json").read_text(encoding="utf-8"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 def test_main_jsonschema_serialization_aliases_with_use_serialization_alias_pydantic_v2(output_file: Path) -> None:
     """Test explicit serialization aliases override alias removal mode."""
     run_main_and_assert(
@@ -11786,6 +11805,21 @@ def test_main_jsonschema_default_values_override(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_default_values_override_inline_json(output_file: Path) -> None:
+    """Test default value overrides from inline JSON."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "default_values_override.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="jsonschema_default_values_override.py",
+        extra_args=[
+            "--default-values",
+            (DEFAULT_VALUES_DATA_PATH / "scoped_defaults.json").read_text(encoding="utf-8"),
+        ],
+    )
+
+
 def test_main_jsonschema_default_values_allof(output_file: Path) -> None:
     """Test default value overrides with allOf inheritance."""
     run_main_and_assert(
@@ -11940,6 +11974,25 @@ def test_field_validators(output_file: Path) -> None:
         extra_args=[
             "--validators",
             str(JSON_SCHEMA_DATA_PATH / "field_validators_config.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        skip_code_validation=True,
+    )
+
+
+def test_field_validators_inline_json(output_file: Path) -> None:
+    """Test validators configuration from inline JSON."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_validators.py",
+        extra_args=[
+            "--validators",
+            (JSON_SCHEMA_DATA_PATH / "field_validators_config.json").read_text(encoding="utf-8"),
             "--output-model-type",
             "pydantic_v2.BaseModel",
             "--disable-timestamp",

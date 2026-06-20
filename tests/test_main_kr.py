@@ -1837,6 +1837,22 @@ def test_custom_formatters_kwargs_option(output_file: Path) -> None:
     )
 
 
+@freeze_time("2019-07-26")
+def test_custom_formatters_kwargs_inline_json_option(output_file: Path) -> None:
+    """Pass custom formatter kwargs via inline JSON."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "input_output" / "output.py",
+        extra_args=[
+            "--custom-formatters-kwargs",
+            (DATA_PATH / "config" / "formatter_kwargs.json").read_text(encoding="utf-8"),
+        ],
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--http-ignore-tls"],
     option_description="""Disable TLS certificate verification for HTTPS requests.
@@ -2286,24 +2302,15 @@ def test_output_format_json_schema_structured_output(capsys: pytest.CaptureFixtu
 
 def test_output_format_json_schema_config(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --output-format-json-schema config emits the JSON config schema."""
-    run_main_with_args([
-        "--output-format-json-schema",
-        "config",
-    ])
-
-    captured = capsys.readouterr()
-    schema = json.loads(captured.out)
-    summary = {
-        "$schema": schema["$schema"],
-        "additionalProperties": schema["additionalProperties"],
-        "enum-field-as-literal-map": schema["properties"]["enum-field-as-literal-map"]["anyOf"][0]["$ref"],
-        "enum-values": schema["$defs"]["EnumFieldAsLiteralMapConfig"]["additionalProperties"]["enum"],
-        "model-name-map": schema["properties"]["model-name-map"]["anyOf"][0]["$ref"],
-    }
-    assert_output(captured.err, EXPECTED_EMPTY_OUTPUT_PATH)
-    assert_output(
-        f"{json.dumps(summary, indent=2, sort_keys=True)}\n",
-        EXPECTED_OUTPUT_FORMAT_JSON_PATH / "config_schema_summary.txt",
+    run_main_with_args(
+        [
+            "--output-format-json-schema",
+            "config",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "config_schema.txt",
+        assert_no_stderr=True,
     )
 
 
