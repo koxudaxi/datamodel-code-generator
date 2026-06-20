@@ -746,16 +746,18 @@ def test_apply_root_model_sequence_methods_skips_models_without_sequence_method(
 
 
 @pytest.mark.parametrize(
-    ("data_type", "expected_item_hint"),
+    ("data_type", "expected_item_hint", "expected_slice_hint"),
     [
-        (_root_model_sequence_type(DataType(type="str")), "str"),
-        (_root_model_sequence_type(), "Any"),
-        (_root_model_sequence_type(DataType()), "Any"),
+        (_root_model_sequence_type(DataType(type="str")), "str", "List[str]"),
+        (_root_model_sequence_type(), "Any", "List[Any]"),
+        (_root_model_sequence_type(DataType()), "Any", "List[Any]"),
+        (DataType(is_sequence=True, data_types=[DataType(type="str")]), "str", "Sequence[str]"),
     ],
 )
 def test_apply_root_model_sequence_methods_adds_sequence_helpers(
     data_type: DataType,
     expected_item_hint: str,
+    expected_slice_hint: str,
 ) -> None:
     """Sequence helpers use the wrapped item hint, falling back to Any when needed."""
     parser = JsonSchemaParser("", use_root_model_sequence_methods=True)
@@ -763,7 +765,14 @@ def test_apply_root_model_sequence_methods_adds_sequence_helpers(
 
     parser._apply_root_model_sequence_methods(root_model, root_model.fields)
 
+    assert len(root_model.methods) == 5
     assert root_model.methods[0].startswith(f"def __iter__(self) -> Iterator[{expected_item_hint}]")
+    assert root_model.methods[1].startswith(f"@overload\n    def __getitem__(self, index: int) -> {expected_item_hint}")
+    assert root_model.methods[2].startswith(
+        f"@overload\n    def __getitem__(self, index: slice) -> {expected_slice_hint}"
+    )
+    assert root_model.methods[3].startswith("def __getitem__(self, index: int | slice)")
+    assert root_model.methods[4].startswith("def __len__(self) -> int")
 
 
 @pytest.mark.parametrize(

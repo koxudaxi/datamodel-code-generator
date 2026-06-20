@@ -61,18 +61,24 @@ def test_root_model_sequence_methods() -> None:
         reference=Reference(name="TestRootModel", path="test_root_model"),
     )
 
-    root_model.add_sequence_methods("str")
+    root_model.add_sequence_methods("str", "list[str]")
 
     assert root_model.render() == (
         "class TestRootModel(RootModel[list[str]]):\n"
         "    root: list[str]\n\n"
         "    def __iter__(self) -> Iterator[str]:\n"
         "        return iter(self.root)\n\n"
-        "    def __getitem__(self, index: int) -> str:\n"
+        "    @overload\n"
+        "    def __getitem__(self, index: int) -> str: ...\n\n"
+        "    @overload\n"
+        "    def __getitem__(self, index: slice) -> list[str]: ...\n\n"
+        "    def __getitem__(self, index: int | slice) -> str | list[str]:\n"
         "        return self.root[index]\n\n"
         "    def __len__(self) -> int:\n"
         "        return len(self.root)"
     )
+    assert any(import_.import_ == "Iterator" for import_ in root_model.imports)
+    assert any(import_.import_ == "overload" for import_ in root_model.imports)
 
 
 def test_root_model_sequence_methods_add_any_import() -> None:
@@ -88,7 +94,7 @@ def test_root_model_sequence_methods_add_any_import() -> None:
         reference=Reference(name="TestRootModel", path="test_root_model"),
     )
 
-    root_model.add_sequence_methods("Any")
+    root_model.add_sequence_methods("Any", "list[Any]")
 
     assert "def __iter__(self) -> Iterator[Any]" in root_model.render()
     assert any(import_.import_ == "Any" for import_ in root_model.imports)

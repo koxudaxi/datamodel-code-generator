@@ -3698,7 +3698,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         item_type = root_type.data_types[0].type_hint if root_type.data_types else ANY
         item_type = item_type or ANY
-        add_sequence_methods(item_type)
+        slice_type = root_type.type_hint or f"list[{item_type}]"
+        if "[" not in slice_type:
+            slice_type = f"{slice_type}[{item_type}]"
+        add_sequence_methods(item_type, slice_type)
 
     def _get_root_model_sequence_type(self, data_type: DataType) -> DataType | None:  # noqa: PLR6301
         """Return a sequence data type for RootModel helpers.
