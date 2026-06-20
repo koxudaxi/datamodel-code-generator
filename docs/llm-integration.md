@@ -76,6 +76,7 @@ Use `--output-format-json-schema` when a tool or agent needs a JSON Schema befor
 it consumes command output:
 
 ```bash
+datamodel-codegen --output-format-json-schema config
 datamodel-codegen --output-format-json-schema generate-prompt
 datamodel-codegen --output-format-json-schema generation
 datamodel-codegen --output-format-json-schema structured-output
@@ -83,6 +84,8 @@ datamodel-codegen --output-format-json-schema structured-output
 
 The schema targets are scoped:
 
+- `config`: schema for JSON configuration options such as `--aliases`,
+  `--type-overrides`, and `--validators`
 - `generate-prompt`: schema for `--generate-prompt --output-format json`
 - `generation`: schema for normal generation with `--output-format json`
 - `structured-output`: tagged union schema for all structured command outputs,

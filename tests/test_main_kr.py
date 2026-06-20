@@ -1803,9 +1803,9 @@ def test_formatters_option(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--custom-formatters-kwargs"],
-    option_description="""Pass custom arguments to custom formatters via JSON file.
+    option_description="""Pass custom arguments to custom formatters via inline JSON or a JSON file path.
 
-The `--custom-formatters-kwargs` flag accepts a path to a JSON file containing
+The `--custom-formatters-kwargs` flag accepts an inline JSON object or a path to a JSON file containing
 custom configuration for custom formatters (used with --custom-formatters).
 The file should contain a JSON object mapping formatter names to their kwargs.
 
@@ -1817,9 +1817,9 @@ configuration to user-defined formatter modules.""",
 )
 @freeze_time("2019-07-26")
 def test_custom_formatters_kwargs_option(output_file: Path) -> None:
-    """Pass custom arguments to custom formatters via JSON file.
+    """Pass custom arguments to custom formatters via inline JSON or a JSON file path.
 
-    The `--custom-formatters-kwargs` flag accepts a path to a JSON file containing
+    The `--custom-formatters-kwargs` flag accepts an inline JSON object or a path to a JSON file containing
     custom configuration for custom formatters (used with --custom-formatters).
     The file should contain a JSON object mapping formatter names to their kwargs.
 
@@ -2281,6 +2281,29 @@ def test_output_format_json_schema_structured_output(capsys: pytest.CaptureFixtu
         capsys=capsys,
         expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "structured_output_schema.txt",
         assert_no_stderr=True,
+    )
+
+
+def test_output_format_json_schema_config(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --output-format-json-schema config emits the JSON config schema."""
+    run_main_with_args([
+        "--output-format-json-schema",
+        "config",
+    ])
+
+    captured = capsys.readouterr()
+    schema = json.loads(captured.out)
+    summary = {
+        "$schema": schema["$schema"],
+        "additionalProperties": schema["additionalProperties"],
+        "enum-field-as-literal-map": schema["properties"]["enum-field-as-literal-map"]["anyOf"][0]["$ref"],
+        "enum-values": schema["$defs"]["EnumFieldAsLiteralMapConfig"]["additionalProperties"]["enum"],
+        "model-name-map": schema["properties"]["model-name-map"]["anyOf"][0]["$ref"],
+    }
+    assert_output(captured.err, EXPECTED_EMPTY_OUTPUT_PATH)
+    assert_output(
+        f"{json.dumps(summary, indent=2, sort_keys=True)}\n",
+        EXPECTED_OUTPUT_FORMAT_JSON_PATH / "config_schema_summary.txt",
     )
 
 

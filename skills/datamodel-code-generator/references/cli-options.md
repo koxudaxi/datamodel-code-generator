@@ -92,10 +92,10 @@ Field naming, aliases, defaults, and constraints.
 - `--use-single-line-docstring`: Use single-line docstrings when the content fits on one line
 - `--no-alias`: Do not add a field alias. E.g., if --snake-case-field is used along with a base class, which has an alias_generator
 - `--use-serialization-alias`: Use serialization_alias instead of alias for field aliasing (Pydantic v2 only). This allows setting values using the Pythonic field name while serializing to the original name.
-- `--serialization-aliases`: Serialization alias mapping file (JSON) for Pydantic v2. Format: {'<schema_field>': '<serialization_alias>'}. Supports hierarchical formats: Flat: {'name': 'fullName'} applies to all occurrences. Scoped: {'User.name': 'fullName'} applies to specific class.
+- `--serialization-aliases`: Serialization alias mapping as inline JSON or a JSON file path for Pydantic v2. Format: {'<schema_field>': '<serialization_alias>'}. Supports hierarchical formats: Flat: {'name': 'fullName'} applies to all occurrences. Scoped: {'User.name': 'fullName'} applies to specific class.
 - `--field-type-collision-strategy`: Strategy for handling field name and type name collisions (Pydantic v2 only). 'rename-field': rename field with suffix and add alias (default). 'rename-type': rename type class with suffix to preserve field name. Choices: `rename-field`, `rename-type`.
-- `--aliases`: Alias mapping file (JSON) for renaming fields. Format: {'<schema_field>': '<python_name>'} - the schema field name becomes the Pydantic alias. Supports hierarchical formats: Flat: {'id': 'id_'} applies to all occurrences. Scoped: {'User.name': 'user_name'} applies to specific class. Priority: scoped > flat. Multiple aliases (Pydantic v2 only): {'field': ['alt1', 'alt2']} uses AliasChoices for validation. Example: {'User.name': 'user_name', 'id': 'id_'} generates `id_: ... = Field(alias='id')`.
-- `--default-values`: Default value overrides file (JSON). Supports hierarchical formats: Flat: {'field': value} applies to all occurrences. Scoped: {'ClassName.field': value} applies to specific class. Priority: scoped > flat. Note: Scoped keys use the generated class name for JSON Schema/OpenAPI. Required fields remain required unless --use-default is also specified. Example: {'User.status': 'active', 'page': 1, 'limit': 10}
+- `--aliases`: Alias mapping as inline JSON or a JSON file path for renaming fields. Format: {'<schema_field>': '<python_name>'} - the schema field name becomes the Pydantic alias. Supports hierarchical formats: Flat: {'id': 'id_'} applies to all occurrences. Scoped: {'User.name': 'user_name'} applies to specific class. Priority: scoped > flat. Multiple aliases (Pydantic v2 only): {'field': ['alt1', 'alt2']} uses AliasChoices for validation. Example: {'User.name': 'user_name', 'id': 'id_'} generates `id_: ... = Field(alias='id')`.
+- `--default-values`: Default value overrides as inline JSON or a JSON file path. Supports hierarchical formats: Flat: {'field': value} applies to all occurrences. Scoped: {'ClassName.field': value} applies to specific class. Priority: scoped > flat. Note: Scoped keys use the generated class name for JSON Schema/OpenAPI. Required fields remain required unless --use-default is also specified. Example: {'User.status': 'active', 'page': 1, 'limit': 10}
 
 ## Model Customization
 
@@ -162,8 +162,8 @@ Formatting, custom templates, and generated file headers.
 - `--custom-file-header`: Custom file header
 - `--custom-file-header-path`: Custom file header file path
 - `--custom-template-dir`: Custom template directory
-- `--extra-template-data`: Extra template data for output models. Input is supposed to be a json/yaml file. For OpenAPI and Jsonschema the keys are the spec path of the object, or the name of the object if you want to apply the template data to multiple objects with the same name. If you are using another input file type (e.g. GraphQL), the key is the name of the object. The value is a dictionary of the template data to add.
-- `--validators`: Validators configuration file (JSON). Defines field validators for Pydantic v2 models. Keys are model names, values contain validator definitions with field, function, and mode.
+- `--extra-template-data`: Extra template data for output models as inline JSON or a JSON file path. For OpenAPI and Jsonschema the keys are the spec path of the object, or the name of the object if you want to apply the template data to multiple objects with the same name. If you are using another input file type (e.g. GraphQL), the key is the name of the object. The value is a dictionary of the template data to add.
+- `--validators`: Validators configuration as inline JSON or a JSON file path. Defines field validators for Pydantic v2 models. Keys are model names, values contain validator definitions with field, function, and mode.
 - `--use-type-checking-imports`: Allow Ruff to move typing-only imports into TYPE_CHECKING blocks. By default this stays enabled, except for multi-module Ruff formatting of modular Pydantic output where referenced models stay imported at runtime. Use --no-use-type-checking-imports to force runtime imports.
 - `--no-use-type-checking-imports`: Allow Ruff to move typing-only imports into TYPE_CHECKING blocks. By default this stays enabled, except for multi-module Ruff formatting of modular Pydantic output where referenced models stay imported at runtime. Use --no-use-type-checking-imports to force runtime imports.
 - `--use-double-quotes`: Model generated with double quotes. Single quotes or your black config skip_string_normalization value will be used without this option.
@@ -172,7 +172,7 @@ Formatting, custom templates, and generated file headers.
 - `--class-decorators`: Custom decorators for generated model classes (delimited list input). For example "@dataclass_json(letter_case=LetterCase.CAMEL)". The "@" prefix is optional and will be added automatically if missing.
 - `--formatters`: Formatters for output (default: [black, isort]; use builtin for dependency-free formatting) Choices: `builtin`, `black`, `isort`, `ruff-check`, `ruff-format`.
 - `--custom-formatters`: List of modules with custom formatter (delimited list input).
-- `--custom-formatters-kwargs`: A file with kwargs for custom formatters.
+- `--custom-formatters-kwargs`: Custom formatter kwargs as inline JSON or a JSON file path.
 
 ## OpenAPI-only Options
 
@@ -218,7 +218,7 @@ General utility, HTTP, checking, and project integration options.
 - `--help` (alias: `-h`): show this help message and exit
 - `--no-color`: disable colorized output
 - `--output-format`: Format for command output (default: text). Use json for structured output when supported. Choices: `text`, `json`.
-- `--output-format-json-schema`: Output JSON Schema for the selected JSON output format and exit. Choices: `generate-prompt`, `generation`, `model-metadata`, `structured-output`.
+- `--output-format-json-schema`: Output JSON Schema for the selected JSON output or JSON configuration format and exit. Choices: `config`, `generate-prompt`, `generation`, `model-metadata`, `structured-output`.
 - `--generate-pyproject-config`: Generate pyproject.toml configuration from the provided CLI arguments and exit
 - `--generate-cli-command`: Generate CLI command from pyproject.toml configuration and exit
 - `--generate-prompt`: Generate a prompt for consulting LLMs about CLI options. Optionally provide your question as an argument. Pipe to CLI tools (e.g., `| claude -p`, `| codex exec`) or copy to clipboard (e.g., `| pbcopy`, `| xclip`) for web LLM chats.

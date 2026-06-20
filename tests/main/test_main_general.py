@@ -33,6 +33,7 @@ from datamodel_code_generator.__main__ import (
     BOOLEAN_OPTIONAL_OPTIONS,
     Config,
     Exit,
+    generate_pyproject_config,
     run_generate_from_config,
 )
 from datamodel_code_generator.arguments import _dataclass_arguments, arg_parser
@@ -1451,6 +1452,16 @@ strict-types = ["str", "int"]
 
 
 @pytest.mark.allow_direct_assert
+def test_generate_pyproject_config_json_mapping_option_preserves_value() -> None:
+    """JSON mapping CLI values should not be serialized as key-only TOML lists."""
+    config = generate_pyproject_config(
+        Namespace(generate_pyproject_config=True, base_class_map='{"User":"custom.Base"}')
+    )
+
+    assert config == '[tool.datamodel-codegen]\nbase-class-map = "{\\"User\\":\\"custom.Base\\"}"\n'
+
+
+@pytest.mark.allow_direct_assert
 @pytest.mark.parametrize(
     ("json_str", "expected"),
     [
@@ -1523,6 +1534,24 @@ def test_type_overrides_model_level(output_file: Path) -> None:
         extra_args=[
             "--type-overrides",
             '{"CustomType": "my_app.types.CustomType"}',
+        ],
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_type_overrides_model_level_from_file(output_file: Path, tmp_path: Path) -> None:
+    """Replace schema model types from a JSON file mapping."""
+    mapping_path = tmp_path / "type_overrides.json"
+    mapping_path.write_text(json.dumps({"CustomType": "my_app.types.CustomType"}), encoding="utf-8")
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_overrides_test.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_overrides_model_level.py",
+        extra_args=[
+            "--type-overrides",
+            str(mapping_path),
         ],
     )
 
