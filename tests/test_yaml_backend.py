@@ -97,6 +97,12 @@ class TestLoadYaml:
 
         assert result == {"description": "literal !!set text"}
 
+    def test_load_yaml_allows_literal_unsupported_tag_marker_text_in_sequence(self) -> None:
+        """Literal marker text is valid YAML sequence data when it is not a YAML tag."""
+        result = load_yaml("descriptions:\n  - 'literal !!set text'\n")
+
+        assert result == {"descriptions": ["literal !!set text"]}
+
     def test_load_yaml_allows_comment_only_unsupported_tag_marker_text(self) -> None:
         """Comment-only marker text is not a YAML tag."""
         result = load_yaml("# !!set\n")
