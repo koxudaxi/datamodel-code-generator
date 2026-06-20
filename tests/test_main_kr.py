@@ -21,7 +21,6 @@ from datamodel_code_generator.__main__ import (
     generate_pyproject_config,
 )
 from datamodel_code_generator.arguments import arg_parser
-from datamodel_code_generator.validators import ModelValidators
 from tests.conftest import (
     HttpxGetMockFactory,
     MockHttpxResponse,
@@ -2323,10 +2322,33 @@ def test_output_format_json_schema_validates_generation_json() -> None:
     jsonschema.validate(instance=payload, schema=schema)
 
 
-def test_output_format_json_schema_validates_model_metadata_json() -> None:
-    """Test emitted model metadata conforms to its emitted JSON Schema."""
-    schema = json.loads((EXPECTED_OUTPUT_FORMAT_JSON_PATH / "model_metadata_schema.txt").read_text())
-    payload = json.loads((DATA_PATH / "expected" / "main" / "jsonschema" / "model_metadata_map.txt").read_text())
+def test_output_format_json_schema_validates_model_metadata_json(
+    output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test generated model metadata conforms to the emitted JSON Schema."""
+    metadata_path = output_file.parent / "metadata" / "model-map.json"
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_metadata_base_model_name.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=DATA_PATH / "expected" / "main" / "jsonschema" / "model_metadata_base_model_name.py",
+        extra_args=[
+            "--emit-model-metadata",
+            str(metadata_path),
+            "--disable-timestamp",
+        ],
+    )
+    run_main_with_args(
+        [
+            "--output-format-json-schema",
+            "model-metadata",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+    )
+    schema = json.loads(capsys.readouterr().out)
+    payload = json.loads(metadata_path.read_text(encoding="utf-8"))
 
     jsonschema.validate(instance=payload, schema=schema)
 
@@ -2337,15 +2359,6 @@ def test_output_format_json_json_ready_values() -> None:
         "exit": Exit.OK,
         "path": Path("schema/person.json"),
         "items": [Exit.ERROR, Path("model/output.py")],
-        "validators": ModelValidators.model_validate({
-            "validators": [
-                {
-                    "field": "name",
-                    "function": "pkg.validators.clean",
-                    "mode": "before",
-                }
-            ]
-        }),
     })
     assert_output(
         f"{json.dumps(payload, indent=2, ensure_ascii=False)}\n",

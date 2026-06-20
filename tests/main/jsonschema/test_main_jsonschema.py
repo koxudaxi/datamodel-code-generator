@@ -4160,6 +4160,25 @@ def test_main_jsonschema_base_class_map_inline_requires_json_object(
     )
 
 
+def test_main_jsonschema_base_class_map_rejects_invalid_mapping_value(
+    output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test invalid base-class-map values fail with the option name."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "base_class_map.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        file_should_not_exist=output_file,
+        capsys=capsys,
+        expected_stderr_contains="Invalid --base-class-map",
+        extra_args=[
+            "--base-class-map",
+            '{"Person": 1}',
+        ],
+    )
+
+
 def test_main_jsonschema_custom_base_paths_list(output_file: Path) -> None:
     """Test customBasePath with list of base classes."""
     run_main_and_assert(
@@ -4404,6 +4423,18 @@ def test_jsonschema_infer_union_variant_names_default_names(output_file: Path) -
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="infer_union_variant_names_baseline.py",
+    )
+
+
+def test_jsonschema_infer_union_variant_names_edges(output_file: Path) -> None:
+    """Infer variant names for discriminator, scalar literal, ref, and fallback cases."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "infer_union_variant_names_edges.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="infer_union_variant_names_edges.py",
+        extra_args=["--infer-union-variant-names", "--disable-timestamp"],
     )
 
 
@@ -7118,6 +7149,26 @@ def test_main_enum_field_as_literal_map_inline_requires_json_object(
         capsys,
         "Expected a JSON object",
     )
+
+
+def test_main_enum_field_as_literal_map_legacy_value_warns(output_file: Path) -> None:
+    """Test legacy enum-field map values warn and remain compatible."""
+    with pytest.warns(
+        FutureWarning,
+        match="JSON configuration values that do not match the documented schema are deprecated",
+    ):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+            output_path=output_file,
+            input_file_type=None,
+            assert_func=assert_file_content,
+            expected_file="enum_field_as_literal_map_legacy.py",
+            extra_args=[
+                "--enum-field-as-literal-map",
+                '{"status": "legacy"}',
+                "--disable-timestamp",
+            ],
+        )
 
 
 def test_main_x_enum_field_as_literal(output_file: Path) -> None:

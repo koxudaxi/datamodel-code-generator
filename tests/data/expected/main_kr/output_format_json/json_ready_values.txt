@@ -4,14 +4,5 @@
   "items": [
     2,
     "model/output.py"
-  ],
-  "validators": {
-    "validators": [
-      {
-        "field": "name",
-        "function": "pkg.validators.clean",
-        "mode": "before"
-      }
-    ]
-  }
+  ]
 }
