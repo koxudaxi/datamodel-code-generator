@@ -106,6 +106,7 @@ Generated model class and package behavior.
 - `--allow-population-by-field-name`: Allow population by field name
 - `--no-allow-population-by-field-name`: Allow population by field name
 - `--class-name`: Set class name of root model
+- `--model-name-map`: Rename generated model classes by schema ref or current generated class name using a JSON object or JSON file.
 - `--allow-leading-underscore-class-name`: Allow an explicitly specified root class name to start with an underscore
 - `--class-name-prefix`: Prefix to add to generated class names (e.g., 'Api' produces 'ApiUser'). Does not apply to root model when --class-name is specified.
 - `--class-name-suffix`: Suffix to add to generated class names (e.g., 'Schema' produces 'UserSchema'). Does not apply to root model when --class-name is specified.

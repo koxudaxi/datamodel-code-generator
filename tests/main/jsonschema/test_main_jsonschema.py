@@ -3967,6 +3967,99 @@ def test_main_jsonschema_base_class_map_from_file(output_file: Path, tmp_path: P
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--model-name-map"],
+    option_description="""Rename generated model classes from a JSON mapping.
+
+The `--model-name-map` option applies explicit class names to generated models.
+Mapping keys can be canonical schema refs such as `#/definitions/Foo` or the
+current generated class name such as `Foo1`. Values are final Python class names.
+
+This is useful when a schema cannot be edited but generated model names must be
+stable for public APIs or downstream code. Colliding mapped names fail instead
+of being silently suffixed.""",
+    input_schema="jsonschema/model_name_map.json",
+    cli_args=[
+        "--model-name-map",
+        '{"#/definitions/Foo": "RenamedFoo", "Bar": "RenamedBar", "model-name": "OriginalMapped"}',
+    ],
+    golden_output="jsonschema/model_name_map.py",
+    related_options=["--use-title-as-name", "--naming-strategy"],
+)
+def test_main_jsonschema_model_name_map(output_file: Path) -> None:
+    """Test class renames by schema ref, generated class name, and original schema name."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_name_map.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="model_name_map.py",
+        extra_args=[
+            "--model-name-map",
+            '{"#/definitions/Foo": "RenamedFoo", "Bar": "RenamedBar", "model-name": "OriginalMapped"}',
+        ],
+    )
+
+
+def test_main_jsonschema_model_name_map_from_file(output_file: Path, tmp_path: Path) -> None:
+    """Test model_name_map loaded from a JSON file."""
+    mapping_path = tmp_path / "model_name_map.json"
+    mapping_path.write_text(
+        json.dumps({
+            "#/definitions/Foo": "RenamedFoo",
+            "Bar": "RenamedBar",
+            "model-name": "OriginalMapped",
+        }),
+        encoding="utf-8",
+    )
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_name_map.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="model_name_map.py",
+        extra_args=["--model-name-map", str(mapping_path)],
+    )
+
+
+def test_main_jsonschema_model_name_map_rejects_collision(
+    output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test mapped class name collisions fail instead of adding a suffix."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_name_map.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        file_should_not_exist=output_file,
+        capsys=capsys,
+        expected_stderr_contains="but that model name is already used",
+        extra_args=[
+            "--model-name-map",
+            '{"#/definitions/Foo": "Renamed", "#/definitions/Bar": "Renamed"}',
+        ],
+    )
+
+
+def test_main_jsonschema_model_name_map_rejects_invalid_name(
+    output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test mapped class names must be valid Python identifiers."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_name_map.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        file_should_not_exist=output_file,
+        capsys=capsys,
+        expected_stderr_contains="to invalid class name",
+        extra_args=[
+            "--model-name-map",
+            '{"#/definitions/Foo": "not valid"}',
+        ],
+    )
+
+
 def test_main_jsonschema_base_class_map_from_file_invalid_json(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

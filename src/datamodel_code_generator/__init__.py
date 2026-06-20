@@ -948,6 +948,7 @@ def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
         "dump_resolve_reference_action": data_model_types.dump_resolve_reference_action,
         "extra_template_data": extra_template_data,
         "serialization_aliases": config.serialization_aliases,
+        "model_name_map": config.model_name_map,
         "base_path": input_.parent if isinstance(input_, Path) and input_.is_file() else None,
         "remote_text_cache": remote_text_cache,
         "known_third_party": data_model_types.known_third_party,

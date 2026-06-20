@@ -307,6 +307,13 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
+    "--model-name-map",
+    help="Rename generated model classes by schema ref or current generated class name "
+    "using a JSON object or JSON file.",
+    type=_json_value_or_file,
+    default=None,
+)
+model_options.add_argument(
     "--allow-leading-underscore-class-name",
     help="Allow an explicitly specified root class name to start with an underscore",
     action="store_true",

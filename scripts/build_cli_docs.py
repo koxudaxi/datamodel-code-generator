@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shlex
 import subprocess
 import sys
 from collections import defaultdict
@@ -448,7 +449,9 @@ def format_cli_args(cli_args: list[str]) -> list[str]:
         arg = cli_args[i]
         if arg.startswith("-") and i + 1 < len(cli_args) and not cli_args[i + 1].startswith("-"):
             value = cli_args[i + 1]
-            if " " in value or not value:
+            if '"' in value or "'" in value:
+                value = shlex.quote(value)
+            elif " " in value or not value:
                 value = f'"{value}"'
             formatted.append(f"{arg} {value}")
             i += 2

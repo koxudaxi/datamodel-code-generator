@@ -28,7 +28,7 @@ from datamodel_code_generator.cli_options import (
     is_excluded_from_docs,
     is_manual_doc,
 )
-from scripts.build_cli_docs import _documented_related_option, scan_docs_for_cli_option_tags
+from scripts.build_cli_docs import _documented_related_option, format_cli_args, scan_docs_for_cli_option_tags
 
 if TYPE_CHECKING:
     from collections.abc import Collection
@@ -119,6 +119,16 @@ def test_documented_related_option_prefers_existing_generated_section() -> None:
         "--no-use-union-operator",
         "--use-union-operator related option target",
     )
+
+
+def test_format_cli_args_shell_quotes_inline_json_values() -> None:
+    """Inline JSON values in generated examples should be copy-pasteable in a shell."""
+    assert format_cli_args([
+        "--model-name-map",
+        '{"#/definitions/Foo": "RenamedFoo", "Bar": "RenamedBar"}',
+    ]) == [
+        """--model-name-map '{"#/definitions/Foo": "RenamedFoo", "Bar": "RenamedBar"}'""",
+    ]
 
 
 def test_related_page_tags_prefer_existing_generated_section() -> None:

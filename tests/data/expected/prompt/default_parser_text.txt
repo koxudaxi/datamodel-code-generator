@@ -109,6 +109,7 @@
 - `--keyword-only`: Generate dataclasses with keyword-only fields (Python 3.10+).
 - `--model-extra-keys`: Add model-level schema extensions to ConfigDict json_schema_extra.
 - `--model-extra-keys-without-x-prefix`: Strip x- prefix from model-level schema extensions and add to ConfigDic...
+- `--model-name-map`: Rename generated model classes from a JSON mapping.
 - `--naming-strategy`: Use parent-prefixed naming strategy for duplicate model names.
 - `--no-allow-population-by-field-name`
 - `--no-collapse-root-models`

@@ -1066,6 +1066,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         target_pydantic_version=config.target_pydantic_version,
         base_class=config.base_class,
         base_class_map=config.base_class_map,
+        model_name_map=config.model_name_map,
         additional_imports=config.additional_imports,
         class_decorators=config.class_decorators,
         custom_template_dir=config.custom_template_dir,

@@ -384,6 +384,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --keep-model-order    Keep generated models' order
   --keyword-only        Defined models as keyword only (for example
                         dataclass(kw_only=True)).
+  --model-name-map MODEL_NAME_MAP
+                        Rename generated model classes by schema ref or
+                        current generated class name using a JSON object or
+                        JSON file.
   --module-split-mode {single}
                         Split generated models into separate files. 'single':
                         generate one file per model class.
