@@ -50,8 +50,8 @@ class RootModel(BaseModel):
             self.extra_template_data.pop(_CONFIG_ITEMS_TEMPLATE_DATA_KEY, None)
             self._additional_imports = [imp for imp in self._additional_imports if imp != IMPORT_CONFIG_DICT]
 
-    def add_sequence_methods(self, item_type: str, slice_type: str) -> None:
-        """Add sequence helper methods that delegate to the wrapped root value."""
+    def add_sequence_interface(self, item_type: str, slice_type: str) -> None:
+        """Add sequence interface helpers that delegate to the wrapped root value."""
         self._additional_imports.append(IMPORT_ABC_ITERATOR)
         self._additional_imports.append(IMPORT_ABC_SEQUENCE)
         self._additional_imports.append(IMPORT_OVERLOAD)

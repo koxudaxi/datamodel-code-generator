@@ -971,7 +971,7 @@ def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
         ),
         "use_object_type": config.use_object_type,
         "skip_root_model": skip_root_model,
-        "use_root_model_sequence_methods": config.use_root_model_sequence_methods,
+        "use_root_model_sequence_interface": config.use_root_model_sequence_interface,
     }
     return data_model_types, source, defer_formatting, additional_options
 

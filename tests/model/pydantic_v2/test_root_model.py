@@ -43,8 +43,8 @@ def test_root_model() -> None:
     assert root_model.render() == ("class TestRootModel(RootModel[Optional[str]]):\n    root: Optional[str] = 'abc'")
 
 
-def test_root_model_sequence_methods() -> None:
-    """RootModel can render sequence helpers."""
+def test_root_model_sequence_interface() -> None:
+    """RootModel can render sequence interface helpers."""
     root_model = RootModel(
         fields=[
             DataModelFieldBase(
@@ -61,7 +61,7 @@ def test_root_model_sequence_methods() -> None:
         reference=Reference(name="TestRootModel", path="test_root_model"),
     )
 
-    root_model.add_sequence_methods("str", "list[str]")
+    root_model.add_sequence_interface("str", "list[str]")
 
     assert root_model.render() == (
         "class TestRootModel(RootModel[list[str]], Sequence[str]):\n"
@@ -83,8 +83,8 @@ def test_root_model_sequence_methods() -> None:
     assert any(import_.import_ == "SupportsIndex" for import_ in root_model.imports)
 
 
-def test_root_model_sequence_methods_add_any_import() -> None:
-    """Sequence helpers import Any when the wrapped item type is Any."""
+def test_root_model_sequence_interface_add_any_import() -> None:
+    """Sequence interface helpers import Any when the wrapped item type is Any."""
     root_model = RootModel(
         fields=[
             DataModelFieldBase(
@@ -96,7 +96,7 @@ def test_root_model_sequence_methods_add_any_import() -> None:
         reference=Reference(name="TestRootModel", path="test_root_model"),
     )
 
-    root_model.add_sequence_methods("Any", "list[Any]")
+    root_model.add_sequence_interface("Any", "list[Any]")
 
     assert "def __iter__(self) -> Iterator[Any]" in root_model.render()
     assert any(import_.import_ == "Any" for import_ in root_model.imports)

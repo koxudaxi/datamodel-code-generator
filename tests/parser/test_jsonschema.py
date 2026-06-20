@@ -666,12 +666,12 @@ def _root_model(fields: list[DataModelFieldBase] | None = None) -> RootModel:
     ("parser", "data_model_root", "fields"),
     [
         (
-            JsonSchemaParser("", use_root_model_sequence_methods=False),
+            JsonSchemaParser("", use_root_model_sequence_interface=False),
             _root_model([_root_model_sequence_field(_root_model_sequence_type(DataType(type="str")))]),
             [_root_model_sequence_field(_root_model_sequence_type(DataType(type="str")))],
         ),
         (
-            JsonSchemaParser("", use_root_model_sequence_methods=True),
+            JsonSchemaParser("", use_root_model_sequence_interface=True),
             TypeAlias(
                 fields=[_root_model_sequence_field(_root_model_sequence_type(DataType(type="str")))],
                 reference=Reference(name="Pets", path="pets"),
@@ -679,29 +679,29 @@ def _root_model(fields: list[DataModelFieldBase] | None = None) -> RootModel:
             [_root_model_sequence_field(_root_model_sequence_type(DataType(type="str")))],
         ),
         (
-            JsonSchemaParser("", use_root_model_sequence_methods=True),
+            JsonSchemaParser("", use_root_model_sequence_interface=True),
             _root_model(),
             [],
         ),
     ],
 )
-def test_apply_root_model_sequence_methods_skips_disabled_alias_and_empty_fields(
+def test_apply_root_model_sequence_interface_skips_disabled_alias_and_empty_fields(
     parser: JsonSchemaParser,
     data_model_root: RootModel | TypeAlias,
     fields: list[DataModelFieldBase],
 ) -> None:
-    """Sequence helpers are skipped unless the opt-in target is a concrete RootModel with a field."""
-    parser._apply_root_model_sequence_methods(data_model_root, fields)
+    """Sequence interface helpers are skipped unless the opt-in target is a concrete RootModel with a field."""
+    parser._apply_root_model_sequence_interface(data_model_root, fields)
 
     assert data_model_root.methods == []
 
 
-def test_apply_root_model_sequence_methods_skips_non_sequence_root() -> None:
-    """Sequence helpers are skipped for scalar RootModel classes."""
-    parser = JsonSchemaParser("", use_root_model_sequence_methods=True)
+def test_apply_root_model_sequence_interface_skips_non_sequence_root() -> None:
+    """Sequence interface helpers are skipped for scalar RootModel classes."""
+    parser = JsonSchemaParser("", use_root_model_sequence_interface=True)
     root_model = _root_model([_root_model_sequence_field(DataType(type="str"))])
 
-    parser._apply_root_model_sequence_methods(root_model, root_model.fields)
+    parser._apply_root_model_sequence_interface(root_model, root_model.fields)
 
     assert root_model.methods == []
 
@@ -713,12 +713,12 @@ def test_apply_root_model_sequence_methods_skips_non_sequence_root() -> None:
         (True, True),
     ],
 )
-def test_apply_root_model_sequence_methods_skips_optional_root_field(
+def test_apply_root_model_sequence_interface_skips_optional_root_field(
     required: bool,
     nullable: bool | None,
 ) -> None:
-    """Sequence helpers are skipped when the root field can be None."""
-    parser = JsonSchemaParser("", use_root_model_sequence_methods=True)
+    """Sequence interface helpers are skipped when the root field can be None."""
+    parser = JsonSchemaParser("", use_root_model_sequence_interface=True)
     root_model = _root_model([
         _root_model_sequence_field(
             _root_model_sequence_type(DataType(type="str")),
@@ -727,20 +727,20 @@ def test_apply_root_model_sequence_methods_skips_optional_root_field(
         )
     ])
 
-    parser._apply_root_model_sequence_methods(root_model, root_model.fields)
+    parser._apply_root_model_sequence_interface(root_model, root_model.fields)
 
     assert root_model.methods == []
 
 
-def test_apply_root_model_sequence_methods_skips_models_without_sequence_method() -> None:
+def test_apply_root_model_sequence_interface_skips_models_without_sequence_method() -> None:
     """The parser only applies helpers to RootModel implementations that expose the method."""
-    parser = JsonSchemaParser("", use_root_model_sequence_methods=True)
+    parser = JsonSchemaParser("", use_root_model_sequence_interface=True)
     base_model = BaseModel(
         fields=[_root_model_sequence_field(_root_model_sequence_type(DataType(type="str")))],
         reference=Reference(name="Pets", path="pets"),
     )
 
-    parser._apply_root_model_sequence_methods(base_model, base_model.fields)
+    parser._apply_root_model_sequence_interface(base_model, base_model.fields)
 
     assert base_model.methods == []
 
@@ -754,16 +754,16 @@ def test_apply_root_model_sequence_methods_skips_models_without_sequence_method(
         (DataType(is_sequence=True, data_types=[DataType(type="str")]), "str", "Sequence[str]"),
     ],
 )
-def test_apply_root_model_sequence_methods_adds_sequence_helpers(
+def test_apply_root_model_sequence_interface_adds_sequence_helpers(
     data_type: DataType,
     expected_item_hint: str,
     expected_slice_hint: str,
 ) -> None:
-    """Sequence helpers use the wrapped item hint, falling back to Any when needed."""
-    parser = JsonSchemaParser("", use_root_model_sequence_methods=True)
+    """Sequence interface helpers use the wrapped item hint, falling back to Any when needed."""
+    parser = JsonSchemaParser("", use_root_model_sequence_interface=True)
     root_model = _root_model([_root_model_sequence_field(data_type)])
 
-    parser._apply_root_model_sequence_methods(root_model, root_model.fields)
+    parser._apply_root_model_sequence_interface(root_model, root_model.fields)
 
     assert len(root_model.methods) == 5
     assert root_model.methods[0].startswith(f"def __iter__(self) -> Iterator[{expected_item_hint}]")

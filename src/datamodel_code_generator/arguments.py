@@ -370,10 +370,11 @@ model_options.add_argument(
     help="Skip generating the model for the root schema element",
 )
 model_options.add_argument(
-    "--use-root-model-sequence-methods",
+    "--use-root-model-sequence-interface",
     action="store_true",
     default=None,
-    help="Add __iter__, __getitem__, and __len__ methods to sequence-like RootModel classes (Pydantic v2 only)",
+    help="Make non-null sequence-like Pydantic v2 RootModel classes implement collections.abc.Sequence by adding "
+    "Sequence[T] inheritance and root-delegating __iter__, __getitem__, and __len__ methods",
 )
 model_options.add_argument(
     "--disable-appending-item-suffix",

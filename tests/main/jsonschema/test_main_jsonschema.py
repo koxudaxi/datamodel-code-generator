@@ -3590,33 +3590,34 @@ def test_main_jsonschema_root_model_ordering(output_file: Path, extra_args: list
 
 
 @pytest.mark.cli_doc(
-    options=["--use-root-model-sequence-methods"],
-    option_description="""Add sequence helper methods to Pydantic v2 RootModel classes.
+    options=["--use-root-model-sequence-interface"],
+    option_description="""Make non-null sequence-like Pydantic v2 RootModel classes implement collections.abc.Sequence.
 
-When enabled, list-like RootModel classes inherit from collections.abc.Sequence
-and include __iter__, __getitem__, and __len__ methods that delegate to the wrapped root value.""",
-    input_schema="jsonschema/root_model_sequence_methods.json",
+When enabled, a RootModel whose root is list[T] or Sequence[T] inherits from Sequence[T]
+and includes __iter__, __getitem__, and __len__ methods that delegate to the wrapped root value.
+Scalar, optional, nullable, and RootModel type-alias outputs are unchanged.""",
+    input_schema="jsonschema/root_model_sequence_interface.json",
     cli_args=[
         "--output-model-type",
         "pydantic_v2.BaseModel",
-        "--use-root-model-sequence-methods",
+        "--use-root-model-sequence-interface",
         "--class-name",
         "Pets",
     ],
-    golden_output="jsonschema/root_model_sequence_methods.py",
+    golden_output="jsonschema/root_model_sequence_interface.py",
 )
-def test_main_jsonschema_root_model_sequence_methods(output_file: Path) -> None:
-    """Generate sequence helpers for list RootModel classes."""
+def test_main_jsonschema_root_model_sequence_interface(output_file: Path) -> None:
+    """Generate the Sequence interface for list RootModel classes."""
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "root_model_sequence_methods.json",
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_sequence_interface.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file="root_model_sequence_methods.py",
+        expected_file="root_model_sequence_interface.py",
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
-            "--use-root-model-sequence-methods",
+            "--use-root-model-sequence-interface",
             "--class-name",
             "Pets",
             "--disable-timestamp",
@@ -3624,7 +3625,7 @@ def test_main_jsonschema_root_model_sequence_methods(output_file: Path) -> None:
         force_exec_validation=True,
     )
 
-    module_name = "generated_root_model_sequence_methods"
+    module_name = "generated_root_model_sequence_interface"
     spec = importlib.util.spec_from_file_location(module_name, output_file)
     assert spec is not None
     assert spec.loader is not None
@@ -3642,18 +3643,18 @@ def test_main_jsonschema_root_model_sequence_methods(output_file: Path) -> None:
         sys.modules.pop(module_name, None)
 
 
-def test_main_jsonschema_root_model_sequence_methods_type_alias(output_file: Path) -> None:
-    """Sequence helpers are skipped for RootModel type aliases."""
+def test_main_jsonschema_root_model_sequence_interface_type_alias(output_file: Path) -> None:
+    """Sequence interface is skipped for RootModel type aliases."""
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "root_model_sequence_methods.json",
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_sequence_interface.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file="root_model_sequence_methods_type_alias.py",
+        expected_file="root_model_sequence_interface_type_alias.py",
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
-            "--use-root-model-sequence-methods",
+            "--use-root-model-sequence-interface",
             "--use-root-model-type-alias",
             "--class-name",
             "Pets",

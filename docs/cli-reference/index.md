@@ -227,7 +227,7 @@ This documentation is auto-generated from test cases.
 - [`--use-one-literal-as-default`](model-customization.md#use-one-literal-as-default)
 - [`--use-operation-id-as-name`](openapi-only-options.md#use-operation-id-as-name)
 - [`--use-pendulum`](typing-customization.md#use-pendulum)
-- [`--use-root-model-sequence-methods`](model-customization.md#use-root-model-sequence-methods)
+- [`--use-root-model-sequence-interface`](model-customization.md#use-root-model-sequence-interface)
 - [`--use-root-model-type-alias`](typing-customization.md#use-root-model-type-alias)
 - [`--use-schema-description`](field-customization.md#use-schema-description)
 - [`--use-serialization-alias`](field-customization.md#use-serialization-alias)

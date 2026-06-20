@@ -1155,7 +1155,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         collapse_root_models_name_strategy=config.collapse_root_models_name_strategy,
         collapse_reuse_models=config.collapse_reuse_models,
         skip_root_model=config.skip_root_model,
-        use_root_model_sequence_methods=config.use_root_model_sequence_methods,
+        use_root_model_sequence_interface=config.use_root_model_sequence_interface,
         use_type_alias=config.use_type_alias,
         use_root_model_type_alias=config.use_root_model_type_alias,
         use_union_operator=config.use_union_operator,

@@ -3672,16 +3672,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             nullable=obj.type_has_null,
             treat_dot_as_module=self.treat_dot_as_module,
         )
-        self._apply_root_model_sequence_methods(data_model_root, fields)
+        self._apply_root_model_sequence_interface(data_model_root, fields)
         self.generation_store.register_model(data_model_root)
         return data_model_root
 
-    def _apply_root_model_sequence_methods(
+    def _apply_root_model_sequence_interface(
         self,
         data_model_root: DataModel,
         fields: list[DataModelFieldBase],
     ) -> None:
-        if not self.use_root_model_sequence_methods or data_model_root.is_alias or not fields:
+        if not self.use_root_model_sequence_interface or data_model_root.is_alias or not fields:
             return
 
         root_field = fields[0]
@@ -3692,8 +3692,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if root_type is None:
             return
 
-        add_sequence_methods = getattr(data_model_root, "add_sequence_methods", None)
-        if add_sequence_methods is None:
+        add_sequence_interface = getattr(data_model_root, "add_sequence_interface", None)
+        if add_sequence_interface is None:
             return
 
         item_type = root_type.data_types[0].type_hint if root_type.data_types else ANY
@@ -3701,7 +3701,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         slice_type = root_type.type_hint or f"list[{item_type}]"
         if "[" not in slice_type:
             slice_type = f"{slice_type}[{item_type}]"
-        add_sequence_methods(item_type, slice_type)
+        add_sequence_interface(item_type, slice_type)
 
     def _get_root_model_sequence_type(self, data_type: DataType) -> DataType | None:  # noqa: PLR6301
         """Return a sequence data type for RootModel helpers.

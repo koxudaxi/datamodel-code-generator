@@ -163,7 +163,7 @@ class BaseGenerateConfig(BaseModel):
     collapse_root_models_name_strategy: CollapseRootModelsNameStrategy | None = None
     collapse_reuse_models: bool = False
     skip_root_model: bool = False
-    use_root_model_sequence_methods: bool = False
+    use_root_model_sequence_interface: bool = False
     use_type_alias: bool = False
     use_root_model_type_alias: bool = False
     special_field_name_prefix: str | None = None
@@ -329,7 +329,7 @@ class ParserConfig(BaseModel):
     collapse_root_models_name_strategy: CollapseRootModelsNameStrategy | None = None
     collapse_reuse_models: bool = False
     skip_root_model: bool = False
-    use_root_model_sequence_methods: bool = False
+    use_root_model_sequence_interface: bool = False
     use_type_alias: bool = False
     special_field_name_prefix: str | None = None
     remove_special_field_name_prefix: bool = False

@@ -116,7 +116,7 @@ Generated model class and package behavior.
 - `--collapse-root-models-name-strategy`: Strategy for naming when collapsing root models that reference other models. 'child': Keep inner model's name (default). 'parent': Use wrapper's name for inner model. Requires --collapse-root-models to be set. Choices: `child`, `parent`.
 - `--collapse-reuse-models`: When used with --reuse-model, collapse duplicate models by replacing references instead of creating empty inheritance subclasses. This eliminates 'class Foo(Bar): pass' patterns
 - `--skip-root-model`: Skip generating the model for the root schema element
-- `--use-root-model-sequence-methods`: Add __iter__, __getitem__, and __len__ methods to sequence-like RootModel classes (Pydantic v2 only)
+- `--use-root-model-sequence-interface`: Make non-null sequence-like Pydantic v2 RootModel classes implement `collections.abc.Sequence`
 - `--enable-faux-immutability`: Enable faux immutability
 - `--keep-model-order`: Keep generated models' order
 - `--keyword-only`: Defined models as keyword only (for example dataclass(kw_only=True)).
