@@ -1862,6 +1862,27 @@ def test_jsonschema_parser_edge_case_helpers() -> None:
     assert parser._get_data_type_from_json_value(object()).type_hint == "Any"
 
 
+@pytest.mark.parametrize(
+    ("current_root", "path", "expected"),
+    [
+        ([], [], True),
+        ([], ["#"], True),
+        (["schema.json"], ["schema.json"], True),
+        (["schema.json"], ["schema.json", "#"], True),
+        (["schema.json"], ["schema.json#"], True),
+        (["schema.json"], ["other.json#"], False),
+    ],
+)
+def test_is_current_root_schema_path_normalizes_root_spellings(
+    current_root: list[str], path: list[str], *, expected: bool
+) -> None:
+    """Treat equivalent root path spellings as the current schema root."""
+    parser = JsonSchemaParser("")
+    parser.model_resolver.set_current_root(current_root)
+
+    assert parser._is_current_root_schema_path(path) is expected
+
+
 def test_anchor_ref_path_escapes_json_pointer_segments() -> None:
     """Test anchor ref paths escape JSON Pointer segments."""
     parser = JsonSchemaParser("")
