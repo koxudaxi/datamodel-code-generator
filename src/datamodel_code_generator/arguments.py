@@ -498,6 +498,12 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
+    "--infer-union-variant-names",
+    help="Infer inline oneOf/anyOf branch model names from literal discriminator-style fields",
+    action="store_true",
+    default=None,
+)
+model_options.add_argument(
     "--use-pendulum",
     help="use pendulum instead of datetime",
     action="store_true",

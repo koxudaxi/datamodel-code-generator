@@ -680,6 +680,7 @@ def test_run_generate_from_config_generate_kwargs_are_pinned() -> None:
         ("graphql_no_typename", "config.graphql_no_typename"),
         ("wrap_string_literal", "config.wrap_string_literal"),
         ("use_title_as_name", "config.use_title_as_name"),
+        ("infer_union_variant_names", "config.infer_union_variant_names"),
         ("use_operation_id_as_name", "config.use_operation_id_as_name"),
         ("use_unique_items_as_set", "config.use_unique_items_as_set"),
         ("use_tuple_for_fixed_items", "config.use_tuple_for_fixed_items"),

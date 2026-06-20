@@ -70,6 +70,7 @@ Field naming, aliases, defaults, and constraints.
 - `--extra-fields`: Set the generated models to allow, forbid, or ignore extra fields. Choices: `allow`, `ignore`, `forbid`.
 - `--use-schema-description`: Use schema description to populate class docstring
 - `--use-title-as-name`: use titles as class names of models
+- `--infer-union-variant-names`: Infer inline oneOf/anyOf branch model names from literal discriminator-style fields
 - `--field-constraints`: Use field constraints and not con* annotations
 - `--set-default-enum-member`: Set enum members as default values for enum field
 - `--use-enum-values-in-discriminator`: Use enum member literals in discriminator fields instead of string literals

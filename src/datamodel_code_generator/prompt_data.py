@@ -74,6 +74,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--ignore-enum-constraints": "Ignore enum constraints and use base string type instead of Enum classes.",
     "--ignore-pyproject": "Ignore pyproject.toml configuration file.",
     "--include-path-parameters": "Include OpenAPI path parameters in generated parameter models.",
+    "--infer-union-variant-names": "Infer names for inline oneOf/anyOf object variants from literal fields.",
     "--input": "Specify the input schema file path.",
     "--input-file-type": "Specify the input file type for code generation.",
     "--input-model": "Import a Python type or dict schema from a module.",
