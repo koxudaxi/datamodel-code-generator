@@ -218,6 +218,13 @@ def test_main_array_uri_items_preserves_min_items(output_file: Path) -> None:
     input_schema="jsonschema/model_metadata.json",
     cli_args=["--emit-model-metadata", "model-map.json", "--module-split-mode", "single", "--disable-timestamp"],
     golden_output="jsonschema/model_metadata_module_split/root_title.py",
+    extra_outputs=[
+        {
+            "title": "Generated metadata (`model-map.json`)",
+            "path": "main/jsonschema/model_metadata_map.txt",
+            "language": "json",
+        }
+    ],
 )
 def test_main_emit_model_metadata(output_file: Path) -> None:
     """Write generated model metadata to a separate JSON file."""

@@ -85,6 +85,9 @@ class CliDocKwargs(TypedDict, total=False):
     expected_stdout: str | None
     """Path to expected stdout file relative to tests/data/expected/."""
 
+    extra_outputs: list[dict[str, str]] | None
+    """Additional output files to show in docs. Each item has title, path, and optional language."""
+
     related_options: list[str] | None
     """Related CLI options to link in documentation."""
 
@@ -298,6 +301,23 @@ def _validate_cli_doc_marker(node_id: str, kwargs: CliDocKwargs) -> list[str]:  
             errors.append(f"'related_options' must be a list, got {type(related).__name__}")
         elif not all(isinstance(r, str) for r in related):
             errors.append("'related_options' must be a list of strings")
+
+    if "extra_outputs" in kwargs:
+        extra_outputs = kwargs["extra_outputs"]
+        if not isinstance(extra_outputs, list):
+            errors.append(f"'extra_outputs' must be a list, got {type(extra_outputs).__name__}")
+        else:
+            for index, output in enumerate(extra_outputs):
+                if not isinstance(output, dict):
+                    errors.append(f"'extra_outputs[{index}]' must be a dict, got {type(output).__name__}")
+                    continue
+                for key in ("title", "path"):
+                    value = output.get(key)
+                    if not isinstance(value, str) or not value:
+                        errors.append(f"'extra_outputs[{index}].{key}' must be a non-empty string")
+                language = output.get("language", "")
+                if not isinstance(language, str):
+                    errors.append(f"'extra_outputs[{index}].language' must be a string")
 
     if "aliases" in kwargs:
         aliases = kwargs["aliases"]

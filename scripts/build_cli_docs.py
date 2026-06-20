@@ -54,6 +54,7 @@ class CLIDocExample:
     version_outputs: dict[str, str] | None = None
     model_outputs: dict[str, str] | None = None
     expected_stdout: str | None = None
+    extra_outputs: list[dict[str, str]] = field(default_factory=list)
     aliases: list[str] = field(default_factory=list)
     related_options: list[str] = field(default_factory=list)
     is_primary: bool = False
@@ -73,6 +74,7 @@ class CLIDocExample:
             version_outputs=kwargs.get("version_outputs"),
             model_outputs=kwargs.get("model_outputs"),
             expected_stdout=kwargs.get("expected_stdout"),
+            extra_outputs=kwargs.get("extra_outputs", []),
             aliases=kwargs.get("aliases", []),
             related_options=kwargs.get("related_options", []),
             is_primary=kwargs.get("primary", False),
@@ -548,6 +550,29 @@ def _generate_single_example_output(example: CLIDocExample, prefix: str = "    "
     return md
 
 
+def _generate_extra_outputs(example: CLIDocExample, prefix: str = "    ") -> str:
+    """Generate additional output files for a single example."""
+    md = ""
+    for output in example.extra_outputs:
+        title = output.get("title", "Additional Output")
+        output_path = output.get("path")
+        language = output.get("language", "")
+        if not output_path:
+            md += f"{prefix}> **Error:** extra output is missing a path\n\n"
+            continue
+
+        md += f"{prefix}**{title}:**\n\n"
+        try:
+            content = read_expected_file(output_path)
+            md += f"{prefix}```{language}\n"
+            for line in content.strip().split("\n"):
+                md += f"{prefix}{line}\n" if line else "\n"
+            md += f"{prefix}```\n\n"
+        except (FileNotFoundError, ValueError) as e:
+            md += f"{prefix}> **Error:** {e}\n\n"
+    return md
+
+
 def _generate_example_with_input_output(example: CLIDocExample, prefix: str = "    ") -> str:
     """Generate combined input schema and output for an example."""
     md = ""
@@ -576,6 +601,7 @@ def _generate_example_with_input_output(example: CLIDocExample, prefix: str = " 
     # Output section
     md += f"{prefix}**Output:**\n\n"
     md += _generate_single_example_output(example, prefix)
+    md += _generate_extra_outputs(example, prefix)
 
     return md
 
@@ -710,6 +736,7 @@ def generate_option_section(
 
         md += "    **Output:**\n\n"
         md += _generate_single_example_output(example, "    ")
+        md += _generate_extra_outputs(example, "    ")
 
     md += "---\n\n"
     return md
