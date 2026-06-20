@@ -116,6 +116,17 @@ def test_inflect_import_does_not_leave_typeguard_loaded(monkeypatch: pytest.Monk
     assert "typeguard" not in sys.modules
 
 
+def test_restore_typeguard_module_preserves_replaced_module(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Restoring an absent typeguard must not remove a module installed by other code."""
+    typeguard_stub = types.ModuleType("typeguard")
+    replacement_typeguard = types.ModuleType("typeguard")
+    monkeypatch.setitem(sys.modules, "typeguard", replacement_typeguard)
+
+    reference_module._restore_typeguard_module(reference_module._TYPEGUARD_NOT_LOADED, typeguard_stub)
+
+    assert sys.modules["typeguard"] is replacement_typeguard
+
+
 def test_inflect_import_falls_back_to_normal_import(monkeypatch: pytest.MonkeyPatch) -> None:
     """If the optimized import path fails, inflect should be imported normally."""
     monkeypatch.delitem(sys.modules, "inflect", raising=False)
@@ -129,19 +140,19 @@ def test_inflect_import_falls_back_to_normal_import(monkeypatch: pytest.MonkeyPa
         assert name == "inflect"
         call_index = len(import_calls)
         import_calls.append(sys.modules.get("typeguard"))
-        match call_index:
-            case 0:
-                typeguard_stub = import_calls[-1]
-                assert typeguard_stub is not original_typeguard
-                typechecked = typeguard_stub.__dict__["typechecked"]
-                assert typechecked("sentinel") == "sentinel"
-                decorator = typechecked(collection_check_strategy="sentinel")
-                assert decorator("wrapped") == "wrapped"
-                sys.modules["inflect"] = partial_inflect
-                optimized_error = "optimized import failed"
-                raise ImportError(optimized_error)
-            case 1:
-                assert import_calls[-1] is original_typeguard
+        if call_index == 0:
+            typeguard_stub = import_calls[-1]
+            assert typeguard_stub is not original_typeguard
+            typechecked = typeguard_stub.__dict__["typechecked"]
+            assert typechecked("sentinel") == "sentinel"
+            decorator = typechecked(collection_check_strategy="sentinel")
+            assert decorator("wrapped") == "wrapped"
+            sys.modules["inflect"] = partial_inflect
+            optimized_error = "optimized import failed"
+            raise ImportError(optimized_error)
+
+        assert call_index == 1
+        assert import_calls[-1] is original_typeguard
         sys.modules["inflect"] = fake_inflect
         return fake_inflect
 
