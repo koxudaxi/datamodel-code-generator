@@ -9,10 +9,12 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 
 import pytest
 
-import datamodel_code_generator.reference as reference_module
 from datamodel_code_generator.http import join_url
 from datamodel_code_generator.reference import (
+    _TYPEGUARD_NOT_LOADED,
     ModelResolver,
+    _import_inflect_without_typeguard_instrumentation,
+    _restore_typeguard_module,
     get_relative_path,
     get_singular_name,
     is_url,
@@ -109,7 +111,7 @@ def test_inflect_import_does_not_leave_typeguard_loaded(monkeypatch: pytest.Monk
     """The optimized inflect import path should not leak the temporary typeguard stub."""
     monkeypatch.delitem(sys.modules, "inflect", raising=False)
     monkeypatch.delitem(sys.modules, "typeguard", raising=False)
-    monkeypatch.setattr(reference_module, "_inflect_engine", None)
+    monkeypatch.setattr("datamodel_code_generator.reference._inflect_engine", None)
     get_singular_name.cache_clear()
 
     assert get_singular_name("Users") == "User"
@@ -122,7 +124,7 @@ def test_restore_typeguard_module_preserves_replaced_module(monkeypatch: pytest.
     replacement_typeguard = types.ModuleType("typeguard")
     monkeypatch.setitem(sys.modules, "typeguard", replacement_typeguard)
 
-    reference_module._restore_typeguard_module(reference_module._TYPEGUARD_NOT_LOADED, typeguard_stub)
+    _restore_typeguard_module(_TYPEGUARD_NOT_LOADED, typeguard_stub)
 
     assert sys.modules["typeguard"] is replacement_typeguard
 
@@ -158,7 +160,7 @@ def test_inflect_import_falls_back_to_normal_import(monkeypatch: pytest.MonkeyPa
 
     monkeypatch.setattr(importlib, "import_module", fake_import_module)
 
-    assert reference_module._import_inflect_without_typeguard_instrumentation() is fake_inflect
+    assert _import_inflect_without_typeguard_instrumentation() is fake_inflect
     assert len(import_calls) == 2
     assert import_calls[1] is original_typeguard
     assert sys.modules["inflect"] is fake_inflect
