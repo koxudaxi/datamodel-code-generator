@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import sys
 import threading
+import types
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -14,6 +16,7 @@ from inline_snapshot import external_file
 
 from datamodel_code_generator import (
     DataModelType,
+    Error,
     InputFileType,
     clear_dynamic_models_cache,
     generate,
@@ -213,6 +216,149 @@ def test_cache_miss_different_config() -> None:
     assert models1 is not models2
     assert sorted(models1.keys()) == ["User"]
     assert sorted(models2.keys()) == ["Person"]
+
+
+def test_module_name_is_applied_for_same_schema_with_different_runtime_modules() -> None:
+    """Test generated models keep the requested module name for identical schemas."""
+    schema = make_object_schema({"name": {"type": "string"}}, required=["name"])
+
+    runtime_model = generate_dynamic_models(schema, module_name="runtime_models")["Model"]
+    other_runtime_model = generate_dynamic_models(schema, module_name="other_runtime_models")["Model"]
+
+    assert runtime_model.__module__ == "runtime_models"
+    assert runtime_model.model_validate({"name": "Alice"}).model_dump(mode="json") == {"name": "Alice"}
+    assert other_runtime_model.__module__ == "other_runtime_models"
+    assert other_runtime_model.model_validate({"name": "Bob"}).model_dump(mode="json") == {"name": "Bob"}
+
+
+def test_target_model_names_filters_single_model() -> None:
+    """Test filtering returned dynamic models to a single requested model."""
+    schema = make_object_schema({"name": {"type": "string"}}, required=["name"])
+
+    models = generate_dynamic_models(schema, config=make_config(class_name="User"), target_model_names=["User"])
+    User = models["User"]
+
+    assert list(models) == ["User"]
+    assert User.__name__ == "User"
+    assert User.model_validate({"name": "Alice"}).model_dump(mode="json") == {"name": "Alice"}
+
+
+def test_target_model_names_with_module_name() -> None:
+    """Test module_name is assigned when filtering returned dynamic models."""
+    schema = make_object_schema({"name": {"type": "string"}}, required=["name"])
+
+    models = generate_dynamic_models(
+        schema,
+        config=make_config(class_name="User"),
+        module_name="runtime_models",
+        target_model_names=["User"],
+    )
+    User = models["User"]
+
+    assert User.__module__ == "runtime_models"
+    assert User.model_validate({"name": "Alice"}).model_dump(mode="json") == {"name": "Alice"}
+
+
+def test_target_model_names_filters_multiple_models() -> None:
+    """Test filtering returned dynamic models to multiple requested models."""
+    schema: dict[str, Any] = {
+        "openapi": "3.0.0",
+        "info": {"title": "User API", "version": "1.0.0"},
+        "paths": {},
+        "components": {
+            "schemas": {
+                "User": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]},
+                "Order": {
+                    "type": "object",
+                    "properties": {"id": {"type": "integer"}, "user": {"$ref": "#/components/schemas/User"}},
+                    "required": ["id", "user"],
+                },
+            }
+        },
+    }
+
+    models = generate_dynamic_models(schema, target_model_names=["Order", "User"])
+
+    assert list(models) == ["Order", "User"]
+    User = models["User"]
+    Order = models["Order"]
+    assert User.__name__ == "User"
+    assert User.model_validate({"name": "Alice"}).model_dump(mode="json") == {"name": "Alice"}
+    assert Order.model_validate({"id": 1, "user": {"name": "Alice"}}).user.name == "Alice"
+
+
+def test_target_model_names_does_not_reduce_cached_models() -> None:
+    """Test target filtering does not cache a reduced model dictionary."""
+    schema: dict[str, Any] = {
+        "openapi": "3.0.0",
+        "info": {"title": "User API", "version": "1.0.0"},
+        "paths": {},
+        "components": {
+            "schemas": {
+                "User": {"type": "object", "properties": {"name": {"type": "string"}}},
+                "Order": {
+                    "type": "object",
+                    "properties": {"id": {"type": "integer"}, "user": {"$ref": "#/components/schemas/User"}},
+                },
+            }
+        },
+    }
+
+    filtered_models = generate_dynamic_models(schema, target_model_names=["User"])
+    all_models = generate_dynamic_models(schema)
+
+    assert list(filtered_models) == ["User"]
+    assert filtered_models["User"].model_validate({"name": "Alice"}).model_dump(mode="json") == {"name": "Alice"}
+    assert sorted(all_models) == ["Order", "User"]
+    assert all_models["Order"].model_validate({"id": 1, "user": {"name": "Alice"}}).user.name == "Alice"
+
+
+def test_target_model_names_raises_for_missing_model() -> None:
+    """Test target filtering gives available names when requested models are missing."""
+    schema: dict[str, Any] = {
+        "openapi": "3.0.0",
+        "info": {"title": "User API", "version": "1.0.0"},
+        "paths": {},
+        "components": {
+            "schemas": {
+                "User": {"type": "object", "properties": {"name": {"type": "string"}}},
+                "Order": {
+                    "type": "object",
+                    "properties": {"id": {"type": "integer"}, "user": {"$ref": "#/components/schemas/User"}},
+                },
+            }
+        },
+    }
+
+    with pytest.raises(
+        Error,
+        match=r"target_model_names: 'Missing'.*Available models: Order, User",
+    ):
+        generate_dynamic_models(schema, target_model_names=["Missing"])
+
+
+def test_target_model_names_rejects_empty_sequence() -> None:
+    """Test target filtering rejects an empty target model name sequence."""
+    schema = make_object_schema({"name": {"type": "string"}})
+
+    with pytest.raises(Error, match="target_model_names must contain at least one model name"):
+        generate_dynamic_models(schema, target_model_names=[])
+
+
+def test_target_model_names_rejects_string() -> None:
+    """Test target filtering rejects a string instead of a model name sequence."""
+    schema = make_object_schema({"name": {"type": "string"}})
+
+    with pytest.raises(Error, match="target_model_names must be a sequence of model names"):
+        generate_dynamic_models(schema, target_model_names="Model")  # type: ignore[arg-type]
+
+
+def test_target_model_names_rejects_invalid_names() -> None:
+    """Test target filtering rejects empty and non-string model names."""
+    schema = make_object_schema({"name": {"type": "string"}})
+
+    with pytest.raises(Error, match=r"target_model_names contains invalid model names: '', 1"):
+        generate_dynamic_models(schema, target_model_names=["", 1])  # type: ignore[list-item]
 
 
 def test_cache_disabled() -> None:
@@ -453,6 +599,35 @@ def test_multi_module_output() -> None:
     )
 
 
+def test_multi_module_output_with_module_name() -> None:
+    """Test module_name is assigned to generated multi-module classes."""
+    schema: dict[str, Any] = {
+        "$defs": {
+            "User": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+                "required": ["name"],
+            },
+            "Order": {
+                "type": "object",
+                "properties": {"id": {"type": "integer"}, "user": {"$ref": "#/$defs/User"}},
+                "required": ["id"],
+            },
+        },
+        "$ref": "#/$defs/Order",
+    }
+
+    models = generate_dynamic_models(
+        schema,
+        config=make_config(module_split_mode=ModuleSplitMode.Single),
+        module_name="runtime_package",
+    )
+
+    assert models["User"].__module__.startswith("runtime_package")
+    assert models["Order"].__module__.startswith("runtime_package")
+    assert models["Order"].model_validate({"id": 1, "user": {"name": "Alice"}}).user.name == "Alice"
+
+
 def test_generated_code_matches_expected() -> None:
     """Test that generate() produces expected code for a complex schema."""
     schema: dict[str, Any] = {
@@ -533,6 +708,42 @@ def test_execute_multi_module_without_init() -> None:
     assert "User" in models
     user = models["User"](name="Alice")
     assert user.name == "Alice"
+
+
+def test_multi_module_output_restores_existing_module_name() -> None:
+    """Test dynamic generation restores an existing user-provided module name."""
+    package_name = "runtime_package_restore"
+    user_module_name = f"{package_name}.user"
+    original_user_module = types.ModuleType(user_module_name)
+    sys.modules[user_module_name] = original_user_module
+
+    schema: dict[str, Any] = {
+        "$defs": {
+            "User": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+                "required": ["name"],
+            }
+        },
+        "$ref": "#/$defs/User",
+    }
+
+    try:
+        models = generate_dynamic_models(
+            schema,
+            config=make_config(module_split_mode=ModuleSplitMode.Single),
+            module_name=package_name,
+            cache_size=0,
+        )
+
+        assert "User" in models
+        assert models["User"].__module__ == f"{package_name}.user"
+        assert models["User"].model_validate({"name": "Alice"}).name == "Alice"
+        assert package_name not in sys.modules
+        assert sys.modules[user_module_name] is original_user_module
+    finally:
+        sys.modules.pop(package_name, None)
+        sys.modules.pop(user_module_name, None)
 
 
 def test_execute_multi_module_no_models() -> None:
