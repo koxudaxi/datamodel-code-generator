@@ -218,17 +218,17 @@ def test_cache_miss_different_config() -> None:
     assert sorted(models2.keys()) == ["Person"]
 
 
-def test_cache_miss_different_module_name() -> None:
-    """Test that module_name creates different cache entries."""
-    schema = make_object_schema({"name": {"type": "string"}})
-    models1 = generate_dynamic_models(schema, module_name="runtime_models")
-    models2 = generate_dynamic_models(schema, module_name="other_runtime_models")
-    models3 = generate_dynamic_models(schema, module_name="runtime_models")
+def test_module_name_is_applied_for_same_schema_with_different_runtime_modules() -> None:
+    """Test generated models keep the requested module name for identical schemas."""
+    schema = make_object_schema({"name": {"type": "string"}}, required=["name"])
 
-    assert models1 is not models2
-    assert models1 is models3
-    assert models1["Model"].__module__ == "runtime_models"
-    assert models2["Model"].__module__ == "other_runtime_models"
+    runtime_model = generate_dynamic_models(schema, module_name="runtime_models")["Model"]
+    other_runtime_model = generate_dynamic_models(schema, module_name="other_runtime_models")["Model"]
+
+    assert runtime_model.__module__ == "runtime_models"
+    assert runtime_model.model_validate({"name": "Alice"}).model_dump(mode="json") == {"name": "Alice"}
+    assert other_runtime_model.__module__ == "other_runtime_models"
+    assert other_runtime_model.model_validate({"name": "Bob"}).model_dump(mode="json") == {"name": "Bob"}
 
 
 def test_target_model_names_filters_single_model() -> None:
@@ -256,6 +256,7 @@ def test_target_model_names_with_module_name() -> None:
     User = models["User"]
 
     assert User.__module__ == "runtime_models"
+    assert User.model_validate({"name": "Alice"}).model_dump(mode="json") == {"name": "Alice"}
 
 
 def test_target_model_names_filters_multiple_models() -> None:
@@ -307,7 +308,9 @@ def test_target_model_names_does_not_reduce_cached_models() -> None:
     all_models = generate_dynamic_models(schema)
 
     assert list(filtered_models) == ["User"]
+    assert filtered_models["User"].model_validate({"name": "Alice"}).model_dump(mode="json") == {"name": "Alice"}
     assert sorted(all_models) == ["Order", "User"]
+    assert all_models["Order"].model_validate({"id": 1, "user": {"name": "Alice"}}).user.name == "Alice"
 
 
 def test_target_model_names_raises_for_missing_model() -> None:
