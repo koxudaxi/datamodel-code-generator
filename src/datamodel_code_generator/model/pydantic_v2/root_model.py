@@ -17,6 +17,8 @@ IMPORT_ABC_SEQUENCE = Import.from_full_path("collections.abc.Sequence")
 IMPORT_OVERLOAD = Import.from_full_path("typing.overload")
 IMPORT_SUPPORTS_INDEX = Import.from_full_path("typing.SupportsIndex")
 _SEQUENCE_BASE_CLASS_TEMPLATE_DATA_KEY = "sequence_base_class"
+_SEQUENCE_ITEM_TYPE_TEMPLATE_DATA_KEY = "sequence_item_type"
+_SEQUENCE_SLICE_TYPE_TEMPLATE_DATA_KEY = "sequence_slice_type"
 
 
 class RootModel(BaseModel):
@@ -60,16 +62,8 @@ class RootModel(BaseModel):
         if item_type == "Any":
             self._additional_imports.append(IMPORT_ANY)
         self.extra_template_data[_SEQUENCE_BASE_CLASS_TEMPLATE_DATA_KEY] = f"Sequence[{item_type}]"
-        self.methods.extend([
-            f"def __iter__(self) -> Iterator[{item_type}]:\n        return iter(self.root)",
-            f"@overload\n    def __getitem__(self, index: SupportsIndex) -> {item_type}:\n        pass",
-            f"@overload\n    def __getitem__(self, index: slice) -> {slice_type}:\n        pass",
-            (
-                f"def __getitem__(self, index: SupportsIndex | slice) -> {item_type} | {slice_type}:\n"
-                "        return self.root[index]"
-            ),
-            "def __len__(self) -> int:\n        return len(self.root)",
-        ])
+        self.extra_template_data[_SEQUENCE_ITEM_TYPE_TEMPLATE_DATA_KEY] = item_type
+        self.extra_template_data[_SEQUENCE_SLICE_TYPE_TEMPLATE_DATA_KEY] = slice_type
 
     def render(self, *, class_name: str | None = None) -> str:
         """Render the RootModel and validate custom sequence templates when needed."""
@@ -96,7 +90,8 @@ class RootModel(BaseModel):
             missing_items = ", ".join(missing)
             msg = (
                 "The custom RootModel template does not support --use-root-model-sequence-interface. "
-                f"Update {self.template_file_path} to render sequence_base_class and methods. "
+                f"Update {self.template_file_path} to render sequence_base_class, "
+                "sequence_item_type, and sequence_slice_type. "
                 f"Missing: {missing_items}."
             )
             raise Error(msg)

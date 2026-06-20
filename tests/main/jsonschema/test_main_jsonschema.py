@@ -3598,8 +3598,9 @@ and includes __iter__, __getitem__, and __len__ methods that delegate to the wra
 Scalar, optional, nullable, and RootModel type-alias outputs are unchanged.
 
 When used with `--custom-template-dir`, a custom `pydantic_v2/RootModel.jinja2` template must render both
-`sequence_base_class` and `methods`. If the custom RootModel template does not render the sequence base class
-and helper methods, generation fails with an error instead of silently ignoring this option.""",
+`sequence_base_class` and the helper methods using `sequence_item_type` and `sequence_slice_type`. If the custom
+RootModel template does not render the sequence base class and helper methods, generation fails with an error
+instead of silently ignoring this option.""",
     input_schema="jsonschema/root_model_sequence_interface.json",
     cli_args=[
         "--output-model-type",

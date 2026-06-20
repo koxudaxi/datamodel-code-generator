@@ -754,17 +754,17 @@ def test_apply_root_model_sequence_interface_adds_sequence_helpers(
 
     parser._apply_root_model_sequence_interface(root_model, root_model.fields)
 
-    assert len(root_model.methods) == 5
-    assert root_model.methods[0].startswith(f"def __iter__(self) -> Iterator[{expected_item_hint}]")
-    assert root_model.methods[1].startswith(
-        f"@overload\n    def __getitem__(self, index: SupportsIndex) -> {expected_item_hint}"
-    )
-    assert root_model.methods[2].startswith(
-        f"@overload\n    def __getitem__(self, index: slice) -> {expected_slice_hint}"
-    )
-    assert root_model.methods[3].startswith("def __getitem__(self, index: SupportsIndex | slice)")
-    assert root_model.methods[4].startswith("def __len__(self) -> int")
-    assert f", Sequence[{expected_item_hint}]):" in root_model.render().splitlines()[0]
+    rendered = root_model.render()
+    assert root_model.methods == []
+    assert root_model.extra_template_data["sequence_base_class"] == f"Sequence[{expected_item_hint}]"
+    assert root_model.extra_template_data["sequence_item_type"] == expected_item_hint
+    assert root_model.extra_template_data["sequence_slice_type"] == expected_slice_hint
+    assert f", Sequence[{expected_item_hint}]):" in rendered.splitlines()[0]
+    assert f"def __iter__(self) -> Iterator[{expected_item_hint}]" in rendered
+    assert f"def __getitem__(self, index: SupportsIndex) -> {expected_item_hint}" in rendered
+    assert f"def __getitem__(self, index: slice) -> {expected_slice_hint}" in rendered
+    assert "def __getitem__(self, index: SupportsIndex | slice)" in rendered
+    assert "def __len__(self) -> int" in rendered
 
 
 @pytest.mark.parametrize(

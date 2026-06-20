@@ -138,16 +138,28 @@ def test_root_model_sequence_interface_rejects_unsupported_custom_template(tmp_p
 
 
 def test_root_model_sequence_interface_accepts_supported_custom_template(tmp_path: Path) -> None:
-    """Custom RootModel templates can opt in by rendering sequence_base_class and methods."""
+    """Custom RootModel templates can opt in by rendering sequence template variables."""
     template_path = tmp_path / "pydantic_v2" / "RootModel.jinja2"
     template_path.parent.mkdir()
     template_path.write_text(
         "class {{ class_name }}({{ base_class }}{% if sequence_base_class is defined %}, "
         "{{ sequence_base_class }}{% endif %}):\n"
         "    root: {{ fields[0].type_hint }}\n"
-        "{%- for method in methods %}\n\n"
-        "    {{ method }}\n"
-        "{%- endfor %}\n",
+        "{% if sequence_item_type is defined and sequence_slice_type is defined %}\n"
+        "    def __iter__(self) -> Iterator[{{ sequence_item_type }}]:\n"
+        "        return iter(self.root)\n\n"
+        "    @overload\n"
+        "    def __getitem__(self, index: SupportsIndex) -> {{ sequence_item_type }}:\n"
+        "        pass\n\n"
+        "    @overload\n"
+        "    def __getitem__(self, index: slice) -> {{ sequence_slice_type }}:\n"
+        "        pass\n\n"
+        "    def __getitem__(self, index: SupportsIndex | slice) -> "
+        "{{ sequence_item_type }} | {{ sequence_slice_type }}:\n"
+        "        return self.root[index]\n\n"
+        "    def __len__(self) -> int:\n"
+        "        return len(self.root)\n"
+        "{% endif %}\n",
         encoding="utf-8",
     )
     root_model = RootModel(

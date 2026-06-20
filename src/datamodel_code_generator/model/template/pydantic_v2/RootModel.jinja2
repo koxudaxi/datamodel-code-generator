@@ -50,6 +50,25 @@ class {{ class_name }}({{ base_class }}{%- if fields -%}[{{get_type_hint(fields,
     {{ field.inline_field_docstring }}
 
     {%- endif %}
+{%- if sequence_item_type is defined and sequence_slice_type is defined %}
+
+    def __iter__(self) -> Iterator[{{ sequence_item_type }}]:
+        return iter(self.root)
+
+    @overload
+    def __getitem__(self, index: SupportsIndex) -> {{ sequence_item_type }}:
+        pass
+
+    @overload
+    def __getitem__(self, index: slice) -> {{ sequence_slice_type }}:
+        pass
+
+    def __getitem__(self, index: SupportsIndex | slice) -> {{ sequence_item_type }} | {{ sequence_slice_type }}:
+        return self.root[index]
+
+    def __len__(self) -> int:
+        return len(self.root)
+{%- endif %}
 {%- for method in methods %}
 
     {{ method }}
