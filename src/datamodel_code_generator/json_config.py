@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 import json
-import typing
 from collections import defaultdict
 from dataclasses import dataclass
 from io import TextIOBase
 from pathlib import Path
-from typing import Any, ClassVar, TypeAlias, cast
+from typing import Any, ClassVar, Literal, TypeAlias, cast
 
-import pydantic
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, RootModel, ValidationError
 
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.validators import ValidatorsConfig, format_validation_error
@@ -26,31 +24,31 @@ class JsonConfigError(Exception):
     """Error raised when a JSON configuration value cannot be loaded or validated."""
 
 
-class StringMappingConfig(pydantic.RootModel[dict[str, str]]):
+class StringMappingConfig(RootModel[dict[str, str]]):
     """JSON object with string keys and string values."""
 
 
-class StringOrStringListMappingConfig(pydantic.RootModel[dict[str, str | list[str]]]):
+class StringOrStringListMappingConfig(RootModel[dict[str, str | list[str]]]):
     """JSON object with string keys and string or list-of-string values."""
 
 
-class EnumFieldAsLiteralMapConfig(pydantic.RootModel[dict[str, typing.Literal["literal", "enum"]]]):
+class EnumFieldAsLiteralMapConfig(RootModel[dict[str, Literal["literal", "enum"]]]):
     """Per-field enum/literal generation override mapping."""
 
 
-class DuplicateNameSuffixConfig(pydantic.RootModel[dict[typing.Literal["model", "enum", "default"], str]]):
+class DuplicateNameSuffixConfig(RootModel[dict[Literal["model", "enum", "default"], str]]):
     """Duplicate-name suffix mapping."""
 
 
-class DefaultValuesConfig(pydantic.RootModel[dict[str, Any]]):
+class DefaultValuesConfig(RootModel[dict[str, Any]]):
     """Default value override mapping."""
 
 
-class ExtraTemplateDataConfig(pydantic.RootModel[dict[str, dict[str, Any]]]):
+class ExtraTemplateDataConfig(RootModel[dict[str, dict[str, Any]]]):
     """Extra template data mapping."""
 
 
-class LegacyExtraTemplateDataConfig(pydantic.RootModel[dict[str, Any]]):
+class LegacyExtraTemplateDataConfig(RootModel[dict[str, Any]]):
     """Legacy extra template data mapping accepted during strict-validation migration."""
 
 
