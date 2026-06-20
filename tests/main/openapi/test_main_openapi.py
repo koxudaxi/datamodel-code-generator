@@ -6,6 +6,7 @@ import contextlib
 import json
 import platform
 import re
+import sys
 import warnings
 from collections import defaultdict
 from pathlib import Path
@@ -28,10 +29,12 @@ from datamodel_code_generator import (
     inferred_message,
     load_data_from_path,
 )
+from datamodel_code_generator import reference as reference_module
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.model import base as model_base
 from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA
+from datamodel_code_generator.reference import get_singular_name
 from tests.conftest import (
     HttpxGetMockFactory,
     MockHttpxResponse,
@@ -74,6 +77,23 @@ def test_main(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="general.py",
     )
+
+
+def test_main_inflect_import_without_typeguard_leak(output_file: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """OpenAPI generation should keep expected output without leaking typeguard."""
+    monkeypatch.delitem(sys.modules, "inflect", raising=False)
+    monkeypatch.delitem(sys.modules, "typeguard", raising=False)
+    monkeypatch.setattr(reference_module, "_inflect_engine", None)
+    get_singular_name.cache_clear()
+
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="general.py",
+    )
+    assert "typeguard" not in sys.modules
 
 
 @pytest.mark.cli_doc(

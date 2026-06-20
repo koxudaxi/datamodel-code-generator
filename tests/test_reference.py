@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import importlib
+import sys
+import types
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
 import pytest
 
+import datamodel_code_generator.reference as reference_module
 from datamodel_code_generator.http import join_url
 from datamodel_code_generator.reference import (
     ModelResolver,
@@ -99,6 +103,44 @@ def test_reference_cache_clear_preserves_helper_values() -> None:
 
     assert get_singular_name("users") == singular_name
     assert snake_to_upper_camel("user_name") == upper_camel
+
+
+def test_inflect_import_falls_back_to_normal_import(monkeypatch: pytest.MonkeyPatch) -> None:
+    """If the optimized import path fails, inflect should be imported normally."""
+    monkeypatch.delitem(sys.modules, "inflect", raising=False)
+    original_typeguard = types.ModuleType("typeguard")
+    monkeypatch.setitem(sys.modules, "typeguard", original_typeguard)
+    fake_inflect = types.ModuleType("inflect")
+    partial_inflect = types.ModuleType("inflect")
+    import_calls: list[object] = []
+
+    def fake_import_module(name: str) -> types.ModuleType:
+        assert name == "inflect"
+        call_index = len(import_calls)
+        import_calls.append(sys.modules.get("typeguard"))
+        match call_index:
+            case 0:
+                typeguard_stub = import_calls[-1]
+                assert typeguard_stub is not original_typeguard
+                typechecked = typeguard_stub.__dict__["typechecked"]
+                assert typechecked("sentinel") == "sentinel"
+                decorator = typechecked(collection_check_strategy="sentinel")
+                assert decorator("wrapped") == "wrapped"
+                sys.modules["inflect"] = partial_inflect
+                optimized_error = "optimized import failed"
+                raise ImportError(optimized_error)
+            case 1:
+                assert import_calls[-1] is original_typeguard
+        sys.modules["inflect"] = fake_inflect
+        return fake_inflect
+
+    monkeypatch.setattr(importlib, "import_module", fake_import_module)
+
+    assert reference_module._import_inflect_without_typeguard_instrumentation() is fake_inflect
+    assert len(import_calls) == 2
+    assert import_calls[1] is original_typeguard
+    assert sys.modules["inflect"] is fake_inflect
+    assert sys.modules["typeguard"] is original_typeguard
 
 
 def test_model_resolver_delete_missing_reference_noop() -> None:
