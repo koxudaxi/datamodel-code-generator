@@ -3637,13 +3637,13 @@ def test_main_jsonschema_root_model_sequence_interface(output_file: Path) -> Non
         spec.loader.exec_module(module)
         pet = module.Pet(name="dog")
         pets = module.Pets(root=[pet])
-        if not isinstance(pets, Sequence):
+        if not isinstance(pets, Sequence):  # pragma: no cover
             pytest.fail("Generated RootModel does not implement collections.abc.Sequence")
-        if pets.count(pet) != 1:
+        if pets.count(pet) != 1:  # pragma: no cover
             pytest.fail("Generated RootModel Sequence.count does not delegate to root")
-        if pets.index(pet) != 0:
+        if pets.index(pet) != 0:  # pragma: no cover
             pytest.fail("Generated RootModel Sequence.index does not delegate to root")
-        if list(reversed(pets)) != [pet]:
+        if list(reversed(pets)) != [pet]:  # pragma: no cover
             pytest.fail("Generated RootModel Sequence.__reversed__ does not delegate to root")
     finally:
         sys.modules.pop(module_name, None)
