@@ -9,14 +9,14 @@
 | [`--custom-file-header`](#custom-file-header) | Add custom header text to the generated file. |
 | [`--custom-file-header-path`](#custom-file-header-path) | Add custom header content from file to generated code. |
 | [`--custom-formatters`](#custom-formatters) | Apply custom Python code formatters to generated output. |
-| [`--custom-formatters-kwargs`](#custom-formatters-kwargs) | Pass custom arguments to custom formatters via JSON file. |
+| [`--custom-formatters-kwargs`](#custom-formatters-kwargs) | Pass custom arguments to custom formatters via inline JSON o... |
 | [`--custom-template-dir`](#custom-template-dir) | Use custom Jinja2 templates for model generation. |
 | [`--disable-appending-item-suffix`](#disable-appending-item-suffix) | Disable appending 'Item' suffix to array item types. |
 | [`--disable-timestamp`](#disable-timestamp) | Disable timestamp in generated file header for reproducible ... |
 | [`--enable-command-header`](#enable-command-header) | Include command-line options in file header for reproducibil... |
 | [`--enable-generated-header-marker`](#enable-generated-header-marker) | Include the @generated marker in file header for generated-c... |
 | [`--enable-version-header`](#enable-version-header) | Include tool version information in file header. |
-| [`--extra-template-data`](#extra-template-data) | Pass custom template variables from JSON file for code gener... |
+| [`--extra-template-data`](#extra-template-data) | Pass custom template variables via inline JSON or a JSON fil... |
 | [`--formatters`](#formatters) | Specify code formatters to apply to generated output. |
 | [`--no-treat-dot-as-module`](#no-treat-dot-as-module) | Keep dots in schema names as underscores for flat output. |
 | [`--no-use-type-checking-imports`](#no-use-type-checking-imports) | Keep generated model imports available at runtime when using... |
@@ -620,9 +620,9 @@ formatting rules beyond what black/isort provide.
 
 ## `--custom-formatters-kwargs` {#custom-formatters-kwargs}
 
-Pass custom arguments to custom formatters via JSON file.
+Pass custom arguments to custom formatters via inline JSON or a JSON file path.
 
-The `--custom-formatters-kwargs` flag accepts a path to a JSON file containing
+The `--custom-formatters-kwargs` flag accepts an inline JSON object or a path to a JSON file containing
 custom configuration for custom formatters (used with --custom-formatters).
 The file should contain a JSON object mapping formatter names to their kwargs.
 
@@ -2210,10 +2210,10 @@ The `--enable-version-header` flag configures the code generation behavior.
 
 ## `--extra-template-data` {#extra-template-data}
 
-Pass custom template variables from JSON file for code generation.
+Pass custom template variables via inline JSON or a JSON file path.
 
 The `--extra-template-data` flag allows you to provide additional variables
-(from a JSON file) that can be used in custom templates to configure generated
+from an inline JSON object or JSON file that can be used in custom templates to configure generated
 model settings like Config classes, enabling customization beyond standard options.
 
 **See also:** [Custom Templates](../custom_template.md)
@@ -3678,7 +3678,7 @@ for multi-module Pydantic output where runtime imports might otherwise be preser
 
 Add custom field validators to generated Pydantic v2 models.
 
-The `--validators` option takes a JSON file defining validators per model.
+The `--validators` option takes an inline JSON object or JSON file defining validators per model.
 Each validator specifies the field(s) to validate, the validation function
 to import, and optionally the mode (before/after/wrap/plain).
 This allows injecting custom validation logic into generated models.

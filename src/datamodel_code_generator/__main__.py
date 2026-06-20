@@ -20,6 +20,7 @@ if len(sys.argv) == 2 and sys.argv[1] in {"--help", "-h"}:  # pragma: no cover  
 
 match sys.argv:
     case [_, "--output-format-json-schema", schema_output_name] if schema_output_name in {
+        "config",
         "generation",
         "model-metadata",
         "structured-output",
@@ -27,12 +28,17 @@ match sys.argv:
         pass
     case [_, schema_output_option] if schema_output_option.startswith("--output-format-json-schema=") and (
         schema_output_name := schema_output_option.partition("=")[2]
-    ) in {"generation", "model-metadata", "structured-output"}:
+    ) in {"config", "generation", "model-metadata", "structured-output"}:
         pass
     case _:
         schema_output_name = None
 
 match schema_output_name:
+    case "config":  # pragma: no cover
+        from datamodel_code_generator.json_config import json_config_json_schema
+
+        sys.stdout.write(f"{json_config_json_schema()}\n")
+        sys.exit(0)
     case "generation":  # pragma: no cover
         from datamodel_code_generator._structured_output import generation_output_json_schema
 
@@ -63,6 +69,11 @@ if any(
         from datamodel_code_generator.prompt import generate_prompt_json_schema
 
         sys.stdout.write(f"{generate_prompt_json_schema()}\n")
+        sys.exit(0)
+    if namespace.output_format_json_schema == "config":
+        from datamodel_code_generator.json_config import json_config_json_schema
+
+        sys.stdout.write(f"{json_config_json_schema()}\n")
         sys.exit(0)
     if namespace.output_format_json_schema == "generation":
         from datamodel_code_generator._structured_output import generation_output_json_schema
@@ -95,15 +106,13 @@ import shutil
 import signal
 import tempfile
 import warnings
-from collections import defaultdict
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from enum import Enum, IntEnum
-from io import TextIOBase
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
 
-from pydantic import ConfigDict, Field, ValidationError, field_validator, model_validator
+from pydantic import ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 from datamodel_code_generator import (
     AllExportsScope,
@@ -130,13 +139,15 @@ from datamodel_code_generator.format import (
     _get_black,
     is_supported_in_black,
 )
+from datamodel_code_generator.json_config import JsonConfigError, JsonConfigSource, load_json_config_field
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes
 from datamodel_code_generator.util import load_toml
-from datamodel_code_generator.validators import ValidatorsConfig
+from datamodel_code_generator.validators import ModelValidators
 
 if TYPE_CHECKING:
     from argparse import Namespace
+    from collections import defaultdict
 
     from typing_extensions import Self
 
@@ -145,7 +156,6 @@ if TYPE_CHECKING:
         CommandOutputKind,
         GeneratedFilePayload,
     )
-    from datamodel_code_generator.validators import ModelValidators
 
 
 # Options that should be excluded from pyproject.toml config generation
@@ -212,12 +222,12 @@ _RawConfigValue: TypeAlias = (
     | float
     | Path
     | ParseResult
-    | TextIOBase
     | Enum
     | Sequence[str]
     | Sequence[StrictTypes]
     | Sequence[OpenAPIScope]
     | Sequence[tuple[str, str]]
+    | Mapping[str, Any]
     | Mapping[str, str]
     | Mapping[str, str | list[str]]
 )
@@ -274,19 +284,25 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
         "custom_formatters_kwargs",
         "validators",
         "default_values",
+        "base_class_map",
+        "model_name_map",
+        "enum_field_as_literal_map",
+        "duplicate_name_suffix",
+        "type_overrides",
         mode="before",
     )
-    def validate_file(cls, value: Any) -> TextIOBase | None:  # noqa: N805
-        """Validate and open file path."""
+    def validate_json_config(cls, value: Any, info: ValidationInfo) -> Any:  # noqa: N805
+        """Load and validate JSON configuration values from inline JSON or file paths."""
         if value is None:  # pragma: no cover
             return value
-
-        path = Path(value)
-        if path.is_file():
-            return cast("TextIOBase", path.expanduser().resolve().open("rt"))
-
-        msg = f"A file was expected but {value} is not a file."  # pragma: no cover
-        raise Error(msg)  # pragma: no cover
+        field_name = info.field_name
+        if field_name is None:  # pragma: no cover
+            msg = "JSON configuration validator was called without a field name."
+            raise Error(msg)
+        try:
+            return load_json_config_field(field_name, cast("JsonConfigSource", value))
+        except JsonConfigError as e:
+            raise Error(str(e)) from e
 
     @field_validator(
         "input",
@@ -347,18 +363,6 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
         custom_formatters = values.get("custom_formatters")
         if custom_formatters is not None:
             values["custom_formatters"] = custom_formatters.split(",")
-        return values
-
-    @model_validator(mode="before")  # ty: ignore
-    def validate_duplicate_name_suffix(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
-        """Validate and parse duplicate_name_suffix JSON string."""
-        duplicate_name_suffix = values.get("duplicate_name_suffix")
-        if duplicate_name_suffix is not None and isinstance(duplicate_name_suffix, str):
-            try:
-                values["duplicate_name_suffix"] = json.loads(duplicate_name_suffix)
-            except json.JSONDecodeError as e:
-                msg = f"Invalid JSON for --duplicate-name-suffix: {e}"
-                raise Error(msg) from e
         return values
 
     @model_validator(mode="before")  # ty: ignore
@@ -511,17 +515,17 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
     check: bool = False
     debug: bool = False
     disable_warnings: bool = False
-    extra_template_data: Optional[TextIOBase] = None  # noqa: UP045
-    validators: Optional[TextIOBase] = None  # noqa: UP045
-    aliases: Optional[TextIOBase] = None  # noqa: UP045
-    serialization_aliases: Optional[TextIOBase] = None  # noqa: UP045
-    default_values: Optional[TextIOBase] = None  # noqa: UP045
+    extra_template_data: Optional[dict[str, dict[str, Any]]] = None  # noqa: UP045
+    validators: Optional[Mapping[str, ModelValidators]] = None  # noqa: UP045
+    aliases: Optional[Mapping[str, str | list[str]]] = None  # noqa: UP045
+    serialization_aliases: Optional[Mapping[str, str]] = None  # noqa: UP045
+    default_values: Optional[Mapping[str, Any]] = None  # noqa: UP045
     use_default: bool = False
     force_optional: bool = False
     url: Optional[ParseResult] = None  # noqa: UP045
     strict_types: list[StrictTypes] = Field(default_factory=list)
     openapi_scopes: Optional[list[OpenAPIScope]] = Field(default_factory=lambda: [OpenAPIScope.Schemas])  # noqa: UP045
-    custom_formatters_kwargs: Optional[TextIOBase] = None  # noqa: UP045
+    custom_formatters_kwargs: Optional[dict[str, str]] = None  # noqa: UP045
     watch: bool = False
     watch_delay: float = 0.5
     list_deprecations: Optional[str] = None  # noqa: UP045
@@ -547,6 +551,9 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
         parsed_args = Config.model_validate(set_args)
         for field_name in set_args:
             setattr(self, field_name, getattr(parsed_args, field_name))
+
+
+Config.model_rebuild(_types_namespace={"ModelValidators": ModelValidators})
 
 
 def _explicit_config_args(args: Namespace) -> dict[str, _RawConfigValue]:
@@ -874,62 +881,6 @@ def _hyphenated_config_data(config: Mapping[str, Any]) -> dict[str, Any]:
     return {key.replace("_", "-"): _json_ready(value) for key, value in sorted(config.items())}
 
 
-def _load_json_config(
-    file_handle: TextIOBase | None,
-    name: str,
-    validator: Callable[[Any], str | None],
-) -> tuple[dict[str, Any] | None, str | None]:
-    """Load and validate a JSON configuration file.
-
-    Args:
-        file_handle: The file handle to read from, or None.
-        name: The name of the config for error messages.
-        validator: A function that validates the loaded data and returns an error message or None.
-
-    Returns:
-        A tuple of (loaded_dict, error_message). If successful, error_message is None.
-        If file_handle is None, returns (None, None).
-    """
-    if file_handle is None:
-        return None, None
-
-    with file_handle as data:
-        try:
-            result = json.load(data)
-        except json.JSONDecodeError as e:
-            return None, f"Unable to load {name}: {e}"
-
-    error = validator(result)
-    if error:
-        return None, f"Unable to load {name}: {error}"
-
-    return result, None
-
-
-def _load_validators_config(
-    file_handle: TextIOBase | None,
-) -> tuple[dict[str, ModelValidators] | None, str | None]:
-    """Load and validate a validators configuration file.
-
-    Returns:
-        A tuple of (validators_dict, error_message). If successful, error_message is None.
-        If file_handle is None, returns (None, None).
-    """
-    if file_handle is None:
-        return None, None
-
-    with file_handle as data:
-        try:
-            raw = json.load(data)
-        except json.JSONDecodeError as e:
-            return None, f"Unable to load validators configuration: {e}"
-
-    try:
-        return ValidatorsConfig.model_validate(raw).root, None
-    except ValidationError as e:
-        return None, f"Invalid validators configuration: {e}"
-
-
 def _generated_module_path(module: tuple[str, ...]) -> str:
     return Path(*module).as_posix()
 
@@ -1046,14 +997,14 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     config: Config,
     input_: Path | str | ParseResult,
     output: Path | None,
-    extra_template_data: dict[str, Any] | None,
-    aliases: dict[str, str] | None,
-    serialization_aliases: dict[str, str] | None,
+    extra_template_data: defaultdict[str, dict[str, Any]] | None,
+    aliases: Mapping[str, str | list[str]] | None,
+    serialization_aliases: Mapping[str, str] | None,
     command_line: str | None,
     custom_formatters_kwargs: dict[str, str] | None,
     settings_path: Path | None = None,
     validators: Mapping[str, ModelValidators] | None = None,
-    default_value_overrides: dict[str, Any] | None = None,
+    default_value_overrides: Mapping[str, Any] | None = None,
 ) -> str | Mapping[tuple[str, ...], str] | None:
     """Run code generation with the given config and parameters."""
     return generate(
@@ -1231,6 +1182,11 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         from datamodel_code_generator.prompt import generate_prompt_json_schema  # noqa: PLC0415
 
         print(generate_prompt_json_schema())  # noqa: T201
+        return Exit.OK
+    if namespace.output_format_json_schema == "config":
+        from datamodel_code_generator.json_config import json_config_json_schema  # noqa: PLC0415
+
+        print(json_config_json_schema())  # noqa: T201
         return Exit.OK
     if namespace.output_format_json_schema == "generation":
         print(_generation_output_json_schema())  # noqa: T201
@@ -1457,15 +1413,8 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
     if config.extra_template_data is None:
         extra_template_data = None
     else:
-        with config.extra_template_data as data:
-            try:
-                extra_template_data = json.load(data, object_hook=lambda d: defaultdict(dict, **d))
-            except json.JSONDecodeError as e:
-                print(f"Unable to load extra template data: {e}", file=sys.stderr)  # noqa: T201
-                return Exit.ERROR
-
+        extra_template_data = cast("defaultdict[str, dict[str, Any]]", config.extra_template_data)
         # Extract additional_imports from extra_template_data entries and merge with config
-        assert extra_template_data is not None
         additional_imports_from_template_data = _extract_additional_imports(extra_template_data)
         if additional_imports_from_template_data:
             if config.additional_imports is None:
@@ -1473,57 +1422,11 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             else:
                 config.additional_imports = list(config.additional_imports) + additional_imports_from_template_data
 
-    def _validate_aliases(data: Any) -> str | None:
-        if not isinstance(data, dict) or not all(
-            isinstance(k, str) and (isinstance(v, str) or (isinstance(v, list) and all(isinstance(i, str) for i in v)))
-            for k, v in data.items()
-        ):
-            return (
-                "must be a JSON mapping with string keys and string or list of strings values "
-                '(e.g. {"from": "to", "field": ["alias1", "alias2"]})'
-            )
-        return None
-
-    def _validate_string_key_dict(data: Any) -> str | None:
-        if not isinstance(data, dict) or not all(isinstance(k, str) for k in data):
-            return "must be a JSON object with string keys"
-        return None
-
-    def _validate_string_mapping(data: Any) -> str | None:
-        if not isinstance(data, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in data.items()):
-            return 'must be a JSON string mapping (e.g. {"key": "value", ...})'
-        return None
-
-    aliases, error = _load_json_config(config.aliases, "alias mapping", _validate_aliases)
-    if error:
-        print(error, file=sys.stderr)  # noqa: T201
-        return Exit.ERROR
-
-    serialization_aliases, error = _load_json_config(
-        config.serialization_aliases, "serialization alias mapping", _validate_string_mapping
-    )
-    if error:
-        print(error, file=sys.stderr)  # noqa: T201
-        return Exit.ERROR
-
-    default_value_overrides, error = _load_json_config(
-        config.default_values, "default values mapping", _validate_string_key_dict
-    )
-    if error:
-        print(error, file=sys.stderr)  # noqa: T201
-        return Exit.ERROR
-
-    custom_formatters_kwargs, error = _load_json_config(
-        config.custom_formatters_kwargs, "custom_formatters_kwargs mapping", _validate_string_mapping
-    )
-    if error:
-        print(error, file=sys.stderr)  # noqa: T201
-        return Exit.ERROR
-
-    validators_config, error = _load_validators_config(config.validators)
-    if error:
-        print(error, file=sys.stderr)  # noqa: T201
-        return Exit.ERROR
+    aliases = config.aliases
+    serialization_aliases = config.serialization_aliases
+    default_value_overrides = config.default_values
+    custom_formatters_kwargs = config.custom_formatters_kwargs
+    validators_config = config.validators
 
     writes_json_output_file = namespace.output_format == "json" and config.output is not None and not config.check
     if config.check or writes_json_output_file:

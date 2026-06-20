@@ -4,9 +4,9 @@
 
 | Option | Description |
 |--------|-------------|
-| [`--aliases`](#aliases) | Apply custom field and class name aliases from JSON file. |
+| [`--aliases`](#aliases) | Apply custom field and class name aliases via inline JSON or... |
 | [`--capitalize-enum-members`](#capitalize-enum-members) | Capitalize enum member names to UPPER_CASE format. |
-| [`--default-values`](#default-values) | Override field default values from external JSON file. |
+| [`--default-values`](#default-values) | Override field default values via inline JSON or a JSON file... |
 | [`--empty-enum-field-name`](#empty-enum-field-name) | Name for empty string enum field values. |
 | [`--extra-fields`](#extra-fields) | Configure how generated models handle extra fields not defin... |
 | [`--field-constraints`](#field-constraints) | Generate Field() with validation constraints from schema. |
@@ -18,7 +18,7 @@
 | [`--no-alias`](#no-alias) | Disable Field alias generation for non-Python-safe property ... |
 | [`--original-field-name-delimiter`](#original-field-name-delimiter) | Specify delimiter for original field names when using snake-... |
 | [`--remove-special-field-name-prefix`](#remove-special-field-name-prefix) | Remove the special prefix from field names. |
-| [`--serialization-aliases`](#serialization-aliases) | Apply custom Pydantic v2 serialization aliases from JSON fil... |
+| [`--serialization-aliases`](#serialization-aliases) | Apply custom Pydantic v2 serialization aliases via inline JS... |
 | [`--set-default-enum-member`](#set-default-enum-member) | Set the first enum member as the default value for enum fiel... |
 | [`--snake-case-field`](#snake-case-field) | Convert field names to snake_case format. |
 | [`--special-field-name-prefix`](#special-field-name-prefix) | Prefix to add to special field names (like reserved keywords... |
@@ -36,9 +36,9 @@
 
 ## `--aliases` {#aliases}
 
-Apply custom field and class name aliases from JSON file.
+Apply custom field and class name aliases via inline JSON or a JSON file path.
 
-The `--aliases` option allows renaming fields and classes via a JSON mapping file,
+The `--aliases` option allows renaming fields and classes via an inline JSON object or JSON mapping file,
 providing fine-grained control over generated names independent of schema definitions.
 
 **See also:** [Field Aliases](../aliases.md)
@@ -493,9 +493,9 @@ naming conventions for constants.
 
 ## `--default-values` {#default-values}
 
-Override field default values from external JSON file.
+Override field default values via inline JSON or a JSON file path.
 
-The `--default-values` option allows specifying default values for fields via a JSON file.
+The `--default-values` option allows specifying default values for fields via an inline JSON object or JSON file.
 Supports scoped format (ClassName.field) for hierarchical overrides.
 
 !!! tip "Usage"
@@ -2072,7 +2072,7 @@ The `--remove-special-field-name-prefix` flag configures the code generation beh
 
 ## `--serialization-aliases` {#serialization-aliases}
 
-Apply custom Pydantic v2 serialization aliases from JSON file.
+Apply custom Pydantic v2 serialization aliases via inline JSON or a JSON file path.
 
 The `--serialization-aliases` option lets Pydantic v2 models keep input aliases
 or validation aliases while using separate output-only names for serialization.

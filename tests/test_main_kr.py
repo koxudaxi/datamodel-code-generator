@@ -1803,9 +1803,9 @@ def test_formatters_option(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--custom-formatters-kwargs"],
-    option_description="""Pass custom arguments to custom formatters via JSON file.
+    option_description="""Pass custom arguments to custom formatters via inline JSON or a JSON file path.
 
-The `--custom-formatters-kwargs` flag accepts a path to a JSON file containing
+The `--custom-formatters-kwargs` flag accepts an inline JSON object or a path to a JSON file containing
 custom configuration for custom formatters (used with --custom-formatters).
 The file should contain a JSON object mapping formatter names to their kwargs.
 
@@ -1817,9 +1817,9 @@ configuration to user-defined formatter modules.""",
 )
 @freeze_time("2019-07-26")
 def test_custom_formatters_kwargs_option(output_file: Path) -> None:
-    """Pass custom arguments to custom formatters via JSON file.
+    """Pass custom arguments to custom formatters via inline JSON or a JSON file path.
 
-    The `--custom-formatters-kwargs` flag accepts a path to a JSON file containing
+    The `--custom-formatters-kwargs` flag accepts an inline JSON object or a path to a JSON file containing
     custom configuration for custom formatters (used with --custom-formatters).
     The file should contain a JSON object mapping formatter names to their kwargs.
 

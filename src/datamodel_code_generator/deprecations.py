@@ -18,6 +18,7 @@ DeprecationId = Literal[
     "cli.parent-scoped-naming",
     "cli.validation",
     "config.yaml-non-lowercase-bool",
+    "config.json-config-strict-validation",
     "format.default-formatters",
     "python-api.python-version-has-type-alias",
     "schema.jsonschema-items-array",
@@ -120,6 +121,19 @@ DEPRECATIONS: dict[DeprecationId, Deprecation] = {
         warning_since="0.48.0",
         removal_version=None,
         replacement="Use lowercase true or false.",
+    ),
+    "config.json-config-strict-validation": Deprecation(
+        id="config.json-config-strict-validation",
+        kind="config",
+        target="JSON configuration values accepted by legacy validation",
+        message=(
+            "JSON configuration values that do not match the documented schema are deprecated and will become "
+            "validation errors in a future release."
+        ),
+        warning_since="0.64.2",
+        removal_version=None,
+        replacement="Update the JSON configuration to match --output-format-json-schema config.",
+        warning_category="FutureWarning",
     ),
     "python-api.python-version-has-type-alias": Deprecation(
         id="python-api.python-version-has-type-alias",

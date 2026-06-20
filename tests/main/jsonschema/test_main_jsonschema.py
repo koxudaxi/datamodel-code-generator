@@ -9688,9 +9688,9 @@ def test_main_jsonschema_contains_false_min_contains_zero(output_file: Path) -> 
 
 @pytest.mark.cli_doc(
     options=["--aliases"],
-    option_description="""Apply custom field and class name aliases from JSON file.
+    option_description="""Apply custom field and class name aliases via inline JSON or a JSON file path.
 
-The `--aliases` option allows renaming fields and classes via a JSON mapping file,
+The `--aliases` option allows renaming fields and classes via an inline JSON object or JSON mapping file,
 providing fine-grained control over generated names independent of schema definitions.
 Supports scoped format (ClassName.field) for hierarchical aliasing.""",
     input_schema="jsonschema/hierarchical_aliases.json",
@@ -9707,6 +9707,21 @@ def test_main_jsonschema_hierarchical_aliases_scoped(output_file: Path) -> None:
         extra_args=[
             "--aliases",
             str(ALIASES_DATA_PATH / "hierarchical_aliases_scoped.json"),
+        ],
+    )
+
+
+def test_main_jsonschema_hierarchical_aliases_inline_json(output_file: Path) -> None:
+    """Test aliases mapping loaded from inline JSON."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "hierarchical_aliases.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="jsonschema_hierarchical_aliases_scoped.py",
+        extra_args=[
+            "--aliases",
+            '{"Root.name": "root_name", "User.name": "user_name", "Address.name": "address_name"}',
         ],
     )
 
@@ -9794,7 +9809,7 @@ def test_main_jsonschema_serialization_alias_same_name_pydantic_v2(output_file: 
 
 @pytest.mark.cli_doc(
     options=["--serialization-aliases"],
-    option_description="""Apply custom Pydantic v2 serialization aliases from JSON file.
+    option_description="""Apply custom Pydantic v2 serialization aliases via inline JSON or a JSON file path.
 
 The `--serialization-aliases` option lets Pydantic v2 models keep input aliases
 or validation aliases while using separate output-only names for serialization.""",
@@ -11748,16 +11763,16 @@ def test_x_python_type_union_anyof(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--default-values"],
-    option_description="""Override field default values from external JSON file.
+    option_description="""Override field default values via inline JSON or a JSON file path.
 
-The `--default-values` option allows specifying default values for fields via a JSON file.
+The `--default-values` option allows specifying default values for fields via an inline JSON object or JSON file.
 Supports scoped format (ClassName.field) for hierarchical overrides.""",
     input_schema="jsonschema/default_values_override.json",
     cli_args=["--default-values", "default_values/scoped_defaults.json"],
     golden_output="jsonschema/jsonschema_default_values_override.py",
 )
 def test_main_jsonschema_default_values_override(output_file: Path) -> None:
-    """Test default value overrides from external JSON file."""
+    """Test default value overrides from a JSON file path."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "default_values_override.json",
         output_path=output_file,
@@ -11894,7 +11909,7 @@ def test_reduce_duplicate_field_types(output_file: Path) -> None:
     options=["--validators"],
     option_description="""Add custom field validators to generated Pydantic v2 models.
 
-The `--validators` option takes a JSON file defining validators per model.
+The `--validators` option takes an inline JSON object or JSON file defining validators per model.
 Each validator specifies the field(s) to validate, the validation function
 to import, and optionally the mode (before/after/wrap/plain).
 This allows injecting custom validation logic into generated models.""",
@@ -11911,7 +11926,7 @@ This allows injecting custom validation logic into generated models.""",
 def test_field_validators(output_file: Path) -> None:
     """Add custom field validators to generated Pydantic v2 models.
 
-    The `--validators` option takes a JSON file defining validators per model.
+    The `--validators` option takes an inline JSON object or JSON file defining validators per model.
     Each validator specifies the field(s) to validate, the validation function
     to import, and optionally the mode (before/after/wrap/plain).
     This allows injecting custom validation logic into generated models.
