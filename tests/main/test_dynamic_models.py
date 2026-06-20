@@ -350,6 +350,14 @@ def test_target_model_names_rejects_string() -> None:
         generate_dynamic_models(schema, target_model_names="Model")  # type: ignore[arg-type]
 
 
+def test_target_model_names_rejects_invalid_names() -> None:
+    """Test target filtering rejects empty and non-string model names."""
+    schema = make_object_schema({"name": {"type": "string"}})
+
+    with pytest.raises(Error, match=r"target_model_names contains invalid model names: '', 1"):
+        generate_dynamic_models(schema, target_model_names=["", 1])  # type: ignore[list-item]
+
+
 def test_cache_disabled() -> None:
     """Test that caching can be disabled."""
     schema = make_object_schema({"name": {"type": "string"}})
@@ -699,23 +707,35 @@ def test_execute_multi_module_without_init() -> None:
     assert user.name == "Alice"
 
 
-def test_execute_multi_module_restores_existing_module_name() -> None:
-    """Test _execute_multi_module restores an existing user-provided module name."""
-    from datamodel_code_generator.dynamic import _execute_multi_module
-
+def test_multi_module_output_restores_existing_module_name() -> None:
+    """Test dynamic generation restores an existing user-provided module name."""
     package_name = "runtime_package_restore"
     user_module_name = f"{package_name}.user"
     original_user_module = types.ModuleType(user_module_name)
     sys.modules[user_module_name] = original_user_module
 
+    schema: dict[str, Any] = {
+        "$defs": {
+            "User": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+                "required": ["name"],
+            }
+        },
+        "$ref": "#/$defs/User",
+    }
+
     try:
-        models = _execute_multi_module(
-            {("user.py",): "from pydantic import BaseModel\n\nclass User(BaseModel):\n    name: str"},
+        models = generate_dynamic_models(
+            schema,
+            config=make_config(module_split_mode=ModuleSplitMode.Single),
             module_name=package_name,
+            cache_size=0,
         )
 
         assert "User" in models
         assert models["User"].__module__ == f"{package_name}.user"
+        assert models["User"].model_validate({"name": "Alice"}).name == "Alice"
         assert package_name not in sys.modules
         assert sys.modules[user_module_name] is original_user_module
     finally:
