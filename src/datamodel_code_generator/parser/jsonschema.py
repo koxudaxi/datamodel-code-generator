@@ -5453,7 +5453,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _is_current_root_schema_path(self, path: list[str]) -> bool:
         current_root = list(self.model_resolver.current_root)
-        return path == (current_root or ["#"])
+        if path == (current_root or ["#"]):
+            return True
+        return self.model_resolver.resolve_ref(path) == self.model_resolver.resolve_ref(current_root or "#")
 
     def _drop_ref_from_schema(self, obj: JsonSchemaObject) -> JsonSchemaObject:
         return self.SCHEMA_OBJECT_TYPE.model_validate(
