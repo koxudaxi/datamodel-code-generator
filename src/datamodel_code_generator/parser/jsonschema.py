@@ -88,7 +88,66 @@ if TYPE_CHECKING:
     from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 JsonSchemaLiteral = Union[bool, int, str]  # noqa: UP007
+JsonSchemaConstraintKey = Literal[
+    "minimum",
+    "maximum",
+    "multipleOf",
+    "exclusiveMaximum",
+    "exclusiveMinimum",
+    "pattern",
+    "minLength",
+    "maxLength",
+    "minItems",
+    "maxItems",
+]
+JsonSchemaConstraintValue = int | float | str | bool
+JsonSchemaDataTypeKwargValue = JsonSchemaConstraintValue
 _MIN_UNION_VARIANT_LITERAL_VALUES = 2
+_NUMBER_CONSTRAINT_KEYS: tuple[JsonSchemaConstraintKey, ...] = (
+    "minimum",
+    "maximum",
+    "multipleOf",
+    "exclusiveMaximum",
+    "exclusiveMinimum",
+)
+_STRING_CONSTRAINT_KEYS: tuple[JsonSchemaConstraintKey, ...] = (
+    "pattern",
+    "minLength",
+    "maxLength",
+    "minItems",
+    "maxItems",
+)
+_BYTES_CONSTRAINT_KEYS: tuple[JsonSchemaConstraintKey, ...] = ("minLength", "maxLength")
+_NUMBER_CONSTRAINT_TYPES = frozenset({
+    Types.int32,
+    Types.int64,
+    Types.integer,
+    Types.float,
+    Types.double,
+    Types.number,
+    Types.time,
+    Types.decimal,
+})
+
+
+def _get_data_type_constraint_kwargs(
+    obj: JsonSchemaObject,
+    type_: Types,
+) -> dict[str, JsonSchemaConstraintValue]:
+    match type_:
+        case number_type if number_type in _NUMBER_CONSTRAINT_TYPES:
+            keys = _NUMBER_CONSTRAINT_KEYS
+        case Types.string:
+            keys = _STRING_CONSTRAINT_KEYS
+        case Types.binary:
+            keys = _BYTES_CONSTRAINT_KEYS
+        case _:
+            return {}
+    return {
+        key: value.value if isinstance(value, UnionIntFloat) else value
+        for key in keys
+        if (value := getattr(obj, key, None)) is not None
+    }
 
 
 def _get_discriminator_property_name(obj: JsonSchemaObject) -> str | None:
@@ -1801,15 +1860,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
 
         def _get_data_type(type_: str, format__: str) -> DataType:
+            types = self._get_type_with_mappings(type_, format__)
+            kwargs_to_pass: dict[str, JsonSchemaDataTypeKwargValue]
             if self.field_constraints:
                 # To prevent type manager from generating conint/confloat,
                 # we only pass constraints that perfectly match specialized types
                 # (like NonNegativeInt -> minimum: 0).
                 # Other constraints should remain on Field(), so we pass {}
                 kwargs_to_pass = {}
-                number_keys = ("minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum")
                 number_kwargs: dict[str, int | float | bool] = {}
-                for key in number_keys:
+                for key in ("minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum"):
                     value = getattr(obj, key)
                     if value is not None:
                         number_kwargs[key] = value.value if isinstance(value, UnionIntFloat) else value
@@ -1820,9 +1880,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         key = zero_bound_keys[0]
                         kwargs_to_pass = {key: number_kwargs[key]}
             else:
-                kwargs_to_pass = obj.model_dump()
+                kwargs_to_pass = {}
+                kwargs_to_pass.update(_get_data_type_constraint_kwargs(obj, types))
 
-            types = self._get_type_with_mappings(type_, format__)
             if types == Types.binary and self._is_base64_encoded_binary_mapping(type_, format__):
                 kwargs_to_pass["base64_encoded"] = True
 

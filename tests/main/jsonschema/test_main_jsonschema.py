@@ -3217,6 +3217,24 @@ def test_main_strict_types_with_constraints(output_file: Path) -> None:
     )
 
 
+def test_main_selective_constraint_kwargs_pydantic_v2(output_file: Path) -> None:
+    """Test primitive constraints are preserved without dumping the full schema object."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "selective_constraint_kwargs.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="selective_constraint_kwargs.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+            "--disable-timestamp",
+        ],
+    )
+
+
 @LEGACY_BLACK_SKIP
 def test_main_hostname_strict_field_constraints(output_file: Path) -> None:
     """Test hostname with --strict-types str and --field-constraints returns StrictStr."""
