@@ -1092,7 +1092,7 @@ adding `BaseModel`. Ensure your mixins inherit from `BaseModel` if needed.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --base-class-map "{"Person": "custom.bases.PersonBase", "Animal": "custom.bases.AnimalBase"}" # (1)!
+    datamodel-codegen --input schema.json --base-class-map '{"Person": "custom.bases.PersonBase", "Animal": "custom.bases.AnimalBase"}' # (1)!
     ```
 
     1. :material-arrow-left: `--base-class-map` - the option documented here
@@ -1786,7 +1786,7 @@ control over dataclass generation.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --output-model-type dataclasses.dataclass --dataclass-arguments "{"slots": true, "order": true}" # (1)!
+    datamodel-codegen --input schema.json --output-model-type dataclasses.dataclass --dataclass-arguments '{"slots": true, "order": true}' # (1)!
     ```
 
     1. :material-arrow-left: `--dataclass-arguments` - the option documented here
@@ -2120,7 +2120,7 @@ For example, `{"model": "Schema"}` changes `Item1` to `ItemSchema`.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --duplicate-name-suffix "{"model": "Schema"}" # (1)!
+    datamodel-codegen --input schema.json --duplicate-name-suffix '{"model": "Schema"}' # (1)!
     ```
 
     1. :material-arrow-left: `--duplicate-name-suffix` - the option documented here
@@ -3551,7 +3551,7 @@ of being silently suffixed.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --model-name-map "{"#/definitions/Foo": "RenamedFoo", "Bar": "RenamedBar", "model-name": "OriginalMapped"}" # (1)!
+    datamodel-codegen --input schema.json --model-name-map '{"#/definitions/Foo": "RenamedFoo", "Bar": "RenamedBar", "model-name": "OriginalMapped"}' # (1)!
     ```
 
     1. :material-arrow-left: `--model-name-map` - the option documented here
