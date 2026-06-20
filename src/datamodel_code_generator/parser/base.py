@@ -94,6 +94,7 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator.model_metadata import GeneratedModelMetadata, ModelFieldMetadata, ModelMetadata
 ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
 
 HashableComparable = _internal_utils.HashableComparable
@@ -259,6 +260,33 @@ class ParseConfig(NamedTuple):
     module_split_mode: ModuleSplitMode | None
     all_exports_scope: AllExportsScope | None
     all_exports_collision_strategy: AllExportsCollisionStrategy | None
+
+
+def _decode_json_pointer_part(value: str) -> str:
+    return value.replace("~1", "/").replace("~0", "~")
+
+
+def _source_path_from_reference_path(reference_path: str) -> list[str] | None:
+    _, separator, fragment = reference_path.partition("#")
+    if not separator:
+        return None
+    if not fragment:
+        return []
+    if not fragment.startswith("/"):
+        return None
+    return [_decode_json_pointer_part(part) for part in fragment[1:].split("/")]
+
+
+def _module_name_from_module_path(module: ModulePath) -> str:
+    if module == ("__init__.py",):
+        return ""
+
+    parts = [*module]
+    if parts and parts[-1].endswith(".py"):
+        parts[-1] = parts[-1][:-3]
+    if parts and parts[-1] == "__init__":
+        parts.pop()
+    return ".".join(parts)
 
 
 class _KeepModelOrderDeps(NamedTuple):
@@ -1262,6 +1290,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.target_python_version: PythonVersion = config.target_python_version
         self.builtin_names: frozenset[str] = _get_builtin_names_for_target(self.target_python_version)
         self.generation_store, self.results = GenerationStore.create_with_results()
+        self.model_metadata: ModelMetadata | None = None
         self.dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = config.dump_resolve_reference_action
         self.validation: bool = config.validation
         self.field_constraints: bool = config.field_constraints
@@ -1300,6 +1329,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.remote_text_cache: DefaultPutDict[str, str] = config.remote_text_cache or DefaultPutDict()
         self.current_source_path: Path | None = None
         self.use_title_as_name: bool = config.use_title_as_name
+        self.infer_union_variant_names: bool = config.infer_union_variant_names
         self.use_operation_id_as_name: bool = config.use_operation_id_as_name
         self.use_unique_items_as_set: bool = config.use_unique_items_as_set
         self.use_tuple_for_fixed_items: bool = config.use_tuple_for_fixed_items
@@ -1390,6 +1420,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             base_url=source.geturl() if isinstance(source, ParseResult) else None,
             singular_name_suffix="" if config.disable_appending_item_suffix else None,
             aliases=config.aliases,
+            model_name_map=config.model_name_map,
             empty_field_name=config.empty_enum_field_name,
             snake_case_field=config.snake_case_field,
             custom_class_name_generator=config.custom_class_name_generator,
@@ -3741,6 +3772,52 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     future_imports=future_imports_str,
                 )
 
+    @staticmethod
+    def _field_metadata(field: DataModelFieldBase) -> ModelFieldMetadata:
+        source_name = field.original_name or field.alias or field.name or ""
+        return {
+            "name": field.name or source_name,
+            "alias": field.alias or source_name,
+            "original_name": field.original_name,
+            "type": field.type_hint,
+            "required": field.required,
+        }
+
+    @classmethod
+    def _model_metadata(
+        cls,
+        model: DataModel,
+        module: ModulePath,
+        source_reference_paths: Mapping[DataModel, str],
+    ) -> GeneratedModelMetadata:
+        source_ref = source_reference_paths[model]
+        title = model.extra_template_data.get("title")
+        return {
+            "class_name": model.class_name,
+            "name": model.name,
+            "module": _module_name_from_module_path(module),
+            "source_ref": source_ref,
+            "source_path": _source_path_from_reference_path(source_ref),
+            "title": title if isinstance(title, str) else None,
+            "fields": [cls._field_metadata(field) for field in model.fields],
+        }
+
+    @classmethod
+    def _build_model_metadata(
+        cls,
+        contexts: list[ModuleContext],
+        source_reference_paths: Mapping[DataModel, str],
+    ) -> ModelMetadata:
+        return {
+            "version": 1,
+            "models": [
+                cls._model_metadata(model, ctx.module, source_reference_paths)
+                for ctx in contexts
+                for model in ctx.models
+                if model in source_reference_paths
+            ],
+        }
+
     def _dispose(self) -> None:
         """Break reference cycles in the parsed object graph.
 
@@ -3767,6 +3844,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         all_exports_scope: AllExportsScope | None = None,
         all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
         module_split_mode: ModuleSplitMode | None = None,
+        collect_model_metadata: bool = False,  # noqa: FBT001, FBT002
     ) -> str | dict[tuple[str, ...], Result]:
         """Parse schema and generate code, returning single file or module dict."""
         self.parse_raw()
@@ -3784,6 +3862,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             generation_index=self.generation_store.index,
             pydantic_v2_root_model_type=self.pydantic_v2_root_model_type,
         )
+        source_reference_paths: dict[DataModel, str] = {}
+        if collect_model_metadata:
+            source_reference_paths = {model: model.reference.path for model in sorted_data_models.values()}
         sort_base_classes_for_mro(sorted_data_models, self.generation_store)
 
         (
@@ -3842,6 +3923,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         if config.all_exports_scope is not None:
             self._generate_empty_init_exports(results, contexts, config, future_imports_str)
+
+        if collect_model_metadata:
+            self.model_metadata = self._build_model_metadata(contexts, source_reference_paths)
+        else:
+            self.model_metadata = None
 
         if [*results] == [("__init__.py",)]:
             single_result = results["__init__.py",]

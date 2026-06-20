@@ -17,6 +17,7 @@ Input sources, output paths, and schema version handling.
 - `--input-file-type`: Input file type (default: auto). Use 'jsonschema', 'openapi', 'asyncapi', 'graphql', 'mcp-tools', 'xmlschema', 'protobuf', or 'avro' for schema definitions. Use 'json', 'yaml', or 'csv' for raw sample data to infer a schema automatically. Choices: `auto`, `openapi`, `asyncapi`, `jsonschema`, `mcp-tools`, `xmlschema`, `protobuf`, `avro`, `json`, `yaml`, `dict`, `csv`, `graphql`.
 - `--external-ref-mapping`: Map external $ref file paths to Python import packages instead of generating duplicate classes. Accepts one or more mappings after a single flag. Format: "path/to/schema.yaml=mypackage.models". When a $ref points to a mapped file, an import statement is generated instead of a class definition.
 - `--output`: Output file (default: stdout)
+- `--emit-model-metadata`: Write a separate JSON map from source schema references to generated models and fields.
 - `--preset`: Apply an immutable built-in option preset. Preset names include the target Python version so generated syntax is pinned. Choices: `standard-py310-20260619`, `standard-py311-20260619`, `standard-py312-20260619`, `standard-py313-20260619`, `standard-py314-20260619`, `practical-py310-20260619`, `practical-py311-20260619`, `practical-py312-20260619`, `practical-py313-20260619`, `practical-py314-20260619`.
 - `--url`: Input file URL. `--input` is ignored when `--url` is used
 - `--input-model`: Python import path to a Pydantic v2 model or schema dict (e.g., 'mypackage.module:ClassName' or 'mypackage.schemas:SCHEMA_DICT'). Can be specified multiple times for related models with inheritance. For dict input, --input-file-type is required. Cannot be used with --input or --url.
@@ -69,6 +70,7 @@ Field naming, aliases, defaults, and constraints.
 - `--extra-fields`: Set the generated models to allow, forbid, or ignore extra fields. Choices: `allow`, `ignore`, `forbid`.
 - `--use-schema-description`: Use schema description to populate class docstring
 - `--use-title-as-name`: use titles as class names of models
+- `--infer-union-variant-names`: Infer inline oneOf/anyOf branch model names from literal discriminator-style fields
 - `--field-constraints`: Use field constraints and not con* annotations
 - `--set-default-enum-member`: Set enum members as default values for enum field
 - `--use-enum-values-in-discriminator`: Use enum member literals in discriminator fields instead of string literals
@@ -104,6 +106,7 @@ Generated model class and package behavior.
 - `--allow-population-by-field-name`: Allow population by field name
 - `--no-allow-population-by-field-name`: Allow population by field name
 - `--class-name`: Set class name of root model
+- `--model-name-map`: Rename generated model classes by schema ref or current generated class name using a JSON object or JSON file.
 - `--allow-leading-underscore-class-name`: Allow an explicitly specified root class name to start with an underscore
 - `--class-name-prefix`: Prefix to add to generated class names (e.g., 'Api' produces 'ApiUser'). Does not apply to root model when --class-name is specified.
 - `--class-name-suffix`: Suffix to add to generated class names (e.g., 'Schema' produces 'UserSchema'). Does not apply to root model when --class-name is specified.
@@ -215,7 +218,7 @@ General utility, HTTP, checking, and project integration options.
 - `--help` (alias: `-h`): show this help message and exit
 - `--no-color`: disable colorized output
 - `--output-format`: Format for command output (default: text). Use json for structured output when supported. Choices: `text`, `json`.
-- `--output-format-json-schema`: Output JSON Schema for the selected structured output format and exit. Choices: `generate-prompt`, `generation`, `structured-output`.
+- `--output-format-json-schema`: Output JSON Schema for the selected JSON output format and exit. Choices: `generate-prompt`, `generation`, `model-metadata`, `structured-output`.
 - `--generate-pyproject-config`: Generate pyproject.toml configuration from the provided CLI arguments and exit
 - `--generate-cli-command`: Generate CLI command from pyproject.toml configuration and exit
 - `--generate-prompt`: Generate a prompt for consulting LLMs about CLI options. Optionally provide your question as an argument. Pipe to CLI tools (e.g., `| claude -p`, `| codex exec`) or copy to clipboard (e.g., `| pbcopy`, `| xclip`) for web LLM chats.

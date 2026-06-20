@@ -88,6 +88,38 @@ if TYPE_CHECKING:
     from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 JsonSchemaLiteral = Union[bool, int, str]  # noqa: UP007
+_MIN_UNION_VARIANT_LITERAL_VALUES = 2
+
+
+def _get_discriminator_property_name(obj: JsonSchemaObject) -> str | None:
+    """Return the discriminator property name from either JSON Schema or OpenAPI shape."""
+    discriminator = obj.discriminator
+    if isinstance(discriminator, Discriminator):
+        return discriminator.propertyName
+    if isinstance(discriminator, str):
+        return discriminator
+    return None
+
+
+def _literal_uniqueness_key(value: JsonSchemaLiteral) -> tuple[type[object], JsonSchemaLiteral]:
+    return type(value), value
+
+
+def _get_union_variant_name(name: str, literal: object) -> str | None:
+    module_name, separator, class_name = name.rpartition(".")
+    if isinstance(literal, str):
+        literal_text = literal
+    elif isinstance(literal, bool):
+        literal_text = f"bool_{str(literal).lower()}"
+    elif isinstance(literal, int):
+        literal_text = f"int_{literal}"
+    else:
+        return None
+    literal_name = sanitize_module_name(literal_text, treat_dot_as_module=False)
+    if not literal_name:
+        return None
+    variant_name = f"{class_name or name}_{literal_name}"
+    return f"{module_name}{separator}{variant_name}" if module_name else variant_name
 
 
 def __getattr__(name: str) -> Any:
@@ -2173,6 +2205,130 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
         return name
 
+    def _get_single_literal_value(
+        self,
+        obj: JsonSchemaObject,
+        seen_refs: set[str] | None = None,
+    ) -> JsonSchemaLiteral | None:
+        if "const" in obj.extras:
+            const = obj.extras["const"]
+            return const if isinstance(const, (bool, int, str)) else None
+        if len(obj.enum) == 1 and isinstance(obj.enum[0], (bool, int, str)):
+            return obj.enum[0]
+        if obj.ref:
+            seen_refs = seen_refs or set()
+            resolved_ref = self.model_resolver.resolve_ref(obj.ref)
+            if resolved_ref in seen_refs:
+                return None
+            if self._resolve_external_ref_mapping(obj.ref):
+                return None
+            seen_refs.add(resolved_ref)
+            return self._get_single_literal_value(self._load_ref_schema_object(obj.ref), seen_refs)
+        return None
+
+    def _get_union_variant_literal_values(
+        self,
+        combined_schemas: Sequence[JsonSchemaObject],
+        field_name: str,
+    ) -> dict[int, JsonSchemaLiteral] | None:
+        values: dict[int, JsonSchemaLiteral] = {}
+        for index, item in enumerate(combined_schemas):
+            if not item.properties:
+                continue
+            field = item.properties.get(field_name)
+            if not isinstance(field, JsonSchemaObject):
+                return None
+            value = self._get_single_literal_value(field)
+            if value is None:
+                return None
+            values[index] = value
+
+        if len(values) < _MIN_UNION_VARIANT_LITERAL_VALUES:
+            return None
+        unique_values = {_literal_uniqueness_key(value) for value in values.values()}
+        return values if len(unique_values) == len(values) else None
+
+    def _iter_union_variant_literal_field_names(  # noqa: PLR6301
+        self,
+        obj: JsonSchemaObject,
+        combined_schemas: Sequence[JsonSchemaObject],
+    ) -> Iterator[str]:
+        seen: set[str] = set()
+        if discriminator_property_name := _get_discriminator_property_name(obj):
+            seen.add(discriminator_property_name)
+            yield discriminator_property_name
+
+        for item in combined_schemas:
+            if not item.properties:
+                continue
+            for field_name in item.properties:
+                if field_name in seen:
+                    continue
+                seen.add(field_name)
+                yield field_name
+
+    def _infer_union_variant_names(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        combined_schemas: Sequence[JsonSchemaObject],
+    ) -> list[str | None] | None:
+        if not self.infer_union_variant_names:
+            return None
+
+        for field_name in self._iter_union_variant_literal_field_names(obj, combined_schemas):
+            values = self._get_union_variant_literal_values(combined_schemas, field_name)
+            if values is None:
+                continue
+            variant_names: list[str | None] = [None] * len(combined_schemas)
+            for index, literal in values.items():
+                variant_names[index] = _get_union_variant_name(name, literal)
+            generated_names = [variant_name for variant_name in variant_names if variant_name]
+            if len(set(generated_names)) != len(generated_names):
+                continue
+            return variant_names
+        return None
+
+    def _get_inferred_union_variant_names(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        combined_schemas: Sequence[JsonSchemaObject],
+    ) -> list[str | None] | None:
+        if not self.infer_union_variant_names:
+            return None
+        return self._infer_union_variant_names(name, obj, combined_schemas)
+
+    def _parse_combined_schema_items(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+        combined_schemas: Sequence[JsonSchemaObject],
+        variant_names: Sequence[str | None] | None,
+    ) -> list[DataType]:
+        if variant_names:
+            return [
+                self.parse_item(
+                    variant_names[index] or name,
+                    item,
+                    [*path, str(index)],
+                    singular_name=False,
+                    parent=obj,
+                )
+                for index, item in enumerate(combined_schemas)
+            ]
+        return [
+            self.parse_item(
+                name,
+                item,
+                [*path, str(index)],
+                singular_name=False,
+                parent=obj,
+            )
+            for index, item in enumerate(combined_schemas)
+        ]
+
     def _deep_merge(self, dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
         """Deep merge two dictionaries, combining nested dicts and lists."""
         result = dict1.copy()
@@ -3208,13 +3364,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     )
                 )
 
-        parsed_schemas = self.parse_list_item(
-            name,
-            combined_schemas,
-            path,
-            obj,
-            singular_name=False,
-        )
+        variant_names = self._get_inferred_union_variant_names(name, obj, combined_schemas)
+        parsed_schemas = self._parse_combined_schema_items(name, obj, path, combined_schemas, variant_names)
         if not parsed_schemas:
             self._raise_unsatisfiable_schema(path, target_attribute_name)
         common_path_keyword = f"{target_attribute_name}Common"

@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shlex
 import subprocess
 import sys
 from collections import defaultdict
@@ -54,6 +55,7 @@ class CLIDocExample:
     version_outputs: dict[str, str] | None = None
     model_outputs: dict[str, str] | None = None
     expected_stdout: str | None = None
+    extra_outputs: list[dict[str, str]] = field(default_factory=list)
     aliases: list[str] = field(default_factory=list)
     related_options: list[str] = field(default_factory=list)
     is_primary: bool = False
@@ -73,6 +75,7 @@ class CLIDocExample:
             version_outputs=kwargs.get("version_outputs"),
             model_outputs=kwargs.get("model_outputs"),
             expected_stdout=kwargs.get("expected_stdout"),
+            extra_outputs=kwargs.get("extra_outputs", []),
             aliases=kwargs.get("aliases", []),
             related_options=kwargs.get("related_options", []),
             is_primary=kwargs.get("primary", False),
@@ -179,7 +182,7 @@ MANUAL_OPTION_DESCRIPTIONS = {
     "--debug": "Show debug messages during code generation",
     "--profile": "Use a named profile from pyproject.toml",
     "--output-format": "Choose the command output format",
-    "--output-format-json-schema": "Output JSON Schema for structured command output",
+    "--output-format-json-schema": "Output JSON Schema for JSON output payloads",
     "--no-color": "Disable colorized output",
     "--generate-prompt": "Generate a prompt for consulting LLMs about CLI options",
     "--list-deprecations": "List registered deprecations and scheduled breaking changes",
@@ -446,7 +449,9 @@ def format_cli_args(cli_args: list[str]) -> list[str]:
         arg = cli_args[i]
         if arg.startswith("-") and i + 1 < len(cli_args) and not cli_args[i + 1].startswith("-"):
             value = cli_args[i + 1]
-            if " " in value or not value:
+            if '"' in value or "'" in value:
+                value = shlex.quote(value)
+            elif " " in value or not value:
                 value = f'"{value}"'
             formatted.append(f"{arg} {value}")
             i += 2
@@ -548,6 +553,29 @@ def _generate_single_example_output(example: CLIDocExample, prefix: str = "    "
     return md
 
 
+def _generate_extra_outputs(example: CLIDocExample, prefix: str = "    ") -> str:
+    """Generate additional output files for a single example."""
+    md = ""
+    for output in example.extra_outputs:
+        title = output.get("title", "Additional Output")
+        output_path = output.get("path")
+        language = output.get("language", "")
+        if not output_path:
+            md += f"{prefix}> **Error:** extra output is missing a path\n\n"
+            continue
+
+        md += f"{prefix}**{title}:**\n\n"
+        try:
+            content = read_expected_file(output_path)
+            md += f"{prefix}```{language}\n"
+            for line in content.strip().split("\n"):
+                md += f"{prefix}{line}\n" if line else "\n"
+            md += f"{prefix}```\n\n"
+        except (FileNotFoundError, ValueError) as e:
+            md += f"{prefix}> **Error:** {e}\n\n"
+    return md
+
+
 def _generate_example_with_input_output(example: CLIDocExample, prefix: str = "    ") -> str:
     """Generate combined input schema and output for an example."""
     md = ""
@@ -576,6 +604,7 @@ def _generate_example_with_input_output(example: CLIDocExample, prefix: str = " 
     # Output section
     md += f"{prefix}**Output:**\n\n"
     md += _generate_single_example_output(example, prefix)
+    md += _generate_extra_outputs(example, prefix)
 
     return md
 
@@ -710,6 +739,7 @@ def generate_option_section(
 
         md += "    **Output:**\n\n"
         md += _generate_single_example_output(example, "    ")
+        md += _generate_extra_outputs(example, "    ")
 
     md += "---\n\n"
     return md

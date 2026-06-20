@@ -1541,7 +1541,7 @@ You can pass the mapping either inline as JSON or as a path to a JSON file.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --enum-field-as-literal-map "{"status": "literal"}" # (1)!
+    datamodel-codegen --input schema.json --enum-field-as-literal-map '{"status": "literal"}' # (1)!
     ```
 
     1. :material-arrow-left: `--enum-field-as-literal-map` - the option documented here
@@ -2812,7 +2812,7 @@ instead of generating them.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --type-overrides "{"CustomType": "my_app.types.CustomType"}" # (1)!
+    datamodel-codegen --input schema.json --type-overrides '{"CustomType": "my_app.types.CustomType"}' # (1)!
     ```
 
     1. :material-arrow-left: `--type-overrides` - the option documented here
