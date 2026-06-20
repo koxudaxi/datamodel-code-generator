@@ -20,7 +20,6 @@ from datamodel_code_generator import (
     InputFileType,
     clear_dynamic_models_cache,
     generate,
-    generate_dynamic_model,
     generate_dynamic_models,
 )
 from datamodel_code_generator.config import GenerateConfig
@@ -232,78 +231,35 @@ def test_cache_miss_different_module_name() -> None:
     assert models2["Model"].__module__ == "other_runtime_models"
 
 
-def test_generate_dynamic_model_returns_single_class() -> None:
-    """Test generating one dynamic model class directly."""
+def test_target_model_names_filters_single_model() -> None:
+    """Test filtering returned dynamic models to a single requested model."""
     schema = make_object_schema({"name": {"type": "string"}}, required=["name"])
 
-    User = generate_dynamic_model(schema, class_name="User")
+    models = generate_dynamic_models(schema, config=make_config(class_name="User"), target_model_names=["User"])
+    User = models["User"]
 
+    assert list(models) == ["User"]
     assert User.__name__ == "User"
     assert User.model_validate({"name": "Alice"}).model_dump(mode="json") == {"name": "Alice"}
 
 
-def test_generate_dynamic_model_uses_dynamic_default_config(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test single-model helper preserves dynamic generation defaults."""
-    dynamic_module = sys.modules["datamodel_code_generator.dynamic"]
-
-    class Model:
-        pass
-
-    schema = make_object_schema({"name": {"type": "string"}}, required=["name"])
-    captured_config: dict[str, GenerateConfig] = {}
-
-    def generate_models(
-        input_: dict[str, Any],
-        *,
-        config: GenerateConfig,
-        cache_size: int,
-        module_name: str | None,
-    ) -> dict[str, type]:
-        captured_config["config"] = config
-        assert input_ is schema
-        assert cache_size == 128
-        assert module_name is None
-        return {"Model": Model}
-
-    monkeypatch.setattr(dynamic_module, "generate_dynamic_models", generate_models)
-
-    assert dynamic_module.generate_dynamic_model(schema) is Model
-    assert captured_config["config"].class_name == "Model"
-    assert captured_config["config"].input_file_type == InputFileType.JsonSchema
-    assert captured_config["config"].output_model_type == DataModelType.PydanticV2BaseModel
-
-
-def test_generate_dynamic_model_uses_config_class_name() -> None:
-    """Test single-model helper uses config.class_name."""
+def test_target_model_names_with_module_name() -> None:
+    """Test module_name is assigned when filtering returned dynamic models."""
     schema = make_object_schema({"name": {"type": "string"}}, required=["name"])
 
-    Person = generate_dynamic_model(schema, config=make_config(class_name="Person"))
-
-    assert Person.__name__ == "Person"
-    assert Person.model_validate({"name": "Bob"}).model_dump(mode="json") == {"name": "Bob"}
-
-
-def test_generate_dynamic_model_class_name_overrides_config() -> None:
-    """Test explicit class_name takes precedence over config.class_name."""
-    schema = make_object_schema({"name": {"type": "string"}}, required=["name"])
-
-    Customer = generate_dynamic_model(schema, class_name="Customer", config=make_config(class_name="Person"))
-
-    assert Customer.__name__ == "Customer"
-    assert Customer.model_validate({"name": "Alice"}).model_dump(mode="json") == {"name": "Alice"}
-
-
-def test_generate_dynamic_model_module_name() -> None:
-    """Test module_name is assigned to a generated single model class."""
-    schema = make_object_schema({"name": {"type": "string"}}, required=["name"])
-
-    User = generate_dynamic_model(schema, class_name="User", module_name="runtime_models")
+    models = generate_dynamic_models(
+        schema,
+        config=make_config(class_name="User"),
+        module_name="runtime_models",
+        target_model_names=["User"],
+    )
+    User = models["User"]
 
     assert User.__module__ == "runtime_models"
 
 
-def test_generate_dynamic_model_returns_single_available_model() -> None:
-    """Test single-model helper falls back to the only generated model."""
+def test_target_model_names_filters_multiple_models() -> None:
+    """Test filtering returned dynamic models to multiple requested models."""
     schema: dict[str, Any] = {
         "openapi": "3.0.0",
         "info": {"title": "User API", "version": "1.0.0"},
@@ -311,18 +267,51 @@ def test_generate_dynamic_model_returns_single_available_model() -> None:
         "components": {
             "schemas": {
                 "User": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]},
+                "Order": {
+                    "type": "object",
+                    "properties": {"id": {"type": "integer"}, "user": {"$ref": "#/components/schemas/User"}},
+                    "required": ["id", "user"],
+                },
             }
         },
     }
 
-    User = generate_dynamic_model(schema, class_name="Missing")
+    models = generate_dynamic_models(schema, target_model_names=["Order", "User"])
 
+    assert list(models) == ["Order", "User"]
+    User = models["User"]
+    Order = models["Order"]
     assert User.__name__ == "User"
     assert User.model_validate({"name": "Alice"}).model_dump(mode="json") == {"name": "Alice"}
+    assert Order.model_validate({"id": 1, "user": {"name": "Alice"}}).user.name == "Alice"
 
 
-def test_generate_dynamic_model_raises_for_multi_model_schema_without_target() -> None:
-    """Test single-model helper gives available names for ambiguous schemas."""
+def test_target_model_names_does_not_reduce_cached_models() -> None:
+    """Test target filtering does not cache a reduced model dictionary."""
+    schema: dict[str, Any] = {
+        "openapi": "3.0.0",
+        "info": {"title": "User API", "version": "1.0.0"},
+        "paths": {},
+        "components": {
+            "schemas": {
+                "User": {"type": "object", "properties": {"name": {"type": "string"}}},
+                "Order": {
+                    "type": "object",
+                    "properties": {"id": {"type": "integer"}, "user": {"$ref": "#/components/schemas/User"}},
+                },
+            }
+        },
+    }
+
+    filtered_models = generate_dynamic_models(schema, target_model_names=["User"])
+    all_models = generate_dynamic_models(schema)
+
+    assert list(filtered_models) == ["User"]
+    assert sorted(all_models) == ["Order", "User"]
+
+
+def test_target_model_names_raises_for_missing_model() -> None:
+    """Test target filtering gives available names when requested models are missing."""
     schema: dict[str, Any] = {
         "openapi": "3.0.0",
         "info": {"title": "User API", "version": "1.0.0"},
@@ -340,9 +329,25 @@ def test_generate_dynamic_model_raises_for_multi_model_schema_without_target() -
 
     with pytest.raises(
         Error,
-        match=r"Expected a generated dynamic model named 'Missing'.*Order, User.*generate_dynamic_models\(\)",
+        match=r"target_model_names: 'Missing'.*Available models: Order, User",
     ):
-        generate_dynamic_model(schema, class_name="Missing")
+        generate_dynamic_models(schema, target_model_names=["Missing"])
+
+
+def test_target_model_names_rejects_empty_sequence() -> None:
+    """Test target filtering rejects an empty target model name sequence."""
+    schema = make_object_schema({"name": {"type": "string"}})
+
+    with pytest.raises(Error, match="target_model_names must contain at least one model name"):
+        generate_dynamic_models(schema, target_model_names=[])
+
+
+def test_target_model_names_rejects_string() -> None:
+    """Test target filtering rejects a string instead of a model name sequence."""
+    schema = make_object_schema({"name": {"type": "string"}})
+
+    with pytest.raises(Error, match="target_model_names must be a sequence of model names"):
+        generate_dynamic_models(schema, target_model_names="Model")  # type: ignore[arg-type]
 
 
 def test_cache_disabled() -> None:

@@ -73,7 +73,6 @@ if TYPE_CHECKING:
     )
     from datamodel_code_generator._types.generate_config_dict import GenerateConfigDict
     from datamodel_code_generator.config import GenerateConfig, ParserConfig
-    from datamodel_code_generator.dynamic import generate_dynamic_model
     from datamodel_code_generator.format import (
         DEFAULT_FORMATTERS,
         DateClassType,
@@ -1480,7 +1479,6 @@ _LAZY_IMPORTS = {
     "clear_dynamic_models_cache": "datamodel_code_generator.dynamic",
     "detect_jsonschema_version": "datamodel_code_generator.parser.schema_version",
     "detect_openapi_version": "datamodel_code_generator.parser.schema_version",
-    "generate_dynamic_model": "datamodel_code_generator.dynamic",
     "generate_dynamic_models": "datamodel_code_generator.dynamic",
     "GenerateConfig": "datamodel_code_generator.config",
     "UnionMode": "datamodel_code_generator.enums",
@@ -1552,7 +1550,6 @@ __all__ = [
     "detect_xmlschema_version",
     "enable_parsed_source_cache",
     "generate",
-    "generate_dynamic_model",
     "generate_dynamic_models",  # noqa: F822
 ]
 

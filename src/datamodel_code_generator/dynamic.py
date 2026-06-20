@@ -27,7 +27,7 @@ from datamodel_code_generator.enums import DataModelType, InputFileType
 from datamodel_code_generator.parser._graph import stable_toposort
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Sequence
 
 _dynamic_models_cache: dict[str, dict[str, type]] = {}
 _dynamic_models_lock = threading.Lock()
@@ -217,12 +217,51 @@ def _detect_schema_input_file_type(input_: Mapping[str, Any]) -> InputFileType:
     return InputFileType.JsonSchema
 
 
+def _normalize_target_model_names(target_model_names: Sequence[str] | None) -> tuple[str, ...] | None:
+    if target_model_names is None:
+        return None
+    if isinstance(target_model_names, str):
+        msg = "target_model_names must be a sequence of model names, not a string."
+        raise Error(msg)
+
+    target_names = tuple(target_model_names)
+    if not target_names:
+        msg = "target_model_names must contain at least one model name."
+        raise Error(msg)
+
+    invalid_names = [name for name in target_names if not isinstance(name, str) or not name]
+    if invalid_names:
+        invalid_values = ", ".join(repr(name) for name in invalid_names)
+        msg = f"target_model_names contains invalid model names: {invalid_values}."
+        raise Error(msg)
+
+    return target_names
+
+
+def _filter_target_models(models: dict[str, type], target_model_names: tuple[str, ...] | None) -> dict[str, type]:
+    if target_model_names is None:
+        return models
+
+    missing_names = [name for name in target_model_names if name not in models]
+    if missing_names:
+        requested_models = ", ".join(repr(name) for name in missing_names)
+        available_models = ", ".join(sorted(models)) or "<none>"
+        msg = (
+            f"Generated dynamic models do not include requested target_model_names: {requested_models}. "
+            f"Available models: {available_models}."
+        )
+        raise Error(msg)
+
+    return {name: models[name] for name in target_model_names}
+
+
 def generate_dynamic_models(
     input_: Mapping[str, Any],
     *,
     config: GenerateConfig | None = None,
     cache_size: int = 128,
     module_name: str | None = None,
+    target_model_names: Sequence[str] | None = None,
 ) -> dict[str, type]:
     """Generate actual Python model classes from schema at runtime.
 
@@ -235,6 +274,7 @@ def generate_dynamic_models(
         config: A GenerateConfig object with generation options. If None, uses defaults.
         cache_size: Maximum number of schemas to cache. Set to 0 to disable caching.
         module_name: Optional module/package name to assign to generated classes.
+        target_model_names: Optional model names to include in the returned dictionary.
 
     Returns:
         Dictionary mapping class names to model classes.
@@ -243,7 +283,7 @@ def generate_dynamic_models(
         - Thread-safe (uses internal lock and cache)
         - Pydantic v2 only (v1 is not supported)
         - Not pickle-able (use model_dump() to serialize instances)
-        - Cached by schema + config hash with FIFO eviction when cache_size is exceeded
+        - Cached by schema + config + module_name hash with FIFO eviction when cache_size is exceeded
         - Supports both single-module and multi-module output
 
     Example:
@@ -272,6 +312,7 @@ def generate_dynamic_models(
     elif config.input_file_type == InputFileType.Auto:
         config = config.model_copy(update={"input_file_type": _detect_schema_input_file_type(input_)})
 
+    normalized_target_model_names = _normalize_target_model_names(target_model_names)
     cache_key = _make_cache_key(input_, config, module_name)
     use_cache = cache_size > 0 and cache_key is not None
 
@@ -279,7 +320,7 @@ def generate_dynamic_models(
         if use_cache:
             assert cache_key is not None
             if (cached_models := _dynamic_models_cache.get(cache_key)) is not None:
-                return cached_models
+                return _filter_target_models(cached_models, normalized_target_model_names)
 
         result = generate(input_=input_, config=config)
         if result is None:  # pragma: no cover
@@ -298,41 +339,7 @@ def generate_dynamic_models(
                 del _dynamic_models_cache[oldest_key]
             _dynamic_models_cache[cache_key] = models  # type: ignore[index]
 
-        return models
-
-
-def generate_dynamic_model(
-    input_: Mapping[str, Any],
-    *,
-    class_name: str | None = None,
-    config: GenerateConfig | None = None,
-    cache_size: int = 128,
-    module_name: str | None = None,
-) -> type:
-    """Generate a single Python model class from schema at runtime."""
-    target_class_name = class_name or (config.class_name if config is not None else None) or "Model"
-    if config is None:
-        config = GenerateConfig(
-            class_name=target_class_name,
-            input_file_type=_detect_schema_input_file_type(input_),
-            output_model_type=DataModelType.PydanticV2BaseModel,
-        )
-    elif config.class_name != target_class_name:
-        config = config.model_copy(update={"class_name": target_class_name})
-
-    models = generate_dynamic_models(input_, config=config, cache_size=cache_size, module_name=module_name)
-    if model := models.get(target_class_name):
-        return model
-    if len(models) == 1:
-        return next(iter(models.values()))
-
-    available_models = ", ".join(sorted(models)) or "<none>"
-    msg = (
-        f"Expected a generated dynamic model named {target_class_name!r}, "
-        f"but generated models are: {available_models}. "
-        "Use generate_dynamic_models() to handle multi-model schemas, or pass class_name/config.class_name."
-    )
-    raise Error(msg)
+        return _filter_target_models(models, normalized_target_model_names)
 
 
 def clear_dynamic_models_cache() -> int:

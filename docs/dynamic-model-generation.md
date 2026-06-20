@@ -4,7 +4,7 @@ Generate real Python model classes from JSON Schema or OpenAPI at runtime withou
 
 ## Overview
 
-While `generate()` produces source code as strings, `generate_dynamic_model()` and `generate_dynamic_models()` create actual Python classes that you can use immediately for validation and data processing. This is useful for:
+While `generate()` produces source code as strings, `generate_dynamic_models()` creates actual Python classes that you can use immediately for validation and data processing. This is useful for:
 
 - Runtime schema validation without code generation step
 - Dynamic API clients that adapt to schema changes
@@ -14,7 +14,7 @@ While `generate()` produces source code as strings, `generate_dynamic_model()` a
 ## Quick Start
 
 ```python
-from datamodel_code_generator import generate_dynamic_model
+from datamodel_code_generator import GenerateConfig, generate_dynamic_models
 
 schema = {
     "type": "object",
@@ -25,7 +25,12 @@ schema = {
     "required": ["name"]
 }
 
-User = generate_dynamic_model(schema, class_name="User")
+models = generate_dynamic_models(
+    schema,
+    config=GenerateConfig(class_name="User"),
+    target_model_names=["User"],
+)
+User = models["User"]
 
 # Use the model for validation
 user = User(name="Alice", age=30)
@@ -40,31 +45,6 @@ except Exception as e:
 
 ## API Reference
 
-### `generate_dynamic_model()`
-
-```python
-def generate_dynamic_model(
-    input_: Mapping[str, Any],
-    *,
-    class_name: str | None = None,
-    config: GenerateConfig | None = None,
-    cache_size: int = 128,
-    module_name: str | None = None,
-) -> type:
-```
-
-**Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `input_` | `Mapping[str, Any]` | required | JSON Schema or OpenAPI schema as dict |
-| `class_name` | `str \| None` | `None` | Name to assign to the primary generated model. Defaults to `config.class_name` or `Model` |
-| `config` | `GenerateConfig \| None` | `None` | Generation options (same as `generate()`) |
-| `cache_size` | `int` | `128` | Maximum cached schemas. Set to `0` to disable |
-| `module_name` | `str \| None` | `None` | Optional module/package name to assign to generated classes |
-
-**Returns:** `type` - A generated model class.
-
 ### `generate_dynamic_models()`
 
 ```python
@@ -74,6 +54,7 @@ def generate_dynamic_models(
     config: GenerateConfig | None = None,
     cache_size: int = 128,
     module_name: str | None = None,
+    target_model_names: Sequence[str] | None = None,
 ) -> dict[str, type]:
 ```
 
@@ -85,6 +66,7 @@ def generate_dynamic_models(
 | `config` | `GenerateConfig \| None` | `None` | Generation options (same as `generate()`) |
 | `cache_size` | `int` | `128` | Maximum cached schemas. Set to `0` to disable |
 | `module_name` | `str \| None` | `None` | Optional module/package name to assign to generated classes |
+| `target_model_names` | `Sequence[str] \| None` | `None` | Optional model names to include in the returned dictionary. Generation still produces all referenced models internally |
 
 **Returns:** `dict[str, type]` - Dictionary mapping class names to model classes.
 
@@ -173,7 +155,7 @@ user = User(id=1, email="alice@example.com")
 ### With Custom Configuration
 
 ```python
-from datamodel_code_generator import generate_dynamic_model, GenerateConfig, DataModelType
+from datamodel_code_generator import generate_dynamic_models, GenerateConfig, DataModelType
 
 schema = {"type": "object", "properties": {"name": {"type": "string"}}}
 
@@ -182,18 +164,39 @@ config = GenerateConfig(
     output_model_type=DataModelType.PydanticV2BaseModel,
 )
 
-Customer = generate_dynamic_model(schema, config=config)
+models = generate_dynamic_models(schema, config=config, target_model_names=["Customer"])
+Customer = models["Customer"]
 ```
 
 ### With a Runtime Module Name
 
 ```python
-from datamodel_code_generator import generate_dynamic_model
+from datamodel_code_generator import GenerateConfig, generate_dynamic_models
 
 schema = {"type": "object", "properties": {"name": {"type": "string"}}}
 
-Customer = generate_dynamic_model(schema, class_name="Customer", module_name="runtime_models")
+models = generate_dynamic_models(
+    schema,
+    config=GenerateConfig(class_name="Customer"),
+    module_name="runtime_models",
+    target_model_names=["Customer"],
+)
+Customer = models["Customer"]
 assert Customer.__module__ == "runtime_models"
+```
+
+### Filtering Returned Models
+
+`target_model_names` filters the returned dictionary without pruning generation. Referenced models are still generated
+so validation and forward references continue to work.
+
+```python
+from datamodel_code_generator import generate_dynamic_models
+
+models = generate_dynamic_models(schema, target_model_names=["User", "Order"])
+
+User = models["User"]
+Order = models["Order"]
 ```
 
 ### Enum Models
@@ -264,7 +267,8 @@ tree = Node(
 
 ## Caching
 
-Models are cached by schema content, configuration, and `module_name` to avoid regeneration:
+Models are cached by schema content, configuration, and `module_name` to avoid regeneration.
+`target_model_names` only filters the returned dictionary, so it does not change the cache key:
 
 ```python
 from datamodel_code_generator import generate_dynamic_models, clear_dynamic_models_cache
