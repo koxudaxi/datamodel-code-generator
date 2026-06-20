@@ -3696,8 +3696,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if add_sequence_interface is None:
             return
 
-        item_type = root_type.data_types[0].type_hint if root_type.data_types else ANY
-        item_type = item_type or ANY
+        if not root_type.data_types:
+            item_type = ANY
+        elif len(root_type.data_types) == 1:
+            item_type = root_type.data_types[0].type_hint or ANY
+        else:
+            item_type = self.data_type(data_types=root_type.data_types).type_hint or ANY
         slice_type = root_type.type_hint or f"list[{item_type}]"
         if "[" not in slice_type:
             slice_type = f"{slice_type}[{item_type}]"

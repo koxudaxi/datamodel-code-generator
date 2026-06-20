@@ -3627,18 +3627,24 @@ def test_main_jsonschema_root_model_sequence_interface(output_file: Path) -> Non
 
     module_name = "generated_root_model_sequence_interface"
     spec = importlib.util.spec_from_file_location(module_name, output_file)
-    assert spec is not None
-    assert spec.loader is not None
+    if spec is None:  # pragma: no cover
+        pytest.fail(f"Unable to load generated module from {output_file}", pytrace=False)
+    if spec.loader is None:  # pragma: no cover
+        pytest.fail(f"Unable to load generated module loader from {output_file}", pytrace=False)
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     try:
         spec.loader.exec_module(module)
         pet = module.Pet(name="dog")
         pets = module.Pets(root=[pet])
-        assert isinstance(pets, Sequence)
-        assert pets.count(pet) == 1
-        assert pets.index(pet) == 0
-        assert list(reversed(pets)) == [pet]
+        if not isinstance(pets, Sequence):
+            pytest.fail("Generated RootModel does not implement collections.abc.Sequence")
+        if pets.count(pet) != 1:
+            pytest.fail("Generated RootModel Sequence.count does not delegate to root")
+        if pets.index(pet) != 0:
+            pytest.fail("Generated RootModel Sequence.index does not delegate to root")
+        if list(reversed(pets)) != [pet]:
+            pytest.fail("Generated RootModel Sequence.__reversed__ does not delegate to root")
     finally:
         sys.modules.pop(module_name, None)
 

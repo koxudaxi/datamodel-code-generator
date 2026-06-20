@@ -751,6 +751,11 @@ def test_apply_root_model_sequence_interface_skips_models_without_sequence_metho
         (_root_model_sequence_type(DataType(type="str")), "str", "List[str]"),
         (_root_model_sequence_type(), "Any", "List[Any]"),
         (_root_model_sequence_type(DataType()), "Any", "List[Any]"),
+        (
+            DataType(is_list=True, data_types=[DataType(type="str"), DataType(type="int")]),
+            "Union[str, int]",
+            "List[Union[str, int]]",
+        ),
         (DataType(is_sequence=True, data_types=[DataType(type="str")]), "str", "Sequence[str]"),
     ],
 )
