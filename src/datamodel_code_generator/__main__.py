@@ -21,12 +21,13 @@ if len(sys.argv) == 2 and sys.argv[1] in {"--help", "-h"}:  # pragma: no cover  
 match sys.argv:
     case [_, "--output-format-json-schema", schema_output_name] if schema_output_name in {
         "generation",
+        "model-metadata",
         "structured-output",
     }:
         pass
     case [_, schema_output_option] if schema_output_option.startswith("--output-format-json-schema=") and (
         schema_output_name := schema_output_option.partition("=")[2]
-    ) in {"generation", "structured-output"}:
+    ) in {"generation", "model-metadata", "structured-output"}:
         pass
     case _:
         schema_output_name = None
@@ -36,6 +37,11 @@ match schema_output_name:
         from datamodel_code_generator._structured_output import generation_output_json_schema
 
         sys.stdout.write(f"{generation_output_json_schema()}\n")
+        sys.exit(0)
+    case "model-metadata":  # pragma: no cover
+        from datamodel_code_generator.model_metadata import model_metadata_json_schema
+
+        sys.stdout.write(f"{model_metadata_json_schema()}\n")
         sys.exit(0)
     case "structured-output":  # pragma: no cover
         from datamodel_code_generator._structured_output import structured_output_json_schema
@@ -62,6 +68,11 @@ if any(
         from datamodel_code_generator._structured_output import generation_output_json_schema
 
         sys.stdout.write(f"{generation_output_json_schema()}\n")
+        sys.exit(0)
+    if namespace.output_format_json_schema == "model-metadata":
+        from datamodel_code_generator.model_metadata import model_metadata_json_schema
+
+        sys.stdout.write(f"{model_metadata_json_schema()}\n")
         sys.exit(0)
     if namespace.output_format_json_schema == "structured-output":
         from datamodel_code_generator._structured_output import structured_output_json_schema
@@ -995,6 +1006,12 @@ def _generation_output_json_schema() -> str:
     return generation_output_json_schema()
 
 
+def _model_metadata_json_schema() -> str:
+    from datamodel_code_generator.model_metadata import model_metadata_json_schema  # noqa: PLC0415
+
+    return model_metadata_json_schema()
+
+
 def _structured_output_json_schema() -> str:
     from datamodel_code_generator._structured_output import structured_output_json_schema  # noqa: PLC0415
 
@@ -1216,6 +1233,9 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         return Exit.OK
     if namespace.output_format_json_schema == "generation":
         print(_generation_output_json_schema())  # noqa: T201
+        return Exit.OK
+    if namespace.output_format_json_schema == "model-metadata":
+        print(_model_metadata_json_schema())  # noqa: T201
         return Exit.OK
     if namespace.output_format_json_schema == "structured-output":
         print(_structured_output_json_schema())  # noqa: T201

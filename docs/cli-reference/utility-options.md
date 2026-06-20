@@ -11,7 +11,7 @@
 | [`--list-experimental`](#list-experimental) | List registered experimental features |
 | [`--no-color`](#no-color) | Disable colorized output |
 | [`--output-format`](#output-format) | Choose the command output format |
-| [`--output-format-json-schema`](#output-format-json-schema) | Output JSON Schema for structured command output |
+| [`--output-format-json-schema`](#output-format-json-schema) | Output JSON Schema for JSON output payloads |
 | [`--profile`](#profile) | Use a named profile from pyproject.toml |
 | [`--version`](#version) | Show program version and exit |
 
@@ -227,11 +227,12 @@ is the generated module path.
 
 Use `--output-format json` with `--generate-prompt` to emit structured option
 metadata instead of Markdown. Use `--output-format-json-schema` when an LLM
-agent or tool needs the schema for a structured output payload.
+agent or tool needs the schema for a JSON payload.
 
 Schema targets are intentionally scoped. `generate-prompt` emits the
 `PromptPayload` schema for `--generate-prompt --output-format json`.
 `generation` emits only the `GenerationPayload` schema for generated-file JSON.
+`model-metadata` emits the schema for files written by `--emit-model-metadata`.
 `structured-output` emits the broader `StructuredOutputPayload` schema, a union
 covering `GenerationPayload`, `PromptPayload`, `CommandOutputPayload`, and
 `CheckOutputPayload`. Structured payloads use `kind` as the discriminator.
@@ -244,7 +245,8 @@ covering `GenerationPayload`, `PromptPayload`, `CommandOutputPayload`, and
     datamodel-codegen --generate-prompt --output-format json # (3)!
     datamodel-codegen --output-format-json-schema generation # (4)!
     datamodel-codegen --output-format-json-schema generate-prompt # (5)!
-    datamodel-codegen --output-format-json-schema structured-output # (6)!
+    datamodel-codegen --output-format-json-schema model-metadata # (6)!
+    datamodel-codegen --output-format-json-schema structured-output # (7)!
     ```
 
     1. :material-arrow-left: Emit the default generated Python text
@@ -252,7 +254,8 @@ covering `GenerationPayload`, `PromptPayload`, `CommandOutputPayload`, and
     3. :material-arrow-left: Emit structured JSON with current options and argparse metadata
     4. :material-arrow-left: Emit JSON Schema for generated-file JSON output
     5. :material-arrow-left: Emit JSON Schema for structured prompt JSON
-    6. :material-arrow-left: Emit JSON Schema for any structured command JSON output
+    6. :material-arrow-left: Emit JSON Schema for generated model metadata JSON
+    7. :material-arrow-left: Emit JSON Schema for any structured command JSON output
 
 ??? example "Generation JSON output"
 
@@ -285,7 +288,7 @@ covering `GenerationPayload`, `PromptPayload`, `CommandOutputPayload`, and
 
 ## `--output-format-json-schema` {#output-format-json-schema}
 
-Output JSON Schema for a structured command output format and exit.
+Output JSON Schema for a JSON output format and exit.
 
 Use this when an LLM agent, tool call definition, or validation layer needs the
 contract before consuming JSON output. The schema is emitted separately from the
@@ -296,6 +299,7 @@ Currently supported schema targets:
 
 - `generate-prompt`: schema for `--generate-prompt --output-format json`
 - `generation`: schema for normal generation with `--output-format json`
+- `model-metadata`: schema for files emitted by `--emit-model-metadata`
 - `structured-output`: tagged union schema for all structured command outputs,
   discriminated by `kind`
 
@@ -304,16 +308,18 @@ Currently supported schema targets:
     ```bash
     datamodel-codegen --output-format-json-schema generate-prompt # (1)!
     datamodel-codegen --output-format-json-schema generation # (2)!
-    datamodel-codegen --output-format-json-schema structured-output # (3)!
-    datamodel-codegen --generate-prompt --output-format json # (4)!
-    datamodel-codegen --input schema.json --output-format json # (5)!
+    datamodel-codegen --output-format-json-schema model-metadata # (3)!
+    datamodel-codegen --output-format-json-schema structured-output # (4)!
+    datamodel-codegen --generate-prompt --output-format json # (5)!
+    datamodel-codegen --input schema.json --emit-model-metadata model-map.json # (6)!
     ```
 
     1. :material-arrow-left: Emit the JSON Schema for structured prompt output
     2. :material-arrow-left: Emit the JSON Schema for generated-file output
-    3. :material-arrow-left: Emit the JSON Schema for all structured command outputs
-    4. :material-arrow-left: Emit prompt payloads that match the prompt schema
-    5. :material-arrow-left: Emit generation payloads that match the generation schema
+    3. :material-arrow-left: Emit the JSON Schema for generated model metadata
+    4. :material-arrow-left: Emit the JSON Schema for all structured command outputs
+    5. :material-arrow-left: Emit prompt payloads that match the prompt schema
+    6. :material-arrow-left: Emit metadata payloads that match the model metadata schema
 
 ---
 

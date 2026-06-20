@@ -80,6 +80,7 @@ from datamodel_code_generator.model.base import (
 from datamodel_code_generator.model.enum import Enum, Member, evaluate_member_value
 from datamodel_code_generator.model.imports import IMPORT_TYPED_DICT, IMPORT_TYPED_DICT_BACKPORT
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
+from datamodel_code_generator.model_metadata import GeneratedModelMetadata, ModelFieldMetadata, ModelMetadata
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser._graph import stable_toposort
 from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_connected_components
@@ -237,7 +238,6 @@ ClassGraph: TypeAlias = dict[ClassNode, set[ClassNode]]
 ModulePath: TypeAlias = tuple[str, ...]
 ModuleModels: TypeAlias = list[tuple[ModulePath, list[DataModel]]]
 ForwarderMap: TypeAlias = dict[ModulePath, tuple[ModulePath, list[tuple[str, str]]]]
-ModelMetadata: TypeAlias = dict[str, Any]
 
 
 class ModuleContext(NamedTuple):
@@ -3772,15 +3772,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 )
 
     @staticmethod
-    def _field_metadata(field: DataModelFieldBase) -> dict[str, Any]:
-        source_name = field.original_name or field.alias or field.name
-        return {
-            "name": field.name,
-            "alias": field.alias or source_name,
-            "original_name": field.original_name,
-            "type": field.type_hint,
-            "required": field.required,
-        }
+    def _field_metadata(field: DataModelFieldBase) -> ModelFieldMetadata:
+        source_name = field.original_name or field.alias or field.name or ""
+        return ModelFieldMetadata(
+            name=field.name or source_name,
+            alias=field.alias or source_name,
+            original_name=field.original_name,
+            type=field.type_hint,
+            required=field.required,
+        )
 
     @classmethod
     def _model_metadata(
@@ -3788,17 +3788,18 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         model: DataModel,
         module: ModulePath,
         source_reference_paths: Mapping[DataModel, str],
-    ) -> dict[str, Any]:
+    ) -> GeneratedModelMetadata:
         source_ref = source_reference_paths[model]
-        return {
-            "class_name": model.class_name,
-            "name": model.name,
-            "module": _module_name_from_module_path(module),
-            "source_ref": source_ref,
-            "source_path": _source_path_from_reference_path(source_ref),
-            "title": model.extra_template_data.get("title"),
-            "fields": [cls._field_metadata(field) for field in model.fields],
-        }
+        title = model.extra_template_data.get("title")
+        return GeneratedModelMetadata(
+            class_name=model.class_name,
+            name=model.name,
+            module=_module_name_from_module_path(module),
+            source_ref=source_ref,
+            source_path=_source_path_from_reference_path(source_ref),
+            title=title if isinstance(title, str) else None,
+            fields=[cls._field_metadata(field) for field in model.fields],
+        )
 
     @classmethod
     def _build_model_metadata(
@@ -3806,15 +3807,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         contexts: list[ModuleContext],
         source_reference_paths: Mapping[DataModel, str],
     ) -> ModelMetadata:
-        return {
-            "version": 1,
-            "models": [
+        return ModelMetadata(
+            version=1,
+            models=[
                 cls._model_metadata(model, ctx.module, source_reference_paths)
                 for ctx in contexts
                 for model in ctx.models
                 if model in source_reference_paths
             ],
-        }
+        )
 
     def _dispose(self) -> None:
         """Break reference cycles in the parsed object graph.

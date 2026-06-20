@@ -5,11 +5,14 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
+import jsonschema
 import pytest
 from inline_snapshot import snapshot
 
 from datamodel_code_generator import _write_model_metadata
+from datamodel_code_generator.model_metadata import model_metadata_json_schema
 from datamodel_code_generator.parser.base import _module_name_from_module_path, _source_path_from_reference_path
+from scripts.build_model_metadata_schema import build_model_metadata_schema
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -58,3 +61,15 @@ def test_write_model_metadata_defaults_when_metadata_is_empty(tmp_path: Path) ->
         "version": 1,
         "models": [],
     })
+
+
+@pytest.mark.allow_direct_assert
+def test_model_metadata_json_schema_matches_typed_dict_contract() -> None:
+    """Keep the static JSON Schema in sync with the TypedDict metadata contract."""
+    schema = json.loads(model_metadata_json_schema())
+    generated_schema = build_model_metadata_schema()
+
+    jsonschema.validate(instance={"version": 1, "models": []}, schema=schema)
+    assert schema == generated_schema
+    assert schema["$schema"] == snapshot("https://json-schema.org/draft/2020-12/schema")
+    assert schema["title"] == snapshot("ModelMetadata")

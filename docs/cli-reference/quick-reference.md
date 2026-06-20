@@ -222,7 +222,7 @@ datamodel-codegen [OPTIONS]
 | [`--list-experimental`](utility-options.md#list-experimental) | List registered experimental features |
 | [`--no-color`](utility-options.md#no-color) | Disable colorized output |
 | [`--output-format`](utility-options.md#output-format) | Choose the command output format |
-| [`--output-format-json-schema`](utility-options.md#output-format-json-schema) | Output JSON Schema for structured command output |
+| [`--output-format-json-schema`](utility-options.md#output-format-json-schema) | Output JSON Schema for JSON output payloads |
 | [`--profile`](utility-options.md#profile) | Use a named profile from pyproject.toml |
 | [`--version`](utility-options.md#version) | Show program version and exit |
 
@@ -331,7 +331,7 @@ All options sorted alphabetically:
 - [`--output-date-class`](typing-customization.md#output-date-class) - Specify date class type for date schema fields.
 - [`--output-datetime-class`](typing-customization.md#output-datetime-class) - Specify datetime class type for date-time schema fields.
 - [`--output-format`](utility-options.md#output-format) - Choose the command output format
-- [`--output-format-json-schema`](utility-options.md#output-format-json-schema) - Output JSON Schema for structured command output
+- [`--output-format-json-schema`](utility-options.md#output-format-json-schema) - Output JSON Schema for JSON output payloads
 - [`--output-model-type`](model-customization.md#output-model-type) - Select the output model type (Pydantic v2, Pydantic v2 datac...
 - [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) - Namespace models by their parent scope to avoid naming confl...
 - [`--preset`](base-options.md#preset) - Apply an immutable built-in option preset.

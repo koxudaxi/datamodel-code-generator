@@ -1254,10 +1254,10 @@ general_options.add_argument(
 )
 general_options.add_argument(
     "--output-format-json-schema",
-    choices=["generate-prompt", "generation", "structured-output"],
+    choices=["generate-prompt", "generation", "model-metadata", "structured-output"],
     default=None,
-    metavar="{generate-prompt,generation,structured-output}",
-    help="Output JSON Schema for the selected structured output format and exit.",
+    metavar="{generate-prompt,generation,model-metadata,structured-output}",
+    help="Output JSON Schema for the selected JSON output format and exit.",
 )
 general_options.add_argument(
     "--generate-pyproject-config",

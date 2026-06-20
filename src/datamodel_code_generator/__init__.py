@@ -7,7 +7,6 @@ Python data models (Pydantic, dataclasses, TypedDict, msgspec) from various sche
 from __future__ import annotations
 
 import contextlib
-import json
 import os
 import sys
 from collections import OrderedDict, defaultdict
@@ -59,6 +58,7 @@ from datamodel_code_generator.enums import (
     VersionMode,
     XMLSchemaVersion,
 )
+from datamodel_code_generator.model_metadata import ModelMetadata, dump_model_metadata
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 
 if TYPE_CHECKING:
@@ -1195,10 +1195,9 @@ def _emit_results(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     return None
 
 
-def _write_model_metadata(metadata_path: Path, metadata: Mapping[str, Any] | None, encoding: str) -> None:
+def _write_model_metadata(metadata_path: Path, metadata: ModelMetadata | None, encoding: str) -> None:
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
-    payload = metadata or {"version": 1, "models": []}
-    metadata_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding=encoding)
+    metadata_path.write_text(f"{dump_model_metadata(metadata)}\n", encoding=encoding)
 
 
 def generate(  # noqa: PLR0912, PLR0914, PLR0915
