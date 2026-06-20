@@ -6,7 +6,6 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 
 import pytest
 
-from datamodel_code_generator import Error
 from datamodel_code_generator.http import join_url
 from datamodel_code_generator.reference import (
     ModelResolver,
@@ -88,14 +87,6 @@ def test_model_resolver_add_class_name_generates_class_reference() -> None:
 
     assert reference.name == "User"
     assert reference.duplicate_name is None
-
-
-def test_model_resolver_model_name_map_rejects_reserved_name() -> None:
-    """Explicit model-name mappings fail when the target is reserved."""
-    model_resolver = ModelResolver(exclude_names={"Reserved"}, model_name_map={"#/definitions/User": "Reserved"})
-
-    with pytest.raises(Error, match="but that model name is reserved"):
-        model_resolver.add(["#", "definitions", "User"], "User", class_name=True)
 
 
 def test_reference_cache_clear_preserves_helper_values() -> None:

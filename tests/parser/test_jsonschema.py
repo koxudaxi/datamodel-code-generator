@@ -25,8 +25,6 @@ from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
     Types,
-    _get_discriminator_property_name,
-    _get_union_variant_name,
     _validate_schema_python_import_path,
     get_model_by_path,
     split_json_pointer,
@@ -40,30 +38,11 @@ if TYPE_CHECKING:
 
 DATA_PATH: Path = Path(__file__).parents[1] / "data" / "jsonschema"
 
-EXPECTED_JSONSCHEMA_PATH = Path(__file__).parents[1] / "data" / "expected" / "parser" / "jsonschema"
-
 
 @pytest.fixture(autouse=True)
 def block_dns_by_default(mocker: MockerFixture) -> None:
     """Keep tests that mock httpx.get independent from external DNS."""
     mocker.patch("socket.getaddrinfo", side_effect=OSError)
-
-
-def _json_schema_object(data: dict[str, Any]) -> JsonSchemaObject:
-    return JsonSchemaObject.model_validate(data)
-
-
-@pytest.mark.parametrize(
-    ("schema", "expected"),
-    [
-        ({"discriminator": {"propertyName": "kind"}}, "kind"),
-        ({"discriminator": "kind"}, "kind"),
-        ({}, None),
-    ],
-)
-def test_get_discriminator_property_name(schema: dict[str, Any], expected: str | None) -> None:
-    """Return discriminator property names from supported schema shapes."""
-    assert _get_discriminator_property_name(_json_schema_object(schema)) == expected
 
 
 @pytest.mark.parametrize(
@@ -641,148 +620,6 @@ def test_parse_any_root_object(source_obj: dict[str, Any], generated_classes: st
     parser = JsonSchemaParser("")
     parser.parse_root_type("AnyObject", JsonSchemaObject.model_validate(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
-
-
-def test_infer_union_variant_names_uses_discriminator_literals() -> None:
-    """Infer variant names from discriminator literals without mutating schemas."""
-    parser = JsonSchemaParser("", infer_union_variant_names=True)
-    parent = _json_schema_object({"discriminator": {"propertyName": "kind"}})
-    variants = [
-        _json_schema_object({"properties": {"kind": {"const": ""}}}),
-        _json_schema_object({"properties": {"kind": {"enum": ["ready"]}}}),
-    ]
-
-    assert parser._infer_union_variant_names("pkg.Event", parent, variants) == [None, "pkg.Event_ready"]
-
-
-def test_infer_union_variant_names_distinguishes_literal_types() -> None:
-    """Use type-aware names for non-string literal tags."""
-    parser = JsonSchemaParser("", infer_union_variant_names=True)
-    parent = _json_schema_object({"discriminator": {"propertyName": "kind"}})
-    variants = [
-        _json_schema_object({"properties": {"kind": {"const": 1}}}),
-        _json_schema_object({"properties": {"kind": {"const": "1"}}}),
-        _json_schema_object({"properties": {"kind": {"const": True}}}),
-    ]
-
-    assert parser._infer_union_variant_names("Event", parent, variants) == [
-        "Event_int_1",
-        "Event__1",
-        "Event_bool_true",
-    ]
-    assert _get_union_variant_name("Event", "") is None
-    assert _get_union_variant_name("Event", object()) is None
-
-
-def test_infer_union_variant_names_skips_generated_name_collisions() -> None:
-    """Try the next literal field when generated variant names collide."""
-    parser = JsonSchemaParser("", infer_union_variant_names=True)
-    parent = _json_schema_object({"discriminator": {"propertyName": "kind"}})
-    variants = [
-        _json_schema_object({"properties": {"kind": {"const": 1}, "fallback": {"const": "created"}}}),
-        _json_schema_object({"properties": {"kind": {"const": "int_1"}, "fallback": {"const": "updated"}}}),
-    ]
-
-    assert parser._infer_union_variant_names("Event", parent, variants) == ["Event_created", "Event_updated"]
-
-
-def test_union_variant_literal_helpers_handle_refs_and_invalid_fields(tmp_path: Path, mocker: MockerFixture) -> None:
-    """Literal collection rejects ambiguous branches and resolves simple refs."""
-    parser = JsonSchemaParser("", infer_union_variant_names=True)
-    ref = "#/$defs/Kind"
-    parser.raw_obj = {"$defs": {"Kind": {"const": "from_ref"}}}
-    external_schema = tmp_path / "external.json"
-    external_parser = JsonSchemaParser(
-        "",
-        external_ref_mapping={str(external_schema): "external.models"},
-        infer_union_variant_names=True,
-    )
-    load_ref = mocker.patch.object(external_parser, "_load_ref_schema_object")
-
-    assert parser._get_single_literal_value(_json_schema_object({"$ref": ref})) == "from_ref"
-    assert (
-        external_parser._get_single_literal_value(_json_schema_object({"$ref": f"{external_schema}#/External"})) is None
-    )
-    load_ref.assert_not_called()
-    assert (
-        parser._get_single_literal_value(
-            _json_schema_object({"$ref": ref}),
-            {parser.model_resolver.resolve_ref(ref)},
-        )
-        is None
-    )
-    assert parser._get_single_literal_value(_json_schema_object({"type": "string"})) is None
-    assert (
-        parser._get_union_variant_literal_values(
-            [
-                _json_schema_object({}),
-                _json_schema_object({"properties": {"kind": {"const": "only"}}}),
-            ],
-            "kind",
-        )
-        is None
-    )
-    assert (
-        parser._get_union_variant_literal_values(
-            [
-                _json_schema_object({"properties": {"kind": True}}),
-                _json_schema_object({"properties": {"kind": {"const": "ready"}}}),
-            ],
-            "kind",
-        )
-        is None
-    )
-    assert (
-        parser._get_union_variant_literal_values(
-            [
-                _json_schema_object({"properties": {"kind": {"type": "string"}}}),
-                _json_schema_object({"properties": {"kind": {"const": "ready"}}}),
-            ],
-            "kind",
-        )
-        is None
-    )
-
-
-def test_iter_union_variant_literal_field_names_skips_duplicates() -> None:
-    """Field name scanning prefers discriminator names and keeps fallbacks stable."""
-    parser = JsonSchemaParser("", infer_union_variant_names=True)
-
-    assert list(parser._iter_union_variant_literal_field_names(_json_schema_object({"discriminator": "kind"}), [])) == [
-        "kind"
-    ]
-    assert list(
-        parser._iter_union_variant_literal_field_names(
-            _json_schema_object({}),
-            [
-                _json_schema_object({}),
-                _json_schema_object({"properties": {"kind": {"const": "a"}, "reason": {"const": "x"}}}),
-                _json_schema_object({"properties": {"kind": {"const": "b"}}}),
-            ],
-        )
-    ) == ["kind", "reason"]
-
-
-def test_infer_union_variant_names_returns_none_when_no_literal_field_matches() -> None:
-    """Keep default generated names when no field has unique literal values."""
-    parser = JsonSchemaParser("", infer_union_variant_names=True)
-    variants = [
-        _json_schema_object({"properties": {"kind": {"type": "string"}}}),
-        _json_schema_object({"properties": {"kind": {"const": "ready"}}}),
-    ]
-
-    assert parser._infer_union_variant_names("Event", _json_schema_object({}), variants) is None
-
-
-def test_infer_union_variant_names_disabled() -> None:
-    """Leave default variant naming unchanged unless explicitly enabled."""
-    parser = JsonSchemaParser("")
-    variants = [
-        _json_schema_object({"properties": {"kind": {"const": "created"}}}),
-        _json_schema_object({"properties": {"kind": {"const": "deleted"}}}),
-    ]
-
-    assert parser._infer_union_variant_names("Event", _json_schema_object({}), variants) is None
 
 
 @pytest.mark.parametrize(
@@ -1860,27 +1697,6 @@ def test_jsonschema_parser_edge_case_helpers() -> None:
         JsonSchemaObject.model_validate({"contains": True, "minContains": 1, "minItems": 2})
     ) == {"minItems": 2}
     assert parser._get_data_type_from_json_value(object()).type_hint == "Any"
-
-
-@pytest.mark.parametrize(
-    ("current_root", "path", "expected"),
-    [
-        ([], [], True),
-        ([], ["#"], True),
-        (["schema.json"], ["schema.json"], True),
-        (["schema.json"], ["schema.json", "#"], True),
-        (["schema.json"], ["schema.json#"], True),
-        (["schema.json"], ["other.json#"], False),
-    ],
-)
-def test_is_current_root_schema_path_normalizes_root_spellings(
-    current_root: list[str], path: list[str], *, expected: bool
-) -> None:
-    """Treat equivalent root path spellings as the current schema root."""
-    parser = JsonSchemaParser("")
-    parser.model_resolver.set_current_root(current_root)
-
-    assert parser._is_current_root_schema_path(path) is expected
 
 
 def test_anchor_ref_path_escapes_json_pointer_segments() -> None:

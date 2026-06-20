@@ -123,9 +123,8 @@ PROMPT_GUIDANCE_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
                 "not for `--watch`."
             ),
             (
-                "- `--output-format-json-schema` accepts `generate-prompt`, `generation`, `model-metadata`, "
-                "or `structured-output`; "
-                "choose the narrow schema unless the consumer handles multiple payload kinds."
+                "- `--output-format-json-schema` accepts `config`, `generate-prompt`, `generation`, "
+                "`model-metadata`, or `structured-output`; use `config` for JSON configuration schemas."
             ),
             "- `--validation` is deprecated; use `--field-constraints` for generated Field constraints.",
         ),

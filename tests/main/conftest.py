@@ -253,11 +253,6 @@ def _assert_file_does_not_exist(path: Path) -> None:
         pytest.fail(f"File should not exist: {path}")
 
 
-def _assert_files_do_not_exist(paths: Path | Sequence[Path]) -> None:
-    for path in (paths,) if isinstance(paths, Path) else paths:
-        _assert_file_does_not_exist(path)
-
-
 def _assert_python_module_importable(path: Path, module_name: str, attribute: str | None = None) -> None:
     spec = importlib.util.spec_from_file_location(module_name, path)
     if spec is None:  # pragma: no cover
@@ -884,7 +879,7 @@ def run_main_and_assert(  # noqa: PLR0912
         expected_output: Compare with string directly
         expected_directory: Compare entire directory
         output_to_expected: Compare multiple files
-        file_should_not_exist: Assert one or more files do NOT exist
+        file_should_not_exist: Assert a file does NOT exist
         output_should_not_exist: Assert output_path does NOT exist
 
     Verification modifiers:
@@ -978,7 +973,12 @@ def run_main_and_assert(  # noqa: PLR0912
             pytest.fail("output_path is required when using output_should_not_exist")
         _assert_file_does_not_exist(output_path)
     if file_should_not_exist is not None:
-        _assert_files_do_not_exist(file_should_not_exist)
+        match file_should_not_exist:
+            case Path() as missing_path:
+                _assert_file_does_not_exist(missing_path)
+            case missing_paths:
+                for missing_path in missing_paths:
+                    _assert_file_does_not_exist(missing_path)
 
     # Skip output verification if expected_exit is not OK
     if expected_exit != Exit.OK:

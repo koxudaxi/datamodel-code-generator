@@ -594,11 +594,15 @@ class ModelResolver:  # noqa: PLR0904
             raise Error(msg)
 
         reference_names = self._get_reference_names()
-        if mapped_name != reserved_name and mapped_name in reference_names:
-            msg = f"--model-name-map maps {path!r} to {mapped_name!r}, but that model name is already used"
-            raise Error(msg)
-        if mapped_name != generated_name and mapped_name in self.exclude_names:
-            msg = f"--model-name-map maps {path!r} to {mapped_name!r}, but that model name is reserved"
+        conflict_reason = (
+            "already used"
+            if mapped_name != reserved_name and mapped_name in reference_names
+            else "reserved"
+            if mapped_name != generated_name and mapped_name in self.exclude_names
+            else None
+        )
+        if conflict_reason:
+            msg = f"--model-name-map maps {path!r} to {mapped_name!r}, but that model name is {conflict_reason}"
             raise Error(msg)
 
     def _apply_model_name_map(
