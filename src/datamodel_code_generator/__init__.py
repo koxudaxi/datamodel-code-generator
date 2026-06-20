@@ -58,7 +58,6 @@ from datamodel_code_generator.enums import (
     VersionMode,
     XMLSchemaVersion,
 )
-from datamodel_code_generator.model_metadata import ModelMetadata, dump_model_metadata
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 
 if TYPE_CHECKING:
@@ -81,6 +80,7 @@ if TYPE_CHECKING:
         PythonVersion,
         PythonVersionMin,
     )
+    from datamodel_code_generator.model_metadata import ModelMetadata
 
 T = TypeVar("T")
 _ConfigT = TypeVar("_ConfigT", bound="ParserConfig")
@@ -1196,6 +1196,8 @@ def _emit_results(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
 
 def _write_model_metadata(metadata_path: Path, metadata: ModelMetadata | None, encoding: str) -> None:
+    from datamodel_code_generator.model_metadata import dump_model_metadata  # noqa: PLC0415
+
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
     metadata_path.write_text(f"{dump_model_metadata(metadata)}\n", encoding=encoding)
 

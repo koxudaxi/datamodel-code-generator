@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from importlib.resources import files
 from typing import Literal
 
 from typing_extensions import TypedDict
@@ -54,6 +53,8 @@ def dump_model_metadata(metadata: ModelMetadata | None) -> str:
 
 def model_metadata_json_schema() -> str:
     """Return the static JSON Schema for --emit-model-metadata output."""
+    from importlib.resources import files  # noqa: PLC0415
+
     return (
         files("datamodel_code_generator.resources")
         .joinpath(MODEL_METADATA_SCHEMA_RESOURCE)
