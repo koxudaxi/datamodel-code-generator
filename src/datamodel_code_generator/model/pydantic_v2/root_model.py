@@ -15,7 +15,6 @@ IMPORT_ABC_ITERATOR = Import.from_full_path("collections.abc.Iterator")
 IMPORT_ABC_SEQUENCE = Import.from_full_path("collections.abc.Sequence")
 IMPORT_OVERLOAD = Import.from_full_path("typing.overload")
 IMPORT_SUPPORTS_INDEX = Import.from_full_path("typing.SupportsIndex")
-_SEQUENCE_BASE_CLASS_TEMPLATE_DATA_KEY = "sequence_base_class"
 
 
 class RootModel(BaseModel):
@@ -40,6 +39,7 @@ class RootModel(BaseModel):
             kwargs.pop("custom_base_class")
 
         super().__init__(**kwargs)
+        self._sequence_base_class: str | None = None
 
         config = self.extra_template_data.get("config")
         has_meaningful_config = config is not None and (
@@ -58,7 +58,7 @@ class RootModel(BaseModel):
         self._additional_imports.append(IMPORT_SUPPORTS_INDEX)
         if item_type == "Any":
             self._additional_imports.append(IMPORT_ANY)
-        self.extra_template_data[_SEQUENCE_BASE_CLASS_TEMPLATE_DATA_KEY] = f"Sequence[{item_type}]"
+        self._sequence_base_class = f"Sequence[{item_type}]"
         self.methods.extend([
             f"def __iter__(self) -> Iterator[{item_type}]:\n        return iter(self.root)",
             f"@overload\n    def __getitem__(self, index: SupportsIndex) -> {item_type}:\n        pass",
@@ -69,3 +69,28 @@ class RootModel(BaseModel):
             ),
             "def __len__(self) -> int:\n        return len(self.root)",
         ])
+
+    def render(self, *, class_name: str | None = None) -> str:
+        """Render the RootModel, adding optional sequence helpers without altering the template."""
+        rendered = super().render(class_name=class_name)
+        if self.template_file_path.is_absolute() or not self._sequence_base_class:
+            return rendered
+
+        lines = rendered.splitlines(keepends=True)
+        rendered_class_name = class_name or self.class_name
+        for index, class_line in enumerate(lines):
+            if not class_line.startswith(f"class {rendered_class_name}("):
+                continue
+            before_suffix, separator, after_suffix = class_line.rpartition("):")
+            if not separator:  # pragma: no cover
+                return rendered
+            lines[index] = f"{before_suffix}, {self._sequence_base_class}{separator}{after_suffix}"
+            break
+        else:  # pragma: no cover
+            return rendered
+
+        if not self.methods:
+            return "".join(lines)
+
+        rendered_methods = "\n\n".join(f"    {method}" for method in self.methods)
+        return f"{''.join(lines)}\n\n{rendered_methods}"
