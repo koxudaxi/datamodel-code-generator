@@ -9,15 +9,15 @@ from typing import Literal
 from pydantic import BaseModel
 
 
-class EventMessageCreated(BaseModel):
+class Event(BaseModel):
     type: Literal['message.created']
     id: str
 
 
-class EventMessageFailed(BaseModel):
+class Event1(BaseModel):
     type: Literal['message.failed']
     reason: str
 
 
 class WebhookEnvelope(BaseModel):
-    event: EventMessageCreated | EventMessageFailed
+    event: Event | Event1
