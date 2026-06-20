@@ -61,8 +61,8 @@ class RootModel(BaseModel):
         self.extra_template_data[_SEQUENCE_BASE_CLASS_TEMPLATE_DATA_KEY] = f"Sequence[{item_type}]"
         self.methods.extend([
             f"def __iter__(self) -> Iterator[{item_type}]:\n        return iter(self.root)",
-            f"@overload\n    def __getitem__(self, index: SupportsIndex) -> {item_type}: ...",
-            f"@overload\n    def __getitem__(self, index: slice) -> {slice_type}: ...",
+            f"@overload\n    def __getitem__(self, index: SupportsIndex) -> {item_type}:\n        ...",
+            f"@overload\n    def __getitem__(self, index: slice) -> {slice_type}:\n        ...",
             (
                 f"def __getitem__(self, index: SupportsIndex | slice) -> {item_type} | {slice_type}:\n"
                 "        return self.root[index]"

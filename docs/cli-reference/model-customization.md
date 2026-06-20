@@ -6377,10 +6377,12 @@ Scalar, optional, nullable, and RootModel type-alias outputs are unchanged.
             return iter(self.root)
 
         @overload
-        def __getitem__(self, index: SupportsIndex) -> Pet: ...
+        def __getitem__(self, index: SupportsIndex) -> Pet:
+            ...
 
         @overload
-        def __getitem__(self, index: slice) -> list[Pet]: ...
+        def __getitem__(self, index: slice) -> list[Pet]:
+            ...
 
         def __getitem__(self, index: SupportsIndex | slice) -> Pet | list[Pet]:
             return self.root[index]
