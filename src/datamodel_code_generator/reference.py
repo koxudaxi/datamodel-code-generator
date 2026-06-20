@@ -1311,15 +1311,16 @@ def _restore_typeguard_module(original_typeguard: Any, typeguard_stub: Any) -> N
 def _import_inflect_without_typeguard_instrumentation() -> Any:
     """Import inflect without paying typeguard's import-time AST instrumentation cost."""
     import _imp  # noqa: PLC0415, PLC2701
-    import importlib  # noqa: PLC0415
     import sys  # noqa: PLC0415
-    import types  # noqa: PLC0415
 
     # Guard the temporary sys.modules replacement from concurrent imports.
     _imp.acquire_lock()
     try:
         if (inflect_module := sys.modules.get("inflect")) is not None:
             return inflect_module
+
+        import importlib  # noqa: PLC0415
+        import types  # noqa: PLC0415
 
         original_typeguard = sys.modules.get("typeguard", _TYPEGUARD_NOT_LOADED)
         typeguard_stub = types.ModuleType("typeguard")
