@@ -606,6 +606,7 @@ def test_run_generate_from_config_generate_kwargs_are_pinned() -> None:
         ("input_", "input_"),
         ("input_file_type", "config.input_file_type"),
         ("output", "output"),
+        ("emit_model_metadata", "config.emit_model_metadata"),
         ("output_model_type", "config.output_model_type"),
         ("target_python_version", "config.target_python_version"),
         ("target_pydantic_version", "config.target_pydantic_version"),

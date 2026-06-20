@@ -201,6 +201,7 @@ def _baseline_generate(
     input_filename: str | None = None,
     input_file_type: InputFileType = InputFileType.Auto,
     output: Path | None = None,
+    emit_model_metadata: Path | None = None,
     output_model_type: DataModelType = DataModelType.PydanticV2BaseModel,
     preset: PresetName | None = None,
     target_python_version: PythonVersion = PythonVersionMin,
@@ -496,6 +497,7 @@ class _BaselineParser:
         all_exports_scope: AllExportsScope | None = None,
         all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
         module_split_mode: ModuleSplitMode | None = None,
+        collect_model_metadata: bool = False,
     ) -> str | dict[tuple[str, ...], Any]:
         raise NotImplementedError
 

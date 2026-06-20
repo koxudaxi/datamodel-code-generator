@@ -134,6 +134,7 @@ VersionMode: TypeAlias = Literal['lenient', 'strict']
 class BaseGenerateConfig(TypedDict):
     input_file_type: NotRequired[InputFileType]
     output: NotRequired[str | None]
+    emit_model_metadata: NotRequired[str | None]
     output_model_type: NotRequired[DataModelType]
     preset: NotRequired[str | None]
     target_python_version: NotRequired[PythonVersion]

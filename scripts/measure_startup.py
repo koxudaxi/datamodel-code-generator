@@ -45,6 +45,10 @@ CASES = (
         ("-m", "datamodel_code_generator.__main__", "--output-format-json-schema=generation"),
     ),
     Case(
+        "cli-schema-model-metadata",
+        ("-m", "datamodel_code_generator.__main__", "--output-format-json-schema=model-metadata"),
+    ),
+    Case(
         "cli-schema-structured-output",
         ("-m", "datamodel_code_generator.__main__", "--output-format-json-schema=structured-output"),
     ),
