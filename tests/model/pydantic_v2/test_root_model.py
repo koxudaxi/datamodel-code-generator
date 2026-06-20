@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from typing import TYPE_CHECKING
 
 import pytest
 
+from datamodel_code_generator import Error
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic_v2.base_model import _CONFIG_ITEMS_TEMPLATE_DATA_KEY
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_root_model() -> None:
@@ -104,6 +109,66 @@ def test_root_model_sequence_interface_with_decorator() -> None:
     rendered_lines = root_model.render().splitlines()
     assert rendered_lines[0] == "@some_decorator"
     assert rendered_lines[1] == "class TestRootModel(RootModel[List[str]], Sequence[str]):"
+
+
+def test_root_model_sequence_interface_rejects_unsupported_custom_template(tmp_path: Path) -> None:
+    """Unsupported custom RootModel templates fail when sequence interface helpers are requested."""
+    template_path = tmp_path / "pydantic_v2" / "RootModel.jinja2"
+    template_path.parent.mkdir()
+    template_path.write_text(
+        "class {{ class_name }}({{ base_class }}):\n    root: {{ fields[0].type_hint }}\n",
+        encoding="utf-8",
+    )
+    root_model = RootModel(
+        custom_template_dir=tmp_path,
+        fields=[
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(type="str", is_list=True, data_types=[DataType(type="str")]),
+                required=True,
+            )
+        ],
+        reference=Reference(name="TestRootModel", path="test_root_model"),
+    )
+
+    root_model.add_sequence_interface("str", "List[str]")
+
+    with pytest.raises(Error, match="does not support --use-root-model-sequence-interface"):
+        root_model.render()
+
+
+def test_root_model_sequence_interface_accepts_supported_custom_template(tmp_path: Path) -> None:
+    """Custom RootModel templates can opt in by rendering sequence_base_class and methods."""
+    template_path = tmp_path / "pydantic_v2" / "RootModel.jinja2"
+    template_path.parent.mkdir()
+    template_path.write_text(
+        "class {{ class_name }}({{ base_class }}{% if sequence_base_class is defined %}, "
+        "{{ sequence_base_class }}{% endif %}):\n"
+        "    root: {{ fields[0].type_hint }}\n"
+        "{%- for method in methods %}\n\n"
+        "    {{ method }}\n"
+        "{%- endfor %}\n",
+        encoding="utf-8",
+    )
+    root_model = RootModel(
+        custom_template_dir=tmp_path,
+        fields=[
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(type="str", is_list=True, data_types=[DataType(type="str")]),
+                required=True,
+            )
+        ],
+        reference=Reference(name="TestRootModel", path="test_root_model"),
+    )
+
+    root_model.add_sequence_interface("str", "List[str]")
+    rendered = root_model.render()
+
+    assert "class TestRootModel(RootModel, Sequence[str]):" in rendered
+    assert "def __iter__(self) -> Iterator[str]:" in rendered
+    assert "def __getitem__(self, index: SupportsIndex) -> str:" in rendered
+    assert "def __len__(self) -> int:" in rendered
 
 
 def test_root_model_sequence_interface_add_any_import() -> None:

@@ -3595,7 +3595,11 @@ def test_main_jsonschema_root_model_ordering(output_file: Path, extra_args: list
 
 When enabled, a RootModel whose root is list[T] or Sequence[T] inherits from Sequence[T]
 and includes __iter__, __getitem__, and __len__ methods that delegate to the wrapped root value.
-Scalar, optional, nullable, and RootModel type-alias outputs are unchanged.""",
+Scalar, optional, nullable, and RootModel type-alias outputs are unchanged.
+
+When used with `--custom-template-dir`, a custom `pydantic_v2/RootModel.jinja2` template must render both
+`sequence_base_class` and `methods`. If the custom RootModel template does not render the sequence base class
+and helper methods, generation fails with an error instead of silently ignoring this option.""",
     input_schema="jsonschema/root_model_sequence_interface.json",
     cli_args=[
         "--output-model-type",
