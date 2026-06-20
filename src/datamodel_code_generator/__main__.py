@@ -156,7 +156,7 @@ if TYPE_CHECKING:
         CommandOutputKind,
         GeneratedFilePayload,
     )
-    from datamodel_code_generator.json_config import JsonConfigSource
+    from datamodel_code_generator.json_config import JsonConfigFieldName, JsonConfigSource
 
 
 # Options that should be excluded from pyproject.toml config generation
@@ -297,7 +297,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
         """Load and validate JSON configuration values from inline JSON or file paths."""
         if value is None:  # pragma: no cover
             return value
-        field_name = cast("str", info.field_name)
+        field_name = cast("JsonConfigFieldName", info.field_name)
         try:
             return load_json_config_field(field_name, cast("JsonConfigSource", value))
         except JsonConfigError as e:

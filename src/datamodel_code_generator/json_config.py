@@ -18,6 +18,40 @@ DEFAULT_ENCODING = "utf-8"
 JSON_SCHEMA_DRAFT_2020_12 = "https://json-schema.org/draft/2020-12/schema"
 
 JsonConfigSource: TypeAlias = str | Path | TextIOBase | dict[str, Any] | None
+JsonConfigFieldName: TypeAlias = Literal[
+    "aliases",
+    "base_class_map",
+    "custom_formatters_kwargs",
+    "default_values",
+    "duplicate_name_suffix",
+    "enum_field_as_literal_map",
+    "extra_template_data",
+    "model_name_map",
+    "serialization_aliases",
+    "type_overrides",
+    "validators",
+]
+JsonConfigOptionName: TypeAlias = Literal[
+    "--aliases",
+    "--base-class-map",
+    "--custom-formatters-kwargs",
+    "--default-values",
+    "--duplicate-name-suffix",
+    "--enum-field-as-literal-map",
+    "--extra-template-data",
+    "--model-name-map",
+    "--serialization-aliases",
+    "--type-overrides",
+    "--validators",
+]
+JsonConfigErrorName: TypeAlias = Literal[
+    "alias mapping",
+    "custom_formatters_kwargs mapping",
+    "default values mapping",
+    "extra template data",
+    "serialization alias mapping",
+    "validators configuration",
+]
 
 
 class JsonConfigError(Exception):
@@ -50,6 +84,18 @@ class ExtraTemplateDataConfig(RootModel[dict[str, dict[str, Any]]]):
 
 class LegacyExtraTemplateDataConfig(RootModel[dict[str, Any]]):
     """Legacy extra template data mapping accepted during strict-validation migration."""
+
+
+JsonConfigStrictModel: TypeAlias = (
+    type[StringMappingConfig]
+    | type[StringOrStringListMappingConfig]
+    | type[EnumFieldAsLiteralMapConfig]
+    | type[DuplicateNameSuffixConfig]
+    | type[DefaultValuesConfig]
+    | type[ExtraTemplateDataConfig]
+    | type[ValidatorsConfig]
+)
+JsonConfigLegacyModel: TypeAlias = type[StringMappingConfig] | type[LegacyExtraTemplateDataConfig]
 
 
 class JsonConfigSchemasPayload(BaseModel):
@@ -140,12 +186,12 @@ def _to_defaultdict(value: Any) -> Any:
 class JsonConfigSpec:
     """Validation spec for a JSON configuration option."""
 
-    option_name: str
-    strict_model: type[Any]
-    legacy_model: type[Any] | None = None
+    option_name: JsonConfigOptionName
+    strict_model: JsonConfigStrictModel
+    legacy_model: JsonConfigLegacyModel | None = None
     as_defaultdict: bool = False
-    load_error_name: str | None = None
-    validation_error_name: str | None = None
+    load_error_name: JsonConfigErrorName | None = None
+    validation_error_name: JsonConfigErrorName | None = None
     validation_error_message: str | None = None
 
     def validate(self, raw: Any) -> Any:
@@ -197,7 +243,7 @@ class JsonConfigSpec:
 class JsonConfigSpecs:
     """Registry of JSON configuration specs."""
 
-    by_field_name: ClassVar[dict[str, JsonConfigSpec]] = {
+    by_field_name: ClassVar[dict[JsonConfigFieldName, JsonConfigSpec]] = {
         "aliases": JsonConfigSpec(
             "--aliases",
             StringOrStringListMappingConfig,
@@ -255,7 +301,7 @@ class JsonConfigSpecs:
 
 
 def load_json_config_field(
-    field_name: str,
+    field_name: JsonConfigFieldName,
     value: JsonConfigSource,
 ) -> Any:
     """Load and validate a JSON configuration field by Config field name."""
