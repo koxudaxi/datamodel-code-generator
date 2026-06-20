@@ -137,6 +137,7 @@ class BaseGenerateConfig(BaseModel):
     graphql_no_typename: bool = False
     wrap_string_literal: bool | None = None
     use_title_as_name: bool = False
+    infer_union_variant_names: bool = False
     use_operation_id_as_name: bool = False
     use_unique_items_as_set: bool = False
     use_tuple_for_fixed_items: bool = False
@@ -299,6 +300,7 @@ class ParserConfig(BaseModel):
     model_extra_keys_without_x_prefix: set[str] | None = None
     wrap_string_literal: bool | None = None
     use_title_as_name: bool = False
+    infer_union_variant_names: bool = False
     use_operation_id_as_name: bool = False
     use_unique_items_as_set: bool = False
     use_tuple_for_fixed_items: bool = False

@@ -375,6 +375,9 @@ Model customization:
                         extra fields.
   --frozen-dataclasses  Generate frozen dataclasses (dataclass(frozen=True)).
                         Only applies to dataclass output.
+  --infer-union-variant-names
+                        Infer inline oneOf/anyOf branch model names from
+                        literal discriminator-style fields
   --keep-model-order    Keep generated models' order
   --keyword-only        Defined models as keyword only (for example
                         dataclass(kw_only=True)).
