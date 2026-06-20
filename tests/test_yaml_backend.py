@@ -93,15 +93,13 @@ class TestLoadYaml:
 
     def test_load_yaml_allows_literal_unsupported_tag_marker_text(self) -> None:
         """Literal marker text is valid YAML data when it is not a YAML tag."""
-        with patch.dict("sys.modules", {"ryaml": None}):
-            result = load_yaml("description: 'literal !!set text'\n")
+        result = load_yaml("description: 'literal !!set text'\n")
 
         assert result == {"description": "literal !!set text"}
 
     def test_load_yaml_allows_comment_only_unsupported_tag_marker_text(self) -> None:
         """Comment-only marker text is not a YAML tag."""
-        with patch.dict("sys.modules", {"ryaml": None}):
-            result = load_yaml("# !!set\n")
+        result = load_yaml("# !!set\n")
 
         assert result is None
 
