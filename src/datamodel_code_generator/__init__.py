@@ -170,12 +170,14 @@ def _is_parsed_source_cache_enabled() -> bool:
 
 def load_yaml(stream: str | TextIO) -> YamlValue:
     """Load YAML content using ryaml (if available) or PyYAML."""
-    from datamodel_code_generator.util import get_yaml_backend  # noqa: PLC0415
+    from datamodel_code_generator.util import get_yaml_backend, reject_unsupported_yaml_tags  # noqa: PLC0415
+
+    text = stream if isinstance(stream, str) else stream.read()
+    reject_unsupported_yaml_tags(text)
 
     if get_yaml_backend() == "ryaml":
         import ryaml  # noqa: PLC0415  # ty: ignore[unresolved-import]
 
-        text = stream if isinstance(stream, str) else stream.read()
         from datamodel_code_generator.util import warn_yaml_deprecated_bool_values  # noqa: PLC0415
 
         warn_yaml_deprecated_bool_values(text)
@@ -185,7 +187,7 @@ def load_yaml(stream: str | TextIO) -> YamlValue:
 
     from datamodel_code_generator.util import SafeLoader  # noqa: PLC0415
 
-    return yaml.load(stream, Loader=SafeLoader)  # noqa: S506
+    return yaml.load(text, Loader=SafeLoader)  # noqa: S506
 
 
 def load_yaml_dict(stream: str | TextIO) -> dict[str, YamlValue]:
@@ -969,6 +971,7 @@ def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
         ),
         "use_object_type": config.use_object_type,
         "skip_root_model": skip_root_model,
+        "use_root_model_sequence_interface": config.use_root_model_sequence_interface,
     }
     return data_model_types, source, defer_formatting, additional_options
 

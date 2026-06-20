@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import importlib.util
 import itertools
 import json
 import os
+import sys
 import tempfile
 from collections import defaultdict
+from collections.abc import Sequence
 from pathlib import Path
 
 import black
@@ -3583,6 +3586,109 @@ def test_main_jsonschema_root_model_ordering(output_file: Path, extra_args: list
         assert_func=assert_file_content,
         expected_file=expected_file,
         extra_args=extra_args,
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--use-root-model-sequence-interface"],
+    option_description="""Make non-null sequence-like Pydantic v2 RootModel classes implement collections.abc.Sequence.
+
+When enabled, a RootModel whose root is list[T] or Sequence[T] inherits from Sequence[T]
+and includes __iter__, __getitem__, and __len__ methods that delegate to the wrapped root value.
+Scalar, optional, nullable, and RootModel type-alias outputs are unchanged.
+
+This makes generated RootModel wrappers convenient to use anywhere a typed sequence is expected,
+without unpacking `.root` at every call site:
+
+```python
+from collections.abc import Sequence
+
+pets = Pets(root=[Pet(name="dog")])
+
+first_pet: Pet = pets[0]
+selected_pets: list[Pet] = pets[:1]
+pet_names = [pet.name for pet in pets]
+
+def render_pet_names(pets: Sequence[Pet]) -> list[str]:
+    return [pet.name for pet in pets]
+
+render_pet_names(pets)
+```
+
+When used with `--custom-template-dir`, a custom `pydantic_v2/RootModel.jinja2` template must render both
+`sequence_base_class` and the helper methods using `sequence_item_type` and `sequence_slice_type`. If the custom
+RootModel template does not render the sequence base class and helper methods, generation fails with an error
+instead of silently ignoring this option.""",
+    input_schema="jsonschema/root_model_sequence_interface.json",
+    cli_args=[
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--use-root-model-sequence-interface",
+        "--class-name",
+        "Pets",
+    ],
+    golden_output="jsonschema/root_model_sequence_interface.py",
+)
+def test_main_jsonschema_root_model_sequence_interface(output_file: Path) -> None:
+    """Generate the Sequence interface for list RootModel classes."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_sequence_interface.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_sequence_interface.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-root-model-sequence-interface",
+            "--class-name",
+            "Pets",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+    module_name = "generated_root_model_sequence_interface"
+    spec = importlib.util.spec_from_file_location(module_name, output_file)
+    if spec is None:  # pragma: no cover
+        pytest.fail(f"Unable to load generated module from {output_file}", pytrace=False)
+    if spec.loader is None:  # pragma: no cover
+        pytest.fail(f"Unable to load generated module loader from {output_file}", pytrace=False)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+        pet = module.Pet(name="dog")
+        pets = module.Pets(root=[pet])
+        if not isinstance(pets, Sequence):  # pragma: no cover
+            pytest.fail("Generated RootModel does not implement collections.abc.Sequence")
+        if pets.count(pet) != 1:  # pragma: no cover
+            pytest.fail("Generated RootModel Sequence.count does not delegate to root")
+        if pets.index(pet) != 0:  # pragma: no cover
+            pytest.fail("Generated RootModel Sequence.index does not delegate to root")
+        if list(reversed(pets)) != [pet]:  # pragma: no cover
+            pytest.fail("Generated RootModel Sequence.__reversed__ does not delegate to root")
+    finally:
+        sys.modules.pop(module_name, None)
+
+
+def test_main_jsonschema_root_model_sequence_interface_type_alias(output_file: Path) -> None:
+    """Sequence interface is skipped for RootModel type aliases."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_sequence_interface.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_sequence_interface_type_alias.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-root-model-sequence-interface",
+            "--use-root-model-type-alias",
+            "--class-name",
+            "Pets",
+            "--disable-timestamp",
+        ],
     )
 
 

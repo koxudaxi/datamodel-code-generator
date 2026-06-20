@@ -140,6 +140,7 @@ class BaseGenerateConfig(TypedDict):
     collapse_root_models_name_strategy: NotRequired[CollapseRootModelsNameStrategy | None]
     collapse_reuse_models: NotRequired[bool]
     skip_root_model: NotRequired[bool]
+    use_root_model_sequence_interface: NotRequired[bool]
     use_type_alias: NotRequired[bool]
     use_root_model_type_alias: NotRequired[bool]
     special_field_name_prefix: NotRequired[str | None]

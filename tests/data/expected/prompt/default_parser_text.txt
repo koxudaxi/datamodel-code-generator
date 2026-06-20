@@ -130,6 +130,7 @@
 - `--use-frozen-field`: Generate frozen (immutable) field definitions for readOnly properties.
 - `--use-generic-base-class`: Generate a shared base class with model configuration to avoid repetition (DRY).
 - `--use-one-literal-as-default`: Use single literal value as default when enum has only one option.
+- `--use-root-model-sequence-interface`: Make non-null sequence-like Pydantic v2 RootModel classes implement col...
 - `--use-serialize-as-any`: Wrap fields with subtypes in Pydantic's SerializeAsAny.
 - `--use-subclass-enum`: Generate typed Enum subclasses for enums with specific field types.
 
