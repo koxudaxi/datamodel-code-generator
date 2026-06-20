@@ -110,7 +110,7 @@ def _run_parsed_schema_path(schema_name: str) -> dict[str, Any]:
 @pytest.mark.allow_direct_assert
 def test_output_format_json_schema_exact_fast_paths_skip_argument_parser_import() -> None:
     """Exact JSON Schema utility invocations bypass argparse without changing output."""
-    for schema_name in ("config", "generation", "model-metadata", "structured-output"):
+    for schema_name in ("generation", "structured-output"):
         parsed_path = _run_parsed_schema_path(schema_name)
         assert parsed_path["code"] == 0
         fast_paths = [

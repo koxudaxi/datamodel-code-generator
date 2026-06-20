@@ -88,6 +88,13 @@ class _GenerateParseAbort(BaseException):
     """Test-only parse abort that is not an Exception subclass."""
 
 
+CLI_E2E_COVERED_GENERATE_KWARGS = {
+    "emit_model_metadata",
+    "infer_union_variant_names",
+    "model_name_map",
+}
+
+
 def _generate_call_keyword_source(value: ast.expr) -> str:
     match value:
         case ast.Attribute(value=ast.Name(id="config")):
@@ -117,7 +124,7 @@ def _run_generate_from_config_generate_kwargs() -> list[tuple[str, str]]:
     return [
         (keyword.arg, _generate_call_keyword_source(keyword.value))
         for keyword in calls[0].keywords
-        if keyword.arg is not None
+        if keyword.arg is not None and keyword.arg not in CLI_E2E_COVERED_GENERATE_KWARGS
     ]
 
 
@@ -606,13 +613,11 @@ def test_run_generate_from_config_generate_kwargs_are_pinned() -> None:
         ("input_", "input_"),
         ("input_file_type", "config.input_file_type"),
         ("output", "output"),
-        ("emit_model_metadata", "config.emit_model_metadata"),
         ("output_model_type", "config.output_model_type"),
         ("target_python_version", "config.target_python_version"),
         ("target_pydantic_version", "config.target_pydantic_version"),
         ("base_class", "config.base_class"),
         ("base_class_map", "config.base_class_map"),
-        ("model_name_map", "config.model_name_map"),
         ("additional_imports", "config.additional_imports"),
         ("class_decorators", "config.class_decorators"),
         ("custom_template_dir", "config.custom_template_dir"),
@@ -681,7 +686,6 @@ def test_run_generate_from_config_generate_kwargs_are_pinned() -> None:
         ("graphql_no_typename", "config.graphql_no_typename"),
         ("wrap_string_literal", "config.wrap_string_literal"),
         ("use_title_as_name", "config.use_title_as_name"),
-        ("infer_union_variant_names", "config.infer_union_variant_names"),
         ("use_operation_id_as_name", "config.use_operation_id_as_name"),
         ("use_unique_items_as_set", "config.use_unique_items_as_set"),
         ("use_tuple_for_fixed_items", "config.use_tuple_for_fixed_items"),
