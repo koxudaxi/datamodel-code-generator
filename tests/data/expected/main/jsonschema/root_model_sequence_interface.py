@@ -21,11 +21,11 @@ class Pets(RootModel[list[Pet]], Sequence[Pet]):
 
     @overload
     def __getitem__(self, index: SupportsIndex) -> Pet:
-        ...
+        pass
 
     @overload
     def __getitem__(self, index: slice) -> list[Pet]:
-        ...
+        pass
 
     def __getitem__(self, index: SupportsIndex | slice) -> Pet | list[Pet]:
         return self.root[index]
