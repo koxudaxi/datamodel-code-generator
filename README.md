@@ -185,6 +185,20 @@ class Pet(BaseModel):
     age: Annotated[int | None, Field(description='Age in years', ge=0)] = None
     vaccinated: bool = False
 ```
+
+### ⚡ Speed up generation
+
+By default, generated Python is currently formatted with `black` and `isort`. For faster generation without external
+formatter dependencies, add `--formatters builtin` for standard generated model modules. In a future version, the
+Black/isort dependencies will become opt-in and the default formatter will change to `builtin`.
+
+If you prefer Ruff, install it with `pip install 'datamodel-code-generator[ruff]'` and use
+`--formatters ruff-check ruff-format` for a fast external formatter.
+
+Custom templates can emit Python outside the standard generated model patterns covered by `builtin`, so
+custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted
+output with a custom template, please open an issue with a small reproducer. See
+[Formatter Behavior](https://datamodel-code-generator.koxudaxi.dev/formatter-behavior/) for details.
 <!-- END AUTO-GENERATED PRESET QUICK START -->
 
 ---

@@ -186,6 +186,20 @@ class Pet(BaseModel):
 ```
 
 🎉 That's it! Your schema is now a fully-typed Python model.
+
+### ⚡ Speed up generation
+
+By default, generated Python is currently formatted with `black` and `isort`. For faster generation without external
+formatter dependencies, add `--formatters builtin` for standard generated model modules. In a future version, the
+Black/isort dependencies will become opt-in and the default formatter will change to `builtin`.
+
+If you prefer Ruff, install it with `pip install 'datamodel-code-generator[ruff]'` and use
+`--formatters ruff-check ruff-format` for a fast external formatter.
+
+Custom templates can emit Python outside the standard generated model patterns covered by `builtin`, so
+custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted
+output with a custom template, please open an issue with a small reproducer. See
+[Formatter Behavior](formatter-behavior.md) for details.
 <!-- END AUTO-GENERATED PRESET QUICK START -->
 
 ---
