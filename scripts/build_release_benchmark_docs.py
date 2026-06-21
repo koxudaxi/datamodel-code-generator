@@ -572,17 +572,15 @@ def _render_scenario_history_tabs(
 
 
 def _note_scope_label(note: BenchmarkNote) -> str:
-    match note.input_type, note.case:
-        case "", "":
-            return ""
-        case input_type, "":
-            return _input_label(input_type)
-        case "", case_name:
-            return case_name.title()
-        case input_type, case_name:
-            return _scenario_label(input_type, case_name)
-        case _:
-            return ""
+    input_type = note.input_type
+    case_name = note.case
+    if not input_type and not case_name:
+        return ""
+    if input_type and not case_name:
+        return _input_label(input_type)
+    if not input_type:
+        return case_name.title()
+    return _scenario_label(input_type, case_name)
 
 
 def _render_benchmark_notes(data: BenchmarkData) -> str:
