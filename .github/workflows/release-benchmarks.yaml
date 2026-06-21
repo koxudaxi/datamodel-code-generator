@@ -1,0 +1,196 @@
+name: Release Benchmarks
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_run:
+    workflows: ["Publish"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      versions:
+        description: "Release tags or versions to benchmark. Leave empty to select by PyPI download usage."
+        required: false
+        default: ""
+      history_days:
+        description: "PyPI download lookback window used for version selection."
+        required: false
+        default: "365"
+      limit:
+        description: "Maximum release versions to benchmark."
+        required: false
+        default: "40"
+      runs:
+        description: "Measured runs per release/input/formatter case."
+        required: false
+        default: "7"
+      python_version:
+        description: "Python version used to install and run released packages."
+        required: false
+        default: "3.14.2"
+
+concurrency:
+  group: release-benchmarks-${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Resolve release benchmark versions
+    runs-on: ubuntu-24.04
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event_name == 'pull_request' &&
+          contains(github.event.pull_request.labels.*.name, 'run-release-benchmarks') &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        ) ||
+        (
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      }}
+    outputs:
+      versions_json: ${{ steps.versions.outputs.versions_json }}
+      versions: ${{ steps.versions.outputs.versions }}
+    env:
+      BENCHMARK_PYTHON_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.python_version || '3.14.2' }}
+      BENCHMARK_HISTORY_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.history_days || '365' }}
+      BENCHMARK_LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.limit || '40' }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: ${{ env.BENCHMARK_PYTHON_VERSION }}
+      - name: Resolve release versions
+        id: versions
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_TAG: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || '' }}
+          WORKFLOW_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || '' }}
+          INPUT_VERSIONS: ${{ github.event_name == 'workflow_dispatch' && inputs.versions || '' }}
+        run: |
+          set -euo pipefail
+          versions="$INPUT_VERSIONS"
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            versions="$WORKFLOW_TAG"
+            case "$versions" in
+              refs/tags/*) versions="${versions#refs/tags/}" ;;
+              v[0-9]* | [0-9]*) ;;
+              *) versions="" ;;
+            esac
+            if [ -z "$versions" ] && [ -n "$WORKFLOW_SHA" ]; then
+              git fetch --tags --force --depth=1 origin '+refs/tags/*:refs/tags/*'
+              versions="$(git tag --points-at "$WORKFLOW_SHA" | sort -V | tail -n 1)"
+            fi
+            if [ -z "$versions" ]; then
+              echo "Could not determine release tag for Publish workflow run $WORKFLOW_SHA" >&2
+              exit 1
+            fi
+          fi
+          python scripts/select_release_benchmark_versions.py \
+            --versions "$versions" \
+            --history-days "$BENCHMARK_HISTORY_DAYS" \
+            --limit "$BENCHMARK_LIMIT" \
+            --output .benchmarks/release-benchmark-selection.json
+      - name: Upload benchmark selection
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dcg-release-benchmark-selection
+          path: .benchmarks/release-benchmark-selection.json
+          if-no-files-found: error
+
+  collect:
+    name: Collect release benchmarks (${{ matrix.version }})
+    needs: resolve
+    if: needs.resolve.result == 'success'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      max-parallel: 40
+      matrix:
+        version: ${{ fromJson(needs.resolve.outputs.versions_json) }}
+    env:
+      BENCHMARK_PYTHON_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.python_version || '3.14.2' }}
+      BENCHMARK_RUNS: ${{ github.event_name == 'workflow_dispatch' && inputs.runs || (github.event_name == 'pull_request' && '3' || '7') }}
+      OS: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: ${{ env.BENCHMARK_PYTHON_VERSION }}
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - name: Collect benchmarks
+        env:
+          BENCHMARK_VERSION: ${{ matrix.version }}
+        run: >-
+          python scripts/collect_release_benchmarks.py
+          --versions "$BENCHMARK_VERSION"
+          --runs "$BENCHMARK_RUNS"
+          --output ".benchmarks/fragments/release-benchmark-${BENCHMARK_VERSION}.json"
+      - name: Upload benchmark fragment
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dcg-release-benchmark-fragment-${{ matrix.version }}
+          path: .benchmarks/fragments/release-benchmark-${{ matrix.version }}.json
+          if-no-files-found: error
+
+  build:
+    name: Build release benchmark docs artifact
+    needs: [resolve, collect]
+    if: needs.collect.result == 'success'
+    runs-on: ubuntu-24.04
+    env:
+      BENCHMARK_PYTHON_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.python_version || '3.14.2' }}
+      OS: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: ${{ env.BENCHMARK_PYTHON_VERSION }}
+      - name: Download benchmark selection
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dcg-release-benchmark-selection
+          path: .benchmarks
+      - name: Download benchmark fragments
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: dcg-release-benchmark-fragment-*
+          path: .benchmarks/fragments
+          merge-multiple: true
+      - name: Merge benchmark data
+        run: >-
+          python scripts/merge_release_benchmarks.py
+          .benchmarks/fragments/*.json
+          --selection .benchmarks/release-benchmark-selection.json
+          --output .benchmarks/release-benchmarks.json
+      - name: Build benchmark docs artifact
+        run: >-
+          python scripts/build_release_benchmark_docs.py
+          --data .benchmarks/release-benchmarks.json
+          --docs .benchmarks/docs/performance-benchmarks.md
+          --svg .benchmarks/docs/assets/benchmarks/release-benchmarks.svg
+      - name: Upload benchmark data
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dcg-release-benchmarks-json
+          path: .benchmarks/release-benchmarks.json
+          if-no-files-found: error
+      - name: Upload benchmark docs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dcg-release-benchmark-docs
+          path: .benchmarks/docs
+          if-no-files-found: error

@@ -199,6 +199,8 @@ Custom templates can emit Python outside the standard generated model patterns c
 custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted
 output with a custom template, please open an issue with a small reproducer. See
 [Formatter Behavior](https://datamodel-code-generator.koxudaxi.dev/formatter-behavior/) for details.
+
+See [Performance Benchmarks](https://datamodel-code-generator.koxudaxi.dev/performance-benchmarks/) for release benchmark data and SVG charts.
 <!-- END AUTO-GENERATED PRESET QUICK START -->
 
 ---
@@ -213,6 +215,7 @@ output with a custom template, please open an issue with a small reproducer. See
 - ⚙️ [pyproject.toml](https://datamodel-code-generator.koxudaxi.dev/pyproject_toml/) - Configuration file
 - 🔄 [CI/CD Integration](https://datamodel-code-generator.koxudaxi.dev/ci-cd/) - GitHub Actions, pre-commit hooks
 - ✅ [Conformance Dashboard](https://datamodel-code-generator.koxudaxi.dev/conformance/) - External corpus coverage signals
+- 📈 [Performance Benchmarks](https://datamodel-code-generator.koxudaxi.dev/performance-benchmarks/) - Release benchmark tables and SVG charts
 - 🧭 [Architecture](https://datamodel-code-generator.koxudaxi.dev/architecture/) - Generation pipeline and synchronized component inventory
 - 🚀 [One-liner Usage](https://datamodel-code-generator.koxudaxi.dev/oneliner/) - uvx, pipx, clipboard integration
 - ❓ [FAQ](https://datamodel-code-generator.koxudaxi.dev/faq/) - Common questions

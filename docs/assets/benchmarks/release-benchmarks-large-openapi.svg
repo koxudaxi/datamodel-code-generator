@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="640" viewBox="0 0 980 640" role="img" aria-labelledby="title desc">
+  <title id="title">datamodel-code-generator release benchmarks</title>
+  <desc id="desc">Historical median generation time by release version for Large / OpenAPI.</desc>
+  <style>
+    text { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #111827; }
+    .muted { fill: #6b7280; }
+    .axis { stroke: #374151; stroke-width: 1.2; }
+    .grid { stroke: #d1d5db; stroke-width: 1; stroke-dasharray: 4 5; }
+    .panel { fill: #ffffff; stroke: #e5e7eb; stroke-width: 1; }
+  </style>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <rect class="panel" x="20" y="20" width="940" height="600" rx="8"/>
+<text x="44.0" y="48.0" font-size="22" text-anchor="start" font-weight="700">datamodel-code-generator release trend: Large / OpenAPI</text>
+<text x="44.0" y="74.0" font-size="13" text-anchor="start" font-weight="400">Median generation time by release version. Lower is faster.</text>
+<line class="grid" x1="86" y1="476.0" x2="846" y2="476.0"/>
+<text x="74.0" y="480.0" font-size="11" text-anchor="end" font-weight="400">0.00ms</text>
+<line class="grid" x1="86" y1="386.0" x2="846" y2="386.0"/>
+<text x="74.0" y="390.0" font-size="11" text-anchor="end" font-weight="400">1.32s</text>
+<line class="grid" x1="86" y1="296.0" x2="846" y2="296.0"/>
+<text x="74.0" y="300.0" font-size="11" text-anchor="end" font-weight="400">2.64s</text>
+<line class="grid" x1="86" y1="206.0" x2="846" y2="206.0"/>
+<text x="74.0" y="210.0" font-size="11" text-anchor="end" font-weight="400">3.97s</text>
+<line class="grid" x1="86" y1="116.0" x2="846" y2="116.0"/>
+<text x="74.0" y="120.0" font-size="11" text-anchor="end" font-weight="400">5.29s</text>
+<line class="axis" x1="86" y1="116" x2="86" y2="476"/>
+<line class="axis" x1="86" y1="476" x2="846" y2="476"/>
+<line class="grid" x1="86.0" y1="116" x2="86.0" y2="476"/>
+<text x="86.0" y="500.0" font-size="11" text-anchor="middle" font-weight="400">0.17.2</text>
+<line class="grid" x1="163.9" y1="116" x2="163.9" y2="476"/>
+<text x="163.9" y="500.0" font-size="11" text-anchor="middle" font-weight="400">0.25.6</text>
+<line class="grid" x1="241.9" y1="116" x2="241.9" y2="476"/>
+<text x="241.9" y="500.0" font-size="11" text-anchor="middle" font-weight="400">0.26.3</text>
+<line class="grid" x1="319.8" y1="116" x2="319.8" y2="476"/>
+<text x="319.8" y="500.0" font-size="11" text-anchor="middle" font-weight="400">0.28.2</text>
+<line class="grid" x1="397.8" y1="116" x2="397.8" y2="476"/>
+<text x="397.8" y="500.0" font-size="11" text-anchor="middle" font-weight="400">0.30.2</text>
+<line class="grid" x1="475.7" y1="116" x2="475.7" y2="476"/>
+<text x="475.7" y="500.0" font-size="11" text-anchor="middle" font-weight="400">0.34.0</text>
+<line class="grid" x1="553.7" y1="116" x2="553.7" y2="476"/>
+<text x="553.7" y="500.0" font-size="11" text-anchor="middle" font-weight="400">0.42.0</text>
+<line class="grid" x1="631.6" y1="116" x2="631.6" y2="476"/>
+<text x="631.6" y="500.0" font-size="11" text-anchor="middle" font-weight="400">0.52.2</text>
+<line class="grid" x1="709.6" y1="116" x2="709.6" y2="476"/>
+<text x="709.6" y="500.0" font-size="11" text-anchor="middle" font-weight="400">0.55.0</text>
+<line class="grid" x1="787.5" y1="116" x2="787.5" y2="476"/>
+<text x="787.5" y="500.0" font-size="11" text-anchor="middle" font-weight="400">0.58.0</text>
+<line class="grid" x1="846.0" y1="116" x2="846.0" y2="476"/>
+<text x="846.0" y="500.0" font-size="11" text-anchor="middle" font-weight="400">0.64.1</text>
+<line x1="86" y1="92" x2="110" y2="92" stroke="#6b7280" stroke-width="2.6"/>
+<circle cx="98" cy="92" r="3" fill="#6b7280"/>
+<text x="118.0" y="96.0" font-size="11" text-anchor="start" font-weight="400">Default</text>
+<line x1="218" y1="92" x2="242" y2="92" stroke="#2563eb" stroke-width="2.6"/>
+<circle cx="230" cy="92" r="3" fill="#2563eb"/>
+<text x="250.0" y="96.0" font-size="11" text-anchor="start" font-weight="400">Built-in</text>
+<line x1="350" y1="92" x2="374" y2="92" stroke="#16a34a" stroke-width="2.6"/>
+<circle cx="362" cy="92" r="3" fill="#16a34a"/>
+<text x="382.0" y="96.0" font-size="11" text-anchor="start" font-weight="400">Ruff</text>
+<polyline points="105.5,258.2 125.0,252.6 144.5,259.0 163.9,265.0 183.4,276.9 202.9,250.5 222.4,236.1 241.9,269.0 495.2,163.0 514.7,225.3 534.2,262.7 553.7,251.8 573.2,239.4 592.7,255.9 612.2,285.1 631.6,241.0 651.1,250.9 670.6,242.6 690.1,249.1 709.6,235.5 729.1,246.7 748.6,276.9 768.1,244.8 787.5,232.4 807.0,234.2 826.5,243.1 846.0,251.5" fill="none" stroke="#6b7280" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="105.5" cy="258.2" r="3" fill="#6b7280"/>
+<circle cx="125.0" cy="252.6" r="3" fill="#6b7280"/>
+<circle cx="144.5" cy="259.0" r="3" fill="#6b7280"/>
+<circle cx="163.9" cy="265.0" r="3" fill="#6b7280"/>
+<circle cx="183.4" cy="276.9" r="3" fill="#6b7280"/>
+<circle cx="202.9" cy="250.5" r="3" fill="#6b7280"/>
+<circle cx="222.4" cy="236.1" r="3" fill="#6b7280"/>
+<circle cx="241.9" cy="269.0" r="3" fill="#6b7280"/>
+<circle cx="495.2" cy="163.0" r="3" fill="#6b7280"/>
+<circle cx="514.7" cy="225.3" r="3" fill="#6b7280"/>
+<circle cx="534.2" cy="262.7" r="3" fill="#6b7280"/>
+<circle cx="553.7" cy="251.8" r="3" fill="#6b7280"/>
+<circle cx="573.2" cy="239.4" r="3" fill="#6b7280"/>
+<circle cx="592.7" cy="255.9" r="3" fill="#6b7280"/>
+<circle cx="612.2" cy="285.1" r="3" fill="#6b7280"/>
+<circle cx="631.6" cy="241.0" r="3" fill="#6b7280"/>
+<circle cx="651.1" cy="250.9" r="3" fill="#6b7280"/>
+<circle cx="670.6" cy="242.6" r="3" fill="#6b7280"/>
+<circle cx="690.1" cy="249.1" r="3" fill="#6b7280"/>
+<circle cx="709.6" cy="235.5" r="3" fill="#6b7280"/>
+<circle cx="729.1" cy="246.7" r="3" fill="#6b7280"/>
+<circle cx="748.6" cy="276.9" r="3" fill="#6b7280"/>
+<circle cx="768.1" cy="244.8" r="3" fill="#6b7280"/>
+<circle cx="787.5" cy="232.4" r="3" fill="#6b7280"/>
+<circle cx="807.0" cy="234.2" r="3" fill="#6b7280"/>
+<circle cx="826.5" cy="243.1" r="3" fill="#6b7280"/>
+<circle cx="846.0" cy="251.5" r="3" fill="#6b7280"/>
+<polyline points="826.5,376.6 846.0,377.6" fill="none" stroke="#2563eb" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="826.5" cy="376.6" r="3" fill="#2563eb"/>
+<circle cx="846.0" cy="377.6" r="3" fill="#2563eb"/>
+<polyline points="631.6,372.3 651.1,375.5 670.6,370.6 690.1,375.5 709.6,370.1 729.1,373.9 748.6,384.0 768.1,370.9 787.5,367.0 807.0,360.1 826.5,380.3 846.0,381.6" fill="none" stroke="#16a34a" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="631.6" cy="372.3" r="3" fill="#16a34a"/>
+<circle cx="651.1" cy="375.5" r="3" fill="#16a34a"/>
+<circle cx="670.6" cy="370.6" r="3" fill="#16a34a"/>
+<circle cx="690.1" cy="375.5" r="3" fill="#16a34a"/>
+<circle cx="709.6" cy="370.1" r="3" fill="#16a34a"/>
+<circle cx="729.1" cy="373.9" r="3" fill="#16a34a"/>
+<circle cx="748.6" cy="384.0" r="3" fill="#16a34a"/>
+<circle cx="768.1" cy="370.9" r="3" fill="#16a34a"/>
+<circle cx="787.5" cy="367.0" r="3" fill="#16a34a"/>
+<circle cx="807.0" cy="360.1" r="3" fill="#16a34a"/>
+<circle cx="826.5" cy="380.3" r="3" fill="#16a34a"/>
+<circle cx="846.0" cy="381.6" r="3" fill="#16a34a"/>
+<text x="466.0" y="530.0" font-size="11" text-anchor="middle" font-weight="400">Release version</text>
+<text x="44.0" y="100.0" font-size="11" text-anchor="start" font-weight="400">Median</text>
+</svg>

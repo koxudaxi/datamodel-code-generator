@@ -77,6 +77,7 @@ nav = [
     ]}
   ]},
   { "Conformance Dashboard" = "conformance.md" },
+  { "Performance Benchmarks" = "performance-benchmarks.md" },
   { "Deprecations" = "deprecations.md" },
   { "Experimental Features" = "experimental.md" },
   { "FAQ" = "faq.md" },
