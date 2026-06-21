@@ -63,6 +63,20 @@ class CountingJsonSchemaParser(JsonSchemaParser):
         return super()._validate_schema_object(raw, path)
 
 
+class RefBodyCountingJsonSchemaParser(CountingJsonSchemaParser):
+    """JsonSchemaParser that records reference body loads."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize the parser and reference body recorder."""
+        super().__init__(*args, **kwargs)
+        self.ref_body_paths: list[str] = []
+        self.ref_bodies: dict[str, dict[str, Any]] = {}
+
+    def _get_ref_body(self, resolved_ref: str) -> dict[str, Any]:
+        self.ref_body_paths.append(resolved_ref)
+        return self.ref_bodies[resolved_ref]
+
+
 @pytest.fixture(autouse=True)
 def block_dns_by_default(mocker: MockerFixture) -> None:
     """Keep tests that mock httpx.get independent from external DNS."""
@@ -108,10 +122,10 @@ def test_load_ref_schema_object_caches_refs() -> None:
     ]
 
 
-def test_parse_file_reuses_validated_definition_objects() -> None:
-    """Test definitions validated for metadata are reused when parsed."""
-    parser = CountingJsonSchemaParser("")
-    raw = {
+def test_load_ref_schema_object_reuses_current_raw_obj_for_current_root_ref() -> None:
+    """Test same-document refs use the current raw object instead of loading a ref body."""
+    parser = RefBodyCountingJsonSchemaParser("")
+    parser.raw_obj = {
         "definitions": {
             "User": {
                 "type": "object",
@@ -120,12 +134,76 @@ def test_parse_file_reuses_validated_definition_objects() -> None:
         },
     }
 
+    with parser.model_resolver.current_root_context(["current.json"]):
+        schema = parser._load_ref_schema_object("#/definitions/User")
+
+    assert schema.type == "object"
+    assert parser.ref_body_paths == []
+    assert parser.validation_paths == [
+        ("current.json#/definitions/User",),
+    ]
+
+
+def test_load_ref_schema_object_loads_non_current_root_ref_body() -> None:
+    """Test refs outside the current root still load their referenced body."""
+    parser = RefBodyCountingJsonSchemaParser("")
+    parser.raw_obj = {}
+    parser.ref_bodies["other.json"] = {
+        "definitions": {
+            "User": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+            },
+        },
+    }
+
+    with parser.model_resolver.current_root_context(["current.json"]):
+        schema = parser._load_ref_schema_object("other.json#/definitions/User")
+
+    assert schema.type == "object"
+    assert parser.ref_body_paths == ["other.json"]
+    assert parser.validation_paths == [
+        ("other.json#/definitions/User",),
+    ]
+
+
+def test_parse_file_reuses_validated_definition_objects() -> None:
+    """Test definitions validated for metadata are reused when parsed and referenced."""
+    parser = CountingJsonSchemaParser("")
+    raw = {
+        "type": "object",
+        "properties": {
+            "user": {"$ref": "#/definitions/User"},
+            "member": {"$ref": "#/definitions/Namespaces/$defs/Member"},
+        },
+        "definitions": {
+            "User": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+            },
+            "Namespaces": {
+                "$defs": {
+                    "Member": {
+                        "type": "object",
+                        "properties": {"id": {"type": "integer"}},
+                    },
+                },
+            },
+        },
+    }
+
     parser._parse_file(raw, "Root", [])
 
     assert parser.validation_paths.count(("#/definitions", "User")) == 1
+    assert parser.validation_paths.count(("#/definitions", "Namespaces", "$defs", "Member")) == 1
+    assert ("#/definitions/User",) not in parser.validation_paths
+    assert ("#/definitions/Namespaces/$defs/Member",) not in parser.validation_paths
     reference = parser.model_resolver.get(["#/definitions", "User"])
     assert reference is not None
     assert reference.loaded
+    nested_reference = parser.model_resolver.get(["#/definitions", "Namespaces", "$defs", "Member"])
+    assert nested_reference is not None
+    assert nested_reference.loaded
 
 
 @pytest.mark.parametrize(
