@@ -1286,13 +1286,72 @@ class ModelResolver:  # noqa: PLR0904
 
 
 _inflect_engine: inflect.engine | None = None
+_TYPEGUARD_NOT_LOADED = object()
+
+
+def _noop_typechecked(target: Any = None, **_: Any) -> Any:
+    """Return a no-op replacement for typeguard.typechecked."""
+    if target is None:
+        return lambda wrapped: wrapped
+    return target
+
+
+def _restore_typeguard_module(original_typeguard: Any, typeguard_stub: Any) -> None:
+    import sys  # noqa: PLC0415
+
+    match original_typeguard:
+        case _ if original_typeguard is _TYPEGUARD_NOT_LOADED:
+            if sys.modules.get("typeguard") is typeguard_stub:
+                del sys.modules["typeguard"]
+            return
+        case _:
+            sys.modules["typeguard"] = original_typeguard
+
+
+def _import_inflect_without_typeguard_instrumentation() -> Any:
+    """Import inflect without paying typeguard's import-time AST instrumentation cost."""
+    import _imp  # noqa: PLC0415, PLC2701
+    import sys  # noqa: PLC0415
+
+    # Guard the temporary sys.modules replacement from concurrent imports.
+    _imp.acquire_lock()
+    try:
+        if (inflect_module := sys.modules.get("inflect")) is not None:
+            return inflect_module
+
+        import importlib  # noqa: PLC0415
+        import types  # noqa: PLC0415
+
+        original_typeguard = sys.modules.get("typeguard", _TYPEGUARD_NOT_LOADED)
+        typeguard_stub = types.ModuleType("typeguard")
+        typeguard_stub.__dict__["__datamodel_codegen_stub__"] = True
+        typeguard_stub.__dict__["typechecked"] = _noop_typechecked
+        sys.modules["typeguard"] = typeguard_stub
+        try:
+            return importlib.import_module("inflect")
+        except (AttributeError, ImportError, TypeError):
+            # inflect>=7.2 imports typeguard and @typechecked reparses the module
+            # during import, causing the startup regression tracked in:
+            # https://github.com/jaraco/inflect/issues/212
+            #
+            # datamodel-code-generator only needs inflect.engine().singular_noun()
+            # for generated class names, not runtime validation. If inflect starts
+            # requiring more typeguard behavior than typechecked(), restore the real
+            # module and fall back to a normal import to preserve compatibility.
+            sys.modules.pop("inflect", None)
+            _restore_typeguard_module(original_typeguard, typeguard_stub)
+            return importlib.import_module("inflect")
+        finally:
+            _restore_typeguard_module(original_typeguard, typeguard_stub)
+    finally:
+        _imp.release_lock()
 
 
 def _get_inflect_engine() -> inflect.engine:
     """Get or create the inflect engine lazily."""
     global _inflect_engine  # noqa: PLW0603
     if _inflect_engine is None:
-        import inflect  # noqa: PLC0415
+        inflect = _import_inflect_without_typeguard_instrumentation()
 
         _inflect_engine = inflect.engine()
     return _inflect_engine
