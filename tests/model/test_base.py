@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 
+from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_DECIMAL, IMPORT_OPTIONAL, IMPORT_UNION, Import
 from datamodel_code_generator.model.base import (
     DataModel,
     DataModelFieldBase,
@@ -25,7 +26,7 @@ from datamodel_code_generator.model.pydantic_v2 import BaseModel
 from datamodel_code_generator.model.pydantic_v2 import DataModelField as PydanticV2DataModelField
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_FIELD
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import DataType, Types
+from datamodel_code_generator.types import ANY, DataType, Types
 
 
 class A(TemplateBase):
@@ -445,6 +446,141 @@ def test_data_field() -> None:
 
     field = DataModelFieldBase(name="a", data_type=DataType(is_list=True), required=False)
     assert field.type_hint == "Optional[List]"
+
+
+@pytest.mark.parametrize(
+    "data_type",
+    [
+        DataType(reference=Reference(path="Ref", original_name="Ref", name="Ref")),
+        DataType(data_types=[DataType(type="str")]),
+        DataType(is_dict=True, dict_key=DataType(type="str")),
+        DataType(literals=["value"]),
+        DataType(enum_member_literals=[("EnumModel", "VALUE")]),
+        DataType(type=ANY, is_optional=True),
+    ],
+)
+def test_field_import_fast_path_skips_complex_data_types(data_type: DataType) -> None:
+    """Test that complex DataTypes keep the side-effect-preserving import path."""
+    field = DataModelFieldBase(name="a", data_type=data_type, required=True)
+
+    assert field._can_collect_imports_without_type_hint(needs_annotated=False) is False
+
+
+def test_field_import_fast_path_skips_annotated_fields() -> None:
+    """Test that annotated fields keep the rendered type-hint import path."""
+    field = DataModelFieldBase(name="a", data_type=DataType(type="str"), required=True)
+
+    assert field._can_collect_imports_without_type_hint(needs_annotated=True) is False
+
+
+def test_field_import_fast_path_skips_forward_reference_parent() -> None:
+    """Test fields in forward-reference models keep rendered type-hint import detection."""
+    field = DataModelFieldBase(name="a", data_type=DataType(type="str"), required=False)
+    model = BaseModel(
+        fields=[field],
+        reference=Reference(path="Model", original_name="Model", name="Model"),
+    )
+    model.has_forward_reference = True
+
+    assert field._can_collect_imports_without_type_hint(needs_annotated=False) is False
+
+
+@pytest.mark.parametrize("type_name", ["Optional[str]", "Union[str, int]"])
+def test_field_import_fast_path_skips_explicit_typing_names(type_name: str) -> None:
+    """Test explicit typing names keep legacy import detection."""
+    field = DataModelFieldBase(name="a", data_type=DataType(type=type_name), required=True)
+
+    assert field._can_collect_imports_without_type_hint(needs_annotated=False) is False
+
+
+@pytest.mark.parametrize(
+    ("field", "expected_imports"),
+    [
+        (DataModelFieldBase(name="a", data_type=DataType(type="str"), required=False), (IMPORT_OPTIONAL,)),
+        (
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(type="str"),
+                required=True,
+                nullable=True,
+            ),
+            (IMPORT_OPTIONAL,),
+        ),
+        (
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(type="str"),
+                required=False,
+                nullable=False,
+            ),
+            (),
+        ),
+        (
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(type="str"),
+                required=True,
+                type_has_null=True,
+            ),
+            (IMPORT_OPTIONAL,),
+        ),
+        (
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(type="str", is_optional=True),
+                required=False,
+            ),
+            (IMPORT_OPTIONAL,),
+        ),
+        (
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(type="str", use_union_operator=True),
+                required=False,
+            ),
+            (),
+        ),
+        (
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(type="Decimal", import_=IMPORT_DECIMAL),
+                required=False,
+            ),
+            (IMPORT_DECIMAL, IMPORT_OPTIONAL),
+        ),
+        (DataModelFieldBase(name="a", data_type=DataType(), required=False), ()),
+    ],
+)
+def test_field_import_fast_path_collects_simple_data_type_imports(
+    field: DataModelFieldBase,
+    expected_imports: tuple[Import, ...],
+) -> None:
+    """Test simple DataTypes collect imports without rendering type hints."""
+    assert field.imports == expected_imports
+
+
+def test_field_import_fallback_collects_annotated_import() -> None:
+    """Test the fallback path includes Annotated when requested."""
+    field = DataModelFieldBase(name="a", data_type=DataType(type="str"), required=True)
+
+    assert field._collect_field_imports(needs_annotated=True) == (IMPORT_ANNOTATED,)
+
+
+@pytest.mark.parametrize(
+    ("type_name", "expected_imports"),
+    [
+        ("Optional[str]", (IMPORT_OPTIONAL,)),
+        ("Union[str, int]", (IMPORT_UNION,)),
+    ],
+)
+def test_field_import_fallback_collects_explicit_typing_names(
+    type_name: str,
+    expected_imports: tuple[Import, ...],
+) -> None:
+    """Test explicit typing names still collect Optional and Union imports."""
+    field = DataModelFieldBase(name="a", data_type=DataType(type=type_name), required=True)
+
+    assert field.imports == expected_imports
 
 
 @pytest.mark.parametrize(
