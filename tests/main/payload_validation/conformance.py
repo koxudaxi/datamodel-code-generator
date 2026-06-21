@@ -192,6 +192,9 @@ MSGSPEC_VALIDATION_EXCLUDED_CASES: Final[dict[str, str]] = {
     "jsonschema/combine_one_of_object.json": (
         "msgspec conversion requires tagged Struct unions for combined object schemas"
     ),
+    "jsonschema/msgspec_payload_runtime_compatibility.json": (
+        "msgspec conversion requires tagged Struct unions, but boolean tag values are not supported"
+    ),
     "jsonschema/collapse_root_models_empty_union.json": (
         "msgspec 0.18 cannot evaluate generated null-only union aliases during conversion"
     ),

@@ -59,6 +59,7 @@ from datamodel_code_generator.parser.base import (
     SPECIAL_PATH_FORMAT,
     Parser,
     Source,
+    _is_msgspec_struct,
     _is_typed_dict_data_model,
     escape_characters,
     get_special_path,
@@ -102,6 +103,7 @@ JsonSchemaConstraintKey = Literal[
 ]
 JsonSchemaConstraintValue = int | float | str | bool
 JsonSchemaDataTypeKwargValue = JsonSchemaConstraintValue
+MsgspecTagValue = Union[int, str]  # noqa: UP007
 _MIN_UNION_VARIANT_LITERAL_VALUES = 2
 _NUMBER_CONSTRAINT_KEYS: tuple[JsonSchemaConstraintKey, ...] = (
     "minimum",
@@ -177,6 +179,16 @@ def _get_union_variant_name(name: str, literal: JsonSchemaLiteral) -> str | None
         return None
     variant_name = f"{class_name or name}_{literal_name}"
     return f"{module_name}{separator}{variant_name}" if module_name else variant_name
+
+
+def _get_msgspec_tag_value(literal: JsonSchemaLiteral) -> MsgspecTagValue | None:
+    """Return a msgspec-supported Struct tag value for a JSON Schema literal."""
+    match literal:
+        case bool():
+            return None
+        case int() | str():
+            return literal
+    return None  # pragma: no cover
 
 
 def __getattr__(name: str) -> Any:
@@ -873,6 +885,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self.raw_obj: dict[str, YamlValue] = {}
         self._root_id: Optional[str] = None  # noqa: UP045
         self._root_id_base_path: Optional[str] = None  # noqa: UP045
+        self._is_msgspec_struct_output = _is_msgspec_struct(self.data_model_type)
 
         # Normalize external ref mapping paths to absolute for reliable matching
         raw_mapping = self.config.external_ref_mapping
@@ -1474,7 +1487,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _get_const_data_type(self, const: object) -> DataType:
         """Return a DataType for a JSON Schema const value."""
-        if isinstance(const, (bool, int, str)):
+        if isinstance(const, bool):
+            if self._is_msgspec_struct_output:
+                return self.data_type_manager.get_data_type(Types.boolean)
+            return self.data_type(literals=[const])
+        if isinstance(const, (int, str)):
             return self.data_type(literals=[const])
         return self._get_data_type_from_json_value(const)
 
@@ -2351,6 +2368,52 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if not self.infer_union_variant_names:
             return None
         return self._infer_union_variant_names(name, obj, combined_schemas)
+
+    def _get_msgspec_union_tag_field_values(
+        self,
+        obj: JsonSchemaObject,
+        combined_schemas: Sequence[JsonSchemaObject],
+    ) -> tuple[str, dict[int, MsgspecTagValue]] | None:
+        """Return the shared required literal field and supported msgspec tags for a Struct union."""
+        discriminator_schemas = [
+            self._load_ref_schema_object(item.ref) if item.ref and item.ref_type == JSONReference.LOCAL else item
+            for item in combined_schemas
+        ]
+        for field_name in self._iter_union_variant_literal_field_names(obj, discriminator_schemas):
+            if (literal_values := self._get_union_variant_literal_values(discriminator_schemas, field_name)) is None:
+                continue
+            if len(literal_values) != len(discriminator_schemas):
+                continue
+
+            tag_values: dict[int, MsgspecTagValue] = {}
+            for index, literal in literal_values.items():
+                match discriminator_schemas[index]:
+                    case JsonSchemaObject(required=required) if field_name in required:
+                        pass
+                    case _:
+                        break
+                if (tag_value := _get_msgspec_tag_value(literal)) is None:
+                    break
+                tag_values[index] = tag_value
+            else:
+                return field_name, tag_values
+
+        return None
+
+    def _set_msgspec_union_discriminator(
+        self,
+        obj: JsonSchemaObject,
+        combined_schemas: Sequence[JsonSchemaObject],
+    ) -> None:
+        """Set a discriminator extra when msgspec can use a tagged Struct union."""
+        if not (tag_data := self._get_msgspec_union_tag_field_values(obj, combined_schemas)):
+            return
+        tag_field, _tag_values = tag_data
+        match obj.extras.get("discriminator"):
+            case dict() as discriminator:
+                discriminator["propertyName"] = tag_field
+            case _:
+                obj.extras["discriminator"] = {"propertyName": tag_field}
 
     def _parse_combined_schema_items(
         self,
@@ -3369,7 +3432,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         merged_schema.pop("allOf", None)
         return self.SCHEMA_OBJECT_TYPE.model_validate(merged_schema)
 
-    def parse_combined_schema(
+    def parse_combined_schema(  # noqa: PLR0912
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -3418,6 +3481,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 )
 
         variant_names = self._get_inferred_union_variant_names(name, obj, combined_schemas)
+        if self._is_msgspec_struct_output:
+            self._set_msgspec_union_discriminator(obj, combined_schemas)
         parsed_schemas = self._parse_combined_schema_items(name, obj, path, combined_schemas, variant_names)
         if not parsed_schemas:
             self._raise_unsatisfiable_schema(path, target_attribute_name)

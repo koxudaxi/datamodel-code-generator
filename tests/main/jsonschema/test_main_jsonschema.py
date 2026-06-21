@@ -13240,6 +13240,48 @@ def test_main_msgspec_required_nullable_field_stays_required(output_file: Path) 
     )
 
 
+def test_main_payload_runtime_compatibility(output_file: Path) -> None:
+    """Test JSON Schema payload runtime compatibility fixture with default output."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_payload_runtime_compatibility.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--target-python-version",
+            "3.10",
+            "--class-name",
+            "Payload",
+        ],
+        assert_func=assert_file_content,
+        expected_file="payload_runtime_compatibility.py",
+        force_exec_validation=True,
+        importable_module_name="generated_payload_runtime_compatibility",
+        importable_module_attribute="Payload",
+    )
+
+
+def test_main_msgspec_payload_runtime_compatibility(output_file: Path) -> None:
+    """Test msgspec avoids unsupported bool Literal and tags supported Struct unions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_payload_runtime_compatibility.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--target-python-version",
+            "3.10",
+            "--class-name",
+            "Payload",
+        ],
+        assert_func=assert_file_content,
+        expected_file="msgspec_payload_runtime_compatibility.py",
+        force_exec_validation=True,
+        importable_module_name="generated_msgspec_payload_runtime_compatibility",
+        importable_module_attribute="Payload",
+    )
+
+
 def test_main_msgspec_array_length_constraints_use_annotated(output_file: Path) -> None:
     """Test msgspec renders array length constraints as Meta annotations."""
     run_main_and_assert(
