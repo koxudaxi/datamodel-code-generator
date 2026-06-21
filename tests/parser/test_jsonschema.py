@@ -86,8 +86,8 @@ def test_get_model_by_path(schema: dict, path: str, model: dict) -> None:
     assert get_model_by_path(schema, path.split("/") if path else []) == model
 
 
-def test_load_ref_schema_object_caches_seen_refs() -> None:
-    """Test repeated ref schema loads reuse the cached validated object after the second read."""
+def test_load_ref_schema_object_caches_refs() -> None:
+    """Test repeated ref schema loads reuse the cached validated object."""
     parser = CountingJsonSchemaParser("")
     parser.raw_obj = {
         "definitions": {
@@ -102,10 +102,8 @@ def test_load_ref_schema_object_caches_seen_refs() -> None:
     second = parser._load_ref_schema_object("#/definitions/User")
     third = parser._load_ref_schema_object("#/definitions/User")
 
-    assert first is not second
-    assert second is third
+    assert first is second is third
     assert parser.validation_paths == [
-        ("#/definitions/User",),
         ("#/definitions/User",),
     ]
 
@@ -125,6 +123,9 @@ def test_parse_file_reuses_validated_definition_objects() -> None:
     parser._parse_file(raw, "Root", [])
 
     assert parser.validation_paths.count(("#/definitions", "User")) == 1
+    reference = parser.model_resolver.get(["#/definitions", "User"])
+    assert reference is not None
+    assert reference.loaded
 
 
 @pytest.mark.parametrize(
