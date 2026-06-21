@@ -35427,28 +35427,37 @@ hand-written while release-time details such as parser routes and output backend
 ## Generation Pipeline
 
 ```mermaid
-flowchart LR
-    cli["CLI\n__main__.py"]
-    api["Python API\ngenerate()"]
-    config["GenerateConfig\nParserConfig"]
-    normalize["Input normalization\ninfer, fetch, convert"]
-    parser["Parser.parse()"]
-    raw["parse_raw()\nformat-specific"]
-    model_graph["Generation graph\nDataModel / DataType / Reference"]
-    render["Templates\nmodel/template"]
-    format["CodeFormatter"]
-    output["Python files\nstdout / return value"]
+flowchart TD
+    subgraph entry["Entry points"]
+        direction TB
+        cli["CLI\n__main__.py"]
+        api["Python API\ngenerate()"]
+    end
 
-    cli --> api
-    api --> config
-    config --> normalize
-    normalize --> parser
-    parser --> raw
-    raw --> model_graph
+    subgraph setup["Configuration and input handling"]
+        direction TB
+        config["GenerateConfig\nParserConfig"]
+        normalize["Input normalization\ninfer / fetch / convert"]
+    end
+
+    subgraph parsing["Parsing"]
+        direction TB
+        parser["Parser.parse()"]
+        raw["parse_raw()\nformat-specific parser"]
+        model_graph["Generation graph\nDataModel / DataType / Reference"]
+    end
+
+    subgraph rendering["Rendering"]
+        direction TB
+        render["Templates\nmodel/template"]
+        format["CodeFormatter"]
+        output["Python files\nstdout / return value"]
+    end
+
+    cli --> api --> config --> normalize --> parser
+    parser --> raw --> model_graph
     parser --> model_graph
-    model_graph --> render
-    render --> format
-    format --> output
+    model_graph --> render --> format --> output
 ```
 
 The CLI builds a `Config` from command-line arguments, `pyproject.toml`, and presets. It then calls the same
