@@ -2219,8 +2219,13 @@ def test_main_root_model_with_additional_properties_literal(min_version: str, ou
     )
 
 
-def test_main_jsonschema_multiple_files_ref(output_dir: Path) -> None:
+def test_main_jsonschema_multiple_files_ref(output_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test multiple files with references."""
+    monkeypatch.setattr(
+        "datamodel_code_generator.parser.jsonschema.load_data_from_path",
+        lambda *_args, **_kwargs: pytest.fail("local refs should reuse loaded directory sources"),
+    )
+
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "multiple_files_self_ref",
         output_path=output_dir,

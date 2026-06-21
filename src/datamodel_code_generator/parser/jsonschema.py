@@ -5663,13 +5663,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             case list() as paths:
                 yield from ((self.base_path / path) for path in paths)
 
-    def _load_source_dict(self, source: Source) -> dict[str, Any]:  # noqa: PLR6301
+    def _load_source_dict(self, source: Source) -> dict[str, YamlValue]:  # noqa: PLR6301
+        """Load a source into a schema dictionary."""
         if source.raw_data is None:
             return load_data(source.text)
         if not isinstance(source.raw_data, dict):
             msg = f"Expected dict, got {type(source.raw_data).__name__}"
             raise TypeError(msg)
         return dict(source.raw_data)
+
+    def _cache_source_ref_body(self, source: Source, raw_obj: dict[str, YamlValue]) -> None:
+        """Cache a local source body for later local $ref resolution."""
+        if not source.path.parts:
+            return
+        self.remote_object_cache[str((self.base_path / source.path).resolve())] = raw_obj
 
     def _resolve_root_model_name(self, raw_obj: dict[str, Any]) -> tuple[str, bool]:
         title = raw_obj.get("title")
@@ -5694,8 +5701,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for source, path_parts in self._get_context_source_path_parts():
                 raw_obj = make_converter().convert(source)
                 source.raw_data = raw_obj
-                if source.path.parts:
-                    self.remote_object_cache[str((self.base_path / source.path).resolve())] = raw_obj
+                self._cache_source_ref_body(source, raw_obj)
                 self.raw_obj = raw_obj
                 obj_name, preserve_root_class_name = self._resolve_root_model_name(raw_obj)
                 self._parse_file(
@@ -5719,6 +5725,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 except TypeError:
                     warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
                     continue
+                self._cache_source_ref_body(source, raw_obj)
                 self.raw_obj = raw_obj
                 obj_name, preserve_root_class_name = self._resolve_root_model_name(self.raw_obj)
                 self._parse_file(self.raw_obj, obj_name, path_parts, preserve_root_class_name=preserve_root_class_name)
