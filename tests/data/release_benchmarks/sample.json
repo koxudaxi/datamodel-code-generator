@@ -3,6 +3,7 @@
   "metadata": {
     "generated_at": "2026-06-22T00:00:00Z",
     "workflow": "Release Benchmarks",
+    "python_version": "3.14.2",
     "runs_per_case": "7"
   },
   "entries": [

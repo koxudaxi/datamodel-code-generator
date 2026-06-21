@@ -37,6 +37,8 @@ Each chart plots median generation time by release version for one benchmark sce
 - Schema version: `1`
 - Generated at: `2026-06-22T00:00:00Z`
 - Source workflow: `Release Benchmarks`
+- Primary Python version: `3.14.2`
+- Entry Python versions: `3.14.2`
 - Benchmark runs per case: `7`
 - Version selection: `-`
 - Selected versions: `2`

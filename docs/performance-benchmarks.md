@@ -8,6 +8,8 @@ This page tracks datamodel-code-generator release benchmark results collected on
 
 Each chart plots median generation time by release version for one benchmark scenario. Formatter lines are included for context; missing or unsupported formatter results are skipped.
 
+Compatibility backfill: Versions 0.26.4-0.34.0 use Python 3.13.14 because those releases fail during import on Python 3.14.2 before benchmark timing.
+
 === "Small / JSON Schema"
 
     ![Small / JSON Schema release benchmark trend](assets/benchmarks/release-benchmarks.svg){ align=center }
@@ -35,11 +37,13 @@ Each chart plots median generation time by release version for one benchmark sce
 ## Latest Dataset
 
 - Schema version: `1`
-- Generated at: `2026-06-21T16:10:37Z`
+- Generated at: `2026-06-21T16:47:19Z`
 - Source workflow: `Release Benchmarks`
+- Primary Python version: `3.14.2`
+- Entry Python versions: `3.13.14`, `3.14.2`
 - Benchmark runs per case: `3`
-- Version selection: `clickpy_downloads`
-- Selected versions: `40`
+- Version selection: `clickpy_downloads_with_compatibility_backfill`
+- Selected versions: `50`
 - Download source: `clickpy`
 - Download window: `365` days
 - Downloads in window: `117,300,797`
@@ -90,18 +94,28 @@ Rows are release versions. Formatter cells show median generation time; non-defa
     | 0.25.9 | 404ms | Unsupported: unavailable | Unsupported: unavailable |
     | 0.26.1 | 423ms | Unsupported: unavailable | Unsupported: unavailable |
     | 0.26.3 | 401ms | Unsupported: unavailable | Unsupported: unavailable |
-    | 0.26.4 | Failed: command | Failed: command | Failed: command |
-    | 0.26.5 | Failed: command | Failed: command | Failed: command |
-    | 0.27.3 | Failed: command | Failed: command | Failed: command |
-    | 0.28.2 | Failed: command | Failed: command | Failed: command |
-    | 0.28.4 | Failed: command | Failed: command | Failed: command |
-    | 0.28.5 | Failed: command | Failed: command | Failed: command |
-    | 0.30.1 | Failed: command | Failed: command | Failed: command |
-    | 0.30.2 | Failed: command | Failed: command | Failed: command |
-    | 0.31.2 | Failed: command | Failed: command | Failed: command |
-    | 0.32.0 | Failed: command | Failed: command | Failed: command |
-    | 0.33.0 | Failed: command | Failed: command | Failed: command |
-    | 0.34.0 | Failed: command | Failed: command | Failed: command |
+    | 0.26.4 | 405ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.26.5 | 405ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.27.0 | 488ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.27.1 | 392ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.27.2 | 389ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.27.3 | 432ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.0 | 400ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.1 | 425ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.2 | 405ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.3 | 419ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.4 | 399ms | Unsupported: unavailable | Failed: command |
+    | 0.28.5 | 435ms | Unsupported: unavailable | Failed: command |
+    | 0.29.0 | 2.07s | Unsupported: unavailable | Failed: command |
+    | 0.30.0 | 2.13s | Unsupported: unavailable | Failed: command |
+    | 0.30.1 | 1.59s | Unsupported: unavailable | Failed: command |
+    | 0.30.2 | 2.23s | Unsupported: unavailable | Failed: command |
+    | 0.31.0 | 2.00s | Unsupported: unavailable | Failed: command |
+    | 0.31.1 | 2.09s | Unsupported: unavailable | Failed: command |
+    | 0.31.2 | 2.05s | Unsupported: unavailable | Failed: command |
+    | 0.32.0 | 2.02s | Unsupported: unavailable | Failed: command |
+    | 0.33.0 | 2.23s | Unsupported: unavailable | Failed: command |
+    | 0.34.0 | 2.06s | Unsupported: unavailable | Failed: command |
     | 0.35.0 | 2.10s | Unsupported: unavailable | Failed: command |
     | 0.36.0 | 1.66s | Unsupported: unavailable | Failed: command |
     | 0.39.0 | 413ms | Unsupported: unavailable | Failed: command |
@@ -135,18 +149,28 @@ Rows are release versions. Formatter cells show median generation time; non-defa
     | 0.25.9 | 440ms | Unsupported: unavailable | Unsupported: unavailable |
     | 0.26.1 | 495ms | Unsupported: unavailable | Unsupported: unavailable |
     | 0.26.3 | 434ms | Unsupported: unavailable | Unsupported: unavailable |
-    | 0.26.4 | Failed: command | Failed: command | Failed: command |
-    | 0.26.5 | Failed: command | Failed: command | Failed: command |
-    | 0.27.3 | Failed: command | Failed: command | Failed: command |
-    | 0.28.2 | Failed: command | Failed: command | Failed: command |
-    | 0.28.4 | Failed: command | Failed: command | Failed: command |
-    | 0.28.5 | Failed: command | Failed: command | Failed: command |
-    | 0.30.1 | Failed: command | Failed: command | Failed: command |
-    | 0.30.2 | Failed: command | Failed: command | Failed: command |
-    | 0.31.2 | Failed: command | Failed: command | Failed: command |
-    | 0.32.0 | Failed: command | Failed: command | Failed: command |
-    | 0.33.0 | Failed: command | Failed: command | Failed: command |
-    | 0.34.0 | Failed: command | Failed: command | Failed: command |
+    | 0.26.4 | 441ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.26.5 | 439ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.27.0 | 491ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.27.1 | 442ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.27.2 | 433ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.27.3 | 475ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.0 | 442ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.1 | 456ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.2 | 449ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.3 | 455ms | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.4 | 426ms | Unsupported: unavailable | Failed: command |
+    | 0.28.5 | 479ms | Unsupported: unavailable | Failed: command |
+    | 0.29.0 | 2.11s | Unsupported: unavailable | Failed: command |
+    | 0.30.0 | 2.22s | Unsupported: unavailable | Failed: command |
+    | 0.30.1 | 1.63s | Unsupported: unavailable | Failed: command |
+    | 0.30.2 | 2.33s | Unsupported: unavailable | Failed: command |
+    | 0.31.0 | 2.06s | Unsupported: unavailable | Failed: command |
+    | 0.31.1 | 2.12s | Unsupported: unavailable | Failed: command |
+    | 0.31.2 | 2.04s | Unsupported: unavailable | Failed: command |
+    | 0.32.0 | 2.05s | Unsupported: unavailable | Failed: command |
+    | 0.33.0 | 2.24s | Unsupported: unavailable | Failed: command |
+    | 0.34.0 | 2.10s | Unsupported: unavailable | Failed: command |
     | 0.35.0 | 2.17s | Unsupported: unavailable | Failed: command |
     | 0.36.0 | 1.69s | Unsupported: unavailable | Failed: command |
     | 0.39.0 | 2.19s | Unsupported: unavailable | Failed: command |
@@ -180,18 +204,28 @@ Rows are release versions. Formatter cells show median generation time; non-defa
     | 0.25.9 | 3.76s | Unsupported: unavailable | Unsupported: unavailable |
     | 0.26.1 | 3.87s | Unsupported: unavailable | Unsupported: unavailable |
     | 0.26.3 | 3.29s | Unsupported: unavailable | Unsupported: unavailable |
-    | 0.26.4 | Failed: command | Failed: command | Failed: command |
-    | 0.26.5 | Failed: command | Failed: command | Failed: command |
-    | 0.27.3 | Failed: command | Failed: command | Failed: command |
-    | 0.28.2 | Failed: command | Failed: command | Failed: command |
-    | 0.28.4 | Failed: command | Failed: command | Failed: command |
-    | 0.28.5 | Failed: command | Failed: command | Failed: command |
-    | 0.30.1 | Failed: command | Failed: command | Failed: command |
-    | 0.30.2 | Failed: command | Failed: command | Failed: command |
-    | 0.31.2 | Failed: command | Failed: command | Failed: command |
-    | 0.32.0 | Failed: command | Failed: command | Failed: command |
-    | 0.33.0 | Failed: command | Failed: command | Failed: command |
-    | 0.34.0 | Failed: command | Failed: command | Failed: command |
+    | 0.26.4 | 3.29s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.26.5 | 3.28s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.27.0 | 3.65s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.27.1 | 3.51s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.27.2 | 3.39s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.27.3 | 3.79s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.0 | 3.24s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.1 | 3.65s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.2 | 3.36s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.3 | 3.67s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.4 | 3.16s | Unsupported: unavailable | Failed: command |
+    | 0.28.5 | 3.93s | Unsupported: unavailable | Failed: command |
+    | 0.29.0 | 5.15s | Unsupported: unavailable | Failed: command |
+    | 0.30.0 | 5.81s | Unsupported: unavailable | Failed: command |
+    | 0.30.1 | 4.06s | Unsupported: unavailable | Failed: command |
+    | 0.30.2 | 6.03s | Unsupported: unavailable | Failed: command |
+    | 0.31.0 | 5.40s | Unsupported: unavailable | Failed: command |
+    | 0.31.1 | 5.36s | Unsupported: unavailable | Failed: command |
+    | 0.31.2 | 5.25s | Unsupported: unavailable | Failed: command |
+    | 0.32.0 | 5.51s | Unsupported: unavailable | Failed: command |
+    | 0.33.0 | 5.91s | Unsupported: unavailable | Failed: command |
+    | 0.34.0 | 5.17s | Unsupported: unavailable | Failed: command |
     | 0.35.0 | 5.06s | Unsupported: unavailable | Failed: command |
     | 0.36.0 | 4.19s | Unsupported: unavailable | Failed: command |
     | 0.39.0 | 3.42s | Unsupported: unavailable | Failed: command |
@@ -225,18 +259,28 @@ Rows are release versions. Formatter cells show median generation time; non-defa
     | 0.25.9 | 3.31s | Unsupported: unavailable | Unsupported: unavailable |
     | 0.26.1 | 3.53s | Unsupported: unavailable | Unsupported: unavailable |
     | 0.26.3 | 3.04s | Unsupported: unavailable | Unsupported: unavailable |
-    | 0.26.4 | Failed: command | Failed: command | Failed: command |
-    | 0.26.5 | Failed: command | Failed: command | Failed: command |
-    | 0.27.3 | Failed: command | Failed: command | Failed: command |
-    | 0.28.2 | Failed: command | Failed: command | Failed: command |
-    | 0.28.4 | Failed: command | Failed: command | Failed: command |
-    | 0.28.5 | Failed: command | Failed: command | Failed: command |
-    | 0.30.1 | Failed: command | Failed: command | Failed: command |
-    | 0.30.2 | Failed: command | Failed: command | Failed: command |
-    | 0.31.2 | Failed: command | Failed: command | Failed: command |
-    | 0.32.0 | Failed: command | Failed: command | Failed: command |
-    | 0.33.0 | Failed: command | Failed: command | Failed: command |
-    | 0.34.0 | Failed: command | Failed: command | Failed: command |
+    | 0.26.4 | 3.01s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.26.5 | 3.21s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.27.0 | 3.47s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.27.1 | 3.29s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.27.2 | 3.20s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.27.3 | 3.59s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.0 | 3.00s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.1 | 3.48s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.2 | 3.20s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.3 | 3.40s | Unsupported: unavailable | Unsupported: unavailable |
+    | 0.28.4 | 2.98s | Unsupported: unavailable | Failed: command |
+    | 0.28.5 | 3.57s | Unsupported: unavailable | Failed: command |
+    | 0.29.0 | 4.72s | Unsupported: unavailable | Failed: command |
+    | 0.30.0 | 5.36s | Unsupported: unavailable | Failed: command |
+    | 0.30.1 | 3.69s | Unsupported: unavailable | Failed: command |
+    | 0.30.2 | 5.50s | Unsupported: unavailable | Failed: command |
+    | 0.31.0 | 5.07s | Unsupported: unavailable | Failed: command |
+    | 0.31.1 | 4.82s | Unsupported: unavailable | Failed: command |
+    | 0.31.2 | 4.81s | Unsupported: unavailable | Failed: command |
+    | 0.32.0 | 4.90s | Unsupported: unavailable | Failed: command |
+    | 0.33.0 | 5.42s | Unsupported: unavailable | Failed: command |
+    | 0.34.0 | 4.74s | Unsupported: unavailable | Failed: command |
     | 0.35.0 | 4.60s | Unsupported: unavailable | Failed: command |
     | 0.36.0 | 3.68s | Unsupported: unavailable | Failed: command |
     | 0.39.0 | 3.13s | Unsupported: unavailable | Failed: command |

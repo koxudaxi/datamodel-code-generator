@@ -493,6 +493,28 @@ def _format_count(value: int | None) -> str:
     return f"{value:,}"
 
 
+def _python_versions(data: BenchmarkData) -> list[str]:
+    versions = sorted({entry.python_version for entry in data.entries if entry.python_version})
+    if versions:
+        return versions
+    if metadata_version := _metadata_value(data, "python_version"):
+        return [] if metadata_version == EMPTY_CELL else [metadata_version]
+    return []
+
+
+def _python_versions_label(data: BenchmarkData) -> str:
+    if versions := _python_versions(data):
+        return ", ".join(f"`{version}`" for version in versions)
+    return EMPTY_CELL
+
+
+def _compatibility_backfill_note(data: BenchmarkData) -> str:
+    note = _metadata_value(data, "compatibility_backfill")
+    if note == EMPTY_CELL:
+        return ""
+    return note
+
+
 def _selected_version_count(data: BenchmarkData) -> int:
     selected_versions = _metadata_value(data, "selected_versions")
     if selected_versions == EMPTY_CELL:
@@ -515,6 +537,8 @@ def _collection_metadata_lines(data: BenchmarkData) -> list[str]:
         f"- Schema version: `{data.schema_version}`",
         f"- Generated at: `{_metadata_value(data, 'generated_at')}`",
         f"- Source workflow: `{_metadata_value(data, 'workflow')}`",
+        f"- Primary Python version: `{_metadata_value(data, 'python_version')}`",
+        f"- Entry Python versions: {_python_versions_label(data)}",
         f"- Benchmark runs per case: `{_metadata_value(data, 'runs_per_case')}`",
         f"- Version selection: `{_metadata_value(data, 'selection_strategy')}`",
         f"- Selected versions: `{_selected_version_count(data)}`",
@@ -567,6 +591,13 @@ def render_release_benchmark_markdown(data: BenchmarkData) -> str:
             "Formatter lines are included for context; missing or unsupported formatter results are skipped."
         ),
         "",
+    ])
+    if backfill_note := _compatibility_backfill_note(data):
+        lines.extend([
+            f"Compatibility backfill: {backfill_note}",
+            "",
+        ])
+    lines.extend([
         _render_chart_tabs(data.entries),
         "",
         *_collection_metadata_lines(data),
