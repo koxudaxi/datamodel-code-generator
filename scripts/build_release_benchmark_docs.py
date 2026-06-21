@@ -1,4 +1,4 @@
-"""Build the release benchmark documentation page and SVG chart.
+"""Build the release benchmark documentation page.
 
 Usage:
     python scripts/build_release_benchmark_docs.py
@@ -8,7 +8,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import html
 import json
 import re
 import sys
@@ -24,17 +23,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = ROOT / "docs" / "data" / "release-benchmarks.json"
 DOCS_PATH = ROOT / "docs" / "performance-benchmarks.md"
-SVG_PATH = ROOT / "docs" / "assets" / "benchmarks" / "release-benchmarks.svg"
 
-SVG_WIDTH = 980
-SVG_HEIGHT = 640
-PLOT_LEFT = 86
-PLOT_TOP = 116
-PLOT_WIDTH = 760
-PLOT_HEIGHT = 360
-GRID_LINES = 4
-VERSION_TICK_COUNT = 10
-POINT_RADIUS = 3
 STATUS_OK = "ok"
 EMPTY_CELL = "-"
 MILLISECONDS_PER_SECOND = 1000
@@ -43,16 +32,6 @@ TENTH_MS_THRESHOLD = 10
 SAME_SPEED_TOLERANCE = 0.005
 FORMATTER_ORDER = ("default", "builtin", "ruff")
 CASE_ORDER = ("small", "large")
-SERIES_COLORS = (
-    "#6b7280",
-    "#2563eb",
-    "#16a34a",
-    "#9333ea",
-    "#ea580c",
-    "#0891b2",
-    "#be123c",
-    "#4d7c0f",
-)
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,25 +69,6 @@ class GeneratedDoc:
 
     path: Path
     content: str
-
-
-@dataclass(frozen=True, slots=True)
-class SvgTextStyle:
-    """SVG text rendering attributes."""
-
-    size: int = 12
-    anchor: str = "start"
-    weight: str = "400"
-
-
-DEFAULT_TEXT_STYLE = SvgTextStyle()
-TITLE_TEXT_STYLE = SvgTextStyle(size=22, weight="700")
-EMPTY_TITLE_TEXT_STYLE = SvgTextStyle(size=22, anchor="middle")
-EMPTY_NOTE_TEXT_STYLE = SvgTextStyle(size=14, anchor="middle")
-MUTED_TEXT_STYLE = SvgTextStyle(size=13)
-TICK_TEXT_STYLE = SvgTextStyle(size=11)
-Y_AXIS_TICK_TEXT_STYLE = SvgTextStyle(size=11, anchor="end")
-X_AXIS_TICK_TEXT_STYLE = SvgTextStyle(size=11, anchor="middle")
 
 
 def _string(value: object) -> str:
@@ -406,30 +366,26 @@ def _scenarios(entries: tuple[BenchmarkEntry, ...]) -> list[tuple[str, str]]:
     )
 
 
-def _scenario_svg_filename(input_type: str, case: str, *, index: int) -> str:
-    if index == 0:
-        return "release-benchmarks.svg"
-    return f"release-benchmarks-{case}-{input_type}.svg"
-
-
-def _scenario_svg_path(svg_path: Path, input_type: str, case: str, *, index: int) -> Path:
-    return svg_path.with_name(_scenario_svg_filename(input_type, case, index=index))
-
-
-def _scenario_svg_relative_path(input_type: str, case: str, *, index: int) -> str:
-    return f"assets/benchmarks/{_scenario_svg_filename(input_type, case, index=index)}"
-
-
 def _render_chart_tabs(entries: tuple[BenchmarkEntry, ...]) -> str:
     blocks: list[str] = []
-    for index, (input_type, case) in enumerate(_scenarios(entries)):
+    for input_type, case in _scenarios(entries):
         label = _scenario_label(input_type, case)
         blocks.extend((
             f'=== "{label}"',
             "",
             _indent_block(
-                f"![{label} release benchmark trend]({_scenario_svg_relative_path(input_type, case, index=index)})"
-                "{ align=center }"
+                "\n".join((
+                    (
+                        f'<span class="release-benchmark-chart" data-release-benchmark-chart '
+                        f'data-input-type="{input_type}" data-case="{case}" '
+                        f'aria-label="{label} release benchmark trend">'
+                    ),
+                    '  <canvas role="img" aria-label="Median generation time by release version"></canvas>',
+                    '  <span class="release-benchmark-chart__legend" aria-hidden="true"></span>',
+                    '  <span class="release-benchmark-chart__tooltip" role="status" hidden></span>',
+                    "  <noscript>See the historical results table below for benchmark data.</noscript>",
+                    "</span>",
+                ))
             ),
             "",
         ))
@@ -574,7 +530,7 @@ def render_release_benchmark_markdown(data: BenchmarkData) -> str:
             "",
             (
                 "After this workflow is available on `main`, run it with `workflow_dispatch` and commit the generated "
-                "`docs/data/release-benchmarks.json`, Markdown, and SVG artifacts."
+                "`docs/data/release-benchmarks.json` and Markdown artifact."
             ),
             "",
             *_collection_metadata_lines(data),
@@ -625,210 +581,9 @@ def render_release_benchmark_markdown(data: BenchmarkData) -> str:
     return "\n".join(lines)
 
 
-def _svg_text(x: float, y: float, text: str, style: SvgTextStyle = DEFAULT_TEXT_STYLE) -> str:
-    return (
-        f'<text x="{x:.1f}" y="{y:.1f}" font-size="{style.size}" text-anchor="{style.anchor}" '
-        f'font-weight="{style.weight}">{html.escape(text)}</text>'
-    )
-
-
-def _scale(value: float, *, source_min: float, source_max: float, target_min: float, target_max: float) -> float:
-    if source_max == source_min:
-        return (target_min + target_max) / 2
-    ratio = (value - source_min) / (source_max - source_min)
-    return target_min + ratio * (target_max - target_min)
-
-
-def _chart_entries(entries: tuple[BenchmarkEntry, ...], *, input_type: str, case: str) -> list[BenchmarkEntry]:
-    return [
-        entry
-        for entry in _sorted_entries(entries)
-        if (
-            entry.input_type == input_type
-            and entry.case == case
-            and entry.status == STATUS_OK
-            and entry.median_ms is not None
-        )
-    ]
-
-
-def _render_empty_svg() -> str:
-    body = "\n".join((
-        _svg_text(
-            SVG_WIDTH / 2,
-            SVG_HEIGHT / 2 - 10,
-            "No release benchmark data committed yet",
-            EMPTY_TITLE_TEXT_STYLE,
-        ),
-        _svg_text(
-            SVG_WIDTH / 2,
-            SVG_HEIGHT / 2 + 20,
-            "Run the Release Benchmarks workflow to generate the initial historical dataset.",
-            EMPTY_NOTE_TEXT_STYLE,
-        ),
-    ))
-    return _wrap_svg(
-        body,
-        desc="No datamodel-code-generator release benchmark data has been committed yet.",
-    )
-
-
-def _wrap_svg(body: str, *, desc: str) -> str:
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{SVG_WIDTH}" height="{SVG_HEIGHT}" \
-viewBox="0 0 {SVG_WIDTH} {SVG_HEIGHT}" role="img" aria-labelledby="title desc">
-  <title id="title">datamodel-code-generator release benchmarks</title>
-  <desc id="desc">{html.escape(desc)}</desc>
-  <style>
-    text {{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", \
-sans-serif; fill: #111827; }}
-    .muted {{ fill: #6b7280; }}
-    .axis {{ stroke: #374151; stroke-width: 1.2; }}
-    .grid {{ stroke: #d1d5db; stroke-width: 1; stroke-dasharray: 4 5; }}
-    .panel {{ fill: #ffffff; stroke: #e5e7eb; stroke-width: 1; }}
-  </style>
-  <rect width="100%" height="100%" fill="#ffffff"/>
-  <rect class="panel" x="20" y="20" width="{SVG_WIDTH - 40}" height="{SVG_HEIGHT - 40}" rx="8"/>
-{body}
-</svg>
-"""
-
-
-def _line_points(entries: list[BenchmarkEntry], *, formatter: str, versions: list[str], y_max: float) -> list[str]:
-    by_version = {entry.version: entry for entry in entries if entry.formatter == formatter}
-    points: list[str] = []
-    for index, version in enumerate(versions):
-        entry = by_version.get(version)
-        if entry is None or entry.median_ms is None:
-            continue
-        x = _scale(
-            index,
-            source_min=0,
-            source_max=max(len(versions) - 1, 1),
-            target_min=PLOT_LEFT,
-            target_max=PLOT_LEFT + PLOT_WIDTH,
-        )
-        y = _scale(
-            entry.median_ms,
-            source_min=0,
-            source_max=y_max,
-            target_min=PLOT_TOP + PLOT_HEIGHT,
-            target_max=PLOT_TOP,
-        )
-        points.append(f"{x:.1f},{y:.1f}")
-    return points
-
-
-def _version_tick_indexes(version_count: int) -> list[int]:
-    if version_count <= 1:
-        return [0]
-    step = max(1, round(version_count / VERSION_TICK_COUNT))
-    indexes = list(range(0, version_count, step))
-    if indexes[-1] != version_count - 1:
-        indexes.append(version_count - 1)
-    return indexes
-
-
-def render_release_benchmark_svg(data: BenchmarkData, *, input_type: str = "", case: str = "") -> str:
-    """Render a static SVG historical trend chart for one benchmark scenario."""
-    if not input_type or not case:
-        scenarios = _scenarios(data.entries)
-        if not scenarios:
-            return _render_empty_svg()
-        input_type, case = scenarios[0]
-
-    entries = _chart_entries(data.entries, input_type=input_type, case=case)
-    if not entries:
-        return _render_empty_svg()
-
-    scenario_label = _scenario_label(input_type, case)
-    versions = sorted(
-        {entry.version for entry in data.entries if entry.input_type == input_type and entry.case == case},
-        key=_version_sort_key,
-    )
-    max_ms = max(entry.median_ms or 0 for entry in entries)
-    y_max = max_ms * 1.15 if max_ms else 1
-    body: list[str] = [
-        _svg_text(44, 48, f"datamodel-code-generator release trend: {scenario_label}", TITLE_TEXT_STYLE),
-        _svg_text(44, 74, "Median generation time by release version. Lower is faster.", MUTED_TEXT_STYLE),
-    ]
-
-    for index in range(GRID_LINES + 1):
-        value = y_max * index / GRID_LINES
-        y = _scale(value, source_min=0, source_max=y_max, target_min=PLOT_TOP + PLOT_HEIGHT, target_max=PLOT_TOP)
-        body.extend((
-            f'<line class="grid" x1="{PLOT_LEFT}" y1="{y:.1f}" x2="{PLOT_LEFT + PLOT_WIDTH}" y2="{y:.1f}"/>',
-            _svg_text(PLOT_LEFT - 12, y + 4, _format_ms(value), Y_AXIS_TICK_TEXT_STYLE),
-        ))
-
-    body.extend((
-        f'<line class="axis" x1="{PLOT_LEFT}" y1="{PLOT_TOP}" x2="{PLOT_LEFT}" y2="{PLOT_TOP + PLOT_HEIGHT}"/>',
-        (
-            f'<line class="axis" x1="{PLOT_LEFT}" y1="{PLOT_TOP + PLOT_HEIGHT}" '
-            f'x2="{PLOT_LEFT + PLOT_WIDTH}" y2="{PLOT_TOP + PLOT_HEIGHT}"/>'
-        ),
-    ))
-
-    for index in _version_tick_indexes(len(versions)):
-        version = versions[index]
-        x = _scale(
-            index,
-            source_min=0,
-            source_max=max(len(versions) - 1, 1),
-            target_min=PLOT_LEFT,
-            target_max=PLOT_LEFT + PLOT_WIDTH,
-        )
-        body.extend((
-            f'<line class="grid" x1="{x:.1f}" y1="{PLOT_TOP}" x2="{x:.1f}" y2="{PLOT_TOP + PLOT_HEIGHT}"/>',
-            _svg_text(x, PLOT_TOP + PLOT_HEIGHT + 24, version, X_AXIS_TICK_TEXT_STYLE),
-        ))
-
-    legend_x = PLOT_LEFT
-    for index, formatter in enumerate(FORMATTER_ORDER):
-        color = SERIES_COLORS[index % len(SERIES_COLORS)]
-        x = legend_x + index * 132
-        body.extend((
-            f'<line x1="{x}" y1="92" x2="{x + 24}" y2="92" stroke="{color}" stroke-width="2.6"/>',
-            f'<circle cx="{x + 12}" cy="92" r="{POINT_RADIUS}" fill="{color}"/>',
-            _svg_text(x + 32, 96, _formatter_label(formatter), TICK_TEXT_STYLE),
-        ))
-
-    for index, formatter in enumerate(FORMATTER_ORDER):
-        points = _line_points(entries, formatter=formatter, versions=versions, y_max=y_max)
-        if not points:
-            continue
-        color = SERIES_COLORS[index % len(SERIES_COLORS)]
-        body.append(
-            f'<polyline points="{" ".join(points)}" fill="none" stroke="{color}" stroke-width="2.4" '
-            'stroke-linejoin="round" stroke-linecap="round"/>'
-        )
-        for point in points:
-            x, y = point.split(",", maxsplit=1)
-            body.append(f'<circle cx="{x}" cy="{y}" r="{POINT_RADIUS}" fill="{color}"/>')
-
-    body.extend((
-        _svg_text(PLOT_LEFT + PLOT_WIDTH / 2, PLOT_TOP + PLOT_HEIGHT + 54, "Release version", X_AXIS_TICK_TEXT_STYLE),
-        _svg_text(44, PLOT_TOP - 16, "Median", TICK_TEXT_STYLE),
-    ))
-
-    return _wrap_svg(
-        "\n".join(body),
-        desc=f"Historical median generation time by release version for {scenario_label}.",
-    )
-
-
-def _generated_docs(data_path: Path, docs_path: Path, svg_path: Path) -> tuple[GeneratedDoc, ...]:
+def _generated_docs(data_path: Path, docs_path: Path) -> tuple[GeneratedDoc, ...]:
     data = load_benchmark_data(data_path)
-    docs = [GeneratedDoc(docs_path, render_release_benchmark_markdown(data).rstrip() + "\n")]
-    for index, (input_type, case) in enumerate(_scenarios(data.entries)):
-        docs.append(
-            GeneratedDoc(
-                _scenario_svg_path(svg_path, input_type, case, index=index),
-                render_release_benchmark_svg(data, input_type=input_type, case=case),
-            )
-        )
-    if len(docs) == 1:
-        docs.append(GeneratedDoc(svg_path, render_release_benchmark_svg(data)))
-    return tuple(docs)
+    return (GeneratedDoc(docs_path, render_release_benchmark_markdown(data).rstrip() + "\n"),)
 
 
 def _doc_is_current(doc: GeneratedDoc) -> bool:
@@ -840,10 +595,9 @@ def build_docs(
     check: bool,
     data_path: Path = DATA_PATH,
     docs_path: Path = DOCS_PATH,
-    svg_path: Path = SVG_PATH,
 ) -> int:
     """Generate or check release benchmark documentation outputs."""
-    docs = _generated_docs(data_path, docs_path, svg_path)
+    docs = _generated_docs(data_path, docs_path)
     if check:
         if not (out_of_date := tuple(doc.path for doc in docs if not _doc_is_current(doc))):
             print("Release benchmark docs are up to date.")
@@ -861,18 +615,17 @@ def build_docs(
 
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(description="Build release benchmark documentation and SVG chart")
+    parser = argparse.ArgumentParser(description="Build release benchmark documentation")
     parser.add_argument("--check", action="store_true", help="Check whether generated benchmark docs are up to date")
     parser.add_argument("--data", type=Path, default=DATA_PATH, help="Benchmark JSON data path")
     parser.add_argument("--docs", type=Path, default=DOCS_PATH, help="Markdown output path")
-    parser.add_argument("--svg", type=Path, default=SVG_PATH, help="SVG chart output path")
     return parser.parse_args()
 
 
 def main() -> int:
     """Script entrypoint."""
     args = parse_args()
-    return build_docs(check=args.check, data_path=args.data, docs_path=args.docs, svg_path=args.svg)
+    return build_docs(check=args.check, data_path=args.data, docs_path=args.docs)
 
 
 if __name__ == "__main__":

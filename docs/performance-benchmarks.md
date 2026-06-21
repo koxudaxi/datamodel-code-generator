@@ -12,19 +12,39 @@ Compatibility backfill: Versions 0.26.4-0.34.0 use Python 3.13.14 because those 
 
 === "Small / JSON Schema"
 
-    ![Small / JSON Schema release benchmark trend](assets/benchmarks/release-benchmarks.svg){ align=center }
+    <span class="release-benchmark-chart" data-release-benchmark-chart data-input-type="jsonschema" data-case="small" aria-label="Small / JSON Schema release benchmark trend">
+      <canvas role="img" aria-label="Median generation time by release version"></canvas>
+      <span class="release-benchmark-chart__legend" aria-hidden="true"></span>
+      <span class="release-benchmark-chart__tooltip" role="status" hidden></span>
+      <noscript>See the historical results table below for benchmark data.</noscript>
+    </span>
 
 === "Small / OpenAPI"
 
-    ![Small / OpenAPI release benchmark trend](assets/benchmarks/release-benchmarks-small-openapi.svg){ align=center }
+    <span class="release-benchmark-chart" data-release-benchmark-chart data-input-type="openapi" data-case="small" aria-label="Small / OpenAPI release benchmark trend">
+      <canvas role="img" aria-label="Median generation time by release version"></canvas>
+      <span class="release-benchmark-chart__legend" aria-hidden="true"></span>
+      <span class="release-benchmark-chart__tooltip" role="status" hidden></span>
+      <noscript>See the historical results table below for benchmark data.</noscript>
+    </span>
 
 === "Large / JSON Schema"
 
-    ![Large / JSON Schema release benchmark trend](assets/benchmarks/release-benchmarks-large-jsonschema.svg){ align=center }
+    <span class="release-benchmark-chart" data-release-benchmark-chart data-input-type="jsonschema" data-case="large" aria-label="Large / JSON Schema release benchmark trend">
+      <canvas role="img" aria-label="Median generation time by release version"></canvas>
+      <span class="release-benchmark-chart__legend" aria-hidden="true"></span>
+      <span class="release-benchmark-chart__tooltip" role="status" hidden></span>
+      <noscript>See the historical results table below for benchmark data.</noscript>
+    </span>
 
 === "Large / OpenAPI"
 
-    ![Large / OpenAPI release benchmark trend](assets/benchmarks/release-benchmarks-large-openapi.svg){ align=center }
+    <span class="release-benchmark-chart" data-release-benchmark-chart data-input-type="openapi" data-case="large" aria-label="Large / OpenAPI release benchmark trend">
+      <canvas role="img" aria-label="Median generation time by release version"></canvas>
+      <span class="release-benchmark-chart__legend" aria-hidden="true"></span>
+      <span class="release-benchmark-chart__tooltip" role="status" hidden></span>
+      <noscript>See the historical results table below for benchmark data.</noscript>
+    </span>
 
 ## Collection Policy
 

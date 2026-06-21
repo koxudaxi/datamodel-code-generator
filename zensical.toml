@@ -85,6 +85,14 @@ nav = [
   { "Development-Contributing" = "development-contributing.md" }
 ]
 
+extra_css = [
+  "assets/benchmarks/release-benchmarks.css"
+]
+
+extra_javascript = [
+  { path = "assets/benchmarks/release-benchmarks.js", defer = true }
+]
+
 [project.theme]
 custom_dir = "overrides"
 features = [

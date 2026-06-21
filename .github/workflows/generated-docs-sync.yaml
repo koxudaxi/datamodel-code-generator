@@ -20,7 +20,8 @@ on:
       - 'scripts/update_generate_prompt_snapshots.py'
       - 'scripts/update_docs_version.py'
       - 'docs/data/release-benchmarks.json'
-      - 'docs/assets/benchmarks/release-benchmarks.svg'
+      - 'docs/assets/benchmarks/release-benchmarks.css'
+      - 'docs/assets/benchmarks/release-benchmarks.js'
       - 'tox.ini'
       - '.github/workflows/generated-docs-sync.yaml'
       - 'docs/**/*.md'
@@ -70,7 +71,6 @@ jobs:
             docs/conformance.md
             docs/architecture.md
             docs/performance-benchmarks.md
-            docs/assets/benchmarks/release-benchmarks.svg
             docs/cli-reference/
             docs/llms.txt
             docs/llms-full.txt

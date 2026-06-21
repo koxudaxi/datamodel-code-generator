@@ -55,22 +55,18 @@ def test_build_release_benchmark_docs_check_is_up_to_date() -> None:
 
 
 def test_release_benchmark_renderers_use_fixture_data() -> None:
-    """Render Markdown and SVG from an external benchmark data fixture."""
+    """Render Markdown from an external benchmark data fixture."""
     data = build_release_benchmark_docs.load_benchmark_data(FIXTURE_DATA)
 
     assert_output(
-        "\n--- markdown ---\n"
-        + build_release_benchmark_docs.render_release_benchmark_markdown(data)
-        + "\n--- svg ---\n"
-        + build_release_benchmark_docs.render_release_benchmark_svg(data),
+        "\n--- markdown ---\n" + build_release_benchmark_docs.render_release_benchmark_markdown(data),
         EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "release_benchmark_rendered.txt",
     )
 
 
 def test_release_benchmark_docs_cli_writes_expected_outputs(tmp_path: Path) -> None:
-    """The CLI can render fixture-backed Markdown and SVG to caller-selected paths."""
+    """The CLI can render fixture-backed Markdown to a caller-selected path."""
     docs_path = tmp_path / "performance-benchmarks.md"
-    svg_path = tmp_path / "release-benchmarks.svg"
     result = subprocess.run(
         [
             sys.executable,
@@ -79,8 +75,6 @@ def test_release_benchmark_docs_cli_writes_expected_outputs(tmp_path: Path) -> N
             str(FIXTURE_DATA),
             "--docs",
             str(docs_path),
-            "--svg",
-            str(svg_path),
         ],
         cwd=ROOT,
         capture_output=True,
@@ -90,11 +84,7 @@ def test_release_benchmark_docs_cli_writes_expected_outputs(tmp_path: Path) -> N
 
     _raise_for_failed_process(result)
     assert_output(
-        _completed_process_output(result)
-        + "docs:\n"
-        + docs_path.read_text(encoding="utf-8")
-        + "svg:\n"
-        + svg_path.read_text(encoding="utf-8"),
+        _completed_process_output(result) + "docs:\n" + docs_path.read_text(encoding="utf-8"),
         EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "release_benchmark_cli_outputs.txt",
     )
 

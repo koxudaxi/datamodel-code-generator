@@ -328,7 +328,7 @@ custom-template output is not exhaustively validated. If `--formatters builtin` 
 output with a custom template, please open an issue with a small reproducer. See
 [Formatter Behavior]({README_FORMATTER_BEHAVIOR_LINK}) for details.
 
-See [Performance Benchmarks]({README_PERFORMANCE_BENCHMARKS_LINK}) for release benchmark data and SVG charts.
+See [Performance Benchmarks]({README_PERFORMANCE_BENCHMARKS_LINK}) for release benchmark data and interactive charts.
 """
 
 
@@ -387,7 +387,7 @@ custom-template output is not exhaustively validated. If `--formatters builtin` 
 output with a custom template, please open an issue with a small reproducer. See
 [Formatter Behavior]({DOCS_FORMATTER_BEHAVIOR_LINK}) for details.
 
-See [Performance Benchmarks]({DOCS_PERFORMANCE_BENCHMARKS_LINK}) for release benchmark data and SVG charts."""
+See [Performance Benchmarks]({DOCS_PERFORMANCE_BENCHMARKS_LINK}) for release benchmark data and interactive charts."""
 
 
 def parse_args() -> argparse.Namespace:

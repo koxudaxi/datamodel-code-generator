@@ -200,7 +200,7 @@ custom-template output is not exhaustively validated. If `--formatters builtin` 
 output with a custom template, please open an issue with a small reproducer. See
 [Formatter Behavior](https://datamodel-code-generator.koxudaxi.dev/formatter-behavior/) for details.
 
-See [Performance Benchmarks](https://datamodel-code-generator.koxudaxi.dev/performance-benchmarks/) for release benchmark data and SVG charts.
+See [Performance Benchmarks](https://datamodel-code-generator.koxudaxi.dev/performance-benchmarks/) for release benchmark data and interactive charts.
 <!-- END AUTO-GENERATED PRESET QUICK START -->
 
 ---
@@ -215,7 +215,7 @@ See [Performance Benchmarks](https://datamodel-code-generator.koxudaxi.dev/perfo
 - ⚙️ [pyproject.toml](https://datamodel-code-generator.koxudaxi.dev/pyproject_toml/) - Configuration file
 - 🔄 [CI/CD Integration](https://datamodel-code-generator.koxudaxi.dev/ci-cd/) - GitHub Actions, pre-commit hooks
 - ✅ [Conformance Dashboard](https://datamodel-code-generator.koxudaxi.dev/conformance/) - External corpus coverage signals
-- 📈 [Performance Benchmarks](https://datamodel-code-generator.koxudaxi.dev/performance-benchmarks/) - Release benchmark tables and SVG charts
+- 📈 [Performance Benchmarks](https://datamodel-code-generator.koxudaxi.dev/performance-benchmarks/) - Release benchmark tables and interactive charts
 - 🧭 [Architecture](https://datamodel-code-generator.koxudaxi.dev/architecture/) - Generation pipeline and synchronized component inventory
 - 🚀 [One-liner Usage](https://datamodel-code-generator.koxudaxi.dev/oneliner/) - uvx, pipx, clipboard integration
 - ❓ [FAQ](https://datamodel-code-generator.koxudaxi.dev/faq/) - Common questions
