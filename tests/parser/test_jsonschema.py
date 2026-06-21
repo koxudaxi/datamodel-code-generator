@@ -46,6 +46,23 @@ def _json_schema_object(data: dict[str, Any]) -> JsonSchemaObject:
     return JsonSchemaObject.model_validate(data)
 
 
+class CountingJsonSchemaParser(JsonSchemaParser):
+    """JsonSchemaParser that records schema validation paths for cache tests."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize the parser and validation path recorder."""
+        super().__init__(*args, **kwargs)
+        self.validation_paths: list[tuple[str, ...]] = []
+
+    def _validate_schema_object(
+        self,
+        raw: dict[str, Any] | Any,
+        path: list[str],
+    ) -> JsonSchemaObject:
+        self.validation_paths.append(tuple(path))
+        return super()._validate_schema_object(raw, path)
+
+
 @pytest.fixture(autouse=True)
 def block_dns_by_default(mocker: MockerFixture) -> None:
     """Keep tests that mock httpx.get independent from external DNS."""
@@ -67,6 +84,47 @@ def block_dns_by_default(mocker: MockerFixture) -> None:
 def test_get_model_by_path(schema: dict, path: str, model: dict) -> None:
     """Test model retrieval by path."""
     assert get_model_by_path(schema, path.split("/") if path else []) == model
+
+
+def test_load_ref_schema_object_caches_seen_refs() -> None:
+    """Test repeated ref schema loads reuse the cached validated object after the second read."""
+    parser = CountingJsonSchemaParser("")
+    parser.raw_obj = {
+        "definitions": {
+            "User": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+            },
+        },
+    }
+
+    first = parser._load_ref_schema_object("#/definitions/User")
+    second = parser._load_ref_schema_object("#/definitions/User")
+    third = parser._load_ref_schema_object("#/definitions/User")
+
+    assert first is not second
+    assert second is third
+    assert parser.validation_paths == [
+        ("#/definitions/User",),
+        ("#/definitions/User",),
+    ]
+
+
+def test_parse_file_reuses_validated_definition_objects() -> None:
+    """Test definitions validated for metadata are reused when parsed."""
+    parser = CountingJsonSchemaParser("")
+    raw = {
+        "definitions": {
+            "User": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+            },
+        },
+    }
+
+    parser._parse_file(raw, "Root", [])
+
+    assert parser.validation_paths.count(("#/definitions", "User")) == 1
 
 
 @pytest.mark.parametrize(

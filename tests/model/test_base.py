@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
@@ -57,6 +58,14 @@ class B(DataModel):
 
 class C(DataModel):
     """Test helper class for DataModel testing without template path."""
+
+
+@dataclass
+class ReferenceSource:
+    """Test helper for reference source nullability."""
+
+    nullable: bool
+    is_alias: bool = False
 
 
 template: str = """{%- for decorator in decorators -%}
@@ -451,7 +460,6 @@ def test_data_field() -> None:
 @pytest.mark.parametrize(
     "data_type",
     [
-        DataType(reference=Reference(path="Ref", original_name="Ref", name="Ref")),
         DataType(data_types=[DataType(type="str")]),
         DataType(is_dict=True, dict_key=DataType(type="str")),
         DataType(literals=["value"]),
@@ -557,6 +565,24 @@ def test_field_import_fast_path_collects_simple_data_type_imports(
 ) -> None:
     """Test simple DataTypes collect imports without rendering type hints."""
     assert field.imports == expected_imports
+
+
+def test_field_import_fast_path_collects_nullable_reference_import() -> None:
+    """Test reference source nullability contributes Optional without rendering type hints."""
+    reference = Reference(path="#/definitions/User", name="User")
+    reference.source = ReferenceSource(nullable=True)
+    field = DataModelFieldBase(name="user", data_type=DataType(reference=reference), required=True)
+
+    assert field.imports == (IMPORT_OPTIONAL,)
+
+
+def test_field_import_fast_path_ignores_nullable_alias_reference() -> None:
+    """Test nullable aliases do not make the referencing field import Optional."""
+    reference = Reference(path="#/definitions/UserAlias", name="UserAlias")
+    reference.source = ReferenceSource(nullable=True, is_alias=True)
+    field = DataModelFieldBase(name="user", data_type=DataType(reference=reference), required=True)
+
+    assert field.imports == ()
 
 
 def test_field_import_fallback_collects_annotated_import() -> None:

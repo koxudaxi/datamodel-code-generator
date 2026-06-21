@@ -901,6 +901,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._dynamic_anchor_index: dict[tuple[str, ...], dict[str, str]] = {}
         self._recursive_anchor_index: dict[tuple[str, ...], list[str]] = {}
         self._ref_data_type_facts: dict[str, tuple[Any, bool]] = {}
+        self._ref_schema_object_seen_refs: set[str] = set()
+        self._ref_schema_object_cache: dict[str, JsonSchemaObject] = {}
         self._force_base_model_refs: set[str] = set()
         self._force_base_model_generation = False
         self.field_keys: set[str] = {
@@ -2462,6 +2464,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _load_ref_schema_object(self, ref: str) -> JsonSchemaObject:
         """Load a JsonSchemaObject from a $ref using standard resolve/load pipeline."""
         resolved_ref = self.model_resolver.resolve_ref(ref)
+        use_cache = resolved_ref in self._ref_schema_object_seen_refs
+        if use_cache and (cached := self._ref_schema_object_cache.get(resolved_ref)) is not None:
+            return cached
+        self._ref_schema_object_seen_refs.add(resolved_ref)
+
         file_part, fragment = ([*resolved_ref.split("#", 1), ""])[:2]
         raw_doc = self._get_ref_body(file_part) if file_part else self.raw_obj
 
@@ -2470,7 +2477,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             pointer = split_json_pointer(raw_doc, fragment)
             target_schema = get_model_by_path(raw_doc, pointer)
 
-        return self._validate_schema_object(target_schema, [resolved_ref])
+        ref_schema = self._validate_schema_object(target_schema, [resolved_ref])
+        if use_cache:
+            self._ref_schema_object_cache[resolved_ref] = ref_schema
+        return ref_schema
 
     def _anchor_ref_path(self, root_key: tuple[str, ...], path: list[str]) -> str:  # noqa: PLR6301
         """Return the local ref path for an anchor under the current root."""
@@ -5486,6 +5496,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         path: list[str],
     ) -> None:
         """Parse a raw dictionary into a JsonSchemaObject and process it."""
+        self._parse_raw_or_validated_obj(name, raw, path)
+
+    def _parse_raw_or_validated_obj(
+        self,
+        name: str,
+        raw: dict[str, YamlValue] | YamlValue,
+        path: list[str],
+        validated_obj: JsonSchemaObject | None = None,
+    ) -> None:
+        """Parse a raw schema, reusing a validated object when available."""
         if isinstance(raw, dict) and "x-python-import" in raw:
             self._handle_python_import(name, path)
             return
@@ -5493,7 +5513,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         # Strict mode: check for version-specific features before validation
         self._check_version_specific_features(raw, path)
 
-        obj = self._validate_schema_object(raw, path)
+        obj = validated_obj if validated_obj is not None else self._validate_schema_object(raw, path)
         # Build $recursiveAnchor / $dynamicAnchor indexes for this schema
         self._build_anchor_indexes(obj, path)
         self.parse_obj(name, obj, path)
@@ -5964,11 +5984,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     *definition_entries,
                 ]
                 seen_definition_metadata_paths: set[tuple[str, ...]] = set()
+                validated_definition_objects: dict[tuple[str, ...], JsonSchemaObject] = {}
                 for _key, model, definition_path in definition_metadata_entries:
                     if (definition_path_key := tuple(definition_path)) in seen_definition_metadata_paths:
                         continue
                     seen_definition_metadata_paths.add(definition_path_key)
                     obj = self._validate_schema_object(model, definition_path)
+                    validated_definition_objects[definition_path_key] = obj
                     self.parse_id(obj, definition_path)
                     if obj.recursiveAnchor:
                         ref_path = self._anchor_ref_path(root_key, definition_path)
@@ -5986,7 +6008,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 for key, model, path in definition_entries:
                     reference = self.model_resolver.get(path)
                     if not reference or not reference.loaded:
-                        self.parse_raw_obj(key, model, path)
+                        self._parse_raw_or_validated_obj(
+                            key,
+                            model,
+                            path,
+                            validated_definition_objects.get(tuple(path)),
+                        )
 
                 key = tuple(path_parts)
                 reserved_refs = set(self.reserved_refs.get(key) or [])
