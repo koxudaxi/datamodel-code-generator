@@ -81,6 +81,7 @@
 - [Conformance Dashboard](https://datamodel-code-generator.koxudaxi.dev/conformance/): This page summarizes the external conformance and end-to-end corpus checks that CI runs for datamodel-code-generator. The table is generated from `...
 - [Deprecations](https://datamodel-code-generator.koxudaxi.dev/deprecations/): This page lists deprecations and scheduled breaking changes.
 - [Experimental Features](https://datamodel-code-generator.koxudaxi.dev/experimental/): This page lists features that are available but still experimental.
+- [Architecture](https://datamodel-code-generator.koxudaxi.dev/architecture/): `datamodel-code-generator` is organized around one central idea: many input formats are normalized into a shared generation graph, then rendered th...
 ## Optional
 
 - [Frequently Asked Questions](https://datamodel-code-generator.koxudaxi.dev/faq/)
