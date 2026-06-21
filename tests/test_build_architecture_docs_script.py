@@ -7,9 +7,25 @@ import sys
 from pathlib import Path
 
 from scripts import build_architecture_docs
+from tests.conftest import assert_output
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "build_architecture_docs.py"
+EXPECTED_ARCHITECTURE_DOCS_PATH = ROOT / "tests" / "data" / "expected" / "architecture_docs"
+CORE_INVENTORY_MARKERS = (
+    "OpenAPIParser",
+    "JsonSchemaParser",
+    "`pydantic_v2.BaseModel`",
+    "`black`",
+)
+
+
+def _completed_process_output(result: subprocess.CompletedProcess[str]) -> str:
+    return f"returncode: {result.returncode}\nstdout:\n{result.stdout}stderr:\n{result.stderr}"
+
+
+def _core_inventory_marker_output(content: str) -> str:
+    return "".join(f"{marker}\n" for marker in CORE_INVENTORY_MARKERS if marker in content)
 
 
 def test_build_architecture_docs_check_is_up_to_date() -> None:
@@ -22,14 +38,17 @@ def test_build_architecture_docs_check_is_up_to_date() -> None:
         check=False,
     )
 
-    assert result.returncode == 0, result.stderr
+    assert_output(
+        _completed_process_output(result),
+        EXPECTED_ARCHITECTURE_DOCS_PATH / "build_architecture_docs_check.txt",
+    )
 
 
 def test_architecture_inventory_contains_core_routes() -> None:
     """Check that the generated inventory includes representative source-derived entries."""
     content = build_architecture_docs.generate_architecture_inventory()
 
-    assert "OpenAPIParser" in content
-    assert "JsonSchemaParser" in content
-    assert "`pydantic_v2.BaseModel`" in content
-    assert "`black`" in content
+    assert_output(
+        _core_inventory_marker_output(content),
+        EXPECTED_ARCHITECTURE_DOCS_PATH / "architecture_inventory_core.txt",
+    )
