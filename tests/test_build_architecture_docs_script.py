@@ -21,10 +21,12 @@ CORE_INVENTORY_MARKERS = (
 
 
 def _completed_process_output(result: subprocess.CompletedProcess[str]) -> str:
+    """Format a subprocess result for stable external-file comparison."""
     return f"returncode: {result.returncode}\nstdout:\n{result.stdout}stderr:\n{result.stderr}"
 
 
 def _core_inventory_marker_output(content: str) -> str:
+    """Extract representative generated inventory markers for external-file comparison."""
     return "".join(f"{marker}\n" for marker in CORE_INVENTORY_MARKERS if marker in content)
 
 
