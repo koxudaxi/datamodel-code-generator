@@ -79,6 +79,39 @@
     return targetMin + ((value - sourceMin) / (sourceMax - sourceMin)) * (targetMax - targetMin);
   }
 
+  function maxVersionLabelWidth(context, versions) {
+    if (versions.length === 0) {
+      return 0;
+    }
+    return Math.max(...versions.map((version) => context.measureText(version).width));
+  }
+
+  function versionTickIndexes(context, versions, plotWidth) {
+    if (versions.length <= 1) {
+      return versions.length === 1 ? [0] : [];
+    }
+    const labelWidth = maxVersionLabelWidth(context, versions);
+    const minimumSpacing = Math.max(44, Math.ceil(labelWidth) + 16);
+    const minimumIndexGap = Math.max(
+      1,
+      Math.ceil((minimumSpacing / Math.max(plotWidth, 1)) * (versions.length - 1)),
+    );
+    const indexes = [];
+    for (let index = 0; index < versions.length; index += minimumIndexGap) {
+      indexes.push(index);
+    }
+
+    const lastIndex = versions.length - 1;
+    if (indexes[indexes.length - 1] === lastIndex) {
+      return indexes;
+    }
+    if (lastIndex - indexes[indexes.length - 1] < minimumIndexGap && indexes.length > 1) {
+      indexes.pop();
+    }
+    indexes.push(lastIndex);
+    return indexes;
+  }
+
   function cssColor(element, name, fallback) {
     const value = getComputedStyle(element).getPropertyValue(name).trim();
     return value || fallback;
@@ -205,17 +238,18 @@
     const muted = cssColor(container, "--md-default-fg-color--light", "#6b7280");
     const grid = cssColor(container, "--md-default-fg-color--lightest", "#d1d5db");
     const noteColor = cssColor(container, "--md-accent-fg-color", "#dc2626");
+    context.font = "12px system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
+    const horizontalLabelPadding = Math.ceil(maxVersionLabelWidth(context, versions) / 2) + 8;
     const plot = {
-      left: 58,
+      left: Math.max(58, horizontalLabelPadding),
       top: 38,
-      right: width - 18,
+      right: width - Math.max(18, horizontalLabelPadding),
       bottom: height - 58,
     };
     const maxMs = Math.max(...okEntries.map((entry) => entry.median_ms || 0));
     const yMax = maxMs > 0 ? maxMs * 1.15 : 1;
     const points = [];
 
-    context.font = "12px system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
     context.fillStyle = foreground;
     context.fillText(`${caseName[0].toUpperCase()}${caseName.slice(1)} / ${inputLabel(inputType)}`, plot.left, 20);
 
@@ -233,12 +267,9 @@
       context.fillText(formatMs(value), plot.left - 10, y + 4);
     }
 
-    const tickStep = Math.max(1, Math.round(versions.length / 8));
     context.textAlign = "center";
-    versions.forEach((version, index) => {
-      if (index % tickStep !== 0 && index !== versions.length - 1) {
-        return;
-      }
+    versionTickIndexes(context, versions, plot.right - plot.left).forEach((index) => {
+      const version = versions[index];
       const x = scale(index, 0, Math.max(versions.length - 1, 1), plot.left, plot.right);
       context.strokeStyle = grid;
       context.beginPath();

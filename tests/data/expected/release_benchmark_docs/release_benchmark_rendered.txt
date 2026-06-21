@@ -85,24 +85,24 @@ Results below are medians. Built-in and Ruff ratios are relative to the Default 
 
 ## Historical Results
 
-Rows are release versions. Formatter cells show median generation time; non-default cells include the speed relative to Default when both results are available. Version cells marked with `*` have benchmark notes above.
+Rows are release versions, newest first. Released is the PyPI upload timestamp in UTC. Formatter cells show median generation time; non-default cells include the speed relative to Default when both results are available. Version cells marked with `*` have benchmark notes above.
 
 === "Small / JSON Schema"
 
-    | Version | Default | Built-in | Ruff |
-    | --- | --- | --- | --- |
-    | 0.58.0 | - | - | 72.3ms |
+    | Version | Released | Default | Built-in | Ruff |
+    | --- | --- | --- | --- | --- |
+    | 0.58.0 | 2026-06-20 08:30 UTC | - | - | 72.3ms |
 
 === "Large / JSON Schema"
 
-    | Version | Default | Built-in | Ruff |
-    | --- | --- | --- | --- |
-    | 0.58.0 | - | 420ms | - |
-    | 0.59.0 | - | 360ms | - |
+    | Version | Released | Default | Built-in | Ruff |
+    | --- | --- | --- | --- | --- |
+    | 0.59.0 | 2026-06-21 09:45 UTC | - | 360ms | - |
+    | 0.58.0 | 2026-06-20 08:30 UTC | - | 420ms | - |
 
 === "Large / OpenAPI"
 
-    | Version | Default | Built-in | Ruff |
-    | --- | --- | --- | --- |
-    | 0.58.0 | - | 980ms | - |
-    | <span class="release-benchmark-version-note" title="Fixture note for a benchmark step change.">0.59.0 *</span> | - | 881ms | Unsupported: formatter target is unavailable in this release |
+    | Version | Released | Default | Built-in | Ruff |
+    | --- | --- | --- | --- | --- |
+    | <span class="release-benchmark-version-note" title="Fixture note for a benchmark step change.">0.59.0 *</span> | 2026-06-21 09:45 UTC | - | 881ms | Unsupported: formatter target is unavailable in this release |
+    | 0.58.0 | 2026-06-20 08:30 UTC | - | 980ms | - |

@@ -13,6 +13,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -308,6 +309,31 @@ def _latest_version(entries: tuple[BenchmarkEntry, ...]) -> str:
     return versions[-1] if versions else ""
 
 
+def _release_dates(data: BenchmarkData) -> dict[str, str]:
+    if not isinstance(raw_dates := data.metadata.get("release_dates"), dict):
+        return {}
+    return {
+        version: uploaded_at
+        for version, uploaded_at in raw_dates.items()
+        if isinstance(version, str) and isinstance(uploaded_at, str)
+    }
+
+
+def _parse_utc_datetime(value: str) -> datetime | None:
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
+def _release_date_cell(release_dates: dict[str, str], version: str) -> str:
+    if not (uploaded_at := release_dates.get(version, "")):
+        return EMPTY_CELL
+    if parsed := _parse_utc_datetime(uploaded_at):
+        return parsed.strftime("%Y-%m-%d %H:%M UTC")
+    return uploaded_at
+
+
 def _entries_by_scenario_and_formatter(
     entries: tuple[BenchmarkEntry, ...],
 ) -> dict[tuple[str, str], dict[str, BenchmarkEntry]]:
@@ -498,27 +524,34 @@ def _render_scenario_history_table(
     *,
     input_type: str,
     case: str,
+    release_dates: dict[str, str],
     notes_by_version: dict[str, tuple[BenchmarkNote, ...]] | None = None,
 ) -> str:
     notes_by_version = notes_by_version or {}
-    headers = ("Version", *(_formatter_label(formatter) for formatter in FORMATTER_ORDER))
+    headers = ("Version", "Released", *(_formatter_label(formatter) for formatter in FORMATTER_ORDER))
     lines = [
         "| " + " | ".join(headers) + " |",
         "| " + " | ".join("---" for _header in headers) + " |",
     ]
     scenario_entries = tuple(entry for entry in entries if entry.input_type == input_type and entry.case == case)
-    for version in sorted({entry.version for entry in scenario_entries}, key=_version_sort_key):
+    for version in sorted({entry.version for entry in scenario_entries}, key=_version_sort_key, reverse=True):
         formatter_entries = {entry.formatter: entry for entry in scenario_entries if entry.version == version}
         baseline = formatter_entries.get("default")
         values = [
             _version_cell(version, notes_by_version),
+            _release_date_cell(release_dates, version),
             *(_formatter_history_cell(formatter_entries.get(formatter), baseline) for formatter in FORMATTER_ORDER),
         ]
         lines.append("| " + " | ".join(_markdown_cell(value) for value in values) + " |")
     return "\n".join(lines)
 
 
-def _render_scenario_history_tabs(entries: tuple[BenchmarkEntry, ...], notes: tuple[BenchmarkNote, ...] = ()) -> str:
+def _render_scenario_history_tabs(
+    entries: tuple[BenchmarkEntry, ...],
+    *,
+    release_dates: dict[str, str],
+    notes: tuple[BenchmarkNote, ...] = (),
+) -> str:
     blocks: list[str] = []
     for input_type, case in _scenarios(entries):
         blocks.extend((
@@ -529,6 +562,7 @@ def _render_scenario_history_tabs(entries: tuple[BenchmarkEntry, ...], notes: tu
                     entries,
                     input_type=input_type,
                     case=case,
+                    release_dates=release_dates,
                     notes_by_version=_notes_by_version(notes, input_type=input_type, case=case),
                 )
             ),
@@ -715,12 +749,12 @@ def render_release_benchmark_markdown(data: BenchmarkData) -> str:
         "## Historical Results",
         "",
         (
-            "Rows are release versions. Formatter cells show median generation time; non-default cells include "
-            "the speed relative to Default when both results are available. Version cells marked with `*` have "
-            "benchmark notes above."
+            "Rows are release versions, newest first. Released is the PyPI upload timestamp in UTC. Formatter "
+            "cells show median generation time; non-default cells include the speed relative to Default when both "
+            "results are available. Version cells marked with `*` have benchmark notes above."
         ),
         "",
-        _render_scenario_history_tabs(data.entries, _visible_notes(data)),
+        _render_scenario_history_tabs(data.entries, release_dates=_release_dates(data), notes=_visible_notes(data)),
         "",
     ])
     return "\n".join(lines)

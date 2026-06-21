@@ -26,7 +26,13 @@ merged:
     "pypistats_last_week": "789",
     "pypistats_last_month": "3456",
     "pypistats_timeseries_days": "2",
-    "pypistats_timeseries_downloads": "300"
+    "pypistats_timeseries_downloads": "300",
+    "release_dates": {
+      "0.64.1": "2026-06-19T00:00:00Z",
+      "0.64.0": "2026-06-14T00:00:00Z",
+      "0.53.0": "2026-01-12T00:00:00Z",
+      "0.33.0": "2025-08-14T00:00:00Z"
+    }
   },
   "entries": [
     {

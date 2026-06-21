@@ -4,7 +4,11 @@
     "generated_at": "2026-06-22T00:00:00Z",
     "workflow": "Release Benchmarks",
     "python_version": "3.14.2",
-    "runs_per_case": "7"
+    "runs_per_case": "7",
+    "release_dates": {
+      "0.58.0": "2026-06-20T08:30:00Z",
+      "0.59.0": "2026-06-21T09:45:00Z"
+    }
   },
   "entries": [
     {

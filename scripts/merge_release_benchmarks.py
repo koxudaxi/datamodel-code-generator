@@ -75,7 +75,22 @@ def _selection_metadata(selection: object) -> dict[str, object]:
         "pypistats_last_month": str(pypistats.get("last_month", "")),
         "pypistats_timeseries_days": str(pypistats.get("timeseries_days", "")),
         "pypistats_timeseries_downloads": str(pypistats.get("timeseries_downloads", "")),
+        "release_dates": _selection_release_dates(selection),
     }
+
+
+def _selection_release_dates(selection: dict[str, object]) -> dict[str, str]:
+    if not isinstance(releases := selection.get("releases"), list):
+        return {}
+    release_dates: dict[str, str] = {}
+    for release in releases:
+        if (
+            isinstance(release, dict)
+            and isinstance(version := release.get("version"), str)
+            and isinstance(uploaded_at := release.get("uploaded_at"), str)
+        ):
+            release_dates[version] = uploaded_at
+    return release_dates
 
 
 def _runner_os() -> str:
