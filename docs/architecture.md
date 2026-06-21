@@ -16,7 +16,7 @@ flowchart LR
     normalize["Input normalization\ninfer, fetch, convert"]
     parser["Parser.parse()"]
     raw["parse_raw()\nformat-specific"]
-    graph["Generation graph\nDataModel / DataType / Reference"]
+    model_graph["Generation graph\nDataModel / DataType / Reference"]
     render["Templates\nmodel/template"]
     format["CodeFormatter"]
     output["Python files\nstdout / return value"]
@@ -26,9 +26,9 @@ flowchart LR
     config --> normalize
     normalize --> parser
     parser --> raw
-    raw --> graph
-    parser --> graph
-    graph --> render
+    raw --> model_graph
+    parser --> model_graph
+    model_graph --> render
     render --> format
     format --> output
 ```
