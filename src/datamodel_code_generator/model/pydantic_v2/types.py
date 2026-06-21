@@ -9,7 +9,7 @@ import ast
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from datamodel_code_generator.format import DateClassType, DatetimeClassType, PythonVersion, PythonVersionMin
+from datamodel_code_generator._format_types import DateClassType, DatetimeClassType, PythonVersion, PythonVersionMin
 from datamodel_code_generator.imports import (
     IMPORT_ANY,
     IMPORT_DATE,

@@ -52,13 +52,8 @@ from datamodel_code_generator import (
     _is_parsed_source_cache_enabled,
     _read_parser_source_data_from_path,
 )
+from datamodel_code_generator._format_types import Formatter, PythonVersion
 from datamodel_code_generator.enums import StrictTypes
-from datamodel_code_generator.format import (
-    CodeFormatter,
-    Formatter,
-    PythonVersion,
-    resolve_use_type_checking_imports,
-)
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
     IMPORT_LITERAL,
@@ -94,6 +89,7 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator.format import CodeFormatter
     from datamodel_code_generator.model_metadata import GeneratedModelMetadata, ModelFieldMetadata, ModelMetadata
 ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
 
@@ -3496,6 +3492,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         *,
         is_multi_module_output: bool,
     ) -> CodeFormatter:
+        from datamodel_code_generator.format import CodeFormatter, resolve_use_type_checking_imports  # noqa: PLC0415
+
         effective_use_type_checking_imports = resolve_use_type_checking_imports(
             self.use_type_checking_imports,
             is_multi_module_output=is_multi_module_output,

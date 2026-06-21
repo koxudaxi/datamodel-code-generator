@@ -22,8 +22,8 @@ from xml.etree import ElementTree as ET  # noqa: S405
 from typing_extensions import Unpack
 
 from datamodel_code_generator import Error, YamlValue
+from datamodel_code_generator._format_types import DatetimeClassType
 from datamodel_code_generator.enums import VersionMode, XMLSchemaVersion
-from datamodel_code_generator.format import DatetimeClassType
 from datamodel_code_generator.parser import _xmlschema_literals
 from datamodel_code_generator.parser._convert_common import _copy_schema, _namespace_name, _unique_name
 from datamodel_code_generator.parser._math_imports import apply_math_imports_to_parse_result

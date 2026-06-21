@@ -33,8 +33,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing_extensions import TypeIs
 
 from datamodel_code_generator import Error, NamingStrategy
+from datamodel_code_generator._format_types import PythonVersion
 from datamodel_code_generator.enums import ClassNameAffixScope
-from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.util import camel_to_snake
 
 if TYPE_CHECKING:

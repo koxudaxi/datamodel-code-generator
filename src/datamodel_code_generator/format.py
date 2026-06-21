@@ -10,18 +10,26 @@ import re
 import shutil
 import subprocess  # noqa: S404
 import sys
-from enum import Enum
-from functools import cached_property, lru_cache
+from functools import lru_cache
 from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from warnings import warn
 
+from datamodel_code_generator import _format_types
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.util import load_toml
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+DEFAULT_FORMATTERS = _format_types.DEFAULT_FORMATTERS
+EXTERNAL_FORMATTERS = _format_types.EXTERNAL_FORMATTERS
+DateClassType = _format_types.DateClassType
+DatetimeClassType = _format_types.DatetimeClassType
+Formatter = _format_types.Formatter
+PythonVersion = _format_types.PythonVersion
+PythonVersionMin = _format_types.PythonVersionMin
 
 
 DEFAULT_LINE_LENGTH = 88
@@ -186,116 +194,6 @@ def _get_isort() -> Any:
     return _isort
 
 
-class DatetimeClassType(Enum):
-    """Output datetime class type options."""
-
-    Datetime = "datetime"
-    Awaredatetime = "AwareDatetime"
-    Naivedatetime = "NaiveDatetime"
-    Pastdatetime = "PastDatetime"
-    Futuredatetime = "FutureDatetime"
-
-
-class DateClassType(Enum):
-    """Output date class type options."""
-
-    Date = "date"
-    Pastdate = "PastDate"
-    Futuredate = "FutureDate"
-
-
-class PythonVersion(Enum):
-    """Supported Python version targets for code generation."""
-
-    PY_310 = "3.10"
-    PY_311 = "3.11"
-    PY_312 = "3.12"
-    PY_313 = "3.13"
-    PY_314 = "3.14"
-
-    @cached_property
-    def version_key(self) -> tuple[int, int]:
-        """Return (major, minor) tuple for version comparison."""
-        major, minor = self.value.split(".")
-        return int(major), int(minor)
-
-    @cached_property
-    def _is_py_310_or_later(self) -> bool:  # pragma: no cover
-        return True  # 3.10+ always true since minimum is PY_310
-
-    @cached_property
-    def _is_py_311_or_later(self) -> bool:  # pragma: no cover
-        return self.version_key >= (3, 11)
-
-    @cached_property
-    def _is_py_312_or_later(self) -> bool:  # pragma: no cover
-        return self.version_key >= (3, 12)
-
-    @cached_property
-    def _is_py_313_or_later(self) -> bool:
-        return self.version_key >= (3, 13)
-
-    @cached_property
-    def _is_py_314_or_later(self) -> bool:
-        return self.version_key >= (3, 14)
-
-    @property
-    def has_union_operator(self) -> bool:  # pragma: no cover
-        """Check if Python version supports the union operator (|)."""
-        return self._is_py_310_or_later
-
-    @property
-    def has_type_alias(self) -> bool:  # pragma: no cover
-        """Check if Python version supports TypeAlias.
-
-        .. deprecated::
-            This property is unused and will be removed in a future version.
-        """
-        warn_deprecated("python-api.python-version-has-type-alias", stacklevel=2)
-        return self._is_py_310_or_later
-
-    @property
-    def has_typed_dict_non_required(self) -> bool:
-        """Check if Python version supports TypedDict NotRequired."""
-        return self._is_py_311_or_later
-
-    @property
-    def has_typed_dict_read_only(self) -> bool:
-        """Check if Python version supports TypedDict ReadOnly (PEP 705)."""
-        return self._is_py_313_or_later
-
-    @property
-    def has_typed_dict_closed(self) -> bool:
-        """Check if Python version supports TypedDict closed/extra_items (PEP 728).
-
-        PEP 728 is targeted for Python 3.15. Until then, typing_extensions is required.
-        """
-        return self.version_key >= (3, 15)
-
-    @property
-    def has_kw_only_dataclass(self) -> bool:
-        """Check if Python version supports kw_only in dataclasses."""
-        return self._is_py_310_or_later
-
-    @property
-    def has_type_statement(self) -> bool:
-        """Check if Python version supports type statements."""
-        return self._is_py_312_or_later
-
-    @property
-    def has_native_deferred_annotations(self) -> bool:
-        """Check if Python version has native deferred annotations (Python 3.14+)."""
-        return self._is_py_314_or_later
-
-    @property
-    def has_strenum(self) -> bool:
-        """Check if Python version supports StrEnum."""
-        return self._is_py_311_or_later
-
-
-PythonVersionMin = PythonVersion.PY_310
-
-
 def apply_builtin_formatter(  # noqa: PLR0913
     code: str,
     *,
@@ -339,25 +237,6 @@ def black_find_project_root(sources: Sequence[Path]) -> Path:
     if isinstance(project_root, tuple):
         return project_root[0]
     return project_root  # pragma: no cover
-
-
-class Formatter(Enum):
-    """Available code formatters for generated output."""
-
-    BUILTIN = "builtin"
-    BLACK = "black"
-    ISORT = "isort"
-    RUFF_CHECK = "ruff-check"
-    RUFF_FORMAT = "ruff-format"
-
-
-DEFAULT_FORMATTERS = [Formatter.BLACK, Formatter.ISORT]
-EXTERNAL_FORMATTERS = frozenset({
-    Formatter.BLACK,
-    Formatter.ISORT,
-    Formatter.RUFF_CHECK,
-    Formatter.RUFF_FORMAT,
-})
 
 
 def resolve_use_type_checking_imports(
