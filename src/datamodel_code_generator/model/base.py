@@ -431,13 +431,15 @@ class DataModelFieldBase(_BaseModel):
             return False
 
         data_type = self.data_type
+        if data_type.use_serialize_as_any:
+            return False
+
         type_name = data_type.alias or data_type.type
         if type_name and (UNION_PREFIX in type_name or OPTIONAL_PREFIX in type_name):
             return False
 
         return not (
-            data_type.reference
-            or data_type.data_types
+            data_type.data_types
             or data_type.dict_key
             or data_type.literals
             or data_type.enum_member_literals
@@ -472,16 +474,25 @@ class DataModelFieldBase(_BaseModel):
         ):
             return False
 
+        if self._reference_source_nullable_without_type_hint():
+            return True
+
         match self.nullable:
             case True:
                 return True
             case False:
                 return False
-            case None if self.required:
-                return bool(self.type_has_null)
             case None:
-                return bool(self.fall_back_to_nullable)
+                return bool(self.type_has_null) if self.required else bool(self.fall_back_to_nullable)
         return False  # pragma: no cover
+
+    def _reference_source_nullable_without_type_hint(self) -> bool:
+        """Return whether a referenced non-alias model should make this type optional."""
+        reference = self.data_type.reference
+        if reference is None:
+            return False
+        source = reference.source
+        return not getattr(source, "is_alias", False) and bool(getattr(source, "nullable", False))
 
     def _has_renderable_data_type_without_type_hint(self) -> bool:
         """Return whether this simple DataType renders to something other than None."""
@@ -489,6 +500,7 @@ class DataModelFieldBase(_BaseModel):
         return bool(
             data_type.alias
             or data_type.type
+            or data_type.reference
             or data_type.is_dict
             or data_type.is_list
             or data_type.is_set
