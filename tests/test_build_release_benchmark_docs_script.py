@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "build_release_benchmark_docs.py"
 FIXTURE_DATA = ROOT / "tests" / "data" / "release_benchmarks" / "sample.json"
 FIXTURE_DIR = ROOT / "tests" / "data" / "release_benchmarks"
+FIXTURE_NOTES = FIXTURE_DIR / "notes.json"
 EXPECTED_RELEASE_BENCHMARK_DOCS_PATH = ROOT / "tests" / "data" / "expected" / "release_benchmark_docs"
 
 
@@ -56,7 +57,7 @@ def test_build_release_benchmark_docs_check_is_up_to_date() -> None:
 
 def test_release_benchmark_renderers_use_fixture_data() -> None:
     """Render Markdown from an external benchmark data fixture."""
-    data = build_release_benchmark_docs.load_benchmark_data(FIXTURE_DATA)
+    data = build_release_benchmark_docs.load_benchmark_data(FIXTURE_DATA, notes_path=FIXTURE_NOTES)
 
     assert_output(
         "\n--- markdown ---\n" + build_release_benchmark_docs.render_release_benchmark_markdown(data),
@@ -73,6 +74,8 @@ def test_release_benchmark_docs_cli_writes_expected_outputs(tmp_path: Path) -> N
             str(SCRIPT),
             "--data",
             str(FIXTURE_DATA),
+            "--notes",
+            str(FIXTURE_NOTES),
             "--docs",
             str(docs_path),
         ],

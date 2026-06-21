@@ -20,6 +20,7 @@ on:
       - 'scripts/update_generate_prompt_snapshots.py'
       - 'scripts/update_docs_version.py'
       - 'docs/data/release-benchmarks.json'
+      - 'docs/data/release-benchmark-notes.json'
       - 'docs/assets/benchmarks/release-benchmarks.css'
       - 'docs/assets/benchmarks/release-benchmarks.js'
       - 'tox.ini'

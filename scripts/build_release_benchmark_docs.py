@@ -8,6 +8,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import re
 import sys
@@ -22,6 +23,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = ROOT / "docs" / "data" / "release-benchmarks.json"
+NOTES_PATH = ROOT / "docs" / "data" / "release-benchmark-notes.json"
 DOCS_PATH = ROOT / "docs" / "performance-benchmarks.md"
 
 STATUS_OK = "ok"
@@ -55,12 +57,24 @@ class BenchmarkEntry:
 
 
 @dataclass(frozen=True, slots=True)
+class BenchmarkNote:
+    """One human-authored release benchmark note."""
+
+    version: str
+    summary: str
+    details: str
+    input_type: str
+    case: str
+
+
+@dataclass(frozen=True, slots=True)
 class BenchmarkData:
     """Release benchmark dataset loaded from JSON."""
 
     schema_version: int
     metadata: dict[str, Any]
     entries: tuple[BenchmarkEntry, ...]
+    notes: tuple[BenchmarkNote, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,7 +143,41 @@ def _entry_from_raw(raw: object, *, index: int) -> BenchmarkEntry:
     )
 
 
-def load_benchmark_data(path: Path = DATA_PATH) -> BenchmarkData:
+def _note_from_raw(raw: object, *, index: int) -> BenchmarkNote:
+    if not isinstance(raw, dict):
+        msg = f"Benchmark note #{index} must be an object"
+        raise TypeError(msg)
+    if not (version := _string(raw.get("version")).strip()):
+        msg = f"Benchmark note #{index} is missing version"
+        raise ValueError(msg)
+    if not (summary := _string(raw.get("summary")).strip()):
+        msg = f"Benchmark note #{index} is missing summary"
+        raise ValueError(msg)
+    return BenchmarkNote(
+        version=version,
+        summary=summary,
+        details=_string(raw.get("details")).strip(),
+        input_type=_string(raw.get("input_type")).strip(),
+        case=_string(raw.get("case")).strip(),
+    )
+
+
+def load_benchmark_notes(path: Path | None = NOTES_PATH) -> tuple[BenchmarkNote, ...]:
+    """Load optional human-authored release benchmark notes."""
+    if path is None or not path.exists():
+        return ()
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        msg = f"Benchmark notes in {path} must be a JSON object"
+        raise TypeError(msg)
+    raw_notes = payload.get("notes", [])
+    if not isinstance(raw_notes, list):
+        msg = f"Benchmark notes in {path} must contain a notes list"
+        raise TypeError(msg)
+    return tuple(_note_from_raw(raw, index=index) for index, raw in enumerate(raw_notes, start=1))
+
+
+def load_benchmark_data(path: Path = DATA_PATH, *, notes_path: Path | None = NOTES_PATH) -> BenchmarkData:
     """Load release benchmark JSON data."""
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -146,6 +194,7 @@ def load_benchmark_data(path: Path = DATA_PATH) -> BenchmarkData:
         schema_version=_integer(payload.get("schema_version"), default=1),
         metadata=metadata,
         entries=tuple(_entry_from_raw(raw, index=index) for index, raw in enumerate(raw_entries, start=1)),
+        notes=load_benchmark_notes(notes_path),
     )
 
 
@@ -311,6 +360,45 @@ def _markdown_cell(value: object) -> str:
     return text.replace("|", "\\|")
 
 
+def _note_applies(note: BenchmarkNote, *, input_type: str, case: str) -> bool:
+    if note.input_type and note.input_type != input_type:
+        return False
+    return not note.case or note.case == case
+
+
+def _notes_by_version(
+    notes: tuple[BenchmarkNote, ...],
+    *,
+    input_type: str,
+    case: str,
+) -> dict[str, tuple[BenchmarkNote, ...]]:
+    notes_by_version: dict[str, list[BenchmarkNote]] = {}
+    for note in notes:
+        if _note_applies(note, input_type=input_type, case=case):
+            notes_by_version.setdefault(note.version, []).append(note)
+    return {version: tuple(version_notes) for version, version_notes in notes_by_version.items()}
+
+
+def _visible_notes(data: BenchmarkData) -> tuple[BenchmarkNote, ...]:
+    notes = tuple(
+        note
+        for note in data.notes
+        if any(
+            entry.version == note.version and _note_applies(note, input_type=entry.input_type, case=entry.case)
+            for entry in data.entries
+        )
+    )
+    return tuple(sorted(notes, key=lambda note: (*_version_sort_key(note.version), note.input_type, note.case)))
+
+
+def _version_cell(version: str, notes_by_version: dict[str, tuple[BenchmarkNote, ...]]) -> str:
+    if notes := notes_by_version.get(version):
+        title = html.escape(" ".join(note.summary for note in notes), quote=True)
+        label = html.escape(version)
+        return f'<span class="release-benchmark-version-note" title="{title}">{label} *</span>'
+    return version
+
+
 def _render_case_results_table(entries: tuple[BenchmarkEntry, ...], *, case: str, include_version: bool) -> str:
     headers = (
         ("Version", "Input", "Formatter", "Median", "vs Default", "Status")
@@ -382,6 +470,7 @@ def _render_chart_tabs(entries: tuple[BenchmarkEntry, ...]) -> str:
                     ),
                     '  <canvas role="img" aria-label="Median generation time by release version"></canvas>',
                     '  <span class="release-benchmark-chart__legend" aria-hidden="true"></span>',
+                    '  <span class="release-benchmark-chart__status" role="status">Loading benchmark chart...</span>',
                     '  <span class="release-benchmark-chart__tooltip" role="status" hidden></span>',
                     "  <noscript>See the historical results table below for benchmark data.</noscript>",
                     "</span>",
@@ -404,7 +493,14 @@ def _formatter_history_cell(entry: BenchmarkEntry | None, baseline: BenchmarkEnt
     return _format_ms(entry.median_ms)
 
 
-def _render_scenario_history_table(entries: tuple[BenchmarkEntry, ...], *, input_type: str, case: str) -> str:
+def _render_scenario_history_table(
+    entries: tuple[BenchmarkEntry, ...],
+    *,
+    input_type: str,
+    case: str,
+    notes_by_version: dict[str, tuple[BenchmarkNote, ...]] | None = None,
+) -> str:
+    notes_by_version = notes_by_version or {}
     headers = ("Version", *(_formatter_label(formatter) for formatter in FORMATTER_ORDER))
     lines = [
         "| " + " | ".join(headers) + " |",
@@ -415,23 +511,61 @@ def _render_scenario_history_table(entries: tuple[BenchmarkEntry, ...], *, input
         formatter_entries = {entry.formatter: entry for entry in scenario_entries if entry.version == version}
         baseline = formatter_entries.get("default")
         values = [
-            version,
+            _version_cell(version, notes_by_version),
             *(_formatter_history_cell(formatter_entries.get(formatter), baseline) for formatter in FORMATTER_ORDER),
         ]
         lines.append("| " + " | ".join(_markdown_cell(value) for value in values) + " |")
     return "\n".join(lines)
 
 
-def _render_scenario_history_tabs(entries: tuple[BenchmarkEntry, ...]) -> str:
+def _render_scenario_history_tabs(entries: tuple[BenchmarkEntry, ...], notes: tuple[BenchmarkNote, ...] = ()) -> str:
     blocks: list[str] = []
     for input_type, case in _scenarios(entries):
         blocks.extend((
             f'=== "{_scenario_label(input_type, case)}"',
             "",
-            _indent_block(_render_scenario_history_table(entries, input_type=input_type, case=case)),
+            _indent_block(
+                _render_scenario_history_table(
+                    entries,
+                    input_type=input_type,
+                    case=case,
+                    notes_by_version=_notes_by_version(notes, input_type=input_type, case=case),
+                )
+            ),
             "",
         ))
     return "\n".join(blocks).rstrip()
+
+
+def _note_scope_label(note: BenchmarkNote) -> str:
+    match note.input_type, note.case:
+        case "", "":
+            return ""
+        case input_type, "":
+            return _input_label(input_type)
+        case "", case_name:
+            return case_name.title()
+        case input_type, case_name:
+            return _scenario_label(input_type, case_name)
+
+
+def _render_benchmark_notes(data: BenchmarkData) -> str:
+    notes = _visible_notes(data)
+    if not notes:
+        return ""
+    lines = [
+        "## Benchmark Notes",
+        "",
+        "Version markers in the charts and historical tables point to these benchmark interpretation notes.",
+        "",
+    ]
+    for note in notes:
+        body = note.summary
+        if note.details:
+            body = f"{body} {note.details}"
+        scope = f" ({scope_label})" if (scope_label := _note_scope_label(note)) else ""
+        lines.append(f"- `{note.version}`{scope}: {_markdown_cell(body)}")
+    return "\n".join(lines)
 
 
 def _metadata_value(data: BenchmarkData, key: str) -> str:
@@ -544,7 +678,8 @@ def render_release_benchmark_markdown(data: BenchmarkData) -> str:
         "",
         (
             "Each chart plots median generation time by release version for one benchmark scenario. "
-            "Formatter lines are included for context; missing or unsupported formatter results are skipped."
+            "Formatter lines are included for context; missing or unsupported formatter results are skipped. "
+            "Marked versions have benchmark notes below."
         ),
         "",
     ])
@@ -556,6 +691,13 @@ def render_release_benchmark_markdown(data: BenchmarkData) -> str:
     lines.extend([
         _render_chart_tabs(data.entries),
         "",
+    ])
+    if notes_block := _render_benchmark_notes(data):
+        lines.extend([
+            notes_block,
+            "",
+        ])
+    lines.extend([
         *_collection_metadata_lines(data),
         "## Latest Release Summary",
         "",
@@ -572,17 +714,18 @@ def render_release_benchmark_markdown(data: BenchmarkData) -> str:
         "",
         (
             "Rows are release versions. Formatter cells show median generation time; non-default cells include "
-            "the speed relative to Default when both results are available."
+            "the speed relative to Default when both results are available. Version cells marked with `*` have "
+            "benchmark notes above."
         ),
         "",
-        _render_scenario_history_tabs(data.entries),
+        _render_scenario_history_tabs(data.entries, _visible_notes(data)),
         "",
     ])
     return "\n".join(lines)
 
 
-def _generated_docs(data_path: Path, docs_path: Path) -> tuple[GeneratedDoc, ...]:
-    data = load_benchmark_data(data_path)
+def _generated_docs(data_path: Path, docs_path: Path, notes_path: Path | None) -> tuple[GeneratedDoc, ...]:
+    data = load_benchmark_data(data_path, notes_path=notes_path)
     return (GeneratedDoc(docs_path, render_release_benchmark_markdown(data).rstrip() + "\n"),)
 
 
@@ -594,10 +737,11 @@ def build_docs(
     *,
     check: bool,
     data_path: Path = DATA_PATH,
+    notes_path: Path | None = NOTES_PATH,
     docs_path: Path = DOCS_PATH,
 ) -> int:
     """Generate or check release benchmark documentation outputs."""
-    docs = _generated_docs(data_path, docs_path)
+    docs = _generated_docs(data_path, docs_path, notes_path)
     if check:
         if not (out_of_date := tuple(doc.path for doc in docs if not _doc_is_current(doc))):
             print("Release benchmark docs are up to date.")
@@ -618,6 +762,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build release benchmark documentation")
     parser.add_argument("--check", action="store_true", help="Check whether generated benchmark docs are up to date")
     parser.add_argument("--data", type=Path, default=DATA_PATH, help="Benchmark JSON data path")
+    parser.add_argument("--notes", type=Path, default=NOTES_PATH, help="Benchmark notes JSON data path")
     parser.add_argument("--docs", type=Path, default=DOCS_PATH, help="Markdown output path")
     return parser.parse_args()
 
@@ -625,7 +770,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     """Script entrypoint."""
     args = parse_args()
-    return build_docs(check=args.check, data_path=args.data, docs_path=args.docs)
+    return build_docs(check=args.check, data_path=args.data, notes_path=args.notes, docs_path=args.docs)
 
 
 if __name__ == "__main__":

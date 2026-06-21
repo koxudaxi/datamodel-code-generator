@@ -34,6 +34,17 @@
   border-radius: 999px;
 }
 
+.release-benchmark-chart__status {
+  display: block;
+  margin-top: 0.75rem;
+  color: var(--md-default-fg-color--light, #6b7280);
+  font-size: 0.72rem;
+}
+
+.release-benchmark-chart__status[hidden] {
+  display: none;
+}
+
 .release-benchmark-chart__tooltip {
   position: absolute;
   z-index: 2;
@@ -47,6 +58,12 @@
   pointer-events: none;
   transform: translate(-50%, calc(-100% - 0.6rem));
   white-space: nowrap;
+}
+
+.release-benchmark-version-note {
+  color: var(--md-accent-fg-color, #dc2626);
+  text-decoration: underline dotted;
+  text-underline-offset: 0.18em;
 }
 
 @media screen and (max-width: 42rem) {

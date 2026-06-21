@@ -10,13 +10,14 @@ This page tracks datamodel-code-generator release benchmark results collected on
 
 ## Historical Trends
 
-Each chart plots median generation time by release version for one benchmark scenario. Formatter lines are included for context; missing or unsupported formatter results are skipped.
+Each chart plots median generation time by release version for one benchmark scenario. Formatter lines are included for context; missing or unsupported formatter results are skipped. Marked versions have benchmark notes below.
 
 === "Small / JSON Schema"
 
     <span class="release-benchmark-chart" data-release-benchmark-chart data-input-type="jsonschema" data-case="small" aria-label="Small / JSON Schema release benchmark trend">
       <canvas role="img" aria-label="Median generation time by release version"></canvas>
       <span class="release-benchmark-chart__legend" aria-hidden="true"></span>
+      <span class="release-benchmark-chart__status" role="status">Loading benchmark chart...</span>
       <span class="release-benchmark-chart__tooltip" role="status" hidden></span>
       <noscript>See the historical results table below for benchmark data.</noscript>
     </span>
@@ -26,6 +27,7 @@ Each chart plots median generation time by release version for one benchmark sce
     <span class="release-benchmark-chart" data-release-benchmark-chart data-input-type="jsonschema" data-case="large" aria-label="Large / JSON Schema release benchmark trend">
       <canvas role="img" aria-label="Median generation time by release version"></canvas>
       <span class="release-benchmark-chart__legend" aria-hidden="true"></span>
+      <span class="release-benchmark-chart__status" role="status">Loading benchmark chart...</span>
       <span class="release-benchmark-chart__tooltip" role="status" hidden></span>
       <noscript>See the historical results table below for benchmark data.</noscript>
     </span>
@@ -35,9 +37,16 @@ Each chart plots median generation time by release version for one benchmark sce
     <span class="release-benchmark-chart" data-release-benchmark-chart data-input-type="openapi" data-case="large" aria-label="Large / OpenAPI release benchmark trend">
       <canvas role="img" aria-label="Median generation time by release version"></canvas>
       <span class="release-benchmark-chart__legend" aria-hidden="true"></span>
+      <span class="release-benchmark-chart__status" role="status">Loading benchmark chart...</span>
       <span class="release-benchmark-chart__tooltip" role="status" hidden></span>
       <noscript>See the historical results table below for benchmark data.</noscript>
     </span>
+
+## Benchmark Notes
+
+Version markers in the charts and historical tables point to these benchmark interpretation notes.
+
+- `0.59.0` (Large / OpenAPI): Fixture note for a benchmark step change. This note verifies that chart and table markers render from external note data.
 
 ## Collection Policy
 
@@ -78,7 +87,7 @@ Results below are medians. Built-in and Ruff ratios are relative to the Default 
 
 ## Historical Results
 
-Rows are release versions. Formatter cells show median generation time; non-default cells include the speed relative to Default when both results are available.
+Rows are release versions. Formatter cells show median generation time; non-default cells include the speed relative to Default when both results are available. Version cells marked with `*` have benchmark notes above.
 
 === "Small / JSON Schema"
 
@@ -98,4 +107,4 @@ Rows are release versions. Formatter cells show median generation time; non-defa
     | Version | Default | Built-in | Ruff |
     | --- | --- | --- | --- |
     | 0.58.0 | - | 980ms | - |
-    | 0.59.0 | - | 881ms | Unsupported: formatter target is unavailable in this release |
+    | <span class="release-benchmark-version-note" title="Fixture note for a benchmark step change.">0.59.0 *</span> | - | 881ms | Unsupported: formatter target is unavailable in this release |

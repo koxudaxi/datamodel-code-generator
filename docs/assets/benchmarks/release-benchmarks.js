@@ -3,18 +3,18 @@
 
   const STATUS_OK = "ok";
   const FORMATTERS = [
-    { key: "default", label: "Default", color: "#6b7280" },
+    { key: "default", label: "Default", color: "#f59e0b" },
     { key: "builtin", label: "Built-in", color: "#2563eb" },
     { key: "ruff", label: "Ruff", color: "#16a34a" },
   ];
 
-  const charts = Array.from(document.querySelectorAll("[data-release-benchmark-chart]"));
-  if (charts.length === 0) {
-    return;
-  }
-
-  const scriptUrl = document.currentScript ? document.currentScript.src : document.baseURI;
+  const scriptUrl = document.currentScript && document.currentScript.src ? document.currentScript.src : document.baseURI;
   const dataUrl = new URL("../../data/release-benchmarks.json", scriptUrl);
+  const notesUrl = new URL("../../data/release-benchmark-notes.json", scriptUrl);
+
+  function chartContainers() {
+    return Array.from(document.querySelectorAll("[data-release-benchmark-chart]"));
+  }
 
   function versionKey(version) {
     const parts = String(version)
@@ -88,6 +88,51 @@
     return data.entries.filter((entry) => entry.input_type === inputType && entry.case === caseName);
   }
 
+  function normalizeNotes(payload) {
+    if (!payload || !Array.isArray(payload.notes)) {
+      return [];
+    }
+    return payload.notes.reduce((notesByVersion, note) => {
+      if (note && typeof note.version === "string" && typeof note.summary === "string") {
+        notesByVersion.push({
+          version: note.version,
+          summary: note.summary,
+          details: typeof note.details === "string" ? note.details : "",
+          inputType: typeof note.input_type === "string" ? note.input_type : "",
+          caseName: typeof note.case === "string" ? note.case : "",
+        });
+      }
+      return notesByVersion;
+    }, []);
+  }
+
+  function noteText(note) {
+    return note.details ? `${note.summary} ${note.details}` : note.summary;
+  }
+
+  function noteApplies(note, inputType, caseName) {
+    if (note.inputType && note.inputType !== inputType) {
+      return false;
+    }
+    if (note.caseName && note.caseName !== caseName) {
+      return false;
+    }
+    return true;
+  }
+
+  function scenarioNotesByVersion(notes, inputType, caseName) {
+    return notes.reduce((notesByVersion, note) => {
+      if (!noteApplies(note, inputType, caseName)) {
+        return notesByVersion;
+      }
+      if (!notesByVersion[note.version]) {
+        notesByVersion[note.version] = [];
+      }
+      notesByVersion[note.version].push(note);
+      return notesByVersion;
+    }, {});
+  }
+
   function renderLegend(container) {
     const legend = container.querySelector(".release-benchmark-chart__legend");
     if (!legend) {
@@ -97,6 +142,15 @@
       (formatter) =>
         `<span class="release-benchmark-chart__legend-item"><span class="release-benchmark-chart__swatch" style="background:${formatter.color}"></span>${formatter.label}</span>`,
     ).join("");
+  }
+
+  function setStatus(container, message) {
+    const status = container.querySelector(".release-benchmark-chart__status");
+    if (!status) {
+      return;
+    }
+    status.textContent = message;
+    status.hidden = message === "";
   }
 
   function chartSize(canvas) {
@@ -111,7 +165,7 @@
     return Boolean(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
   }
 
-  function drawChart(container, data) {
+  function drawChart(container, data, notes) {
     const canvas = container.querySelector("canvas");
     if (!(canvas instanceof HTMLCanvasElement)) {
       return;
@@ -123,12 +177,15 @@
     const inputType = container.dataset.inputType || "";
     const caseName = container.dataset.case || "";
     const entries = scenarioEntries(data, inputType, caseName);
+    const notesByVersion = scenarioNotesByVersion(notes, inputType, caseName);
     const versions = Array.from(new Set(entries.map((entry) => entry.version))).sort(compareVersions);
     const okEntries = entries.filter((entry) => entry.status === STATUS_OK && typeof entry.median_ms === "number");
 
     if (versions.length === 0 || okEntries.length === 0) {
+      setStatus(container, "No benchmark data is available for this chart.");
       return;
     }
+    setStatus(container, "");
 
     const { width, height } = chartSize(canvas);
     const devicePixelRatio = window.devicePixelRatio || 1;
@@ -147,6 +204,7 @@
     const foreground = cssColor(container, "--md-default-fg-color", "#111827");
     const muted = cssColor(container, "--md-default-fg-color--light", "#6b7280");
     const grid = cssColor(container, "--md-default-fg-color--lightest", "#d1d5db");
+    const noteColor = cssColor(container, "--md-accent-fg-color", "#dc2626");
     const plot = {
       left: 58,
       top: 38,
@@ -198,6 +256,27 @@
     context.lineTo(plot.right, plot.bottom);
     context.stroke();
 
+    const noteMarkers = [];
+    context.save();
+    context.strokeStyle = noteColor;
+    context.fillStyle = noteColor;
+    context.textAlign = "center";
+    context.setLineDash([4, 4]);
+    versions.forEach((version, index) => {
+      const versionNotes = notesByVersion[version];
+      if (!versionNotes || versionNotes.length === 0) {
+        return;
+      }
+      const x = scale(index, 0, Math.max(versions.length - 1, 1), plot.left, plot.right);
+      noteMarkers.push({ x, version, notes: versionNotes, plotTop: plot.top, plotBottom: plot.bottom });
+      context.beginPath();
+      context.moveTo(x, plot.top);
+      context.lineTo(x, plot.bottom);
+      context.stroke();
+      context.fillText("*", x, plot.top - 10);
+    });
+    context.restore();
+
     FORMATTERS.forEach((formatter) => {
       const formatterPoints = [];
       versions.forEach((version, index) => {
@@ -234,6 +313,7 @@
     });
 
     container.releaseBenchmarkPoints = points;
+    container.releaseBenchmarkNotes = noteMarkers;
   }
 
   function showTooltip(container, event) {
@@ -254,6 +334,25 @@
         nearestDistance = distance;
       }
     });
+    let nearestNote = null;
+    let nearestNoteDistance = 10;
+    if (container.releaseBenchmarkNotes) {
+      container.releaseBenchmarkNotes.forEach((marker) => {
+        const isInsidePlot = y >= marker.plotTop - 24 && y <= marker.plotBottom + 30;
+        const distance = Math.abs(marker.x - x);
+        if (isInsidePlot && distance < nearestNoteDistance) {
+          nearestNote = marker;
+          nearestNoteDistance = distance;
+        }
+      });
+    }
+    if (nearestNote && (!nearest || nearestNoteDistance <= nearestDistance)) {
+      tooltip.textContent = `${nearestNote.version}: ${nearestNote.notes.map(noteText).join(" ")}`;
+      tooltip.style.left = `${canvas.offsetLeft + nearestNote.x}px`;
+      tooltip.style.top = `${canvas.offsetTop + nearestNote.plotTop}px`;
+      tooltip.hidden = false;
+      return;
+    }
     if (!nearest) {
       tooltip.hidden = true;
       return;
@@ -271,35 +370,66 @@
     }
   }
 
-  function renderAll(data) {
-    charts.forEach((container) => drawChart(container, data));
+  function renderAll(data, notes, charts) {
+    charts.forEach((container) => drawChart(container, data, notes));
   }
 
-  fetch(dataUrl)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`Could not load ${dataUrl.pathname}`);
-      }
-      return response.json();
-    })
-    .then((data) => {
-      charts.forEach((container) => {
-        renderLegend(container);
-        container.addEventListener("mousemove", (event) => showTooltip(container, event));
-        container.addEventListener("mouseleave", () => hideTooltip(container));
-      });
-      renderAll(data);
-      const observer = new ResizeObserver(() => window.requestAnimationFrame(() => renderAll(data)));
-      charts.forEach((container) => observer.observe(container));
-      document.addEventListener("click", () => window.setTimeout(() => renderAll(data), 50));
-    })
-    .catch((error) => {
-      charts.forEach((container) => {
-        const tooltip = container.querySelector(".release-benchmark-chart__tooltip");
-        if (tooltip) {
-          tooltip.textContent = error.message;
-          tooltip.hidden = false;
-        }
-      });
+  function scheduleRender(data, notes, charts) {
+    window.requestAnimationFrame(() => renderAll(data, notes, charts));
+  }
+
+  function initializeCharts() {
+    const charts = chartContainers();
+    if (charts.length === 0) {
+      return;
+    }
+    charts.forEach((container) => {
+      renderLegend(container);
+      setStatus(container, "Loading benchmark chart...");
+      container.addEventListener("mousemove", (event) => showTooltip(container, event));
+      container.addEventListener("mouseleave", () => hideTooltip(container));
     });
+
+    Promise.all([
+      fetch(dataUrl).then((response) => {
+        if (!response.ok) {
+          throw new Error(`Could not load ${dataUrl.pathname}`);
+        }
+        return response.json();
+      }),
+      fetch(notesUrl)
+        .then((response) => (response.ok ? response.json() : { notes: [] }))
+        .then(normalizeNotes)
+        .catch(() => []),
+    ])
+      .then((response) => {
+        const [data, notes] = response;
+        scheduleRender(data, notes, charts);
+        if ("ResizeObserver" in window) {
+          const observer = new ResizeObserver(() => scheduleRender(data, notes, charts));
+          charts.forEach((container) => observer.observe(container));
+        } else {
+          window.addEventListener("resize", () => scheduleRender(data, notes, charts));
+        }
+        document.addEventListener("click", () => window.setTimeout(() => scheduleRender(data, notes, charts), 50));
+        document.addEventListener("change", () => window.setTimeout(() => scheduleRender(data, notes, charts), 50));
+        document.addEventListener("visibilitychange", () => scheduleRender(data, notes, charts));
+      })
+      .catch((error) => {
+        charts.forEach((container) => {
+          setStatus(container, error.message);
+          const tooltip = container.querySelector(".release-benchmark-chart__tooltip");
+          if (tooltip) {
+            tooltip.textContent = error.message;
+            tooltip.hidden = false;
+          }
+        });
+      });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializeCharts, { once: true });
+  } else {
+    initializeCharts();
+  }
 })();

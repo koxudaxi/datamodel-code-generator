@@ -15,6 +15,7 @@ on:
       - 'scripts/build_schema_docs.py'
       - 'scripts/build_release_benchmark_docs.py'
       - 'docs/data/release-benchmarks.json'
+      - 'docs/data/release-benchmark-notes.json'
       - 'docs/assets/benchmarks/release-benchmarks.css'
       - 'docs/assets/benchmarks/release-benchmarks.js'
       - 'docs/**/*.md'

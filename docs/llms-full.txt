@@ -34918,7 +34918,7 @@ This page tracks datamodel-code-generator release benchmark results collected on
 
 ## Historical Trends
 
-Each chart plots median generation time by release version for one benchmark scenario. Formatter lines are included for context; missing or unsupported formatter results are skipped.
+Each chart plots median generation time by release version for one benchmark scenario. Formatter lines are included for context; missing or unsupported formatter results are skipped. Marked versions have benchmark notes below.
 
 Compatibility backfill: Versions 0.26.4-0.34.0 use Python 3.13.14 because those releases fail during import on Python 3.14.2 before benchmark timing.
 
@@ -34927,6 +34927,7 @@ Compatibility backfill: Versions 0.26.4-0.34.0 use Python 3.13.14 because those 
     <span class="release-benchmark-chart" data-release-benchmark-chart data-input-type="jsonschema" data-case="small" aria-label="Small / JSON Schema release benchmark trend">
       <canvas role="img" aria-label="Median generation time by release version"></canvas>
       <span class="release-benchmark-chart__legend" aria-hidden="true"></span>
+      <span class="release-benchmark-chart__status" role="status">Loading benchmark chart...</span>
       <span class="release-benchmark-chart__tooltip" role="status" hidden></span>
       <noscript>See the historical results table below for benchmark data.</noscript>
     </span>
@@ -34936,6 +34937,7 @@ Compatibility backfill: Versions 0.26.4-0.34.0 use Python 3.13.14 because those 
     <span class="release-benchmark-chart" data-release-benchmark-chart data-input-type="openapi" data-case="small" aria-label="Small / OpenAPI release benchmark trend">
       <canvas role="img" aria-label="Median generation time by release version"></canvas>
       <span class="release-benchmark-chart__legend" aria-hidden="true"></span>
+      <span class="release-benchmark-chart__status" role="status">Loading benchmark chart...</span>
       <span class="release-benchmark-chart__tooltip" role="status" hidden></span>
       <noscript>See the historical results table below for benchmark data.</noscript>
     </span>
@@ -34945,6 +34947,7 @@ Compatibility backfill: Versions 0.26.4-0.34.0 use Python 3.13.14 because those 
     <span class="release-benchmark-chart" data-release-benchmark-chart data-input-type="jsonschema" data-case="large" aria-label="Large / JSON Schema release benchmark trend">
       <canvas role="img" aria-label="Median generation time by release version"></canvas>
       <span class="release-benchmark-chart__legend" aria-hidden="true"></span>
+      <span class="release-benchmark-chart__status" role="status">Loading benchmark chart...</span>
       <span class="release-benchmark-chart__tooltip" role="status" hidden></span>
       <noscript>See the historical results table below for benchmark data.</noscript>
     </span>
@@ -34954,9 +34957,17 @@ Compatibility backfill: Versions 0.26.4-0.34.0 use Python 3.13.14 because those 
     <span class="release-benchmark-chart" data-release-benchmark-chart data-input-type="openapi" data-case="large" aria-label="Large / OpenAPI release benchmark trend">
       <canvas role="img" aria-label="Median generation time by release version"></canvas>
       <span class="release-benchmark-chart__legend" aria-hidden="true"></span>
+      <span class="release-benchmark-chart__status" role="status">Loading benchmark chart...</span>
       <span class="release-benchmark-chart__tooltip" role="status" hidden></span>
       <noscript>See the historical results table below for benchmark data.</noscript>
     </span>
+
+## Benchmark Notes
+
+Version markers in the charts and historical tables point to these benchmark interpretation notes.
+
+- `0.29.0`: The inflect dependency range was widened and cold imports became slower. Release 0.29.0 allowed inflect 7.x, which resolves typeguard 4.x in modern environments. That typeguard instrumentation increased fresh-process startup cost. Small OpenAPI is especially visible because the fixture has array component names such as Pets and Users, so class-name singularization initializes inflect while the rest of the generation work is small.
+- `0.64.1` (Small / OpenAPI): Small OpenAPI in this release predates the main-branch inflect import mitigation. The latest release result still includes the inflect/typeguard cold-import cost. On main after the mitigation, the same Small/OpenAPI built-in formatter case is back near the Small/JSON Schema result.
 
 ## Collection Policy
 
@@ -35011,7 +35022,7 @@ Results below are medians. Built-in and Ruff ratios are relative to the Default 
 
 ## Historical Results
 
-Rows are release versions. Formatter cells show median generation time; non-default cells include the speed relative to Default when both results are available.
+Rows are release versions. Formatter cells show median generation time; non-default cells include the speed relative to Default when both results are available. Version cells marked with `*` have benchmark notes above.
 
 === "Small / JSON Schema"
 
@@ -35038,7 +35049,7 @@ Rows are release versions. Formatter cells show median generation time; non-defa
     | 0.28.3 | 419ms | Unsupported: unavailable | Unsupported: unavailable |
     | 0.28.4 | 399ms | Unsupported: unavailable | Failed: command |
     | 0.28.5 | 435ms | Unsupported: unavailable | Failed: command |
-    | 0.29.0 | 2.07s | Unsupported: unavailable | Failed: command |
+    | <span class="release-benchmark-version-note" title="The inflect dependency range was widened and cold imports became slower.">0.29.0 *</span> | 2.07s | Unsupported: unavailable | Failed: command |
     | 0.30.0 | 2.13s | Unsupported: unavailable | Failed: command |
     | 0.30.1 | 1.59s | Unsupported: unavailable | Failed: command |
     | 0.30.2 | 2.23s | Unsupported: unavailable | Failed: command |
@@ -35093,7 +35104,7 @@ Rows are release versions. Formatter cells show median generation time; non-defa
     | 0.28.3 | 455ms | Unsupported: unavailable | Unsupported: unavailable |
     | 0.28.4 | 426ms | Unsupported: unavailable | Failed: command |
     | 0.28.5 | 479ms | Unsupported: unavailable | Failed: command |
-    | 0.29.0 | 2.11s | Unsupported: unavailable | Failed: command |
+    | <span class="release-benchmark-version-note" title="The inflect dependency range was widened and cold imports became slower.">0.29.0 *</span> | 2.11s | Unsupported: unavailable | Failed: command |
     | 0.30.0 | 2.22s | Unsupported: unavailable | Failed: command |
     | 0.30.1 | 1.63s | Unsupported: unavailable | Failed: command |
     | 0.30.2 | 2.33s | Unsupported: unavailable | Failed: command |
@@ -35121,7 +35132,7 @@ Rows are release versions. Formatter cells show median generation time; non-defa
     | 0.58.0 | 2.59s | Unsupported: unavailable | 2.57s (1.01x faster) |
     | 0.59.0 | 2.38s | Unsupported: unavailable | 2.33s (1.02x faster) |
     | 0.64.0 | 2.32s | 2.20s (1.06x faster) | 2.21s (1.05x faster) |
-    | 0.64.1 | 2.30s | 2.28s (1.01x faster) | 2.17s (1.06x faster) |
+    | <span class="release-benchmark-version-note" title="Small OpenAPI in this release predates the main-branch inflect import mitigation.">0.64.1 *</span> | 2.30s | 2.28s (1.01x faster) | 2.17s (1.06x faster) |
 
 === "Large / JSON Schema"
 
@@ -35148,7 +35159,7 @@ Rows are release versions. Formatter cells show median generation time; non-defa
     | 0.28.3 | 3.67s | Unsupported: unavailable | Unsupported: unavailable |
     | 0.28.4 | 3.16s | Unsupported: unavailable | Failed: command |
     | 0.28.5 | 3.93s | Unsupported: unavailable | Failed: command |
-    | 0.29.0 | 5.15s | Unsupported: unavailable | Failed: command |
+    | <span class="release-benchmark-version-note" title="The inflect dependency range was widened and cold imports became slower.">0.29.0 *</span> | 5.15s | Unsupported: unavailable | Failed: command |
     | 0.30.0 | 5.81s | Unsupported: unavailable | Failed: command |
     | 0.30.1 | 4.06s | Unsupported: unavailable | Failed: command |
     | 0.30.2 | 6.03s | Unsupported: unavailable | Failed: command |
@@ -35203,7 +35214,7 @@ Rows are release versions. Formatter cells show median generation time; non-defa
     | 0.28.3 | 3.40s | Unsupported: unavailable | Unsupported: unavailable |
     | 0.28.4 | 2.98s | Unsupported: unavailable | Failed: command |
     | 0.28.5 | 3.57s | Unsupported: unavailable | Failed: command |
-    | 0.29.0 | 4.72s | Unsupported: unavailable | Failed: command |
+    | <span class="release-benchmark-version-note" title="The inflect dependency range was widened and cold imports became slower.">0.29.0 *</span> | 4.72s | Unsupported: unavailable | Failed: command |
     | 0.30.0 | 5.36s | Unsupported: unavailable | Failed: command |
     | 0.30.1 | 3.69s | Unsupported: unavailable | Failed: command |
     | 0.30.2 | 5.50s | Unsupported: unavailable | Failed: command |
