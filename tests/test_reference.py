@@ -12,6 +12,7 @@ import pytest
 from datamodel_code_generator.http import join_url
 from datamodel_code_generator.reference import (
     _TYPEGUARD_NOT_LOADED,
+    RESOLVE_REF_CACHE_MAX_SIZE,
     ModelResolver,
     _import_inflect_without_typeguard_instrumentation,
     _restore_typeguard_module,
@@ -175,6 +176,146 @@ def test_model_resolver_delete_missing_reference_noop() -> None:
     model_resolver.delete(["#", "definitions", "Missing"])
 
     assert model_resolver.get(["#", "definitions", "User"]) is reference
+
+
+def test_resolve_ref_reuses_cached_result() -> None:
+    """Repeated refs in the same context should reuse the cached resolution."""
+    resolver = ModelResolver()
+
+    first = resolver.resolve_ref("#/definitions/User")
+    second = resolver.resolve_ref("#/definitions/User")
+
+    assert first == "#/definitions/User"
+    assert second == first
+    assert resolver._resolve_ref_cache == {"#/definitions/User": "#/definitions/User"}
+
+
+def test_resolve_ref_cache_handles_root_ref() -> None:
+    """Root refs should use and reuse the current root context."""
+    resolver = ModelResolver()
+
+    with resolver.current_root_context(["schema.json"]):
+        assert resolver.resolve_ref("#") == "schema.json#"
+        assert resolver.resolve_ref("#") == "schema.json#"
+
+
+def test_resolve_ref_cache_keeps_same_context_values() -> None:
+    """Setting context values to the same value should not clear the ref cache."""
+    resolver = ModelResolver()
+    resolver.resolve_ref("#/definitions/User")
+
+    resolver.set_current_base_path(resolver.current_base_path)
+    resolver.set_base_url(resolver.base_url)
+    resolver.set_current_root(resolver.current_root)
+    resolver.set_root_id(resolver.root_id)
+
+    assert resolver._resolve_ref_cache == {"#/definitions/User": "#/definitions/User"}
+
+
+def test_resolve_ref_cache_is_bounded() -> None:
+    """The per-instance resolve cache should not grow without limit."""
+    resolver = ModelResolver()
+
+    for index in range(RESOLVE_REF_CACHE_MAX_SIZE + 1):
+        resolver.resolve_ref(f"#/definitions/User{index}")
+
+    assert resolver._resolve_ref_cache == {
+        f"#/definitions/User{RESOLVE_REF_CACHE_MAX_SIZE}": f"#/definitions/User{RESOLVE_REF_CACHE_MAX_SIZE}"
+    }
+
+
+def test_resolve_ref_cache_clears_when_context_changes(tmp_path: Path) -> None:
+    """Changing resolver context should drop cached ref resolutions."""
+    resolver = ModelResolver(base_path=tmp_path)
+    resolver.resolve_ref("#/definitions/User")
+
+    resolver.set_current_base_path(tmp_path / "schemas")
+    assert resolver._resolve_ref_cache == {}
+
+    resolver.resolve_ref("#/definitions/User")
+    resolver.set_base_url("https://example.com/schema.json")
+    assert resolver._resolve_ref_cache == {}
+
+    resolver.resolve_ref("#/definitions/User")
+    resolver.set_current_root(["other.json"])
+    assert resolver._resolve_ref_cache == {}
+
+
+def test_resolve_ref_cache_clears_when_base_url_changes() -> None:
+    """Changing base URL should produce a fresh URL resolution."""
+    resolver = ModelResolver(base_url="https://example.com/schemas/v1/root.json")
+
+    assert resolver.resolve_ref("child.json") == "https://example.com/schemas/v1/child.json#"
+
+    resolver.set_base_url("https://example.com/schemas/v2/root.json")
+
+    assert resolver.resolve_ref("child.json") == "https://example.com/schemas/v2/child.json#"
+
+
+def test_resolve_ref_cache_clears_when_root_id_changes() -> None:
+    """Changing root id should drop cached ref resolutions and update base path."""
+    resolver = ModelResolver()
+    resolver.resolve_ref("#/definitions/User")
+
+    resolver.set_root_id("schema")
+    assert resolver.root_id_base_path is None
+    assert resolver._resolve_ref_cache == {}
+
+    resolver.resolve_ref("#/definitions/User")
+    resolver.set_root_id("https://example.com/schemas/main.json")
+    assert resolver.root_id_base_path == "https://example.com/schemas"
+    assert resolver._resolve_ref_cache == {}
+
+
+def test_resolve_ref_cache_clears_when_root_id_changes_url_base() -> None:
+    """Changing root id should produce a fresh URL resolution."""
+    resolver = ModelResolver(base_url="https://example.com/schemas/v1/root.json")
+
+    assert resolver.resolve_ref("child.json") == "https://example.com/schemas/v1/child.json#"
+
+    resolver.set_root_id("https://example.org/catalog/root.json")
+    assert resolver.resolve_ref("child.json") == "https://example.org/catalog/child.json#"
+
+    resolver.set_root_id("/schemas/v2/root.json")
+    assert resolver.resolve_ref("child.json") == "https://example.com/schemas/v2/child.json#"
+
+    resolver.set_root_id(None)
+    assert resolver.resolve_ref("child.json") == "https://example.com/schemas/v1/child.json#"
+
+
+def test_resolve_ref_cache_clears_after_add_id() -> None:
+    """Adding an id mapping should invalidate previously cached URL refs."""
+    resolver = ModelResolver()
+    resolver.set_current_root([])
+    assert resolver.resolve_ref("https://schemas.example.org/child#") == "https://schemas.example.org/child#"
+    assert resolver._resolve_ref_cache
+
+    resolver.add_id("https://schemas.example.org/child", ["#", "$defs", "child"])
+
+    assert resolver._resolve_ref_cache == {}
+    assert resolver.resolve_ref("https://schemas.example.org/child#") == "#/$defs/child"
+
+
+def test_resolve_ref_cache_respects_current_root_context() -> None:
+    """The same local fragment should resolve separately under different roots."""
+    resolver = ModelResolver()
+
+    with resolver.current_root_context(["first.json"]):
+        assert resolver.resolve_ref("#/definitions/User") == "first.json#/definitions/User"
+
+    with resolver.current_root_context(["second.json"]):
+        assert resolver.resolve_ref("#/definitions/User") == "second.json#/definitions/User"
+
+
+def test_resolve_ref_cache_respects_current_base_path_context(tmp_path: Path) -> None:
+    """The same relative file ref should resolve separately under different base paths."""
+    resolver = ModelResolver(base_path=tmp_path)
+
+    with resolver.current_base_path_context(Path("schemas/a")):
+        assert resolver.resolve_ref("../common.json") == "schemas/common.json#"
+
+    with resolver.current_base_path_context(Path("other/a")):
+        assert resolver.resolve_ref("../common.json") == "other/common.json#"
 
 
 def test_base_url_context_sets_url_when_base_url_already_set() -> None:

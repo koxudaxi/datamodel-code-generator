@@ -2256,6 +2256,16 @@ def test_main_same_file_ref_fast_path(output_file: Path) -> None:
     )
 
 
+def test_main_resolve_ref_cache_fast_path(output_file: Path) -> None:
+    """Test repeated refs keep generated output unchanged."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "resolve_ref_cache_fast_path.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
 def test_main_root_model_with_additional_properties_literal(min_version: str, output_file: Path) -> None:
     """Test root model additional properties with literal types."""
     run_main_and_assert(

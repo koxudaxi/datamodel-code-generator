@@ -1,0 +1,29 @@
+{
+  "title": "ResolveRefCacheFastPath",
+  "type": "object",
+  "properties": {
+    "first": {
+      "$ref": "#/definitions/User"
+    },
+    "second": {
+      "$ref": "#/definitions/User"
+    }
+  },
+  "required": [
+    "first",
+    "second"
+  ],
+  "definitions": {
+    "User": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  }
+}

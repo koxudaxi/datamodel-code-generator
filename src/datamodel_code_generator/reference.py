@@ -168,6 +168,8 @@ SINGULAR_NAME_SUFFIX: str = "Item"
 
 ID_PATTERN: Pattern[str] = re.compile(r"^#[^/].*")
 
+RESOLVE_REF_CACHE_MAX_SIZE: int = 4096
+
 SPECIAL_PATH_MARKER: str = "#-datamodel-code-generator-#-"
 
 T = TypeVar("T")
@@ -500,6 +502,7 @@ class ModelResolver:  # noqa: PLR0904
         self._current_root: Sequence[str] = []
         self._root_id: str | None = None
         self._root_id_base_path: str | None = None
+        self._resolve_ref_cache: dict[str, str] = {}
         self.ids: defaultdict[str, dict[str, str]] = defaultdict(dict)
         self.after_load_files: set[str] = set()
         self.exclude_names: set[str] = exclude_names or set()
@@ -628,6 +631,16 @@ class ModelResolver:  # noqa: PLR0904
         self.exclude_names = exclude_names
         self.references.clear()
         self._reference_names_cache.clear()
+        self._clear_resolve_ref_cache()
+
+    def _clear_resolve_ref_cache(self) -> None:
+        self._resolve_ref_cache.clear()
+
+    def _cache_resolved_ref(self, cache_key: str, ref: str) -> str:
+        if len(self._resolve_ref_cache) >= RESOLVE_REF_CACHE_MAX_SIZE:
+            self._clear_resolve_ref_cache()
+        self._resolve_ref_cache[cache_key] = ref
+        return ref
 
     def _get_reference_names(self) -> set[str]:
         """Get the set of all reference names for uniqueness checking."""
@@ -650,7 +663,10 @@ class ModelResolver:  # noqa: PLR0904
 
     def set_current_base_path(self, base_path: Path | None) -> None:
         """Set the current base path for file resolution."""
+        if self._current_base_path == base_path:
+            return
         self._current_base_path = base_path
+        self._clear_resolve_ref_cache()
 
     @property
     def base_url(self) -> str | None:
@@ -659,7 +675,10 @@ class ModelResolver:  # noqa: PLR0904
 
     def set_base_url(self, base_url: str | None) -> None:
         """Set the base URL for reference resolution."""
+        if self._base_url == base_url:
+            return
         self._base_url = base_url
+        self._clear_resolve_ref_cache()
 
     @contextmanager
     def current_base_path_context(self, base_path: Path | None) -> Generator[None, None, None]:
@@ -692,7 +711,10 @@ class ModelResolver:  # noqa: PLR0904
 
     def set_current_root(self, current_root: Sequence[str]) -> None:
         """Set the current root path components."""
+        if tuple(self._current_root) == tuple(current_root):
+            return
         self._current_root = current_root
+        self._clear_resolve_ref_cache()
 
     @contextmanager
     def current_root_context(self, current_root: Sequence[str]) -> Generator[None, None, None]:
@@ -712,16 +734,21 @@ class ModelResolver:  # noqa: PLR0904
 
     def set_root_id(self, root_id: str | None) -> None:
         """Set the root identifier and extract its base path."""
-        if root_id and "/" in root_id:
-            self._root_id_base_path = root_id.rsplit("/", 1)[0]
-        else:
-            self._root_id_base_path = None
+        if self._root_id == root_id:
+            return
+        match root_id:
+            case str() if "/" in root_id:
+                self._root_id_base_path = root_id.rsplit("/", 1)[0]
+            case _:
+                self._root_id_base_path = None
 
         self._root_id = root_id
+        self._clear_resolve_ref_cache()
 
     def add_id(self, id_: str, path: Sequence[str]) -> None:
         """Register an identifier mapping to a resolved reference path."""
         self.ids["/".join(self.current_root)][id_] = self.resolve_ref(path)
+        self._clear_resolve_ref_cache()
 
     def _get_path_absolute_local_file(self, ref: str) -> tuple[Path, str] | None:
         """Return the local file path for a path-absolute URI ref."""
@@ -765,8 +792,11 @@ class ModelResolver:  # noqa: PLR0904
     def resolve_ref(self, path: Sequence[str] | str) -> str:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         """Resolve a reference path to its canonical form."""
         joined_path = path if isinstance(path, str) else self.join_path(tuple(path))
+        cache_key = joined_path
+        if (cached_ref := self._resolve_ref_cache.get(cache_key)) is not None:
+            return cached_ref
         if joined_path == "#":
-            return f"{'/'.join(self.current_root)}#"
+            return self._cache_resolved_ref(cache_key, f"{'/'.join(self.current_root)}#")
         if path_absolute_ref := self._resolve_path_absolute_local_ref(joined_path):
             joined_path = path_absolute_ref
         if self.current_base_path and not self.base_url and joined_path[0] != "#" and not is_url(joined_path):
@@ -810,8 +840,8 @@ class ModelResolver:  # noqa: PLR0904
                 if path_part:
                     mapped_base, mapped_fragment = mapped_ref.split("#", 1) if "#" in mapped_ref else (mapped_ref, "")
                     combined_fragment = f"{mapped_fragment.rstrip('/')}/{path_part.lstrip('/')}"
-                    return f"{mapped_base}#{combined_fragment}"
-                return mapped_ref
+                    return self._cache_resolved_ref(cache_key, f"{mapped_base}#{combined_fragment}")
+                return self._cache_resolved_ref(cache_key, mapped_ref)
 
         if self.base_url:
             from .http import join_url  # noqa: PLC0415
@@ -821,15 +851,15 @@ class ModelResolver:  # noqa: PLR0904
                 effective_base = self.root_id if is_url(self.root_id) else join_url(self.base_url, self.root_id)
             joined_url = join_url(effective_base, ref)
             joined_url_without_fragment, _, fragment = joined_url.partition("#")
-            return f"{joined_url_without_fragment}#{fragment}"
+            return self._cache_resolved_ref(cache_key, f"{joined_url_without_fragment}#{fragment}")
 
         if is_url(ref):
             file_part, path_part = ref.split("#", 1)
             if file_part == self.root_id:  # pragma: no cover
-                return f"{'/'.join(self.current_root)}#{path_part}"
+                return self._cache_resolved_ref(cache_key, f"{'/'.join(self.current_root)}#{path_part}")
             target_url: ParseResult = urlparse(file_part)
             if not (self.root_id and self.current_base_path):
-                return ref
+                return self._cache_resolved_ref(cache_key, ref)
             root_id_url: ParseResult = urlparse(self.root_id)
             if (target_url.scheme, target_url.netloc) == (
                 root_id_url.scheme,
@@ -842,9 +872,12 @@ class ModelResolver:  # noqa: PLR0904
                     / target_url_path.name
                 )
                 if target_path.exists():
-                    return f"{target_path.resolve().relative_to(self._base_path)}#{path_part}"
+                    return self._cache_resolved_ref(
+                        cache_key,
+                        f"{target_path.resolve().relative_to(self._base_path)}#{path_part}",
+                    )
 
-        return ref
+        return self._cache_resolved_ref(cache_key, ref)
 
     def is_after_load(self, ref: str) -> bool:
         """Check if a reference points to a file loaded after the current one."""
