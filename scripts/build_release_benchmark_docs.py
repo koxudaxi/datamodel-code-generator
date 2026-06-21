@@ -547,6 +547,8 @@ def _note_scope_label(note: BenchmarkNote) -> str:
             return case_name.title()
         case input_type, case_name:
             return _scenario_label(input_type, case_name)
+        case _:
+            return ""
 
 
 def _render_benchmark_notes(data: BenchmarkData) -> str:
