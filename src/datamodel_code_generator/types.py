@@ -32,7 +32,7 @@ from pydantic import ConfigDict, Field, GetCoreSchemaHandler, StrictBool, Strict
 from pydantic_core import core_schema
 from typing_extensions import TypeIs
 
-from datamodel_code_generator.format import (
+from datamodel_code_generator._format_types import (
     DateClassType,
     DatetimeClassType,
     PythonVersion,

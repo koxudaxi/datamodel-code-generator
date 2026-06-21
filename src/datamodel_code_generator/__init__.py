@@ -26,8 +26,6 @@ from typing import (
 )
 from urllib.parse import ParseResult
 
-from typing_extensions import TypeAliasType, Unpack
-
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     MAX_VERSION,
@@ -60,7 +58,25 @@ from datamodel_code_generator.enums import (
 )
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 
+# Pydantic 2.5 cannot build schemas from stdlib TypeAliasType on Python 3.12.
+if sys.version_info >= (3, 14):
+    from typing import TypeAliasType
+else:
+    from typing_extensions import TypeAliasType
+
+if sys.version_info >= (3, 11):
+    from typing import Unpack
+else:
+    from typing_extensions import Unpack
+
 if TYPE_CHECKING:
+    from datamodel_code_generator._format_types import (
+        DEFAULT_FORMATTERS,
+        DateClassType,
+        DatetimeClassType,
+        PythonVersion,
+        PythonVersionMin,
+    )
     from datamodel_code_generator._types import (
         AsyncAPIParserConfigDict,
         AvroParserConfigDict,
@@ -73,13 +89,6 @@ if TYPE_CHECKING:
     )
     from datamodel_code_generator._types.generate_config_dict import GenerateConfigDict
     from datamodel_code_generator.config import GenerateConfig, ParserConfig
-    from datamodel_code_generator.format import (
-        DEFAULT_FORMATTERS,
-        DateClassType,
-        DatetimeClassType,
-        PythonVersion,
-        PythonVersionMin,
-    )
     from datamodel_code_generator.model_metadata import ModelMetadata
 
 T = TypeVar("T")
@@ -528,7 +537,7 @@ def _validate_output_datetime_class(
     if output_datetime_class is None:
         return
 
-    from datamodel_code_generator.format import DatetimeClassType  # noqa: PLC0415
+    from datamodel_code_generator._format_types import DatetimeClassType  # noqa: PLC0415
 
     if output_datetime_class is DatetimeClassType.Datetime:
         return
@@ -932,7 +941,7 @@ def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
 
     target_datetime_class = config.output_datetime_class
     if target_datetime_class is None:
-        from datamodel_code_generator.format import DatetimeClassType  # noqa: PLC0415
+        from datamodel_code_generator._format_types import DatetimeClassType  # noqa: PLC0415
 
         match input_file_type:
             case InputFileType.GraphQL:
@@ -1163,9 +1172,9 @@ def _emit_results(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         file.close()
 
     if defer_formatting and config.formatters:
+        from datamodel_code_generator._format_types import Formatter  # noqa: PLC0415
         from datamodel_code_generator.format import (  # noqa: PLC0415
             CodeFormatter,
-            Formatter,
             resolve_use_type_checking_imports,
         )
 
@@ -1498,12 +1507,12 @@ _LAZY_IMPORTS = {
     "GenerateConfig": "datamodel_code_generator.config",
     "UnionMode": "datamodel_code_generator.enums",
     "CodeFormatter": "datamodel_code_generator.format",
-    "DateClassType": "datamodel_code_generator.format",
-    "DatetimeClassType": "datamodel_code_generator.format",
-    "DEFAULT_FORMATTERS": "datamodel_code_generator.format",
-    "Formatter": "datamodel_code_generator.format",
-    "PythonVersion": "datamodel_code_generator.format",
-    "PythonVersionMin": "datamodel_code_generator.format",
+    "DateClassType": "datamodel_code_generator._format_types",
+    "DatetimeClassType": "datamodel_code_generator._format_types",
+    "DEFAULT_FORMATTERS": "datamodel_code_generator._format_types",
+    "Formatter": "datamodel_code_generator._format_types",
+    "PythonVersion": "datamodel_code_generator._format_types",
+    "PythonVersionMin": "datamodel_code_generator._format_types",
     "resolve_use_type_checking_imports": "datamodel_code_generator.format",
 }
 

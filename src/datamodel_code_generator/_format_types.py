@@ -1,0 +1,158 @@
+"""Lightweight formatting option types.
+
+This module intentionally stays dependency-light so CLI argument setup and
+reference helpers can use formatting enums without importing formatter runtime
+dependencies such as subprocess, shutil, black, or isort.
+"""
+
+from __future__ import annotations
+
+from enum import Enum
+from functools import cached_property
+
+
+class DatetimeClassType(Enum):
+    """Output datetime class type options."""
+
+    Datetime = "datetime"
+    Awaredatetime = "AwareDatetime"
+    Naivedatetime = "NaiveDatetime"
+    Pastdatetime = "PastDatetime"
+    Futuredatetime = "FutureDatetime"
+
+
+class DateClassType(Enum):
+    """Output date class type options."""
+
+    Date = "date"
+    Pastdate = "PastDate"
+    Futuredate = "FutureDate"
+
+
+class PythonVersion(Enum):
+    """Supported Python version targets for code generation."""
+
+    PY_310 = "3.10"
+    PY_311 = "3.11"
+    PY_312 = "3.12"
+    PY_313 = "3.13"
+    PY_314 = "3.14"
+
+    @cached_property
+    def version_key(self) -> tuple[int, int]:
+        """Return (major, minor) tuple for version comparison."""
+        major, minor = self.value.split(".")
+        return int(major), int(minor)
+
+    @cached_property
+    def _is_py_310_or_later(self) -> bool:  # pragma: no cover
+        return True  # 3.10+ always true since minimum is PY_310
+
+    @cached_property
+    def _is_py_311_or_later(self) -> bool:  # pragma: no cover
+        return self.version_key >= (3, 11)
+
+    @cached_property
+    def _is_py_312_or_later(self) -> bool:  # pragma: no cover
+        return self.version_key >= (3, 12)
+
+    @cached_property
+    def _is_py_313_or_later(self) -> bool:
+        return self.version_key >= (3, 13)
+
+    @cached_property
+    def _is_py_314_or_later(self) -> bool:
+        return self.version_key >= (3, 14)
+
+    @property
+    def has_union_operator(self) -> bool:  # pragma: no cover
+        """Check if Python version supports the union operator (|)."""
+        return self._is_py_310_or_later
+
+    @property
+    def has_type_alias(self) -> bool:  # pragma: no cover
+        """Check if Python version supports TypeAlias.
+
+        .. deprecated::
+            This property is unused and will be removed in a future version.
+        """
+        from datamodel_code_generator.deprecations import warn_deprecated  # noqa: PLC0415
+
+        warn_deprecated("python-api.python-version-has-type-alias", stacklevel=2)
+        return self._is_py_310_or_later
+
+    @property
+    def has_typed_dict_non_required(self) -> bool:
+        """Check if Python version supports TypedDict NotRequired."""
+        return self._is_py_311_or_later
+
+    @property
+    def has_typed_dict_read_only(self) -> bool:
+        """Check if Python version supports TypedDict ReadOnly (PEP 705)."""
+        return self._is_py_313_or_later
+
+    @property
+    def has_typed_dict_closed(self) -> bool:
+        """Check if Python version supports TypedDict closed/extra_items (PEP 728).
+
+        PEP 728 is targeted for Python 3.15. Until then, typing_extensions is required.
+        """
+        return self.version_key >= (3, 15)
+
+    @property
+    def has_kw_only_dataclass(self) -> bool:
+        """Check if Python version supports kw_only in dataclasses."""
+        return self._is_py_310_or_later
+
+    @property
+    def has_type_statement(self) -> bool:
+        """Check if Python version supports type statements."""
+        return self._is_py_312_or_later
+
+    @property
+    def has_native_deferred_annotations(self) -> bool:
+        """Check if Python version has native deferred annotations (Python 3.14+)."""
+        return self._is_py_314_or_later
+
+    @property
+    def has_strenum(self) -> bool:
+        """Check if Python version supports StrEnum."""
+        return self._is_py_311_or_later
+
+
+PythonVersionMin = PythonVersion.PY_310
+
+
+class Formatter(Enum):
+    """Available code formatters for generated output."""
+
+    BUILTIN = "builtin"
+    BLACK = "black"
+    ISORT = "isort"
+    RUFF_CHECK = "ruff-check"
+    RUFF_FORMAT = "ruff-format"
+
+
+DEFAULT_FORMATTERS: tuple[Formatter, ...] = (Formatter.BLACK, Formatter.ISORT)
+EXTERNAL_FORMATTERS = frozenset({
+    Formatter.BLACK,
+    Formatter.ISORT,
+    Formatter.RUFF_CHECK,
+    Formatter.RUFF_FORMAT,
+})
+
+# Keep the historical public pickle/repr path after moving these enums out of format.py.
+for _public_type in (DateClassType, DatetimeClassType, Formatter, PythonVersion):
+    _public_type.__module__ = "datamodel_code_generator.format"
+del _public_type
+
+
+__all__ = [
+    "DEFAULT_FORMATTERS",
+    "EXTERNAL_FORMATTERS",
+    "DateClassType",
+    "DatetimeClassType",
+    "Formatter",
+    "PythonVersion",
+    "PythonVersionMin",
+]

@@ -13,6 +13,7 @@ from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+from datamodel_code_generator._format_types import DateClassType, DatetimeClassType, Formatter, PythonVersion
 from datamodel_code_generator.deprecations import deprecation_message
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -38,8 +39,6 @@ from datamodel_code_generator.enums import (
     UnionMode,
     VersionMode,
 )
-from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
-from datamodel_code_generator.json_config import JsonConfigError, validate_json_value_or_file
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.preset_names import PRESET_NAMES
 
@@ -91,6 +90,8 @@ def _external_ref_mapping(value: str) -> str:
 
 def _json_value_or_file(value: str) -> dict[str, object]:
     """Parse a JSON value or load it from a JSON file path."""
+    from datamodel_code_generator.json_config import JsonConfigError, validate_json_value_or_file  # noqa: PLC0415
+
     try:
         return validate_json_value_or_file(value)
     except JsonConfigError as e:

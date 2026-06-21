@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import pickle
 import subprocess
 import sys
 import warnings
@@ -14,7 +15,9 @@ import black
 import isort
 import pytest
 
+import datamodel_code_generator
 import datamodel_code_generator._builtin_formatter as builtin_formatter
+import datamodel_code_generator._format_types as format_types
 import datamodel_code_generator.format as format_module
 
 DEFAULT_KNOWN_FIRST_PARTY = format_module.DEFAULT_KNOWN_FIRST_PARTY
@@ -129,6 +132,57 @@ def test_package_import_does_not_load_format_module() -> None:
     )
 
     assert result.stdout == "False\n"
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "import datamodel_code_generator._format_types",
+        "import datamodel_code_generator.arguments",
+        "import datamodel_code_generator.config",
+        "from datamodel_code_generator import DEFAULT_FORMATTERS, PythonVersionMin",
+    ],
+)
+def test_light_format_type_imports_do_not_load_formatter_runtime(statement: str) -> None:
+    """Test light format type consumers do not import formatter runtime modules."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; "
+                f"{statement}; "
+                "print('datamodel_code_generator.format' in sys.modules); "
+                "print('datamodel_code_generator._builtin_formatter' in sys.modules)"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.stdout == "False\nFalse\n"
+
+
+def test_format_type_reexports_keep_public_identity() -> None:
+    """Test moved format types keep the public class identity and pickle path."""
+    assert format_module.DateClassType is format_types.DateClassType
+    assert format_module.DatetimeClassType is format_types.DatetimeClassType
+    assert format_module.Formatter is format_types.Formatter
+    assert format_module.PythonVersion is format_types.PythonVersion
+    assert format_module.PythonVersionMin is format_types.PythonVersionMin
+    assert format_module.DEFAULT_FORMATTERS is format_types.DEFAULT_FORMATTERS
+    assert datamodel_code_generator.PythonVersion is format_types.PythonVersion
+    assert datamodel_code_generator.DEFAULT_FORMATTERS is format_types.DEFAULT_FORMATTERS
+    assert format_types.PythonVersion.__module__ == "datamodel_code_generator.format"
+    assert pickle.loads(pickle.dumps(format_types.PythonVersion.PY_310)) is format_types.PythonVersion.PY_310
+
+
+def test_main_get_black_wrapper_returns_black_module() -> None:
+    """Test the CLI wrapper keeps Black imports lazy while returning the installed module."""
+    import datamodel_code_generator.__main__ as main_module
+
+    assert main_module._get_black() is black
 
 
 def test_apply_builtin_formatter_keeps_concrete_public_python_version_type() -> None:
@@ -1971,8 +2025,6 @@ def test_defer_formatting_skips_ruff_in_format_code(tmp_path: Path, monkeypatch:
 
 def test_generate_with_ruff_batch_formatting(tmp_path: Path) -> None:
     """Test that generate uses batch ruff formatting for directory output."""
-    from datamodel_code_generator import ModuleSplitMode, generate
-
     schema = """
     {
         "type": "object",
@@ -1987,11 +2039,11 @@ def test_generate_with_ruff_batch_formatting(tmp_path: Path) -> None:
         mock.patch("datamodel_code_generator.format.CodeFormatter._find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("datamodel_code_generator.format.subprocess.run") as mock_run,
     ):
-        generate(
+        datamodel_code_generator.generate(
             input_=schema,
             output=output_dir,
             formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
-            module_split_mode=ModuleSplitMode.Single,
+            module_split_mode=datamodel_code_generator.ModuleSplitMode.Single,
         )
 
     assert mock_run.call_count == 2
@@ -2019,8 +2071,6 @@ def test_generate_with_ruff_batch_formatting(tmp_path: Path) -> None:
 
 def test_generate_with_ruff_batch_formatting_and_explicit_type_checking_imports(tmp_path: Path) -> None:
     """Test explicit TYPE_CHECKING imports override the modular Pydantic Ruff default."""
-    from datamodel_code_generator import ModuleSplitMode, generate
-
     schema = """
     {
         "type": "object",
@@ -2035,11 +2085,11 @@ def test_generate_with_ruff_batch_formatting_and_explicit_type_checking_imports(
         mock.patch("datamodel_code_generator.format.CodeFormatter._find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("datamodel_code_generator.format.subprocess.run") as mock_run,
     ):
-        generate(
+        datamodel_code_generator.generate(
             input_=schema,
             output=output_dir,
             formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
-            module_split_mode=ModuleSplitMode.Single,
+            module_split_mode=datamodel_code_generator.ModuleSplitMode.Single,
             use_type_checking_imports=True,
         )
 

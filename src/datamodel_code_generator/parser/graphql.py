@@ -19,7 +19,7 @@ from datamodel_code_generator import (
     LiteralType,
     snooper_to_methods,
 )
-from datamodel_code_generator.format import DatetimeClassType
+from datamodel_code_generator._format_types import DatetimeClassType
 from datamodel_code_generator.model.enum import SPECIALIZED_ENUM_TYPE_MATCH, Enum
 from datamodel_code_generator.parser.base import (
     DataType,

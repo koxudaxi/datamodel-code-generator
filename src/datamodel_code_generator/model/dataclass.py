@@ -7,8 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from datamodel_code_generator import (
-    DataclassArguments,
+from datamodel_code_generator._format_types import (
     DateClassType,
     DatetimeClassType,
     PythonVersion,
@@ -28,6 +27,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path
 
+    from datamodel_code_generator.enums import DataclassArguments
     from datamodel_code_generator.imports import Import
 
 

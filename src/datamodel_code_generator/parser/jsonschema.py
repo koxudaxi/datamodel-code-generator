@@ -42,10 +42,10 @@ from datamodel_code_generator import (
     load_data_from_path,
     snooper_to_methods,
 )
-from datamodel_code_generator.deprecations import warn_deprecated
-from datamodel_code_generator.format import (
+from datamodel_code_generator._format_types import (
     DatetimeClassType,
 )
+from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED, get_module_name, sanitize_module_name

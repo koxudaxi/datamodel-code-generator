@@ -9,7 +9,7 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING, NamedTuple
 
-from datamodel_code_generator import PythonVersion
+from datamodel_code_generator._format_types import PythonVersion
 
 from .base import UNDEFINED as UNDEFINED
 from .base import ConstraintsBase, DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace

@@ -9,6 +9,13 @@ from typing import TYPE_CHECKING, Annotated, Any, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from datamodel_code_generator._format_types import (
+    DateClassType,
+    DatetimeClassType,
+    Formatter,
+    PythonVersion,
+    PythonVersionMin,
+)
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     AliasGenerator,
@@ -36,13 +43,6 @@ from datamodel_code_generator.enums import (
     UnionMode,
     VersionMode,
     XMLSchemaVersion,
-)
-from datamodel_code_generator.format import (
-    DateClassType,
-    DatetimeClassType,
-    Formatter,
-    PythonVersion,
-    PythonVersionMin,
 )
 from datamodel_code_generator.model import pydantic_v2
 from datamodel_code_generator.model.base import (  # noqa: TC001 - used by Pydantic at runtime

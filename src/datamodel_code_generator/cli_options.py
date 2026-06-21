@@ -17,9 +17,9 @@ from enum import Enum
 from functools import lru_cache
 from typing import Any
 
+from datamodel_code_generator._format_types import PythonVersion
 from datamodel_code_generator.deprecations import deprecation_message
 from datamodel_code_generator.enums import AllExportsScope, DataModelType, NamingStrategy, ReuseScope
-from datamodel_code_generator.format import PythonVersion
 
 
 class OptionCategory(str, Enum):

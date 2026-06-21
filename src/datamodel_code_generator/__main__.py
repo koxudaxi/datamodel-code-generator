@@ -130,16 +130,10 @@ from datamodel_code_generator import (
     enable_debug_message,
     generate,
 )
+from datamodel_code_generator._format_types import Formatter, PythonVersion
 from datamodel_code_generator.arguments import arg_parser, namespace
 from datamodel_code_generator.config import BaseGenerateConfig
 from datamodel_code_generator.deprecations import render_deprecations, warn_deprecated
-from datamodel_code_generator.format import (
-    Formatter,
-    PythonVersion,
-    _get_black,
-    is_supported_in_black,
-)
-from datamodel_code_generator.json_config import JsonConfigError, JsonConfigSpecs, load_json_config_field
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes
 from datamodel_code_generator.util import load_toml
@@ -208,6 +202,19 @@ def sig_int_handler(_: int, __: Any) -> None:  # pragma: no cover
 
 
 signal.signal(signal.SIGINT, sig_int_handler)
+
+
+def _get_black() -> Any:
+    from datamodel_code_generator.format import _get_black as get_black  # noqa: PLC0415
+
+    return get_black()
+
+
+def is_supported_in_black(python_version: PythonVersion) -> bool:
+    """Return whether the installed black supports the target Python version."""
+    from datamodel_code_generator.format import is_supported_in_black as supported  # noqa: PLC0415
+
+    return supported(python_version)
 
 
 _HttpKeyValuePair: TypeAlias = tuple[str, str]
@@ -296,6 +303,8 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
         """Load and validate JSON configuration values from inline JSON or file paths."""
         if value is None:  # pragma: no cover
             return value
+        from datamodel_code_generator.json_config import JsonConfigError, load_json_config_field  # noqa: PLC0415
+
         field_name: JsonConfigFieldName = cast("JsonConfigFieldName", info.field_name)
         try:
             json_config_source: JsonConfigSource = cast("JsonConfigSource", value)
@@ -727,6 +736,8 @@ def _json_ready(value: Any) -> Any:
 
 
 def _pyproject_toml_value(key: str, value: object) -> TomlValue:
+    from datamodel_code_generator.json_config import JsonConfigSpecs  # noqa: PLC0415
+
     if key not in JsonConfigSpecs.by_field_name or not isinstance(value, Mapping):
         return cast("TomlValue", value)
     return json.dumps(_json_ready(value), ensure_ascii=False, separators=(",", ":"))

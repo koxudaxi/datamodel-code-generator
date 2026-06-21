@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Literal, TypeAlias
 from pydantic import ConfigDict, PrivateAttr
 from typing_extensions import TypedDict
 
+from datamodel_code_generator._format_types import DateClassType, DatetimeClassType, PythonVersion
 from datamodel_code_generator._registry_render import _render_registry_json
 from datamodel_code_generator.cli_options import CLI_OPTION_META
 from datamodel_code_generator.config import BaseGenerateConfig
@@ -28,7 +29,6 @@ from datamodel_code_generator.enums import (
     UnionMode,
     VersionMode,
 )
-from datamodel_code_generator.format import DateClassType, DatetimeClassType, PythonVersion
 from datamodel_code_generator.parser import LiteralType
 
 if TYPE_CHECKING:

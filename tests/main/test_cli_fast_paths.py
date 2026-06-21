@@ -11,6 +11,7 @@ import subprocess
 import sys
 import textwrap
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import pytest
@@ -52,7 +53,7 @@ def _run_module_schema_fast_path_in_process(schema_options: list[str]) -> dict[s
     finally:
         sys.argv = original_argv
         sys.modules.pop(module_name, None)
-        if previous_module is not MISSING:  # pragma: no branch
+        if isinstance(previous_module, ModuleType):  # pragma: no branch
             sys.modules[module_name] = previous_module
     return {"code": code, "stdout": stdout.getvalue()}
 
@@ -82,6 +83,82 @@ def _run_module_schema_fast_path(schema_options: list[str]) -> dict[str, Any]:
                 "stdout": stdout.getvalue(),
                 "imported_arguments": "datamodel_code_generator.arguments" in sys.modules,
             }}))
+            """
+        )
+    )
+
+
+def _run_module_help_fast_path() -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            """
+            import contextlib
+            import io
+            import json
+            import runpy
+            import sys
+
+            sys.argv = ["datamodel-codegen", "--help"]
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                try:
+                    runpy.run_module("datamodel_code_generator.__main__", run_name="__main__", alter_sys=True)
+                except SystemExit as exc:
+                    code = exc.code
+                else:
+                    code = None
+
+            print(json.dumps({
+                "code": code,
+                "stdout": stdout.getvalue(),
+                "imported_arguments": "datamodel_code_generator.arguments" in sys.modules,
+                "imported_format": "datamodel_code_generator.format" in sys.modules,
+                "imported_json_config": "datamodel_code_generator.json_config" in sys.modules,
+                "imported_pydantic": "pydantic" in sys.modules,
+                "imported_validators": "datamodel_code_generator.validators" in sys.modules,
+            }))
+            """
+        )
+    )
+
+
+def _run_argument_parser_json_option_parse() -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            """
+            import json
+            import sys
+
+            from datamodel_code_generator.arguments import arg_parser, namespace
+
+            vars(namespace).clear()
+            namespace.no_color = False
+            arg_parser.parse_args(["--model-name-map", '{"User": "Account"}'], namespace=namespace)
+
+            print(json.dumps({
+                "model_name_map": namespace.model_name_map,
+                "imported_json_config": "datamodel_code_generator.json_config" in sys.modules,
+                "imported_pydantic": "pydantic" in sys.modules,
+            }))
+            """
+        )
+    )
+
+
+def _run_main_import_probe() -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            """
+            import json
+            import sys
+
+            from datamodel_code_generator.__main__ import main
+
+            print(json.dumps({
+                "main_callable": callable(main),
+                "imported_format": "datamodel_code_generator.format" in sys.modules,
+                "imported_builtin_formatter": "datamodel_code_generator._builtin_formatter" in sys.modules,
+            }))
             """
         )
     )
@@ -131,3 +208,37 @@ def test_output_format_json_schema_exact_fast_paths_skip_argument_parser_import(
         for fast_path in covered_fast_paths:
             assert fast_path["code"] == 0
             assert fast_path["stdout"] == parsed_path["stdout"]
+
+
+@pytest.mark.allow_direct_assert
+def test_help_fast_path_skips_json_config_and_formatter_imports() -> None:
+    """--help builds argparse choices without importing validation or formatter runtimes."""
+    fast_path = _run_module_help_fast_path()
+
+    assert fast_path["code"] == 0
+    assert "Generate Python data models" in fast_path["stdout"]
+    assert fast_path["imported_arguments"] is True
+    assert fast_path["imported_format"] is False
+    assert fast_path["imported_json_config"] is False
+    assert fast_path["imported_pydantic"] is False
+    assert fast_path["imported_validators"] is False
+
+
+@pytest.mark.allow_direct_assert
+def test_argument_parser_json_option_loads_json_config_lazily() -> None:
+    """JSON-backed argparse callbacks still load and validate only when invoked."""
+    parsed = _run_argument_parser_json_option_parse()
+
+    assert parsed["model_name_map"] == {"User": "Account"}
+    assert parsed["imported_json_config"] is True
+    assert parsed["imported_pydantic"] is True
+
+
+@pytest.mark.allow_direct_assert
+def test_main_import_skips_formatter_runtime() -> None:
+    """Importing CLI main does not load formatter runtime until a black check is needed."""
+    imported = _run_main_import_probe()
+
+    assert imported["main_callable"] is True
+    assert imported["imported_format"] is False
+    assert imported["imported_builtin_formatter"] is False
