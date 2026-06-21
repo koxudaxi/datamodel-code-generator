@@ -2208,6 +2208,17 @@ def test_main_root_model_with_additional_properties_no_use_union_operator(output
     )
 
 
+def test_main_import_fast_path_primitives(output_file: Path) -> None:
+    """Test primitive fields keep Optional imports with no union operator."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "import_fast_path_primitives.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--no-use-union-operator"],
+    )
+
+
 def test_main_root_model_with_additional_properties_literal(min_version: str, output_file: Path) -> None:
     """Test root model additional properties with literal types."""
     run_main_and_assert(

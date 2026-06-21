@@ -390,6 +390,15 @@ class DataModelFieldBase(_BaseModel):
 
     def _collect_field_imports(self, *, needs_annotated: bool) -> tuple[Import, ...]:
         """Collect type-hint imports; needs_annotated is passed in so subclasses can precompute it."""
+        if self._can_collect_imports_without_type_hint(needs_annotated=needs_annotated):
+            if self._can_skip_data_type_imports():
+                return (IMPORT_OPTIONAL,) if self._needs_optional_import_without_type_hint() else ()
+
+            imports = tuple(self.data_type.all_imports)
+            if self._needs_optional_import_without_type_hint() and IMPORT_OPTIONAL not in imports:
+                return chain_as_tuple(imports, (IMPORT_OPTIONAL,))
+            return imports
+
         type_hint = self.type_hint
         has_union = not self._use_union_operator and UNION_PREFIX in type_hint
         has_optional = OPTIONAL_PREFIX in type_hint
@@ -413,6 +422,81 @@ class DataModelFieldBase(_BaseModel):
         if needs_annotated:
             imports.append((IMPORT_ANNOTATED,))
         return chain_as_tuple(*imports)
+
+    def _can_collect_imports_without_type_hint(self, *, needs_annotated: bool) -> bool:
+        """Return whether imports can be collected without rendering the type hint."""
+        if needs_annotated:
+            return False
+        if self.parent and self.parent.has_forward_reference:
+            return False
+
+        data_type = self.data_type
+        type_name = data_type.alias or data_type.type
+        if type_name and (UNION_PREFIX in type_name or OPTIONAL_PREFIX in type_name):
+            return False
+
+        return not (
+            data_type.reference
+            or data_type.data_types
+            or data_type.dict_key
+            or data_type.literals
+            or data_type.enum_member_literals
+            or (data_type.is_optional and data_type.type == ANY)
+        )
+
+    def _can_skip_data_type_imports(self) -> bool:
+        """Return whether the simple DataType cannot contribute imports."""
+        data_type = self.data_type
+        return not (
+            data_type.import_
+            or data_type.kwargs
+            or data_type.is_optional
+            or data_type.is_dict
+            or data_type.is_list
+            or data_type.is_set
+            or data_type.is_frozen_set
+            or data_type.is_mapping
+            or data_type.is_sequence
+            or data_type.is_tuple
+            or data_type.use_generic_container
+        )
+
+    def _needs_optional_import_without_type_hint(self) -> bool:
+        """Return whether the field-level nullable wrapper needs typing.Optional."""
+        data_type = self.data_type
+        if (
+            self._use_union_operator
+            or not self._has_renderable_data_type_without_type_hint()
+            or self.has_default_factory
+            or (data_type.is_optional and data_type.type != ANY)
+        ):
+            return False
+
+        match self.nullable:
+            case True:
+                return True
+            case False:
+                return False
+            case None if self.required:
+                return bool(self.type_has_null)
+            case None:
+                return bool(self.fall_back_to_nullable)
+        return False  # pragma: no cover
+
+    def _has_renderable_data_type_without_type_hint(self) -> bool:
+        """Return whether this simple DataType renders to something other than None."""
+        data_type = self.data_type
+        return bool(
+            data_type.alias
+            or data_type.type
+            or data_type.is_dict
+            or data_type.is_list
+            or data_type.is_set
+            or data_type.is_frozen_set
+            or data_type.is_mapping
+            or data_type.is_sequence
+            or data_type.is_tuple
+        )
 
     @property
     def docstring(self) -> str | None:
