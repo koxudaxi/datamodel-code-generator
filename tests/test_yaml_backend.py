@@ -11,12 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
-from datamodel_code_generator import (
-    InputFileType,
-    infer_input_type,
-    load_yaml,
-    load_yaml_dict_from_path,
-)
+from datamodel_code_generator import InputFileType, infer_input_type, load_yaml, load_yaml_dict_from_path
 from datamodel_code_generator.util import (
     _is_yaml_deprecated_bool_warning_enabled,
     get_yaml_backend,
