@@ -235,6 +235,12 @@ class DataModelField(DataModelFieldBase):
     def _process_annotated_field_arguments(self, field_arguments: list[str]) -> list[str]:  # noqa: PLR6301
         return field_arguments
 
+    def _should_strip_default_none_from_field(self) -> bool:
+        if self.data_type.is_optional:
+            return False
+
+        return self.default is None
+
     def _get_field_data_and_default_factory(self) -> tuple[dict[str, Any], Any]:
         """Build Field() keyword data and the effective default_factory."""
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS}
@@ -306,8 +312,11 @@ class DataModelField(DataModelFieldBase):
             and not self.extras.get("validate_default")
         ):
             field_arguments = ["...", *field_arguments]
-        elif not default_factory:
-            default_repr = represent_python_value(self.default)
+        elif (
+            not default_factory
+            and (default_repr := represent_python_value(self.default))
+            and (not self.strip_default_none or not self._should_strip_default_none_from_field())
+        ):
             field_arguments = [default_repr, *field_arguments]
 
         if self.is_class_var:
