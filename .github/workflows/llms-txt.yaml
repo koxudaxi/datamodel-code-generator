@@ -13,6 +13,11 @@ on:
       - 'scripts/build_preset_docs.py'
       - 'src/datamodel_code_generator/parser/schema_version.py'
       - 'scripts/build_schema_docs.py'
+      - 'scripts/build_release_benchmark_docs.py'
+      - 'docs/data/release-benchmarks.json'
+      - 'docs/data/release-benchmark-notes.json'
+      - 'docs/assets/benchmarks/release-benchmarks.css'
+      - 'docs/assets/benchmarks/release-benchmarks.js'
       - 'docs/**/*.md'
       - 'README.md'
       - 'zensical.toml'
@@ -67,5 +72,7 @@ jobs:
         run: .tox/schema-docs/bin/python scripts/build_schema_docs.py
       - name: Build preset docs
         run: .tox/preset-docs/bin/python scripts/build_preset_docs.py
+      - name: Build release benchmark docs
+        run: .tox/llms-txt/bin/python scripts/build_release_benchmark_docs.py
       - name: Build llms.txt
         run: .tox/llms-txt/bin/python scripts/build_llms_txt.py

@@ -1,0 +1,2 @@
+release: datamodel-code-generator[ruff]==0.65.0
+main: datamodel-code-generator[ruff] @ git+https://github.com/koxudaxi/datamodel-code-generator.git@main

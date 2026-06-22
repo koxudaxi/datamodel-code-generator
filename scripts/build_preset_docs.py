@@ -38,12 +38,14 @@ README_OUTPUT_MODEL_TYPE_OPTION_LINK = (
     "https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-customization/#output-model-type"
 )
 README_FORMATTER_BEHAVIOR_LINK = "https://datamodel-code-generator.koxudaxi.dev/formatter-behavior/"
+README_PERFORMANCE_BENCHMARKS_LINK = "https://datamodel-code-generator.koxudaxi.dev/performance-benchmarks/"
 DOCS_PRESETS_LINK = "presets.md"
 DOCS_CLI_REFERENCE_LINK = "cli-reference/index.md"
 DOCS_PRESET_OPTION_LINK = "cli-reference/base-options.md#preset"
 DOCS_INPUT_FILE_TYPE_OPTION_LINK = "cli-reference/base-options.md#input-file-type"
 DOCS_OUTPUT_MODEL_TYPE_OPTION_LINK = "cli-reference/model-customization.md#output-model-type"
 DOCS_FORMATTER_BEHAVIOR_LINK = "formatter-behavior.md"
+DOCS_PERFORMANCE_BENCHMARKS_LINK = "performance-benchmarks.md"
 
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
@@ -325,6 +327,8 @@ Custom templates can emit Python outside the standard generated model patterns c
 custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted
 output with a custom template, please open an issue with a small reproducer. See
 [Formatter Behavior]({README_FORMATTER_BEHAVIOR_LINK}) for details.
+
+See [Performance Benchmarks]({README_PERFORMANCE_BENCHMARKS_LINK}) for release benchmark data and interactive charts.
 """
 
 
@@ -381,7 +385,9 @@ If you prefer Ruff, install it with `pip install 'datamodel-code-generator[ruff]
 Custom templates can emit Python outside the standard generated model patterns covered by `builtin`, so
 custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted
 output with a custom template, please open an issue with a small reproducer. See
-[Formatter Behavior]({DOCS_FORMATTER_BEHAVIOR_LINK}) for details."""
+[Formatter Behavior]({DOCS_FORMATTER_BEHAVIOR_LINK}) for details.
+
+See [Performance Benchmarks]({DOCS_PERFORMANCE_BENCHMARKS_LINK}) for release benchmark data and interactive charts."""
 
 
 def parse_args() -> argparse.Namespace:

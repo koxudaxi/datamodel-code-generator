@@ -77,11 +77,20 @@ nav = [
     ]}
   ]},
   { "Conformance Dashboard" = "conformance.md" },
+  { "Performance Benchmarks" = "performance-benchmarks.md" },
   { "Deprecations" = "deprecations.md" },
   { "Experimental Features" = "experimental.md" },
   { "FAQ" = "faq.md" },
   { "Architecture" = "architecture.md" },
   { "Development-Contributing" = "development-contributing.md" }
+]
+
+extra_css = [
+  "assets/benchmarks/release-benchmarks.css"
+]
+
+extra_javascript = [
+  "assets/benchmarks/release-benchmarks.js"
 ]
 
 [project.theme]
