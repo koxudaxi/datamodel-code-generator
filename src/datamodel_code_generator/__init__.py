@@ -163,7 +163,7 @@ _YAML_FAST_PATH_UNSAFE_SCALAR_PATTERN = re.compile(
     r"[-+]?\d[\d_]*[eE][-+]?\d+)"
     r"(?![A-Za-z0-9_])"
 )
-_YAML_FAST_PATH_UNSAFE_TIMESTAMP_PATTERN = re.compile(r"(?<![A-Za-z0-9_])\d{4}-\d{1,2}-\d{1,2}(?=$|[Tt]|\s)")
+_YAML_FAST_PATH_UNSAFE_TIMESTAMP_PATTERN = re.compile(r"(?<![A-Za-z0-9_])\d{4}-\d{1,2}-\d{1,2}(?=\Z|[Tt]|\s)")
 _YAML_FAST_PATH_UNSAFE_MARKERS = ("!", "%TAG", "tag:yaml.org,2002:")
 
 
