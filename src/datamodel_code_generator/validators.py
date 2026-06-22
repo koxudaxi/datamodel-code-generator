@@ -9,7 +9,7 @@ import keyword
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, RootModel, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, RootModel, ValidationError, field_validator
 
 _MIN_DOTTED_PATH_PARTS = 2
 
@@ -47,6 +47,8 @@ def _validate_dotted_python_identifier_path(value: str) -> str:
 
 class ValidatorDefinition(BaseModel):
     """Definition of a single validator."""
+
+    model_config = ConfigDict(defer_build=True)
 
     field: str | None = None
     fields: list[str] | None = None
@@ -93,11 +95,15 @@ class ValidatorDefinition(BaseModel):
 class ModelValidators(BaseModel):
     """Validators configuration for a single model."""
 
+    model_config = ConfigDict(defer_build=True)
+
     validators: list[ValidatorDefinition]
 
 
 class ValidatorsConfig(RootModel[dict[str, ModelValidators]]):
     """Root model for validators configuration."""
+
+    model_config = ConfigDict(defer_build=True)
 
 
 def format_validation_error(error: ValidationError) -> str:

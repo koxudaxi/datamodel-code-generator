@@ -33,7 +33,7 @@ from typing import (
 from urllib.parse import ParseResult
 from warnings import warn
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing_extensions import Unpack
 
 from datamodel_code_generator import (
@@ -963,6 +963,8 @@ def _copy_data_types(data_types: list[DataType]) -> list[DataType]:
 class Result(BaseModel):
     """Generated code result with optional source file reference."""
 
+    model_config = ConfigDict(defer_build=True)
+
     body: str
     future_imports: str = ""
     source: Optional[Path] = None  # noqa: UP045
@@ -970,6 +972,8 @@ class Result(BaseModel):
 
 class Source(BaseModel):
     """Schema source file with path and content."""
+
+    model_config = ConfigDict(defer_build=True)
 
     path: Path
     text: str = ""

@@ -192,7 +192,9 @@ class ConstraintsBase(_BaseModel):
     unique_items: Optional[bool] = Field(None, alias="uniqueItems")  # noqa: UP045
     _exclude_fields: ClassVar[set[str]] = {"has_constraints", "_exclude_unset_dump"}
     model_config = ConfigDict(  # ty: ignore
-        arbitrary_types_allowed=True, ignored_types=(cached_property,)
+        arbitrary_types_allowed=True,
+        ignored_types=(cached_property,),
+        defer_build=True,
     )
 
     @cached_property

@@ -201,7 +201,7 @@ def _get_base_model_class() -> type:
     from pydantic import ConfigDict as _ConfigDict  # noqa: PLC0415
 
     class _BaseModelV2(_PydanticBaseModel):
-        model_config = _ConfigDict(strict=False)
+        model_config = _ConfigDict(strict=False, defer_build=True)
 
     return _BaseModelV2
 

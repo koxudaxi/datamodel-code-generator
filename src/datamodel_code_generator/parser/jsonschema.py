@@ -79,7 +79,6 @@ from datamodel_code_generator.types import (
     is_python_type_annotation,
 )
 from datamodel_code_generator.util import BaseModel
-from datamodel_code_generator.validators import _validate_dotted_python_identifier_path
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
@@ -547,6 +546,7 @@ class JsonSchemaObject(BaseModel):
     model_config = ConfigDict(  # ty: ignore
         arbitrary_types_allowed=True,
         ignored_types=(cached_property,),
+        defer_build=True,
     )
 
     def model_post_init(self, __context: Any, /) -> None:
@@ -720,6 +720,8 @@ def _validate_schema_python_import_path(value: Any, field_name: str) -> str:
     if not isinstance(value, str):
         msg = f"{field_name} must be a dotted Python identifier path: {value!r}"
         raise Error(msg)
+    from datamodel_code_generator.validators import _validate_dotted_python_identifier_path  # noqa: PLC0415
+
     try:
         return _validate_dotted_python_identifier_path(value)
     except ValueError as exc:
