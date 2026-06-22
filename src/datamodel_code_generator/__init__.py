@@ -88,11 +88,10 @@ if TYPE_CHECKING:
         XMLSchemaParserConfigDict,
     )
     from datamodel_code_generator._types.generate_config_dict import GenerateConfigDict
-    from datamodel_code_generator.config import GenerateConfig, ParserConfig
+    from datamodel_code_generator.config import GenerateConfig
     from datamodel_code_generator.model_metadata import ModelMetadata
 
 T = TypeVar("T")
-_ConfigT = TypeVar("_ConfigT", bound="ParserConfig")
 
 YamlScalar: TypeAlias = str | int | float | bool | None
 YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
@@ -693,8 +692,46 @@ def _build_module_content(
     return "\n".join(lines)
 
 
+@_lru_cache(maxsize=1)
+def _get_internal_parser_config_model() -> type[Any]:
+    """Return a lightweight Pydantic model for already-validated parser options."""
+    from pydantic import BaseModel, ConfigDict  # noqa: PLC0415
+
+    class _InternalParserConfig(BaseModel):
+        model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True)
+
+    return _InternalParserConfig
+
+
+_INTERNAL_PARSER_CONFIG_DEFAULTS: dict[str, Any] = {
+    "allow_responses_without_content": False,
+    "apply_default_values_for_required_fields": False,
+    "base_path": None,
+    "custom_class_name_generator": None,
+    "default_field_extras": None,
+    "default_value_overrides": None,
+    "defer_formatting": False,
+    "dump_resolve_reference_action": None,
+    "force_optional_for_required_fields": False,
+    "known_third_party": None,
+    "remote_text_cache": None,
+    "target_date_class": None,
+    "target_datetime_class": None,
+}
+
+
+def _generate_config_values(generate_config: GenerateConfig) -> dict[str, Any]:
+    values = vars(generate_config).copy()
+    if not (fields := getattr(type(generate_config), "model_fields", None)):
+        return values
+
+    values.update({
+        field_name: getattr(generate_config, field_name) for field_name in fields if field_name not in values
+    })
+    return values
+
+
 def _create_parser_config(
-    config_class: type[_ConfigT],
     generate_config: GenerateConfig,
     additional_options: ParserConfigDict
     | AvroParserConfigDict
@@ -703,19 +740,15 @@ def _create_parser_config(
     | AsyncAPIParserConfigDict
     | GraphQLParserConfigDict
     | ProtobufParserConfigDict,
-) -> _ConfigT:
+) -> Any:
     """Create a parser config from GenerateConfig with additional options.
 
-    Filters GenerateConfig fields to only those expected by the parser config class,
-    then merges with additional_options.
+    ``generate_config`` is already validated by the CLI or public generate()
+    entrypoint. Public Parser(..., **options) still validates separately.
     """
-    parser_config_fields = set(config_class.model_fields.keys())
-    all_options = {
-        k: v
-        for k, v in generate_config.model_dump().items()
-        if k in parser_config_fields and k not in additional_options
-    } | dict(additional_options)
-    return config_class.model_validate(all_options)
+    values = {**_INTERNAL_PARSER_CONFIG_DEFAULTS, **_generate_config_values(generate_config)}
+    values.update(dict(additional_options))
+    return _get_internal_parser_config_model().model_construct(**values)
 
 
 _SchemaVersions: TypeAlias = tuple[
@@ -927,6 +960,7 @@ def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
         config.target_python_version,
         use_type_alias=config.use_type_alias,
         use_root_model_type_alias=config.use_root_model_type_alias,
+        include_graphql_models=input_file_type == InputFileType.GraphQL,
     )
 
     if source_override is not None:
@@ -1000,7 +1034,6 @@ def _build_parser(  # noqa: PLR0911, PLR0913
 ) -> Any:
     match input_file_type:
         case InputFileType.OpenAPI:
-            from datamodel_code_generator.config import OpenAPIParserConfig  # noqa: PLC0415
             from datamodel_code_generator.parser.openapi import OpenAPIParser  # noqa: PLC0415
 
             openapi_additional_options: OpenAPIParserConfigDict = {
@@ -1008,10 +1041,9 @@ def _build_parser(  # noqa: PLR0911, PLR0913
                 "openapi_version": openapi_version,
                 **additional_options,
             }
-            parser_config = _create_parser_config(OpenAPIParserConfig, config, openapi_additional_options)
+            parser_config = _create_parser_config(config, openapi_additional_options)
             return OpenAPIParser(source=source, config=parser_config)  # ty: ignore
         case InputFileType.AsyncAPI:
-            from datamodel_code_generator.config import AsyncAPIParserConfig  # noqa: PLC0415
             from datamodel_code_generator.parser.asyncapi import AsyncAPIParser  # noqa: PLC0415
 
             asyncapi_additional_options: AsyncAPIParserConfigDict = {
@@ -1019,20 +1051,18 @@ def _build_parser(  # noqa: PLR0911, PLR0913
                 "asyncapi_version": asyncapi_version,
                 **additional_options,
             }
-            parser_config = _create_parser_config(AsyncAPIParserConfig, config, asyncapi_additional_options)
+            parser_config = _create_parser_config(config, asyncapi_additional_options)
             return AsyncAPIParser(source=source, config=parser_config)  # ty: ignore
         case InputFileType.XMLSchema:
-            from datamodel_code_generator.config import XMLSchemaParserConfig  # noqa: PLC0415
             from datamodel_code_generator.parser.xmlschema import XMLSchemaParser  # noqa: PLC0415
 
             xmlschema_additional_options: XMLSchemaParserConfigDict = {
                 "xmlschema_version": xmlschema_version,
                 **additional_options,
             }
-            parser_config = _create_parser_config(XMLSchemaParserConfig, config, xmlschema_additional_options)
+            parser_config = _create_parser_config(config, xmlschema_additional_options)
             return XMLSchemaParser(source=source, config=parser_config)  # ty: ignore
         case InputFileType.Protobuf:
-            from datamodel_code_generator.config import ProtobufParserConfig  # noqa: PLC0415
             from datamodel_code_generator.parser.protobuf import ProtobufParser  # noqa: PLC0415
 
             protobuf_additional_options: ProtobufParserConfigDict = {
@@ -1040,17 +1070,15 @@ def _build_parser(  # noqa: PLR0911, PLR0913
                 "protobuf_version": protobuf_version,
                 "skip_root_model": True,
             }
-            parser_config = _create_parser_config(ProtobufParserConfig, config, protobuf_additional_options)
+            parser_config = _create_parser_config(config, protobuf_additional_options)
             return ProtobufParser(source=source, config=parser_config)  # ty: ignore
         case InputFileType.Avro:
-            from datamodel_code_generator.config import AvroParserConfig  # noqa: PLC0415
             from datamodel_code_generator.parser.avro import AvroParser  # noqa: PLC0415
 
             avro_additional_options: AvroParserConfigDict = {**additional_options}
-            parser_config = _create_parser_config(AvroParserConfig, config, avro_additional_options)
+            parser_config = _create_parser_config(config, avro_additional_options)
             return AvroParser(source=source, config=parser_config)  # ty: ignore
         case InputFileType.GraphQL:
-            from datamodel_code_generator.config import GraphQLParserConfig  # noqa: PLC0415
             from datamodel_code_generator.parser.graphql import GraphQLParser  # noqa: PLC0415
 
             graphql_additional_options: GraphQLParserConfigDict = {
@@ -1058,17 +1086,16 @@ def _build_parser(  # noqa: PLR0911, PLR0913
                 "data_model_union_type": data_model_types.union_model,
                 **additional_options,
             }
-            parser_config = _create_parser_config(GraphQLParserConfig, config, graphql_additional_options)
+            parser_config = _create_parser_config(config, graphql_additional_options)
             return GraphQLParser(source=source, config=parser_config)  # ty: ignore
         case _:
-            from datamodel_code_generator.config import JSONSchemaParserConfig  # noqa: PLC0415
             from datamodel_code_generator.parser.jsonschema import JsonSchemaParser  # noqa: PLC0415
 
             jsonschema_additional_options: JSONSchemaParserConfigDict = {
                 "jsonschema_version": jsonschema_version,
                 **additional_options,
             }
-            parser_config = _create_parser_config(JSONSchemaParserConfig, config, jsonschema_additional_options)
+            parser_config = _create_parser_config(config, jsonschema_additional_options)
             return JsonSchemaParser(source=source, config=parser_config)  # ty: ignore
     msg = f"Unsupported input file type: {input_file_type}"
     raise Error(msg)
@@ -1243,14 +1270,12 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     Raises:
         ValueError: If both config and **options are provided.
     """
-    from datamodel_code_generator.config import GenerateConfig  # noqa: PLC0415
-
     if config is not None and options:
         msg = "Cannot specify both 'config' and keyword arguments. Use one or the other."
         raise ValueError(msg)
 
     if config is None:
-        from datamodel_code_generator.config import _rebuild_generate_config  # noqa: PLC0415
+        from datamodel_code_generator.config import GenerateConfig, _rebuild_generate_config  # noqa: PLC0415
 
         _rebuild_generate_config()
         config = GenerateConfig.model_validate(options)

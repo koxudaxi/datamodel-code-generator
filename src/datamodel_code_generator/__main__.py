@@ -113,6 +113,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional, 
 from urllib.parse import ParseResult, urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
+from typing_extensions import Self
 
 from datamodel_code_generator import (
     AllExportsScope,
@@ -132,18 +133,14 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator._format_types import Formatter, PythonVersion
 from datamodel_code_generator.arguments import arg_parser, namespace
-from datamodel_code_generator.config import BaseGenerateConfig
+from datamodel_code_generator.base_config import BaseGenerateConfig
 from datamodel_code_generator.deprecations import render_deprecations, warn_deprecated
-from datamodel_code_generator.reference import is_url
-from datamodel_code_generator.types import StrictTypes
+from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.util import load_toml
-from datamodel_code_generator.validators import ModelValidators
 
 if TYPE_CHECKING:
     from argparse import Namespace
     from collections import defaultdict
-
-    from typing_extensions import Self
 
     from datamodel_code_generator._structured_output import (
         CheckDifferencePayload,
@@ -151,6 +148,11 @@ if TYPE_CHECKING:
         GeneratedFilePayload,
     )
     from datamodel_code_generator.json_config import JsonConfigFieldName, JsonConfigSource
+    from datamodel_code_generator.validators import ModelValidators
+
+    ValidatorsConfigValue: TypeAlias = Mapping[str, ModelValidators]
+else:
+    ValidatorsConfigValue: TypeAlias = Mapping[str, Any]
 
 # Options that should be excluded from pyproject.toml config generation
 EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
@@ -217,6 +219,12 @@ def is_supported_in_black(python_version: PythonVersion) -> bool:
     return supported(python_version)
 
 
+def is_url(ref: str) -> bool:
+    """Check if a reference string is a URL (HTTP, HTTPS, or file scheme)."""
+    # Keep this local so importing the CLI does not import reference.py and its model stack.
+    return ref.startswith(("https://", "http://", "file://"))
+
+
 _HttpKeyValuePair: TypeAlias = tuple[str, str]
 _HttpKeyValueInput: TypeAlias = str | _HttpKeyValuePair
 _HttpSeparator: TypeAlias = Literal[":", "="]
@@ -269,7 +277,12 @@ def _validate_http_key_value_options(
 class Config(BaseGenerateConfig):  # noqa: PLR0904
     """Configuration model for code generation."""
 
-    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True, protected_namespaces=())  # ty: ignore
+    model_config = ConfigDict(
+        extra="ignore",
+        arbitrary_types_allowed=True,
+        protected_namespaces=(),
+        defer_build=True,
+    )  # ty: ignore
 
     def get(self, item: str) -> Any:  # pragma: no cover
         """Get attribute value by name."""
@@ -289,7 +302,6 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
         "serialization_aliases",
         "extra_template_data",
         "custom_formatters_kwargs",
-        "validators",
         "default_values",
         "base_class_map",
         "model_name_map",
@@ -309,6 +321,20 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
         try:
             json_config_source: JsonConfigSource = cast("JsonConfigSource", value)
             return load_json_config_field(field_name, json_config_source)
+        except JsonConfigError as e:
+            raise Error(str(e)) from e
+
+    @field_validator("validators", mode="before")
+    @classmethod
+    def validate_validators_config(cls, value: Any) -> Any:
+        """Validate validators lazily only when the option is present."""
+        if value is None:
+            return None
+
+        from datamodel_code_generator.json_config import JsonConfigError, load_json_config_field  # noqa: PLC0415
+
+        try:
+            return load_json_config_field("validators", cast("JsonConfigSource", value))
         except JsonConfigError as e:
             raise Error(str(e)) from e
 
@@ -524,7 +550,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
     debug: bool = False
     disable_warnings: bool = False
     extra_template_data: Mapping[str, dict[str, Any]] | None = None
-    validators: Optional[Mapping[str, ModelValidators]] = None  # noqa: UP045
+    validators: Optional[ValidatorsConfigValue] = None  # noqa: UP045
     aliases: Optional[Mapping[str, str | list[str]]] = None  # noqa: UP045
     serialization_aliases: Optional[Mapping[str, str]] = None  # noqa: UP045
     default_values: Optional[Mapping[str, Any]] = None  # noqa: UP045
@@ -541,7 +567,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
 
     def merge_args(self, args: Namespace) -> None:
         """Merge command-line arguments into config."""
-        set_args = _explicit_config_args(args)
+        set_args = _prepare_cli_config_args(_explicit_config_args(args))
         explicit_input_sources = {
             field_name for field_name in ("input", "url", "input_model") if field_name in set_args
         }
@@ -550,23 +576,45 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
             for field_name in {"input", "url", "input_model"} - explicit_input_sources:
                 setattr(self, field_name, None)
 
-        if set_args.get("output_model_type") == DataModelType.MsgspecStruct.value:
-            set_args["use_annotated"] = True
-
-        if set_args.get("use_annotated"):
-            set_args["field_constraints"] = True
-
         parsed_args = Config.model_validate(set_args)
         for field_name in set_args:
             setattr(self, field_name, getattr(parsed_args, field_name))
 
 
-Config.model_rebuild(_types_namespace={"ModelValidators": ModelValidators})
-
-
 def _explicit_config_args(args: Namespace) -> dict[str, _RawConfigValue]:
     """Return command-line values that explicitly target Config fields."""
     return {field: value for field in Config.get_fields() if (value := getattr(args, field, None)) is not None}
+
+
+def _prepare_cli_config_args(set_args: Mapping[str, _RawConfigValue]) -> dict[str, _RawConfigValue]:
+    """Apply CLI-only derived config values before validation."""
+    if not set_args:
+        return {}
+
+    prepared_args = dict(set_args)
+    if prepared_args.get("output_model_type") == DataModelType.MsgspecStruct.value:
+        prepared_args["use_annotated"] = True
+
+    if prepared_args.get("use_annotated"):
+        prepared_args["field_constraints"] = True
+
+    return prepared_args
+
+
+def _create_config(
+    pyproject_config: Mapping[str, Any],
+    cli_config_args: Mapping[str, _RawConfigValue],
+) -> Config:
+    """Create the final CLI config while preserving pyproject/CLI validation order."""
+    if not pyproject_config:
+        return Config.model_validate(_prepare_cli_config_args(cli_config_args))
+
+    from argparse import Namespace as ArgNamespace  # noqa: PLC0415
+
+    config = Config.model_validate(pyproject_config)
+    cli_namespace = ArgNamespace(**cli_config_args)
+    config.merge_args(cli_namespace)
+    return config
 
 
 def _apply_preset(
@@ -1025,154 +1073,26 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     default_value_overrides: Mapping[str, Any] | None = None,
 ) -> str | Mapping[tuple[str, ...], str] | None:
     """Run code generation with the given config and parameters."""
+    generation_config = config.model_copy(
+        update={
+            "input_filename": None,
+            "output": output,
+            "preset": None,
+            "extra_template_data": extra_template_data,
+            "aliases": aliases,
+            "serialization_aliases": serialization_aliases,
+            "command_line": command_line,
+            "apply_default_values_for_required_fields": config.use_default,
+            "force_optional_for_required_fields": config.force_optional,
+            "custom_formatters_kwargs": custom_formatters_kwargs,
+            "settings_path": settings_path,
+            "validators": validators,
+            "default_value_overrides": default_value_overrides,
+        }
+    )
     return generate(
         input_=input_,
-        input_file_type=config.input_file_type,
-        output=output,
-        emit_model_metadata=config.emit_model_metadata,
-        output_model_type=config.output_model_type,
-        target_python_version=config.target_python_version,
-        target_pydantic_version=config.target_pydantic_version,
-        base_class=config.base_class,
-        base_class_map=config.base_class_map,
-        model_name_map=config.model_name_map,
-        additional_imports=config.additional_imports,
-        class_decorators=config.class_decorators,
-        custom_template_dir=config.custom_template_dir,
-        validation=config.validation,
-        field_constraints=config.field_constraints,
-        alias_generator=config.alias_generator,
-        snake_case_field=config.snake_case_field,
-        strip_default_none=config.strip_default_none,
-        extra_template_data=extra_template_data,  # ty: ignore
-        aliases=aliases,
-        serialization_aliases=serialization_aliases,
-        disable_timestamp=config.disable_timestamp,
-        enable_version_header=config.enable_version_header,
-        enable_command_header=config.enable_command_header,
-        enable_generated_header_marker=config.enable_generated_header_marker,
-        command_line=command_line,
-        allow_population_by_field_name=config.allow_population_by_field_name,
-        allow_extra_fields=config.allow_extra_fields,
-        extra_fields=config.extra_fields,
-        use_generic_base_class=config.use_generic_base_class,
-        apply_default_values_for_required_fields=config.use_default,
-        force_optional_for_required_fields=config.force_optional,
-        class_name=config.class_name,
-        allow_leading_underscore_class_name=config.allow_leading_underscore_class_name,
-        class_name_prefix=config.class_name_prefix,
-        class_name_suffix=config.class_name_suffix,
-        class_name_affix_scope=config.class_name_affix_scope,
-        use_standard_collections=config.use_standard_collections,
-        use_schema_description=config.use_schema_description,
-        use_field_description=config.use_field_description,
-        use_field_description_example=config.use_field_description_example,
-        use_attribute_docstrings=config.use_attribute_docstrings,
-        use_inline_field_description=config.use_inline_field_description,
-        use_single_line_docstring=config.use_single_line_docstring,
-        use_default_kwarg=config.use_default_kwarg,
-        reuse_model=config.reuse_model,
-        reuse_scope=config.reuse_scope,
-        shared_module_name=config.shared_module_name,
-        encoding=config.encoding,
-        enum_field_as_literal=config.enum_field_as_literal,
-        enum_field_as_literal_map=config.enum_field_as_literal_map,
-        ignore_enum_constraints=config.ignore_enum_constraints,
-        use_one_literal_as_default=config.use_one_literal_as_default,
-        use_enum_values_in_discriminator=config.use_enum_values_in_discriminator,
-        set_default_enum_member=config.set_default_enum_member,
-        use_subclass_enum=config.use_subclass_enum,
-        use_specialized_enum=config.use_specialized_enum,
-        strict_nullable=config.strict_nullable,
-        use_generic_container_types=config.use_generic_container_types,
-        enable_faux_immutability=config.enable_faux_immutability,
-        disable_appending_item_suffix=config.disable_appending_item_suffix,
-        strict_types=config.strict_types,
-        empty_enum_field_name=config.empty_enum_field_name,
-        field_extra_keys=config.field_extra_keys,
-        field_include_all_keys=config.field_include_all_keys,
-        field_extra_keys_without_x_prefix=config.field_extra_keys_without_x_prefix,
-        model_extra_keys=config.model_extra_keys,
-        model_extra_keys_without_x_prefix=config.model_extra_keys_without_x_prefix,
-        openapi_scopes=config.openapi_scopes,
-        include_path_parameters=config.include_path_parameters,
-        openapi_include_paths=config.openapi_include_paths,
-        openapi_include_info_version=config.openapi_include_info_version,
-        graphql_no_typename=config.graphql_no_typename,
-        wrap_string_literal=config.wrap_string_literal,
-        use_title_as_name=config.use_title_as_name,
-        infer_union_variant_names=config.infer_union_variant_names,
-        use_operation_id_as_name=config.use_operation_id_as_name,
-        use_unique_items_as_set=config.use_unique_items_as_set,
-        use_tuple_for_fixed_items=config.use_tuple_for_fixed_items,
-        use_closed_typed_dict=config.use_closed_typed_dict,
-        allof_merge_mode=config.allof_merge_mode,
-        allof_class_hierarchy=config.allof_class_hierarchy,
-        allow_remote_refs=config.allow_remote_refs,
-        allow_private_network=config.allow_private_network,
-        http_headers=config.http_headers,
-        http_local_ref_path=config.http_local_ref_path,
-        http_ignore_tls=config.http_ignore_tls,
-        http_timeout=config.http_timeout,
-        use_annotated=config.use_annotated,
-        use_serialize_as_any=config.use_serialize_as_any,
-        use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
-        use_decimal_for_multiple_of=config.use_decimal_for_multiple_of,
-        original_field_name_delimiter=config.original_field_name_delimiter,
-        use_double_quotes=config.use_double_quotes,
-        collapse_root_models=config.collapse_root_models,
-        collapse_root_models_name_strategy=config.collapse_root_models_name_strategy,
-        collapse_reuse_models=config.collapse_reuse_models,
-        skip_root_model=config.skip_root_model,
-        use_root_model_sequence_interface=config.use_root_model_sequence_interface,
-        use_type_alias=config.use_type_alias,
-        use_root_model_type_alias=config.use_root_model_type_alias,
-        use_union_operator=config.use_union_operator,
-        special_field_name_prefix=config.special_field_name_prefix,
-        remove_special_field_name_prefix=config.remove_special_field_name_prefix,
-        capitalise_enum_members=config.capitalise_enum_members,
-        keep_model_order=config.keep_model_order,
-        custom_file_header=config.custom_file_header,
-        custom_file_header_path=config.custom_file_header_path,
-        custom_formatters=config.custom_formatters,
-        custom_formatters_kwargs=custom_formatters_kwargs,
-        use_pendulum=config.use_pendulum,
-        use_standard_primitive_types=config.use_standard_primitive_types,
-        use_object_type=config.use_object_type,
-        http_query_parameters=config.http_query_parameters,
-        treat_dot_as_module=config.treat_dot_as_module,
-        use_exact_imports=config.use_exact_imports,
-        use_type_checking_imports=config.use_type_checking_imports,
-        union_mode=config.union_mode,
-        output_datetime_class=config.output_datetime_class,
-        output_date_class=config.output_date_class,
-        keyword_only=config.keyword_only,
-        frozen_dataclasses=config.frozen_dataclasses,
-        no_alias=config.no_alias,
-        use_serialization_alias=config.use_serialization_alias,
-        use_frozen_field=config.use_frozen_field,
-        use_default_factory_for_optional_nested_models=config.use_default_factory_for_optional_nested_models,
-        formatters=config.formatters,
-        builtin_format_line_length=config.builtin_format_line_length,
-        settings_path=settings_path,
-        parent_scoped_naming=config.parent_scoped_naming,
-        naming_strategy=config.naming_strategy,
-        duplicate_name_suffix=config.duplicate_name_suffix,
-        dataclass_arguments=config.dataclass_arguments,
-        disable_future_imports=config.disable_future_imports,
-        type_mappings=config.type_mappings,
-        type_overrides=config.type_overrides,
-        read_only_write_only_model_type=config.read_only_write_only_model_type,
-        use_status_code_in_response_name=config.use_status_code_in_response_name,
-        all_exports_scope=config.all_exports_scope,
-        all_exports_collision_strategy=config.all_exports_collision_strategy,
-        field_type_collision_strategy=config.field_type_collision_strategy,
-        module_split_mode=config.module_split_mode,
-        validators=validators,
-        default_value_overrides=default_value_overrides,
-        schema_version=config.schema_version,
-        schema_version_mode=config.schema_version_mode,
-        external_ref_mapping=config.external_ref_mapping,
+        config=cast("Any", generation_config),
     )
 
 
@@ -1273,8 +1193,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
 
     try:
         cli_config_args = _explicit_config_args(namespace)
-        config = Config.model_validate(pyproject_config)
-        config.merge_args(namespace)
+        config = _create_config(pyproject_config, cli_config_args)
         _apply_preset(config, pyproject_config, cli_config_args)
         _validate_final_config(config)
     except Error as e:

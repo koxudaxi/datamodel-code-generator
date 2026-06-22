@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Dict, Optional  # noqa: UP035
 
 from pydantic import BaseModel as _BaseModel
+from pydantic import ConfigDict as _PydanticConfigDict
 
 from datamodel_code_generator.enums import UnionMode
 
@@ -28,6 +29,8 @@ def dump_resolve_reference_action(class_names: Iterable[str]) -> str:
 
 class ConfigDict(_BaseModel):
     """Pydantic v2 model_config options."""
+
+    model_config = _PydanticConfigDict(defer_build=True)
 
     extra: Optional[str] = None  # noqa: UP045
     title: Optional[str] = None  # noqa: UP045

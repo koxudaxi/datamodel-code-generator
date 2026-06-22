@@ -156,8 +156,95 @@ def _run_main_import_probe() -> dict[str, Any]:
 
             print(json.dumps({
                 "main_callable": callable(main),
+                "imported_config": "datamodel_code_generator.config" in sys.modules,
                 "imported_format": "datamodel_code_generator.format" in sys.modules,
                 "imported_builtin_formatter": "datamodel_code_generator._builtin_formatter" in sys.modules,
+                "imported_model": "datamodel_code_generator.model" in sys.modules,
+                "imported_reference": "datamodel_code_generator.reference" in sys.modules,
+                "imported_types": "datamodel_code_generator.types" in sys.modules,
+                "imported_validators": "datamodel_code_generator.validators" in sys.modules,
+            }))
+            """
+        )
+    )
+
+
+def _run_config_api_probe() -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            """
+            import json
+
+            from datamodel_code_generator.__main__ import Config
+
+            default_config = Config()
+            validated = Config.model_validate({
+                "validators": {
+                    "User": {
+                        "validators": [
+                            {"field": "name", "function": "myapp.validators.validate_name"}
+                        ]
+                    }
+                }
+            })
+            json_validated = Config.model_validate_json('{"input_file_type": "jsonschema"}')
+            strings_validated = Config.model_validate_strings({"input_file_type": "openapi"})
+            schema = Config.model_json_schema()
+
+            try:
+                Config(validators={
+                    "User": {
+                        "validators": [
+                            {"field": "bad-name", "function": "myapp.validators.validate_name"}
+                        ]
+                    }
+                })
+            except Exception as exc:
+                invalid_message = str(exc).splitlines()[0]
+            else:
+                invalid_message = None
+
+            print(json.dumps({
+                "default_input_file_type": default_config.input_file_type.value,
+                "validator_function": validated.validators["User"].validators[0].function,
+                "json_input_file_type": json_validated.input_file_type.value,
+                "strings_input_file_type": strings_validated.input_file_type.value,
+                "schema_title": schema["title"],
+                "invalid_message": invalid_message,
+            }))
+            """
+        )
+    )
+
+
+def _run_cli_generate_config_import_probe() -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            """
+            import json
+            import sys
+            import tempfile
+            from pathlib import Path
+
+            from datamodel_code_generator.__main__ import Config, run_generate_from_config
+
+            schema = (
+                '{"openapi":"3.0.0","info":{"title":"T","version":"1"},"paths":{},'
+                '"components":{"schemas":{"User":{"type":"object","properties":{"id":{"type":"integer"}}}}}}'
+            )
+            config = Config.model_validate({
+                "disable_timestamp": True,
+                "input_file_type": "openapi",
+                "output_model_type": "pydantic_v2.BaseModel",
+            })
+            with tempfile.TemporaryDirectory() as directory:
+                output = Path(directory) / "models.py"
+                run_generate_from_config(config, schema, output, None, None, None, None, None)
+                generated = output.read_text()
+
+            print(json.dumps({
+                "generated_user": "class User" in generated,
+                "imported_config": "datamodel_code_generator.config" in sys.modules,
             }))
             """
         )
@@ -240,5 +327,52 @@ def test_main_import_skips_formatter_runtime() -> None:
     imported = _run_main_import_probe()
 
     assert imported["main_callable"] is True
+    assert imported["imported_config"] is False
     assert imported["imported_format"] is False
     assert imported["imported_builtin_formatter"] is False
+    assert imported["imported_model"] is False
+    assert imported["imported_reference"] is False
+    assert imported["imported_types"] is False
+    assert imported["imported_validators"] is False
+
+
+@pytest.mark.allow_direct_assert
+def test_cli_config_public_construction_rebuilds_lazy_validator_types() -> None:
+    """CLI Config keeps direct construction and validators validation while imports stay lazy."""
+    config = _run_config_api_probe()
+
+    assert config["default_input_file_type"] == "auto"
+    assert config["validator_function"] == "myapp.validators.validate_name"
+    assert config["json_input_file_type"] == "jsonschema"
+    assert config["strings_input_file_type"] == "openapi"
+    assert config["schema_title"] == "Config"
+    assert "bad-name" in config["invalid_message"]
+
+
+@pytest.mark.allow_direct_assert
+def test_cli_config_public_validation_methods_handle_lazy_validator_types() -> None:
+    """Coverage for public Config validation methods with lazy validator types."""
+    from datamodel_code_generator.__main__ import Config
+
+    validated = Config.model_validate({
+        "validators": {"User": {"validators": [{"field": "name", "function": "myapp.validators.validate_name"}]}}
+    })
+    none_validated = Config.model_validate({"validators": None})
+    json_validated = Config.model_validate_json('{"input_file_type": "jsonschema"}')
+    strings_validated = Config.model_validate_strings({"input_file_type": "openapi"})
+    schema = Config.model_json_schema()
+
+    assert validated.validators["User"].validators[0].function == "myapp.validators.validate_name"
+    assert none_validated.validators is None
+    assert json_validated.input_file_type.value == "jsonschema"
+    assert strings_validated.input_file_type.value == "openapi"
+    assert schema["title"] == "Config"
+
+
+@pytest.mark.allow_direct_assert
+def test_cli_generation_with_validated_config_skips_parser_config_import() -> None:
+    """Internal CLI generation reuses validated config without importing parser config models."""
+    generated = _run_cli_generate_config_import_probe()
+
+    assert generated["generated_user"] is True
+    assert generated["imported_config"] is False

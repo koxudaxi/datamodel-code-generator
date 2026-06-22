@@ -501,6 +501,7 @@ class DataType(_BaseModel):
     model_config = ConfigDict(  # ty: ignore
         extra="forbid",
         revalidate_instances="never",
+        defer_build=True,
     )
 
     type: Optional[str] = None  # noqa: UP045

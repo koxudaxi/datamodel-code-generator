@@ -114,7 +114,8 @@ def test_inflect_import_does_not_leave_typeguard_loaded(monkeypatch: pytest.Monk
     monkeypatch.setattr("datamodel_code_generator.reference._inflect_engine", None)
     get_singular_name.cache_clear()
 
-    assert get_singular_name("Users") == "User"
+    assert get_singular_name("Children") == "Child"
+    assert "inflect" in sys.modules
     assert "typeguard" not in sys.modules
 
 
