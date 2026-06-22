@@ -258,9 +258,10 @@ def _run_cli_generate_config_import_probe() -> dict[str, Any]:
                 "input_file_type": "openapi",
                 "output_model_type": "pydantic_v2.BaseModel",
             })
-            with tempfile.NamedTemporaryFile(suffix=".py") as output:
-                run_generate_from_config(config, schema, Path(output.name), None, None, None, None, None)
-                generated = Path(output.name).read_text()
+            with tempfile.TemporaryDirectory() as directory:
+                output = Path(directory) / "models.py"
+                run_generate_from_config(config, schema, output, None, None, None, None, None)
+                generated = output.read_text()
 
             print(json.dumps({
                 "generated_user": "class User" in generated,
@@ -380,11 +381,13 @@ def test_cli_config_public_validation_methods_rebuild_lazy_validator_types() -> 
     validated = Config.model_validate({
         "validators": {"User": {"validators": [{"field": "name", "function": "myapp.validators.validate_name"}]}}
     })
+    none_validated = Config.model_validate({"validators": None})
     json_validated = Config.model_validate_json('{"input_file_type": "jsonschema"}')
     strings_validated = Config.model_validate_strings({"input_file_type": "openapi"})
     schema = Config.model_json_schema()
 
     original_supported = main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS.get("model_validate")
+    restore_supported = {} if original_supported is None else {"model_validate": original_supported}
     main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS["model_validate"] = frozenset({
         "obj",
         "strict",
@@ -395,12 +398,11 @@ def test_cli_config_public_validation_methods_rebuild_lazy_validator_types() -> 
         with pytest.raises(TypeError, match="unexpected keyword argument 'extra'"):
             Config.model_validate({}, extra="forbid")
     finally:
-        if original_supported is None:
-            del main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS["model_validate"]
-        else:
-            main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS["model_validate"] = original_supported
+        main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS.pop("model_validate", None)
+        main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS.update(restore_supported)
 
     assert validated.validators["User"].validators[0].function == "myapp.validators.validate_name"
+    assert none_validated.validators is None
     assert json_validated.input_file_type.value == "jsonschema"
     assert strings_validated.input_file_type.value == "openapi"
     assert schema["title"] == "Config"

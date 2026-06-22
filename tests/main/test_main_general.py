@@ -671,12 +671,15 @@ def test_create_config_pyproject_branch_keeps_input_source_override() -> None:
 def test_internal_parser_config_model_copy_supports_deep_update() -> None:
     """The internal parser config keeps the parser-facing model_copy contract."""
     nested = {"items": [1]}
-    copied = _InternalParserConfig({"name": "before", "nested": nested}).model_copy(
+    config = _InternalParserConfig({"name": "before", "nested": nested})
+    plain_copy = config.model_copy()
+    copied = config.model_copy(
         update={"name": "after"},
         deep=True,
     )
     nested["items"].append(2)
 
+    assert plain_copy.name == "before"
     assert copied.name == "after"
     assert copied.nested == {"items": [1]}
 
