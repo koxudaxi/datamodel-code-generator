@@ -137,6 +137,7 @@ class DataClass(_DataclassReuseMixin, DataModel):
         config = self.extra_template_data.setdefault("config", {})
         config["regex_engine"] = '"python-re"'
         self._additional_imports.append(IMPORT_CONFIG_DICT)
+        self.clear_imports_cache()
 
     @property
     def imports(self) -> tuple[Import, ...]:

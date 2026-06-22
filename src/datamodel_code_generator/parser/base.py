@@ -562,6 +562,12 @@ def _alias_base_class_imports(
                 break
 
 
+def _clear_model_imports_cache(models: Iterable[DataModel]) -> None:
+    """Clear per-model imports caches after import-affecting mutations."""
+    for model in models:
+        model.clear_imports_cache()
+
+
 ReferenceMapSet = dict[str, set[str]]
 SortedDataModels = dict[str, DataModel]
 
@@ -1893,6 +1899,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     ),
                 )
             if import_sensitive_alias_changed:  # pragma: no cover
+                model.clear_imports_cache()
                 after_import = model.imports
                 if before_import != after_import:
                     imports.append(after_import)
@@ -2138,6 +2145,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         return None  # pragma: no cover
 
     def __replace_unique_list_to_set(self, models: list[DataModel]) -> None:
+        changed = False
         for model in models:
             for model_field in model.fields:
                 if not self.use_unique_items_as_set:
@@ -2157,6 +2165,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             continue
                         model_field.default = converted_default
                     self.generation_store.replace_field_type(model_field, set_data_type)
+                    changed = True
+        if changed:
+            _clear_model_imports_cache(models)
 
     @classmethod
     def __collect_set_item_references(cls, models: list[DataModel]) -> set[str]:
@@ -2542,6 +2553,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self,
         models: list[DataModel],
     ) -> None:
+        changed = False
         for model in models:
             if isinstance(model, (Enum, self.data_model_root_type)):
                 continue
@@ -2560,6 +2572,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 original_field = _find_field(model_field.original_name, _find_base_classes(model))
                 if not original_field:
                     self.generation_store.remove_field(model, model_field)
+                    changed = True
                     continue
                 copied_original_field = original_field.model_copy()
                 if original_field.data_type.reference:
@@ -2581,6 +2594,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     copied_original_field.use_default_with_required = True
                 self.generation_store.insert_field(model, index, copied_original_field)
                 self.generation_store.remove_field(model, model_field)
+                changed = True
+        if changed:
+            _clear_model_imports_cache(models)
 
     def __sort_models(
         self,
@@ -2937,6 +2953,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         for model in models:
             _alias_base_class_imports(model, aliased_imports)
+        _clear_model_imports_cache(models)
 
     def __apply_generic_base_class(  # noqa: PLR0912, PLR0914, PLR0915
         self,
@@ -3631,6 +3648,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             models, self.pydantic_v2_root_model_type, use_deferred_annotations=config.use_deferred_annotations
         )
         self.__set_validate_default_on_fields(models)
+        _clear_model_imports_cache(models)
 
         return ModuleContext(module, module_, models, is_init, imports, scoped_model_resolver)
 

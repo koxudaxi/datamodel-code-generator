@@ -64,6 +64,7 @@ class RootModel(BaseModel):
         self.extra_template_data[_SEQUENCE_BASE_CLASS_TEMPLATE_DATA_KEY] = f"Sequence[{item_type}]"
         self.extra_template_data[_SEQUENCE_ITEM_TYPE_TEMPLATE_DATA_KEY] = item_type
         self.extra_template_data[_SEQUENCE_SLICE_TYPE_TEMPLATE_DATA_KEY] = slice_type
+        self.clear_imports_cache()
 
     def render(self, *, class_name: str | None = None) -> str:
         """Render the RootModel and validate custom sequence templates when needed."""
