@@ -1021,6 +1021,8 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     @property
     def imports(self) -> tuple[Import, ...]:
         """Get all imports required by this model and its fields."""
+        # DataModel is intentionally mutable during parser post-processing. Keep
+        # this cache coarse-grained: import-affecting mutations must clear it.
         if self._IMPORTS_CACHE_KEY in self.__dict__:
             return self.__dict__[self._IMPORTS_CACHE_KEY]
 
@@ -1032,7 +1034,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         return imports
 
     def clear_imports_cache(self) -> None:
-        """Clear cached imports after model, field, or data type mutations."""
+        """Clear cached imports after import-affecting model, field, or data type mutations."""
         self.__dict__.pop(self._IMPORTS_CACHE_KEY, None)
 
     @property

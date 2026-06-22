@@ -564,6 +564,8 @@ def _alias_base_class_imports(
 
 def _clear_model_imports_cache(models: Iterable[DataModel]) -> None:
     """Clear per-model imports caches after import-affecting mutations."""
+    # Parser post-processing rewrites fields, data types, and aliases in bulk.
+    # Clear at the end of those rewrite steps so later imports are recomputed.
     for model in models:
         model.clear_imports_cache()
 
