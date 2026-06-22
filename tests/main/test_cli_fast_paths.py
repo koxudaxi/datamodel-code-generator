@@ -345,13 +345,7 @@ def test_cli_config_public_validation_methods_rebuild_lazy_validator_types() -> 
     Config = main_module.Config
 
     validated = Config.model_validate({
-        "validators": {
-            "User": {
-                "validators": [
-                    {"field": "name", "function": "myapp.validators.validate_name"}
-                ]
-            }
-        }
+        "validators": {"User": {"validators": [{"field": "name", "function": "myapp.validators.validate_name"}]}}
     })
     json_validated = Config.model_validate_json('{"input_file_type": "jsonschema"}')
     strings_validated = Config.model_validate_strings({"input_file_type": "openapi"})
