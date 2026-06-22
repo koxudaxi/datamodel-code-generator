@@ -12,7 +12,6 @@ import re
 import sys
 from collections import OrderedDict, defaultdict
 from collections.abc import Callable, Iterator, Mapping
-from copy import deepcopy
 from datetime import datetime, timezone
 from functools import lru_cache as _lru_cache
 from hashlib import sha256
@@ -733,17 +732,15 @@ def _build_module_content(
     return "\n".join(lines)
 
 
-class _InternalParserConfig:
-    """Attribute container for already-validated generate() options."""
+@_lru_cache(maxsize=1)
+def _get_internal_parser_config_model() -> type[Any]:
+    """Return a lightweight Pydantic model for already-validated parser options."""
+    from pydantic import BaseModel, ConfigDict  # noqa: PLC0415
 
-    def __init__(self, values: Mapping[str, Any]) -> None:
-        self.__dict__.update(values)
+    class _InternalParserConfig(BaseModel):
+        model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True)
 
-    def model_copy(self, *, update: Mapping[str, Any] | None = None, deep: bool = False) -> _InternalParserConfig:
-        values = deepcopy(self.__dict__) if deep else self.__dict__.copy()
-        if update:
-            values.update(update)
-        return type(self)(values)
+    return _InternalParserConfig
 
 
 _INTERNAL_PARSER_CONFIG_DEFAULTS: dict[str, Any] = {
@@ -783,7 +780,7 @@ def _create_parser_config(
     | AsyncAPIParserConfigDict
     | GraphQLParserConfigDict
     | ProtobufParserConfigDict,
-) -> _InternalParserConfig:
+) -> Any:
     """Create a parser config from GenerateConfig with additional options.
 
     ``generate_config`` is already validated by the CLI or public generate()
@@ -791,7 +788,7 @@ def _create_parser_config(
     """
     values = {**_INTERNAL_PARSER_CONFIG_DEFAULTS, **_generate_config_values(generate_config)}
     values.update(dict(additional_options))
-    return _InternalParserConfig(values)
+    return _get_internal_parser_config_model().model_construct(**values)
 
 
 _SchemaVersions: TypeAlias = tuple[

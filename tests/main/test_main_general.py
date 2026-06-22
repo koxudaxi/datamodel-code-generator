@@ -27,7 +27,7 @@ from datamodel_code_generator import (
     InputFileType,
     SchemaParseError,
     _generate_config_values,
-    _InternalParserConfig,
+    _get_internal_parser_config_model,
     chdir,
     generate,
     snooper_to_methods,
@@ -671,7 +671,7 @@ def test_create_config_pyproject_branch_keeps_input_source_override() -> None:
 def test_internal_parser_config_model_copy_supports_deep_update() -> None:
     """The internal parser config keeps the parser-facing model_copy contract."""
     nested = {"items": [1]}
-    config = _InternalParserConfig({"name": "before", "nested": nested})
+    config = _get_internal_parser_config_model().model_construct(name="before", nested=nested)
     plain_copy = config.model_copy()
     copied = config.model_copy(
         update={"name": "after"},
