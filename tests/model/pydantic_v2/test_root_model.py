@@ -66,6 +66,8 @@ def test_root_model_sequence_interface() -> None:
         reference=Reference(name="TestRootModel", path="test_root_model"),
     )
 
+    assert not any(import_.import_ == "Iterator" for import_ in root_model.imports)
+
     root_model.add_sequence_interface("str", "list[str]")
 
     assert root_model.render() == (

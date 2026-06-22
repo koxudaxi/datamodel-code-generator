@@ -159,6 +159,18 @@ def test_data_model_dedup_key_uses_model_base_to_hashable_seam(monkeypatch: pyte
     assert calls[1] == model.imports
 
 
+def test_data_model_imports_cache_clears_after_field_type_replacement() -> None:
+    """Test model imports reflect field type replacements after an earlier read."""
+    field = DataModelFieldBase(name="a", data_type=DataType(type="str"), required=True)
+    model = BaseModel(fields=[field], reference=Reference(path="Model", original_name="Model", name="Model"))
+
+    assert IMPORT_DECIMAL not in model.imports
+
+    field.replace_data_type(DataType.from_import(IMPORT_DECIMAL))
+
+    assert IMPORT_DECIMAL in model.imports
+
+
 def test_pydantic_v2_extra_type_hint_keeps_non_dict_hint() -> None:
     """Test typed-extra type hint conversion leaves non-dict hints unchanged."""
     field = PydanticV2DataModelField(
