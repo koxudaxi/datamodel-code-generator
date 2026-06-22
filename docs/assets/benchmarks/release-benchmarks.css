@@ -28,6 +28,11 @@
   gap: 0.35rem;
 }
 
+.release-benchmark-chart__legend-label {
+  color: var(--md-default-fg-color--light, #6b7280);
+  font-weight: 700;
+}
+
 .release-benchmark-chart__swatch {
   width: 0.75rem;
   height: 0.75rem;

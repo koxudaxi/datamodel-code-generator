@@ -8,7 +8,7 @@ This page tracks datamodel-code-generator release and main-branch benchmark resu
 
 ## Historical Trends
 
-Each chart plots median generation time by release version for one benchmark scenario. Formatter lines are included for context; missing or unsupported formatter results are skipped. Marked versions have benchmark notes below.
+Each chart plots median generation time by release version for one benchmark scenario. Each line is a formatter pipeline; missing or unsupported formatter results are skipped. Marked versions have benchmark notes below.
 
 === "Small / JSON Schema"
 
@@ -72,39 +72,39 @@ Version markers in the charts and historical tables point to these benchmark int
 
 ## Latest Release Summary
 
-Results below are medians. Built-in and Ruff ratios are relative to the Default formatter for the same scenario.
+Results below are medians. Built-in and Ruff ratios are relative to the black/isort(Default) formatter for the same scenario.
 
 ### main
 
 === "Small"
 
-    | Input | Formatter | Median | vs Default | Range | Status |
+    | Input | Formatter | Median | vs black/isort(Default) | Range | Status |
     | --- | --- | --- | --- | --- | --- |
-    | JSON Schema | Default | 80.0ms | baseline | 78.0ms-83.0ms | OK |
+    | JSON Schema | black/isort(Default) | 80.0ms | baseline | 78.0ms-83.0ms | OK |
     | JSON Schema | Built-in | 70.0ms | 1.14x faster | 68.0ms-73.0ms | OK |
     | JSON Schema | Ruff | 71.0ms | 1.13x faster | 69.0ms-75.0ms | OK |
 
 ## Historical Results
 
-Rows are release versions, newest first, with `main` shown before releases when present. Released is the PyPI upload timestamp in UTC; branch refs such as `main` show `-`. Formatter cells show median generation time; non-default cells include the speed relative to Default when both results are available. Version cells marked with `*` have benchmark notes above.
+Rows are release versions, newest first, with `main` shown before releases when present. Released is the PyPI upload timestamp in UTC; branch refs such as `main` show `-`. Formatter cells show median generation time; non-default cells include the speed relative to black/isort(Default) when both results are available. Version cells marked with `*` have benchmark notes above.
 
 === "Small / JSON Schema"
 
-    | Version | Released | Default | Built-in | Ruff |
+    | Version | Released | black/isort(Default) | Built-in | Ruff |
     | --- | --- | --- | --- | --- |
     | main | - | 80.0ms | 70.0ms (1.14x faster) | 71.0ms (1.13x faster) |
     | 0.58.0 | 2026-06-20 08:30 UTC | - | - | 72.3ms |
 
 === "Large / JSON Schema"
 
-    | Version | Released | Default | Built-in | Ruff |
+    | Version | Released | black/isort(Default) | Built-in | Ruff |
     | --- | --- | --- | --- | --- |
     | 0.59.0 | 2026-06-21 09:45 UTC | - | 360ms | - |
     | 0.58.0 | 2026-06-20 08:30 UTC | - | 420ms | - |
 
 === "Large / OpenAPI"
 
-    | Version | Released | Default | Built-in | Ruff |
+    | Version | Released | black/isort(Default) | Built-in | Ruff |
     | --- | --- | --- | --- | --- |
     | <span class="release-benchmark-version-note" title="Fixture note for a benchmark step change.">0.59.0 *</span> | 2026-06-21 09:45 UTC | - | 881ms | Unsupported: formatter target is unavailable in this release |
     | 0.58.0 | 2026-06-20 08:30 UTC | - | 980ms | - |

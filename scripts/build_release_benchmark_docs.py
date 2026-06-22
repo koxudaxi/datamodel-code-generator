@@ -264,7 +264,7 @@ def _formatter_label(formatter: str) -> str:
     label = formatter
     match formatter:
         case "default":
-            label = "Default"
+            label = "black/isort(Default)"
         case "builtin":
             label = "Built-in"
         case "ruff":
@@ -432,9 +432,9 @@ def _version_cell(version: str, notes_by_version: dict[str, tuple[BenchmarkNote,
 
 def _render_case_results_table(entries: tuple[BenchmarkEntry, ...], *, case: str, include_version: bool) -> str:
     headers = (
-        ("Version", "Input", "Formatter", "Median", "vs Default", "Status")
+        ("Version", "Input", "Formatter", "Median", "vs black/isort(Default)", "Status")
         if include_version
-        else ("Input", "Formatter", "Median", "vs Default", "Range", "Status")
+        else ("Input", "Formatter", "Median", "vs black/isort(Default)", "Range", "Status")
     )
     lines = [
         "| " + " | ".join(headers) + " |",
@@ -719,7 +719,7 @@ def render_release_benchmark_markdown(data: BenchmarkData) -> str:
         "",
         (
             "Each chart plots median generation time by release version for one benchmark scenario. "
-            "Formatter lines are included for context; missing or unsupported formatter results are skipped. "
+            "Each line is a formatter pipeline; missing or unsupported formatter results are skipped. "
             "Marked versions have benchmark notes below."
         ),
         "",
@@ -743,7 +743,7 @@ def render_release_benchmark_markdown(data: BenchmarkData) -> str:
         "## Latest Release Summary",
         "",
         (
-            "Results below are medians. Built-in and Ruff ratios are relative to the Default formatter "
+            "Results below are medians. Built-in and Ruff ratios are relative to the black/isort(Default) formatter "
             "for the same scenario."
         ),
         "",
@@ -756,8 +756,8 @@ def render_release_benchmark_markdown(data: BenchmarkData) -> str:
         (
             "Rows are release versions, newest first, with `main` shown before releases when present. Released is "
             "the PyPI upload timestamp in UTC; branch refs such as `main` show `-`. Formatter cells show median "
-            "generation time; non-default cells include the speed relative to Default when both results are "
-            "available. Version cells marked with `*` have benchmark notes above."
+            "generation time; non-default cells include the speed relative to black/isort(Default) when both "
+            "results are available. Version cells marked with `*` have benchmark notes above."
         ),
         "",
         _render_scenario_history_tabs(data.entries, release_dates=_release_dates(data), notes=_visible_notes(data)),

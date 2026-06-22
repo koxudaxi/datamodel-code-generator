@@ -3,7 +3,7 @@
 
   const STATUS_OK = "ok";
   const FORMATTERS = [
-    { key: "default", label: "Default", color: "#f59e0b" },
+    { key: "default", label: "black/isort(Default)", color: "#f59e0b" },
     { key: "builtin", label: "Built-in", color: "#2563eb" },
     { key: "ruff", label: "Ruff", color: "#16a34a" },
   ];
@@ -177,10 +177,11 @@
     if (!legend) {
       return;
     }
-    legend.innerHTML = FORMATTERS.map(
+    const legendItems = FORMATTERS.map(
       (formatter) =>
         `<span class="release-benchmark-chart__legend-item"><span class="release-benchmark-chart__swatch" style="background:${formatter.color}"></span>${formatter.label}</span>`,
     ).join("");
+    legend.innerHTML = `<span class="release-benchmark-chart__legend-label">Formatter:</span>${legendItems}`;
   }
 
   function setStatus(container, message) {

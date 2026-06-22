@@ -6,7 +6,7 @@ This page tracks datamodel-code-generator release and main-branch benchmark resu
 
 ## Historical Trends
 
-Each chart plots median generation time by release version for one benchmark scenario. Formatter lines are included for context; missing or unsupported formatter results are skipped. Marked versions have benchmark notes below.
+Each chart plots median generation time by release version for one benchmark scenario. Each line is a formatter pipeline; missing or unsupported formatter results are skipped. Marked versions have benchmark notes below.
 
 Compatibility backfill: Versions 0.26.4-0.34.0 use Python 3.13.14 because those releases fail during import on Python 3.14.2 before benchmark timing.
 
@@ -83,39 +83,39 @@ Version markers in the charts and historical tables point to these benchmark int
 
 ## Latest Release Summary
 
-Results below are medians. Built-in and Ruff ratios are relative to the Default formatter for the same scenario.
+Results below are medians. Built-in and Ruff ratios are relative to the black/isort(Default) formatter for the same scenario.
 
 ### main
 
 === "Small"
 
-    | Input | Formatter | Median | vs Default | Range | Status |
+    | Input | Formatter | Median | vs black/isort(Default) | Range | Status |
     | --- | --- | --- | --- | --- | --- |
-    | JSON Schema | Default | 436ms | baseline | 432ms-442ms | OK |
+    | JSON Schema | black/isort(Default) | 436ms | baseline | 432ms-442ms | OK |
     | JSON Schema | Built-in | 310ms | 1.41x faster | 307ms-314ms | OK |
     | JSON Schema | Ruff | 318ms | 1.37x faster | 315ms-324ms | OK |
-    | OpenAPI | Default | 517ms | baseline | 513ms-524ms | OK |
+    | OpenAPI | black/isort(Default) | 517ms | baseline | 513ms-524ms | OK |
     | OpenAPI | Built-in | 379ms | 1.37x faster | 374ms-389ms | OK |
     | OpenAPI | Ruff | 383ms | 1.35x faster | 376ms-387ms | OK |
 
 === "Large"
 
-    | Input | Formatter | Median | vs Default | Range | Status |
+    | Input | Formatter | Median | vs black/isort(Default) | Range | Status |
     | --- | --- | --- | --- | --- | --- |
-    | JSON Schema | Default | 3.13s | baseline | 3.09s-3.17s | OK |
+    | JSON Schema | black/isort(Default) | 3.13s | baseline | 3.09s-3.17s | OK |
     | JSON Schema | Built-in | 1.11s | 2.81x faster | 1.10s-1.12s | OK |
     | JSON Schema | Ruff | 1.06s | 2.94x faster | 1.05s-1.10s | OK |
-    | OpenAPI | Default | 3.13s | baseline | 3.03s-3.16s | OK |
+    | OpenAPI | black/isort(Default) | 3.13s | baseline | 3.03s-3.16s | OK |
     | OpenAPI | Built-in | 1.21s | 2.59x faster | 1.18s-1.21s | OK |
     | OpenAPI | Ruff | 1.15s | 2.72x faster | 1.14s-1.19s | OK |
 
 ## Historical Results
 
-Rows are release versions, newest first, with `main` shown before releases when present. Released is the PyPI upload timestamp in UTC; branch refs such as `main` show `-`. Formatter cells show median generation time; non-default cells include the speed relative to Default when both results are available. Version cells marked with `*` have benchmark notes above.
+Rows are release versions, newest first, with `main` shown before releases when present. Released is the PyPI upload timestamp in UTC; branch refs such as `main` show `-`. Formatter cells show median generation time; non-default cells include the speed relative to black/isort(Default) when both results are available. Version cells marked with `*` have benchmark notes above.
 
 === "Small / JSON Schema"
 
-    | Version | Released | Default | Built-in | Ruff |
+    | Version | Released | black/isort(Default) | Built-in | Ruff |
     | --- | --- | --- | --- | --- |
     | main | - | 436ms | 310ms (1.41x faster) | 318ms (1.37x faster) |
     | 0.65.0 | 2026-06-21 18:21 UTC | 515ms | 397ms (1.30x faster) | 416ms (1.24x faster) |
@@ -172,7 +172,7 @@ Rows are release versions, newest first, with `main` shown before releases when 
 
 === "Small / OpenAPI"
 
-    | Version | Released | Default | Built-in | Ruff |
+    | Version | Released | black/isort(Default) | Built-in | Ruff |
     | --- | --- | --- | --- | --- |
     | main | - | 517ms | 379ms (1.37x faster) | 383ms (1.35x faster) |
     | 0.65.0 | 2026-06-21 18:21 UTC | 581ms | 439ms (1.32x faster) | 481ms (1.21x faster) |
@@ -229,7 +229,7 @@ Rows are release versions, newest first, with `main` shown before releases when 
 
 === "Large / JSON Schema"
 
-    | Version | Released | Default | Built-in | Ruff |
+    | Version | Released | black/isort(Default) | Built-in | Ruff |
     | --- | --- | --- | --- | --- |
     | main | - | 3.13s | 1.11s (2.81x faster) | 1.06s (2.94x faster) |
     | 0.65.0 | 2026-06-21 18:21 UTC | 3.20s | 1.19s (2.69x faster) | 1.14s (2.80x faster) |
@@ -286,7 +286,7 @@ Rows are release versions, newest first, with `main` shown before releases when 
 
 === "Large / OpenAPI"
 
-    | Version | Released | Default | Built-in | Ruff |
+    | Version | Released | black/isort(Default) | Built-in | Ruff |
     | --- | --- | --- | --- | --- |
     | main | - | 3.13s | 1.21s (2.59x faster) | 1.15s (2.72x faster) |
     | 0.65.0 | 2026-06-21 18:21 UTC | 2.97s | 1.23s (2.42x faster) | 1.22s (2.44x faster) |
