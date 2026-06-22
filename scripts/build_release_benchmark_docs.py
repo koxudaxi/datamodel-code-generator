@@ -658,6 +658,10 @@ def _collection_metadata_lines(data: BenchmarkData) -> list[str]:
         "## Collection Policy",
         "",
         "- The benchmark workflow runs on `ubuntu-24.04`.",
+        (
+            "- Benchmark results are collected on GitHub Actions CI runners, so median timings can vary slightly "
+            "with runner load and workflow timing; rerun benchmarks before treating small differences as regressions."
+        ),
         "- The Python version is the workflow input, defaulting to the latest configured CI Python.",
         "- Release packages are installed from PyPI in isolated virtual environments.",
         "- The `main` snapshot is installed from the GitHub repository when it is explicitly selected.",
