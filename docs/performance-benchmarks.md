@@ -71,7 +71,7 @@ Version markers in the charts and historical tables point to these benchmark int
 ## Latest Dataset
 
 - Schema version: `1`
-- Generated at: `2026-06-22T07:03:14Z`
+- Generated at: `2026-06-22T09:37:07Z`
 - Source workflow: `Release Benchmarks`
 - Primary Python version: `3.14.2`
 - Entry Python versions: `3.13.14`, `3.14.2`
@@ -93,23 +93,23 @@ Results below are medians. Built-in and Ruff ratios are relative to the black/is
 
     | Input | Formatter | Median | vs black/isort(Default) | Range | Status |
     | --- | --- | --- | --- | --- | --- |
-    | JSON Schema | black/isort(Default) | 436ms | baseline | 432ms-442ms | OK |
-    | JSON Schema | Built-in | 310ms | 1.41x faster | 307ms-314ms | OK |
-    | JSON Schema | Ruff | 318ms | 1.37x faster | 315ms-324ms | OK |
-    | OpenAPI | black/isort(Default) | 517ms | baseline | 513ms-524ms | OK |
-    | OpenAPI | Built-in | 379ms | 1.37x faster | 374ms-389ms | OK |
-    | OpenAPI | Ruff | 383ms | 1.35x faster | 376ms-387ms | OK |
+    | JSON Schema | black/isort(Default) | 457ms | baseline | 450ms-460ms | OK |
+    | JSON Schema | Built-in | 325ms | 1.41x faster | 321ms-339ms | OK |
+    | JSON Schema | Ruff | 328ms | 1.39x faster | 324ms-332ms | OK |
+    | OpenAPI | black/isort(Default) | 523ms | baseline | 515ms-529ms | OK |
+    | OpenAPI | Built-in | 383ms | 1.37x faster | 375ms-389ms | OK |
+    | OpenAPI | Ruff | 380ms | 1.38x faster | 372ms-386ms | OK |
 
 === "Large"
 
     | Input | Formatter | Median | vs black/isort(Default) | Range | Status |
     | --- | --- | --- | --- | --- | --- |
-    | JSON Schema | black/isort(Default) | 3.13s | baseline | 3.09s-3.17s | OK |
-    | JSON Schema | Built-in | 1.11s | 2.81x faster | 1.10s-1.12s | OK |
-    | JSON Schema | Ruff | 1.06s | 2.94x faster | 1.05s-1.10s | OK |
-    | OpenAPI | black/isort(Default) | 3.13s | baseline | 3.03s-3.16s | OK |
-    | OpenAPI | Built-in | 1.21s | 2.59x faster | 1.18s-1.21s | OK |
-    | OpenAPI | Ruff | 1.15s | 2.72x faster | 1.14s-1.19s | OK |
+    | JSON Schema | black/isort(Default) | 3.54s | baseline | 3.42s-3.63s | OK |
+    | JSON Schema | Built-in | 1.23s | 2.89x faster | 1.20s-1.24s | OK |
+    | JSON Schema | Ruff | 1.15s | 3.09x faster | 1.14s-1.16s | OK |
+    | OpenAPI | black/isort(Default) | 3.19s | baseline | 3.17s-3.26s | OK |
+    | OpenAPI | Built-in | 1.28s | 2.49x faster | 1.25s-1.30s | OK |
+    | OpenAPI | Ruff | 1.23s | 2.59x faster | 1.20s-1.25s | OK |
 
 ## Historical Results
 
@@ -119,7 +119,7 @@ Rows are release versions, newest first, with `main` shown before releases when 
 
     | Version | Released | black/isort(Default) | Built-in | Ruff |
     | --- | --- | --- | --- | --- |
-    | main | - | 436ms | 310ms (1.41x faster) | 318ms (1.37x faster) |
+    | main | - | 457ms | 325ms (1.41x faster) | 328ms (1.39x faster) |
     | 0.65.0 | 2026-06-21 18:21 UTC | 515ms | 397ms (1.30x faster) | 416ms (1.24x faster) |
     | <span class="release-benchmark-version-note" title="This release predates the main-branch inflect import mitigation.">0.64.1 *</span> | 2026-06-19 17:19 UTC | 561ms | 420ms (1.33x faster) | 430ms (1.30x faster) |
     | 0.64.0 | 2026-06-14 17:24 UTC | 588ms | 415ms (1.42x faster) | 416ms (1.41x faster) |
@@ -175,7 +175,7 @@ Rows are release versions, newest first, with `main` shown before releases when 
 
     | Version | Released | black/isort(Default) | Built-in | Ruff |
     | --- | --- | --- | --- | --- |
-    | main | - | 517ms | 379ms (1.37x faster) | 383ms (1.35x faster) |
+    | main | - | 523ms | 383ms (1.37x faster) | 380ms (1.38x faster) |
     | 0.65.0 | 2026-06-21 18:21 UTC | 581ms | 439ms (1.32x faster) | 481ms (1.21x faster) |
     | <span class="release-benchmark-version-note" title="This release predates the main-branch inflect import mitigation.">0.64.1 *</span> | 2026-06-19 17:19 UTC | 2.30s | 2.28s (1.01x faster) | 2.17s (1.06x faster) |
     | 0.64.0 | 2026-06-14 17:24 UTC | 2.32s | 2.20s (1.06x faster) | 2.21s (1.05x faster) |
@@ -231,7 +231,7 @@ Rows are release versions, newest first, with `main` shown before releases when 
 
     | Version | Released | black/isort(Default) | Built-in | Ruff |
     | --- | --- | --- | --- | --- |
-    | main | - | 3.13s | 1.11s (2.81x faster) | 1.06s (2.94x faster) |
+    | main | - | 3.54s | 1.23s (2.89x faster) | 1.15s (3.09x faster) |
     | 0.65.0 | 2026-06-21 18:21 UTC | 3.20s | 1.19s (2.69x faster) | 1.14s (2.80x faster) |
     | <span class="release-benchmark-version-note" title="This release predates the main-branch inflect import mitigation.">0.64.1 *</span> | 2026-06-19 17:19 UTC | 3.78s | 1.51s (2.50x faster) | 1.53s (2.48x faster) |
     | 0.64.0 | 2026-06-14 17:24 UTC | 3.77s | 1.51s (2.50x faster) | 1.47s (2.56x faster) |
@@ -287,7 +287,7 @@ Rows are release versions, newest first, with `main` shown before releases when 
 
     | Version | Released | black/isort(Default) | Built-in | Ruff |
     | --- | --- | --- | --- | --- |
-    | main | - | 3.13s | 1.21s (2.59x faster) | 1.15s (2.72x faster) |
+    | main | - | 3.19s | 1.28s (2.49x faster) | 1.23s (2.59x faster) |
     | 0.65.0 | 2026-06-21 18:21 UTC | 2.97s | 1.23s (2.42x faster) | 1.22s (2.44x faster) |
     | <span class="release-benchmark-version-note" title="This release predates the main-branch inflect import mitigation.">0.64.1 *</span> | 2026-06-19 17:19 UTC | 3.30s | 1.45s (2.28x faster) | 1.39s (2.38x faster) |
     | 0.64.0 | 2026-06-14 17:24 UTC | 3.42s | 1.46s (2.34x faster) | 1.41s (2.43x faster) |
