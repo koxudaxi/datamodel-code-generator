@@ -6,6 +6,7 @@ representation, and DataModel as the abstract base for all model types.
 
 from __future__ import annotations
 
+import os
 import re
 import sys
 from abc import ABC, abstractmethod
@@ -641,6 +642,23 @@ def _nested_model_default_factory(field: DataModelFieldBase, model_cls: type[Dat
     return None
 
 
+@lru_cache(maxsize=1)
+def _get_jinja_bytecode_cache() -> Any:
+    """Return a persistent Jinja bytecode cache, or None if unavailable."""
+    if os.environ.get("DATAMODEL_CODE_GENERATOR_DISABLE_JINJA_BYTECODE_CACHE"):
+        return None
+
+    from jinja2 import FileSystemBytecodeCache  # noqa: PLC0415
+
+    try:
+        cache_root = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
+        cache_dir = cache_root / "datamodel-code-generator" / "jinja2"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return None
+    return FileSystemBytecodeCache(str(cache_dir), "%s.cache")
+
+
 def _build_environment(loader: Any) -> Environment:
     """Build a Jinja environment with built-in filters."""
     from jinja2 import Environment, select_autoescape  # noqa: PLC0415
@@ -648,6 +666,7 @@ def _build_environment(loader: Any) -> Environment:
     env = Environment(
         loader=loader,
         autoescape=select_autoescape(["html", "xml"]),
+        bytecode_cache=_get_jinja_bytecode_cache(),
     )
     env.filters["escape_docstring"] = escape_docstring  # For old custom templates
     env.filters["format_docstring"] = format_docstring

@@ -1288,6 +1288,27 @@ class ModelResolver:  # noqa: PLR0904
 
 _inflect_engine: inflect.engine | None = None
 _TYPEGUARD_NOT_LOADED = object()
+_COMMON_INFLECT_SINGULAR_NAMES: dict[str, str] = {
+    # Pinned to inflect>=4.1,<8 outputs. Falling back keeps custom/rare words unchanged.
+    "Apis": "Api",
+    "Categories": "Category",
+    "Companies": "Company",
+    "Items": "Item",
+    "Pets": "Pet",
+    "Policies": "Policy",
+    "Rules": "Rule",
+    "Statuses": "Status",
+    "Users": "User",
+    "apis": "api",
+    "categories": "category",
+    "companies": "company",
+    "items": "item",
+    "pets": "pet",
+    "policies": "policy",
+    "rules": "rule",
+    "statuses": "status",
+    "users": "user",
+}
 
 
 def _noop_typechecked(target: Any = None, **_: Any) -> Any:
@@ -1361,6 +1382,9 @@ def _get_inflect_engine() -> inflect.engine:
 @lru_cache(maxsize=4096)
 def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
     """Convert a plural name to singular form."""
+    if (singular_name := _COMMON_INFLECT_SINGULAR_NAMES.get(name)) is not None:
+        return singular_name
+
     singular_name = _get_inflect_engine().singular_noun(cast("inflect.Word", name))  # ty: ignore
     if singular_name is False:
         singular_name = f"{name}{suffix}"

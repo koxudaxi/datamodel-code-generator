@@ -238,6 +238,39 @@ def _run_config_api_probe() -> dict[str, Any]:
     )
 
 
+def _run_cli_generate_config_import_probe() -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            """
+            import json
+            import sys
+            import tempfile
+            from pathlib import Path
+
+            from datamodel_code_generator.__main__ import Config, run_generate_from_config
+
+            schema = (
+                '{"openapi":"3.0.0","info":{"title":"T","version":"1"},"paths":{},'
+                '"components":{"schemas":{"User":{"type":"object","properties":{"id":{"type":"integer"}}}}}}'
+            )
+            config = Config.model_validate({
+                "disable_timestamp": True,
+                "input_file_type": "openapi",
+                "output_model_type": "pydantic_v2.BaseModel",
+            })
+            with tempfile.NamedTemporaryFile(suffix=".py") as output:
+                run_generate_from_config(config, schema, Path(output.name), None, None, None, None, None)
+                generated = Path(output.name).read_text()
+
+            print(json.dumps({
+                "generated_user": "class User" in generated,
+                "imported_config": "datamodel_code_generator.config" in sys.modules,
+            }))
+            """
+        )
+    )
+
+
 def _run_parsed_schema_path(schema_name: str) -> dict[str, Any]:
     return _run_probe(
         textwrap.dedent(
@@ -371,3 +404,12 @@ def test_cli_config_public_validation_methods_rebuild_lazy_validator_types() -> 
     assert json_validated.input_file_type.value == "jsonschema"
     assert strings_validated.input_file_type.value == "openapi"
     assert schema["title"] == "Config"
+
+
+@pytest.mark.allow_direct_assert
+def test_cli_generation_with_validated_config_skips_parser_config_import() -> None:
+    """Internal CLI generation reuses validated config without importing parser config models."""
+    generated = _run_cli_generate_config_import_probe()
+
+    assert generated["generated_user"] is True
+    assert generated["imported_config"] is False
