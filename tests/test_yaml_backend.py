@@ -95,6 +95,14 @@ class TestLoadYaml:
         assert used_fast_path is False
         assert result is None
 
+    def test_pyyaml_fast_path_skips_timestamp_values(self) -> None:
+        """Timestamp-like scalars stay on the full loader path to avoid datetime coercion."""
+        with patch.dict("sys.modules", {"ryaml": None}):
+            used_fast_path, result = _load_yaml_with_pyyaml_fast_path("example: 2023-12-25 10:30\n")
+
+        assert used_fast_path is False
+        assert result is None
+
     def test_pyyaml_fast_path_skips_tag_markers(self) -> None:
         """YAML tag markers stay on the full loader path for validation."""
         with patch.dict("sys.modules", {"ryaml": None}):

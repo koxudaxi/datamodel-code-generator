@@ -157,12 +157,13 @@ _parser_source_data_cache: OrderedDict[_ParserSourceDataCacheKey, YamlValue] = O
 _parser_source_data_seen_keys: OrderedDict[_ParserSourceDataSeenKey, None] = OrderedDict()
 _parser_source_data_cache_lock = RLock()
 _enable_parsed_source_cache = False
-_YAML_FAST_PATH_UNSAFE_PATTERN = re.compile(
+_YAML_FAST_PATH_UNSAFE_SCALAR_PATTERN = re.compile(
     r"(?<![A-Za-z0-9_])"
     r"(?:y|Y|yes|Yes|YES|n|N|no|No|NO|True|TRUE|False|FALSE|on|On|ON|off|Off|OFF|"
-    r"\d{4}-\d{1,2}-\d{1,2}(?:[Tt\s]|$)|[-+]?\d[\d_]*[eE][-+]?\d+)"
+    r"[-+]?\d[\d_]*[eE][-+]?\d+)"
     r"(?![A-Za-z0-9_])"
 )
+_YAML_FAST_PATH_UNSAFE_TIMESTAMP_PATTERN = re.compile(r"(?<![A-Za-z0-9_])\d{4}-\d{1,2}-\d{1,2}(?=$|[Tt]|\s)")
 _YAML_FAST_PATH_UNSAFE_MARKERS = ("!", "%TAG", "tag:yaml.org,2002:")
 
 
@@ -202,7 +203,9 @@ def _load_yaml_with_pyyaml_fast_path(text: str) -> tuple[bool, YamlValue]:
         return False, None
     if any(marker in text for marker in _YAML_FAST_PATH_UNSAFE_MARKERS):
         return False, None
-    if _YAML_FAST_PATH_UNSAFE_PATTERN.search(text):
+    if _YAML_FAST_PATH_UNSAFE_SCALAR_PATTERN.search(text):
+        return False, None
+    if _YAML_FAST_PATH_UNSAFE_TIMESTAMP_PATTERN.search(text):
         return False, None
 
     import yaml  # noqa: PLC0415
