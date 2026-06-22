@@ -182,6 +182,7 @@ def test_resolve_local_ref_path_caches_safe_paths(tmp_path: Path, monkeypatch: p
 
     parser._resolve_local_ref_path(target, "schema.json")
     first_call_count = len(calls)
+    assert first_call_count > 0
     parser._resolve_local_ref_path(target, "schema.json")
 
     assert len(calls) == first_call_count
