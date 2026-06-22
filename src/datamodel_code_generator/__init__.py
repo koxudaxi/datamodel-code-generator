@@ -765,9 +765,9 @@ def _generate_config_values(generate_config: GenerateConfig) -> dict[str, Any]:
     if not (fields := getattr(type(generate_config), "model_fields", None)):
         return values
 
-    values.update(
-        {field_name: getattr(generate_config, field_name) for field_name in fields if field_name not in values}
-    )
+    values.update({
+        field_name: getattr(generate_config, field_name) for field_name in fields if field_name not in values
+    })
     return values
 
 
