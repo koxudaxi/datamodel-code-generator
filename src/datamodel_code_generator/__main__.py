@@ -113,7 +113,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional, 
 from urllib.parse import ParseResult, urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
-from pydantic.json_schema import GenerateJsonSchema, JsonSchemaMode
+from typing_extensions import Self
 
 from datamodel_code_generator import (
     AllExportsScope,
@@ -141,8 +141,6 @@ from datamodel_code_generator.util import load_toml
 if TYPE_CHECKING:
     from argparse import Namespace
     from collections import defaultdict
-
-    from typing_extensions import Self
 
     from datamodel_code_generator._structured_output import (
         CheckDifferencePayload,
@@ -285,119 +283,6 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
         protected_namespaces=(),
         defer_build=True,
     )  # ty: ignore
-
-    def __init__(self, /, **data: Any) -> None:
-        """Initialize config after resolving optional CLI-only forward refs."""
-        _rebuild_config_model()
-        super().__init__(**data)
-
-    @classmethod
-    def model_validate(  # noqa: PLR0913
-        cls,
-        obj: Any,
-        *,
-        strict: bool | None = None,
-        extra: Any | None = None,
-        from_attributes: bool | None = None,
-        context: Any | None = None,
-        by_alias: bool | None = None,
-        by_name: bool | None = None,
-    ) -> Self:
-        """Validate config after resolving optional CLI-only forward refs."""
-        _rebuild_config_model()
-        return cast(
-            "Self",
-            _call_base_model_class_method(
-                cls,
-                "model_validate",
-                obj,
-                strict=strict,
-                extra=extra,
-                from_attributes=from_attributes,
-                context=context,
-                by_alias=by_alias,
-                by_name=by_name,
-            ),
-        )
-
-    @classmethod
-    def model_validate_json(  # noqa: PLR0913
-        cls,
-        json_data: str | bytes | bytearray,
-        *,
-        strict: bool | None = None,
-        extra: Any | None = None,
-        context: Any | None = None,
-        by_alias: bool | None = None,
-        by_name: bool | None = None,
-    ) -> Self:
-        """Validate JSON config after resolving optional CLI-only forward refs."""
-        _rebuild_config_model()
-        return cast(
-            "Self",
-            _call_base_model_class_method(
-                cls,
-                "model_validate_json",
-                json_data,
-                strict=strict,
-                extra=extra,
-                context=context,
-                by_alias=by_alias,
-                by_name=by_name,
-            ),
-        )
-
-    @classmethod
-    def model_validate_strings(  # noqa: PLR0913
-        cls,
-        obj: Any,
-        *,
-        strict: bool | None = None,
-        extra: Any | None = None,
-        context: Any | None = None,
-        by_alias: bool | None = None,
-        by_name: bool | None = None,
-    ) -> Self:
-        """Validate string config after resolving optional CLI-only forward refs."""
-        _rebuild_config_model()
-        return cast(
-            "Self",
-            _call_base_model_class_method(
-                cls,
-                "model_validate_strings",
-                obj,
-                strict=strict,
-                extra=extra,
-                context=context,
-                by_alias=by_alias,
-                by_name=by_name,
-            ),
-        )
-
-    @classmethod
-    def model_json_schema(
-        cls,
-        by_alias: bool = True,  # noqa: FBT001, FBT002
-        ref_template: str = "#/$defs/{model}",
-        schema_generator: type[GenerateJsonSchema] = GenerateJsonSchema,
-        mode: JsonSchemaMode = "validation",
-        *,
-        union_format: Literal["any_of", "primitive_type_array"] = "any_of",
-    ) -> dict[str, Any]:
-        """Build JSON schema after resolving optional CLI-only forward refs."""
-        _rebuild_config_model()
-        return cast(
-            "dict[str, Any]",
-            _call_base_model_class_method(
-                cls,
-                "model_json_schema",
-                by_alias=by_alias,
-                ref_template=ref_template,
-                schema_generator=schema_generator,
-                mode=mode,
-                union_format=union_format,
-            ),
-        )
 
     def get(self, item: str) -> Any:  # pragma: no cover
         """Get attribute value by name."""
@@ -694,102 +579,6 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
         parsed_args = Config.model_validate(set_args)
         for field_name in set_args:
             setattr(self, field_name, getattr(parsed_args, field_name))
-
-
-_BaseModelClassMethodName: TypeAlias = Literal[
-    "model_json_schema",
-    "model_validate",
-    "model_validate_json",
-    "model_validate_strings",
-]
-
-_BASE_MODEL_METHOD_SUPPORTED_KWARGS: dict[_BaseModelClassMethodName, frozenset[str]] = {}
-_BASE_MODEL_METHOD_DEFAULTS: dict[_BaseModelClassMethodName, dict[str, Any]] = {
-    "model_json_schema": {
-        "by_alias": True,
-        "ref_template": "#/$defs/{model}",
-        "schema_generator": GenerateJsonSchema,
-        "mode": "validation",
-        "union_format": "any_of",
-    },
-    "model_validate": {
-        "strict": None,
-        "extra": None,
-        "from_attributes": None,
-        "context": None,
-        "by_alias": None,
-        "by_name": None,
-    },
-    "model_validate_json": {
-        "strict": None,
-        "extra": None,
-        "context": None,
-        "by_alias": None,
-        "by_name": None,
-    },
-    "model_validate_strings": {
-        "strict": None,
-        "extra": None,
-        "context": None,
-        "by_alias": None,
-        "by_name": None,
-    },
-}
-
-
-def _supported_base_model_kwargs(method_name: _BaseModelClassMethodName) -> frozenset[str]:
-    if supported := _BASE_MODEL_METHOD_SUPPORTED_KWARGS.get(method_name):
-        return supported
-
-    from inspect import signature  # noqa: PLC0415
-
-    supported = frozenset(signature(getattr(BaseModel, method_name)).parameters)
-    _BASE_MODEL_METHOD_SUPPORTED_KWARGS[method_name] = supported
-    return supported
-
-
-def _unsupported_base_model_kwarg(
-    method_name: _BaseModelClassMethodName,
-    kwargs: Mapping[str, Any],
-) -> str | None:
-    supported = _supported_base_model_kwargs(method_name)
-    defaults = _BASE_MODEL_METHOD_DEFAULTS[method_name]
-    for key, value in kwargs.items():
-        if key in supported or value == defaults[key]:
-            continue
-        return key
-    return None
-
-
-def _call_base_model_class_method(
-    cls: type[Config],
-    method_name: _BaseModelClassMethodName,
-    *args: Any,
-    **kwargs: Any,
-) -> Any:
-    if unsupported := _unsupported_base_model_kwarg(method_name, kwargs):
-        msg = f"BaseModel.{method_name}() got an unexpected keyword argument {unsupported!r}"
-        raise TypeError(msg)
-
-    supported = _supported_base_model_kwargs(method_name)
-    call_kwargs = {key: value for key, value in kwargs.items() if key in supported}
-    match method_name:  # pragma: no branch
-        case "model_validate":
-            return super(Config, cls).model_validate(*args, **call_kwargs)
-        case "model_validate_json":
-            return super(Config, cls).model_validate_json(*args, **call_kwargs)
-        case "model_validate_strings":
-            return super(Config, cls).model_validate_strings(*args, **call_kwargs)
-        case "model_json_schema":
-            return super(Config, cls).model_json_schema(**call_kwargs)
-        case _:  # pragma: no cover
-            raise AssertionError(method_name)
-
-
-def _rebuild_config_model() -> None:
-    if Config.__pydantic_complete__:
-        return
-    Config.model_rebuild(_types_namespace=globals())
 
 
 def _explicit_config_args(args: Namespace) -> dict[str, _RawConfigValue]:

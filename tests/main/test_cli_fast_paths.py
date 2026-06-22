@@ -175,7 +175,6 @@ def _run_config_api_probe() -> dict[str, Any]:
             """
             import json
 
-            import datamodel_code_generator.__main__ as main_module
             from datamodel_code_generator.__main__ import Config
 
             default_config = Config()
@@ -205,25 +204,6 @@ def _run_config_api_probe() -> dict[str, Any]:
             else:
                 invalid_message = None
 
-            original_supported = main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS.get("model_validate")
-            main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS["model_validate"] = frozenset({
-                "obj",
-                "strict",
-                "from_attributes",
-                "context",
-            })
-            try:
-                Config.model_validate({}, extra="forbid")
-            except TypeError as exc:
-                unsupported_message = str(exc)
-            else:
-                unsupported_message = None
-            finally:
-                if original_supported is None:
-                    del main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS["model_validate"]
-                else:
-                    main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS["model_validate"] = original_supported
-
             print(json.dumps({
                 "default_input_file_type": default_config.input_file_type.value,
                 "validator_function": validated.validators["User"].validators[0].function,
@@ -231,7 +211,6 @@ def _run_config_api_probe() -> dict[str, Any]:
                 "strings_input_file_type": strings_validated.input_file_type.value,
                 "schema_title": schema["title"],
                 "invalid_message": invalid_message,
-                "unsupported_message": unsupported_message,
             }))
             """
         )
@@ -368,15 +347,12 @@ def test_cli_config_public_construction_rebuilds_lazy_validator_types() -> None:
     assert config["strings_input_file_type"] == "openapi"
     assert config["schema_title"] == "Config"
     assert "bad-name" in config["invalid_message"]
-    assert "unexpected keyword argument 'extra'" in config["unsupported_message"]
 
 
 @pytest.mark.allow_direct_assert
-def test_cli_config_public_validation_methods_rebuild_lazy_validator_types() -> None:
-    """Coverage for public Config validation wrappers that keep Pydantic-version behavior."""
-    import datamodel_code_generator.__main__ as main_module
-
-    Config = main_module.Config
+def test_cli_config_public_validation_methods_handle_lazy_validator_types() -> None:
+    """Coverage for public Config validation methods with lazy validator types."""
+    from datamodel_code_generator.__main__ import Config
 
     validated = Config.model_validate({
         "validators": {"User": {"validators": [{"field": "name", "function": "myapp.validators.validate_name"}]}}
@@ -385,21 +361,6 @@ def test_cli_config_public_validation_methods_rebuild_lazy_validator_types() -> 
     json_validated = Config.model_validate_json('{"input_file_type": "jsonschema"}')
     strings_validated = Config.model_validate_strings({"input_file_type": "openapi"})
     schema = Config.model_json_schema()
-
-    original_supported = main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS.get("model_validate")
-    restore_supported = {} if original_supported is None else {"model_validate": original_supported}
-    main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS["model_validate"] = frozenset({
-        "obj",
-        "strict",
-        "from_attributes",
-        "context",
-    })
-    try:
-        with pytest.raises(TypeError, match="unexpected keyword argument 'extra'"):
-            Config.model_validate({}, extra="forbid")
-    finally:
-        main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS.pop("model_validate", None)
-        main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS.update(restore_supported)
 
     assert validated.validators["User"].validators[0].function == "myapp.validators.validate_name"
     assert none_validated.validators is None

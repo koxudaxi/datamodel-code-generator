@@ -14,7 +14,6 @@ from datamodel_code_generator.model.base import (
     DataModel,
     DataModelFieldBase,
     TemplateBase,
-    _get_jinja_bytecode_cache,
     _RenderedDataModelField,
     comment_safe,
     escape_docstring,
@@ -93,37 +92,6 @@ def test_template_base() -> None:
     assert str(a.template_file_path) == dummy_template.name
     assert a._render() == "abc"
     assert not str(a)
-
-
-def test_jinja_bytecode_cache_can_be_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The persistent Jinja bytecode cache can be disabled by environment."""
-    _get_jinja_bytecode_cache.cache_clear()
-    monkeypatch.setenv("DATAMODEL_CODE_GENERATOR_DISABLE_JINJA_BYTECODE_CACHE", "1")
-
-    assert _get_jinja_bytecode_cache() is None
-
-
-def test_jinja_bytecode_cache_uses_xdg_cache_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """The persistent Jinja bytecode cache is created under XDG_CACHE_HOME."""
-    _get_jinja_bytecode_cache.cache_clear()
-    monkeypatch.delenv("DATAMODEL_CODE_GENERATOR_DISABLE_JINJA_BYTECODE_CACHE", raising=False)
-    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
-
-    assert _get_jinja_bytecode_cache() is not None
-    assert (tmp_path / "datamodel-code-generator" / "jinja2").is_dir()
-
-
-def test_jinja_bytecode_cache_falls_back_on_cache_dir_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Cache directory creation failures leave template rendering on the default path."""
-    _get_jinja_bytecode_cache.cache_clear()
-    monkeypatch.delenv("DATAMODEL_CODE_GENERATOR_DISABLE_JINJA_BYTECODE_CACHE", raising=False)
-
-    def raise_os_error(self: Path, *args: Any, **kwargs: Any) -> None:  # noqa: ARG001
-        raise OSError
-
-    monkeypatch.setattr(Path, "mkdir", raise_os_error)
-
-    assert _get_jinja_bytecode_cache() is None
 
 
 def test_data_model() -> None:

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import contextlib
 import os
-import re
 import sys
 from collections import OrderedDict, defaultdict
 from collections.abc import Callable, Iterator, Mapping
@@ -156,14 +155,6 @@ _parser_source_data_cache: OrderedDict[_ParserSourceDataCacheKey, YamlValue] = O
 _parser_source_data_seen_keys: OrderedDict[_ParserSourceDataSeenKey, None] = OrderedDict()
 _parser_source_data_cache_lock = RLock()
 _enable_parsed_source_cache = False
-_YAML_FAST_PATH_UNSAFE_SCALAR_PATTERN = re.compile(
-    r"(?<![A-Za-z0-9_])"
-    r"(?:y|Y|yes|Yes|YES|n|N|no|No|NO|True|TRUE|False|FALSE|on|On|ON|off|Off|OFF|"
-    r"[-+]?\d[\d_]*[eE][-+]?\d+)"
-    r"(?![A-Za-z0-9_])"
-)
-_YAML_FAST_PATH_UNSAFE_TIMESTAMP_PATTERN = re.compile(r"(?<![A-Za-z0-9_])\d{4}-\d{1,2}-\d{1,2}(?=\Z|[Tt]|\s)")
-_YAML_FAST_PATH_UNSAFE_MARKERS = ("!", "%TAG", "tag:yaml.org,2002:")
 
 
 def enable_parsed_source_cache() -> Callable[[], None]:
@@ -185,42 +176,11 @@ def _is_parsed_source_cache_enabled() -> bool:
     return _enable_parsed_source_cache
 
 
-def _has_ryaml_backend() -> bool:
-    if sys.modules.get("ryaml") is not None:
-        return True
-    if "ryaml" in sys.modules:
-        return False
-
-    from importlib.util import find_spec  # noqa: PLC0415
-
-    return find_spec("ryaml") is not None
-
-
-def _load_yaml_with_pyyaml_fast_path(text: str) -> tuple[bool, YamlValue]:
-    """Load simple YAML with PyYAML directly when custom handling cannot affect it."""
-    if _has_ryaml_backend():
-        return False, None
-    if any(marker in text for marker in _YAML_FAST_PATH_UNSAFE_MARKERS):
-        return False, None
-    if _YAML_FAST_PATH_UNSAFE_SCALAR_PATTERN.search(text):
-        return False, None
-    if _YAML_FAST_PATH_UNSAFE_TIMESTAMP_PATTERN.search(text):
-        return False, None
-
-    import yaml  # noqa: PLC0415
-
-    loader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
-    return True, yaml.load(text, Loader=loader)  # noqa: S506
-
-
 def load_yaml(stream: str | TextIO) -> YamlValue:
     """Load YAML content using ryaml (if available) or PyYAML."""
-    text = stream if isinstance(stream, str) else stream.read()
-    if (fast_path_result := _load_yaml_with_pyyaml_fast_path(text))[0]:
-        return fast_path_result[1]
-
     from datamodel_code_generator.util import get_yaml_backend, reject_unsupported_yaml_tags  # noqa: PLC0415
 
+    text = stream if isinstance(stream, str) else stream.read()
     reject_unsupported_yaml_tags(text)
 
     if get_yaml_backend() == "ryaml":

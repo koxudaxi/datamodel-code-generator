@@ -119,19 +119,6 @@ def test_inflect_import_does_not_leave_typeguard_loaded(monkeypatch: pytest.Monk
     assert "typeguard" not in sys.modules
 
 
-def test_common_singular_names_do_not_import_inflect(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Common generated array names avoid inflect's cold import without changing results."""
-    monkeypatch.delitem(sys.modules, "inflect", raising=False)
-    monkeypatch.delitem(sys.modules, "typeguard", raising=False)
-    monkeypatch.setattr("datamodel_code_generator.reference._inflect_engine", None)
-    get_singular_name.cache_clear()
-
-    assert get_singular_name("Users") == "User"
-    assert get_singular_name("Apis") == "Api"
-    assert "inflect" not in sys.modules
-    assert "typeguard" not in sys.modules
-
-
 def test_restore_typeguard_module_preserves_replaced_module(monkeypatch: pytest.MonkeyPatch) -> None:
     """Restoring an absent typeguard must not remove a module installed by other code."""
     typeguard_stub = types.ModuleType("typeguard")

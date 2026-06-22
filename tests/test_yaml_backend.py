@@ -13,8 +13,6 @@ import yaml
 
 from datamodel_code_generator import (
     InputFileType,
-    _has_ryaml_backend,
-    _load_yaml_with_pyyaml_fast_path,
     infer_input_type,
     load_yaml,
     load_yaml_dict_from_path,
@@ -78,47 +76,6 @@ class TestGetYamlParseErrors:
 
 class TestLoadYaml:
     """Tests for load_yaml() with backend switching."""
-
-    def test_pyyaml_fast_path_loads_simple_yaml(self) -> None:
-        """Simple YAML uses the PyYAML fast path when custom handling is unnecessary."""
-        with patch.dict("sys.modules", {"ryaml": None}):
-            used_fast_path, result = _load_yaml_with_pyyaml_fast_path("required: false\n")
-
-        assert used_fast_path is True
-        assert result == {"required": False}
-
-    def test_pyyaml_fast_path_skips_custom_yaml_values(self) -> None:
-        """Values that need custom YAML semantics stay on the full loader path."""
-        with patch.dict("sys.modules", {"ryaml": None}):
-            used_fast_path, result = _load_yaml_with_pyyaml_fast_path("enabled: False\n")
-
-        assert used_fast_path is False
-        assert result is None
-
-    def test_pyyaml_fast_path_skips_timestamp_values(self) -> None:
-        """Timestamp-like scalars stay on the full loader path to avoid datetime coercion."""
-        with patch.dict("sys.modules", {"ryaml": None}):
-            used_fast_path, result = _load_yaml_with_pyyaml_fast_path("example: 2023-12-25 10:30\n")
-
-        assert used_fast_path is False
-        assert result is None
-
-    def test_pyyaml_fast_path_skips_tag_markers(self) -> None:
-        """YAML tag markers stay on the full loader path for validation."""
-        with patch.dict("sys.modules", {"ryaml": None}):
-            used_fast_path, result = _load_yaml_with_pyyaml_fast_path("fruits: !!set\n  ? apple\n")
-
-        assert used_fast_path is False
-        assert result is None
-
-    def test_pyyaml_fast_path_skips_when_ryaml_is_loaded(self) -> None:
-        """An imported ryaml module preserves the ryaml backend behavior."""
-        with patch.dict("sys.modules", {"ryaml": MagicMock()}):
-            assert _has_ryaml_backend() is True
-            used_fast_path, result = _load_yaml_with_pyyaml_fast_path("key: value\n")
-
-        assert used_fast_path is False
-        assert result is None
 
     def test_load_yaml_dict_from_path_reads_yaml_dict(self, tmp_path: Path) -> None:
         """Read YAML dict data from a local path."""
