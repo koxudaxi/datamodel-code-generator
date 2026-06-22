@@ -34916,6 +34916,8 @@ Source: https://datamodel-code-generator.koxudaxi.dev/performance-benchmarks/
 
 This page tracks datamodel-code-generator release and main-branch benchmark results collected on GitHub Actions. The data covers only datamodel-code-generator and uses Ubuntu runners so release-to-release changes can be compared without mixing in third-party generator results. Automatic backfills select versions from PyPI download-by-version data when that public dataset is available.
 
+datamodel-code-generator supports many schema styles and production use cases, so it includes a broad set of useful options. As releases add more capabilities, these benchmarks help keep the implementation measured, managed, and tuned so code generation stays fast in everyday use.
+
 ## Historical Trends
 
 Each chart plots median generation time by release version for one benchmark scenario. Each line is a formatter pipeline; missing or unsupported formatter results are skipped. Marked versions have benchmark notes below.

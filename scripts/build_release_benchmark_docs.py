@@ -697,6 +697,12 @@ def render_release_benchmark_markdown(data: BenchmarkData) -> str:
             "available."
         ),
         "",
+        (
+            "datamodel-code-generator supports many schema styles and production use cases, so it includes a broad "
+            "set of useful options. As releases add more capabilities, these benchmarks help keep the implementation "
+            "measured, managed, and tuned so code generation stays fast in everyday use."
+        ),
+        "",
     ]
 
     if not data.entries:
