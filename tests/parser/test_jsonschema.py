@@ -129,6 +129,65 @@ def test_get_x_python_import_path_handles_empty_and_incomplete_metadata() -> Non
     assert parser._get_x_python_import_path({"module": "os", "name": "PathLike"}) == "os.PathLike"
 
 
+def test_get_ref_data_type_uses_cached_validated_definition_facts(mocker: MockerFixture) -> None:
+    """Use facts from the already validated definition instead of validating the ref target again."""
+    parser = JsonSchemaParser(
+        json.dumps({
+            "type": "object",
+            "properties": {"user": {"$ref": "#/$defs/User"}},
+            "required": ["user"],
+            "$defs": {
+                "User": {
+                    "type": "object",
+                    "nullable": True,
+                    "properties": {"name": {"type": "string"}},
+                    "required": ["name"],
+                },
+            },
+        }),
+        strict_nullable=True,
+    )
+    load_ref_schema_object = mocker.spy(parser, "_load_ref_schema_object")
+
+    parser.parse(format_=False)
+
+    load_ref_schema_object.assert_not_called()
+    assert parser._ref_data_type_facts["#/$defs/User"] == (None, True)
+    assert "user: Optional[User]" in dump_templates(list(parser.results))
+
+
+def test_get_ref_data_type_falls_back_when_facts_are_not_cached(mocker: MockerFixture) -> None:
+    """Keep the validation fallback for refs that were not parsed and cached first."""
+    parser = JsonSchemaParser("")
+    parser.raw_obj = {"$defs": {"User": {"type": "object"}}}
+    load_ref_schema_object = mocker.spy(parser, "_load_ref_schema_object")
+
+    parser.get_ref_data_type("#/$defs/User")
+
+    load_ref_schema_object.assert_called_once_with("#/$defs/User")
+
+
+def test_resolve_local_ref_path_caches_safe_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Avoid resolving the same local ref path repeatedly after it has passed safety checks."""
+    parser = JsonSchemaParser(tmp_path / "schema.json")
+    target = tmp_path / "schema.json"
+    original_resolve = Path.resolve
+    calls: list[Path] = []
+
+    def resolve(path: Path, *args: Any, **kwargs: Any) -> Path:
+        calls.append(path)
+        return original_resolve(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", resolve)
+
+    parser._resolve_local_ref_path(target, "schema.json")
+    first_call_count = len(calls)
+    assert first_call_count > 0
+    parser._resolve_local_ref_path(target, "schema.json")
+
+    assert len(calls) == first_call_count
+
+
 def test_json_schema_directory_input_reads_each_source_once(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test directory input source text is materialized once per parse."""
     user_path, pet_path = _write_simple_json_schemas(tmp_path)
