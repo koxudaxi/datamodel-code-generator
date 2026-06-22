@@ -12,6 +12,16 @@
   const dataUrl = new URL("../../data/release-benchmarks.json", scriptUrl);
   const notesUrl = new URL("../../data/release-benchmark-notes.json", scriptUrl);
   const MAIN_VERSION = "main";
+  const initializedCharts = new WeakSet();
+  const observedCharts = new WeakSet();
+  let benchmarkPayloadPromise = null;
+  let benchmarkPayload = null;
+  let resizeObserver = null;
+  let globalEventsAttached = false;
+  let instantNavigationHookAttached = false;
+  let navigationEventsAttached = false;
+  let mutationObserverAttached = false;
+  let initializeScheduled = false;
 
   function chartContainers() {
     return Array.from(document.querySelectorAll("[data-release-benchmark-chart]"));
@@ -413,22 +423,34 @@
   }
 
   function scheduleRender(data, notes, charts) {
-    window.requestAnimationFrame(() => renderAll(data, notes, charts));
+    let rendered = false;
+    const render = () => {
+      if (rendered) {
+        return;
+      }
+      rendered = true;
+      renderAll(data, notes, charts);
+    };
+    window.requestAnimationFrame(render);
+    window.setTimeout(render, 100);
   }
 
-  function initializeCharts() {
-    const charts = chartContainers();
-    if (charts.length === 0) {
+  function initializedChartContainers() {
+    return chartContainers().filter((container) => initializedCharts.has(container));
+  }
+
+  function scheduleInitializedChartsRender() {
+    if (!benchmarkPayload) {
       return;
     }
-    charts.forEach((container) => {
-      renderLegend(container);
-      setStatus(container, "Loading benchmark chart...");
-      container.addEventListener("mousemove", (event) => showTooltip(container, event));
-      container.addEventListener("mouseleave", () => hideTooltip(container));
-    });
+    scheduleRender(benchmarkPayload.data, benchmarkPayload.notes, initializedChartContainers());
+  }
 
-    Promise.all([
+  function loadBenchmarkPayload() {
+    if (benchmarkPayloadPromise) {
+      return benchmarkPayloadPromise;
+    }
+    benchmarkPayloadPromise = Promise.all([
       fetch(dataUrl).then((response) => {
         if (!response.ok) {
           throw new Error(`Could not load ${dataUrl.pathname}`);
@@ -439,19 +461,84 @@
         .then((response) => (response.ok ? response.json() : { notes: [] }))
         .then(normalizeNotes)
         .catch(() => []),
-    ])
-      .then((response) => {
-        const [data, notes] = response;
-        scheduleRender(data, notes, charts);
-        if ("ResizeObserver" in window) {
-          const observer = new ResizeObserver(() => scheduleRender(data, notes, charts));
-          charts.forEach((container) => observer.observe(container));
-        } else {
-          window.addEventListener("resize", () => scheduleRender(data, notes, charts));
+    ]).then((response) => {
+      const [data, notes] = response;
+      benchmarkPayload = { data, notes };
+      return benchmarkPayload;
+    });
+    return benchmarkPayloadPromise;
+  }
+
+  function observeChart(container) {
+    if (!("ResizeObserver" in window) || observedCharts.has(container)) {
+      return;
+    }
+    if (!resizeObserver) {
+      resizeObserver = new ResizeObserver(scheduleInitializedChartsRender);
+    }
+    resizeObserver.observe(container);
+    observedCharts.add(container);
+  }
+
+  function attachGlobalEvents() {
+    if (globalEventsAttached) {
+      return;
+    }
+    globalEventsAttached = true;
+    window.addEventListener("resize", scheduleInitializedChartsRender);
+    document.addEventListener("click", () => window.setTimeout(scheduleInitializedChartsRender, 50));
+    document.addEventListener("change", () => window.setTimeout(scheduleInitializedChartsRender, 50));
+    document.addEventListener("visibilitychange", scheduleInitializedChartsRender);
+  }
+
+  // Material instant navigation swaps page content without re-running destination extra scripts.
+  function scheduleNavigationRetry() {
+    [0, 50, 250, 750].forEach((delay) => {
+      window.setTimeout(scheduleInitializeCharts, delay);
+    });
+  }
+
+  function attachNavigationEvents() {
+    if (navigationEventsAttached) {
+      return;
+    }
+    navigationEventsAttached = true;
+    document.addEventListener(
+      "click",
+      (event) => {
+        const anchor = event.target instanceof Element ? event.target.closest("a") : null;
+        if (!(anchor instanceof HTMLAnchorElement) || anchor.target || anchor.origin !== window.location.origin) {
+          return;
         }
-        document.addEventListener("click", () => window.setTimeout(() => scheduleRender(data, notes, charts), 50));
-        document.addEventListener("change", () => window.setTimeout(() => scheduleRender(data, notes, charts), 50));
-        document.addEventListener("visibilitychange", () => scheduleRender(data, notes, charts));
+        scheduleNavigationRetry();
+      },
+      true,
+    );
+    window.addEventListener("popstate", scheduleNavigationRetry);
+  }
+
+  function prepareChart(container) {
+    if (initializedCharts.has(container)) {
+      return;
+    }
+    initializedCharts.add(container);
+    renderLegend(container);
+    setStatus(container, "Loading benchmark chart...");
+    container.addEventListener("mousemove", (event) => showTooltip(container, event));
+    container.addEventListener("mouseleave", () => hideTooltip(container));
+    observeChart(container);
+  }
+
+  function initializeCharts() {
+    const charts = chartContainers();
+    if (charts.length === 0) {
+      return;
+    }
+    charts.forEach(prepareChart);
+    attachGlobalEvents();
+    loadBenchmarkPayload()
+      .then(({ data, notes }) => {
+        scheduleRender(data, notes, charts);
       })
       .catch((error) => {
         charts.forEach((container) => {
@@ -465,9 +552,71 @@
       });
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initializeCharts, { once: true });
-  } else {
-    initializeCharts();
+  function scheduleInitializeCharts() {
+    if (initializeScheduled) {
+      return;
+    }
+    initializeScheduled = true;
+    window.setTimeout(() => {
+      initializeScheduled = false;
+      initializeCharts();
+    }, 0);
   }
+
+  function attachMutationObserver() {
+    if (mutationObserverAttached || !("MutationObserver" in window) || !document.documentElement) {
+      return;
+    }
+    mutationObserverAttached = true;
+    const observer = new MutationObserver(() => {
+      if (chartContainers().some((container) => !initializedCharts.has(container))) {
+        scheduleInitializeCharts();
+      }
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  function instantNavigationDocument() {
+    if (window.document$ && typeof window.document$.subscribe === "function") {
+      return window.document$;
+    }
+    if (typeof document$ !== "undefined" && typeof document$.subscribe === "function") {
+      return document$;
+    }
+    return null;
+  }
+
+  function attachInstantNavigationHook() {
+    if (instantNavigationHookAttached) {
+      return;
+    }
+    const navigationDocument = instantNavigationDocument();
+    if (!navigationDocument) {
+      return;
+    }
+    instantNavigationHookAttached = true;
+    try {
+      navigationDocument.subscribe(scheduleInitializeCharts);
+    } catch {
+      // Initial rendering and navigation retry still cover environments without this observable.
+    }
+  }
+
+  function start() {
+    attachNavigationEvents();
+    attachMutationObserver();
+    scheduleInitializeCharts();
+    attachInstantNavigationHook();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      start,
+      { once: true },
+    );
+  }
+  start();
+  window.addEventListener("load", start, { once: true });
+  window.setTimeout(start, 0);
 })();

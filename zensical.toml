@@ -90,7 +90,7 @@ extra_css = [
 ]
 
 extra_javascript = [
-  { path = "assets/benchmarks/release-benchmarks.js", defer = true }
+  "assets/benchmarks/release-benchmarks.js"
 ]
 
 [project.theme]
