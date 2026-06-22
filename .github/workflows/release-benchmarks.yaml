@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       versions:
-        description: "Release tags or versions to benchmark. Leave empty to select by PyPI download usage."
+        description: "Release tags, versions, or main to benchmark. Leave empty to select by PyPI download usage."
         required: false
         default: ""
       history_days:

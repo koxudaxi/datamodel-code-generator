@@ -1,8 +1,8 @@
 """Collect datamodel-code-generator release benchmarks in isolated environments.
 
-This script is intended for GitHub Actions. It installs released PyPI packages in
-temporary virtual environments, runs CLI generation commands, and writes a JSON
-artifact consumed by scripts/build_release_benchmark_docs.py.
+This script is intended for GitHub Actions. It installs released PyPI packages
+or the main branch in temporary virtual environments, runs CLI generation
+commands, and writes a JSON artifact consumed by scripts/build_release_benchmark_docs.py.
 """
 
 from __future__ import annotations
@@ -30,6 +30,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
     from release_benchmark_errors import compact_benchmark_error
 
 ROOT = Path(__file__).resolve().parents[1]
+GITHUB_PACKAGE_URL = "git+https://github.com/koxudaxi/datamodel-code-generator.git"
 DEFAULT_OUTPUT = ROOT / ".benchmarks" / "release-benchmarks.json"
 DEFAULT_RUNS = 7
 DEFAULT_WARMUPS = 1
@@ -151,8 +152,16 @@ def _truncate_error(text: str) -> str:
     return f"{compact[: MAX_ERROR_LENGTH - 3]}..."
 
 
+def _install_spec(version: str) -> str:
+    match _normalize_version(version):
+        case "main":
+            return f"datamodel-code-generator[ruff] @ {GITHUB_PACKAGE_URL}@main"
+        case normalized:
+            return f"datamodel-code-generator[ruff]=={normalized}"
+
+
 def _install_command(python_path: Path, version: str) -> list[str]:
-    spec = f"datamodel-code-generator[ruff]=={_normalize_version(version)}"
+    spec = _install_spec(version)
     if uv_path := shutil.which("uv"):
         return [uv_path, "pip", "install", "--python", str(python_path), spec]
     return [str(python_path), "-m", "pip", "install", spec]
@@ -361,7 +370,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--versions",
         required=True,
-        help="Comma, whitespace, or newline separated release versions/tags",
+        help="Comma, whitespace, or newline separated release versions/tags or main",
     )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help="JSON artifact output path")
     parser.add_argument("--runs", type=int, default=DEFAULT_RUNS, help="Measured runs per case")

@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from scripts import build_release_benchmark_docs
-from scripts.collect_release_benchmarks import _failure_status, _run_subprocess
+from scripts.collect_release_benchmarks import _failure_status, _install_spec, _run_subprocess
 from scripts.release_benchmark_errors import sanitize_benchmark_error, summarize_benchmark_error
 from tests.conftest import assert_output
 
@@ -135,6 +135,17 @@ def test_collect_release_benchmark_failure_helpers() -> None:
     ))
 
     assert_output(output, EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "collect_release_benchmarks_failures.txt")
+
+
+def test_collect_release_benchmark_install_specs() -> None:
+    """Release versions use PyPI pins and main uses the GitHub branch ref."""
+    output = "\n".join((
+        f"release: {_install_spec('v0.65.0')}",
+        f"main: {_install_spec('main')}",
+        "",
+    ))
+
+    assert_output(output, EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "collect_release_benchmark_install_specs.txt")
 
 
 def test_release_benchmark_error_helpers_redact_public_output() -> None:

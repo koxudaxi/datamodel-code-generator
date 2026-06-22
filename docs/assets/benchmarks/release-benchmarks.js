@@ -11,12 +11,17 @@
   const scriptUrl = document.currentScript && document.currentScript.src ? document.currentScript.src : document.baseURI;
   const dataUrl = new URL("../../data/release-benchmarks.json", scriptUrl);
   const notesUrl = new URL("../../data/release-benchmark-notes.json", scriptUrl);
+  const MAIN_VERSION = "main";
 
   function chartContainers() {
     return Array.from(document.querySelectorAll("[data-release-benchmark-chart]"));
   }
 
   function versionKey(version) {
+    const normalizedVersion = String(version).replace(/^v/, "");
+    if (normalizedVersion === MAIN_VERSION) {
+      return [1, 0, 0, 0, 0];
+    }
     const parts = String(version)
       .replace(/^v/, "")
       .split(/[.\-+_]/)
@@ -24,13 +29,14 @@
     while (parts.length < 4) {
       parts.push(0);
     }
+    parts.unshift(0);
     return parts;
   }
 
   function compareVersions(left, right) {
     const leftKey = versionKey(left);
     const rightKey = versionKey(right);
-    for (let index = 0; index < 4; index += 1) {
+    for (let index = 0; index < 5; index += 1) {
       if (leftKey[index] !== rightKey[index]) {
         return leftKey[index] - rightKey[index];
       }
