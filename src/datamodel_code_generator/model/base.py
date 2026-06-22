@@ -629,6 +629,8 @@ class DataModelFieldBase(_BaseModel):
         else:
             self.data_type = new_data_type
             new_data_type.parent = self
+        if self.parent is not None:
+            self.parent.clear_imports_cache()
 
 
 def _nested_model_default_factory(field: DataModelFieldBase, model_cls: type[DataModel]) -> str | None:
@@ -812,6 +814,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     DOCSTRING_INDENT: ClassVar[int] = 4
     FIELD_DOCSTRING_INDENT: ClassVar[int] = 4
     FORMAT_DESCRIPTION_AS_DOCSTRING: ClassVar[bool] = True
+    _IMPORTS_CACHE_KEY: ClassVar[str] = "_cached_imports"
     has_forward_reference: bool = False
 
     @classmethod
@@ -967,6 +970,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             message = f"{self.class_name} is deprecated."
             self.decorators = [*self.decorators, f"@deprecated({message!r})"]
         self._additional_imports.append(Import.from_full_path("typing_extensions.deprecated"))
+        self.clear_imports_cache()
 
     def replace_children_in_models(self, models: list[DataModel], new_ref: Reference) -> None:
         """Replace reference children if their parent model is in models list."""
@@ -985,6 +989,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
 
         if not base_class_list:
             self.base_classes = []
+            self.clear_imports_cache()
             return
 
         result = []
@@ -993,6 +998,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             self._additional_imports.append(base_class_import)
             result.append(BaseClassDataType.from_import(base_class_import))
         self.base_classes = result
+        self.clear_imports_cache()
 
     @cached_property
     def template_file_path(self) -> Path:
@@ -1015,10 +1021,21 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     @property
     def imports(self) -> tuple[Import, ...]:
         """Get all imports required by this model and its fields."""
-        return chain_as_tuple(
+        # DataModel is intentionally mutable during parser post-processing. Keep
+        # this cache coarse-grained: import-affecting mutations must clear it.
+        if self._IMPORTS_CACHE_KEY in self.__dict__:
+            return self.__dict__[self._IMPORTS_CACHE_KEY]
+
+        imports = chain_as_tuple(
             (i for f in self.fields for i in f.imports),
             self._additional_imports,
         )
+        self.__dict__[self._IMPORTS_CACHE_KEY] = imports
+        return imports
+
+    def clear_imports_cache(self) -> None:
+        """Clear cached imports after import-affecting model, field, or data type mutations."""
+        self.__dict__.pop(self._IMPORTS_CACHE_KEY, None)
 
     @property
     def reference_classes(self) -> frozenset[str]:
@@ -1060,6 +1077,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             self.reference.name = f"{self.reference.name.rsplit('.', 1)[0]}.{class_name}"
         else:
             self.reference.name = class_name
+        self.clear_imports_cache()
 
     @property
     def duplicate_class_name(self) -> str:
@@ -1119,6 +1137,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         self.reference.path = new_path
         if "path" in self.__dict__:  # pragma: no branch
             del self.__dict__["path"]
+        self.clear_imports_cache()
 
     def render(self, *, class_name: str | None = None) -> str:
         """Render the model to a string using the template."""
