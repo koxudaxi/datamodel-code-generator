@@ -171,6 +171,10 @@ Current version-specific exclusions:
 - Pydantic before 2.5.0 can emit JSON-mode serializer warnings for enum
   dictionary keys during dump, so only the affected round-trip cases are skipped
   under older runtimes; acceptance coverage remains enabled for those schemas.
+- Pydantic 2.0.x can emit JSON-mode serializer warnings for object unions
+  distinguished by boolean `Literal` fields during dump, so only the affected
+  round-trip case is skipped under that older runtime; acceptance coverage
+  remains enabled for that schema.
 
 Future work:
 

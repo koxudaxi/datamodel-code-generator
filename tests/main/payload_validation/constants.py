@@ -176,6 +176,7 @@ ROUND_TRIP_EXCLUDED_CASES: dict[str, str] = {
     ),
 }
 PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN_VERSION = "2.5.0"
+PYDANTIC_V2_0_RUNTIME_MAX_VERSION = "2.1.0"
 PYDANTIC_V2_LEGACY_LOOKAROUND_EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/lookaround_anyof_nullable.json": (
         "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
@@ -232,6 +233,14 @@ PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES: dict[PayloadBackend, dict[str, str]] 
         **_pydantic_v2_legacy_lookaround_excluded_cases(PayloadBackend.PYDANTIC_V2_DATACLASS),
         "jsonschema/use_decimal_for_multiple_of.json": (
             "Pydantic before 2.5.0 can reject schema-valid dataclass float multipleOf values near float boundaries"
+        ),
+    },
+}
+PYDANTIC_V2_0_RUNTIME_ROUND_TRIP_EXCLUDED_CASES: dict[PayloadBackend, dict[str, str]] = {
+    PayloadBackend.PYDANTIC_V2: {
+        "jsonschema/msgspec_payload_runtime_compatibility.json": (
+            "Pydantic 2.0.x emits JSON-mode serializer warnings for object unions "
+            "distinguished by boolean Literal fields"
         ),
     },
 }
