@@ -156,8 +156,82 @@ def _run_main_import_probe() -> dict[str, Any]:
 
             print(json.dumps({
                 "main_callable": callable(main),
+                "imported_config": "datamodel_code_generator.config" in sys.modules,
                 "imported_format": "datamodel_code_generator.format" in sys.modules,
                 "imported_builtin_formatter": "datamodel_code_generator._builtin_formatter" in sys.modules,
+                "imported_model": "datamodel_code_generator.model" in sys.modules,
+                "imported_reference": "datamodel_code_generator.reference" in sys.modules,
+                "imported_types": "datamodel_code_generator.types" in sys.modules,
+                "imported_validators": "datamodel_code_generator.validators" in sys.modules,
+            }))
+            """
+        )
+    )
+
+
+def _run_config_api_probe() -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            """
+            import json
+
+            import datamodel_code_generator.__main__ as main_module
+            from datamodel_code_generator.__main__ import Config
+
+            default_config = Config()
+            validated = Config.model_validate({
+                "validators": {
+                    "User": {
+                        "validators": [
+                            {"field": "name", "function": "myapp.validators.validate_name"}
+                        ]
+                    }
+                }
+            })
+            json_validated = Config.model_validate_json('{"input_file_type": "jsonschema"}')
+            strings_validated = Config.model_validate_strings({"input_file_type": "openapi"})
+            schema = Config.model_json_schema()
+
+            try:
+                Config(validators={
+                    "User": {
+                        "validators": [
+                            {"field": "bad-name", "function": "myapp.validators.validate_name"}
+                        ]
+                    }
+                })
+            except Exception as exc:
+                invalid_message = str(exc).splitlines()[0]
+            else:
+                invalid_message = None
+
+            original_supported = main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS.get("model_validate")
+            main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS["model_validate"] = frozenset({
+                "obj",
+                "strict",
+                "from_attributes",
+                "context",
+            })
+            try:
+                Config.model_validate({}, extra="forbid")
+            except TypeError as exc:
+                unsupported_message = str(exc)
+            else:
+                unsupported_message = None
+            finally:
+                if original_supported is None:
+                    del main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS["model_validate"]
+                else:
+                    main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS["model_validate"] = original_supported
+
+            print(json.dumps({
+                "default_input_file_type": default_config.input_file_type.value,
+                "validator_function": validated.validators["User"].validators[0].function,
+                "json_input_file_type": json_validated.input_file_type.value,
+                "strings_input_file_type": strings_validated.input_file_type.value,
+                "schema_title": schema["title"],
+                "invalid_message": invalid_message,
+                "unsupported_message": unsupported_message,
             }))
             """
         )
@@ -240,5 +314,66 @@ def test_main_import_skips_formatter_runtime() -> None:
     imported = _run_main_import_probe()
 
     assert imported["main_callable"] is True
+    assert imported["imported_config"] is False
     assert imported["imported_format"] is False
     assert imported["imported_builtin_formatter"] is False
+    assert imported["imported_model"] is False
+    assert imported["imported_reference"] is False
+    assert imported["imported_types"] is False
+    assert imported["imported_validators"] is False
+
+
+@pytest.mark.allow_direct_assert
+def test_cli_config_public_construction_rebuilds_lazy_validator_types() -> None:
+    """CLI Config keeps direct construction and validators validation while imports stay lazy."""
+    config = _run_config_api_probe()
+
+    assert config["default_input_file_type"] == "auto"
+    assert config["validator_function"] == "myapp.validators.validate_name"
+    assert config["json_input_file_type"] == "jsonschema"
+    assert config["strings_input_file_type"] == "openapi"
+    assert config["schema_title"] == "Config"
+    assert "bad-name" in config["invalid_message"]
+    assert "unexpected keyword argument 'extra'" in config["unsupported_message"]
+
+
+@pytest.mark.allow_direct_assert
+def test_cli_config_public_validation_methods_rebuild_lazy_validator_types() -> None:
+    """Coverage for public Config validation wrappers that keep Pydantic-version behavior."""
+    import datamodel_code_generator.__main__ as main_module
+
+    Config = main_module.Config
+
+    validated = Config.model_validate({
+        "validators": {
+            "User": {
+                "validators": [
+                    {"field": "name", "function": "myapp.validators.validate_name"}
+                ]
+            }
+        }
+    })
+    json_validated = Config.model_validate_json('{"input_file_type": "jsonschema"}')
+    strings_validated = Config.model_validate_strings({"input_file_type": "openapi"})
+    schema = Config.model_json_schema()
+
+    original_supported = main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS.get("model_validate")
+    main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS["model_validate"] = frozenset({
+        "obj",
+        "strict",
+        "from_attributes",
+        "context",
+    })
+    try:
+        with pytest.raises(TypeError, match="unexpected keyword argument 'extra'"):
+            Config.model_validate({}, extra="forbid")
+    finally:
+        if original_supported is None:
+            del main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS["model_validate"]
+        else:
+            main_module._BASE_MODEL_METHOD_SUPPORTED_KWARGS["model_validate"] = original_supported
+
+    assert validated.validators["User"].validators[0].function == "myapp.validators.validate_name"
+    assert json_validated.input_file_type.value == "jsonschema"
+    assert strings_validated.input_file_type.value == "openapi"
+    assert schema["title"] == "Config"

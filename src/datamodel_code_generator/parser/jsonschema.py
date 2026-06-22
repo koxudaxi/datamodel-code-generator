@@ -547,6 +547,7 @@ class JsonSchemaObject(BaseModel):
     model_config = ConfigDict(  # ty: ignore
         arbitrary_types_allowed=True,
         ignored_types=(cached_property,),
+        defer_build=True,
     )
 
     def model_post_init(self, __context: Any, /) -> None:

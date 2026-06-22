@@ -144,6 +144,7 @@ class Reference(_BaseModel):
         arbitrary_types_allowed=True,
         ignored_types=(cached_property,),
         revalidate_instances="never",
+        defer_build=True,
     )
 
     @property

@@ -48,7 +48,6 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
 from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA
 from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
-from datamodel_code_generator.validators import format_validation_error, normalize_validators
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -529,6 +528,8 @@ class BaseModel(BaseModelBase):
         validators = self.extra_template_data.get("validators")
         if not validators:
             return
+
+        from datamodel_code_generator.validators import format_validation_error, normalize_validators  # noqa: PLC0415
 
         try:
             validators = normalize_validators(validators)
