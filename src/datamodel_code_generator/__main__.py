@@ -219,6 +219,7 @@ def is_supported_in_black(python_version: PythonVersion) -> bool:
 
 def is_url(ref: str) -> bool:
     """Check if a reference string is a URL (HTTP, HTTPS, or file scheme)."""
+    # Keep this local so importing the CLI does not import reference.py and its model stack.
     return ref.startswith(("https://", "http://", "file://"))
 
 
