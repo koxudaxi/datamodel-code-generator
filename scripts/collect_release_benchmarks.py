@@ -153,11 +153,9 @@ def _truncate_error(text: str) -> str:
 
 
 def _install_spec(version: str) -> str:
-    match _normalize_version(version):
-        case "main":
-            return f"datamodel-code-generator[ruff] @ {GITHUB_PACKAGE_URL}@main"
-        case normalized:
-            return f"datamodel-code-generator[ruff]=={normalized}"
+    if (normalized := _normalize_version(version)) == "main":
+        return f"datamodel-code-generator[ruff] @ {GITHUB_PACKAGE_URL}@main"
+    return f"datamodel-code-generator[ruff]=={normalized}"
 
 
 def _install_command(python_path: Path, version: str) -> list[str]:
