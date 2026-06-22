@@ -55,7 +55,7 @@ Compatibility backfill: Versions 0.26.4-0.34.0 use Python 3.13.14 because those 
 Version markers in the charts and historical tables point to these benchmark interpretation notes.
 
 - `0.29.0`: The inflect dependency range was widened and cold imports became slower. Release 0.29.0 allowed inflect 7.x, which resolves typeguard 4.x in modern environments. That typeguard instrumentation increased fresh-process startup cost. Small OpenAPI is especially visible because the fixture has array component names such as Pets and Users, so class-name singularization initializes inflect while the rest of the generation work is small.
-- `0.64.1` (Small / OpenAPI): Small OpenAPI in this release predates the main-branch inflect import mitigation. The latest release result still includes the inflect/typeguard cold-import cost. On main after the mitigation, the same Small/OpenAPI built-in formatter case is back near the Small/JSON Schema result.
+- `0.64.1`: This release predates the main-branch inflect import mitigation. The latest release result still includes the inflect/typeguard cold-import cost. The effect is most visible in Small/OpenAPI because the fixture has array component names such as Pets and Users, so class-name singularization initializes inflect while the rest of the generation work is small.
 
 ## Collection Policy
 
@@ -119,7 +119,7 @@ Rows are release versions, newest first, with `main` shown before releases when 
     | --- | --- | --- | --- | --- |
     | main | - | 436ms | 310ms (1.41x faster) | 318ms (1.37x faster) |
     | 0.65.0 | 2026-06-21 18:21 UTC | 515ms | 397ms (1.30x faster) | 416ms (1.24x faster) |
-    | 0.64.1 | 2026-06-19 17:19 UTC | 561ms | 420ms (1.33x faster) | 430ms (1.30x faster) |
+    | <span class="release-benchmark-version-note" title="This release predates the main-branch inflect import mitigation.">0.64.1 *</span> | 2026-06-19 17:19 UTC | 561ms | 420ms (1.33x faster) | 430ms (1.30x faster) |
     | 0.64.0 | 2026-06-14 17:24 UTC | 588ms | 415ms (1.42x faster) | 416ms (1.41x faster) |
     | 0.59.0 | 2026-05-29 15:47 UTC | 541ms | Unsupported: unavailable | 509ms (1.06x faster) |
     | 0.58.0 | 2026-05-25 03:23 UTC | 539ms | Unsupported: unavailable | 497ms (1.09x faster) |
@@ -175,7 +175,7 @@ Rows are release versions, newest first, with `main` shown before releases when 
     | --- | --- | --- | --- | --- |
     | main | - | 517ms | 379ms (1.37x faster) | 383ms (1.35x faster) |
     | 0.65.0 | 2026-06-21 18:21 UTC | 581ms | 439ms (1.32x faster) | 481ms (1.21x faster) |
-    | <span class="release-benchmark-version-note" title="Small OpenAPI in this release predates the main-branch inflect import mitigation.">0.64.1 *</span> | 2026-06-19 17:19 UTC | 2.30s | 2.28s (1.01x faster) | 2.17s (1.06x faster) |
+    | <span class="release-benchmark-version-note" title="This release predates the main-branch inflect import mitigation.">0.64.1 *</span> | 2026-06-19 17:19 UTC | 2.30s | 2.28s (1.01x faster) | 2.17s (1.06x faster) |
     | 0.64.0 | 2026-06-14 17:24 UTC | 2.32s | 2.20s (1.06x faster) | 2.21s (1.05x faster) |
     | 0.59.0 | 2026-05-29 15:47 UTC | 2.38s | Unsupported: unavailable | 2.33s (1.02x faster) |
     | 0.58.0 | 2026-05-25 03:23 UTC | 2.59s | Unsupported: unavailable | 2.57s (1.01x faster) |
@@ -231,7 +231,7 @@ Rows are release versions, newest first, with `main` shown before releases when 
     | --- | --- | --- | --- | --- |
     | main | - | 3.13s | 1.11s (2.81x faster) | 1.06s (2.94x faster) |
     | 0.65.0 | 2026-06-21 18:21 UTC | 3.20s | 1.19s (2.69x faster) | 1.14s (2.80x faster) |
-    | 0.64.1 | 2026-06-19 17:19 UTC | 3.78s | 1.51s (2.50x faster) | 1.53s (2.48x faster) |
+    | <span class="release-benchmark-version-note" title="This release predates the main-branch inflect import mitigation.">0.64.1 *</span> | 2026-06-19 17:19 UTC | 3.78s | 1.51s (2.50x faster) | 1.53s (2.48x faster) |
     | 0.64.0 | 2026-06-14 17:24 UTC | 3.77s | 1.51s (2.50x faster) | 1.47s (2.56x faster) |
     | 0.59.0 | 2026-05-29 15:47 UTC | 3.67s | Unsupported: unavailable | 1.71s (2.14x faster) |
     | 0.58.0 | 2026-05-25 03:23 UTC | 3.82s | Unsupported: unavailable | 1.59s (2.40x faster) |
@@ -287,7 +287,7 @@ Rows are release versions, newest first, with `main` shown before releases when 
     | --- | --- | --- | --- | --- |
     | main | - | 3.13s | 1.21s (2.59x faster) | 1.15s (2.72x faster) |
     | 0.65.0 | 2026-06-21 18:21 UTC | 2.97s | 1.23s (2.42x faster) | 1.22s (2.44x faster) |
-    | 0.64.1 | 2026-06-19 17:19 UTC | 3.30s | 1.45s (2.28x faster) | 1.39s (2.38x faster) |
+    | <span class="release-benchmark-version-note" title="This release predates the main-branch inflect import mitigation.">0.64.1 *</span> | 2026-06-19 17:19 UTC | 3.30s | 1.45s (2.28x faster) | 1.39s (2.38x faster) |
     | 0.64.0 | 2026-06-14 17:24 UTC | 3.42s | 1.46s (2.34x faster) | 1.41s (2.43x faster) |
     | 0.59.0 | 2026-05-29 15:47 UTC | 3.55s | Unsupported: unavailable | 1.70s (2.09x faster) |
     | 0.58.0 | 2026-05-25 03:23 UTC | 3.58s | Unsupported: unavailable | 1.60s (2.23x faster) |
