@@ -69,45 +69,45 @@ Version markers in the charts and historical tables point to these benchmark int
 ## Latest Dataset
 
 - Schema version: `1`
-- Generated at: `2026-06-21T18:25:22Z`
+- Generated at: `2026-06-22T04:26:32Z`
 - Source workflow: `Release Benchmarks`
 - Primary Python version: `3.14.2`
 - Entry Python versions: `3.13.14`, `3.14.2`
 - Benchmark runs per case: `mixed`
-- Version selection: `clickpy_downloads_with_compatibility_backfill`
-- Selected versions: `51`
+- Version selection: `clickpy_downloads_with_compatibility_backfill_and_main`
+- Selected versions: `52`
 - Download source: `clickpy`
 - Download window: `365` days
-- Downloads in window: `117,300,797`
-- PyPIStats last month: `14,094,143`
+- Downloads in window: `117,445,983`
+- PyPIStats last month: `13,805,155`
 
 ## Latest Release Summary
 
 Results below are medians. Built-in and Ruff ratios are relative to the Default formatter for the same scenario.
 
-### 0.65.0
+### main
 
 === "Small"
 
     | Input | Formatter | Median | vs Default | Range | Status |
     | --- | --- | --- | --- | --- | --- |
-    | JSON Schema | Default | 515ms | baseline | 503ms-566ms | OK |
-    | JSON Schema | Built-in | 397ms | 1.30x faster | 382ms-406ms | OK |
-    | JSON Schema | Ruff | 416ms | 1.24x faster | 396ms-433ms | OK |
-    | OpenAPI | Default | 581ms | baseline | 560ms-616ms | OK |
-    | OpenAPI | Built-in | 439ms | 1.32x faster | 432ms-444ms | OK |
-    | OpenAPI | Ruff | 481ms | 1.21x faster | 447ms-504ms | OK |
+    | JSON Schema | Default | 451ms | baseline | 438ms-460ms | OK |
+    | JSON Schema | Built-in | 319ms | 1.41x faster | 315ms-336ms | OK |
+    | JSON Schema | Ruff | 322ms | 1.40x faster | 319ms-331ms | OK |
+    | OpenAPI | Default | 502ms | baseline | 500ms-510ms | OK |
+    | OpenAPI | Built-in | 359ms | 1.40x faster | 357ms-364ms | OK |
+    | OpenAPI | Ruff | 362ms | 1.39x faster | 360ms-367ms | OK |
 
 === "Large"
 
     | Input | Formatter | Median | vs Default | Range | Status |
     | --- | --- | --- | --- | --- | --- |
-    | JSON Schema | Default | 3.20s | baseline | 2.99s-3.41s | OK |
-    | JSON Schema | Built-in | 1.19s | 2.69x faster | 1.15s-1.25s | OK |
-    | JSON Schema | Ruff | 1.14s | 2.80x faster | 1.11s-1.18s | OK |
-    | OpenAPI | Default | 2.97s | baseline | 2.77s-3.06s | OK |
-    | OpenAPI | Built-in | 1.23s | 2.42x faster | 1.20s-1.25s | OK |
-    | OpenAPI | Ruff | 1.22s | 2.44x faster | 1.16s-1.23s | OK |
+    | JSON Schema | Default | 3.30s | baseline | 3.17s-3.33s | OK |
+    | JSON Schema | Built-in | 1.17s | 2.81x faster | 1.16s-1.21s | OK |
+    | JSON Schema | Ruff | 1.12s | 2.94x faster | 1.11s-1.13s | OK |
+    | OpenAPI | Default | 2.91s | baseline | 2.84s-2.98s | OK |
+    | OpenAPI | Built-in | 1.17s | 2.49x faster | 1.16s-1.19s | OK |
+    | OpenAPI | Ruff | 1.11s | 2.61x faster | 1.09s-1.14s | OK |
 
 ## Historical Results
 
@@ -117,6 +117,7 @@ Rows are release versions, newest first, with `main` shown before releases when 
 
     | Version | Released | Default | Built-in | Ruff |
     | --- | --- | --- | --- | --- |
+    | main | - | 451ms | 319ms (1.41x faster) | 322ms (1.40x faster) |
     | 0.65.0 | 2026-06-21 18:21 UTC | 515ms | 397ms (1.30x faster) | 416ms (1.24x faster) |
     | 0.64.1 | 2026-06-19 17:19 UTC | 561ms | 420ms (1.33x faster) | 430ms (1.30x faster) |
     | 0.64.0 | 2026-06-14 17:24 UTC | 588ms | 415ms (1.42x faster) | 416ms (1.41x faster) |
@@ -173,6 +174,7 @@ Rows are release versions, newest first, with `main` shown before releases when 
 
     | Version | Released | Default | Built-in | Ruff |
     | --- | --- | --- | --- | --- |
+    | main | - | 502ms | 359ms (1.40x faster) | 362ms (1.39x faster) |
     | 0.65.0 | 2026-06-21 18:21 UTC | 581ms | 439ms (1.32x faster) | 481ms (1.21x faster) |
     | <span class="release-benchmark-version-note" title="Small OpenAPI in this release predates the main-branch inflect import mitigation.">0.64.1 *</span> | 2026-06-19 17:19 UTC | 2.30s | 2.28s (1.01x faster) | 2.17s (1.06x faster) |
     | 0.64.0 | 2026-06-14 17:24 UTC | 2.32s | 2.20s (1.06x faster) | 2.21s (1.05x faster) |
@@ -229,6 +231,7 @@ Rows are release versions, newest first, with `main` shown before releases when 
 
     | Version | Released | Default | Built-in | Ruff |
     | --- | --- | --- | --- | --- |
+    | main | - | 3.30s | 1.17s (2.81x faster) | 1.12s (2.94x faster) |
     | 0.65.0 | 2026-06-21 18:21 UTC | 3.20s | 1.19s (2.69x faster) | 1.14s (2.80x faster) |
     | 0.64.1 | 2026-06-19 17:19 UTC | 3.78s | 1.51s (2.50x faster) | 1.53s (2.48x faster) |
     | 0.64.0 | 2026-06-14 17:24 UTC | 3.77s | 1.51s (2.50x faster) | 1.47s (2.56x faster) |
@@ -285,6 +288,7 @@ Rows are release versions, newest first, with `main` shown before releases when 
 
     | Version | Released | Default | Built-in | Ruff |
     | --- | --- | --- | --- | --- |
+    | main | - | 2.91s | 1.17s (2.49x faster) | 1.11s (2.61x faster) |
     | 0.65.0 | 2026-06-21 18:21 UTC | 2.97s | 1.23s (2.42x faster) | 1.22s (2.44x faster) |
     | 0.64.1 | 2026-06-19 17:19 UTC | 3.30s | 1.45s (2.28x faster) | 1.39s (2.38x faster) |
     | 0.64.0 | 2026-06-14 17:24 UTC | 3.42s | 1.46s (2.34x faster) | 1.41s (2.43x faster) |
