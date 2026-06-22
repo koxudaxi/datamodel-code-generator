@@ -111,7 +111,7 @@ Results below are medians. Built-in and Ruff ratios are relative to the black/is
 
 ## Historical Results
 
-Rows are release versions, newest first, with `main` shown before releases when present. Released is the PyPI upload timestamp in UTC; branch refs such as `main` show `-`. Formatter cells show median generation time; non-default cells include the speed relative to black/isort(Default) when both results are available. Version cells marked with `*` have benchmark notes above.
+Rows are release versions, newest first, with `main` shown before releases when present. Released is the PyPI upload timestamp in UTC; branch refs such as `main` show `-`. Formatter cells show median generation time; non-default cells include the speed relative to black/isort(Default) when both results are available. Rows without any successful formatter result are omitted. Version cells marked with `*` have benchmark notes above.
 
 === "Small / JSON Schema"
 
@@ -168,7 +168,6 @@ Rows are release versions, newest first, with `main` shown before releases when 
     | 0.25.4 | 2024-02-13 18:10 UTC | 396ms | Unsupported: unavailable | Unsupported: unavailable |
     | 0.25.2 | 2023-12-21 18:12 UTC | 418ms | Unsupported: unavailable | Unsupported: unavailable |
     | 0.25.0 | 2023-11-25 07:17 UTC | 387ms | Unsupported: unavailable | Unsupported: unavailable |
-    | 0.17.2 | 2023-03-31 15:26 UTC | Failed: install | Failed: install | Failed: install |
 
 === "Small / OpenAPI"
 
@@ -225,7 +224,6 @@ Rows are release versions, newest first, with `main` shown before releases when 
     | 0.25.4 | 2024-02-13 18:10 UTC | 437ms | Unsupported: unavailable | Unsupported: unavailable |
     | 0.25.2 | 2023-12-21 18:12 UTC | 460ms | Unsupported: unavailable | Unsupported: unavailable |
     | 0.25.0 | 2023-11-25 07:17 UTC | 425ms | Unsupported: unavailable | Unsupported: unavailable |
-    | 0.17.2 | 2023-03-31 15:26 UTC | Failed: install | Failed: install | Failed: install |
 
 === "Large / JSON Schema"
 
@@ -282,7 +280,6 @@ Rows are release versions, newest first, with `main` shown before releases when 
     | 0.25.4 | 2024-02-13 18:10 UTC | 3.49s | Unsupported: unavailable | Unsupported: unavailable |
     | 0.25.2 | 2023-12-21 18:12 UTC | 3.67s | Unsupported: unavailable | Unsupported: unavailable |
     | 0.25.0 | 2023-11-25 07:17 UTC | 3.44s | Unsupported: unavailable | Unsupported: unavailable |
-    | 0.17.2 | 2023-03-31 15:26 UTC | Failed: install | Failed: install | Failed: install |
 
 === "Large / OpenAPI"
 
@@ -339,4 +336,3 @@ Rows are release versions, newest first, with `main` shown before releases when 
     | 0.25.4 | 2024-02-13 18:10 UTC | 3.19s | Unsupported: unavailable | Unsupported: unavailable |
     | 0.25.2 | 2023-12-21 18:12 UTC | 3.28s | Unsupported: unavailable | Unsupported: unavailable |
     | 0.25.0 | 2023-11-25 07:17 UTC | 3.20s | Unsupported: unavailable | Unsupported: unavailable |
-    | 0.17.2 | 2023-03-31 15:26 UTC | Failed: install | Failed: install | Failed: install |

@@ -541,6 +541,8 @@ def _render_scenario_history_table(
     scenario_entries = tuple(entry for entry in entries if entry.input_type == input_type and entry.case == case)
     for version in sorted({entry.version for entry in scenario_entries}, key=_version_sort_key, reverse=True):
         formatter_entries = {entry.formatter: entry for entry in scenario_entries if entry.version == version}
+        if not any(entry.status == STATUS_OK for entry in formatter_entries.values()):
+            continue
         baseline = formatter_entries.get("default")
         values = [
             _version_cell(version, notes_by_version),
@@ -757,7 +759,8 @@ def render_release_benchmark_markdown(data: BenchmarkData) -> str:
             "Rows are release versions, newest first, with `main` shown before releases when present. Released is "
             "the PyPI upload timestamp in UTC; branch refs such as `main` show `-`. Formatter cells show median "
             "generation time; non-default cells include the speed relative to black/isort(Default) when both "
-            "results are available. Version cells marked with `*` have benchmark notes above."
+            "results are available. Rows without any successful formatter result are omitted. Version cells marked "
+            "with `*` have benchmark notes above."
         ),
         "",
         _render_scenario_history_tabs(data.entries, release_dates=_release_dates(data), notes=_visible_notes(data)),
