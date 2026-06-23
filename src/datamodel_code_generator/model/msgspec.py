@@ -5,6 +5,7 @@ Generates Python models using msgspec.Struct for high-performance serialization.
 
 from __future__ import annotations
 
+import ast
 from functools import lru_cache, wraps
 from math import isfinite
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
@@ -28,7 +29,8 @@ from datamodel_code_generator.model.types import DataTypeManager as _DataTypeMan
 from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.types import (
     NONE,
-    OPTIONAL_PREFIX,
+    OPTIONAL,
+    UNION,
     UNION_DELIMITER,
     UNION_OPERATOR_DELIMITER,
     UNION_PREFIX,
@@ -39,6 +41,7 @@ from datamodel_code_generator.types import (
 )
 
 UNSET_TYPE = "UnsetType"
+_UNSET_WRAPPER_NAMES = (OPTIONAL, UNION)
 
 
 class _UNSET:
@@ -213,18 +216,44 @@ class Constraints(_Constraints):
 
 
 @lru_cache
+def _get_top_level_typing_subscript(type_: str) -> tuple[str, str] | None:
+    """Return the top-level Optional/Union name and args for a type hint."""
+    try:
+        expression = ast.parse(type_, mode="eval").body
+    except SyntaxError:
+        return None
+
+    match expression:
+        case ast.Subscript(value=ast.Name(id=name), slice=slice_node) if name in _UNSET_WRAPPER_NAMES:
+            if (args := ast.get_source_segment(type_, slice_node)) is not None:
+                return name, args
+        case _:
+            return None
+    return None
+
+
+def _get_top_level_typing_args(type_: str, expected_name: str) -> str | None:
+    """Return args when the type hint is a specific top-level typing subscript."""
+    match _get_top_level_typing_subscript(type_):
+        case (name, args) if name == expected_name:
+            return args
+        case _:
+            return None
+
+
+@lru_cache
 def get_neither_required_nor_nullable_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT001
     """Get type hint for fields that are neither required nor nullable, using UnsetType."""
     type_ = _remove_none_from_union(type_, use_union_operator=use_union_operator)
-    if type_.startswith(OPTIONAL_PREFIX):  # pragma: no cover
-        type_ = type_[len(OPTIONAL_PREFIX) : -1]
+    if (inner_type := _get_top_level_typing_args(type_, OPTIONAL)) is not None:  # pragma: no cover
+        type_ = inner_type
 
     if not type_ or type_ == NONE:
         return UNSET_TYPE
     if use_union_operator:
         return UNION_OPERATOR_DELIMITER.join((type_, UNSET_TYPE))
-    if type_.startswith(UNION_PREFIX):
-        return f"{type_[:-1]}{UNION_DELIMITER}{UNSET_TYPE}]"
+    if (union_args := _get_top_level_typing_args(type_, UNION)) is not None:
+        return f"{UNION_PREFIX}{union_args}{UNION_DELIMITER}{UNSET_TYPE}]"
     return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"
 
 
@@ -233,12 +262,13 @@ def _add_unset_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT00
     """Add UnsetType to a type hint without removing None."""
     if use_union_operator:
         return f"{type_}{UNION_OPERATOR_DELIMITER}{UNSET_TYPE}"
-    if type_.startswith(UNION_PREFIX):  # pragma: no cover
-        return f"{type_[:-1]}{UNION_DELIMITER}{UNSET_TYPE}]"
-    if type_.startswith(OPTIONAL_PREFIX):  # pragma: no cover
-        inner_type = type_[len(OPTIONAL_PREFIX) : -1]
-        return f"{UNION_PREFIX}{inner_type}{UNION_DELIMITER}{NONE}{UNION_DELIMITER}{UNSET_TYPE}]"
-    return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"  # pragma: no cover
+    match _get_top_level_typing_subscript(type_):
+        case (name, union_args) if name == UNION:  # pragma: no cover
+            return f"{UNION_PREFIX}{union_args}{UNION_DELIMITER}{UNSET_TYPE}]"
+        case (name, inner_type) if name == OPTIONAL:  # pragma: no cover
+            return f"{UNION_PREFIX}{inner_type}{UNION_DELIMITER}{NONE}{UNION_DELIMITER}{UNSET_TYPE}]"
+        case _:
+            return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"  # pragma: no cover
 
 
 @import_extender
