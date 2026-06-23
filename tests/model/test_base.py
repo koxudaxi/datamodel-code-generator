@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import tokenize
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -261,18 +260,18 @@ def test_pydantic_v2_extra_type_hint_uses_structured_dict(data_type: DataType, e
     assert field.pydantic_extra_type_hint == expected
 
 
-def test_pydantic_extra_type_hint_for_builtin_dict_rejects_token_errors(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test malformed token streams leave typed-extra annotations unchanged."""
-    monkeypatch.setattr(
-        "datamodel_code_generator.model.pydantic_v2.base_model.tokenize.generate_tokens",
-        lambda _: (_ for _ in ()).throw(tokenize.TokenError("bad", (1, 0))),
-    )
-    _pydantic_extra_type_hint_for_builtin_dict.cache_clear()
-
-    try:
-        assert _pydantic_extra_type_hint_for_builtin_dict("dict[str, int]") is None
-    finally:
-        _pydantic_extra_type_hint_for_builtin_dict.cache_clear()
+@pytest.mark.parametrize(
+    ("type_hint", "expected"),
+    [
+        ("dict[str, tuple[*Ts]]", "Dict[str, tuple[*Ts]]"),
+        ("dict[str, Literal[']']] | None", "Dict[str, Literal[']']] | None"),
+        ("dict[str, Literal['unterminated]", None),
+        ("dict[str][int]", None),
+    ],
+)
+def test_pydantic_extra_type_hint_for_builtin_dict_scans_subscript(type_hint: str, expected: str | None) -> None:
+    """Test typed-extra dict conversion does not depend on runtime AST grammar."""
+    assert _pydantic_extra_type_hint_for_builtin_dict(type_hint) == expected
 
 
 def test_rendered_pydantic_v2_field_reuses_field_string(monkeypatch: pytest.MonkeyPatch) -> None:

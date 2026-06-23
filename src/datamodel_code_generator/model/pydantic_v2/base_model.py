@@ -6,9 +6,7 @@ with support for Field() constraints and ConfigDict.
 
 from __future__ import annotations
 
-import io
 import re
-import tokenize
 from collections import defaultdict
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
@@ -103,49 +101,65 @@ _ALIAS_GENERATOR_IMPORTS: dict[str, Import] = {
     AliasGenerator.ToPascal.value: IMPORT_ALIAS_GENERATOR_TO_PASCAL,
     AliasGenerator.ToSnake.value: IMPORT_ALIAS_GENERATOR_TO_SNAKE,
 }
-_IGNORED_TYPE_HINT_TOKEN_TYPES = frozenset({tokenize.ENDMARKER, tokenize.NEWLINE, tokenize.NL})
+_TYPE_HINT_QUOTE_CHARS = "'\""
 
 
 def _replace_annotation_name(type_hint: str, start: int, end: int, replacement: str) -> str:
     return f"{type_hint[:start]}{replacement}{type_hint[end:]}"
 
 
+def _is_escaped_position(type_hint: str, index: int) -> bool:
+    backslash_count = 0
+    while index - backslash_count > 0 and type_hint[index - backslash_count - 1] == "\\":
+        backslash_count += 1
+    return backslash_count % 2 == 1
+
+
+def _skip_string_literal(type_hint: str, index: int, quote: str) -> int:
+    quote_size = 3 if type_hint[index : index + 3] == quote * 3 else 1
+    quote_token = quote * quote_size
+    index += quote_size
+    while (next_index := type_hint.find(quote_token, index)) != -1:
+        if not _is_escaped_position(type_hint, next_index):
+            return next_index + quote_size
+        index = next_index + quote_size
+    return len(type_hint)
+
+
+def _find_subscript_end(type_hint: str, open_index: int) -> int | None:
+    depth = 0
+    index = open_index
+    while index < len(type_hint):
+        char = type_hint[index]
+        if char in _TYPE_HINT_QUOTE_CHARS:
+            index = _skip_string_literal(type_hint, index, char)
+            continue
+        match char:
+            case "[":
+                depth += 1
+            case "]":
+                depth -= 1
+                if depth == 0:
+                    return index
+        index += 1
+    return None
+
+
 def _get_leading_builtin_dict_name_end(type_hint: str) -> int | None:
-    try:
-        tokens = [
-            token_info
-            for token_info in tokenize.generate_tokens(io.StringIO(type_hint).readline)
-            if token_info.type not in _IGNORED_TYPE_HINT_TOKEN_TYPES
-        ]
-    except tokenize.TokenError:
+    if (open_index := type_hint.find("[")) == -1:
         return None
 
-    match tokens:
-        case [name_token, open_token, *_] if (
-            name_token.type == tokenize.NAME
-            and name_token.string == "dict"
-            and name_token.start == (1, 0)
-            and open_token.type == tokenize.OP
-            and open_token.string == "["
-        ):
-            depth = 0
-            for index, token_info in enumerate(tokens[1:], start=1):
-                if token_info.type != tokenize.OP:
-                    continue
-                match token_info.string:
-                    case "[":
-                        depth += 1
-                    case "]":
-                        depth -= 1
-                        if depth == 0:
-                            match tokens[index + 1 :]:
-                                case [] | [tokenize.TokenInfo(type=tokenize.OP, string="|"), *_]:
-                                    return name_token.end[1]
-                                case _:
-                                    return None
+    match type_hint[:open_index]:
+        case "dict":
+            if (close_index := _find_subscript_end(type_hint, open_index)) is None:
+                return None
+            match type_hint[close_index + 1 :].lstrip()[:1]:
+                case "" | "|":
+                    return open_index
+                case _:
+                    return None
         case _:
             return None
-    return None  # pragma: no cover
 
 
 @lru_cache(maxsize=256)
