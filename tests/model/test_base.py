@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import tokenize
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -35,6 +36,7 @@ from datamodel_code_generator.model.base import (
 from datamodel_code_generator.model.pydantic_base import DataModelField as PydanticBaseDataModelField
 from datamodel_code_generator.model.pydantic_v2 import BaseModel
 from datamodel_code_generator.model.pydantic_v2 import DataModelField as PydanticV2DataModelField
+from datamodel_code_generator.model.pydantic_v2.base_model import _pydantic_extra_type_hint_for_builtin_dict
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_FIELD
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import ANY, NONE, DataType, Types
@@ -217,6 +219,10 @@ def test_pydantic_v2_extra_type_hint_keeps_non_dict_hint() -> None:
             "Dict[str, list[str]]",
         ),
         (
+            DataType(type="tuple[*Ts]", is_dict=True, use_standard_collections=True),
+            "Dict[str, tuple[*Ts]]",
+        ),
+        (
             DataType(type="int", is_dict=True),
             "Dict[str, int]",
         ),
@@ -253,6 +259,20 @@ def test_pydantic_v2_extra_type_hint_uses_structured_dict(data_type: DataType, e
     )
 
     assert field.pydantic_extra_type_hint == expected
+
+
+def test_pydantic_extra_type_hint_for_builtin_dict_rejects_token_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test malformed token streams leave typed-extra annotations unchanged."""
+    monkeypatch.setattr(
+        "datamodel_code_generator.model.pydantic_v2.base_model.tokenize.generate_tokens",
+        lambda _: (_ for _ in ()).throw(tokenize.TokenError("bad", (1, 0))),
+    )
+    _pydantic_extra_type_hint_for_builtin_dict.cache_clear()
+
+    try:
+        assert _pydantic_extra_type_hint_for_builtin_dict("dict[str, int]") is None
+    finally:
+        _pydantic_extra_type_hint_for_builtin_dict.cache_clear()
 
 
 def test_rendered_pydantic_v2_field_reuses_field_string(monkeypatch: pytest.MonkeyPatch) -> None:

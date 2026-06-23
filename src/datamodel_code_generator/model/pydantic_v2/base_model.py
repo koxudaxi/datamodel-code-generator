@@ -6,8 +6,9 @@ with support for Field() constraints and ConfigDict.
 
 from __future__ import annotations
 
-import ast
+import io
 import re
+import tokenize
 from collections import defaultdict
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
@@ -102,18 +103,46 @@ _ALIAS_GENERATOR_IMPORTS: dict[str, Import] = {
     AliasGenerator.ToPascal.value: IMPORT_ALIAS_GENERATOR_TO_PASCAL,
     AliasGenerator.ToSnake.value: IMPORT_ALIAS_GENERATOR_TO_SNAKE,
 }
+_IGNORED_TYPE_HINT_TOKEN_TYPES = frozenset({tokenize.ENDMARKER, tokenize.NEWLINE, tokenize.NL})
 
 
-def _replace_annotation_name(type_hint: str, name: ast.Name, replacement: str) -> str:
-    return f"{type_hint[: name.col_offset]}{replacement}{type_hint[name.end_col_offset :]}"
+def _replace_annotation_name(type_hint: str, start: int, end: int, replacement: str) -> str:
+    return f"{type_hint[:start]}{replacement}{type_hint[end:]}"
 
 
-def _get_leading_builtin_dict_name(expression: ast.AST) -> ast.Name | None:
-    match expression:
-        case ast.Subscript(value=ast.Name(id="dict") as dict_name):
-            return dict_name
-        case ast.BinOp(left=left, op=ast.BitOr()):
-            return _get_leading_builtin_dict_name(left)
+def _get_leading_builtin_dict_name_end(type_hint: str) -> int | None:
+    try:
+        tokens = [
+            token_info
+            for token_info in tokenize.generate_tokens(io.StringIO(type_hint).readline)
+            if token_info.type not in _IGNORED_TYPE_HINT_TOKEN_TYPES
+        ]
+    except tokenize.TokenError:
+        return None
+
+    match tokens:
+        case [name_token, open_token, *_] if (
+            name_token.type == tokenize.NAME
+            and name_token.string == "dict"
+            and name_token.start == (1, 0)
+            and open_token.type == tokenize.OP
+            and open_token.string == "["
+        ):
+            depth = 0
+            for index, token_info in enumerate(tokens[1:], start=1):
+                if token_info.type != tokenize.OP:
+                    continue
+                match token_info.string:
+                    case "[":
+                        depth += 1
+                    case "]":
+                        depth -= 1
+                        if depth == 0:
+                            match tokens[index + 1 :]:
+                                case [] | [tokenize.TokenInfo(type=tokenize.OP, string="|"), *_]:
+                                    return name_token.end[1]
+                                case _:
+                                    return None
         case _:
             return None
     return None  # pragma: no cover
@@ -121,14 +150,9 @@ def _get_leading_builtin_dict_name(expression: ast.AST) -> ast.Name | None:
 
 @lru_cache(maxsize=256)
 def _pydantic_extra_type_hint_for_builtin_dict(type_hint: str) -> str | None:
-    try:
-        expression = ast.parse(type_hint, mode="eval").body
-    except SyntaxError:  # pragma: no cover
+    if (dict_name_end := _get_leading_builtin_dict_name_end(type_hint)) is None:
         return None
-
-    if (dict_name := _get_leading_builtin_dict_name(expression)) is None or dict_name.col_offset != 0:
-        return None
-    return _replace_annotation_name(type_hint, dict_name, DICT)
+    return _replace_annotation_name(type_hint, 0, dict_name_end, DICT)
 
 
 def _alias_generator_name(value: Any) -> str | None:
