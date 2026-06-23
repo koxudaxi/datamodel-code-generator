@@ -2246,6 +2246,19 @@ def test_main_serialize_as_any_import_fast_path(output_file: Path) -> None:
     )
 
 
+def test_main_structured_imports(output_file: Path) -> None:
+    """Test structured import detection keeps generated Union and Optional output."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "structured_imports.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--no-use-union-operator"],
+        force_exec_validation=True,
+        importable_module_name="generated_structured_imports",
+    )
+
+
 def test_main_root_model_with_additional_properties_literal(min_version: str, output_file: Path) -> None:
     """Test root model additional properties with literal types."""
     run_main_and_assert(
@@ -13319,6 +13332,25 @@ def test_main_msgspec_array_length_constraints_use_annotated(output_file: Path) 
         assert_func=assert_file_content,
         expected_file="msgspec_array_length_constraints_use_annotated.py",
         importable_module_name="generated_msgspec_array_length_constraints",
+    )
+
+
+def test_main_msgspec_annotated_optional_imports(output_file: Path) -> None:
+    """Test msgspec keeps Optional imports when Annotated wraps optional types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_annotated_optional_imports.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--use-annotated",
+            "--no-use-union-operator",
+        ],
+        assert_func=assert_file_content,
+        expected_file="msgspec_annotated_optional_imports.py",
+        force_exec_validation=True,
+        importable_module_name="generated_msgspec_annotated_optional_imports",
     )
 
 

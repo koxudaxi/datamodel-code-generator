@@ -9,12 +9,22 @@ from typing import Any
 
 import pytest
 
-from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_DECIMAL, IMPORT_OPTIONAL, IMPORT_UNION, Import
+from datamodel_code_generator.imports import (
+    IMPORT_ANNOTATED,
+    IMPORT_ANY,
+    IMPORT_DECIMAL,
+    IMPORT_DICT,
+    IMPORT_OPTIONAL,
+    IMPORT_UNION,
+    Import,
+)
 from datamodel_code_generator.model.base import (
     DataModel,
     DataModelFieldBase,
     TemplateBase,
+    _annotation_typing_import_names,
     _RenderedDataModelField,
+    _TypingImportRequirements,
     comment_safe,
     escape_docstring,
     format_docstring,
@@ -27,7 +37,7 @@ from datamodel_code_generator.model.pydantic_v2 import BaseModel
 from datamodel_code_generator.model.pydantic_v2 import DataModelField as PydanticV2DataModelField
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_FIELD
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import ANY, DataType, Types
+from datamodel_code_generator.types import ANY, NONE, DataType, Types
 
 
 class A(TemplateBase):
@@ -609,6 +619,7 @@ def test_field_import_fallback_collects_annotated_import() -> None:
     [
         ("Optional[str]", (IMPORT_OPTIONAL,)),
         ("Union[str, int]", (IMPORT_UNION,)),
+        ("Annotated[str, Field()]", (IMPORT_ANNOTATED,)),
     ],
 )
 def test_field_import_fallback_collects_explicit_typing_names(
@@ -619,6 +630,202 @@ def test_field_import_fallback_collects_explicit_typing_names(
     field = DataModelFieldBase(name="a", data_type=DataType(type=type_name), required=True)
 
     assert field.imports == expected_imports
+
+
+def test_field_import_fallback_uses_structured_union_requirements(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test complex unions collect imports without scanning rendered type-hint text."""
+    field = DataModelFieldBase(
+        name="a",
+        data_type=DataType(data_types=[DataType(type="str"), DataType(type="int"), DataType(type=NONE)]),
+        required=True,
+    )
+
+    def fail_type_hint(_self: DataModelFieldBase) -> str:  # pragma: no cover
+        msg = "unexpected type_hint render"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(DataModelFieldBase, "type_hint", property(fail_type_hint))
+
+    assert field.imports == (IMPORT_OPTIONAL, IMPORT_UNION)
+
+
+@pytest.mark.parametrize(
+    ("data_type", "expected_imports"),
+    [
+        (DataType(data_types=[DataType(type="str"), DataType(type=NONE)]), (IMPORT_OPTIONAL,)),
+        (DataType(data_types=[DataType(type="str"), DataType(type="str")]), (IMPORT_OPTIONAL,)),
+        (DataType(data_types=[DataType(type=NONE)]), ()),
+        (DataType(data_types=[DataType(type=NONE), DataType(type=NONE)]), (IMPORT_ANY, IMPORT_OPTIONAL)),
+        (DataType(data_types=[DataType(type="str")]), (IMPORT_OPTIONAL,)),
+        (DataType(data_types=[DataType(type="str", discriminator="kind")]), (IMPORT_ANNOTATED, IMPORT_OPTIONAL)),
+        (DataType(data_types=[DataType(type="str")], is_optional=True), (IMPORT_OPTIONAL,)),
+    ],
+)
+def test_field_import_fallback_handles_structured_optional_edges(
+    data_type: DataType,
+    expected_imports: tuple[Import, ...],
+) -> None:
+    """Test structured import detection preserves Optional edge cases."""
+    field = DataModelFieldBase(name="a", data_type=data_type, required=False)
+
+    assert field.imports == expected_imports
+
+
+def test_field_import_fallback_collects_explicit_typing_names_with_ast() -> None:
+    """Test explicit type strings are parsed structurally for typing imports."""
+    field = DataModelFieldBase(name="a", data_type=DataType(type="list[Union[str, int]]"), required=True)
+
+    assert field.imports == (IMPORT_UNION,)
+
+
+def test_field_import_fallback_collects_dict_key_typing_names() -> None:
+    """Test dict key annotations contribute structured typing imports."""
+    field = DataModelFieldBase(
+        name="a",
+        data_type=DataType(is_dict=True, dict_key=DataType(type="Optional[str]")),
+        required=True,
+    )
+
+    assert field.imports == (IMPORT_DICT, IMPORT_OPTIONAL)
+
+
+def test_field_import_fallback_collects_nullable_reference_in_union() -> None:
+    """Test nullable references inside complex types contribute Optional structurally."""
+    reference = Reference(path="#/definitions/User", name="User")
+    reference.source = ReferenceSource(nullable=True)
+    field = DataModelFieldBase(
+        name="a",
+        data_type=DataType(data_types=[DataType(reference=reference), DataType(type="int")]),
+        required=True,
+    )
+
+    assert field.imports == (IMPORT_OPTIONAL, IMPORT_UNION)
+
+
+@pytest.mark.parametrize(
+    ("field", "expected_imports"),
+    [
+        (
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(data_types=[DataType(type="str")]),
+                required=True,
+                nullable=True,
+            ),
+            (IMPORT_OPTIONAL,),
+        ),
+        (
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(data_types=[DataType(type="str")]),
+                required=True,
+                nullable=False,
+            ),
+            (),
+        ),
+        (
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(data_types=[DataType(type="str")]),
+                required=True,
+                type_has_null=True,
+            ),
+            (IMPORT_OPTIONAL,),
+        ),
+        (
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(data_types=[DataType(type="str")], use_union_operator=True),
+                required=False,
+            ),
+            (),
+        ),
+        (
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(data_types=[DataType(type="str")]),
+                required=False,
+                extras={"default_factory": "list"},
+            ),
+            (),
+        ),
+    ],
+)
+def test_field_import_fallback_handles_field_optional_structure(
+    field: DataModelFieldBase,
+    expected_imports: tuple[Import, ...],
+) -> None:
+    """Test field-level optional import decisions use field structure."""
+    assert field.imports == expected_imports
+
+
+def test_field_import_fallback_handles_unexpected_nullable_value() -> None:
+    """Test defensive nullable matching keeps non-bool values from adding imports."""
+    field = DataModelFieldBase(
+        name="a",
+        data_type=DataType(data_types=[DataType(type="str")]),
+        required=False,
+    )
+    field.nullable = object()  # type: ignore[assignment]
+
+    assert field.imports == ()
+
+
+def test_field_import_fallback_respects_union_operator_for_none_branch() -> None:
+    """Test union operator mode does not add typing imports for None branches."""
+    field = DataModelFieldBase(
+        name="a",
+        data_type=DataType(
+            data_types=[DataType(type="str"), DataType(type=NONE)],
+            use_union_operator=True,
+        ),
+        required=True,
+    )
+
+    assert field.imports == ()
+
+
+def test_field_import_fallback_keeps_union_operator_optional_in_forward_ref_model() -> None:
+    """Test DataType-level union operator option still controls existing optional hints."""
+    field = DataModelFieldBase(
+        name="a",
+        data_type=DataType(data_types=[DataType(type="str")], is_optional=True, use_union_operator=True),
+        required=False,
+    )
+    model = BaseModel(
+        fields=[field],
+        reference=Reference(path="Model", original_name="Model", name="Model"),
+    )
+    model.has_forward_reference = True
+
+    assert field.imports == ()
+
+
+def test_typing_import_requirements_ignore_unknown_import_name() -> None:
+    """Test unknown annotation names leave structured import requirements unchanged."""
+    requirements = _TypingImportRequirements(optional=True)
+
+    assert requirements.with_import_name("Literal") is requirements
+
+
+def test_annotation_typing_import_names_ignores_invalid_annotation() -> None:
+    """Test invalid explicit type strings do not fall back to ad hoc string matching."""
+    assert _annotation_typing_import_names("List[") == frozenset()
+
+
+@pytest.mark.parametrize(
+    ("annotation", "expected_names"),
+    [
+        ("str", frozenset()),
+        ("Optional", frozenset({IMPORT_OPTIONAL.import_})),
+    ],
+)
+def test_annotation_typing_import_names_handles_identifier_fast_path(
+    annotation: str,
+    expected_names: frozenset[str],
+) -> None:
+    """Test identifier annotations skip AST parsing unless they are typing imports."""
+    assert _annotation_typing_import_names(annotation) == expected_names
 
 
 @pytest.mark.parametrize(
