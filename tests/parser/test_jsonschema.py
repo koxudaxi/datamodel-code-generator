@@ -27,7 +27,11 @@ from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
     Types,
+    _extract_qualified_python_type_spans,
     _get_union_variant_name,
+    _is_union_operator_python_type,
+    _is_union_python_type,
+    _replace_python_type_spans,
     _validate_schema_python_import_path,
     get_model_by_path,
     split_json_pointer,
@@ -1956,6 +1960,46 @@ def test_get_python_type_flags(x_python_type: str, expected: dict[str, bool]) ->
     obj = JsonSchemaObject.model_validate({"x-python-type": x_python_type})
     result = parser._get_python_type_flags(obj)
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("x_python_type", "expected"),
+    [
+        ("Union[str, int]", True),
+        ("typing.Optional[str]", True),
+        ("str | int", True),
+        ("str|int", False),
+        ("list[str]", False),
+        ("[", False),
+    ],
+)
+def test_is_union_python_type(x_python_type: str, expected: bool) -> None:
+    """Test union type detection uses parsed annotations."""
+    assert _is_union_python_type(x_python_type) is expected
+
+
+@pytest.mark.parametrize(
+    ("x_python_type", "expected"),
+    [
+        ("str | int", True),
+        ("str|int", False),
+        ("Literal[' | ']", False),
+    ],
+)
+def test_is_union_operator_python_type(x_python_type: str, expected: bool) -> None:
+    """Test union operator detection ignores non-operator annotation text."""
+    assert _is_union_operator_python_type(x_python_type) is expected
+
+
+def test_extract_and_replace_qualified_python_type_spans() -> None:
+    """Test qualified Python type spans preserve string literals when replacing."""
+    x_python_type = "Callable[[foo.Bar, Literal['foo.Bar']], baz.Qux]"
+    spans = _extract_qualified_python_type_spans(x_python_type)
+    replacements = [(start, end, name.rsplit(".", 1)[-1]) for name, start, end in spans]
+
+    assert spans == (("baz.Qux", 40, 47), ("foo.Bar", 10, 17))
+    assert _replace_python_type_spans(x_python_type, replacements) == "Callable[[Bar, Literal['foo.Bar']], Qux]"
+    assert _extract_qualified_python_type_spans("[") == ()
 
 
 def test_merge_type_modifiers_preserves_container_flags() -> None:

@@ -169,8 +169,11 @@ def _extract_qualified_python_type_spans(type_str: str) -> tuple[tuple[str, int,
     for node in ast.walk(expression):
         if not isinstance(node, ast.Attribute) or id(node) in visited:
             continue
-        if (name := _get_full_attribute_name(node, visited)) is not None and "." in name:
-            qualified_names.append((name, node.col_offset, node.end_col_offset))
+        if (name := _get_full_attribute_name(node, visited)) is None or "." not in name:
+            continue
+        if (end_col_offset := node.end_col_offset) is None:  # pragma: no cover
+            continue
+        qualified_names.append((name, node.col_offset, end_col_offset))
     return tuple(qualified_names)
 
 
