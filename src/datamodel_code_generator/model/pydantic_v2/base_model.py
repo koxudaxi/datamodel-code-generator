@@ -160,6 +160,7 @@ def _get_leading_builtin_dict_name_end(type_hint: str) -> int | None:
                     return None
         case _:
             return None
+    return None  # pragma: no cover
 
 
 @lru_cache(maxsize=256)
