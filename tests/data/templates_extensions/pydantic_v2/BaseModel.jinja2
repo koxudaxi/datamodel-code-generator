@@ -35,7 +35,7 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
     {%- else %}
     {{ field.name }}: {{ field.type_hint }}
     {%- endif %}
-    {%- if not field.has_default_factory_in_field and not field.required and (field.represented_default != 'None' or not field.strip_default_none or field.data_type.is_optional)
+    {%- if not field.has_default_factory_in_field and not field.required and not field.should_strip_default_none(keep_optional=True)
             %} = {{ field.represented_default }}
     {%- endif -%}
     {%- endif %}

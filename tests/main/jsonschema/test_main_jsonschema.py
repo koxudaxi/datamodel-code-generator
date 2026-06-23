@@ -10554,6 +10554,24 @@ def test_main_jsonschema_root_model_default_value_branches(output_file: Path) ->
     )
 
 
+def test_main_jsonschema_root_model_strip_default_none_string_none(output_file: Path) -> None:
+    """Test RootModel keeps string None defaults when strip-default-none is enabled."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "strip_default_none_root_string_none.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="strip_default_none_root_string_none.py",
+        extra_args=[
+            "--strip-default-none",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
 @pytest.mark.benchmark
 def test_main_jsonschema_root_model_default_value_non_root(output_file: Path) -> None:
     """Test that non-RootModel references are not wrapped."""
@@ -11682,6 +11700,30 @@ def test_main_jsonschema_schema_id(
                 "pydantic_v2.BaseModel",
             ],
         )
+
+
+@pytest.mark.isolate_builtin_formatter_config
+def test_main_jsonschema_schema_id_strip_default_none_semantic(output_file: Path) -> None:
+    """Test custom schema_id templates can reuse semantic strip-default-none logic."""
+    model_base._get_environment.cache_clear()
+    model_base._get_template_with_custom_dir.cache_clear()
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "strip_default_none_semantic.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="strip_default_none_semantic_schema_id.py",
+        extra_args=[
+            "--strip-default-none",
+            "--custom-template-dir",
+            str(DATA_PATH / "templates_schema_id"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
 
 
 @pytest.mark.parametrize(

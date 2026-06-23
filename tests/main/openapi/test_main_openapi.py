@@ -1323,6 +1323,16 @@ def test_main_openapi_pydantic_v2_strip_default_none_field_metadata(output_file:
     ("output_model_type", "target_python_version", "expected_file"),
     [
         (
+            "pydantic_v2.BaseModel",
+            "3.10",
+            "strip_default_none_semantic_pydantic_v2.py",
+        ),
+        (
+            "pydantic_v2.dataclass",
+            "3.10",
+            "strip_default_none_semantic_pydantic_v2_dataclass.py",
+        ),
+        (
             "dataclasses.dataclass",
             "3.10",
             "strip_default_none_semantic_dataclass.py",
@@ -1333,7 +1343,7 @@ def test_main_openapi_pydantic_v2_strip_default_none_field_metadata(output_file:
             "strip_default_none_semantic_msgspec.py",
         ),
     ],
-    ids=["dataclass", "msgspec"],
+    ids=["pydantic-v2", "pydantic-v2-dataclass", "dataclass", "msgspec"],
 )
 def test_main_openapi_strip_default_none_semantic_default(
     output_model_type: str,
@@ -1354,6 +1364,30 @@ def test_main_openapi_strip_default_none_semantic_default(
             output_model_type,
             "--target-python-version",
             target_python_version,
+        ],
+    )
+
+
+@pytest.mark.isolate_builtin_formatter_config
+def test_main_openapi_strip_default_none_semantic_custom_template_extensions(output_file: Path) -> None:
+    """Test custom templates can reuse semantic strip-default-none logic."""
+    model_base._get_environment.cache_clear()
+    model_base._get_template_with_custom_dir.cache_clear()
+
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "strip_default_none_semantic.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="strip_default_none_semantic_custom_template_extensions.py",
+        extra_args=[
+            "--strip-default-none",
+            "--custom-template-dir",
+            str(DATA_PATH / "templates_extensions"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
         ],
     )
 
