@@ -14,6 +14,7 @@ from datamodel_code_generator.types import (
     DataType,
     _contains_decimal,
     _remove_none_from_union,
+    chain_as_tuple,
     extract_qualified_names,
     get_optional_type,
     get_subscript_args,
@@ -71,6 +72,11 @@ def test_get_optional_type_cache_clear_preserves_value() -> None:
     get_optional_type.cache_clear()
 
     assert get_optional_type("str | None", True) == optional_type
+
+
+def test_chain_as_tuple_chains_multiple_iterables() -> None:
+    """Test chain_as_tuple handles the general path for more than two iterables."""
+    assert chain_as_tuple((1,), (2,), (3,)) == (1, 2, 3)
 
 
 @pytest.mark.parametrize(
