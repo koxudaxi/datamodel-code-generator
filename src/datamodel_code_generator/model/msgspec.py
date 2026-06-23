@@ -5,8 +5,6 @@ Generates Python models using msgspec.Struct for high-performance serialization.
 
 from __future__ import annotations
 
-import io
-import tokenize
 from functools import lru_cache, wraps
 from math import isfinite
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
@@ -43,7 +41,7 @@ from datamodel_code_generator.types import (
 
 UNSET_TYPE = "UnsetType"
 _UNSET_WRAPPER_NAMES = (OPTIONAL, UNION)
-_IGNORED_TYPE_HINT_TOKEN_TYPES = frozenset({tokenize.ENDMARKER, tokenize.NEWLINE, tokenize.NL})
+_TYPE_HINT_QUOTE_CHARS = "'\""
 
 
 class _UNSET:
@@ -217,42 +215,57 @@ class Constraints(_Constraints):
     """Constraint model for msgspec fields."""
 
 
+def _is_escaped_position(type_: str, index: int) -> bool:
+    backslash_count = 0
+    while index - backslash_count > 0 and type_[index - backslash_count - 1] == "\\":
+        backslash_count += 1
+    return backslash_count % 2 == 1
+
+
+def _skip_string_literal(type_: str, index: int, quote: str) -> int:
+    quote_size = 3 if type_[index : index + 3] == quote * 3 else 1
+    quote_token = quote * quote_size
+    index += quote_size
+    while (next_index := type_.find(quote_token, index)) != -1:
+        if not _is_escaped_position(type_, next_index):
+            return next_index + quote_size
+        index = next_index + quote_size
+    return len(type_)
+
+
+def _find_subscript_end(type_: str, open_index: int) -> int | None:
+    depth = 0
+    index = open_index
+    while index < len(type_):
+        char = type_[index]
+        if char in _TYPE_HINT_QUOTE_CHARS:
+            index = _skip_string_literal(type_, index, char)
+            continue
+        match char:
+            case "[":
+                depth += 1
+            case "]":
+                depth -= 1
+                if depth == 0:
+                    return index
+        index += 1
+    return None
+
+
 @lru_cache
 def _get_top_level_typing_subscript(type_: str) -> tuple[str, str] | None:
     """Return the top-level Optional/Union name and args for a type hint."""
-    try:
-        tokens = [
-            token_info
-            for token_info in tokenize.generate_tokens(io.StringIO(type_).readline)
-            if token_info.type not in _IGNORED_TYPE_HINT_TOKEN_TYPES
-        ]
-    except tokenize.TokenError:
+    if (open_index := type_.find("[")) == -1:
         return None
 
-    match tokens:
-        case [name_token, open_token, *_] if (
-            name_token.type == tokenize.NAME
-            and name_token.string in _UNSET_WRAPPER_NAMES
-            and name_token.start == (1, 0)
-            and open_token.type == tokenize.OP
-            and open_token.string == "["
-        ):
-            depth = 0
-            for index, token_info in enumerate(tokens[1:], start=1):
-                if token_info.type != tokenize.OP:
-                    continue
-                match token_info.string:
-                    case "[":
-                        depth += 1
-                    case "]":
-                        depth -= 1
-                        if depth == 0:
-                            if index != len(tokens) - 1:
-                                return None
-                            return name_token.string, type_[open_token.end[1] : token_info.start[1]]
+    name = type_[:open_index]
+    match name:
+        case name if name in _UNSET_WRAPPER_NAMES:
+            if (close_index := _find_subscript_end(type_, open_index)) != len(type_) - 1:
+                return None
+            return name, type_[open_index + 1 : close_index]
         case _:
             return None
-    return None
 
 
 def _get_top_level_typing_args(type_: str, expected_name: str) -> str | None:

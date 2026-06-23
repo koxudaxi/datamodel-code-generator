@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import tokenize
-
 import pytest
 
 from datamodel_code_generator.model.msgspec import (
@@ -64,11 +62,13 @@ def test_add_unset_type(type_hint: str, use_union_operator: bool, expected: str)
     [
         ("Optional[str]", ("Optional", "str")),
         ("Union[str, int]", ("Union", "str, int")),
+        ("Optional[Literal[']']]", ("Optional", "Literal[']']")),
         ("Optional[tuple[*Ts]]", ("Optional", "tuple[*Ts]")),
         ("Union[tuple[*Ts], int]", ("Union", "tuple[*Ts], int")),
         ("typing.Optional[str]", None),
         ("list[Union[str, int]]", None),
         ("Optional[str] | None", None),
+        ("Optional[Literal['unterminated]", None),
         ("str", None),
         ("[", None),
     ],
@@ -90,18 +90,3 @@ def test_get_top_level_typing_subscript(type_hint: str, expected: tuple[str, str
 def test_get_top_level_typing_args(type_hint: str, expected_name: str, expected: str | None) -> None:
     """Return args only for the requested wrapper name."""
     assert _get_top_level_typing_args(type_hint, expected_name) == expected
-
-
-@pytest.mark.allow_direct_assert
-def test_get_top_level_typing_subscript_rejects_token_errors(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Return None when the type hint cannot be tokenized."""
-    monkeypatch.setattr(
-        "datamodel_code_generator.model.msgspec.tokenize.generate_tokens",
-        lambda _: (_ for _ in ()).throw(tokenize.TokenError("bad", (1, 0))),
-    )
-    _get_top_level_typing_subscript.cache_clear()
-
-    try:
-        assert _get_top_level_typing_subscript("Optional[str]") is None
-    finally:
-        _get_top_level_typing_subscript.cache_clear()
