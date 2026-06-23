@@ -43,6 +43,20 @@ def test_imports_include_serialize_as_any_when_enabled() -> None:
 
 
 @pytest.mark.allow_direct_assert
+def test_imports_skip_serialize_as_any_when_type_renders_without_wrapper() -> None:
+    """Do not import SerializeAsAny for reference structures rendered through type."""
+    reference = Reference(path="#/$defs/User", name="User")
+    model = BaseModel(
+        fields=[DataModelField(name="name", data_type=DataType(type="str"), required=True)],
+        reference=reference,
+    )
+    reference.children.append(model)
+    data_type = PydanticV2DataType(type="Shared.User", reference=reference, use_serialize_as_any=True)
+
+    assert list(data_type.imports) == []
+
+
+@pytest.mark.allow_direct_assert
 def test_imports_skip_serialize_as_any_without_reference() -> None:
     """Do not render type_hint or assert when no reference can be wrapped."""
     data_type = TypeHintErrorDataType(type="User", use_serialize_as_any=True)
