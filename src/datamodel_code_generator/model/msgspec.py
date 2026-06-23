@@ -338,10 +338,10 @@ class DataModelField(DataModelFieldBase):
             return self._unset_union_data_type()
         return self.data_type
 
-    def _imports_data_type(self) -> DataType:
+    def _imports_data_type(self, meta: str | None = None) -> DataType:
         if not (self._not_required and not self.nullable and self.use_annotated):
             return self._type_hint_data_type()
-        if (meta := self._get_meta_string()) is None:
+        if meta is None:
             return self._type_hint_data_type()
         return self._annotated_unset_union_data_type(self._annotated_type_hint(meta))
 
@@ -440,9 +440,10 @@ class DataModelField(DataModelFieldBase):
     @property
     def imports(self) -> tuple[Import, ...]:
         """Get imports from the structurally rendered msgspec annotation."""
+        meta = self._get_meta_string() if self.use_annotated else None
         return self._collect_field_imports(
-            needs_annotated=self.use_annotated and self.needs_annotated_import,
-            data_type=self._imports_data_type(),
+            needs_annotated=meta is not None,
+            data_type=self._imports_data_type(meta),
         )
 
     @property
@@ -522,11 +523,7 @@ class DataModelField(DataModelFieldBase):
         ClassVar fields with Meta need Annotated only when use_annotated is True.
         ClassVar fields without Meta don't need Annotated.
         """
-        if not self.annotated:
-            return False
-        if self.extras.get("is_classvar"):  # pragma: no cover
-            return self.use_annotated and self._get_meta_string() is not None
-        return True
+        return self.use_annotated and self._get_meta_string() is not None
 
     @property
     def needs_meta_import(self) -> bool:

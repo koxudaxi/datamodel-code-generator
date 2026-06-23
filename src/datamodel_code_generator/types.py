@@ -878,10 +878,12 @@ class DataType(_BaseModel):
         wrap_discriminator: bool,
     ) -> str:
         data_types: list[str] = []
+        seen_data_types: set[str] = set()
         for data_type in self.data_types:
             data_type_type = data_type.base_type_hint if use_base_type_hint else data_type.type_hint
-            if not data_type_type or data_type_type in data_types:
+            if not data_type_type or data_type_type in seen_data_types:
                 continue
+            seen_data_types.add(data_type_type)
             data_types.append(data_type_type)
 
         match len(data_types):
