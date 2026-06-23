@@ -361,6 +361,7 @@ def test_msgspec_annotated_unset_keeps_optional_inside_annotated() -> None:
     )
 
     assert field.annotated == "Union[Annotated[Optional[str], Meta(max_length=5)], UnsetType]"
+    assert field.needs_annotated_import is True
     assert field.imports == (
         IMPORT_OPTIONAL,
         IMPORT_MSGSPEC_UNSETTYPE,
