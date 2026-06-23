@@ -63,6 +63,7 @@ def test_add_unset_type(type_hint: str, use_union_operator: bool, expected: str)
         ("Optional[str]", ("Optional", "str")),
         ("Union[str, int]", ("Union", "str, int")),
         ("Optional[Literal[']']]", ("Optional", "Literal[']']")),
+        ("Optional[Literal['\\'']]", ("Optional", "Literal['\\'']")),
         ("Optional[tuple[*Ts]]", ("Optional", "tuple[*Ts]")),
         ("Union[tuple[*Ts], int]", ("Union", "tuple[*Ts], int")),
         ("typing.Optional[str]", None),
