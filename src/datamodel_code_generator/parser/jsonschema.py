@@ -132,6 +132,7 @@ def _is_union_python_type(type_str: str) -> bool:
             return True
         case _:
             return False
+    return False  # pragma: no cover
 
 
 @lru_cache(maxsize=1024)
@@ -143,6 +144,7 @@ def _is_union_operator_python_type(type_str: str) -> bool:
             return True
         case _:
             return False
+    return False  # pragma: no cover
 
 
 def _get_full_attribute_name(node: ast.AST, visited: set[int]) -> str | None:
