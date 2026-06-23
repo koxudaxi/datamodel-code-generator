@@ -265,6 +265,7 @@ def test_pydantic_v2_extra_type_hint_uses_structured_dict(data_type: DataType, e
     [
         ("dict[str, tuple[*Ts]]", "Dict[str, tuple[*Ts]]"),
         ("dict[str, Literal[']']] | None", "Dict[str, Literal[']']] | None"),
+        ("dict[str, Literal['\\'']]", "Dict[str, Literal['\\'']]"),
         ("dict[str, Literal['unterminated]", None),
         ("dict[str][int]", None),
     ],
