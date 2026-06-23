@@ -14,6 +14,7 @@ from datamodel_code_generator.types import (
     DataType,
     _contains_decimal,
     _remove_none_from_union,
+    _skip_string_literal,
     chain_as_tuple,
     extract_qualified_names,
     get_optional_type,
@@ -141,6 +142,11 @@ def test_chain_as_tuple_chains_multiple_iterables() -> None:
             "Literal['a,b']",
         ),
         (
+            'Union[Literal["a\\",b"], None]',
+            False,
+            'Literal["a\\",b"]',
+        ),
+        (
             "Union[Annotated[str, Field(description='a, b')], None]",
             False,
             "Annotated[str, Field(description='a, b')]",
@@ -171,12 +177,22 @@ def test_chain_as_tuple_chains_multiple_iterables() -> None:
         # Non-union types (should be returned as-is)
         ("str", False, "str"),
         ("List[str]", False, "List[str]"),
+        ("List[None]", False, "List[None]"),
+        ("Union[str, None", False, "Union[str, None"),
         ("str|None", True, "str|None"),
+        ('Literal[" | None"]', True, 'Literal[" | None"]'),
     ],
 )
 def test_remove_none_from_union(type_str: str, use_union_operator: bool, expected: str) -> None:
     """Test _remove_none_from_union function with various type strings."""
     assert _remove_none_from_union(type_str, use_union_operator=use_union_operator) == expected
+
+
+def test_skip_string_literal_without_closing_quote_returns_end() -> None:
+    """Test string literal scanning stops safely for invalid input."""
+    type_str = '"unterminated'
+
+    assert _skip_string_literal(type_str, 0, '"') == len(type_str)
 
 
 @pytest.mark.parametrize(

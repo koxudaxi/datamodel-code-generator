@@ -88,6 +88,11 @@ STANDARD_SET = "set"
 STANDARD_TUPLE = "tuple"
 STANDARD_FROZEN_SET = "frozenset"
 STR = "str"
+TYPE_PART_BRACKET_CHARS = "[]"
+TYPE_PART_COMPLEX_CHARS = "(){}'\""
+TYPE_PART_OPEN_CHARS = "[({"
+TYPE_PART_CLOSE_CHARS = "])}"
+TYPE_PART_QUOTE_CHARS = "'\""
 
 NOT_REQUIRED = "NotRequired"
 NOT_REQUIRED_PREFIX = f"{NOT_REQUIRED}["
@@ -392,32 +397,94 @@ def _is_python_type_annotation_node(node: ast.AST, *, allow_literal: bool) -> bo
     return result
 
 
-def _get_annotation_source_segment(source: str, node: ast.AST) -> str:
-    return ast.get_source_segment(source, node) or ast.unparse(node)
+def _split_bracketed_type_parts(type_: str, delimiter: str) -> list[str]:
+    parts: list[str] = []
+    start = 0
+    depth = 0
+    for index, char in enumerate(type_):
+        if char == "[":
+            depth += 1
+        elif char == "]":
+            depth = max(depth - 1, 0)
+        elif char == delimiter and depth == 0:
+            parts.append(type_[start:index].strip())
+            start = index + 1
+    parts.append(type_[start:].strip())
+    return parts
 
 
-def _get_union_subscript_parts(type_: str, expression: ast.AST) -> list[str] | None:
-    match expression:
-        case ast.Subscript(value=ast.Name(id=name), slice=slice_node) if name == UNION:
-            if isinstance(slice_node, ast.Tuple):
-                return [_get_annotation_source_segment(type_, elt) for elt in slice_node.elts]
-            return [_get_annotation_source_segment(type_, slice_node)]
-        case _:
-            return None
+def _is_escaped_position(type_: str, index: int) -> bool:
+    backslash_count = 0
+    while index - backslash_count > 0 and type_[index - backslash_count - 1] == "\\":
+        backslash_count += 1
+    return backslash_count % 2 == 1
 
 
-def _get_union_operator_parts(type_: str, expression: ast.AST) -> list[str] | None:
-    match expression:
-        case ast.BinOp(left=left, op=ast.BitOr(), right=right):
-            parts: list[str] = []
-            for node in (left, right):
-                if nested_parts := _get_union_operator_parts(type_, node):
-                    parts.extend(nested_parts)
-                else:
-                    parts.append(_get_annotation_source_segment(type_, node))
-            return parts
-        case _:
-            return None
+def _skip_string_literal(type_: str, index: int, quote: str) -> int:
+    quote_size = 3 if type_[index : index + 3] == quote * 3 else 1
+    quote_token = quote * quote_size
+    index += quote_size
+    while (next_index := type_.find(quote_token, index)) != -1:
+        if not _is_escaped_position(type_, next_index):
+            return next_index + quote_size
+        index = next_index + quote_size
+    return len(type_)
+
+
+def _split_complex_type_parts(type_: str, delimiter: str) -> list[str]:
+    parts: list[str] = []
+    start = 0
+    depth = 0
+    index = 0
+    while index < len(type_):
+        char = type_[index]
+        if char in TYPE_PART_QUOTE_CHARS:
+            index = _skip_string_literal(type_, index, char)
+            continue
+        if char in TYPE_PART_OPEN_CHARS:
+            depth += 1
+        elif char in TYPE_PART_CLOSE_CHARS:
+            depth = max(depth - 1, 0)
+        elif char == delimiter and depth == 0:
+            parts.append(type_[start:index].strip())
+            start = index + 1
+        index += 1
+    parts.append(type_[start:].strip())
+    return parts
+
+
+def _get_union_subscript_parts(type_: str) -> list[str] | None:
+    if not type_.startswith(UNION_PREFIX) or not type_.endswith("]"):
+        return None
+    inner_type = type_[len(UNION_PREFIX) : -1]
+    if "," not in inner_type:
+        return [inner_type.strip()]
+    has_bracket = False
+    for char in inner_type:
+        if char in TYPE_PART_COMPLEX_CHARS:
+            return _split_complex_type_parts(inner_type, ",")
+        if char in TYPE_PART_BRACKET_CHARS:
+            has_bracket = True
+    if has_bracket:
+        return _split_bracketed_type_parts(inner_type, ",")
+    return [part.strip() for part in inner_type.split(",")]
+
+
+def _get_union_operator_parts(type_: str) -> list[str] | None:
+    if UNION_OPERATOR_DELIMITER not in type_:
+        return None
+    has_bracket = False
+    for char in type_:
+        if char in TYPE_PART_COMPLEX_CHARS:
+            parts = _split_complex_type_parts(type_, "|")
+            break
+        if char in TYPE_PART_BRACKET_CHARS:
+            has_bracket = True
+    else:
+        parts = _split_bracketed_type_parts(type_, "|") if has_bracket else [part.strip() for part in type_.split("|")]
+    if len(parts) == 1:
+        return None
+    return parts
 
 
 def _remove_none_from_union_parts(parts: list[str], *, use_union_operator: bool) -> list[str]:
@@ -426,14 +493,13 @@ def _remove_none_from_union_parts(parts: list[str], *, use_union_operator: bool)
         if part == NONE:
             continue
         filtered_part = part
-        if not use_union_operator:
-            try:
-                expression = ast.parse(part, mode="eval").body
-            except SyntaxError:  # pragma: no cover
-                filtered_parts.append(part)
-                continue
-            if _get_union_subscript_parts(part, expression) is not None:
-                filtered_part = _remove_none_from_union(part, use_union_operator=False)
+        if (
+            not use_union_operator
+            and NONE in part
+            and part.startswith(UNION_PREFIX)
+            and _get_union_subscript_parts(part)
+        ):
+            filtered_part = _remove_none_from_union(part, use_union_operator=False)
         filtered_parts.append(filtered_part)
     return filtered_parts
 
@@ -451,17 +517,17 @@ def _join_union_parts(parts: list[str], *, use_union_operator: bool) -> str:
 @lru_cache(maxsize=4096)
 def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:
     """Remove None from a Union type string, handling nested unions."""
-    if use_union_operator and UNION_OPERATOR_DELIMITER not in type_:
-        return type_
-    try:
-        expression = ast.parse(type_, mode="eval").body
-    except SyntaxError:
-        return type_
+    match use_union_operator:
+        case True if NONE not in type_:
+            return type_
+        case True if UNION_OPERATOR_DELIMITER not in type_:
+            return type_
+        case False if NONE not in type_ and not type_.startswith(UNION_PREFIX):
+            return type_
+        case False if not type_.startswith(UNION_PREFIX):
+            return type_
 
-    if use_union_operator:
-        parts = _get_union_operator_parts(type_, expression)
-    else:
-        parts = _get_union_subscript_parts(type_, expression)
+    parts = _get_union_operator_parts(type_) if use_union_operator else _get_union_subscript_parts(type_)
     if parts is None:
         return type_
 
