@@ -77,7 +77,12 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
             extra_imports.append(IMPORT_MSGSPEC_CONVERT)
         if isinstance(self, DataModelField) and self.needs_meta_import:
             extra_imports.append(IMPORT_MSGSPEC_META)
-        if not self.required and not self.nullable and (self.default is None or self.default is UNDEFINED):
+        if (
+            isinstance(self, DataModelField)
+            and self._not_required
+            and not self.nullable
+            and (self.default is None or self.default is UNDEFINED)
+        ):
             extra_imports.append(IMPORT_MSGSPEC_UNSET)
         imports = original_imports.fget(self)  # ty: ignore
         if (

@@ -320,7 +320,16 @@ def test_msgspec_unset_type_hint_handles_empty_and_simple_types() -> None:
     assert _msgspec_field(DataType()).type_hint == "UnsetType"
     assert _msgspec_field(DataType(type="str")).type_hint == "Union[str, UnsetType]"
     assert _msgspec_field(DataType(type="str", is_optional=True)).type_hint == "Union[str, None, UnsetType]"
-    assert _msgspec_field(DataType(is_optional=True)).type_hint == "Union[None, UnsetType]"
+    none_field = _msgspec_field(DataType(is_optional=True))
+    assert none_field.type_hint == "Union[None, UnsetType]"
+    assert none_field.imports == (IMPORT_MSGSPEC_UNSETTYPE, IMPORT_UNION, IMPORT_MSGSPEC_UNSET)
+
+
+def test_msgspec_unset_import_is_limited_to_struct_fields() -> None:
+    """Test msgspec UNSET value imports match Struct-only field emission."""
+    field = MsgspecDataModelField(name="value", data_type=DataType(type="str"), required=False)
+
+    assert IMPORT_MSGSPEC_UNSET not in field.imports
 
 
 def test_msgspec_data_type_copy_preserves_structural_children() -> None:

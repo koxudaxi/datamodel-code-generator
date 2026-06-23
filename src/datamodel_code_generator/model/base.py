@@ -585,9 +585,10 @@ class DataModelFieldBase(_BaseModel):
             data_type.is_optional = True
             if not data_type.use_union_operator:
                 requirements = requirements.with_import_name(IMPORT_OPTIONAL.import_)
-        if not branch_keys and data_type.data_types:
+        ordered_none_branch_count = int(data_type.preserve_union_member_order and has_none)
+        if not branch_keys and data_type.data_types and not ordered_none_branch_count:
             requirements = replace(requirements, any_=True)
-        if len(branch_keys) > 1 and not data_type.use_union_operator:
+        if len(branch_keys) + ordered_none_branch_count > 1 and not data_type.use_union_operator:
             requirements = requirements.with_import_name(IMPORT_UNION.import_)
         return requirements
 
