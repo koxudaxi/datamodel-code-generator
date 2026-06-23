@@ -6,6 +6,7 @@ Python data models. Supports draft-04 through draft-2020-12 schemas.
 
 from __future__ import annotations
 
+import ast
 import enum as _enum
 import importlib
 import json
@@ -69,11 +70,11 @@ from datamodel_code_generator.parser.schema_version import get_data_formats
 from datamodel_code_generator.reference import SPECIAL_PATH_MARKER, ModelType, Reference, is_url
 from datamodel_code_generator.types import (
     ANY,
+    UNION_OPERATOR_DELIMITER,
     DataType,
     EmptyDataType,
     Types,
     UnionIntFloat,
-    extract_qualified_names,
     get_subscript_args,
     get_type_base_name,
     is_python_type_annotation,
@@ -111,6 +112,74 @@ _NUMBER_CONSTRAINT_KEYS: tuple[JsonSchemaConstraintKey, ...] = (
     "exclusiveMaximum",
     "exclusiveMinimum",
 )
+
+_PYTHON_UNION_BASE_TYPES = frozenset({"Union", "Optional"})
+
+
+def _parse_python_type_annotation(type_str: str) -> ast.expr | None:
+    try:
+        return ast.parse(type_str, mode="eval").body
+    except SyntaxError:  # pragma: no cover
+        return None
+
+
+@lru_cache(maxsize=1024)
+def _is_union_python_type(type_str: str) -> bool:
+    match _parse_python_type_annotation(type_str):
+        case ast.Subscript(value=ast.Name(id=name) | ast.Attribute(attr=name)) if name in _PYTHON_UNION_BASE_TYPES:
+            return True
+        case ast.BinOp(op=ast.BitOr()) if UNION_OPERATOR_DELIMITER in type_str:
+            return True
+        case _:
+            return False
+
+
+@lru_cache(maxsize=1024)
+def _is_union_operator_python_type(type_str: str) -> bool:
+    if UNION_OPERATOR_DELIMITER not in type_str:
+        return False
+    match _parse_python_type_annotation(type_str):
+        case ast.BinOp(op=ast.BitOr()):
+            return True
+        case _:
+            return False
+
+
+def _get_full_attribute_name(node: ast.AST, visited: set[int]) -> str | None:
+    parts: list[str] = []
+    current = node
+    while isinstance(current, ast.Attribute):
+        visited.add(id(current))
+        parts.append(current.attr)
+        current = current.value
+    if isinstance(current, ast.Name):
+        parts.append(current.id)
+        return ".".join(reversed(parts))
+    return None
+
+
+@lru_cache(maxsize=1024)
+def _extract_qualified_python_type_spans(type_str: str) -> tuple[tuple[str, int, int], ...]:
+    expression = _parse_python_type_annotation(type_str)
+    if expression is None:
+        return ()
+
+    qualified_names: list[tuple[str, int, int]] = []
+    visited: set[int] = set()
+    for node in ast.walk(expression):
+        if not isinstance(node, ast.Attribute) or id(node) in visited:
+            continue
+        if (name := _get_full_attribute_name(node, visited)) is not None and "." in name:
+            qualified_names.append((name, node.col_offset, node.end_col_offset))
+    return tuple(qualified_names)
+
+
+def _replace_python_type_spans(type_str: str, replacements: list[tuple[int, int, str]]) -> str:
+    for start, end, replacement in sorted(replacements, reverse=True):
+        type_str = f"{type_str[:start]}{replacement}{type_str[end:]}"
+    return type_str
+
+
 _STRING_CONSTRAINT_KEYS: tuple[JsonSchemaConstraintKey, ...] = (
     "pattern",
     "minLength",
@@ -2149,7 +2218,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if base_type in type_to_flag:
             return type_to_flag[base_type]
 
-        if base_type in {"Union", "Optional"} or " | " in x_python_type:
+        if _is_union_python_type(x_python_type):
             for arg in get_subscript_args(x_python_type):
                 arg_base = get_type_base_name(arg)
                 if arg_base in type_to_flag:
@@ -2169,11 +2238,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         all_type_names = self._extract_all_type_names(python_type)
         if any(t in self.PYTHON_TYPE_OVERRIDE_ALWAYS for t in all_type_names):
             return False
-        if " | " in python_type and schema_type is None:
+        if _is_union_operator_python_type(python_type) and schema_type is None:
             return False
         if schema_type is None:  # pragma: no cover
             return True
-        if base_type in {"Union", "Optional"}:  # pragma: no cover
+        if base_type in _PYTHON_UNION_BASE_TYPES:  # pragma: no cover
             return True
         compatible = self.COMPATIBLE_PYTHON_TYPES.get(schema_type, frozenset())
         return base_type in compatible
@@ -2253,23 +2322,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         base_type = self._get_python_type_base(x_python_type)
         import_ = self._resolve_type_import(base_type)
 
-        # Convert fully qualified path to short name when import is added
+        # Convert fully qualified names to short names when imports are added
         type_str = x_python_type
-        prefix = x_python_type.split("[", maxsplit=1)[0]
-        if "." in prefix:
-            # Replace the fully qualified prefix with just the base type name
-            type_str = base_type + x_python_type[len(prefix) :]
-            if not import_:
-                # If not in predefined imports, create import from the full path
-                import_ = Import.from_full_path(prefix)
-
-        # Collect imports for qualified names (e.g., module.path.ClassName)
         nested_imports: list[DataType] = []
-        for qualified_name in extract_qualified_names(type_str):
+        replacements: list[tuple[int, int, str]] = []
+        for qualified_name, start, end in _extract_qualified_python_type_spans(x_python_type):
             class_name = qualified_name.rsplit(".", 1)[-1]
+            replacements.append((start, end, class_name))
+            if start == 0 and class_name == base_type:
+                if not import_:
+                    import_ = Import.from_full_path(qualified_name)
+                continue
             nested_import = self._resolve_type_import(class_name) or Import.from_full_path(qualified_name)
             nested_imports.append(self.data_type(import_=nested_import))
-            type_str = type_str.replace(qualified_name, class_name)
+        if replacements:
+            type_str = _replace_python_type_spans(x_python_type, replacements)
 
         # Collect imports for all nested types (e.g., Iterable inside Callable[[Iterable[str]], str])
         for type_name in self._extract_all_type_names(type_str):
