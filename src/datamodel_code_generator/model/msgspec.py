@@ -60,9 +60,7 @@ if TYPE_CHECKING:
 
 def has_field_assignment(field: DataModelFieldBase) -> bool:
     """Return whether a msgspec field renders with a default assignment."""
-    return field.use_default_with_required or not (
-        field.required or (field.represented_default == "None" and field.strip_default_none)
-    )
+    return field.use_default_with_required or not (field.required or field.should_strip_default_none())
 
 
 DataModelFieldBaseT = TypeVar("DataModelFieldBaseT", bound=DataModelFieldBase)
