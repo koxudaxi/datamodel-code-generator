@@ -116,6 +116,7 @@ def _get_leading_builtin_dict_name(expression: ast.AST) -> ast.Name | None:
             return _get_leading_builtin_dict_name(left)
         case _:
             return None
+    return None  # pragma: no cover
 
 
 @lru_cache(maxsize=256)
