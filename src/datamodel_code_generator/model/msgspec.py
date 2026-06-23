@@ -5,7 +5,8 @@ Generates Python models using msgspec.Struct for high-performance serialization.
 
 from __future__ import annotations
 
-import ast
+import io
+import tokenize
 from functools import lru_cache, wraps
 from math import isfinite
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
@@ -42,6 +43,7 @@ from datamodel_code_generator.types import (
 
 UNSET_TYPE = "UnsetType"
 _UNSET_WRAPPER_NAMES = (OPTIONAL, UNION)
+_IGNORED_TYPE_HINT_TOKEN_TYPES = frozenset({tokenize.ENDMARKER, tokenize.NEWLINE, tokenize.NL})
 
 
 class _UNSET:
@@ -219,14 +221,35 @@ class Constraints(_Constraints):
 def _get_top_level_typing_subscript(type_: str) -> tuple[str, str] | None:
     """Return the top-level Optional/Union name and args for a type hint."""
     try:
-        expression = ast.parse(type_, mode="eval").body
-    except SyntaxError:
+        tokens = [
+            token_info
+            for token_info in tokenize.generate_tokens(io.StringIO(type_).readline)
+            if token_info.type not in _IGNORED_TYPE_HINT_TOKEN_TYPES
+        ]
+    except tokenize.TokenError:
         return None
 
-    match expression:
-        case ast.Subscript(value=ast.Name(id=name), slice=slice_node) if name in _UNSET_WRAPPER_NAMES:
-            if (args := ast.get_source_segment(type_, slice_node)) is not None:
-                return name, args
+    match tokens:
+        case [name_token, open_token, *_] if (
+            name_token.type == tokenize.NAME
+            and name_token.string in _UNSET_WRAPPER_NAMES
+            and name_token.start == (1, 0)
+            and open_token.type == tokenize.OP
+            and open_token.string == "["
+        ):
+            depth = 0
+            for index, token_info in enumerate(tokens[1:], start=1):
+                if token_info.type != tokenize.OP:
+                    continue
+                match token_info.string:
+                    case "[":
+                        depth += 1
+                    case "]":
+                        depth -= 1
+                        if depth == 0:
+                            if index != len(tokens) - 1:
+                                return None
+                            return name_token.string, type_[open_token.end[1] : token_info.start[1]]
         case _:
             return None
     return None

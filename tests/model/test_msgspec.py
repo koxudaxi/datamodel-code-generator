@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import tokenize
+
 import pytest
 
 from datamodel_code_generator.model.msgspec import (
@@ -18,6 +20,7 @@ from datamodel_code_generator.model.msgspec import (
     [
         ("Optional[str]", False, "Union[str, UnsetType]"),
         ("Union[str, int]", False, "Union[str, int, UnsetType]"),
+        ("Union[tuple[*Ts], int]", False, "Union[tuple[*Ts], int, UnsetType]"),
         ("Union[str, None]", False, "Union[str, UnsetType]"),
         (
             "Annotated[Optional[str], Meta(min_length=1)]",
@@ -39,6 +42,7 @@ def test_get_neither_required_nor_nullable_type(type_hint: str, use_union_operat
     [
         ("Optional[str]", False, "Union[str, None, UnsetType]"),
         ("Union[str, int]", False, "Union[str, int, UnsetType]"),
+        ("Union[tuple[*Ts], int]", False, "Union[tuple[*Ts], int, UnsetType]"),
         ("Union[str, None]", False, "Union[str, None, UnsetType]"),
         (
             "Annotated[Optional[str], Meta(min_length=1)]",
@@ -60,8 +64,11 @@ def test_add_unset_type(type_hint: str, use_union_operator: bool, expected: str)
     [
         ("Optional[str]", ("Optional", "str")),
         ("Union[str, int]", ("Union", "str, int")),
+        ("Optional[tuple[*Ts]]", ("Optional", "tuple[*Ts]")),
+        ("Union[tuple[*Ts], int]", ("Union", "tuple[*Ts], int")),
         ("typing.Optional[str]", None),
         ("list[Union[str, int]]", None),
+        ("Optional[str] | None", None),
         ("str", None),
         ("[", None),
     ],
@@ -86,9 +93,12 @@ def test_get_top_level_typing_args(type_hint: str, expected_name: str, expected:
 
 
 @pytest.mark.allow_direct_assert
-def test_get_top_level_typing_subscript_without_source_segment(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Return None when ast cannot provide a source segment."""
-    monkeypatch.setattr("datamodel_code_generator.model.msgspec.ast.get_source_segment", lambda *_: None)
+def test_get_top_level_typing_subscript_rejects_token_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Return None when the type hint cannot be tokenized."""
+    monkeypatch.setattr(
+        "datamodel_code_generator.model.msgspec.tokenize.generate_tokens",
+        lambda _: (_ for _ in ()).throw(tokenize.TokenError("bad", (1, 0))),
+    )
     _get_top_level_typing_subscript.cache_clear()
 
     try:
