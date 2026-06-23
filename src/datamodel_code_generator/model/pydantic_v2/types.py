@@ -461,7 +461,7 @@ class PydanticV2DataType(DataType):
         """Yield imports including SerializeAsAny when needed."""
         yield from super().imports
 
-        if self.use_serialize_as_any and "SerializeAsAny" in self.type_hint:
+        if self.use_serialize_as_any and self.reference is not None and self._should_wrap_with_serialize_as_any():
             yield IMPORT_SERIALIZE_AS_ANY
 
 
