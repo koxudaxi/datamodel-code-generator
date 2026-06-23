@@ -315,6 +315,14 @@ class DataModelFieldBase(_BaseModel):
         if self.default is None and not self.has_default:
             self.default = const
 
+    def should_strip_default_none(self, *, keep_optional: bool = False) -> bool:
+        """Return whether an actual None default should be omitted."""
+        match (self.strip_default_none, keep_optional and self.data_type.is_optional):
+            case (False, _) | (_, True):
+                return False
+
+        return self.default is None
+
     def self_reference(self) -> bool:
         """Check if field references its parent model.
 
