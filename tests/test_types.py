@@ -13,8 +13,14 @@ from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import (
     DataType,
     _contains_decimal,
+    _get_union_operator_parts,
+    _get_union_subscript_parts,
+    _is_escaped_position,
     _remove_none_from_union,
+    _remove_none_from_union_parts,
     _skip_string_literal,
+    _split_bracketed_type_parts,
+    _split_complex_type_parts,
     chain_as_tuple,
     extract_qualified_names,
     get_optional_type,
@@ -193,6 +199,54 @@ def test_skip_string_literal_without_closing_quote_returns_end() -> None:
     type_str = '"unterminated'
 
     assert _skip_string_literal(type_str, 0, '"') == len(type_str)
+
+
+def test_type_part_helpers_parse_structured_segments() -> None:
+    """Test top-level type part helpers keep nested syntax intact."""
+    assert _split_bracketed_type_parts("List[str, int], None", ",") == ["List[str, int]", "None"]
+    assert _split_complex_type_parts("Callable[[int], str], None", ",") == ["Callable[[int], str]", "None"]
+    assert _split_complex_type_parts("Literal['a,b'], None", ",") == ["Literal['a,b']", "None"]
+    assert _skip_string_literal('"value"', 0, '"') == len('"value"')
+    assert _is_escaped_position(r'"a\""', 3)
+    assert not _is_escaped_position('"a"', 2)
+
+
+@pytest.mark.parametrize(
+    ("type_str", "expected"),
+    [
+        ("List[None]", None),
+        ("Union[str]", ["str"]),
+        ("Union[str, int, None]", ["str", "int", "None"]),
+        ("Union[Union[str, None], int]", ["Union[str, None]", "int"]),
+        ("Union[Literal['a,b'], None]", ["Literal['a,b']", "None"]),
+        ("Union[str, None", None),
+    ],
+)
+def test_get_union_subscript_parts(type_str: str, expected: list[str] | None) -> None:
+    """Test Union[...] part parsing."""
+    assert _get_union_subscript_parts(type_str) == expected
+
+
+@pytest.mark.parametrize(
+    ("type_str", "expected"),
+    [
+        ("str|None", None),
+        ('Literal[" | None"]', None),
+        ("str | int | None", ["str", "int", "None"]),
+        ("List[str | None] | None", ["List[str | None]", "None"]),
+        ("constr(pattern='0 | 1') | None", ["constr(pattern='0 | 1')", "None"]),
+    ],
+)
+def test_get_union_operator_parts(type_str: str, expected: list[str] | None) -> None:
+    """Test PEP 604 union part parsing."""
+    assert _get_union_operator_parts(type_str) == expected
+
+
+def test_remove_none_from_union_parts() -> None:
+    """Test structured filtering of already parsed union parts."""
+    assert _remove_none_from_union_parts(["None"], use_union_operator=False) == []
+    assert _remove_none_from_union_parts(["Union[str, None]", "int"], use_union_operator=False) == ["str", "int"]
+    assert _remove_none_from_union_parts(["str | None"], use_union_operator=True) == ["str | None"]
 
 
 @pytest.mark.parametrize(
