@@ -192,6 +192,69 @@ def test_pydantic_v2_extra_type_hint_keeps_non_dict_hint() -> None:
     assert field.pydantic_extra_type_hint == "str"
 
 
+@pytest.mark.parametrize(
+    ("data_type", "expected"),
+    [
+        (
+            DataType(type="int", is_dict=True, use_standard_collections=True),
+            "Dict[str, int]",
+        ),
+        (
+            DataType(
+                type="int",
+                is_dict=True,
+                dict_key=DataType(type="int"),
+                use_standard_collections=True,
+            ),
+            "Dict[int, int]",
+        ),
+        (
+            DataType(
+                data_types=[DataType(type="str", is_list=True, use_standard_collections=True)],
+                is_dict=True,
+                use_standard_collections=True,
+            ),
+            "Dict[str, list[str]]",
+        ),
+        (
+            DataType(type="int", is_dict=True),
+            "Dict[str, int]",
+        ),
+        (
+            DataType(type="int", is_dict=True, use_standard_collections=True, use_generic_container=True),
+            "Mapping[str, int]",
+        ),
+        (
+            DataType(is_dict=True, use_standard_collections=True),
+            "dict",
+        ),
+        (
+            DataType(type="int", is_dict=True, is_optional=True, use_standard_collections=True),
+            "Optional[dict[str, int]]",
+        ),
+        (
+            DataType(
+                type="int",
+                is_dict=True,
+                is_optional=True,
+                use_standard_collections=True,
+                use_union_operator=True,
+            ),
+            "Dict[str, int] | None",
+        ),
+    ],
+)
+def test_pydantic_v2_extra_type_hint_uses_structured_dict(data_type: DataType, expected: str) -> None:
+    """Test typed-extra dict conversion follows the parsed type hint structure."""
+    field = PydanticV2DataModelField(
+        name="__pydantic_extra__",
+        data_type=data_type,
+        required=True,
+    )
+
+    assert field.pydantic_extra_type_hint == expected
+
+
 def test_rendered_pydantic_v2_field_reuses_field_string(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test built-in field proxy computes field and annotated values from one Field() string."""
     field = PydanticV2DataModelField(

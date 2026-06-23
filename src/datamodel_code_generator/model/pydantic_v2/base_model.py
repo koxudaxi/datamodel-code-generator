@@ -6,8 +6,10 @@ with support for Field() constraints and ConfigDict.
 
 from __future__ import annotations
 
+import ast
 import re
 from collections import defaultdict
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from pydantic import Field, ValidationError, field_validator, model_validator
@@ -47,7 +49,7 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
 )
 from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA
 from datamodel_code_generator.reference import ModelResolver
-from datamodel_code_generator.types import chain_as_tuple
+from datamodel_code_generator.types import DICT, chain_as_tuple
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -100,6 +102,32 @@ _ALIAS_GENERATOR_IMPORTS: dict[str, Import] = {
     AliasGenerator.ToPascal.value: IMPORT_ALIAS_GENERATOR_TO_PASCAL,
     AliasGenerator.ToSnake.value: IMPORT_ALIAS_GENERATOR_TO_SNAKE,
 }
+
+
+def _replace_annotation_name(type_hint: str, name: ast.Name, replacement: str) -> str:
+    return f"{type_hint[: name.col_offset]}{replacement}{type_hint[name.end_col_offset :]}"
+
+
+def _get_leading_builtin_dict_name(expression: ast.AST) -> ast.Name | None:
+    match expression:
+        case ast.Subscript(value=ast.Name(id="dict") as dict_name):
+            return dict_name
+        case ast.BinOp(left=left, op=ast.BitOr()):
+            return _get_leading_builtin_dict_name(left)
+        case _:
+            return None
+
+
+@lru_cache(maxsize=256)
+def _pydantic_extra_type_hint_for_builtin_dict(type_hint: str) -> str | None:
+    try:
+        expression = ast.parse(type_hint, mode="eval").body
+    except SyntaxError:  # pragma: no cover
+        return None
+
+    if (dict_name := _get_leading_builtin_dict_name(expression)) is None or dict_name.col_offset != 0:
+        return None
+    return _replace_annotation_name(type_hint, dict_name, DICT)
 
 
 def _alias_generator_name(value: Any) -> str | None:
@@ -254,9 +282,9 @@ class DataModelField(_PydanticBaseDataModelField):
     def pydantic_extra_type_hint(self) -> str:
         """Return a Dict-based type hint for Pydantic 2.0 typed extras."""
         type_hint = self.type_hint
-        if not type_hint.startswith("dict["):
-            return type_hint
-        return f"Dict[{type_hint.removeprefix('dict[')}"
+        if (dict_type_hint := _pydantic_extra_type_hint_for_builtin_dict(type_hint)) is not None:
+            return dict_type_hint
+        return type_hint
 
     def _process_data_in_str(self, data: dict[str, Any]) -> None:
         if self.const:
