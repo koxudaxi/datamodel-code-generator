@@ -525,6 +525,7 @@ class DataType(_BaseModel):
     use_standard_collections: bool = False
     use_generic_container: bool = False
     use_union_operator: bool = False
+    preserve_union_member_order: bool = False
     alias: Optional[str] = None  # noqa: UP045
     parent: Union[DataModelFieldBase, DataType, None] = None  # noqa: UP007
     children: list[DataType] = Field(default_factory=list)
@@ -831,6 +832,12 @@ class DataType(_BaseModel):
         use_base_type_hint: bool,
         wrap_discriminator: bool,
     ) -> str:
+        if self.preserve_union_member_order:
+            return self._render_ordered_union_type_hint(
+                use_base_type_hint=use_base_type_hint,
+                wrap_discriminator=wrap_discriminator,
+            )
+
         data_types: list[str] = []
         for data_type in self.data_types:
             data_type_type = data_type.base_type_hint if use_base_type_hint else data_type.type_hint
@@ -859,6 +866,34 @@ class DataType(_BaseModel):
             type_ = UNION_OPERATOR_DELIMITER.join(data_types)
         else:
             type_ = f"{UNION_PREFIX}{UNION_DELIMITER.join(data_types)}]"
+
+        if wrap_discriminator and self.discriminator:
+            type_ = f"Annotated[{type_}, Field(discriminator={self.discriminator!r})]"
+        return type_
+
+    def _render_ordered_union_type_hint(
+        self,
+        *,
+        use_base_type_hint: bool,
+        wrap_discriminator: bool,
+    ) -> str:
+        data_types: list[str] = []
+        for data_type in self.data_types:
+            data_type_type = data_type.base_type_hint if use_base_type_hint else data_type.type_hint
+            if not data_type_type or data_type_type in data_types:
+                continue
+            data_types.append(data_type_type)
+
+        match len(data_types):
+            case 0:
+                type_ = ANY
+                self.import_ = self.import_ or IMPORT_ANY
+            case 1:
+                type_ = data_types[0]
+            case _ if self.use_union_operator:
+                type_ = UNION_OPERATOR_DELIMITER.join(data_types)
+            case _:
+                type_ = f"{UNION_PREFIX}{UNION_DELIMITER.join(data_types)}]"
 
         if wrap_discriminator and self.discriminator:
             type_ = f"Annotated[{type_}, Field(discriminator={self.discriminator!r})]"

@@ -418,13 +418,17 @@ class DataModelFieldBase(_BaseModel):
         return self.data_type.use_union_operator
 
     @property
-    def type_hint(self) -> str:  # noqa: PLR0911
+    def type_hint(self) -> str:
         """Get the type hint string for this field, including nullability."""
-        type_hint = self.data_type.type_hint
+        return self._type_hint_from_data_type(self.data_type)
+
+    def _type_hint_from_data_type(self, data_type: DataType) -> str:  # noqa: PLR0911
+        """Get the type hint string for a field data type, including nullability."""
+        type_hint = data_type.type_hint
 
         if not type_hint:
             return NONE
-        if self.has_default_factory or (self.data_type.is_optional and self.data_type.type != ANY):
+        if self.has_default_factory or (data_type.is_optional and data_type.type != ANY):
             return type_hint
         if self.nullable is not None:
             if self.nullable:
@@ -470,20 +474,26 @@ class DataModelFieldBase(_BaseModel):
         """Get all imports required for this field's type hint."""
         return self._collect_field_imports(needs_annotated=self.use_annotated and self.needs_annotated_import)
 
-    def _collect_field_imports(self, *, needs_annotated: bool) -> tuple[Import, ...]:
+    def _collect_field_imports(
+        self,
+        *,
+        needs_annotated: bool,
+        data_type: DataType | None = None,
+    ) -> tuple[Import, ...]:
         """Collect type-hint imports; needs_annotated is passed in so subclasses can precompute it."""
-        if self._can_collect_imports_without_type_hint(needs_annotated=needs_annotated):
-            needs_optional = self._needs_optional_import_without_type_hint()
-            if self._can_skip_data_type_imports():
+        data_type = data_type or self.data_type
+        if self._can_collect_imports_without_type_hint(needs_annotated=needs_annotated, data_type=data_type):
+            needs_optional = self._needs_optional_import_without_type_hint(data_type=data_type)
+            if self._can_skip_data_type_imports(data_type=data_type):
                 return (IMPORT_OPTIONAL,) if needs_optional else ()
 
-            imports = tuple(self.data_type.all_imports)
+            imports = tuple(data_type.all_imports)
             if needs_optional and IMPORT_OPTIONAL not in imports:
                 return chain_as_tuple(imports, (IMPORT_OPTIONAL,))
             return imports
 
-        requirements = self._typing_import_requirements(needs_annotated=needs_annotated)
-        imports = tuple(self.data_type.all_imports)
+        requirements = self._typing_import_requirements(needs_annotated=needs_annotated, data_type=data_type)
+        imports = tuple(data_type.all_imports)
         if requirements.any_ and IMPORT_ANY not in imports:
             imports = chain_as_tuple(requirements.leading_imports, imports)
 
@@ -493,14 +503,19 @@ class DataModelFieldBase(_BaseModel):
             return filtered_imports
         return chain_as_tuple(filtered_imports, missing_imports)
 
-    def _can_collect_imports_without_type_hint(self, *, needs_annotated: bool) -> bool:
+    def _can_collect_imports_without_type_hint(
+        self,
+        *,
+        needs_annotated: bool,
+        data_type: DataType | None = None,
+    ) -> bool:
         """Return whether imports can be collected without rendering the type hint."""
         if needs_annotated:
             return False
         if self.parent and self.parent.has_forward_reference:
             return False
 
-        data_type = self.data_type
+        data_type = data_type or self.data_type
         if data_type.use_serialize_as_any:
             return False
 
@@ -522,11 +537,17 @@ class DataModelFieldBase(_BaseModel):
                 return bool(names)
         return False
 
-    def _typing_import_requirements(self, *, needs_annotated: bool) -> _TypingImportRequirements:
-        requirements = self._data_type_typing_import_requirements(self.data_type)
+    def _typing_import_requirements(
+        self,
+        *,
+        needs_annotated: bool,
+        data_type: DataType | None = None,
+    ) -> _TypingImportRequirements:
+        data_type = data_type or self.data_type
+        requirements = self._data_type_typing_import_requirements(data_type)
         if needs_annotated:
             requirements = requirements.with_import_name(IMPORT_ANNOTATED.import_)
-        if not requirements.optional and self._needs_field_optional_import_from_structure():
+        if not requirements.optional and self._needs_field_optional_import_from_structure(data_type=data_type):
             requirements = requirements.with_import_name(IMPORT_OPTIONAL.import_)
         return requirements
 
@@ -560,7 +581,7 @@ class DataModelFieldBase(_BaseModel):
                 continue
             branch_keys.add(self._data_type_import_key(child))
 
-        if has_none:
+        if has_none and not data_type.preserve_union_member_order:
             data_type.is_optional = True
             if not data_type.use_union_operator:
                 requirements = requirements.with_import_name(IMPORT_OPTIONAL.import_)
@@ -585,8 +606,8 @@ class DataModelFieldBase(_BaseModel):
             return False
         return data_type.is_optional and self._data_type_renders_importable_hint(data_type)
 
-    def _needs_field_optional_import_from_structure(self) -> bool:
-        data_type = self.data_type
+    def _needs_field_optional_import_from_structure(self, *, data_type: DataType | None = None) -> bool:
+        data_type = data_type or self.data_type
         if (
             self._use_union_operator
             or self.has_default_factory
@@ -671,13 +692,14 @@ class DataModelFieldBase(_BaseModel):
             data_type.use_standard_collections,
             data_type.use_generic_container,
             data_type.use_union_operator,
+            data_type.preserve_union_member_order,
             data_type.use_serialize_as_any,
             data_type.discriminator,
         )
 
-    def _can_skip_data_type_imports(self) -> bool:
+    def _can_skip_data_type_imports(self, *, data_type: DataType | None = None) -> bool:
         """Return whether the simple DataType cannot contribute imports."""
-        data_type = self.data_type
+        data_type = data_type or self.data_type
         return not (
             data_type.import_
             or data_type.kwargs
@@ -692,18 +714,18 @@ class DataModelFieldBase(_BaseModel):
             or data_type.use_generic_container
         )
 
-    def _needs_optional_import_without_type_hint(self) -> bool:
+    def _needs_optional_import_without_type_hint(self, *, data_type: DataType | None = None) -> bool:
         """Return whether the field-level nullable wrapper needs typing.Optional."""
-        data_type = self.data_type
+        data_type = data_type or self.data_type
         if (
             self._use_union_operator
-            or not self._has_renderable_data_type_without_type_hint()
+            or not self._has_renderable_data_type_without_type_hint(data_type=data_type)
             or self.has_default_factory
             or (data_type.is_optional and data_type.type != ANY)
         ):
             return False
 
-        if self._reference_source_nullable_without_type_hint():
+        if self._reference_source_nullable_without_type_hint(data_type=data_type):
             return True
 
         match self.nullable:
@@ -715,17 +737,18 @@ class DataModelFieldBase(_BaseModel):
                 return bool(self.type_has_null) if self.required else bool(self.fall_back_to_nullable)
         return False  # pragma: no cover
 
-    def _reference_source_nullable_without_type_hint(self) -> bool:
+    def _reference_source_nullable_without_type_hint(self, *, data_type: DataType | None = None) -> bool:
         """Return whether a referenced non-alias model should make this type optional."""
-        reference = self.data_type.reference
+        data_type = data_type or self.data_type
+        reference = data_type.reference
         if reference is None:
             return False
         source = reference.source
         return not getattr(source, "is_alias", False) and bool(getattr(source, "nullable", False))
 
-    def _has_renderable_data_type_without_type_hint(self) -> bool:
+    def _has_renderable_data_type_without_type_hint(self, *, data_type: DataType | None = None) -> bool:
         """Return whether this simple DataType renders to something other than None."""
-        data_type = self.data_type
+        data_type = data_type or self.data_type
         return bool(
             data_type.alias
             or data_type.type

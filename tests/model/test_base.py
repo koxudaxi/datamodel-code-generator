@@ -32,6 +32,9 @@ from datamodel_code_generator.model.base import (
     inline_comment_safe,
     sanitize_module_name,
 )
+from datamodel_code_generator.model.imports import IMPORT_MSGSPEC_META, IMPORT_MSGSPEC_UNSET, IMPORT_MSGSPEC_UNSETTYPE
+from datamodel_code_generator.model.msgspec import DataModelField as MsgspecDataModelField
+from datamodel_code_generator.model.msgspec import Struct as MsgspecStruct
 from datamodel_code_generator.model.pydantic_base import DataModelField as PydanticBaseDataModelField
 from datamodel_code_generator.model.pydantic_v2 import BaseModel
 from datamodel_code_generator.model.pydantic_v2 import DataModelField as PydanticV2DataModelField
@@ -192,6 +195,23 @@ def test_pydantic_v2_extra_type_hint_keeps_non_dict_hint() -> None:
     assert field.pydantic_extra_type_hint == "str"
 
 
+def test_pydantic_v2_extra_type_hint_uses_structured_root_dict() -> None:
+    """Test typed-extra type hint renders only the root dict as typing.Dict."""
+    item_type = DataType(type="str", is_list=True, use_standard_collections=True)
+    data_type = DataType(data_types=[item_type], is_dict=True, use_standard_collections=True)
+    field = PydanticV2DataModelField(
+        name="__pydantic_extra__",
+        data_type=data_type,
+        required=True,
+    )
+
+    assert field.type_hint == "dict[str, list[str]]"
+    assert field.pydantic_extra_type_hint == "Dict[str, list[str]]"
+    assert data_type.use_standard_collections is True
+    assert item_type.use_standard_collections is True
+    assert IMPORT_DICT in field.imports
+
+
 def test_rendered_pydantic_v2_field_reuses_field_string(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test built-in field proxy computes field and annotated values from one Field() string."""
     field = PydanticV2DataModelField(
@@ -277,6 +297,87 @@ def test_pydantic_v2_nested_discriminator_still_imports_field() -> None:
     )
 
     assert IMPORT_FIELD in field.imports
+
+
+def _msgspec_field(data_type: DataType, **kwargs: Any) -> MsgspecDataModelField:
+    field = MsgspecDataModelField(name="value", data_type=data_type, required=False, **kwargs)
+    MsgspecStruct(fields=[field], reference=Reference(path="Model", original_name="Model", name="Model"))
+    return field
+
+
+def test_msgspec_unset_type_hint_uses_structured_ordered_union() -> None:
+    """Test msgspec UnsetType is added through an ordered DataType union."""
+    data_type = DataType(data_types=[DataType(type="str"), DataType(type=NONE)])
+    field = _msgspec_field(data_type)
+
+    assert field.type_hint == "Union[str, None, UnsetType]"
+    assert data_type.preserve_union_member_order is False
+    assert field.imports == (IMPORT_MSGSPEC_UNSETTYPE, IMPORT_UNION, IMPORT_MSGSPEC_UNSET)
+
+
+def test_msgspec_unset_type_hint_handles_empty_and_simple_types() -> None:
+    """Test msgspec UnsetType structural unions cover empty and simple field types."""
+    assert _msgspec_field(DataType()).type_hint == "UnsetType"
+    assert _msgspec_field(DataType(type="str")).type_hint == "Union[str, UnsetType]"
+    assert _msgspec_field(DataType(type="str", is_optional=True)).type_hint == "Union[str, None, UnsetType]"
+    assert _msgspec_field(DataType(is_optional=True)).type_hint == "Union[None, UnsetType]"
+
+
+def test_msgspec_data_type_copy_preserves_structural_children() -> None:
+    """Test msgspec annotation copies preserve dict keys and kwargs without parent links."""
+    field = _msgspec_field(DataType(type="str"))
+    data_type = DataType(
+        type="Value",
+        is_dict=True,
+        dict_key=DataType(type="Key"),
+        kwargs={"strict": True},
+    )
+
+    copied = field._copy_data_type(data_type)
+
+    assert copied is not data_type
+    assert copied.parent is None
+    assert copied.children == []
+    assert copied.dict_key is not data_type.dict_key
+    assert copied.dict_key.type == "Key"
+    assert copied.kwargs == {"strict": True}
+
+
+def test_msgspec_annotated_unset_keeps_optional_inside_annotated() -> None:
+    """Test msgspec Annotated fields keep Optional inside the Annotated branch."""
+    field = _msgspec_field(
+        DataType(type="str", is_optional=True),
+        extras={"max_length": 5},
+        use_annotated=True,
+    )
+
+    assert field.annotated == "Union[Annotated[Optional[str], Meta(max_length=5)], UnsetType]"
+    assert field.imports == (
+        IMPORT_OPTIONAL,
+        IMPORT_MSGSPEC_UNSETTYPE,
+        IMPORT_UNION,
+        IMPORT_ANNOTATED,
+        IMPORT_MSGSPEC_META,
+        IMPORT_MSGSPEC_UNSET,
+    )
+
+
+def test_ordered_union_type_hint_handles_empty_and_discriminator() -> None:
+    """Test ordered union rendering keeps explicit order without Optional normalization."""
+    empty_union = DataType(data_types=[DataType(), DataType()], preserve_union_member_order=True)
+    deduplicated_union = DataType(
+        data_types=[DataType(type="str"), DataType(type="str")],
+        preserve_union_member_order=True,
+    )
+    discriminated_union = DataType(
+        data_types=[DataType(type="str"), DataType(type="int")],
+        discriminator="kind",
+        preserve_union_member_order=True,
+    )
+
+    assert empty_union.type_hint == ANY
+    assert deduplicated_union.type_hint == "str"
+    assert discriminated_union.type_hint == "Annotated[Union[str, int], Field(discriminator='kind')]"
 
 
 def test_data_model_exception() -> None:

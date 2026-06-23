@@ -253,10 +253,10 @@ class DataModelField(_PydanticBaseDataModelField):
     @property
     def pydantic_extra_type_hint(self) -> str:
         """Return a Dict-based type hint for Pydantic 2.0 typed extras."""
-        type_hint = self.type_hint
-        if not type_hint.startswith("dict["):
-            return type_hint
-        return f"Dict[{type_hint.removeprefix('dict[')}"
+        data_type = self.data_type
+        if not (data_type.is_dict and data_type.use_standard_collections and not data_type.use_generic_container):
+            return self.type_hint
+        return self._type_hint_from_data_type(data_type.model_copy(update={"use_standard_collections": False}))
 
     def _process_data_in_str(self, data: dict[str, Any]) -> None:
         if self.const:
