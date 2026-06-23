@@ -266,6 +266,7 @@ def _get_top_level_typing_subscript(type_: str) -> tuple[str, str] | None:
             return name, type_[open_index + 1 : close_index]
         case _:
             return None
+    return None  # pragma: no cover
 
 
 def _get_top_level_typing_args(type_: str, expected_name: str) -> str | None:
