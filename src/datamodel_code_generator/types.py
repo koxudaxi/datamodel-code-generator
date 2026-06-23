@@ -392,68 +392,83 @@ def _is_python_type_annotation_node(node: ast.AST, *, allow_literal: bool) -> bo
     return result
 
 
-def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # noqa: PLR0912
-    """Remove None from a Union type string, handling nested unions."""
-    if use_union_operator:
-        if " | " not in type_:
-            return type_
-        separator = "|"
-        inner_text = type_
-    else:
-        if not type_.startswith(UNION_PREFIX):
-            return type_
-        separator = ","
-        inner_text = type_[len(UNION_PREFIX) : -1]
+def _get_annotation_source_segment(source: str, node: ast.AST) -> str:
+    return ast.get_source_segment(source, node) or ast.unparse(node)
 
-    parts = []
-    inner_count = 0
-    current_part = ""
 
-    # With this variable we count any non-escaped round bracket, whenever we are inside a
-    # constraint string expression. Once found a part starting with `constr(`, we increment
-    # this counter for each non-escaped opening round bracket and decrement it for each
-    # non-escaped closing round bracket.
-    in_constr = 0
+def _get_union_subscript_parts(type_: str, expression: ast.AST) -> list[str] | None:
+    match expression:
+        case ast.Subscript(value=ast.Name(id=name), slice=slice_node) if name == UNION:
+            if isinstance(slice_node, ast.Tuple):
+                return [_get_annotation_source_segment(type_, elt) for elt in slice_node.elts]
+            return [_get_annotation_source_segment(type_, slice_node)]
+        case _:
+            return None
 
-    # Parse union parts carefully to handle nested structures
-    for char in inner_text:
-        current_part += char
-        if char == "[" and in_constr == 0:
-            inner_count += 1
-        elif char == "]" and in_constr == 0:
-            inner_count -= 1
-        elif char == "(":
-            if current_part.strip().startswith("constr(") and (len(current_part) < 2 or current_part[-2] != "\\"):  # noqa: PLR2004
-                in_constr += 1
-        elif char == ")":
-            if in_constr > 0 and (len(current_part) < 2 or current_part[-2] != "\\"):  # noqa: PLR2004
-                in_constr -= 1
-        elif char == separator and inner_count == 0 and in_constr == 0:
-            part = current_part[:-1].strip()
-            if part != NONE:
-                # Process nested unions recursively
-                # only UNION_PREFIX might be nested but not union_operator
-                if not use_union_operator and part.startswith(UNION_PREFIX):
-                    part = _remove_none_from_union(part, use_union_operator=False)
-                parts.append(part)
-            current_part = ""
 
-    part = current_part.strip()
-    if current_part and part != NONE:
-        # only UNION_PREFIX might be nested but not union_operator
-        if not use_union_operator and part.startswith(UNION_PREFIX):  # pragma: no cover
-            part = _remove_none_from_union(part, use_union_operator=False)
-        parts.append(part)
+def _get_union_operator_parts(type_: str, expression: ast.AST) -> list[str] | None:
+    match expression:
+        case ast.BinOp(left=left, op=ast.BitOr(), right=right):
+            parts: list[str] = []
+            for node in (left, right):
+                if nested_parts := _get_union_operator_parts(type_, node):
+                    parts.extend(nested_parts)
+                else:
+                    parts.append(_get_annotation_source_segment(type_, node))
+            return parts
+        case _:
+            return None
 
+
+def _remove_none_from_union_parts(parts: list[str], *, use_union_operator: bool) -> list[str]:
+    filtered_parts: list[str] = []
+    for part in parts:
+        if part == NONE:
+            continue
+        filtered_part = part
+        if not use_union_operator:
+            try:
+                expression = ast.parse(part, mode="eval").body
+            except SyntaxError:  # pragma: no cover
+                filtered_parts.append(part)
+                continue
+            if _get_union_subscript_parts(part, expression) is not None:
+                filtered_part = _remove_none_from_union(part, use_union_operator=False)
+        filtered_parts.append(filtered_part)
+    return filtered_parts
+
+
+def _join_union_parts(parts: list[str], *, use_union_operator: bool) -> str:
     if not parts:
         return NONE
     if len(parts) == 1:
         return parts[0]
-
     if use_union_operator:
         return UNION_OPERATOR_DELIMITER.join(parts)
-
     return f"{UNION_PREFIX}{UNION_DELIMITER.join(parts)}]"
+
+
+@lru_cache(maxsize=4096)
+def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:
+    """Remove None from a Union type string, handling nested unions."""
+    if use_union_operator and UNION_OPERATOR_DELIMITER not in type_:
+        return type_
+    try:
+        expression = ast.parse(type_, mode="eval").body
+    except SyntaxError:
+        return type_
+
+    if use_union_operator:
+        parts = _get_union_operator_parts(type_, expression)
+    else:
+        parts = _get_union_subscript_parts(type_, expression)
+    if parts is None:
+        return type_
+
+    return _join_union_parts(
+        _remove_none_from_union_parts(parts, use_union_operator=use_union_operator),
+        use_union_operator=use_union_operator,
+    )
 
 
 @lru_cache(maxsize=4096)

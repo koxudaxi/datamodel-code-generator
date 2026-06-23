@@ -135,6 +135,16 @@ def test_chain_as_tuple_chains_multiple_iterables() -> None:
             False,
             "Union[constr(regex=r'\\['), str, int]",
         ),
+        (
+            "Union[Literal['a,b'], None]",
+            False,
+            "Literal['a,b']",
+        ),
+        (
+            "Union[Annotated[str, Field(description='a, b')], None]",
+            False,
+            "Annotated[str, Field(description='a, b')]",
+        ),
         # Complex nested types - union operator syntax
         ("List[str | None] | None", True, "List[str | None]"),
         (
@@ -161,6 +171,7 @@ def test_chain_as_tuple_chains_multiple_iterables() -> None:
         # Non-union types (should be returned as-is)
         ("str", False, "str"),
         ("List[str]", False, "List[str]"),
+        ("str|None", True, "str|None"),
     ],
 )
 def test_remove_none_from_union(type_str: str, use_union_operator: bool, expected: str) -> None:
