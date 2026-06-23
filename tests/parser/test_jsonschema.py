@@ -2000,6 +2000,7 @@ def test_extract_and_replace_qualified_python_type_spans() -> None:
     assert spans == (("baz.Qux", 40, 47), ("foo.Bar", 10, 17))
     assert _replace_python_type_spans(x_python_type, replacements) == "Callable[[Bar, Literal['foo.Bar']], Qux]"
     assert _extract_qualified_python_type_spans("[") == ()
+    assert _extract_qualified_python_type_spans("foo().bar") == ()
 
 
 def test_merge_type_modifiers_preserves_container_flags() -> None:
