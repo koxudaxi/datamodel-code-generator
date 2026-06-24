@@ -309,6 +309,9 @@ class ConstraintsBase(_BaseModel):
 class DataModelFieldBase(_BaseModel):
     """Base class for model field representation and rendering."""
 
+    _FIELD_IMPORTS_CACHE_MAX_SIZE: ClassVar[int] = 4096
+    _field_imports_cache: ClassVar[dict[tuple[Any, ...], tuple[Import, ...]]] = {}
+
     model_config = ConfigDict(  # ty: ignore
         arbitrary_types_allowed=True,
         defer_build=True,
@@ -483,15 +486,33 @@ class DataModelFieldBase(_BaseModel):
         """Collect type-hint imports; needs_annotated is passed in so subclasses can precompute it."""
         data_type = data_type or self.data_type
         if self._can_collect_imports_without_type_hint(needs_annotated=needs_annotated, data_type=data_type):
-            needs_optional = self._needs_optional_import_without_type_hint(data_type=data_type)
-            if self._can_skip_data_type_imports(data_type=data_type):
-                return (IMPORT_OPTIONAL,) if needs_optional else ()
+            return self._collect_field_imports_without_type_hint(data_type=data_type)
 
-            imports = tuple(data_type.all_imports)
-            if needs_optional and IMPORT_OPTIONAL not in imports:
-                return chain_as_tuple(imports, (IMPORT_OPTIONAL,))
-            return imports
+        self._normalize_data_type_import_state(data_type)
+        cache_key = self._field_imports_cache_key(needs_annotated=needs_annotated, data_type=data_type)
+        if (cached_imports := self._field_imports_cache.get(cache_key)) is not None:
+            return cached_imports
+        imports = self._collect_field_imports_uncached(needs_annotated=needs_annotated, data_type=data_type)
+        self._set_cached_field_imports(cache_key, imports)
+        return imports
 
+    def _collect_field_imports_without_type_hint(self, *, data_type: DataType) -> tuple[Import, ...]:
+        needs_optional = self._needs_optional_import_without_type_hint(data_type=data_type)
+        if self._can_skip_data_type_imports(data_type=data_type):
+            return (IMPORT_OPTIONAL,) if needs_optional else ()
+
+        imports = tuple(data_type.all_imports)
+        if needs_optional and IMPORT_OPTIONAL not in imports:
+            return chain_as_tuple(imports, (IMPORT_OPTIONAL,))
+        return imports
+
+    def _collect_field_imports_uncached(
+        self,
+        *,
+        needs_annotated: bool,
+        data_type: DataType,
+    ) -> tuple[Import, ...]:
+        """Collect field imports after import-affecting DataType normalization."""
         requirements = self._typing_import_requirements(needs_annotated=needs_annotated, data_type=data_type)
         imports = tuple(data_type.all_imports)
         if requirements.any_ and IMPORT_ANY not in imports:
@@ -502,6 +523,54 @@ class DataModelFieldBase(_BaseModel):
         if not missing_imports:
             return filtered_imports
         return chain_as_tuple(filtered_imports, missing_imports)
+
+    def _normalize_data_type_import_state(self, data_type: DataType) -> None:
+        """Apply import-relevant DataType mutations before cache lookup."""
+        if data_type.reference:
+            data_type._apply_nullable_from_reference()  # noqa: SLF001
+
+        for child in data_type.data_types:
+            self._normalize_data_type_import_state(child)
+        if data_type.dict_key:
+            self._normalize_data_type_import_state(data_type.dict_key)
+
+        if not data_type.is_union or data_type.preserve_union_member_order:
+            return
+        if any(self._data_type_renders_none(child) for child in data_type.data_types):
+            data_type.is_optional = True
+
+    @staticmethod
+    def _import_key(import_: Import | None) -> tuple[str, str | None, str | None, str | None] | None:
+        if import_ is None:
+            return None
+        return (import_.import_, import_.from_, import_.alias, import_.reference_path)
+
+    @staticmethod
+    def _reference_source_import_key(reference: Reference | None) -> tuple[bool, bool] | None:
+        if reference is None:
+            return None
+        source = reference.source
+        return (bool(getattr(source, "nullable", False)), bool(getattr(source, "is_alias", False)))
+
+    def _field_imports_cache_key(self, *, needs_annotated: bool, data_type: DataType) -> tuple[Any, ...]:
+        return (
+            self.__class__,
+            needs_annotated,
+            self.nullable,
+            self.required,
+            self.type_has_null,
+            self.has_default_factory,
+            self.fall_back_to_nullable,
+            self._use_union_operator,
+            bool(self.parent and self.parent.has_forward_reference),
+            self._data_type_import_key(data_type),
+        )
+
+    def _set_cached_field_imports(self, cache_key: tuple[Any, ...], imports: tuple[Import, ...]) -> None:
+        cache = self._field_imports_cache
+        if len(cache) >= self._FIELD_IMPORTS_CACHE_MAX_SIZE:
+            del cache[next(iter(cache))]
+        cache[cache_key] = imports
 
     def _can_collect_imports_without_type_hint(
         self,
@@ -553,8 +622,6 @@ class DataModelFieldBase(_BaseModel):
 
     def _data_type_typing_import_requirements(self, data_type: DataType) -> _TypingImportRequirements:
         requirements = self._explicit_typing_import_requirements(data_type)
-        if data_type.reference:
-            data_type._apply_nullable_from_reference()  # noqa: SLF001
 
         if data_type.is_union:
             requirements = requirements.merge(self._union_typing_import_requirements(data_type))
@@ -581,10 +648,8 @@ class DataModelFieldBase(_BaseModel):
                 continue
             branch_keys.add(self._data_type_import_key(child))
 
-        if has_none and not data_type.preserve_union_member_order:
-            data_type.is_optional = True
-            if not data_type.use_union_operator:
-                requirements = requirements.with_import_name(IMPORT_OPTIONAL.import_)
+        if has_none and not data_type.preserve_union_member_order and not data_type.use_union_operator:
+            requirements = requirements.with_import_name(IMPORT_OPTIONAL.import_)
         ordered_none_branch_count = int(data_type.preserve_union_member_order and has_none)
         if not branch_keys and data_type.data_types and not ordered_none_branch_count:
             requirements = replace(requirements, any_=True)
@@ -673,14 +738,19 @@ class DataModelFieldBase(_BaseModel):
 
     def _data_type_import_key(self, data_type: DataType) -> tuple[Any, ...]:
         return (
+            data_type.__class__,
             data_type.alias,
             data_type.type,
+            self._import_key(data_type.import_),
             data_type.reference.path if data_type.reference else None,
+            self._reference_source_import_key(data_type.reference),
             tuple(self._data_type_import_key(child) for child in data_type.data_types),
             self._data_type_import_key(data_type.dict_key) if data_type.dict_key else None,
             tuple(data_type.literals),
             tuple(data_type.enum_member_literals),
             to_hashable(data_type.kwargs),
+            data_type.strict,
+            data_type.is_custom_type,
             data_type.is_optional,
             data_type.is_func,
             data_type.is_dict,

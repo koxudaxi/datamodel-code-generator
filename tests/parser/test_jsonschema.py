@@ -1262,6 +1262,26 @@ def test_json_schema_parser_extension(source_obj: dict[str, Any], generated_clas
     assert dump_templates(list(parser.results)) == generated_classes
 
 
+def test_json_schema_parser_schema_raw_key_cache_is_schema_object_specific() -> None:
+    """Test schema raw key caches are keyed by the exact schema object type."""
+
+    class AltJsonSchemaObject(JsonSchemaObject):
+        properties: Optional[dict[str, Union[AltJsonSchemaObject, bool]]] = None  # noqa: UP007, UP045
+        alt_type: Optional[str] = pydantic.Field(default=None, alias="altType")  # noqa: UP045
+
+    class AltJsonSchemaParser(JsonSchemaParser):
+        SCHEMA_OBJECT_TYPE = AltJsonSchemaObject
+
+    base_parser = JsonSchemaParser("")
+    alt_parser = AltJsonSchemaParser("")
+
+    assert "altType" not in base_parser._known_schema_object_raw_keys()
+    assert "altType" in alt_parser._known_schema_object_raw_keys()
+    assert base_parser._has_schema_affecting_keywords({"altType": "string"}) is False
+    assert alt_parser._has_schema_affecting_keywords({"altType": "string"}) is True
+    assert alt_parser._known_schema_object_raw_keys() is alt_parser._known_schema_object_raw_keys()
+
+
 def test_create_data_model_with_frozen_dataclasses() -> None:
     """Test _create_data_model when frozen_dataclasses attribute exists."""
     parser = JsonSchemaParser(
