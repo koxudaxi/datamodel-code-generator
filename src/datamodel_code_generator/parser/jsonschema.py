@@ -2263,10 +2263,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         all_type_names = self._extract_all_type_names(python_type)
         if any(t in self.PYTHON_TYPE_OVERRIDE_ALWAYS for t in all_type_names):
             return False
-        if _is_union_operator_python_type(python_type) and schema_type is None:
-            return False
-        if schema_type is None:  # pragma: no cover
-            return True
+        if schema_type is None:
+            return not _is_union_python_type(python_type)
         if base_type in _PYTHON_UNION_BASE_TYPES:  # pragma: no cover
             return True
         compatible = self.COMPATIBLE_PYTHON_TYPES.get(schema_type, frozenset())
@@ -2358,6 +2356,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 import_ = _qualified_python_type_import(qualified_name)
                 continue
             nested_imports.append(self.data_type(import_=_qualified_python_type_import(qualified_name)))
+        if base_type in qualified_type_names and root_qualified_name is None:
+            import_ = None
 
         # Collect imports for all nested types (e.g., Iterable inside Callable[[Iterable[str]], str])
         for type_name in self._extract_all_type_names(type_str):

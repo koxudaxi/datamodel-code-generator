@@ -8,6 +8,10 @@
     "customIterable": {
       "type": "string",
       "x-python-type": "my.custom.Iterable[str]"
+    },
+    "customUnionIterable": {
+      "type": "string",
+      "x-python-type": "my.custom.Iterable[str] | None"
     }
   }
 }

@@ -16,3 +16,4 @@ from typing_extensions import NotRequired
 class Model(TypedDict):
     handler: NotRequired[Callable[[Bar, BarExtra, Literal['foo.Bar']], Qux]]
     customIterable: NotRequired[Iterable[str]]
+    customUnionIterable: NotRequired[Iterable[str] | None]
