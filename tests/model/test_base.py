@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
+from unittest.mock import Mock
 
 import pytest
 
@@ -707,6 +708,7 @@ def test_field_import_fast_path_collects_nullable_reference_import() -> None:
     field = DataModelFieldBase(name="user", data_type=DataType(reference=reference), required=True)
 
     assert field.imports == (IMPORT_OPTIONAL,)
+    assert field.data_type.is_optional is False
 
 
 def test_field_import_fast_path_ignores_nullable_alias_reference() -> None:
@@ -811,6 +813,88 @@ def test_field_import_fallback_collects_nullable_reference_in_union() -> None:
     )
 
     assert field.imports == (IMPORT_OPTIONAL, IMPORT_UNION)
+
+
+def test_field_import_cache_normalizes_union_on_cache_hit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test cached import lookup still applies union Optional side effects."""
+    DataModelFieldBase._field_imports_cache.clear()
+    try:
+        primed_field = DataModelFieldBase(
+            name="a",
+            data_type=DataType(data_types=[DataType(type="str"), DataType(type=NONE)]),
+            required=True,
+        )
+
+        assert primed_field.imports == (IMPORT_OPTIONAL,)
+        assert primed_field.data_type.is_optional is True
+
+        uncached = Mock(side_effect=AssertionError("unexpected uncached import collection"))
+        monkeypatch.setattr(DataModelFieldBase, "_collect_field_imports_uncached", uncached)
+        cached_field = DataModelFieldBase(
+            name="a",
+            data_type=DataType(data_types=[DataType(type="str"), DataType(type=NONE)]),
+            required=True,
+        )
+
+        assert cached_field.data_type.is_optional is False
+        assert cached_field.imports == (IMPORT_OPTIONAL,)
+        assert cached_field.data_type.is_optional is True
+        uncached.assert_not_called()
+    finally:
+        DataModelFieldBase._field_imports_cache.clear()
+
+
+def test_field_import_cache_normalizes_nullable_reference_on_cache_hit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test cached import lookup still applies reference nullable side effects."""
+    DataModelFieldBase._field_imports_cache.clear()
+    try:
+        primed_reference = Reference(path="#/definitions/User", name="User")
+        primed_reference.source = ReferenceSource(nullable=True)
+        primed_field = DataModelFieldBase(
+            name="user",
+            data_type=DataType(data_types=[DataType(reference=primed_reference), DataType(type="int")]),
+            required=True,
+        )
+
+        assert primed_field.imports == (IMPORT_OPTIONAL, IMPORT_UNION)
+        assert primed_field.data_type.data_types[0].is_optional is True
+
+        uncached = Mock(side_effect=AssertionError("unexpected uncached import collection"))
+        monkeypatch.setattr(DataModelFieldBase, "_collect_field_imports_uncached", uncached)
+        cached_reference = Reference(path="#/definitions/User", name="User")
+        cached_reference.source = ReferenceSource(nullable=True)
+        cached_field = DataModelFieldBase(
+            name="user",
+            data_type=DataType(data_types=[DataType(reference=cached_reference), DataType(type="int")]),
+            required=True,
+        )
+
+        assert cached_field.data_type.data_types[0].is_optional is False
+        assert cached_field.imports == (IMPORT_OPTIONAL, IMPORT_UNION)
+        assert cached_field.data_type.data_types[0].is_optional is True
+        uncached.assert_not_called()
+    finally:
+        DataModelFieldBase._field_imports_cache.clear()
+
+
+def test_field_import_cache_evicts_oldest_entry() -> None:
+    """Test the bounded field imports cache evicts the oldest entry."""
+    DataModelFieldBase._field_imports_cache.clear()
+    original_max_size = DataModelFieldBase._FIELD_IMPORTS_CACHE_MAX_SIZE
+    try:
+        DataModelFieldBase._FIELD_IMPORTS_CACHE_MAX_SIZE = 1
+        field = DataModelFieldBase(name="a", data_type=DataType(type="str"), required=True)
+        first_key: tuple[Any, ...] = ("first",)
+        second_key: tuple[Any, ...] = ("second",)
+
+        field._set_cached_field_imports(first_key, ())
+        field._set_cached_field_imports(second_key, (IMPORT_OPTIONAL,))
+
+        assert first_key not in DataModelFieldBase._field_imports_cache
+        assert DataModelFieldBase._field_imports_cache[second_key] == (IMPORT_OPTIONAL,)
+    finally:
+        DataModelFieldBase._FIELD_IMPORTS_CACHE_MAX_SIZE = original_max_size
+        DataModelFieldBase._field_imports_cache.clear()
 
 
 @pytest.mark.parametrize(

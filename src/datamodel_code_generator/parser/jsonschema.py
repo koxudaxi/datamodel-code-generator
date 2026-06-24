@@ -5952,24 +5952,32 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         self.parse_raw_obj(model_name, models, [*path_parts, f"#/{reference_paths[0]}", *reference_paths[1:]])
 
-    def _known_schema_object_raw_keys(self) -> set[str]:
+    @staticmethod
+    @lru_cache(maxsize=16)
+    def _schema_object_raw_key_sets(
+        schema_object_type: type[JsonSchemaObject],
+    ) -> tuple[frozenset[str], frozenset[str]]:
         keys = {"definitions", "$defs"}
-        for name, field in self.SCHEMA_OBJECT_TYPE.get_fields().items():  # ty: ignore
+        for name, field in schema_object_type.get_fields().items():  # ty: ignore
             keys.add(name)
             if alias := getattr(field, "alias", None):
                 keys.add(alias)
-        return keys
-
-    def _has_schema_affecting_keywords(self, raw: dict[str, Any]) -> bool:
         metadata_keys = {
-            *self.SCHEMA_OBJECT_TYPE.__metadata_only_fields__,
+            *schema_object_type.__metadata_only_fields__,
             "extras",
-            self.SCHEMA_OBJECT_TYPE.__extra_key__,
+            schema_object_type.__extra_key__,
         }
         schema_affecting_keys = {
-            *self._known_schema_object_raw_keys(),
-            *self.SCHEMA_OBJECT_TYPE.__schema_affecting_extras__,
+            *keys,
+            *schema_object_type.__schema_affecting_extras__,
         } - metadata_keys
+        return frozenset(keys), frozenset(schema_affecting_keys)
+
+    def _known_schema_object_raw_keys(self) -> frozenset[str]:
+        return self._schema_object_raw_key_sets(self.SCHEMA_OBJECT_TYPE)[0]
+
+    def _has_schema_affecting_keywords(self, raw: dict[str, Any]) -> bool:
+        schema_affecting_keys = self._schema_object_raw_key_sets(self.SCHEMA_OBJECT_TYPE)[1]
         return any(str(key) in schema_affecting_keys for key in raw)
 
     def _is_version_definition_namespace_name(self, name: str) -> bool:  # noqa: PLR6301
