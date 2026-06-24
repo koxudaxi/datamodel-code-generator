@@ -9,8 +9,10 @@ from typing import Literal, TypedDict
 
 from baz import Qux
 from foo import Bar, BarExtra
+from my.custom import Iterable
 from typing_extensions import NotRequired
 
 
 class Model(TypedDict):
     handler: NotRequired[Callable[[Bar, BarExtra, Literal['foo.Bar']], Qux]]
+    customIterable: NotRequired[Iterable[str]]

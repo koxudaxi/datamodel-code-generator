@@ -70,7 +70,6 @@ from datamodel_code_generator.parser.schema_version import get_data_formats
 from datamodel_code_generator.reference import SPECIAL_PATH_MARKER, ModelType, Reference, is_url
 from datamodel_code_generator.types import (
     ANY,
-    UNION_OPERATOR_DELIMITER,
     DataType,
     EmptyDataType,
     Types,
@@ -114,6 +113,9 @@ _NUMBER_CONSTRAINT_KEYS: tuple[JsonSchemaConstraintKey, ...] = (
 )
 
 _PYTHON_UNION_BASE_TYPES = frozenset({"Union", "Optional"})
+_QUALIFIED_PYTHON_TYPE_IMPORT_ALIASES = {
+    "pydantic.main.BaseModel": Import.from_full_path("pydantic.BaseModel"),
+}
 
 
 def _parse_python_type_annotation(type_str: str) -> ast.expr | None:
@@ -128,7 +130,7 @@ def _is_union_python_type(type_str: str) -> bool:
     match _parse_python_type_annotation(type_str):
         case ast.Subscript(value=ast.Name(id=name) | ast.Attribute(attr=name)) if name in _PYTHON_UNION_BASE_TYPES:
             return True
-        case ast.BinOp(op=ast.BitOr()) if UNION_OPERATOR_DELIMITER in type_str:
+        case ast.BinOp(op=ast.BitOr()):
             return True
         case _:
             return False
@@ -137,8 +139,6 @@ def _is_union_python_type(type_str: str) -> bool:
 
 @lru_cache(maxsize=1024)
 def _is_union_operator_python_type(type_str: str) -> bool:
-    if UNION_OPERATOR_DELIMITER not in type_str:
-        return False
     match _parse_python_type_annotation(type_str):
         case ast.BinOp(op=ast.BitOr()):
             return True
@@ -147,11 +147,10 @@ def _is_union_operator_python_type(type_str: str) -> bool:
     return False  # pragma: no cover
 
 
-def _get_full_attribute_name(node: ast.AST, visited: set[int]) -> str | None:
+def _get_full_attribute_name(node: ast.AST) -> str | None:
     parts: list[str] = []
     current = node
     while isinstance(current, ast.Attribute):
-        visited.add(id(current))
         parts.append(current.attr)
         current = current.value
     if isinstance(current, ast.Name):
@@ -160,29 +159,50 @@ def _get_full_attribute_name(node: ast.AST, visited: set[int]) -> str | None:
     return None
 
 
+def _get_root_qualified_python_type_name(expression: ast.expr) -> str | None:
+    match expression:
+        case ast.Subscript(value=value):
+            name = _get_full_attribute_name(value)
+        case ast.Attribute():
+            name = _get_full_attribute_name(expression)
+        case _:
+            return None
+    if name is not None and "." in name:
+        return name
+    return None
+
+
+def _qualified_python_type_import(qualified_name: str) -> Import:
+    return _QUALIFIED_PYTHON_TYPE_IMPORT_ALIASES.get(qualified_name) or Import.from_full_path(qualified_name)
+
+
+class _QualifiedPythonTypeNameShortener(ast.NodeTransformer):
+    def __init__(self) -> None:
+        self.qualified_names: list[str] = []
+
+    def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
+        if (qualified_name := _get_full_attribute_name(node)) is None or "." not in qualified_name:
+            return self.generic_visit(node)
+        self.qualified_names.append(qualified_name)
+        return ast.copy_location(ast.Name(id=qualified_name.rsplit(".", 1)[-1], ctx=ast.Load()), node)
+
+
 @lru_cache(maxsize=1024)
-def _extract_qualified_python_type_spans(type_str: str) -> tuple[tuple[str, int, int], ...]:
+def _shorten_qualified_python_type_annotation(type_str: str) -> tuple[str, tuple[str, ...], str | None]:
     expression = _parse_python_type_annotation(type_str)
     if expression is None:
-        return ()
+        return type_str, (), None
 
-    qualified_names: list[tuple[str, int, int]] = []
-    visited: set[int] = set()
-    for node in ast.walk(expression):
-        if not isinstance(node, ast.Attribute) or id(node) in visited:
-            continue
-        if (name := _get_full_attribute_name(node, visited)) is None or "." not in name:
-            continue
-        if (end_col_offset := node.end_col_offset) is None:  # pragma: no cover
-            continue
-        qualified_names.append((name, node.col_offset, end_col_offset))
-    return tuple(qualified_names)
-
-
-def _replace_python_type_spans(type_str: str, replacements: list[tuple[int, int, str]]) -> str:
-    for start, end, replacement in sorted(replacements, reverse=True):
-        type_str = f"{type_str[:start]}{replacement}{type_str[end:]}"
-    return type_str
+    root_qualified_name = _get_root_qualified_python_type_name(expression)
+    shortener = _QualifiedPythonTypeNameShortener()
+    shortened_expression = shortener.visit(expression)
+    if shortened_expression is None or not shortener.qualified_names:
+        return type_str, (), root_qualified_name
+    return (
+        ast.unparse(ast.fix_missing_locations(shortened_expression)),
+        tuple(shortener.qualified_names),
+        root_qualified_name,
+    )
 
 
 _STRING_CONSTRAINT_KEYS: tuple[JsonSchemaConstraintKey, ...] = (
@@ -2328,24 +2348,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         import_ = self._resolve_type_import(base_type)
 
         # Convert fully qualified names to short names when imports are added
-        type_str = x_python_type
+        type_str, qualified_names, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
         nested_imports: list[DataType] = []
-        replacements: list[tuple[int, int, str]] = []
-        for qualified_name, start, end in _extract_qualified_python_type_spans(x_python_type):
+        qualified_type_names: set[str] = set()
+        for qualified_name in qualified_names:
             class_name = qualified_name.rsplit(".", 1)[-1]
-            replacements.append((start, end, class_name))
-            if start == 0 and class_name == base_type:
-                if not import_:
-                    import_ = Import.from_full_path(qualified_name)
+            qualified_type_names.add(class_name)
+            if qualified_name == root_qualified_name and class_name == base_type:
+                import_ = _qualified_python_type_import(qualified_name)
                 continue
-            nested_import = self._resolve_type_import(class_name) or Import.from_full_path(qualified_name)
-            nested_imports.append(self.data_type(import_=nested_import))
-        if replacements:
-            type_str = _replace_python_type_spans(x_python_type, replacements)
+            nested_imports.append(self.data_type(import_=_qualified_python_type_import(qualified_name)))
 
         # Collect imports for all nested types (e.g., Iterable inside Callable[[Iterable[str]], str])
         for type_name in self._extract_all_type_names(type_str):
-            if type_name != base_type:
+            if type_name != base_type and type_name not in qualified_type_names:
                 nested_import = self._resolve_type_import(type_name) or self._resolve_type_import_from_defs(type_name)
                 if nested_import:
                     nested_imports.append(self.data_type(import_=nested_import))

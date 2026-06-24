@@ -27,11 +27,10 @@ from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
     Types,
-    _extract_qualified_python_type_spans,
     _get_union_variant_name,
     _is_union_operator_python_type,
     _is_union_python_type,
-    _replace_python_type_spans,
+    _shorten_qualified_python_type_annotation,
     _validate_schema_python_import_path,
     get_model_by_path,
     split_json_pointer,
@@ -1937,6 +1936,8 @@ def test_json_schema_standard_string_formats_map_to_string(format_: str) -> None
         ("Union[Set[str], None]", {"is_set": True}),
         ("Optional[FrozenSet[int]]", {"is_frozen_set": True}),
         ("Set[int] | None", {"is_set": True}),
+        ("Set[int]|None", {"is_set": True}),
+        ("None|Set[int]", {"is_set": True}),
         ("Sequence[str] | int", {"is_sequence": True}),
         # Union without special container type (loop completes without match)
         ("Union[str, int]", {}),
@@ -1968,7 +1969,7 @@ def test_get_python_type_flags(x_python_type: str, expected: dict[str, bool]) ->
         ("Union[str, int]", True),
         ("typing.Optional[str]", True),
         ("str | int", True),
-        ("str|int", False),
+        ("str|int", True),
         ("list[str]", False),
         ("[", False),
     ],
@@ -1982,7 +1983,8 @@ def test_is_union_python_type(x_python_type: str, expected: bool) -> None:
     ("x_python_type", "expected"),
     [
         ("str | int", True),
-        ("str|int", False),
+        ("str|int", True),
+        ("None|Set[int]", True),
         ("Literal[' | ']", False),
     ],
 )
@@ -1991,16 +1993,36 @@ def test_is_union_operator_python_type(x_python_type: str, expected: bool) -> No
     assert _is_union_operator_python_type(x_python_type) is expected
 
 
-def test_extract_and_replace_qualified_python_type_spans() -> None:
-    """Test qualified Python type spans preserve string literals when replacing."""
+def test_shorten_qualified_python_type_annotation() -> None:
+    """Test qualified Python type AST shortening preserves string literals."""
     x_python_type = "Callable[[foo.Bar, Literal['foo.Bar']], baz.Qux]"
-    spans = _extract_qualified_python_type_spans(x_python_type)
-    replacements = [(start, end, name.rsplit(".", 1)[-1]) for name, start, end in spans]
+    type_str, qualified_names, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
 
-    assert spans == (("baz.Qux", 40, 47), ("foo.Bar", 10, 17))
-    assert _replace_python_type_spans(x_python_type, replacements) == "Callable[[Bar, Literal['foo.Bar']], Qux]"
-    assert _extract_qualified_python_type_spans("[") == ()
-    assert _extract_qualified_python_type_spans("foo().bar") == ()
+    assert qualified_names == ("foo.Bar", "baz.Qux")
+    assert root_qualified_name is None
+    assert type_str == "Callable[[Bar, Literal['foo.Bar']], Qux]"
+    assert _shorten_qualified_python_type_annotation("[") == ("[", (), None)
+    assert _shorten_qualified_python_type_annotation("foo().bar") == ("foo().bar", (), None)
+
+
+def test_shorten_qualified_python_type_annotation_after_non_ascii_literal() -> None:
+    """Test AST shortening handles non-ASCII text before qualified names."""
+    x_python_type = "Callable[[Literal['あ'], foo.Bar], baz.Qux]"
+    type_str, qualified_names, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
+
+    assert qualified_names == ("foo.Bar", "baz.Qux")
+    assert root_qualified_name is None
+    assert type_str == "Callable[[Literal['あ'], Bar], Qux]"
+
+
+def test_shorten_qualified_python_type_annotation_after_multiline_literal() -> None:
+    """Test AST shortening handles multiline annotations."""
+    x_python_type = "Callable[[\n    Literal['foo.Bar'],\n    foo.Bar,\n], baz.Qux]"
+    type_str, qualified_names, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
+
+    assert qualified_names == ("foo.Bar", "baz.Qux")
+    assert root_qualified_name is None
+    assert type_str == "Callable[[Literal['foo.Bar'], Bar], Qux]"
 
 
 def test_merge_type_modifiers_preserves_container_flags() -> None:
