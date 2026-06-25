@@ -62,10 +62,10 @@ jobs:
       BENCHMARK_HISTORY_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.history_days || '365' }}
       BENCHMARK_LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.limit || '40' }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.BENCHMARK_PYTHON_VERSION }}
       - name: Resolve release versions
@@ -100,7 +100,7 @@ jobs:
             --limit "$BENCHMARK_LIMIT" \
             --output .benchmarks/release-benchmark-selection.json
       - name: Upload benchmark selection
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dcg-release-benchmark-selection
           path: .benchmarks/release-benchmark-selection.json
@@ -121,14 +121,14 @@ jobs:
       BENCHMARK_RUNS: ${{ github.event_name == 'workflow_dispatch' && inputs.runs || (github.event_name == 'pull_request' && '3' || '7') }}
       OS: ubuntu-24.04
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.BENCHMARK_PYTHON_VERSION }}
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
       - name: Collect benchmarks
         env:
           BENCHMARK_VERSION: ${{ matrix.version }}
@@ -138,7 +138,7 @@ jobs:
           --runs "$BENCHMARK_RUNS"
           --output ".benchmarks/fragments/release-benchmark-${BENCHMARK_VERSION}.json"
       - name: Upload benchmark fragment
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dcg-release-benchmark-fragment-${{ matrix.version }}
           path: .benchmarks/fragments/release-benchmark-${{ matrix.version }}.json
@@ -153,19 +153,19 @@ jobs:
       BENCHMARK_PYTHON_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.python_version || '3.14.2' }}
       OS: ubuntu-24.04
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.BENCHMARK_PYTHON_VERSION }}
       - name: Download benchmark selection
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: dcg-release-benchmark-selection
           path: .benchmarks
       - name: Download benchmark fragments
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: dcg-release-benchmark-fragment-*
           path: .benchmarks/fragments
@@ -190,13 +190,13 @@ jobs:
           cp .benchmarks/release-benchmarks.json .benchmarks/docs/data/
           cp docs/data/release-benchmark-notes.json .benchmarks/docs/data/
       - name: Upload benchmark data
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dcg-release-benchmarks-json
           path: .benchmarks/release-benchmarks.json
           if-no-files-found: error
       - name: Upload benchmark docs
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dcg-release-benchmark-docs
           path: .benchmarks/docs
