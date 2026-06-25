@@ -13116,6 +13116,31 @@ def test_main_exact_imports_collapse_root_models_title_array(output_dir: Path) -
     )
 
 
+def test_main_exact_imports_collapse_root_models_module_split_oneof_imports(output_dir: Path) -> None:
+    """Regression test for https://github.com/koxudaxi/datamodel-code-generator/issues/3487."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "exact_imports_collapse_root_models_module_split_oneof.json",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "exact_imports_collapse_root_models_module_split_oneof",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+            "--use-exact-imports",
+            "--collapse-root-models",
+            "--module-split-mode",
+            "single",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+        runtime_validation_module="animal_home",
+        runtime_validation_model_name="AnimalHome",
+        runtime_validation_data={"pets": [{"bark": True}]},
+    )
+
+
 @pytest.mark.timeout(30)
 def test_main_jsonschema_discriminated_oneof_allof_cycle(output_file: Path) -> None:
     """Discriminated oneOf with variants that allOf the parent (circular graph).
