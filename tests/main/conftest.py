@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import inspect
 import os
@@ -267,6 +268,47 @@ def _assert_python_module_importable(path: Path, module_name: str, attribute: st
             pytest.fail(f"Expected generated module {module_name!r} to define {attribute!r}")
     finally:
         sys.modules.pop(module_name, None)
+
+
+@contextmanager
+def _generated_package_module(output_path: Path, module_path: str) -> Generator[Any, None, None]:
+    """Temporarily import a generated package module without leaking module cache state."""
+    package_name = output_path.name
+    module_name = f"{package_name}.{module_path}"
+    module_prefix = f"{package_name}."
+    previous_modules = {
+        name: module for name, module in sys.modules.items() if name == package_name or name.startswith(module_prefix)
+    }
+    for name in list(sys.modules):
+        if name == package_name or name.startswith(module_prefix):
+            sys.modules.pop(name, None)
+
+    parent_directory = str(output_path.parent)
+    sys.path.insert(0, parent_directory)
+    importlib.invalidate_caches()
+    try:
+        yield importlib.import_module(module_name)
+    finally:
+        sys.path.remove(parent_directory)
+        for name in [name for name in sys.modules if name == package_name or name.startswith(module_prefix)]:
+            sys.modules.pop(name, None)
+        sys.modules.update(previous_modules)
+
+
+def _assert_generated_package_model_validation(
+    output_path: Path,
+    *,
+    module_path: str,
+    model_name: str,
+    data: Mapping[str, Any],
+) -> None:
+    """Assert a generated package model can validate runtime data."""
+    with _generated_package_module(output_path, module_path) as module:
+        model = getattr(module, model_name)
+        validate = getattr(model, "model_validate", None)
+        if not callable(validate):  # pragma: no cover
+            pytest.fail(f"Expected generated model {model_name!r} to define model_validate")
+        validate(data)
 
 
 @cache
@@ -855,6 +897,9 @@ def run_main_and_assert(  # noqa: PLR0912
     importable_module_name: str | None = None,
     importable_module_file: str | Path | None = None,
     importable_module_attribute: str | None = None,
+    runtime_validation_module: str | None = None,
+    runtime_validation_model_name: str | None = None,
+    runtime_validation_data: Mapping[str, Any] | None = None,
 ) -> None:
     """Execute main() and assert output.
 
@@ -902,8 +947,23 @@ def run_main_and_assert(  # noqa: PLR0912
         importable_module_name: Import output_path as this module name
         importable_module_file: Relative file under output_path to import
         importable_module_attribute: Assert imported module defines this attribute
+        runtime_validation_module: Relative generated package module to import
+        runtime_validation_model_name: Model class name to validate at runtime
+        runtime_validation_data: Data passed to model_validate on the generated model
     """
     __tracebackhide__ = True
+    runtime_validation_options = (
+        runtime_validation_module,
+        runtime_validation_model_name,
+        runtime_validation_data,
+    )
+    if any(option is not None for option in runtime_validation_options) and not all(
+        option is not None for option in runtime_validation_options
+    ):  # pragma: no cover
+        pytest.fail(
+            "runtime_validation_module, runtime_validation_model_name, and runtime_validation_data "
+            "must be passed together"
+        )
 
     # Handle stdin input
     if stdin_path is not None:
@@ -1041,6 +1101,24 @@ def run_main_and_assert(  # noqa: PLR0912
         if importable_module_file is not None:
             importable_path = output_path / importable_module_file
         _assert_python_module_importable(importable_path, importable_module_name, importable_module_attribute)
+    if runtime_validation_module is not None:
+        if output_path is None:  # pragma: no cover
+            pytest.fail("output_path is required when using runtime_validation_module")
+        if _should_skip_compile(extra_args):
+            return
+        runtime_validation_model = runtime_validation_model_name
+        runtime_validation_payload = runtime_validation_data
+        if runtime_validation_model is None or runtime_validation_payload is None:  # pragma: no cover
+            pytest.fail(
+                "runtime_validation_module, runtime_validation_model_name, and runtime_validation_data "
+                "must be passed together"
+            )
+        _assert_generated_package_model_validation(
+            output_path,
+            module_path=runtime_validation_module,
+            model_name=runtime_validation_model,
+            data=runtime_validation_payload,
+        )
 
 
 def _get_argument_value(arguments: Sequence[str] | None, argument_name: str) -> str | None:
