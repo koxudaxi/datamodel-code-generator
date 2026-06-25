@@ -210,6 +210,9 @@ MSGSPEC_VALIDATION_EXCLUDED_CASES: Final[dict[str, str]] = {
     "jsonschema/enum_object_values.json": (
         "msgspec conversion cannot validate generated empty Enum classes from object-valued enum schemas"
     ),
+    "jsonschema/exact_imports_collapse_root_models_module_split_oneof.json": (
+        "msgspec conversion requires tagged Struct unions for combined object schemas"
+    ),
     "jsonschema/falsy_default_enum_member.json": (
         "msgspec conversion only supports Enum classes with homogeneous str or int values"
     ),

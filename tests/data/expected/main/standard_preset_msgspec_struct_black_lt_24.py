@@ -13,8 +13,8 @@ class Person(Struct):
         str, Meta(description="The person's first name.")
     ] | UnsetType = field(name='firstName', default=UNSET)
     last_name: Annotated[
-        str | None, Meta(description="The person's last name.")
-    ] | UnsetType = field(name='lastName', default=UNSET)
+        str, Meta(description="The person's last name.")
+    ] | None | UnsetType = field(name='lastName', default=UNSET)
     age: Annotated[
         int,
         Meta(
