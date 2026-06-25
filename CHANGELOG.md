@@ -5,6 +5,30 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.65.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.65.1) - 2026-06-25
+
+## What's Changed
+* Update CHANGELOG for 0.65.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3470
+* Speed up CLI generation by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3471
+* Cache JSON Schema ref facts by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3472
+* Cache model imports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3473
+* Add release benchmark docs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3465
+* Skip legacy Pydantic union round trip by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3475
+* Strip Field None defaults with metadata by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3476
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3478
+* Use semantic None default checks by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3479
+* Structure field import detection by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3481
+* Use structured type rendering by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3488
+* Use structured SerializeAsAny imports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3482
+* Use structured x-python-type annotations by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3486
+* Cache structured import requirements by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3489
+* Fix collapsed root imports in split modules by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3491
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.65.0...0.65.1
+
+---
+
 ## [0.65.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.65.0) - 2026-06-21
 
 ## Breaking Changes
