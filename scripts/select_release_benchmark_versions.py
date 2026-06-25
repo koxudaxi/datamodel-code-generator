@@ -19,6 +19,11 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+try:
+    from scripts.release_benchmark_safety import safe_release_version
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from release_benchmark_safety import safe_release_version
+
 if importlib.util.find_spec("certifi"):
     import certifi
 else:
@@ -124,7 +129,15 @@ def _split_csv_words(raw: str) -> list[str]:
 
 
 def _normalize_version(version: str) -> str:
-    return version.strip().removeprefix("v")
+    normalized = version.strip().removeprefix("v")
+    return safe_release_version(normalized, path=DEFAULT_OUTPUT, field="version")
+
+
+def _safe_normalize_version(version: str) -> str:
+    try:
+        return _normalize_version(version)
+    except ValueError:
+        return ""
 
 
 def _is_stable_version(version: str) -> bool:
@@ -181,6 +194,8 @@ def _release_versions(payload: object) -> list[ReleaseVersion]:
     for version, files in releases.items():
         if not isinstance(version, str) or not isinstance(files, list) or not _is_stable_version(version):
             continue
+        if not (normalized_version := _safe_normalize_version(version)):
+            continue
         active_files = [file_info for file_info in files if isinstance(file_info, dict) and not file_info.get("yanked")]
         if not active_files:
             continue
@@ -191,7 +206,7 @@ def _release_versions(payload: object) -> list[ReleaseVersion]:
         ]
         if not upload_times:
             continue
-        versions.append(ReleaseVersion(version=_normalize_version(version), uploaded_at=_timestamp(max(upload_times))))
+        versions.append(ReleaseVersion(version=normalized_version, uploaded_at=_timestamp(max(upload_times))))
     return sorted(versions, key=lambda release: _parse_datetime(release.uploaded_at), reverse=True)
 
 
@@ -203,9 +218,11 @@ def _version_usage(payload: object) -> list[VersionUsage]:
     for row in rows:
         if not isinstance(row, dict) or not isinstance(version := row.get("version"), str):
             continue
+        if not (normalized_version := _safe_normalize_version(version)):
+            continue
         usage.append(
             VersionUsage(
-                version=_normalize_version(version),
+                version=normalized_version,
                 downloads=int(row.get("downloads", 0)),
                 first_seen=str(row.get("first_seen", "")),
                 last_seen=str(row.get("last_seen", "")),
@@ -257,7 +274,7 @@ def _selected_explicit_releases(
             usage_by_version.get(version),
         )
         for raw_version in _split_csv_words(explicit_versions)
-        if (version := _normalize_version(raw_version))
+        if (version := _safe_normalize_version(raw_version))
     ][:limit]
 
 
