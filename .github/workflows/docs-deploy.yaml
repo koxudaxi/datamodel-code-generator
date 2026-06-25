@@ -80,7 +80,7 @@ jobs:
           PLAYGROUND_DEPLOY_BRANCH: ${{ inputs.deploy_branch }}
           PLAYGROUND_MAIN_ASSET_BASE: ${{ inputs.deploy_branch != '' && github.repository == 'koxudaxi/datamodel-code-generator' && './generated/main/' || '' }}
       - name: Build site
-        run: zensical build --clean
+        run: uv run zensical build --clean
       - name: Publish standalone playground route
         run: |
           rm -rf site/playground
