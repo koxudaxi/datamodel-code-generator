@@ -1093,32 +1093,53 @@ def _get_enum_from_base(discriminator_model: DataModel, field_name: str) -> Enum
     return None
 
 
+def _get_model_module_name(model: DataModel, model_path_to_module_name: Mapping[str, str]) -> str:
+    return model_path_to_module_name.get(model.path, model.module_name)
+
+
+def _get_data_type_target_full_name(
+    data_type: DataType,
+    reference: Reference,
+    model_path_to_module_name: Mapping[str, str],
+) -> str:
+    if (ref_module_name := model_path_to_module_name.get(reference.path)) is None:
+        ref_module_name = data_type.full_name.rsplit(".", 1)[0] if "." in data_type.full_name else ""
+    return f"{ref_module_name}.{reference.short_name}" if ref_module_name else reference.short_name
+
+
 def _register_data_type_import(
     data_type: DataType,
     model: DataModel,
     imports: Imports,
     scoped_model_resolver: ModelResolver,
+    model_path_to_module_name: dict[str, str] | None = None,
 ) -> None:
-    if data_type.reference is None:
-        return
-    from_, import_ = full_path = relative(model.module_name, data_type.full_name)
+    match data_type.reference:
+        case None:
+            return
+        case reference:
+            pass
+
+    model_path_to_module_name = model_path_to_module_name or {}
+    from_, import_ = full_path = relative(
+        _get_model_module_name(model, model_path_to_module_name),
+        _get_data_type_target_full_name(data_type, reference, model_path_to_module_name),
+    )
     if imports.use_exact:
-        from_, import_ = full_path = exact_import(from_, import_, data_type.reference.short_name)
-    if from_ and import_:
-        alias = scoped_model_resolver.add(full_path, import_)
-        data_type.alias = (
-            alias.name
-            if data_type.reference.short_name == import_
-            else f"{alias.name}.{data_type.reference.short_name}"
+        from_, import_ = full_path = exact_import(from_, import_, reference.short_name)
+    if not (from_ and import_):
+        return
+
+    alias = scoped_model_resolver.add(full_path, import_)
+    data_type.alias = alias.name if reference.short_name == import_ else f"{alias.name}.{reference.short_name}"
+    imports.append([
+        Import(
+            from_=from_,
+            import_=import_,
+            alias=alias.name,
+            reference_path=reference.path,
         )
-        imports.append([
-            Import(
-                from_=from_,
-                import_=import_,
-                alias=alias.name,
-                reference_path=data_type.reference.path,
-            )
-        ])
+    ])
 
 
 def _resolve_module_file(module_: ModulePath, results: dict[ModulePath, Result]) -> tuple[ModulePath, bool]:
@@ -1831,33 +1852,30 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         for model in models:
             before_import = model.imports
             imports.append(before_import)
-            current_module_name = model_path_to_module_name.get(model.path, model.module_name)
+            current_module_name = _get_model_module_name(model, model_path_to_module_name)
             # Some imports are derived from type hints, so aliases can affect them.
             import_sensitive_alias_changed = False
             for data_type in model.all_data_types:
-                if not data_type.reference or data_type.reference.path in model_paths:
-                    continue
+                match data_type.reference:
+                    case None:
+                        continue
+                    case reference if reference.path in model_paths:
+                        continue
+                    case reference:
+                        pass
 
-                ref_module_name = model_path_to_module_name.get(
-                    data_type.reference.path,
-                    data_type.full_name.rsplit(".", 1)[0] if "." in data_type.full_name else "",
-                )
-                target_full_name = (
-                    f"{ref_module_name}.{data_type.reference.short_name}"
-                    if ref_module_name
-                    else data_type.reference.short_name
-                )
+                target_full_name = _get_data_type_target_full_name(data_type, reference, model_path_to_module_name)
 
                 if isinstance(data_type, BaseClassDataType):
                     left, right = relative(current_module_name, target_full_name)
                     is_ancestor = is_ancestor_package_reference(current_module_name, target_full_name)
                     from_ = left if is_ancestor else (f"{left}{right}" if left.endswith(".") else f"{left}.{right}")
-                    import_ = data_type.reference.short_name
+                    import_ = reference.short_name
                     full_path = from_, import_
                 else:
                     from_, import_ = full_path = relative(current_module_name, target_full_name)
                     if imports.use_exact:
-                        from_, import_ = full_path = exact_import(from_, import_, data_type.reference.short_name)
+                        from_, import_ = full_path = exact_import(from_, import_, reference.short_name)
                     import_ = import_.replace("-", "_")
                     current_module_path = tuple(current_module_name.split(".")) if current_module_name else ()
                     if (  # pragma: no cover
@@ -1871,7 +1889,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     ref_module = tuple(target_full_name.split(".")[:-1])
 
                     is_module_class_collision = (
-                        ref_module and import_ == data_type.reference.short_name and ref_module[-1] == import_
+                        ref_module and import_ == reference.short_name and ref_module[-1] == import_
                     )
 
                     if (
@@ -1880,14 +1898,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         and (ref_module in internal_modules or is_module_class_collision)
                     ):
                         from_ = f"{from_}{import_}" if from_.endswith(".") else f"{from_}.{import_}"
-                        import_ = data_type.reference.short_name
+                        import_ = reference.short_name
                         full_path = from_, import_
 
                 alias = scoped_model_resolver.add(full_path, import_).name
 
-                name = data_type.reference.short_name
+                name = reference.short_name
                 if from_ and import_ and alias != name:
-                    data_type.alias = alias if data_type.reference.short_name == import_ else f"{alias}.{name}"
+                    data_type.alias = alias if reference.short_name == import_ else f"{alias}.{name}"
                     import_sensitive_alias_changed = True
 
                 if init and not target_full_name.startswith(current_module_name + "."):
@@ -1897,7 +1915,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         from_=from_,
                         import_=import_,
                         alias=alias,
-                        reference_path=data_type.reference.path,
+                        reference_path=reference.path,
                     ),
                 )
             if import_sensitive_alias_changed:  # pragma: no cover
@@ -2361,6 +2379,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         unused_models: list[DataModel],
         imports: Imports,
         scoped_model_resolver: ModelResolver,
+        model_path_to_module_name: dict[str, str] | None = None,
     ) -> None:
         if not self.collapse_root_models:
             return
@@ -2488,7 +2507,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         continue
 
                     for d in copied_data_type.all_data_types:
-                        _register_data_type_import(d, model, imports, scoped_model_resolver)
+                        _register_data_type_import(
+                            d,
+                            model,
+                            imports,
+                            scoped_model_resolver,
+                            model_path_to_module_name,
+                        )
 
                     original_field = get_most_of_parent(data_type, DataModelFieldBase)
                     if original_field:  # pragma: no cover
@@ -3637,7 +3662,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.__extract_inherited_enum(models)
         self.__set_reference_default_value_to_field(models)
         self.__reuse_model(models, require_update_action_models)
-        self.__collapse_root_models(models, unused_models, imports, scoped_model_resolver)
+        self.__collapse_root_models(models, unused_models, imports, scoped_model_resolver, model_path_to_module_name)
         self.__set_default_enum_member(models)
         self.__sort_models(models, imports, use_deferred_annotations=config.use_deferred_annotations)
         self.__change_field_name(models)

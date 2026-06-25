@@ -321,6 +321,9 @@ def test_msgspec_unset_type_hint_handles_empty_and_simple_types() -> None:
     assert _msgspec_field(DataType()).type_hint == "UnsetType"
     assert _msgspec_field(DataType(type="str")).type_hint == "Union[str, UnsetType]"
     assert _msgspec_field(DataType(type="str", is_optional=True)).type_hint == "Union[str, None, UnsetType]"
+    assert _msgspec_field(DataType(data_types=[DataType(type="str"), DataType(type="int")])).type_hint == (
+        "Union[str, int, UnsetType]"
+    )
     none_field = _msgspec_field(DataType(is_optional=True))
     assert none_field.type_hint == "Union[None, UnsetType]"
     assert none_field.imports == (IMPORT_MSGSPEC_UNSETTYPE, IMPORT_UNION, IMPORT_MSGSPEC_UNSET)
@@ -329,8 +332,16 @@ def test_msgspec_unset_type_hint_handles_empty_and_simple_types() -> None:
 def test_msgspec_unset_import_is_limited_to_struct_fields() -> None:
     """Test msgspec UNSET value imports match Struct-only field emission."""
     field = MsgspecDataModelField(name="value", data_type=DataType(type="str"), required=False)
+    annotated_field = MsgspecDataModelField(
+        name="value",
+        data_type=DataType(type="str"),
+        required=False,
+        extras={"max_length": 5},
+        use_annotated=True,
+    )
 
     assert IMPORT_MSGSPEC_UNSET not in field.imports
+    assert IMPORT_MSGSPEC_UNSET not in annotated_field.imports
 
 
 def test_msgspec_data_type_copy_preserves_structural_children() -> None:
@@ -353,23 +364,41 @@ def test_msgspec_data_type_copy_preserves_structural_children() -> None:
     assert copied.kwargs == {"strict": True}
 
 
-def test_msgspec_annotated_unset_keeps_optional_inside_annotated() -> None:
-    """Test msgspec Annotated fields keep Optional inside the Annotated branch."""
+def test_msgspec_annotated_unset_keeps_none_outside_annotated() -> None:
+    """Test msgspec Annotated fields keep None outside the Annotated branch."""
     field = _msgspec_field(
         DataType(type="str", is_optional=True),
         extras={"max_length": 5},
         use_annotated=True,
     )
 
-    assert field.annotated == "Union[Annotated[Optional[str], Meta(max_length=5)], UnsetType]"
+    assert field.annotated == "Union[Annotated[str, Meta(max_length=5)], None, UnsetType]"
     assert field.needs_annotated_import is True
     assert field.imports == (
-        IMPORT_OPTIONAL,
         IMPORT_MSGSPEC_UNSETTYPE,
         IMPORT_UNION,
         IMPORT_ANNOTATED,
         IMPORT_MSGSPEC_META,
         IMPORT_MSGSPEC_UNSET,
+    )
+
+
+def test_msgspec_required_annotated_nullable_keeps_none_outside_annotated() -> None:
+    """Test required msgspec Annotated nullable fields keep None outside Annotated."""
+    field = MsgspecDataModelField(
+        name="value",
+        data_type=DataType(type="str", is_optional=True),
+        required=True,
+        extras={"max_length": 5},
+        use_annotated=True,
+    )
+    MsgspecStruct(fields=[field], reference=Reference(path="Model", original_name="Model", name="Model"))
+
+    assert field.annotated == "Union[Annotated[str, Meta(max_length=5)], None]"
+    assert field.imports == (
+        IMPORT_UNION,
+        IMPORT_ANNOTATED,
+        IMPORT_MSGSPEC_META,
     )
 
 

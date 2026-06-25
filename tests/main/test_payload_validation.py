@@ -388,6 +388,7 @@ def test_payload_backend_full_matrix_exclusions_are_classified() -> None:
     "case_id",
     [
         "jsonschema/constrained_types_keyword_order.json",
+        "jsonschema/exact_imports_collapse_root_models_module_split_oneof.json",
         "jsonschema/strict_types.json",
         "jsonschema/type_array_only_null.json",
         "jsonschema/type_mappings.json",

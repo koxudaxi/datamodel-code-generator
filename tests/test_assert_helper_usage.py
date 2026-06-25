@@ -17,7 +17,12 @@ from tests.conftest import (
     assert_httpx_get_kwargs,
     create_httpx_get_mock,
 )
-from tests.main.conftest import assert_generated_model_json_invalid, assert_generated_model_json_validation
+from tests.main.conftest import (
+    _assert_generated_package_model_validation,
+    assert_generated_model_json_invalid,
+    assert_generated_model_json_validation,
+    run_main_and_assert,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -526,3 +531,55 @@ def test_generated_model_json_helpers_restore_existing_module(tmp_path: Path) ->
         assert sys.modules[module_name] is previous_module
     finally:
         sys.modules.pop(module_name, None)
+
+
+def test_generated_package_model_validation_restores_existing_modules(tmp_path: Path) -> None:
+    """Generated-package validation restores existing package modules."""
+    output_dir = tmp_path / "model"
+    output_dir.mkdir()
+    (output_dir / "__init__.py").write_text("", encoding="utf-8")
+    (output_dir / "target.py").write_text(
+        "from pydantic import BaseModel\n\nclass Target(BaseModel):\n    value: int\n",
+        encoding="utf-8",
+    )
+
+    previous_package = ModuleType("model")
+    previous_module = ModuleType("model.target")
+    sys.modules["model"] = previous_package
+    sys.modules["model.target"] = previous_module
+
+    try:
+        _assert_generated_package_model_validation(
+            output_dir,
+            module_path="target",
+            model_name="Target",
+            data={"value": 1},
+        )
+        assert sys.modules["model"] is previous_package
+        assert sys.modules["model.target"] is previous_module
+    finally:
+        sys.modules.pop("model", None)
+        sys.modules.pop("model.target", None)
+
+
+@pytest.mark.skipif(sys.version_info >= (3, 14), reason="requires a target version newer than the runtime")
+def test_run_main_runtime_validation_skips_newer_python_target(tmp_path: Path) -> None:
+    """Runtime validation follows generated-code compatibility guards."""
+    input_path = tmp_path / "schema.json"
+    input_path.write_text('{"type": "object", "properties": {"value": {"type": "integer"}}}', encoding="utf-8")
+
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=tmp_path / "model.py",
+        input_file_type="jsonschema",
+        extra_args=[
+            "--target-python-version",
+            "3.14",
+            "--formatters",
+            "builtin",
+        ],
+        skip_code_validation=True,
+        runtime_validation_module="missing_module",
+        runtime_validation_model_name="MissingModel",
+        runtime_validation_data={},
+    )

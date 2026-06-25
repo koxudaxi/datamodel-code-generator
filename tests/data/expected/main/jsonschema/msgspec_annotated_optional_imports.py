@@ -4,10 +4,10 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Optional, Union
+from typing import Annotated, Union
 
 from msgspec import UNSET, Meta, Struct, UnsetType
 
 
 class Model(Struct):
-    name: Union[Annotated[Optional[str], Meta(max_length=5)], UnsetType] = UNSET
+    name: Union[Annotated[str, Meta(max_length=5)], None, UnsetType] = UNSET

@@ -85,13 +85,7 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
         ):
             extra_imports.append(IMPORT_MSGSPEC_UNSET)
         imports = original_imports.fget(self)  # ty: ignore
-        if (
-            isinstance(self, DataModelField)
-            and self._not_required
-            and not self.nullable
-            and self.data_type.is_optional
-            and not self._uses_optional_inside_annotated_unset
-        ):
+        if isinstance(self, DataModelField) and self._not_required and not self.nullable and self.data_type.is_optional:
             imports = tuple(import_ for import_ in imports if import_ != IMPORT_OPTIONAL)
         return chain_as_tuple(imports, extra_imports)
 
@@ -264,6 +258,13 @@ class DataModelField(DataModelFieldBase):
             return False
         return any(self._data_type_renders_none(child) for child in data_type.data_types)
 
+    def _field_has_top_level_none(self) -> bool:
+        return any((
+            self.nullable is True,
+            self.type_has_null is True,
+            self._data_type_has_top_level_none(self.data_type),
+        ))
+
     @staticmethod
     def _data_type_has_container(data_type: DataType) -> bool:
         return any((
@@ -305,38 +306,49 @@ class DataModelField(DataModelFieldBase):
             return unset_type
 
         data_types = []
-        has_none = self._data_type_has_top_level_none(self.data_type)
-        if not has_none and self._data_type_is_plain_union(self.data_type):
-            data_types.extend(self._copy_data_type(child) for child in self.data_type.data_types)
-        elif has_none:
-            base_data_type = self._copy_data_type_without_top_level_none(self.data_type)
-            if self._data_type_has_renderable_structure(base_data_type) and not self._data_type_renders_none(
-                base_data_type
-            ):
-                data_types.append(base_data_type)
-        else:
-            base_data_type = self._copy_data_type(self.data_type)
-            if self._data_type_has_renderable_structure(base_data_type) and not self._data_type_renders_none(
-                base_data_type
-            ):
-                data_types.append(base_data_type)
+        has_none = self._field_has_top_level_none()
+        match (has_none, self._data_type_is_plain_union(self.data_type)):
+            case (False, True):
+                data_types.extend(self._copy_data_type(child) for child in self.data_type.data_types)
+            case (True, _):
+                if self._data_type_has_renderable_structure(
+                    base_data_type := self._copy_data_type_without_top_level_none(self.data_type)
+                ) and not self._data_type_renders_none(base_data_type):
+                    data_types.append(base_data_type)
+            case _:
+                if self._data_type_has_renderable_structure(
+                    base_data_type := self._copy_data_type(self.data_type)
+                ) and not self._data_type_renders_none(base_data_type):
+                    data_types.append(base_data_type)
         if has_none:
             data_types.append(self.data_type.__class__(type=NONE))
         data_types.append(unset_type)
         return self._ordered_union_data_type(data_types)
 
+    def _annotated_base_data_type(self) -> DataType:
+        if not self._field_has_top_level_none():
+            return self._copy_data_type(self.data_type)
+        return self._copy_data_type_without_top_level_none(self.data_type)
+
+    def _annotated_union_data_type(self, meta: str, *, include_unset: bool) -> DataType:
+        data_types = [
+            self.data_type.__class__(
+                type=f"Annotated[{(base_data_type := self._annotated_base_data_type()).type_hint}, {meta}]",
+                data_types=[base_data_type],
+                use_union_operator=self.data_type.use_union_operator,
+            )
+        ]
+        if self._field_has_top_level_none():
+            data_types.append(self.data_type.__class__(type=NONE))
+        if include_unset:
+            data_types.append(self._unset_type_data_type())
+        return self._ordered_union_data_type(data_types)
+
     def _annotated_type_hint(self, meta: str) -> str:
-        return f"Annotated[{self.data_type.type_hint}, {meta}]"
+        return self._annotated_union_data_type(meta, include_unset=False).type_hint
 
-    def _annotated_data_type(self, annotated_type: str) -> DataType:
-        return self.data_type.__class__(
-            type=annotated_type,
-            data_types=[self._copy_data_type(self.data_type)],
-            use_union_operator=self.data_type.use_union_operator,
-        )
-
-    def _annotated_unset_union_data_type(self, annotated_type: str) -> DataType:
-        return self._ordered_union_data_type([self._annotated_data_type(annotated_type), self._unset_type_data_type()])
+    def _annotated_unset_union_data_type(self, meta: str) -> DataType:
+        return self._annotated_union_data_type(meta, include_unset=True)
 
     def _type_hint_data_type(self) -> DataType:
         if self._not_required and not self.nullable:
@@ -344,11 +356,13 @@ class DataModelField(DataModelFieldBase):
         return self.data_type
 
     def _imports_data_type(self, meta: str | None = None) -> DataType:
-        if not (self._not_required and not self.nullable and self.use_annotated):
-            return self._type_hint_data_type()
         if meta is None:
             return self._type_hint_data_type()
-        return self._annotated_unset_union_data_type(self._annotated_type_hint(meta))
+        if self.required or self.nullable:
+            return self._annotated_union_data_type(meta, include_unset=False)
+        if self._not_required:
+            return self._annotated_unset_union_data_type(meta)
+        return self._type_hint_data_type()
 
     def _has_numeric_data_type(self, type_name: str) -> bool:
         """Return whether any field data type is the given numeric type."""
@@ -514,12 +528,11 @@ class DataModelField(DataModelFieldBase):
             return None
 
         if self.required:
-            return f"Annotated[{self.type_hint}, {meta}]"
+            return self._annotated_type_hint(meta)
 
-        annotated_type = self._annotated_type_hint(meta)
         if self.nullable:  # pragma: no cover
-            return annotated_type
-        return self._annotated_unset_union_data_type(annotated_type).type_hint
+            return self._annotated_type_hint(meta)
+        return self._annotated_unset_union_data_type(meta).type_hint
 
     @property
     def needs_annotated_import(self) -> bool:
@@ -534,10 +547,6 @@ class DataModelField(DataModelFieldBase):
     def needs_meta_import(self) -> bool:
         """Check if this field requires the Meta import."""
         return self.use_annotated and self._get_meta_string() is not None
-
-    @property
-    def _uses_optional_inside_annotated_unset(self) -> bool:
-        return self.needs_meta_import and not self.data_type.use_union_operator
 
     def _get_default_as_struct_model(self) -> str | None:
         """Convert default value to Struct model using msgspec convert."""

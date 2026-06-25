@@ -2259,6 +2259,28 @@ def test_main_structured_imports(output_file: Path) -> None:
     )
 
 
+def test_main_msgspec_structured_imports(output_file: Path) -> None:
+    """Test msgspec structured imports preserve nullable container fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "structured_imports.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="msgspec_structured_imports.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--target-python-version",
+            "3.10",
+            "--class-name",
+            "Payload",
+        ],
+        force_exec_validation=True,
+        importable_module_name="generated_msgspec_structured_imports",
+        importable_module_attribute="Payload",
+    )
+
+
 def test_main_root_model_with_additional_properties_literal(min_version: str, output_file: Path) -> None:
     """Test root model additional properties with literal types."""
     run_main_and_assert(
@@ -13113,6 +13135,31 @@ def test_main_exact_imports_collapse_root_models_title_array(output_dir: Path) -
             "--disable-timestamp",
         ],
         force_exec_validation=True,
+    )
+
+
+def test_main_exact_imports_collapse_root_models_module_split_oneof_imports(output_dir: Path) -> None:
+    """Regression test for https://github.com/koxudaxi/datamodel-code-generator/issues/3487."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "exact_imports_collapse_root_models_module_split_oneof.json",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "exact_imports_collapse_root_models_module_split_oneof",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+            "--use-exact-imports",
+            "--collapse-root-models",
+            "--module-split-mode",
+            "single",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+        runtime_validation_module="animal_home",
+        runtime_validation_model_name="AnimalHome",
+        runtime_validation_data={"pets": [{"bark": True}]},
     )
 
 
