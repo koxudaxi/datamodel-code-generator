@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Dict
 
 from pydantic import BaseModel, ConfigDict
 
@@ -13,5 +13,10 @@ class RCloneConfig(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    __pydantic_extra__: dict[str, float | str | bool | dict[str, Any] | None]
     type: str
+
+
+RCloneConfig.__annotations__['__pydantic_extra__'] = Dict[
+    str, float | str | bool | dict[str, Any] | None
+]
+RCloneConfig.model_rebuild(force=True)

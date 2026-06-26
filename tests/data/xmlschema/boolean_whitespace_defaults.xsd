@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="settings">
+    <xs:complexType>
+      <xs:attribute name="flag" type="xs:boolean" default=" 1 "/>
+      <xs:attribute name="disabled" type="xs:boolean" default="&#x9;false&#xA;"/>
+      <xs:attribute name="fixedFlag" type="xs:boolean" fixed="&#xA;false&#xD;"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

@@ -13,9 +13,11 @@ from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+from datamodel_code_generator._format_types import DateClassType, DatetimeClassType, Formatter, PythonVersion
 from datamodel_code_generator.deprecations import deprecation_message
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
+    AliasGenerator,
     AllExportsCollisionStrategy,
     AllExportsScope,
     AllOfClassHierarchy,
@@ -37,8 +39,8 @@ from datamodel_code_generator.enums import (
     UnionMode,
     VersionMode,
 )
-from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
 from datamodel_code_generator.parser import LiteralType
+from datamodel_code_generator.preset_names import PRESET_NAMES
 
 if TYPE_CHECKING:
     from argparse import Action
@@ -88,36 +90,13 @@ def _external_ref_mapping(value: str) -> str:
 
 def _json_value_or_file(value: str) -> dict[str, object]:
     """Parse a JSON value or load it from a JSON file path."""
-    path = Path(value).expanduser()
-
-    # In Python<=3.13, long json values would cause `path.is_file()` to raise an OSError exception
-    # because the string is too long to be interpreted as a filename.
-    # This changed in Python>=3.14 since now `path.is_file()` catches OSError and returns `false` instead.
-    # Therefore we are going to catch OSError exception raised in Python<=3.13 to replicate Python>=3.14 behavior.
-    is_file: bool
-    try:
-        is_file = path.is_file()
-    except OSError:
-        is_file = False
-
-    if is_file:
-        try:
-            json_input = path.read_text(encoding=DEFAULT_ENCODING)
-        except (OSError, UnicodeDecodeError) as e:
-            msg = f"Unable to read JSON file {value!r}: {e}"
-            raise ArgumentTypeError(msg) from e
-    else:
-        json_input = value
+    from datamodel_code_generator.json_config import JsonConfigError, validate_json_value_or_file  # noqa: PLC0415
 
     try:
-        result = json.loads(json_input)
-    except json.JSONDecodeError as e:
-        msg = f"Invalid JSON: {e}"
+        return validate_json_value_or_file(value)
+    except JsonConfigError as e:
+        msg = str(e)
         raise ArgumentTypeError(msg) from e
-    if not isinstance(result, dict):
-        msg = f"Expected a JSON object, got {type(result).__name__}"
-        raise ArgumentTypeError(msg)
-    return result
 
 
 class SortingHelpFormatter(RawDescriptionHelpFormatter):
@@ -142,6 +121,7 @@ arg_parser = ArgumentParser(
     description="Generate Python data models from schema definitions or structured data\n\n"
     "For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev",
     epilog="Documentation: https://datamodel-code-generator.koxudaxi.dev\n"
+    "Agent skill: https://datamodel-code-generator.koxudaxi.dev/coding-agent-skill/\n"
     "GitHub: https://github.com/koxudaxi/datamodel-code-generator",
     formatter_class=SortingHelpFormatter,
     add_help=False,
@@ -167,6 +147,18 @@ base_options.add_argument(
     "Pass --allow-remote-refs to opt in without warning, "
     "or --no-allow-remote-refs to block remote fetching. "
     "In a future version, remote fetching will be disabled by default.",
+    action=BooleanOptionalAction,
+    default=None,
+)
+base_options.add_argument(
+    "--allow-private-network",
+    help=(
+        "Allow HTTP(S) schema requests to private, loopback, link-local, or otherwise non-public network hosts. "
+        "By default these targets are blocked to reduce server-side request forgery (SSRF) risk. "
+        "If a trusted internal schema endpoint is blocked, verify the URL and pass this option; otherwise use a "
+        "local schema file or public endpoint. "
+        "Pass --no-allow-private-network to override a configuration file that enables it."
+    ),
     action=BooleanOptionalAction,
     default=None,
 )
@@ -209,7 +201,7 @@ base_options.add_argument(
     "--input-file-type",
     help=(
         "Input file type (default: auto). "
-        "Use 'jsonschema', 'openapi', 'asyncapi', 'graphql', 'xmlschema', 'protobuf', or 'avro' "
+        "Use 'jsonschema', 'openapi', 'asyncapi', 'graphql', 'mcp-tools', 'xmlschema', 'protobuf', or 'avro' "
         "for schema definitions. "
         "Use 'json', 'yaml', or 'csv' for raw sample data to infer a schema automatically."
     ),
@@ -229,9 +221,22 @@ base_options.add_argument(
     help="Output file (default: stdout)",
 )
 base_options.add_argument(
+    "--emit-model-metadata",
+    type=Path,
+    help="Write a separate JSON map from source schema references to generated models and fields.",
+)
+base_options.add_argument(
     "--output-model-type",
     help="Output model type (default: pydantic_v2.BaseModel)",
     choices=[i.value for i in DataModelType],
+)
+base_options.add_argument(
+    "--preset",
+    help=(
+        "Apply an immutable built-in option preset. "
+        "Preset names include the target Python version so generated syntax is pinned."
+    ),
+    choices=PRESET_NAMES,
 )
 base_options.add_argument(
     "--url",
@@ -270,12 +275,25 @@ extra_fields_model_options.add_argument(
 model_options.add_argument(
     "--allow-population-by-field-name",
     help="Allow population by field name",
-    action="store_true",
+    action=BooleanOptionalAction,
     default=None,
 )
 model_options.add_argument(
     "--class-name",
     help="Set class name of root model",
+    default=None,
+)
+model_options.add_argument(
+    "--model-name-map",
+    help="Rename generated model classes by schema ref or current generated class name "
+    "using a JSON object or JSON file.",
+    type=_json_value_or_file,
+    default=None,
+)
+model_options.add_argument(
+    "--allow-leading-underscore-class-name",
+    help="Allow an explicitly specified root class name to start with an underscore",
+    action="store_true",
     default=None,
 )
 model_options.add_argument(
@@ -303,7 +321,7 @@ model_options.add_argument(
 )
 model_options.add_argument(
     "--collapse-root-models",
-    action="store_true",
+    action=BooleanOptionalAction,
     default=None,
     help="Models generated with a root-type field will be merged into the models using that root-type model",
 )
@@ -327,6 +345,13 @@ model_options.add_argument(
     action="store_true",
     default=None,
     help="Skip generating the model for the root schema element",
+)
+model_options.add_argument(
+    "--use-root-model-sequence-interface",
+    action="store_true",
+    default=None,
+    help="Make non-null sequence-like Pydantic v2 RootModel classes implement collections.abc.Sequence by adding "
+    "Sequence[T] inheritance and root-delegating __iter__, __getitem__, and __len__ methods",
 )
 model_options.add_argument(
     "--disable-appending-item-suffix",
@@ -431,6 +456,13 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
+    "--alias-generator",
+    help="Pydantic v2 BaseModel alias generator to use in ConfigDict. "
+    "Matching generated aliases are omitted from individual Field() calls.",
+    choices=[a.value for a in AliasGenerator],
+    default=None,
+)
+model_options.add_argument(
     "--treat-dot-as-module",
     help="Treat dotted schema names as module paths, creating nested directory structures (e.g., 'foo.bar.Model' "
     "becomes 'foo/bar.py'). Use --no-treat-dot-as-module to keep dots in names as underscores for single-file output.",
@@ -457,6 +489,12 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
+    "--infer-union-variant-names",
+    help="Infer inline oneOf/anyOf branch model names from literal discriminator-style fields",
+    action="store_true",
+    default=None,
+)
+model_options.add_argument(
     "--use-pendulum",
     help="use pendulum instead of datetime",
     action="store_true",
@@ -467,7 +505,7 @@ model_options.add_argument(
     help="Use Python standard library types for string formats (UUID, IPv4Address, etc.) "
     "instead of str. Affects dataclass, msgspec, TypedDict output. "
     "Pydantic already uses these types by default.",
-    action="store_true",
+    action=BooleanOptionalAction,
     default=None,
 )
 model_options.add_argument(
@@ -748,7 +786,7 @@ typing_options.add_argument(
     "Format: JSON object mapping model names to Python import paths. "
     'Model-level: \'{"CustomType": "my_app.types.MyType"}\' replaces all references. '
     'Scoped: \'{"User.field": "my_app.Type"}\' replaces specific field only.',
-    type=json.loads,
+    type=str,
     default=None,
 )
 
@@ -818,7 +856,7 @@ field_options.add_argument(
 field_options.add_argument(
     "--snake-case-field",
     help="Change camel-case field name to snake-case",
-    action="store_true",
+    action=BooleanOptionalAction,
     default=None,
 )
 field_options.add_argument(
@@ -902,17 +940,17 @@ field_options.add_argument(
 )
 field_options.add_argument(
     "--serialization-aliases",
-    help="Serialization alias mapping file (JSON) for Pydantic v2. "
+    help="Serialization alias mapping as inline JSON or a JSON file path for Pydantic v2. "
     "Format: {'<schema_field>': '<serialization_alias>'}. "
     "Supports hierarchical formats: "
     "Flat: {'name': 'fullName'} applies to all occurrences. "
     "Scoped: {'User.name': 'fullName'} applies to specific class.",
-    type=Path,
+    type=str,
 )
 field_options.add_argument(
     "--use-frozen-field",
     help="Use Field(frozen=True) for readOnly fields (Pydantic v2).",
-    action="store_true",
+    action=BooleanOptionalAction,
     default=None,
 )
 field_options.add_argument(
@@ -936,7 +974,7 @@ field_options.add_argument(
 # ======================================================================================
 template_options.add_argument(
     "--aliases",
-    help="Alias mapping file (JSON) for renaming fields. "
+    help="Alias mapping as inline JSON or a JSON file path for renaming fields. "
     "Format: {'<schema_field>': '<python_name>'} - the schema field name becomes the Pydantic alias. "
     "Supports hierarchical formats: "
     "Flat: {'id': 'id_'} applies to all occurrences. "
@@ -944,11 +982,11 @@ template_options.add_argument(
     "Priority: scoped > flat. "
     "Multiple aliases (Pydantic v2 only): {'field': ['alt1', 'alt2']} uses AliasChoices for validation. "
     "Example: {'User.name': 'user_name', 'id': 'id_'} generates `id_: ... = Field(alias='id')`.",
-    type=Path,
+    type=str,
 )
 template_options.add_argument(
     "--default-values",
-    help="Default value overrides file (JSON). "
+    help="Default value overrides as inline JSON or a JSON file path. "
     "Supports hierarchical formats: "
     "Flat: {'field': value} applies to all occurrences. "
     "Scoped: {'ClassName.field': value} applies to specific class. "
@@ -956,7 +994,7 @@ template_options.add_argument(
     "Note: Scoped keys use the generated class name for JSON Schema/OpenAPI. "
     "Required fields remain required unless --use-default is also specified. "
     "Example: {'User.status': 'active', 'page': 1, 'limit': 10}",
-    type=Path,
+    type=str,
 )
 template_options.add_argument(
     "--custom-file-header",
@@ -982,18 +1020,19 @@ template_options.add_argument(
 )
 template_options.add_argument(
     "--extra-template-data",
-    help="Extra template data for output models. Input is supposed to be a json/yaml file. "
+    help="Extra template data for output models as inline JSON or a JSON file path. "
     "For OpenAPI and Jsonschema the keys are the spec path of the object, or the name of the object if you want to "
     "apply the template data to multiple objects with the same name. "
     "If you are using another input file type (e.g. GraphQL), the key is the name of the object. "
     "The value is a dictionary of the template data to add.",
-    type=Path,
+    type=str,
 )
 template_options.add_argument(
     "--validators",
-    help="Validators configuration file (JSON). Defines field validators for Pydantic v2 models. "
+    help="Validators configuration as inline JSON or a JSON file path. "
+    "Defines field validators for Pydantic v2 models. "
     "Keys are model names, values contain validator definitions with field, function, and mode.",
-    type=Path,
+    type=str,
 )
 template_options.add_argument(
     "--generate-schema-validators",
@@ -1059,8 +1098,8 @@ base_options.add_argument(
 )
 template_options.add_argument(
     "--custom-formatters-kwargs",
-    help="A file with kwargs for custom formatters.",
-    type=Path,
+    help="Custom formatter kwargs as inline JSON or a JSON file path.",
+    type=str,
 )
 
 # ======================================================================================
@@ -1130,7 +1169,7 @@ base_options.add_argument(
     "--schema-version",
     help="Schema version. Valid values depend on input type: "
     "JsonSchema: auto, draft-04, draft-06, draft-07, 2019-09, 2020-12. "
-    "OpenAPI: auto, 3.0, 3.1. "
+    "OpenAPI: auto, 3.0, 3.1, 3.2. "
     "AsyncAPI: auto, 2.0, 3.0. "
     "XMLSchema: auto, 1.0, 1.1. "
     "Protobuf: auto, proto2, proto3, 2023. "
@@ -1211,6 +1250,19 @@ general_options.add_argument(
     action="store_true",
     default=False,
     help="disable colorized output",
+)
+general_options.add_argument(
+    "--output-format",
+    choices=["text", "json"],
+    default=None,
+    help="Format for command output (default: text). Use json for structured output when supported.",
+)
+general_options.add_argument(
+    "--output-format-json-schema",
+    choices=["config", "generate-prompt", "generation", "model-metadata", "structured-output"],
+    default=None,
+    metavar="{config,generate-prompt,generation,model-metadata,structured-output}",
+    help="Output JSON Schema for the selected JSON output or JSON configuration format and exit.",
 )
 general_options.add_argument(
     "--generate-pyproject-config",

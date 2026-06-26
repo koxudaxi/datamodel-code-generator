@@ -18,7 +18,7 @@ jobs:
       TARGET_REPO: datamodel-code-generator
     steps:
       - name: Post release notifications
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -97,6 +97,13 @@ jobs:
               return comments;
             }
 
+            function hasReleaseNotification(comments, version) {
+              return comments.some(c =>
+                c.body && (c.body.includes(`Released in [${version}]`) ||
+                           c.body.includes(`Related PR Released: [${version}]`))
+              );
+            }
+
             // Extract PR numbers from release notes (this repo only, PRs only)
             const prNumbers = new Set();
 
@@ -163,8 +170,10 @@ jobs:
             const closingKeywordBase = '(?:fix(?:es|ed)?|close[sd]?|resolve[sd]?)';
             const relatedKeywordBase = '(?:related(?:\\s+to)?|see|ref(?:s|erences)?)';
 
-            const processedIssues = new Set();
-            const processedPRs = new Set();
+            const directPRNotifications = new Set();
+            const closingIssueNotifications = new Map();
+            const relatedIssueNotifications = new Map();
+            const relatedPRNotifications = new Map();
 
             for (const prNumber of prNumbers) {
               try {
@@ -185,25 +194,10 @@ jobs:
                   throw prError;
                 }
 
-                // Post comment to PR
-                if (!processedPRs.has(prNumber)) {
-                  const prComment = `🎉 **Released in [${version}](${releaseUrl})**\n\nThis PR is now available in the latest release. See the [release notes](${releaseUrl}) for details.`;
-
-                  const prComments = await getAllComments(prNumber);
-                  const hasExistingComment = prComments.some(c =>
-                    c.body && c.body.includes(`Released in [${version}]`)
-                  );
-
-                  if (!hasExistingComment) {
-                    await github.rest.issues.createComment({
-                      owner: repoOwner,
-                      repo: repoName,
-                      issue_number: prNumber,
-                      body: prComment
-                    });
-                    console.log(`Posted release comment to PR #${prNumber}`);
-                  }
-                  processedPRs.add(prNumber);
+                // Collect direct PR notification
+                if (!directPRNotifications.has(prNumber)) {
+                  directPRNotifications.add(prNumber);
+                  relatedPRNotifications.delete(prNumber);
                 }
 
                 // Find closing issues (Fixes/Closes/Resolves)
@@ -249,39 +243,16 @@ jobs:
                   }
                 }
 
-                // Post to closing issues
+                // Collect closing issues
                 for (const issueNumber of closingIssues) {
-                  const key = `closing-${issueNumber}`;
-                  if (processedIssues.has(key)) continue;
-                  processedIssues.add(key);
-
-                  try {
-                    const issueComments = await getAllComments(issueNumber);
-                    const hasExistingComment = issueComments.some(c =>
-                      c.body && c.body.includes(`Released in [${version}]`)
-                    );
-
-                    if (!hasExistingComment) {
-                      const comment = `🎉 **Released in [${version}](${releaseUrl})**\n\nThe fix/feature from PR #${prNumber} has been included in this release. See the [release notes](${releaseUrl}) for details.\n\nThank you for your contribution!`;
-                      await github.rest.issues.createComment({
-                        owner: repoOwner,
-                        repo: repoName,
-                        issue_number: issueNumber,
-                        body: comment
-                      });
-                      console.log(`Posted closing comment to issue #${issueNumber}`);
-                    }
-                  } catch (e) {
-                    console.log(`Failed to comment on issue #${issueNumber}: ${e.message}`);
+                  if (!closingIssueNotifications.has(issueNumber)) {
+                    closingIssueNotifications.set(issueNumber, prNumber);
                   }
+                  relatedIssueNotifications.delete(issueNumber);
                 }
 
-                // Post to related issues (not closing)
+                // Collect related issues (not closing)
                 for (const issueNumber of relatedIssues) {
-                  const key = `related-${issueNumber}`;
-                  if (processedIssues.has(key)) continue;
-                  processedIssues.add(key);
-
                   try {
                     // Check if it's actually an issue (not a PR)
                     try {
@@ -298,56 +269,107 @@ jobs:
                       // It's an issue, continue
                     }
 
-                    const issueComments = await getAllComments(issueNumber);
-                    const hasExistingComment = issueComments.some(c =>
-                      c.body && (c.body.includes(`Released in [${version}]`) ||
-                                 c.body.includes(`Related PR Released`))
-                    );
-
-                    if (!hasExistingComment) {
-                      const comment = `📢 **Related PR Released: [${version}](${releaseUrl})**\n\nPR #${prNumber}, which references this issue, has been released. See the [release notes](${releaseUrl}) for details.\n\nNote: This issue was not explicitly closed by the PR.`;
-                      await github.rest.issues.createComment({
-                        owner: repoOwner,
-                        repo: repoName,
-                        issue_number: issueNumber,
-                        body: comment
-                      });
-                      console.log(`Posted related comment to issue #${issueNumber}`);
+                    if (!closingIssueNotifications.has(issueNumber) &&
+                        !relatedIssueNotifications.has(issueNumber)) {
+                      relatedIssueNotifications.set(issueNumber, prNumber);
                     }
                   } catch (e) {
-                    console.log(`Failed to comment on issue #${issueNumber}: ${e.message}`);
+                    console.log(`Failed to collect issue #${issueNumber}: ${e.message}`);
                   }
                 }
 
-                // Post to referenced PRs
+                // Collect referenced PRs
                 for (const refPrNumber of referencedPRs) {
-                  const key = `refpr-${refPrNumber}`;
-                  if (processedPRs.has(refPrNumber) || processedIssues.has(key)) continue;
-                  processedIssues.add(key);
-
-                  try {
-                    const refPrComments = await getAllComments(refPrNumber);
-                    const hasExistingComment = refPrComments.some(c =>
-                      c.body && c.body.includes(`Released in [${version}]`)
-                    );
-
-                    if (!hasExistingComment) {
-                      const comment = `📢 **Related PR Released: [${version}](${releaseUrl})**\n\nPR #${prNumber}, which references this PR, has been released. See the [release notes](${releaseUrl}) for details.`;
-                      await github.rest.issues.createComment({
-                        owner: repoOwner,
-                        repo: repoName,
-                        issue_number: refPrNumber,
-                        body: comment
-                      });
-                      console.log(`Posted related comment to PR #${refPrNumber}`);
-                    }
-                  } catch (e) {
-                    console.log(`Failed to comment on PR #${refPrNumber}: ${e.message}`);
+                  if (!directPRNotifications.has(refPrNumber) && !relatedPRNotifications.has(refPrNumber)) {
+                    relatedPRNotifications.set(refPrNumber, prNumber);
                   }
                 }
 
               } catch (e) {
                 console.log(`Failed to process PR #${prNumber}: ${e.message}`);
+              }
+            }
+
+            // Post to PRs that are directly included in the release notes
+            for (const prNumber of directPRNotifications) {
+              try {
+                const prComment = `🎉 **Released in [${version}](${releaseUrl})**\n\nThis PR is now available in the latest release. See the [release notes](${releaseUrl}) for details.`;
+
+                const prComments = await getAllComments(prNumber);
+                const hasExistingComment = hasReleaseNotification(prComments, version);
+
+                if (!hasExistingComment) {
+                  await github.rest.issues.createComment({
+                    owner: repoOwner,
+                    repo: repoName,
+                    issue_number: prNumber,
+                    body: prComment
+                  });
+                  console.log(`Posted release comment to PR #${prNumber}`);
+                }
+              } catch (e) {
+                console.log(`Failed to comment on PR #${prNumber}: ${e.message}`);
+              }
+            }
+
+            // Post to closing issues first so they win over related references
+            for (const [issueNumber, prNumber] of closingIssueNotifications) {
+              try {
+                const issueComments = await getAllComments(issueNumber);
+                const hasExistingComment = hasReleaseNotification(issueComments, version);
+
+                if (!hasExistingComment) {
+                  const comment = `🎉 **Released in [${version}](${releaseUrl})**\n\nThe fix/feature from PR #${prNumber} has been included in this release. See the [release notes](${releaseUrl}) for details.\n\nThank you for your contribution!`;
+                  await github.rest.issues.createComment({
+                    owner: repoOwner,
+                    repo: repoName,
+                    issue_number: issueNumber,
+                    body: comment
+                  });
+                  console.log(`Posted closing comment to issue #${issueNumber}`);
+                }
+              } catch (e) {
+                console.log(`Failed to comment on issue #${issueNumber}: ${e.message}`);
+              }
+            }
+
+            for (const [issueNumber, prNumber] of relatedIssueNotifications) {
+              try {
+                const issueComments = await getAllComments(issueNumber);
+                const hasExistingComment = hasReleaseNotification(issueComments, version);
+
+                if (!hasExistingComment) {
+                  const comment = `📢 **Related PR Released: [${version}](${releaseUrl})**\n\nPR #${prNumber}, which references this issue, has been released. See the [release notes](${releaseUrl}) for details.\n\nNote: This issue was not explicitly closed by the PR.`;
+                  await github.rest.issues.createComment({
+                    owner: repoOwner,
+                    repo: repoName,
+                    issue_number: issueNumber,
+                    body: comment
+                  });
+                  console.log(`Posted related comment to issue #${issueNumber}`);
+                }
+              } catch (e) {
+                console.log(`Failed to comment on issue #${issueNumber}: ${e.message}`);
+              }
+            }
+
+            for (const [refPrNumber, prNumber] of relatedPRNotifications) {
+              try {
+                const refPrComments = await getAllComments(refPrNumber);
+                const hasExistingComment = hasReleaseNotification(refPrComments, version);
+
+                if (!hasExistingComment) {
+                  const comment = `📢 **Related PR Released: [${version}](${releaseUrl})**\n\nPR #${prNumber}, which references this PR, has been released. See the [release notes](${releaseUrl}) for details.`;
+                  await github.rest.issues.createComment({
+                    owner: repoOwner,
+                    repo: repoName,
+                    issue_number: refPrNumber,
+                    body: comment
+                  });
+                  console.log(`Posted related comment to PR #${refPrNumber}`);
+                }
+              } catch (e) {
+                console.log(`Failed to comment on PR #${refPrNumber}: ${e.message}`);
               }
             }
 

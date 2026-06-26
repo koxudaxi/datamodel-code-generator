@@ -2,40 +2,46 @@
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import inspect
 import os
-import re
 import shutil
 import sys
 import textwrap
 import time
 import warnings
 from argparse import Namespace
-from collections.abc import Callable, Generator, Sequence
+from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import contextmanager
+from functools import cache
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import black
-import httpx
 import pytest
 from packaging import version
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
-from datamodel_code_generator import InputFileType, generate
+from datamodel_code_generator import InputFileType, enable_parsed_source_cache, generate
 from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.arguments import arg_parser
+from datamodel_code_generator.format import Formatter, PythonVersion, is_supported_in_black
 from tests.conftest import (
     AssertFileContent,
-    _format_diff,
-    _normalize_line_endings,
+    _infer_expected_file,
     _validation_stats,
     assert_directory_content,
+    assert_inputs_not_mutated,
     assert_output,
     assert_warnings_contain,
     freeze_time,
     validate_generated_code,
+)
+from tests.main._builtin_parity import (
+    _assert_builtin_cli_formatter_parity,
+    _assert_builtin_generate_formatter_parity,
+    _BuiltinCliFormatterParityContext,
 )
 
 InputFileTypeLiteral = Literal[
@@ -43,6 +49,7 @@ InputFileTypeLiteral = Literal[
     "openapi",
     "asyncapi",
     "jsonschema",
+    "mcp-tools",
     "xmlschema",
     "protobuf",
     "avro",
@@ -54,25 +61,72 @@ InputFileTypeLiteral = Literal[
 ]
 CopyFilesMapping = Sequence[tuple[Path, Path]]
 
+_TEST_DEFAULT_FORMATTER_ENV = "DATAMODEL_CODE_GENERATOR_TEST_DEFAULT_FORMATTER"
+_BUILTIN_FORMATTER_VALUE = "builtin"
+_BUILTIN_FORMATTER_LINE_LENGTH = 88
+_BUILTIN_FORMATTER_CONFIG = "[tool.datamodel-codegen]\nbuiltin-format-line-length = 88\n"
+_CLI_FORMATTER_RELATED_OPTIONS = frozenset({
+    "--custom-formatters",
+    "--custom-formatters-kwargs",
+    "--formatters",
+    "--profile",
+    "--skip-string-normalization",
+    "--use-double-quotes",
+    "--wrap-string-literal",
+})
+_NON_GENERATION_CLI_OPTIONS = frozenset({
+    "--debug",
+    "--generate-cli-command",
+    "--generate-prompt",
+    "--generate-pyproject-config",
+    "--help",
+    "--list-deprecations",
+    "--list-experimental",
+    "--output-format",
+    "--output-format-json-schema",
+    "--version",
+    "--watch",
+})
+_API_FORMATTER_RELATED_OPTIONS = frozenset({
+    "builtin_format_line_length",
+    "config",
+    "custom_formatters",
+    "custom_formatters_kwargs",
+    "formatters",
+    "settings_path",
+    "use_double_quotes",
+    "use_type_checking_imports",
+    "wrap_string_literal",
+})
+
+
+def _uses_builtin_test_default_formatter() -> bool:
+    return os.environ.get(_TEST_DEFAULT_FORMATTER_ENV) == _BUILTIN_FORMATTER_VALUE
+
+
+def _uses_external_test_default_formatter() -> bool:
+    return not _uses_builtin_test_default_formatter()
+
+
 MSGSPEC_LEGACY_BLACK_SKIP = pytest.mark.skipif(
-    sys.version_info[:2] == (3, 12) and version.parse(black.__version__) < version.parse("24.0.0"),
+    _uses_external_test_default_formatter()
+    and sys.version_info[:2] == (3, 12)
+    and version.parse(black.__version__) < version.parse("24.0.0"),
     reason="msgspec.Struct formatting differs with python3.12 + black < 24",
 )
 
 LEGACY_BLACK_SKIP = pytest.mark.skipif(
-    version.parse(black.__version__) < version.parse("24.0.0"),
+    _uses_external_test_default_formatter() and version.parse(black.__version__) < version.parse("24.0.0"),
     reason="Type annotation formatting differs with black < 24",
 )
 
-from datamodel_code_generator.format import Formatter, PythonVersion, is_supported_in_black  # noqa: E402
-
 BLACK_PY313_SKIP = pytest.mark.skipif(
-    not is_supported_in_black(PythonVersion.PY_313),
+    _uses_external_test_default_formatter() and not is_supported_in_black(PythonVersion.PY_313),
     reason=f"Installed black ({black.__version__}) doesn't support Python 3.13",
 )
 
 BLACK_PY314_SKIP = pytest.mark.skipif(
-    not is_supported_in_black(PythonVersion.PY_314),
+    _uses_external_test_default_formatter() and not is_supported_in_black(PythonVersion.PY_314),
     reason=f"Installed black ({black.__version__}) doesn't support Python 3.14",
 )
 
@@ -113,13 +167,10 @@ DEFAULT_FREEZE_TIME = "2019-07-26"
 @pytest.fixture(autouse=True)
 def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
     """Reset argument namespace before each test."""
-    from datamodel_code_generator.model.base import _get_environment, _get_template_with_custom_dir
-
+    # Template caches are safe to keep because custom-template tests use fixed directories and keyed caches.
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace_)
     monkeypatch.setattr("datamodel_code_generator.arguments.namespace", namespace_)
-    _get_environment.cache_clear()
-    _get_template_with_custom_dir.cache_clear()
 
 
 @pytest.fixture(autouse=True)
@@ -210,11 +261,57 @@ def _assert_python_module_importable(path: Path, module_name: str, attribute: st
     if spec.loader is None:  # pragma: no cover
         pytest.fail(f"Unable to load generated module loader from {path}")
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    if attribute is not None and not hasattr(module, attribute):  # pragma: no cover
-        pytest.fail(f"Expected generated module {module_name!r} to define {attribute!r}")
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+        if attribute is not None and not hasattr(module, attribute):  # pragma: no cover
+            pytest.fail(f"Expected generated module {module_name!r} to define {attribute!r}")
+    finally:
+        sys.modules.pop(module_name, None)
 
 
+@contextmanager
+def _generated_package_module(output_path: Path, module_path: str) -> Generator[Any, None, None]:
+    """Temporarily import a generated package module without leaking module cache state."""
+    package_name = output_path.name
+    module_name = f"{package_name}.{module_path}"
+    module_prefix = f"{package_name}."
+    previous_modules = {
+        name: module for name, module in sys.modules.items() if name == package_name or name.startswith(module_prefix)
+    }
+    for name in list(sys.modules):
+        if name == package_name or name.startswith(module_prefix):
+            sys.modules.pop(name, None)
+
+    parent_directory = str(output_path.parent)
+    sys.path.insert(0, parent_directory)
+    importlib.invalidate_caches()
+    try:
+        yield importlib.import_module(module_name)
+    finally:
+        sys.path.remove(parent_directory)
+        for name in [name for name in sys.modules if name == package_name or name.startswith(module_prefix)]:
+            sys.modules.pop(name, None)
+        sys.modules.update(previous_modules)
+
+
+def _assert_generated_package_model_validation(
+    output_path: Path,
+    *,
+    module_path: str,
+    model_name: str,
+    data: Mapping[str, Any],
+) -> None:
+    """Assert a generated package model can validate runtime data."""
+    with _generated_package_module(output_path, module_path) as module:
+        model = getattr(module, model_name)
+        validate = getattr(model, "model_validate", None)
+        if not callable(validate):  # pragma: no cover
+            pytest.fail(f"Expected generated model {model_name!r} to define model_validate")
+        validate(data)
+
+
+@cache
 def _get_valid_cli_options() -> frozenset[str]:
     """Get all valid CLI option names from arg_parser."""
     valid_options: set[str] = set()
@@ -223,48 +320,11 @@ def _get_valid_cli_options() -> frozenset[str]:
     return frozenset(valid_options)
 
 
-_VALID_CLI_OPTIONS = _get_valid_cli_options()
-_BUILTIN_FORMATTER_PARITY_ENV = "DATAMODEL_CODE_GENERATOR_CHECK_BUILTIN_FORMATTER_PARITY"
-_DEFAULT_CLI_FORMATTERS = {"black", "isort"}
-_DEFAULT_API_FORMATTERS = {Formatter.BLACK, Formatter.ISORT}
-
-
-@contextmanager
-def _preserve_mock_calls(mocked_callables: Sequence[Any]) -> Generator[None, None, None]:
-    snapshots: list[tuple[Any, Any, list[Any], list[Any], list[Any], int]] = []
-    for mocked_callable in mocked_callables:
-        if hasattr(mocked_callable, "mock_calls") and hasattr(mocked_callable, "reset_mock"):
-            snapshots.append((  # noqa: PERF401
-                mocked_callable,
-                mocked_callable.call_args,
-                list(mocked_callable.call_args_list),
-                list(mocked_callable.mock_calls),
-                list(mocked_callable.method_calls),
-                mocked_callable.call_count,
-            ))
-    try:
-        yield
-    finally:
-        for mocked_callable, call_args, call_args_list, mock_calls, method_calls, call_count in snapshots:
-            mocked_callable.reset_mock()
-            mocked_callable._mock_call_args = call_args
-            mocked_callable._mock_call_args_list = call_args_list
-            mocked_callable._mock_mock_calls = mock_calls
-            mocked_callable._mock_method_calls = method_calls
-            mocked_callable._mock_call_count = call_count
-
-
-def _parity_mocked_callables_to_preserve() -> list[Any]:
-    prance = sys.modules.get("prance")
-    if prance is None:
-        return []
-    return [getattr(prance, "BaseParser", None)]
-
-
 def _validate_extra_args(extra_args: Sequence[str] | None) -> None:
     """Validate that all option-like arguments in extra_args are valid CLI options."""
     if extra_args is None:
         return
+    valid_cli_options = _get_valid_cli_options()
     invalid_args: list[str] = [
         arg
         for arg in extra_args
@@ -272,193 +332,162 @@ def _validate_extra_args(extra_args: Sequence[str] | None) -> None:
             (arg.startswith("--") and "=" not in arg)
             or (arg.startswith("-") and not arg.startswith("--") and len(arg) == 2)
         )
-        and arg not in _VALID_CLI_OPTIONS
+        and arg not in valid_cli_options
     ]
     if invalid_args:  # pragma: no cover
-        pytest.fail(f"Invalid CLI options in extra_args: {invalid_args}. Valid options: {sorted(_VALID_CLI_OPTIONS)}")
+        pytest.fail(f"Invalid CLI options in extra_args: {invalid_args}. Valid options: {sorted(valid_cli_options)}")
 
 
-def _extract_cli_formatters(extra_args: Sequence[str] | None) -> list[str] | None:
-    if extra_args is None or "--formatters" not in extra_args:
-        return None
-    extra_args_list = list(extra_args)
-    formatter_index = extra_args_list.index("--formatters")
-    formatters: list[str] = []
-    for item in extra_args_list[formatter_index + 1 :]:
-        if item.startswith("-"):
-            break
-        formatters.append(item)
-    return formatters
+def _has_formatter_related_cli_options(args: Sequence[str]) -> bool:
+    return any(arg.split("=", maxsplit=1)[0] in _CLI_FORMATTER_RELATED_OPTIONS for arg in args)
 
 
-def _uses_default_cli_formatters(extra_args: Sequence[str] | None) -> bool:
-    if extra_args is None:
-        return True
-    if "--custom-formatters" in extra_args or "--custom-formatters-kwargs" in extra_args:
+def _has_formatter_related_copy_files(copy_files: CopyFilesMapping | None) -> bool:
+    return copy_files is not None and any(dst.name == "pyproject.toml" for _, dst in copy_files)
+
+
+def _has_formatter_related_settings_path(output_path: Path | None) -> bool:
+    if output_path is None:
         return False
-    return (formatters := _extract_cli_formatters(extra_args)) is None or set(formatters) == _DEFAULT_CLI_FORMATTERS
+    settings_path = output_path if output_path.is_dir() else output_path.parent
+    for path in (settings_path, *settings_path.parents):
+        pyproject_toml = path / "pyproject.toml"
+        if pyproject_toml.is_file():
+            return True
+    return False
 
 
-def _uses_check_mode(extra_args: Sequence[str] | None) -> bool:
-    return extra_args is not None and "--check" in extra_args
-
-
-def _uses_default_api_formatters(generate_options: dict[str, Any]) -> bool:
-    if generate_options.get("custom_formatters") or generate_options.get(
-        "custom_formatters_kwargs"
-    ):  # pragma: no cover
-        return False
-    return (formatters := generate_options.get("formatters")) is None or set(formatters) == _DEFAULT_API_FORMATTERS
-
-
-def _builtin_formatter_extra_args(extra_args: Sequence[str] | None) -> list[str]:
-    if extra_args is None:
-        return ["--formatters", "builtin"]
-    extra_args_list = list(extra_args)
-    if "--formatters" not in extra_args_list:
-        return [*extra_args_list, "--formatters", "builtin"]
-    formatter_index = extra_args_list.index("--formatters")  # pragma: no cover
-    end_index = formatter_index + 1  # pragma: no cover
-    while end_index < len(extra_args_list) and not extra_args_list[end_index].startswith("-"):  # pragma: no cover
-        end_index += 1  # pragma: no cover
-    return [*extra_args_list[: formatter_index + 1], "builtin", *extra_args_list[end_index:]]  # pragma: no cover
-
-
-def _builtin_formatter_parity_output_path(output_path: Path) -> Path:
+def _builtin_default_formatter_config_path(output_path: Path) -> Path:
     if output_path.is_dir():
-        return output_path.with_name(f"{output_path.name}_builtin_parity")
-    if output_path.suffix:
-        return output_path.with_name(f"{output_path.stem}.builtin-parity{output_path.suffix}")
-    return output_path.with_name(f"{output_path.name}.builtin-parity")  # pragma: no cover
+        return output_path / "pyproject.toml"
+    return output_path.parent / "pyproject.toml"
 
 
-def _clear_builtin_formatter_parity_output(output_path: Path) -> None:
-    if output_path.is_dir():
-        shutil.rmtree(output_path)
-    elif output_path.exists():
-        output_path.unlink()
+@contextmanager
+def _builtin_default_formatter_config(output_path: Path | None, *, enabled: bool) -> Generator[None]:
+    if not enabled or output_path is None:
+        yield
+        return
+    pyproject_toml = _builtin_default_formatter_config_path(output_path)
+    if pyproject_toml.is_file():
+        yield
+        return
+    pyproject_toml.write_text(_BUILTIN_FORMATTER_CONFIG, encoding="utf-8")
+    try:
+        yield
+    finally:
+        pyproject_toml.unlink(missing_ok=True)
 
 
-def _normalize_builtin_parity_content(content: str) -> str:
-    return re.sub(
-        r"^#   command:   datamodel-codegen .*$",
-        "#   command:   datamodel-codegen [COMMAND]",
-        content,
-        flags=re.MULTILINE,
+def _should_use_builtin_default_cli_formatter(
+    args: Sequence[str],
+    *,
+    copy_files: CopyFilesMapping | None = None,
+    output_path: Path | None = None,
+    is_generation_command: bool = True,
+) -> bool:
+    args_list = list(args)
+    return not (
+        not is_generation_command
+        or not _uses_builtin_test_default_formatter()
+        or _has_formatter_related_cli_options(args_list)
+        or _has_formatter_related_copy_files(copy_files)
+        or _has_formatter_related_settings_path(output_path)
     )
 
 
-def _assert_same_generated_python(expected_path: Path, actual_path: Path) -> None:
-    if expected_path.is_file():
-        expected = _normalize_builtin_parity_content(_normalize_line_endings(expected_path.read_text(encoding="utf-8")))
-        actual = _normalize_builtin_parity_content(_normalize_line_endings(actual_path.read_text(encoding="utf-8")))
-        if expected != actual:  # pragma: no cover
-            diff = _format_diff(expected, actual, expected_path)
-            pytest.fail(f"Built-in formatter output differs from black+isort for {expected_path}\n{diff}")
-        return
-
-    expected_files = {path.relative_to(expected_path) for path in expected_path.rglob("*.py")}
-    actual_files = {path.relative_to(actual_path) for path in actual_path.rglob("*.py")}
-    if expected_files != actual_files:  # pragma: no cover
-        pytest.fail(
-            "Built-in formatter output file set differs from black+isort\n"
-            f"Missing: {sorted(expected_files - actual_files)}\n"
-            f"Extra: {sorted(actual_files - expected_files)}"
-        )
-    for relative_path in sorted(expected_files):
-        expected_file = expected_path / relative_path
-        actual_file = actual_path / relative_path
-        expected = _normalize_builtin_parity_content(_normalize_line_endings(expected_file.read_text(encoding="utf-8")))
-        actual = _normalize_builtin_parity_content(_normalize_line_endings(actual_file.read_text(encoding="utf-8")))
-        if expected != actual:  # pragma: no cover
-            diff = _format_diff(expected, actual, expected_file)
-            pytest.fail(f"Built-in formatter output differs from black+isort for {relative_path}\n{diff}")
+def _is_main_generation_command(args: Sequence[str]) -> bool:
+    return any(arg.split("=", maxsplit=1)[0] in {"--input", "--url"} for arg in args) and not any(
+        arg.split("=", maxsplit=1)[0] in _NON_GENERATION_CLI_OPTIONS for arg in args
+    )
 
 
-def _assert_builtin_cli_formatter_parity(
+def _get_cli_output_path(args: Sequence[str]) -> Path | None:
+    args_list = list(args)
+    for index, arg in enumerate(args_list):
+        if arg == "--output" and index + 1 < len(args_list):
+            return Path(args_list[index + 1])
+        if arg.startswith("--output="):
+            return Path(arg.split("=", maxsplit=1)[1])
+    return None
+
+
+def _default_formatter_cli_args(
+    args: Sequence[str],
     *,
-    input_path: Path | None,
-    output_path: Path | None,
-    input_file_type: InputFileTypeLiteral | None,
-    extra_args: Sequence[str] | None,
-    copy_files: CopyFilesMapping | None,
-    stdin_path: Path | None,
-    monkeypatch: pytest.MonkeyPatch | None,
-) -> None:
-    if os.environ.get(_BUILTIN_FORMATTER_PARITY_ENV) != "1":
-        return
-    if (
-        output_path is None
-        or not output_path.exists()
-        or _uses_check_mode(extra_args)
-        or not _uses_default_cli_formatters(extra_args)
-        or hasattr(httpx.get, "mock_calls")
+    copy_files: CopyFilesMapping | None = None,
+    output_path: Path | None = None,
+    is_generation_command: bool = True,
+) -> list[str]:
+    args_list = list(args)
+    if not _should_use_builtin_default_cli_formatter(
+        args_list,
+        copy_files=copy_files,
+        output_path=output_path,
+        is_generation_command=is_generation_command,
     ):
-        return
-
-    builtin_output_path = _builtin_formatter_parity_output_path(output_path)
-    _clear_builtin_formatter_parity_output(builtin_output_path)
-    builtin_extra_args = _builtin_formatter_extra_args(extra_args)
-
-    with _preserve_mock_calls(_parity_mocked_callables_to_preserve()):
-        if stdin_path is not None:
-            if monkeypatch is None:  # pragma: no cover
-                pytest.fail("monkeypatch is required when using stdin_path")
-            _copy_files(copy_files)
-            with stdin_path.open(encoding="utf-8") as stdin:
-                monkeypatch.setattr("sys.stdin", stdin)
-                args: list[str] = []
-                _extend_args(
-                    args,
-                    output_path=builtin_output_path,
-                    input_file_type=input_file_type,
-                    extra_args=builtin_extra_args,
-                )
-                return_code = main(args)
-        else:
-            if input_path is None:  # pragma: no cover
-                pytest.fail("input_path is required")
-            return_code = _run_main(
-                input_path,
-                builtin_output_path,
-                input_file_type,
-                extra_args=builtin_extra_args,
-                copy_files=copy_files,
-            )
-
-    _assert_exit_code(return_code, Exit.OK, f"Built-in formatter parity input: {input_path}")
-    _assert_same_generated_python(output_path, builtin_output_path)
-    _clear_builtin_formatter_parity_output(builtin_output_path)
+        return args_list
+    return [*args_list, "--formatters", _BUILTIN_FORMATTER_VALUE]
 
 
-def _assert_builtin_generate_formatter_parity(
-    *,
-    input_: Path,
-    output_path: Path,
-    generate_options: dict[str, Any],
-    expected_warnings: Sequence[str] | None = None,
-) -> None:
-    if os.environ.get(_BUILTIN_FORMATTER_PARITY_ENV) != "1":
-        return
-    if not output_path.exists() or not _uses_default_api_formatters(generate_options):  # pragma: no cover
-        return
-
-    builtin_output_path = _builtin_formatter_parity_output_path(output_path)
-    _clear_builtin_formatter_parity_output(builtin_output_path)
-    builtin_options = {
-        **generate_options,
-        "output": builtin_output_path,
+def _default_formatter_generate_options(
+    generate_kwargs: dict[str, Any], *, output_path: Path | None = None
+) -> dict[str, Any]:
+    output = output_path or generate_kwargs.get("output")
+    if (
+        not _uses_builtin_test_default_formatter()
+        or any(key in generate_kwargs for key in _API_FORMATTER_RELATED_OPTIONS)
+        or (isinstance(output, Path) and _has_formatter_related_settings_path(output))
+    ):
+        return generate_kwargs
+    return {
+        **generate_kwargs,
         "formatters": [Formatter.BUILTIN],
+        "builtin_format_line_length": _BUILTIN_FORMATTER_LINE_LENGTH,
     }
-    if expected_warnings is None:
-        generate(input_=input_, **builtin_options)
-    else:
-        with warnings.catch_warnings(record=True) as warning_records:
-            warnings.simplefilter("always")
-            generate(input_=input_, **builtin_options)
-        assert_warnings_contain(warning_records, *expected_warnings)
-    _assert_same_generated_python(output_path, builtin_output_path)
-    _clear_builtin_formatter_parity_output(builtin_output_path)
+
+
+@contextmanager
+def _enable_test_parsed_source_cache() -> Generator[None, None, None]:
+    restore = enable_parsed_source_cache()
+    try:
+        yield
+    finally:
+        restore()
+
+
+@contextmanager
+def _optional_test_parsed_source_cache(enabled: bool) -> Generator[None, None, None]:
+    if not enabled:
+        yield
+        return
+    with _enable_test_parsed_source_cache():
+        yield
+
+
+def _clear_model_template_cache() -> None:
+    from datamodel_code_generator.model import base as model_base
+
+    for cached in (
+        model_base.get_template,
+        model_base._get_template_with_custom_dir,
+        model_base._get_environment,
+        model_base._get_template_with_absolute_path,
+        model_base._get_environment_with_absolute_path,
+    ):
+        cached.cache_clear()
+
+
+@contextmanager
+def _optional_model_template_cache_isolation(enabled: bool) -> Generator[None, None, None]:
+    if not enabled:
+        yield
+        return
+    _clear_model_template_cache()
+    try:
+        yield
+    finally:
+        _clear_model_template_cache()
 
 
 def _extend_args(
@@ -468,7 +497,8 @@ def _extend_args(
     output_path: Path | None = None,
     input_file_type: InputFileTypeLiteral | None = None,
     extra_args: Sequence[str] | None = None,
-) -> None:
+    copy_files: CopyFilesMapping | None = None,
+) -> bool:
     """Extend args with optional input_path, output_path, input_file_type and extra_args."""
     if input_path is not None:
         args.extend(["--input", str(input_path)])
@@ -479,6 +509,14 @@ def _extend_args(
     _validate_extra_args(extra_args)
     if extra_args is not None:
         args.extend(extra_args)
+    use_builtin_default = _should_use_builtin_default_cli_formatter(
+        args,
+        copy_files=copy_files,
+        output_path=output_path,
+    )
+    if use_builtin_default:
+        args.extend(("--formatters", _BUILTIN_FORMATTER_VALUE))
+    return use_builtin_default
 
 
 def _run_main(
@@ -492,10 +530,28 @@ def _run_main(
     """Execute main() with standard arguments (internal use)."""
     _copy_files(copy_files)
     args: list[str] = []
-    _extend_args(
-        args, input_path=input_path, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args
+    use_builtin_default = _extend_args(
+        args,
+        input_path=input_path,
+        output_path=output_path,
+        input_file_type=input_file_type,
+        extra_args=extra_args,
+        copy_files=copy_files,
     )
-    return main(args)
+    with (
+        _enable_test_parsed_source_cache(),
+        _builtin_default_formatter_config(output_path, enabled=use_builtin_default),
+    ):
+        return main(args)
+
+
+def _builtin_cli_formatter_parity_context() -> _BuiltinCliFormatterParityContext:
+    return _BuiltinCliFormatterParityContext(
+        run_main=_run_main,
+        extend_args=_extend_args,
+        copy_files=_copy_files,
+        assert_exit_code=_assert_exit_code,
+    )
 
 
 def _run_main_url(
@@ -507,8 +563,14 @@ def _run_main_url(
 ) -> Exit:
     """Execute main() with URL input (internal use)."""
     args = ["--url", url]
-    _extend_args(args, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args)
-    return main(args)
+    use_builtin_default = _extend_args(
+        args, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args
+    )
+    with (
+        _enable_test_parsed_source_cache(),
+        _builtin_default_formatter_config(output_path, enabled=use_builtin_default),
+    ):
+        return main(args)
 
 
 def run_main_with_args(
@@ -520,6 +582,9 @@ def run_main_with_args(
     expected_stderr: str | None = None,
     expected_stderr_contains: str | None = None,
     assert_no_stderr: bool = False,
+    use_parsed_source_cache: bool = True,
+    use_builtin_default_formatter: bool = True,
+    isolate_model_template_cache: bool = False,
 ) -> Exit:
     """Execute main() with custom arguments.
 
@@ -531,12 +596,28 @@ def run_main_with_args(
         expected_stderr: Exact expected stderr
         expected_stderr_contains: Expected stderr substring
         assert_no_stderr: Assert stderr is empty
+        use_parsed_source_cache: Enable the process-local parsed source cache for generation-style commands
+        use_builtin_default_formatter: Add the test-suite builtin formatter default when applicable
+        isolate_model_template_cache: Clear cached Jinja model templates before and after execution
 
     Returns:
         Exit code from main()
     """
     __tracebackhide__ = True
-    return_code = main(list(args))
+    output_path = _get_cli_output_path(args)
+    is_generation_command = _is_main_generation_command(args)
+    use_builtin_default = use_builtin_default_formatter and _should_use_builtin_default_cli_formatter(
+        args,
+        output_path=output_path,
+        is_generation_command=is_generation_command,
+    )
+    main_args = [*args, "--formatters", _BUILTIN_FORMATTER_VALUE] if use_builtin_default else list(args)
+    with (
+        _optional_test_parsed_source_cache(use_parsed_source_cache),
+        _optional_model_template_cache_isolation(isolate_model_template_cache),
+        _builtin_default_formatter_config(output_path, enabled=use_builtin_default),
+    ):
+        return_code = main(main_args)
     _assert_exit_code(return_code, expected_exit, f"Args: {args}")
     _assert_captured_output(
         capsys,
@@ -560,8 +641,20 @@ def run_main_with_system_exit(
 ) -> None:
     """Execute main() expecting argparse/SystemExit and assert captured output."""
     __tracebackhide__ = True
-    with pytest.raises(SystemExit) as exc_info:
-        main(list(args))
+    output_path = _get_cli_output_path(args)
+    is_generation_command = _is_main_generation_command(args)
+    use_builtin_default = _should_use_builtin_default_cli_formatter(
+        args,
+        output_path=output_path,
+        is_generation_command=is_generation_command,
+    )
+    main_args = [*args, "--formatters", _BUILTIN_FORMATTER_VALUE] if use_builtin_default else list(args)
+    with (
+        pytest.raises(SystemExit) as exc_info,
+        _enable_test_parsed_source_cache(),
+        _builtin_default_formatter_config(output_path, enabled=use_builtin_default),
+    ):
+        main(main_args)
     if exc_info.value.code != expected_code:  # pragma: no cover
         pytest.fail(f"Expected SystemExit code {expected_code!r}, got {exc_info.value.code!r}\nArgs: {args}")
     _assert_captured_output(
@@ -587,20 +680,92 @@ def assert_input_file_type(result: object, expected: InputFileType) -> None:
         pytest.fail(f"Expected input file type {expected!r}, got {result!r}")
 
 
-def assert_watch_called(
-    mock_watchfiles: Any,
-    *,
-    debounce: int | None = None,
-    recursive: bool | None = None,
-) -> None:
-    """Assert watchfiles.watch was called with expected options."""
+def _value_at_path(value: object, path: Sequence[str | int]) -> object:
     __tracebackhide__ = True
-    mock_watchfiles.watch.assert_called_once()
-    call_kwargs = mock_watchfiles.watch.call_args.kwargs
-    if debounce is not None and call_kwargs.get("debounce") != debounce:  # pragma: no cover
-        pytest.fail(f"Expected watch debounce {debounce!r}, got {call_kwargs.get('debounce')!r}")
-    if recursive is not None and call_kwargs.get("recursive") is not recursive:  # pragma: no cover
-        pytest.fail(f"Expected watch recursive {recursive!r}, got {call_kwargs.get('recursive')!r}")
+    current = value
+    for key in path:
+        match current, key:
+            case Mapping(), _:
+                current = cast("Mapping[object, object]", current)[key]
+            case Sequence(), int() if not isinstance(current, str | bytes | bytearray):
+                current = cast("Sequence[object]", current)[key]
+            case _:
+                pytest.fail(f"Expected cached value to contain path {path!r}, got {value!r}")
+    return current
+
+
+def assert_path_cache_reuses_value(
+    loader: Callable[[Path, str], object],
+    path: Path,
+    *,
+    encoding: str = "utf-8",
+    warmups: int = 0,
+) -> None:
+    """Assert a path-based cache reuses the parsed or decoded value."""
+    __tracebackhide__ = True
+    for _ in range(warmups):
+        loader(path, encoding)
+
+    first = loader(path, encoding)
+    second = loader(path, encoding)
+
+    if first is second:
+        return
+
+    pytest.fail(f"Expected cached value for {path} to be reused")
+
+
+def assert_path_cache_invalidates_after_write(
+    loader: Callable[[Path, str], object],
+    path: Path,
+    new_text: str,
+    expected_value: object,
+    *,
+    encoding: str = "utf-8",
+    expected_value_path: Sequence[str | int] = (),
+    warmups: int = 0,
+) -> None:
+    """Assert a path-based cache reloads after file content changes."""
+    __tracebackhide__ = True
+    for _ in range(warmups):
+        loader(path, encoding)
+
+    first = loader(path, encoding)
+    path.write_text(new_text, encoding=encoding)
+    second = loader(path, encoding)
+
+    if first is second:
+        pytest.fail(f"Expected cached value for {path} to be invalidated after write")
+
+    actual_value = _value_at_path(second, expected_value_path)
+    if actual_value != expected_value:
+        pytest.fail(f"Expected cached value {expected_value!r}, got {actual_value!r}")
+
+    third = loader(path, encoding)
+    if second is third:
+        return
+
+    pytest.fail(f"Expected updated cached value for {path} to be reused")
+
+
+def assert_path_cache_evicts_lru_entries(
+    loader: Callable[[Path, str], object],
+    first_path: Path,
+    second_path: Path,
+    *,
+    encoding: str = "utf-8",
+) -> None:
+    """Assert a path-based LRU cache remains valid while evicting older entries."""
+    __tracebackhide__ = True
+    first_value = loader(first_path, encoding)
+    if loader(first_path, encoding) != first_value:
+        pytest.fail(f"Expected cached value for {first_path} to stay stable")
+
+    second_value = loader(second_path, encoding)
+    if loader(second_path, encoding) == second_value:
+        return
+
+    pytest.fail(f"Expected cached value for {second_path} to stay stable")
 
 
 def run_watch_and_assert(config: Any, *, expected_exit: Exit = Exit.OK) -> None:
@@ -621,6 +786,7 @@ def run_generate_file_and_assert(
     expected_file: str | Path | None = None,
     transform: Callable[[str], str] | None = None,
     expected_warnings: Sequence[str] | None = None,
+    unchanged_inputs: Mapping[str, object] | None = None,
     **generate_kwargs: Any,
 ) -> None:
     """Execute generate() for a file input and assert the generated output."""
@@ -637,54 +803,60 @@ def run_generate_file_and_assert(
 
     generate_options: dict[str, Any] = {
         "output": output_path,
-        **generate_kwargs,
+        **_default_formatter_generate_options(generate_kwargs, output_path=output_path),
     }
     if input_file_type is not None:
         generate_options["input_file_type"] = input_file_type
 
-    if expected_warnings is None:
-        generate(
-            input_=input_,
-            **generate_options,
-        )
-    else:
-        with warnings.catch_warnings(record=True) as warning_records:
-            warnings.simplefilter("always")
+    with _enable_test_parsed_source_cache(), assert_inputs_not_mutated(unchanged_inputs):
+        if expected_warnings is None:
             generate(
                 input_=input_,
                 **generate_options,
             )
-        assert_warnings_contain(warning_records, *expected_warnings)
+        else:
+            with warnings.catch_warnings(record=True) as warning_records:
+                warnings.simplefilter("always")
+                generate(
+                    input_=input_,
+                    **generate_options,
+                )
+            assert_warnings_contain(warning_records, *expected_warnings)
 
     if expected_file is None:
         frame = inspect.currentframe()
         assert frame is not None
         assert frame.f_back is not None
-        func_name = frame.f_back.f_code.co_name
+        expected_file = _infer_expected_file(frame.f_back.f_code.co_name)
         del frame
-        for prefix in ("test_main_", "test_"):
-            func_name = func_name.removeprefix(prefix)
-        expected_file = f"{func_name}.py"
 
     assert_func(output_path, expected_file, transform=transform)
-    _assert_builtin_generate_formatter_parity(
-        input_=input_,
-        output_path=output_path,
-        generate_options=generate_options,
-        expected_warnings=expected_warnings,
-    )
+    with _enable_test_parsed_source_cache(), assert_inputs_not_mutated(unchanged_inputs):
+        _assert_builtin_generate_formatter_parity(
+            input_=input_,
+            output_path=output_path,
+            generate_options=generate_options,
+            expected_warnings=expected_warnings,
+        )
 
 
 def run_generate_and_assert(
     *,
     input_: Any,
     expected_file: Path,
+    assert_input_unchanged: bool = False,
+    unchanged_inputs: Mapping[str, object] | None = None,
     **generate_kwargs: Any,
 ) -> None:
     """Execute generate(output=None) and assert the returned text output."""
     __tracebackhide__ = True
 
-    result = generate(input_=input_, **generate_kwargs)
+    guarded_inputs = dict(unchanged_inputs or {})
+    if assert_input_unchanged:
+        guarded_inputs["input_"] = input_
+
+    with _enable_test_parsed_source_cache(), assert_inputs_not_mutated(guarded_inputs or None):
+        result = generate(input_=input_, **_default_formatter_generate_options(generate_kwargs))
     if not isinstance(result, str):  # pragma: no cover
         pytest.fail(f"Expected generate() to return str, got {type(result).__name__}")
     assert_output(result, expected_file)
@@ -703,8 +875,7 @@ def run_main_and_assert(  # noqa: PLR0912
     expected_output: str | None = None,
     expected_directory: Path | None = None,
     output_to_expected: Sequence[tuple[str, str | Path]] | None = None,
-    assert_output_path_not_exists: bool = False,
-    file_should_not_exist: Path | None = None,
+    file_should_not_exist: Path | Sequence[Path] | None = None,
     output_should_not_exist: bool = False,
     # Verification options
     ignore_whitespace: bool = False,
@@ -726,6 +897,9 @@ def run_main_and_assert(  # noqa: PLR0912
     importable_module_name: str | None = None,
     importable_module_file: str | Path | None = None,
     importable_module_attribute: str | None = None,
+    runtime_validation_module: str | None = None,
+    runtime_validation_model_name: str | None = None,
+    runtime_validation_data: Mapping[str, Any] | None = None,
 ) -> None:
     """Execute main() and assert output.
 
@@ -750,7 +924,6 @@ def run_main_and_assert(  # noqa: PLR0912
         expected_output: Compare with string directly
         expected_directory: Compare entire directory
         output_to_expected: Compare multiple files
-        assert_output_path_not_exists: Assert output_path does NOT exist
         file_should_not_exist: Assert a file does NOT exist
         output_should_not_exist: Assert output_path does NOT exist
 
@@ -774,8 +947,23 @@ def run_main_and_assert(  # noqa: PLR0912
         importable_module_name: Import output_path as this module name
         importable_module_file: Relative file under output_path to import
         importable_module_attribute: Assert imported module defines this attribute
+        runtime_validation_module: Relative generated package module to import
+        runtime_validation_model_name: Model class name to validate at runtime
+        runtime_validation_data: Data passed to model_validate on the generated model
     """
     __tracebackhide__ = True
+    runtime_validation_options = (
+        runtime_validation_module,
+        runtime_validation_model_name,
+        runtime_validation_data,
+    )
+    if any(option is not None for option in runtime_validation_options) and not all(
+        option is not None for option in runtime_validation_options
+    ):  # pragma: no cover
+        pytest.fail(
+            "runtime_validation_module, runtime_validation_model_name, and runtime_validation_data "
+            "must be passed together"
+        )
 
     # Handle stdin input
     if stdin_path is not None:
@@ -784,15 +972,31 @@ def run_main_and_assert(  # noqa: PLR0912
         _copy_files(copy_files)
         monkeypatch.setattr("sys.stdin", stdin_path.open(encoding="utf-8"))
         args: list[str] = []
-        _extend_args(args, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args)
-        return_code = main(args)
+        use_builtin_default = _extend_args(
+            args,
+            output_path=output_path,
+            input_file_type=input_file_type,
+            extra_args=extra_args,
+            copy_files=copy_files,
+        )
+        with (
+            _enable_test_parsed_source_cache(),
+            _builtin_default_formatter_config(output_path, enabled=use_builtin_default),
+        ):
+            return_code = main(args)
     # Handle stdout-only output (no output_path)
     elif output_path is None:
         if input_path is None:  # pragma: no cover
             pytest.fail("input_path is required when output_path is None")
         args = []
-        _extend_args(args, input_path=input_path, input_file_type=input_file_type, extra_args=extra_args)
-        return_code = main(args)
+        use_builtin_default = _extend_args(
+            args, input_path=input_path, input_file_type=input_file_type, extra_args=extra_args
+        )
+        with (
+            _enable_test_parsed_source_cache(),
+            _builtin_default_formatter_config(output_path, enabled=use_builtin_default),
+        ):
+            return_code = main(args)
     # Standard file input
     else:
         if input_path is None:  # pragma: no cover
@@ -814,7 +1018,6 @@ def run_main_and_assert(  # noqa: PLR0912
         + int(expected_output is not None)
         + int(expected_directory is not None)
         + int(output_to_expected is not None)
-        + int(assert_output_path_not_exists)
         + int(file_should_not_exist is not None)
         + int(output_should_not_exist)
     )
@@ -822,26 +1025,25 @@ def run_main_and_assert(  # noqa: PLR0912
         pytest.fail(
             "Output verification options are mutually exclusive; use exactly one of "
             "standalone assert_func, expected_output, expected_directory, output_to_expected, "
-            "assert_output_path_not_exists, file_should_not_exist, or output_should_not_exist"
+            "file_should_not_exist, or output_should_not_exist"
         )
 
-    if assert_output_path_not_exists:
-        if output_path is None:  # pragma: no cover
-            pytest.fail("output_path is required when using assert_output_path_not_exists")
-        _assert_file_does_not_exist(output_path)
     if output_should_not_exist:
         if output_path is None:  # pragma: no cover
             pytest.fail("output_path is required when using output_should_not_exist")
         _assert_file_does_not_exist(output_path)
     if file_should_not_exist is not None:
-        _assert_file_does_not_exist(file_should_not_exist)
+        match file_should_not_exist:
+            case Path() as missing_path:
+                _assert_file_does_not_exist(missing_path)
+            case missing_paths:
+                for missing_path in missing_paths:
+                    _assert_file_does_not_exist(missing_path)
 
     # Skip output verification if expected_exit is not OK
     if expected_exit != Exit.OK:
         return
-    if (  # pragma: no cover
-        assert_output_path_not_exists or output_should_not_exist or file_should_not_exist is not None
-    ):
+    if output_should_not_exist or file_should_not_exist is not None:  # pragma: no cover
         return
 
     # Output verification
@@ -874,24 +1076,21 @@ def run_main_and_assert(  # noqa: PLR0912
             frame = inspect.currentframe()
             assert frame is not None
             assert frame.f_back is not None
-            func_name = frame.f_back.f_code.co_name
+            expected_file = _infer_expected_file(frame.f_back.f_code.co_name)
             del frame
-            for prefix in ("test_main_", "test_"):  # pragma: no branch
-                if func_name.startswith(prefix):
-                    func_name = func_name[len(prefix) :]
-                    break
-            expected_file = f"{func_name}.py"
         assert_func(output_path, expected_file, transform=transform)
 
-    _assert_builtin_cli_formatter_parity(
-        input_path=input_path,
-        output_path=output_path,
-        input_file_type=input_file_type,
-        extra_args=extra_args,
-        copy_files=copy_files,
-        stdin_path=stdin_path,
-        monkeypatch=monkeypatch,
-    )
+    with _enable_test_parsed_source_cache():
+        _assert_builtin_cli_formatter_parity(
+            input_path=input_path,
+            output_path=output_path,
+            input_file_type=input_file_type,
+            extra_args=extra_args,
+            copy_files=copy_files,
+            stdin_path=stdin_path,
+            monkeypatch=monkeypatch,
+            context=_builtin_cli_formatter_parity_context(),
+        )
 
     if output_path is not None and not skip_code_validation:
         _validate_output_files(output_path, extra_args, force_exec_validation=force_exec_validation)
@@ -902,6 +1101,24 @@ def run_main_and_assert(  # noqa: PLR0912
         if importable_module_file is not None:
             importable_path = output_path / importable_module_file
         _assert_python_module_importable(importable_path, importable_module_name, importable_module_attribute)
+    if runtime_validation_module is not None:
+        if output_path is None:  # pragma: no cover
+            pytest.fail("output_path is required when using runtime_validation_module")
+        if _should_skip_compile(extra_args):
+            return
+        runtime_validation_model = runtime_validation_model_name
+        runtime_validation_payload = runtime_validation_data
+        if runtime_validation_model is None or runtime_validation_payload is None:  # pragma: no cover
+            pytest.fail(
+                "runtime_validation_module, runtime_validation_model_name, and runtime_validation_data "
+                "must be passed together"
+            )
+        _assert_generated_package_model_validation(
+            output_path,
+            module_path=runtime_validation_module,
+            model_name=runtime_validation_model,
+            data=runtime_validation_payload,
+        )
 
 
 def _get_argument_value(arguments: Sequence[str] | None, argument_name: str) -> str | None:
@@ -1127,9 +1344,19 @@ def _generated_model(output_path: Path, module_name: str, model_name: str) -> Ge
             sys.modules[spec.name] = previous_module
 
 
-def _assert_model_json_invalid(model: Any, invalid_json: str, expected_error_type: str) -> None:
+def _model_json_validator(model: Any) -> Callable[[str], Any]:
+    """Return a JSON validation callable for a generated Pydantic model or dataclass."""
+    if callable(validate_json := getattr(model, "model_validate_json", None)):
+        return validate_json
+    return TypeAdapter(model).validate_json
+
+
+def _assert_model_json_invalid(
+    validate_json: Callable[[str], Any], invalid_json: str, expected_error_type: str
+) -> None:
+    """Assert that a generated model JSON validator rejects invalid JSON with the expected error."""
     with pytest.raises(ValidationError) as exc_info:
-        model.model_validate_json(invalid_json)
+        validate_json(invalid_json)
     errors = exc_info.value.errors()
     if not errors:  # pragma: no cover
         pytest.fail("Expected validation error but got an empty errors list", pytrace=False)
@@ -1152,9 +1379,10 @@ def assert_generated_model_json_validation(
     expected_attribute_path: Sequence[str] = (),
     expected_attribute_value: Any = None,
 ) -> None:
-    """Import a generated module and validate JSON data through a generated Pydantic model."""
+    """Import a generated module and validate JSON data through a generated Pydantic model or dataclass."""
     with _generated_model(output_path, module_name, model_name) as model:
-        parsed = model.model_validate_json(valid_json)
+        validate_json = _model_json_validator(model)
+        parsed = validate_json(valid_json)
 
         if expected_attribute_path:
             actual: Any = parsed
@@ -1166,7 +1394,7 @@ def assert_generated_model_json_validation(
                     pytrace=False,
                 )
 
-        _assert_model_json_invalid(model, invalid_json, expected_error_type)
+        _assert_model_json_invalid(validate_json, invalid_json, expected_error_type)
 
 
 def assert_generated_model_json_invalid(
@@ -1179,7 +1407,7 @@ def assert_generated_model_json_invalid(
 ) -> None:
     """Import a generated module and assert JSON data is rejected by a generated Pydantic model."""
     with _generated_model(output_path, module_name, model_name) as model:
-        _assert_model_json_invalid(model, invalid_json, expected_error_type)
+        _assert_model_json_invalid(_model_json_validator(model), invalid_json, expected_error_type)
 
 
 def run_main_url_and_assert(

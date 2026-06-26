@@ -18,9 +18,9 @@ class {{ class_name }}({%- if schema_runtime_validation_use_base -%}{{ schema_ru
 {%- endfor %}
 {%- include 'schema_runtime_validation.jinja2' %}
 {%- for field in fields %}
-    {%- if not field.annotated and field.field %}
+    {%- if not field.use_pydantic_extra_annotation_assignment and not field.annotated and field.field %}
     {{ field.name }}: {{ field.type_hint }} = {{ field.field }}
-    {%- else %}
+    {%- elif not field.use_pydantic_extra_annotation_assignment %}
     {%- if field.annotated %}
     {{ field.name }}: {{ field.annotated }}
     {%- else %}
@@ -62,3 +62,10 @@ class {{ class_name }}({%- if schema_runtime_validation_use_base -%}{{ schema_ru
 {%- endif %}
 {%- endfor %}
 {%- endif %}
+{%- for field in fields %}
+{%- if field.use_pydantic_extra_annotation_assignment %}
+
+{{ class_name }}.__annotations__['__pydantic_extra__'] = {{ field.pydantic_extra_type_hint }}
+{{ class_name }}.model_rebuild(force=True)
+{%- endif %}
+{%- endfor %}

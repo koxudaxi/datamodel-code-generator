@@ -12,7 +12,7 @@ inputs:
     description: 'Output file or directory'
     required: true
   input-file-type:
-    description: 'Input file type (openapi, jsonschema, json, yaml, csv, graphql)'
+    description: 'Input file type (openapi, asyncapi, jsonschema, mcp-tools, xmlschema, graphql, protobuf, avro, json, yaml, csv)'
     required: true
   output-model-type:
     description: 'Output model type (pydantic_v2.BaseModel, pydantic_v2.dataclass, dataclasses.dataclass, typing.TypedDict, msgspec.Struct)'
@@ -45,11 +45,11 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - uses: actions/setup-python@v6
+    - uses: actions/setup-python@v6.3.0
       with:
         python-version: '3.14'
 
-    - uses: actions/cache@v5
+    - uses: actions/cache@v6.0.0
       with:
         path: ~/.cache/pip
         key: datamodel-codegen-${{ runner.os }}

@@ -28,6 +28,9 @@ channels:
                   - "null"
                   - int
                 default: null
+              - name: signupCount
+                type: int
+                default: 0
 operations:
   receiveUserSignup:
     action: receive

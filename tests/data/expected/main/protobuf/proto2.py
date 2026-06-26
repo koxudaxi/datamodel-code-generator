@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-from math import inf
 from enum import Enum
 
 from pydantic import BaseModel, ConfigDict
@@ -30,7 +29,7 @@ class ExampleLegacyLegacyMessage(BaseModel):
     count: int | None = 7
     enabled: bool | None = True
     tags: list[str] | None = []
-    ratio: float | None = inf
+    ratio: float | None = float('inf')
     status: ExampleLegacyLegacyStatus | None = 'LEGACY_ACTIVE'
     title: str | None = 'legacy'
     annotated: str | None = 'kept'

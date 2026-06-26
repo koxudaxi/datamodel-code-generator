@@ -1,0 +1,18 @@
+{
+  "archive_issue": {
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "issue_id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "issue_id"
+      ]
+    }
+  }
+}

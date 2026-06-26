@@ -1,0 +1,18 @@
+{
+  "tools": [
+    {
+      "name": "remote_relative_ref",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "$ref": "common.json#/definitions/Value"
+          }
+        },
+        "required": [
+          "value"
+        ]
+      }
+    }
+  ]
+}

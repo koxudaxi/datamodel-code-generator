@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shlex
 import subprocess
 import sys
 from collections import defaultdict
@@ -54,6 +55,7 @@ class CLIDocExample:
     version_outputs: dict[str, str] | None = None
     model_outputs: dict[str, str] | None = None
     expected_stdout: str | None = None
+    extra_outputs: list[dict[str, str]] = field(default_factory=list)
     aliases: list[str] = field(default_factory=list)
     related_options: list[str] = field(default_factory=list)
     is_primary: bool = False
@@ -73,6 +75,7 @@ class CLIDocExample:
             version_outputs=kwargs.get("version_outputs"),
             model_outputs=kwargs.get("model_outputs"),
             expected_stdout=kwargs.get("expected_stdout"),
+            extra_outputs=kwargs.get("extra_outputs", []),
             aliases=kwargs.get("aliases", []),
             related_options=kwargs.get("related_options", []),
             is_primary=kwargs.get("primary", False),
@@ -178,6 +181,8 @@ MANUAL_OPTION_DESCRIPTIONS = {
     "--version": "Show program version and exit",
     "--debug": "Show debug messages during code generation",
     "--profile": "Use a named profile from pyproject.toml",
+    "--output-format": "Choose the command output format",
+    "--output-format-json-schema": "Output JSON Schema for structured command output or JSON configuration",
     "--no-color": "Disable colorized output",
     "--generate-prompt": "Generate a prompt for consulting LLMs about CLI options",
     "--list-deprecations": "List registered deprecations and scheduled breaking changes",
@@ -273,7 +278,9 @@ def parse_docstring(docstring: str) -> ParsedDocstring:
     )
 
 
-def scan_docs_for_cli_option_tags() -> dict[str, list[tuple[str, str]]]:
+def scan_docs_for_cli_option_tags(
+    documented_options: frozenset[str] | None = None,
+) -> dict[str, list[tuple[str, str]]]:
     """Scan markdown files in docs/ for related-cli-options tags.
 
     Returns:
@@ -311,11 +318,12 @@ def scan_docs_for_cli_option_tags() -> dict[str, list[tuple[str, str]]]:
         page_path = str(md_file.relative_to(DOCS_ROOT))
 
         # Parse all matched tags
+        available_options = documented_options or frozenset()
         for match in matches:
             options = [opt.strip() for opt in match.split(",")]
             for option in options:
                 if option.startswith("--"):
-                    canonical = get_canonical_option(option)
+                    canonical = _documented_related_option(option, available_options)
                     option_to_pages[canonical].append((page_path, page_title))
 
     # Sort the page lists for each option to ensure consistent ordering
@@ -441,7 +449,9 @@ def format_cli_args(cli_args: list[str]) -> list[str]:
         arg = cli_args[i]
         if arg.startswith("-") and i + 1 < len(cli_args) and not cli_args[i + 1].startswith("-"):
             value = cli_args[i + 1]
-            if " " in value or not value:
+            if '"' in value or "'" in value:
+                value = shlex.quote(value)
+            elif " " in value or not value:
                 value = f'"{value}"'
             formatted.append(f"{arg} {value}")
             i += 2
@@ -543,6 +553,29 @@ def _generate_single_example_output(example: CLIDocExample, prefix: str = "    "
     return md
 
 
+def _generate_extra_outputs(example: CLIDocExample, prefix: str = "    ") -> str:
+    """Generate additional output files for a single example."""
+    md = ""
+    for output in example.extra_outputs:
+        title = output.get("title", "Additional Output")
+        output_path = output.get("path")
+        language = output.get("language", "")
+        if not output_path:
+            md += f"{prefix}> **Error:** extra output is missing a path\n\n"
+            continue
+
+        md += f"{prefix}**{title}:**\n\n"
+        try:
+            content = read_expected_file(output_path)
+            md += f"{prefix}```{language}\n"
+            for line in content.strip().split("\n"):
+                md += f"{prefix}{line}\n" if line else "\n"
+            md += f"{prefix}```\n\n"
+        except (FileNotFoundError, ValueError) as e:
+            md += f"{prefix}> **Error:** {e}\n\n"
+    return md
+
+
 def _generate_example_with_input_output(example: CLIDocExample, prefix: str = "    ") -> str:
     """Generate combined input schema and output for an example."""
     md = ""
@@ -571,6 +604,7 @@ def _generate_example_with_input_output(example: CLIDocExample, prefix: str = " 
     # Output section
     md += f"{prefix}**Output:**\n\n"
     md += _generate_single_example_output(example, prefix)
+    md += _generate_extra_outputs(example, prefix)
 
     return md
 
@@ -579,6 +613,7 @@ def generate_option_section(
     option: str,
     cli_doc_option: CLIDocOption,
     option_related_pages: dict[str, list[tuple[str, str]]] | None = None,
+    documented_options: frozenset[str] | None = None,
 ) -> str:
     """Generate Markdown section for a single CLI option."""
     meta = get_option_meta(option)
@@ -615,7 +650,7 @@ def generate_option_section(
             # Skip self-references
             if r == option:
                 continue
-            canonical = get_canonical_option(r)
+            canonical = _documented_related_option(r, documented_options or frozenset())
             # Also skip if canonical form is the current option
             if canonical == option:
                 continue
@@ -704,15 +739,26 @@ def generate_option_section(
 
         md += "    **Output:**\n\n"
         md += _generate_single_example_output(example, "    ")
+        md += _generate_extra_outputs(example, "    ")
 
     md += "---\n\n"
     return md
+
+
+def _documented_related_option(option: str, documented_options: frozenset[str]) -> str:
+    """Return the related option name that has a generated section."""
+    canonical = get_canonical_option(option)
+    for candidate in (option, canonical):
+        if candidate in documented_options:
+            return candidate
+    return canonical
 
 
 def generate_category_page(
     category: OptionCategory,
     options: dict[str, CLIDocOption],
     option_related_pages: dict[str, list[tuple[str, str]]] | None = None,
+    documented_options: frozenset[str] | None = None,
 ) -> str:
     """Generate a category page with all options."""
     emoji = CATEGORY_EMOJIS.get(category, "📋")
@@ -727,9 +773,15 @@ def generate_category_page(
         md += f"| [`{option}`](#{slugify(option)}) | {desc} |\n"
     md += "\n---\n\n"
 
+    category_documented_options = documented_options or frozenset(options)
     for option in sorted(options.keys()):
         cli_doc_option = options[option]
-        md += generate_option_section(option, cli_doc_option, option_related_pages)
+        md += generate_option_section(
+            option,
+            cli_doc_option,
+            option_related_pages,
+            category_documented_options,
+        )
 
     return md
 
@@ -982,7 +1034,8 @@ def build_docs(*, check: bool = False) -> int:
             categories[OptionCategory.GENERAL][option] = cli_doc_option
 
     # Scan markdown files for CLI option tags
-    option_related_pages = scan_docs_for_cli_option_tags()
+    documented_options = frozenset(options_map)
+    option_related_pages = scan_docs_for_cli_option_tags(documented_options)
 
     if not check:
         DOCS_OUTPUT.mkdir(parents=True, exist_ok=True)
@@ -1018,7 +1071,7 @@ def build_docs(*, check: bool = False) -> int:
         if not options:
             continue
         try:
-            md = generate_category_page(category, options, option_related_pages)
+            md = generate_category_page(category, options, option_related_pages, documented_options)
             output_path = DOCS_OUTPUT / f"{slugify(category.value)}.md"
             write_or_check(output_path, md, f"{output_path.name} ({len(options)} options)")
         except (OSError, ValueError, KeyError) as e:

@@ -9,6 +9,16 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --additional-imports ADDITIONAL_IMPORTS
                         Custom imports for output (delimited list input). For
                         example "datetime.date,datetime.datetime"
+  --allow-private-network, --no-allow-private-network
+                        Allow HTTP(S) schema requests to private, loopback,
+                        link-local, or otherwise non-public network hosts. By
+                        default these targets are blocked to reduce server-
+                        side request forgery (SSRF) risk. If a trusted
+                        internal schema endpoint is blocked, verify the URL
+                        and pass this option; otherwise use a local schema
+                        file or public endpoint. Pass --no-allow-private-
+                        network to override a configuration file that enables
+                        it.
   --allow-remote-refs, --no-allow-remote-refs
                         Allow fetching remote $ref references over HTTP/HTTPS.
                         Currently remote fetching is allowed by default but
@@ -25,6 +35,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --custom-formatters CUSTOM_FORMATTERS
                         List of modules with custom formatter (delimited list
                         input).
+  --emit-model-metadata EMIT_MODEL_METADATA
+                        Write a separate JSON map from source schema
+                        references to generated models and fields.
   --external-ref-mapping FILE_PATH=PYTHON_PACKAGE [FILE_PATH=PYTHON_PACKAGE ...]
                         Map external $ref file paths to Python import packages
                         instead of generating duplicate classes. Accepts one
@@ -52,12 +65,12 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Timeout in seconds for HTTP requests to remote hosts
                         (default: 30)
   --input INPUT         Input file/directory (default: stdin)
-  --input-file-type {auto,openapi,asyncapi,jsonschema,xmlschema,protobuf,avro,json,yaml,dict,csv,graphql}
+  --input-file-type {auto,openapi,asyncapi,jsonschema,mcp-tools,xmlschema,protobuf,avro,json,yaml,dict,csv,graphql}
                         Input file type (default: auto). Use 'jsonschema',
-                        'openapi', 'asyncapi', 'graphql', 'xmlschema',
-                        'protobuf', or 'avro' for schema definitions. Use
-                        'json', 'yaml', or 'csv' for raw sample data to infer
-                        a schema automatically.
+                        'openapi', 'asyncapi', 'graphql', 'mcp-tools',
+                        'xmlschema', 'protobuf', or 'avro' for schema
+                        definitions. Use 'json', 'yaml', or 'csv' for raw
+                        sample data to infer a schema automatically.
   --input-model MODULE:NAME
                         Python import path to a Pydantic v2 model or schema
                         dict (e.g., 'mypackage.module:ClassName' or
@@ -75,14 +88,19 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --output OUTPUT       Output file (default: stdout)
   --output-model-type {pydantic_v2.BaseModel,pydantic_v2.dataclass,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
                         Output model type (default: pydantic_v2.BaseModel)
+  --preset {standard-py310-20260619,standard-py311-20260619,standard-py312-20260619,standard-py313-20260619,standard-py314-20260619,practical-py310-20260619,practical-py311-20260619,practical-py312-20260619,practical-py313-20260619,practical-py314-20260619}
+                        Apply an immutable built-in option preset. Preset
+                        names include the target Python version so generated
+                        syntax is pinned.
   --schema-version SCHEMA_VERSION
                         Schema version. Valid values depend on input type:
                         JsonSchema: auto, draft-04, draft-06, draft-07,
-                        2019-09, 2020-12. OpenAPI: auto, 3.0, 3.1. AsyncAPI:
-                        auto, 2.0, 3.0. XMLSchema: auto, 1.0, 1.1. Protobuf:
-                        auto, proto2, proto3, 2023. (default: auto - detected
-                        from $schema, openapi/asyncapi field, XML Schema
-                        versioning attributes, or Protobuf syntax/edition)
+                        2019-09, 2020-12. OpenAPI: auto, 3.0, 3.1, 3.2.
+                        AsyncAPI: auto, 2.0, 3.0. XMLSchema: auto, 1.0, 1.1.
+                        Protobuf: auto, proto2, proto3, 2023. (default: auto -
+                        detected from $schema, openapi/asyncapi field, XML
+                        Schema versioning attributes, or Protobuf
+                        syntax/edition)
   --schema-version-mode {lenient,strict}
                         Schema version validation mode. 'lenient': accept all
                         features regardless of version (default). 'strict':
@@ -236,13 +254,14 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Remove field name prefix if it has a special meaning
                         e.g. underscores
   --serialization-aliases SERIALIZATION_ALIASES
-                        Serialization alias mapping file (JSON) for Pydantic
-                        v2. Format: {'<schema_field>':
+                        Serialization alias mapping as inline JSON or a JSON
+                        file path for Pydantic v2. Format: {'<schema_field>':
                         '<serialization_alias>'}. Supports hierarchical
                         formats: Flat: {'name': 'fullName'} applies to all
                         occurrences. Scoped: {'User.name': 'fullName'} applies
                         to specific class.
-  --snake-case-field    Change camel-case field name to snake-case
+  --snake-case-field, --no-snake-case-field
+                        Change camel-case field name to snake-case
   --special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX
                         Set field name prefix when first character can't be
                         used as Python field name (default: `field`)
@@ -265,7 +284,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Use schema description to populate field docstring
   --use-field-description-example
                         Use schema example to populate field docstring
-  --use-frozen-field    Use Field(frozen=True) for readOnly fields (Pydantic
+  --use-frozen-field, --no-use-frozen-field
+                        Use Field(frozen=True) for readOnly fields (Pydantic
                         v2).
   --use-inline-field-description
                         Use schema description to populate field docstring as
@@ -280,6 +300,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         one line
 
 [36;1mModel customization[0m:
+  --alias-generator {to_camel,to_pascal,to_snake}
+                        Pydantic v2 BaseModel alias generator to use in
+                        ConfigDict. Matching generated aliases are omitted
+                        from individual Field() calls.
   --all-exports-collision-strategy {error,minimal-prefix,full-prefix}
                         Strategy for name collisions when using --all-exports-
                         scope=recursive. 'error': raise an error (default).
@@ -292,7 +316,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         'recursive': export from all descendant modules.
   --allow-extra-fields  Deprecated: --allow-extra-fields is deprecated. Use
                         --extra-fields=allow instead.
-  --allow-population-by-field-name
+  --allow-leading-underscore-class-name
+                        Allow an explicitly specified root class name to start
+                        with an underscore
+  --allow-population-by-field-name, --no-allow-population-by-field-name
                         Allow population by field name
   --class-name CLASS_NAME
                         Set class name of root model
@@ -314,7 +341,7 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         models by replacing references instead of creating
                         empty inheritance subclasses. This eliminates 'class
                         Foo(Bar): pass' patterns
-  --collapse-root-models
+  --collapse-root-models, --no-collapse-root-models
                         Models generated with a root-type field will be merged
                         into the models using that root-type model
   --collapse-root-models-name-strategy {child,parent}
@@ -351,9 +378,16 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         extra fields.
   --frozen-dataclasses  Generate frozen dataclasses (dataclass(frozen=True)).
                         Only applies to dataclass output.
+  --infer-union-variant-names
+                        Infer inline oneOf/anyOf branch model names from
+                        literal discriminator-style fields
   --keep-model-order    Keep generated models' order
   --keyword-only        Defined models as keyword only (for example
                         dataclass(kw_only=True)).
+  --model-name-map MODEL_NAME_MAP
+                        Rename generated model classes by schema ref or
+                        current generated class name using a JSON object or
+                        JSON file.
   --module-split-mode {single}
                         Split generated models into separate files. 'single':
                         generate one file per model class.
@@ -415,9 +449,14 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         (e.g., extra='forbid') instead of repeating the
                         configuration in each model. Keeps code DRY.
   --use-pendulum        use pendulum instead of datetime
+  --use-root-model-sequence-interface
+                        Make non-null sequence-like Pydantic v2 RootModel
+                        classes implement collections.abc.Sequence by adding
+                        Sequence[T] inheritance and root-delegating __iter__,
+                        __getitem__, and __len__ methods
   --use-schema-description
                         Use schema description to populate class docstring
-  --use-standard-primitive-types
+  --use-standard-primitive-types, --no-use-standard-primitive-types
                         Use Python standard library types for string formats
                         (UUID, IPv4Address, etc.) instead of str. Affects
                         dataclass, msgspec, TypedDict output. Pydantic already
@@ -425,50 +464,45 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --use-title-as-name   use titles as class names of models
 
 [36;1mTemplate customization[0m:
-  --aliases ALIASES     Alias mapping file (JSON) for renaming fields. Format:
-                        {'<schema_field>': '<python_name>'} - the schema field
-                        name becomes the Pydantic alias. Supports hierarchical
-                        formats: Flat: {'id': 'id_'} applies to all
-                        occurrences. Scoped: {'User.name': 'user_name'}
-                        applies to specific class. Priority: scoped > flat.
-                        Multiple aliases (Pydantic v2 only): {'field':
-                        ['alt1', 'alt2']} uses AliasChoices for validation.
-                        Example: {'User.name': 'user_name', 'id': 'id_'}
-                        generates `id_: ... = Field(alias='id')`.
+  --aliases ALIASES     Alias mapping as inline JSON or a JSON file path for
+                        renaming fields. Format: {'<schema_field>':
+                        '<python_name>'} - the schema field name becomes the
+                        Pydantic alias. Supports hierarchical formats: Flat:
+                        {'id': 'id_'} applies to all occurrences. Scoped:
+                        {'User.name': 'user_name'} applies to specific class.
+                        Priority: scoped > flat. Multiple aliases (Pydantic v2
+                        only): {'field': ['alt1', 'alt2']} uses AliasChoices
+                        for validation. Example: {'User.name': 'user_name',
+                        'id': 'id_'} generates `id_: ... = Field(alias='id')`.
   --custom-file-header CUSTOM_FILE_HEADER
                         Custom file header
   --custom-file-header-path CUSTOM_FILE_HEADER_PATH
                         Custom file header file path
   --custom-formatters-kwargs CUSTOM_FORMATTERS_KWARGS
-                        A file with kwargs for custom formatters.
+                        Custom formatter kwargs as inline JSON or a JSON file
+                        path.
   --custom-template-dir CUSTOM_TEMPLATE_DIR
                         Custom template directory
   --default-values DEFAULT_VALUES
-                        Default value overrides file (JSON). Supports
-                        hierarchical formats: Flat: {'field': value} applies
-                        to all occurrences. Scoped: {'ClassName.field': value}
-                        applies to specific class. Priority: scoped > flat.
-                        Note: Scoped keys use the generated class name for
-                        JSON Schema/OpenAPI. Required fields remain required
-                        unless --use-default is also specified. Example:
-                        {'User.status': 'active', 'page': 1, 'limit': 10}
+                        Default value overrides as inline JSON or a JSON file
+                        path. Supports hierarchical formats: Flat: {'field':
+                        value} applies to all occurrences. Scoped:
+                        {'ClassName.field': value} applies to specific class.
+                        Priority: scoped > flat. Note: Scoped keys use the
+                        generated class name for JSON Schema/OpenAPI. Required
+                        fields remain required unless --use-default is also
+                        specified. Example: {'User.status': 'active', 'page':
+                        1, 'limit': 10}
   --encoding ENCODING   The encoding of input and output (default: utf-8)
   --extra-template-data EXTRA_TEMPLATE_DATA
-                        Extra template data for output models. Input is
-                        supposed to be a json/yaml file. For OpenAPI and
-                        Jsonschema the keys are the spec path of the object,
-                        or the name of the object if you want to apply the
-                        template data to multiple objects with the same name.
-                        If you are using another input file type (e.g.
-                        GraphQL), the key is the name of the object. The value
-                        is a dictionary of the template data to add.
-  --generate-schema-validators
-                        Generate Pydantic v2 model validators for JSON Schema
-                        rules that cannot be represented as type hints
-                        (experimental).
-  --schema-validator-base-class-name SCHEMA_VALIDATOR_BASE_CLASS_NAME
-                        Set the generated shared Pydantic v2 schema runtime
-                        validator base class name.
+                        Extra template data for output models as inline JSON
+                        or a JSON file path. For OpenAPI and Jsonschema the
+                        keys are the spec path of the object, or the name of
+                        the object if you want to apply the template data to
+                        multiple objects with the same name. If you are using
+                        another input file type (e.g. GraphQL), the key is the
+                        name of the object. The value is a dictionary of the
+                        template data to add.
   --use-double-quotes   Model generated with double quotes. Single quotes or
                         your black config skip_string_normalization value will
                         be used without this option.
@@ -480,10 +514,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         at runtime. Use --no-use-type-checking-imports to
                         force runtime imports.
   --validators VALIDATORS
-                        Validators configuration file (JSON). Defines field
-                        validators for Pydantic v2 models. Keys are model
-                        names, values contain validator definitions with
-                        field, function, and mode.
+                        Validators configuration as inline JSON or a JSON file
+                        path. Defines field validators for Pydantic v2 models.
+                        Keys are model names, values contain validator
+                        definitions with field, function, and mode.
   --wrap-string-literal
                         Wrap string literal by using black `experimental-
                         string-processing` option (require black 20.8b0 or
@@ -550,6 +584,12 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --list-experimental [{table,json,markdown}]
                         List registered experimental features, then exit.
   --no-color            disable colorized output
+  --output-format {text,json}
+                        Format for command output (default: text). Use json
+                        for structured output when supported.
+  --output-format-json-schema {config,generate-prompt,generation,model-metadata,structured-output}
+                        Output JSON Schema for the selected JSON output or
+                        JSON configuration format and exit.
   --profile PROFILE     Use a named profile from pyproject.toml
                         [tool.datamodel-codegen.profiles.<name>]
   --version             show version
@@ -561,4 +601,5 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   -h, --help            show this help message and exit
 
 Documentation: https://datamodel-code-generator.koxudaxi.dev
+Agent skill: https://datamodel-code-generator.koxudaxi.dev/coding-agent-skill/
 GitHub: https://github.com/koxudaxi/datamodel-code-generator

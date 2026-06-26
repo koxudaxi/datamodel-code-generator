@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "format": "json",
+  "kind": "pyproject-config",
+  "content": "[tool.datamodel-codegen]\ninput = \"schema.yaml\"\noutput = \"model.py\"\n",
+  "config": {
+    "tool": {
+      "datamodel-codegen": {
+        "input": "schema.yaml",
+        "output": "model.py"
+      }
+    }
+  }
+}

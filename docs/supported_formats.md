@@ -53,7 +53,7 @@ datamodel-code-generator automatically detects the JSON Schema version:
 
 1. **Explicit `$schema` field**: If present, the version is detected from the URL pattern
 2. **Heuristics**: If no `$schema`, presence of `$defs` suggests 2020-12, `definitions` suggests Draft 7
-3. **Fallback**: Draft 7 (most widely used)
+3. **Fallback**: Draft 7 (backward-compatible default)
 
 ## OpenAPI Version Support
 
@@ -63,27 +63,28 @@ datamodel-code-generator automatically detects the JSON Schema version:
 |---------|----------|------------------|
 | 3.0.x | [spec.openapis.org/oas/v3.0.3](https://spec.openapis.org/oas/v3.0.3) | Draft 5 (subset) |
 | 3.1.x | [spec.openapis.org/oas/v3.1.0](https://spec.openapis.org/oas/v3.1.0) | 2020-12 (full) |
+| 3.2.x | [spec.openapis.org/oas/v3.2.0](https://spec.openapis.org/oas/v3.2.0) | 2020-12 (full) |
 
 > **Note**: OpenAPI 2.0 (Swagger) support is limited. We recommend converting to OpenAPI 3.0+.
 
 ### Feature Compatibility Matrix
 
-| Feature | OAS 3.0 | OAS 3.1 |
-|---------|---------|---------|
-| **Schema Base** | JSON Schema Draft 5 (subset) | JSON Schema 2020-12 (full) |
-| **Definitions Path** | `#/components/schemas` | `#/components/schemas` |
-| **Nullable** |
-| `nullable: true` keyword | Yes | Deprecated |
-| Null in type array | - | Yes |
-| Type as array | - | Yes |
-| **Array Features** |
-| prefixItems | - | Yes |
-| **Boolean Schemas** | - | Yes |
-| **OpenAPI Specific** |
-| discriminator | Yes | Yes |
-| binary format | Yes | Yes |
-| password format | Yes | Yes |
-| webhooks | - | Yes |
+| Feature | OAS 3.0 | OAS 3.1 | OAS 3.2 |
+|---------|---------|---------|---------|
+| **Schema Base** | JSON Schema Draft 5 (subset) | JSON Schema 2020-12 (full) | JSON Schema 2020-12 (full) |
+| **Definitions Path** | `#/components/schemas` | `#/components/schemas` | `#/components/schemas` |
+| **Nullable** | | | |
+| `nullable: true` keyword | Yes | Deprecated | Deprecated |
+| Null in type array | - | Yes | Yes |
+| Type as array | - | Yes | Yes |
+| **Array Features** | | | |
+| prefixItems | - | Yes | Yes |
+| **Boolean Schemas** | - | Yes | Yes |
+| **OpenAPI Specific** | | | |
+| discriminator | Yes | Yes | Yes |
+| binary format | Yes | Yes | Yes |
+| password format | Yes | Yes | Yes |
+| webhooks | - | Yes | Yes |
 
 ### Version Detection
 
@@ -91,6 +92,7 @@ datamodel-code-generator detects the OpenAPI version from the `openapi` field:
 
 - `openapi: "3.0.x"` -> OpenAPI 3.0
 - `openapi: "3.1.x"` -> OpenAPI 3.1
+- `openapi: "3.2.x"` -> OpenAPI 3.2
 - No `openapi` field -> Fallback to OpenAPI 3.1
 
 ## AsyncAPI Version Support
@@ -135,6 +137,19 @@ datamodel-code-generator detects the AsyncAPI version from the `asyncapi` field:
 - `asyncapi: "2.x.y"` -> AsyncAPI 2.x
 - `asyncapi: "3.x.y"` -> AsyncAPI 3.x
 - Unknown versions fall back to the 3.x schema behavior unless `--schema-version` is set explicitly
+
+## MCP Tool Schema Profile Support
+
+MCP tool schema profile documents are supported with `--input-file-type mcp-tools`. This input type is experimental and converts MCP tool `inputSchema` and `outputSchema` entries into JSON Schema definitions before model generation.
+
+Supported source shapes include:
+
+- `tools/list` JSON-RPC responses with `result.tools`;
+- MCP server definitions with a top-level `tools` array;
+- single tool definitions or arrays of tool definitions;
+- JSON Schema documents whose `$defs` or `definitions` values are tool definitions.
+
+Each generated definition is named from the tool `name` plus `Input` or `Output`, for example `SearchInput`, `SearchOutput`, and `CreateIssueInput`.
 
 ## Protocol Buffers Version Support
 
@@ -219,7 +234,7 @@ The following features are tracked in the codebase with their implementation sta
 | `if/then/else` | Draft 7 | ❌ Not Supported | Conditional schema validation |
 | `contentMediaType/contentEncoding` | Draft 7 | ⚠️ Partial | Content type and encoding hints for strings |
 | `contentSchema` | 2019-09 | ⚠️ Partial | Schema for decoded string content |
-| `$anchor` | 2019-09 | ❌ Not Supported | Location-independent schema references |
+| `$anchor` | 2019-09 | ✅ Supported | Location-independent schema references |
 | `$vocabulary` | 2019-09 | ❌ Not Supported | Vocabulary declarations for meta-schemas |
 | `unevaluatedProperties` | 2019-09 | ⚠️ Partial | Additional properties not evaluated by subschemas |
 | `unevaluatedItems` | 2019-09 | ⚠️ Partial | Additional items not evaluated by subschemas |
@@ -236,6 +251,9 @@ The following features are tracked in the codebase with their implementation sta
 | `discriminator` | OAS 3.0 | ✅ Supported | Polymorphism support via `discriminator` keyword |
 | `webhooks` | OAS 3.1 | ✅ Supported | Top-level webhooks object for incoming events |
 | `$ref with sibling keywords` | OAS 3.1 | ⚠️ Partial | $ref can coexist with description, summary (no allOf workaround) |
+| `itemSchema` | OAS 3.2 | ✅ Supported | Media Type Object item schema for sequential media |
+| `$self` | OAS 3.2 | ✅ Supported | Root document URI for relative and absolute reference resolution |
+| `querystring` | OAS 3.2 | ✅ Supported | Query string parameter object without a parameter name |
 | `xml` | OAS 3.0 | ⚠️ Partial | XML serialization metadata (name, namespace, prefix) |
 | `externalDocs` | OAS 3.0 | ⚠️ Partial | Reference to external documentation |
 | `links` | OAS 3.0 | ❌ Not Supported | Links between operations |
@@ -290,7 +308,6 @@ The following features are tracked in the codebase with their implementation sta
 
 | Feature | Introduced | Status | Notes |
 |---------|------------|--------|-------|
-| `$anchor` | 2019-09 | ❌ Not supported | Use `$ref` with `$id` instead |
 | `contains` | Draft 6 | ⚠️ Partial | Count constraints are modeled when `contains` matches every item |
 | `unevaluatedProperties` | 2019-09 | ⚠️ Partial | Boolean values and schema-valued extra allowance are modeled |
 | `unevaluatedItems` | 2019-09 | ⚠️ Partial | Boolean values and schema-valued array item types are modeled |

@@ -11,8 +11,10 @@ import ast
 import re
 from abc import ABC, abstractmethod
 from copy import deepcopy
+from decimal import Decimal
 from enum import Enum, auto
-from functools import lru_cache
+from fractions import Fraction
+from functools import cache, lru_cache
 from itertools import chain
 from re import Pattern
 from typing import (
@@ -30,7 +32,7 @@ from pydantic import ConfigDict, Field, GetCoreSchemaHandler, StrictBool, Strict
 from pydantic_core import core_schema
 from typing_extensions import TypeIs
 
-from datamodel_code_generator.format import (
+from datamodel_code_generator._format_types import (
     DateClassType,
     DatetimeClassType,
     PythonVersion,
@@ -41,6 +43,7 @@ from datamodel_code_generator.imports import (
     IMPORT_ABC_SEQUENCE,
     IMPORT_ANNOTATED,
     IMPORT_ANY,
+    IMPORT_DECIMAL,
     IMPORT_DICT,
     IMPORT_FROZEN_SET,
     IMPORT_LIST,
@@ -53,7 +56,9 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
+from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.reference import Reference, _BaseModel
+from datamodel_code_generator.util import create_module_getattr
 
 T = TypeVar("T")
 SourceT = TypeVar("SourceT")
@@ -89,9 +94,6 @@ NOT_REQUIRED_PREFIX = f"{NOT_REQUIRED}["
 
 READ_ONLY = "ReadOnly"
 READ_ONLY_PREFIX = f"{READ_ONLY}["
-
-
-from datamodel_code_generator.util import create_module_getattr  # noqa: E402
 
 __getattr__ = create_module_getattr(
     __name__,
@@ -163,6 +165,76 @@ class UnionIntFloat:
             msg = f"{v} is not int or float"
             raise TypeError(msg)
         return cls(v)
+
+
+def _contains_decimal(value: Any) -> bool:
+    match value:
+        case Decimal():
+            return True
+        case dict():
+            return any(_contains_decimal(k) or _contains_decimal(v) for k, v in value.items())
+        case list() | tuple() | set() | frozenset():
+            return any(_contains_decimal(item) for item in value)
+        case _:
+            return False
+
+
+def _get_fraction_floor(value: Fraction) -> int:
+    return value.numerator // value.denominator
+
+
+def _get_fraction_ceil(value: Fraction) -> int:
+    return -(-value.numerator // value.denominator)
+
+
+def _get_constraint_number(value: Any) -> Any:
+    return value.value if isinstance(value, UnionIntFloat) else value
+
+
+def normalize_integer_constraint(constraint: str, value: Any) -> tuple[str, Any] | None:  # noqa: PLR0911
+    """Return an integer-safe pydantic constraint for a numeric schema constraint."""
+    number = _get_constraint_number(value)
+    try:
+        fraction = Fraction(str(number))
+    except (TypeError, ValueError):
+        return constraint, value
+
+    match constraint:
+        case "multiple_of" if fraction.numerator == 1:
+            return None
+        case "multiple_of":
+            return constraint, abs(fraction.numerator)
+        case _ if fraction.denominator == 1:
+            return constraint, int(fraction)
+        case "ge":
+            return "ge", _get_fraction_ceil(fraction)
+        case "gt":
+            return "ge", _get_fraction_floor(fraction) + 1
+        case "le":
+            return "le", _get_fraction_floor(fraction)
+        case "lt":
+            return "le", _get_fraction_ceil(fraction) - 1
+    return constraint, value
+
+
+def merge_normalized_constraint(constraints: dict[str, Any], key: str, value: Any) -> None:
+    """Merge a normalized constraint, keeping the stronger bound when ge or le collides."""
+    match constraints.get(key):
+        case None:
+            constraints[key] = value
+        case current if key == "ge":
+            constraints[key] = max(current, value)
+        case current:
+            constraints[key] = min(current, value)
+
+
+def normalize_integer_constraints(constraints: dict[str, Any]) -> dict[str, Any]:
+    """Return integer-safe pydantic constraints."""
+    normalized_constraints: dict[str, Any] = {}
+    for key, value in constraints.items():
+        if (normalized := normalize_integer_constraint(key, value)) is not None:
+            merge_normalized_constraint(normalized_constraints, normalized[0], normalized[1])
+    return normalized_constraints
 
 
 def chain_as_tuple(*iterables: Iterable[T]) -> tuple[T, ...]:
@@ -277,6 +349,49 @@ def extract_qualified_names(type_str: str) -> list[str]:
     return qualified_names
 
 
+@lru_cache(maxsize=1024)
+def is_python_type_annotation(type_str: str) -> bool:
+    """Return whether a string is a Python type annotation expression."""
+    try:
+        tree = ast.parse(type_str, mode="eval")
+    except SyntaxError:
+        return False
+
+    return _is_python_type_annotation_node(tree.body, allow_literal=False)
+
+
+def _is_python_type_annotation_node(node: ast.AST, *, allow_literal: bool) -> bool:
+    match node:
+        case ast.Name():
+            result = True
+        case ast.Attribute(value=value):
+            result = isinstance(value, (ast.Name, ast.Attribute)) and _is_python_type_annotation_node(
+                value,
+                allow_literal=False,
+            )
+        case ast.Subscript(value=value, slice=slice_node):
+            result = _is_python_type_annotation_node(
+                value,
+                allow_literal=False,
+            ) and _is_python_type_annotation_node(slice_node, allow_literal=True)
+        case ast.Tuple(elts=elts) | ast.List(elts=elts):
+            result = all(_is_python_type_annotation_node(elt, allow_literal=True) for elt in elts)
+        case ast.BinOp(left=left, op=ast.BitOr(), right=right):
+            result = _is_python_type_annotation_node(left, allow_literal=False) and _is_python_type_annotation_node(
+                right,
+                allow_literal=False,
+            )
+        case ast.Constant(value=None):
+            result = True
+        case ast.Constant(value=value) if allow_literal:
+            result = value is None or value is Ellipsis or isinstance(value, (str, int, float, bool))
+        case ast.UnaryOp(op=ast.UAdd() | ast.USub(), operand=ast.Constant(value=value)) if allow_literal:
+            result = isinstance(value, (int, float))
+        case _:
+            result = False
+    return result
+
+
 def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # noqa: PLR0912
     """Remove None from a Union type string, handling nested unions."""
     if use_union_operator:
@@ -341,7 +456,7 @@ def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # 
     return f"{UNION_PREFIX}{UNION_DELIMITER.join(parts)}]"
 
 
-@lru_cache
+@lru_cache(maxsize=4096)
 def get_optional_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT001
     """Wrap a type string in Optional or add | None suffix."""
     type_ = _remove_none_from_union(type_, use_union_operator=use_union_operator)
@@ -386,6 +501,7 @@ class DataType(_BaseModel):
     model_config = ConfigDict(  # ty: ignore
         extra="forbid",
         revalidate_instances="never",
+        defer_build=True,
     )
 
     type: Optional[str] = None  # noqa: UP045
@@ -409,6 +525,7 @@ class DataType(_BaseModel):
     use_standard_collections: bool = False
     use_generic_container: bool = False
     use_union_operator: bool = False
+    preserve_union_member_order: bool = False
     alias: Optional[str] = None  # noqa: UP045
     parent: Union[DataModelFieldBase, DataType, None] = None  # noqa: UP007
     children: list[DataType] = Field(default_factory=list)
@@ -520,8 +637,8 @@ class DataType(_BaseModel):
     @property
     def module_name(self) -> str | None:
         """Return the module name from the reference source."""
-        if self.reference and isinstance(self.reference.source, Modular):
-            return self.reference.source.module_name
+        if self.reference and (module_name := getattr(self.reference.source, "module_name", None)) is not None:
+            return module_name
         return None  # pragma: no cover
 
     @property
@@ -576,56 +693,45 @@ class DataType(_BaseModel):
             yield from data_type.all_imports
         yield from self.imports
 
+    def _conditional_imports(self) -> Iterator[tuple[bool, Import]]:
+        """Yield (condition, import) pairs in the order they may be emitted."""
+        use_standard_collections = self.use_standard_collections
+        yield (self.is_optional and not self.use_union_operator, IMPORT_OPTIONAL)
+        yield (len(self.data_types) > 1 and not self.use_union_operator, IMPORT_UNION)
+        yield (bool(self.literals) or bool(self.enum_member_literals), IMPORT_LITERAL)
+        yield (bool(self.discriminator), IMPORT_ANNOTATED)
+        yield (self.is_frozen_set and not use_standard_collections, IMPORT_FROZEN_SET)
+        yield (self.is_mapping and use_standard_collections, IMPORT_ABC_MAPPING)
+        yield (self.is_mapping and not use_standard_collections, IMPORT_MAPPING)
+        yield (self.is_sequence and use_standard_collections, IMPORT_ABC_SEQUENCE)
+        yield (self.is_sequence and not use_standard_collections, IMPORT_SEQUENCE)
+        if self.use_generic_container:
+            if use_standard_collections:
+                # frozenset is builtin, no import needed for is_set
+                yield (self.is_list, IMPORT_ABC_SEQUENCE)
+                yield (self.is_dict, IMPORT_ABC_MAPPING)
+            else:  # pragma: no cover
+                yield (self.is_list, IMPORT_SEQUENCE)
+                yield (self.is_set, IMPORT_FROZEN_SET)
+                yield (self.is_dict, IMPORT_MAPPING)
+                yield (self.is_tuple, IMPORT_TUPLE)
+        elif not use_standard_collections:
+            yield (self.is_list, IMPORT_LIST)
+            yield (self.is_set, IMPORT_SET)
+            yield (self.is_dict, IMPORT_DICT)
+            yield (self.is_tuple, IMPORT_TUPLE)
+
     @property
     def imports(self) -> Iterator[Import]:
         """Yield imports required by this DataType."""
         # Add base import if exists
         if self.import_:
             yield self.import_
-
-        imports: tuple[tuple[bool, Import], ...] = (
-            (self.is_optional and not self.use_union_operator, IMPORT_OPTIONAL),
-            (len(self.data_types) > 1 and not self.use_union_operator, IMPORT_UNION),
-            (bool(self.literals) or bool(self.enum_member_literals), IMPORT_LITERAL),
-            (bool(self.discriminator), IMPORT_ANNOTATED),
-        )
-
-        imports = (
-            *imports,
-            (self.is_frozen_set and not self.use_standard_collections, IMPORT_FROZEN_SET),
-            (self.is_mapping and self.use_standard_collections, IMPORT_ABC_MAPPING),
-            (self.is_mapping and not self.use_standard_collections, IMPORT_MAPPING),
-            (self.is_sequence and self.use_standard_collections, IMPORT_ABC_SEQUENCE),
-            (self.is_sequence and not self.use_standard_collections, IMPORT_SEQUENCE),
-        )
-
-        if self.use_generic_container:
-            if self.use_standard_collections:
-                # frozenset is builtin, no import needed for is_set
-                imports = (
-                    *imports,
-                    (self.is_list, IMPORT_ABC_SEQUENCE),
-                    (self.is_dict, IMPORT_ABC_MAPPING),
-                )
-            else:  # pragma: no cover
-                imports = (
-                    *imports,
-                    (self.is_list, IMPORT_SEQUENCE),
-                    (self.is_set, IMPORT_FROZEN_SET),
-                    (self.is_dict, IMPORT_MAPPING),
-                    (self.is_tuple, IMPORT_TUPLE),
-                )
-        elif not self.use_standard_collections:
-            imports = (
-                *imports,
-                (self.is_list, IMPORT_LIST),
-                (self.is_set, IMPORT_SET),
-                (self.is_dict, IMPORT_DICT),
-                (self.is_tuple, IMPORT_TUPLE),
-            )
+        if self.kwargs and self.import_ != IMPORT_DECIMAL and _contains_decimal(self.kwargs):
+            yield IMPORT_DECIMAL
 
         # Yield imports based on conditions
-        for field, import_ in imports:
+        for field, import_ in self._conditional_imports():
             if field and import_ is not None and import_ != self.import_:
                 yield import_
 
@@ -676,108 +782,242 @@ class DataType(_BaseModel):
         """
         return type_
 
+    _TYPE_HINT_CONTAINER_ORDER: ClassVar[tuple[str, ...]] = (
+        "frozen_set",
+        "set",
+        "sequence",
+        "list",
+        "mapping",
+        "dict",
+    )
+    _BASE_TYPE_HINT_CONTAINER_ORDER: ClassVar[tuple[str, ...]] = ("list", "set", "dict")
+
+    def _render_nested_type_hint(
+        self,
+        *,
+        use_base_type_hint: bool,
+        wrap_discriminator: bool,
+    ) -> str:
+        if self.is_tuple:
+            tuple_type = STANDARD_TUPLE if self.use_standard_collections else TUPLE
+            inner_types = [
+                (item.base_type_hint if use_base_type_hint else item.type_hint) or ANY for item in self.data_types
+            ]
+            type_ = f"{tuple_type}[{', '.join(inner_types)}]" if inner_types else f"{tuple_type}[()]"
+        elif self.is_union:
+            type_ = self._render_union_type_hint(
+                use_base_type_hint=use_base_type_hint,
+                wrap_discriminator=wrap_discriminator,
+            )
+        elif len(self.data_types) == 1:
+            data_type = self.data_types[0]
+            type_ = data_type.base_type_hint if use_base_type_hint else data_type.type_hint
+        elif self.enum_member_literals:
+            parts = [f"{enum_class}.{member}" for enum_class, member in self.enum_member_literals]
+            type_ = f"{LITERAL}[{', '.join(parts)}]"
+        elif self.literals:
+            type_ = f"{LITERAL}[{', '.join(repr(literal) for literal in self.literals)}]"
+        elif self.reference:
+            type_ = self.reference.short_name
+            type_ = self._get_wrapped_reference_type_hint(type_)
+        else:
+            # TODO support strict Any
+            type_ = ""
+
+        return type_
+
+    def _render_union_type_hint(
+        self,
+        *,
+        use_base_type_hint: bool,
+        wrap_discriminator: bool,
+    ) -> str:
+        if self.preserve_union_member_order:
+            return self._render_ordered_union_type_hint(
+                use_base_type_hint=use_base_type_hint,
+                wrap_discriminator=wrap_discriminator,
+            )
+
+        data_types: list[str] = []
+        for data_type in self.data_types:
+            data_type_type = data_type.base_type_hint if use_base_type_hint else data_type.type_hint
+            if not data_type_type or data_type_type in data_types:
+                continue
+
+            if data_type_type == NONE:
+                self.is_optional = True
+                continue
+
+            non_optional_data_type_type = _remove_none_from_union(
+                data_type_type, use_union_operator=self.use_union_operator
+            )
+
+            if non_optional_data_type_type != data_type_type:
+                self.is_optional = True
+
+            data_types.append(non_optional_data_type_type)
+
+        if not data_types:
+            type_ = ANY
+            self.import_ = self.import_ or IMPORT_ANY
+        elif len(data_types) == 1:
+            type_ = data_types[0]
+        elif self.use_union_operator:
+            type_ = UNION_OPERATOR_DELIMITER.join(data_types)
+        else:
+            type_ = f"{UNION_PREFIX}{UNION_DELIMITER.join(data_types)}]"
+
+        if wrap_discriminator and self.discriminator:
+            type_ = f"Annotated[{type_}, Field(discriminator={self.discriminator!r})]"
+        return type_
+
+    def _render_ordered_union_type_hint(
+        self,
+        *,
+        use_base_type_hint: bool,
+        wrap_discriminator: bool,
+    ) -> str:
+        data_types: list[str] = []
+        seen_data_types: set[str] = set()
+        for data_type in self.data_types:
+            data_type_type = data_type.base_type_hint if use_base_type_hint else data_type.type_hint
+            if not data_type_type or data_type_type in seen_data_types:
+                continue
+            seen_data_types.add(data_type_type)
+            data_types.append(data_type_type)
+
+        match len(data_types):
+            case 0:
+                type_ = ANY
+                self.import_ = self.import_ or IMPORT_ANY
+            case 1:
+                type_ = data_types[0]
+            case _ if self.use_union_operator:
+                type_ = UNION_OPERATOR_DELIMITER.join(data_types)
+            case _:
+                type_ = f"{UNION_PREFIX}{UNION_DELIMITER.join(data_types)}]"
+
+        if wrap_discriminator and self.discriminator:
+            type_ = f"Annotated[{type_}, Field(discriminator={self.discriminator!r})]"
+        return type_
+
+    def _apply_nullable_from_reference(self) -> None:
+        if not self.reference:
+            return
+
+        source = self.reference.source
+        if getattr(source, "is_alias", False):
+            return
+        if getattr(source, "nullable", False):
+            self.is_optional = True
+
+    def _wrap_dict_type_hint(
+        self,
+        type_: str,
+        dict_: str,
+        *,
+        use_base_type_hint: bool,
+    ) -> str:
+        if self.dict_key or type_:
+            key = (
+                (self.dict_key.base_type_hint if use_base_type_hint else self.dict_key.type_hint)
+                if self.dict_key
+                else STR
+            )
+            return f"{dict_}[{key}, {type_ or ANY}]"
+        return dict_
+
+    def _wrap_frozen_set_type_hint(self, type_: str, _use_base_type_hint: bool) -> str:  # noqa: FBT001
+        set_ = STANDARD_FROZEN_SET if self.use_standard_collections else FROZEN_SET
+        return f"{set_}[{type_}]" if type_ else set_
+
+    def _wrap_set_type_hint(self, type_: str, _use_base_type_hint: bool) -> str:  # noqa: FBT001
+        if self.use_generic_container:
+            set_ = STANDARD_FROZEN_SET if self.use_standard_collections else FROZEN_SET
+        elif self.use_standard_collections:
+            set_ = STANDARD_SET
+        else:
+            set_ = SET
+        return f"{set_}[{type_}]" if type_ else set_
+
+    @staticmethod
+    def _wrap_sequence_type_hint(type_: str, _use_base_type_hint: bool) -> str:  # noqa: FBT001
+        return f"{SEQUENCE}[{type_}]" if type_ else SEQUENCE
+
+    def _wrap_list_type_hint(self, type_: str, _use_base_type_hint: bool) -> str:  # noqa: FBT001
+        if self.use_generic_container:
+            list_ = SEQUENCE
+        elif self.use_standard_collections:
+            list_ = STANDARD_LIST
+        else:
+            list_ = LIST
+        return f"{list_}[{type_}]" if type_ else list_
+
+    def _wrap_mapping_type_hint(self, type_: str, use_base_type_hint: bool) -> str:  # noqa: FBT001
+        return self._wrap_dict_type_hint(type_, MAPPING, use_base_type_hint=use_base_type_hint)
+
+    def _wrap_builtin_dict_type_hint(self, type_: str, use_base_type_hint: bool) -> str:  # noqa: FBT001
+        if self.use_generic_container:
+            dict_ = MAPPING
+        elif self.use_standard_collections:
+            dict_ = STANDARD_DICT
+        else:
+            dict_ = DICT
+        return self._wrap_dict_type_hint(type_, dict_, use_base_type_hint=use_base_type_hint)
+
+    def _container_type_hint_renderer(
+        self,
+        container: str,
+    ) -> Callable[[str, bool], str] | None:
+        renderer: Callable[[str, bool], str] | None = None
+        match container:
+            case "frozen_set" if self.is_frozen_set:
+                renderer = self._wrap_frozen_set_type_hint
+            case "set" if self.is_set:
+                renderer = self._wrap_set_type_hint
+            case "sequence" if self.is_sequence:
+                renderer = self._wrap_sequence_type_hint
+            case "list" if self.is_list:
+                renderer = self._wrap_list_type_hint
+            case "mapping" if self.is_mapping:
+                renderer = self._wrap_mapping_type_hint
+            case "dict" if self.is_dict:
+                renderer = self._wrap_builtin_dict_type_hint
+        return renderer
+
+    def _wrap_container_type_hint(
+        self,
+        type_: str,
+        container_order: tuple[str, ...],
+        *,
+        use_base_type_hint: bool,
+    ) -> str:
+        for container in container_order:
+            if renderer := self._container_type_hint_renderer(container):
+                return renderer(type_, use_base_type_hint)
+
+        return type_
+
     @property
-    def type_hint(self) -> str:  # noqa: PLR0912, PLR0915
+    def type_hint(self) -> str:
         """Generate the Python type hint string for this DataType."""
         type_: str | None = self.alias or self.type
         if not type_:
-            if self.is_tuple:
-                tuple_type = STANDARD_TUPLE if self.use_standard_collections else TUPLE
-                inner_types = [item.type_hint or ANY for item in self.data_types]
-                type_ = f"{tuple_type}[{', '.join(inner_types)}]" if inner_types else f"{tuple_type}[()]"
-            elif self.is_union:
-                data_types: list[str] = []
-                for data_type in self.data_types:
-                    data_type_type = data_type.type_hint
-                    if not data_type_type or data_type_type in data_types:
-                        continue
-
-                    if data_type_type == NONE:
-                        self.is_optional = True
-                        continue
-
-                    non_optional_data_type_type = _remove_none_from_union(
-                        data_type_type, use_union_operator=self.use_union_operator
-                    )
-
-                    if non_optional_data_type_type != data_type_type:
-                        self.is_optional = True
-
-                    data_types.append(non_optional_data_type_type)
-                if not data_types:
-                    type_ = ANY
-                    self.import_ = self.import_ or IMPORT_ANY
-                elif len(data_types) == 1:
-                    type_ = data_types[0]
-                elif self.use_union_operator:
-                    type_ = UNION_OPERATOR_DELIMITER.join(data_types)
-                else:
-                    type_ = f"{UNION_PREFIX}{UNION_DELIMITER.join(data_types)}]"
-                if self.discriminator:
-                    type_ = f"Annotated[{type_}, Field(discriminator={self.discriminator!r})]"
-            elif len(self.data_types) == 1:
-                type_ = self.data_types[0].type_hint
-            elif self.enum_member_literals:
-                parts = [f"{enum_class}.{member}" for enum_class, member in self.enum_member_literals]
-                type_ = f"{LITERAL}[{', '.join(parts)}]"
-            elif self.literals:
-                type_ = f"{LITERAL}[{', '.join(repr(literal) for literal in self.literals)}]"
-            elif self.reference:
-                type_ = self.reference.short_name
-                type_ = self._get_wrapped_reference_type_hint(type_)
-            else:
-                # TODO support strict Any
-                type_ = ""
+            type_ = self._render_nested_type_hint(use_base_type_hint=False, wrap_discriminator=True)
         if self.reference:
-            source = self.reference.source
-            is_alias = getattr(source, "is_alias", False)
-            if isinstance(source, Nullable) and source.nullable and not is_alias:
-                self.is_optional = True
-        if self.is_frozen_set:
-            set_ = STANDARD_FROZEN_SET if self.use_standard_collections else FROZEN_SET
-            type_ = f"{set_}[{type_}]" if type_ else set_
-        elif self.is_set:
-            if self.use_generic_container:
-                set_ = STANDARD_FROZEN_SET if self.use_standard_collections else FROZEN_SET
-            elif self.use_standard_collections:
-                set_ = STANDARD_SET
-            else:  # pragma: no cover
-                set_ = SET
-            type_ = f"{set_}[{type_}]" if type_ else set_
-        elif self.is_sequence:
-            list_ = SEQUENCE
-            type_ = f"{list_}[{type_}]" if type_ else list_
-        elif self.is_list:
-            if self.use_generic_container:
-                list_ = SEQUENCE
-            elif self.use_standard_collections:
-                list_ = STANDARD_LIST
-            else:
-                list_ = LIST
-            type_ = f"{list_}[{type_}]" if type_ else list_
-        elif self.is_mapping:
-            dict_ = MAPPING
-            if self.dict_key or type_:
-                key = self.dict_key.type_hint if self.dict_key else STR
-                type_ = f"{dict_}[{key}, {type_ or ANY}]"
-            else:  # pragma: no cover
-                type_ = dict_
-        elif self.is_dict:
-            if self.use_generic_container:
-                dict_ = MAPPING
-            elif self.use_standard_collections:
-                dict_ = STANDARD_DICT
-            else:
-                dict_ = DICT
-            if self.dict_key or type_:
-                key = self.dict_key.type_hint if self.dict_key else STR
-                type_ = f"{dict_}[{key}, {type_ or ANY}]"
-            else:  # pragma: no cover
-                type_ = dict_
+            self._apply_nullable_from_reference()
+        has_collection_container = self.is_frozen_set or self.is_set or self.is_sequence
+        has_mapping_container = self.is_list or self.is_mapping or self.is_dict
+        if has_collection_container or has_mapping_container:
+            type_ = self._wrap_container_type_hint(
+                type_,
+                self._TYPE_HINT_CONTAINER_ORDER,
+                use_base_type_hint=False,
+            )
         if self.is_optional and type_ != ANY:
             return get_optional_type(type_, self.use_union_operator)
         if self.is_func and self.kwargs:
-            kwargs: str = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
+            kwargs: str = ", ".join(f"{k}={represent_python_value(v)}" for k, v in self.kwargs.items())
             return f"{type_}({kwargs})"
         return type_
 
@@ -796,7 +1036,7 @@ class DataType(_BaseModel):
     }
 
     @property
-    def base_type_hint(self) -> str:  # noqa: PLR0912, PLR0915
+    def base_type_hint(self) -> str:
         """Return the base type hint without constrained type kwargs.
 
         For types like constr(pattern=..., min_length=...), this returns just 'str'.
@@ -821,83 +1061,15 @@ class DataType(_BaseModel):
 
         type_: str | None = self.alias or self.type
         if not type_:
-            if self.is_tuple:  # pragma: no cover
-                tuple_type = STANDARD_TUPLE if self.use_standard_collections else TUPLE
-                inner_types = [item.base_type_hint or ANY for item in self.data_types]
-                type_ = f"{tuple_type}[{', '.join(inner_types)}]" if inner_types else f"{tuple_type}[()]"
-            elif self.is_union:
-                data_types: list[str] = []
-                for data_type in self.data_types:
-                    data_type_type = data_type.base_type_hint
-                    if not data_type_type or data_type_type in data_types:  # pragma: no cover
-                        continue
-
-                    if data_type_type == NONE:
-                        self.is_optional = True
-                        continue
-
-                    non_optional_data_type_type = _remove_none_from_union(
-                        data_type_type, use_union_operator=self.use_union_operator
-                    )
-
-                    if non_optional_data_type_type != data_type_type:  # pragma: no cover
-                        self.is_optional = True
-
-                    data_types.append(non_optional_data_type_type)
-                if not data_types:  # pragma: no cover
-                    type_ = ANY
-                    self.import_ = self.import_ or IMPORT_ANY
-                elif len(data_types) == 1:
-                    type_ = data_types[0]
-                elif self.use_union_operator:
-                    type_ = UNION_OPERATOR_DELIMITER.join(data_types)
-                else:  # pragma: no cover
-                    type_ = f"{UNION_PREFIX}{UNION_DELIMITER.join(data_types)}]"
-            elif len(self.data_types) == 1:
-                type_ = self.data_types[0].base_type_hint
-            elif self.enum_member_literals:  # pragma: no cover
-                parts = [f"{enum_class}.{member}" for enum_class, member in self.enum_member_literals]
-                type_ = f"{LITERAL}[{', '.join(parts)}]"
-            elif self.literals:  # pragma: no cover
-                type_ = f"{LITERAL}[{', '.join(repr(literal) for literal in self.literals)}]"
-            elif self.reference:  # pragma: no cover
-                type_ = self.reference.short_name
-                type_ = self._get_wrapped_reference_type_hint(type_)
-            else:  # pragma: no cover
-                type_ = ""
-        if self.reference:  # pragma: no cover
-            source = self.reference.source
-            is_alias = getattr(source, "is_alias", False)
-            if isinstance(source, Nullable) and source.nullable and not is_alias:
-                self.is_optional = True
-        if self.is_list:
-            if self.use_generic_container:
-                list_ = SEQUENCE
-            elif self.use_standard_collections:
-                list_ = STANDARD_LIST
-            else:  # pragma: no cover
-                list_ = LIST
-            type_ = f"{list_}[{type_}]" if type_ else list_
-        elif self.is_set:  # pragma: no cover
-            if self.use_generic_container:
-                set_ = STANDARD_FROZEN_SET if self.use_standard_collections else FROZEN_SET
-            elif self.use_standard_collections:
-                set_ = STANDARD_SET
-            else:
-                set_ = SET
-            type_ = f"{set_}[{type_}]" if type_ else set_
-        elif self.is_dict:
-            if self.use_generic_container:
-                dict_ = MAPPING
-            elif self.use_standard_collections:
-                dict_ = STANDARD_DICT
-            else:  # pragma: no cover
-                dict_ = DICT
-            if self.dict_key or type_:
-                key = self.dict_key.base_type_hint if self.dict_key else STR
-                type_ = f"{dict_}[{key}, {type_ or ANY}]"
-            else:  # pragma: no cover
-                type_ = dict_
+            type_ = self._render_nested_type_hint(use_base_type_hint=True, wrap_discriminator=False)
+        if self.reference:
+            self._apply_nullable_from_reference()
+        if self.is_list or self.is_set or self.is_dict:
+            type_ = self._wrap_container_type_hint(
+                type_,
+                self._BASE_TYPE_HINT_CONTAINER_ORDER,
+                use_base_type_hint=True,
+            )
 
         if self.is_optional and type_ != ANY:
             return get_optional_type(type_, self.use_union_operator)
@@ -953,6 +1125,38 @@ class Types(Enum):
     any = auto()
 
 
+@cache
+def _create_context_data_type(  # noqa: PLR0913, PLR0917
+    model_name: str,
+    base: type[DataType],
+    python_version: PythonVersion,
+    use_standard_collections: bool,  # noqa: FBT001
+    use_generic_container: bool,  # noqa: FBT001
+    use_union_operator: bool,  # noqa: FBT001
+    treat_dot_as_module: bool | None,  # noqa: FBT001
+    use_serialize_as_any: bool,  # noqa: FBT001
+) -> type[DataType]:
+    """Create or reuse a DataType subclass with context-specific defaults.
+
+    Building a pydantic model class is expensive; the class is fully determined
+    by its arguments, so identical configurations share one class.
+    """
+    context_data_type: type[DataType] = create_model(
+        model_name,
+        python_version=(PythonVersion, python_version),
+        use_standard_collections=(bool, use_standard_collections),
+        use_generic_container=(bool, use_generic_container),
+        use_union_operator=(bool, use_union_operator),
+        treat_dot_as_module=(bool, treat_dot_as_module),
+        use_serialize_as_any=(bool, use_serialize_as_any),
+        __base__=base,
+    )
+    from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace  # noqa: PLC0415
+
+    _rebuild_model_with_datamodel_namespace(context_data_type)
+    return context_data_type
+
+
 class DataTypeManager(ABC):
     """Abstract base class for managing type mappings in code generation.
 
@@ -999,19 +1203,16 @@ class DataTypeManager(ABC):
         self.treat_dot_as_module: bool = treat_dot_as_module or False
         self.use_serialize_as_any: bool = use_serialize_as_any
 
-        self.data_type: type[DataType] = create_model(
+        self.data_type: type[DataType] = _create_context_data_type(
             "ContextDataType",
-            python_version=(PythonVersion, python_version),
-            use_standard_collections=(bool, use_standard_collections),
-            use_generic_container=(bool, use_generic_container_types),
-            use_union_operator=(bool, use_union_operator),
-            treat_dot_as_module=(bool, treat_dot_as_module),
-            use_serialize_as_any=(bool, use_serialize_as_any),
-            __base__=DataType,
+            DataType,
+            python_version,
+            use_standard_collections,
+            use_generic_container_types,
+            use_union_operator,
+            treat_dot_as_module,
+            use_serialize_as_any,
         )
-        from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace  # noqa: PLC0415
-
-        _rebuild_model_with_datamodel_namespace(self.data_type)
 
     @abstractmethod
     def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
@@ -1020,10 +1221,30 @@ class DataTypeManager(ABC):
 
     @staticmethod
     def copy_data_type(data_type: DataType) -> DataType:
-        """Copy a type-map prototype for caller-owned mutation."""
-        copied_data_type = deepcopy(data_type)
-        for nested_data_type in copied_data_type.all_data_types:
-            nested_data_type.children = []
+        """Copy a type-map prototype for caller-owned mutation.
+
+        Leaf prototypes (no nested data types, reference, dict key, or parent)
+        take a shallow-copy fast path with fresh mutable containers, which is
+        equivalent to deepcopy because every other shared value is immutable
+        (scalars, enums, and the frozen Import dataclass).
+        """
+        if (
+            data_type.data_types
+            or data_type.reference is not None
+            or data_type.dict_key is not None
+            or data_type.parent is not None
+        ):
+            copied_data_type = deepcopy(data_type)
+            for nested_data_type in copied_data_type.all_data_types:
+                nested_data_type.children = []
+            return copied_data_type
+        copied_data_type = data_type.model_copy()
+        copied_data_type.data_types = []
+        copied_data_type.children = []
+        copied_data_type.literals = list(data_type.literals)
+        copied_data_type.enum_member_literals = list(data_type.enum_member_literals)
+        if (kwargs := data_type.kwargs) is not None:
+            copied_data_type.kwargs = deepcopy(kwargs)
         return copied_data_type
 
     def get_data_type_from_full_path(self, full_path: str, is_custom_type: bool) -> DataType:  # noqa: FBT001

@@ -19,10 +19,8 @@ from datamodel_code_generator import (
     LiteralType,
     snooper_to_methods,
 )
-from datamodel_code_generator.format import DatetimeClassType
-from datamodel_code_generator.model.dataclass import DataClass
+from datamodel_code_generator._format_types import DatetimeClassType
 from datamodel_code_generator.model.enum import SPECIALIZED_ENUM_TYPE_MATCH, Enum
-from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticV2DataClass
 from datamodel_code_generator.parser.base import (
     DataType,
     Parser,
@@ -44,7 +42,7 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator._types import GraphQLParserConfigDict
     from datamodel_code_generator.config import GraphQLParserConfig
-    from datamodel_code_generator.model import DataModel, DataModelFieldBase
+    from datamodel_code_generator.model import DataModelFieldBase
     from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 # graphql-core >=3.2.7 removed TypeResolvers in favor of TypeFields.kind.
@@ -81,7 +79,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
     all_graphql_objects: dict[str, graphql.GraphQLNamedType]
     # a reference for each object
     # mapper from an object name to his reference
-    references: dict[str, Reference] = {}  # noqa: RUF012
+    references: dict[str, Reference]
     # mapper from graphql type to all objects with this type
     # `graphql.type.introspection.TypeKind` -- an enum with all supported types
     # `graphql.GraphQLNamedType` -- base type for each graphql object
@@ -110,16 +108,14 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
         """Initialize the GraphQL parser with configuration options."""
         if config is None and options.get("target_datetime_class") is None:
             options["target_datetime_class"] = DatetimeClassType.Datetime
-        use_standard_collections = (
-            config.use_standard_collections if config else options.get("use_standard_collections", False)
-        )
-        use_union_operator = config.use_union_operator if config else options.get("use_union_operator", False)
         super().__init__(source=source, config=config, **options)
 
+        self.references: dict[str, Reference] = {}
+        self.all_graphql_objects: dict[str, graphql.GraphQLNamedType] = {}
         self.data_model_scalar_type = self.config.data_model_scalar_type
         self.data_model_union_type = self.config.data_model_union_type
-        self.use_standard_collections = use_standard_collections
-        self.use_union_operator = use_union_operator
+        self.use_standard_collections = self.config.use_standard_collections
+        self.use_union_operator = self.config.use_union_operator
 
     def _resolve_types(self, paths: list[str], schema: graphql.GraphQLSchema) -> None:
         for type_name, type_ in schema.type_map.items():
@@ -143,32 +139,6 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
 
                 self.support_graphql_types[resolved_type].append(type_)
 
-    def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
-        """Create data model instance with dataclass_arguments support for DataClass."""
-        # Add class decorators if not already provided
-        if "decorators" not in kwargs and self.class_decorators:
-            kwargs["decorators"] = list(self.class_decorators)
-        data_model_class = model_type or self.data_model_type
-        if issubclass(data_model_class, (DataClass, PydanticV2DataClass)):
-            # Use dataclass_arguments from kwargs, or fall back to self.dataclass_arguments
-            # If both are None, construct from legacy frozen_dataclasses/keyword_only flags
-            dataclass_arguments = kwargs.pop("dataclass_arguments", None)
-            if dataclass_arguments is None:
-                dataclass_arguments = self.dataclass_arguments
-            if dataclass_arguments is None:
-                # Construct from legacy flags for library API compatibility
-                dataclass_arguments = {}
-                if self.frozen_dataclasses:
-                    dataclass_arguments["frozen"] = True
-                if self.keyword_only:
-                    dataclass_arguments["kw_only"] = True
-            kwargs["dataclass_arguments"] = dataclass_arguments
-            kwargs.pop("frozen", None)
-            kwargs.pop("keyword_only", None)
-        else:
-            kwargs.pop("dataclass_arguments", None)
-        return data_model_class(**kwargs)
-
     def _typename_field(self, name: str) -> DataModelFieldBase:
         return self.data_model_field_type(
             name="typename__",
@@ -191,18 +161,22 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
     def _get_default(  # noqa: PLR6301
         self,
         field: graphql.GraphQLField | graphql.GraphQLInputField,
-        final_data_type: DataType,
+        final_data_type: DataType,  # noqa: ARG002
         *,
-        required: bool,
+        required: bool,  # noqa: ARG002
     ) -> Any:
         if isinstance(field, graphql.GraphQLInputField):
             if field.default_value == graphql.pyutils.Undefined:
                 return None
             return field.default_value
-        if required is False and final_data_type.is_list:
-            return None
 
         return None
+
+    def _has_schema_default(  # noqa: PLR6301
+        self, field: graphql.GraphQLField | graphql.GraphQLInputField
+    ) -> bool:
+        """Return whether a GraphQL input field defines a schema default."""
+        return isinstance(field, graphql.GraphQLInputField) and field.default_value != graphql.pyutils.Undefined
 
     def parse_scalar(self, scalar_graphql_object: graphql.GraphQLScalarType) -> None:  # ty: ignore
         """Parse a GraphQL scalar type and add it to results."""
@@ -361,10 +335,16 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             # Only happens for Query and Mutation root types
             data_type.type = obj.name
 
-        required = (not self.force_optional_for_required_fields) and (not final_data_type.is_optional)
+        has_schema_default = self._has_schema_default(field)
+        required = (
+            (not self.force_optional_for_required_fields)
+            and (not final_data_type.is_optional)
+            and not has_schema_default
+        )
+        nullable = False if has_schema_default and not final_data_type.is_optional else None
 
         default = self._get_default(field, final_data_type, required=required)
-        has_default = default is not None
+        has_default = has_schema_default
 
         effective_default, effective_has_default = self.model_resolver.resolve_default_value(
             original_field_name,
@@ -392,6 +372,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             default=effective_default,
             data_type=final_data_type,
             required=required,
+            nullable=nullable,
             extras=extras,
             alias=single_alias,
             validation_aliases=validation_aliases,

@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-from math import inf, nan
 from pydantic import BaseModel, ConfigDict, Field, conint
 
 from . import (
@@ -22,12 +21,12 @@ class ExampleSpecProto2SpecProto2(BaseModel):
     decimal_default: int | None = -42
     hex_default: int | None = 42
     octal_default: conint(ge=0, le=4294967295) | None = 42
-    pos_inf: float | None = inf
-    neg_inf: float | None = -inf
-    not_a_number: float | None = nan
+    pos_inf: float | None = float('inf')
+    neg_inf: float | None = float('-inf')
+    not_a_number: float | None = float('nan')
     enabled: bool | None = False
     single_quoted: str | None = 'single'
-    escaped_bytes: bytes | None = '\\001\\002'
+    escaped_bytes: bytes | None = b'\x01\x02'
     state: example_spec_proto2_proto2_state.ExampleSpecProto2Proto2State | None = (
         'PROTO2_ACTIVE'
     )

@@ -13,7 +13,7 @@ from pydantic import AnyUrl, AwareDatetime, BaseModel
 class DatatypeSample(BaseModel):
     notation: str | None = None
     timestamp: AwareDatetime
-    yearMonth: timedelta | None = None
+    yearMonth: str | None = None
     dayTime: timedelta | None = None
     atomic: Any | None = None
 

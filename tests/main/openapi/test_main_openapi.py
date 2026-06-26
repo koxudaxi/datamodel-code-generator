@@ -6,6 +6,7 @@ import contextlib
 import json
 import platform
 import re
+import sys
 import warnings
 from collections import defaultdict
 from pathlib import Path
@@ -27,10 +28,14 @@ from datamodel_code_generator import (
     generate,
     get_version,
     inferred_message,
+    load_data_from_path,
 )
+from datamodel_code_generator import reference as reference_module
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.model import base as model_base
+from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA
+from datamodel_code_generator.reference import get_singular_name
 from tests.conftest import (
     HttpxGetMockFactory,
     MockHttpxResponse,
@@ -50,6 +55,7 @@ from tests.main.conftest import (
     OPEN_API_DATA_PATH,
     TIMESTAMP,
     assert_generated_model_json_validation,
+    run_generate_file_and_assert,
     run_main_and_assert,
     run_main_url_and_assert,
     run_main_with_args,
@@ -66,6 +72,22 @@ EXTERNAL_REF_MAPPING_DATA_PATH = OPEN_API_DATA_PATH / "external_ref_mapping"
 @pytest.mark.benchmark
 def test_main(output_file: Path) -> None:
     """Test OpenAPI file code generation."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="general.py",
+    )
+
+
+def test_main_inflect_import_without_typeguard_leak(output_file: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """OpenAPI generation should keep expected output when inflect starts cold."""
+    monkeypatch.delitem(sys.modules, "inflect", raising=False)
+    monkeypatch.delitem(sys.modules, "typeguard", raising=False)
+    monkeypatch.setattr(reference_module, "_inflect_engine", None)
+    get_singular_name.cache_clear()
+
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
@@ -487,6 +509,22 @@ def test_main_openapi_discriminator_short_mapping_names(output_file: Path) -> No
     )
 
 
+def test_main_openapi_discriminator_external_mapping(output_file: Path) -> None:
+    """Mapping-only discriminator subtypes can be external refs."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_external_mapping" / "openapi.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "external_mapping.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+    )
+
+
 def test_main_openapi_discriminator_partial_mapping(output_file: Path) -> None:
     """Missing discriminator mappings fall back to the subtype name."""
     run_main_and_assert(
@@ -682,6 +720,7 @@ def test_main_modular_filename(output_file: Path) -> None:
     )
 
 
+@pytest.mark.isolate_builtin_formatter_config
 def test_main_openapi_no_file(
     capsys: pytest.CaptureFixture[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -702,12 +741,13 @@ def test_main_openapi_no_file(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+@pytest.mark.isolate_builtin_formatter_config
 @pytest.mark.cli_doc(
     options=["--extra-template-data"],
-    option_description="""Pass custom template variables from JSON file for code generation.
+    option_description="""Pass custom template variables via inline JSON or a JSON file path.
 
 The `--extra-template-data` flag allows you to provide additional variables
-(from a JSON file) that can be used in custom templates to configure generated
+from an inline JSON object or JSON file that can be used in custom templates to configure generated
 model settings like Config classes, enabling customization beyond standard options.""",
     input_schema="openapi/api.yaml",
     cli_args=["--extra-template-data", "openapi/extra_data.json"],
@@ -720,10 +760,10 @@ def test_main_openapi_extra_template_data_config(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Pass custom template variables from JSON file for code generation.
+    """Pass custom template variables via inline JSON or a JSON file path.
 
     The `--extra-template-data` flag allows you to provide additional variables
-    (from a JSON file) that can be used in custom templates to configure generated
+    from an inline JSON object or JSON file that can be used in custom templates to configure generated
     model settings like Config classes, enabling customization beyond standard options.
     """
     monkeypatch.chdir(tmp_path)
@@ -744,6 +784,7 @@ def test_main_openapi_extra_template_data_config(
         )
 
 
+@pytest.mark.isolate_builtin_formatter_config
 def test_main_custom_template_dir_old_style(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -778,6 +819,7 @@ to the templates.""",
     cli_args=["--custom-template-dir", "templates", "--extra-template-data", "openapi/extra_data.json"],
     golden_output="openapi/custom_template_dir.py",
 )
+@pytest.mark.isolate_builtin_formatter_config
 def test_main_openapi_custom_template_dir(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -806,6 +848,7 @@ def test_main_openapi_custom_template_dir(
         )
 
 
+@pytest.mark.isolate_builtin_formatter_config
 def test_main_openapi_custom_template_dir_include_override(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -832,6 +875,7 @@ def test_main_openapi_custom_template_dir_include_override(
         )
 
 
+@pytest.mark.isolate_builtin_formatter_config
 def test_main_openapi_schema_extensions(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -844,6 +888,31 @@ def test_main_openapi_schema_extensions(
             input_path=OPEN_API_DATA_PATH / "schema_extensions.yaml",
             output_path=None,
             expected_stdout_path=EXPECTED_OPENAPI_PATH / "schema_extensions.py",
+            capsys=capsys,
+            input_file_type=None,
+            extra_args=[
+                "--custom-template-dir",
+                str(DATA_PATH / "templates_extensions"),
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+            ],
+            expected_stderr=inferred_message.format("openapi") + "\n",
+        )
+
+
+@pytest.mark.isolate_builtin_formatter_config
+def test_main_openapi_schema_extensions_enum(
+    capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that enum schema extensions (x-* fields) are passed to custom enum templates."""
+    model_base._get_environment.cache_clear()
+    model_base._get_template_with_custom_dir.cache_clear()
+    monkeypatch.chdir(tmp_path)
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "schema_extensions_enum.yaml",
+            output_path=None,
+            expected_stdout_path=EXPECTED_OPENAPI_PATH / "schema_extensions_enum.py",
             capsys=capsys,
             input_file_type=None,
             extra_args=[
@@ -875,7 +944,8 @@ def test_pyproject(tmp_path: Path) -> None:
     output_file: Path = tmp_path / "output.py"
     pyproject_toml_path = Path(DATA_PATH) / "project" / "pyproject.toml"
     pyproject_toml = (
-        pyproject_toml_path.read_text()
+        pyproject_toml_path
+        .read_text()
         .replace("INPUT_PATH", get_path(OPEN_API_DATA_PATH / "api.yaml"))
         .replace("OUTPUT_PATH", get_path(output_file))
         .replace("ALIASES_PATH", get_path(OPEN_API_DATA_PATH / "empty_aliases.json"))
@@ -1075,9 +1145,9 @@ def test_main_without_field_constraints(output_file: Path) -> None:
 )
 @pytest.mark.cli_doc(
     options=["--aliases"],
-    option_description="""Apply custom field and class name aliases from JSON file.
+    option_description="""Apply custom field and class name aliases via inline JSON or a JSON file path.
 
-The `--aliases` option allows renaming fields and classes via a JSON mapping file,
+The `--aliases` option allows renaming fields and classes via an inline JSON object or JSON mapping file,
 providing fine-grained control over generated names independent of schema definitions.""",
     input_schema="openapi/api.yaml",
     cli_args=["--aliases", "openapi/aliases.json", "--target-python-version", "3.10"],
@@ -1087,9 +1157,9 @@ providing fine-grained control over generated names independent of schema defini
     primary=True,
 )
 def test_main_with_aliases(output_model: str, expected_output: str, output_file: Path) -> None:
-    """Apply custom field and class name aliases from JSON file.
+    """Apply custom field and class name aliases via inline JSON or a JSON file path.
 
-    The `--aliases` option allows renaming fields and classes via a JSON mapping file,
+    The `--aliases` option allows renaming fields and classes via an inline JSON object or JSON mapping file,
     providing fine-grained control over generated names independent of schema definitions.
     """
     run_main_and_assert(
@@ -1237,6 +1307,57 @@ def test_main_with_strip_default_none(output_file: Path) -> None:
         input_file_type=None,
         assert_func=assert_file_content,
         extra_args=["--strip-default-none"],
+    )
+
+
+def test_main_openapi_pydantic_v2_strip_default_none_field_metadata(output_file: Path) -> None:
+    """Test strip-default-none removes implicit None defaults from Field metadata."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "strip_default_none_pydantic_v2.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="strip_default_none_pydantic_v2.py",
+        extra_args=["--strip-default-none", "--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model_type", "target_python_version", "expected_file"),
+    [
+        (
+            "dataclasses.dataclass",
+            "3.10",
+            "strip_default_none_semantic_dataclass.py",
+        ),
+        (
+            "msgspec.Struct",
+            "3.10",
+            "strip_default_none_semantic_msgspec.py",
+        ),
+    ],
+    ids=["dataclass", "msgspec"],
+)
+def test_main_openapi_strip_default_none_semantic_default(
+    output_model_type: str,
+    target_python_version: str,
+    expected_file: str,
+    output_file: Path,
+) -> None:
+    """Test strip-default-none treats only actual None defaults as None."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "strip_default_none_semantic.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--strip-default-none",
+            "--output-model-type",
+            output_model_type,
+            "--target-python-version",
+            target_python_version,
+        ],
     )
 
 
@@ -1895,6 +2016,31 @@ def test_main_openapi_pattern_with_lookaround_pydantic_v2(
     )
 
 
+@pytest.mark.parametrize(
+    ("expected_output", "args"),
+    [
+        ("pattern_with_lookaround_pydantic_v2_dataclass.py", []),
+        (
+            "pattern_with_lookaround_pydantic_v2_dataclass_field_constraints.py",
+            ["--field-constraints"],
+        ),
+    ],
+)
+def test_main_openapi_pattern_with_lookaround_pydantic_v2_dataclass(
+    expected_output: str, args: list[str], output_file: Path
+) -> None:
+    """Test OpenAPI generation with pattern lookaround for Pydantic v2 dataclasses."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "pattern_lookaround.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--target-python-version", "3.10", "--output-model-type", "pydantic_v2.dataclass", *args],
+        force_exec_validation=True,
+    )
+
+
 def test_main_generate_custom_class_name_generator_modular(
     tmp_path: Path,
 ) -> None:
@@ -1947,13 +2093,13 @@ def test_main_http_openapi_with_custom_port(mock_httpx_get: HttpxGetMockFactory,
     """Test OpenAPI code generation from HTTP URL with custom port preserves port in refs."""
     httpx_get_mock = mock_httpx_get(
         MockHttpxResponse(
-            "http://127.0.0.1:8123/openapi.json",
+            "https://example.com:8123/openapi.json",
             OPEN_API_DATA_PATH / "http_openapi_with_custom_port.yaml",
         )
     )
 
     run_main_url_and_assert(
-        url="http://127.0.0.1:8123/openapi.json",
+        url="https://example.com:8123/openapi.json",
         output_path=output_file,
         input_file_type=None,
         assert_func=assert_file_content,
@@ -1961,7 +2107,7 @@ def test_main_http_openapi_with_custom_port(mock_httpx_get: HttpxGetMockFactory,
         extra_args=["--disable-timestamp"],
     )
 
-    assert_httpx_get_kwargs(httpx_get_mock, expected_url="http://127.0.0.1:8123/openapi.json")
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com:8123/openapi.json")
 
 
 @pytest.mark.cli_doc(
@@ -2175,11 +2321,12 @@ def test_main_openapi_nullable_use_union_operator(output_file: Path) -> None:
 
 def test_external_relative_ref(tmp_path: Path) -> None:
     """Test OpenAPI generation with external relative references."""
-    run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "external_relative_ref" / "model_b",
-        output_path=tmp_path,
-        expected_directory=EXPECTED_OPENAPI_PATH / "external_relative_ref",
-    )
+    with pytest.warns(FutureWarning, match=r"outside the input base path"):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "external_relative_ref" / "model_b",
+            output_path=tmp_path,
+            expected_directory=EXPECTED_OPENAPI_PATH / "external_relative_ref",
+        )
 
 
 def test_paths_external_ref(output_file: Path) -> None:
@@ -2277,6 +2424,17 @@ def test_main_openapi_const(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="const_pydantic_v2.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_openapi_const_optional_values(output_file: Path) -> None:
+    """Do not treat optional non-literal const values as schema defaults."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "const_optional_values_31.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="const_optional_values_31.py",
     )
 
 
@@ -2910,7 +3068,10 @@ def test_main_dataclass_base_class(output_file: Path) -> None:
 def test_main_openapi_reference_same_hierarchy_directory(tmp_path: Path) -> None:
     """Test OpenAPI generation with reference in same hierarchy directory."""
     output_file: Path = tmp_path / "output.py"
-    with chdir(OPEN_API_DATA_PATH / "reference_same_hierarchy_directory"):
+    with (
+        chdir(OPEN_API_DATA_PATH / "reference_same_hierarchy_directory"),
+        pytest.warns(FutureWarning, match=r"outside the input base path"),
+    ):
         run_main_and_assert(
             input_path=Path("./public/entities.yaml"),
             output_path=output_file,
@@ -4131,6 +4292,62 @@ def test_main_openapi_webhooks(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_item_schema(output_file: Path) -> None:
+    """Test OpenAPI 3.2 itemSchema in media type objects."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "item_schema.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="item_schema.py",
+        extra_args=[
+            "--disable-timestamp",
+            "--openapi-scopes",
+            "schemas",
+            "paths",
+            "parameters",
+            "requestbodies",
+        ],
+    )
+
+
+def test_main_openapi_item_schema_requires_32(output_file: Path) -> None:
+    """Test OpenAPI 3.1 ignores OpenAPI 3.2 itemSchema in media type objects."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "item_schema_31.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="item_schema_31.py",
+        extra_args=[
+            "--disable-timestamp",
+            "--openapi-scopes",
+            "schemas",
+            "paths",
+            "parameters",
+            "requestbodies",
+        ],
+    )
+
+
+def test_main_openapi_querystring_parameter_requires_32(output_file: Path) -> None:
+    """Test OpenAPI 3.1 ignores OpenAPI 3.2 querystring parameters."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "querystring_parameter_31.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="querystring_parameter_31.py",
+        extra_args=[
+            "--disable-timestamp",
+            "--openapi-scopes",
+            "schemas",
+            "paths",
+            "parameters",
+        ],
+    )
+
+
 def test_main_openapi_non_operations_and_security(output_file: Path) -> None:
     """Test OpenAPI generation with non-operation fields and security inheritance."""
     run_main_and_assert(
@@ -4139,6 +4356,24 @@ def test_main_openapi_non_operations_and_security(output_file: Path) -> None:
         input_file_type="openapi",
         assert_func=assert_file_content,
         extra_args=["--openapi-scopes", "schemas", "paths", "webhooks"],
+    )
+
+
+def test_generate_openapi_keeps_referenced_path_item_original_unchanged(output_file: Path) -> None:
+    """Keep cached referenced OpenAPI path items unchanged while inheriting operation metadata."""
+    input_path = OPEN_API_DATA_PATH / "referenced_path_item_mutation_guard" / "openapi.yaml"
+    path_item_path = OPEN_API_DATA_PATH / "referenced_path_item_mutation_guard" / "path-item.yml"
+    cached_path_item = load_data_from_path(path_item_path.resolve(), "utf-8")
+
+    run_generate_file_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type=InputFileType.OpenAPI,
+        assert_func=assert_file_content,
+        expected_file="referenced_path_item_mutation_guard.py",
+        disable_timestamp=True,
+        openapi_scopes=[OpenAPIScope.Schemas, OpenAPIScope.Paths],
+        unchanged_inputs={"cached path-item.yml": cached_path_item},
     )
 
 
@@ -5469,6 +5704,21 @@ def test_main_openapi_deprecated_field(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="deprecated_field.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+@pytest.mark.skipif(
+    not PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA,
+    reason="Pydantic 2.7+ supports Field(deprecated=...) directly",
+)
+def test_main_openapi_deprecated_field_pydantic26(output_file: Path) -> None:
+    """Test OpenAPI deprecated fields stay importable before native Pydantic support."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "deprecated_field.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
     )
 
 

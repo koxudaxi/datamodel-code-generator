@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import asdict, dataclass
 from typing import Literal
+
+from datamodel_code_generator._registry_render import _render_registry_json, _render_registry_table
 
 ExperimentalFeatureKind = Literal["input-format", "formatter", "cli-option", "python-api", "behavior"]
 ExperimentalFeatureFormat = Literal["table", "json", "markdown"]
@@ -12,6 +13,7 @@ ExperimentalFeatureId = Literal[
     "cli-option.generate-schema-validators",
     "input-format.asyncapi",
     "input-format.avro",
+    "input-format.mcp-tools",
     "input-format.protobuf",
     "input-format.xmlschema",
     "formatter.builtin",
@@ -61,6 +63,17 @@ EXPERIMENTAL_FEATURES: dict[ExperimentalFeatureId, ExperimentalFeature] = {
         since_version="0.59.0",
         note="The parser generates Python models from Avro schemas; it does not provide Avro runtime validation.",
     ),
+    "input-format.mcp-tools": ExperimentalFeature(
+        id="input-format.mcp-tools",
+        kind="input-format",
+        target="--input-file-type mcp-tools",
+        message="MCP tool schema profile input support is experimental and may change as MCP schemas evolve.",
+        since_version="0.60.0",
+        note=(
+            "The input is converted from MCP tool inputSchema/outputSchema entries into JSON Schema definitions before "
+            "model generation."
+        ),
+    ),
     "input-format.protobuf": ExperimentalFeature(
         id="input-format.protobuf",
         kind="input-format",
@@ -103,16 +116,12 @@ def experimental_feature_as_dict(feature: ExperimentalFeature) -> dict[str, str 
 
 def render_experimental_features_json() -> str:
     """Render all experimental features as JSON."""
-    return json.dumps(
-        [experimental_feature_as_dict(feature) for feature in iter_experimental_features()],
-        indent=2,
-        sort_keys=True,
-    )
+    return _render_registry_json(experimental_feature_as_dict(feature) for feature in iter_experimental_features())
 
 
 def render_experimental_features_table() -> str:
     """Render all experimental features as a plain text table."""
-    rows = [
+    return _render_registry_table([
         [
             "ID",
             "Kind",
@@ -130,14 +139,7 @@ def render_experimental_features_table() -> str:
             ]
             for feature in iter_experimental_features()
         ],
-    ]
-    widths = [max(len(row[index]) for row in rows) for index in range(len(rows[0]))]
-    lines = [
-        "  ".join(value.ljust(widths[index]) for index, value in enumerate(rows[0])),
-        "  ".join("-" * width for width in widths),
-    ]
-    lines.extend("  ".join(value.ljust(widths[index]) for index, value in enumerate(row)) for row in rows[1:])
-    return "\n".join(lines) + "\n"
+    ])
 
 
 def render_experimental_features_markdown(*, include_header: bool = True) -> str:

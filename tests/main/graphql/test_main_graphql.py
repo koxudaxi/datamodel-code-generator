@@ -131,6 +131,17 @@ def test_main_graphql_empty_list_default(output_file: Path) -> None:
     )
 
 
+def test_main_graphql_field_enum_default(output_file: Path) -> None:
+    """Test GraphQL enum default values keep the default option behavior."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "field-default-enum.graphql",
+        output_path=output_file,
+        assert_func=assert_file_content,
+        expected_file="field_default_enum.py",
+        input_file_type="graphql",
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
@@ -153,18 +164,18 @@ def test_main_graphql_custom_scalar_types(output_file: Path) -> None:
 )
 @pytest.mark.cli_doc(
     options=["--aliases"],
-    option_description="""Apply custom field and class name aliases from JSON file.
+    option_description="""Apply custom field and class name aliases via inline JSON or a JSON file path.
 
-The `--aliases` option allows you to rename fields using a JSON mapping file.
+The `--aliases` option allows you to rename fields using an inline JSON object or JSON mapping file.
 Supports hierarchical formats for scoped or global aliasing.""",
     input_schema="graphql/field-aliases.graphql",
     cli_args=["--aliases", "graphql/field-aliases.json"],
     golden_output="graphql/field_aliases.py",
 )
 def test_main_graphql_field_aliases(output_file: Path) -> None:
-    """Apply custom field and class name aliases from JSON file.
+    """Apply custom field and class name aliases via inline JSON or a JSON file path.
 
-    The `--aliases` option allows you to rename fields using a JSON mapping file.
+    The `--aliases` option allows you to rename fields using an inline JSON object or JSON mapping file.
     Supports hierarchical formats for scoped or global aliasing.
     """
     run_main_and_assert(
@@ -442,6 +453,44 @@ def test_main_graphql_union(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("extra_args", "expected_file"),
+    [
+        (
+            ["--target-python-version", "3.10", "--output-model-type", "pydantic_v2.BaseModel"],
+            "union_description_cr_pydantic_v2.py",
+        ),
+        (
+            ["--target-python-version", "3.10", "--output-model-type", "dataclasses.dataclass"],
+            "union_description_cr_dataclass.py",
+        ),
+        pytest.param(
+            ["--target-python-version", "3.12", "--output-model-type", "pydantic_v2.BaseModel"],
+            "union_description_cr_py312.py",
+            marks=pytest.mark.skipif(
+                int(black.__version__.split(".")[0]) < 23,
+                reason="Installed black doesn't support the new 'type' statement",
+            ),
+        ),
+    ],
+)
+def test_main_graphql_union_description_comment_is_safe(
+    output_file: Path,
+    extra_args: list[str],
+    expected_file: str,
+) -> None:
+    """Test GraphQL union descriptions with CR in generated comments."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "union-description-cr.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=extra_args,
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
@@ -496,6 +545,25 @@ def test_main_graphql_additional_imports_in_extra_template_data(output_file: Pat
         extra_args=[
             "--extra-template-data",
             str(GRAPHQL_DATA_PATH / "additional-imports-in-extra-template-data.json"),
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_graphql_additional_imports_in_extra_template_data_inline_json(output_file: Path) -> None:
+    """Test extra-template-data loaded from inline JSON."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "additional-imports.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="additional_imports.py",
+        extra_args=[
+            "--extra-template-data",
+            (GRAPHQL_DATA_PATH / "additional-imports-in-extra-template-data.json").read_text(encoding="utf-8"),
         ],
     )
 
@@ -911,6 +979,22 @@ def test_main_graphql_use_default_with_default_values(output_file: Path) -> None
             "--use-default",
             "--default-values",
             str(DEFAULT_VALUES_DATA_PATH / "graphql_user_defaults.json"),
+        ],
+    )
+
+
+def test_main_graphql_use_default_with_default_values_inline_json(output_file: Path) -> None:
+    """Test --default-values loaded from inline JSON for GraphQL."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "default_values_required.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="default_values_required_use_default.py",
+        extra_args=[
+            "--use-default",
+            "--default-values",
+            (DEFAULT_VALUES_DATA_PATH / "graphql_user_defaults.json").read_text(encoding="utf-8"),
         ],
     )
 

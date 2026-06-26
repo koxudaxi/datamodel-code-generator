@@ -2,17 +2,28 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+from typing import TYPE_CHECKING
+
 import pytest
 
+from datamodel_code_generator.parser._math_imports import add_math_imports_for_non_finite_literals
+from datamodel_code_generator.python_literal import PythonCode, represent_python_value
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import (
     DataType,
+    _contains_decimal,
     _remove_none_from_union,
+    chain_as_tuple,
     extract_qualified_names,
     get_optional_type,
     get_subscript_args,
     get_type_base_name,
+    normalize_integer_constraint,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @pytest.mark.parametrize(
@@ -52,6 +63,20 @@ from datamodel_code_generator.types import (
 def test_get_optional_type(input_: str, use_union_operator: bool, expected: str) -> None:
     """Test get_optional_type function with various type strings."""
     assert get_optional_type(input_, use_union_operator) == expected
+
+
+def test_get_optional_type_cache_clear_preserves_value() -> None:
+    """Clearing the bounded cache must not change get_optional_type results."""
+    optional_type = get_optional_type("str | None", True)
+
+    get_optional_type.cache_clear()
+
+    assert get_optional_type("str | None", True) == optional_type
+
+
+def test_chain_as_tuple_chains_multiple_iterables() -> None:
+    """Test chain_as_tuple handles the general path for more than two iterables."""
+    assert chain_as_tuple((1,), (2,), (3,)) == (1, 2, 3)
 
 
 @pytest.mark.parametrize(
@@ -192,6 +217,8 @@ def test_datatype_deepcopy_with_circular_references() -> None:
 
 def test_datatype_remove_reference_detaches_compatibility_child() -> None:
     """Test removing a reference keeps the reference children list in sync."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+
     reference = Reference(path="Model", original_name="Model", name="Model")
     data_type = DataType(reference=reference)
 
@@ -199,6 +226,63 @@ def test_datatype_remove_reference_detaches_compatibility_child() -> None:
 
     assert data_type.reference is None
     assert [child is data_type for child in reference.children] == []
+
+
+def test_hostname_regex_aliases_canonical_data_type_manager() -> None:
+    """Test model modules reuse the canonical hostname regex."""
+    from datamodel_code_generator.model import types as model_types
+    from datamodel_code_generator.model.pydantic_v2 import types as pydantic_v2_types
+    from datamodel_code_generator.types import DataTypeManager as BaseDataTypeManager
+
+    assert model_types.HOSTNAME_REGEX is BaseDataTypeManager.HOSTNAME_REGEX
+    assert model_types.DataTypeManager.HOSTNAME_REGEX is BaseDataTypeManager.HOSTNAME_REGEX
+    assert pydantic_v2_types.HOSTNAME_REGEX is BaseDataTypeManager.HOSTNAME_REGEX
+    assert pydantic_v2_types._PydanticDataTypeManager.HOSTNAME_REGEX is BaseDataTypeManager.HOSTNAME_REGEX
+    assert pydantic_v2_types.DataTypeManager.HOSTNAME_REGEX is BaseDataTypeManager.HOSTNAME_REGEX
+
+
+def test_python_literal_helpers_render_code_and_tuple_values() -> None:
+    """Test Python literal rendering for raw code and tuple containers."""
+    raw = PythonCode("datetime_module.date.fromisoformat('2026-01-01')", "2026-01-01")
+
+    assert repr(raw) == "datetime_module.date.fromisoformat('2026-01-01')"
+    assert represent_python_value((raw,)) == "(datetime_module.date.fromisoformat('2026-01-01'),)"
+    assert represent_python_value((1, "two")) == "(1, 'two')"
+    assert represent_python_value(set()) == "set()"
+
+
+def test_add_math_imports_inserts_after_generated_header() -> None:
+    """Test non-finite math imports are inserted after headers and future imports."""
+    body = "# generated\nfrom __future__ import annotations\n\nvalue = inf\n"
+
+    assert add_math_imports_for_non_finite_literals(body) == (
+        "# generated\nfrom __future__ import annotations\n\nfrom math import inf\nvalue = inf"
+    )
+
+
+def test_add_math_imports_keeps_existing_import() -> None:
+    """Test non-finite math imports are not duplicated."""
+    body = "from math import inf, nan\n\nvalue = inf\nother = nan\n"
+
+    assert add_math_imports_for_non_finite_literals(body) == body
+
+
+def test_add_math_imports_ignores_non_literal_matches() -> None:
+    """Test non-finite math imports ignore strings, attributes, and longer names."""
+    body = "label = 'inf'\nvalue = math.nan\nname = infinite\n"
+
+    assert add_math_imports_for_non_finite_literals(body) == body
+
+
+def test_decimal_detection_and_integer_constraint_edges() -> None:
+    """Test Decimal detection and integer constraint normalization edge cases."""
+    sentinel = object()
+
+    assert _contains_decimal([Decimal(1)])
+    assert normalize_integer_constraint("ge", sentinel) == ("ge", sentinel)
+    assert normalize_integer_constraint("le", 1.5) == ("le", 1)
+    assert normalize_integer_constraint("lt", 1.5) == ("le", 1)
+    assert normalize_integer_constraint("unknown", 1.5) == ("unknown", 1.5)
 
 
 def test_datatype_deepcopy_with_nested_data_types() -> None:
@@ -273,6 +357,223 @@ def test_datatype_deepcopy_with_none_memo() -> None:
     assert copied.type == "TestType"
     assert copied.is_optional is True
     assert copied is not data_type
+
+
+def test_datatype_type_hint_container_precedence_matches_base_type_hint() -> None:
+    """Pin asymmetric container precedence for type_hint and base_type_hint."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+
+    cases = [
+        (DataType(type="str", is_list=True, is_set=True), "Set[str]", "List[str]"),
+        (DataType(type="str", is_frozen_set=True, is_list=True), "FrozenSet[str]", "List[str]"),
+        (DataType(type="str", is_sequence=True), "Sequence[str]", "str"),
+        (DataType(type="str", is_mapping=True), "Mapping[str, str]", "str"),
+    ]
+
+    for data_type, expected_type_hint, expected_base_type_hint in cases:
+        assert data_type.type_hint == expected_type_hint
+        assert data_type.base_type_hint == expected_base_type_hint
+
+
+def test_datatype_type_hint_uses_dict_key_render_selector() -> None:
+    """Pin dict key rendering for constrained key types."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+
+    data_type = DataType(
+        type="str",
+        is_dict=True,
+        dict_key=DataType(type="constr", is_func=True, kwargs={"pattern": "^a$"}),
+    )
+
+    assert data_type.type_hint == "Dict[constr(pattern='^a$'), str]"
+    assert data_type.base_type_hint == "Dict[str, str]"
+
+
+def test_datatype_type_hint_keeps_bare_dict_without_inner_type() -> None:
+    """Pin bare dict rendering when no key or value type is available."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+
+    data_type = DataType(is_dict=True)
+
+    assert data_type.type_hint == "Dict"
+    assert data_type.base_type_hint == "Dict"
+
+
+def test_datatype_type_hint_without_container_flag_returns_inner_type() -> None:
+    """Pin the fallback path when no configured container flag matches."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+
+    data_type = DataType(data_types=[DataType(type="str")])
+
+    assert data_type.type_hint == "str"
+    wrapped_type_hint = data_type._wrap_container_type_hint(
+        "str",
+        ("list",),
+        use_base_type_hint=False,
+    )
+    assert wrapped_type_hint == "str"
+    data_type._apply_nullable_from_reference()
+    assert data_type.is_optional is False
+
+
+def test_datatype_module_name_reads_reference_source_attribute() -> None:
+    """Pin module-name lookup through the reference source."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+
+    class ModuleReferenceSource:
+        reference = None
+        module_name = "pkg.models"
+
+    reference = Reference(
+        path="Model",
+        name="Model",
+        source=ModuleReferenceSource(),
+    )
+    data_type = DataType(reference=reference)
+
+    assert data_type.module_name == "pkg.models"
+
+
+def test_datatype_base_type_hint_applies_reference_nullability() -> None:
+    """Pin nullable reference propagation for base type hints."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+
+    class NullableReferenceSource:
+        reference = None
+        nullable = True
+        is_alias = False
+
+    reference = Reference(
+        path="Model",
+        name="Model",
+        source=NullableReferenceSource(),
+    )
+    data_type = DataType(reference=reference)
+
+    assert data_type.base_type_hint == "Optional[Model]"
+
+
+def test_datatype_nullable_reference_keeps_alias_non_optional() -> None:
+    """Pin alias guard before applying reference nullability."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+
+    class AliasNullableReferenceSource:
+        reference = None
+        nullable = True
+        is_alias = True
+
+    reference = Reference(
+        path="Model",
+        name="Model",
+        source=AliasNullableReferenceSource(),
+    )
+    data_type = DataType(reference=reference)
+
+    data_type._apply_nullable_from_reference()
+
+    assert data_type.is_optional is False
+
+
+@pytest.mark.parametrize(
+    ("data_types", "expected_type_hint", "expected_base_type_hint"),
+    [
+        (
+            lambda: [DataType(type="str"), DataType(type="str", is_optional=True)],
+            "Union[str, Optional[str]]",
+            "Union[str, Optional[str]]",
+        ),
+        (
+            lambda: [DataType(type="str", is_optional=True), DataType(type="str")],
+            "Union[Optional[str], str]",
+            "Union[Optional[str], str]",
+        ),
+        (
+            lambda: [
+                DataType(type="constr", is_func=True, kwargs={"pattern": "^a$"}),
+                DataType(type="constr", is_func=True, kwargs={"pattern": "^a$"}, is_optional=True),
+            ],
+            "Union[constr(pattern='^a$'), Optional[constr]]",
+            "Union[str, Optional[str]]",
+        ),
+        (
+            lambda: [
+                DataType(type="constr", is_func=True, kwargs={"pattern": "^a$"}, is_optional=True),
+                DataType(type="constr", is_func=True, kwargs={"pattern": "^a$"}),
+            ],
+            "Union[Optional[constr], constr(pattern='^a$')]",
+            "Union[Optional[str], str]",
+        ),
+    ],
+)
+def test_datatype_union_rendering_preserves_order_and_base_selector(
+    data_types: Callable[[], list[DataType]],
+    expected_type_hint: str,
+    expected_base_type_hint: str,
+) -> None:
+    """Pin order-sensitive union rendering and base hint recursion."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+
+    data_type = DataType(data_types=data_types())
+
+    assert data_type.type_hint == expected_type_hint
+    assert data_type.base_type_hint == expected_base_type_hint
+
+
+@pytest.mark.parametrize(
+    ("first_hint", "expected_first", "expected_second"),
+    [
+        ("type_hint", "Optional[str]", "Optional[str]"),
+        ("base_type_hint", "Optional[str]", "Optional[str]"),
+    ],
+)
+def test_datatype_repeated_property_access_preserves_mutation_carryover(
+    first_hint: str,
+    expected_first: str,
+    expected_second: str,
+) -> None:
+    """Pin mutation carryover when child type hints are evaluated repeatedly."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+
+    child = DataType(data_types=[DataType(type="str"), DataType(type="None")])
+    data_type = DataType(data_types=[child])
+
+    if first_hint == "type_hint":
+        assert data_type.type_hint == expected_first
+        assert data_type.base_type_hint == expected_second
+    else:
+        assert data_type.base_type_hint == expected_first
+        assert data_type.type_hint == expected_second
+    assert data_type.is_optional is False
+    assert child.is_optional is True
+
+
+@pytest.mark.parametrize(
+    ("data_type_factory", "expected_type_hint", "expected_base_type_hint"),
+    [
+        (
+            lambda: DataType(type="constr", is_func=True, kwargs={"pattern": "^a$"}, is_optional=True),
+            "Optional[constr]",
+            "Optional[str]",
+        ),
+        (
+            lambda: DataType(type="conint", is_func=True, kwargs={"gt": 0}, is_optional=True),
+            "Optional[conint]",
+            "Optional[conint]",
+        ),
+    ],
+)
+def test_datatype_optional_func_type_hint_order(
+    data_type_factory: Callable[[], DataType],
+    expected_type_hint: str,
+    expected_base_type_hint: str,
+) -> None:
+    """Pin optional wrapping before function kwargs rendering."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+
+    data_type = data_type_factory()
+
+    assert data_type.type_hint == expected_type_hint
+    assert data_type.base_type_hint == expected_base_type_hint
 
 
 def test_datatype_deepcopy_memo_cache_hit() -> None:

@@ -2,10 +2,26 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
+from datamodel_code_generator import InputFileType
 from datamodel_code_generator.__main__ import Exit
-from tests.main.conftest import XML_SCHEMA_DATA_PATH, run_main_and_assert
+from datamodel_code_generator.parser import xmlschema as xmlschema_parser
+from datamodel_code_generator.parser.xmlschema import (
+    _clear_xml_schema_data_cache,
+    _clear_xml_text_cache,
+    _load_xml_schema_data_from_path,
+    _read_xml_text,
+)
+from tests.main.conftest import (
+    XML_SCHEMA_DATA_PATH,
+    assert_path_cache_evicts_lru_entries,
+    assert_path_cache_invalidates_after_write,
+    assert_path_cache_reuses_value,
+    run_generate_file_and_assert,
+    run_main_and_assert,
+)
 from tests.main.xmlschema.conftest import assert_file_content
 
 if TYPE_CHECKING:
@@ -22,6 +38,101 @@ def test_main_xmlschema_purchase_order(output_file: Path) -> None:
         input_file_type="xmlschema",
         assert_func=assert_file_content,
         expected_file="purchase_order.py",
+    )
+
+
+def test_main_xmlschema_with_parsed_source_cache(output_file: Path) -> None:
+    """Generate XML Schema models with process-local parsed source cache enabled."""
+    _clear_xml_schema_data_cache()
+    run_generate_file_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "purchase_order.xsd",
+        output_path=output_file,
+        input_file_type=InputFileType.XMLSchema,
+        assert_func=assert_file_content,
+        expected_file="purchase_order.py",
+    )
+
+
+def test_read_xml_text_caches_raw_source(tmp_path: Path) -> None:
+    """Reuse raw XML source text by path and content hash."""
+    schema_path = tmp_path / "schema.xsd"
+    schema_path.write_text(
+        (XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    _clear_xml_text_cache()
+
+    assert_path_cache_reuses_value(_read_xml_text, schema_path, warmups=1)
+
+
+def test_read_xml_text_invalidates_updated_raw_source(tmp_path: Path) -> None:
+    """Reload raw XML source text when the local file changes."""
+    schema_path = tmp_path / "schema.xsd"
+    schema_path.write_text(
+        (XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    _clear_xml_text_cache()
+
+    updated_text = (XML_SCHEMA_DATA_PATH / "inline_root.xsd").read_text(encoding="utf-8")
+    assert_path_cache_invalidates_after_write(
+        _read_xml_text,
+        schema_path,
+        updated_text,
+        updated_text.replace("\n", os.linesep),
+    )
+
+
+def test_read_xml_text_evicts_lru_entries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Evict old raw XML text cache entries after the configured limit."""
+    monkeypatch.setattr(xmlschema_parser, "_XML_TEXT_CACHE_MAX_SIZE", 1)
+    _clear_xml_text_cache()
+    first_path = tmp_path / "first.xsd"
+    second_path = tmp_path / "second.xsd"
+    first_text = (XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8")
+    second_text = (XML_SCHEMA_DATA_PATH / "inline_root.xsd").read_text(encoding="utf-8")
+    first_path.write_text(first_text, encoding="utf-8")
+    second_path.write_text(second_text, encoding="utf-8")
+
+    assert_path_cache_evicts_lru_entries(_read_xml_text, first_path, second_path)
+
+
+def test_load_xml_schema_data_from_path_evicts_lru_entries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Evict old converted XML Schema cache entries after the configured limit."""
+    monkeypatch.setattr(xmlschema_parser, "_XML_SCHEMA_DATA_CACHE_MAX_SIZE", 1)
+    _clear_xml_schema_data_cache()
+    _clear_xml_text_cache()
+    first_path = tmp_path / "first.xsd"
+    second_path = tmp_path / "second.xsd"
+    first_path.write_text((XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8"), encoding="utf-8")
+    second_path.write_text((XML_SCHEMA_DATA_PATH / "inline_root.xsd").read_text(encoding="utf-8"), encoding="utf-8")
+
+    kwargs = {
+        "base_path": tmp_path,
+        "encoding": "utf-8",
+        "xmlschema_version": None,
+        "schema_version_mode": None,
+        "use_xmlschema_datetime_default": False,
+    }
+
+    def load_schema_data(path: Path, encoding: str) -> object:  # noqa: ARG001
+        return _load_xml_schema_data_from_path(path, **kwargs)
+
+    assert_path_cache_evicts_lru_entries(load_schema_data, first_path, second_path)
+
+
+def test_main_xmlschema_purchase_order_from_normalized_external_path(tmp_path: Path, output_file: Path) -> None:
+    """Generate XML Schema models when the external input path needs normalization."""
+    redirect_dir = tmp_path / "redirect"
+    redirect_dir.mkdir()
+    run_main_and_assert(
+        input_path=redirect_dir / ".." / "purchase_order.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="purchase_order.py",
+        copy_files=[
+            (XML_SCHEMA_DATA_PATH / "purchase_order.xsd", tmp_path / "purchase_order.xsd"),
+            (XML_SCHEMA_DATA_PATH / "common.xsd", tmp_path / "common.xsd"),
+        ],
     )
 
 
@@ -54,6 +165,72 @@ def test_main_xmlschema_edge_cases(output_file: Path) -> None:
         input_file_type="xmlschema",
         assert_func=assert_file_content,
         expected_file="edge_cases.py",
+    )
+
+
+def test_main_xmlschema_fixed_decimal(output_file: Path) -> None:
+    """Generate Decimal defaults for fixed XML Schema decimal values."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "fixed_decimal.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="fixed_decimal.py",
+    )
+
+
+def test_main_xmlschema_special_float_defaults(output_file: Path) -> None:
+    """Generate non-finite float defaults from XML Schema lexical values."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "special_float_defaults.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="special_float_defaults.py",
+    )
+
+
+def test_main_xmlschema_special_float_bounds(output_file: Path) -> None:
+    """Generate non-finite float bounds from XML Schema lexical values."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "special_float_bounds.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="special_float_bounds.py",
+    )
+
+
+def test_main_xmlschema_union_defaults(output_file: Path) -> None:
+    """Generate typed defaults for XML Schema union values."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "union_defaults.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="union_defaults.py",
+    )
+
+
+def test_main_xmlschema_boolean_whitespace_defaults(output_file: Path) -> None:
+    """Generate boolean defaults after XML Schema whitespace normalization."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "boolean_whitespace_defaults.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="boolean_whitespace_defaults.py",
+    )
+
+
+def test_main_xmlschema_temporal_defaults(output_file: Path) -> None:
+    """Generate typed defaults for XML Schema temporal lexical values."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "temporal_defaults.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="temporal_defaults.py",
     )
 
 
@@ -197,6 +374,17 @@ def test_main_xmlschema_spec_constructs(output_file: Path) -> None:
         input_file_type="xmlschema",
         assert_func=assert_file_content,
         expected_file="spec_constructs.py",
+    )
+
+
+def test_main_xmlschema_list_defaults(output_file: Path) -> None:
+    """Generate list-typed defaults from XML Schema list lexical values."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "list_defaults.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="list_defaults.py",
     )
 
 
@@ -475,6 +663,120 @@ def test_main_xmlschema_builtin_datatypes_matrix(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_datetime_classes_default(output_file: Path) -> None:
+    """Use XML Schema datetime defaults when no datetime class option is set."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "datetime_classes.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="datetime_classes.py",
+    )
+
+
+def test_main_xmlschema_datetime_classes_naive(output_file: Path) -> None:
+    """Respect an explicit NaiveDatetime class for XML Schema date-time types."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "datetime_classes.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="datetime_classes_naive.py",
+        extra_args=["--output-datetime-class", "NaiveDatetime"],
+    )
+
+
+def test_main_xmlschema_datetime_classes_aware(output_file: Path) -> None:
+    """Respect an explicit AwareDatetime class for XML Schema date-time types."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "datetime_classes.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="datetime_classes_aware.py",
+        extra_args=["--output-datetime-class", "AwareDatetime"],
+    )
+
+
+def test_main_xmlschema_blocks_relative_schema_location_outside_base_path(
+    capsys: pytest.CaptureFixture[str],
+    output_file: Path,
+) -> None:
+    """Reject XML Schema includes that resolve outside the input base path."""
+    project_dir = output_file.parent / "project"
+    secret_dir = output_file.parent / "secret"
+    project_dir.mkdir()
+    secret_dir.mkdir()
+    (secret_dir / "leak.xsd").write_text(
+        """<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="Leaked"><xs:restriction base="xs:string"/></xs:simpleType>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+    input_file = project_dir / "attack.xsd"
+    input_file.write_text(
+        """<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:include schemaLocation="../secret/leak.xsd"/>
+  <xs:element name="Root" type="Leaked"/>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="xmlschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Blocked unsafe XML Schema schemaLocation",
+        output_should_not_exist=True,
+    )
+
+
+def test_main_xmlschema_blocks_absolute_schema_location_outside_base_path(
+    capsys: pytest.CaptureFixture[str],
+    output_file: Path,
+) -> None:
+    """Reject absolute XML Schema includes outside the input base path."""
+    project_dir = output_file.parent / "project"
+    secret_dir = output_file.parent / "secret"
+    project_dir.mkdir()
+    secret_dir.mkdir()
+    secret_schema = secret_dir / "leak.xsd"
+    secret_schema.write_text(
+        """<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="Leaked"><xs:restriction base="xs:string"/></xs:simpleType>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+    input_file = project_dir / "attack.xsd"
+    input_file.write_text(
+        f"""<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:include schemaLocation="{secret_schema}"/>
+  <xs:element name="Root" type="Leaked"/>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="xmlschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Blocked unsafe XML Schema schemaLocation",
+        output_should_not_exist=True,
+    )
+
+
 def test_main_xmlschema_parse_error(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Report invalid XML Schema syntax through the CLI."""
     run_main_and_assert(
@@ -484,7 +786,7 @@ def test_main_xmlschema_parse_error(capsys: pytest.CaptureFixture[str], output_f
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Invalid XML Schema document",
-        assert_output_path_not_exists=True,
+        output_should_not_exist=True,
     )
 
 
@@ -497,7 +799,7 @@ def test_main_xmlschema_wrong_root_error(capsys: pytest.CaptureFixture[str], out
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="XML Schema root element must be xs:schema",
-        assert_output_path_not_exists=True,
+        output_should_not_exist=True,
     )
 
 
@@ -509,7 +811,7 @@ def test_main_xmlschema_auto_broken_xml_error(capsys: pytest.CaptureFixture[str]
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Can't infer input file type",
-        assert_output_path_not_exists=True,
+        output_should_not_exist=True,
     )
 
 
@@ -521,5 +823,5 @@ def test_main_xmlschema_auto_wrong_root_error(capsys: pytest.CaptureFixture[str]
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Can't infer input file type",
-        assert_output_path_not_exists=True,
+        output_should_not_exist=True,
     )

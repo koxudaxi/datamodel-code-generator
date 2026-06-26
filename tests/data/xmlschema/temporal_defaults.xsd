@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="Root">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="eventDate" type="xs:date" minOccurs="0" default="2026-06-04"/>
+        <xs:element name="eventTime" type="xs:time" minOccurs="0" default="12:34:56Z"/>
+        <xs:element name="eventAt" type="xs:dateTime" minOccurs="0" default="2026-06-04T12:34:56Z"/>
+        <xs:element name="duration" type="xs:dayTimeDuration" minOccurs="0" default="P1DT2H3M4.5S"/>
+        <xs:element name="dates" minOccurs="0" default="2026-06-04 2026-06-05">
+          <xs:simpleType>
+            <xs:list itemType="xs:date"/>
+          </xs:simpleType>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute name="stampedAt" type="xs:dateTimeStamp" default="2026-06-04T21:34:56+09:00"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

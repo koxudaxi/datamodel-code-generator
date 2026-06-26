@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package skill;
+
+message SkillMessage {
+  string id = 1;
+  int32 count = 2;
+  repeated string tags = 3;
+}

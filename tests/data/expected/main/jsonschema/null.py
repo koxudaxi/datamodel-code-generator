@@ -6,11 +6,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Model(BaseModel):
-    null: None = None
+    null: None = Field(None)
     nullableString: str | None = None
     nullableNumber: float | int | None = None
     any: Any | None = None

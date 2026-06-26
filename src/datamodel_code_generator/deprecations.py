@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import json
 import warnings
 from dataclasses import asdict, dataclass
 from typing import Literal
+
+from datamodel_code_generator._registry_render import _render_registry_json, _render_registry_table
 
 DeprecationKind = Literal["cli-option", "python-api", "config", "behavior", "schema"]
 DeprecationStatus = Literal["active", "scheduled"]
@@ -17,6 +18,7 @@ DeprecationId = Literal[
     "cli.parent-scoped-naming",
     "cli.validation",
     "config.yaml-non-lowercase-bool",
+    "config.json-config-strict-validation",
     "format.default-formatters",
     "python-api.python-version-has-type-alias",
     "schema.jsonschema-items-array",
@@ -91,9 +93,15 @@ DEPRECATIONS: dict[DeprecationId, Deprecation] = {
         message="Remote $ref fetching without --allow-remote-refs is deprecated.",
         warning_since="0.56.0",
         removal_version=None,
-        replacement="Pass --allow-remote-refs or --no-allow-remote-refs explicitly.",
+        replacement=(
+            "Pass --allow-remote-refs for trusted remote schemas, or --no-allow-remote-refs to block HTTP(S) "
+            "$ref fetching."
+        ),
         warning_category="FutureWarning",
-        note="The current default allows remote fetching for compatibility; the scheduled default is disabled.",
+        note=(
+            "The current default allows remote fetching for compatibility; the scheduled default is disabled. "
+            "Private, loopback, link-local, and otherwise non-public network targets require --allow-private-network."
+        ),
     ),
     "format.default-formatters": Deprecation(
         id="format.default-formatters",
@@ -113,6 +121,19 @@ DEPRECATIONS: dict[DeprecationId, Deprecation] = {
         warning_since="0.48.0",
         removal_version=None,
         replacement="Use lowercase true or false.",
+    ),
+    "config.json-config-strict-validation": Deprecation(
+        id="config.json-config-strict-validation",
+        kind="config",
+        target="JSON configuration values accepted by legacy validation",
+        message=(
+            "JSON configuration values that do not match the documented schema are deprecated and will become "
+            "validation errors in a future release."
+        ),
+        warning_since="0.64.2",
+        removal_version=None,
+        replacement="Update the JSON configuration to match --output-format-json-schema config.",
+        warning_category="FutureWarning",
     ),
     "python-api.python-version-has-type-alias": Deprecation(
         id="python-api.python-version-has-type-alias",
@@ -190,16 +211,12 @@ def deprecation_as_dict(deprecation: Deprecation) -> dict[str, str | None]:
 
 def render_deprecations_json() -> str:
     """Render all deprecations as JSON."""
-    return json.dumps(
-        [deprecation_as_dict(deprecation) for deprecation in iter_deprecations()],
-        indent=2,
-        sort_keys=True,
-    )
+    return _render_registry_json(deprecation_as_dict(deprecation) for deprecation in iter_deprecations())
 
 
 def render_deprecations_table() -> str:
     """Render all deprecations as a plain text table."""
-    rows = [
+    return _render_registry_table([
         [
             "ID",
             "Kind",
@@ -219,14 +236,7 @@ def render_deprecations_table() -> str:
             ]
             for deprecation in iter_deprecations()
         ],
-    ]
-    widths = [max(len(row[index]) for row in rows) for index in range(len(rows[0]))]
-    lines = [
-        "  ".join(value.ljust(widths[index]) for index, value in enumerate(rows[0])),
-        "  ".join("-" * width for width in widths),
-    ]
-    lines.extend("  ".join(value.ljust(widths[index]) for index, value in enumerate(row)) for row in rows[1:])
-    return "\n".join(lines) + "\n"
+    ])
 
 
 def render_deprecations_markdown(*, include_header: bool = True) -> str:

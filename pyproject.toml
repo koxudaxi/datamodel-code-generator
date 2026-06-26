@@ -243,11 +243,50 @@ filterwarnings = [
   "ignore:^.*The default external formatters.*:FutureWarning",
 ]
 norecursedirs = [ "tests/data/*", ".hypothesis", ".tox" ]
+assert_helper_direct_assert_exempt_files = [
+  "cli_doc/test_cli_options_sync.py",
+  "main/test_dynamic_models.py",
+  "main/test_performance.py",
+  "main/test_public_api_signature_baseline.py",
+  "main/test_types.py",
+  "model/dataclass/test_param.py",
+  "model/pydantic_v2/test_dataclass.py",
+  "model/pydantic_v2/test_root_model.py",
+  "model/pydantic_v2/test_root_model_type_alias.py",
+  "model/test_base.py",
+  "model/test_dataclass.py",
+  "parser/test_base.py",
+  "parser/test_generation.py",
+  "parser/test_generation_store_usage.py",
+  "parser/test_graphql.py",
+  "parser/test_jsonschema.py",
+  "parser/test_openapi.py",
+  "parser/test_scc.py",
+  "parser/test_schema_version.py",
+  "test_assert_helper_usage.py",
+  "test_build_conformance_docs_script.py",
+  "test_build_deprecation_docs_script.py",
+  "test_build_experimental_docs_script.py",
+  "test_conftest_helpers.py",
+  "test_deprecations.py",
+  "test_experimental.py",
+  "test_format.py",
+  "test_generate_changelog_script.py",
+  "test_http.py",
+  "test_imports.py",
+  "test_infer_input_type.py",
+  "test_input_model.py",
+  "test_reference.py",
+  "test_resolver.py",
+  "test_types.py",
+  "test_yaml_backend.py",
+]
 verbosity_assertions = 2
 markers = [
   "perf: marks tests as performance tests (excluded from CI benchmarks)",
   "benchmark: marks tests as benchmark tests",
-  "allow_direct_assert: marks e2e tests where direct assert statements are intentionally allowed",
+  "allow_direct_assert: marks guarded tests where direct assert statements are intentionally allowed",
+  "isolate_builtin_formatter_config: marks tests that must not inherit repository formatter config",
 ]
 
 [tool.coverage]
@@ -265,12 +304,18 @@ paths.other = [
   "*/datamodel-code-generator",
   "*\\datamodel-code-generator",
 ]
+paths.skill_tests = [
+  "tests/skills/datamodel-code-generator",
+  "*/datamodel-code-generator/tests/skills/datamodel-code-generator",
+  "*\\datamodel-code-generator\\tests\\skills\\datamodel-code-generator",
+]
 run.dynamic_context = "none"
 run.omit = [
   "*/_types/*",
   "tests/cli_doc/*",
   "tests/data/*",
   "tests/main/payload_validation/*",
+  "tests/main/test_jsonschema_suite_conformance.py",
   "tests/main/test_performance.py",
 ]
 report.fail_under = 0
@@ -307,6 +352,7 @@ extends = "config-types-base"
 input-model = "src/datamodel_code_generator/config.py:GenerateConfig"
 output = "src/datamodel_code_generator/_types/generate_config_dict.py"
 class-name = "GenerateConfigDict"
+type-overrides = { "BaseGenerateConfig.preset" = "datamodel_code_generator.preset_names.PresetName" }
 
 [tool.datamodel-codegen.profiles.parser-config-dicts]
 extends = "config-types-base"

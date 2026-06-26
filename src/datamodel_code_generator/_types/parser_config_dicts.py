@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from datamodel_code_generator.enums import (
+        AliasGenerator,
         AllOfClassHierarchy,
         AllOfMergeMode,
         AsyncAPIVersion,
@@ -53,6 +54,7 @@ class ParserConfigDict(TypedDict):
     data_model_field_type: NotRequired[type[DataModelFieldBase]]
     base_class: NotRequired[str | None]
     base_class_map: NotRequired[dict[str, str | list[str]] | None]
+    model_name_map: NotRequired[dict[str, str] | None]
     additional_imports: NotRequired[list[str] | None]
     class_decorators: NotRequired[list[str] | None]
     custom_template_dir: NotRequired[Path | None]
@@ -64,6 +66,7 @@ class ParserConfigDict(TypedDict):
     dump_resolve_reference_action: NotRequired[Callable[[Iterable[str]], str] | None]
     validation: NotRequired[bool]
     field_constraints: NotRequired[bool]
+    alias_generator: NotRequired[AliasGenerator | None]
     snake_case_field: NotRequired[bool]
     strip_default_none: NotRequired[bool]
     aliases: NotRequired[Mapping[str, str | list[str]] | None]
@@ -75,6 +78,7 @@ class ParserConfigDict(TypedDict):
     use_generic_base_class: NotRequired[bool]
     force_optional_for_required_fields: NotRequired[bool]
     class_name: NotRequired[str | None]
+    allow_leading_underscore_class_name: NotRequired[bool]
     class_name_prefix: NotRequired[str | None]
     class_name_suffix: NotRequired[str | None]
     class_name_affix_scope: NotRequired[ClassNameAffixScope]
@@ -112,6 +116,7 @@ class ParserConfigDict(TypedDict):
     model_extra_keys_without_x_prefix: NotRequired[set[str] | None]
     wrap_string_literal: NotRequired[bool | None]
     use_title_as_name: NotRequired[bool]
+    infer_union_variant_names: NotRequired[bool]
     use_operation_id_as_name: NotRequired[bool]
     use_unique_items_as_set: NotRequired[bool]
     use_tuple_for_fixed_items: NotRequired[bool]
@@ -119,6 +124,7 @@ class ParserConfigDict(TypedDict):
     allof_merge_mode: NotRequired[AllOfMergeMode]
     allof_class_hierarchy: NotRequired[AllOfClassHierarchy]
     allow_remote_refs: NotRequired[bool | None]
+    allow_private_network: NotRequired[bool]
     http_headers: NotRequired[Sequence[tuple[str, str]] | None]
     http_local_ref_path: NotRequired[Path | None]
     http_ignore_tls: NotRequired[bool]
@@ -135,6 +141,7 @@ class ParserConfigDict(TypedDict):
     collapse_root_models_name_strategy: NotRequired[CollapseRootModelsNameStrategy | None]
     collapse_reuse_models: NotRequired[bool]
     skip_root_model: NotRequired[bool]
+    use_root_model_sequence_interface: NotRequired[bool]
     use_type_alias: NotRequired[bool]
     special_field_name_prefix: NotRequired[str | None]
     remove_special_field_name_prefix: NotRequired[bool]

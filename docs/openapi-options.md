@@ -11,7 +11,7 @@ When working with OpenAPI specifications, datamodel-code-generator provides seve
 | `--openapi-scopes` | Select which parts of the spec to generate models from |
 | `--include-path-parameters` | Include path parameters in generated models |
 | `--use-operation-id-as-name` | Name models using operation IDs |
-| `--read-only-write-only-model-type` | Generate separate models for read/write contexts |
+| `--read-only-write-only-model-type` | Generate separate models for request/response contexts |
 | `--validation` | Enable OpenAPI validation constraints (deprecated) |
 
 ---
@@ -167,7 +167,9 @@ class GetUserByIdResponse(BaseModel):  # Uses operationId
 
 ## `--read-only-write-only-model-type`
 
-Generates separate model variants for properties marked as `readOnly` or `writeOnly` in OpenAPI.
+Generates separate request/response model variants for properties marked as `readOnly` or `writeOnly` in OpenAPI.
+
+See [CLI Reference: `--read-only-write-only-model-type`](cli-reference/openapi-only-options.md#read-only-write-only-model-type) for the full option reference.
 
 ### OpenAPI Example
 
@@ -196,38 +198,33 @@ class User(BaseModel):
     name: Optional[str] = None
 ```
 
-### With `--read-only-write-only-model-type`
+### With `--read-only-write-only-model-type request-response`
 
 ```bash
 datamodel-codegen --input openapi.yaml --output models.py \
-  --read-only-write-only-model-type all
+  --read-only-write-only-model-type request-response
 ```
 
 ```python
-class User(BaseModel):
-    """Base model with all fields."""
-    id: Optional[int] = None
-    password: Optional[str] = None
-    name: Optional[str] = None
-
-class UserRead(BaseModel):
-    """For responses - excludes writeOnly fields."""
-    id: Optional[int] = None
-    name: Optional[str] = None
-
-class UserWrite(BaseModel):
+class UserRequest(BaseModel):
     """For requests - excludes readOnly fields."""
     password: Optional[str] = None
     name: Optional[str] = None
+
+class UserResponse(BaseModel):
+    """For responses - excludes writeOnly fields."""
+    id: Optional[int] = None
+    name: Optional[str] = None
 ```
+
+Use `all` instead of `request-response` when you also need the base model with all fields.
 
 ### Values
 
 | Value | Description |
 |-------|-------------|
-| `all` | Generate both Read and Write variants |
-| `read` | Generate only Read variants |
-| `write` | Generate only Write variants |
+| `request-response` | Generate request and response variants |
+| `all` | Generate the base model plus request and response variants |
 
 ### When to use
 
@@ -283,7 +280,7 @@ For APIs with distinct input/output shapes:
 
 ```bash
 datamodel-codegen --input openapi.yaml --output models/ \
-  --read-only-write-only-model-type all \
+  --read-only-write-only-model-type request-response \
   --field-constraints
 ```
 
@@ -306,6 +303,7 @@ datamodel-codegen --input openapi.yaml --output models/ \
 |-----------------|---------|
 | 3.0.x | Full support |
 | 3.1.x | Full support |
+| 3.2.x | Full support |
 | 2.0 (Swagger) | Partial support |
 
 ---

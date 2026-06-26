@@ -5,6 +5,425 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.65.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.65.1) - 2026-06-25
+
+## What's Changed
+* Update CHANGELOG for 0.65.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3470
+* Speed up CLI generation by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3471
+* Cache JSON Schema ref facts by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3472
+* Cache model imports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3473
+* Add release benchmark docs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3465
+* Skip legacy Pydantic union round trip by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3475
+* Strip Field None defaults with metadata by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3476
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3478
+* Use semantic None default checks by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3479
+* Structure field import detection by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3481
+* Use structured type rendering by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3488
+* Use structured SerializeAsAny imports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3482
+* Use structured x-python-type annotations by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3486
+* Cache structured import requirements by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3489
+* Fix collapsed root imports in split modules by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3491
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.65.0...0.65.1
+
+---
+
+## [0.65.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.65.0) - 2026-06-21
+
+## Breaking Changes
+
+
+### Error Handling Changes
+* YAML `!!set` tags now rejected - `load_yaml` now validates all YAML input and raises a `yaml.YAMLError` when it encounters the unsupported `tag:yaml.org,2002:set` (`!!set`) tag. Previously such input was loaded silently (constructed as a Python set). YAML schemas or sample data that relied on `!!set` tags will now fail to load with an "Unsupported YAML tag" error. This validation runs unconditionally on every YAML load and is not gated behind any opt-in flag (#3447)
+
+### Code Generation Changes
+* msgspec.Struct boolean const fields now generate `bool` instead of `Literal[True]`/`Literal[False]` - When generating `msgspec.Struct` models (`--output-model-type msgspec.Struct`), a JSON Schema `const` with a boolean value now produces a plain `bool` type instead of a boolean `Literal`, because msgspec does not support boolean `Literal` tag values at runtime. Output for other model types (e.g. Pydantic) is unchanged. Existing msgspec users with boolean-const fields will see different generated output. (#3462)
+* msgspec.Struct combined object unions now render as tagged Struct unions - For `msgspec.Struct` output, combined (`oneOf`/`anyOf`) object schemas that share a required literal discriminator field with int/str values now have a discriminator inferred and are emitted as tagged `Struct` unions (`tag_field=...`, `tag=...`). This changes the generated class definitions for existing msgspec users whose schemas match this shape. (#3462)
+
+## What's Changed
+* Update CHANGELOG for 0.64.1 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3439
+* Fix release draft breaking change notes by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3440
+* Update CHANGELOG for 0.64.1 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3441
+* Add inferred union variant names by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3442
+* Add model metadata output by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3443
+* Add model name mapping by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3444
+* Handle nested schema namespaces by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3445
+* Resolve external discriminator mappings by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3446
+* Unify JSON config loading by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3451
+* Add RootModel sequence methods option by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3447
+* Add dynamic model module names and filtering by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3448
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3452
+* Skip YAML tag scan without unsupported markers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3454
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3455
+* Skip full schema dumps for type constraints by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3456
+* Skip typeguard when importing inflect by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3458
+* Reuse loaded sources for local refs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3459
+* Reduce startup imports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3460
+* Optimize field import collection by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3461
+* Fix msgspec tagged union validation by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3462
+* Document fast formatter choices by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3463
+* Add architecture documentation by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3464
+* Reuse validated JSON Schema objects by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3466
+* Reuse validated schema definitions by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3467
+* Revert schema object reuse by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3469
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.64.1...0.65.0
+
+---
+
+## [0.64.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.64.1) - 2026-06-19
+
+## Breaking Changes
+
+### Code Generation Changes
+* Optional primitive `const` fields no longer emit the const value as an injected default - Optional primitive `const` properties without a schema `default` now render as nullable/omittable (`Literal[...] | None = None`) instead of being populated with the const value when the input key is omitted. Regenerated code and snapshot tests may change. (#3434)
+
+## What's Changed
+* Update CHANGELOG for 0.64.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3414
+* Fix pydantic v2 dataclass lookaround regex engine by @DarkaMaul in https://github.com/koxudaxi/datamodel-code-generator/pull/3370
+* Pass enum schema extensions to templates by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3417
+* Fix payload runtime validation exclusions by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3418
+* Add conformance dashboard by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3423
+* Skip legacy dataclass lookaround payloads by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3428
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3425
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3429
+* Use shared test helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3424
+* Consolidate CLI config fields by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3430
+* Guard JSON-pointer list indexing against invalid segments by @DarkaMaul in https://github.com/koxudaxi/datamodel-code-generator/pull/3420
+* Add Pydantic v2 alias generator by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3432
+* Fix optional primitive const emitting injected non-None default by @tangentlin in https://github.com/koxudaxi/datamodel-code-generator/pull/3434
+* Escape generated pyproject TOML strings by @DarkaMaul in https://github.com/koxudaxi/datamodel-code-generator/pull/3436
+* Add standard preset by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3422
+
+## New Contributors
+* @tangentlin made their first contribution in https://github.com/koxudaxi/datamodel-code-generator/pull/3434
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.64.0...0.64.1
+
+---
+
+## [0.64.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.64.0) - 2026-06-14
+
+## Breaking Changes
+
+
+### Code Generation Changes
+* Self-referencing fields are now quoted with `--disable-future-imports` - When `--disable-future-imports` is set (no `from __future__ import annotations` and no native PEP 649 deferred evaluation on Python < 3.14), self-referencing and forward-referencing field annotations in regular `BaseModel` classes are now emitted as quoted forward references instead of bare names. Previously such annotations were left unquoted, producing invalid code that raised `NameError` (Ruff F821) at class-evaluation time. Output for the common case (with `from __future__ import annotations` or Python 3.14 native deferred annotations) is unchanged. Users who snapshot/golden-file generated output for the `--disable-future-imports` configuration with self-referencing models will see the annotation change from unquoted to quoted, e.g. `children: Optional[List[Node]]` → `children: Optional[List["Node"]]`. (#3387)
+
+## What's Changed
+* Update CHANGELOG for 0.63.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3345
+* Deduplicate module content builder by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3346
+* Deduplicate import reference helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3348
+* Refactor jsonschema root model registration by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3352
+* Refactor XML Schema literal helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3349
+* Move builtin formatter helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3351
+* Deduplicate Pydantic v2 config helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3350
+* Deduplicate DataType type hint rendering by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3354
+* Fix `constr()` for string fields carrying minItems/maxItems by @DarkaMaul in https://github.com/koxudaxi/datamodel-code-generator/pull/3353
+* Cover non-finite import idempotence by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3367
+* Deduplicate input text detection by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3357
+* Remove stale protobuf coverage pragma by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3358
+* Cover explicit null OpenAPI media schemas by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3360
+* Simplify Python version feature checks by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3361
+* Speed up CI checks by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3378
+* Add maintainer link to docs footer and README by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3379
+* Use builtin formatter in CI by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3380
+* Split coverage by OS by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3381
+* Simplify import removal cleanup by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3362
+* Pin deprecation warning stacklevel by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3363
+* Pin public module exports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3364
+* Cover to_hashable branch cases by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3366
+* Cover stable toposort behavior by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3369
+* Extract registry render helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3371
+* Fix minItems for arrays of URI strings by @sjh9714 in https://github.com/koxudaxi/datamodel-code-generator/pull/3377
+* Deduplicate config value validators by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3372
+* Cover CLI option metadata helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3374
+* Cover Pydantic v2 version fallback by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3368
+* Fix nullable JSON Schema const enums by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3355
+* Pin patchable generation seams by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3365
+* Cover utility helper behavior by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3375
+* Cover DefaultPutDict behavior by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3376
+* Cover validator config normalization by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3373
+* Avoid expensive runtime type checks by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3382
+* Avoid eager builtin formatter import by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3383
+* Avoid eager TOML parser import by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3384
+* Stabilize msgspec payload tests by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3385
+* Avoid eager input parser imports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3386
+* Avoid eager parser model imports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3388
+* Avoid eager AsyncAPI converter imports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3389
+* Dispose parser on parse errors by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3390
+* Fix YAML warning filter handling by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3392
+* Cache local parser sources by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3393
+* Guard mutable generation inputs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3394
+* Compact dynamic cache keys by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3395
+* Guard OpenAPI path items by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3397
+* Isolate converted schemas by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3396
+* Add performance measurement coverage by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3398
+* Restore input model modules by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3399
+* Reduce Pydantic v2 render work by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3400
+* Defer parser config imports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3402
+* Slot generation facts by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3403
+* Fast path JSON schemas by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3404
+* Lazy root format exports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3405
+* Defer generation refresh by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3406
+* Cache parsed sources by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3407
+* Shard Python tests by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3408
+* Cache payload validation strategies by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3409
+* fix: quote self-referencing fields when --disable-future-imports is set by @kaizeenn in https://github.com/koxudaxi/datamodel-code-generator/pull/3387
+* Skip discriminator import scan by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3411
+* Fast path schema output by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3410
+
+## New Contributors
+* @DarkaMaul made their first contribution in https://github.com/koxudaxi/datamodel-code-generator/pull/3353
+* @sjh9714 made their first contribution in https://github.com/koxudaxi/datamodel-code-generator/pull/3377
+* @kaizeenn made their first contribution in https://github.com/koxudaxi/datamodel-code-generator/pull/3387
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.63.0...0.64.0
+
+---
+
+## [0.63.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.63.0) - 2026-06-12
+
+## Breaking Changes
+
+
+### Default Behavior Changes
+* `--check` output now uses POSIX-style paths - File paths in `--check` diagnostic output are now normalized with `Path.as_posix()` instead of `str(path)`. On POSIX systems the output is unchanged, but on **Windows** the diff headers and `MISSING:`/`EXTRA:` lines now use forward slashes (`models/foo.py`) instead of backslashes (`models\foo.py`). Tooling or snapshot tests that parse `--check` output on Windows may need updating. (#3287)
+
+## What's Changed
+* Update CHANGELOG for 0.62.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3313
+* Add generate prompt JSON output by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3285
+* Strengthen test oracles by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3314
+* Cover pragma targets by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3315
+* Consolidate test infrastructure helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3316
+* Remove dead branches and import cleanups by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3318
+* Block embedded IPv4 SSRF bypasses by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3319
+* Add generation JSON output format by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3287
+* Remove no-op overrides by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3320
+* Initialize parser lazy state explicitly by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3321
+* Break parser-model import cycles by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3322
+* Document LLM option workflow by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3284
+* Improve generate prompt guidance by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3286
+* Add experimental agent skill by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3310
+* Consolidate JSON Schema data formats by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3323
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3326
+* Deduplicate model-layer helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3327
+* Deduplicate JSON Schema parser helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3328
+* Deduplicate parser base helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3329
+* Deduplicate parser converter helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3330
+* Use resolved converted source cache keys by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3332
+* Add JSON Schema suite conformance by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3333
+* Clarify payload adapter error by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3334
+* Add OpenAI sponsor logo by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3338
+* Add payload rejection oracle by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3335
+* Expand payload backend validation by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3337
+* Add payload round trip validation by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3339
+* Add payload runtime matrix by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3340
+* Expand payload backend matrix by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3341
+* Fix Pydantic 2.0 fallbacks by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3343
+* Refactor generate flow by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3344
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.62.0...0.63.0
+
+---
+
+## [0.62.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.62.0) - 2026-06-10
+
+## Breaking Changes
+
+
+### Code Generation Changes
+* msgspec: Required nullable fields no longer receive a spurious default - Previously, required fields with nullable types (e.g., `str | None`) in msgspec Structs were incorrectly rendered with `= None`. They are now correctly rendered without a default assignment (e.g., `label: str | None` instead of `label: str | None = None`), which means callers must provide the value explicitly (#3292)
+* msgspec: Array length constraints now render as Meta annotations - `minItems`/`maxItems` schema constraints on array fields were previously silently ignored for msgspec output. They now render as `Annotated[list[T], Meta(min_length=..., max_length=...)]` when `--use-annotated` is enabled (e.g., `list[Pet]` becomes `Annotated[list[Pet], Meta(max_length=10, min_length=1)]`) (#3292)
+* msgspec: Inherited Structs with field ordering conflicts now use `kw_only=True` - When a child Struct inherits optional fields from a parent and adds required fields, the child now renders with `kw_only=True` as a base class kwarg (e.g., `class Child(Base, kw_only=True):`), changing the calling convention to keyword-only arguments (#3292)
+* Non-finite float values now use `float()` calls instead of `math` imports - Generated code previously rendered `inf`, `-inf`, and `nan` (with `from math import inf, nan`). Now renders `float('inf')`, `float('-inf')`, and `float('nan')` without the `math` import. Semantically equivalent but changes generated output. (#3289)
+* Decimal constraint arguments now use `Decimal()` objects - `condecimal()` constraints previously used bare int/float values (e.g., `condecimal(ge=0, le=1000)`). Now uses `Decimal` objects (e.g., `condecimal(ge=Decimal('0'), le=Decimal('1000'))`) with an added `from decimal import Decimal` import in generated code. (#3289)
+* Integer fields with fractional constraints are normalized to integer-safe bounds - Fractional constraint values on integer types are now converted: `gt: 0.5` becomes `ge: 1`, `lt: 2.5` becomes `le: 2`, and `multiple_of: 1` is dropped entirely. Previously these fractional values were passed through as-is to `conint()` or `Field()`. (#3289)
+* msgspec array length constraints are now rendered - `min_items` and `max_items` schema constraints on array fields are now emitted as `Meta(min_length=..., max_length=...)` annotations in msgspec output. Previously these constraints were silently ignored. (#3289)
+* msgspec required nullable fields no longer get default `= None` - Required nullable fields in msgspec Structs previously received a `= None` default assignment. Now they are rendered without a default, requiring callers to provide the value explicitly. (#3289)
+* TypedDict `extra_items` now uses direct identifiers instead of string forward references - When `additionalProperties` references another type, the generated `extra_items=` keyword argument changed from a quoted string to a bare identifier (e.g., `extra_items='BaseExtra'` → `extra_items=BaseExtra`). The generated code remains valid because files include `from __future__ import annotations`, but the textual output differs (#3301)
+* Functional-syntax TypedDict description placement changed - Description docstrings for functional-syntax TypedDicts (using `TypedDict('Name', {...})`) are now rendered **before** the definition instead of after it. Previously the docstring appeared as a string literal following the assignment; it now appears as a comment block preceding it (#3301)
+* UUID2 format now generates `uuid.UUID` instead of `pydantic.UUID2` - Schemas using `"format": "uuid2"` now generate `UUID` imported from the `uuid` standard library instead of the non-existent `UUID2` from `pydantic`. This is a bug fix since `pydantic.UUID2` was never a valid Pydantic v2 type (the old generated code would raise `ImportError`), but the generated import and type annotation will differ for any schema using this format (#3297)
+
+### Custom Template Update Required
+* msgspec.jinja2 default assignment condition simplified - The Jinja2 template condition for rendering default values was changed from `not field.field and (not field.required or field.use_default_with_required or field.data_type.is_optional or field.nullable)` to `not field.field and (not field.required or field.use_default_with_required)`. Users with custom msgspec templates that replicate the old logic should update accordingly (#3292)
+* msgspec.jinja2 template default value condition changed - The condition for rendering default value assignments changed from `not field.required or field.use_default_with_required or field.data_type.is_optional or field.nullable` to `not field.required or field.use_default_with_required`. Custom templates derived from the built-in msgspec template may need to be updated. (#3289)
+* `TypedDictFunction.jinja2` template restructured - The built-in functional TypedDict template moved the `description` block from after the class definition to before it and added support for field-level docstrings. Users with custom templates that were based on or extend this template may need to update accordingly (#3301)
+
+### Error Handling Changes
+* XML Schema schemaLocation references outside the input base path are now blocked - Any `xs:include`, `xs:import`, `xs:redefine`, or `xs:override` with a `schemaLocation` that resolves outside the input base directory now raises an unconditional error. Previously, these references were silently resolved regardless of location. Users with XML schemas that include files from parent or sibling directories must move the included schemas under the input directory before generating models. (#3308)
+
+### Default Behavior Changes
+* Local JSON Schema `$ref` references outside the input base path now emit deprecation warnings - Relative path refs (e.g., `$ref: "../other/schema.json"`) and `file://` URL refs that resolve outside the input base directory now emit a `FutureWarning` under the default behavior (no `--allow-remote-refs` flag). Previously these were silently resolved. Pass `--allow-remote-refs` to suppress the warning, or move referenced schemas under the input directory. (#3308)
+* `--no-allow-remote-refs` now blocks `file://` URLs and local refs outside the base path - Previously `--no-allow-remote-refs` only blocked HTTP(S) `$ref` fetching. It now also blocks `file://` URL references and relative local `$ref` references that resolve outside the input base path. Users who rely on `file://` refs or out-of-tree local refs with `--no-allow-remote-refs` must switch to `--allow-remote-refs` or restructure their schemas. (#3308)
+
+## What's Changed
+* Add security policy by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3283
+* Update CHANGELOG for 0.61.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3282
+* Optimize DataType prototype copying and import collection by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3291
+* Cache dynamically created context DataType classes by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3294
+* Reuse ModelResolver for field name collision resolution by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3295
+* Reduce redundant Field() data computation in pydantic fields by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3293
+* Fix raw input parsing by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3290
+* Fix msgspec field ordering by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3292
+* Fix pydantic constraint rendering by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3289
+* Break reference cycles in parsed graph after generation by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3298
+* Compute field statement check once when collecting imports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3296
+* Cache ref schema facts in get_ref_data_type by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3301
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3300
+* Fall back uuid2 format to uuid.UUID by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3305
+* Iterate the smaller side in transform_kwargs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3297
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3307
+* Fix msgspec constraint and default rendering by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3302
+* Avoid building unused Field strings and empty extras dicts by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3304
+* Fix TypedDict functional descriptions and extra_items forward references by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3306
+* Fix playground options layout by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3308
+* Improve private network option help by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3309
+* Fix enum member default resolution by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3303
+* Use Claude Opus 4.8 by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3312
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3311
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.61.0...0.62.0
+
+---
+
+## [0.61.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.61.0) - 2026-06-08
+
+## Breaking Changes
+
+* HTTP(S) schema fetching now blocks localhost, loopback, private, link-local, reserved, and other non-public network targets by default. Users who intentionally fetch schemas from trusted internal/private network endpoints must pass `--allow-private-network` or set `allow_private_network=True`.
+* HTTP(S) redirects are now followed manually and each redirect target is validated before fetching. Redirects to non-public network targets are blocked unless private network access is explicitly enabled.
+
+## Security
+
+* Fixed SSRF protections for HTTP(S) schema fetching via `--url` and remote JSON Schema/OpenAPI `$ref` URLs. (GHSA-rfr2-mq9m-x2qx, GHSA-954p-556p-r752)
+* Remote `$ref` fetching remains controlled by `--allow-remote-refs`; non-public remote references additionally require `--allow-private-network`.
+
+## What's Changed
+* Update CHANGELOG for 0.60.2 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3277
+* Fix generated files by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3279
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3280
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.60.2...0.61.0
+
+---
+
+## [0.60.2](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.60.2) - 2026-06-08
+
+## Security
+
+* Fixed code injection from schema-provided `default_factory` values. (GHSA-386q-5hp3-95m9)
+* Fixed code injection from JSON Schema `x-python-type` extension values. (GHSA-m34r-v34r-rf9q)
+* Fixed code injection from `comment` entries supplied through `--extra-template-data`. (GHSA-wjv6-jcfj-mf9r)
+* Fixed code injection from Pydantic v2 validator definitions supplied through `--validators` or `--extra-template-data`. (GHSA-8m8r-38jm-f355)
+
+## What's Changed
+* Update CHANGELOG for 0.60.1 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3274
+* Cover validator error formatting by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3276
+* Update CHANGELOG for 0.60.1 by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3275
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.60.1...0.60.2
+
+---
+
+## [0.60.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.60.1) - 2026-06-07
+
+## Security
+
+* Fixed code injection from GraphQL union descriptions containing carriage returns. (GHSA-j884-q54q-mmx3)
+
+## What's Changed
+* Update CHANGELOG for 0.60.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3269
+* Fix readOnly/writeOnly option docs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3270
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3271
+* Fix built-in formatter type alias union by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3273
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.60.0...0.60.1
+
+---
+
+## [0.60.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.60.0) - 2026-06-04
+
+## Breaking Changes
+
+* Avro record field defaults are no longer emitted as generated Python defaults. Avro defaults describe reader behavior, not Python model construction defaults, so generated Avro model fields now stay required even when the Avro schema has `default`. This also applies to Avro schemas embedded in AsyncAPI multi-format schemas. (#3256)
+* XML Schema datatype mappings were corrected. `xs:decimal` now generates `Decimal` instead of `float`; `xs:dateTime` defaults to standard-library `datetime` because XML Schema allows values without a timezone; `xs:dateTimeStamp` remains `AwareDatetime`; `xs:duration` and `xs:yearMonthDuration` now generate `str`, while `xs:dayTimeDuration` still generates `timedelta`. (#3248)
+* GraphQL input fields with schema defaults are now generated as optional fields with defaults. For example, non-null list inputs declared with `= []` can now be omitted when constructing the generated model. (#3255)
+* Protobuf `bytes` defaults are now generated as bytes literals instead of strings, including escaped byte sequences. (#3252)
+* XML Schema default and fixed values are parsed according to their XSD lexical types. This affects list defaults, union defaults, non-finite float values, temporal defaults, boolean defaults with XML Schema whitespace, and fixed decimal values. (#3258, #3260, #3261, #3263, #3267, #3268)
+
+## Notes
+
+* `--output-datetime-class` is respected for XML Schema `xs:dateTime` and `xs:dateTimeStamp` when explicitly provided. Without the option, the XML Schema defaults above are used. (#3266)
+* Enum member defaults remain opt-in through `--set-default-enum-member`. The default behavior is not changed to force enum member references. (#3264)
+* JSON Schema and OpenAPI `const` values are not treated as generated Python defaults unless the schema also defines a default. XML Schema `fixed` keeps its XSD value-constraint behavior. (#3268)
+
+## What's Changed
+
+* Update CHANGELOG for 0.59.1 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3239
+* Fix release notification duplicates by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3240
+* Respect OpenAPI 3.2 feature gates by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3243
+* Enforce assert helper usage by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3244
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3246
+* Fix PyPI badge rendering by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3247
+* Preserve AsyncAPI Avro defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3242 (superseded by #3256 before release)
+* Fix XML Schema datatypes by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3248
+* Fix Avro field defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3256
+* Fix GraphQL input defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3255
+* Fix Protobuf bytes defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3252
+* Fix Protobuf enum defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3253
+* Fix XML Schema list defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3258
+* Fix XML Schema union defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3260
+* Fix XML Schema float defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3261
+* Fix complex const defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3259 (narrowed by #3268 before release)
+* Fix GraphQL enum defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3262 (default enum-member behavior restored by #3264 before release)
+* Restore enum default option behavior by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3264
+* Add conversion diagram by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3257
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3265
+* Fix XML Schema datetime class override by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3266
+* Fix XML Schema temporal defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3263
+* Fix XML Schema boolean whitespace by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3267
+* Fix const default scope by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3268
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.59.1...0.60.0
+
+---
+
+## [0.59.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.59.1) - 2026-06-03
+
+## What's Changed
+* Update CHANGELOG for 0.59.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3216
+* Update supported input formats by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3219
+* Fix docs preview deploy by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3218
+* Update zensical by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3220
+* Add builtin formatter warning by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3178
+* Add playground by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3217
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3222
+* Add playground state URLs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3223
+* Add playground version selector by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3224
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3225
+* Optimize playground runtime warmup by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3227
+* Fix playground runtime versions by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3229
+* Add playground privacy note by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3231
+* Fix download badge by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3232
+* Add OpenAPI 3.2 schema version by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3233
+* Add MCP tools input type by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3234
+* Parse AsyncAPI multi-format schemas by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3236
+* Allow leading underscore class names by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3237
+* Clarify uv installation guidance by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3238
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.59.0...0.59.1
+
+---
+
 ## [0.59.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.59.0) - 2026-05-29
 
 ## Breaking Changes

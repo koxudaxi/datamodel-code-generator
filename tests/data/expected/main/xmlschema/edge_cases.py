@@ -4,9 +4,10 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, conint, constr
+from pydantic import BaseModel, ConfigDict, Field, RootModel, confloat, conint, constr
 
 
 class AfterTopAttributes(RootModel[str]):
@@ -43,7 +44,10 @@ class Loose(BaseModel):
     badOccurs: list[str] = Field(..., min_length=1)
     empty: Any
     unknownNamespace: Any
-    badDecimalDefault: float
+    badDoubleDefault: float
+    infiniteDoubleDefault: float
+    doubleRange: confloat(ge=1.5, lt=10.5)
+    badDecimalDefault: Decimal
     badIntDefault: conint(ge=-2147483648, le=2147483647)
     localGrouped: str | None = Field(None, description='Grouped attr')
 

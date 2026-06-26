@@ -88,6 +88,7 @@ input {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 14px;
 }
 
@@ -176,6 +177,55 @@ h1 a:hover {
 
 .tech-note a:hover {
   text-decoration: underline;
+}
+
+.security-note {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid rgb(129 212 250 / 34%);
+  border-radius: 999px;
+  background: rgb(3 169 244 / 10%);
+  color: #b3e5fc;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.security-note::after {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  z-index: 40;
+  width: min(420px, calc(100vw - 24px));
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel-strong);
+  box-shadow: var(--shadow-md);
+  color: var(--text);
+  content: attr(data-tooltip);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  opacity: 0;
+  pointer-events: none;
+  text-align: left;
+  transform: translateX(-50%) translateY(2px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+  white-space: normal;
+}
+
+.security-note:hover::after,
+.security-note:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 .docs-nav {
@@ -484,14 +534,12 @@ pre {
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--panel);
+  container-type: inline-size;
   overflow: hidden;
   box-shadow: var(--shadow-sm);
 }
 
 .options-head {
-  position: sticky;
-  top: var(--topbar-offset);
-  z-index: 8;
   min-height: 44px;
   display: flex;
   align-items: center;
@@ -529,9 +577,6 @@ pre {
 }
 
 .option-group summary {
-  position: sticky;
-  top: calc(var(--topbar-offset) + 44px);
-  z-index: 7;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -561,7 +606,7 @@ pre {
 
 .option-list-panel {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
   gap: 1px;
   border-top: 1px solid var(--border);
   background: var(--border-soft);
@@ -571,7 +616,7 @@ pre {
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 170px;
-  align-items: center;
+  align-items: start;
   gap: 10px;
   padding: 7px 12px;
   background: var(--panel);
@@ -598,22 +643,21 @@ pre {
 }
 
 .option-label code {
-  overflow: hidden;
   color: var(--text);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 12px;
   font-weight: 720;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .option-label span {
-  overflow: hidden;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .option-widget {
@@ -650,6 +694,18 @@ pre {
   height: 18px;
   accent-color: var(--accent);
   justify-self: end;
+}
+
+@container (max-width: 560px) {
+  .option-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .option-widget {
+    justify-content: stretch;
+  }
 }
 
 .option-list {
@@ -796,6 +852,33 @@ body.workspace-collapsed .output-editor-mount {
   .docs-nav {
     margin-left: 0;
     overflow-x: auto;
+  }
+
+  .topbar-meta {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .tech-note,
+  #status {
+    width: 100%;
+    min-width: 0;
+    white-space: normal;
+  }
+
+  .security-note {
+    width: fit-content;
+  }
+
+  .security-note::after {
+    left: 0;
+    transform: translateY(-2px);
+  }
+
+  .security-note:hover::after,
+  .security-note:focus-visible::after {
+    transform: translateY(0);
   }
 
   .controls {

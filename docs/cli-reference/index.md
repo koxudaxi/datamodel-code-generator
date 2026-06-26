@@ -8,15 +8,15 @@ This documentation is auto-generated from test cases.
 
 | Category | Options | Description |
 |----------|---------|-------------|
-| 📁 [Base Options](base-options.md) | 10 | Input/output configuration |
+| 📁 [Base Options](base-options.md) | 12 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 30 | Type annotation and import behavior |
-| 🏷️ [Field Customization](field-customization.md) | 26 | Field naming and docstring behavior |
-| 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
+| 🏷️ [Field Customization](field-customization.md) | 27 | Field naming and docstring behavior |
+| 🏗️ [Model Customization](model-customization.md) | 43 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 24 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
-| ⚙️ [General Options](general-options.md) | 17 | Utilities and meta options |
-| 📝 [Utility Options](utility-options.md) | 8 | Help, version, debug options |
+| ⚙️ [General Options](general-options.md) | 18 | Utilities and meta options |
+| 📝 [Utility Options](utility-options.md) | 10 | Help, version, debug options |
 
 ## All Options
 
@@ -26,13 +26,16 @@ This documentation is auto-generated from test cases.
 ### A {#a}
 
 - [`--additional-imports`](template-customization.md#additional-imports)
+- [`--alias-generator`](model-customization.md#alias-generator)
 - [`--aliases`](field-customization.md#aliases)
 - [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy)
 - [`--all-exports-scope`](general-options.md#all-exports-scope)
 - [`--allof-class-hierarchy`](typing-customization.md#allof-class-hierarchy)
 - [`--allof-merge-mode`](typing-customization.md#allof-merge-mode)
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields)
+- [`--allow-leading-underscore-class-name`](model-customization.md#allow-leading-underscore-class-name)
 - [`--allow-population-by-field-name`](model-customization.md#allow-population-by-field-name)
+- [`--allow-private-network`](general-options.md#allow-private-network)
 - [`--allow-remote-refs`](general-options.md#allow-remote-refs)
 
 ### B {#b}
@@ -71,6 +74,7 @@ This documentation is auto-generated from test cases.
 
 ### E {#e}
 
+- [`--emit-model-metadata`](base-options.md#emit-model-metadata)
 - [`--empty-enum-field-name`](field-customization.md#empty-enum-field-name)
 - [`--enable-command-header`](template-customization.md#enable-command-header)
 - [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability)
@@ -116,6 +120,7 @@ This documentation is auto-generated from test cases.
 - [`--ignore-enum-constraints`](typing-customization.md#ignore-enum-constraints)
 - [`--ignore-pyproject`](general-options.md#ignore-pyproject)
 - [`--include-path-parameters`](openapi-only-options.md#include-path-parameters)
+- [`--infer-union-variant-names`](field-customization.md#infer-union-variant-names)
 - [`--input`](base-options.md#input)
 - [`--input-file-type`](base-options.md#input-file-type)
 - [`--input-model`](base-options.md#input-model)
@@ -135,6 +140,7 @@ This documentation is auto-generated from test cases.
 
 - [`--model-extra-keys`](model-customization.md#model-extra-keys)
 - [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix)
+- [`--model-name-map`](model-customization.md#model-name-map)
 - [`--module-split-mode`](general-options.md#module-split-mode)
 
 ### N {#n}
@@ -158,11 +164,14 @@ This documentation is auto-generated from test cases.
 - [`--output`](base-options.md#output)
 - [`--output-date-class`](typing-customization.md#output-date-class)
 - [`--output-datetime-class`](typing-customization.md#output-datetime-class)
+- [`--output-format`](utility-options.md#output-format)
+- [`--output-format-json-schema`](utility-options.md#output-format-json-schema)
 - [`--output-model-type`](model-customization.md#output-model-type)
 
 ### P {#p}
 
 - [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming)
+- [`--preset`](base-options.md#preset)
 - [`--profile`](utility-options.md#profile)
 
 ### R {#r}
@@ -220,6 +229,7 @@ This documentation is auto-generated from test cases.
 - [`--use-one-literal-as-default`](model-customization.md#use-one-literal-as-default)
 - [`--use-operation-id-as-name`](openapi-only-options.md#use-operation-id-as-name)
 - [`--use-pendulum`](typing-customization.md#use-pendulum)
+- [`--use-root-model-sequence-interface`](model-customization.md#use-root-model-sequence-interface)
 - [`--use-root-model-type-alias`](typing-customization.md#use-root-model-type-alias)
 - [`--use-schema-description`](field-customization.md#use-schema-description)
 - [`--use-serialization-alias`](field-customization.md#use-serialization-alias)

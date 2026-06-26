@@ -2,18 +2,133 @@
 
 from __future__ import annotations
 
+import importlib.util
+import sys
+import types
+from collections import ChainMap, Counter, OrderedDict, defaultdict, deque
+from collections.abc import (
+    Callable as ABCCallable,
+)
+from collections.abc import (
+    Mapping as ABCMapping,
+)
+from collections.abc import (
+    MutableMapping as ABCMutableMapping,
+)
+from collections.abc import (
+    MutableSequence as ABCMutableSequence,
+)
+from collections.abc import (
+    MutableSet as ABCMutableSet,
+)
+from collections.abc import (
+    Sequence as ABCSequence,
+)
+from collections.abc import (
+    Set as AbstractSet,
+)
+from dataclasses import is_dataclass
+from enum import Enum as PyEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, cast, get_args, get_origin, get_type_hints
 
 from pydantic import BaseModel
 
+from datamodel_code_generator.enums import InputModelRefStrategy
+
 if TYPE_CHECKING:
     from datamodel_code_generator import DataModelType, InputFileType
-    from datamodel_code_generator.arguments import InputModelRefStrategy
 
 
 class Error(Exception):
     """Error raised during input model loading."""
+
+
+_MISSING_MODULE = object()
+_ModuleRestoreState = tuple[str, object]
+
+
+def _restore_path_module(state: _ModuleRestoreState) -> None:
+    module_name, previous_module = state
+    if previous_module is _MISSING_MODULE:
+        sys.modules.pop(module_name, None)
+        return
+    sys.modules[module_name] = cast("types.ModuleType", previous_module)
+
+
+def _get_path_module_name(file_path: Path) -> str:
+    module_name = file_path.stem
+    previous_module = sys.modules.get(module_name)
+    if not isinstance(previous_module, types.ModuleType):
+        return module_name
+    if not (module_file := getattr(previous_module, "__file__", None)):
+        return module_name
+    try:
+        previous_file = Path(module_file).resolve()
+    except OSError:
+        return module_name
+    if previous_file == file_path:
+        return module_name
+
+    from hashlib import sha256  # noqa: PLC0415
+
+    digest = sha256(str(file_path).encode()).hexdigest()[:16]
+    return f"_datamodel_code_generator_input_model_{digest}"
+
+
+def _load_module_from_path(file_path: Path, modname: str) -> tuple[types.ModuleType, _ModuleRestoreState]:
+    module_name = _get_path_module_name(file_path)
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    if spec is None or spec.loader is None:
+        msg = f"Cannot load module from {modname!r}"
+        raise Error(msg)
+
+    previous_module = sys.modules.get(module_name, _MISSING_MODULE)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+    except BaseException:
+        _restore_path_module((module_name, previous_module))
+        raise
+    return module, (module_name, previous_module)
+
+
+def _split_input_model(input_model: str) -> tuple[str, str]:
+    modname, separator, qualname = input_model.rpartition(":")
+    if separator and modname:
+        return modname, qualname
+
+    msg = f"Invalid --input-model format: {input_model!r}. Expected 'module:Object' or 'path/to/file.py:Object'."
+    raise Error(msg)
+
+
+def _is_path_input_model_module(modname: str) -> bool:
+    return "/" in modname or "\\" in modname or (modname.endswith(".py") and Path(modname).exists())
+
+
+def _load_input_model_module(modname: str) -> tuple[types.ModuleType, _ModuleRestoreState | None]:
+    if _is_path_input_model_module(modname):
+        file_path = Path(modname).resolve()
+        if not file_path.exists():
+            msg = f"File not found: {modname!r}"
+            raise Error(msg)
+        return _load_module_from_path(file_path, modname)
+
+    try:
+        if importlib.util.find_spec(modname) is None:
+            msg = f"Cannot find module {modname!r}"
+            raise Error(msg)
+        return importlib.import_module(modname), None
+    except ImportError as e:
+        msg = f"Cannot import module {modname!r}: {e}"
+        raise Error(msg) from e
+
+
+def _is_input_model_base_schema(value: object) -> bool:
+    if not isinstance(value, dict):
+        return False
+    return bool(cast("dict[str, object]", value).get("x-is-base-class"))
 
 
 # Types that are lost during JSON Schema conversion and need to be preserved
@@ -33,9 +148,6 @@ _TYPE_FAMILY_OTHER = "other"
 
 def _serialize_python_type_full(tp: type) -> str:  # noqa: PLR0911
     """Serialize ANY Python type to its string representation."""
-    import types  # noqa: PLC0415
-    from typing import Union, get_args, get_origin  # noqa: PLC0415
-
     if tp is type(None):  # pragma: no cover
         return "None"
 
@@ -63,8 +175,6 @@ def _serialize_python_type_full(tp: type) -> str:  # noqa: PLR0911
         parts = [_serialize_python_type_full(arg) for arg in args]
         return " | ".join(parts)
 
-    from typing import Annotated  # noqa: PLC0415
-
     if origin is Annotated:
         if args:
             return _serialize_python_type_full(args[0])
@@ -87,8 +197,6 @@ def _is_callable_origin(origin: type | None) -> bool:
     """Check if origin is Callable."""
     if origin is None:  # pragma: no cover
         return False
-    from collections.abc import Callable as ABCCallable  # noqa: PLC0415
-
     if origin is ABCCallable:
         return True
     origin_str = str(origin)
@@ -162,8 +270,6 @@ def _get_input_model_json_schema_class() -> type:
 
 def _is_type_origin(annotation: type) -> bool:
     """Check if annotation is Type[X]."""
-    from typing import get_origin  # noqa: PLC0415
-
     origin = get_origin(annotation)
     return origin is type
 
@@ -189,8 +295,6 @@ def _process_unserializable_property(prop: dict[str, Any], annotation: type) -> 
 
 def _set_python_type_for_unserializable(item: dict[str, Any], annotation: type) -> None:
     """Set x-python-type and clean up markers."""
-    from typing import Union, get_args, get_origin  # noqa: PLC0415
-
     origin = get_origin(annotation)
     actual_type = annotation
 
@@ -237,14 +341,6 @@ def _add_python_type_for_unserializable(
 
 def _init_preserved_type_origins() -> dict[type, str]:
     """Initialize preserved type origins mapping (lazy initialization)."""
-    from collections import ChainMap, Counter, OrderedDict, defaultdict, deque  # noqa: PLC0415
-    from collections.abc import Mapping as ABCMapping  # noqa: PLC0415
-    from collections.abc import MutableMapping as ABCMutableMapping  # noqa: PLC0415
-    from collections.abc import MutableSequence as ABCMutableSequence  # noqa: PLC0415
-    from collections.abc import MutableSet as ABCMutableSet  # noqa: PLC0415
-    from collections.abc import Sequence as ABCSequence  # noqa: PLC0415
-    from collections.abc import Set as AbstractSet  # noqa: PLC0415
-
     return {
         set: "set",
         frozenset: "frozenset",
@@ -272,14 +368,9 @@ def _get_preserved_type_origins() -> dict[type, str]:
 
 def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
     """Serialize Python type to a string for x-python-type field."""
-    import types  # noqa: PLC0415
-    from typing import get_args, get_origin  # noqa: PLC0415
-
     origin: type | None = get_origin(tp)
     args = get_args(tp)
     preserved_origins = _get_preserved_type_origins()
-
-    from typing import Union  # noqa: PLC0415
 
     is_union = origin is Union or (hasattr(types, "UnionType") and origin is types.UnionType)
     if is_union:
@@ -288,8 +379,6 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
             if any(n is not None for n in nested):
                 return " | ".join(n or _full_type_name(a) for n, a in zip(nested, args, strict=False))
         return None  # pragma: no cover
-
-    from typing import Annotated  # noqa: PLC0415
 
     if origin is Annotated:
         if args:
@@ -319,8 +408,6 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
 
 def _simple_type_name(tp: type) -> str:
     """Get a simple string representation of a type."""
-    from typing import get_origin  # noqa: PLC0415
-
     if tp is type(None):
         return "None"
     if get_origin(tp) is not None:
@@ -336,9 +423,6 @@ def _full_type_name(tp: type) -> str:  # noqa: PLR0911
     For generic types, keeps outer type as short name but FQN-izes the type arguments.
     For non-generic types, returns FQN for non-builtin types.
     """
-    import types  # noqa: PLC0415
-    from typing import ForwardRef, Union, get_args, get_origin  # noqa: PLC0415
-
     if tp is type(None):
         return "None"
 
@@ -405,10 +489,6 @@ def _collect_nested_models(model: type, visited: set[type] | None = None) -> dic
 
 def _find_models_in_type(tp: type, result: dict[str, type], visited: set[type]) -> None:
     """Recursively find BaseModel, Enum, dataclass, TypedDict, and msgspec in a type annotation."""
-    from dataclasses import is_dataclass  # noqa: PLC0415
-    from enum import Enum as PyEnum  # noqa: PLC0415
-    from typing import get_args  # noqa: PLC0415
-
     if isinstance(tp, type) and tp not in visited:
         if issubclass(tp, BaseModel):
             result[tp.__name__] = tp
@@ -427,8 +507,6 @@ def _find_models_in_type(tp: type, result: dict[str, type], visited: set[type]) 
 
 def _get_type_hints_safe(obj: type) -> dict[str, Any]:
     """Safely get type hints from a class, handling forward references."""
-    from typing import get_type_hints  # noqa: PLC0415
-
     try:
         return get_type_hints(obj)
     except Exception:  # noqa: BLE001  # pragma: no cover
@@ -485,9 +563,6 @@ def _add_python_type_info_generic(schema: dict[str, Any], obj: type) -> dict[str
 
 def _get_type_family(tp: type) -> str:  # noqa: PLR0911
     """Determine the type family of a Python type."""
-    from dataclasses import is_dataclass  # noqa: PLC0415
-    from enum import Enum as PyEnum  # noqa: PLC0415
-
     if isinstance(tp, type) and issubclass(tp, PyEnum):
         return _TYPE_FAMILY_ENUM
 
@@ -542,8 +617,6 @@ def _filter_defs_by_strategy(
     strategy: InputModelRefStrategy,
 ) -> dict[str, Any]:
     """Filter $defs based on ref strategy, marking reused types with x-python-import."""
-    from datamodel_code_generator.arguments import InputModelRefStrategy  # noqa: PLC0415
-
     if strategy == InputModelRefStrategy.RegenerateAll:  # pragma: no cover
         return schema
 
@@ -585,8 +658,8 @@ def _try_rebuild_model(obj: type) -> None:
     config_classes = {"GenerateConfig", "ParserConfig", "ParseConfig"}
     main_config_classes = {"Config"}
     if module in {"datamodel_code_generator.config", "config"} and class_name in config_classes:
+        from datamodel_code_generator.enums import UnionMode  # noqa: PLC0415
         from datamodel_code_generator.model.base import DataModel, DataModelFieldBase  # noqa: PLC0415
-        from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
         from datamodel_code_generator.types import DataTypeManager, StrictTypes  # noqa: PLC0415
 
         types_namespace = {
@@ -598,7 +671,7 @@ def _try_rebuild_model(obj: type) -> None:
         }
         obj.model_rebuild(_types_namespace=types_namespace)  # ty: ignore
     elif module == "datamodel_code_generator.__main__" and class_name in main_config_classes:  # pragma: no cover
-        from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
+        from datamodel_code_generator.enums import UnionMode  # noqa: PLC0415
         from datamodel_code_generator.types import StrictTypes  # noqa: PLC0415
 
         types_namespace = {
@@ -694,14 +767,10 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
     Returns:
         Merged schema dict with anyOf referencing all root models
     """
-    import importlib.util  # noqa: PLC0415
-    import sys  # noqa: PLC0415
-
     from datamodel_code_generator import (  # noqa: PLC0415
         DataModelType,
         InputFileType,
     )
-    from datamodel_code_generator.arguments import InputModelRefStrategy  # noqa: PLC0415
 
     if output_model_type is None:
         output_model_type = DataModelType.PydanticV2BaseModel
@@ -714,109 +783,85 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
         sys.path.insert(0, cwd)
 
     model_classes: list[type] = []
-    loaded_modules: dict[str, object] = {}
+    loaded_modules: dict[str, types.ModuleType] = {}
+    path_module_states: list[_ModuleRestoreState] = []
 
-    for input_model in input_models:
-        modname, sep, qualname = input_model.rpartition(":")
-        if not sep or not modname:
+    try:
+        for input_model in input_models:
+            modname, qualname = _split_input_model(input_model)
+
+            if modname not in loaded_modules:
+                module, module_state = _load_input_model_module(modname)
+                if module_state is not None:
+                    path_module_states.append(module_state)
+                loaded_modules[modname] = module
+            else:
+                module = loaded_modules[modname]
+
+            try:
+                obj = getattr(module, qualname)
+            except AttributeError as e:
+                msg = f"Module {modname!r} has no attribute {qualname!r}"
+                raise Error(msg) from e
+
+            if not (isinstance(obj, type) and issubclass(obj, BaseModel)):
+                msg = f"Multiple --input-model only supports Pydantic v2 BaseModel classes, got {type(obj).__name__}"
+                raise Error(msg)
+
+            model_classes.append(obj)
+
+        if input_file_type not in {InputFileType.Auto, InputFileType.JsonSchema}:
             msg = (
-                f"Invalid --input-model format: {input_model!r}. Expected 'module:Object' or 'path/to/file.py:Object'."
+                f"--input-file-type must be 'jsonschema' (or omitted) "
+                f"when --input-model points to Pydantic models, "
+                f"got '{input_file_type.value}'"
             )
             raise Error(msg)
 
-        if modname not in loaded_modules:
-            is_path = "/" in modname or "\\" in modname
-            if not is_path and modname.endswith(".py"):
-                is_path = Path(modname).exists()
+        schema_generator = _get_input_model_json_schema_class()
+        merged_defs: dict[str, object] = {}
+        root_refs: list[dict[str, str]] = []
+        processed_parents: dict[str, dict[str, object]] = {}
 
-            if is_path:
-                file_path = Path(modname).resolve()
-                if not file_path.exists():
-                    msg = f"File not found: {modname!r}"
-                    raise Error(msg)
-                module_name = file_path.stem
-                spec = importlib.util.spec_from_file_location(module_name, file_path)
-                if spec is None or spec.loader is None:
-                    msg = f"Cannot load module from {modname!r}"
-                    raise Error(msg)
-                module = importlib.util.module_from_spec(spec)
-                sys.modules[module_name] = module
-                spec.loader.exec_module(module)
-            else:
-                try:
-                    found_spec = importlib.util.find_spec(modname)
-                    if found_spec is None:
-                        msg = f"Cannot find module {modname!r}"
-                        raise Error(msg)
-                    module = importlib.import_module(modname)
-                except ImportError as e:
-                    msg = f"Cannot import module {modname!r}: {e}"
-                    raise Error(msg) from e
-            loaded_modules[modname] = module
-        else:
-            module = loaded_modules[modname]
-
-        try:
-            obj = getattr(module, qualname)
-        except AttributeError as e:
-            msg = f"Module {modname!r} has no attribute {qualname!r}"
-            raise Error(msg) from e
-
-        if not (isinstance(obj, type) and issubclass(obj, BaseModel)):
-            msg = f"Multiple --input-model only supports Pydantic v2 BaseModel classes, got {type(obj).__name__}"
-            raise Error(msg)
-
-        model_classes.append(obj)
-
-    if input_file_type not in {InputFileType.Auto, InputFileType.JsonSchema}:
-        msg = (
-            f"--input-file-type must be 'jsonschema' (or omitted) "
-            f"when --input-model points to Pydantic models, "
-            f"got '{input_file_type.value}'"
-        )
-        raise Error(msg)
-
-    schema_generator = _get_input_model_json_schema_class()
-    merged_defs: dict[str, object] = {}
-    root_refs: list[dict[str, str]] = []
-    processed_parents: dict[str, dict[str, object]] = {}
-
-    for model_class in model_classes:
-        model_name = model_class.__name__
-        _try_rebuild_model(model_class)
-
-        schema = model_class.model_json_schema(schema_generator=schema_generator)  # ty: ignore
-        schema = _add_python_type_for_unserializable(schema, model_class)
-        schema = _add_python_type_info(schema, model_class)
-
-        schema = _transform_single_model_to_inheritance(schema, model_class, schema_generator, processed_parents)
-
-        if "$defs" in schema:
-            schema_defs = cast("dict[str, object]", schema["$defs"])
-            for k, v in schema_defs.items():
-                new_is_base = isinstance(v, dict) and v.get("x-is-base-class")  # ty: ignore
-                existing = merged_defs.get(k)
-                existing_is_base = isinstance(existing, dict) and existing.get("x-is-base-class") if existing else False  # ty: ignore
-                if k not in merged_defs or (new_is_base and not existing_is_base):
-                    merged_defs[k] = v
-
-        model_def = {k: v for k, v in schema.items() if k != "$defs"}
-        merged_defs[model_name] = model_def
-
-        root_refs.append({"$ref": f"#/$defs/{model_name}"})
-
-    final_schema: dict[str, object] = {"$defs": merged_defs, "anyOf": root_refs}
-
-    if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
-        all_nested_models: dict[str, type] = {}
         for model_class in model_classes:
-            all_nested_models.update(_collect_nested_models(model_class))
-        final_schema = _filter_defs_by_strategy(final_schema, all_nested_models, output_model_type, ref_strategy)
+            model_name = model_class.__name__
+            _try_rebuild_model(model_class)
 
-    return final_schema
+            schema = model_class.model_json_schema(schema_generator=schema_generator)  # ty: ignore
+            schema = _add_python_type_for_unserializable(schema, model_class)
+            schema = _add_python_type_info(schema, model_class)
+
+            schema = _transform_single_model_to_inheritance(schema, model_class, schema_generator, processed_parents)
+
+            if "$defs" in schema:
+                schema_defs = cast("dict[str, object]", schema["$defs"])
+                for k, v in schema_defs.items():
+                    new_is_base = _is_input_model_base_schema(v)
+                    existing = merged_defs.get(k)
+                    existing_is_base = _is_input_model_base_schema(existing) if existing is not None else False
+                    if k not in merged_defs or (new_is_base and not existing_is_base):
+                        merged_defs[k] = v
+
+            model_def = {k: v for k, v in schema.items() if k != "$defs"}
+            merged_defs[model_name] = model_def
+
+            root_refs.append({"$ref": f"#/$defs/{model_name}"})
+
+        final_schema: dict[str, object] = {"$defs": merged_defs, "anyOf": root_refs}
+
+        if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
+            all_nested_models: dict[str, type] = {}
+            for model_class in model_classes:
+                all_nested_models.update(_collect_nested_models(model_class))
+            final_schema = _filter_defs_by_strategy(final_schema, all_nested_models, output_model_type, ref_strategy)
+
+        return final_schema
+    finally:
+        for state in reversed(path_module_states):
+            _restore_path_module(state)
 
 
-def _load_single_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
+def _load_single_model_schema(  # noqa: PLR0912, PLR0915
     input_model: str,
     input_file_type: InputFileType,
     ref_strategy: InputModelRefStrategy | None,
@@ -836,111 +881,80 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
     Raises:
         Error: If format invalid, object cannot be loaded, or input_file_type invalid
     """
-    import importlib.util  # noqa: PLC0415
-    import sys  # noqa: PLC0415
-
     from datamodel_code_generator import InputFileType  # noqa: PLC0415
-    from datamodel_code_generator.arguments import InputModelRefStrategy  # noqa: PLC0415
 
-    modname, sep, qualname = input_model.rpartition(":")
-    if not sep or not modname:
-        msg = f"Invalid --input-model format: {input_model!r}. Expected 'module:Object' or 'path/to/file.py:Object'."
-        raise Error(msg)
-
-    is_path = "/" in modname or "\\" in modname
-    if not is_path and modname.endswith(".py"):
-        is_path = Path(modname).exists()
+    modname, qualname = _split_input_model(input_model)
 
     cwd = str(Path.cwd())
     if cwd not in sys.path:
         sys.path.insert(0, cwd)
 
-    if is_path:
-        file_path = Path(modname).resolve()
-        if not file_path.exists():
-            msg = f"File not found: {modname!r}"
-            raise Error(msg)
-        module_name = file_path.stem
-        spec = importlib.util.spec_from_file_location(module_name, file_path)
-        if spec is None or spec.loader is None:
-            msg = f"Cannot load module from {modname!r}"
-            raise Error(msg)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module
-        spec.loader.exec_module(module)
-    else:
-        try:
-            spec = importlib.util.find_spec(modname)
-            if spec is None:
-                msg = f"Cannot find module {modname!r}"
-                raise Error(msg)
-            module = importlib.import_module(modname)
-        except ImportError as e:
-            msg = f"Cannot import module {modname!r}: {e}"
-            raise Error(msg) from e
+    module, path_module_state = _load_input_model_module(modname)
 
     try:
-        obj = getattr(module, qualname)
-    except AttributeError as e:
-        msg = f"Module {modname!r} has no attribute {qualname!r}"
-        raise Error(msg) from e
+        try:
+            obj = getattr(module, qualname)
+        except AttributeError as e:
+            msg = f"Module {modname!r} has no attribute {qualname!r}"
+            raise Error(msg) from e
 
-    if isinstance(obj, dict):
-        if input_file_type == InputFileType.Auto:
-            msg = "--input-file-type is required when --input-model points to a dict"
-            raise Error(msg)
-        return obj
+        if isinstance(obj, dict):
+            if input_file_type == InputFileType.Auto:
+                msg = "--input-file-type is required when --input-model points to a dict"
+                raise Error(msg)
+            return obj
 
-    if isinstance(obj, type) and issubclass(obj, BaseModel):
-        if input_file_type not in {InputFileType.Auto, InputFileType.JsonSchema}:
-            msg = (
-                f"--input-file-type must be 'jsonschema' (or omitted) "
-                f"when --input-model points to a Pydantic model, "
-                f"got '{input_file_type.value}'"
-            )
-            raise Error(msg)
-        _try_rebuild_model(obj)
-        schema_generator = _get_input_model_json_schema_class()
-        schema = obj.model_json_schema(schema_generator=schema_generator)
-        schema = _add_python_type_for_unserializable(schema, obj)
-        schema = _add_python_type_info(schema, obj)
+        if isinstance(obj, type) and issubclass(obj, BaseModel):
+            if input_file_type not in {InputFileType.Auto, InputFileType.JsonSchema}:
+                msg = (
+                    f"--input-file-type must be 'jsonschema' (or omitted) "
+                    f"when --input-model points to a Pydantic model, "
+                    f"got '{input_file_type.value}'"
+                )
+                raise Error(msg)
+            _try_rebuild_model(obj)
+            schema_generator = _get_input_model_json_schema_class()
+            schema = obj.model_json_schema(schema_generator=schema_generator)
+            schema = _add_python_type_for_unserializable(schema, obj)
+            schema = _add_python_type_info(schema, obj)
 
-        schema = _transform_single_model_to_inheritance(schema, obj, schema_generator)
+            schema = _transform_single_model_to_inheritance(schema, obj, schema_generator)
 
-        if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
-            nested_models = _collect_nested_models(obj)
-            model_name = getattr(obj, "__name__", None)
-            if model_name and "$defs" in schema and model_name in schema["$defs"]:  # pragma: no cover  # ty: ignore
-                nested_models[model_name] = obj
-            schema = _filter_defs_by_strategy(schema, nested_models, output_model_type, ref_strategy)
+            if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
+                nested_models = _collect_nested_models(obj)
+                model_name = getattr(obj, "__name__", None)
+                if model_name and "$defs" in schema and model_name in schema["$defs"]:  # pragma: no cover  # ty: ignore
+                    nested_models[model_name] = obj
+                schema = _filter_defs_by_strategy(schema, nested_models, output_model_type, ref_strategy)
 
-        return schema
+            return schema
 
-    from dataclasses import is_dataclass  # noqa: PLC0415
+        is_typed_dict = isinstance(obj, type) and hasattr(obj, "__required_keys__")
+        if is_dataclass(obj) or is_typed_dict:
+            if input_file_type not in {InputFileType.Auto, InputFileType.JsonSchema}:
+                msg = (
+                    f"--input-file-type must be 'jsonschema' (or omitted) "
+                    f"when --input-model points to a dataclass or TypedDict, "
+                    f"got '{input_file_type.value}'"
+                )
+                raise Error(msg)
+            from pydantic import TypeAdapter  # noqa: PLC0415
 
-    is_typed_dict = isinstance(obj, type) and hasattr(obj, "__required_keys__")
-    if is_dataclass(obj) or is_typed_dict:
-        if input_file_type not in {InputFileType.Auto, InputFileType.JsonSchema}:
-            msg = (
-                f"--input-file-type must be 'jsonschema' (or omitted) "
-                f"when --input-model points to a dataclass or TypedDict, "
-                f"got '{input_file_type.value}'"
-            )
-            raise Error(msg)
-        from pydantic import TypeAdapter  # noqa: PLC0415
+            schema = TypeAdapter(obj).json_schema()
+            schema = _add_python_type_info_generic(schema, cast("type", obj))
 
-        schema = TypeAdapter(obj).json_schema()
-        schema = _add_python_type_info_generic(schema, cast("type", obj))
+            if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
+                obj_type = cast("type", obj)
+                nested_models = _collect_nested_models(obj_type)
+                obj_name = getattr(obj, "__name__", None)
+                if obj_name and "$defs" in schema and obj_name in schema["$defs"]:  # pragma: no cover
+                    nested_models[obj_name] = obj_type
+                schema = _filter_defs_by_strategy(schema, nested_models, output_model_type, ref_strategy)
 
-        if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
-            obj_type = cast("type", obj)
-            nested_models = _collect_nested_models(obj_type)
-            obj_name = getattr(obj, "__name__", None)
-            if obj_name and "$defs" in schema and obj_name in schema["$defs"]:  # pragma: no cover
-                nested_models[obj_name] = obj_type
-            schema = _filter_defs_by_strategy(schema, nested_models, output_model_type, ref_strategy)
+            return schema
 
-        return schema
-
-    msg = f"{qualname!r} is not a supported type. Supported: dict, Pydantic v2 BaseModel, dataclass, TypedDict"
-    raise Error(msg)
+        msg = f"{qualname!r} is not a supported type. Supported: dict, Pydantic v2 BaseModel, dataclass, TypedDict"
+        raise Error(msg)
+    finally:
+        if path_module_state is not None:
+            _restore_path_module(path_module_state)

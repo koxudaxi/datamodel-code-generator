@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 
 class B(BaseModel):
-    type: Literal['b'] = 'b'
+    type: Literal['b'] | None = None
 
 
 class Model(BaseModel):

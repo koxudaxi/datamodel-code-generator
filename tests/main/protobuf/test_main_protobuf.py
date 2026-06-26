@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any, cast
 
 import black
@@ -9,11 +10,13 @@ import pytest
 
 from datamodel_code_generator import Error, InputFileType, generate, infer_input_type
 from datamodel_code_generator.__main__ import Exit
-from tests.conftest import assert_output
+from datamodel_code_generator.parser.protobuf import WELL_KNOWN_SCHEMAS, convert_protobuf_schema_data
+from tests.conftest import assert_mutable_copy_is_isolated, assert_output
 from tests.main.conftest import (
     EXPECTED_PROTOBUF_PATH,
     PROTOBUF_DATA_PATH,
     assert_input_file_type,
+    run_generate_and_assert,
     run_generate_file_and_assert,
     run_main_and_assert,
 )
@@ -80,6 +83,30 @@ def test_main_protobuf_well_known_wrappers(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="well_known_wrappers.py",
     )
+
+
+def _mutate_first_any_of_schema(value: object) -> None:
+    any_of = cast("list[dict[str, Any]]", cast("dict[str, Any]", value)["anyOf"])
+    any_of[0]["x-mutated"] = True
+
+
+def test_convert_protobuf_schema_data_isolates_well_known_schema_templates() -> None:
+    """Keep converted well-known schemas independent from module-level templates."""
+    original_templates = deepcopy(WELL_KNOWN_SCHEMAS)
+    proto = (PROTOBUF_DATA_PATH / "well_known_wrappers.proto").read_text(encoding="utf-8")
+
+    try:
+        converted = convert_protobuf_schema_data(proto)
+        properties = converted["definitions"]["example__wkt__WrapperBucket"]["properties"]
+        assert_mutable_copy_is_isolated(
+            original=WELL_KNOWN_SCHEMAS["google.protobuf.StringValue"],
+            copied=properties["string_value"],
+            mutate_copied=_mutate_first_any_of_schema,
+            label="Protobuf StringValue well-known schema",
+        )
+    finally:
+        WELL_KNOWN_SCHEMAS.clear()
+        WELL_KNOWN_SCHEMAS.update(original_templates)
 
 
 def test_main_protobuf_spec_proto3(output_file: Path) -> None:
@@ -163,13 +190,13 @@ def test_generate_api_protobuf_definition_key_collision() -> None:
 
 def test_generate_api_protobuf_from_path_list() -> None:
     """Generate Protocol Buffers models from a list of .proto file paths."""
-    result = generate(
-        cast(Any, [(PROTOBUF_DATA_PATH / "spec_proto3.proto").resolve()]),  # noqa: TC006
+    run_generate_and_assert(
+        input_=cast(Any, [(PROTOBUF_DATA_PATH / "spec_proto3.proto").resolve()]),  # noqa: TC006
         input_file_type=InputFileType.Protobuf,
         disable_timestamp=True,
+        expected_file=EXPECTED_PROTOBUF_PATH / "spec_proto3_list_input.py",
+        assert_input_unchanged=True,
     )
-
-    assert_output(result, EXPECTED_PROTOBUF_PATH / "spec_proto3_list_input.py")
 
 
 def test_generate_api_protobuf_rejects_dict_input() -> None:

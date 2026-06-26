@@ -33,8 +33,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing_extensions import TypeIs
 
 from datamodel_code_generator import Error, NamingStrategy
+from datamodel_code_generator._format_types import PythonVersion
 from datamodel_code_generator.enums import ClassNameAffixScope
-from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.util import camel_to_snake
 
 if TYPE_CHECKING:
@@ -144,6 +144,7 @@ class Reference(_BaseModel):
         arbitrary_types_allowed=True,
         ignored_types=(cached_property,),
         revalidate_instances="never",
+        defer_build=True,
     )
 
     @property
@@ -310,6 +311,22 @@ class FieldNameResolver:
             count += 1
         return new_name
 
+    def _resolve_alias_value(
+        self,
+        field_name: str,
+        alias_value: object,
+        excludes: set[str] | None,
+    ) -> tuple[str, str | list[str]] | None:
+        if isinstance(alias_value, list) and alias_value:
+            if not all(isinstance(alias, str) for alias in alias_value):
+                return None
+            alias_values = cast("list[str]", alias_value)
+            valid_name = self.get_valid_name(alias_values[0], excludes=excludes)
+            return valid_name, [field_name, *alias_values]
+        if isinstance(alias_value, str):
+            return alias_value, field_name
+        return None
+
     def get_valid_field_name_and_alias(
         self,
         field_name: str,
@@ -338,23 +355,13 @@ class FieldNameResolver:
         del path
         if class_name:
             scoped_key = f"{class_name}.{field_name}"
-            if scoped_key in self.aliases:
-                alias_value = self.aliases[scoped_key]
-                if isinstance(alias_value, list) and alias_value:
-                    # Multiple aliases: validate first alias as field name, return all aliases including original
-                    valid_name = self.get_valid_name(alias_value[0], excludes=excludes)
-                    return valid_name, [field_name, *alias_value]
-                if isinstance(alias_value, str):
-                    return alias_value, field_name
+            resolved_alias = self._resolve_alias_value(field_name, self.aliases.get(scoped_key), excludes)
+            if resolved_alias is not None:
+                return resolved_alias
 
-        if field_name in self.aliases:
-            alias_value = self.aliases[field_name]
-            if isinstance(alias_value, list) and alias_value:
-                # Multiple aliases: validate first alias as field name, return all aliases including original
-                valid_name = self.get_valid_name(alias_value[0], excludes=excludes)
-                return valid_name, [field_name, *alias_value]
-            if isinstance(alias_value, str):
-                return alias_value, field_name
+        resolved_alias = self._resolve_alias_value(field_name, self.aliases.get(field_name), excludes)
+        if resolved_alias is not None:
+            return resolved_alias
 
         valid_name = self.get_valid_name(field_name, excludes=excludes)
         return (
@@ -486,6 +493,7 @@ class ModelResolver:  # noqa: PLR0904
         class_name_suffix: str | None = None,
         class_name_affix_scope: ClassNameAffixScope | None = None,
         skip_affix_for_root: bool = False,  # noqa: FBT001, FBT002
+        model_name_map: Mapping[str, str] | None = None,
         default_value_overrides: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize model resolver with naming and resolution options."""
@@ -545,6 +553,7 @@ class ModelResolver:  # noqa: PLR0904
             raise ValueError(msg)
         self.class_name_affix_scope: ClassNameAffixScope = class_name_affix_scope or ClassNameAffixScope.All
         self.skip_affix_for_root: bool = skip_affix_for_root
+        self.model_name_map: Mapping[str, str] = {} if model_name_map is None else {**model_name_map}
 
         # Incrementally maintained set of reference names for O(1) uniqueness checking
         self._reference_names_cache: set[str] = set()
@@ -553,6 +562,73 @@ class ModelResolver:  # noqa: PLR0904
         self.default_value_overrides: Mapping[str, Any] = (
             {} if default_value_overrides is None else {**default_value_overrides}
         )
+
+    def _get_model_name_map_value(self, path: str, generated_name: str, original_name: str) -> str | None:
+        """Return an explicit model rename for a source path or generated name."""
+        if not self.model_name_map:
+            return None
+
+        _, separator, fragment = path.partition("#")
+        candidates = (
+            (path, f"#{fragment}", generated_name, original_name)
+            if separator
+            else (
+                path,
+                generated_name,
+                original_name,
+            )
+        )
+        for candidate in candidates:
+            if (mapped_name := self.model_name_map.get(candidate)) is not None:
+                return mapped_name
+        return None
+
+    def _ensure_model_name_map_value(
+        self,
+        path: str,
+        generated_name: str,
+        mapped_name: str,
+        reserved_name: str | None,
+    ) -> None:
+        if not self.validate_name(mapped_name):
+            msg = f"--model-name-map maps {path!r} to invalid class name {mapped_name!r}"
+            raise Error(msg)
+
+        reference_names = self._get_reference_names()
+        conflict_reason = (
+            "already used"
+            if mapped_name != reserved_name and mapped_name in reference_names
+            else "reserved"
+            if mapped_name != generated_name and mapped_name in self.exclude_names
+            else None
+        )
+        if conflict_reason:
+            msg = f"--model-name-map maps {path!r} to {mapped_name!r}, but that model name is {conflict_reason}"
+            raise Error(msg)
+
+    def _apply_model_name_map(
+        self,
+        path: str,
+        original_name: str,
+        class_name: ClassName,
+        *,
+        reserved_name: str | None = None,
+    ) -> ClassName:
+        if (mapped_name := self._get_model_name_map_value(path, class_name.name, original_name)) is None:
+            return class_name
+
+        self._ensure_model_name_map_value(path, class_name.name, mapped_name, reserved_name)
+        return ClassName(name=mapped_name, duplicate_name=None)
+
+    def _reset_for_reuse(self, exclude_names: set[str]) -> None:
+        """Reset naming state so this resolver behaves like a freshly constructed one.
+
+        Internal helper for hot paths that would otherwise construct a new
+        ModelResolver per call; only the state touched by add() is reset.
+        """
+        self.exclude_names = exclude_names
+        self.references.clear()
+        self._reference_names_cache.clear()
 
     def _get_reference_names(self) -> set[str]:
         """Get the set of all reference names for uniqueness checking."""
@@ -823,7 +899,8 @@ class ModelResolver:  # noqa: PLR0904
         has_affix_config = bool(self.class_name_prefix or self.class_name_suffix)
         needs_scope = self.class_name_affix_scope != ClassNameAffixScope.All
         skip_affix = has_affix_config and needs_scope
-        name = self.get_class_name(original_name, unique=use_unique, skip_affix=skip_affix).name
+        class_name = self.get_class_name(original_name, unique=use_unique, skip_affix=skip_affix)
+        name = self._apply_model_name_map(path, original_name, class_name).name
         reference = Reference(
             path=path,
             original_name=original_name,
@@ -922,6 +999,7 @@ class ModelResolver:  # noqa: PLR0904
         singular_name_suffix: str | None = None,
         loaded: bool = False,
         model_type: str = "model",
+        preserve_class_name: bool = False,
     ) -> Reference:
         """Add or update a model reference with the given path and name."""
         joined_path = self.join_path(tuple(path))
@@ -952,25 +1030,23 @@ class ModelResolver:  # noqa: PLR0904
                 # For primary definitions, try to use the clean name first
                 # If an external reference has the same name, rename it
                 self._rename_external_ref_with_same_name(name, joined_path)
-                name, duplicate_name = self.get_class_name(
-                    name=name,
-                    unique=unique,
-                    reserved_name=reference.name if reference else None,
-                    singular_name=singular_name,
-                    singular_name_suffix=singular_name_suffix,
-                    model_type=model_type,
-                    is_root=is_root,
-                )
-            else:
-                name, duplicate_name = self.get_class_name(
-                    name=name,
-                    unique=unique,
-                    reserved_name=reference.name if reference else None,
-                    singular_name=singular_name,
-                    singular_name_suffix=singular_name_suffix,
-                    model_type=model_type,
-                    is_root=is_root,
-                )
+            class_name_result = self.get_class_name(
+                name=name,
+                unique=unique,
+                reserved_name=reference.name if reference else None,
+                singular_name=singular_name,
+                singular_name_suffix=singular_name_suffix,
+                model_type=model_type,
+                is_root=is_root,
+                preserve_name=preserve_class_name,
+            )
+            class_name_result = self._apply_model_name_map(
+                joined_path,
+                original_name,
+                class_name_result,
+                reserved_name=reference.name if reference else None,
+            )
+            name, duplicate_name = class_name_result
         else:
             # TODO: create a validate for module name
             name = self.get_valid_field_name(name, model_type=ModelType.CLASS)
@@ -1068,6 +1144,11 @@ class ModelResolver:  # noqa: PLR0904
         class_name = self.class_name_generator(name)
         return self._apply_class_name_affix(class_name, model_type=model_type, is_root=False)
 
+    def _generate_class_name(self, name: str, *, preserve_name: bool = False) -> str:
+        if preserve_name and self.validate_name(name):
+            return name
+        return self.class_name_generator(name)
+
     def get_class_name(  # noqa: PLR0913, PLR0917
         self,
         name: str,
@@ -1078,6 +1159,7 @@ class ModelResolver:  # noqa: PLR0904
         model_type: str = "model",
         is_root: bool = False,  # noqa: FBT001, FBT002
         skip_affix: bool = False,  # noqa: FBT001, FBT002
+        preserve_name: bool = False,  # noqa: FBT001, FBT002
     ) -> ClassName:
         """Generate a unique class name with optional singularization."""
         if "." in name and self.treat_dot_as_module is not False:
@@ -1093,7 +1175,7 @@ class ModelResolver:  # noqa: PLR0904
             prefix = ""
             class_name = name.replace(".", "_") if "." in name else name
 
-        class_name = self.class_name_generator(class_name)
+        class_name = self._generate_class_name(class_name, preserve_name=preserve_name)
 
         if singular_name:
             class_name = get_singular_name(class_name, singular_name_suffix or self.singular_name_suffix)
@@ -1204,20 +1286,79 @@ class ModelResolver:  # noqa: PLR0904
         return original_default, has_default
 
 
+_inflect_engine: inflect.engine | None = None
+_TYPEGUARD_NOT_LOADED = object()
+
+
+def _noop_typechecked(target: Any = None, **_: Any) -> Any:
+    """Return a no-op replacement for typeguard.typechecked."""
+    if target is None:
+        return lambda wrapped: wrapped
+    return target
+
+
+def _restore_typeguard_module(original_typeguard: Any, typeguard_stub: Any) -> None:
+    import sys  # noqa: PLC0415
+
+    match original_typeguard:
+        case _ if original_typeguard is _TYPEGUARD_NOT_LOADED:
+            if sys.modules.get("typeguard") is typeguard_stub:
+                del sys.modules["typeguard"]
+            return
+        case _:
+            sys.modules["typeguard"] = original_typeguard
+
+
+def _import_inflect_without_typeguard_instrumentation() -> Any:
+    """Import inflect without paying typeguard's import-time AST instrumentation cost."""
+    import _imp  # noqa: PLC0415, PLC2701
+    import sys  # noqa: PLC0415
+
+    # Guard the temporary sys.modules replacement from concurrent imports.
+    _imp.acquire_lock()
+    try:
+        if (inflect_module := sys.modules.get("inflect")) is not None:
+            return inflect_module
+
+        import importlib  # noqa: PLC0415
+        import types  # noqa: PLC0415
+
+        original_typeguard = sys.modules.get("typeguard", _TYPEGUARD_NOT_LOADED)
+        typeguard_stub = types.ModuleType("typeguard")
+        typeguard_stub.__dict__["__datamodel_codegen_stub__"] = True
+        typeguard_stub.__dict__["typechecked"] = _noop_typechecked
+        sys.modules["typeguard"] = typeguard_stub
+        try:
+            return importlib.import_module("inflect")
+        except (AttributeError, ImportError, TypeError):
+            # inflect>=7.2 imports typeguard and @typechecked reparses the module
+            # during import, causing the startup regression tracked in:
+            # https://github.com/jaraco/inflect/issues/212
+            #
+            # datamodel-code-generator only needs inflect.engine().singular_noun()
+            # for generated class names, not runtime validation. If inflect starts
+            # requiring more typeguard behavior than typechecked(), restore the real
+            # module and fall back to a normal import to preserve compatibility.
+            sys.modules.pop("inflect", None)
+            _restore_typeguard_module(original_typeguard, typeguard_stub)
+            return importlib.import_module("inflect")
+        finally:
+            _restore_typeguard_module(original_typeguard, typeguard_stub)
+    finally:
+        _imp.release_lock()
+
+
 def _get_inflect_engine() -> inflect.engine:
     """Get or create the inflect engine lazily."""
     global _inflect_engine  # noqa: PLW0603
     if _inflect_engine is None:
-        import inflect  # noqa: PLC0415
+        inflect = _import_inflect_without_typeguard_instrumentation()
 
         _inflect_engine = inflect.engine()
     return _inflect_engine
 
 
-_inflect_engine: inflect.engine | None = None
-
-
-@lru_cache
+@lru_cache(maxsize=4096)
 def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
     """Convert a plural name to singular form."""
     singular_name = _get_inflect_engine().singular_noun(cast("inflect.Word", name))  # ty: ignore
@@ -1226,7 +1367,7 @@ def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
     return singular_name  # ty: ignore
 
 
-@lru_cache
+@lru_cache(maxsize=4096)
 def snake_to_upper_camel(word: str, delimiter: str = "_") -> str:
     """Convert snake_case or delimited string to UpperCamelCase."""
     prefix = ""

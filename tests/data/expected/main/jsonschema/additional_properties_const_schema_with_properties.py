@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Dict, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -13,5 +13,8 @@ class KnownAndConstExtra(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    __pydantic_extra__: dict[str, Literal['red']]
     name: str
+
+
+KnownAndConstExtra.__annotations__['__pydantic_extra__'] = Dict[str, Literal['red']]
+KnownAndConstExtra.model_rebuild(force=True)

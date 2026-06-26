@@ -26,13 +26,14 @@ store mutation API, add it to ``GENERATION_STORE_MUTATION_METHODS`` so the
 checker and its tests stay aligned with the public parser-facing surface.
 """
 
-# ruff: noqa: D105, FURB189, PLR0913
+# ruff: noqa: D105, FURB189
 
 from __future__ import annotations
 
 from collections import defaultdict
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from functools import cache
 from typing import TYPE_CHECKING, Any, Literal, SupportsIndex, TypeAlias, TypeVar, overload
 
 if TYPE_CHECKING:
@@ -50,6 +51,7 @@ DataTypeRole = Literal["field", "base", "nested", "dict_key"]
 _OrderedSetItem = TypeVar("_OrderedSetItem")
 OrderedSet: TypeAlias = dict[_OrderedSetItem, None]
 Reference: TypeAlias = Any
+_PYDANTIC_V2_MODEL_MODULE_PREFIX = "datamodel_code_generator.model.pydantic_v2."
 
 GENERATION_STORE_MUTATION_METHODS: frozenset[str] = frozenset({
     "append_field",
@@ -94,7 +96,23 @@ def _outermost_parent(value: object) -> object:
     return current
 
 
-@dataclass(frozen=True)
+@cache
+def _pydantic_v2_dict_key_reference_classes_enabled() -> bool:
+    from datamodel_code_generator.model.pydantic_v2.version import (  # noqa: PLC0415
+        PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
+    )
+
+    return PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING
+
+
+def _include_dict_key_reference_classes(model: DataModel) -> bool:
+    return (
+        model.__class__.__module__.startswith(_PYDANTIC_V2_MODEL_MODULE_PREFIX)
+        and _pydantic_v2_dict_key_reference_classes_enabled()
+    )
+
+
+@dataclass(frozen=True, slots=True)
 class ModelFact:
     """A parsed model and the stable facts derived from its reference."""
 
@@ -108,7 +126,7 @@ class ModelFact:
     file_path: Path | None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class DataTypeFact:
     """A data type occurrence owned by a parsed model."""
 
@@ -120,7 +138,7 @@ class DataTypeFact:
     reference: Reference | None
 
 
-@dataclass
+@dataclass(slots=True)
 class GenerationFacts:
     """A complete snapshot of derived generation facts."""
 
@@ -130,13 +148,10 @@ class GenerationFacts:
     model_by_path: dict[str, ModelId] = field(default_factory=dict)
     model_by_ref_id: dict[int, ModelId] = field(default_factory=dict)
     data_types_by_model: dict[ModelId, tuple[DataTypeId, ...]] = field(default_factory=dict)
-    field_edges: dict[ModelId, OrderedSet[ModelId]] = field(default_factory=dict)
-    base_edges: dict[ModelId, OrderedSet[ModelId]] = field(default_factory=dict)
-    all_edges: dict[ModelId, OrderedSet[ModelId]] = field(default_factory=dict)
     reverse_edges: defaultdict[int, OrderedSet[DataTypeId]] = field(default_factory=lambda: defaultdict(dict))
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class GenerationBuildResult:
     """Facts and stable id state produced by an index rebuild."""
 
@@ -176,7 +191,11 @@ class _GenerationModelList(list["DataModel"]):
     def __setitem__(self, index: slice, item: Iterable[Any]) -> None:  # pragma: no cover
         pass
 
-    def __setitem__(self, index: SupportsIndex | slice, item: Any | Iterable[Any]) -> None:  # ty: ignore[invalid-method-override]
+    def __setitem__(
+        self,
+        index: SupportsIndex | slice,
+        item: Any | Iterable[Any],
+    ) -> None:  # ty: ignore[invalid-method-override]
         super().__setitem__(index, item)  # type: ignore[arg-type]
         self._invalidate()
 
@@ -264,9 +283,6 @@ class GenerationIndexBuilder:
     def _record_data_types(self) -> None:
         for model_id, model_fact in self._facts.model_facts.items():
             data_type_ids: list[DataTypeId] = []
-            field_edges: OrderedSet[ModelId] = {}
-            base_edges: OrderedSet[ModelId] = {}
-            all_edges: OrderedSet[ModelId] = {}
 
             for field_index, field_ in enumerate(model_fact.model.fields):
                 self._record_data_type_tree(
@@ -275,7 +291,6 @@ class GenerationIndexBuilder:
                     owner_field_index=field_index,
                     role="field",
                     data_type_ids=data_type_ids,
-                    edge_bucket=field_edges,
                 )
 
             for base_class in model_fact.model.base_classes:
@@ -285,18 +300,9 @@ class GenerationIndexBuilder:
                     owner_field_index=None,
                     role="base",
                     data_type_ids=data_type_ids,
-                    edge_bucket=base_edges,
                 )
 
-            for edge_model_id in field_edges:
-                all_edges[edge_model_id] = None
-            for edge_model_id in base_edges:
-                all_edges[edge_model_id] = None
-
             self._facts.data_types_by_model[model_id] = tuple(data_type_ids)
-            self._facts.field_edges[model_id] = field_edges
-            self._facts.base_edges[model_id] = base_edges
-            self._facts.all_edges[model_id] = all_edges
 
     def _record_data_type_tree(
         self,
@@ -306,8 +312,6 @@ class GenerationIndexBuilder:
         owner_field_index: int | None,
         role: DataTypeRole,
         data_type_ids: list[DataTypeId],
-        edge_bucket: OrderedSet[ModelId],
-        include_dependency_edges: bool = True,
     ) -> None:
         data_type_id = self._next_data_type_id
         self._next_data_type_id += 1
@@ -324,9 +328,6 @@ class GenerationIndexBuilder:
         data_type_ids.append(data_type_id)
 
         if data_type.reference:
-            target_id = self._facts.model_by_ref_id.get(id(data_type.reference))
-            if include_dependency_edges and target_id is not None:
-                edge_bucket[target_id] = None
             self._facts.reverse_edges[id(data_type.reference)][data_type_id] = None
 
         nested_role: DataTypeRole = "dict_key" if role == "dict_key" else "nested"
@@ -337,8 +338,6 @@ class GenerationIndexBuilder:
                 owner_field_index=owner_field_index,
                 role=nested_role,
                 data_type_ids=data_type_ids,
-                edge_bucket=edge_bucket,
-                include_dependency_edges=include_dependency_edges,
             )
 
         if data_type.dict_key:
@@ -348,8 +347,6 @@ class GenerationIndexBuilder:
                 owner_field_index=owner_field_index,
                 role="dict_key",
                 data_type_ids=data_type_ids,
-                edge_bucket=edge_bucket,
-                include_dependency_edges=False,
             )
 
 
@@ -425,11 +422,12 @@ class GenerationIndex:
         self._reset_reference_classes_cache_if_needed()
         if (reference_classes := self._reference_classes_cache.get(model_id)) is not None:
             return reference_classes
+        include_dict_key_references = _include_dict_key_reference_classes(model)
         reference_classes = frozenset(
             reference.path
             for data_type_id in facts.data_types_by_model.get(model_id, ())
-            if (fact := facts.data_type_facts[data_type_id]).role != "dict_key"
-            and (reference := fact.reference) is not None
+            if (reference := (fact := facts.data_type_facts[data_type_id]).reference) is not None
+            if include_dict_key_references or fact.role != "dict_key"
         ) | frozenset(model.extra_template_data.get("additionalPropertiesReferenceClasses", ()))
         self._reference_classes_cache[model_id] = reference_classes
         return reference_classes
@@ -526,12 +524,41 @@ class GenerationStore:  # noqa: PLR0904
         self._next_model_id = 0
         self._facts_version = 0
         self._dirty = True
+        self._defer_refresh_depth = 0
 
     @classmethod
     def create_with_results(cls) -> tuple[GenerationStore, list[DataModel]]:
         """Create a store and the public ``Parser.results`` list view together."""
         store = cls()
         return store, store.models
+
+    def _dispose(self, references: Iterable[Reference] = ()) -> None:
+        """Drop all facts and model references so the parsed graph can be reclaimed.
+
+        The store, its model list, and its facts hold strong references to every
+        model and data type; clearing them removes the last anchors keeping the
+        object graph alive once the parser is dropped. Models, fields, data
+        types, and references also point at each other in cycles, so their back
+        references are severed first to let ordinary reference counting reclaim
+        the graph without waiting for a full garbage collection pass.
+        """
+        for model in self.models:
+            for model_field in model.fields:
+                for data_type in list(model_field.data_type.all_data_types):
+                    data_type.parent = None
+                    data_type.reference = None
+                model_field.parent = None
+            for base_class in model.base_classes:
+                for data_type in list(base_class.all_data_types):
+                    data_type.parent = None
+                    data_type.reference = None
+        for reference in references:
+            reference.children.clear()
+            reference.source = None
+        self._facts = GenerationFacts()
+        self._model_ids_by_object.clear()
+        self.models.clear()
+        self._dirty = True
 
     @property
     def facts(self) -> GenerationFacts:
@@ -604,6 +631,13 @@ class GenerationStore:  # noqa: PLR0904
 
     def refresh(self) -> None:
         """Rebuild facts from the live model list."""
+        if self._defer_refresh_depth:
+            return
+
+        self.refresh_now()
+
+    def refresh_now(self) -> None:
+        """Rebuild facts immediately, even inside a deferred mutation block."""
         if not self._dirty:
             return
 
@@ -751,9 +785,19 @@ class GenerationStore:  # noqa: PLR0904
                     self.detach_data_type_ref(data_type)
 
     @contextmanager
-    def defer_refresh(self) -> Generator[None, None, None]:  # noqa: PLR6301
-        """Mark a group of mutations as one logical generation-state update."""
-        yield
+    def defer_refresh(self) -> Generator[None, None, None]:
+        """Batch mutation invalidations and rebuild derived facts once on exit."""
+        self._defer_refresh_depth += 1
+        completed = False
+        try:
+            yield
+            completed = True
+        finally:
+            try:
+                if completed and self._defer_refresh_depth == 1:
+                    self.refresh_now()
+            finally:
+                self._defer_refresh_depth -= 1
 
     @staticmethod
     def _replace_data_type_reference(data_type: DataType, new_reference: Reference | None) -> None:

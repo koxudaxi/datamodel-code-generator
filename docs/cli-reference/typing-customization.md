@@ -1541,7 +1541,7 @@ You can pass the mapping either inline as JSON or as a path to a JSON file.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --enum-field-as-literal-map "{"status": "literal"}" # (1)!
+    datamodel-codegen --input schema.json --enum-field-as-literal-map '{"status": "literal"}' # (1)!
     ```
 
     1. :material-arrow-left: `--enum-field-as-literal-map` - the option documented here
@@ -1803,7 +1803,7 @@ The `--no-use-specialized-enum` flag prevents the generator from using
 specialized Enum classes (StrEnum, IntEnum) when generating code for
 Python 3.11+, falling back to standard Enum classes instead.
 
-**Related:** [`--target-python-version`](model-customization.md#target-python-version), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
+**Related:** [`--target-python-version`](model-customization.md#target-python-version), [`--use-specialized-enum`](typing-customization.md#use-specialized-enum), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 
 !!! tip "Usage"
 
@@ -2078,7 +2078,7 @@ The `--no-use-standard-collections` flag generates typing module containers
 (Dict, List) instead of built-in types. This is useful for older Python
 versions or when explicit typing imports are preferred.
 
-**See also:** [Python Version Compatibility](../python-version-compatibility.md)
+**Related:** [`--use-standard-collections`](typing-customization.md#use-standard-collections)
 
 !!! tip "Usage"
 
@@ -2286,7 +2286,7 @@ The `--no-use-union-operator` flag generates union types using typing.Union
 and typing.Optional instead of the | operator (PEP 604). This is useful
 for older Python versions or when explicit typing imports are preferred.
 
-**See also:** [Python Version Compatibility](../python-version-compatibility.md)
+**Related:** [`--use-union-operator`](typing-customization.md#use-union-operator)
 
 !!! tip "Usage"
 
@@ -2812,7 +2812,7 @@ instead of generating them.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --type-overrides "{"CustomType": "my_app.types.CustomType"}" # (1)!
+    datamodel-codegen --input schema.json --type-overrides '{"CustomType": "my_app.types.CustomType"}' # (1)!
     ```
 
     1. :material-arrow-left: `--type-overrides` - the option documented here
@@ -2880,6 +2880,8 @@ Use [`--use-unique-items-as-set`](#use-unique-items-as-set) when you need the
 generated type to enforce uniqueness for array schemas.
 
 **Related:** [`--field-constraints`](field-customization.md#field-constraints)
+
+**See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
 
@@ -3387,13 +3389,21 @@ precise decimal arithmetic when validating values against the constraint.
 
     from __future__ import annotations
 
+    from decimal import Decimal
+
     from pydantic import BaseModel, condecimal, confloat
 
 
     class Model(BaseModel):
-        price: condecimal(ge=0, le=99999.99, multiple_of=0.01) | None = None
-        quantity: condecimal(multiple_of=0.1) | None = None
-        rate: condecimal(multiple_of=0.001, lt=1.0, gt=0.0) | None = None
+        price: (
+            condecimal(ge=Decimal('0'), le=Decimal('99999.99'), multiple_of=Decimal('0.01'))
+            | None
+        ) = None
+        quantity: condecimal(multiple_of=Decimal('0.1')) | None = None
+        rate: (
+            condecimal(multiple_of=Decimal('0.001'), lt=Decimal('1.0'), gt=Decimal('0.0'))
+            | None
+        ) = None
         simple_float: confloat(ge=0.0, le=100.0) | None = None
     ```
 
@@ -3408,7 +3418,7 @@ The `--use-generic-container-types` flag generates abstract container types
 If `--use-standard-collections` is set, imports from `collections.abc`;
 otherwise imports from `typing`.
 
-**Related:** [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections)
+**Related:** [`--use-standard-collections`](typing-customization.md#use-standard-collections)
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
@@ -4129,6 +4139,8 @@ code for Python 3.10+ where built-in types support subscripting.
 
 **Related:** [`--use-generic-container-types`](typing-customization.md#use-generic-container-types)
 
+**See also:** [Python Version Compatibility](../python-version-compatibility.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -4655,6 +4667,8 @@ The `--use-union-operator` flag generates union types using the | operator
 This is the default behavior.
 
 **Related:** [`--no-use-union-operator`](typing-customization.md#no-use-union-operator)
+
+**See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
 

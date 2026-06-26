@@ -196,6 +196,7 @@ def test_jsonschema_features_2019_09() -> None:
             definitions_key="$defs",
             exclusive_as_number=True,
             read_only_write_only=True,
+            anchor=True,
             recursive_ref=True,
             dynamic_ref=False,
         )
@@ -214,6 +215,7 @@ def test_jsonschema_features_2020_12() -> None:
             definitions_key="$defs",
             exclusive_as_number=True,
             read_only_write_only=True,
+            anchor=True,
             recursive_ref=True,
             dynamic_ref=True,
         )
@@ -232,6 +234,7 @@ def test_jsonschema_features_auto() -> None:
             definitions_key="$defs",
             exclusive_as_number=True,
             read_only_write_only=True,
+            anchor=True,
             recursive_ref=True,
             dynamic_ref=True,
         )
@@ -279,6 +282,7 @@ def test_openapi_features_v31() -> None:
             ref_sibling_keywords=True,
             exclusive_as_number=True,
             read_only_write_only=True,
+            anchor=True,
             recursive_ref=True,
             dynamic_ref=True,
             nullable_keyword=False,
@@ -301,6 +305,7 @@ def test_openapi_features_auto() -> None:
             ref_sibling_keywords=True,
             exclusive_as_number=True,
             read_only_write_only=True,
+            anchor=True,
             recursive_ref=True,
             dynamic_ref=True,
             nullable_keyword=False,
@@ -501,6 +506,81 @@ def test_get_data_formats_openapi() -> None:
     })
 
 
+def _data_format_key_order(data_formats: dict[str, dict[str, object]]) -> dict[str, list[str]]:
+    return {data_type: list(formats) for data_type, formats in data_formats.items()}
+
+
+def test_get_data_formats_openapi_matches_jsonschema_public_mapping() -> None:
+    """Pin parity and ordering for data-format table deduplication."""
+    from datamodel_code_generator.parser.jsonschema import json_schema_data_formats
+    from datamodel_code_generator.parser.schema_version import get_data_formats
+
+    schema_version_data_formats = get_data_formats(is_openapi=True)
+
+    assert schema_version_data_formats == json_schema_data_formats
+    assert schema_version_data_formats is not json_schema_data_formats
+    assert schema_version_data_formats["string"] is not json_schema_data_formats["string"]
+    assert _data_format_key_order(schema_version_data_formats) == _data_format_key_order(json_schema_data_formats)
+    # Dict equality ignores order. Preserve json_schema_data_formats as a public importable mapping.
+    assert _data_format_key_order(json_schema_data_formats) == snapshot({
+        "integer": ["int32", "int64", "default", "date-time", "unix-time", "unixtime"],
+        "number": [
+            "float",
+            "double",
+            "decimal",
+            "date-time",
+            "time",
+            "time-delta",
+            "default",
+            "unixtime",
+        ],
+        "string": [
+            "default",
+            "byte",
+            "date",
+            "date-time",
+            "timestamp with time zone",
+            "date-time-local",
+            "duration",
+            "time",
+            "time-local",
+            "path",
+            "email",
+            "idn-email",
+            "idn-hostname",
+            "iri",
+            "iri-reference",
+            "uuid",
+            "uuid1",
+            "uuid2",
+            "uuid3",
+            "uuid4",
+            "uuid5",
+            "uri",
+            "uri-reference",
+            "uri-template",
+            "json-pointer",
+            "relative-json-pointer",
+            "regex",
+            "hostname",
+            "ipv4",
+            "ipv4-network",
+            "ipv6",
+            "ipv6-network",
+            "decimal",
+            "integer",
+            "unixtime",
+            "ulid",
+            "binary",
+            "password",
+        ],
+        "boolean": ["default"],
+        "object": ["default"],
+        "null": ["default"],
+        "array": ["default"],
+    })
+
+
 def test_jsonschema_parser_schema_features_detection() -> None:
     """Test that JsonSchemaParser detects schema version from $schema."""
     from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
@@ -551,7 +631,7 @@ def test_openapi_parser_config_version_override() -> None:
 
 The `--schema-version` option specifies the schema version to use instead of auto-detection.
 Valid values depend on input type: JsonSchema (draft-04, draft-06, draft-07, 2019-09, 2020-12)
-or OpenAPI (3.0, 3.1). Default is 'auto' (detected from $schema or openapi field).""",
+or OpenAPI (3.0, 3.1, 3.2). Default is 'auto' (detected from $schema or openapi field).""",
     input_schema="jsonschema/simple_string.json",
     cli_args=["--schema-version", "draft-07"],
     golden_output="jsonschema/simple_string.py",
@@ -602,6 +682,15 @@ def test_schema_paths_lenient_mode_draft7() -> None:
         ("#/definitions", ["definitions"]),
         ("#/$defs", ["$defs"]),
     ])
+
+
+def test_jsonschema_default_schema_paths_remain_mutable_list() -> None:
+    """Test default schema paths keep the public mutable list shape."""
+    from datamodel_code_generator.parser.jsonschema import _DEFAULT_SCHEMA_PATHS, JsonSchemaParser
+
+    assert isinstance(JsonSchemaParser.SCHEMA_PATHS, list)
+    assert list(_DEFAULT_SCHEMA_PATHS) == JsonSchemaParser.SCHEMA_PATHS
+    assert JsonSchemaParser.SCHEMA_PATHS is not _DEFAULT_SCHEMA_PATHS
 
 
 def test_schema_paths_lenient_mode_2020_12() -> None:
@@ -1055,7 +1144,7 @@ class Model(BaseModel):
     option_description="""Schema version to use for parsing OpenAPI.
 
 The `--schema-version` option specifies the OpenAPI version to use instead of auto-detection.
-Valid values: 3.0, 3.1.
+Valid values: 3.0, 3.1, 3.2.
 Default is 'auto' (detected from openapi field).""",
     input_schema="openapi/api.yaml",
     cli_args=["--schema-version", "3.0"],

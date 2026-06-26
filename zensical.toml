@@ -4,9 +4,11 @@ site_description = "This code generator creates pydantic model from an openapi f
 site_url = "https://datamodel-code-generator.koxudaxi.dev"
 repo_name = "koxudaxi/datamodel-code-generator"
 repo_url = "https://github.com/koxudaxi/datamodel-code-generator"
+copyright = 'Maintained by <a href="https://koxudaxi.dev/?utm_source=dm_docs&utm_medium=footer&utm_campaign=open_to_work">Koudai Aono</a>'
 
 nav = [
   { "Overview" = "index.md" },
+  { "Presets" = "presets.md" },
   { "Playground" = "playground.md" },
   { "CLI Reference" = [
     { "Overview" = "cli-reference/index.md" },
@@ -40,6 +42,7 @@ nav = [
       { "Apache Avro" = "avro.md" },
       { "XML Schema" = "xmlschema.md" },
       { "Protocol Buffers / gRPC" = "protobuf.md" },
+      { "MCP Tool Schemas" = "mcp-tools.md" },
       { "JSON / YAML / CSV Data" = "jsondata.md" },
       { "GraphQL" = "graphql.md" },
       { "Python Models" = "python-model.md" }
@@ -69,13 +72,25 @@ nav = [
       { "Dynamic Model Generation" = "dynamic-model-generation.md" },
       { "pyproject.toml" = "pyproject_toml.md" },
       { "CI/CD Integration" = "ci-cd.md" },
-      { "LLM Integration" = "llm-integration.md" }
+      { "LLM Integration" = "llm-integration.md" },
+      { "Coding Agent Skill" = "coding-agent-skill.md" }
     ]}
   ]},
+  { "Conformance Dashboard" = "conformance.md" },
+  { "Performance Benchmarks" = "performance-benchmarks.md" },
   { "Deprecations" = "deprecations.md" },
   { "Experimental Features" = "experimental.md" },
   { "FAQ" = "faq.md" },
+  { "Architecture" = "architecture.md" },
   { "Development-Contributing" = "development-contributing.md" }
+]
+
+extra_css = [
+  "assets/benchmarks/release-benchmarks.css"
+]
+
+extra_javascript = [
+  "assets/benchmarks/release-benchmarks.js"
 ]
 
 [project.theme]
@@ -122,6 +137,9 @@ pygments_lang_class = true
 base_path = "."
 
 [project.markdown_extensions.pymdownx.superfences]
+custom_fences = [
+  { name = "mermaid", class = "mermaid" }
+]
 
 [project.markdown_extensions.pymdownx.tabbed]
 alternate_style = true

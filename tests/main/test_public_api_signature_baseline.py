@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import importlib
 import inspect
 import types
 from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, get_args, get_origin
@@ -12,6 +13,7 @@ from typing_extensions import NotRequired
 
 from datamodel_code_generator import DEFAULT_SHARED_MODULE_NAME, generate
 from datamodel_code_generator.enums import (
+    AliasGenerator,
     AllExportsCollisionStrategy,
     AllExportsScope,
     AllOfClassHierarchy,
@@ -46,22 +48,167 @@ if TYPE_CHECKING:
     from datamodel_code_generator.model.dataclass import DataclassArguments
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
     from datamodel_code_generator.parser import DefaultPutDict, LiteralType
+    from datamodel_code_generator.preset_names import PresetName
     from datamodel_code_generator.types import StrictTypes
     from datamodel_code_generator.validators import ModelValidators
 
 
+_PUBLIC_MODULE_EXPORTS: dict[str, frozenset[str]] = {
+    "datamodel_code_generator": frozenset({
+        "DEFAULT_FORMATTERS",
+        "DEFAULT_SHARED_MODULE_NAME",
+        "MAX_VERSION",
+        "MIN_VERSION",
+        "AllExportsCollisionStrategy",
+        "AllExportsScope",
+        "AllOfClassHierarchy",
+        "AllOfMergeMode",
+        "AliasGenerator",
+        "AsyncAPIVersion",
+        "ClassNameAffixScope",
+        "CollapseRootModelsNameStrategy",
+        "DateClassType",
+        "DatetimeClassType",
+        "DefaultPutDict",
+        "Error",
+        "FieldTypeCollisionStrategy",
+        "GenerateConfig",
+        "GeneratedModules",
+        "GraphQLScope",
+        "InputFileType",
+        "InputModelRefStrategy",
+        "InvalidClassNameError",
+        "InvalidFileFormatError",
+        "JsonSchemaVersion",
+        "LiteralType",
+        "ModuleSplitMode",
+        "NamingStrategy",
+        "OpenAPIScope",
+        "OpenAPIVersion",
+        "ProtobufVersion",
+        "PythonVersion",
+        "PythonVersionMin",
+        "ReadOnlyWriteOnlyModelType",
+        "ReuseScope",
+        "SchemaParseError",
+        "TargetPydanticVersion",
+        "VersionMode",
+        "XMLSchemaVersion",
+        "clear_dynamic_models_cache",
+        "detect_jsonschema_version",
+        "detect_openapi_version",
+        "detect_xmlschema_version",
+        "enable_parsed_source_cache",
+        "generate",
+        "generate_dynamic_models",
+    }),
+    "datamodel_code_generator._types": frozenset({
+        "AsyncAPIParserConfigDict",
+        "AvroParserConfigDict",
+        "GenerateConfigDict",
+        "GraphQLParserConfigDict",
+        "JSONSchemaParserConfigDict",
+        "ModelDict",
+        "OpenAPIParserConfigDict",
+        "ParseConfigDict",
+        "ParserConfigDict",
+        "ProtobufParserConfigDict",
+        "XMLSchemaParserConfigDict",
+    }),
+    "datamodel_code_generator.arguments": frozenset({"DEFAULT_ENCODING", "arg_parser", "namespace"}),
+    "datamodel_code_generator.enums": frozenset({
+        "DEFAULT_SHARED_MODULE_NAME",
+        "MAX_VERSION",
+        "MIN_VERSION",
+        "AllExportsCollisionStrategy",
+        "AllExportsScope",
+        "AllOfClassHierarchy",
+        "AllOfMergeMode",
+        "AliasGenerator",
+        "AsyncAPIVersion",
+        "ClassNameAffixScope",
+        "CollapseRootModelsNameStrategy",
+        "DataModelType",
+        "DataclassArguments",
+        "FieldTypeCollisionStrategy",
+        "GraphQLScope",
+        "InputFileType",
+        "InputModelRefStrategy",
+        "JsonSchemaVersion",
+        "ModuleSplitMode",
+        "NamingStrategy",
+        "OpenAPIScope",
+        "OpenAPIVersion",
+        "ProtobufVersion",
+        "ReadOnlyWriteOnlyModelType",
+        "ReuseScope",
+        "StrictTypes",
+        "TargetPydanticVersion",
+        "UnionMode",
+        "VersionMode",
+        "XMLSchemaVersion",
+    }),
+    "datamodel_code_generator.model": frozenset({
+        "DEFAULT_TARGET_PYTHON_VERSION",
+        "UNDEFINED",
+        "ConstraintsBase",
+        "DataModel",
+        "DataModelFieldBase",
+        "DataModelSet",
+        "_rebuild_model_with_datamodel_namespace",
+        "get_data_model_types",
+    }),
+    "datamodel_code_generator.model.pydantic_v2": frozenset({
+        "BaseModel",
+        "DataModelField",
+        "DataTypeManager",
+        "RootModel",
+        "RootModelTypeAlias",
+        "UnionMode",
+        "dump_resolve_reference_action",
+    }),
+    "datamodel_code_generator.parser": frozenset({"DefaultPutDict", "LiteralType"}),
+    "datamodel_code_generator.parser.avro": frozenset({
+        "AvroParser",
+        "convert_avro_schema_data",
+        "is_avro_schema_data",
+    }),
+    "datamodel_code_generator.parser.protobuf": frozenset({"ProtobufParser", "convert_protobuf_schema_data"}),
+    "datamodel_code_generator.parser.schema_version": frozenset({
+        "DataFormatMapping",
+        "FeatureMetadata",
+        "JsonSchemaFeatures",
+        "OpenAPISchemaFeatures",
+        "SchemaFeaturesT",
+        "detect_asyncapi_version",
+        "detect_jsonschema_version",
+        "detect_openapi_version",
+        "get_data_formats",
+    }),
+    "datamodel_code_generator.parser.xmlschema": frozenset({
+        "XMLSchemaParser",
+        "convert_xml_schema_data",
+        "detect_xmlschema_version",
+        "is_xml_schema_text",
+    }),
+}
+
+
 def _baseline_generate(
-    input_: Path | str | ParseResult | Mapping[str, Any],
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     *,
     config: GenerateConfig | None = None,
     input_filename: str | None = None,
     input_file_type: InputFileType = InputFileType.Auto,
     output: Path | None = None,
+    emit_model_metadata: Path | None = None,
     output_model_type: DataModelType = DataModelType.PydanticV2BaseModel,
+    preset: PresetName | None = None,
     target_python_version: PythonVersion = PythonVersionMin,
     target_pydantic_version: TargetPydanticVersion | None = None,
     base_class: str = "",
     base_class_map: dict[str, str | list[str]] | None = None,
+    model_name_map: dict[str, str] | None = None,
     additional_imports: list[str] | None = None,
     class_decorators: list[str] | None = None,
     custom_template_dir: Path | None = None,
@@ -71,6 +218,7 @@ def _baseline_generate(
     schema_validator_base_class_name: str | None = None,
     validation: bool = False,
     field_constraints: bool = False,
+    alias_generator: AliasGenerator | None = None,
     snake_case_field: bool = False,
     strip_default_none: bool = False,
     aliases: Mapping[str, str | list[str]] | None = None,
@@ -88,6 +236,7 @@ def _baseline_generate(
     apply_default_values_for_required_fields: bool = False,
     force_optional_for_required_fields: bool = False,
     class_name: str | None = None,
+    allow_leading_underscore_class_name: bool = False,
     class_name_prefix: str | None = None,
     class_name_suffix: str | None = None,
     class_name_affix_scope: ClassNameAffixScope = ClassNameAffixScope.All,
@@ -131,6 +280,7 @@ def _baseline_generate(
     graphql_no_typename: bool = False,
     wrap_string_literal: bool | None = None,
     use_title_as_name: bool = False,
+    infer_union_variant_names: bool = False,
     use_operation_id_as_name: bool = False,
     use_unique_items_as_set: bool = False,
     use_tuple_for_fixed_items: bool = False,
@@ -138,6 +288,7 @@ def _baseline_generate(
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
     allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict,
     allow_remote_refs: bool | None = None,
+    allow_private_network: bool = False,
     http_headers: Sequence[tuple[str, str]] | None = None,
     http_local_ref_path: Path | None = None,
     http_ignore_tls: bool = False,
@@ -153,6 +304,7 @@ def _baseline_generate(
     collapse_root_models_name_strategy: CollapseRootModelsNameStrategy | None = None,
     collapse_reuse_models: bool = False,
     skip_root_model: bool = False,
+    use_root_model_sequence_interface: bool = False,
     use_type_alias: bool = False,
     use_root_model_type_alias: bool = False,
     special_field_name_prefix: str | None = None,
@@ -213,6 +365,7 @@ class _BaselineParser:
         data_model_field_type: type[DataModelFieldBase] = DataModelField,
         base_class: str | None = None,
         base_class_map: dict[str, str | list[str]] | None = None,
+        model_name_map: dict[str, str] | None = None,
         additional_imports: list[str] | None = None,
         class_decorators: list[str] | None = None,
         custom_template_dir: Path | None = None,
@@ -224,6 +377,7 @@ class _BaselineParser:
         dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = None,
         validation: bool = False,
         field_constraints: bool = False,
+        alias_generator: AliasGenerator | None = None,
         snake_case_field: bool = False,
         strip_default_none: bool = False,
         aliases: Mapping[str, str | list[str]] | None = None,
@@ -236,6 +390,7 @@ class _BaselineParser:
         use_generic_base_class: bool = False,
         force_optional_for_required_fields: bool = False,
         class_name: str | None = None,
+        allow_leading_underscore_class_name: bool = False,
         class_name_prefix: str | None = None,
         class_name_suffix: str | None = None,
         class_name_affix_scope: ClassNameAffixScope = ClassNameAffixScope.All,
@@ -273,6 +428,7 @@ class _BaselineParser:
         model_extra_keys_without_x_prefix: set[str] | None = None,
         wrap_string_literal: bool | None = None,
         use_title_as_name: bool = False,
+        infer_union_variant_names: bool = False,
         use_operation_id_as_name: bool = False,
         use_unique_items_as_set: bool = False,
         use_tuple_for_fixed_items: bool = False,
@@ -280,6 +436,7 @@ class _BaselineParser:
         allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
         allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict,
         allow_remote_refs: bool | None = None,
+        allow_private_network: bool = False,
         http_headers: Sequence[tuple[str, str]] | None = None,
         http_local_ref_path: Path | None = None,
         http_ignore_tls: bool = False,
@@ -296,6 +453,7 @@ class _BaselineParser:
         collapse_root_models_name_strategy: CollapseRootModelsNameStrategy | None = None,
         collapse_reuse_models: bool = False,
         skip_root_model: bool = False,
+        use_root_model_sequence_interface: bool = False,
         use_type_alias: bool = False,
         special_field_name_prefix: str | None = None,
         remove_special_field_name_prefix: bool = False,
@@ -347,6 +505,7 @@ class _BaselineParser:
         all_exports_scope: AllExportsScope | None = None,
         all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
         module_split_mode: ModuleSplitMode | None = None,
+        collect_model_metadata: bool = False,
     ) -> str | dict[tuple[str, ...], Any]:
         raise NotImplementedError
 
@@ -489,6 +648,23 @@ def _types_match(config_type: Any, dict_type: Any) -> bool:
     return _normalize_type(config_type) == _normalize_type(dict_type)
 
 
+@pytest.mark.parametrize(("module_name", "expected_exports"), _PUBLIC_MODULE_EXPORTS.items())
+def test_public_module_all_exports_match_baseline(module_name: str, expected_exports: frozenset[str]) -> None:
+    """Pin focused public module export surfaces used by compatibility shims."""
+    module = importlib.import_module(module_name)
+    module_exports = list(module.__all__)
+    actual_exports = set(module_exports)
+    missing_exports = [name for name in module_exports if not hasattr(module, name)]
+
+    assert len(module_exports) == len(actual_exports), f"{module_name}.__all__ contains duplicate names"
+    assert actual_exports == expected_exports, (
+        f"{module_name}.__all__ changed:\n"
+        f"  removed: {sorted(expected_exports - actual_exports)}\n"
+        f"  added: {sorted(actual_exports - expected_exports)}"
+    )
+    assert missing_exports == [], f"{module_name}.__all__ contains non-importable names: {missing_exports}"
+
+
 def test_generate_signature_matches_baseline() -> None:
     """Ensure generate keeps backward compatibility via GenerateConfigDict.
 
@@ -589,6 +765,25 @@ def test_parser_signature_matches_baseline() -> None:
         )
 
 
+def test_pydantic_v2_compatibility_reexports_remain_importable() -> None:
+    """Keep compatibility import paths for pydantic v2 model internals."""
+    from datamodel_code_generator.model.pydantic_base import DataModelField as PydanticBaseDataModelField
+    from datamodel_code_generator.model.pydantic_v2.base_model import (
+        Constraints as PydanticV2BaseConstraints,
+    )
+    from datamodel_code_generator.model.pydantic_v2.base_model import (
+        DataModelField as PydanticV2DataModelField,
+    )
+    from datamodel_code_generator.model.pydantic_v2.base_model import (
+        DataModelFieldV1,
+    )
+    from datamodel_code_generator.model.pydantic_v2.dataclass import Constraints as PydanticV2DataclassConstraints
+
+    assert DataModelFieldV1 is PydanticBaseDataModelField
+    assert issubclass(PydanticV2DataModelField, DataModelFieldV1)
+    assert PydanticV2DataclassConstraints is PydanticV2BaseConstraints
+
+
 def test_generate_config_dict_fields_match_generate_config() -> None:
     """Ensure GenerateConfigDict has same field names as GenerateConfig."""
     from datamodel_code_generator._types import GenerateConfigDict
@@ -607,6 +802,10 @@ def test_generate_config_dict_types_match_generate_config() -> None:
     for field_name, field_info in GenerateConfig.model_fields.items():
         config_type = field_info.annotation
         dict_type = GenerateConfigDict.__annotations__[field_name]
+        if field_name == "preset":
+            assert _normalize_type(config_type) == "None | str"
+            assert _normalize_type(dict_type) == "None | PresetName"
+            continue
         assert _types_match(config_type, dict_type), (
             f"Type mismatch for {field_name}: Config={_normalize_type(config_type)}, Dict={_normalize_type(dict_type)}"
         )

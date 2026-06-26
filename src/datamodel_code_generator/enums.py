@@ -39,6 +39,7 @@ class InputFileType(Enum):
     OpenAPI = "openapi"
     AsyncAPI = "asyncapi"
     JsonSchema = "jsonschema"
+    MCPTools = "mcp-tools"
     XMLSchema = "xmlschema"
     Protobuf = "protobuf"
     Avro = "avro"
@@ -114,6 +115,14 @@ class FieldTypeCollisionStrategy(Enum):
 
     RenameField = "rename-field"
     RenameType = "rename-type"
+
+
+class ExtraFields(str, Enum):
+    """Generated model behavior for unknown input fields."""
+
+    Allow = "allow"
+    Ignore = "ignore"
+    Forbid = "forbid"
 
 
 class NamingStrategy(Enum):
@@ -212,6 +221,14 @@ class TargetPydanticVersion(Enum):
     V2_11 = "2.11"
 
 
+class AliasGenerator(Enum):
+    """Supported Pydantic v2 alias generator helpers."""
+
+    ToCamel = "to_camel"
+    ToPascal = "to_pascal"
+    ToSnake = "to_snake"
+
+
 class UnionMode(Enum):
     """Union discriminator mode for Pydantic v2."""
 
@@ -265,6 +282,7 @@ class OpenAPIVersion(Enum):
 
     V30 = "3.0"
     V31 = "3.1"
+    V32 = "3.2"
     Auto = "auto"
 
 
@@ -317,6 +335,7 @@ __all__ = [
     "DEFAULT_SHARED_MODULE_NAME",
     "MAX_VERSION",
     "MIN_VERSION",
+    "AliasGenerator",
     "AllExportsCollisionStrategy",
     "AllExportsScope",
     "AllOfClassHierarchy",

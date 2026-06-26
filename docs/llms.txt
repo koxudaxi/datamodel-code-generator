@@ -3,6 +3,7 @@
 > This code generator creates pydantic model from an openapi file and others.
 
 - [datamodel-code-generator](https://datamodel-code-generator.koxudaxi.dev/): Generate Python data models from schema definitions in seconds.
+- [Presets](https://datamodel-code-generator.koxudaxi.dev/presets/): Presets are immutable named groups of CLI options. A preset name never changes behavior; new recommendations are published as new dated preset names.
 - [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/): Run datamodel-code-generator in your browser. The deployed site serves this route as a standalone app so Pyodide only starts after you open it.
 ## CLI Reference
 
@@ -40,6 +41,7 @@
 - [Generate from Apache Avro Schema](https://datamodel-code-generator.koxudaxi.dev/avro/): Generate Python models from JSON-encoded Apache Avro schemas (`.avsc`).
 - [Generate from XML Schema](https://datamodel-code-generator.koxudaxi.dev/xmlschema/): Generate Python models from W3C XML Schema documents (`.xsd`).
 - [Generate from Protocol Buffers / gRPC](https://datamodel-code-generator.koxudaxi.dev/protobuf/): Generate Python models from Protocol Buffers schema files (`.proto`), including message types referenced by gRPC service definitions.
+- [Generate from MCP Tool Schemas](https://datamodel-code-generator.koxudaxi.dev/mcp-tools/): Generate Python models from Model Context Protocol (MCP) tool schema profiles.
 - [Generate from JSON / YAML / CSV Data](https://datamodel-code-generator.koxudaxi.dev/jsondata/): Generate Pydantic models directly from raw JSON, YAML, or CSV data. Under the hood, the generator uses [GenSON](https://pypi.org/project/genson/) t...
 - [Generate from GraphQL](https://datamodel-code-generator.koxudaxi.dev/graphql/): Generate Pydantic models from GraphQL schema definitions.
 - [Generate from Python Models {#python-model}](https://datamodel-code-generator.koxudaxi.dev/python-model/): Generate code from existing Python types: Pydantic models, dataclasses, TypedDict, or dict schemas. This is useful for converting between model typ...
@@ -73,10 +75,14 @@
 - [pyproject.toml Configuration](https://datamodel-code-generator.koxudaxi.dev/pyproject_toml/): datamodel-code-generator can be configured using `pyproject.toml`. The tool automatically searches for `pyproject.toml` in the current directory an...
 - [CI/CD Integration](https://datamodel-code-generator.koxudaxi.dev/ci-cd/): This guide covers how to use datamodel-code-generator in CI/CD pipelines and development workflows to ensure generated code stays in sync with sche...
 - [LLM Integration](https://datamodel-code-generator.koxudaxi.dev/llm-integration/): The `--generate-prompt` option generates a formatted prompt that you can use to consult Large Language Models (LLMs) about datamodel-code-generator...
+- [Using datamodel-code-generator with coding agents](https://datamodel-code-generator.koxudaxi.dev/coding-agent-skill/): This repository includes an experimental Agent Skill for skills-compatible coding agents. The skill teaches an agent to run `datamodel-codegen` whe...
 
 
+- [Conformance Dashboard](https://datamodel-code-generator.koxudaxi.dev/conformance/): This page summarizes the external conformance and end-to-end corpus checks that CI runs for datamodel-code-generator. The table is generated from `...
+- [Performance Benchmarks](https://datamodel-code-generator.koxudaxi.dev/performance-benchmarks/): This page tracks datamodel-code-generator release and main-branch benchmark results collected on GitHub Actions. The data covers only datamodel-cod...
 - [Deprecations](https://datamodel-code-generator.koxudaxi.dev/deprecations/): This page lists deprecations and scheduled breaking changes.
 - [Experimental Features](https://datamodel-code-generator.koxudaxi.dev/experimental/): This page lists features that are available but still experimental.
+- [Architecture](https://datamodel-code-generator.koxudaxi.dev/architecture/): `datamodel-code-generator` is organized around one central idea: many input formats are normalized into a shared generation graph, then rendered th...
 ## Optional
 
 - [Frequently Asked Questions](https://datamodel-code-generator.koxudaxi.dev/faq/)

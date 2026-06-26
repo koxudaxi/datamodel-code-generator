@@ -62,6 +62,155 @@ This intentionally avoids deleting the intermediate models in the default
 output while fixing the payload shape, and it does not introduce a new runtime
 validation mechanism.
 
+## JSON-Schema-Test-Suite Conformance Limits
+
+The JSON-Schema-Test-Suite conformance gate currently targets the required
+`draft7` and `draft2020-12` suite directories pinned at
+`fe8c2f0de2041943975932b6bf4bd882625b6cfb`. It checks the generated Pydantic v2
+model against both valid and invalid suite instances for schema groups that are
+within the current generated-model compatibility policy.
+
+Current scope:
+
+- 640 suite schema groups discovered across the two target drafts.
+- 59 schema groups and 301 suite instances are checked end to end.
+- 581 schema groups are excluded by policy with machine-readable reasons in
+  `tests/main/payload_validation/json_schema_suite.py`.
+
+The largest exclusion categories are compatibility-sensitive or unsupported in
+the current default generated model shape:
+
+- Boolean schemas and boolean subschemas are not accepted by the generator input
+  path.
+- Remote `$ref` and `$dynamicRef`/`$dynamicAnchor` need resolver and dynamic-scope
+  policies before they can be made deterministic.
+- JSON Schema object or array keywords without an explicit matching `type` allow
+  other instance types that generated `BaseModel` or collection roots reject.
+- Pydantic v2 default validation is non-strict, so primitive type tests such as
+  string-to-int coercion do not match JSON Schema.
+- Runtime enforcement for keywords such as `contains`, `dependentRequired`,
+  `dependentSchemas`, `not`, `unevaluatedItems`, `unevaluatedProperties`,
+  `patternProperties`, `uniqueItems`, numeric/string bounds, `multipleOf`, and
+  JSON-equality-sensitive `const`/`enum` values is incomplete in the default
+  generated model.
+- Combined applicators (`allOf`, `anyOf`, `oneOf`) need a dedicated compatibility
+  policy before default-output changes are safe.
+
+Future work:
+
+- Move policy exclusions into explicit hand-classified case dictionaries as each
+  class is narrowed to concrete generator behavior.
+- Add deterministic local remote-ref mirroring for suite `remotes/` and enable
+  non-dynamic remote `$ref` groups.
+- Decide whether strict type generation or field constraint generation should be
+  enabled by default, exposed as a schema-faithful mode, or only tested under
+  non-default generator options.
+- Convert each remaining unsupported keyword category into either a generator
+  fix, a backend-specific conformance policy entry, or a documented permanent
+  subset limitation.
+
+## Backend Payload Matrix Limits
+
+Payload validation now keeps full coverage on the default `pydantic_v2.BaseModel`
+backend and adds a representative backend matrix for `pydantic_v2.dataclass`,
+`msgspec.Struct`, and `dataclasses.dataclass`.
+
+Current scope:
+
+- `pydantic_v2.BaseModel` runs the full schema-derived accept/reject oracle.
+- `pydantic_v2.dataclass` and `msgspec.Struct` run representative accept/reject
+  cases using backend-specific conformance policies.
+- `dataclasses.dataclass` runs representative construction-only cases because
+  standard dataclasses do not provide runtime type validation.
+- `pydantic.BaseModel` / pydantic v1 output is not part of the current matrix
+  because pydantic-v1 output was removed from the generator in #3031.
+- The scheduled runtime matrix widens runtime-validating non-default backends
+  with `DCG_PAYLOAD_BACKEND_CASES=all`. That mode runs the JSON Schema fixture
+  corpus minus classified backend exclusions, plus representative OpenAPI cases;
+  the remaining JSON Schema and OpenAPI backend-specific import/runtime limits
+  are machine-classified in
+  `tests/main/payload_validation/conformance.py`. Plain dataclasses stay
+  representative because they do not provide runtime validation and native
+  construction does not implement JSON alias or extra-key handling.
+
+Future work:
+
+- Reduce the full nightly backend exclusions by fixing backend-specific
+  generator issues where the generated code is invalid for that backend.
+- Add a dedicated strict/schema-faithful mode if a future backend needs stronger
+  JSON Schema runtime validation than the default generated output provides.
+
+## Runtime Minimum Matrix Limits
+
+The `py311-payload-runtime-min` tox environment pins runtime validation
+dependencies to the declared lower bounds where possible. Pydantic v2 is checked
+with `pydantic==2.0.3` without raising the package lower bound.
+
+Current Pydantic 2.0 compatibility fixes:
+
+- Pydantic v2 dataclass fields with non-identifier aliases move the JSON alias out
+  of `alias` only before Pydantic 2.4, so generated dataclass signatures stay
+  importable under Pydantic 2.0 without changing newer-runtime output.
+- Pydantic v2 `Field(deprecated=True)` is emitted through `json_schema_extra`
+  only before Pydantic 2.7, where `deprecated` was still treated as extra field
+  metadata.
+- Pydantic v2 RootModels whose dictionary keys reference generated enum classes
+  include those key references in dependency sorting only before Pydantic 2.8,
+  where dict-key forward references could not be resolved when adapting the
+  model.
+
+Current version-specific exclusions:
+
+- Pydantic before 2.5.0 does not support generated `regex_engine="python-re"` for
+  lookaround pattern validators, so the Pydantic v2 BaseModel and dataclass
+  payload runtime matrices skip only the classified lookaround pattern cases
+  under older runtimes.
+- Pydantic before 2.5.0 can reject schema-valid Decimal `multipleOf` values near
+  float-originated boundaries, so only the classified Decimal `multipleOf` cases
+  are skipped under older runtimes.
+- Pydantic before 2.5.0 can emit JSON-mode serializer warnings for enum
+  dictionary keys during dump, so only the affected round-trip cases are skipped
+  under older runtimes; acceptance coverage remains enabled for those schemas.
+- Pydantic 2.0.x can emit JSON-mode serializer warnings for object unions
+  distinguished by boolean `Literal` fields during dump, so only the affected
+  round-trip case is skipped under that older runtime; acceptance coverage
+  remains enabled for that schema.
+
+Future work:
+
+- Revisit the lookaround skips if support for older Pydantic runtimes can be
+  improved without changing the declared dependency lower bound or newer runtime
+  behavior.
+- Revisit the Decimal `multipleOf` and enum-key dump skips if older Pydantic
+  runtimes can be supported without changing newer runtime behavior.
+
+## Round-Trip Dump Limits
+
+The pydantic v2 payload test now validates accepted payloads, dumps them with
+`mode="json"`, `by_alias=True`, and `exclude_unset=True`, then checks that the
+dumped value is still valid for the source schema. `exclude_unset=True` keeps
+unset optional fields from being materialized as `null` when the source schema
+does not accept `null`.
+
+Current exclusions are machine-readable in
+`tests/main/payload_validation/constants.py`:
+
+- Schemas that list required names absent from `properties` cannot round-trip
+  those names because the generated model has no field to dump.
+- One `oneOf` case normalizes into a shape that matches multiple branches after
+  dumping.
+- One decimal case serializes a JSON numeric `Decimal` value as a string, while
+  the source schema still requires `type: number`.
+
+Future work:
+
+- Decide whether required names absent from `properties` should be represented
+  by generated fields or remain a documented compatibility boundary.
+- Decide whether decimal JSON mode should preserve JSON numbers for
+  schema-faithful dumps or keep Pydantic's string serialization.
+- Strengthen round-trip from schema validity to payload equivalence modulo
+  defaults once these compatibility categories are resolved.
+
 ## OpenAPI Discriminator Compatibility Policy
 
 The following cases expose a mismatch between OpenAPI discriminator semantics,

@@ -4,8 +4,8 @@
 
 from __future__ import annotations
 
-from pydantic import RootModel
+from pydantic import Field, RootModel
 
 
 class NullEnum(RootModel[None]):
-    root: None = None
+    root: None = Field(None)

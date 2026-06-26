@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
-from datamodel_code_generator import InputFileType, infer_input_type, load_yaml
+from datamodel_code_generator import InputFileType, infer_input_type, load_yaml, load_yaml_dict_from_path
 from datamodel_code_generator.util import (
     _is_yaml_deprecated_bool_warning_enabled,
     get_yaml_backend,
@@ -21,6 +21,7 @@ from datamodel_code_generator.util import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
 
 @pytest.fixture(autouse=True)
@@ -71,6 +72,13 @@ class TestGetYamlParseErrors:
 class TestLoadYaml:
     """Tests for load_yaml() with backend switching."""
 
+    def test_load_yaml_dict_from_path_reads_yaml_dict(self, tmp_path: Path) -> None:
+        """Read YAML dict data from a local path."""
+        path = tmp_path / "schema.yaml"
+        path.write_text("key: value\n", encoding="utf-8")
+
+        assert load_yaml_dict_from_path(path, "utf-8") == {"key": "value"}
+
     def test_pyyaml_fallback_string(self) -> None:
         """When ryaml is unavailable, PyYAML is used for string input."""
         with patch.dict("sys.modules", {"ryaml": None}):
@@ -82,6 +90,34 @@ class TestLoadYaml:
         with patch.dict("sys.modules", {"ryaml": None}):
             result = load_yaml(io.StringIO("key: value"))
             assert result == {"key": "value"}
+
+    def test_load_yaml_allows_literal_unsupported_tag_marker_text(self) -> None:
+        """Literal marker text is valid YAML data when it is not a YAML tag."""
+        result = load_yaml("description: 'literal !!set text'\n")
+
+        assert result == {"description": "literal !!set text"}
+
+    def test_load_yaml_allows_literal_unsupported_tag_marker_text_in_sequence(self) -> None:
+        """Literal marker text is valid YAML sequence data when it is not a YAML tag."""
+        result = load_yaml("descriptions:\n  - 'literal !!set text'\n")
+
+        assert result == {"descriptions": ["literal !!set text"]}
+
+    def test_load_yaml_allows_comment_only_unsupported_tag_marker_text(self) -> None:
+        """Comment-only marker text is not a YAML tag."""
+        result = load_yaml("# !!set\n")
+
+        assert result is None
+
+    def test_load_yaml_rejects_yaml_set_tag(self) -> None:
+        """YAML set tags are rejected through the public YAML loader."""
+        with pytest.raises(yaml.YAMLError, match=r"Unsupported YAML tag: tag:yaml\.org,2002:set"):
+            load_yaml("fruits: !!set\n  ? apple\n")
+
+    def test_load_yaml_rejects_yaml_set_tag_with_custom_handle(self) -> None:
+        """YAML set tags are rejected even when declared through a custom YAML tag handle."""
+        with pytest.raises(yaml.YAMLError, match=r"Unsupported YAML tag: tag:yaml\.org,2002:set"):
+            load_yaml("%TAG !e! tag:yaml.org,2002:\n---\nfruits: !e!set\n  ? apple\n")
 
     def test_with_ryaml_string(self) -> None:
         """When ryaml is available, ryaml.loads() is used for string input."""
@@ -124,6 +160,38 @@ class TestLoadYaml:
         )
 
         assert _is_yaml_deprecated_bool_warning_enabled()
+
+    def test_yaml_deprecated_bool_warning_enabled_ignores_unmatched_string_filters(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """String warning filter entries for other modules do not crash or disable the YAML warning."""
+        monkeypatch.setattr(
+            warnings,
+            "filters",
+            [
+                ("default", None, DeprecationWarning, "__main__", 0),
+            ],
+        )
+
+        assert _is_yaml_deprecated_bool_warning_enabled()
+
+    def test_yaml_deprecated_bool_warning_enabled_matches_string_filters(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """String warning filter entries can still disable the YAML warning when they match."""
+        monkeypatch.setattr(
+            warnings,
+            "filters",
+            [
+                (
+                    "ignore",
+                    "YAML bool ",
+                    DeprecationWarning,
+                    "datamodel_code_generator",
+                    0,
+                ),
+            ],
+        )
+
+        assert not _is_yaml_deprecated_bool_warning_enabled()
 
     def test_with_ryaml_textio(self) -> None:
         """When ryaml is available, TextIO.read() is called before ryaml.loads()."""

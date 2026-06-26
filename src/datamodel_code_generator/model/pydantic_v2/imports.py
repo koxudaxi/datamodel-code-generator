@@ -6,10 +6,14 @@ Provides pre-defined Import objects for Pydantic v2 types (ConfigDict, AwareDate
 from __future__ import annotations
 
 from datamodel_code_generator.imports import Import
+from datamodel_code_generator.model import _pydantic_imports
 
 IMPORT_BASE_MODEL = Import.from_full_path("pydantic.BaseModel")
 IMPORT_CONFIG_DICT = Import.from_full_path("pydantic.ConfigDict")
 IMPORT_ALIAS_CHOICES = Import.from_full_path("pydantic.AliasChoices")
+IMPORT_ALIAS_GENERATOR_TO_CAMEL = Import.from_full_path("pydantic.alias_generators.to_camel")
+IMPORT_ALIAS_GENERATOR_TO_PASCAL = Import.from_full_path("pydantic.alias_generators.to_pascal")
+IMPORT_ALIAS_GENERATOR_TO_SNAKE = Import.from_full_path("pydantic.alias_generators.to_snake")
 IMPORT_AWARE_DATETIME = Import.from_full_path("pydantic.AwareDatetime")
 IMPORT_NAIVE_DATETIME = Import.from_full_path("pydantic.NaiveDatetime")
 IMPORT_PAST_DATETIME = Import.from_full_path("pydantic.PastDatetime")
@@ -44,16 +48,15 @@ IMPORT_NON_POSITIVE_FLOAT = Import.from_full_path("pydantic.NonPositiveFloat")
 IMPORT_SECRET_STR = Import.from_full_path("pydantic.SecretStr")
 IMPORT_EMAIL_STR = Import.from_full_path("pydantic.EmailStr")
 IMPORT_UUID1 = Import.from_full_path("pydantic.UUID1")
-IMPORT_UUID2 = Import.from_full_path("pydantic.UUID2")
 IMPORT_UUID3 = Import.from_full_path("pydantic.UUID3")
 IMPORT_UUID4 = Import.from_full_path("pydantic.UUID4")
 IMPORT_UUID5 = Import.from_full_path("pydantic.UUID5")
-IMPORT_ANYURL = Import.from_full_path("pydantic.AnyUrl")
+IMPORT_ANYURL = _pydantic_imports.IMPORT_ANYURL
 IMPORT_IPV4ADDRESS = Import.from_full_path("ipaddress.IPv4Address")
 IMPORT_IPV6ADDRESS = Import.from_full_path("ipaddress.IPv6Address")
 IMPORT_IPV4NETWORKS = Import.from_full_path("ipaddress.IPv4Network")
 IMPORT_IPV6NETWORKS = Import.from_full_path("ipaddress.IPv6Network")
-IMPORT_FIELD = Import.from_full_path("pydantic.Field")
+IMPORT_FIELD = _pydantic_imports.IMPORT_FIELD
 IMPORT_STRICT_INT = Import.from_full_path("pydantic.StrictInt")
 IMPORT_STRICT_FLOAT = Import.from_full_path("pydantic.StrictFloat")
 IMPORT_STRICT_STR = Import.from_full_path("pydantic.StrictStr")

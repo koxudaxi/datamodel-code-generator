@@ -2,13 +2,14 @@
 
 This code generator supports the following input formats:
 
-- OpenAPI 3.0/3.1 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types)); OpenAPI 2.0 (Swagger) has limited support.
+- OpenAPI 3.0/3.1/3.2 (YAML/JSON, [OpenAPI Data Types](https://spec.openapis.org/oas/v3.2.0.html#data-types)); OpenAPI 2.0 (Swagger) has limited support.
 - [AsyncAPI](asyncapi.md) 2.x/3.x (YAML/JSON).
-- JSON Schema ([JSON Schema Core](https://json-schema.org/draft/2019-09/json-schema-core.html) / [JSON Schema Validation](https://json-schema.org/draft/2019-09/json-schema-validation.html)).
+- JSON Schema ([JSON Schema Core](https://json-schema.org/draft/2020-12/json-schema-core.html) / [JSON Schema Validation](https://json-schema.org/draft/2020-12/json-schema-validation.html)).
 - Apache Avro schema (`.avsc`, [Apache Avro](avro.md)).
 - [XML Schema](xmlschema.md) (XSD).
 - Protocol Buffers / gRPC (`.proto`, [Protocol Buffers / gRPC](protobuf.md)).
 - GraphQL schema ([GraphQL Schemas and Types](https://graphql.org/learn/schema/)).
+- MCP tool schemas (`--input-file-type mcp-tools`, [MCP Tool Schemas](mcp-tools.md)).
 - JSON / YAML / CSV data (converted to JSON Schema before model generation).
 - Python dictionary (converted to JSON Schema before model generation).
 - Existing Python types via [`--input-model`](python-model.md): Pydantic models, dataclasses, Pydantic dataclasses, TypedDict, and dict schemas.

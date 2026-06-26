@@ -3,25 +3,37 @@
 from __future__ import annotations
 
 import json
+import socket
+import sys
+from collections import Counter
+from ipaddress import ip_address
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, Union
-from unittest.mock import call
 
 import pydantic
 import pytest
 import yaml
 
-from datamodel_code_generator import AllOfMergeMode, Error
+from datamodel_code_generator import AllOfMergeMode, Error, ReadOnlyWriteOnlyModelType
+from datamodel_code_generator.http import _get_httpx
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
-from datamodel_code_generator.parser.base import Parser, dump_templates
+from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
+from datamodel_code_generator.model.type_alias import TypeAlias
+from datamodel_code_generator.parser.base import Parser, Source, dump_templates
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
     Types,
+    _get_union_variant_name,
+    _is_union_operator_python_type,
+    _is_union_python_type,
+    _shorten_qualified_python_type_annotation,
+    _validate_schema_python_import_path,
     get_model_by_path,
+    split_json_pointer,
 )
 from datamodel_code_generator.reference import SPECIAL_PATH_MARKER, Reference
 from datamodel_code_generator.types import DataType
@@ -32,7 +44,15 @@ if TYPE_CHECKING:
 
 DATA_PATH: Path = Path(__file__).parents[1] / "data" / "jsonschema"
 
-EXPECTED_JSONSCHEMA_PATH = Path(__file__).parents[1] / "data" / "expected" / "parser" / "jsonschema"
+
+def _json_schema_object(data: dict[str, Any]) -> JsonSchemaObject:
+    return JsonSchemaObject.model_validate(data)
+
+
+@pytest.fixture(autouse=True)
+def block_dns_by_default(mocker: MockerFixture) -> None:
+    """Keep tests that mock httpx.get independent from external DNS."""
+    mocker.patch("socket.getaddrinfo", side_effect=OSError)
 
 
 def test_schema_validator_required_only_schema_filters() -> None:
@@ -290,6 +310,8 @@ def test_parse_obj_returns_when_merged_ref_still_has_ref(mocker: MockerFixture) 
         ({"a": {"b": {"foo": "bar"}}}, "a/b", {"foo": "bar"}),
         ({"a": {"b": {"c": {"foo": "bar"}}}}, "a/b", {"c": {"foo": "bar"}}),
         ({"a": {"b": {"c": {"foo": "bar"}}}}, "a/b/c", {"foo": "bar"}),
+        ({"a": [{"x": 1}, {"y": 2}]}, "a/0", {"x": 1}),
+        ({"a": [{"x": 1}, {"y": 2}]}, "a/1", {"y": 2}),
     ],
 )
 def test_get_model_by_path(schema: dict, path: str, model: dict) -> None:
@@ -297,14 +319,225 @@ def test_get_model_by_path(schema: dict, path: str, model: dict) -> None:
     assert get_model_by_path(schema, path.split("/") if path else []) == model
 
 
+@pytest.mark.parametrize(
+    ("path", "match"),
+    [
+        ("a/foo", "Invalid JSON pointer array index 'foo'"),
+        ("a/-1", "Invalid JSON pointer array index '-1'"),
+        ("a/01", "Invalid JSON pointer array index '01'"),
+        ("a/99999", "JSON pointer array index 99999 is out of range"),
+        ("a/0x1", "Invalid JSON pointer array index '0x1'"),
+        ("a/0o1", "Invalid JSON pointer array index '0o1'"),
+        ("a/0b1", "Invalid JSON pointer array index '0b1'"),
+        ("a/017", "Invalid JSON pointer array index '017'"),
+        ("a/1_0", "Invalid JSON pointer array index '1_0'"),
+        ("a/+1", r"Invalid JSON pointer array index '\+1'"),
+    ],
+)
+def test_get_model_by_path_rejects_invalid_list_index(path: str, match: str) -> None:
+    """Test list-index pointer segments are validated, not fed to raw list indexing."""
+    schema = {"a": [{"x": 1}, {"y": 2}]}
+    with pytest.raises(Error, match=match):
+        get_model_by_path(schema, path.split("/"))
+
+
+@pytest.mark.skipif(
+    not hasattr(sys, "set_int_max_str_digits"),
+    reason="int string-conversion length limit requires Python 3.11+",
+)
+def test_get_model_by_path_rejects_overlong_list_index() -> None:
+    """Test a digit string above the int conversion limit raises Error, not ValueError."""
+    schema = {"a": [{"x": 1}]}
+    overlong = "9" * (sys.get_int_max_str_digits() + 1)
+    with pytest.raises(Error, match="integer string is too long to parse"):
+        get_model_by_path(schema, ["a", overlong])
+
+
+def test_split_json_pointer_slow_path_rejects_invalid_list_index() -> None:
+    """Test the slow-path pointer traversal applies the same list-index guard."""
+    # "~1" forces the slow path; the escaped key resolves to a list, then the next
+    # segment is an invalid index.
+    schema = {"weird/key": ["x", "y"]}
+    with pytest.raises(Error, match="Invalid JSON pointer array index 'foo'"):
+        split_json_pointer(schema, "weird~1key/foo")
+
+
+def test_validate_schema_python_import_path_rejects_non_string() -> None:
+    """Test schema import path validation rejects non-string values."""
+    with pytest.raises(Error, match="customTypePath must be a dotted Python identifier path: 1"):
+        _validate_schema_python_import_path(1, "customTypePath")
+
+
+def test_get_x_python_import_path_handles_empty_and_incomplete_metadata() -> None:
+    """Test x-python-import accepts an empty object but rejects partial metadata."""
+    parser = JsonSchemaParser("")
+
+    assert parser._get_x_python_import_path({}) is None
+    for metadata in ({"module": "os"}, {"name": "PathLike"}):
+        with pytest.raises(Error, match="x-python-import requires both module and name"):
+            parser._get_x_python_import_path(metadata)
+    assert parser._get_x_python_import_path({"module": "os", "name": "PathLike"}) == "os.PathLike"
+
+
+def test_get_ref_data_type_uses_cached_validated_definition_facts(mocker: MockerFixture) -> None:
+    """Use facts from the already validated definition instead of validating the ref target again."""
+    parser = JsonSchemaParser(
+        json.dumps({
+            "type": "object",
+            "properties": {"user": {"$ref": "#/$defs/User"}},
+            "required": ["user"],
+            "$defs": {
+                "User": {
+                    "type": "object",
+                    "nullable": True,
+                    "properties": {"name": {"type": "string"}},
+                    "required": ["name"],
+                },
+            },
+        }),
+        strict_nullable=True,
+    )
+    load_ref_schema_object = mocker.spy(parser, "_load_ref_schema_object")
+
+    parser.parse(format_=False)
+
+    load_ref_schema_object.assert_not_called()
+    assert parser._ref_data_type_facts["#/$defs/User"] == (None, True)
+    assert "user: Optional[User]" in dump_templates(list(parser.results))
+
+
+def test_get_ref_data_type_falls_back_when_facts_are_not_cached(mocker: MockerFixture) -> None:
+    """Keep the validation fallback for refs that were not parsed and cached first."""
+    parser = JsonSchemaParser("")
+    parser.raw_obj = {"$defs": {"User": {"type": "object"}}}
+    load_ref_schema_object = mocker.spy(parser, "_load_ref_schema_object")
+
+    parser.get_ref_data_type("#/$defs/User")
+
+    load_ref_schema_object.assert_called_once_with("#/$defs/User")
+
+
+def test_resolve_local_ref_path_caches_safe_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Avoid resolving the same local ref path repeatedly after it has passed safety checks."""
+    parser = JsonSchemaParser(tmp_path / "schema.json")
+    target = tmp_path / "schema.json"
+    original_resolve = Path.resolve
+    calls: list[Path] = []
+
+    def resolve(path: Path, *args: Any, **kwargs: Any) -> Path:
+        calls.append(path)
+        return original_resolve(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", resolve)
+
+    parser._resolve_local_ref_path(target, "schema.json")
+    first_call_count = len(calls)
+    assert first_call_count > 0
+    parser._resolve_local_ref_path(target, "schema.json")
+
+    assert len(calls) == first_call_count
+
+
+def test_json_schema_directory_input_reads_each_source_once(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test directory input source text is materialized once per parse."""
+    user_path, pet_path = _write_simple_json_schemas(tmp_path)
+    read_counts = _track_reads(tmp_path, monkeypatch)
+
+    JsonSchemaParser(source=tmp_path).parse(format_=False)
+
+    assert read_counts == {
+        pet_path: 1,
+        user_path: 1,
+    }
+
+
+def test_json_schema_path_list_input_reads_each_source_once(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test list input source text is materialized once per parse."""
+    user_path, pet_path = _write_simple_json_schemas(tmp_path)
+    read_counts = _track_reads(tmp_path, monkeypatch)
+
+    JsonSchemaParser(source=[user_path, pet_path], base_path=tmp_path).parse(format_=False)
+
+    assert read_counts == {
+        pet_path: 1,
+        user_path: 1,
+    }
+
+
+def test_json_schema_parser_warns_for_non_dict_text_source() -> None:
+    """Test non-dict text sources are skipped with a warning."""
+    with pytest.warns(UserWarning, match=r"\. is empty or not a dict\. Skipping this file"):
+        JsonSchemaParser("[1]").parse(format_=False)
+
+
+def test_json_schema_parser_load_source_dict_rejects_non_dict_text_source() -> None:
+    """Reject non-dict text data before parsing a JSON Schema source."""
+    parser = JsonSchemaParser("")
+
+    with pytest.raises(TypeError, match="Expected dict, got list"):
+        parser._load_source_dict(Source(path=Path(), text="[1]"))
+
+
+def test_json_schema_iter_local_source_paths_ignores_non_local_source() -> None:
+    """Test local source path iteration is empty for non-local source input."""
+    assert list(JsonSchemaParser("{}")._iter_local_source_paths()) == []
+
+
+def test_track_reads_ignores_paths_outside_tmp_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test read tracking ignores files outside the temporary schema directory."""
+    read_counts = _track_reads(tmp_path, monkeypatch)
+
+    assert Path(__file__).read_text(encoding="utf-8")
+    assert read_counts == {}
+
+
+def _write_simple_json_schemas(tmp_path: Path) -> tuple[Path, Path]:
+    user_path = tmp_path / "user.json"
+    user_path.write_text(
+        json.dumps({
+            "title": "User",
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+        }),
+        encoding="utf-8",
+    )
+    pet_path = tmp_path / "pet.json"
+    pet_path.write_text(
+        json.dumps({
+            "title": "Pet",
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+        }),
+        encoding="utf-8",
+    )
+    return user_path, pet_path
+
+
+def _track_reads(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Counter[Path]:
+    read_counts: Counter[Path] = Counter()
+    original_read_text = Path.read_text
+
+    def read_text(path: Path, *args: Any, **kwargs: Any) -> str:
+        if path.parent == tmp_path:
+            read_counts[path] += 1
+        return original_read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", read_text)
+    return read_counts
+
+
 def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:
     """Test JSON schema object reference with JSON URL."""
     parser = JsonSchemaParser("", allow_remote_refs=True)
     obj = JsonSchemaObject.model_validate({"$ref": "https://example.com/person.schema.json#/definitions/User"})
-    mock_get = mocker.patch("httpx.get")
-    mock_get.return_value.status_code = 200
-    mock_get.return_value.headers = {}
-    mock_get.return_value.text = json.dumps(
+    mocker.patch(
+        "socket.getaddrinfo",
+        return_value=[(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))],
+    )
+    mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response")
+    mock_fetch.return_value.status_code = 200
+    mock_fetch.return_value.headers = {}
+    mock_fetch.return_value.text = json.dumps(
         {
             "$id": "https://example.com/person.schema.json",
             "$schema": "http://json-schema.org/draft-07/schema#",
@@ -328,26 +561,31 @@ def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:
     name: Optional[str] = None"""
     )
     parser.parse_ref(obj, ["Model"])
-    mock_get.assert_has_calls([
-        call(
-            "https://example.com/person.schema.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-            timeout=30.0,
-        ),
-    ])
+    mock_fetch.assert_called_once_with(
+        _get_httpx(),
+        "https://example.com/person.schema.json",
+        headers=None,
+        verify=True,
+        follow_redirects=False,
+        query_parameters=None,
+        timeout=30.0,
+        pinned_host="example.com",
+        pinned_ips=(ip_address("93.184.216.34"),),
+    )
 
 
 def test_json_schema_object_ref_url_yaml(mocker: MockerFixture) -> None:
     """Test JSON schema object reference with YAML URL."""
     parser = JsonSchemaParser("", allow_remote_refs=True)
     obj = JsonSchemaObject.model_validate({"$ref": "https://example.org/schema.yaml#/definitions/User"})
-    mock_get = mocker.patch("httpx.get")
-    mock_get.return_value.status_code = 200
-    mock_get.return_value.headers = {}
-    mock_get.return_value.text = yaml.safe_dump(json.load((DATA_PATH / "user.json").open()))
+    mocker.patch(
+        "socket.getaddrinfo",
+        return_value=[(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))],
+    )
+    mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response")
+    mock_fetch.return_value.status_code = 200
+    mock_fetch.return_value.headers = {}
+    mock_fetch.return_value.text = yaml.safe_dump(json.load((DATA_PATH / "user.json").open()))
 
     parser.parse_ref(obj, ["User"])
     assert (
@@ -361,13 +599,16 @@ class Pet(BaseModel):
     name: Optional[str] = Field(None, examples=['dog', 'cat'])"""
     )
     parser.parse_ref(obj, [])
-    mock_get.assert_called_once_with(
+    mock_fetch.assert_called_once_with(
+        _get_httpx(),
         "https://example.org/schema.yaml",
         headers=None,
         verify=True,
-        follow_redirects=True,
-        params=None,
+        follow_redirects=False,
+        query_parameters=None,
         timeout=30.0,
+        pinned_host="example.org",
+        pinned_ips=(ip_address("93.184.216.34"),),
     )
 
 
@@ -384,10 +625,14 @@ def test_json_schema_object_cached_ref_url_yaml(mocker: MockerFixture) -> None:
             },
         },
     )
-    mock_get = mocker.patch("httpx.get")
-    mock_get.return_value.status_code = 200
-    mock_get.return_value.headers = {}
-    mock_get.return_value.text = yaml.safe_dump(json.load((DATA_PATH / "user.json").open()))
+    mocker.patch(
+        "socket.getaddrinfo",
+        return_value=[(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))],
+    )
+    mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response")
+    mock_fetch.return_value.status_code = 200
+    mock_fetch.return_value.headers = {}
+    mock_fetch.return_value.text = yaml.safe_dump(json.load((DATA_PATH / "user.json").open()))
 
     parser.parse_ref(obj, [])
     assert (
@@ -400,13 +645,16 @@ class User(BaseModel):
     name: Optional[str] = Field(None, examples=['ken'])
     pets: List[User] = Field(default_factory=list)"""
     )
-    mock_get.assert_called_once_with(
+    mock_fetch.assert_called_once_with(
+        _get_httpx(),
         "https://example.org/schema.yaml",
         headers=None,
         verify=True,
-        follow_redirects=True,
-        params=None,
+        follow_redirects=False,
+        query_parameters=None,
         timeout=30.0,
+        pinned_host="example.org",
+        pinned_ips=(ip_address("93.184.216.34"),),
     )
 
 
@@ -417,10 +665,14 @@ def test_json_schema_ref_url_json(mocker: MockerFixture) -> None:
         "type": "object",
         "properties": {"user": {"$ref": "https://example.org/schema.json#/definitions/User"}},
     }
-    mock_get = mocker.patch("httpx.get")
-    mock_get.return_value.status_code = 200
-    mock_get.return_value.headers = {}
-    mock_get.return_value.text = json.dumps(json.load((DATA_PATH / "user.json").open()))
+    mocker.patch(
+        "socket.getaddrinfo",
+        return_value=[(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))],
+    )
+    mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response")
+    mock_fetch.return_value.status_code = 200
+    mock_fetch.return_value.headers = {}
+    mock_fetch.return_value.text = json.dumps(json.load((DATA_PATH / "user.json").open()))
 
     parser.parse_raw_obj("Model", obj, ["Model"])
     assert (
@@ -437,13 +689,16 @@ class User(BaseModel):
 class Pet(BaseModel):
     name: Optional[str] = Field(None, examples=['dog', 'cat'])"""
     )
-    mock_get.assert_called_once_with(
+    mock_fetch.assert_called_once_with(
+        _get_httpx(),
         "https://example.org/schema.json",
         headers=None,
         verify=True,
-        follow_redirects=True,
-        params=None,
+        follow_redirects=False,
+        query_parameters=None,
         timeout=30.0,
+        pinned_host="example.org",
+        pinned_ips=(ip_address("93.184.216.34"),),
     )
 
 
@@ -683,6 +938,306 @@ def test_parse_any_root_object(source_obj: dict[str, Any], generated_classes: st
     assert dump_templates(list(parser.results)) == generated_classes
 
 
+def _root_model_sequence_field(
+    data_type: DataType,
+    *,
+    required: bool = True,
+    nullable: bool | None = None,
+) -> DataModelFieldBase:
+    return DataModelFieldBase(name="root", data_type=data_type, required=required, nullable=nullable)
+
+
+def _root_model_sequence_type(item_type: DataType | None = None) -> DataType:
+    return DataType(is_list=True, data_types=[] if item_type is None else [item_type])
+
+
+def _root_model(fields: list[DataModelFieldBase] | None = None) -> RootModel:
+    return RootModel(fields=fields or [], reference=Reference(name="Pets", path="pets"))
+
+
+@pytest.mark.parametrize(
+    ("parser", "data_model_root", "fields"),
+    [
+        (
+            JsonSchemaParser("", use_root_model_sequence_interface=False),
+            _root_model([_root_model_sequence_field(_root_model_sequence_type(DataType(type="str")))]),
+            [_root_model_sequence_field(_root_model_sequence_type(DataType(type="str")))],
+        ),
+        (
+            JsonSchemaParser("", use_root_model_sequence_interface=True),
+            TypeAlias(
+                fields=[_root_model_sequence_field(_root_model_sequence_type(DataType(type="str")))],
+                reference=Reference(name="Pets", path="pets"),
+            ),
+            [_root_model_sequence_field(_root_model_sequence_type(DataType(type="str")))],
+        ),
+        (
+            JsonSchemaParser("", use_root_model_sequence_interface=True),
+            _root_model(),
+            [],
+        ),
+    ],
+)
+def test_apply_root_model_sequence_interface_skips_disabled_alias_and_empty_fields(
+    parser: JsonSchemaParser,
+    data_model_root: RootModel | TypeAlias,
+    fields: list[DataModelFieldBase],
+) -> None:
+    """Sequence interface helpers are skipped unless the opt-in target is a concrete RootModel with a field."""
+    parser._apply_root_model_sequence_interface(data_model_root, fields)
+
+    assert data_model_root.methods == []
+
+
+def test_apply_root_model_sequence_interface_skips_non_sequence_root() -> None:
+    """Sequence interface helpers are skipped for scalar RootModel classes."""
+    parser = JsonSchemaParser("", use_root_model_sequence_interface=True)
+    root_model = _root_model([_root_model_sequence_field(DataType(type="str"))])
+
+    parser._apply_root_model_sequence_interface(root_model, root_model.fields)
+
+    assert root_model.methods == []
+
+
+@pytest.mark.parametrize(
+    ("required", "nullable"),
+    [
+        (False, None),
+        (True, True),
+    ],
+)
+def test_apply_root_model_sequence_interface_skips_optional_root_field(
+    required: bool,
+    nullable: bool | None,
+) -> None:
+    """Sequence interface helpers are skipped when the root field can be None."""
+    parser = JsonSchemaParser("", use_root_model_sequence_interface=True)
+    root_model = _root_model([
+        _root_model_sequence_field(
+            _root_model_sequence_type(DataType(type="str")),
+            required=required,
+            nullable=nullable,
+        )
+    ])
+
+    parser._apply_root_model_sequence_interface(root_model, root_model.fields)
+
+    assert root_model.methods == []
+
+
+def test_apply_root_model_sequence_interface_skips_models_without_sequence_method() -> None:
+    """The parser only applies helpers to RootModel implementations that expose the method."""
+    parser = JsonSchemaParser("", use_root_model_sequence_interface=True)
+    base_model = BaseModel(
+        fields=[_root_model_sequence_field(_root_model_sequence_type(DataType(type="str")))],
+        reference=Reference(name="Pets", path="pets"),
+    )
+
+    parser._apply_root_model_sequence_interface(base_model, base_model.fields)
+
+    assert base_model.methods == []
+
+
+@pytest.mark.parametrize(
+    ("data_type", "expected_item_hint", "expected_slice_hint"),
+    [
+        (_root_model_sequence_type(DataType(type="str")), "str", "List[str]"),
+        (_root_model_sequence_type(), "Any", "List[Any]"),
+        (_root_model_sequence_type(DataType()), "Any", "List[Any]"),
+        (
+            DataType(is_list=True, data_types=[DataType(type="str"), DataType(type="int")]),
+            "Union[str, int]",
+            "List[Union[str, int]]",
+        ),
+        (DataType(is_sequence=True, data_types=[DataType(type="str")]), "str", "Sequence[str]"),
+    ],
+)
+def test_apply_root_model_sequence_interface_adds_sequence_helpers(
+    data_type: DataType,
+    expected_item_hint: str,
+    expected_slice_hint: str,
+) -> None:
+    """Sequence interface helpers use the wrapped item hint, falling back to Any when needed."""
+    parser = JsonSchemaParser("", use_root_model_sequence_interface=True)
+    root_model = _root_model([_root_model_sequence_field(data_type)])
+
+    parser._apply_root_model_sequence_interface(root_model, root_model.fields)
+
+    rendered = root_model.render()
+    assert root_model.methods == []
+    assert root_model.extra_template_data["sequence_base_class"] == f"Sequence[{expected_item_hint}]"
+    assert root_model.extra_template_data["sequence_item_type"] == expected_item_hint
+    assert root_model.extra_template_data["sequence_slice_type"] == expected_slice_hint
+    assert f", Sequence[{expected_item_hint}]):" in rendered.splitlines()[0]
+    assert f"def __iter__(self) -> Iterator[{expected_item_hint}]" in rendered
+    assert f"def __getitem__(self, index: SupportsIndex) -> {expected_item_hint}" in rendered
+    assert f"def __getitem__(self, index: slice) -> {expected_slice_hint}" in rendered
+    assert "def __getitem__(self, index: SupportsIndex | slice)" in rendered
+    assert "def __len__(self) -> int" in rendered
+
+
+@pytest.mark.parametrize(
+    ("data_type", "expected_type"),
+    [
+        (DataType(is_optional=True), None),
+        (DataType(type="str"), None),
+        (DataType(data_types=[DataType(type="str", is_optional=True)]), None),
+        (DataType(data_types=[DataType(type="str")]), None),
+        (_root_model_sequence_type(DataType(type="str")), "List[str]"),
+        (DataType(is_sequence=True, data_types=[DataType(type="str")]), "Sequence[str]"),
+        (DataType(data_types=[_root_model_sequence_type(DataType(type="str"))]), "List[str]"),
+    ],
+)
+def test_get_root_model_sequence_type(data_type: DataType, expected_type: str | None) -> None:
+    """The parser recognizes only non-optional list and sequence RootModel types."""
+    parser = JsonSchemaParser("")
+
+    result = parser._get_root_model_sequence_type(data_type)
+
+    assert (result.type_hint if result is not None else None) == expected_type
+
+
+def test_infer_union_variant_names_uses_discriminator_literals() -> None:
+    """Infer variant names from discriminator literals without mutating schemas."""
+    parser = JsonSchemaParser("", infer_union_variant_names=True)
+    parent = _json_schema_object({"discriminator": {"propertyName": "kind"}})
+    variants = [
+        _json_schema_object({"properties": {"kind": {"const": ""}}}),
+        _json_schema_object({"properties": {"kind": {"enum": ["ready"]}}}),
+    ]
+
+    assert parser._infer_union_variant_names("pkg.Event", parent, variants) == [None, "pkg.Event_ready"]
+
+
+def test_infer_union_variant_names_distinguishes_literal_types() -> None:
+    """Use type-aware names for non-string literal tags."""
+    parser = JsonSchemaParser("", infer_union_variant_names=True)
+    parent = _json_schema_object({"discriminator": {"propertyName": "kind"}})
+    variants = [
+        _json_schema_object({"properties": {"kind": {"const": 1}}}),
+        _json_schema_object({"properties": {"kind": {"const": "1"}}}),
+        _json_schema_object({"properties": {"kind": {"const": True}}}),
+    ]
+
+    assert parser._infer_union_variant_names("Event", parent, variants) == [
+        "Event_int_1",
+        "Event__1",
+        "Event_bool_true",
+    ]
+    assert _get_union_variant_name("Event", "") is None
+
+
+def test_infer_union_variant_names_skips_generated_name_collisions() -> None:
+    """Try the next literal field when generated variant names collide."""
+    parser = JsonSchemaParser("", infer_union_variant_names=True)
+    parent = _json_schema_object({"discriminator": {"propertyName": "kind"}})
+    variants = [
+        _json_schema_object({"properties": {"kind": {"const": 1}, "fallback": {"const": "created"}}}),
+        _json_schema_object({"properties": {"kind": {"const": "int_1"}, "fallback": {"const": "updated"}}}),
+    ]
+
+    assert parser._infer_union_variant_names("Event", parent, variants) == ["Event_created", "Event_updated"]
+
+
+def test_union_variant_literal_helpers_handle_refs_and_invalid_fields(tmp_path: Path, mocker: MockerFixture) -> None:
+    """Literal collection rejects ambiguous branches and resolves simple refs."""
+    parser = JsonSchemaParser("", infer_union_variant_names=True)
+    ref = "#/$defs/Kind"
+    parser.raw_obj = {"$defs": {"Kind": {"const": "from_ref"}}}
+    external_schema = tmp_path / "external.json"
+    external_parser = JsonSchemaParser(
+        "",
+        external_ref_mapping={str(external_schema): "external.models"},
+        infer_union_variant_names=True,
+    )
+    load_ref = mocker.patch.object(external_parser, "_load_ref_schema_object")
+
+    assert parser._get_single_literal_value(_json_schema_object({"$ref": ref})) == "from_ref"
+    assert (
+        external_parser._get_single_literal_value(_json_schema_object({"$ref": f"{external_schema}#/External"})) is None
+    )
+    load_ref.assert_not_called()
+    assert (
+        parser._get_single_literal_value(
+            _json_schema_object({"$ref": ref}),
+            {parser.model_resolver.resolve_ref(ref)},
+        )
+        is None
+    )
+    assert parser._get_single_literal_value(_json_schema_object({"type": "string"})) is None
+    assert (
+        parser._get_union_variant_literal_values(
+            [
+                _json_schema_object({}),
+                _json_schema_object({"properties": {"kind": {"const": "only"}}}),
+            ],
+            "kind",
+        )
+        is None
+    )
+    assert (
+        parser._get_union_variant_literal_values(
+            [
+                _json_schema_object({"properties": {"kind": True}}),
+                _json_schema_object({"properties": {"kind": {"const": "ready"}}}),
+            ],
+            "kind",
+        )
+        is None
+    )
+    assert (
+        parser._get_union_variant_literal_values(
+            [
+                _json_schema_object({"properties": {"kind": {"type": "string"}}}),
+                _json_schema_object({"properties": {"kind": {"const": "ready"}}}),
+            ],
+            "kind",
+        )
+        is None
+    )
+
+
+def test_iter_union_variant_literal_field_names_skips_duplicates() -> None:
+    """Field name scanning prefers discriminator names and keeps fallbacks stable."""
+    parser = JsonSchemaParser("", infer_union_variant_names=True)
+
+    assert list(parser._iter_union_variant_literal_field_names(_json_schema_object({"discriminator": "kind"}), [])) == [
+        "kind"
+    ]
+    assert list(
+        parser._iter_union_variant_literal_field_names(
+            _json_schema_object({}),
+            [
+                _json_schema_object({}),
+                _json_schema_object({"properties": {"kind": {"const": "a"}, "reason": {"const": "x"}}}),
+                _json_schema_object({"properties": {"kind": {"const": "b"}}}),
+            ],
+        )
+    ) == ["kind", "reason"]
+
+
+def test_infer_union_variant_names_returns_none_when_no_literal_field_matches() -> None:
+    """Keep default generated names when no field has unique literal values."""
+    parser = JsonSchemaParser("", infer_union_variant_names=True)
+    variants = [
+        _json_schema_object({"properties": {"kind": {"type": "string"}}}),
+        _json_schema_object({"properties": {"kind": {"const": "ready"}}}),
+    ]
+
+    assert parser._infer_union_variant_names("Event", _json_schema_object({}), variants) is None
+
+
+def test_infer_union_variant_names_disabled() -> None:
+    """Leave default variant naming unchanged unless explicitly enabled."""
+    parser = JsonSchemaParser("")
+    variants = [
+        _json_schema_object({"properties": {"kind": {"const": "created"}}}),
+        _json_schema_object({"properties": {"kind": {"const": "deleted"}}}),
+    ]
+
+    assert parser._get_inferred_union_variant_names("Event", _json_schema_object({}), variants) is None
+
+
 @pytest.mark.parametrize(
     ("source_obj", "generated_classes"),
     [
@@ -802,7 +1357,7 @@ def test_parse_nested_array(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
         ("string", "uri-reference", "str", None, None, False),
         ("string", "uuid", "UUID", "uuid", "UUID", False),
         ("string", "uuid1", "UUID1", "pydantic", "UUID1", False),
-        ("string", "uuid2", "UUID2", "pydantic", "UUID2", False),
+        ("string", "uuid2", "UUID", "uuid", "UUID", False),
         ("string", "uuid3", "UUID3", "pydantic", "UUID3", False),
         ("string", "uuid4", "UUID4", "pydantic", "UUID4", False),
         ("string", "uuid5", "UUID5", "pydantic", "UUID5", False),
@@ -952,6 +1507,26 @@ def test_json_schema_parser_extension(source_obj: dict[str, Any], generated_clas
     )
     parser.parse_object("Person", AltJsonSchemaObject.model_validate(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
+
+
+def test_json_schema_parser_schema_raw_key_cache_is_schema_object_specific() -> None:
+    """Test schema raw key caches are keyed by the exact schema object type."""
+
+    class AltJsonSchemaObject(JsonSchemaObject):
+        properties: Optional[dict[str, Union[AltJsonSchemaObject, bool]]] = None  # noqa: UP007, UP045
+        alt_type: Optional[str] = pydantic.Field(default=None, alias="altType")  # noqa: UP045
+
+    class AltJsonSchemaParser(JsonSchemaParser):
+        SCHEMA_OBJECT_TYPE = AltJsonSchemaObject
+
+    base_parser = JsonSchemaParser("")
+    alt_parser = AltJsonSchemaParser("")
+
+    assert "altType" not in base_parser._known_schema_object_raw_keys()
+    assert "altType" in alt_parser._known_schema_object_raw_keys()
+    assert base_parser._has_schema_affecting_keywords({"altType": "string"}) is False
+    assert alt_parser._has_schema_affecting_keywords({"altType": "string"}) is True
+    assert alt_parser._known_schema_object_raw_keys() is alt_parser._known_schema_object_raw_keys()
 
 
 def test_create_data_model_with_frozen_dataclasses() -> None:
@@ -1236,7 +1811,7 @@ def test_create_data_model_dataclass_arguments(
 
 def test_get_ref_body_from_url_file_unc_path(mocker: MockerFixture) -> None:
     """Test _get_ref_body_from_url handles UNC file:// URLs correctly."""
-    parser = JsonSchemaParser("")
+    parser = JsonSchemaParser("", allow_remote_refs=True)
     mock_load = mocker.patch(
         "datamodel_code_generator.parser.jsonschema.load_data_from_path",
         return_value={"type": "object"},
@@ -1257,7 +1832,7 @@ def test_get_ref_body_from_url_file_unc_path(mocker: MockerFixture) -> None:
 
 def test_get_ref_body_from_url_file_local_path(mocker: MockerFixture) -> None:
     """Test _get_ref_body_from_url handles local file:// URLs (no netloc)."""
-    parser = JsonSchemaParser("")
+    parser = JsonSchemaParser("", allow_remote_refs=True)
     mock_load = mocker.patch(
         "datamodel_code_generator.parser.jsonschema.load_data_from_path",
         return_value={"type": "string"},
@@ -1628,6 +2203,8 @@ def test_json_schema_standard_string_formats_map_to_string(format_: str) -> None
         ("Union[Set[str], None]", {"is_set": True}),
         ("Optional[FrozenSet[int]]", {"is_frozen_set": True}),
         ("Set[int] | None", {"is_set": True}),
+        ("Set[int]|None", {"is_set": True}),
+        ("None|Set[int]", {"is_set": True}),
         ("Sequence[str] | int", {"is_sequence": True}),
         # Union without special container type (loop completes without match)
         ("Union[str, int]", {}),
@@ -1639,6 +2216,7 @@ def test_json_schema_standard_string_formats_map_to_string(format_: str) -> None
         # Non-special container types
         ("List[str]", {}),
         ("Dict[str, int]", {}),
+        ("Literal[-1]", {}),
         ("str", {}),
         ("int", {}),
         ("CustomType", {}),
@@ -1650,6 +2228,93 @@ def test_get_python_type_flags(x_python_type: str, expected: dict[str, bool]) ->
     obj = JsonSchemaObject.model_validate({"x-python-type": x_python_type})
     result = parser._get_python_type_flags(obj)
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("x_python_type", "expected"),
+    [
+        ("Union[str, int]", True),
+        ("typing.Optional[str]", True),
+        ("str | int", True),
+        ("str|int", True),
+        ("list[str]", False),
+        ("[", False),
+    ],
+)
+def test_is_union_python_type(x_python_type: str, expected: bool) -> None:
+    """Test union type detection uses parsed annotations."""
+    assert _is_union_python_type(x_python_type) is expected
+
+
+@pytest.mark.parametrize(
+    ("x_python_type", "expected"),
+    [
+        ("str | int", True),
+        ("str|int", True),
+        ("None|Set[int]", True),
+        ("Literal[' | ']", False),
+    ],
+)
+def test_is_union_operator_python_type(x_python_type: str, expected: bool) -> None:
+    """Test union operator detection ignores non-operator annotation text."""
+    assert _is_union_operator_python_type(x_python_type) is expected
+
+
+def test_shorten_qualified_python_type_annotation() -> None:
+    """Test qualified Python type AST shortening preserves string literals."""
+    x_python_type = "Callable[[foo.Bar, Literal['foo.Bar']], baz.Qux]"
+    type_str, qualified_names, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
+
+    assert qualified_names == ("foo.Bar", "baz.Qux")
+    assert root_qualified_name is None
+    assert type_str == "Callable[[Bar, Literal['foo.Bar']], Qux]"
+    assert _shorten_qualified_python_type_annotation("[") == ("[", (), None)
+    assert _shorten_qualified_python_type_annotation("foo().bar") == ("foo().bar", (), None)
+
+
+def test_shorten_qualified_python_type_annotation_after_non_ascii_literal() -> None:
+    """Test AST shortening handles non-ASCII text before qualified names."""
+    x_python_type = "Callable[[Literal['あ'], foo.Bar], baz.Qux]"
+    type_str, qualified_names, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
+
+    assert qualified_names == ("foo.Bar", "baz.Qux")
+    assert root_qualified_name is None
+    assert type_str == "Callable[[Literal['あ'], Bar], Qux]"
+
+
+def test_shorten_qualified_python_type_annotation_after_multiline_literal() -> None:
+    """Test AST shortening handles multiline annotations."""
+    x_python_type = "Callable[[\n    Literal['foo.Bar'],\n    foo.Bar,\n], baz.Qux]"
+    type_str, qualified_names, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
+
+    assert qualified_names == ("foo.Bar", "baz.Qux")
+    assert root_qualified_name is None
+    assert type_str == "Callable[[Literal['foo.Bar'], Bar], Qux]"
+
+
+def test_merge_type_modifiers_preserves_container_flags() -> None:
+    """Test inherited field type replacement preserves all container modifiers."""
+    parser = JsonSchemaParser("")
+    new_type = DataType(type="str")
+    current_type = DataType(
+        is_optional=True,
+        is_dict=True,
+        is_list=True,
+        is_set=True,
+        is_frozen_set=True,
+        is_mapping=True,
+        is_sequence=True,
+    )
+
+    parser._merge_type_modifiers(new_type, current_type)
+
+    assert new_type.is_optional
+    assert new_type.is_dict
+    assert new_type.is_list
+    assert new_type.is_set
+    assert new_type.is_frozen_set
+    assert new_type.is_mapping
+    assert new_type.is_sequence
 
 
 def test_resolve_type_import_from_defs() -> None:
@@ -1734,6 +2399,40 @@ def test_jsonschema_parser_edge_case_helpers() -> None:
     assert parser._get_data_type_from_json_value(object()).type_hint == "Any"
 
 
+def test_anchor_ref_path_escapes_json_pointer_segments() -> None:
+    """Test anchor ref paths escape JSON Pointer segments."""
+    parser = JsonSchemaParser("")
+
+    assert parser._anchor_ref_path((), ["#", "$defs", "foo/bar", "tilde~key"]) == "#/$defs/foo~1bar/tilde~0key"
+
+    parser.model_resolver.set_current_root([])
+    parser._recursive_anchor_index[()] = ["#/$defs/foo~1bar"]
+    recursive_ref = JsonSchemaObject.model_validate({"$recursiveRef": "#"})
+    assert parser._resolve_recursive_ref(recursive_ref, ["#", "$defs", "foo/bar", "child"]) == "#/$defs/foo~1bar"
+
+
+def test_preload_property_refs_skips_external_ref_mapping(tmp_path: Path, mocker: MockerFixture) -> None:
+    """Test read/write preload does not load refs handled by external mapping."""
+    external_schema = tmp_path / "external.json"
+    parser = JsonSchemaParser(
+        "",
+        external_ref_mapping={str(external_schema): "external.models"},
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.RequestResponse,
+    )
+    load_ref = mocker.patch.object(parser, "_load_ref_schema_object")
+
+    parser._preload_property_refs_for_rw_models(
+        JsonSchemaObject.model_validate({
+            "properties": {
+                "mapped": {"$ref": f"{external_schema}#/External"},
+                "local": {"$ref": "#/$defs/Local"},
+            },
+        })
+    )
+
+    load_ref.assert_called_once_with("#/$defs/Local")
+
+
 def test_json_schema_object_x_property_names_dict() -> None:
     """Test OpenAPI x-propertyNames dict is normalized to propertyNames."""
     obj = JsonSchemaObject.model_validate({"x-propertyNames": {"type": "string", "pattern": "^x-"}})
@@ -1808,6 +2507,14 @@ def test_standard_schema_metadata_is_included_in_field_extras() -> None:
     }
 
 
+def test_field_extra_keys_without_x_prefix_removes_exact_prefix() -> None:
+    """Test x-prefixed field extras remove only the exact extension prefix."""
+    parser = JsonSchemaParser("", field_extra_keys_without_x_prefix={"x-xml"})
+    obj = JsonSchemaObject.model_validate({"type": "string", "x-xml": {"name": "field"}})
+
+    assert parser.get_field_extras(obj) == {"xml": {"name": "field"}}
+
+
 def test_standard_schema_metadata_is_included_in_model_extras() -> None:
     """Test standard metadata keys are preserved as model extras by default."""
     parser = JsonSchemaParser("")
@@ -1832,6 +2539,7 @@ def test_standard_schema_metadata_is_included_in_model_extras() -> None:
     ("schema", "type_hint"),
     [
         ({"allOf": [True]}, "Any"),
+        ({"enum": ["x"]}, "Literal['x']"),
         ({"allOf": [True, {"type": "string"}]}, "str"),
         ({"type": "array", "prefixItems": [{"type": "string"}], "items": True}, "List[Union[str, Any]]"),
         ({"type": "array", "prefixItems": [{"type": "string"}, False], "items": {"type": "integer"}}, "List[str]"),

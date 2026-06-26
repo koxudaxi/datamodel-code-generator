@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datamodel_code_generator.format import PythonVersion, is_supported_in_black
 from tests.main.conftest import CURRENT_PYTHON_VERSION
+from tests.main.payload_validation.models import PayloadBackend
 
 PAYLOAD_CLASS_NAME = "Payload"
 PAYLOAD_CURRENT_PYTHON_VERSION = PythonVersion(CURRENT_PYTHON_VERSION)
@@ -84,8 +85,28 @@ EXCLUDED_FILES: dict[str, str] = {
 }
 EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/all_of_any_of_base_class_ref.json": "hypothesis-jsonschema cannot satisfy the allOf/anyOf constraints",
+    "jsonschema/decimal_fractional_constraints.json": (
+        "format decimal strings from hypothesis-jsonschema are arbitrary text that Decimal cannot parse"
+    ),
+    "jsonschema/integer_fractional_constraints.json": (
+        "hypothesis-jsonschema emits integers near float precision limits where multipleOf checks are unstable"
+    ),
+    "jsonschema/msgspec_decimal_constraints.json": (
+        "format decimal strings from hypothesis-jsonschema are arbitrary text that Decimal cannot parse"
+    ),
+    "jsonschema/non_finite_container_defaults.json": (
+        "non-finite defaults cannot be represented in the JSON payloads hypothesis-jsonschema generates"
+    ),
+    "jsonschema/non_finite_number_values.json": (
+        "non-finite bounds cannot be satisfied by any JSON payload hypothesis-jsonschema generates"
+    ),
+    "jsonschema/uuid_format_versions.json": ("versioned uuid formats reject the fixed version-4 uuid example payloads"),
     "jsonschema/prefix_items_fixed_unevaluated_tail_schema.json": (
         "hypothesis-jsonschema cannot satisfy fixed prefixItems with unevaluatedItems tail constraints"
+    ),
+    "jsonschema/string_min_max_items_compat.json": (
+        "compatibility fixture maps string minItems/maxItems to Pydantic length constraints, "
+        "which is stricter than JSON Schema"
     ),
     "jsonschema/typed_dict_allof_constraint_extra_items.json": (
         "TypedDict-only e2e fixture intentionally emits a generator warning; Pydantic payload validation "
@@ -129,6 +150,109 @@ EXCLUDED_CASES: dict[str, str] = {
     "openapi/ref_nullable.yaml::components.schemas.NullableChild": (
         "top-level nullable object components need a wrapper policy; nullable refs are covered via Parent"
     ),
+}
+ROUND_TRIP_EXCLUDED_CASES: dict[str, str] = {
+    "jsonschema/default_factory_nested_model_with_dict.json": (
+        "pydantic union branch normalization can dump a oneOf value into a shape that matches multiple branches"
+    ),
+    "jsonschema/external_child_root.json": (
+        "schema requires a property absent from properties, so the generated model has no field to dump"
+    ),
+    "jsonschema/nested_json_pointer.json": (
+        "schema requires a property absent from properties, so the generated model has no field to dump"
+    ),
+    "jsonschema/one_of_with_sub_schema_array_item.json": (
+        "pydantic serializes URI values in JSON mode, which can collapse distinct source-valid strings and violate "
+        "uniqueItems"
+    ),
+    "jsonschema/strict_types_matrix.json": (
+        "pydantic serializes Decimal JSON values as strings while the source schema requires number"
+    ),
+    "openapi/allof_array_ref_override.yaml::components.schemas.DataType": (
+        "schema requires a property absent from properties, so the generated model has no field to dump"
+    ),
+    "openapi/issue_2953.yaml::components.schemas.DataType": (
+        "schema requires a property absent from properties, so the generated model has no field to dump"
+    ),
+}
+PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN_VERSION = "2.5.0"
+PYDANTIC_V2_0_RUNTIME_MAX_VERSION = "2.1.0"
+PYDANTIC_V2_LEGACY_LOOKAROUND_EXCLUDED_CASES: dict[str, str] = {
+    "jsonschema/lookaround_anyof_nullable.json": (
+        "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
+    ),
+    "jsonschema/lookaround_dict.json": (
+        "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
+    ),
+    "jsonschema/lookaround_mixed_constraints.json": (
+        "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
+    ),
+    "jsonschema/lookaround_union_types.json": (
+        "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
+    ),
+    "jsonschema/nested_lookaround_array.json": (
+        "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to nested lookaround pattern validators"
+    ),
+    "openapi/pattern_lookaround.yaml::components.schemas.info": (
+        "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to OpenAPI lookaround pattern validators"
+    ),
+}
+PYDANTIC_V2_DATACLASS_LEGACY_LOOKAROUND_CASE_IDS = (
+    "jsonschema/lookaround_anyof_nullable.json",
+    "jsonschema/lookaround_dict.json",
+    "jsonschema/lookaround_union_types.json",
+    "jsonschema/nested_lookaround_array.json",
+)
+
+
+def _pydantic_v2_legacy_lookaround_excluded_cases(backend: PayloadBackend) -> dict[str, str]:
+    """Return old-runtime lookaround exclusions supported by the selected payload backend."""
+    match backend:
+        case PayloadBackend.PYDANTIC_V2:
+            return dict(PYDANTIC_V2_LEGACY_LOOKAROUND_EXCLUDED_CASES)
+        case PayloadBackend.PYDANTIC_V2_DATACLASS:
+            case_ids = PYDANTIC_V2_DATACLASS_LEGACY_LOOKAROUND_CASE_IDS
+        case _:
+            return {}
+    return {
+        case_id: reason for case_id in case_ids if (reason := PYDANTIC_V2_LEGACY_LOOKAROUND_EXCLUDED_CASES.get(case_id))
+    }
+
+
+PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES: dict[PayloadBackend, dict[str, str]] = {
+    PayloadBackend.PYDANTIC_V2: {
+        **_pydantic_v2_legacy_lookaround_excluded_cases(PayloadBackend.PYDANTIC_V2),
+        "jsonschema/use_decimal_for_multiple_of.json": (
+            "Pydantic before 2.5.0 can reject schema-valid Decimal multipleOf values near float boundaries"
+        ),
+        "openapi/allof_with_required_inherited_coverage.yaml::components.schemas.MultipleOfBase": (
+            "Pydantic before 2.5.0 can reject schema-valid inherited Decimal multipleOf values"
+        ),
+    },
+    PayloadBackend.PYDANTIC_V2_DATACLASS: {
+        **_pydantic_v2_legacy_lookaround_excluded_cases(PayloadBackend.PYDANTIC_V2_DATACLASS),
+        "jsonschema/use_decimal_for_multiple_of.json": (
+            "Pydantic before 2.5.0 can reject schema-valid dataclass float multipleOf values near float boundaries"
+        ),
+    },
+}
+PYDANTIC_V2_0_RUNTIME_ROUND_TRIP_EXCLUDED_CASES: dict[PayloadBackend, dict[str, str]] = {
+    PayloadBackend.PYDANTIC_V2: {
+        "jsonschema/msgspec_payload_runtime_compatibility.json": (
+            "Pydantic 2.0.x emits JSON-mode serializer warnings for object unions "
+            "distinguished by boolean Literal fields"
+        ),
+    },
+}
+PYDANTIC_V2_LEGACY_RUNTIME_ROUND_TRIP_EXCLUDED_CASES: dict[PayloadBackend, dict[str, str]] = {
+    PayloadBackend.PYDANTIC_V2: {
+        "jsonschema/property_names_anyof_ref.json": (
+            "Pydantic before 2.5.0 emits JSON-mode serializer warnings for enum dictionary keys"
+        ),
+        "jsonschema/property_names_ref_enum.json": (
+            "Pydantic before 2.5.0 emits JSON-mode serializer warnings for enum dictionary keys"
+        ),
+    },
 }
 
 

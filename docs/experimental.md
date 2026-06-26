@@ -10,6 +10,7 @@ This page lists features that are available but still experimental.
 | `formatter.builtin` | formatter | `--formatters builtin` | 0.59.0 | - |
 | `input-format.asyncapi` | input-format | `--input-file-type asyncapi` | 0.59.0 | - |
 | `input-format.avro` | input-format | `--input-file-type avro` | 0.59.0 | - |
+| `input-format.mcp-tools` | input-format | `--input-file-type mcp-tools` | 0.60.0 | - |
 | `input-format.protobuf` | input-format | `--input-file-type protobuf` | 0.59.0 | - |
 | `input-format.xmlschema` | input-format | `--input-file-type xmlschema` | 0.59.0 | - |
 
@@ -54,6 +55,16 @@ The parser focuses on message payload model generation from AsyncAPI documents.
 Apache Avro schema input support is experimental and may change as real-world usage is validated.
 
 The parser generates Python models from Avro schemas; it does not provide Avro runtime validation.
+
+### `input-format.mcp-tools`
+
+- **Kind:** input-format
+- **Target:** `--input-file-type mcp-tools`
+- **Since:** 0.60.0
+
+MCP tool schema profile input support is experimental and may change as MCP schemas evolve.
+
+The input is converted from MCP tool inputSchema/outputSchema entries into JSON Schema definitions before model generation.
 
 ### `input-format.protobuf`
 

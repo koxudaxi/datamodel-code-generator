@@ -4,7 +4,8 @@
 
 `datamodel-codegen` formats generated Python code after model generation. The default formatter list is currently `black` and `isort`.
 
-This default will change in a future release. External formatters will become opt-in so that generated output can be produced without installing formatter packages.
+This default will change in a future release. The default formatter will become `builtin`, and external formatter
+dependencies will become opt-in so that generated output can be produced without installing formatter packages.
 
 ## Formatter selection
 
@@ -32,6 +33,19 @@ single-file output is processed as isort, built-in formatter, Black, then Ruff c
 selected.
 The built-in formatter is an alternative to external formatting, not a pre-formatter.
 If `builtin` is passed together with `black`, `isort`, `ruff-check`, or `ruff-format`, `builtin` is ignored.
+
+### ⚡ Speed up generation
+
+The default formatter list is currently `black` and `isort`. For faster generation with no extra formatter dependency,
+prefer `--formatters builtin` for standard generated model modules. In a future version, the default formatter will
+change to `builtin` and the Black/isort dependencies will become opt-in.
+
+If you prefer Ruff, install it with `pip install 'datamodel-code-generator[ruff]'` and use
+`--formatters ruff-check ruff-format` for a fast external formatter.
+
+Custom templates can emit Python outside the standard generated model patterns covered by `builtin`, so
+custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted
+output with a custom template, please open an issue with a small reproducer.
 
 ## Built-in formatter scope
 
@@ -62,6 +76,11 @@ The built-in formatter does not currently format:
 - String wrapping outside supported generated call arguments.
 - Comment placement beyond preserving commented import lines.
 - Import section rules beyond the simple groups listed above.
+
+This scope matters when using `--custom-template-dir`. Custom templates can emit arbitrary Python code outside the
+generated model patterns listed above, so custom-template output is not exhaustively validated with the built-in
+formatter. If `--formatters builtin` produces invalid or poorly formatted output with a custom template, please open an
+issue with a small reproducer.
 
 For exact Black, isort, or Ruff behavior, continue to pass those formatters explicitly.
 The built-in formatter is not run before external formatters.

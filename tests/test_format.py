@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import ast
+import pickle
+import subprocess
 import sys
 import warnings
 from pathlib import Path
@@ -13,21 +15,26 @@ import black
 import isort
 import pytest
 
-from datamodel_code_generator.format import (
-    DEFAULT_KNOWN_FIRST_PARTY,
-    CodeFormatter,
-    Formatter,
-    PythonVersion,
-    PythonVersionMin,
-    _format_constrained_call,
-    _format_import_node,
-    _format_import_node_without_reordering,
-    _get_builtin_known_first_party,
-    _normalize_string_quotes,
-    _split_escaped_string_literal,
-    apply_builtin_formatter,
-    resolve_use_type_checking_imports,
-)
+import datamodel_code_generator
+import datamodel_code_generator._builtin_formatter as builtin_formatter
+import datamodel_code_generator._format_types as format_types
+import datamodel_code_generator.format as format_module
+
+DEFAULT_KNOWN_FIRST_PARTY = format_module.DEFAULT_KNOWN_FIRST_PARTY
+CodeFormatter = format_module.CodeFormatter
+Formatter = format_module.Formatter
+PythonVersion = format_module.PythonVersion
+PythonVersionMin = format_module.PythonVersionMin
+_format_constrained_call = format_module._format_constrained_call
+_format_import_node = format_module._format_import_node
+_format_import_node_without_reordering = format_module._format_import_node_without_reordering
+_get_builtin_line_length = format_module._get_builtin_line_length
+_get_builtin_known_first_party = format_module._get_builtin_known_first_party
+_get_builtin_string_normalization = format_module._get_builtin_string_normalization
+_normalize_string_quotes = format_module._normalize_string_quotes
+_split_escaped_string_literal = format_module._split_escaped_string_literal
+apply_builtin_formatter = format_module.apply_builtin_formatter
+resolve_use_type_checking_imports = format_module.resolve_use_type_checking_imports
 
 EXAMPLE_LICENSE_FILE = str(Path(__file__).parent / "data/python/custom_formatters/license_example.txt")
 
@@ -40,6 +47,150 @@ FAKE_RUFF_PATH = "/opt/fake-ruff/bin/ruff"
 BLACK_VERSION_DEPENDENT_NORMALIZED_EXPECTED_FILES = {
     "main/openapi/custom_file_header_with_docstring_and_import.py",
 }
+BUILTIN_FORMATTER_LOCAL_CONSTANTS = {
+    "DEFAULT_LINE_LENGTH",
+    "DEFAULT_KNOWN_FIRST_PARTY",
+    "MAX_TOP_LEVEL_BLANK_LINES",
+    "MAX_SHORT_DEFAULT_OVERFLOW",
+    "LONG_TARGET_PREFIX_LENGTH",
+    "TYPE_ALIAS_INLINE_ARGUMENT_COUNT",
+    "STRING_PREFIX_PATTERN",
+}
+
+
+def test_builtin_formatter_moved_names_are_reexported() -> None:
+    """Test format.py keeps an explicit re-export shim for moved builtin formatter names."""
+    assert format_module._BUILTIN_FORMATTER_REEXPORTS
+    assert "__all__" not in vars(format_module)
+    for name in format_module._BUILTIN_FORMATTER_REEXPORTS:
+        if name in BUILTIN_FORMATTER_LOCAL_CONSTANTS:
+            local_value = getattr(format_module, name)
+            builtin_value = getattr(builtin_formatter, name)
+            if name == "STRING_PREFIX_PATTERN":
+                assert local_value.pattern == builtin_value.pattern
+                assert local_value.flags == builtin_value.flags
+            else:
+                assert local_value == builtin_value
+            continue
+        assert getattr(format_module, name) is getattr(builtin_formatter, name)
+
+
+@pytest.mark.parametrize("module_name", ["datamodel_code_generator.format", "datamodel_code_generator"])
+def test_light_import_does_not_load_builtin_formatter(module_name: str) -> None:
+    """Test light package imports do not import the built-in formatter module."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import importlib, sys; "
+                f"importlib.import_module({module_name!r}); "
+                "print('datamodel_code_generator._builtin_formatter' in sys.modules)"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.stdout == "False\n"
+
+
+def test_format_star_import_keeps_constants_without_loading_builtin_formatter() -> None:
+    """Test star import keeps public constants without loading the built-in formatter module."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; "
+                "namespace = {}; "
+                "exec('from datamodel_code_generator.format import *', namespace); "
+                "print(namespace['DEFAULT_LINE_LENGTH']); "
+                "print('datamodel_code_generator._builtin_formatter' in sys.modules)"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.stdout == "88\nFalse\n"
+
+
+def test_package_import_does_not_load_format_module() -> None:
+    """Test package root import keeps formatter exports lazy."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            ("import sys; import datamodel_code_generator; print('datamodel_code_generator.format' in sys.modules)"),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.stdout == "False\n"
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "import datamodel_code_generator._format_types",
+        "import datamodel_code_generator.arguments",
+        "import datamodel_code_generator.config",
+        "from datamodel_code_generator import DEFAULT_FORMATTERS, PythonVersionMin",
+    ],
+)
+def test_light_format_type_imports_do_not_load_formatter_runtime(statement: str) -> None:
+    """Test light format type consumers do not import formatter runtime modules."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; "
+                f"{statement}; "
+                "print('datamodel_code_generator.format' in sys.modules); "
+                "print('datamodel_code_generator._builtin_formatter' in sys.modules)"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.stdout == "False\nFalse\n"
+
+
+def test_format_type_reexports_keep_public_identity() -> None:
+    """Test moved format types keep the public class identity and pickle path."""
+    assert format_module.DateClassType is format_types.DateClassType
+    assert format_module.DatetimeClassType is format_types.DatetimeClassType
+    assert format_module.Formatter is format_types.Formatter
+    assert format_module.PythonVersion is format_types.PythonVersion
+    assert format_module.PythonVersionMin is format_types.PythonVersionMin
+    assert format_module.DEFAULT_FORMATTERS is format_types.DEFAULT_FORMATTERS
+    assert datamodel_code_generator.PythonVersion is format_types.PythonVersion
+    assert datamodel_code_generator.DEFAULT_FORMATTERS is format_types.DEFAULT_FORMATTERS
+    assert format_types.PythonVersion.__module__ == "datamodel_code_generator.format"
+    assert pickle.loads(pickle.dumps(format_types.PythonVersion.PY_310)) is format_types.PythonVersion.PY_310
+
+
+def test_main_get_black_wrapper_returns_black_module() -> None:
+    """Test the CLI wrapper keeps Black imports lazy while returning the installed module."""
+    import datamodel_code_generator.__main__ as main_module
+
+    assert main_module._get_black() is black
+
+
+def test_apply_builtin_formatter_keeps_concrete_public_python_version_type() -> None:
+    """Test the public formatter wrapper keeps the concrete PythonVersion annotation."""
+    assert format_module.apply_builtin_formatter.__annotations__["python_version"] == "PythonVersion | None"
+    assert format_module.apply_builtin_formatter("x=1\n", python_version=PythonVersionMin) == (
+        builtin_formatter.apply_builtin_formatter("x=1\n", python_version=PythonVersionMin)
+    )
 
 
 def test_python_version() -> None:
@@ -141,6 +292,44 @@ def test_format_code_ignores_builtin_when_external_formatter_selected(
     assert formatter.format_code("x=1\n") == "x = 1\n"
 
 
+def test_format_code_builtin_formatter_uses_format_module_reexported_callables(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatting call sites resolve through format.py globals."""
+    known_first_party = frozenset({"example"})
+    monkeypatch.chdir(tmp_path)
+
+    with (
+        mock.patch("datamodel_code_generator.format._get_builtin_line_length", return_value=99) as line_length_reader,
+        mock.patch(
+            "datamodel_code_generator.format._get_builtin_known_first_party",
+            return_value=known_first_party,
+        ) as known_first_party_reader,
+        mock.patch(
+            "datamodel_code_generator.format._get_builtin_string_normalization",
+            return_value=True,
+        ) as string_normalization_reader,
+        mock.patch("datamodel_code_generator.format.apply_builtin_formatter", return_value="patched\n") as formatter,
+    ):
+        code_formatter = CodeFormatter(
+            PythonVersionMin,
+            formatters=[Formatter.BUILTIN],
+        )
+        formatted_code = code_formatter.format_code("x=1\n")
+
+    assert code_formatter.builtin_line_length == 99
+    assert code_formatter.builtin_known_first_party == known_first_party
+    assert code_formatter.builtin_string_normalization
+    assert formatted_code == "patched\n"
+    line_length_reader.assert_called_once()
+    known_first_party_reader.assert_called_once()
+    string_normalization_reader.assert_called_once()
+    shared_tool_config = line_length_reader.call_args.kwargs["tool_config"]
+    assert shared_tool_config is known_first_party_reader.call_args.kwargs["tool_config"]
+    assert shared_tool_config is string_normalization_reader.call_args.kwargs["tool_config"]
+    formatter.assert_called_once()
+
+
 def test_format_code_builtin_formatter_uses_explicit_line_length(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -177,6 +366,31 @@ def test_format_code_builtin_formatter_rejects_invalid_explicit_line_length(
             formatters=[Formatter.BUILTIN],
             builtin_format_line_length=line_length,
         )
+
+
+def test_builtin_config_helpers_fall_back_without_pyproject(tmp_path: Path) -> None:
+    """Test moved built-in config helpers keep no-pyproject fallback behavior."""
+    assert _get_builtin_line_length(tmp_path) == format_module.DEFAULT_LINE_LENGTH
+    assert _get_builtin_known_first_party(tmp_path) == DEFAULT_KNOWN_FIRST_PARTY
+    assert not _get_builtin_string_normalization(tmp_path, skip_string_normalization=True)
+
+
+def test_builtin_config_helpers_read_pyproject_directly(tmp_path: Path) -> None:
+    """Test moved built-in config helpers still read pyproject for direct callers."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        "[tool.ruff]\nline-length = 120\n[tool.black]\nskip-string-normalization = false\n",
+        encoding="utf-8",
+    )
+
+    assert _get_builtin_line_length(tmp_path) == 120
+    assert _get_builtin_string_normalization(tmp_path, skip_string_normalization=True)
+
+
+def test_builtin_line_length_helper_rejects_invalid_explicit_value(tmp_path: Path) -> None:
+    """Test the moved line length helper still validates direct callers."""
+    with pytest.raises(ValueError, match="builtin_format_line_length must be a positive integer"):
+        _get_builtin_line_length(tmp_path, 0)
 
 
 def test_format_code_builtin_formatter_uses_datamodel_codegen_line_length(
@@ -513,6 +727,65 @@ def test_apply_builtin_formatter_adds_blank_between_assignment_and_class() -> No
     assert apply_builtin_formatter(code) == '__all__ = [\n    "Model",\n]\n\n\nclass Model:\n    id: str\n'
 
 
+def test_apply_builtin_formatter_wraps_module_subscript_assignment() -> None:
+    """Test built-in formatter wraps long module-level subscript assignments."""
+    code = (
+        "class Model:\n"
+        "    id: str\n"
+        "\n"
+        "Model.__annotations__['__pydantic_extra__'] = Dict[str, float | str | bool | dict[str, Any] | None]\n"
+        "Model.model_rebuild(force=True)\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "class Model:\n"
+        "    id: str\n"
+        "\n"
+        "\n"
+        "Model.__annotations__['__pydantic_extra__'] = Dict[\n"
+        "    str, float | str | bool | dict[str, Any] | None\n"
+        "]\n"
+        "Model.model_rebuild(force=True)\n"
+    )
+
+
+def test_apply_builtin_formatter_wraps_nested_module_subscript_assignment() -> None:
+    """Test built-in formatter wraps nested subscript assignments."""
+    code = "Model.__annotations__['__pydantic_extra__'] = Dict[str, list[VeryLongName | OtherVeryLongName | None]]\n"
+
+    assert apply_builtin_formatter(code, line_length=40) == (
+        "Model.__annotations__['__pydantic_extra__'] = Dict[\n"
+        "    str,\n"
+        "    list[\n"
+        "        VeryLongName\n"
+        "        | OtherVeryLongName\n"
+        "        | None\n"
+        "    ],\n"
+        "]\n"
+    )
+
+
+def test_apply_builtin_formatter_wraps_module_subscript_union_element() -> None:
+    """Test built-in formatter wraps union elements in module-level subscripts."""
+    code = "Model.__annotations__['__pydantic_extra__'] = Dict[str, VeryLongName | OtherVeryLongName | None]\n"
+
+    assert apply_builtin_formatter(code, line_length=40) == (
+        "Model.__annotations__['__pydantic_extra__'] = Dict[\n"
+        "    str,\n"
+        "    VeryLongName\n"
+        "    | OtherVeryLongName\n"
+        "    | None,\n"
+        "]\n"
+    )
+
+
+def test_apply_builtin_formatter_keeps_one_line_class_annotation_spacing() -> None:
+    """Test post-class annotation spacing ignores one-line classes."""
+    code = "class Model: pass\nModel.__annotations__['__pydantic_extra__'] = Dict[str, int]\n"
+
+    assert apply_builtin_formatter(code) == code
+
+
 def test_apply_builtin_formatter_normalizes_simple_string_quotes() -> None:
     """Test built-in formatter can match black string normalization for generated strings."""
     code = (
@@ -604,6 +877,52 @@ def test_apply_builtin_formatter_wraps_inline_type_alias_type_union() -> None:
     )
 
 
+def test_apply_builtin_formatter_wraps_type_alias_union_assignment() -> None:
+    """Test built-in formatter matches black for TypeAlias Union assignments."""
+    code = (
+        "from typing import TypeAlias, Union\n"
+        "\n"
+        "\n"
+        "# safe\n"
+        "# raise RuntimeError('executed')\n"
+        "SearchResult: TypeAlias = Union[\n"
+        "        'A',\n"
+        "        'B',\n"
+        "    ]\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "from typing import TypeAlias, Union\n"
+        "\n"
+        "# safe\n"
+        "# raise RuntimeError('executed')\n"
+        "SearchResult: TypeAlias = Union[\n"
+        "    'A',\n"
+        "    'B',\n"
+        "]\n"
+    )
+
+
+def test_apply_builtin_formatter_keeps_inline_type_alias_union_assignment() -> None:
+    """Test built-in formatter keeps short TypeAlias Union assignments inline."""
+    code = "from typing import TypeAlias, Union\n\n\nSearchResult: TypeAlias = Union['A', 'B']\n"
+
+    assert (
+        apply_builtin_formatter(code)
+        == "from typing import TypeAlias, Union\n\nSearchResult: TypeAlias = Union['A', 'B']\n"
+    )
+
+
+def test_apply_builtin_formatter_keeps_non_union_type_alias_assignment() -> None:
+    """Test built-in formatter only rewrites TypeAlias Union assignments."""
+    code = "from typing import TypeAlias\n\n\nSearchResult: TypeAlias = tuple[\n    'A',\n    'B',\n]\n"
+
+    assert (
+        apply_builtin_formatter(code)
+        == "from typing import TypeAlias\n\nSearchResult: TypeAlias = tuple[\n    'A',\n    'B',\n]\n"
+    )
+
+
 def test_apply_builtin_formatter_normalizes_blank_lines_without_imports() -> None:
     """Test built-in formatter normalizes top-level blanks when no imports exist."""
     code = "Alias = str\n\n\n\nOtherAlias = Alias\n"
@@ -619,7 +938,6 @@ def test_apply_builtin_formatter_normalizes_type_alias_blank_lines_without_impor
     assert apply_builtin_formatter(code) == "type Foo = str\n\n\ntype Bar = Foo\n"
 
 
-@pytest.mark.skipif(sys.version_info < (3, 12), reason="type statements require Python 3.12")
 def test_builtin_formatter_respects_target_python_version_for_ast_parse() -> None:
     """Test built-in formatter parses code using the configured target Python version."""
     code = "type Foo = str\n\n\n\ntype Bar = Foo\n"
@@ -629,6 +947,109 @@ def test_builtin_formatter_respects_target_python_version_for_ast_parse() -> Non
 
     assert py310_formatter.format_code(code) == code
     assert py312_formatter.format_code(code) == "type Foo = str\n\n\ntype Bar = Foo\n"
+
+
+def test_builtin_formatter_formats_type_alias_modules_on_older_runtimes() -> None:
+    """Test built-in formatter handles target Python 3.12 type aliases on older runtimes."""
+    code = (
+        "from typing import Annotated\n"
+        "from pydantic import Field\n"
+        "\n"
+        "\n"
+        "type Alias = Annotated[str | bool, Field(..., "
+        "description='An annotated union type', title='MyAnnotatedType')]\n"
+        "\n"
+        "\n"
+        "\n"
+        "class Model:\n"
+        "    x_value: Annotated[Alias | None, Field(validate_default=True)] = {'type': 'b', 'value': 1}\n"
+    )
+
+    assert apply_builtin_formatter(code, line_length=88, python_version=PythonVersion.PY_312) == (
+        "from typing import Annotated\n"
+        "\n"
+        "from pydantic import Field\n"
+        "\n"
+        "type Alias = Annotated[\n"
+        "    str | bool,\n"
+        "    Field(..., description='An annotated union type', title='MyAnnotatedType'),\n"
+        "]\n"
+        "\n"
+        "\n"
+        "class Model:\n"
+        "    x_value: Annotated[Alias | None, Field(validate_default=True)] = {\n"
+        "        'type': 'b',\n"
+        "        'value': 1,\n"
+        "    }\n"
+    )
+
+
+def test_builtin_formatter_pep695_placeholder_helpers(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test helper branches for parsing Python 3.12 type aliases on older runtimes."""
+    monkeypatch.setattr(builtin_formatter.sys, "version_info", (3, 11, 0, "final", 0))
+
+    assert builtin_formatter._needs_pep695_type_alias_placeholders(PythonVersion.PY_312)
+    assert not builtin_formatter._needs_pep695_type_alias_placeholders(PythonVersion.PY_311)
+    assert not builtin_formatter._needs_pep695_type_alias_placeholders(None)
+
+    alias_lines = [
+        "x = 1",
+        "type Alias = Annotated[",
+        "    str | bool,",
+        "    Field(...),",
+        "]",
+        "y = 2",
+    ]
+    assert builtin_formatter._pep695_type_alias_statement_end(alias_lines, 1) == 4
+    assert builtin_formatter._pep695_type_alias_statement_end([], 0) == 0
+    assert builtin_formatter._pep695_type_alias_statement_end(["type Alias = Annotated["], 0) == 0
+    assert builtin_formatter._replace_pep695_type_aliases_with_placeholders("\n".join(alias_lines)) == (
+        f"x = 1\n{builtin_formatter.PEP695_TYPE_ALIAS_PLACEHOLDER} = None\n\n\n\ny = 2"
+    )
+
+    assert builtin_formatter._parse_builtin_code("type Alias =\n", PythonVersion.PY_312) is not None
+    assert builtin_formatter._parse_builtin_code("if", PythonVersion.PY_312) is None
+    assert builtin_formatter._parse_builtin_code("    type Alias =\n", PythonVersion.PY_312) is None
+
+
+def test_builtin_formatter_pep695_type_alias_replacement_edges() -> None:
+    """Test PEP 695 alias replacement skips unsupported forms and rewrites generated Annotated aliases."""
+    assert builtin_formatter._has_comment_token("value = 'unterminated #")
+    assert not builtin_formatter._has_comment_token("value = 'https://example.com/#fragment'")
+    assert (
+        builtin_formatter._pep695_type_alias_replacement(
+            ["type Alias = Annotated[str, Field(..., description='kept')]  # noqa: F401"],
+            0,
+            40,
+        )
+        is None
+    )
+    assert builtin_formatter._pep695_type_alias_replacement(["type Alias = ["], 0, 40) is None
+    assert builtin_formatter._pep695_type_alias_replacement(["type Alias = str"], 0, 40) is None
+
+    replacements = builtin_formatter._collect_pep695_type_alias_replacements(
+        [
+            "value = 1",
+            "type Alias = Annotated[str, Field(..., description='long generated alias description')]",
+        ],
+        40,
+    )
+
+    assert replacements == [
+        (
+            2,
+            2,
+            [
+                "type Alias = Annotated[",
+                "    str,",
+                "    Field(",
+                "        ...,",
+                "        description='long generated alias description',",
+                "    ),",
+                "]",
+            ],
+        )
+    ]
 
 
 def test_apply_builtin_formatter_parenthesizes_short_annotated_default() -> None:
@@ -671,6 +1092,88 @@ def test_apply_builtin_formatter_parenthesizes_long_union_annotation() -> None:
         "    optional_nullable_with_constraint: (\n"
         "        Annotated[str, Meta(max_length=50)] | UnsetType\n"
         "    ) = UNSET\n"
+    )
+
+
+def test_apply_builtin_formatter_parenthesizes_union_annotation_with_long_default() -> None:
+    """Test built-in formatter matches black for long union annotations with long defaults."""
+    code = (
+        "class Model:\n"
+        "    qualified_state: example_spec_proto3_alias_state.ExampleSpecProto3AliasState | None = "
+        "example_spec_proto3_alias_state.ExampleSpecProto3AliasState.ALIAS_STATE_UNSPECIFIED\n"
+    )
+
+    assert apply_builtin_formatter(code, line_length=88) == (
+        "class Model:\n"
+        "    qualified_state: (\n"
+        "        example_spec_proto3_alias_state.ExampleSpecProto3AliasState | None\n"
+        "    ) = (\n"
+        "        example_spec_proto3_alias_state.ExampleSpecProto3AliasState.ALIAS_STATE_UNSPECIFIED\n"
+        "    )\n"
+    )
+
+
+def test_apply_builtin_formatter_parenthesizes_constrained_call_union_annotation_with_default() -> None:
+    """Test built-in formatter matches black for constrained call union annotations."""
+    code = (
+        "class Model:\n"
+        "    price: condecimal(ge=Decimal('0'), le=Decimal('99999.99'), multiple_of=Decimal('0.01')) | None = None\n"
+    )
+
+    assert apply_builtin_formatter(code, line_length=88) == (
+        "class Model:\n"
+        "    price: (\n"
+        "        condecimal(ge=Decimal('0'), le=Decimal('99999.99'), multiple_of=Decimal('0.01'))\n"
+        "        | None\n"
+        "    ) = None\n"
+    )
+
+
+def test_apply_builtin_formatter_parenthesizes_union_annotation_with_string_default() -> None:
+    """Test built-in formatter matches black for long union annotations with string defaults."""
+    code = "class Model:\n    typename__: Literal['Notification'] | None = 'Notification'\n"
+
+    assert apply_builtin_formatter(code, line_length=40) == (
+        "class Model:\n    typename__: (\n        Literal['Notification'] | None\n    ) = 'Notification'\n"
+    )
+
+
+def test_apply_builtin_formatter_wraps_string_default_with_single_quote() -> None:
+    """Test wrapped generated string defaults keep values with single quotes intact."""
+    code = (
+        "class Model:\n"
+        '    message: str = Field(..., description="it\'s a generated description with enough words to wrap")\n'
+    )
+
+    assert apply_builtin_formatter(code, line_length=48, wrap_string_literal=True) == (
+        "class Model:\n"
+        "    message: str = Field(\n"
+        "        ...,\n"
+        "        description=(\n"
+        '            "it\'s a generated description with"\n'
+        '            " enough words to wrap"\n'
+        "        ),\n"
+        "    )\n"
+    )
+
+
+def test_apply_builtin_formatter_formats_hash_inside_field_string() -> None:
+    """Test URL fragments inside generated strings are not treated as comments."""
+    code = (
+        "class ErrorResponse:\n"
+        "    type: AnyUrl | None = Field('about:blank', description='An absolute URI that identifies the problem "
+        "type.  When dereferenced,\\nit SHOULD provide human-readable documentation for the problem type\\n(e.g., "
+        "using HTML).\\n', examples=['https://tools.ietf.org/html/rfc7231#section-6.6.4'])\n"
+    )
+
+    assert apply_builtin_formatter(code, line_length=88) == (
+        "class ErrorResponse:\n"
+        "    type: AnyUrl | None = Field(\n"
+        "        'about:blank',\n"
+        "        description='An absolute URI that identifies the problem type.  When dereferenced,\\nit SHOULD "
+        "provide human-readable documentation for the problem type\\n(e.g., using HTML).\\n',\n"
+        "        examples=['https://tools.ietf.org/html/rfc7231#section-6.6.4'],\n"
+        "    )\n"
     )
 
 
@@ -1007,7 +1510,10 @@ def test_builtin_formatter_private_edge_helpers(tmp_path: Path) -> None:
         '[tool.isort]\nknown_first_party = "not-a-list"\n',
         encoding="utf-8",
     )
-    call = ast.parse("constr()").body[0].value
+    statement = ast.parse("constr()").body[0]
+    assert isinstance(statement, ast.Expr)
+    call = statement.value
+    assert isinstance(call, ast.Call)
 
     assert _get_builtin_known_first_party(tmp_path) == DEFAULT_KNOWN_FIRST_PARTY
     assert _split_escaped_string_literal("abc\\def", 4) == ["abc", "\\def"]
@@ -1519,8 +2025,6 @@ def test_defer_formatting_skips_ruff_in_format_code(tmp_path: Path, monkeypatch:
 
 def test_generate_with_ruff_batch_formatting(tmp_path: Path) -> None:
     """Test that generate uses batch ruff formatting for directory output."""
-    from datamodel_code_generator import ModuleSplitMode, generate
-
     schema = """
     {
         "type": "object",
@@ -1535,11 +2039,11 @@ def test_generate_with_ruff_batch_formatting(tmp_path: Path) -> None:
         mock.patch("datamodel_code_generator.format.CodeFormatter._find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("datamodel_code_generator.format.subprocess.run") as mock_run,
     ):
-        generate(
+        datamodel_code_generator.generate(
             input_=schema,
             output=output_dir,
             formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
-            module_split_mode=ModuleSplitMode.Single,
+            module_split_mode=datamodel_code_generator.ModuleSplitMode.Single,
         )
 
     assert mock_run.call_count == 2
@@ -1567,8 +2071,6 @@ def test_generate_with_ruff_batch_formatting(tmp_path: Path) -> None:
 
 def test_generate_with_ruff_batch_formatting_and_explicit_type_checking_imports(tmp_path: Path) -> None:
     """Test explicit TYPE_CHECKING imports override the modular Pydantic Ruff default."""
-    from datamodel_code_generator import ModuleSplitMode, generate
-
     schema = """
     {
         "type": "object",
@@ -1583,11 +2085,11 @@ def test_generate_with_ruff_batch_formatting_and_explicit_type_checking_imports(
         mock.patch("datamodel_code_generator.format.CodeFormatter._find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("datamodel_code_generator.format.subprocess.run") as mock_run,
     ):
-        generate(
+        datamodel_code_generator.generate(
             input_=schema,
             output=output_dir,
             formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
-            module_split_mode=ModuleSplitMode.Single,
+            module_split_mode=datamodel_code_generator.ModuleSplitMode.Single,
             use_type_checking_imports=True,
         )
 

@@ -9,11 +9,14 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, ValidationError, field_validator, model_validator
+from pydantic.alias_generators import to_camel, to_pascal, to_snake
 
-from datamodel_code_generator.imports import IMPORT_ANY, Import
+from datamodel_code_generator import Error
+from datamodel_code_generator.enums import AliasGenerator
+from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_ANY, IMPORT_DICT, Import
 from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
@@ -24,16 +27,20 @@ from datamodel_code_generator.model.base import (
     _get_template_with_custom_dir,
 )
 from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
+from datamodel_code_generator.model.pydantic_base import BaseModelBase
+from datamodel_code_generator.model.pydantic_base import Constraints as _Constraints
 from datamodel_code_generator.model.pydantic_base import (
-    BaseModelBase,
+    DataModelField as _PydanticBaseDataModelField,
 )
-from datamodel_code_generator.model.pydantic_base import (
-    Constraints as _Constraints,
-)
-from datamodel_code_generator.model.pydantic_base import (
-    DataModelField as DataModelFieldV1,
+from datamodel_code_generator.model.pydantic_v2._config import (
+    ConfigAttribute,
+    build_base_config_parameters,
 )
 from datamodel_code_generator.model.pydantic_v2.imports import (
+    IMPORT_ALIAS_CHOICES,
+    IMPORT_ALIAS_GENERATOR_TO_CAMEL,
+    IMPORT_ALIAS_GENERATOR_TO_PASCAL,
+    IMPORT_ALIAS_GENERATOR_TO_SNAKE,
     IMPORT_BASE_MODEL,
     IMPORT_CONFIG_DICT,
     IMPORT_FIELD,
@@ -43,6 +50,7 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_VALIDATION_INFO,
     IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER,
 )
+from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA
 from datamodel_code_generator.model.runtime_validation import SchemaRuntimeValidation
 from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
@@ -85,7 +93,98 @@ class Constraints(_Constraints):
         return values
 
 
-class DataModelField(DataModelFieldV1):
+DataModelFieldV1 = _PydanticBaseDataModelField  # deprecated re-export, pydantic-v1 output removed in #3031
+
+_ALIAS_GENERATOR_TEMPLATE_DATA_KEY = "alias_generator"
+_ALIAS_GENERATOR_INTERNAL_KEY = "_alias_generator"
+_NO_ALIAS_INTERNAL_KEY = "_no_alias"
+_CONFIG_ITEMS_TEMPLATE_DATA_KEY = "config_items"
+_ALIAS_GENERATOR_IMPORTS: dict[str, Import] = {
+    AliasGenerator.ToCamel.value: IMPORT_ALIAS_GENERATOR_TO_CAMEL,
+    AliasGenerator.ToPascal.value: IMPORT_ALIAS_GENERATOR_TO_PASCAL,
+    AliasGenerator.ToSnake.value: IMPORT_ALIAS_GENERATOR_TO_SNAKE,
+}
+
+
+def _alias_generator_name(value: Any) -> str | None:
+    generator_name: str | None = None
+    match value:
+        case AliasGenerator():
+            generator_name = value.value
+        case str() if value in _ALIAS_GENERATOR_IMPORTS:
+            generator_name = value
+    return generator_name
+
+
+def _generate_alias(generator_name: str, field_name: str) -> str:
+    generated_alias = field_name
+    match generator_name:
+        case AliasGenerator.ToCamel.value:
+            generated_alias = to_camel(field_name)
+        case AliasGenerator.ToPascal.value:
+            generated_alias = to_pascal(field_name)
+        case AliasGenerator.ToSnake.value:
+            generated_alias = to_snake(field_name)
+    return generated_alias
+
+
+def _config_dict_items(config: Any) -> list[tuple[str, Any]]:
+    if config is None:
+        return []
+
+    if isinstance(config, dict):
+        return list(config.items())
+
+    if model_dump := getattr(config, "model_dump", None):
+        return list(model_dump(exclude_unset=True).items())
+
+    if dict_ := getattr(config, "dict", None):
+        return list(dict_(exclude_unset=True).items())
+
+    return []
+
+
+_PYDANTIC_V2_BASE_FIELD_KEYS: frozenset[str] = frozenset({
+    "default",
+    "default_factory",
+    "alias",
+    "alias_priority",
+    "validation_alias",
+    "serialization_alias",
+    "title",
+    "description",
+    "examples",
+    "exclude",
+    "discriminator",
+    "json_schema_extra",
+    "frozen",
+    "validate_default",
+    "repr",
+    "init_var",
+    "kw_only",
+    "pattern",
+    "strict",
+    "gt",
+    "ge",
+    "lt",
+    "le",
+    "multiple_of",
+    "allow_inf_nan",
+    "max_digits",
+    "decimal_places",
+    "min_length",
+    "max_length",
+    "union_mode",
+})
+
+
+if PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA:
+    _PYDANTIC_V2_DEFAULT_FIELD_KEYS = _PYDANTIC_V2_BASE_FIELD_KEYS
+else:
+    _PYDANTIC_V2_DEFAULT_FIELD_KEYS = _PYDANTIC_V2_BASE_FIELD_KEYS | {"deprecated"}
+
+
+class DataModelField(_PydanticBaseDataModelField):
     """Pydantic v2 field with Field() constraints and json_schema_extra support."""
 
     _EXCLUDE_FIELD_KEYS: ClassVar[set[str]] = {
@@ -100,42 +199,10 @@ class DataModelField(DataModelFieldV1):
         "max_length",
         "pattern",
     }
-    _DEFAULT_FIELD_KEYS: ClassVar[set[str]] = {
-        "default",
-        "default_factory",
-        "alias",
-        "alias_priority",
-        "validation_alias",
-        "serialization_alias",
-        "title",
-        "description",
-        "examples",
-        "exclude",
-        "discriminator",
-        "json_schema_extra",
-        "frozen",
-        "validate_default",
-        "repr",
-        "init_var",
-        "kw_only",
-        "pattern",
-        "strict",
-        "gt",
-        "ge",
-        "lt",
-        "le",
-        "multiple_of",
-        "allow_inf_nan",
-        "max_digits",
-        "decimal_places",
-        "min_length",
-        "max_length",
-        "union_mode",
-        "deprecated",
-    }
+    _DEFAULT_FIELD_KEYS: ClassVar[frozenset[str]] = _PYDANTIC_V2_DEFAULT_FIELD_KEYS
     constraints: Optional[Constraints] = None  # ty: ignore  # noqa: UP045
-    _PARSE_METHOD: ClassVar[str] = "model_validate"
     can_have_extra_keys: ClassVar[bool] = False
+    _PYDANTIC_EXTRA_FIELD_NAME: ClassVar[str] = "__pydantic_extra__"
 
     @field_validator("extras")
     def validate_extras(cls, values: Any) -> dict[str, Any]:  # noqa: N805
@@ -152,6 +219,48 @@ class DataModelField(DataModelFieldV1):
     def process_const(self) -> None:
         """Process const field constraint using literal type."""
         self._process_const_as_literal()
+
+    def _requires_null_default_field(self) -> bool:
+        if self.required or self.default is not None or self.has_default_factory:
+            return False
+        return self.data_type.type == "None"
+
+    def _has_field_statement(self) -> bool:
+        if self._requires_null_default_field():
+            return True
+        if self.is_class_var:
+            self.__dict__["_computed_default_factory"] = None
+            return False
+        if self._alias_generator_name_from_parent() is None:
+            return super()._has_field_statement()
+        return self._has_processed_field_statement()
+
+    def _has_processed_field_statement(self) -> bool:
+        """Return whether processed Field() data will render a Field() call."""
+        data, default_factory = self._get_field_data_and_default_factory()
+        if default_factory or any(v is not None for v in data.values()):
+            return True
+        return bool(self.nullable and self.required and not self.use_default_with_required)
+
+    def __str__(self) -> str:
+        """Return Field(None) when stringification would omit an explicit null default."""
+        field = super().__str__()
+        if self._requires_null_default_field() and not field:
+            return "Field(None)"
+        return field
+
+    @property
+    def use_pydantic_extra_annotation_assignment(self) -> bool:
+        """Return whether this field needs runtime annotation assignment."""
+        return self.name == self._PYDANTIC_EXTRA_FIELD_NAME
+
+    @property
+    def pydantic_extra_type_hint(self) -> str:
+        """Return a Dict-based type hint for Pydantic 2.0 typed extras."""
+        data_type = self.data_type
+        if not (data_type.is_dict and data_type.use_standard_collections and not data_type.use_generic_container):
+            return self.type_hint
+        return self._type_hint_from_data_type(data_type.model_copy(update={"use_standard_collections": False}))
 
     def _process_data_in_str(self, data: dict[str, Any]) -> None:
         if self.const:
@@ -170,6 +279,7 @@ class DataModelField(DataModelFieldV1):
             else:
                 data.pop("union_mode")
 
+        self._update_alias_for_alias_generator(data)
         has_alias = "alias" in data
         alias = data.get("alias")
 
@@ -201,20 +311,49 @@ class DataModelField(DataModelFieldV1):
                 data["serialization_alias"] = serialization_alias
 
         # **extra is not supported in pydantic 2.0
-        json_schema_extra = {k: v for k, v in data.items() if k not in self._DEFAULT_FIELD_KEYS}
+        extra_field_keys = tuple(k for k in data if k not in self._DEFAULT_FIELD_KEYS)
+        existing_json_schema_extra = data.get("json_schema_extra") or {}
+        json_schema_extra = {
+            **existing_json_schema_extra,
+            **{k: data[k] for k in extra_field_keys},
+        }
         if json_schema_extra:
             data["json_schema_extra"] = json_schema_extra
-            for key in json_schema_extra:
+            for key in extra_field_keys:
                 data.pop(key)
 
-    def _process_annotated_field_arguments(  # noqa: PLR6301
-        self,
-        field_arguments: list[str],
-    ) -> list[str]:
-        return field_arguments
+    def _update_alias_for_alias_generator(self, data: dict[str, Any]) -> None:
+        if self.name is None or self.use_pydantic_extra_annotation_assignment:
+            return
+        if (generator_name := self._alias_generator_name_from_parent()) is None:
+            return
+        alias = data.get("alias")
+        if alias is None and self._automatic_alias_disabled_for_alias_generator():
+            return
+        if (wire_name := alias if alias is not None else self.original_name) is None:
+            return
+        if _generate_alias(generator_name, self.name) == wire_name:
+            data.pop("alias", None)
+            return
+        data["alias"] = wire_name
+
+    def _alias_generator_name_from_parent(self) -> str | None:
+        if self.parent is None:
+            return None
+        alias_generator = self.parent.extra_template_data.get(_ALIAS_GENERATOR_TEMPLATE_DATA_KEY)
+        if alias_generator is None:
+            alias_generator = self.parent.extra_template_data.get(_ALIAS_GENERATOR_INTERNAL_KEY)
+        return _alias_generator_name(alias_generator)
+
+    def _automatic_alias_disabled_for_alias_generator(self) -> bool:
+        if self.parent is None:
+            return False
+        return bool(self.parent.extra_template_data.get(_NO_ALIAS_INTERNAL_KEY))
 
     def _has_discriminator_in_data_type(self) -> bool:
         """Check if any nested DataType has a discriminator."""
+        if not self.data_type.discriminator and not self.data_type.data_types and self.data_type.dict_key is None:
+            return False
         return any(dt.discriminator for dt in self.data_type.all_data_types)
 
     @property
@@ -225,22 +364,50 @@ class DataModelField(DataModelFieldV1):
         if self.is_class_var:
             extra_imports.append(IMPORT_CLASSVAR)
         if self.validation_aliases:
-            from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_ALIAS_CHOICES  # noqa: PLC0415
-
             extra_imports.append(IMPORT_ALIAS_CHOICES)
-        if self._has_discriminator_in_data_type():
+        if IMPORT_ANNOTATED in base_imports and self._has_discriminator_in_data_type():
             extra_imports.append(IMPORT_FIELD)
+        if self.use_pydantic_extra_annotation_assignment:
+            extra_imports.append(IMPORT_DICT)
         if extra_imports:
             return chain_as_tuple(base_imports, tuple(extra_imports))
         return base_imports
 
 
-class ConfigAttribute(NamedTuple):
-    """Configuration attribute mapping for ConfigDict conversion."""
+_LOOKAROUND_PATTERN: re.Pattern[str] = re.compile(r"\(\?<?[=!]")
 
-    from_: str
-    to: str
-    invert: bool
+
+def has_lookaround_pattern(
+    fields: list[DataModelFieldBase],
+    *,
+    follow_references: bool = False,
+    _visited: set[int] | None = None,
+) -> bool:
+    """Check if any field has a regex pattern with lookaround assertions.
+
+    When ``follow_references`` is True, also inspect patterns reachable through referenced
+    models (generated type aliases/root types) -- needed for Pydantic v2 dataclasses, where
+    alias patterns are compiled with the consuming dataclass's config rather than their own.
+    """
+    if _visited is None:
+        _visited = set()
+    for field in fields:
+        pattern = isinstance(field.constraints, Constraints) and field.constraints.pattern
+        if pattern and _LOOKAROUND_PATTERN.search(pattern):
+            return True
+        for data_type in field.data_type.all_data_types:
+            pattern = (data_type.kwargs or {}).get("pattern")
+            if pattern and _LOOKAROUND_PATTERN.search(pattern):
+                return True
+            if not follow_references or data_type.reference is None:
+                continue
+            source = data_type.reference.source
+            source_fields = getattr(source, "fields", None)
+            if source_fields is not None and id(source) not in _visited:
+                _visited.add(id(source))
+                if has_lookaround_pattern(source_fields, follow_references=True, _visited=_visited):
+                    return True
+    return False
 
 
 class BaseModel(BaseModelBase):
@@ -256,6 +423,8 @@ class BaseModel(BaseModelBase):
     BASE_CLASS_ALIAS: ClassVar[str] = "_BaseModel"
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
+    SUPPORTS_CONFIG_EXTRA: ClassVar[bool] = True
+    SUPPORTS_ARBITRARY_TYPES_ALLOWED: ClassVar[bool] = True
     TYPED_EXTRA_FIELD_NAME: ClassVar[str] = "__pydantic_extra__"
     # In Pydantic 2.11+, populate_by_name is deprecated in favor of validate_by_name + validate_by_alias
     # Default to V2 compatible (populate_by_name) unless target_pydantic_version is specified
@@ -396,143 +565,45 @@ class BaseModel(BaseModelBase):
             treat_dot_as_module=treat_dot_as_module,
         )
         self._prepare_schema_runtime_validation_config()
-        config_parameters: dict[str, Any] = {}
+        config_parameters: dict[str, Any] = dict(
+            build_base_config_parameters(
+                extra_template_data=self.extra_template_data,
+                all_data_types=self.all_data_types if self.SUPPORTS_ARBITRARY_TYPES_ALLOWED else (),
+                config_attributes_v2=self._CONFIG_ATTRIBUTES_V2,
+                config_attributes_v2_11=self._CONFIG_ATTRIBUTES_V2_11,
+                include_extra=self.SUPPORTS_CONFIG_EXTRA,
+            )
+        )
 
-        extra = self._get_config_extra()
-        if extra:
-            config_parameters["extra"] = extra
-
-        # Select CONFIG_ATTRIBUTES based on target_pydantic_version
-        config_attributes = self._get_config_attributes()
-        for from_, to, invert in config_attributes:
-            if from_ in self.extra_template_data:
-                config_parameters[to] = (
-                    not self.extra_template_data[from_] if invert else self.extra_template_data[from_]
-                )
-        for data_type in self.all_data_types:
-            if data_type.is_custom_type:  # pragma: no cover
-                config_parameters["arbitrary_types_allowed"] = True
-                break
-
-        if self._has_lookaround_pattern():
+        if has_lookaround_pattern(self.fields):
             config_parameters["regex_engine"] = '"python-re"'
 
-        if isinstance(self.extra_template_data.get("config"), dict):
-            for key, value in self.extra_template_data["config"].items():
-                config_parameters[key] = value  # noqa: PERF403
+        if alias_generator := _alias_generator_name(self.extra_template_data.get(_ALIAS_GENERATOR_TEMPLATE_DATA_KEY)):
+            config_parameters[_ALIAS_GENERATOR_TEMPLATE_DATA_KEY] = alias_generator
+            self._additional_imports.append(_ALIAS_GENERATOR_IMPORTS[alias_generator])
+
+        if isinstance(config := self.extra_template_data.get("config"), dict):
+            config_parameters.update(dict(config.items()))
 
         # Handle json_schema_extra from schema extensions (x-* fields)
         model_extras = self.extra_template_data.get("model_extras")
         if model_extras:
-            existing = config_parameters.get("json_schema_extra") or {}
+            existing = cast("dict[str, Any]", config_parameters.get("json_schema_extra") or {})
             config_parameters["json_schema_extra"] = {**existing, **model_extras}
 
         if config_parameters:
             from datamodel_code_generator.model.pydantic_v2 import ConfigDict  # noqa: PLC0415
 
             self.extra_template_data["config"] = ConfigDict.model_validate(config_parameters)  # ty: ignore
+            self.extra_template_data[_CONFIG_ITEMS_TEMPLATE_DATA_KEY] = _config_dict_items(
+                self.extra_template_data["config"]
+            )
             self._additional_imports.append(IMPORT_CONFIG_DICT)
+        else:
+            self.extra_template_data.pop(_CONFIG_ITEMS_TEMPLATE_DATA_KEY, None)
 
         self._process_schema_runtime_validation()
         self._process_validators()
-
-    def _get_config_extra(self) -> Literal["'allow'", "'forbid'", "'ignore'"] | None:
-        if self.extra_template_data.get("force_extra_allow"):
-            return "'allow'"
-
-        additional_properties = self.extra_template_data.get("additionalProperties")
-        unevaluated_properties = self.extra_template_data.get("unevaluatedProperties")
-        allow_extra_fields = self.extra_template_data.get("allow_extra_fields")
-        extra_fields = self.extra_template_data.get("extra_fields")
-
-        config_extra = None
-        if allow_extra_fields or extra_fields == "allow":
-            config_extra = "'allow'"
-        elif extra_fields == "forbid":
-            config_extra = "'forbid'"
-        elif extra_fields == "ignore":
-            config_extra = "'ignore'"
-        elif additional_properties is True:
-            config_extra = "'allow'"
-        elif additional_properties is False:
-            config_extra = "'forbid'"
-        elif unevaluated_properties is True:
-            config_extra = "'allow'"
-        elif unevaluated_properties is False:
-            config_extra = "'forbid'"
-        return config_extra
-
-    def _get_config_attributes(self) -> list[ConfigAttribute]:
-        """Get config attributes based on target Pydantic version.
-
-        If target_pydantic_version is V2_11, use validate_by_name.
-        Otherwise (V2 or not specified), use populate_by_name for compatibility.
-        """
-        from datamodel_code_generator import TargetPydanticVersion  # noqa: PLC0415
-
-        target_version = self.extra_template_data.get("target_pydantic_version")
-        if target_version == TargetPydanticVersion.V2_11:
-            return self._CONFIG_ATTRIBUTES_V2_11
-        return self._CONFIG_ATTRIBUTES_V2
-
-    def _has_lookaround_pattern(self) -> bool:
-        """Check if any field has a regex pattern with lookaround assertions."""
-        lookaround_regex = re.compile(r"\(\?<?[=!]")
-        for field in self.fields:
-            pattern = isinstance(field.constraints, Constraints) and field.constraints.pattern
-            if pattern and lookaround_regex.search(pattern):
-                return True
-            for data_type in field.data_type.all_data_types:
-                pattern = (data_type.kwargs or {}).get("pattern")
-                if pattern and lookaround_regex.search(pattern):
-                    return True
-        return False
-
-    def _process_validators(self) -> None:
-        """Process validator definitions and prepare them for template rendering."""
-        validators = self.extra_template_data.get("validators")
-        if not validators:
-            return
-
-        prepared_validators: list[dict[str, Any]] = []
-        scoped_resolver = ModelResolver(custom_class_name_generator=lambda name: name)
-        for validator in validators:
-            fields = validator.get("fields") or [validator.get("field")]
-            fields = [f for f in fields if f]
-            if not fields:
-                continue
-
-            function_path: str = validator["function"]
-            function_name = function_path.rsplit(".", 1)[-1]
-            mode = validator.get("mode", "after")
-
-            fields_str = ", ".join(f"'{f}'" for f in fields)
-
-            base_method_name = f"{function_name}_validator"
-            method_name = scoped_resolver.add([base_method_name], base_method_name, unique=True, class_name=True).name
-
-            mode_str = f"mode='{mode}'"
-
-            prepared_validators.append({
-                "fields_str": fields_str,
-                "mode_str": mode_str,
-                "method_name": method_name,
-                "function_name": function_name,
-                "mode": mode,
-            })
-
-            self._additional_imports.append(Import.from_full_path(function_path))
-
-        if prepared_validators:
-            self.extra_template_data["prepared_validators"] = prepared_validators  # ty: ignore
-            self._additional_imports.append(IMPORT_FIELD_VALIDATOR)
-            self._additional_imports.append(IMPORT_ANY)
-
-            modes = {v["mode"] for v in prepared_validators}
-            if modes - {"plain"}:
-                self._additional_imports.append(IMPORT_VALIDATION_INFO)
-            if "wrap" in modes:
-                self._additional_imports.append(IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER)
 
     def _get_schema_runtime_validation(self) -> SchemaRuntimeValidation | None:
         runtime_validation = self.extra_template_data.get("schema_runtime_validation")
@@ -565,6 +636,61 @@ class BaseModel(BaseModelBase):
 
         for data_type in runtime_validation.data_types:
             self._additional_imports.extend(data_type.all_imports)
+
+    def _process_validators(self) -> None:
+        """Process validator definitions and prepare them for template rendering."""
+        self.extra_template_data.pop("prepared_validators", None)
+        validators = self.extra_template_data.get("validators")
+        if not validators:
+            return
+
+        from datamodel_code_generator.validators import format_validation_error, normalize_validators  # noqa: PLC0415
+
+        try:
+            validators = normalize_validators(validators)
+        except ValidationError as e:
+            msg = f"Invalid validators configuration: {format_validation_error(e)}"
+            raise Error(msg) from e
+
+        prepared_validators: list[dict[str, Any]] = []
+        scoped_resolver = ModelResolver(custom_class_name_generator=lambda name: name)
+        for validator in validators:
+            fields = validator.get("fields") or [validator.get("field")]
+            fields = [f for f in fields if f]
+            if not fields:
+                continue
+
+            function_path: str = validator["function"]
+            function_name = function_path.rsplit(".", 1)[-1]
+            mode = validator.get("mode", "after")
+
+            fields_str = ", ".join(repr(f) for f in fields)
+
+            base_method_name = f"{function_name}_validator"
+            method_name = scoped_resolver.add([base_method_name], base_method_name, unique=True, class_name=True).name
+
+            mode_str = f"mode={mode!r}"
+
+            prepared_validators.append({
+                "fields_str": fields_str,
+                "mode_str": mode_str,
+                "method_name": method_name,
+                "function_name": function_name,
+                "mode": mode,
+            })
+
+            self._additional_imports.append(Import.from_full_path(function_path))
+
+        if prepared_validators:
+            self.extra_template_data["prepared_validators"] = prepared_validators  # ty: ignore
+            self._additional_imports.append(IMPORT_FIELD_VALIDATOR)
+            self._additional_imports.append(IMPORT_ANY)
+
+            modes = {v["mode"] for v in prepared_validators}
+            if modes - {"plain"}:
+                self._additional_imports.append(IMPORT_VALIDATION_INFO)
+            if "wrap" in modes:
+                self._additional_imports.append(IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER)
 
     @classmethod
     def create_base_class_model(

@@ -25,12 +25,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ inputs.checkout_ref }}
           persist-credentials: false
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           python-version: 3.14
       - name: Install dependencies
@@ -49,20 +49,46 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Build browser package wheel
-        if: inputs.deploy_branch != 'main'
         run: uv build --wheel --out-dir docs/assets/playground/generated .
+      - name: Build main playground assets
+        if: inputs.deploy_branch != '' && github.repository == 'koxudaxi/datamodel-code-generator'
+        run: |
+          main_checkout="$RUNNER_TEMP/playground-main"
+          rm -rf "$main_checkout"
+          # This step executes the checked-out code, so keep the source fixed to the trusted upstream.
+          git clone --depth 1 --single-branch --branch main -- https://github.com/koxudaxi/datamodel-code-generator.git "$main_checkout"
+          pushd "$main_checkout"
+          uv sync
+          uv build --wheel --out-dir docs/assets/playground/generated .
+          uv run --python 3.14 --group playground python scripts/build_playground_assets.py
+          popd
+          mkdir -p docs/assets/playground/generated/main
+          cp -R "$main_checkout/docs/assets/playground/generated/." docs/assets/playground/generated/main/
+      - name: Build playground release list
+        run: |
+          {
+            echo 'PLAYGROUND_RELEASES_JSON<<EOF'
+            python scripts/build_playground_release_versions.py
+            echo EOF
+          } >> "$GITHUB_ENV"
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Build playground assets
         run: uv run --python 3.14 --group playground python scripts/build_playground_assets.py
+        env:
+          PLAYGROUND_CHECKOUT_REF: ${{ inputs.checkout_ref }}
+          PLAYGROUND_DEPLOY_BRANCH: ${{ inputs.deploy_branch }}
+          PLAYGROUND_MAIN_ASSET_BASE: ${{ inputs.deploy_branch != '' && github.repository == 'koxudaxi/datamodel-code-generator' && './generated/main/' || '' }}
       - name: Build site
-        run: zensical build --clean
+        run: uv run zensical build --clean
       - name: Publish standalone playground route
         run: |
           rm -rf site/playground
           mkdir -p site/playground
           cp -R site/assets/playground/. site/playground/
       - name: Deploy
-        if: inputs.deploy_branch != ''
-        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
+        if: inputs.deploy_branch != '' && github.repository == 'koxudaxi/datamodel-code-generator'
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

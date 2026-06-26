@@ -32,7 +32,7 @@ By default, the action runs in **check mode** (`--check`), which validates that 
 |-------|----------|---------|-------------|
 | `input` | Yes | - | Input schema file or directory |
 | `output` | Yes | - | Output file or directory |
-| `input-file-type` | Yes | - | Input file type (`openapi`, `jsonschema`, `xmlschema`, `avro`, `json`, `yaml`, `csv`, `graphql`) |
+| `input-file-type` | Yes | - | Input file type (`openapi`, `asyncapi`, `jsonschema`, `mcp-tools`, `xmlschema`, `graphql`, `protobuf`, `avro`, `json`, `yaml`, `csv`) |
 | `output-model-type` | Yes | - | Output model type (`pydantic_v2.BaseModel`, `pydantic_v2.dataclass`, `dataclasses.dataclass`, `typing.TypedDict`, `msgspec.Struct`) |
 | `check` | No | `true` | Validate that existing output is up to date (no generation) |
 | `working-directory` | No | `.` | Working directory (where `pyproject.toml` is located) |
@@ -305,6 +305,9 @@ If your project uses [uv](https://github.com/astral-sh/uv), you can run the CLI 
 - name: Verify generated models are up-to-date
   run: uv run --with datamodel-code-generator datamodel-codegen --profile api --check
 ```
+
+If you want the generator version pinned in your project lockfile, add it once with `uv add --dev datamodel-code-generator`
+and run `uv run datamodel-codegen --profile api --check` in CI.
 
 ---
 

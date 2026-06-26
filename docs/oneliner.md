@@ -195,11 +195,12 @@ cat openapi.yaml | yq '.components.schemas.User' | \
 |--------|---------|----------|
 | **uvx** | `uvx datamodel-codegen` | One-liner usage, no installation |
 | **pipx run** | `pipx run datamodel-code-generator` | One-liner usage, alternative to uvx |
+| **uv tool install** | `uv tool install datamodel-code-generator` | Standalone CLI installation |
 | **pipx install** | `pipx install datamodel-code-generator` | Global installation, frequent usage |
-| **uv add** | `uv add datamodel-code-generator` | Project dependency |
+| **uv add --dev** | `uv add --dev datamodel-code-generator` | Pinned project/CI dependency |
 | **pip install** | `pip install datamodel-code-generator` | Traditional installation |
 
 !!! tip "When to use each method"
     - **uvx/pipx run**: Quick one-liner generation, testing different versions
-    - **pipx install**: Frequent CLI usage across multiple projects
-    - **uv add/pip install**: Project dependency, CI/CD pipelines, programmatic usage
+    - **uv tool install/pipx install**: Frequent CLI usage across multiple projects
+    - **uv add --dev/pip install**: Project dependency, CI/CD pipelines, programmatic usage

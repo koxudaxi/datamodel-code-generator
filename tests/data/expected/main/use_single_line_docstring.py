@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, conint
+from pydantic import BaseModel, Field, conint
 
 
 class Person(BaseModel):
@@ -17,4 +17,4 @@ class Person(BaseModel):
     age: conint(ge=0) | None = None
     """Age in years which must be equal to or greater than zero."""
     friends: list[Any] | None = None
-    comment: None = None
+    comment: None = Field(None)

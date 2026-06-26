@@ -9,11 +9,13 @@ from __future__ import annotations
 import contextlib
 import os
 import sys
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from collections.abc import Callable, Iterator, Mapping
 from datetime import datetime, timezone
 from functools import lru_cache as _lru_cache
+from hashlib import sha256
 from pathlib import Path
+from threading import RLock
 from typing import (
     IO,
     TYPE_CHECKING,
@@ -21,16 +23,14 @@ from typing import (
     TextIO,
     TypeAlias,
     TypeVar,
-    cast,
 )
 from urllib.parse import ParseResult
-
-from typing_extensions import TypeAliasType, Unpack
 
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     MAX_VERSION,
     MIN_VERSION,
+    AliasGenerator,
     AllExportsCollisionStrategy,
     AllExportsScope,
     AllOfClassHierarchy,
@@ -56,19 +56,27 @@ from datamodel_code_generator.enums import (
     VersionMode,
     XMLSchemaVersion,
 )
-from datamodel_code_generator.format import (
-    DEFAULT_FORMATTERS,
-    CodeFormatter,
-    DateClassType,
-    DatetimeClassType,
-    Formatter,
-    PythonVersion,
-    PythonVersionMin,
-    resolve_use_type_checking_imports,
-)
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 
+# Pydantic 2.5 cannot build schemas from stdlib TypeAliasType on Python 3.12.
+if sys.version_info >= (3, 14):
+    from typing import TypeAliasType
+else:
+    from typing_extensions import TypeAliasType
+
+if sys.version_info >= (3, 11):
+    from typing import Unpack
+else:
+    from typing_extensions import Unpack
+
 if TYPE_CHECKING:
+    from datamodel_code_generator._format_types import (
+        DEFAULT_FORMATTERS,
+        DateClassType,
+        DatetimeClassType,
+        PythonVersion,
+        PythonVersionMin,
+    )
     from datamodel_code_generator._types import (
         AsyncAPIParserConfigDict,
         AvroParserConfigDict,
@@ -80,17 +88,13 @@ if TYPE_CHECKING:
         XMLSchemaParserConfigDict,
     )
     from datamodel_code_generator._types.generate_config_dict import GenerateConfigDict
-    from datamodel_code_generator.config import GenerateConfig, ParserConfig
-
-    YamlScalar: TypeAlias = str | int | float | bool | None
-    YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
+    from datamodel_code_generator.config import GenerateConfig
+    from datamodel_code_generator.model_metadata import ModelMetadata
 
 T = TypeVar("T")
-_ConfigT = TypeVar("_ConfigT", bound="ParserConfig")
 
-if not TYPE_CHECKING:  # pragma: no branch
-    YamlScalar: TypeAlias = str | int | float | bool | None
-    YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
+YamlScalar: TypeAlias = str | int | float | bool | None
+YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
 
 
 GeneratedModules: TypeAlias = dict[tuple[str, ...], str]
@@ -100,17 +104,88 @@ Maps module path tuples (e.g., ("models", "user.py")) to generated code strings.
 Returned by generate() when output=None and multiple modules are generated.
 """
 
+
+def _apply_generate_config_preset(config: GenerateConfig) -> GenerateConfig:
+    """Return a generate config with preset defaults applied."""
+    preset_name = config.preset
+    if preset_name is None:
+        return config
+
+    from datamodel_code_generator.preset import (  # noqa: PLC0415
+        PresetConfigValue,
+        PresetContext,
+        PresetError,
+        resolve_preset_config_updates,
+    )
+
+    try:
+        preset_config = resolve_preset_config_updates(
+            preset_name,
+            context=PresetContext(
+                input_file_type=config.input_file_type,
+                output_model_type=config.output_model_type,
+                target_python_version=config.target_python_version,
+            ),
+            use_annotated=config.use_annotated,
+            explicit_fields=config.model_fields_set,
+        )
+    except PresetError as e:
+        raise Error(str(e)) from e
+
+    if preset_config.target_python_version is not None:
+        config = config.model_copy(update={"target_python_version": preset_config.target_python_version})
+
+    updates: dict[str, PresetConfigValue] = {}
+    for item in preset_config.items:
+        updates[item.field_name] = item.applied_value
+
+    if updates:
+        config = config.model_copy(update=updates)
+    if preset_config.force_field_constraints:
+        return config.model_copy(update={"field_constraints": True})
+    return config
+
+
 DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
+_IGNORED_TEXT_PREFIX_CHARS: frozenset[str] = frozenset({"\ufeff", " ", "\t", "\r", "\n"})
+_PARSER_SOURCE_DATA_CACHE_MAX_SIZE = 128
+_ParserSourceDataCacheKey: TypeAlias = tuple[Path, str, str, str]
+_ParserSourceDataSeenKey: TypeAlias = tuple[Path, str]
+_parser_source_data_cache: OrderedDict[_ParserSourceDataCacheKey, YamlValue] = OrderedDict()
+_parser_source_data_seen_keys: OrderedDict[_ParserSourceDataSeenKey, None] = OrderedDict()
+_parser_source_data_cache_lock = RLock()
+_enable_parsed_source_cache = False
+
+
+def enable_parsed_source_cache() -> Callable[[], None]:
+    """Enable the process-local parsed source cache and return a restore callback."""
+    global _enable_parsed_source_cache  # noqa: PLW0603
+
+    previous = _enable_parsed_source_cache
+    _enable_parsed_source_cache = True
+
+    def restore() -> None:
+        global _enable_parsed_source_cache  # noqa: PLW0603
+
+        _enable_parsed_source_cache = previous
+
+    return restore
+
+
+def _is_parsed_source_cache_enabled() -> bool:
+    return _enable_parsed_source_cache
 
 
 def load_yaml(stream: str | TextIO) -> YamlValue:
     """Load YAML content using ryaml (if available) or PyYAML."""
-    from datamodel_code_generator.util import get_yaml_backend  # noqa: PLC0415
+    from datamodel_code_generator.util import get_yaml_backend, reject_unsupported_yaml_tags  # noqa: PLC0415
+
+    text = stream if isinstance(stream, str) else stream.read()
+    reject_unsupported_yaml_tags(text)
 
     if get_yaml_backend() == "ryaml":
         import ryaml  # noqa: PLC0415  # ty: ignore[unresolved-import]
 
-        text = stream if isinstance(stream, str) else stream.read()
         from datamodel_code_generator.util import warn_yaml_deprecated_bool_values  # noqa: PLC0415
 
         warn_yaml_deprecated_bool_values(text)
@@ -120,7 +195,7 @@ def load_yaml(stream: str | TextIO) -> YamlValue:
 
     from datamodel_code_generator.util import SafeLoader  # noqa: PLC0415
 
-    return yaml.load(stream, Loader=SafeLoader)  # noqa: S506
+    return yaml.load(text, Loader=SafeLoader)  # noqa: S506
 
 
 def load_yaml_dict(stream: str | TextIO) -> dict[str, YamlValue]:
@@ -152,26 +227,25 @@ def _load_yaml_dict_from_path_cached(
         return load_yaml_dict(f)
 
 
+def _first_significant_text_char(text: str) -> str | None:
+    for ch in text:
+        if ch not in _IGNORED_TEXT_PREFIX_CHARS:
+            return ch
+    return None
+
+
 def _is_json_text(text: str) -> bool:
     """Check if text likely contains JSON by examining the first non-whitespace character.
 
     Skips BOM, spaces, tabs, carriage returns, and newlines.
     Returns True if the first significant character is '{' or '['.
     """
-    for ch in text:
-        if ch in {"\ufeff", " ", "\t", "\r", "\n"}:
-            continue
-        return ch in {"{", "["}
-    return False
+    return _first_significant_text_char(text) in {"{", "["}
 
 
 def _is_xml_text(text: str) -> bool:
     """Check if text likely contains XML by examining the first non-whitespace character."""
-    for ch in text:
-        if ch in {"\ufeff", " ", "\t", "\r", "\n"}:
-            continue
-        return ch == "<"
-    return False
+    return _first_significant_text_char(text) == "<"
 
 
 def _is_protobuf_text(text: str) -> bool:
@@ -210,16 +284,104 @@ def load_data_from_path(path: Path, encoding: str) -> dict[str, YamlValue]:
 
     For file input: tries json.load() for .json files (more efficient than
     read_text + json.loads), falls back to YAML if JSON parsing fails
-    (e.g., trailing commas) or if content is not a dict. Uses YAML for all other extensions.
+    (e.g., trailing commas), and requires the parsed content to be a dict.
+    Uses YAML for all other extensions.
     """
+    result = _load_parser_source_data_from_path(path, encoding)
+    if not isinstance(result, dict):
+        msg = f"Expected dict, got {type(result).__name__}"
+        raise TypeError(msg)
+    return result
+
+
+def _load_parser_source_data_from_path(
+    path: Path,
+    encoding: str,
+) -> YamlValue:
+    return _read_parser_source_data_from_path(path, encoding)[1]
+
+
+def _read_parser_source_data_from_path(path: Path, encoding: str) -> tuple[bytes, YamlValue]:
+    resolved_path = path.resolve()
+    data = resolved_path.read_bytes()
+    return data, _load_parser_source_data_from_path_bytes(resolved_path, data, encoding)
+
+
+def _load_parser_source_data_from_path_bytes(resolved_path: Path, data: bytes, encoding: str) -> YamlValue:
+    seen_key = (resolved_path, encoding)
+    with _parser_source_data_cache_lock:
+        use_cache = seen_key in _parser_source_data_seen_keys
+        _parser_source_data_seen_keys[seen_key] = None
+        _parser_source_data_seen_keys.move_to_end(seen_key)
+        while len(_parser_source_data_seen_keys) > _PARSER_SOURCE_DATA_CACHE_MAX_SIZE:
+            _parser_source_data_seen_keys.popitem(last=False)
+
+    if not use_cache:
+        return _load_parser_source_data_from_bytes(resolved_path, data, encoding)
+
+    digest = sha256(data).hexdigest()
+    return _load_parser_source_data_from_bytes_with_cache(resolved_path, data, digest, encoding)
+
+
+def _load_cached_parser_source_data(cache_key: _ParserSourceDataCacheKey) -> YamlValue | None:
+    with _parser_source_data_cache_lock:
+        if cache_key in _parser_source_data_cache:
+            _parser_source_data_cache.move_to_end(cache_key)
+            return _parser_source_data_cache[cache_key]
+    return None
+
+
+def _store_parser_source_data(cache_key: _ParserSourceDataCacheKey, parsed_data: YamlValue) -> YamlValue:
+    with _parser_source_data_cache_lock:
+        _parser_source_data_cache[cache_key] = parsed_data
+        _parser_source_data_cache.move_to_end(cache_key)
+        while len(_parser_source_data_cache) > _PARSER_SOURCE_DATA_CACHE_MAX_SIZE:
+            _parser_source_data_cache.popitem(last=False)
+    return parsed_data
+
+
+def _load_parser_source_data_from_bytes_with_cache(
+    path: Path,
+    data: bytes,
+    digest: str,
+    encoding: str,
+) -> YamlValue:
     import json  # noqa: PLC0415
 
+    text = data.decode(encoding)
     if path.suffix.lower() == ".json":
-        with contextlib.suppress(json.JSONDecodeError), path.open(encoding=encoding) as f:
-            result = json.load(f)
-            if isinstance(result, dict):
-                return result
-    return load_yaml_dict_from_path(path, encoding)
+        cache_key = (path, digest, encoding, "json")
+        if (cached_data := _load_cached_parser_source_data(cache_key)) is not None:
+            return cached_data
+
+        with contextlib.suppress(json.JSONDecodeError):
+            return _store_parser_source_data(cache_key, json.loads(text))
+
+    from datamodel_code_generator.util import get_yaml_backend  # noqa: PLC0415
+
+    parser_backend = f"yaml:{get_yaml_backend()}"
+    cache_key = (path, digest, encoding, parser_backend)
+    if (cached_data := _load_cached_parser_source_data(cache_key)) is not None:
+        return cached_data
+
+    return _store_parser_source_data(cache_key, load_yaml(text))
+
+
+def _load_parser_source_data_from_bytes(path: Path, data: bytes, encoding: str) -> YamlValue:
+    import json  # noqa: PLC0415
+
+    text = data.decode(encoding)
+    if path.suffix.lower() == ".json":
+        with contextlib.suppress(json.JSONDecodeError):
+            return json.loads(text)
+
+    return load_yaml(text)
+
+
+def _clear_parser_source_data_cache() -> None:
+    with _parser_source_data_cache_lock:
+        _parser_source_data_cache.clear()
+        _parser_source_data_seen_keys.clear()
 
 
 @_lru_cache(maxsize=256)
@@ -371,20 +533,25 @@ class InvalidClassNameError(Error):
 def _validate_output_datetime_class(
     output_model_type: DataModelType, output_datetime_class: DatetimeClassType | None
 ) -> None:
-    if output_datetime_class is None or output_datetime_class is DatetimeClassType.Datetime:
+    if output_datetime_class is None:
         return
-    if output_model_type == DataModelType.DataclassesDataclass:
-        msg = (
-            '`--output-datetime-class` only allows "datetime" for '
-            f"`--output-model-type` {DataModelType.DataclassesDataclass.value}"
-        )
+
+    from datamodel_code_generator._format_types import DatetimeClassType  # noqa: PLC0415
+
+    if output_datetime_class is DatetimeClassType.Datetime:
+        return
+    if output_model_type in {DataModelType.DataclassesDataclass, DataModelType.TypingTypedDict}:
+        msg = f'`--output-datetime-class` only allows "datetime" for `--output-model-type` {output_model_type.value}'
         raise Error(msg)
-    if output_model_type == DataModelType.TypingTypedDict:
-        msg = (
-            '`--output-datetime-class` only allows "datetime" for '
-            f"`--output-model-type` {DataModelType.TypingTypedDict.value}"
-        )
-        raise Error(msg)
+
+
+def _validate_alias_generator(output_model_type: DataModelType, alias_generator: AliasGenerator | None) -> None:
+    if alias_generator is None:
+        return
+    if output_model_type is DataModelType.PydanticV2BaseModel:
+        return
+    msg = "`--alias-generator` is only supported for `--output-model-type pydantic_v2.BaseModel`"
+    raise Error(msg)
 
 
 class InvalidFileFormatError(Error):
@@ -485,6 +652,8 @@ def _build_module_content(
     body: str,
     header: str,
     custom_file_header: str | None,
+    *,
+    future_imports: str = "",
 ) -> str:
     """Build module content by combining header and body.
 
@@ -495,11 +664,12 @@ def _build_module_content(
     if custom_file_header and body:
         # Extract future imports from body for correct placement after custom_file_header
         body_without_future = body
-        extracted_future = ""
+        extracted_future = future_imports
         body_lines = body.split("\n")
         future_indices = [i for i, line in enumerate(body_lines) if line.strip().startswith("from __future__")]
         if future_indices:
-            extracted_future = "\n".join(body_lines[i] for i in future_indices)
+            if not extracted_future:
+                extracted_future = "\n".join(body_lines[i] for i in future_indices)
             remaining_lines = [line for i, line in enumerate(body_lines) if i not in future_indices]
             body_without_future = "\n".join(remaining_lines).lstrip("\n")
 
@@ -522,8 +692,46 @@ def _build_module_content(
     return "\n".join(lines)
 
 
+@_lru_cache(maxsize=1)
+def _get_internal_parser_config_model() -> type[Any]:
+    """Return a lightweight Pydantic model for already-validated parser options."""
+    from pydantic import BaseModel, ConfigDict  # noqa: PLC0415
+
+    class _InternalParserConfig(BaseModel):
+        model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True)
+
+    return _InternalParserConfig
+
+
+_INTERNAL_PARSER_CONFIG_DEFAULTS: dict[str, Any] = {
+    "allow_responses_without_content": False,
+    "apply_default_values_for_required_fields": False,
+    "base_path": None,
+    "custom_class_name_generator": None,
+    "default_field_extras": None,
+    "default_value_overrides": None,
+    "defer_formatting": False,
+    "dump_resolve_reference_action": None,
+    "force_optional_for_required_fields": False,
+    "known_third_party": None,
+    "remote_text_cache": None,
+    "target_date_class": None,
+    "target_datetime_class": None,
+}
+
+
+def _generate_config_values(generate_config: GenerateConfig) -> dict[str, Any]:
+    values = vars(generate_config).copy()
+    if not (fields := getattr(type(generate_config), "model_fields", None)):
+        return values
+
+    values.update({
+        field_name: getattr(generate_config, field_name) for field_name in fields if field_name not in values
+    })
+    return values
+
+
 def _create_parser_config(
-    config_class: type[_ConfigT],
     generate_config: GenerateConfig,
     additional_options: ParserConfigDict
     | AvroParserConfigDict
@@ -532,217 +740,210 @@ def _create_parser_config(
     | AsyncAPIParserConfigDict
     | GraphQLParserConfigDict
     | ProtobufParserConfigDict,
-) -> _ConfigT:
+) -> Any:
     """Create a parser config from GenerateConfig with additional options.
 
-    Filters GenerateConfig fields to only those expected by the parser config class,
-    then merges with additional_options.
+    ``generate_config`` is already validated by the CLI or public generate()
+    entrypoint. Public Parser(..., **options) still validates separately.
     """
-    parser_config_fields = set(config_class.model_fields.keys())
-    all_options = {
-        k: v
-        for k, v in generate_config.model_dump().items()
-        if k in parser_config_fields and k not in additional_options
-    } | dict(additional_options)
-    return config_class.model_validate(all_options)
+    values = {**_INTERNAL_PARSER_CONFIG_DEFAULTS, **_generate_config_values(generate_config)}
+    values.update(dict(additional_options))
+    return _get_internal_parser_config_model().model_construct(**values)
 
 
-def generate(  # noqa: PLR0912, PLR0914, PLR0915
-    input_: Path | str | ParseResult | Mapping[str, Any],
-    *,
-    config: GenerateConfig | None = None,
-    **options: Unpack[GenerateConfigDict],
-) -> str | GeneratedModules | None:
-    """Generate Python data models from schema definitions or structured data.
+_SchemaVersions: TypeAlias = tuple[
+    JsonSchemaVersion | None,
+    OpenAPIVersion | None,
+    AsyncAPIVersion | None,
+    XMLSchemaVersion | None,
+    ProtobufVersion | None,
+]
 
-    This is the main entry point for code generation. Supports OpenAPI, AsyncAPI,
-    JSON Schema, GraphQL, XML Schema, Protocol Buffers, Avro, and raw data formats
-    (JSON, YAML, Dict, CSV) as input.
 
-    Args:
-        input_: The input source (file path, string content, URL, or dict).
-        config: A GenerateConfig object with all options. Cannot be used together with **options.
-        **options: Individual options matching GenerateConfig fields. Cannot be used together with config.
+def _parse_schema_version(enum_type: Any, schema_version: str, label: str) -> Any:
+    try:
+        return enum_type(schema_version)
+    except ValueError:
+        valid = [v.value for v in enum_type]
+        msg = f"Invalid {label} version: {schema_version}. Valid values: {valid}"
+        raise Error(msg) from None
 
-    Returns:
-        - When output is a Path: None (writes to file system)
-        - When output is None and single module: str (generated code)
-        - When output is None and multiple modules: GeneratedModules (dict mapping
-          module path tuples to generated code strings)
 
-    Raises:
-        ValueError: If both config and **options are provided.
-    """
-    from datamodel_code_generator.config import GenerateConfig  # noqa: PLC0415
+def _resolve_schema_versions(input_file_type: InputFileType, schema_version: str | None) -> _SchemaVersions:
+    jsonschema_version: JsonSchemaVersion | None = None
+    openapi_version: OpenAPIVersion | None = None
+    asyncapi_version: AsyncAPIVersion | None = None
+    xmlschema_version: XMLSchemaVersion | None = None
+    protobuf_version: ProtobufVersion | None = None
+    if not schema_version or schema_version == "auto":
+        return jsonschema_version, openapi_version, asyncapi_version, xmlschema_version, protobuf_version
 
-    if config is not None and options:
-        msg = "Cannot specify both 'config' and keyword arguments. Use one or the other."
-        raise ValueError(msg)
+    if input_file_type == InputFileType.Avro:
+        msg = "--schema-version is not supported for avro because Avro schemas do not carry a version marker"
+        raise Error(msg)
+    if input_file_type == InputFileType.GraphQL:
+        msg = f"--schema-version is not supported for {input_file_type.value}"
+        raise Error(msg)
 
-    if config is None:
-        from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
-        from datamodel_code_generator.types import StrictTypes  # noqa: PLC0415
-
-        GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
-        config = GenerateConfig.model_validate(options)
-
-    _validate_output_datetime_class(config.output_model_type, config.output_datetime_class)
-
-    # Variables that may be modified during processing
-    input_filename = config.input_filename
-    input_file_type = config.input_file_type
-    extra_template_data: defaultdict[str, dict[str, Any]] | None = None
-    if config.extra_template_data is not None:
-        extra_template_data = defaultdict(dict, config.extra_template_data)
-    dataclass_arguments = config.dataclass_arguments
-    custom_file_header = config.custom_file_header
-
-    remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
-    match input_:
-        case str():
-            input_text: str | None = input_
-        case ParseResult():
-            from datamodel_code_generator.http import DEFAULT_HTTP_TIMEOUT, get_body  # noqa: PLC0415
-
-            timeout = config.http_timeout if config.http_timeout is not None else DEFAULT_HTTP_TIMEOUT
-            input_text = remote_text_cache.get_or_put(
-                input_.geturl(),
-                default_factory=lambda url: get_body(
-                    url,
-                    config.http_headers,
-                    config.http_ignore_tls,
-                    config.http_query_parameters,
-                    timeout,
-                ),
-            )
+    version_targets = {
+        InputFileType.OpenAPI: (OpenAPIVersion, "OpenAPI"),
+        InputFileType.AsyncAPI: (AsyncAPIVersion, "AsyncAPI"),
+        InputFileType.XMLSchema: (XMLSchemaVersion, "XML Schema"),
+        InputFileType.Protobuf: (ProtobufVersion, "Protobuf"),
+    }
+    enum_type, label = version_targets.get(input_file_type, (JsonSchemaVersion, "JSON Schema"))
+    version = _parse_schema_version(enum_type, schema_version, label)
+    match input_file_type:
+        case InputFileType.OpenAPI:
+            openapi_version = version
+        case InputFileType.AsyncAPI:
+            asyncapi_version = version
+        case InputFileType.XMLSchema:
+            xmlschema_version = version
+        case InputFileType.Protobuf:
+            protobuf_version = version
         case _:
-            input_text = None
+            jsonschema_version = version
+    return jsonschema_version, openapi_version, asyncapi_version, xmlschema_version, protobuf_version
 
-    if dataclass_arguments is None:
-        dataclass_arguments = DataclassArguments()
-        if config.frozen_dataclasses:
-            dataclass_arguments["frozen"] = True
-        if config.keyword_only:
-            dataclass_arguments["kw_only"] = True
 
-    if isinstance(input_, Path) and not input_.is_absolute():
-        input_ = input_.expanduser().resolve()
-    if input_file_type == InputFileType.Auto and isinstance(input_, Mapping):
-        msg = (
-            "input_file_type=Auto is not supported for dict input. "
-            "Please specify input_file_type explicitly (e.g., InputFileType.JsonSchema)."
-        )
-        raise Error(msg)
+def _openapi_shared_options(config: GenerateConfig) -> dict[str, Any]:
+    return {
+        "openapi_scopes": config.openapi_scopes,
+        "include_path_parameters": config.include_path_parameters,
+        "use_status_code_in_response_name": config.use_status_code_in_response_name,
+        "openapi_include_paths": config.openapi_include_paths,
+        "openapi_include_info_version": config.openapi_include_info_version,
+    }
 
-    if isinstance(input_, Mapping) and input_file_type == InputFileType.GraphQL:
-        msg = "Dict input is not supported for GraphQL. GraphQL requires text input (SDL format)."
-        raise Error(msg)
 
-    if isinstance(input_, Mapping) and input_file_type == InputFileType.XMLSchema:
-        msg = "Dict input is not supported for xmlschema. Provide XSD text, file path, or URL input."
-        raise Error(msg)
+def _normalize_raw_input(  # noqa: PLR0912, PLR0915
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    input_text: str | None,
+    input_file_type: InputFileType,
+    config: GenerateConfig,
+) -> str | None:
+    if input_file_type not in RAW_DATA_TYPES or input_file_type == InputFileType.GraphQL:
+        return input_text
 
-    if isinstance(input_, Mapping) and input_file_type == InputFileType.Protobuf:
-        msg = "Dict input is not supported for protobuf. Provide .proto text, file path, or URL input."
-        raise Error(msg)
+    import json  # noqa: PLC0415
 
-    if isinstance(input_, Mapping) and input_file_type in {
-        InputFileType.Json,
-        InputFileType.Yaml,
-        InputFileType.CSV,
-    }:
-        msg = (
-            f"Dict input is not supported for {input_file_type.value}. "
-            f"Use InputFileType.Dict to generate schema from dict data, "
-            f"or provide text/file input for {input_file_type.value} format."
-        )
-        raise Error(msg)
+    try:
+        if isinstance(input_, Path) and input_.is_dir():  # pragma: no cover
+            msg = f"Input must be a file for {input_file_type}"
+            raise Error(msg)  # noqa: TRY301
+        obj: Any
+        if input_file_type == InputFileType.CSV:
+            import csv  # noqa: PLC0415
 
-    if input_file_type == InputFileType.Auto:
-        try:
+            def get_header_and_first_line(csv_file: IO[str]) -> dict[str, Any]:
+                csv_reader = csv.DictReader(csv_file)
+                if csv_reader.fieldnames is None:
+                    msg = "CSV file has no header row"
+                    raise ValueError(msg)  # noqa: TRY301
+                try:
+                    first_row = next(csv_reader)
+                except StopIteration:
+                    msg = "CSV file has no data rows"
+                    raise ValueError(msg) from None
+                return {key: value for key, value in first_row.items() if key is not None}
+
             if isinstance(input_, Path):
-                input_text_ = get_first_file(input_).read_text(encoding=config.encoding)
+                with input_.open(encoding=config.encoding) as f:
+                    obj = get_header_and_first_line(f)
             else:
-                input_text_ = input_text
-        except FileNotFoundError as exc:
-            msg = "File not found"
-            raise Error(msg) from exc
+                import io  # noqa: PLC0415
 
-        try:
-            assert isinstance(input_text_, str)
-            input_file_type = infer_input_type(input_text_)
-        except Exception as exc:
-            raise InvalidFileFormatError(exc) from exc
-        else:
-            print(  # noqa: T201
-                inferred_message.format(input_file_type.value),
-                file=sys.stderr,
-            )
-            # Reuse already-read text for single Path file to avoid re-reading
-            # Only for OpenAPI/JsonSchema (RAW_DATA_TYPES are transformed by genson)
-            if isinstance(input_, Path) and input_.is_file() and input_file_type not in RAW_DATA_TYPES:
-                input_text = input_text_
-
-    if input_file_type not in {InputFileType.OpenAPI, InputFileType.GraphQL} and input_file_type in RAW_DATA_TYPES:
-        import json  # noqa: PLC0415
-
-        try:
-            if isinstance(input_, Path) and input_.is_dir():  # pragma: no cover
-                msg = f"Input must be a file for {input_file_type}"
-                raise Error(msg)  # noqa: TRY301
-            obj: dict[str, Any]
-            if input_file_type == InputFileType.CSV:
-                import csv  # noqa: PLC0415
-
-                def get_header_and_first_line(csv_file: IO[str]) -> dict[str, Any]:
-                    csv_reader = csv.DictReader(csv_file)
-                    assert csv_reader.fieldnames is not None
-                    return dict(zip(csv_reader.fieldnames, next(csv_reader), strict=False))
-
-                if isinstance(input_, Path):
-                    with input_.open(encoding=config.encoding) as f:
-                        obj = get_header_and_first_line(f)
-                else:
-                    import io  # noqa: PLC0415
-
-                    obj = get_header_and_first_line(io.StringIO(input_text))
-            elif input_file_type == InputFileType.Yaml:
-                if isinstance(input_, Path):
-                    obj = load_yaml_dict(input_.read_text(encoding=config.encoding))
-                else:  # pragma: no cover
-                    assert input_text is not None
-                    obj = load_yaml_dict(input_text)
-            elif input_file_type == InputFileType.Json:
-                if isinstance(input_, Path):
-                    obj = json.loads(input_.read_text(encoding=config.encoding))
-                else:
-                    assert input_text is not None
-                    obj = json.loads(input_text)
-            elif input_file_type == InputFileType.Dict:
-                import ast  # noqa: PLC0415
-
-                obj = (
-                    ast.literal_eval(input_.read_text(encoding=config.encoding))
-                    if isinstance(input_, Path)
-                    else cast("dict[str, Any]", input_)
-                )
+                obj = get_header_and_first_line(io.StringIO(input_text))
+        elif input_file_type == InputFileType.Yaml:
+            if isinstance(input_, Path):
+                obj = load_yaml(input_.read_text(encoding=config.encoding))
             else:  # pragma: no cover
-                msg = f"Unsupported input file type: {input_file_type}"
-                raise Error(msg)  # noqa: TRY301
-        except Error:
-            raise
-        except Exception as exc:
-            raise InvalidFileFormatError(exc, input_file_type) from exc
+                assert input_text is not None
+                obj = load_yaml(input_text)
+        elif input_file_type == InputFileType.Json:
+            if isinstance(input_, Path):
+                obj = json.loads(input_.read_text(encoding=config.encoding))
+            else:
+                assert input_text is not None
+                obj = json.loads(input_text)
+        elif input_file_type == InputFileType.Dict:
+            import ast  # noqa: PLC0415
+
+            if isinstance(input_, Path):
+                obj = ast.literal_eval(input_.read_text(encoding=config.encoding))
+            elif isinstance(input_, Mapping):
+                obj = input_
+            else:
+                assert input_text is not None
+                obj = ast.literal_eval(input_text)
+        else:  # pragma: no cover
+            msg = f"Unsupported input file type: {input_file_type}"
+            raise Error(msg)  # noqa: TRY301
 
         from genson import SchemaBuilder  # noqa: PLC0415
 
         builder = SchemaBuilder()
         builder.add_object(obj)
-        input_text = json.dumps(builder.to_schema())
+        return json.dumps(builder.to_schema())
+    except Error:
+        raise
+    except Exception as exc:
+        raise InvalidFileFormatError(exc, input_file_type) from exc
 
-    if isinstance(input_, ParseResult) and input_file_type not in RAW_DATA_TYPES:
-        input_text = None
 
+def _convert_mcp_tools(
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    input_text: str | None,
+    config: GenerateConfig,
+    remote_text_cache: DefaultPutDict[str, str],
+) -> tuple[Mapping[str, Any] | None, InputFileType, bool]:
+    import json  # noqa: PLC0415
+
+    from datamodel_code_generator.parser.mcp import convert_mcp_tools_to_jsonschema  # noqa: PLC0415
+
+    def load_mcp_tools_text(text: str) -> Any:
+        if _is_json_text(text):
+            with contextlib.suppress(json.JSONDecodeError):
+                return json.loads(text)
+        return load_yaml(text)
+
+    def load_mcp_tools_data() -> Any:
+        match input_:
+            case Mapping() | list():
+                return input_
+            case Path():
+                return load_mcp_tools_text(input_.read_text(encoding=config.encoding))
+        assert input_text is not None
+        return load_mcp_tools_text(input_text)
+
+    try:
+        mcp_tools_jsonschema = convert_mcp_tools_to_jsonschema(load_mcp_tools_data())
+    except Error:
+        raise
+    except Exception as exc:
+        raise InvalidFileFormatError(exc, InputFileType.MCPTools) from exc
+
+    if isinstance(input_, ParseResult) and (input_url := input_.geturl()):
+        remote_text_cache[input_url] = json.dumps(mcp_tools_jsonschema)
+        source_override = None
+    else:
+        source_override = mcp_tools_jsonschema
+    return source_override, InputFileType.JsonSchema, True
+
+
+def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    input_text: str | None,
+    input_file_type: InputFileType,
+    source_override: Mapping[str, Any] | None,
+    config: GenerateConfig,
+    extra_template_data: defaultdict[str, dict[str, Any]] | None,
+    dataclass_arguments: DataclassArguments,
+    *,
+    skip_root_model: bool,
+    remote_text_cache: DefaultPutDict[str, str],
+) -> tuple[Any, Any, bool, ParserConfigDict]:
     if config.union_mode is not None:
         if config.output_model_type == DataModelType.PydanticV2BaseModel:
             default_field_extras = {"union_mode": config.union_mode}
@@ -763,9 +964,12 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         config.target_python_version,
         use_type_alias=config.use_type_alias,
         use_root_model_type_alias=config.use_root_model_type_alias,
+        include_graphql_models=input_file_type == InputFileType.GraphQL,
     )
 
-    if isinstance(input_, Mapping) and input_file_type not in RAW_DATA_TYPES:
+    if source_override is not None:
+        source = dict(source_override)
+    elif isinstance(input_, Mapping) and input_file_type not in RAW_DATA_TYPES:
         source = dict(input_)
     else:
         source = input_text or input_
@@ -773,12 +977,17 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
 
     defer_formatting = config.output is not None and not config.output.suffix
 
-    from datamodel_code_generator.config import (  # noqa: PLC0415
-        AsyncAPIParserConfig,
-        GraphQLParserConfig,
-        JSONSchemaParserConfig,
-        OpenAPIParserConfig,
-    )
+    target_datetime_class = config.output_datetime_class
+    if target_datetime_class is None:
+        from datamodel_code_generator._format_types import DatetimeClassType  # noqa: PLC0415
+
+        match input_file_type:
+            case InputFileType.GraphQL:
+                target_datetime_class = DatetimeClassType.Datetime
+            case InputFileType.XMLSchema:
+                target_datetime_class = None
+            case _:
+                target_datetime_class = DatetimeClassType.Awaredatetime
 
     additional_options: ParserConfigDict = {
         "data_model_type": data_model_types.data_model,
@@ -788,20 +997,13 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         "dump_resolve_reference_action": data_model_types.dump_resolve_reference_action,
         "extra_template_data": extra_template_data,
         "serialization_aliases": config.serialization_aliases,
+        "model_name_map": config.model_name_map,
         "schema_validator_base_class_name": config.schema_validator_base_class_name,
         "base_path": input_.parent if isinstance(input_, Path) and input_.is_file() else None,
         "remote_text_cache": remote_text_cache,
         "known_third_party": data_model_types.known_third_party,
         "default_field_extras": default_field_extras,
-        "target_datetime_class": (
-            config.output_datetime_class
-            if config.output_datetime_class is not None
-            else (
-                DatetimeClassType.Datetime
-                if input_file_type == InputFileType.GraphQL
-                else DatetimeClassType.Awaredatetime
-            )
-        ),
+        "target_datetime_class": target_datetime_class,
         "target_date_class": config.output_date_class,
         "dataclass_arguments": dataclass_arguments,
         "defer_formatting": defer_formatting,
@@ -816,144 +1018,104 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             True if config.output_model_type == DataModelType.DataclassesDataclass else config.set_default_enum_member
         ),
         "use_object_type": config.use_object_type,
+        "skip_root_model": skip_root_model,
+        "use_root_model_sequence_interface": config.use_root_model_sequence_interface,
     }
+    return data_model_types, source, defer_formatting, additional_options
 
-    # Convert schema_version string to appropriate enum based on input type
-    jsonschema_version: JsonSchemaVersion | None = None
-    openapi_version: OpenAPIVersion | None = None
-    asyncapi_version: AsyncAPIVersion | None = None
-    xmlschema_version: XMLSchemaVersion | None = None
-    protobuf_version: ProtobufVersion | None = None
-    if config.schema_version and config.schema_version != "auto":
-        if input_file_type == InputFileType.OpenAPI:
-            try:
-                openapi_version = OpenAPIVersion(config.schema_version)
-            except ValueError:
-                valid = [v.value for v in OpenAPIVersion]
-                msg = f"Invalid OpenAPI version: {config.schema_version}. Valid values: {valid}"
-                raise Error(msg) from None
-        elif input_file_type == InputFileType.AsyncAPI:
-            try:
-                asyncapi_version = AsyncAPIVersion(config.schema_version)
-            except ValueError:
-                valid = [v.value for v in AsyncAPIVersion]
-                msg = f"Invalid AsyncAPI version: {config.schema_version}. Valid values: {valid}"
-                raise Error(msg) from None
-        elif input_file_type == InputFileType.XMLSchema:
-            try:
-                xmlschema_version = XMLSchemaVersion(config.schema_version)
-            except ValueError:
-                valid = [v.value for v in XMLSchemaVersion]
-                msg = f"Invalid XML Schema version: {config.schema_version}. Valid values: {valid}"
-                raise Error(msg) from None
-        elif input_file_type == InputFileType.Protobuf:
-            try:
-                protobuf_version = ProtobufVersion(config.schema_version)
-            except ValueError:
-                valid = [v.value for v in ProtobufVersion]
-                msg = f"Invalid Protobuf version: {config.schema_version}. Valid values: {valid}"
-                raise Error(msg) from None
-        elif input_file_type == InputFileType.Avro:
-            msg = "--schema-version is not supported for avro because Avro schemas do not carry a version marker"
-            raise Error(msg)
-        elif input_file_type == InputFileType.GraphQL:
-            msg = f"--schema-version is not supported for {input_file_type.value}"
-            raise Error(msg)
-        else:
-            try:
-                jsonschema_version = JsonSchemaVersion(config.schema_version)
-            except ValueError:
-                valid = [v.value for v in JsonSchemaVersion]
-                msg = f"Invalid JSON Schema version: {config.schema_version}. Valid values: {valid}"
-                raise Error(msg) from None
 
-    if input_file_type == InputFileType.OpenAPI:
-        from datamodel_code_generator.parser.openapi import OpenAPIParser  # noqa: PLC0415
+def _build_parser(  # noqa: PLR0911, PLR0913
+    input_file_type: InputFileType,
+    source: Any,
+    config: GenerateConfig,
+    additional_options: ParserConfigDict,
+    data_model_types: Any,
+    *,
+    jsonschema_version: JsonSchemaVersion | None,
+    openapi_version: OpenAPIVersion | None,
+    asyncapi_version: AsyncAPIVersion | None,
+    xmlschema_version: XMLSchemaVersion | None,
+    protobuf_version: ProtobufVersion | None,
+) -> Any:
+    match input_file_type:
+        case InputFileType.OpenAPI:
+            from datamodel_code_generator.parser.openapi import OpenAPIParser  # noqa: PLC0415
 
-        openapi_additional_options: OpenAPIParserConfigDict = {
-            "openapi_scopes": config.openapi_scopes,
-            "include_path_parameters": config.include_path_parameters,
-            "use_status_code_in_response_name": config.use_status_code_in_response_name,
-            "openapi_include_paths": config.openapi_include_paths,
-            "openapi_include_info_version": config.openapi_include_info_version,
-            "openapi_version": openapi_version,
-            **additional_options,
-        }
-        parser_config = _create_parser_config(OpenAPIParserConfig, config, openapi_additional_options)
-        parser = OpenAPIParser(source=source, config=parser_config)  # ty: ignore
-    elif input_file_type == InputFileType.AsyncAPI:
-        from datamodel_code_generator.parser.asyncapi import AsyncAPIParser  # noqa: PLC0415
+            openapi_additional_options: OpenAPIParserConfigDict = {
+                **_openapi_shared_options(config),
+                "openapi_version": openapi_version,
+                **additional_options,
+            }
+            parser_config = _create_parser_config(config, openapi_additional_options)
+            return OpenAPIParser(source=source, config=parser_config)  # ty: ignore
+        case InputFileType.AsyncAPI:
+            from datamodel_code_generator.parser.asyncapi import AsyncAPIParser  # noqa: PLC0415
 
-        asyncapi_additional_options: AsyncAPIParserConfigDict = {
-            "openapi_scopes": config.openapi_scopes,
-            "include_path_parameters": config.include_path_parameters,
-            "use_status_code_in_response_name": config.use_status_code_in_response_name,
-            "openapi_include_paths": config.openapi_include_paths,
-            "openapi_include_info_version": config.openapi_include_info_version,
-            "asyncapi_version": asyncapi_version,
-            **additional_options,
-        }
-        parser_config = _create_parser_config(AsyncAPIParserConfig, config, asyncapi_additional_options)
-        parser = AsyncAPIParser(source=source, config=parser_config)  # ty: ignore
-    elif input_file_type == InputFileType.XMLSchema:
-        from datamodel_code_generator.config import XMLSchemaParserConfig  # noqa: PLC0415
-        from datamodel_code_generator.parser.xmlschema import XMLSchemaParser  # noqa: PLC0415
+            asyncapi_additional_options: AsyncAPIParserConfigDict = {
+                **_openapi_shared_options(config),
+                "asyncapi_version": asyncapi_version,
+                **additional_options,
+            }
+            parser_config = _create_parser_config(config, asyncapi_additional_options)
+            return AsyncAPIParser(source=source, config=parser_config)  # ty: ignore
+        case InputFileType.XMLSchema:
+            from datamodel_code_generator.parser.xmlschema import XMLSchemaParser  # noqa: PLC0415
 
-        xmlschema_additional_options: XMLSchemaParserConfigDict = {
-            "xmlschema_version": xmlschema_version,
-            **additional_options,
-        }
-        parser_config = _create_parser_config(XMLSchemaParserConfig, config, xmlschema_additional_options)
-        parser = XMLSchemaParser(source=source, config=parser_config)  # ty: ignore
-    elif input_file_type == InputFileType.Protobuf:
-        from datamodel_code_generator.config import ProtobufParserConfig  # noqa: PLC0415
-        from datamodel_code_generator.parser.protobuf import ProtobufParser  # noqa: PLC0415
+            xmlschema_additional_options: XMLSchemaParserConfigDict = {
+                "xmlschema_version": xmlschema_version,
+                **additional_options,
+            }
+            parser_config = _create_parser_config(config, xmlschema_additional_options)
+            return XMLSchemaParser(source=source, config=parser_config)  # ty: ignore
+        case InputFileType.Protobuf:
+            from datamodel_code_generator.parser.protobuf import ProtobufParser  # noqa: PLC0415
 
-        protobuf_additional_options: ProtobufParserConfigDict = {
-            "protobuf_version": protobuf_version,
-            "skip_root_model": True,
-            **additional_options,
-        }
-        parser_config = _create_parser_config(ProtobufParserConfig, config, protobuf_additional_options)
-        parser = ProtobufParser(source=source, config=parser_config)  # ty: ignore
-    elif input_file_type == InputFileType.Avro:
-        from datamodel_code_generator.config import AvroParserConfig  # noqa: PLC0415
-        from datamodel_code_generator.parser.avro import AvroParser  # noqa: PLC0415
+            protobuf_additional_options: ProtobufParserConfigDict = {
+                **additional_options,
+                "protobuf_version": protobuf_version,
+                "skip_root_model": True,
+            }
+            parser_config = _create_parser_config(config, protobuf_additional_options)
+            return ProtobufParser(source=source, config=parser_config)  # ty: ignore
+        case InputFileType.Avro:
+            from datamodel_code_generator.parser.avro import AvroParser  # noqa: PLC0415
 
-        avro_additional_options: AvroParserConfigDict = {
-            "apply_default_values_for_required_fields": True,
-            **additional_options,
-        }
-        parser_config = _create_parser_config(AvroParserConfig, config, avro_additional_options)
-        parser = AvroParser(source=source, config=parser_config)  # ty: ignore
-    elif input_file_type == InputFileType.GraphQL:
-        from datamodel_code_generator.parser.graphql import GraphQLParser  # noqa: PLC0415
+            avro_additional_options: AvroParserConfigDict = {**additional_options}
+            parser_config = _create_parser_config(config, avro_additional_options)
+            return AvroParser(source=source, config=parser_config)  # ty: ignore
+        case InputFileType.GraphQL:
+            from datamodel_code_generator.parser.graphql import GraphQLParser  # noqa: PLC0415
 
-        graphql_additional_options: GraphQLParserConfigDict = {
-            "data_model_scalar_type": data_model_types.scalar_model,
-            "data_model_union_type": data_model_types.union_model,
-            **additional_options,
-        }
-        parser_config = _create_parser_config(GraphQLParserConfig, config, graphql_additional_options)
-        parser = GraphQLParser(source=source, config=parser_config)  # ty: ignore
-    else:
-        from datamodel_code_generator.parser.jsonschema import JsonSchemaParser  # noqa: PLC0415
+            graphql_additional_options: GraphQLParserConfigDict = {
+                "data_model_scalar_type": data_model_types.scalar_model,
+                "data_model_union_type": data_model_types.union_model,
+                **additional_options,
+            }
+            parser_config = _create_parser_config(config, graphql_additional_options)
+            return GraphQLParser(source=source, config=parser_config)  # ty: ignore
+        case _:
+            from datamodel_code_generator.parser.jsonschema import JsonSchemaParser  # noqa: PLC0415
 
-        jsonschema_additional_options: JSONSchemaParserConfigDict = {
-            "jsonschema_version": jsonschema_version,
-            **additional_options,
-        }
-        parser_config = _create_parser_config(JSONSchemaParserConfig, config, jsonschema_additional_options)
-        parser = JsonSchemaParser(source=source, config=parser_config)  # ty: ignore
+            jsonschema_additional_options: JSONSchemaParserConfigDict = {
+                "jsonschema_version": jsonschema_version,
+                **additional_options,
+            }
+            parser_config = _create_parser_config(config, jsonschema_additional_options)
+            return JsonSchemaParser(source=source, config=parser_config)  # ty: ignore
+    msg = f"Unsupported input file type: {input_file_type}"
+    raise Error(msg)
 
-    with chdir(config.output):
-        results = parser.parse(
-            settings_path=config.settings_path,
-            disable_future_imports=config.disable_future_imports,
-            all_exports_scope=config.all_exports_scope,
-            all_exports_collision_strategy=config.all_exports_collision_strategy,
-            module_split_mode=config.module_split_mode,
-        )
+
+def _emit_results(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
+    results: str | dict[tuple[str, ...], Any],
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    input_filename: str | None,
+    custom_file_header: str | None,
+    config: GenerateConfig,
+    *,
+    defer_formatting: bool,
+    data_model_types: Any,
+) -> str | GeneratedModules | None:
     if not input_filename:  # pragma: no cover
         match input_:
             case str():
@@ -1025,53 +1187,32 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     for path, (body, future_imports, filename) in modules.items():
         if not path.parent.exists():
             path.parent.mkdir(parents=True)
-        file = path.open("wt", encoding=config.encoding)
 
         safe_filename = filename.replace("\n", " ").replace("\r", " ") if filename else ""
         effective_header = custom_file_header or header.format(safe_filename)
-
+        file = path.open("wt", encoding=config.encoding)
         if custom_file_header and body:
-            # Extract future imports from body for correct placement after custom_file_header
-            body_without_future = body
-            extracted_future = future_imports  # Use pre-extracted if available
-            lines = body.split("\n")
-            future_indices = [i for i, line in enumerate(lines) if line.strip().startswith("from __future__")]
-            if future_indices:
-                if not extracted_future:
-                    # Extract future imports from body
-                    extracted_future = "\n".join(lines[i] for i in future_indices)
-                remaining_lines = [line for i, line in enumerate(lines) if i not in future_indices]
-                body_without_future = "\n".join(remaining_lines).lstrip("\n")
-
-            if extracted_future:
-                insertion_point = _find_future_import_insertion_point(custom_file_header)
-                header_before = custom_file_header[:insertion_point].rstrip()
-                header_after = custom_file_header[insertion_point:].strip()
-                if header_after:
-                    content = header_before + "\n" + extracted_future + "\n\n" + header_after
-                else:
-                    content = header_before + "\n\n" + extracted_future
-                print(content, file=file)
-                print(file=file)
-                print(body_without_future.rstrip(), file=file)
-            else:
-                print(effective_header, file=file)
-                print(file=file)
-                print(body.rstrip(), file=file)
+            file.write(
+                _build_module_content(body, effective_header, custom_file_header, future_imports=future_imports) + "\n"
+            )
         else:
-            # Body already contains future imports, just print as-is
-            print(effective_header, file=file)
+            file.write(effective_header)
             if body:
-                print(file=file)
-                print(body.rstrip(), file=file)
-
+                file.write("\n\n")
+                file.write(body.rstrip())
+            file.write("\n")
         file.close()
 
-    if (
-        defer_formatting
-        and config.formatters
-        and (Formatter.RUFF_CHECK in config.formatters or Formatter.RUFF_FORMAT in config.formatters)
-    ):
+    if defer_formatting and config.formatters:
+        from datamodel_code_generator._format_types import Formatter  # noqa: PLC0415
+        from datamodel_code_generator.format import (  # noqa: PLC0415
+            CodeFormatter,
+            resolve_use_type_checking_imports,
+        )
+
+        if Formatter.RUFF_CHECK not in config.formatters and Formatter.RUFF_FORMAT not in config.formatters:
+            return None
+
         effective_use_type_checking_imports = resolve_use_type_checking_imports(
             config.use_type_checking_imports,
             is_multi_module_output=True,
@@ -1099,12 +1240,241 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     return None
 
 
+def _write_model_metadata(metadata_path: Path, metadata: ModelMetadata | None, encoding: str) -> None:
+    from datamodel_code_generator.model_metadata import dump_model_metadata  # noqa: PLC0415
+
+    metadata_path.parent.mkdir(parents=True, exist_ok=True)
+    metadata_path.write_text(f"{dump_model_metadata(metadata)}\n", encoding=encoding)
+
+
+def generate(  # noqa: PLR0912, PLR0914, PLR0915
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    *,
+    config: GenerateConfig | None = None,
+    **options: Unpack[GenerateConfigDict],
+) -> str | GeneratedModules | None:
+    """Generate Python data models from schema definitions or structured data.
+
+    This is the main entry point for code generation. Supports OpenAPI, AsyncAPI,
+    JSON Schema, GraphQL, XML Schema, Protocol Buffers, Avro, and raw data formats
+    (JSON, YAML, Dict, CSV) as input.
+
+    Args:
+        input_: The input source (file path, string content, URL, dict,
+            list of file paths, or MCP tools list when input_file_type is
+            InputFileType.MCPTools).
+        config: A GenerateConfig object with all options. Cannot be used together with **options.
+        **options: Individual options matching GenerateConfig fields. Cannot be used together with config.
+
+    Returns:
+        - When output is a Path: None (writes to file system)
+        - When output is None and single module: str (generated code)
+        - When output is None and multiple modules: GeneratedModules (dict mapping
+          module path tuples to generated code strings)
+
+    Raises:
+        ValueError: If both config and **options are provided.
+    """
+    if config is not None and options:
+        msg = "Cannot specify both 'config' and keyword arguments. Use one or the other."
+        raise ValueError(msg)
+
+    if config is None:
+        from datamodel_code_generator.config import GenerateConfig, _rebuild_generate_config  # noqa: PLC0415
+
+        _rebuild_generate_config()
+        config = GenerateConfig.model_validate(options)
+    config = _apply_generate_config_preset(config)
+
+    _validate_output_datetime_class(config.output_model_type, config.output_datetime_class)
+    _validate_alias_generator(config.output_model_type, config.alias_generator)
+
+    # Variables that may be modified during processing
+    input_filename = config.input_filename
+    input_file_type = config.input_file_type
+    extra_template_data: defaultdict[str, dict[str, Any]] | None = None
+    if config.extra_template_data is not None:
+        extra_template_data = defaultdict(dict, config.extra_template_data)
+    dataclass_arguments = config.dataclass_arguments
+    custom_file_header = config.custom_file_header
+    skip_root_model = config.skip_root_model
+    source_override: Mapping[str, Any] | None = None
+
+    if (
+        isinstance(input_, list)
+        and input_file_type != InputFileType.MCPTools
+        and (not input_ or any(not isinstance(item, Path) for item in input_))
+    ):
+        msg = (  # pragma: no cover
+            "List input is only supported for file path lists or input_file_type=InputFileType.MCPTools."
+        )
+        raise Error(msg)  # pragma: no cover
+
+    remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
+    match input_:
+        case str():
+            input_text: str | None = input_
+        case ParseResult():
+            from datamodel_code_generator.http import DEFAULT_HTTP_TIMEOUT, get_body  # noqa: PLC0415
+
+            timeout = config.http_timeout if config.http_timeout is not None else DEFAULT_HTTP_TIMEOUT
+            input_text = remote_text_cache.get_or_put(
+                input_.geturl(),
+                default_factory=lambda url: get_body(
+                    url,
+                    config.http_headers,
+                    config.http_ignore_tls,
+                    config.http_query_parameters,
+                    timeout,
+                    allow_private_network=config.allow_private_network,
+                ),
+            )
+        case _:
+            input_text = None
+
+    if dataclass_arguments is None:
+        dataclass_arguments = DataclassArguments()
+        if config.frozen_dataclasses:
+            dataclass_arguments["frozen"] = True
+        if config.keyword_only:
+            dataclass_arguments["kw_only"] = True
+
+    if isinstance(input_, Path) and not input_.is_absolute():
+        input_ = input_.expanduser().resolve()
+    if input_file_type == InputFileType.Auto and isinstance(input_, Mapping):
+        msg = (
+            "input_file_type=Auto is not supported for dict input. "
+            "Please specify input_file_type explicitly (e.g., InputFileType.JsonSchema)."
+        )
+        raise Error(msg)
+
+    if isinstance(input_, Mapping) and input_file_type == InputFileType.GraphQL:
+        msg = "Dict input is not supported for GraphQL. GraphQL requires text input (SDL format)."
+        raise Error(msg)
+
+    if isinstance(input_, Mapping) and input_file_type == InputFileType.XMLSchema:
+        msg = "Dict input is not supported for xmlschema. Provide XSD text, file path, or URL input."
+        raise Error(msg)
+
+    if isinstance(input_, Mapping) and input_file_type == InputFileType.Protobuf:
+        msg = "Dict input is not supported for protobuf. Provide .proto text, file path, or URL input."
+        raise Error(msg)
+
+    if isinstance(input_, Mapping) and input_file_type in {
+        InputFileType.Json,
+        InputFileType.Yaml,
+        InputFileType.CSV,
+    }:
+        msg = (
+            f"Dict input is not supported for {input_file_type.value}. "
+            f"Use InputFileType.Dict to generate schema from dict data, "
+            f"or provide text/file input for {input_file_type.value} format."
+        )
+        raise Error(msg)
+
+    if input_file_type == InputFileType.Auto:
+        try:
+            if isinstance(input_, Path):
+                input_text_ = get_first_file(input_).read_text(encoding=config.encoding)
+            else:
+                input_text_ = input_text
+        except FileNotFoundError as exc:
+            msg = "File not found"
+            raise Error(msg) from exc
+
+        try:
+            assert isinstance(input_text_, str)
+            input_file_type = infer_input_type(input_text_)
+        except Exception as exc:
+            raise InvalidFileFormatError(exc) from exc
+        else:
+            print(  # noqa: T201
+                inferred_message.format(input_file_type.value),
+                file=sys.stderr,
+            )
+            # Reuse already-read text for single Path file to avoid re-reading
+            # Only for OpenAPI/JsonSchema (RAW_DATA_TYPES are transformed by genson)
+            if isinstance(input_, Path) and input_.is_file() and input_file_type not in RAW_DATA_TYPES:
+                input_text = input_text_
+
+    input_text = _normalize_raw_input(input_, input_text, input_file_type, config)
+
+    if input_file_type == InputFileType.MCPTools:
+        source_override, input_file_type, skip_root_model = _convert_mcp_tools(
+            input_,
+            input_text,
+            config,
+            remote_text_cache,
+        )
+
+    if isinstance(input_, ParseResult) and input_file_type not in RAW_DATA_TYPES:
+        input_text = None
+
+    data_model_types, source, defer_formatting, additional_options = _prepare_parser_common_options(
+        input_,
+        input_text,
+        input_file_type,
+        source_override,
+        config,
+        extra_template_data,
+        dataclass_arguments,
+        skip_root_model=skip_root_model,
+        remote_text_cache=remote_text_cache,
+    )
+
+    jsonschema_version, openapi_version, asyncapi_version, xmlschema_version, protobuf_version = (
+        _resolve_schema_versions(input_file_type, config.schema_version)
+    )
+
+    parser = _build_parser(
+        input_file_type,
+        source,
+        config,
+        additional_options,
+        data_model_types,
+        jsonschema_version=jsonschema_version,
+        openapi_version=openapi_version,
+        asyncapi_version=asyncapi_version,
+        xmlschema_version=xmlschema_version,
+        protobuf_version=protobuf_version,
+    )
+
+    with chdir(config.output):
+        try:
+            results = parser.parse(
+                settings_path=config.settings_path,
+                disable_future_imports=config.disable_future_imports,
+                all_exports_scope=config.all_exports_scope,
+                all_exports_collision_strategy=config.all_exports_collision_strategy,
+                module_split_mode=config.module_split_mode,
+                collect_model_metadata=config.emit_model_metadata is not None,
+            )
+        except BaseException:
+            with contextlib.suppress(BaseException):
+                parser._dispose()  # noqa: SLF001
+            raise
+    model_metadata = parser.model_metadata
+    parser._dispose()  # noqa: SLF001
+    generated = _emit_results(
+        results,
+        input_,
+        input_filename,
+        custom_file_header,
+        config,
+        defer_formatting=defer_formatting,
+        data_model_types=data_model_types,
+    )
+    if config.emit_model_metadata is not None:
+        _write_model_metadata(config.emit_model_metadata, model_metadata, config.encoding)
+    return generated
+
+
 def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
     """Automatically detect the input file type from text content."""
     from datamodel_code_generator.util import get_yaml_parse_errors  # noqa: PLC0415
 
     if _is_xml_text(text):
-        from datamodel_code_generator.parser.xmlschema import is_xml_schema_text  # noqa: PLC0415
+        from datamodel_code_generator.parser._xmlschema_detection import is_xml_schema_text  # noqa: PLC0415
 
         if is_xml_schema_text(text):
             return InputFileType.XMLSchema
@@ -1118,7 +1488,7 @@ def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
             return InputFileType.AsyncAPI
         if is_openapi(data):
             return InputFileType.OpenAPI
-        from datamodel_code_generator.parser.avro import is_avro_schema_data  # noqa: PLC0415
+        from datamodel_code_generator.parser._avro_detection import is_avro_schema_data  # noqa: PLC0415
 
         if is_avro_schema_data(data):
             return InputFileType.Avro
@@ -1128,12 +1498,12 @@ def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
     if _is_protobuf_text(text):
         return InputFileType.Protobuf
     if isinstance(data, list):
-        from datamodel_code_generator.parser.avro import is_avro_schema_data  # noqa: PLC0415
+        from datamodel_code_generator.parser._avro_detection import is_avro_schema_data  # noqa: PLC0415
 
         if is_avro_schema_data(data):
             return InputFileType.Avro
     if isinstance(data, str):
-        from datamodel_code_generator.parser.avro import is_avro_schema_data  # noqa: PLC0415
+        from datamodel_code_generator.parser._avro_detection import is_avro_schema_data  # noqa: PLC0415
 
         if is_avro_schema_data(data):
             return InputFileType.Avro
@@ -1165,6 +1535,15 @@ _LAZY_IMPORTS = {
     "detect_openapi_version": "datamodel_code_generator.parser.schema_version",
     "generate_dynamic_models": "datamodel_code_generator.dynamic",
     "GenerateConfig": "datamodel_code_generator.config",
+    "UnionMode": "datamodel_code_generator.enums",
+    "CodeFormatter": "datamodel_code_generator.format",
+    "DateClassType": "datamodel_code_generator._format_types",
+    "DatetimeClassType": "datamodel_code_generator._format_types",
+    "DEFAULT_FORMATTERS": "datamodel_code_generator._format_types",
+    "Formatter": "datamodel_code_generator._format_types",
+    "PythonVersion": "datamodel_code_generator._format_types",
+    "PythonVersionMin": "datamodel_code_generator._format_types",
+    "resolve_use_type_checking_imports": "datamodel_code_generator.format",
 }
 
 
@@ -1173,7 +1552,9 @@ def __getattr__(name: str) -> Any:
         import importlib  # noqa: PLC0415
 
         module = importlib.import_module(_LAZY_IMPORTS[name])
-        return getattr(module, name)
+        value = getattr(module, name)
+        globals()[name] = value
+        return value
     msg = f"module {__name__!r} has no attribute {name!r}"
     raise AttributeError(msg)
 
@@ -1183,6 +1564,7 @@ __all__ = [
     "DEFAULT_SHARED_MODULE_NAME",
     "MAX_VERSION",
     "MIN_VERSION",
+    "AliasGenerator",
     "AllExportsCollisionStrategy",
     "AllExportsScope",
     "AllOfClassHierarchy",
@@ -1220,6 +1602,7 @@ __all__ = [
     "detect_jsonschema_version",  # noqa: F822
     "detect_openapi_version",  # noqa: F822
     "detect_xmlschema_version",
+    "enable_parsed_source_cache",
     "generate",
     "generate_dynamic_models",  # noqa: F822
 ]

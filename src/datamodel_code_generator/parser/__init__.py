@@ -37,14 +37,14 @@ class DefaultPutDict(UserDict[TK, TV]):
         """Get value for key, or compute and store it if missing."""
         if key in self:
             return self[key]
-        if default:  # pragma: no cover
+        if default is not None:
             value = self[key] = default
             return value
-        if default_factory:
+        if default_factory is not None:
             value = self[key] = default_factory(key)
             return value
-        msg = "Not found default and default_factory"  # pragma: no cover
-        raise ValueError(msg)  # pragma: no cover
+        msg = "Not found default and default_factory"
+        raise ValueError(msg)
 
 
 __all__ = [

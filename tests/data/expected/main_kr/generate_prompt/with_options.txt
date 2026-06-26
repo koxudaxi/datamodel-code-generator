@@ -15,6 +15,7 @@ What other options should I use?
 ## Options by Category
 
 ### Base Options
+- `--emit-model-metadata`: Write a separate JSON map from source schema references to the final generated models...
 - `--encoding`: Specify character encoding for input and output files.
 - `--external-ref-mapping`: Map external `$ref` files to Python packages.
 - `--input`: Specify the input schema file path.
@@ -22,6 +23,7 @@ What other options should I use?
 - `--input-model`: Import a Python type or dict schema from a module.
 - `--input-model-ref-strategy`: Strategy for referenced types when using --input-model.
 - `--output`: Specify the destination path for generated Python code.
+- `--preset`: Apply an immutable built-in option preset.
 - `--schema-version`: Schema version to use for parsing.
 - `--schema-version-mode`: Schema version validation mode.
 - `--url`: Fetch schema from URL with custom HTTP headers.
@@ -37,6 +39,7 @@ What other options should I use?
 - `--no-use-closed-typed-dict`: Disable PEP 728 TypedDict closed/extra_items generation.
 - `--no-use-specialized-enum`: Disable specialized Enum classes for Python 3.11+ code generation.
 - `--no-use-standard-collections`: Use typing.Dict/List instead of built-in dict/list for container types.
+- `--no-use-standard-primitive-types`
 - `--no-use-union-operator`: Use Union[X, Y] / Optional[X] instead of X | Y union operator.
 - `--output-date-class`: Specify date class type for date schema fields.
 - `--output-datetime-class`: Specify datetime class type for date-time schema fields.
@@ -51,6 +54,7 @@ What other options should I use?
 - `--use-object-type`: Use object instead of Any for unspecified object and array values.
 - `--use-pendulum`: Use pendulum types for date, time, and duration fields.
 - `--use-root-model-type-alias`: Generate RootModel as type alias format for better mypy support.
+- `--use-specialized-enum`: Generate StrEnum/IntEnum for string/integer enums (Python 3.11+).
 - `--use-standard-collections`: Use built-in dict/list instead of typing.Dict/List.
 - `--use-standard-primitive-types`: Use Python standard library types for string formats instead of str.
 - `--use-tuple-for-fixed-items`: Generate tuple types for arrays with items array syntax.
@@ -59,9 +63,9 @@ What other options should I use?
 - `--use-unique-items-as-set`: Generate set types for arrays with uniqueItems constraint.
 
 ### Field Customization
-- `--aliases`: Apply custom field and class name aliases from JSON file.
+- `--aliases`: Apply custom field and class name aliases via inline JSON or a JSON file path.
 - `--capitalize-enum-members`: Capitalize enum member names to UPPER_CASE format.
-- `--default-values`: Override field default values from external JSON file.
+- `--default-values`: Override field default values via inline JSON or a JSON file path.
 - `--empty-enum-field-name`: Name for empty string enum field values.
 - `--extra-fields`: Configure how generated models handle extra fields not defined in schema.
 - `--field-constraints`: Generate Field() with validation constraints from schema.
@@ -69,10 +73,12 @@ What other options should I use?
 - `--field-extra-keys-without-x-prefix`: Include schema extension keys in Field() without requiring 'x-' prefix.
 - `--field-include-all-keys`: Include all schema keys in Field() json_schema_extra.
 - `--field-type-collision-strategy`: Rename type class instead of field when names collide (Pydantic v2 only).
+- `--infer-union-variant-names`: Infer names for inline oneOf/anyOf object variants from literal fields.
 - `--no-alias`: Disable Field alias generation for non-Python-safe property names.
+- `--no-snake-case-field`
 - `--original-field-name-delimiter`: Specify delimiter for original field names when using snake-case conversion.
 - `--remove-special-field-name-prefix`: Remove the special prefix from field names.
-- `--serialization-aliases`: Apply custom Pydantic v2 serialization aliases from JSON file.
+- `--serialization-aliases`: Apply custom Pydantic v2 serialization aliases via inline JSON or a JSON file path.
 - `--set-default-enum-member`: Set the first enum member as the default value for enum fields.
 - `--snake-case-field`: Convert field names to snake_case format.
 - `--special-field-name-prefix`: Prefix to add to special field names (like reserved keywords).
@@ -87,7 +93,9 @@ What other options should I use?
 - `--use-title-as-name`: Use schema title as the generated class name.
 
 ### Model Customization
+- `--alias-generator`: Use a Pydantic v2 alias generator in model_config.
 - `--allow-extra-fields`: Allow extra fields in generated Pydantic models (extra='allow').
+- `--allow-leading-underscore-class-name`: Allow an explicitly specified root class name to start with an unders...
 - `--allow-population-by-field-name`: Allow Pydantic model population by field name (not just alias).
 - `--base-class`: Specify a custom base class for generated models.
 - `--base-class-map`: Specify different base classes for specific models via JSON mapping.
@@ -107,7 +115,11 @@ What other options should I use?
 - `--keyword-only`: Generate dataclasses with keyword-only fields (Python 3.10+).
 - `--model-extra-keys`: Add model-level schema extensions to ConfigDict json_schema_extra.
 - `--model-extra-keys-without-x-prefix`: Strip x- prefix from model-level schema extensions and add to ConfigDic...
+- `--model-name-map`: Rename generated model classes from a JSON mapping.
 - `--naming-strategy`: Use parent-prefixed naming strategy for duplicate model names.
+- `--no-allow-population-by-field-name`
+- `--no-collapse-root-models`
+- `--no-use-frozen-field`
 - `--output-model-type`: Generate models from GraphQL with different output model types.
 - `--parent-scoped-naming`: Namespace models by their parent scope to avoid naming conflicts.
 - `--reuse-model`: Reuse identical model definitions instead of generating duplicates.
@@ -124,6 +136,7 @@ What other options should I use?
 - `--use-frozen-field`: Generate frozen (immutable) field definitions for readOnly properties.
 - `--use-generic-base-class`: Generate a shared base class with model configuration to avoid repetition (DRY).
 - `--use-one-literal-as-default`: Use single literal value as default when enum has only one option.
+- `--use-root-model-sequence-interface`: Make non-null sequence-like Pydantic v2 RootModel classes implement col...
 - `--use-serialize-as-any`: Wrap fields with subtypes in Pydantic's SerializeAsAny.
 - `--use-subclass-enum`: Generate typed Enum subclasses for enums with specific field types.
 
@@ -133,19 +146,19 @@ What other options should I use?
 - `--custom-file-header`: Add custom header text to the generated file.
 - `--custom-file-header-path`: Add custom header content from file to generated code.
 - `--custom-formatters`: Apply custom Python code formatters to generated output.
-- `--custom-formatters-kwargs`: Pass custom arguments to custom formatters via JSON file.
+- `--custom-formatters-kwargs`: Pass custom arguments to custom formatters via inline JSON or a JSON file path.
 - `--custom-template-dir`: Use custom Jinja2 templates for model generation.
 - `--disable-appending-item-suffix`: Disable appending 'Item' suffix to array item types.
 - `--disable-timestamp`: Disable timestamp in generated file header for reproducible output.
 - `--enable-command-header`: Include command-line options in file header for reproducibility.
 - `--enable-generated-header-marker`: Include the @generated marker in file header for generated-code tooling.
 - `--enable-version-header`: Include tool version information in file header.
-- `--extra-template-data`: Pass custom template variables from JSON file for code generation.
+- `--extra-template-data`: Pass custom template variables via inline JSON or a JSON file path.
 - `--formatters`: Specify code formatters to apply to generated output.
 - `--generate-schema-validators`: Generate experimental Pydantic v2 model validators for JSON Schema runtime rules.
 - `--no-treat-dot-as-module`: Keep dots in schema names as underscores for flat output.
 - `--no-use-type-checking-imports`: Keep generated model imports available at runtime when using Ruff fixes.
-- `--schema-validator-base-class-name`: Set the generated shared Pydantic v2 schema runtime validator base class name.
+- `--schema-validator-base-class-name`: Set the generated shared Pydantic v2 schema runtime validator base class...
 - `--use-double-quotes`: Use double quotes for string literals in generated code.
 - `--use-exact-imports`: Import exact types instead of modules.
 - `--use-type-checking-imports`: Allow Ruff to move typing-only imports into TYPE_CHECKING blocks.
@@ -168,6 +181,7 @@ What other options should I use?
 ### General Options
 - `--all-exports-collision-strategy`: Handle name collisions when exporting recursive module hierarchies.
 - `--all-exports-scope`: Generate __all__ exports for child modules in __init__.py files.
+- `--allow-private-network`: Allow HTTP requests to private network schema endpoints.
 - `--allow-remote-refs`: Enable fetching of `$ref` targets over HTTP/HTTPS.
 - `--check`: Verify generated code matches existing output without modifying files.
 - `--disable-warnings`: Suppress warning messages during code generation.
@@ -180,6 +194,7 @@ What other options should I use?
 - `--http-timeout`: Set timeout for HTTP requests to remote hosts.
 - `--ignore-pyproject`: Ignore pyproject.toml configuration file.
 - `--module-split-mode`: Split generated models into separate files, one per model class.
+- `--no-allow-private-network`
 - `--no-allow-remote-refs`
 - `--shared-module-name`: Customize the name of the shared module for deduplicated models.
 - `--watch`: Watch input file(s) for changes and regenerate output automatically.
@@ -199,6 +214,16 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --additional-imports ADDITIONAL_IMPORTS
                         Custom imports for output (delimited list input). For
                         example "datetime.date,datetime.datetime"
+  --allow-private-network, --no-allow-private-network
+                        Allow HTTP(S) schema requests to private, loopback,
+                        link-local, or otherwise non-public network hosts. By
+                        default these targets are blocked to reduce server-
+                        side request forgery (SSRF) risk. If a trusted
+                        internal schema endpoint is blocked, verify the URL
+                        and pass this option; otherwise use a local schema
+                        file or public endpoint. Pass --no-allow-private-
+                        network to override a configuration file that enables
+                        it.
   --allow-remote-refs, --no-allow-remote-refs
                         Allow fetching remote $ref references over HTTP/HTTPS.
                         Currently remote fetching is allowed by default but
@@ -215,6 +240,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --custom-formatters CUSTOM_FORMATTERS
                         List of modules with custom formatter (delimited list
                         input).
+  --emit-model-metadata EMIT_MODEL_METADATA
+                        Write a separate JSON map from source schema
+                        references to generated models and fields.
   --external-ref-mapping FILE_PATH=PYTHON_PACKAGE [FILE_PATH=PYTHON_PACKAGE ...]
                         Map external $ref file paths to Python import packages
                         instead of generating duplicate classes. Accepts one
@@ -242,12 +270,12 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Timeout in seconds for HTTP requests to remote hosts
                         (default: 30)
   --input INPUT         Input file/directory (default: stdin)
-  --input-file-type {auto,openapi,asyncapi,jsonschema,xmlschema,protobuf,avro,json,yaml,dict,csv,graphql}
+  --input-file-type {auto,openapi,asyncapi,jsonschema,mcp-tools,xmlschema,protobuf,avro,json,yaml,dict,csv,graphql}
                         Input file type (default: auto). Use 'jsonschema',
-                        'openapi', 'asyncapi', 'graphql', 'xmlschema',
-                        'protobuf', or 'avro' for schema definitions. Use
-                        'json', 'yaml', or 'csv' for raw sample data to infer
-                        a schema automatically.
+                        'openapi', 'asyncapi', 'graphql', 'mcp-tools',
+                        'xmlschema', 'protobuf', or 'avro' for schema
+                        definitions. Use 'json', 'yaml', or 'csv' for raw
+                        sample data to infer a schema automatically.
   --input-model MODULE:NAME
                         Python import path to a Pydantic v2 model or schema
                         dict (e.g., 'mypackage.module:ClassName' or
@@ -265,14 +293,19 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --output OUTPUT       Output file (default: stdout)
   --output-model-type {pydantic_v2.BaseModel,pydantic_v2.dataclass,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
                         Output model type (default: pydantic_v2.BaseModel)
+  --preset {standard-py310-20260619,standard-py311-20260619,standard-py312-20260619,standard-py313-20260619,standard-py314-20260619,practical-py310-20260619,practical-py311-20260619,practical-py312-20260619,practical-py313-20260619,practical-py314-20260619}
+                        Apply an immutable built-in option preset. Preset
+                        names include the target Python version so generated
+                        syntax is pinned.
   --schema-version SCHEMA_VERSION
                         Schema version. Valid values depend on input type:
                         JsonSchema: auto, draft-04, draft-06, draft-07,
-                        2019-09, 2020-12. OpenAPI: auto, 3.0, 3.1. AsyncAPI:
-                        auto, 2.0, 3.0. XMLSchema: auto, 1.0, 1.1. Protobuf:
-                        auto, proto2, proto3, 2023. (default: auto - detected
-                        from $schema, openapi/asyncapi field, XML Schema
-                        versioning attributes, or Protobuf syntax/edition)
+                        2019-09, 2020-12. OpenAPI: auto, 3.0, 3.1, 3.2.
+                        AsyncAPI: auto, 2.0, 3.0. XMLSchema: auto, 1.0, 1.1.
+                        Protobuf: auto, proto2, proto3, 2023. (default: auto -
+                        detected from $schema, openapi/asyncapi field, XML
+                        Schema versioning attributes, or Protobuf
+                        syntax/edition)
   --schema-version-mode {lenient,strict}
                         Schema version validation mode. 'lenient': accept all
                         features regardless of version (default). 'strict':
@@ -426,13 +459,14 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Remove field name prefix if it has a special meaning
                         e.g. underscores
   --serialization-aliases SERIALIZATION_ALIASES
-                        Serialization alias mapping file (JSON) for Pydantic
-                        v2. Format: {'<schema_field>':
+                        Serialization alias mapping as inline JSON or a JSON
+                        file path for Pydantic v2. Format: {'<schema_field>':
                         '<serialization_alias>'}. Supports hierarchical
                         formats: Flat: {'name': 'fullName'} applies to all
                         occurrences. Scoped: {'User.name': 'fullName'} applies
                         to specific class.
-  --snake-case-field    Change camel-case field name to snake-case
+  --snake-case-field, --no-snake-case-field
+                        Change camel-case field name to snake-case
   --special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX
                         Set field name prefix when first character can't be
                         used as Python field name (default: `field`)
@@ -455,7 +489,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Use schema description to populate field docstring
   --use-field-description-example
                         Use schema example to populate field docstring
-  --use-frozen-field    Use Field(frozen=True) for readOnly fields (Pydantic
+  --use-frozen-field, --no-use-frozen-field
+                        Use Field(frozen=True) for readOnly fields (Pydantic
                         v2).
   --use-inline-field-description
                         Use schema description to populate field docstring as
@@ -470,6 +505,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         one line
 
 [36;1mModel customization[0m:
+  --alias-generator {to_camel,to_pascal,to_snake}
+                        Pydantic v2 BaseModel alias generator to use in
+                        ConfigDict. Matching generated aliases are omitted
+                        from individual Field() calls.
   --all-exports-collision-strategy {error,minimal-prefix,full-prefix}
                         Strategy for name collisions when using --all-exports-
                         scope=recursive. 'error': raise an error (default).
@@ -482,7 +521,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         'recursive': export from all descendant modules.
   --allow-extra-fields  Deprecated: --allow-extra-fields is deprecated. Use
                         --extra-fields=allow instead.
-  --allow-population-by-field-name
+  --allow-leading-underscore-class-name
+                        Allow an explicitly specified root class name to start
+                        with an underscore
+  --allow-population-by-field-name, --no-allow-population-by-field-name
                         Allow population by field name
   --class-name CLASS_NAME
                         Set class name of root model
@@ -504,7 +546,7 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         models by replacing references instead of creating
                         empty inheritance subclasses. This eliminates 'class
                         Foo(Bar): pass' patterns
-  --collapse-root-models
+  --collapse-root-models, --no-collapse-root-models
                         Models generated with a root-type field will be merged
                         into the models using that root-type model
   --collapse-root-models-name-strategy {child,parent}
@@ -541,9 +583,16 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         extra fields.
   --frozen-dataclasses  Generate frozen dataclasses (dataclass(frozen=True)).
                         Only applies to dataclass output.
+  --infer-union-variant-names
+                        Infer inline oneOf/anyOf branch model names from
+                        literal discriminator-style fields
   --keep-model-order    Keep generated models' order
   --keyword-only        Defined models as keyword only (for example
                         dataclass(kw_only=True)).
+  --model-name-map MODEL_NAME_MAP
+                        Rename generated model classes by schema ref or
+                        current generated class name using a JSON object or
+                        JSON file.
   --module-split-mode {single}
                         Split generated models into separate files. 'single':
                         generate one file per model class.
@@ -605,9 +654,14 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         (e.g., extra='forbid') instead of repeating the
                         configuration in each model. Keeps code DRY.
   --use-pendulum        use pendulum instead of datetime
+  --use-root-model-sequence-interface
+                        Make non-null sequence-like Pydantic v2 RootModel
+                        classes implement collections.abc.Sequence by adding
+                        Sequence[T] inheritance and root-delegating __iter__,
+                        __getitem__, and __len__ methods
   --use-schema-description
                         Use schema description to populate class docstring
-  --use-standard-primitive-types
+  --use-standard-primitive-types, --no-use-standard-primitive-types
                         Use Python standard library types for string formats
                         (UUID, IPv4Address, etc.) instead of str. Affects
                         dataclass, msgspec, TypedDict output. Pydantic already
@@ -615,43 +669,45 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --use-title-as-name   use titles as class names of models
 
 [36;1mTemplate customization[0m:
-  --aliases ALIASES     Alias mapping file (JSON) for renaming fields. Format:
-                        {'<schema_field>': '<python_name>'} - the schema field
-                        name becomes the Pydantic alias. Supports hierarchical
-                        formats: Flat: {'id': 'id_'} applies to all
-                        occurrences. Scoped: {'User.name': 'user_name'}
-                        applies to specific class. Priority: scoped > flat.
-                        Multiple aliases (Pydantic v2 only): {'field':
-                        ['alt1', 'alt2']} uses AliasChoices for validation.
-                        Example: {'User.name': 'user_name', 'id': 'id_'}
-                        generates `id_: ... = Field(alias='id')`.
+  --aliases ALIASES     Alias mapping as inline JSON or a JSON file path for
+                        renaming fields. Format: {'<schema_field>':
+                        '<python_name>'} - the schema field name becomes the
+                        Pydantic alias. Supports hierarchical formats: Flat:
+                        {'id': 'id_'} applies to all occurrences. Scoped:
+                        {'User.name': 'user_name'} applies to specific class.
+                        Priority: scoped > flat. Multiple aliases (Pydantic v2
+                        only): {'field': ['alt1', 'alt2']} uses AliasChoices
+                        for validation. Example: {'User.name': 'user_name',
+                        'id': 'id_'} generates `id_: ... = Field(alias='id')`.
   --custom-file-header CUSTOM_FILE_HEADER
                         Custom file header
   --custom-file-header-path CUSTOM_FILE_HEADER_PATH
                         Custom file header file path
   --custom-formatters-kwargs CUSTOM_FORMATTERS_KWARGS
-                        A file with kwargs for custom formatters.
+                        Custom formatter kwargs as inline JSON or a JSON file
+                        path.
   --custom-template-dir CUSTOM_TEMPLATE_DIR
                         Custom template directory
   --default-values DEFAULT_VALUES
-                        Default value overrides file (JSON). Supports
-                        hierarchical formats: Flat: {'field': value} applies
-                        to all occurrences. Scoped: {'ClassName.field': value}
-                        applies to specific class. Priority: scoped > flat.
-                        Note: Scoped keys use the generated class name for
-                        JSON Schema/OpenAPI. Required fields remain required
-                        unless --use-default is also specified. Example:
-                        {'User.status': 'active', 'page': 1, 'limit': 10}
+                        Default value overrides as inline JSON or a JSON file
+                        path. Supports hierarchical formats: Flat: {'field':
+                        value} applies to all occurrences. Scoped:
+                        {'ClassName.field': value} applies to specific class.
+                        Priority: scoped > flat. Note: Scoped keys use the
+                        generated class name for JSON Schema/OpenAPI. Required
+                        fields remain required unless --use-default is also
+                        specified. Example: {'User.status': 'active', 'page':
+                        1, 'limit': 10}
   --encoding ENCODING   The encoding of input and output (default: utf-8)
   --extra-template-data EXTRA_TEMPLATE_DATA
-                        Extra template data for output models. Input is
-                        supposed to be a json/yaml file. For OpenAPI and
-                        Jsonschema the keys are the spec path of the object,
-                        or the name of the object if you want to apply the
-                        template data to multiple objects with the same name.
-                        If you are using another input file type (e.g.
-                        GraphQL), the key is the name of the object. The value
-                        is a dictionary of the template data to add.
+                        Extra template data for output models as inline JSON
+                        or a JSON file path. For OpenAPI and Jsonschema the
+                        keys are the spec path of the object, or the name of
+                        the object if you want to apply the template data to
+                        multiple objects with the same name. If you are using
+                        another input file type (e.g. GraphQL), the key is the
+                        name of the object. The value is a dictionary of the
+                        template data to add.
   --generate-schema-validators
                         Generate Pydantic v2 model validators for JSON Schema
                         rules that cannot be represented as type hints
@@ -670,10 +726,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         at runtime. Use --no-use-type-checking-imports to
                         force runtime imports.
   --validators VALIDATORS
-                        Validators configuration file (JSON). Defines field
-                        validators for Pydantic v2 models. Keys are model
-                        names, values contain validator definitions with
-                        field, function, and mode.
+                        Validators configuration as inline JSON or a JSON file
+                        path. Defines field validators for Pydantic v2 models.
+                        Keys are model names, values contain validator
+                        definitions with field, function, and mode.
   --wrap-string-literal
                         Wrap string literal by using black `experimental-
                         string-processing` option (require black 20.8b0 or
@@ -740,6 +796,12 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --list-experimental [{table,json,markdown}]
                         List registered experimental features, then exit.
   --no-color            disable colorized output
+  --output-format {text,json}
+                        Format for command output (default: text). Use json
+                        for structured output when supported.
+  --output-format-json-schema {config,generate-prompt,generation,model-metadata,structured-output}
+                        Output JSON Schema for the selected JSON output or
+                        JSON configuration format and exit.
   --profile PROFILE     Use a named profile from pyproject.toml
                         [tool.datamodel-codegen.profiles.<name>]
   --version             show version
@@ -751,16 +813,57 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   -h, --help            show this help message and exit
 
 Documentation: https://datamodel-code-generator.koxudaxi.dev
+Agent skill: https://datamodel-code-generator.koxudaxi.dev/coding-agent-skill/
 GitHub: https://github.com/koxudaxi/datamodel-code-generator
 
 ```
 
+## Agent Task
+
+Recommend a final CLI command for the user's schema and target runtime. Include:
+- Final `datamodel-codegen` command in a shell code block.
+- Brief explanation for each selected option.
+- Rejected alternatives with the reason they do not fit.
+- Verification command, such as `datamodel-codegen ... --output models.py --check` (`--check` requires `--output`) or a diff against expected output.
+
+## Decision Checklist
+
+- Input type: auto-detected schema/data, OpenAPI, AsyncAPI, JSON Schema, MCP tools, XML Schema, Protocol Buffers, Avro, GraphQL, CSV, Python input model, or raw JSON/YAML/dict data.
+- Output model type: `pydantic_v2.BaseModel`, `pydantic_v2.dataclass`, `dataclasses.dataclass`, `typing.TypedDict`, or `msgspec.Struct`.
+- Python/Pydantic version: align `--target-python-version`, `--output-model-type`, and `--target-pydantic-version` when generating Pydantic v2 models.
+- Strictness: choose `--strict-types` values, `--strict-nullable`, `--field-constraints`, and `--extra-fields`.
+- Aliases/naming: decide between API-compatible aliases and normalized names such as `--snake-case-field`.
+- Module layout: choose one file or an output directory with `--module-split-mode` and reuse options.
+- Structured output: use `--output-format json` for machine-readable prompt or generation output, `--emit-model-metadata` for generated model maps, and `--output-format-json-schema` when a tool needs a validation schema.
+- Runtime model base: use `--base-class` for a custom base class; it is separate from `--output-model-type`.
+- Validation constraints: prefer `--field-constraints`; add `--use-annotated` for Pydantic v2.
+
+## Common Recipes
+
+- Strict Pydantic v2: `--output-model-type pydantic_v2.BaseModel --target-pydantic-version 2.11 --use-annotated --field-constraints`, plus needed `--strict-types` values.
+- OpenAPI request/response models: `--input-file-type openapi --openapi-scopes schemas paths --read-only-write-only-model-type request-response`.
+- TypedDict modern syntax: `--output-model-type typing.TypedDict --target-python-version 3.12 --use-standard-collections --use-union-operator`.
+- Multi-module OpenAPI output: set `--output` to a directory and use `--module-split-mode single --all-exports-scope recursive --use-exact-imports`.
+- Machine-readable agent flow: run `--generate-prompt --output-format json` first, then validate tool integration with `--output-format-json-schema generate-prompt` or `structured-output`.
+
+## Important Option Relationships
+
+- `--use-annotated` also enables `--field-constraints`; prefer it for constrained Pydantic v2 fields.
+- `--openapi-include-paths` only has an effect when `--openapi-scopes paths` is included.
+- `--strict-types` requires one or more values: `str`, `int`, `float`, `bool`, or `bytes`.
+- `--use-specialized-enum` requires `--target-python-version >= 3.11`.
+- `--output-format json` is supported for generation, `--generate-prompt`, and `--check`; not for `--watch`.
+- `--output-format-json-schema` accepts `config`, `generate-prompt`, `generation`, `model-metadata`, or `structured-output`; use `config` for JSON configuration schemas.
+- `--validation` is deprecated; use `--field-constraints` for generated Field constraints.
+
 ## Instructions
 
-Based on the above information, please help with the question or suggest
-appropriate CLI options for the use case. Consider:
+Based on the above information, propose the smallest datamodel-codegen
+command that satisfies the question or use case. Preserve current options
+unless they conflict with the goal or another option. Include:
 
-1. The current options already set
-2. Option descriptions and their purposes
-3. Potential conflicts between options
-4. Best practices for the target output format
+1. Final CLI command to run
+2. Reasons for each non-obvious added or changed option
+3. Current options that should remain unchanged
+4. Options considered but rejected, with a short reason
+5. Verification command that validates the generated CLI or output

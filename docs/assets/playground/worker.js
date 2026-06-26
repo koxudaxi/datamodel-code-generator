@@ -1,10 +1,8 @@
 import { expose } from "https://cdn.jsdelivr.net/npm/comlink@4.4.2/dist/esm/comlink.mjs";
-import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v314.0.0a2/full/pyodide.mjs";
+import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v314.0.0/full/pyodide.mjs";
 
-const PYODIDE_VERSION = "314.0.0-alpha.2";
-const PYODIDE_INDEX = "https://cdn.jsdelivr.net/pyodide/v314.0.0a2/full/";
-const PYPI_JSON_BASE = "https://pypi.org/pypi";
-const MICROPIP_VERSION = "0.11.1";
+const PYODIDE_VERSION = "314.0.0";
+const PYODIDE_INDEX = "https://cdn.jsdelivr.net/pyodide/v314.0.0/full/";
 const STANDARD_RUNTIME_PACKAGES = [
   "inflect>=4.1,<8",
   "jinja2>=2.10.1,<4",
@@ -78,39 +76,29 @@ function packageInstallFromMetadata(metadata, versionConfig) {
   };
 }
 
-async function findWheelUrl(project, version, matcher) {
-  const response = await fetch(`${PYPI_JSON_BASE}/${project}/${version}/json`);
-  if (!response.ok) {
-    throw new Error(`Could not load PyPI metadata for ${project} ${version}: ${response.status}`);
-  }
-  const metadata = await response.json();
-  const wheel = metadata.urls.find((item) => item.packagetype === "bdist_wheel" && matcher(item.filename));
-  if (!wheel) {
-    throw new Error(`No compatible wheel found for ${project} ${version}`);
-  }
-  return wheel.url;
-}
-
 async function installPythonPackages(pyodide, packages, message) {
   const missingPackages = packages.filter((name) => !packageInstallPromises.has(name));
-  if (missingPackages.length > 0) {
-    const installPromise = packageInstallQueue.then(async () => {
-      postStatus(message);
-      pyodide.globals.set("packages_json", JSON.stringify(missingPackages));
-      try {
-        await pyodide.runPythonAsync(`
+  if (missingPackages.length === 0) {
+    return Promise.all(packages.map((name) => packageInstallPromises.get(name)));
+  }
+
+  const installPromise = packageInstallQueue.then(async () => {
+    postStatus(message);
+    pyodide.globals.set("packages_json", JSON.stringify(missingPackages));
+    try {
+      await pyodide.runPythonAsync(`
 import json
 import micropip
 await micropip.install(json.loads(packages_json))
 `);
-      } finally {
-        pyodide.globals.delete("packages_json");
-      }
-    });
-    packageInstallQueue = installPromise.catch(() => {});
-    missingPackages.forEach((name) => packageInstallPromises.set(name, installPromise));
-  }
-  await Promise.all(packages.map((name) => packageInstallPromises.get(name)));
+    } finally {
+      pyodide.globals.delete("packages_json");
+    }
+  });
+  packageInstallQueue = installPromise.catch(() => {});
+  missingPackages.forEach((name) => packageInstallPromises.set(name, installPromise));
+
+  return Promise.all(packages.map((name) => packageInstallPromises.get(name)));
 }
 
 function packagesForInputType(inputType) {
@@ -131,10 +119,7 @@ async function initPyodide(versionConfig) {
   const pyodide = await loadPyodide({ indexURL: PYODIDE_INDEX });
 
   postStatus("Loading micropip...");
-  const micropipWheel = await findWheelUrl("micropip", MICROPIP_VERSION, (filename) =>
-    filename.endsWith("-py3-none-any.whl"),
-  );
-  await pyodide.loadPackage(micropipWheel);
+  await pyodide.loadPackage("micropip");
 
   await installPythonPackages(
     pyodide,

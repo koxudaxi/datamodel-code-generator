@@ -2,12 +2,24 @@
 
 from __future__ import annotations
 
+import importlib
+import sys
+import types
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
 import pytest
 
 from datamodel_code_generator.http import join_url
-from datamodel_code_generator.reference import ModelResolver, get_relative_path, is_url
+from datamodel_code_generator.reference import (
+    _TYPEGUARD_NOT_LOADED,
+    ModelResolver,
+    _import_inflect_without_typeguard_instrumentation,
+    _restore_typeguard_module,
+    get_relative_path,
+    get_singular_name,
+    is_url,
+    snake_to_upper_camel,
+)
 
 
 @pytest.mark.parametrize(
@@ -71,6 +83,89 @@ def test_model_resolver_add_ref_unevaluated() -> None:
     model_resolver = ModelResolver()
     reference = model_resolver.add_ref("meta/unevaluated")
     assert reference.original_name == "unevaluated"
+
+
+def test_model_resolver_add_class_name_generates_class_reference() -> None:
+    """Class-name references still flow through get_class_name."""
+    model_resolver = ModelResolver()
+
+    reference = model_resolver.add(["#", "definitions", "user"], "user", class_name=True)
+
+    assert reference.name == "User"
+    assert reference.duplicate_name is None
+
+
+def test_reference_cache_clear_preserves_helper_values() -> None:
+    """Clearing bounded reference caches must not change helper results."""
+    singular_name = get_singular_name("users")
+    upper_camel = snake_to_upper_camel("user_name")
+
+    get_singular_name.cache_clear()
+    snake_to_upper_camel.cache_clear()
+
+    assert get_singular_name("users") == singular_name
+    assert snake_to_upper_camel("user_name") == upper_camel
+
+
+def test_inflect_import_does_not_leave_typeguard_loaded(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The optimized inflect import path should not leak the temporary typeguard stub."""
+    monkeypatch.delitem(sys.modules, "inflect", raising=False)
+    monkeypatch.delitem(sys.modules, "typeguard", raising=False)
+    monkeypatch.setattr("datamodel_code_generator.reference._inflect_engine", None)
+    get_singular_name.cache_clear()
+
+    assert get_singular_name("Children") == "Child"
+    assert "inflect" in sys.modules
+    assert "typeguard" not in sys.modules
+
+
+def test_restore_typeguard_module_preserves_replaced_module(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Restoring an absent typeguard must not remove a module installed by other code."""
+    typeguard_stub = types.ModuleType("typeguard")
+    replacement_typeguard = types.ModuleType("typeguard")
+    monkeypatch.setitem(sys.modules, "typeguard", replacement_typeguard)
+
+    _restore_typeguard_module(_TYPEGUARD_NOT_LOADED, typeguard_stub)
+
+    assert sys.modules["typeguard"] is replacement_typeguard
+
+
+def test_inflect_import_falls_back_to_normal_import(monkeypatch: pytest.MonkeyPatch) -> None:
+    """If the optimized import path fails, inflect should be imported normally."""
+    monkeypatch.delitem(sys.modules, "inflect", raising=False)
+    original_typeguard = types.ModuleType("typeguard")
+    monkeypatch.setitem(sys.modules, "typeguard", original_typeguard)
+    fake_inflect = types.ModuleType("inflect")
+    partial_inflect = types.ModuleType("inflect")
+    import_calls: list[object] = []
+
+    def fake_import_module(name: str) -> types.ModuleType:
+        assert name == "inflect"
+        call_index = len(import_calls)
+        import_calls.append(sys.modules.get("typeguard"))
+        if call_index == 0:
+            typeguard_stub = import_calls[-1]
+            assert typeguard_stub is not original_typeguard
+            typechecked = typeguard_stub.__dict__["typechecked"]
+            assert typechecked("sentinel") == "sentinel"
+            decorator = typechecked(collection_check_strategy="sentinel")
+            assert decorator("wrapped") == "wrapped"
+            sys.modules["inflect"] = partial_inflect
+            optimized_error = "optimized import failed"
+            raise ImportError(optimized_error)
+
+        assert call_index == 1
+        assert import_calls[-1] is original_typeguard
+        sys.modules["inflect"] = fake_inflect
+        return fake_inflect
+
+    monkeypatch.setattr(importlib, "import_module", fake_import_module)
+
+    assert _import_inflect_without_typeguard_instrumentation() is fake_inflect
+    assert len(import_calls) == 2
+    assert import_calls[1] is original_typeguard
+    assert sys.modules["inflect"] is fake_inflect
+    assert sys.modules["typeguard"] is original_typeguard
 
 
 def test_model_resolver_delete_missing_reference_noop() -> None:
