@@ -3672,8 +3672,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
 
     def _has_schema_validator_constraints(self, obj: JsonSchemaObject) -> bool:
-        if not self.generate_schema_validators:
-            return False
         return bool(
             self._has_required_group_validators(obj)
             or self._has_conditional_validator(obj)
