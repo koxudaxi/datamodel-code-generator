@@ -1,3 +1,16 @@
+.release-benchmark-app {
+  display: block;
+}
+
+.release-benchmark-app__status {
+  color: var(--md-default-fg-color--light, #6b7280);
+}
+
+.release-benchmark-chart-list {
+  display: grid;
+  gap: 1rem;
+}
+
 .release-benchmark-chart {
   display: block;
   position: relative;

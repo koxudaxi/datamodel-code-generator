@@ -10,43 +10,12 @@ datamodel-code-generator supports many schema styles and production use cases, s
 
 ## Historical Trends
 
-Each chart plots median generation time by release version for one benchmark scenario. Each line is a formatter pipeline; missing or unsupported formatter results are skipped. Marked versions have benchmark notes below.
+The benchmark data on this page is loaded from `docs/data/release-benchmarks.json` and rendered in the browser. Release runs update that JSON file directly, so the published page reflects new release measurements after the docs deployment without rewriting this Markdown file.
 
-=== "Small / JSON Schema"
-
-    <span class="release-benchmark-chart" data-release-benchmark-chart data-input-type="jsonschema" data-case="small" aria-label="Small / JSON Schema release benchmark trend">
-      <canvas role="img" aria-label="Median generation time by release version"></canvas>
-      <span class="release-benchmark-chart__legend" aria-hidden="true"></span>
-      <span class="release-benchmark-chart__status" role="status">Loading benchmark chart...</span>
-      <span class="release-benchmark-chart__tooltip" role="status" hidden></span>
-      <noscript>See the historical results table below for benchmark data.</noscript>
-    </span>
-
-=== "Large / JSON Schema"
-
-    <span class="release-benchmark-chart" data-release-benchmark-chart data-input-type="jsonschema" data-case="large" aria-label="Large / JSON Schema release benchmark trend">
-      <canvas role="img" aria-label="Median generation time by release version"></canvas>
-      <span class="release-benchmark-chart__legend" aria-hidden="true"></span>
-      <span class="release-benchmark-chart__status" role="status">Loading benchmark chart...</span>
-      <span class="release-benchmark-chart__tooltip" role="status" hidden></span>
-      <noscript>See the historical results table below for benchmark data.</noscript>
-    </span>
-
-=== "Large / OpenAPI"
-
-    <span class="release-benchmark-chart" data-release-benchmark-chart data-input-type="openapi" data-case="large" aria-label="Large / OpenAPI release benchmark trend">
-      <canvas role="img" aria-label="Median generation time by release version"></canvas>
-      <span class="release-benchmark-chart__legend" aria-hidden="true"></span>
-      <span class="release-benchmark-chart__status" role="status">Loading benchmark chart...</span>
-      <span class="release-benchmark-chart__tooltip" role="status" hidden></span>
-      <noscript>See the historical results table below for benchmark data.</noscript>
-    </span>
-
-## Benchmark Notes
-
-Version markers in the charts and historical tables point to these benchmark interpretation notes.
-
-- `0.59.0` (Large / OpenAPI): Fixture note for a benchmark step change. This note verifies that chart and table markers render from external note data.
+<div class="release-benchmark-app" data-release-benchmark-app data-release-benchmark-state="available">
+  <p class="release-benchmark-app__status" data-release-benchmark-status>Loading benchmark data...</p>
+  <noscript>JavaScript is required to load the release benchmark data.</noscript>
+</div>
 
 ## Collection Policy
 
@@ -56,58 +25,4 @@ Version markers in the charts and historical tables point to these benchmark int
 - Release packages are installed from PyPI in isolated virtual environments.
 - The `main` snapshot is installed from the GitHub repository when it is explicitly selected.
 - Input coverage currently focuses on OpenAPI and JSON Schema.
-- Historical backfills are produced by the `Release Benchmarks` workflow and committed after review.
-
-## Latest Dataset
-
-- Schema version: `1`
-- Generated at: `2026-06-22T00:00:00Z`
-- Source workflow: `Release Benchmarks`
-- Primary Python version: `3.14.2`
-- Entry Python versions: `3.14.2`
-- Benchmark runs per case: `7`
-- Version selection: `-`
-- Selected versions: `3`
-- Download source: `-`
-- Download window: `-` days
-- Downloads in window: `-`
-- PyPIStats last month: `-`
-
-## Latest Release Summary
-
-Results below are medians. Built-in and Ruff ratios are relative to the black/isort(Default) formatter for the same scenario.
-
-### main
-
-=== "Small"
-
-    | Input | Formatter | Median | vs black/isort(Default) | Range | Status |
-    | --- | --- | --- | --- | --- | --- |
-    | JSON Schema | black/isort(Default) | 80.0ms | baseline | 78.0ms-83.0ms | OK |
-    | JSON Schema | Built-in | 70.0ms | 1.14x faster | 68.0ms-73.0ms | OK |
-    | JSON Schema | Ruff | 71.0ms | 1.13x faster | 69.0ms-75.0ms | OK |
-
-## Historical Results
-
-Rows are release versions, newest first, with `main` shown before releases when present. Released is the PyPI upload timestamp in UTC; branch refs such as `main` show `-`. Formatter cells show median generation time; non-default cells include the speed relative to black/isort(Default) when both results are available. Rows without any successful formatter result are omitted. Version cells marked with `*` have benchmark notes above.
-
-=== "Small / JSON Schema"
-
-    | Version | Released | black/isort(Default) | Built-in | Ruff |
-    | --- | --- | --- | --- | --- |
-    | main | - | 80.0ms | 70.0ms (1.14x faster) | 71.0ms (1.13x faster) |
-    | 0.58.0 | 2026-06-20 08:30 UTC | - | - | 72.3ms |
-
-=== "Large / JSON Schema"
-
-    | Version | Released | black/isort(Default) | Built-in | Ruff |
-    | --- | --- | --- | --- | --- |
-    | 0.59.0 | 2026-06-21 09:45 UTC | - | 360ms | - |
-    | 0.58.0 | 2026-06-20 08:30 UTC | - | 420ms | - |
-
-=== "Large / OpenAPI"
-
-    | Version | Released | black/isort(Default) | Built-in | Ruff |
-    | --- | --- | --- | --- | --- |
-    | <span class="release-benchmark-version-note" title="Fixture note for a benchmark step change.">0.59.0 *</span> | 2026-06-21 09:45 UTC | - | 881ms | Unsupported: formatter target is unavailable in this release |
-    | 0.58.0 | 2026-06-20 08:30 UTC | - | 980ms | - |
+- Historical updates commit `docs/data/release-benchmarks.json`; the page renders that JSON client-side.

@@ -2,6 +2,12 @@
   "use strict";
 
   const STATUS_OK = "ok";
+  const EMPTY_CELL = "-";
+  const MILLISECONDS_PER_SECOND = 1000;
+  const WHOLE_MS_THRESHOLD = 100;
+  const TENTH_MS_THRESHOLD = 10;
+  const SAME_SPEED_TOLERANCE = 0.005;
+  const CASE_ORDER = ["small", "large"];
   const FORMATTERS = [
     { key: "default", label: "black/isort(Default)", color: "#f59e0b" },
     { key: "builtin", label: "Built-in", color: "#2563eb" },
@@ -13,6 +19,7 @@
   const notesUrl = new URL("../../data/release-benchmark-notes.json", scriptUrl);
   const MAIN_VERSION = "main";
   const initializedCharts = new WeakSet();
+  const initializedApps = new WeakSet();
   const observedCharts = new WeakSet();
   let benchmarkPayloadPromise = null;
   let benchmarkPayload = null;
@@ -25,6 +32,10 @@
 
   function chartContainers() {
     return Array.from(document.querySelectorAll("[data-release-benchmark-chart]"));
+  }
+
+  function benchmarkApps() {
+    return Array.from(document.querySelectorAll("[data-release-benchmark-app]"));
   }
 
   function versionKey(version) {
@@ -54,17 +65,66 @@
     return String(left).localeCompare(String(right));
   }
 
+  function stringValue(value) {
+    return typeof value === "string" ? value : "";
+  }
+
+  function numberValue(value) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === "string" && value.trim() !== "") {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  }
+
+  function benchmarkEntries(data) {
+    if (!data || !Array.isArray(data.entries)) {
+      return [];
+    }
+    return data.entries.filter((entry) => entry && typeof entry === "object");
+  }
+
+  function benchmarkMetadata(data) {
+    if (!data || !data.metadata || typeof data.metadata !== "object" || Array.isArray(data.metadata)) {
+      return {};
+    }
+    return data.metadata;
+  }
+
+  function metadataValue(data, key) {
+    const value = benchmarkMetadata(data)[key];
+    if (typeof value === "number") {
+      return String(value);
+    }
+    return stringValue(value) || EMPTY_CELL;
+  }
+
+  function formatCount(value) {
+    const number = numberValue(value);
+    if (number === null) {
+      return EMPTY_CELL;
+    }
+    return new Intl.NumberFormat("en-US").format(number);
+  }
+
   function formatMs(value) {
-    if (value >= 1000) {
-      return `${(value / 1000).toFixed(2)}s`;
+    const number = numberValue(value);
+    if (number === null) {
+      return EMPTY_CELL;
     }
-    if (value >= 100) {
-      return `${value.toFixed(0)}ms`;
+    if (number >= MILLISECONDS_PER_SECOND) {
+      return `${(number / MILLISECONDS_PER_SECOND).toFixed(2)}s`;
     }
-    if (value >= 10) {
-      return `${value.toFixed(1)}ms`;
+    if (number >= WHOLE_MS_THRESHOLD) {
+      return `${number.toFixed(0)}ms`;
     }
-    return `${value.toFixed(2)}ms`;
+    if (number >= TENTH_MS_THRESHOLD) {
+      return `${number.toFixed(1)}ms`;
+    }
+    return `${number.toFixed(2)}ms`;
   }
 
   function inputLabel(inputType) {
@@ -76,6 +136,36 @@
       default:
         return inputType;
     }
+  }
+
+  function formatterLabel(formatter) {
+    const knownFormatter = FORMATTERS.find((item) => item.key === formatter);
+    return knownFormatter ? knownFormatter.label : formatter;
+  }
+
+  function caseSortKey(caseName) {
+    const index = CASE_ORDER.indexOf(caseName);
+    return [index === -1 ? CASE_ORDER.length : index, caseName];
+  }
+
+  function compareCaseNames(left, right) {
+    const leftKey = caseSortKey(left);
+    const rightKey = caseSortKey(right);
+    if (leftKey[0] !== rightKey[0]) {
+      return leftKey[0] - rightKey[0];
+    }
+    return String(leftKey[1]).localeCompare(String(rightKey[1]));
+  }
+
+  function compareFormatters(left, right) {
+    const leftIndex = FORMATTERS.findIndex((formatter) => formatter.key === left);
+    const rightIndex = FORMATTERS.findIndex((formatter) => formatter.key === right);
+    const normalizedLeft = leftIndex === -1 ? FORMATTERS.length : leftIndex;
+    const normalizedRight = rightIndex === -1 ? FORMATTERS.length : rightIndex;
+    if (normalizedLeft !== normalizedRight) {
+      return normalizedLeft - normalizedRight;
+    }
+    return String(left).localeCompare(String(right));
   }
 
   function findEntry(entries, version, formatter) {
@@ -134,7 +224,7 @@
   }
 
   function scenarioEntries(data, inputType, caseName) {
-    return data.entries.filter((entry) => entry.input_type === inputType && entry.case === caseName);
+    return benchmarkEntries(data).filter((entry) => entry.input_type === inputType && entry.case === caseName);
   }
 
   function normalizeNotes(payload) {
@@ -169,6 +259,19 @@
     return true;
   }
 
+  function noteScopeLabel(note) {
+    if (!note.inputType && !note.caseName) {
+      return "";
+    }
+    if (note.inputType && !note.caseName) {
+      return inputLabel(note.inputType);
+    }
+    if (!note.inputType) {
+      return `${note.caseName[0].toUpperCase()}${note.caseName.slice(1)}`;
+    }
+    return `${note.caseName[0].toUpperCase()}${note.caseName.slice(1)} / ${inputLabel(note.inputType)}`;
+  }
+
   function scenarioNotesByVersion(notes, inputType, caseName) {
     return notes.reduce((notesByVersion, note) => {
       if (!noteApplies(note, inputType, caseName)) {
@@ -182,16 +285,443 @@
     }, {});
   }
 
+  function visibleNotes(entries, notes) {
+    return notes
+      .filter((note) =>
+        entries.some(
+          (entry) =>
+            entry.version === note.version &&
+            noteApplies(note, stringValue(entry.input_type), stringValue(entry.case)),
+        ),
+      )
+      .sort((left, right) => {
+        const versionComparison = compareVersions(left.version, right.version);
+        if (versionComparison !== 0) {
+          return versionComparison;
+        }
+        const inputComparison = left.inputType.localeCompare(right.inputType);
+        return inputComparison === 0 ? left.caseName.localeCompare(right.caseName) : inputComparison;
+      });
+  }
+
+  function scenarios(entries) {
+    const seen = new Set();
+    const result = [];
+    entries.forEach((entry) => {
+      const inputType = stringValue(entry.input_type);
+      const caseName = stringValue(entry.case);
+      if (!inputType || !caseName) {
+        return;
+      }
+      const key = `${inputType}\u0000${caseName}`;
+      if (seen.has(key)) {
+        return;
+      }
+      seen.add(key);
+      result.push({ inputType, caseName });
+    });
+    return result.sort((left, right) => {
+      const caseComparison = compareCaseNames(left.caseName, right.caseName);
+      return caseComparison === 0 ? left.inputType.localeCompare(right.inputType) : caseComparison;
+    });
+  }
+
+  function latestVersion(entries) {
+    const versions = Array.from(new Set(entries.map((entry) => stringValue(entry.version)).filter(Boolean))).sort(
+      compareVersions,
+    );
+    return versions.length === 0 ? "" : versions[versions.length - 1];
+  }
+
+  function releaseDate(data, version) {
+    const releaseDates = benchmarkMetadata(data).release_dates;
+    if (!releaseDates || typeof releaseDates !== "object" || Array.isArray(releaseDates)) {
+      return EMPTY_CELL;
+    }
+    const uploadedAt = stringValue(releaseDates[version]);
+    if (!uploadedAt) {
+      return EMPTY_CELL;
+    }
+    const parsed = new Date(uploadedAt);
+    if (Number.isNaN(parsed.getTime())) {
+      return uploadedAt;
+    }
+    const iso = parsed.toISOString();
+    return `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
+  }
+
+  function ratioLabel(ratio) {
+    if (Math.abs(ratio - 1) <= SAME_SPEED_TOLERANCE) {
+      return "same speed";
+    }
+    if (ratio > 1) {
+      return `${ratio.toFixed(2)}x faster`;
+    }
+    return `${(1 / ratio).toFixed(2)}x slower`;
+  }
+
+  function speedLabel(entry, baseline) {
+    const entryMedian = numberValue(entry && entry.median_ms);
+    const baselineMedian = numberValue(baseline && baseline.median_ms);
+    if (entryMedian === null || baselineMedian === null || entryMedian <= 0 || baselineMedian <= 0) {
+      return "";
+    }
+    return ratioLabel(baselineMedian / entryMedian);
+  }
+
+  function statusLabel(entry) {
+    const status = stringValue(entry.status) || "unknown";
+    let prefix = status;
+    switch (status) {
+      case STATUS_OK:
+        return "OK";
+      case "unsupported":
+        prefix = "Unsupported";
+        break;
+      case "failed":
+        prefix = "Failed";
+        break;
+      default:
+        prefix = status ? `${status[0].toUpperCase()}${status.slice(1)}` : "Unknown";
+        break;
+    }
+    const error = stringValue(entry.error);
+    if (!error) {
+      return prefix;
+    }
+    if (/timeout/i.test(error)) {
+      return `${prefix}: timeout`;
+    }
+    if (/Failed to build|Failed to install|Could not install|No matching distribution/i.test(error)) {
+      return `${prefix}: install`;
+    }
+    if (/unrecognized arguments|invalid choice|No such option|unsupported/i.test(error)) {
+      return `${prefix}: unavailable`;
+    }
+    return `${prefix}: command`;
+  }
+
+  function createElement(tagName, className) {
+    const element = document.createElement(tagName);
+    if (className) {
+      element.className = className;
+    }
+    return element;
+  }
+
+  function appendText(parent, tagName, text, className) {
+    const element = createElement(tagName, className);
+    element.textContent = text;
+    parent.append(element);
+    return element;
+  }
+
+  function codeElement(text) {
+    const element = document.createElement("code");
+    element.textContent = text;
+    return element;
+  }
+
+  function appendCell(row, value, tagName) {
+    const cell = document.createElement(tagName);
+    if (value instanceof Node) {
+      cell.append(value);
+    } else {
+      cell.textContent = String(value);
+    }
+    row.append(cell);
+    return cell;
+  }
+
+  function benchmarkTable(headers, rows) {
+    const table = createElement("table", "release-benchmark-table");
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    headers.forEach((header) => appendCell(headRow, header, "th"));
+    thead.append(headRow);
+    const tbody = document.createElement("tbody");
+    rows.forEach((values) => {
+      const row = document.createElement("tr");
+      values.forEach((value) => appendCell(row, value, "td"));
+      tbody.append(row);
+    });
+    table.append(thead, tbody);
+    return table;
+  }
+
+  function chartElement(inputType, caseName) {
+    const container = createElement("span", "release-benchmark-chart");
+    container.setAttribute("data-release-benchmark-chart", "");
+    container.dataset.inputType = inputType;
+    container.dataset.case = caseName;
+    container.setAttribute("aria-label", `${caseName} / ${inputLabel(inputType)} release benchmark trend`);
+
+    const canvas = document.createElement("canvas");
+    canvas.setAttribute("role", "img");
+    canvas.setAttribute("aria-label", "Median generation time by release version");
+    const legend = createElement("span", "release-benchmark-chart__legend");
+    legend.setAttribute("aria-hidden", "true");
+    const status = createElement("span", "release-benchmark-chart__status");
+    status.setAttribute("role", "status");
+    status.textContent = "Loading benchmark chart...";
+    const tooltip = createElement("span", "release-benchmark-chart__tooltip");
+    tooltip.setAttribute("role", "status");
+    tooltip.hidden = true;
+    container.append(canvas, legend, status, tooltip);
+    return container;
+  }
+
+  function versionElement(version, notesByVersion) {
+    const versionNotes = notesByVersion[version];
+    if (!versionNotes || versionNotes.length === 0) {
+      return version;
+    }
+    const element = createElement("span", "release-benchmark-version-note");
+    element.title = versionNotes.map((note) => note.summary).join(" ");
+    element.textContent = `${version} *`;
+    return element;
+  }
+
+  function formatterHistoryCell(entry, baseline) {
+    if (!entry) {
+      return EMPTY_CELL;
+    }
+    if (entry.status !== STATUS_OK) {
+      return statusLabel(entry);
+    }
+    if (entry.formatter === "default") {
+      return formatMs(entry.median_ms);
+    }
+    const speed = speedLabel(entry, baseline);
+    return speed ? `${formatMs(entry.median_ms)} (${speed})` : formatMs(entry.median_ms);
+  }
+
+  function relativeSpeedCell(entry, baseline) {
+    if (entry.status !== STATUS_OK) {
+      return EMPTY_CELL;
+    }
+    if (entry.formatter === "default") {
+      return "baseline";
+    }
+    return speedLabel(entry, baseline) || EMPTY_CELL;
+  }
+
+  function rangeCell(entry) {
+    if (entry.status !== STATUS_OK) {
+      return EMPTY_CELL;
+    }
+    return `${formatMs(entry.min_ms)}-${formatMs(entry.max_ms)}`;
+  }
+
+  function entriesByFormatter(entries) {
+    return entries.reduce((grouped, entry) => {
+      const formatter = stringValue(entry.formatter);
+      if (formatter) {
+        grouped[formatter] = entry;
+      }
+      return grouped;
+    }, {});
+  }
+
+  function renderChartSection(fragment, entries) {
+    const scenarioList = scenarios(entries);
+    if (scenarioList.length === 0) {
+      appendText(fragment, "p", "No benchmark data is available yet.", "release-benchmark-app__status");
+      return;
+    }
+    const charts = createElement("div", "release-benchmark-chart-list");
+    scenarioList.forEach(({ inputType, caseName }) => {
+      appendText(charts, "h3", `${caseName[0].toUpperCase()}${caseName.slice(1)} / ${inputLabel(inputType)}`);
+      charts.append(chartElement(inputType, caseName));
+    });
+    fragment.append(charts);
+  }
+
+  function renderBenchmarkNotes(fragment, entries, notes) {
+    const noteList = visibleNotes(entries, notes);
+    if (noteList.length === 0) {
+      return;
+    }
+    appendText(fragment, "h2", "Benchmark Notes");
+    appendText(
+      fragment,
+      "p",
+      "Version markers in the charts and historical tables point to these benchmark interpretation notes.",
+    );
+    const list = document.createElement("ul");
+    noteList.forEach((note) => {
+      const item = document.createElement("li");
+      item.append(codeElement(note.version));
+      if (noteScopeLabel(note)) {
+        item.append(` (${noteScopeLabel(note)})`);
+      }
+      item.append(`: ${noteText(note)}`);
+      list.append(item);
+    });
+    fragment.append(list);
+  }
+
+  function selectedVersionCount(data, entries) {
+    const selectedVersions = stringValue(benchmarkMetadata(data).selected_versions);
+    if (!selectedVersions) {
+      return new Set(entries.map((entry) => stringValue(entry.version)).filter(Boolean)).size;
+    }
+    return selectedVersions.split(",").filter(Boolean).length;
+  }
+
+  function entryPythonVersions(data, entries) {
+    const versions = Array.from(new Set(entries.map((entry) => stringValue(entry.python_version)).filter(Boolean)));
+    if (versions.length > 0) {
+      return versions.sort().join(", ");
+    }
+    return metadataValue(data, "python_version");
+  }
+
+  function renderLatestDataset(fragment, data, entries) {
+    appendText(fragment, "h2", "Latest Dataset");
+    const list = document.createElement("ul");
+    [
+      ["Schema version", String(data && data.schema_version ? data.schema_version : 1)],
+      ["Generated at", metadataValue(data, "generated_at")],
+      ["Source workflow", metadataValue(data, "workflow")],
+      ["Primary Python version", metadataValue(data, "python_version")],
+      ["Entry Python versions", entryPythonVersions(data, entries)],
+      ["Benchmark runs per case", metadataValue(data, "runs_per_case")],
+      ["Version selection", metadataValue(data, "selection_strategy")],
+      ["Selected versions", String(selectedVersionCount(data, entries))],
+      ["Download source", metadataValue(data, "download_source")],
+      ["Download window", `${metadataValue(data, "download_window_days")} days`],
+      ["Downloads in window", formatCount(benchmarkMetadata(data).download_window_total)],
+      ["PyPIStats last month", formatCount(benchmarkMetadata(data).pypistats_last_month)],
+    ].forEach(([label, value]) => {
+      const item = document.createElement("li");
+      item.append(`${label}: `, codeElement(value));
+      list.append(item);
+    });
+    fragment.append(list);
+  }
+
+  function renderLatestSummary(fragment, entries) {
+    const version = latestVersion(entries);
+    if (!version) {
+      return;
+    }
+    const latestEntries = entries.filter((entry) => entry.version === version);
+    appendText(fragment, "h2", "Latest Release Summary");
+    appendText(
+      fragment,
+      "p",
+      "Results below are medians. Built-in and Ruff ratios are relative to the black/isort(Default) formatter for the same scenario.",
+    );
+    appendText(fragment, "h3", version);
+    Array.from(new Set(latestEntries.map((entry) => stringValue(entry.case)).filter(Boolean)))
+      .sort(compareCaseNames)
+      .forEach((caseName) => {
+        const caseEntries = latestEntries.filter((entry) => entry.case === caseName);
+        const rows = [];
+        scenarios(caseEntries).forEach(({ inputType }) => {
+          const scenarioEntriesForCase = caseEntries.filter((entry) => entry.input_type === inputType);
+          const byFormatter = entriesByFormatter(scenarioEntriesForCase);
+          Object.keys(byFormatter)
+            .sort(compareFormatters)
+            .forEach((formatter) => {
+              const entry = byFormatter[formatter];
+              rows.push([
+                inputLabel(inputType),
+                formatterLabel(formatter),
+                formatMs(entry.median_ms),
+                relativeSpeedCell(entry, byFormatter.default),
+                rangeCell(entry),
+                statusLabel(entry),
+              ]);
+            });
+        });
+        if (rows.length > 0) {
+          appendText(fragment, "h4", `${caseName[0].toUpperCase()}${caseName.slice(1)}`);
+          fragment.append(
+            benchmarkTable(["Input", "Formatter", "Median", "vs black/isort(Default)", "Range", "Status"], rows),
+          );
+        }
+      });
+  }
+
+  function renderHistoricalResults(fragment, data, entries, notes) {
+    appendText(fragment, "h2", "Historical Results");
+    appendText(
+      fragment,
+      "p",
+      "Rows are release versions, newest first, with main shown before releases when present. Released is the PyPI upload timestamp in UTC. Formatter cells show median generation time and relative speed when available.",
+    );
+    scenarios(entries).forEach(({ inputType, caseName }) => {
+      const scenarioEntriesForCase = entries.filter(
+        (entry) => entry.input_type === inputType && entry.case === caseName,
+      );
+      const notesByVersion = scenarioNotesByVersion(notes, inputType, caseName);
+      const rows = [];
+      Array.from(new Set(scenarioEntriesForCase.map((entry) => stringValue(entry.version)).filter(Boolean)))
+        .sort(compareVersions)
+        .reverse()
+        .forEach((version) => {
+          const versionEntries = scenarioEntriesForCase.filter((entry) => entry.version === version);
+          if (!versionEntries.some((entry) => entry.status === STATUS_OK)) {
+            return;
+          }
+          const byFormatter = entriesByFormatter(versionEntries);
+          rows.push([
+            versionElement(version, notesByVersion),
+            releaseDate(data, version),
+            ...FORMATTERS.map((formatter) => formatterHistoryCell(byFormatter[formatter.key], byFormatter.default)),
+          ]);
+        });
+      if (rows.length === 0) {
+        return;
+      }
+      appendText(fragment, "h3", `${caseName[0].toUpperCase()}${caseName.slice(1)} / ${inputLabel(inputType)}`);
+      fragment.append(
+        benchmarkTable(["Version", "Released", ...FORMATTERS.map((formatter) => formatter.label)], rows),
+      );
+    });
+  }
+
+  function renderBenchmarkApp(container, data, notes) {
+    const entries = benchmarkEntries(data);
+    const fragment = document.createDocumentFragment();
+    if (entries.length === 0) {
+      appendText(fragment, "p", "No release benchmark data has been committed yet.", "release-benchmark-app__status");
+      container.replaceChildren(fragment);
+      return;
+    }
+    const backfillNote = stringValue(benchmarkMetadata(data).compatibility_backfill);
+    if (backfillNote) {
+      appendText(fragment, "p", `Compatibility backfill: ${backfillNote}`);
+    }
+    renderChartSection(fragment, entries);
+    renderBenchmarkNotes(fragment, entries, notes);
+    renderLatestDataset(fragment, data, entries);
+    renderLatestSummary(fragment, entries);
+    renderHistoricalResults(fragment, data, entries, notes);
+    container.replaceChildren(fragment);
+    scheduleInitializeCharts();
+  }
+
   function renderLegend(container) {
     const legend = container.querySelector(".release-benchmark-chart__legend");
     if (!legend) {
       return;
     }
-    const legendItems = FORMATTERS.map(
-      (formatter) =>
-        `<span class="release-benchmark-chart__legend-item"><span class="release-benchmark-chart__swatch" style="background:${formatter.color}"></span>${formatter.label}</span>`,
-    ).join("");
-    legend.innerHTML = `<span class="release-benchmark-chart__legend-label">Formatter:</span>${legendItems}`;
+    const label = document.createElement("span");
+    label.className = "release-benchmark-chart__legend-label";
+    label.textContent = "Formatter:";
+    const legendItems = FORMATTERS.map((formatter) => {
+      const item = document.createElement("span");
+      const swatch = document.createElement("span");
+      item.className = "release-benchmark-chart__legend-item";
+      swatch.className = "release-benchmark-chart__swatch";
+      swatch.style.background = formatter.color;
+      item.append(swatch, formatter.label);
+      return item;
+    });
+    legend.replaceChildren(label, ...legendItems);
   }
 
   function setStatus(container, message) {
@@ -446,6 +976,30 @@
     scheduleRender(benchmarkPayload.data, benchmarkPayload.notes, initializedChartContainers());
   }
 
+  function initializeBenchmarkApps() {
+    const apps = benchmarkApps().filter((container) => !initializedApps.has(container));
+    if (apps.length === 0) {
+      return;
+    }
+    apps.forEach((container) => {
+      initializedApps.add(container);
+      const status = container.querySelector("[data-release-benchmark-status]");
+      if (status) {
+        status.textContent = "Loading benchmark data...";
+      }
+    });
+    loadBenchmarkPayload()
+      .then(({ data, notes }) => {
+        apps.forEach((container) => renderBenchmarkApp(container, data, notes));
+      })
+      .catch((error) => {
+        apps.forEach((container) => {
+          container.replaceChildren();
+          appendText(container, "p", error.message, "release-benchmark-app__status");
+        });
+      });
+  }
+
   function loadBenchmarkPayload() {
     if (benchmarkPayloadPromise) {
       return benchmarkPayloadPromise;
@@ -494,7 +1048,10 @@
   // Material instant navigation swaps page content without re-running destination extra scripts.
   function scheduleNavigationRetry() {
     [0, 50, 250, 750].forEach((delay) => {
-      window.setTimeout(scheduleInitializeCharts, delay);
+      window.setTimeout(() => {
+        initializeBenchmarkApps();
+        scheduleInitializeCharts();
+      }, delay);
     });
   }
 
@@ -569,6 +1126,9 @@
     }
     mutationObserverAttached = true;
     const observer = new MutationObserver(() => {
+      if (benchmarkApps().some((container) => !initializedApps.has(container))) {
+        initializeBenchmarkApps();
+      }
       if (chartContainers().some((container) => !initializedCharts.has(container))) {
         scheduleInitializeCharts();
       }
@@ -596,7 +1156,7 @@
     }
     instantNavigationHookAttached = true;
     try {
-      navigationDocument.subscribe(scheduleInitializeCharts);
+      navigationDocument.subscribe(start);
     } catch {
       // Initial rendering and navigation retry still cover environments without this observable.
     }
@@ -605,6 +1165,7 @@
   function start() {
     attachNavigationEvents();
     attachMutationObserver();
+    initializeBenchmarkApps();
     scheduleInitializeCharts();
     attachInstantNavigationHook();
   }
