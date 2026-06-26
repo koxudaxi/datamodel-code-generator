@@ -278,16 +278,14 @@ def test_schema_validator_conditional_predicate_helpers() -> None:
     assert parser.extra_template_data["#/Model"] == {}
 
 
-def test_parse_id_traverses_property_names_schema(mocker: MockerFixture) -> None:
+def test_parse_id_traverses_property_names_schema() -> None:
     """Test $id collection traverses propertyNames schemas."""
     parser = JsonSchemaParser("")
     obj = JsonSchemaObject.model_validate({"propertyNames": {"$id": "urn:property-name"}})
-    spy = mocker.spy(parser, "parse_id")
 
     parser.parse_id(obj, ["#"])
 
-    assert spy.call_count == 2
-    assert parser.model_resolver.ids[""]["urn:property-name"] == "#"
+    assert parser.model_resolver.ids[""]["urn:property-name"] == "#/propertyNames"
 
 
 def test_parse_obj_returns_when_merged_ref_still_has_ref(mocker: MockerFixture) -> None:

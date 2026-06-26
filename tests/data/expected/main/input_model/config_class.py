@@ -145,6 +145,8 @@ class BaseGenerateConfig(TypedDict):
     additional_imports: NotRequired[list[str] | None]
     class_decorators: NotRequired[list[str] | None]
     custom_template_dir: NotRequired[str | None]
+    generate_schema_validators: NotRequired[bool]
+    schema_validator_base_class_name: NotRequired[str | None]
     validation: NotRequired[bool]
     field_constraints: NotRequired[bool]
     alias_generator: NotRequired[AliasGenerator | None]
