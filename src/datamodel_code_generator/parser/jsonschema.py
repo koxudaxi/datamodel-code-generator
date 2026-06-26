@@ -3975,7 +3975,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         base_classes: list[Reference],
         required: list[str],
     ) -> DataType:
-        obj = self._merge_conditional_properties(obj)
+        if self.generate_schema_validators:
+            obj = self._merge_conditional_properties(obj)
         self._preload_property_refs_for_rw_models(obj)
         if obj.properties:
             fields.extend(
@@ -4031,7 +4032,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             and not fields
             and extra_field is None
             and len(base_classes) == 1
-            and not self._has_schema_validator_constraints(obj)
+            and not (self.generate_schema_validators and self._has_schema_validator_constraints(obj))
         ):
             with self.model_resolver.current_base_path_context(self.model_resolver._base_path):  # noqa: SLF001
                 self.model_resolver.delete(path)
@@ -4067,7 +4068,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             fields.insert(0, extra_field)
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
-        self._add_schema_validators(reference.path, reference.name, obj, path, fields, base_classes)
+        if self.generate_schema_validators:
+            self._add_schema_validators(reference.path, reference.name, obj, path, fields, base_classes)
 
         generates_separate = self._should_generate_separate_models(fields, base_classes)
         if generates_separate:
@@ -4556,7 +4558,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         unique: bool = True,  # noqa: FBT001, FBT002
     ) -> DataType:
         """Parse object schema into a data model."""
-        obj = self._merge_conditional_properties(obj)
+        if self.generate_schema_validators:
+            obj = self._merge_conditional_properties(obj)
         if not unique:  # pragma: no cover
             warn(
                 f"{self.__class__.__name__}.parse_object() ignore `unique` argument."
@@ -4638,7 +4641,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
-        self._add_schema_validators(reference.path, class_name, obj, path, fields, [])
+        if self.generate_schema_validators:
+            self._add_schema_validators(reference.path, class_name, obj, path, fields, [])
 
         generates_separate = self._should_generate_separate_models(fields, None)
         if generates_separate:
@@ -4956,7 +4960,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self.parse_array_fields(name, item, get_special_path("array", path)).data_type
         if item.discriminator and parent and parent.is_array and (item.oneOf or item.anyOf):
             return self.parse_root_type(name, item, path)
-        if self._should_parse_object_with_schema_validators(item):
+        if self.generate_schema_validators and self._should_parse_object_with_schema_validators(item):
             return self.parse_object(name, item, get_special_path("object", path), singular_name=singular_name)
         if item.anyOf:
             if combined_const_enum := self._parse_combined_const_enum(
@@ -6137,7 +6141,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             self.parse_root_type(name, obj, path)
         elif obj.allOf:
             self.parse_all_of(name, obj, path)
-        elif self._should_parse_object_with_schema_validators(obj):
+        elif self.generate_schema_validators and self._should_parse_object_with_schema_validators(obj):
             self.parse_object(name, obj, path)
         elif obj.oneOf or obj.anyOf:
             combined_items = obj.oneOf or obj.anyOf
