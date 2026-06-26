@@ -184,7 +184,7 @@ jobs:
           if-no-files-found: error
 
   update-docs:
-    name: Update release benchmark data
+    name: Create release benchmark data PR
     needs: build
     if: >-
       ${{
@@ -200,8 +200,8 @@ jobs:
       }}
     runs-on: ubuntu-24.04
     outputs:
-      changed: ${{ steps.commit.outputs.changed }}
-      commit_sha: ${{ steps.commit.outputs.commit_sha }}
+      changed: ${{ steps.pr.outputs.changed }}
+      pr_number: ${{ steps.pr.outputs.pr_number }}
     env:
       BENCHMARK_PYTHON_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.python_version || '3.14.2' }}
     steps:
@@ -243,9 +243,8 @@ jobs:
         with:
           app-id: ${{ secrets.GENERATED_DOCS_APP_ID }}
           private-key: ${{ secrets.GENERATED_DOCS_APP_PRIVATE_KEY }}
-          permission-contents: write
-      - name: Commit benchmark data
-        id: commit
+      - name: Create or update release benchmark data PR
+        id: pr
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           TARGET_REPO: ${{ github.repository }}
@@ -257,40 +256,73 @@ jobs:
             koxudaxi/datamodel-code-generator) ;;
             *) echo "Refusing to push release benchmark docs to $TARGET_REPO" >&2; exit 1 ;;
           esac
-          for attempt in 1 2 3; do
-            git fetch origin main
-            git reset --hard origin/main
-            python scripts/update_release_benchmark_history.py \
-              --incoming-data .benchmarks/update/release-benchmarks.json \
-              --selection .benchmarks/update/release-benchmark-selection-refresh.json \
-              --output docs/data/release-benchmarks.json
-            git add docs/data/release-benchmarks.json
-            if git diff --cached --quiet; then
-              echo "changed=false" >> "$GITHUB_OUTPUT"
-              echo "commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            git commit -m "docs: update release benchmark data"
-            if git -c "http.https://github.com/${TARGET_REPO}.git.extraheader=AUTHORIZATION: bearer ${GH_TOKEN}" \
-              push "https://github.com/${TARGET_REPO}.git" "HEAD:refs/heads/main"; then
-              echo "changed=true" >> "$GITHUB_OUTPUT"
-              echo "commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            if [ "$attempt" = "3" ]; then
-              echo "Failed to push release benchmark data after ${attempt} attempts" >&2
-              exit 1
-            fi
-            sleep $((attempt * 2))
-          done
+          sync_branch="$(
+            python - <<'PY'
+          import hashlib
+          import json
+          import re
+          from pathlib import Path
 
-  deploy-docs:
-    needs: update-docs
-    if: needs.update-docs.outputs.changed == 'true'
-    uses: ./.github/workflows/docs-deploy.yaml
-    with:
-      checkout_ref: ${{ needs.update-docs.outputs.commit_sha }}
-      deploy_branch: main
-    secrets:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          payload = json.loads(Path(".benchmarks/update/release-benchmark-selection-refresh.json").read_text())
+          raw = "-".join(str(version) for version in payload.get("selected_versions", []) if version) or "data"
+          safe = re.sub(r"[^A-Za-z0-9._-]+", "-", raw).strip("-") or "data"
+          if len(safe) > 80:
+              digest = hashlib.sha256(raw.encode()).hexdigest()[:12]
+              safe = f"{safe[:60].rstrip('-')}-{digest}"
+          print(f"docs/release-benchmark-{safe}")
+          PY
+          )"
+
+          git fetch origin main
+          git reset --hard origin/main
+          python scripts/update_release_benchmark_history.py \
+            --incoming-data .benchmarks/update/release-benchmarks.json \
+            --selection .benchmarks/update/release-benchmark-selection-refresh.json \
+            --output docs/data/release-benchmarks.json
+          git add docs/data/release-benchmarks.json
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "docs: update release benchmark data"
+
+          remote_url="https://x-access-token:${GH_TOKEN}@github.com/${TARGET_REPO}.git"
+          remote_sha="$(git ls-remote --heads "$remote_url" "$sync_branch" | awk '{print $1}')"
+          if [ -n "$remote_sha" ]; then
+            git push --force-with-lease="refs/heads/${sync_branch}:${remote_sha}" \
+              "$remote_url" \
+              "HEAD:refs/heads/${sync_branch}"
+          else
+            git push "$remote_url" "HEAD:refs/heads/${sync_branch}"
+          fi
+
+          target_owner="${TARGET_REPO%%/*}"
+          existing_pr="$(
+            gh pr list \
+              --repo "$TARGET_REPO" \
+              --base main \
+              --head "${target_owner}:${sync_branch}" \
+              --state open \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+
+          if [ -n "$existing_pr" ]; then
+            gh pr edit "$existing_pr" \
+              --repo "$TARGET_REPO" \
+              --title "Update release benchmark data" \
+              --body ""
+            pr_number="$existing_pr"
+          else
+            pr_url="$(
+              gh pr create \
+                --repo "$TARGET_REPO" \
+                --base main \
+                --head "${target_owner}:${sync_branch}" \
+                --title "Update release benchmark data" \
+                --body ""
+            )"
+            pr_number="${pr_url##*/}"
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
