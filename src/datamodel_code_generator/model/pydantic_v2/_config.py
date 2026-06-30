@@ -26,12 +26,16 @@ _CONFIG_EXTRA_KEYS: frozenset[str] = frozenset({
     "additionalProperties",
     "allow_extra_fields",
     "extra_fields",
+    "force_extra_allow",
     "unevaluatedProperties",
 })
 
 
 def get_config_extra(extra_template_data: dict[str, Any]) -> ConfigExtra | None:
     """Get extra field configuration for ConfigDict."""
+    if extra_template_data.get("force_extra_allow"):
+        return "'allow'"
+
     additional_properties = extra_template_data.get("additionalProperties")
     unevaluated_properties = extra_template_data.get("unevaluatedProperties")
     allow_extra_fields = extra_template_data.get("allow_extra_fields")

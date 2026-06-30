@@ -125,6 +125,12 @@ class ExtraFields(str, Enum):
     Forbid = "forbid"
 
 
+class SchemaValidatorType(Enum):
+    """Schema-derived runtime validator backend."""
+
+    PydanticV2 = "pydantic-v2"
+
+
 class NamingStrategy(Enum):
     """Strategy for generating unique model names when duplicates occur.
 
@@ -357,6 +363,7 @@ __all__ = [
     "ProtobufVersion",
     "ReadOnlyWriteOnlyModelType",
     "ReuseScope",
+    "SchemaValidatorType",
     "StrictTypes",
     "TargetPydanticVersion",
     "UnionMode",

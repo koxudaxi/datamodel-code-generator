@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from keyword import iskeyword
 from pathlib import Path  # noqa: TC003 - used at runtime by Pydantic
 from typing import TYPE_CHECKING, Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from datamodel_code_generator._format_types import (
     DateClassType,
@@ -63,6 +64,16 @@ else:
     ExtraTemplateDataType = defaultdict[str, Annotated[dict[str, Any], Field(default_factory=dict)]]
 
 
+def validate_schema_validator_base_class_name(value: str | None) -> str | None:
+    """Validate the generated shared schema validator base class name."""
+    if value is None:
+        return value
+    if not value.isidentifier() or iskeyword(value):
+        msg = f"--schema-validator-base-class-name '{value}' is not a valid Python identifier"
+        raise ValueError(msg)
+    return value
+
+
 class GenerateConfig(BaseGenerateConfig):
     """Configuration model for generate()."""
 
@@ -81,6 +92,10 @@ class GenerateConfig(BaseGenerateConfig):
     custom_formatters_kwargs: dict[str, Any] | None = None
     settings_path: Path | None = None
     default_value_overrides: Mapping[str, Any] | None = None
+
+    _validate_schema_validator_base_class_name = field_validator("schema_validator_base_class_name")(
+        validate_schema_validator_base_class_name
+    )
 
 
 def _rebuild_generate_config() -> None:
@@ -109,6 +124,8 @@ class ParserConfig(BaseModel):
     custom_template_dir: Path | None = None
     extra_template_data: ExtraTemplateDataType | None = None
     validators: Mapping[str, ModelValidators] | None = None
+    generate_schema_validators: bool = False
+    schema_validator_base_class_name: str | None = None
     target_python_version: PythonVersion = PythonVersionMin
     dump_resolve_reference_action: DumpResolveReferenceAction | None = None
     validation: bool = False
@@ -229,6 +246,10 @@ class ParserConfig(BaseModel):
     target_pydantic_version: TargetPydanticVersion | None = None
     default_value_overrides: Mapping[str, Any] | None = None
     external_ref_mapping: dict[str, str] | None = None
+
+    _validate_schema_validator_base_class_name = field_validator("schema_validator_base_class_name")(
+        validate_schema_validator_base_class_name
+    )
 
 
 class GraphQLParserConfig(ParserConfig):

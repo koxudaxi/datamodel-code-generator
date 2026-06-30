@@ -108,6 +108,7 @@ import tempfile
 import warnings
 from collections.abc import Mapping, Sequence
 from enum import Enum, IntEnum
+from keyword import iskeyword
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
@@ -539,6 +540,17 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
         if isinstance(v, str):
             return ClassNameAffixScope(v)
         return v  # pragma: no cover
+
+    @field_validator("schema_validator_base_class_name")
+    @classmethod
+    def validate_schema_validator_base_class_name(cls, v: str | None) -> str | None:  # ty: ignore
+        """Validate schema validator base class name."""
+        if v is None:  # pragma: no cover
+            return v
+        if not v.isidentifier() or iskeyword(v):
+            msg = f"--schema-validator-base-class-name '{v}' is not a valid Python identifier"
+            raise Error(msg)
+        return v
 
     input: Optional[Union[Path, str]] = None  # noqa: UP007, UP045
     input_model: Optional[list[str]] = None  # noqa: UP045
