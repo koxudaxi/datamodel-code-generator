@@ -5,6 +5,20 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.66.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.66.1) - 2026-06-30
+
+## What's Changed
+* Add schema validators by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3228
+* Update CHANGELOG for 0.66.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3502
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3503
+* [pre-commit.ci] pre-commit autoupdate by @pre-commit-ci[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3504
+* Fix inline-snapshot compatibility by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3506
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.66.0...0.66.1
+
+---
+
 ## [0.66.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.66.0) - 2026-06-26
 
 ## Breaking Changes
