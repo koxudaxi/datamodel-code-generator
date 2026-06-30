@@ -1007,7 +1007,7 @@ dev = [
     { name = "email-validator", specifier = ">=2.2" },
     { name = "hypothesis", specifier = ">=6.136.6" },
     { name = "hypothesis-jsonschema", specifier = ">=0.23.1" },
-    { name = "inline-snapshot", specifier = ">=0.31.1" },
+    { name = "inline-snapshot", specifier = ">=0.34.2" },
     { name = "jsonschema", specifier = ">=4.24" },
     { name = "msgspec", specifier = ">=0.18" },
     { name = "prek", specifier = ">=0.2.22" },
@@ -1051,7 +1051,7 @@ test = [
     { name = "email-validator", specifier = ">=2.2" },
     { name = "hypothesis", specifier = ">=6.136.6" },
     { name = "hypothesis-jsonschema", specifier = ">=0.23.1" },
-    { name = "inline-snapshot", specifier = ">=0.31.1" },
+    { name = "inline-snapshot", specifier = ">=0.34.2" },
     { name = "jsonschema", specifier = ">=4.24" },
     { name = "msgspec", specifier = ">=0.18" },
     { name = "pytest", specifier = ">=8.3.4" },
@@ -1069,7 +1069,7 @@ type = [
     { name = "email-validator", specifier = ">=2.2" },
     { name = "hypothesis", specifier = ">=6.136.6" },
     { name = "hypothesis-jsonschema", specifier = ">=0.23.1" },
-    { name = "inline-snapshot", specifier = ">=0.31.1" },
+    { name = "inline-snapshot", specifier = ">=0.34.2" },
     { name = "jsonschema", specifier = ">=4.24" },
     { name = "msgspec", specifier = ">=0.18" },
     { name = "pytest", specifier = ">=8.3.4" },
@@ -1554,7 +1554,7 @@ wheels = [
 
 [[package]]
 name = "inline-snapshot"
-version = "0.31.1"
+version = "0.34.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asttokens" },
@@ -1562,10 +1562,11 @@ dependencies = [
     { name = "pytest" },
     { name = "rich" },
     { name = "tomli", marker = "python_full_version < '3.11' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-blacklatest') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-blacklatest') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-blacklatest') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-blacklatest' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-isort5') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-isort6') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-isort7') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-isort8') or (extra == 'group-24-datamodel-code-generator-isort5' and extra == 'group-24-datamodel-code-generator-isort6') or (extra == 'group-24-datamodel-code-generator-isort5' and extra == 'group-24-datamodel-code-generator-isort7') or (extra == 'group-24-datamodel-code-generator-isort5' and extra == 'group-24-datamodel-code-generator-isort8') or (extra == 'group-24-datamodel-code-generator-isort6' and extra == 'group-24-datamodel-code-generator-isort7') or (extra == 'group-24-datamodel-code-generator-isort6' and extra == 'group-24-datamodel-code-generator-isort8') or (extra == 'group-24-datamodel-code-generator-isort7' and extra == 'group-24-datamodel-code-generator-isort8')" },
+    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1c/b1/52b5ee59f73ed31d5fe21b10881bf2d121d07d54b23c0b6b74186792e620/inline_snapshot-0.31.1.tar.gz", hash = "sha256:4ea5ed70aa1d652713bbfd750606b94bd8a42483f7d3680433b3e92994495f64", size = 2606338, upload-time = "2025-11-07T07:36:18.932Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/91/c3/b5c36ab59e355b8d7c59205b8903fa74458c6938c9691f7d7730404f94c9/inline_snapshot-0.34.2.tar.gz", hash = "sha256:d160cb6059e00916c2e846abc014ead6f01fb24479f13696fb8670d7a7937f67", size = 2641142, upload-time = "2026-06-19T21:17:27.338Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ba/52/945db420380efbda8c69a7a4a16c53df9d7ac50d8217286b9d41e5d825ff/inline_snapshot-0.31.1-py3-none-any.whl", hash = "sha256:7875a73c986a03388c7e758fb5cb8a43d2c3a20328aa1d851bfb4ed536c4496f", size = 71965, upload-time = "2025-11-07T07:36:16.836Z" },
+    { url = "https://files.pythonhosted.org/packages/bb/2a/84fe7ef052ac666e95e7cabdf0905aa3f2c90b5a117419760b39b577602a/inline_snapshot-0.34.2-py3-none-any.whl", hash = "sha256:743a514a08ffd0d2d62878b0208d4def5041585affa7db6b89f0ca2e23552361", size = 90717, upload-time = "2026-06-19T21:17:25.629Z" },
 ]
 
 [[package]]
