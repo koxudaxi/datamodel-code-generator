@@ -1945,7 +1945,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             serialization_alias=serialization_alias,
             constraints=constraints,
             nullable=field.nullable
-            if self.strict_nullable and field.nullable is not None
+            if (self.strict_nullable or self.use_missing_sentinel) and field.nullable is not None
             else (False if self.strict_nullable and (has_default or required) else None),
             strip_default_none=self.strip_default_none,
             extras=self.get_field_extras(field),
@@ -1964,6 +1964,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             use_serialization_alias=self.use_serialization_alias,
             use_default_factory_for_optional_nested_models=self.use_default_factory_for_optional_nested_models,
             use_default_with_required=use_default_with_required,
+            **self._data_model_field_common_kwargs(),
         )
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
@@ -3402,6 +3403,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             data_type=self._get_inherited_field_type(required_field_name, base_classes)
             or DataType(type=ANY, import_=IMPORT_ANY),
             use_serialization_alias=self.use_serialization_alias,
+            **self._data_model_field_common_kwargs(),
         )
 
     def _schema_signature(self, prop_schema: JsonSchemaObject | bool) -> str | bool:  # noqa: FBT001, PLR6301
@@ -4208,6 +4210,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             name=None,
             data_type=ref_data_type,
             required=True,
+            **self._data_model_field_common_kwargs(),
         )
         self._register_root_model(
             reference=reference,
@@ -4461,6 +4464,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         use_inline_field_description=self.use_inline_field_description,
                         original_name=original_field_name,
                         use_serialization_alias=self.use_serialization_alias,
+                        **self._data_model_field_common_kwargs(),
                     )
                 )
                 continue
@@ -5135,6 +5139,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             use_inline_field_description=self.use_inline_field_description,
             original_name=None,
             has_default=obj.has_default,
+            **self._data_model_field_common_kwargs(),
         )
 
     def parse_array(
@@ -5172,6 +5177,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 use_inline_field_description=self.use_inline_field_description,
                 original_name=None,
                 has_default=field.has_default,
+                **self._data_model_field_common_kwargs(),
             )
 
         self._register_root_model(
@@ -5301,6 +5307,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     use_inline_field_description=self.use_inline_field_description,
                     original_name=None,
                     has_default=has_default_override,
+                    **self._data_model_field_common_kwargs(),
                 )
             ],
             obj=obj,
@@ -5355,7 +5362,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     default=obj.default,
                     required=required,
                     constraints=constraints,
-                    nullable=obj.type_has_null if self.strict_nullable else None,
+                    nullable=obj.type_has_null if (self.strict_nullable or self.use_missing_sentinel) else None,
                     strip_default_none=self.strip_default_none,
                     extras=self.get_field_extras(obj),
                     use_annotated=self.use_annotated,
@@ -5364,6 +5371,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     use_inline_field_description=self.use_inline_field_description,
                     original_name=None,
                     has_default=obj.has_default,
+                    **self._data_model_field_common_kwargs(),
                 )
             ],
             obj=obj,
@@ -5491,6 +5499,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     use_inline_field_description=self.use_inline_field_description,
                     extras=field_extras,
                     original_name=None,
+                    **self._data_model_field_common_kwargs(),
                 )
             )
 
@@ -5525,6 +5534,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         use_field_description_example=self.use_field_description_example,
                         use_inline_field_description=self.use_inline_field_description,
                         original_name=None,
+                        **self._data_model_field_common_kwargs(),
                     )
                 ],
                 obj=obj,
@@ -5598,6 +5608,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     use_field_description_example=self.use_field_description_example,
                     use_inline_field_description=self.use_inline_field_description,
                     original_name=None,
+                    **self._data_model_field_common_kwargs(),
                 )
             ],
             obj=obj,

@@ -137,6 +137,7 @@ def _payload_codegen_args(case: SchemaCase, input_path: Path, output_path: Path,
     ]
     if case.input_file_type == "openapi":
         args.extend(["--openapi-scopes", "schemas", "--strict-nullable"])
+    args.extend(case.backend_extra_args.get(backend, ()))
     return args
 
 

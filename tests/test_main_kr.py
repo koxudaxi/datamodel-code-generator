@@ -2126,6 +2126,7 @@ The `--target-pydantic-version` flag controls Pydantic version-specific config:
 
 - **2**: Uses `populate_by_name=True` (compatible with Pydantic 2.0-2.10)
 - **2.11**: Uses `validate_by_name=True` (for Pydantic 2.11+)
+- **2.12**: Uses `validate_by_name=True` and allows features that require Pydantic 2.12+
 
 This prevents breaking changes when generated code is used on older Pydantic versions.""",
     input_schema="jsonschema/person.json",
@@ -2147,6 +2148,7 @@ def test_target_pydantic_version(output_file: Path) -> None:
 
     - **2**: Uses `populate_by_name=True` (compatible with Pydantic 2.0-2.10)
     - **2.11**: Uses `validate_by_name=True` (for Pydantic 2.11+)
+    - **2.12**: Uses `validate_by_name=True` and allows features that require Pydantic 2.12+
 
     This prevents breaking changes when generated code is used on older Pydantic versions.
     """

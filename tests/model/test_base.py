@@ -39,7 +39,7 @@ from datamodel_code_generator.model.msgspec import Struct as MsgspecStruct
 from datamodel_code_generator.model.pydantic_base import DataModelField as PydanticBaseDataModelField
 from datamodel_code_generator.model.pydantic_v2 import BaseModel
 from datamodel_code_generator.model.pydantic_v2 import DataModelField as PydanticV2DataModelField
-from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_FIELD
+from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_FIELD, IMPORT_MISSING
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import ANY, NONE, DataType, Types
 
@@ -211,6 +211,35 @@ def test_pydantic_v2_extra_type_hint_uses_structured_root_dict() -> None:
     assert data_type.use_standard_collections is True
     assert item_type.use_standard_collections is True
     assert IMPORT_DICT in field.imports
+
+
+def test_pydantic_v2_missing_sentinel_default_keeps_explicit_default() -> None:
+    """Test explicit defaults are not replaced by the MISSING sentinel."""
+    field = PydanticV2DataModelField(
+        name="value",
+        data_type=DataType(type="str"),
+        default="fallback",
+        use_missing_sentinel=True,
+    )
+
+    assert not field.use_missing_sentinel_default
+    assert field.represented_default == "'fallback'"
+    assert IMPORT_MISSING not in field.imports
+
+
+def test_pydantic_v2_missing_sentinel_type_hint_fallbacks(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test defensive MISSING type-hint branches."""
+    field = PydanticV2DataModelField(
+        name="value",
+        data_type=DataType(type="str", use_union_operator=True),
+        use_missing_sentinel=True,
+    )
+
+    assert field._type_hint_with_missing_sentinel("") == "MISSING"
+
+    monkeypatch.setattr(PydanticV2DataModelField, "_use_union_operator", property(lambda _self: None))
+
+    assert field._type_hint_with_missing_sentinel("str") == "str"
 
 
 def test_rendered_pydantic_v2_field_reuses_field_string(monkeypatch: pytest.MonkeyPatch) -> None:

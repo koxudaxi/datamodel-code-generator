@@ -308,7 +308,7 @@ class DataModelField(DataModelFieldBase):
             field_arguments = ["...", *field_arguments]
         elif (
             not default_factory
-            and (default_repr := represent_python_value(self.default))
+            and (default_repr := self.represented_default)
             and not self.should_strip_default_none(keep_optional=True)
         ):
             field_arguments = [default_repr, *field_arguments]

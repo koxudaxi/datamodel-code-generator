@@ -221,10 +221,26 @@ class TargetPydanticVersion(Enum):
 
     V2: Generate code compatible with Pydantic 2.0+ (uses populate_by_name).
     V2_11: Generate code for Pydantic 2.11+ (uses validate_by_name).
+    V2_12: Generate code for Pydantic 2.12+ (supports MISSING sentinel).
     """
 
     V2 = "2"
     V2_11 = "2.11"
+    V2_12 = "2.12"
+
+
+def _pydantic_version_key(target_version: TargetPydanticVersion | str) -> tuple[int, ...]:
+    """Convert a target Pydantic version into comparable integer parts."""
+    value = target_version.value if isinstance(target_version, TargetPydanticVersion) else target_version
+    return tuple(int(part) for part in value.split("."))
+
+
+def _is_pydantic_version_at_least(
+    target_version: TargetPydanticVersion | str,
+    minimum: TargetPydanticVersion | str,
+) -> bool:
+    """Return whether the target Pydantic version is greater than or equal to the minimum."""
+    return _pydantic_version_key(target_version) >= _pydantic_version_key(minimum)
 
 
 class AliasGenerator(Enum):

@@ -116,6 +116,29 @@ def test_base_model_config_alias_generator_order_and_import() -> None:
     )
 
 
+def test_model_config_target_pydantic_version_uses_validate_by_name_for_later_versions() -> None:
+    """Pydantic model config treats target Pydantic versions later than 2.11 as 2.11+."""
+    extra_template_data = _extra_template_data()
+    extra_template_data["Model"]["target_pydantic_version"] = "2.13"
+    base_model = BaseModel(fields=[_field()], reference=_reference(), extra_template_data=extra_template_data)
+
+    extra_template_data = _extra_template_data()
+    extra_template_data["Model"]["target_pydantic_version"] = "2.13"
+    dataclass_model = DataClass(fields=[_field()], reference=_reference(), extra_template_data=extra_template_data)
+
+    base_model_config = base_model.extra_template_data["config"].model_dump(exclude_unset=True)
+    dataclass_config = dataclass_model.extra_template_data["config"]
+    assert_output(
+        (
+            f"base model config keys: {list(base_model_config)!r}\n"
+            f"base model config: {base_model_config!r}\n"
+            f"dataclass config keys: {list(dataclass_config)!r}\n"
+            f"dataclass config: {dataclass_config!r}\n"
+        ),
+        EXPECTED_PYDANTIC_V2_MODEL_PATH / "config_target_pydantic_future_version.txt",
+    )
+
+
 def test_base_model_alias_generator_adds_field_import_for_mismatch() -> None:
     """Alias generator mismatch fields still import Field."""
     extra_template_data = defaultdict(dict, {"Model": {"alias_generator": "to_camel"}})

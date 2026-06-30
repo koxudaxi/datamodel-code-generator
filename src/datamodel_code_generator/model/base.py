@@ -338,6 +338,7 @@ class DataModelFieldBase(_BaseModel):
     const: bool = False
     original_name: Optional[str] = None  # noqa: UP045
     use_default_kwarg: bool = False
+    use_missing_sentinel: bool = False
     use_one_literal_as_default: bool = False
     _exclude_fields: ClassVar[set[str]] = {"parent"}
     _pass_fields: ClassVar[set[str]] = {"parent", "data_type"}

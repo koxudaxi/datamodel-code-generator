@@ -125,7 +125,7 @@ Generated model class and package behavior.
 - `--reuse-model`: Reuse models on the field when a module has the model with the same content
 - `--reuse-scope`: Scope for model reuse deduplication: module (per-file, default) or tree (cross-file with shared module). Only effective when --reuse-model is set. Choices: `module`, `tree`.
 - `--target-python-version`: target python version Choices: `3.10`, `3.11`, `3.12`, `3.13`, `3.14`.
-- `--target-pydantic-version`: Target Pydantic version for generated code. '2': Pydantic 2.0+ compatible (default, uses populate_by_name). '2.11': Pydantic 2.11+ (uses validate_by_name). Choices: `2`, `2.11`.
+- `--target-pydantic-version`: Target Pydantic version for generated code. '2': Pydantic 2.0+ compatible (default, uses populate_by_name). '2.11': Pydantic 2.11+ (uses validate_by_name). '2.12': Pydantic 2.12+ (supports MISSING sentinel). Choices: `2`, `2.11`, `2.12`.
 - `--alias-generator`: Pydantic v2 BaseModel alias generator to use in ConfigDict. Matching generated aliases are omitted from individual Field() calls. Choices: `to_camel`, `to_pascal`, `to_snake`.
 - `--use-generic-base-class`: Generate a shared base class with model configuration (e.g., extra='forbid') instead of repeating the configuration in each model. Keeps code DRY.
 - `--parent-scoped-naming` (deprecated): Deprecated: --parent-scoped-naming is deprecated. Use --naming-strategy parent-prefixed instead.
@@ -143,6 +143,7 @@ Generated model class and package behavior.
 - `--strip-default-none`: Strip default None on fields
 - `--use-default`: Use default value even if a field is required
 - `--use-default-kwarg`: Use `default=` instead of a positional argument for Fields that have default values.
+- `--use-missing-sentinel`: Use pydantic.experimental.missing_sentinel.MISSING for optional fields without defaults (Pydantic v2.12+).
 - `--union-mode`: Union mode for only pydantic v2 field Choices: `smart`, `left_to_right`.
 - `--use-frozen-field`: Use Field(frozen=True) for readOnly fields (Pydantic v2).
 - `--no-use-frozen-field`: Use Field(frozen=True) for readOnly fields (Pydantic v2).

@@ -452,7 +452,8 @@ model_options.add_argument(
     "--target-pydantic-version",
     help="Target Pydantic version for generated code. "
     "'2': Pydantic 2.0+ compatible (default, uses populate_by_name). "
-    "'2.11': Pydantic 2.11+ (uses validate_by_name).",
+    "'2.11': Pydantic 2.11+ (uses validate_by_name). "
+    "'2.12': Pydantic 2.12+ (supports MISSING sentinel).",
     choices=[v.value for v in TargetPydanticVersion],
     default=None,
 )
@@ -887,6 +888,12 @@ field_options.add_argument(
     "--use-default-kwarg",
     action="store_true",
     help="Use `default=` instead of a positional argument for Fields that have default values.",
+    default=None,
+)
+field_options.add_argument(
+    "--use-missing-sentinel",
+    help="Use pydantic.experimental.missing_sentinel.MISSING for optional fields without defaults (Pydantic v2.12+).",
+    action="store_true",
     default=None,
 )
 field_options.add_argument(

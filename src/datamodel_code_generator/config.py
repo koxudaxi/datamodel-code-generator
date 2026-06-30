@@ -155,6 +155,7 @@ class ParserConfig(BaseModel):
     use_inline_field_description: bool = False
     use_single_line_docstring: bool = False
     use_default_kwarg: bool = False
+    use_missing_sentinel: bool = False
     reuse_model: bool = False
     reuse_scope: ReuseScope | None = None
     shared_module_name: str = DEFAULT_SHARED_MODULE_NAME

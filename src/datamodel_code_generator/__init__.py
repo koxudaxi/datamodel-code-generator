@@ -56,6 +56,7 @@ from datamodel_code_generator.enums import (
     TargetPydanticVersion,
     VersionMode,
     XMLSchemaVersion,
+    _is_pydantic_version_at_least,
 )
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 
@@ -555,6 +556,32 @@ def _validate_alias_generator(output_model_type: DataModelType, alias_generator:
     raise Error(msg)
 
 
+def _apply_missing_sentinel_config(config: GenerateConfig) -> GenerateConfig:
+    if not config.use_missing_sentinel:
+        return config
+
+    if config.output_model_type is not DataModelType.PydanticV2BaseModel:
+        msg = "`--use-missing-sentinel` is only supported for `--output-model-type pydantic_v2.BaseModel`"
+        raise Error(msg)
+
+    match target_version := config.target_pydantic_version:
+        case None:
+            return config.model_copy(update={"target_pydantic_version": TargetPydanticVersion.V2_12})
+        case _ if _is_pydantic_version_at_least(target_version, TargetPydanticVersion.V2_12):
+            return config
+        case _:
+            target_version_value = (
+                target_version.value if isinstance(target_version, TargetPydanticVersion) else target_version
+            )
+            msg = (
+                "`--use-missing-sentinel` requires "
+                f"`--target-pydantic-version {TargetPydanticVersion.V2_12.value}` or later; "
+                f"got {target_version_value!r}"
+            )
+            raise Error(msg)
+    raise AssertionError  # pragma: no cover
+
+
 class InvalidFileFormatError(Error):
     """Raised when the input file format is invalid or cannot be parsed."""
 
@@ -1028,6 +1055,7 @@ def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
             if config.enum_field_as_literal is not None
             else (LiteralType.All if config.output_model_type == DataModelType.TypingTypedDict else None)
         ),
+        "use_missing_sentinel": config.use_missing_sentinel,
         "set_default_enum_member": (
             True if config.output_model_type == DataModelType.DataclassesDataclass else config.set_default_enum_member
         ),
@@ -1299,6 +1327,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         _rebuild_generate_config()
         config = GenerateConfig.model_validate(options)
     config = _apply_generate_config_preset(config)
+    config = _apply_missing_sentinel_config(config)
 
     _validate_output_datetime_class(config.output_model_type, config.output_datetime_class)
     _validate_alias_generator(config.output_model_type, config.alias_generator)
