@@ -19,13 +19,13 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from itertools import starmap
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast
+from typing import TYPE_CHECKING, Any, NoReturn, Protocol, TypedDict, cast
 from urllib.parse import urlparse
 
 import httpx
 import pytest
 import time_machine
-from inline_snapshot import external_file, register_format_alias
+from inline_snapshot import external_file, get_snapshot_value, register_format_alias
 from inline_snapshot._external._storage._protocol import StorageLookupError
 from inline_snapshot._global_state import state as inline_snapshot_state
 from typing_extensions import Required
@@ -610,36 +610,50 @@ def _assert_with_external_file(content: str, expected_path: Path) -> None:
         msg = f"Expected file not found: {expected_path}\n{hint}\n{formatted_content}"
         raise AssertionError(msg) from None
     normalized_content = _normalize_line_endings(content)
-    if isinstance(expected, str):
-        normalized_expected = _normalize_line_endings(expected)
-        if normalized_content != normalized_expected:  # pragma: no cover
-            hint = _format_snapshot_hint("fix")
-            diff = _format_diff(normalized_expected, normalized_content, expected_path)
-            msg = f"Content mismatch for {expected_path}\n{hint}\n{diff}"
-            raise AssertionError(msg) from None
-    else:  # pragma: no cover - exercised only with --inline-snapshot=create/fix
-        update_flags = inline_snapshot_state().update_flags
-        try:
-            normalized_expected = _normalize_line_endings(expected._load_value())
-        except StorageLookupError:
-            if update_flags.create:
-                # Let inline-snapshot materialize missing external files only in create mode.
-                assert expected == normalized_content
-                return
-            hint = _format_snapshot_hint("create")
-            formatted_content = _format_new_content(content)
-            msg = f"Expected file not found: {expected_path}\n{hint}\n{formatted_content}"
-            raise AssertionError(msg) from None
-        if normalized_content == normalized_expected:
-            return
-        if update_flags.fix:
-            # Let inline-snapshot update existing external files only in fix mode.
-            assert expected == normalized_content
-            return
+
+    def raise_content_mismatch(normalized_expected: str) -> NoReturn:
         hint = _format_snapshot_hint("fix")
         diff = _format_diff(normalized_expected, normalized_content, expected_path)
         msg = f"Content mismatch for {expected_path}\n{hint}\n{diff}"
         raise AssertionError(msg) from None
+
+    def record_snapshot_update() -> None:
+        if matched := expected == normalized_content:
+            return
+        msg = f"inline-snapshot did not record {expected_path}: {matched}"
+        raise AssertionError(msg) from None
+
+    match expected:
+        case str():
+            if normalized_content == (normalized_expected := _normalize_line_endings(expected)):
+                return
+            raise_content_mismatch(normalized_expected)
+
+        case _:
+            update_flags = inline_snapshot_state().update_flags
+            try:
+                expected_value = get_snapshot_value(expected, "old")
+            except StorageLookupError:
+                expected_value = Ellipsis
+
+            if expected_value is Ellipsis:
+                if update_flags.create:
+                    # Let inline-snapshot materialize missing external files only in create mode.
+                    record_snapshot_update()
+                    return
+                hint = _format_snapshot_hint("create")
+                formatted_content = _format_new_content(content)
+                msg = f"Expected file not found: {expected_path}\n{hint}\n{formatted_content}"
+                raise AssertionError(msg) from None
+
+            if normalized_content == (normalized_expected := _normalize_line_endings(cast("str", expected_value))):
+                return
+
+            if update_flags.fix:
+                # Let inline-snapshot update existing external files only in fix mode.
+                record_snapshot_update()
+                return
+            raise_content_mismatch(normalized_expected)
 
 
 class AssertFileContent(Protocol):

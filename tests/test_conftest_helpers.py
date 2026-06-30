@@ -9,15 +9,19 @@ from typing import TYPE_CHECKING
 from unittest.mock import call
 
 import pytest
+from inline_snapshot._flags import Flags
+from inline_snapshot._global_state import state as inline_snapshot_state
 
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import Formatter
+from tests import conftest as shared_conftest
 from tests.conftest import (
     _infer_expected_file,
     assert_exact_directory_content,
     assert_inputs_not_mutated,
     assert_parser_modules,
     assert_parser_results,
+    create_assert_file_content,
 )
 from tests.main import _builtin_parity
 from tests.main import conftest as main_conftest
@@ -53,6 +57,174 @@ def test_assert_exact_directory_content_reports_diff(tmp_path: Path) -> None:
         assert_exact_directory_content(output_dir, expected_dir)
 
     assert "sample.py" in str(exc_info.value)
+
+
+def test_assert_file_content_matches_inline_snapshot_external_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Generated output helper compares external files through inline-snapshot."""
+    state = inline_snapshot_state()
+    monkeypatch.setattr(state, "active", True)
+    monkeypatch.setattr(state, "update_flags", Flags(set()))
+    monkeypatch.setattr(state, "snapshots", {})
+    expected_dir = tmp_path / "expected"
+    expected_dir.mkdir()
+    output_file = tmp_path / "output.py"
+    expected_file = expected_dir / "sample.py"
+
+    expected_file.write_bytes(b"value = 1\r\n")
+    output_file.write_bytes(b"value = 1\n")
+
+    assert_file_content = create_assert_file_content(expected_dir)
+
+    assert_file_content(output_file, "sample.py")
+
+
+def test_assert_file_content_matches_inactive_external_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Generated output helper still supports inactive inline-snapshot file loading."""
+    monkeypatch.setattr(inline_snapshot_state(), "active", False)
+    expected_dir = tmp_path / "expected"
+    expected_dir.mkdir()
+    output_file = tmp_path / "output.py"
+    expected_file = expected_dir / "sample.py"
+
+    expected_file.write_bytes(b"value = 1\r\n")
+    output_file.write_bytes(b"value = 1\n")
+
+    assert_file_content = create_assert_file_content(expected_dir)
+
+    assert_file_content(output_file, "sample.py")
+
+
+def test_assert_file_content_rejects_mismatched_inactive_external_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Generated output helper reports inactive inline-snapshot file mismatches."""
+    monkeypatch.setattr(inline_snapshot_state(), "active", False)
+    expected_dir = tmp_path / "expected"
+    expected_dir.mkdir()
+    output_file = tmp_path / "output.py"
+    expected_file = expected_dir / "sample.py"
+
+    expected_file.write_text("value = 1\n", encoding="utf-8")
+    output_file.write_text("value = 2\n", encoding="utf-8")
+
+    assert_file_content = create_assert_file_content(expected_dir)
+
+    with pytest.raises(AssertionError, match="Content mismatch"):
+        assert_file_content(output_file, "sample.py")
+
+
+@pytest.mark.parametrize(("create", "raises"), [(False, True), (True, False)])
+def test_assert_file_content_missing_inline_snapshot_external_file(
+    create: bool, raises: bool, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Generated output helper defers missing external file creation to inline-snapshot."""
+    state = inline_snapshot_state()
+    monkeypatch.setattr(state, "active", True)
+    monkeypatch.setattr(state, "update_flags", Flags({"create"} if create else set()))
+    monkeypatch.setattr(state, "missing_values", 0)
+    monkeypatch.setattr(state, "snapshots", {})
+    expected_dir = tmp_path / "expected"
+    expected_dir.mkdir()
+    output_file = tmp_path / "output.py"
+    output_file.write_text("value = 1\n", encoding="utf-8")
+
+    assert_file_content = create_assert_file_content(expected_dir)
+
+    if raises:
+        with pytest.raises(AssertionError, match="Expected file not found"):
+            assert_file_content(output_file, "missing.py")
+        return
+
+    assert_file_content(output_file, "missing.py")
+    state.missing_values = 0
+    state.snapshots.clear()
+
+
+def test_assert_file_content_handles_storage_lookup_error(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Generated output helper treats snapshot storage misses as missing external files."""
+    state = inline_snapshot_state()
+    monkeypatch.setattr(state, "active", True)
+    monkeypatch.setattr(state, "update_flags", Flags(set()))
+    monkeypatch.setattr(state, "snapshots", {})
+    expected_dir = tmp_path / "expected"
+    expected_dir.mkdir()
+    output_file = tmp_path / "output.py"
+    output_file.write_text("value = 1\n", encoding="utf-8")
+
+    def raise_storage_lookup_error(_expected: object, _which: str) -> object:
+        msg = "missing"
+        raise shared_conftest.StorageLookupError(msg, files=[])
+
+    monkeypatch.setattr(shared_conftest, "get_snapshot_value", raise_storage_lookup_error)
+    assert_file_content = create_assert_file_content(expected_dir)
+
+    with pytest.raises(AssertionError, match="Expected file not found"):
+        assert_file_content(output_file, "missing.py")
+
+
+def test_assert_file_content_reports_failed_inline_snapshot_update(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Generated output helper reports abnormal inline-snapshot update failures."""
+
+    class UnrecordedSnapshot:
+        __hash__ = object.__hash__
+
+        def __init__(self) -> None:
+            self.recorded = False
+
+        def __eq__(self, other: object) -> bool:
+            self.recorded = other is not self
+            return False
+
+    state = inline_snapshot_state()
+    monkeypatch.setattr(state, "active", True)
+    monkeypatch.setattr(state, "update_flags", Flags({"create"}))
+    expected = UnrecordedSnapshot()
+    expected_dir = tmp_path / "expected"
+    expected_dir.mkdir()
+    output_file = tmp_path / "output.py"
+    output_file.write_text("value = 1\n", encoding="utf-8")
+
+    monkeypatch.setattr(shared_conftest, "external_file", lambda _expected_path: expected)
+    monkeypatch.setattr(shared_conftest, "get_snapshot_value", lambda _expected, _which: Ellipsis)
+    assert_file_content = create_assert_file_content(expected_dir)
+
+    with pytest.raises(AssertionError, match="inline-snapshot did not record"):
+        assert_file_content(output_file, "missing.py")
+    assert expected.recorded is True
+
+
+@pytest.mark.parametrize(("fix", "raises"), [(False, True), (True, False)])
+def test_assert_file_content_mismatched_inline_snapshot_external_file(
+    fix: bool, raises: bool, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Generated output helper defers mismatched external file updates to inline-snapshot."""
+    state = inline_snapshot_state()
+    monkeypatch.setattr(state, "active", True)
+    monkeypatch.setattr(state, "update_flags", Flags({"fix"} if fix else set()))
+    monkeypatch.setattr(state, "incorrect_values", 0)
+    monkeypatch.setattr(state, "snapshots", {})
+    expected_dir = tmp_path / "expected"
+    expected_dir.mkdir()
+    output_file = tmp_path / "output.py"
+    expected_file = expected_dir / "sample.py"
+
+    expected_file.write_text("value = 1\n", encoding="utf-8")
+    output_file.write_text("value = 2\n", encoding="utf-8")
+
+    assert_file_content = create_assert_file_content(expected_dir)
+
+    if raises:
+        with pytest.raises(AssertionError, match="Content mismatch"):
+            assert_file_content(output_file, "sample.py")
+        return
+
+    assert_file_content(output_file, "sample.py")
+    state.incorrect_values = 0
+    state.snapshots.clear()
 
 
 def test_assert_parser_results_rejects_unexpected_result(tmp_path: Path) -> None:
