@@ -7,6 +7,7 @@ This page lists features that are available but still experimental.
 | ID | Kind | Target | Since | Tracking |
 |----|------|--------|-------|----------|
 | `cli-option.generate-schema-validators` | cli-option | `--generate-schema-validators` | 0.59.0 | - |
+| `cli-option.schema-validator-type` | cli-option | `--schema-validator-type` | 0.59.0 | - |
 | `formatter.builtin` | formatter | `--formatters builtin` | 0.59.0 | - |
 | `input-format.asyncapi` | input-format | `--input-file-type asyncapi` | 0.59.0 | - |
 | `input-format.avro` | input-format | `--input-file-type avro` | 0.59.0 | - |
@@ -25,6 +26,16 @@ This page lists features that are available but still experimental.
 Schema-derived runtime validators are experimental and may change as JSON Schema coverage is expanded.
 
 The option currently targets Pydantic v2 BaseModel output and covers selected object-level rules such as patternProperties, required-only oneOf/anyOf groups, and simple if/then/else required-property conditions.
+
+### `cli-option.schema-validator-type`
+
+- **Kind:** cli-option
+- **Target:** `--schema-validator-type`
+- **Since:** 0.59.0
+
+Schema-derived runtime validator backend selection is experimental and may change as validation backends are added.
+
+The only currently implemented backend is 'pydantic-v2', which preserves the existing generated Pydantic v2 validator behavior.
 
 ### `formatter.builtin`
 

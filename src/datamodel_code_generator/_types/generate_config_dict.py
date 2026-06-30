@@ -30,6 +30,7 @@ if TYPE_CHECKING:
         OpenAPIScope,
         ReadOnlyWriteOnlyModelType,
         ReuseScope,
+        SchemaValidatorType,
         StrictTypes,
         TargetPydanticVersion,
         UnionMode,
@@ -62,6 +63,7 @@ class BaseGenerateConfig(TypedDict):
     additional_imports: NotRequired[list[str] | None]
     class_decorators: NotRequired[list[str] | None]
     custom_template_dir: NotRequired[Path | None]
+    schema_validator_type: NotRequired[SchemaValidatorType | None]
     generate_schema_validators: NotRequired[bool]
     schema_validator_base_class_name: NotRequired[str | None]
     validation: NotRequired[bool]

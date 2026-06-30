@@ -109,6 +109,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--reuse-model": "Reuse identical model definitions instead of generating duplicates.",
     "--reuse-scope": "Scope for model reuse detection (root or tree).",
     "--schema-validator-base-class-name": "Set the generated shared Pydantic v2 schema runtime validator base class...",
+    "--schema-validator-type": "Select the schema-derived runtime validator backend.",
     "--schema-version": "Schema version to use for parsing.",
     "--schema-version-mode": "Schema version validation mode.",
     "--serialization-aliases": "Apply custom Pydantic v2 serialization aliases via inline JSON or a JSON file path.",

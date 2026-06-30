@@ -24,6 +24,7 @@ from datamodel_code_generator import (
     InputFileType,
     PythonVersion,
     PythonVersionMin,
+    SchemaValidatorType,
     TargetPydanticVersion,
     _clear_parser_source_data_cache,
     chdir,
@@ -12426,6 +12427,54 @@ def test_main_jsonschema_generate_schema_validators(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--schema-validator-type"],
+    option_description="""Select the schema-derived runtime validator backend.
+
+The `--schema-validator-type pydantic-v2` option enables the current generated
+Pydantic v2 model-validator backend for JSON Schema rules that cannot be
+represented as type hints alone. The explicit type keeps the CLI ready for
+additional validator backends without adding them in this release.""",
+    input_schema="jsonschema/schema_validators.json",
+    cli_args=[
+        "--schema-validator-type",
+        "pydantic-v2",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--disable-timestamp",
+    ],
+    golden_output="jsonschema/schema_validators.py",
+    related_options=["--generate-schema-validators"],
+)
+def test_main_jsonschema_schema_validator_type_pydantic_v2(output_file: Path) -> None:
+    """Generate schema validators through the explicit backend selector."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators.py",
+        extra_args=[
+            "--schema-validator-type",
+            "pydantic-v2",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_schema_validator_type_pydantic_v2",
+        model_name="DirectPatternBag",
+        valid_json='{"item_1":7}',
+        invalid_json='{"bad":7}',
+        expected_error_type="value_error",
+        expected_attribute_path=("item_1",),
+        expected_attribute_value=7,
+    )
+
+
 def test_main_jsonschema_generate_schema_validators_extra_template_collision(
     output_file: Path,
     tmp_path: Path,
@@ -12597,9 +12646,17 @@ def test_main_jsonschema_generate_schema_validators_required_branch_constraints(
     )
 
 
+@pytest.mark.parametrize(
+    "schema_validator_args",
+    [
+        pytest.param(["--generate-schema-validators"]),
+        pytest.param(["--schema-validator-type", "pydantic-v2"]),
+    ],
+)
 def test_main_jsonschema_generate_schema_validators_requires_pydantic_v2(
     output_file: Path,
     capsys: pytest.CaptureFixture[str],
+    schema_validator_args: list[str],
 ) -> None:
     """Reject schema-derived validators for output models without Pydantic v2 runtime hooks."""
     run_main_and_assert(
@@ -12608,9 +12665,9 @@ def test_main_jsonschema_generate_schema_validators_requires_pydantic_v2(
         input_file_type="jsonschema",
         expected_exit=Exit.ERROR,
         capsys=capsys,
-        expected_stderr_contains="generate_schema_validators is only supported for pydantic_v2.BaseModel",
+        expected_stderr_contains="schema_validator_type='pydantic-v2' is only supported for pydantic_v2.BaseModel",
         extra_args=[
-            "--generate-schema-validators",
+            *schema_validator_args,
             "--output-model-type",
             "dataclasses.dataclass",
         ],
@@ -12663,6 +12720,20 @@ def test_generate_schema_validators_invalid_base_class_name_public_api(output_fi
             generate_schema_validators=True,
             schema_validator_base_class_name="123Invalid",
         )
+
+
+def test_generate_schema_validator_type_public_api(output_file: Path) -> None:
+    """Generate schema validators through the public API backend selector."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="schema_validators.py",
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        schema_validator_type=SchemaValidatorType.PydanticV2,
+        disable_timestamp=True,
+    )
 
 
 def test_field_validators_multi_fields(output_file: Path) -> None:

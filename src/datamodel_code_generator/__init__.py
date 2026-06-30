@@ -52,6 +52,7 @@ from datamodel_code_generator.enums import (
     ProtobufVersion,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
+    SchemaValidatorType,
     TargetPydanticVersion,
     VersionMode,
     XMLSchemaVersion,
@@ -932,6 +933,20 @@ def _convert_mcp_tools(
     return source_override, InputFileType.JsonSchema, True
 
 
+def _uses_pydantic_v2_schema_validator(config: GenerateConfig) -> bool:
+    if (schema_validator_type := config.schema_validator_type) is None:
+        return False
+
+    match schema_validator_type:
+        case SchemaValidatorType.PydanticV2:
+            if config.output_model_type == DataModelType.PydanticV2BaseModel:
+                return True
+            msg = "schema_validator_type='pydantic-v2' is only supported for pydantic_v2.BaseModel"
+            raise Error(msg)
+    msg = f"Unsupported schema_validator_type: {schema_validator_type.value}"  # pragma: no cover
+    raise Error(msg)  # pragma: no cover
+
+
 def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
     input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     input_text: str | None,
@@ -953,9 +968,7 @@ def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
     else:
         default_field_extras = None
 
-    if config.generate_schema_validators and config.output_model_type != DataModelType.PydanticV2BaseModel:
-        msg = "generate_schema_validators is only supported for pydantic_v2.BaseModel"
-        raise Error(msg)
+    generate_schema_validators = _uses_pydantic_v2_schema_validator(config)
 
     from datamodel_code_generator.model import get_data_model_types  # noqa: PLC0415
 
@@ -998,6 +1011,7 @@ def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
         "extra_template_data": extra_template_data,
         "serialization_aliases": config.serialization_aliases,
         "model_name_map": config.model_name_map,
+        "generate_schema_validators": generate_schema_validators,
         "schema_validator_base_class_name": config.schema_validator_base_class_name,
         "base_path": input_.parent if isinstance(input_, Path) and input_.is_file() else None,
         "remote_text_cache": remote_text_cache,
@@ -1595,6 +1609,7 @@ __all__ = [
     "ReadOnlyWriteOnlyModelType",
     "ReuseScope",
     "SchemaParseError",
+    "SchemaValidatorType",
     "TargetPydanticVersion",
     "VersionMode",
     "XMLSchemaVersion",

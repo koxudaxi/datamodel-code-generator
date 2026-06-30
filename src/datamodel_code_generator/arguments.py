@@ -34,6 +34,7 @@ from datamodel_code_generator.enums import (
     OpenAPIScope,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
+    SchemaValidatorType,
     StrictTypes,
     TargetPydanticVersion,
     UnionMode,
@@ -1039,6 +1040,13 @@ template_options.add_argument(
     help="Generate Pydantic v2 model validators for JSON Schema rules that cannot be represented as type hints "
     "(experimental).",
     action="store_true",
+    default=None,
+)
+template_options.add_argument(
+    "--schema-validator-type",
+    help="Select the schema-derived runtime validator backend. "
+    "'pydantic-v2' generates Pydantic v2 model validators (experimental).",
+    choices=[i.value for i in SchemaValidatorType],
     default=None,
 )
 template_options.add_argument(

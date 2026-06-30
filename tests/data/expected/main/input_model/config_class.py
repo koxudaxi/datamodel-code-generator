@@ -116,6 +116,9 @@ ReadOnlyWriteOnlyModelType: TypeAlias = Literal['request-response', 'all']
 ReuseScope: TypeAlias = Literal['module', 'tree']
 
 
+SchemaValidatorType: TypeAlias = Literal['pydantic-v2']
+
+
 StrictTypesModel: TypeAlias = Literal['str', 'bytes', 'int', 'float', 'bool']
 
 
@@ -145,6 +148,7 @@ class BaseGenerateConfig(TypedDict):
     additional_imports: NotRequired[list[str] | None]
     class_decorators: NotRequired[list[str] | None]
     custom_template_dir: NotRequired[str | None]
+    schema_validator_type: NotRequired[SchemaValidatorType | None]
     generate_schema_validators: NotRequired[bool]
     schema_validator_base_class_name: NotRequired[str | None]
     validation: NotRequired[bool]

@@ -510,6 +510,10 @@ Template customization:
   --schema-validator-base-class-name SCHEMA_VALIDATOR_BASE_CLASS_NAME
                         Set the generated shared Pydantic v2 schema runtime
                         validator base class name.
+  --schema-validator-type {pydantic-v2}
+                        Select the schema-derived runtime validator backend.
+                        'pydantic-v2' generates Pydantic v2 model validators
+                        (experimental).
   --use-double-quotes   Model generated with double quotes. Single quotes or
                         your black config skip_string_normalization value will
                         be used without this option.
