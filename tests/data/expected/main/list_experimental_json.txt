@@ -1,5 +1,23 @@
 [
   {
+    "id": "cli-option.generate-schema-validators",
+    "kind": "cli-option",
+    "message": "Schema-derived runtime validators are experimental and may change as JSON Schema coverage is expanded.",
+    "note": "The option currently targets Pydantic v2 BaseModel output and covers selected object-level rules such as patternProperties, required-only oneOf/anyOf groups, and simple if/then/else required-property conditions.",
+    "since_version": "0.59.0",
+    "target": "--generate-schema-validators",
+    "tracking_issue": null
+  },
+  {
+    "id": "cli-option.schema-validator-type",
+    "kind": "cli-option",
+    "message": "Schema-derived runtime validator backend selection is experimental and may change as validation backends are added.",
+    "note": "The only currently implemented backend is 'pydantic-v2', which preserves the existing generated Pydantic v2 validator behavior.",
+    "since_version": "0.59.0",
+    "target": "--schema-validator-type",
+    "tracking_issue": null
+  },
+  {
     "id": "formatter.builtin",
     "kind": "formatter",
     "message": "The internal formatter is experimental and may change as generated-output coverage is expanded.",

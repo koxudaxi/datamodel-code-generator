@@ -11,7 +11,8 @@ from collections.abc import Sequence  # noqa: TC003 - used at runtime by Pydanti
 from pathlib import Path  # noqa: TC003 - used at runtime by Pydantic
 from typing import TYPE_CHECKING, TypeAlias
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
+from typing_extensions import Self
 
 from datamodel_code_generator._format_types import (
     DateClassType,
@@ -37,6 +38,7 @@ from datamodel_code_generator.enums import (
     NamingStrategy,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
+    SchemaValidatorType,
     TargetPydanticVersion,
     UnionMode,
     VersionMode,
@@ -72,6 +74,9 @@ class BaseGenerateConfig(BaseModel):
     additional_imports: list[str] | None = None
     class_decorators: list[str] | None = None
     custom_template_dir: Path | None = None
+    schema_validator_type: SchemaValidatorType | None = None
+    generate_schema_validators: bool = False
+    schema_validator_base_class_name: str | None = None
     validation: bool = False
     field_constraints: bool = False
     alias_generator: AliasGenerator | None = None
@@ -194,6 +199,15 @@ class BaseGenerateConfig(BaseModel):
     schema_version: str | None = None
     schema_version_mode: VersionMode | None = None
     external_ref_mapping: dict[str, str] | None = None
+
+    @model_validator(mode="after")
+    def normalize_schema_validator_type(self) -> Self:
+        """Keep the legacy boolean flag and explicit backend selection in sync."""
+        if self.generate_schema_validators and self.schema_validator_type is None:
+            self.schema_validator_type = SchemaValidatorType.PydanticV2
+        if self.schema_validator_type is not None:
+            self.generate_schema_validators = True
+        return self
 
 
 __all__ = ["BaseGenerateConfig"]

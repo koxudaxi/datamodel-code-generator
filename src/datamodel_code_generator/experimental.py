@@ -10,6 +10,8 @@ from datamodel_code_generator._registry_render import _render_registry_json, _re
 ExperimentalFeatureKind = Literal["input-format", "formatter", "cli-option", "python-api", "behavior"]
 ExperimentalFeatureFormat = Literal["table", "json", "markdown"]
 ExperimentalFeatureId = Literal[
+    "cli-option.generate-schema-validators",
+    "cli-option.schema-validator-type",
     "input-format.asyncapi",
     "input-format.avro",
     "input-format.mcp-tools",
@@ -33,6 +35,33 @@ class ExperimentalFeature:
 
 
 EXPERIMENTAL_FEATURES: dict[ExperimentalFeatureId, ExperimentalFeature] = {
+    "cli-option.generate-schema-validators": ExperimentalFeature(
+        id="cli-option.generate-schema-validators",
+        kind="cli-option",
+        target="--generate-schema-validators",
+        message=(
+            "Schema-derived runtime validators are experimental and may change as JSON Schema coverage is expanded."
+        ),
+        since_version="0.59.0",
+        note=(
+            "The option currently targets Pydantic v2 BaseModel output and covers selected object-level rules such as "
+            "patternProperties, required-only oneOf/anyOf groups, and simple if/then/else required-property conditions."
+        ),
+    ),
+    "cli-option.schema-validator-type": ExperimentalFeature(
+        id="cli-option.schema-validator-type",
+        kind="cli-option",
+        target="--schema-validator-type",
+        message=(
+            "Schema-derived runtime validator backend selection is experimental and may change as validation "
+            "backends are added."
+        ),
+        since_version="0.59.0",
+        note=(
+            "The only currently implemented backend is 'pydantic-v2', which preserves the existing generated "
+            "Pydantic v2 validator behavior."
+        ),
+    ),
     "input-format.asyncapi": ExperimentalFeature(
         id="input-format.asyncapi",
         kind="input-format",
@@ -107,7 +136,7 @@ def render_experimental_features_json() -> str:
 
 def render_experimental_features_table() -> str:
     """Render all experimental features as a plain text table."""
-    return _render_registry_table([
+    table = _render_registry_table([
         [
             "ID",
             "Kind",
@@ -126,6 +155,7 @@ def render_experimental_features_table() -> str:
             for feature in iter_experimental_features()
         ],
     ])
+    return "\n".join(line.rstrip() for line in table.splitlines()) + "\n"
 
 
 def render_experimental_features_markdown(*, include_header: bool = True) -> str:

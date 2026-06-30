@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from pydantic import Field, ValidationError, field_validator, model_validator
@@ -21,7 +22,9 @@ from datamodel_code_generator.model.base import (
     ALL_MODEL,
     UNDEFINED,
     BaseClassDataType,
+    DataModel,
     DataModelFieldBase,
+    _get_template_with_custom_dir,
 )
 from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
 from datamodel_code_generator.model.pydantic_base import BaseModelBase
@@ -42,16 +45,17 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_CONFIG_DICT,
     IMPORT_FIELD,
     IMPORT_FIELD_VALIDATOR,
+    IMPORT_MODEL_VALIDATOR,
+    IMPORT_TYPE_ADAPTER,
     IMPORT_VALIDATION_INFO,
     IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER,
 )
 from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA
+from datamodel_code_generator.model.runtime_validation import SchemaRuntimeValidation
 from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from datamodel_code_generator.reference import Reference
     from datamodel_code_generator.types import DataType
 
@@ -410,6 +414,10 @@ class BaseModel(BaseModelBase):
     """Pydantic v2 BaseModel with ConfigDict and pattern-based regex_engine support."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic_v2/BaseModel.jinja2"
+    SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH: ClassVar[str] = (
+        "pydantic_v2/schema_runtime_validation_helpers.jinja2"
+    )
+    SCHEMA_RUNTIME_VALIDATION_BASE_CLASS_NAME: ClassVar[str] = "_JsonSchemaRuntimeValidationBase"
     BASE_CLASS: ClassVar[str] = "pydantic.BaseModel"
     BASE_CLASS_NAME: ClassVar[str] = "BaseModel"
     BASE_CLASS_ALIAS: ClassVar[str] = "_BaseModel"
@@ -434,6 +442,79 @@ class BaseModel(BaseModelBase):
         ConfigAttribute("frozen", "frozen", False),  # noqa: FBT003
         ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False),  # noqa: FBT003
     ]
+
+    @classmethod
+    def render_module_code(cls, models: list[DataModel]) -> str:
+        """Render shared schema runtime validation helpers for the module."""
+        if not models or not models[0].extra_template_data.get("schema_runtime_validation_enabled"):
+            return ""
+
+        runtime_models: list[DataModel] = [
+            model
+            for model in models
+            if isinstance(
+                model.extra_template_data.get("schema_runtime_validation"),
+                SchemaRuntimeValidation,
+            )
+            and model.extra_template_data["schema_runtime_validation"]
+        ]
+        if not runtime_models:
+            return ""
+
+        base_class_name = (
+            runtime_models[0].extra_template_data.get("schema_validator_base_class_name")
+            or cls.SCHEMA_RUNTIME_VALIDATION_BASE_CLASS_NAME
+        )
+        for model in runtime_models:
+            model.extra_template_data["schema_runtime_validation_base_class_name"] = base_class_name
+            model.extra_template_data[
+                "schema_runtime_validation_use_base"
+            ] = not cls._inherits_schema_runtime_validation_base(
+                model,
+                seen=set(),
+            )
+
+        custom_template_dir = next(
+            (model.custom_template_dir for model in models if model.custom_template_dir is not None),
+            None,
+        )
+        template = _get_template_with_custom_dir(
+            Path(cls.SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH),
+            custom_template_dir,
+        )
+        runtime_validations = [model.extra_template_data["schema_runtime_validation"] for model in runtime_models]
+        return template.render(
+            schema_runtime_validation_base_class_name=base_class_name,
+            has_pattern_properties=any(
+                runtime_validation.pattern_properties for runtime_validation in runtime_validations
+            ),
+            has_required_groups=any(runtime_validation.required_groups for runtime_validation in runtime_validations),
+            has_conditional_required=any(
+                runtime_validation.conditional_required for runtime_validation in runtime_validations
+            ),
+        )
+
+    @classmethod
+    def _inherits_schema_runtime_validation_base(cls, model: DataModel, *, seen: set[str]) -> bool:
+        """Return whether a model already inherits the generated runtime validation base."""
+        if model.reference.path in seen:
+            return False
+        seen.add(model.reference.path)
+        for base_class in model.base_classes:
+            if not base_class.reference or not isinstance(base_class.reference.source, DataModel):
+                continue
+            base_model = base_class.reference.source
+            if (
+                isinstance(
+                    base_model.extra_template_data.get("schema_runtime_validation"),
+                    SchemaRuntimeValidation,
+                )
+                and base_model.extra_template_data["schema_runtime_validation"]
+            ):
+                return True
+            if cls._inherits_schema_runtime_validation_base(base_model, seen=seen):
+                return True
+        return False
 
     @classmethod
     def create_typed_extra_field(
@@ -483,6 +564,7 @@ class BaseModel(BaseModelBase):
             keyword_only=keyword_only,
             treat_dot_as_module=treat_dot_as_module,
         )
+        self._prepare_schema_runtime_validation_config()
         config_parameters: dict[str, Any] = dict(
             build_base_config_parameters(
                 extra_template_data=self.extra_template_data,
@@ -520,7 +602,40 @@ class BaseModel(BaseModelBase):
         else:
             self.extra_template_data.pop(_CONFIG_ITEMS_TEMPLATE_DATA_KEY, None)
 
+        self._process_schema_runtime_validation()
         self._process_validators()
+
+    def _get_schema_runtime_validation(self) -> SchemaRuntimeValidation | None:
+        runtime_validation = self.extra_template_data.get("schema_runtime_validation")
+        if isinstance(runtime_validation, SchemaRuntimeValidation) and runtime_validation:
+            return runtime_validation
+        return None
+
+    def _prepare_schema_runtime_validation_config(self) -> None:
+        """Prepare Pydantic config required by schema-derived runtime validators."""
+        runtime_validation = self._get_schema_runtime_validation()
+        if runtime_validation is None:
+            return
+        self.extra_template_data["schema_runtime_validation"] = runtime_validation
+        if runtime_validation.pattern_properties:
+            self.extra_template_data["force_extra_allow"] = True
+
+    def _process_schema_runtime_validation(self) -> None:
+        """Add imports required by schema-derived runtime validators."""
+        runtime_validation = self._get_schema_runtime_validation()
+        if runtime_validation is None:
+            return
+
+        self._additional_imports.append(IMPORT_MODEL_VALIDATOR)
+        self._additional_imports.append(IMPORT_ANY)
+        self._additional_imports.append(IMPORT_CLASSVAR)
+        self._additional_imports.append(IMPORT_BASE_MODEL)
+        if runtime_validation.pattern_properties:
+            self._additional_imports.append(Import(import_="re"))
+            self._additional_imports.append(IMPORT_TYPE_ADAPTER)
+
+        for data_type in runtime_validation.data_types:
+            self._additional_imports.extend(data_type.all_imports)
 
     def _process_validators(self) -> None:
         """Process validator definitions and prepare them for template rendering."""

@@ -16,7 +16,7 @@
 
 {#- Use base_type_hint in generic when regex_engine is set to avoid evaluating pattern before config is processed -#}
 {%- set use_base_type = config and config.regex_engine -%}
-class {{ class_name }}({{ base_class }}{%- if fields -%}[{{get_type_hint(fields, use_base_type)}}]{%- endif -%}{%- if sequence_base_class is defined -%}, {{ sequence_base_class }}{%- endif -%}):{% if comment is defined %}  # {{ comment }}{% endif %}
+class {{ class_name }}({%- if schema_runtime_validation_use_base -%}{{ schema_runtime_validation_base_class_name }}, {% endif -%}{{ base_class }}{%- if fields -%}[{{get_type_hint(fields, use_base_type)}}]{%- endif -%}{%- if sequence_base_class is defined -%}, {{ sequence_base_class }}{%- endif -%}):{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
     {{ description }}
 {%- endif %}
@@ -28,8 +28,11 @@ class {{ class_name }}({{ base_class }}{%- if fields -%}[{{get_type_hint(fields,
 {%- for line in class_body_lines %}
     {{ line }}
 {%- endfor %}
-{%- if not fields and not description and not config and not class_body_lines %}
+{%- include 'schema_runtime_validation.jinja2' %}
+{%- if not fields %}
+{%- if not description and not config and not class_body_lines and not schema_runtime_validation %}
     pass
+{%- endif %}
 {%- else %}
     {%- set field = fields[0] %}
     {%- if not field.annotated and field.field %}

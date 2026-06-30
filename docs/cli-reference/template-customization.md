@@ -18,8 +18,11 @@
 | [`--enable-version-header`](#enable-version-header) | Include tool version information in file header. |
 | [`--extra-template-data`](#extra-template-data) | Pass custom template variables via inline JSON or a JSON fil... |
 | [`--formatters`](#formatters) | Specify code formatters to apply to generated output. |
+| [`--generate-schema-validators`](#generate-schema-validators) | Generate experimental Pydantic v2 model validators for JSON ... |
 | [`--no-treat-dot-as-module`](#no-treat-dot-as-module) | Keep dots in schema names as underscores for flat output. |
 | [`--no-use-type-checking-imports`](#no-use-type-checking-imports) | Keep generated model imports available at runtime when using... |
+| [`--schema-validator-base-class-name`](#schema-validator-base-class-name) | Set the generated shared Pydantic v2 schema runtime validato... |
+| [`--schema-validator-type`](#schema-validator-type) | Select the schema-derived runtime validator backend. |
 | [`--treat-dot-as-module`](#treat-dot-as-module) | Treat dots in schema names as module separators. |
 | [`--use-double-quotes`](#use-double-quotes) | Use double quotes for string literals in generated code. |
 | [`--use-exact-imports`](#use-exact-imports) | Import exact types instead of modules. |
@@ -2554,6 +2557,447 @@ Use this to customize formatting or disable formatters entirely.
 
 ---
 
+## `--generate-schema-validators` {#generate-schema-validators}
+
+Generate experimental Pydantic v2 model validators for JSON Schema runtime rules.
+
+The `--generate-schema-validators` option emits schema-derived model validators
+for object constraints that cannot be represented as type hints alone, including
+patternProperties on composed object models, required-only oneOf/anyOf groups,
+and simple if/then/else required-property conditions. This feature is
+experimental and may change as JSON Schema coverage is expanded.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --generate-schema-validators --output-model-type pydantic_v2.BaseModel --disable-timestamp # (1)!
+    ```
+
+    1. :material-arrow-left: `--generate-schema-validators` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$defs": {
+        "First": {
+          "type": "object",
+          "properties": {
+            "first": {
+              "type": "string"
+            }
+          },
+          "required": ["first"]
+        },
+        "Second": {
+          "type": "object",
+          "properties": {
+            "second": {
+              "type": "string"
+            }
+          },
+          "required": ["second"]
+        },
+        "PatternBag": {
+          "type": "object",
+          "patternProperties": {
+            "^[A-Z][A-Za-z0-9_]*$": {
+              "$ref": "#/$defs/Second"
+            }
+          },
+          "additionalProperties": false
+        },
+        "PatternTarget": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/First"
+            },
+            {
+              "$ref": "#/$defs/PatternBag"
+            }
+          ]
+        },
+        "DirectPatternBag": {
+          "type": "object",
+          "patternProperties": {
+            "^item_[0-9]+$": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "ValidatorOnlyChild": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/First"
+            },
+            {
+              "type": "object",
+              "patternProperties": {
+                "^extra_[A-Za-z]+$": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "ValidatorOnlyPatternRef": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/First"
+            }
+          ],
+          "patternProperties": {
+            "^ref_extra_[A-Za-z]+$": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "OneOfContact": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string"
+            },
+            "phone": {
+              "type": "string"
+            }
+          },
+          "oneOf": [
+            {
+              "required": ["email"]
+            },
+            {
+              "required": ["phone"]
+            }
+          ]
+        },
+        "AnyOfContact": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string"
+            },
+            "phone": {
+              "type": "string"
+            }
+          },
+          "anyOf": [
+            {
+              "required": ["email"]
+            },
+            {
+              "required": ["phone"]
+            }
+          ]
+        },
+        "ConditionalPayload": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string"
+            }
+          },
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "metric"
+              }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": {
+              "metric": {
+                "type": "integer"
+              }
+            },
+            "required": ["metric"]
+          },
+          "else": {
+            "properties": {
+              "note": {
+                "type": "string"
+              }
+            },
+            "required": ["note"]
+          }
+        },
+        "RequiredOnlyGuard": {
+          "type": "object",
+          "properties": {
+            "flag": {
+              "type": "string"
+            }
+          },
+          "oneOf": [
+            {},
+            {
+              "required": []
+            }
+          ]
+        }
+      },
+      "$ref": "#/$defs/PatternTarget"
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  schema_validators.json
+
+    from __future__ import annotations
+
+    import re
+    from typing import Any, ClassVar
+
+    from pydantic import BaseModel, ConfigDict, RootModel, TypeAdapter, model_validator
+
+
+    class _JsonSchemaRuntimeValidationBase(BaseModel):
+        __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = ()
+        __json_schema_one_of_required_groups__: ClassVar[tuple[Any, ...]] = ()
+        __json_schema_any_of_required_groups__: ClassVar[tuple[Any, ...]] = ()
+        __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = ()
+
+        @model_validator(mode='before')
+        @classmethod
+        def _validate_json_schema_runtime_rules(cls, data: Any) -> Any:
+            data = cls._validate_json_schema_pattern_properties(data)
+            data = cls._validate_json_schema_required_groups(
+                data,
+                required_group_rules=cls.__json_schema_one_of_required_groups__,
+                require_exactly_one=True,
+            )
+            data = cls._validate_json_schema_required_groups(
+                data,
+                required_group_rules=cls.__json_schema_any_of_required_groups__,
+                require_exactly_one=False,
+            )
+            data = cls._validate_json_schema_conditional_required(data)
+            return data
+
+        @classmethod
+        def _validate_json_schema_pattern_properties(cls, data: Any) -> Any:
+            if not isinstance(data, dict):
+                return data
+            values = dict(data)
+            for rule in cls.__json_schema_pattern_properties__:
+                for key, value in data.items():
+                    if key in rule['declared_properties']:
+                        continue
+                    if any(
+                        re.search(pattern, key) for pattern in rule['rejected_patterns']
+                    ):
+                        raise ValueError(
+                            f'Property {key!r} is not allowed by patternProperties'
+                        )
+                    matched = False
+                    for pattern, value_type in rule['pattern_properties']:
+                        if not re.search(pattern, key):
+                            continue
+                        matched = True
+                        value = TypeAdapter(value_type).validate_python(value)
+                    if matched:
+                        values[key] = value
+                        continue
+                    if rule['additional_property_type'] is not None:
+                        values[key] = TypeAdapter(
+                            rule['additional_property_type']
+                        ).validate_python(value)
+                        continue
+                    if not rule['allow_unmatched']:
+                        raise ValueError(f'Unexpected property {key!r}')
+            return values
+
+        @classmethod
+        def _validate_json_schema_required_groups(
+            cls,
+            data: Any,
+            *,
+            required_group_rules: tuple[Any, ...],
+            require_exactly_one: bool,
+        ) -> Any:
+            if not required_group_rules or not isinstance(data, dict):
+                return data
+            for required_groups in required_group_rules:
+                matches = sum(
+                    all(any(name in data for name in names) for names in group)
+                    for group in required_groups
+                )
+                if require_exactly_one:
+                    if matches != 1:
+                        raise ValueError(
+                            'Expected exactly one required property group to be present'
+                        )
+                elif matches == 0:
+                    raise ValueError(
+                        'Expected at least one required property group to be present'
+                    )
+            return data
+
+        @classmethod
+        def _validate_json_schema_conditional_required(cls, data: Any) -> Any:
+            if not isinstance(data, dict):
+                return data
+            for rule in cls.__json_schema_conditional_required__:
+                condition_matches = all(
+                    any(name in data and data[name] in expected for name in names)
+                    for names, expected in rule['condition']
+                )
+                required_groups = (
+                    rule['then_required_groups']
+                    if condition_matches
+                    else rule['else_required_groups']
+                )
+                for group in required_groups:
+                    if all(any(name in data for name in names) for names in group):
+                        continue
+                    raise ValueError('Conditional required properties are missing')
+            return data
+
+
+    class First(BaseModel):
+        first: str
+
+
+    class Second(BaseModel):
+        second: str
+
+
+    class PatternBag(_JsonSchemaRuntimeValidationBase):
+        model_config = ConfigDict(
+            extra='allow',
+        )
+
+        __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
+            {
+                'declared_properties': (),
+                'rejected_patterns': (),
+                'pattern_properties': (('^[A-Z][A-Za-z0-9_]*$', Second),),
+                'additional_property_type': None,
+                'allow_unmatched': False,
+            },
+        )
+
+
+    class PatternTarget(First, PatternBag):
+        model_config = ConfigDict(
+            extra='allow',
+        )
+
+        __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
+            {
+                'declared_properties': ('first',),
+                'rejected_patterns': (),
+                'pattern_properties': (('^[A-Z][A-Za-z0-9_]*$', Second),),
+                'additional_property_type': None,
+                'allow_unmatched': False,
+            },
+        )
+
+
+    class DirectPatternBag(_JsonSchemaRuntimeValidationBase):
+        model_config = ConfigDict(
+            extra='allow',
+        )
+
+        __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
+            {
+                'declared_properties': (),
+                'rejected_patterns': (),
+                'pattern_properties': (('^item_[0-9]+$', int),),
+                'additional_property_type': None,
+                'allow_unmatched': False,
+            },
+        )
+
+
+    class ValidatorOnlyChild(_JsonSchemaRuntimeValidationBase, First):
+        model_config = ConfigDict(
+            extra='allow',
+        )
+
+        __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
+            {
+                'declared_properties': ('first',),
+                'rejected_patterns': (),
+                'pattern_properties': (('^extra_[A-Za-z]+$', int),),
+                'additional_property_type': None,
+                'allow_unmatched': False,
+            },
+        )
+
+
+    class ValidatorOnlyPatternRef(_JsonSchemaRuntimeValidationBase, First):
+        model_config = ConfigDict(
+            extra='allow',
+        )
+
+        __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
+            {
+                'declared_properties': ('first',),
+                'rejected_patterns': (),
+                'pattern_properties': (('^ref_extra_[A-Za-z]+$', int),),
+                'additional_property_type': None,
+                'allow_unmatched': False,
+            },
+        )
+
+
+    class OneOfContact(_JsonSchemaRuntimeValidationBase):
+        __json_schema_one_of_required_groups__: ClassVar[tuple[Any, ...]] = (
+            ((('email',),), (('phone',),)),
+        )
+
+        email: str | None = None
+        phone: str | None = None
+
+
+    class AnyOfContact(_JsonSchemaRuntimeValidationBase):
+        __json_schema_any_of_required_groups__: ClassVar[tuple[Any, ...]] = (
+            ((('email',),), (('phone',),)),
+        )
+
+        email: str | None = None
+        phone: str | None = None
+
+
+    class ConditionalPayload(_JsonSchemaRuntimeValidationBase):
+        __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = (
+            {
+                'condition': ((('kind',), ('metric',)),),
+                'then_required_groups': ((('metric',),),),
+                'else_required_groups': ((('note',),),),
+            },
+        )
+
+        kind: str | None = None
+        metric: int | None = None
+        note: str | None = None
+
+
+    class RequiredOnlyGuard1(BaseModel):
+        flag: str | None = None
+
+
+    class RequiredOnlyGuard(RootModel[RequiredOnlyGuard1]):
+        root: RequiredOnlyGuard1
+
+
+    class Model(RootModel[PatternTarget]):
+        root: PatternTarget
+    ```
+
+---
+
 ## `--no-treat-dot-as-module` {#no-treat-dot-as-module}
 
 Keep dots in schema names as underscores for flat output.
@@ -2995,6 +3439,558 @@ require manual `model_rebuild()` calls for cross-module runtime references.
 
 
     Tea_1.model_rebuild()
+    ```
+
+---
+
+## `--schema-validator-base-class-name` {#schema-validator-base-class-name}
+
+Set the generated shared Pydantic v2 schema runtime validator base class name.
+
+The `--schema-validator-base-class-name` option changes the name of the generated
+shared base class that owns schema-derived runtime validators. It is only used when
+`--generate-schema-validators` emits shared validator code.
+
+**Related:** [`--generate-schema-validators`](template-customization.md#generate-schema-validators)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --generate-schema-validators --schema-validator-base-class-name SharedSchemaValidatorBase --output-model-type pydantic_v2.BaseModel --disable-timestamp # (1)!
+    ```
+
+    1. :material-arrow-left: `--schema-validator-base-class-name` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "title": "CustomBaseClassName",
+      "type": "object",
+      "patternProperties": {
+        "^item_[0-9]+$": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  schema_validators_custom_base_class_name.json
+
+    from __future__ import annotations
+
+    import re
+    from typing import Any, ClassVar
+
+    from pydantic import BaseModel, ConfigDict, TypeAdapter, model_validator
+
+
+    class SharedSchemaValidatorBase(BaseModel):
+        __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = ()
+
+        @model_validator(mode='before')
+        @classmethod
+        def _validate_json_schema_runtime_rules(cls, data: Any) -> Any:
+            data = cls._validate_json_schema_pattern_properties(data)
+            return data
+
+        @classmethod
+        def _validate_json_schema_pattern_properties(cls, data: Any) -> Any:
+            if not isinstance(data, dict):
+                return data
+            values = dict(data)
+            for rule in cls.__json_schema_pattern_properties__:
+                for key, value in data.items():
+                    if key in rule['declared_properties']:
+                        continue
+                    if any(
+                        re.search(pattern, key) for pattern in rule['rejected_patterns']
+                    ):
+                        raise ValueError(
+                            f'Property {key!r} is not allowed by patternProperties'
+                        )
+                    matched = False
+                    for pattern, value_type in rule['pattern_properties']:
+                        if not re.search(pattern, key):
+                            continue
+                        matched = True
+                        value = TypeAdapter(value_type).validate_python(value)
+                    if matched:
+                        values[key] = value
+                        continue
+                    if rule['additional_property_type'] is not None:
+                        values[key] = TypeAdapter(
+                            rule['additional_property_type']
+                        ).validate_python(value)
+                        continue
+                    if not rule['allow_unmatched']:
+                        raise ValueError(f'Unexpected property {key!r}')
+            return values
+
+
+    class CustomBaseClassName(SharedSchemaValidatorBase):
+        model_config = ConfigDict(
+            extra='allow',
+        )
+
+        __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
+            {
+                'declared_properties': (),
+                'rejected_patterns': (),
+                'pattern_properties': (('^item_[0-9]+$', int),),
+                'additional_property_type': None,
+                'allow_unmatched': False,
+            },
+        )
+    ```
+
+---
+
+## `--schema-validator-type` {#schema-validator-type}
+
+Select the schema-derived runtime validator backend.
+
+The `--schema-validator-type pydantic-v2` option enables the current generated
+Pydantic v2 model-validator backend for JSON Schema rules that cannot be
+represented as type hints alone. The explicit type keeps the CLI ready for
+additional validator backends without adding them in this release.
+
+**Related:** [`--generate-schema-validators`](template-customization.md#generate-schema-validators)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --schema-validator-type pydantic-v2 --output-model-type pydantic_v2.BaseModel --disable-timestamp # (1)!
+    ```
+
+    1. :material-arrow-left: `--schema-validator-type` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$defs": {
+        "First": {
+          "type": "object",
+          "properties": {
+            "first": {
+              "type": "string"
+            }
+          },
+          "required": ["first"]
+        },
+        "Second": {
+          "type": "object",
+          "properties": {
+            "second": {
+              "type": "string"
+            }
+          },
+          "required": ["second"]
+        },
+        "PatternBag": {
+          "type": "object",
+          "patternProperties": {
+            "^[A-Z][A-Za-z0-9_]*$": {
+              "$ref": "#/$defs/Second"
+            }
+          },
+          "additionalProperties": false
+        },
+        "PatternTarget": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/First"
+            },
+            {
+              "$ref": "#/$defs/PatternBag"
+            }
+          ]
+        },
+        "DirectPatternBag": {
+          "type": "object",
+          "patternProperties": {
+            "^item_[0-9]+$": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "ValidatorOnlyChild": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/First"
+            },
+            {
+              "type": "object",
+              "patternProperties": {
+                "^extra_[A-Za-z]+$": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "ValidatorOnlyPatternRef": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/First"
+            }
+          ],
+          "patternProperties": {
+            "^ref_extra_[A-Za-z]+$": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "OneOfContact": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string"
+            },
+            "phone": {
+              "type": "string"
+            }
+          },
+          "oneOf": [
+            {
+              "required": ["email"]
+            },
+            {
+              "required": ["phone"]
+            }
+          ]
+        },
+        "AnyOfContact": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string"
+            },
+            "phone": {
+              "type": "string"
+            }
+          },
+          "anyOf": [
+            {
+              "required": ["email"]
+            },
+            {
+              "required": ["phone"]
+            }
+          ]
+        },
+        "ConditionalPayload": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string"
+            }
+          },
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "metric"
+              }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": {
+              "metric": {
+                "type": "integer"
+              }
+            },
+            "required": ["metric"]
+          },
+          "else": {
+            "properties": {
+              "note": {
+                "type": "string"
+              }
+            },
+            "required": ["note"]
+          }
+        },
+        "RequiredOnlyGuard": {
+          "type": "object",
+          "properties": {
+            "flag": {
+              "type": "string"
+            }
+          },
+          "oneOf": [
+            {},
+            {
+              "required": []
+            }
+          ]
+        }
+      },
+      "$ref": "#/$defs/PatternTarget"
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  schema_validators.json
+
+    from __future__ import annotations
+
+    import re
+    from typing import Any, ClassVar
+
+    from pydantic import BaseModel, ConfigDict, RootModel, TypeAdapter, model_validator
+
+
+    class _JsonSchemaRuntimeValidationBase(BaseModel):
+        __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = ()
+        __json_schema_one_of_required_groups__: ClassVar[tuple[Any, ...]] = ()
+        __json_schema_any_of_required_groups__: ClassVar[tuple[Any, ...]] = ()
+        __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = ()
+
+        @model_validator(mode='before')
+        @classmethod
+        def _validate_json_schema_runtime_rules(cls, data: Any) -> Any:
+            data = cls._validate_json_schema_pattern_properties(data)
+            data = cls._validate_json_schema_required_groups(
+                data,
+                required_group_rules=cls.__json_schema_one_of_required_groups__,
+                require_exactly_one=True,
+            )
+            data = cls._validate_json_schema_required_groups(
+                data,
+                required_group_rules=cls.__json_schema_any_of_required_groups__,
+                require_exactly_one=False,
+            )
+            data = cls._validate_json_schema_conditional_required(data)
+            return data
+
+        @classmethod
+        def _validate_json_schema_pattern_properties(cls, data: Any) -> Any:
+            if not isinstance(data, dict):
+                return data
+            values = dict(data)
+            for rule in cls.__json_schema_pattern_properties__:
+                for key, value in data.items():
+                    if key in rule['declared_properties']:
+                        continue
+                    if any(
+                        re.search(pattern, key) for pattern in rule['rejected_patterns']
+                    ):
+                        raise ValueError(
+                            f'Property {key!r} is not allowed by patternProperties'
+                        )
+                    matched = False
+                    for pattern, value_type in rule['pattern_properties']:
+                        if not re.search(pattern, key):
+                            continue
+                        matched = True
+                        value = TypeAdapter(value_type).validate_python(value)
+                    if matched:
+                        values[key] = value
+                        continue
+                    if rule['additional_property_type'] is not None:
+                        values[key] = TypeAdapter(
+                            rule['additional_property_type']
+                        ).validate_python(value)
+                        continue
+                    if not rule['allow_unmatched']:
+                        raise ValueError(f'Unexpected property {key!r}')
+            return values
+
+        @classmethod
+        def _validate_json_schema_required_groups(
+            cls,
+            data: Any,
+            *,
+            required_group_rules: tuple[Any, ...],
+            require_exactly_one: bool,
+        ) -> Any:
+            if not required_group_rules or not isinstance(data, dict):
+                return data
+            for required_groups in required_group_rules:
+                matches = sum(
+                    all(any(name in data for name in names) for names in group)
+                    for group in required_groups
+                )
+                if require_exactly_one:
+                    if matches != 1:
+                        raise ValueError(
+                            'Expected exactly one required property group to be present'
+                        )
+                elif matches == 0:
+                    raise ValueError(
+                        'Expected at least one required property group to be present'
+                    )
+            return data
+
+        @classmethod
+        def _validate_json_schema_conditional_required(cls, data: Any) -> Any:
+            if not isinstance(data, dict):
+                return data
+            for rule in cls.__json_schema_conditional_required__:
+                condition_matches = all(
+                    any(name in data and data[name] in expected for name in names)
+                    for names, expected in rule['condition']
+                )
+                required_groups = (
+                    rule['then_required_groups']
+                    if condition_matches
+                    else rule['else_required_groups']
+                )
+                for group in required_groups:
+                    if all(any(name in data for name in names) for names in group):
+                        continue
+                    raise ValueError('Conditional required properties are missing')
+            return data
+
+
+    class First(BaseModel):
+        first: str
+
+
+    class Second(BaseModel):
+        second: str
+
+
+    class PatternBag(_JsonSchemaRuntimeValidationBase):
+        model_config = ConfigDict(
+            extra='allow',
+        )
+
+        __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
+            {
+                'declared_properties': (),
+                'rejected_patterns': (),
+                'pattern_properties': (('^[A-Z][A-Za-z0-9_]*$', Second),),
+                'additional_property_type': None,
+                'allow_unmatched': False,
+            },
+        )
+
+
+    class PatternTarget(First, PatternBag):
+        model_config = ConfigDict(
+            extra='allow',
+        )
+
+        __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
+            {
+                'declared_properties': ('first',),
+                'rejected_patterns': (),
+                'pattern_properties': (('^[A-Z][A-Za-z0-9_]*$', Second),),
+                'additional_property_type': None,
+                'allow_unmatched': False,
+            },
+        )
+
+
+    class DirectPatternBag(_JsonSchemaRuntimeValidationBase):
+        model_config = ConfigDict(
+            extra='allow',
+        )
+
+        __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
+            {
+                'declared_properties': (),
+                'rejected_patterns': (),
+                'pattern_properties': (('^item_[0-9]+$', int),),
+                'additional_property_type': None,
+                'allow_unmatched': False,
+            },
+        )
+
+
+    class ValidatorOnlyChild(_JsonSchemaRuntimeValidationBase, First):
+        model_config = ConfigDict(
+            extra='allow',
+        )
+
+        __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
+            {
+                'declared_properties': ('first',),
+                'rejected_patterns': (),
+                'pattern_properties': (('^extra_[A-Za-z]+$', int),),
+                'additional_property_type': None,
+                'allow_unmatched': False,
+            },
+        )
+
+
+    class ValidatorOnlyPatternRef(_JsonSchemaRuntimeValidationBase, First):
+        model_config = ConfigDict(
+            extra='allow',
+        )
+
+        __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
+            {
+                'declared_properties': ('first',),
+                'rejected_patterns': (),
+                'pattern_properties': (('^ref_extra_[A-Za-z]+$', int),),
+                'additional_property_type': None,
+                'allow_unmatched': False,
+            },
+        )
+
+
+    class OneOfContact(_JsonSchemaRuntimeValidationBase):
+        __json_schema_one_of_required_groups__: ClassVar[tuple[Any, ...]] = (
+            ((('email',),), (('phone',),)),
+        )
+
+        email: str | None = None
+        phone: str | None = None
+
+
+    class AnyOfContact(_JsonSchemaRuntimeValidationBase):
+        __json_schema_any_of_required_groups__: ClassVar[tuple[Any, ...]] = (
+            ((('email',),), (('phone',),)),
+        )
+
+        email: str | None = None
+        phone: str | None = None
+
+
+    class ConditionalPayload(_JsonSchemaRuntimeValidationBase):
+        __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = (
+            {
+                'condition': ((('kind',), ('metric',)),),
+                'then_required_groups': ((('metric',),),),
+                'else_required_groups': ((('note',),),),
+            },
+        )
+
+        kind: str | None = None
+        metric: int | None = None
+        note: str | None = None
+
+
+    class RequiredOnlyGuard1(BaseModel):
+        flag: str | None = None
+
+
+    class RequiredOnlyGuard(RootModel[RequiredOnlyGuard1]):
+        root: RequiredOnlyGuard1
+
+
+    class Model(RootModel[PatternTarget]):
+        root: PatternTarget
     ```
 
 ---

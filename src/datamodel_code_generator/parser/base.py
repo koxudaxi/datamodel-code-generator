@@ -1383,6 +1383,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.custom_template_dir = config.custom_template_dir
         self.extra_template_data: defaultdict[str, Any] = config.extra_template_data or defaultdict(dict)
         self.validators = config.validators
+        self.generate_schema_validators: bool = config.generate_schema_validators
 
         if self.validators:
             for model_name, model_config in self.validators.items():
@@ -1442,6 +1443,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 self.generic_base_class_config["target_pydantic_version"] = config.target_pydantic_version
             else:
                 self.extra_template_data[ALL_MODEL]["target_pydantic_version"] = config.target_pydantic_version
+        if config.schema_validator_base_class_name:
+            self.extra_template_data[ALL_MODEL]["schema_validator_base_class_name"] = (
+                config.schema_validator_base_class_name
+            )
+        if config.generate_schema_validators:
+            self.extra_template_data[ALL_MODEL]["schema_runtime_validation_enabled"] = True
 
         self.model_resolver = ModelResolver(
             base_url=source.geturl() if isinstance(source, ParseResult) else None,
@@ -3759,6 +3766,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     if m.reference and not m.reference.short_name.startswith("_"):  # pragma: no branch
                         export_imports.add_export(m.reference.short_name)
                 result += [export_imports.dump_all(multiline=True) + "\n"]
+
+            module_code = self.data_model_type.render_module_code(ctx.models)
+            if module_code:
+                result += [module_code, ""]
 
             code = dump_templates(ctx.models)
             result += [code]
