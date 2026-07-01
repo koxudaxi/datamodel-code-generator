@@ -143,6 +143,7 @@ playground = [
 version.source = "vcs"
 build.dev-mode-dirs = [ "src" ]
 build.targets.sdist.include = [
+  "/scripts",
   "/src",
   "/tests",
 ]
