@@ -6,8 +6,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 from scripts import build_schema_docs
 from tests.conftest import assert_output
 
@@ -63,7 +61,6 @@ def test_update_docs_target_replaces_marked_section(tmp_path: Path) -> None:
         content="\nGenerated\n",
     )
 
-    if not build_schema_docs.update_docs_target(target, check=False):
-        pytest.fail("Expected update_docs_target to replace the generated section")
+    assert build_schema_docs.update_docs_target(target, check=False) is True
 
     assert_output(docs_path.read_text(encoding="utf-8"), EXPECTED_SCHEMA_DOCS_PATH / "updated_target.txt")
