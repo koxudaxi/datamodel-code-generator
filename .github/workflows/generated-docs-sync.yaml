@@ -7,12 +7,17 @@ on:
     paths:
       - 'src/datamodel_code_generator/**'
       - 'tests/main/**'
+      - 'tests/data/openapi/**'
+      - 'tests/data/jsonschema/**'
+      - 'tests/data/expected/main/openapi/**'
+      - 'tests/data/expected/main/jsonschema/**'
       - 'tests/data/jsonschema/tutorial_pet.json'
       - 'tests/test_main_kr.py'
       - 'scripts/build_cli_docs.py'
       - 'scripts/build_prompt_data.py'
       - 'scripts/build_preset_docs.py'
       - 'scripts/build_schema_docs.py'
+      - 'scripts/build_docs_examples.py'
       - 'scripts/build_conformance_docs.py'
       - 'scripts/build_architecture_docs.py'
       - 'scripts/build_release_benchmark_docs.py'
@@ -68,6 +73,8 @@ jobs:
           generated_paths=(
             README.md
             docs/index.md
+            docs/model-reuse.md
+            docs/openapi.md
             docs/presets.md
             docs/conformance.md
             docs/architecture.md
