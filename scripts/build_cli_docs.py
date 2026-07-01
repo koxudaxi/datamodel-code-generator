@@ -154,6 +154,15 @@ class CLIDocOption:
         return list(types.keys())
 
 
+@dataclass(frozen=True)
+class CategoryRecipe:
+    """A concise set of options that solve a common category workflow."""
+
+    title: str
+    description: str
+    options: tuple[str, ...]
+
+
 COLLECTION_PATH = Path(__file__).parent.parent / "tests" / "cli_doc" / ".cli_doc_collection.json"
 DATA_PATH = Path(__file__).parent.parent / "tests" / "data"
 EXPECTED_BASE_PATH = DATA_PATH / "expected"
@@ -178,6 +187,106 @@ CATEGORY_EMOJIS = {
     OptionCategory.TEMPLATE: "🎨",
     OptionCategory.OPENAPI: "📘",
     OptionCategory.GENERAL: "⚙️",
+}
+
+CATEGORY_RECIPES: dict[OptionCategory, tuple[CategoryRecipe, ...]] = {
+    OptionCategory.BASE: (
+        CategoryRecipe(
+            title="Generate a local schema file",
+            description="Pin the input type and destination when the source extension is ambiguous or generated output "
+            "needs a stable path.",
+            options=("--input", "--input-file-type", "--output"),
+        ),
+        CategoryRecipe(
+            title="Fetch a protected remote schema",
+            description="Use URL input together with HTTP request controls for schemas served behind headers or slower "
+            "endpoints.",
+            options=("--url", "--http-headers", "--http-timeout"),
+        ),
+    ),
+    OptionCategory.TYPING: (
+        CategoryRecipe(
+            title="Use modern Python annotations",
+            description="Target a recent Python version and prefer built-in collection and union syntax in generated "
+            "types.",
+            options=("--target-python-version", "--use-union-operator", "--use-standard-collections"),
+        ),
+        CategoryRecipe(
+            title="Keep validation constraints in type hints",
+            description="Combine Annotated hints with strict scalar handling when downstream tooling reads type "
+            "metadata.",
+            options=("--use-annotated", "--field-constraints", "--strict-types"),
+        ),
+    ),
+    OptionCategory.FIELD: (
+        CategoryRecipe(
+            title="Normalize incoming field names",
+            description="Convert source names to Python identifiers while preserving explicit alias data for runtime "
+            "IO.",
+            options=("--snake-case-field", "--original-field-name-delimiter", "--aliases"),
+        ),
+        CategoryRecipe(
+            title="Carry schema documentation into models",
+            description="Promote schema and field descriptions into generated docstrings or field metadata.",
+            options=("--use-schema-description", "--use-field-description", "--use-field-description-example"),
+        ),
+    ),
+    OptionCategory.MODEL: (
+        CategoryRecipe(
+            title="Target Pydantic v2 on modern Python",
+            description="Set the output model family and Python/Pydantic compatibility targets together.",
+            options=("--output-model-type", "--target-python-version", "--target-pydantic-version"),
+        ),
+        CategoryRecipe(
+            title="Deduplicate reusable schemas",
+            description="Reuse equivalent models and tune the scope or root-model behavior when schemas repeat.",
+            options=("--reuse-model", "--reuse-scope", "--collapse-root-models"),
+        ),
+    ),
+    OptionCategory.TEMPLATE: (
+        CategoryRecipe(
+            title="Control generated file headers",
+            description="Choose a header source and remove volatile timestamp content for reproducible output.",
+            options=("--custom-file-header", "--custom-file-header-path", "--disable-timestamp"),
+        ),
+        CategoryRecipe(
+            title="Inject project-specific code",
+            description="Add imports, decorators, or custom templates when generated classes must fit local framework "
+            "conventions.",
+            options=("--additional-imports", "--class-decorators", "--custom-template-dir"),
+        ),
+    ),
+    OptionCategory.OPENAPI: (
+        CategoryRecipe(
+            title="Generate operation-focused models",
+            description="Limit OpenAPI output to operation shapes and name models from operation IDs and status codes.",
+            options=("--openapi-scopes", "--use-operation-id-as-name", "--use-status-code-in-response-name"),
+        ),
+        CategoryRecipe(
+            title="Trim an OpenAPI build",
+            description="Restrict generation to selected paths while preserving parameter and info-version context.",
+            options=("--openapi-include-paths", "--include-path-parameters", "--openapi-include-info-version"),
+        ),
+    ),
+    OptionCategory.GRAPHQL: (
+        CategoryRecipe(
+            title="Trim GraphQL metadata fields",
+            description="Skip injected typename fields when generated models should expose only business data.",
+            options=("--graphql-no-typename",),
+        ),
+    ),
+    OptionCategory.GENERAL: (
+        CategoryRecipe(
+            title="Resolve remote references deliberately",
+            description="Enable remote `$ref` loading and configure request metadata, timeouts, or local ref roots.",
+            options=("--allow-remote-refs", "--http-headers", "--http-timeout", "--http-local-ref-path"),
+        ),
+        CategoryRecipe(
+            title="Regenerate during schema edits",
+            description="Watch input files with a short debounce while writing output to a stable target path.",
+            options=("--watch", "--watch-delay", "--output"),
+        ),
+    ),
 }
 
 # Manual option descriptions for utility options
@@ -645,7 +754,13 @@ def generate_option_section(
             # Also skip if canonical form is the current option
             if canonical == option:
                 continue
-            related_links.append(_format_option_link(canonical, documented_options or frozenset()))
+            related_links.append(
+                _format_option_link(
+                    canonical,
+                    documented_options or frozenset(),
+                    current_category=meta.category if meta else None,
+                )
+            )
         if related_links:  # Only add Related if there are non-self-referencing options
             meta_parts.append(f"**Related:** {', '.join(related_links)}")
 
@@ -742,12 +857,43 @@ def _documented_related_option(option: str, documented_options: frozenset[str]) 
     return canonical
 
 
-def _format_option_link(option: str, documented_options: frozenset[str]) -> str:
-    """Format a generated CLI option link when metadata is available."""
+def _format_option_link(
+    option: str,
+    documented_options: frozenset[str],
+    *,
+    current_category: OptionCategory | None = None,
+) -> str:
+    """Return a Markdown link to a generated option section when metadata is available."""
     documented_option = _documented_related_option(option, documented_options)
-    if get_option_meta(documented_option) and (doc_path := get_cli_option_doc_path(documented_option)):
-        return f"[`{documented_option}`]({doc_path})"
-    return f"`{documented_option}`"
+    if not (meta := get_option_meta(documented_option)):
+        return f"`{documented_option}`"
+
+    if current_category == meta.category:
+        target = f"#{get_cli_doc_slug(get_cli_option_doc_name(documented_option))}"
+    elif doc_path := get_cli_option_doc_path(documented_option):
+        target = doc_path
+    else:
+        return f"`{documented_option}`"
+    return f"[`{documented_option}`]({target})"
+
+
+def generate_category_recipes(
+    category: OptionCategory,
+    documented_options: frozenset[str],
+) -> str:
+    """Generate category recipes that link to option details."""
+    if not (recipes := CATEGORY_RECIPES.get(category)):
+        return ""
+
+    md = "## 🍳 Recipes\n\n"
+    for recipe in recipes:
+        option_links = ", ".join(
+            _format_option_link(option, documented_options, current_category=category) for option in recipe.options
+        )
+        md += f"### {recipe.title}\n\n"
+        md += f"{recipe.description}\n\n"
+        md += f"**Options:** {option_links}\n\n"
+    return md
 
 
 def _format_relation_value(value: Any) -> str:
@@ -817,6 +963,10 @@ def generate_category_page(
     md += "\n---\n\n"
 
     category_documented_options = documented_options or frozenset(options)
+    if recipes := generate_category_recipes(category, category_documented_options):
+        md += recipes
+        md += "---\n\n"
+
     for option in sorted(options.keys()):
         cli_doc_option = options[option]
         md += generate_option_section(

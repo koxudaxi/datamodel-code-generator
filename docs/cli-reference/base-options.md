@@ -19,6 +19,22 @@
 
 ---
 
+## 🍳 Recipes
+
+### Generate a local schema file
+
+Pin the input type and destination when the source extension is ambiguous or generated output needs a stable path.
+
+**Options:** [`--input`](#input), [`--input-file-type`](#input-file-type), [`--output`](#output)
+
+### Fetch a protected remote schema
+
+Use URL input together with HTTP request controls for schemas served behind headers or slower endpoints.
+
+**Options:** [`--url`](#url), [`--http-headers`](general-options.md#http-headers), [`--http-timeout`](general-options.md#http-timeout)
+
+---
+
 ## `--emit-model-metadata` {#emit-model-metadata}
 
 Write a separate JSON map from source schema references to the final generated models, modules, fields, and type hints.
