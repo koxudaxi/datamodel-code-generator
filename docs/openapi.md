@@ -421,7 +421,7 @@ components:
 ```
 <!-- END AUTO-GENERATED DOC EXAMPLE: openapi.read-only-write-only-allof.schema -->
 
-Generated `UserRequest` will exclude `created_at` (readOnly from Timestamps).
+Generated `UserRequest` will exclude `created_at`, `updated_at`, and `id` because they are readOnly fields from the flattened Timestamps/User schemas. Generated `UserResponse` will exclude `password` and `api_key` because they are writeOnly fields from Credentials.
 
 ### ⚠️ Collision Handling
 

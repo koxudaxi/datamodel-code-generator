@@ -129,6 +129,9 @@ models/
 `-- shared.py
 ```
 
+**models/__init__.py:**
+_No code beyond the generated header._
+
 **models/schema_a.py:**
 
 ```python
