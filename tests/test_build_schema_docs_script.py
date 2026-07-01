@@ -15,8 +15,7 @@ SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "build_schema_docs.py
 EXPECTED_SCHEMA_DOCS_PATH = Path(__file__).resolve().parent / "data" / "expected" / "schema_docs"
 
 
-def test_build_schema_docs_check_is_up_to_date() -> None:
-    """Generated schema docs are committed."""
+def _assert_schema_docs_check_is_up_to_date() -> None:
     result = subprocess.run(
         [sys.executable, str(SCRIPT), "--check"],
         capture_output=True,
@@ -28,6 +27,23 @@ def test_build_schema_docs_check_is_up_to_date() -> None:
             f"build_schema_docs.py --check failed\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
             pytrace=False,
         )
+
+
+def test_build_schema_docs_check_is_up_to_date() -> None:
+    """Generated schema docs are committed."""
+    _assert_schema_docs_check_is_up_to_date()
+
+
+def test_build_schema_docs_check_reports_captured_output(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Schema docs check failures include captured process output."""
+
+    def fail_check(*_args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(args=[], returncode=1, stdout="generated diff", stderr="update hint")
+
+    monkeypatch.setattr(subprocess, "run", fail_check)
+
+    with pytest.raises(pytest.fail.Exception, match="stdout:\ngenerated diff\nstderr:\nupdate hint"):
+        _assert_schema_docs_check_is_up_to_date()
 
 
 def test_supported_formats_features_content() -> None:
