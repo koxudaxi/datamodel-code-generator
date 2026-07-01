@@ -1,34 +1,46 @@
-name: Update llms.txt
+name: Docs Check All
 
 on:
   pull_request:
     branches: [main]
     paths:
-      - 'src/datamodel_code_generator/**'
-      - 'tests/main/**'
-      - 'tests/data/jsonschema/tutorial_pet.json'
-      - 'tests/test_main_kr.py'
-      - 'scripts/build_cli_docs.py'
-      - 'scripts/build_prompt_data.py'
-      - 'scripts/build_preset_docs.py'
-      - 'src/datamodel_code_generator/parser/schema_version.py'
-      - 'scripts/build_schema_docs.py'
-      - 'scripts/build_release_benchmark_docs.py'
-      - 'docs/data/release-benchmarks.json'
-      - 'docs/data/release-benchmark-notes.json'
-      - 'docs/assets/benchmarks/release-benchmarks.css'
-      - 'docs/assets/benchmarks/release-benchmarks.js'
-      - 'docs/**/*.md'
+      - '.github/workflows/llms-txt.yaml'
+      - '.github/workflows/playground-lint.yaml'
       - 'README.md'
-      - 'zensical.toml'
+      - 'docs/**'
+      - 'pyproject.toml'
+      - 'scripts/build_architecture_docs.py'
+      - 'src/datamodel_code_generator/**'
+      - 'scripts/build_cli_docs.py'
+      - 'scripts/build_conformance_docs.py'
+      - 'scripts/build_deprecation_docs.py'
+      - 'scripts/build_diagrams.py'
+      - 'scripts/build_docs_examples.py'
+      - 'scripts/build_experimental_docs.py'
+      - 'scripts/build_release_benchmark_docs.py'
       - 'scripts/build_llms_txt.py'
+      - 'scripts/build_playground_assets.py'
+      - 'scripts/build_preset_docs.py'
+      - 'scripts/build_prompt_data.py'
+      - 'scripts/build_schema_docs.py'
+      - 'scripts/update_command_help_on_markdown.py'
+      - 'scripts/update_generate_prompt_snapshots.py'
+      - 'tests/data/expected/main/jsonschema/**'
+      - 'tests/data/expected/main/openapi/**'
+      - 'tests/data/jsonschema/**'
+      - 'tests/data/openapi/**'
+      - 'tests/main/**'
+      - 'tests/test_main_kr.py'
+      - 'tox.ini'
+      - 'uv.lock'
+      - 'zensical.toml'
 
 permissions:
   contents: read
 
 jobs:
-  update-llms-txt:
-    runs-on: ubuntu-latest
+  docs-check-all:
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -38,41 +50,18 @@ jobs:
           persist-credentials: false
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: true
+          cache-suffix: docs-check-all
+      - name: Setup Python
+        run: uv python install 3.14
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
       - name: Install tox
-        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
-      - name: Setup README environment
-        run: tox run -vv --notest --skip-missing-interpreters false -e readme
+        run: uv tool install --python-preference only-managed --python 3.14 tox --with tox-uv
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Setup CLI docs environment
-        run: tox run -vv --notest --skip-missing-interpreters false -e cli-docs
+      - name: Run aggregate docs check
+        run: tox run -e docs-check-all -- --check
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Setup schema docs environment
-        run: tox run -vv --notest --skip-missing-interpreters false -e schema-docs
-        env:
-          UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Setup preset docs environment
-        run: tox run -vv --notest --skip-missing-interpreters false -e preset-docs
-        env:
-          UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Setup llms.txt environment
-        run: tox run -vv --notest --skip-missing-interpreters false -e llms-txt
-        env:
-          UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Update README
-        run: .tox/readme/bin/python scripts/update_command_help_on_markdown.py
-      - name: Collect CLI doc metadata
-        run: .tox/cli-docs/bin/pytest tests --collect-cli-docs -p no:xdist -q
-      - name: Build CLI docs
-        run: .tox/cli-docs/bin/python scripts/build_cli_docs.py
-      - name: Build prompt data
-        run: .tox/cli-docs/bin/python scripts/build_prompt_data.py
-      - name: Build schema docs
-        run: .tox/schema-docs/bin/python scripts/build_schema_docs.py
-      - name: Build preset docs
-        run: .tox/preset-docs/bin/python scripts/build_preset_docs.py
-      - name: Build release benchmark docs
-        run: .tox/llms-txt/bin/python scripts/build_release_benchmark_docs.py
-      - name: Build llms.txt
-        run: .tox/llms-txt/bin/python scripts/build_llms_txt.py
