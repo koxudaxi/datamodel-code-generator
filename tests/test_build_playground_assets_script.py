@@ -5,7 +5,7 @@ from scripts import build_playground_assets
 
 
 def test_option_metadata_includes_docs_url() -> None:
-    actions = arg_parser._actions  # noqa: SLF001
+    actions = arg_parser._actions
     action = next(action for action in actions if "--output-model-type" in action.option_strings)
     metadata = build_playground_assets._option_metadata(
         action,
@@ -17,7 +17,7 @@ def test_option_metadata_includes_docs_url() -> None:
 
 
 def test_option_metadata_docs_url_canonicalizes_regular_alias() -> None:
-    actions = arg_parser._actions  # noqa: SLF001
+    actions = arg_parser._actions
     action = next(action for action in actions if "--capitalise-enum-members" in action.option_strings)
     metadata = build_playground_assets._option_metadata(
         action,
