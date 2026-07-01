@@ -184,4 +184,4 @@ def _marked_example(example_id: str, content: str) -> str:
 
 
 def _normalize_tmp_path(output: str, tmp_path: Path) -> str:
-    return output.replace(str(tmp_path), "<tmp>")
+    return output.replace(str(tmp_path), "<tmp>").replace("\\", "/")
