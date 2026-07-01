@@ -25,9 +25,7 @@ def test_build_schema_docs_check_is_up_to_date() -> None:
     )
     if result.returncode != 0:
         pytest.fail(
-            "build_schema_docs.py --check failed\n"
-            f"stdout:\n{result.stdout}\n"
-            f"stderr:\n{result.stderr}",
+            f"build_schema_docs.py --check failed\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
             pytrace=False,
         )
 
