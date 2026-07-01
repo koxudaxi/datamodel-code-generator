@@ -28,7 +28,13 @@ from datamodel_code_generator.cli_options import (
     is_excluded_from_docs,
     is_manual_doc,
 )
-from scripts.build_cli_docs import _documented_related_option, scan_docs_for_cli_option_tags
+from scripts.build_cli_docs import (
+    CLIDocExample,
+    CLIDocOption,
+    _documented_related_option,
+    generate_option_section,
+    scan_docs_for_cli_option_tags,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Collection
@@ -143,6 +149,92 @@ def test_related_page_tags_prefer_existing_generated_section() -> None:
         "--no-collapse-root-models",
         option_related_pages,
         "--no-collapse-root-models related page key",
+    )
+
+
+def test_option_section_renders_implies_and_requires_metadata() -> None:
+    """Generated option docs should include relationship metadata from CLIOptionMeta."""
+    section = generate_option_section(
+        "--use-missing-sentinel",
+        CLIDocOption(
+            option_name="--use-missing-sentinel",
+            examples=[
+                CLIDocExample(
+                    node_id="tests/cli_doc/test_cli_options_sync.py::test_use_missing_sentinel",
+                    option_description="Use missing sentinel.",
+                    cli_args=["--use-missing-sentinel"],
+                    is_primary=True,
+                ),
+            ],
+        ),
+        documented_options=frozenset({
+            "--output-model-type",
+            "--target-pydantic-version",
+            "--use-missing-sentinel",
+        }),
+    )
+
+    assert "**Option relationships:**" in section
+    assert (
+        "- **Implies:** [`--target-pydantic-version`](model-customization.md#target-pydantic-version) = `2.12`"
+        in section
+    )
+    assert (
+        "- **Requires:** [`--output-model-type`](model-customization.md#output-model-type) = "
+        "`pydantic_v2.BaseModel` - `--use-missing-sentinel` is only supported for "
+        "`--output-model-type pydantic_v2.BaseModel`."
+        in section
+    )
+
+
+def test_option_section_renders_conditional_requires_metadata() -> None:
+    """Relationship metadata should include source option value conditions."""
+    section = generate_option_section(
+        "--reuse-scope",
+        CLIDocOption(
+            option_name="--reuse-scope",
+            examples=[
+                CLIDocExample(
+                    node_id="tests/cli_doc/test_cli_options_sync.py::test_reuse_scope",
+                    option_description="Scope reuse.",
+                    cli_args=["--reuse-scope", "tree"],
+                    is_primary=True,
+                ),
+            ],
+        ),
+        documented_options=frozenset({"--reuse-model", "--reuse-scope"}),
+    )
+
+    assert (
+        "- **Requires:** When `--reuse-scope=tree`, "
+        "[`--reuse-model`](model-customization.md#reuse-model) enabled - "
+        "`--reuse-scope=tree` has no effect without `--reuse-model`."
+        in section
+    )
+
+
+def test_option_section_renders_conflicts_metadata() -> None:
+    """Generated option docs should include conflict metadata from CLIOptionMeta."""
+    section = generate_option_section(
+        "--custom-file-header",
+        CLIDocOption(
+            option_name="--custom-file-header",
+            examples=[
+                CLIDocExample(
+                    node_id="tests/cli_doc/test_cli_options_sync.py::test_custom_file_header",
+                    option_description="Custom header.",
+                    cli_args=["--custom-file-header", "# Header"],
+                    is_primary=True,
+                ),
+            ],
+        ),
+        documented_options=frozenset({"--custom-file-header", "--custom-file-header-path"}),
+    )
+
+    assert (
+        "- **Conflicts:** [`--custom-file-header-path`](template-customization.md#custom-file-header-path) - "
+        "`--custom-file-header` can not be used with `--custom-file-header-path`."
+        in section
     )
 
 
