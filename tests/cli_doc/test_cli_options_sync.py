@@ -196,15 +196,13 @@ def test_related_option_links_use_current_category_anchor() -> None:
 
 def test_category_recipe_options_have_registered_metadata() -> None:
     """Generated recipes should not point at stale CLI option names."""
-    registered_options = frozenset(CLI_OPTION_META)
     for category, recipes in build_cli_docs.CATEGORY_RECIPES.items():
         assert isinstance(category, OptionCategory)
         assert recipes
         for recipe in recipes:
             assert recipe.options
             for option in recipe.options:
-                canonical = _documented_related_option(option, registered_options)
-                assert get_option_meta(canonical) is not None
+                assert get_option_meta(option) is not None
 
 
 def test_category_recipes_render_before_option_details(monkeypatch: pytest.MonkeyPatch) -> None:
