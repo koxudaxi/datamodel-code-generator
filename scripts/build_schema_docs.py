@@ -500,8 +500,8 @@ def generate_format_type_guide_table() -> str:
         ),
         (
             "Protocol Buffers",
-            f"{len(protobuf_parser.SCALAR_SCHEMAS)} scalar field types, "
-            f"{len(protobuf_parser.WELL_KNOWN_SCHEMAS)} well-known type mappings",
+            (f"{len(protobuf_parser.SCALAR_SCHEMAS)} scalar field types, "
+            f"{len(protobuf_parser.WELL_KNOWN_SCHEMAS)} well-known type mappings"),
             "Converts descriptors to JSON Schema definitions",
         ),
         (
