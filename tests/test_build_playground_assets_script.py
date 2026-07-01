@@ -1,29 +1,44 @@
+"""Tests for generated browser playground assets."""
+
 from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any, cast
 
 from datamodel_code_generator.arguments import arg_parser
 from scripts import build_playground_assets
+from tests.conftest import assert_output
+
+EXPECTED_PLAYGROUND_ASSETS_PATH = Path(__file__).resolve().parent / "data" / "expected" / "playground_assets"
 
 
-def test_option_metadata_includes_docs_url() -> None:
+def test_option_metadata_docs_urls() -> None:
+    """Playground option metadata links back to generated CLI docs."""
     actions = arg_parser._actions
-    action = next(action for action in actions if "--output-model-type" in action.option_strings)
-    metadata = build_playground_assets._option_metadata(
-        action,
-        build_playground_assets._option_target_index(actions),
+    option_targets = build_playground_assets._option_target_index(actions)
+    output = [
+        _metadata_docs_summary("--output-model-type", actions, option_targets),
+        _metadata_docs_summary("--capitalise-enum-members", actions, option_targets),
+    ]
+
+    assert_output(
+        json.dumps(output, indent=2, sort_keys=True) + "\n",
+        EXPECTED_PLAYGROUND_ASSETS_PATH / "option_docs_urls.txt",
     )
 
-    assert metadata is not None
-    assert metadata["docs_url"] == "/cli-reference/model-customization/#output-model-type"
 
-
-def test_option_metadata_docs_url_canonicalizes_regular_alias() -> None:
-    actions = arg_parser._actions
-    action = next(action for action in actions if "--capitalise-enum-members" in action.option_strings)
-    metadata = build_playground_assets._option_metadata(
-        action,
-        build_playground_assets._option_target_index(actions),
+def _metadata_docs_summary(
+    option: str,
+    actions: list[Any],
+    option_targets: dict[str, dict[str, str]],
+) -> dict[str, str]:
+    action = next(action for action in actions if option in action.option_strings)
+    metadata = cast(
+        "dict[str, Any]",
+        build_playground_assets._option_metadata(action, option_targets),
     )
-
-    assert metadata is not None
-    assert metadata["name"] == "--capitalise-enum-members"
-    assert metadata["docs_url"] == "/cli-reference/field-customization/#capitalize-enum-members"
+    return {
+        "name": metadata["name"],
+        "docs_url": metadata["docs_url"],
+    }
