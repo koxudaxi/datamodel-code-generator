@@ -1332,6 +1332,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.use_inline_field_description: bool = config.use_inline_field_description
         self.use_single_line_docstring: bool = config.use_single_line_docstring
         self.use_default_kwarg: bool = config.use_default_kwarg
+        self.use_missing_sentinel: bool = config.use_missing_sentinel
         self.reuse_model: bool = config.reuse_model
         self.reuse_scope: ReuseScope | None = config.reuse_scope
         self.shared_module_name: str = config.shared_module_name
@@ -1526,6 +1527,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             config.use_default_factory_for_optional_nested_models
         )
         self.field_type_collision_strategy: FieldTypeCollisionStrategy | None = config.field_type_collision_strategy
+
+    def _data_model_field_common_kwargs(self) -> dict[str, Any]:
+        return {"use_missing_sentinel": self.use_missing_sentinel}
 
     def _should_preserve_explicit_root_class_name(self, class_name: str) -> bool:
         if not self.allow_leading_underscore_class_name:
@@ -2148,6 +2152,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                     property_name, field_name, discriminator_model.name
                                 ),
                                 use_serialization_alias=self.use_serialization_alias,
+                                **self._data_model_field_common_kwargs(),
                             ),
                         )
             has_imported_literal = any(import_ == IMPORT_LITERAL for import_ in imports)

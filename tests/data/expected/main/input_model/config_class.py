@@ -122,7 +122,7 @@ SchemaValidatorType: TypeAlias = Literal['pydantic-v2']
 StrictTypesModel: TypeAlias = Literal['str', 'bytes', 'int', 'float', 'bool']
 
 
-TargetPydanticVersion: TypeAlias = Literal['2', '2.11']
+TargetPydanticVersion: TypeAlias = Literal['2', '2.11', '2.12']
 
 
 UnionMode: TypeAlias = Literal['smart', 'left_to_right']
@@ -177,6 +177,7 @@ class BaseGenerateConfig(TypedDict):
     use_inline_field_description: NotRequired[bool]
     use_single_line_docstring: NotRequired[bool]
     use_default_kwarg: NotRequired[bool]
+    use_missing_sentinel: NotRequired[bool]
     reuse_model: NotRequired[bool]
     reuse_scope: NotRequired[ReuseScope]
     shared_module_name: NotRequired[str]

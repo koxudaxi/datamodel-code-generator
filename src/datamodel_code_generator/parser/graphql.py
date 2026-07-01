@@ -156,6 +156,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             use_default_kwarg=self.use_default_kwarg,
             has_default=True,
             use_serialization_alias=self.use_serialization_alias,
+            **self._data_model_field_common_kwargs(),
         )
 
     def _get_default(  # noqa: PLR6301
@@ -216,6 +217,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
                 self.data_model_field_type(
                     required=True,
                     data_type=data_type,
+                    **self._data_model_field_common_kwargs(),
                 )
             ],
             custom_base_class=self._resolve_base_class(enum_object.name),
@@ -236,6 +238,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
                 self.data_model_field_type(
                     required=True,
                     data_type=data_type,
+                    **self._data_model_field_common_kwargs(),
                 )
             ],
             custom_base_class=self._resolve_base_class(enum_object.name),
@@ -271,6 +274,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
                     has_default=True,
                     use_field_description=value.description is not None,
                     original_name=None,
+                    **self._data_model_field_common_kwargs(),
                 )
             )
 
@@ -388,6 +392,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             has_default=effective_has_default,
             use_serialization_alias=self.use_serialization_alias,
             use_default_with_required=use_default_with_required,
+            **self._data_model_field_common_kwargs(),
         )
 
     def parse_object_like(
@@ -449,7 +454,11 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
     def parse_union(self, union_object: graphql.GraphQLUnionType) -> None:  # ty: ignore
         """Parse a GraphQL union type and add it to results."""
         fields = [
-            self.data_model_field_type(name=self.references[type_.name].name, data_type=DataType())
+            self.data_model_field_type(
+                name=self.references[type_.name].name,
+                data_type=DataType(),
+                **self._data_model_field_common_kwargs(),
+            )
             for type_ in union_object.types
         ]
         data_model_type = self.data_model_union_type(

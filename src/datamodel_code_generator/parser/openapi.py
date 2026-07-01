@@ -865,7 +865,9 @@ class OpenAPIParser(JsonSchemaParser):
                         if object_schema and self.is_constraints_field(object_schema)
                         else None,
                         nullable=object_schema.nullable
-                        if object_schema and self.strict_nullable and object_schema.nullable is not None
+                        if object_schema
+                        and (self.strict_nullable or self.use_missing_sentinel)
+                        and object_schema.nullable is not None
                         else (
                             False
                             if object_schema and self.strict_nullable and (effective_has_default or effective_required)
@@ -884,6 +886,7 @@ class OpenAPIParser(JsonSchemaParser):
                         type_has_null=object_schema.type_has_null if object_schema else None,
                         use_serialization_alias=self.use_serialization_alias,
                         use_default_with_required=use_default_with_required,
+                        **self._data_model_field_common_kwargs(),
                     )
                 )
 

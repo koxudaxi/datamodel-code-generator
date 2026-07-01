@@ -16,7 +16,7 @@ from pydantic.alias_generators import to_camel, to_pascal, to_snake
 
 from datamodel_code_generator import Error
 from datamodel_code_generator.enums import AliasGenerator
-from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_ANY, IMPORT_DICT, Import
+from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_ANY, IMPORT_DICT, IMPORT_UNION, Import
 from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
@@ -45,6 +45,7 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_CONFIG_DICT,
     IMPORT_FIELD,
     IMPORT_FIELD_VALIDATOR,
+    IMPORT_MISSING,
     IMPORT_MODEL_VALIDATOR,
     IMPORT_TYPE_ADAPTER,
     IMPORT_VALIDATION_INFO,
@@ -98,6 +99,7 @@ DataModelFieldV1 = _PydanticBaseDataModelField  # deprecated re-export, pydantic
 _ALIAS_GENERATOR_TEMPLATE_DATA_KEY = "alias_generator"
 _ALIAS_GENERATOR_INTERNAL_KEY = "_alias_generator"
 _NO_ALIAS_INTERNAL_KEY = "_no_alias"
+_MISSING_SENTINEL = "MISSING"
 _CONFIG_ITEMS_TEMPLATE_DATA_KEY = "config_items"
 _ALIAS_GENERATOR_IMPORTS: dict[str, Import] = {
     AliasGenerator.ToCamel.value: IMPORT_ALIAS_GENERATOR_TO_CAMEL,
@@ -220,7 +222,44 @@ class DataModelField(_PydanticBaseDataModelField):
         """Process const field constraint using literal type."""
         self._process_const_as_literal()
 
+    @property
+    def use_missing_sentinel_default(self) -> bool:
+        """Return whether this field should use the Pydantic MISSING sentinel as its default."""
+        if not self.use_missing_sentinel:
+            return False
+        if self.is_class_var or self.required or self.has_default or self.has_default_factory_in_field:
+            return False
+        if self.default is not None and self.default is not UNDEFINED:
+            return False
+        uses_optional_nested_factory = (
+            self.use_default_factory_for_optional_nested_models
+            and self._get_default_factory_for_optional_nested_model()
+        )
+        return not uses_optional_nested_factory
+
+    @property
+    def represented_default(self) -> str:
+        """Get the rendered default value for the field."""
+        if self.use_missing_sentinel_default:
+            return _MISSING_SENTINEL
+        return super().represented_default
+
+    def should_strip_default_none(self, *, keep_optional: bool = False) -> bool:
+        """Return whether an actual None default should be omitted."""
+        if self.use_missing_sentinel_default:
+            return False
+        return super().should_strip_default_none(keep_optional=keep_optional)
+
+    @property
+    def fall_back_to_nullable(self) -> bool:
+        """Return whether optional fields should fall back to nullable type hints."""
+        if not self.use_missing_sentinel_default:
+            return super().fall_back_to_nullable
+        return bool(self.nullable or self.type_has_null)
+
     def _requires_null_default_field(self) -> bool:
+        if self.use_missing_sentinel_default:
+            return False
         if self.required or self.default is not None or self.has_default_factory:
             return False
         return self.data_type.type == "None"
@@ -248,6 +287,24 @@ class DataModelField(_PydanticBaseDataModelField):
         if self._requires_null_default_field() and not field:
             return "Field(None)"
         return field
+
+    @property
+    def type_hint(self) -> str:
+        """Get the type hint including MISSING when this field uses the sentinel default."""
+        type_hint = super().type_hint
+        if not self.use_missing_sentinel_default:
+            return type_hint
+        return self._type_hint_with_missing_sentinel(type_hint)
+
+    def _type_hint_with_missing_sentinel(self, type_hint: str) -> str:
+        match (self._use_union_operator, type_hint):
+            case (_, ""):
+                return _MISSING_SENTINEL
+            case (True, _):
+                return f"{type_hint} | {_MISSING_SENTINEL}"
+            case (False, _):
+                return f"Union[{type_hint}, {_MISSING_SENTINEL}]"
+        return type_hint
 
     @property
     def use_pydantic_extra_annotation_assignment(self) -> bool:
@@ -361,6 +418,10 @@ class DataModelField(_PydanticBaseDataModelField):
         """Get all required imports including AliasChoices and Field for discriminator."""
         base_imports = super().imports
         extra_imports: list[Import] = []
+        if self.use_missing_sentinel_default:
+            extra_imports.append(IMPORT_MISSING)
+            if not self._use_union_operator and IMPORT_UNION not in base_imports:
+                extra_imports.append(IMPORT_UNION)
         if self.is_class_var:
             extra_imports.append(IMPORT_CLASSVAR)
         if self.validation_aliases:

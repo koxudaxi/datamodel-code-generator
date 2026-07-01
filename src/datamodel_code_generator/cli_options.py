@@ -19,7 +19,13 @@ from typing import Any
 
 from datamodel_code_generator._format_types import PythonVersion
 from datamodel_code_generator.deprecations import deprecation_message
-from datamodel_code_generator.enums import AllExportsScope, DataModelType, NamingStrategy, ReuseScope
+from datamodel_code_generator.enums import (
+    AllExportsScope,
+    DataModelType,
+    NamingStrategy,
+    ReuseScope,
+    TargetPydanticVersion,
+)
 
 
 class OptionCategory(str, Enum):
@@ -193,6 +199,23 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--strict-nullable": CLIOptionMeta(name="--strict-nullable", category=OptionCategory.MODEL),
     "--use-default": CLIOptionMeta(name="--use-default", category=OptionCategory.MODEL),
     "--use-default-kwarg": CLIOptionMeta(name="--use-default-kwarg", category=OptionCategory.MODEL),
+    "--use-missing-sentinel": CLIOptionMeta(
+        name="--use-missing-sentinel",
+        category=OptionCategory.MODEL,
+        implies=(
+            CLIOptionRelation(
+                option="--target-pydantic-version",
+                value=TargetPydanticVersion.V2_12.value,
+            ),
+        ),
+        requires=(
+            CLIOptionRelation(
+                option="--output-model-type",
+                value=DataModelType.PydanticV2BaseModel.value,
+                message=("`--use-missing-sentinel` is only supported for `--output-model-type pydantic_v2.BaseModel`."),
+            ),
+        ),
+    ),
     "--strip-default-none": CLIOptionMeta(name="--strip-default-none", category=OptionCategory.MODEL),
     "--dataclass-arguments": CLIOptionMeta(name="--dataclass-arguments", category=OptionCategory.MODEL),
     "--use-frozen-field": CLIOptionMeta(name="--use-frozen-field", category=OptionCategory.MODEL),

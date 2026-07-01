@@ -1912,6 +1912,27 @@ def test_main_openapi_nullable(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_use_missing_sentinel_nullable_keyword(output_file: Path) -> None:
+    """Test --use-missing-sentinel preserves OpenAPI nullable keyword fields."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "missing_sentinel_nullable.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="missing_sentinel_nullable.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-missing-sentinel"],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="missing_sentinel_nullable",
+        model_name="MissingSentinelNullable",
+        valid_json='{"requiredNullable": null, "nullableUnrequired": null}',
+        invalid_json='{"requiredNullable": {}}',
+        expected_error_type="int_type",
+        expected_attribute_path=("nullableUnrequired",),
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--strict-nullable"],
     option_description="""Treat default field as a non-nullable field.

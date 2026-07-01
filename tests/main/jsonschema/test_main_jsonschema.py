@@ -809,6 +809,120 @@ def test_use_default_pydantic_v2_with_json_schema_const(output_file: Path) -> No
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-missing-sentinel"],
+    option_description="""Use Pydantic's MISSING sentinel for optional fields without defaults.
+
+The `--use-missing-sentinel` flag generates `MISSING` as the default for optional
+Pydantic v2 fields that do not define a schema default. This preserves the
+difference between an omitted field and a nullable field set to `None`.""",
+    input_schema="jsonschema/missing_sentinel.json",
+    cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-missing-sentinel"],
+    golden_output="jsonschema/missing_sentinel.py",
+    related_options=["--target-pydantic-version", "--strict-nullable"],
+)
+def test_main_jsonschema_use_missing_sentinel(output_file: Path) -> None:
+    """Use Pydantic's MISSING sentinel for optional fields without defaults.
+
+    The `--use-missing-sentinel` flag generates `MISSING` as the default for optional
+    Pydantic v2 fields that do not define a schema default. This preserves the
+    difference between an omitted field and a nullable field set to `None`.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "missing_sentinel.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="missing_sentinel.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-missing-sentinel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="missing_sentinel",
+        model_name="MissingSentinel",
+        valid_json='{"required": 1, "requiredNullable": null, "nullableUnrequired": null}',
+        invalid_json='{"required": 1, "requiredNullable": null, "unrequired": null}',
+        expected_error_type="int_type",
+        expected_attribute_path=("nullableUnrequired",),
+        expected_attribute_value=None,
+    )
+
+
+def test_main_jsonschema_use_missing_sentinel_no_union_operator(output_file: Path) -> None:
+    """Use MISSING sentinel when generated unions use typing.Union instead of the | operator."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "missing_sentinel.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="missing_sentinel_no_union_operator.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-missing-sentinel",
+            "--no-use-union-operator",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_use_missing_sentinel_explicit_pydantic_v2_12(output_file: Path) -> None:
+    """Use MISSING sentinel when the required Pydantic target version is explicit."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "missing_sentinel.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="missing_sentinel.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-pydantic-version",
+            "2.12",
+            "--use-missing-sentinel",
+        ],
+        force_exec_validation=True,
+    )
+
+
+@pytest.mark.parametrize(
+    ("extra_args", "expected_stderr_contains"),
+    [
+        (
+            [
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--target-pydantic-version",
+                "2.11",
+                "--use-missing-sentinel",
+            ],
+            "`--use-missing-sentinel` requires `--target-pydantic-version 2.12`",
+        ),
+        (
+            ["--output-model-type", "dataclasses.dataclass", "--use-missing-sentinel"],
+            "`--use-missing-sentinel` is only supported for `--output-model-type pydantic_v2.BaseModel`",
+        ),
+    ],
+)
+def test_main_jsonschema_use_missing_sentinel_requires_pydantic_v2_12(
+    extra_args: list[str],
+    expected_stderr_contains: str,
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject MISSING sentinel generation when the requested output cannot support it."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "missing_sentinel.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=extra_args,
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains=expected_stderr_contains,
+    )
+
+
 @pytest.mark.parametrize(
     ("output_model", "expected_output", "option"),
     [
@@ -8350,8 +8464,11 @@ def test_main_use_generic_base_class_alias_generator(output_file: Path) -> None:
     )
 
 
-def test_main_use_generic_base_class_target_pydantic_v2_11(output_file: Path) -> None:
-    """Test --use-generic-base-class with --target-pydantic-version 2.11."""
+@pytest.mark.parametrize("target_pydantic_version", ["2.11", "2.12"])
+def test_main_use_generic_base_class_target_pydantic_v2_11_or_later(
+    target_pydantic_version: str, output_file: Path
+) -> None:
+    """Test --use-generic-base-class with target Pydantic versions that use validate_by_name."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_simple.json",
         output_path=output_file,
@@ -8364,7 +8481,7 @@ def test_main_use_generic_base_class_target_pydantic_v2_11(output_file: Path) ->
             "pydantic_v2.BaseModel",
             "--use-generic-base-class",
             "--target-pydantic-version",
-            "2.11",
+            target_pydantic_version,
         ],
     )
 
