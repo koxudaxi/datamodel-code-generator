@@ -227,10 +227,11 @@ def _replace_marked_section(markdown_text: str, begin_marker: str, end_marker: s
     if (start := markdown_text.find(begin_marker)) == -1:
         msg = f"Could not find generated section begin marker: {begin_marker}"
         raise ValueError(msg)
-    if (end := markdown_text.find(end_marker)) == -1 or end < start:
+    content_start = start + len(begin_marker)
+    if (end := markdown_text.find(end_marker, content_start)) == -1:
         msg = f"Could not find generated section end marker after {begin_marker}: {end_marker}"
         raise ValueError(msg)
-    return markdown_text[: start + len(begin_marker)] + "\n" + generated.rstrip() + "\n" + markdown_text[end:]
+    return markdown_text[:content_start] + "\n" + generated.rstrip() + "\n" + markdown_text[end:]
 
 
 def _render_readme_supported_input() -> str:

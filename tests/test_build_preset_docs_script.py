@@ -74,6 +74,16 @@ def test_readme_supported_sections_are_rendered_from_enums() -> None:
     )
 
 
+def test_marked_section_replacement_uses_end_marker_after_begin() -> None:
+    """Marked section replacement ignores matching text before the begin marker."""
+    markdown = "Earlier literal <!-- END -->\n<!-- BEGIN -->\nstale\n<!-- END -->\nAfter\n"
+
+    assert_output(
+        build_preset_docs._replace_marked_section(markdown, "<!-- BEGIN -->", "<!-- END -->", "Generated"),
+        EXPECTED_PRESET_DOCS_PATH / "marked_section_replacement.txt",
+    )
+
+
 def test_preset_config_supports_enum_backed_string_options() -> None:
     """Preset config keeps string-backed enum options typed after validation."""
     enum_item = PresetConfig(extra_fields=ExtraFields.Forbid).items()[0]
