@@ -28,7 +28,8 @@ from datamodel_code_generator.cli_options import (
     is_excluded_from_docs,
     is_manual_doc,
 )
-from scripts.build_cli_docs import _documented_related_option, scan_docs_for_cli_option_tags
+from scripts import build_cli_docs
+from scripts.build_cli_docs import _documented_related_option, _format_option_link, scan_docs_for_cli_option_tags
 
 if TYPE_CHECKING:
     from collections.abc import Collection
@@ -144,6 +145,97 @@ def test_related_page_tags_prefer_existing_generated_section() -> None:
         option_related_pages,
         "--no-collapse-root-models related page key",
     )
+
+
+def test_format_option_link_uses_current_category_anchor() -> None:
+    """Recipe links should stay on-page when the option belongs to the current category."""
+    documented_options = frozenset({"--input", "--target-python-version", "--unknown-option"})
+
+    assert _format_option_link("--input", documented_options, current_category=OptionCategory.BASE) == (
+        "[`--input`](#input)"
+    )
+    assert _format_option_link(
+        "--target-python-version",
+        documented_options,
+        current_category=OptionCategory.TYPING,
+    ) == "[`--target-python-version`](model-customization.md#target-python-version)"
+    assert _format_option_link("--unknown-option", documented_options) == "`--unknown-option`"
+
+
+def test_category_recipe_options_have_registered_metadata() -> None:
+    """Generated recipes should not point at stale CLI option names."""
+    registered_options = frozenset(CLI_OPTION_META)
+    for category, recipes in build_cli_docs.CATEGORY_RECIPES.items():
+        assert isinstance(category, OptionCategory)
+        assert recipes
+        for recipe in recipes:
+            assert recipe.options
+            for option in recipe.options:
+                canonical = _documented_related_option(option, registered_options)
+                assert get_option_meta(canonical) is not None
+
+
+def test_category_recipes_render_before_option_details(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Recipe sections should sit between the category option table and detailed option sections."""
+    monkeypatch.setattr(
+        build_cli_docs,
+        "CATEGORY_RECIPES",
+        {
+            OptionCategory.BASE: (
+                build_cli_docs.CategoryRecipe(
+                    title="Read a schema",
+                    description="Choose the schema and destination.",
+                    options=("--input",),
+                ),
+            )
+        },
+    )
+    option = build_cli_docs.CLIDocOption(
+        option_name="--input",
+        examples=[
+            build_cli_docs.CLIDocExample(
+                node_id="tests/test_cli_doc.py::test_input",
+                option_description="Specify the input schema file path.",
+                cli_args=["--input", "schema.json"],
+                is_primary=True,
+            )
+        ],
+    )
+
+    page = build_cli_docs.generate_category_page(
+        OptionCategory.BASE,
+        {"--input": option},
+        documented_options=frozenset({"--input"}),
+    )
+
+    assert "Recipes" in page
+    assert page.index("Recipes") < page.index("## `--input`")
+    assert "**Options:** [`--input`](#input)" in page
+
+
+def test_category_page_omits_recipes_without_category_data(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Categories without recipe data should keep the previous option-table-to-details shape."""
+    monkeypatch.setattr(build_cli_docs, "CATEGORY_RECIPES", {})
+    option = build_cli_docs.CLIDocOption(
+        option_name="--input",
+        examples=[
+            build_cli_docs.CLIDocExample(
+                node_id="tests/test_cli_doc.py::test_input",
+                option_description="Specify the input schema file path.",
+                cli_args=["--input", "schema.json"],
+                is_primary=True,
+            )
+        ],
+    )
+
+    page = build_cli_docs.generate_category_page(
+        OptionCategory.BASE,
+        {"--input": option},
+        documented_options=frozenset({"--input"}),
+    )
+
+    assert "Recipes" not in page
+    assert page.index("---") < page.index("## `--input`")
 
 
 class TestCLIOptionMetaSync:

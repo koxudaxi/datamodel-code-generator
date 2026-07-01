@@ -25,6 +25,22 @@
 
 ---
 
+## 🍳 Recipes
+
+### Resolve remote references deliberately
+
+Enable remote `$ref` loading and configure request metadata, timeouts, or local ref roots.
+
+**Options:** [`--allow-remote-refs`](#allow-remote-refs), [`--http-headers`](#http-headers), [`--http-timeout`](#http-timeout), [`--http-local-ref-path`](#http-local-ref-path)
+
+### Regenerate during schema edits
+
+Watch input files with a short debounce while writing output to a stable target path.
+
+**Options:** [`--watch`](#watch), [`--watch-delay`](#watch-delay), [`--output`](base-options.md#output)
+
+---
+
 ## `--all-exports-collision-strategy` {#all-exports-collision-strategy}
 
 Handle name collisions when exporting recursive module hierarchies.

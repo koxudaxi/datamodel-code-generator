@@ -32,6 +32,22 @@
 
 ---
 
+## 🍳 Recipes
+
+### Control generated file headers
+
+Choose a header source and remove volatile timestamp content for reproducible output.
+
+**Options:** [`--custom-file-header`](#custom-file-header), [`--custom-file-header-path`](#custom-file-header-path), [`--disable-timestamp`](#disable-timestamp)
+
+### Inject project-specific code
+
+Add imports, decorators, or custom templates when generated classes must fit local framework conventions.
+
+**Options:** [`--additional-imports`](#additional-imports), [`--class-decorators`](#class-decorators), [`--custom-template-dir`](#custom-template-dir)
+
+---
+
 ## `--additional-imports` {#additional-imports}
 
 Add custom imports to generated output files.

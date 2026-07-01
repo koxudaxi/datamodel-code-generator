@@ -51,6 +51,22 @@
 
 ---
 
+## 🍳 Recipes
+
+### Target Pydantic v2 on modern Python
+
+Set the output model family and Python/Pydantic compatibility targets together.
+
+**Options:** [`--output-model-type`](#output-model-type), [`--target-python-version`](#target-python-version), [`--target-pydantic-version`](#target-pydantic-version)
+
+### Deduplicate reusable schemas
+
+Reuse equivalent models and tune the scope or root-model behavior when schemas repeat.
+
+**Options:** [`--reuse-model`](#reuse-model), [`--reuse-scope`](#reuse-scope), [`--collapse-root-models`](#collapse-root-models)
+
+---
+
 ## `--alias-generator` {#alias-generator}
 
 Use a Pydantic v2 alias generator in model_config.

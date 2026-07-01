@@ -8,6 +8,16 @@
 
 ---
 
+## 🍳 Recipes
+
+### Trim GraphQL metadata fields
+
+Skip injected typename fields when generated models should expose only business data.
+
+**Options:** [`--graphql-no-typename`](#graphql-no-typename)
+
+---
+
 ## `--graphql-no-typename` {#graphql-no-typename}
 
 Exclude __typename field from generated GraphQL models.

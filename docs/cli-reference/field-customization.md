@@ -34,6 +34,22 @@
 
 ---
 
+## 🍳 Recipes
+
+### Normalize incoming field names
+
+Convert source names to Python identifiers while preserving explicit alias data for runtime IO.
+
+**Options:** [`--snake-case-field`](#snake-case-field), [`--original-field-name-delimiter`](#original-field-name-delimiter), [`--aliases`](#aliases)
+
+### Carry schema documentation into models
+
+Promote schema and field descriptions into generated docstrings or field metadata.
+
+**Options:** [`--use-schema-description`](#use-schema-description), [`--use-field-description`](#use-field-description), [`--use-field-description-example`](#use-field-description-example)
+
+---
+
 ## `--aliases` {#aliases}
 
 Apply custom field and class name aliases via inline JSON or a JSON file path.

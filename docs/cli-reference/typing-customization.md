@@ -37,6 +37,22 @@
 
 ---
 
+## 🍳 Recipes
+
+### Use modern Python annotations
+
+Target a recent Python version and prefer built-in collection and union syntax in generated types.
+
+**Options:** [`--target-python-version`](model-customization.md#target-python-version), [`--use-union-operator`](#use-union-operator), [`--use-standard-collections`](#use-standard-collections)
+
+### Keep validation constraints in type hints
+
+Combine Annotated hints with strict scalar handling when downstream tooling reads type metadata.
+
+**Options:** [`--use-annotated`](#use-annotated), [`--field-constraints`](field-customization.md#field-constraints), [`--strict-types`](#strict-types)
+
+---
+
 ## `--allof-class-hierarchy` {#allof-class-hierarchy}
 
 Controls how allOf schemas are represented in the generated class hierarchy.
