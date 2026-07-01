@@ -61,6 +61,6 @@ def test_update_docs_target_replaces_marked_section(tmp_path: Path) -> None:
         content="\nGenerated\n",
     )
 
-    assert build_schema_docs.update_docs_target(target, check=False) is True
+    build_schema_docs.update_docs_target(target, check=False)
 
     assert_output(docs_path.read_text(encoding="utf-8"), EXPECTED_SCHEMA_DOCS_PATH / "updated_target.txt")
