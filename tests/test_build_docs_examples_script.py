@@ -61,6 +61,20 @@ def test_docs_example_render_helpers(tmp_path: Path) -> None:
             path=python_path,
             strip_python_header=True,
         ).render(),
+        build_docs_examples.render_cli_example(
+            build_docs_examples.MarkdownCodeBlock(
+                "Command",
+                "bash",
+                content="datamodel-codegen --input schema.yaml --output model.py",
+            ),
+            build_docs_examples.MarkdownCodeBlock("Schema", "yaml", path=yaml_path),
+            build_docs_examples.MarkdownCodeBlock(
+                "Model",
+                "python",
+                path=python_path,
+                strip_python_header=True,
+            ),
+        ),
     ))
 
     assert_output(output, EXPECTED_DOCS_EXAMPLES_PATH / "docs_example_render_helpers.txt")

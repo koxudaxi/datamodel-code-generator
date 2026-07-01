@@ -16,6 +16,12 @@ ROOT = Path(__file__).parent.parent
 DOCS = ROOT / "docs"
 TEST_DATA = ROOT / "tests" / "data"
 EXPECTED_MAIN = TEST_DATA / "expected" / "main"
+EXPECTED_INPUT_MODEL = EXPECTED_MAIN / "input_model"
+EXPECTED_JSON_SCHEMA = EXPECTED_MAIN / "jsonschema"
+EXPECTED_OPENAPI = EXPECTED_MAIN / "openapi"
+INPUT_MODEL_DATA = TEST_DATA / "python" / "input_model"
+JSON_SCHEMA_DATA = TEST_DATA / "jsonschema"
+OPENAPI_DATA = TEST_DATA / "openapi"
 
 BEGIN_MARKER_TEMPLATE = "<!-- BEGIN AUTO-GENERATED DOC EXAMPLE: {example_id} -->"
 END_MARKER_TEMPLATE = "<!-- END AUTO-GENERATED DOC EXAMPLE: {example_id} -->"
@@ -35,6 +41,17 @@ class DocsExample:
     example_id: str
     path: Path
     render: Callable[[], str]
+
+
+@dataclass(frozen=True, slots=True)
+class MarkdownCodeBlock:
+    """One labeled code block in a generated Markdown example."""
+
+    label: str
+    language: str
+    path: Path | None = None
+    content: str | None = None
+    strip_python_header: bool = False
 
 
 def read_text(path: Path) -> str:
@@ -61,6 +78,36 @@ def render_file_example(*, language: str, path: Path, strip_python_header: bool 
     """Render one fixture file as a Markdown code block."""
     content = read_python_output(path) if strip_python_header else read_text(path)
     return fenced(language, content)
+
+
+def read_code_block(block: MarkdownCodeBlock) -> str:
+    """Read content for a Markdown code block."""
+    if block.content is not None:
+        return block.content.rstrip()
+    if block.path is None:  # pragma: no cover - registry construction should prevent this
+        msg = f"{block.label} requires either content or path"
+        raise ValueError(msg)
+    if block.strip_python_header:
+        return read_python_output(block.path)
+    return read_text(block.path)
+
+
+def render_labeled_code_block(block: MarkdownCodeBlock) -> str:
+    """Render one labeled Markdown code block."""
+    return f"**{block.label}:**{fenced(block.language, read_code_block(block))}"
+
+
+def indent_markdown(content: str, *, prefix: str = "    ") -> str:
+    """Indent Markdown content for an admonition body."""
+    return "\n".join(f"{prefix}{line}" if line else "" for line in content.splitlines())
+
+
+def render_cli_example(*blocks: MarkdownCodeBlock) -> str:
+    """Render a MkDocs example block from labeled code examples."""
+    if not blocks:
+        return ""
+    body = "\n\n".join(render_labeled_code_block(block).strip() for block in blocks)
+    return f'\n??? example "Examples"\n\n{indent_markdown(body)}\n'
 
 
 def directory_files(path: Path) -> list[Path]:
@@ -121,39 +168,39 @@ def docs_examples() -> tuple[DocsExample, ...]:
         DocsExample(
             example_id="openapi.quick-start.schema",
             path=DOCS / "openapi.md",
-            render=lambda: details("api.yaml", "yaml", read_text(TEST_DATA / "openapi" / "api.yaml")),
+            render=lambda: details("api.yaml", "yaml", read_text(OPENAPI_DATA / "api.yaml")),
         ),
         _file_example(
             "openapi.quick-start.output",
             "openapi.md",
             language="python",
-            path=EXPECTED_MAIN / "openapi" / "general.py",
+            path=EXPECTED_OPENAPI / "general.py",
             strip_python_header=True,
         ),
         _file_example(
             "openapi.read-only-write-only.schema",
             "openapi.md",
             language="yaml",
-            path=TEST_DATA / "openapi" / "read_only_write_only.yaml",
+            path=OPENAPI_DATA / "read_only_write_only.yaml",
         ),
         _file_example(
             "openapi.read-only-write-only.output",
             "openapi.md",
             language="python",
-            path=EXPECTED_MAIN / "openapi" / "read_only_write_only_all.py",
+            path=EXPECTED_OPENAPI / "read_only_write_only_all.py",
             strip_python_header=True,
         ),
         _file_example(
             "openapi.read-only-write-only-allof.schema",
             "openapi.md",
             language="yaml",
-            path=TEST_DATA / "openapi" / "read_only_write_only_allof.yaml",
+            path=OPENAPI_DATA / "read_only_write_only_allof.yaml",
         ),
         _file_example(
             "model-reuse.reuse-model.output",
             "model-reuse.md",
             language="python",
-            path=EXPECTED_MAIN / "jsonschema" / "json_reuse_enum.py",
+            path=EXPECTED_JSON_SCHEMA / "json_reuse_enum.py",
             strip_python_header=True,
         ),
         DocsExample(
@@ -165,14 +212,101 @@ def docs_examples() -> tuple[DocsExample, ...]:
             "model-reuse.use-type-alias.schema",
             "model-reuse.md",
             language="json",
-            path=TEST_DATA / "jsonschema" / "reduce_duplicate_field_types.json",
+            path=JSON_SCHEMA_DATA / "reduce_duplicate_field_types.json",
         ),
         _file_example(
             "model-reuse.use-type-alias.output",
             "model-reuse.md",
             language="python",
-            path=EXPECTED_MAIN / "jsonschema" / "reduce_duplicate_field_types.py",
+            path=EXPECTED_JSON_SCHEMA / "reduce_duplicate_field_types.py",
             strip_python_header=True,
+        ),
+        DocsExample(
+            example_id="cli-reference.base-options.input-model.example",
+            path=DOCS / "cli-reference" / "base-options.md",
+            render=lambda: render_cli_example(
+                MarkdownCodeBlock(
+                    "Command",
+                    "bash",
+                    content=(
+                        "datamodel-codegen \\\n"
+                        "  --input-model tests.data.python.input_model.typeddict_models:User \\\n"
+                        "  --output model.py"
+                    ),
+                ),
+                MarkdownCodeBlock(
+                    "Input Model (`tests/data/python/input_model/typeddict_models.py`)",
+                    "python",
+                    path=INPUT_MODEL_DATA / "typeddict_models.py",
+                ),
+                MarkdownCodeBlock(
+                    "Output",
+                    "python",
+                    path=EXPECTED_INPUT_MODEL / "typeddict.py",
+                    strip_python_header=True,
+                ),
+            ),
+        ),
+        DocsExample(
+            example_id="cli-reference.model-customization.base-class-map.example",
+            path=DOCS / "cli-reference" / "model-customization.md",
+            render=lambda: render_cli_example(
+                MarkdownCodeBlock(
+                    "Input Schema",
+                    "json",
+                    path=JSON_SCHEMA_DATA / "base_class_map.json",
+                ),
+                MarkdownCodeBlock(
+                    "Output",
+                    "python",
+                    path=EXPECTED_JSON_SCHEMA / "base_class_map.py",
+                    strip_python_header=True,
+                ),
+            ),
+        ),
+        DocsExample(
+            example_id="cli-reference.template-customization.custom-template-dir.example",
+            path=DOCS / "cli-reference" / "template-customization.md",
+            render=lambda: render_cli_example(
+                MarkdownCodeBlock(
+                    "Input Schema (`api.yaml`)",
+                    "yaml",
+                    path=OPENAPI_DATA / "api.yaml",
+                ),
+                MarkdownCodeBlock(
+                    "Template (`templates/pydantic/BaseModel.jinja2`)",
+                    "jinja2",
+                    path=TEST_DATA / "templates" / "pydantic" / "BaseModel.jinja2",
+                ),
+                MarkdownCodeBlock(
+                    "Extra Template Data (`openapi/extra_data.json`)",
+                    "json",
+                    path=OPENAPI_DATA / "extra_data.json",
+                ),
+                MarkdownCodeBlock(
+                    "Output",
+                    "python",
+                    path=EXPECTED_OPENAPI / "custom_template_dir.py",
+                    strip_python_header=True,
+                ),
+            ),
+        ),
+        DocsExample(
+            example_id="cli-reference.typing-customization.use-closed-typed-dict.example",
+            path=DOCS / "cli-reference" / "typing-customization.md",
+            render=lambda: render_cli_example(
+                MarkdownCodeBlock(
+                    "Input Schema",
+                    "json",
+                    path=JSON_SCHEMA_DATA / "typed_dict_closed.json",
+                ),
+                MarkdownCodeBlock(
+                    "Output",
+                    "python",
+                    path=EXPECTED_JSON_SCHEMA / "typed_dict_closed.py",
+                    strip_python_header=True,
+                ),
+            ),
         ),
     )
 

@@ -1119,10 +1119,10 @@ adding `BaseModel`. Ensure your mixins inherit from `BaseModel` if needed.
 
     1. :material-arrow-left: `--base-class-map` - the option documented here
 
+<!-- BEGIN AUTO-GENERATED DOC EXAMPLE: cli-reference.model-customization.base-class-map.example -->
 ??? example "Examples"
 
     **Input Schema:**
-
     ```json
     {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1150,8 +1150,31 @@ adding `BaseModel`. Ensure your mixins inherit from `BaseModel` if needed.
     ```
 
     **Output:**
+    ```python
+    from __future__ import annotations
 
-    > **Error:** File not found: base_class_map.py
+    from typing import Any
+
+    from custom.bases import AnimalBase, PersonBase
+    from pydantic import BaseModel, RootModel
+
+
+    class Model(RootModel[Any]):
+        root: Any
+
+
+    class Person(PersonBase):
+        name: str | None = None
+
+
+    class Animal(AnimalBase):
+        species: str | None = None
+
+
+    class Car(BaseModel):
+        model: str | None = None
+    ```
+<!-- END AUTO-GENERATED DOC EXAMPLE: cli-reference.model-customization.base-class-map.example -->
 
 ---
 
