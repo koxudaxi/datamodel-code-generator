@@ -5,6 +5,19 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.66.2](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.66.2) - 2026-07-01
+
+## What's Changed
+* Update CHANGELOG for 0.66.1 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3507
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3508
+* Add Modular to Used by list by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3509
+* Add Pydantic missing sentinel option by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3510
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.66.1...0.66.2
+
+---
+
 ## [0.66.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.66.1) - 2026-06-30
 
 ## What's Changed
