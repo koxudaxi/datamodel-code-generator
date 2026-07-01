@@ -870,6 +870,23 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
 }
 
 
+def _validate_option_topic_groups() -> None:
+    """Validate CLI option topic/group invariants at import time."""
+    for option, meta in CLI_OPTION_META.items():
+        if meta.topic is None or meta.group is None:
+            continue
+        allowed_groups = OPTION_TOPIC_ALLOWED_GROUPS.get(meta.topic)
+        if allowed_groups is None:  # pragma: no cover
+            msg = f"{option}: topic {meta.topic.value!r} has no allowed groups"
+            raise AssertionError(msg)
+        if meta.group not in allowed_groups:  # pragma: no cover
+            msg = f"{option}: group {meta.group.value!r} is not allowed for topic {meta.topic.value!r}"
+            raise AssertionError(msg)
+
+
+_validate_option_topic_groups()
+
+
 def _canonical_option_key(option: str) -> tuple[int, str]:
     """Key function for determining canonical option.
 

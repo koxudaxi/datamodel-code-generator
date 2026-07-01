@@ -217,25 +217,16 @@ class TestCLIOptionMetaSync:
                 + "\n\nRemove the relation or add the target option to arguments.py."
             )
 
-    def test_option_topics_are_known_and_non_empty(self) -> None:
-        """Verify that optional topic metadata uses known non-empty values."""
-        for option, meta in CLI_OPTION_META.items():
-            if (topic := meta.topic) is None:
-                continue
-            if not isinstance(topic, OptionTopic):
-                pytest.fail(f"{option} topic must be an OptionTopic, got {topic!r}")
-            if not topic.value:
-                pytest.fail(f"{option} topic value must not be empty")
-
-    def test_option_groups_are_known_and_non_empty(self) -> None:
-        """Verify that optional group metadata uses known non-empty values."""
-        for option, meta in CLI_OPTION_META.items():
-            if (group := meta.group) is None:
-                continue
-            if not isinstance(group, OptionGroup):
-                pytest.fail(f"{option} group must be an OptionGroup, got {group!r}")
-            if not group.value:
-                pytest.fail(f"{option} group value must not be empty")
+    def test_option_topic_and_group_are_known_and_non_empty(self) -> None:
+        """Verify that optional topic/group metadata uses known non-empty values."""
+        for attr, enum_type in (("topic", OptionTopic), ("group", OptionGroup)):
+            for option, meta in CLI_OPTION_META.items():
+                if (value := getattr(meta, attr)) is None:
+                    continue
+                if not isinstance(value, enum_type):
+                    pytest.fail(f"{option} {attr} must be an {enum_type.__name__}, got {value!r}")
+                if not value.value:
+                    pytest.fail(f"{option} {attr} value must not be empty")
 
     def test_option_topic_groups_are_allowed(self) -> None:
         """Verify that topic metadata only uses groups allowed for that topic."""
