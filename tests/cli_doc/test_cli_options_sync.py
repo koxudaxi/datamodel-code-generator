@@ -271,6 +271,36 @@ def test_category_recipe_options_have_registered_metadata() -> None:
                 assert get_option_meta(option) is not None
 
 
+def test_homepage_recipe_quick_starts_use_curated_category_metadata() -> None:
+    """README/docs-home recipes should stay bounded while linking to generated option docs."""
+    section = build_cli_docs.generate_homepage_recipe_quick_starts(
+        cli_reference_root="cli-reference",
+        cli_reference_extension=".md",
+        cli_reference_index="cli-reference/index.md",
+    )
+
+    recipe_lines = [line for line in section.splitlines() if line.startswith("- **")]
+
+    assert section.startswith("### CLI option quick starts")
+    assert len(recipe_lines) == len(build_cli_docs.HOMEPAGE_RECIPE_CATEGORIES)
+    assert "- **Generate a local schema file:**" in section
+    assert "[`--input`](cli-reference/base-options.md#input)" in section
+    assert "[`--target-python-version`](cli-reference/model-customization.md#target-python-version)" in section
+    assert "Trim GraphQL metadata fields" not in section
+
+
+def test_homepage_recipe_quick_starts_support_readme_links() -> None:
+    """README recipe links should target published extensionless docs URLs."""
+    section = build_cli_docs.generate_homepage_recipe_quick_starts(
+        cli_reference_root="https://datamodel-code-generator.koxudaxi.dev/cli-reference",
+        cli_reference_extension="/",
+        cli_reference_index="https://datamodel-code-generator.koxudaxi.dev/cli-reference/",
+    )
+
+    assert "[`--input`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options/#input)" in section
+    assert "cli-reference/index.md" not in section
+
+
 def test_category_recipes_render_before_option_details(monkeypatch: pytest.MonkeyPatch) -> None:
     """Recipe sections should sit between the category option table and detailed option sections."""
     monkeypatch.setattr(
