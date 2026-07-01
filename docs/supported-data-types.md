@@ -77,9 +77,9 @@ The JSON Schema and OpenAPI feature matrix below is generated from the same code
 ## ✅ Implemented data types and features
 
 <!-- BEGIN AUTO-GENERATED DATA TYPE SUPPORT -->
-### Implemented Data Types and Formats (from code)
+### Implemented Data Types and Formats
 
-The schema type and format tables below are generated from the parser's schema format registry and the default Pydantic v2 type mapping.
+The schema type, format, and default Pydantic v2 type columns below are generated from the parser's schema format registry and the default Pydantic v2 type mapping; keyword and note columns document supplemental schema details.
 
 #### Schema Data Types
 

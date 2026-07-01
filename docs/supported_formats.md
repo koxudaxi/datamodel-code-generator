@@ -264,9 +264,9 @@ The following features are tracked in the codebase with their implementation sta
 ## Data Format Support
 
 <!-- BEGIN AUTO-GENERATED DATA FORMAT SUPPORT -->
-### Data Format Support (from code)
+### Data Format Support
 
-The tables below are generated from the schema format registry and the default Pydantic v2 type mapping.
+The schema type, format, and default Pydantic v2 type columns below are generated from the schema format registry and the default Pydantic v2 type mapping; notes document supplemental details.
 
 #### Common Formats (JSON Schema + OpenAPI)
 

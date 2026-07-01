@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from scripts import build_schema_docs
 from tests.conftest import assert_output
 
@@ -15,7 +17,19 @@ EXPECTED_SCHEMA_DOCS_PATH = Path(__file__).resolve().parent / "data" / "expected
 
 def test_build_schema_docs_check_is_up_to_date() -> None:
     """Generated schema docs are committed."""
-    subprocess.run([sys.executable, str(SCRIPT), "--check"], check=True)
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), "--check"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        pytest.fail(
+            "build_schema_docs.py --check failed\n"
+            f"stdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}",
+            pytrace=False,
+        )
 
 
 def test_supported_formats_features_content() -> None:

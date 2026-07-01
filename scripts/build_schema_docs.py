@@ -284,9 +284,10 @@ def generate_supported_data_types_content() -> str:
 def generate_data_format_content(
     *,
     heading_level: int = 3,
-    title: str = "Data Format Support (from code)",
+    title: str = "Data Format Support",
     intro: str = (
-        "The tables below are generated from the schema format registry and the default Pydantic v2 type mapping."
+        "The schema type, format, and default Pydantic v2 type columns below are generated from the "
+        "schema format registry and the default Pydantic v2 type mapping; notes document supplemental details."
     ),
     include_schema_types: bool = True,
 ) -> str:
@@ -323,10 +324,11 @@ def generate_data_format_content(
 def generate_supported_data_types_format_content() -> str:
     """Generate schema type and format content for docs/supported-data-types.md."""
     return generate_data_format_content(
-        title="Implemented Data Types and Formats (from code)",
+        title="Implemented Data Types and Formats",
         intro=(
-            "The schema type and format tables below are generated from the parser's schema format registry "
-            "and the default Pydantic v2 type mapping."
+            "The schema type, format, and default Pydantic v2 type columns below are generated from the "
+            "parser's schema format registry and the default Pydantic v2 type mapping; keyword and note columns "
+            "document supplemental schema details."
         ),
     )
 
