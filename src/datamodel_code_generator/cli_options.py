@@ -12,6 +12,7 @@ tests/cli_doc/test_cli_options_sync.py.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
@@ -73,6 +74,8 @@ class CLIOptionMeta:
 
 
 OPTION_RELATION_KINDS = ("implies", "requires", "conflicts")
+CLI_REFERENCE_ROOT = "cli-reference"
+UTILITY_OPTIONS_DOC = "utility-options"
 
 
 # Options with manual documentation (not auto-generated from tests)
@@ -536,6 +539,19 @@ def get_canonical_option(option: str) -> str:
 
 
 @lru_cache(maxsize=1)
+def _build_option_string_groups_from_argparse() -> dict[str, tuple[str, ...]]:
+    """Build option string -> sibling option strings map from argparse."""
+    from datamodel_code_generator.arguments import arg_parser as argument_parser  # noqa: PLC0415
+
+    groups: dict[str, tuple[str, ...]] = {}
+    for action in argument_parser._actions:  # noqa: SLF001
+        options = tuple(action.option_strings)
+        for option in options:
+            groups[option] = options
+    return groups
+
+
+@lru_cache(maxsize=1)
 def get_all_canonical_options() -> frozenset[str]:
     """Get all canonical options from argparse."""
     return frozenset(_build_alias_map_from_argparse().values())
@@ -578,3 +594,37 @@ def get_option_meta(option: str) -> CLIOptionMeta | None:
     if canonical in get_all_canonical_options() and canonical not in EXCLUDED_FROM_DOCS:
         return CLIOptionMeta(name=canonical, category=OptionCategory.GENERAL)
     return None
+
+
+def get_cli_doc_slug(text: str) -> str:
+    """Convert CLI documentation text to the generated page/anchor slug."""
+    slug = text.lstrip("-").lower()
+    slug = re.sub(r"[^a-z0-9-]", "-", slug)
+    slug = re.sub(r"-+", "-", slug)
+    slug = slug.strip("-")
+    return slug or "unknown"
+
+
+def get_cli_option_doc_name(option: str) -> str:
+    """Return the option name used by generated CLI documentation anchors."""
+    canonical = get_canonical_option(option)
+    if canonical in MANUAL_DOCS:
+        return canonical
+    options = _build_option_string_groups_from_argparse().get(option, ())
+    if option.startswith("--") and any(item.startswith("--no-") for item in options):
+        return option
+    return canonical
+
+
+def get_cli_option_doc_path(option: str, *, root: str = "", extension: str = ".md") -> str | None:
+    """Return the generated CLI documentation path for an option."""
+    doc_option = get_cli_option_doc_name(option)
+    if doc_option in MANUAL_DOCS:
+        page = UTILITY_OPTIONS_DOC
+    elif meta := get_option_meta(doc_option):
+        page = get_cli_doc_slug(meta.category.value)
+    else:
+        return None
+
+    prefix = f"{root.rstrip('/')}/" if root else ""
+    return f"{prefix}{page}{extension}#{get_cli_doc_slug(doc_option)}"

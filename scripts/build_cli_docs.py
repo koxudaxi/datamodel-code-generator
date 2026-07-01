@@ -36,6 +36,8 @@ from datamodel_code_generator.cli_options import (
     MANUAL_DOCS,
     OptionCategory,
     get_canonical_option,
+    get_cli_doc_slug,
+    get_cli_option_doc_path,
     get_option_meta,
     is_manual_doc,
 )
@@ -330,20 +332,6 @@ def scan_docs_for_cli_option_tags(
     return {option: sorted(pages) for option, pages in sorted(option_to_pages.items())}
 
 
-def slugify(text: str) -> str:
-    """Convert text to safe slug for filenames and anchors.
-
-    Examples:
-        --frozen-dataclasses -> frozen-dataclasses
-        Model Customization -> model-customization
-    """
-    slug = text.lstrip("-").lower()
-    slug = re.sub(r"[^a-z0-9-]", "-", slug)
-    slug = re.sub(r"-+", "-", slug)
-    slug = slug.strip("-")
-    return slug or "unknown"
-
-
 def safe_read_file(base_path: Path, relative_path: str, file_types: tuple[str, ...] = ("*.py",)) -> str:
     """Read file or directory with path traversal protection.
 
@@ -621,7 +609,7 @@ def generate_option_section(
     if not primary:
         return ""
 
-    md = f"## `{option}` {{#{slugify(option)}}}\n\n"
+    md = f"## `{option}` {{#{get_cli_doc_slug(option)}}}\n\n"
 
     # Parse option_description to separate description from admonitions
     option_description = cli_doc_option.get_option_description()
@@ -655,9 +643,8 @@ def generate_option_section(
             if canonical == option:
                 continue
             r_meta = get_option_meta(canonical)
-            if r_meta:
-                cat_slug = slugify(r_meta.category.value)
-                related_links.append(f"[`{canonical}`]({cat_slug}.md#{slugify(canonical)})")
+            if r_meta and (doc_path := get_cli_option_doc_path(canonical)):
+                related_links.append(f"[`{canonical}`]({doc_path})")
             else:
                 related_links.append(f"`{canonical}`")
         if related_links:  # Only add Related if there are non-self-referencing options
@@ -770,7 +757,7 @@ def generate_category_page(
         cli_doc_option = options[option]
         option_description = cli_doc_option.get_option_description()
         desc = summarize_description(option_description, DESC_LENGTH_SHORT) if option_description else ""
-        md += f"| [`{option}`](#{slugify(option)}) | {desc} |\n"
+        md += f"| [`{option}`](#{get_cli_doc_slug(option)}) | {desc} |\n"
     md += "\n---\n\n"
 
     category_documented_options = documented_options or frozenset(options)
@@ -825,7 +812,7 @@ def generate_quick_reference(
         if not options:
             continue
 
-        slug_cat = slugify(category.value)
+        slug_cat = get_cli_doc_slug(category.value)
         emoji = CATEGORY_EMOJIS.get(category, "📋")
         md += f"### {emoji} {category.value}\n\n"
         md += "| Option | Description |\n"
@@ -835,7 +822,7 @@ def generate_quick_reference(
             cli_doc_option = options[option]
             option_description = cli_doc_option.get_option_description()
             desc = summarize_description(option_description, DESC_LENGTH_LONG) if option_description else ""
-            slug_opt = slugify(option)
+            slug_opt = get_cli_doc_slug(option)
             md += f"| [`{option}`]({slug_cat}.md#{slug_opt}) | {desc} |\n"
 
         md += "\n"
@@ -846,7 +833,7 @@ def generate_quick_reference(
         md += "|--------|-------------|\n"
         for option in sorted(manual_docs.keys()):
             desc = MANUAL_OPTION_DESCRIPTIONS.get(option, "")
-            slug_opt = slugify(option)
+            slug_opt = get_cli_doc_slug(option)
             md += f"| [`{option}`](utility-options.md#{slug_opt}) | {desc} |\n"
         md += "\n"
 
@@ -857,10 +844,10 @@ def generate_quick_reference(
 
     for option, desc, category in all_options:
         if category is None:
-            md += f"- [`{option}`](utility-options.md#{slugify(option)}) - {desc}\n"
+            md += f"- [`{option}`]({get_cli_option_doc_path(option)}) - {desc}\n"
         else:
-            slug_cat = slugify(category.value)
-            slug_opt = slugify(option)
+            slug_cat = get_cli_doc_slug(category.value)
+            slug_opt = get_cli_doc_slug(option)
             short_desc = desc[:DESC_LENGTH_SHORT] + "..." if len(desc) > DESC_LENGTH_SHORT else desc
             md += f"- [`{option}`]({slug_cat}.md#{slug_opt}) - {short_desc}\n"
 
@@ -894,7 +881,7 @@ def generate_index_page(
         if category in categories:
             count = len(categories[category])
             desc = category_descriptions.get(category, "")
-            slug = slugify(category.value)
+            slug = get_cli_doc_slug(category.value)
             emoji = CATEGORY_EMOJIS.get(category, "📋")
             md += f"| {emoji} [{category.value}]({slug}.md) | {count} | {desc} |\n"
 
@@ -922,10 +909,10 @@ def generate_index_page(
             current_letter = first_letter
             md += f"\n### {current_letter} {{#{current_letter.lower()}}}\n\n"
         if category is None:
-            md += f"- [`{option}`](utility-options.md#{slugify(option)})\n"
+            md += f"- [`{option}`]({get_cli_option_doc_path(option)})\n"
         else:
-            slug_cat = slugify(category.value)
-            slug_opt = slugify(option)
+            slug_cat = get_cli_doc_slug(category.value)
+            slug_opt = get_cli_doc_slug(option)
             md += f"- [`{option}`]({slug_cat}.md#{slug_opt})\n"
 
     return md
@@ -960,7 +947,7 @@ def generate_manual_docs_section(manual_docs: dict[str, str]) -> str:
 
     for option in sorted(manual_docs.keys()):
         desc = MANUAL_OPTION_DESCRIPTIONS.get(option, "")
-        md += f"| [`{option}`](#{slugify(option)}) | {desc} |\n"
+        md += f"| [`{option}`](#{get_cli_doc_slug(option)}) | {desc} |\n"
 
     md += "\n---\n\n"
 
@@ -1072,7 +1059,7 @@ def build_docs(*, check: bool = False) -> int:
             continue
         try:
             md = generate_category_page(category, options, option_related_pages, documented_options)
-            output_path = DOCS_OUTPUT / f"{slugify(category.value)}.md"
+            output_path = DOCS_OUTPUT / f"{get_cli_doc_slug(category.value)}.md"
             write_or_check(output_path, md, f"{output_path.name} ({len(options)} options)")
         except (OSError, ValueError, KeyError) as e:
             print(f"Error generating {category.value}: {e}", file=sys.stderr)

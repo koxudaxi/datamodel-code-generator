@@ -20,6 +20,7 @@ from datamodel_code_generator.cli_options import (
     OPTION_RELATION_KINDS,
     CLIOptionRelation,
     OptionCategory,
+    get_cli_option_doc_path,
     get_option_meta,
 )
 from datamodel_code_generator.enums import InputFileType
@@ -273,6 +274,7 @@ def _option_metadata(action: argparse.Action, option_targets: dict[str, dict[str
         "value_kind": value_kind,
         "label": name.removeprefix("--"),
         "category": meta.category.value if meta else OptionCategory.GENERAL.value,
+        "docs_url": get_cli_option_doc_path(name, root="/cli-reference", extension="/"),
         "control": control,
         "choices": _choices(action),
         "help": _clean_help(action),
