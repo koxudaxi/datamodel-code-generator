@@ -5,6 +5,18 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.66.3](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.66.3) - 2026-07-01
+
+## What's Changed
+* Update CHANGELOG for 0.66.2 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3511
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3512
+* Fix scripts module imports in tests by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3514
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.66.2...0.66.3
+
+---
+
 ## [0.66.2](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.66.2) - 2026-07-01
 
 ## What's Changed
