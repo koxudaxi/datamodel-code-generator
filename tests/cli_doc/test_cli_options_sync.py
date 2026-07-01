@@ -154,11 +154,14 @@ def test_format_option_link_uses_current_category_anchor() -> None:
     assert _format_option_link("--input", documented_options, current_category=OptionCategory.BASE) == (
         "[`--input`](#input)"
     )
-    assert _format_option_link(
-        "--target-python-version",
-        documented_options,
-        current_category=OptionCategory.TYPING,
-    ) == "[`--target-python-version`](model-customization.md#target-python-version)"
+    assert (
+        _format_option_link(
+            "--target-python-version",
+            documented_options,
+            current_category=OptionCategory.TYPING,
+        )
+        == "[`--target-python-version`](model-customization.md#target-python-version)"
+    )
     assert _format_option_link("--unknown-option", documented_options) == "`--unknown-option`"
 
 
