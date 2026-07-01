@@ -11,15 +11,25 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import ast
 import re
 import sys
 from dataclasses import dataclass, fields
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+from datamodel_code_generator import RAW_DATA_TYPES
+from datamodel_code_generator.enums import (
+    AsyncAPIVersion,
+    InputFileType,
+    JsonSchemaVersion,
+    OpenAPIVersion,
+    ProtobufVersion,
+    XMLSchemaVersion,
+)
 from datamodel_code_generator.format import DatetimeClassType
 from datamodel_code_generator.model.pydantic_v2.types import DataTypeManager as PydanticV2DataTypeManager
 from datamodel_code_generator.parser.schema_version import (
@@ -31,9 +41,16 @@ from datamodel_code_generator.parser.schema_version import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
+    from enum import Enum
+
     from datamodel_code_generator.types import Types
 
 ROOT = Path(__file__).parent.parent
+SRC = ROOT / "src"
+INIT_PATH = SRC / "datamodel_code_generator" / "__init__.py"
+AVRO_PARSER_PATH = SRC / "datamodel_code_generator" / "parser" / "avro.py"
+GRAPHQL_PARSER_PATH = SRC / "datamodel_code_generator" / "parser" / "graphql.py"
 SUPPORTED_FORMATS_DOCS_PATH = ROOT / "docs" / "supported_formats.md"
 SUPPORTED_DATA_TYPES_DOCS_PATH = ROOT / "docs" / "supported-data-types.md"
 
@@ -46,6 +63,8 @@ DATA_FORMAT_BEGIN_MARKER = "<!-- BEGIN AUTO-GENERATED DATA FORMAT SUPPORT -->"
 DATA_FORMAT_END_MARKER = "<!-- END AUTO-GENERATED DATA FORMAT SUPPORT -->"
 DATA_TYPES_FORMAT_BEGIN_MARKER = "<!-- BEGIN AUTO-GENERATED DATA TYPE SUPPORT -->"
 DATA_TYPES_FORMAT_END_MARKER = "<!-- END AUTO-GENERATED DATA TYPE SUPPORT -->"
+INPUT_FORMAT_GUIDE_BEGIN_MARKER = "<!-- BEGIN AUTO-GENERATED INPUT FORMAT GUIDE -->"
+INPUT_FORMAT_GUIDE_END_MARKER = "<!-- END AUTO-GENERATED INPUT FORMAT GUIDE -->"
 
 # Status emoji mapping
 STATUS_EMOJI = {
@@ -70,6 +89,89 @@ FORMAT_NOTES = {
     ("string", "email"): "Requires email-validator",
     ("string", "idn-email"): "Requires email-validator",
     ("string", "ulid"): "Requires python-ulid",
+}
+
+PARSER_ROUTE_OVERRIDES = {
+    InputFileType.Auto: "pre-parser inference",
+    InputFileType.Json: "JsonSchemaParser after genson conversion",
+    InputFileType.Yaml: "JsonSchemaParser after genson conversion",
+    InputFileType.Dict: "JsonSchemaParser after genson conversion",
+    InputFileType.CSV: "JsonSchemaParser after genson conversion",
+    InputFileType.MCPTools: "JsonSchemaParser after MCP conversion",
+}
+
+VERSION_ENUM_BY_INPUT_TYPE: dict[InputFileType, type[Enum]] = {
+    InputFileType.JsonSchema: JsonSchemaVersion,
+    InputFileType.OpenAPI: OpenAPIVersion,
+    InputFileType.AsyncAPI: AsyncAPIVersion,
+    InputFileType.XMLSchema: XMLSchemaVersion,
+    InputFileType.Protobuf: ProtobufVersion,
+}
+
+SCHEMA_VERSION_UNSUPPORTED_INPUT_TYPES = frozenset({
+    InputFileType.Avro,
+    InputFileType.GraphQL,
+})
+
+INPUT_FORMAT_LABELS: dict[InputFileType, str] = {
+    InputFileType.OpenAPI: "OpenAPI",
+    InputFileType.AsyncAPI: "AsyncAPI",
+    InputFileType.JsonSchema: "JSON Schema",
+    InputFileType.MCPTools: "MCP tool schemas",
+    InputFileType.XMLSchema: "XML Schema",
+    InputFileType.Protobuf: "Protocol Buffers",
+    InputFileType.Avro: "Apache Avro",
+    InputFileType.Json: "JSON data",
+    InputFileType.Yaml: "YAML data",
+    InputFileType.Dict: "Python dictionary data",
+    InputFileType.CSV: "CSV data",
+    InputFileType.GraphQL: "GraphQL schema",
+}
+
+INPUT_SOURCE_NOTES: dict[InputFileType, str] = {
+    InputFileType.OpenAPI: "OpenAPI document as JSON/YAML, mapping, URL, or file",
+    InputFileType.AsyncAPI: "AsyncAPI document as JSON/YAML, mapping, URL, or file",
+    InputFileType.JsonSchema: "JSON Schema document as JSON/YAML, mapping, URL, or file",
+    InputFileType.MCPTools: "MCP tool list/profile as JSON/YAML, mapping, list, URL, or file",
+    InputFileType.XMLSchema: "XSD XML text, URL, or file",
+    InputFileType.Protobuf: ".proto text, file, directory, URL, or path list",
+    InputFileType.Avro: "Avro schema JSON/YAML, mapping, list, URL, or file",
+    InputFileType.Json: "JSON sample data text or file",
+    InputFileType.Yaml: "YAML sample data text or file",
+    InputFileType.Dict: "In-memory mapping or Python literal data",
+    InputFileType.CSV: "CSV text or file with a header row and at least one data row",
+    InputFileType.GraphQL: "GraphQL SDL text, URL, or file",
+}
+
+INPUT_AUTO_DETECTION_NOTES: dict[InputFileType, str] = {
+    InputFileType.OpenAPI: "`openapi` field",
+    InputFileType.AsyncAPI: "`asyncapi` field",
+    InputFileType.JsonSchema: "`$schema`, `type`, `properties`, or composition keywords",
+    InputFileType.MCPTools: "Explicit only",
+    InputFileType.XMLSchema: "XML Schema namespace on the root element",
+    InputFileType.Protobuf: "Protocol Buffers syntax/message-like text",
+    InputFileType.Avro: "Avro schema object, union, or primitive schema form",
+    InputFileType.Json: "Mapping that is not a schema/OpenAPI/AsyncAPI/Avro document",
+    InputFileType.Yaml: "Explicit for YAML sample data",
+    InputFileType.Dict: "Explicit for mapping input",
+    InputFileType.CSV: "Fallback when text cannot parse as YAML",
+    InputFileType.GraphQL: "Explicit only",
+}
+
+GRAPHQL_KIND_NOTES = {
+    "SCALAR": "Generates scalar aliases",
+    "ENUM": "Generates enums or literals depending on enum options",
+    "INTERFACE": "Generates model classes from interface fields",
+    "OBJECT": "Generates model classes except root Query/Mutation objects",
+    "INPUT_OBJECT": "Generates model classes for input objects",
+    "UNION": "Generates union type aliases",
+}
+
+PYTHON_INPUT_TYPE_NOTES = {
+    "dict": "Returned directly as the schema; `--input-file-type` is required",
+    "Pydantic v2 BaseModel": "Converted with Pydantic `model_json_schema()`",
+    "dataclass": "Converted with Pydantic `TypeAdapter`; includes stdlib and Pydantic dataclasses",
+    "TypedDict": "Converted with Pydantic `TypeAdapter`",
 }
 
 
@@ -189,6 +291,418 @@ def get_format_label(format_name: str) -> str:
     if format_name == "default":
         return "`default` (no `format`)"
     return f"`{format_name}`"
+
+
+def markdown_table(headers: tuple[str, ...], rows: Iterable[tuple[str, ...]]) -> str:
+    """Render a compact Markdown table."""
+    lines = [
+        f"| {' | '.join(markdown_cell(header) for header in headers)} |",
+        f"| {' | '.join('---' for _header in headers)} |",
+    ]
+    lines.extend(f"| {' | '.join(markdown_cell(cell) for cell in row)} |" for row in rows)
+    return "\n".join(lines)
+
+
+def markdown_cell(value: str) -> str:
+    """Escape Markdown table delimiters in a generated cell."""
+    return value.replace("|", "\\|")
+
+
+def code_label(value: object) -> str:
+    """Return a Markdown code label."""
+    return f"`{value}`"
+
+
+def code_list_label(values: Iterable[object], *, limit: int | None = None) -> str:
+    """Return a comma-separated Markdown code list."""
+    labels = [code_label(value) for value in values]
+    if limit is None or len(labels) <= limit:
+        return ", ".join(labels)
+    return f"{', '.join(labels[:limit])}, +{len(labels) - limit} more"
+
+
+def enum_values_label(enum_type: type[Enum]) -> str:
+    """Return supported enum values as Markdown code labels."""
+    return code_list_label(item.value for item in enum_type)
+
+
+def _name_from_expr(node: ast.AST) -> str | None:
+    """Return the visible name represented by a simple expression."""
+    match node:
+        case ast.Name(id=name):
+            return name
+        case ast.Attribute(attr=name):
+            return name
+        case ast.Subscript(value=value):
+            return _name_from_expr(value)
+    return None
+
+
+def _input_file_type_name(pattern: ast.pattern) -> str | None:
+    """Return the InputFileType member name matched by a pattern."""
+    match pattern:
+        case ast.MatchValue(value=ast.Attribute(value=ast.Name(id="InputFileType"), attr=input_type_name)):
+            return input_type_name
+    return None
+
+
+def _returned_parser_name(case: ast.match_case) -> str | None:
+    """Return the parser class name returned by a match case."""
+    for node in ast.walk(ast.Module(body=case.body, type_ignores=[])):
+        if isinstance(node, ast.Return) and isinstance(node.value, ast.Call):
+            return _name_from_expr(node.value.func)
+    return None
+
+
+def parser_routes_from_source() -> dict[InputFileType, str]:
+    """Read _build_parser() and infer InputFileType to parser routes."""
+    tree = ast.parse(INIT_PATH.read_text(encoding="utf-8"))
+    direct_routes: dict[InputFileType, str] = {}
+    default_route = "JsonSchemaParser"
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef) or node.name != "_build_parser":
+            continue
+        for child in ast.walk(node):
+            if not isinstance(child, ast.Match):
+                continue
+            for case in child.cases:
+                if (parser_name := _returned_parser_name(case)) is None:
+                    continue
+                if (input_type_name := _input_file_type_name(case.pattern)) is None:
+                    default_route = parser_name
+                    continue
+                direct_routes[InputFileType[input_type_name]] = parser_name
+
+    return {
+        input_file_type: PARSER_ROUTE_OVERRIDES.get(input_file_type, direct_routes.get(input_file_type, default_route))
+        for input_file_type in InputFileType
+    }
+
+
+def input_schema_version_label(input_file_type: InputFileType) -> str:
+    """Return the schema-version support label for an input format."""
+    if input_file_type in SCHEMA_VERSION_UNSUPPORTED_INPUT_TYPES:
+        return "Not supported"
+    if enum_type := VERSION_ENUM_BY_INPUT_TYPE.get(input_file_type):
+        return enum_values_label(enum_type)
+    if input_file_type in RAW_DATA_TYPES or input_file_type is InputFileType.MCPTools:
+        return f"Converted to JSON Schema; {enum_values_label(JsonSchemaVersion)}"
+    return "-"
+
+
+def input_format_order() -> tuple[InputFileType, ...]:
+    """Return input formats in docs-friendly order."""
+    return (
+        InputFileType.JsonSchema,
+        InputFileType.OpenAPI,
+        InputFileType.AsyncAPI,
+        InputFileType.GraphQL,
+        InputFileType.XMLSchema,
+        InputFileType.Protobuf,
+        InputFileType.Avro,
+        InputFileType.MCPTools,
+        InputFileType.Json,
+        InputFileType.Yaml,
+        InputFileType.CSV,
+        InputFileType.Dict,
+    )
+
+
+def generate_input_format_route_table() -> str:
+    """Generate a parser route and version support table for input formats."""
+    routes = parser_routes_from_source()
+    rows = [
+        (
+            INPUT_FORMAT_LABELS[input_file_type],
+            code_label(input_file_type.value),
+            code_label(routes[input_file_type]),
+            input_schema_version_label(input_file_type),
+            INPUT_AUTO_DETECTION_NOTES[input_file_type],
+        )
+        for input_file_type in input_format_order()
+    ]
+    rows.append((
+        "Python input model",
+        "`--input-model`",
+        "`JsonSchemaParser` after Python schema conversion",
+        "JSON Schema after conversion; dict input can select another explicit schema type",
+        "Explicit only",
+    ))
+    return markdown_table(
+        ("Input format", "Selector", "Parser route", "`--schema-version`", "Auto detection"),
+        rows,
+    )
+
+
+def generate_input_source_table() -> str:
+    """Generate accepted source-shape guidance for input formats."""
+    rows = [
+        (
+            INPUT_FORMAT_LABELS[input_file_type],
+            INPUT_SOURCE_NOTES[input_file_type],
+        )
+        for input_file_type in input_format_order()
+    ]
+    rows.append(("Python input model", "`module:Object` or `path/to/file.py:Object` via `--input-model`"))
+    return markdown_table(("Input format", "Accepted source shape"), rows)
+
+
+def schema_label(schema: Mapping[str, Any]) -> str:
+    """Return a compact label for a JSON Schema fragment."""
+    if not schema:
+        return "`Any`"
+    if any_of := schema.get("anyOf"):
+        labels = [schema_label(item) for item in any_of if isinstance(item, dict)]
+        return " | ".join(dict.fromkeys(labels))
+    schema_type = schema.get("type", "Any")
+    if schema_format := schema.get("format"):
+        return f"`{schema_type}` + `{schema_format}`"
+    if schema_type == "object" and schema.get("additionalProperties") is True:
+        return "`object` map"
+    return code_label(schema_type)
+
+
+def schema_constraints_label(schema: Mapping[str, Any]) -> str:
+    """Return a compact label for common JSON Schema constraints."""
+    parts = [f"{key}={schema[key]}" for key in ("minimum", "maximum", "minLength", "maxLength") if key in schema]
+    return ", ".join(parts) or "-"
+
+
+def generate_format_type_guide_table() -> str:
+    """Generate a concise per-format type guide summary."""
+    from datamodel_code_generator.parser import protobuf as protobuf_parser  # noqa: PLC0415
+    from datamodel_code_generator.parser import xmlschema as xmlschema_parser  # noqa: PLC0415
+    from datamodel_code_generator.parser.avro import PRIMITIVE_SCHEMAS  # noqa: PLC0415
+
+    common_format_count = sum(len(formats) for formats in get_data_formats(is_openapi=False).values())
+    openapi_only_count = sum(len(formats) for formats in get_openapi_only_data_formats().values())
+    rows = [
+        (
+            "JSON Schema",
+            f"{len(get_data_formats(is_openapi=False))} schema types, {common_format_count} common formats",
+            "Uses JSON Schema type/format mappings and feature metadata below",
+        ),
+        (
+            "OpenAPI",
+            f"JSON Schema mappings plus {openapi_only_count} OpenAPI-only formats",
+            "Adds OpenAPI-specific schema features and formats",
+        ),
+        (
+            "GraphQL",
+            f"{len(graphql_type_kind_rows())} GraphQL type kinds",
+            "Uses GraphQL SDL parser order and parser method map",
+        ),
+        (
+            "XML Schema",
+            f"{len(xmlschema_parser.BUILTIN_TYPE_SCHEMAS)} built-in XSD datatypes",
+            "Converts XSD built-ins to JSON Schema fragments",
+        ),
+        (
+            "Protocol Buffers",
+            f"{len(protobuf_parser.SCALAR_SCHEMAS)} scalar field types, "
+            f"{len(protobuf_parser.WELL_KNOWN_SCHEMAS)} well-known type mappings",
+            "Converts descriptors to JSON Schema definitions",
+        ),
+        (
+            "Apache Avro",
+            f"{len(PRIMITIVE_SCHEMAS)} primitives, {len(avro_logical_type_rows())} logical type mappings",
+            "Converts Avro schemas to JSON Schema while preserving Avro metadata",
+        ),
+        (
+            "JSON/YAML/CSV/Dict data",
+            f"{len([item for item in RAW_DATA_TYPES if item is not InputFileType.GraphQL])} raw data selectors",
+            "Samples are converted to JSON Schema with genson before parsing",
+        ),
+        (
+            "Python input model",
+            f"{len(python_input_type_rows())} supported object kinds",
+            "Python objects are converted to schema data before normal generation",
+        ),
+    ]
+    return markdown_table(("Input family", "Code-derived coverage", "Guide"), rows)
+
+
+def graphql_type_kind_rows() -> list[tuple[str, str, str]]:
+    """Return GraphQL type kind rows from parser source."""
+    tree = ast.parse(GRAPHQL_PARSER_PATH.read_text(encoding="utf-8"))
+    parser_class = next(
+        node for node in ast.walk(tree) if isinstance(node, ast.ClassDef) and node.name == "GraphQLParser"
+    )
+    parse_order = graphql_parse_order(parser_class)
+    parser_methods = graphql_parser_methods(parser_class)
+
+    return [
+        (code_label(kind.lower()), code_label(parser_methods.get(kind, "-")), GRAPHQL_KIND_NOTES[kind])
+        for kind in parse_order
+    ]
+
+
+def graphql_parse_order(parser_class: ast.ClassDef) -> list[str]:
+    """Return the GraphQL parser type-kind order from the parser class."""
+    for child in parser_class.body:
+        if not (
+            isinstance(child, ast.AnnAssign) and isinstance(child.target, ast.Name) and child.target.id == "parse_order"
+        ):
+            continue
+        return [elt.attr for elt in getattr(child.value, "elts", []) if isinstance(elt, ast.Attribute)]
+    return []
+
+
+def graphql_parser_methods(parser_class: ast.ClassDef) -> dict[str, str]:
+    """Return GraphQL type kind to parser method mappings."""
+    parse_raw = next(
+        child for child in parser_class.body if isinstance(child, ast.FunctionDef) and child.name == "parse_raw"
+    )
+    methods: dict[str, str] = {}
+    for subnode in ast.walk(parse_raw):
+        if not isinstance(subnode, ast.Assign) or not isinstance(subnode.value, ast.Dict):
+            continue
+        methods.update({
+            key.attr: value.attr
+            for key, value in zip(subnode.value.keys, subnode.value.values, strict=False)
+            if isinstance(key, ast.Attribute) and isinstance(value, ast.Attribute)
+        })
+    return methods
+
+
+def generate_graphql_type_kind_table() -> str:
+    """Generate GraphQL type kind guide table."""
+    return markdown_table(("GraphQL kind", "Parser method", "Generated shape"), graphql_type_kind_rows())
+
+
+def avro_logical_type_cases() -> list[tuple[str, tuple[str, ...]]]:
+    """Return Avro logical type cases from the converter match statement."""
+    tree = ast.parse(AVRO_PARSER_PATH.read_text(encoding="utf-8"))
+    rows: list[tuple[str, tuple[str, ...]]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef) or node.name != "_apply_logical_type":
+            continue
+        for match_node in (child for child in ast.walk(node) if isinstance(child, ast.Match)):
+            for case in match_node.cases:
+                logical_types = _literal_patterns(case.pattern)
+                avro_types = _avro_type_guard_values(case.guard)
+                rows.extend((logical_type, avro_types) for logical_type in logical_types if avro_types)
+    return rows
+
+
+def _literal_patterns(pattern: ast.pattern) -> tuple[str, ...]:
+    """Return string literal values from a match pattern."""
+    match pattern:
+        case ast.MatchValue(value=ast.Constant(value=str() as value)):
+            return (value,)
+        case ast.MatchOr(patterns=patterns):
+            return tuple(value for pattern in patterns for value in _literal_patterns(pattern))
+    return ()
+
+
+def _avro_type_guard_values(guard: ast.expr | None) -> tuple[str, ...]:
+    """Return Avro type values from a match guard."""
+    match guard:
+        case ast.Compare(
+            left=ast.Name(id="avro_type"),
+            ops=[ast.Eq()],
+            comparators=[ast.Constant(value=str() as value)],
+        ):
+            return (value,)
+        case ast.Compare(
+            left=ast.Name(id="avro_type"),
+            ops=[ast.In()],
+            comparators=[ast.Set(elts=elts) | ast.Tuple(elts=elts)],
+        ):
+            return tuple(elt.value for elt in elts if isinstance(elt, ast.Constant) and isinstance(elt.value, str))
+    return ()
+
+
+def avro_logical_schema(logical_type: str, avro_type: str) -> dict[str, Any]:
+    """Return the JSON Schema fragment produced for an Avro logical type."""
+    from datamodel_code_generator.parser.avro import PRIMITIVE_SCHEMAS, _AvroSchemaConverter  # noqa: PLC0415, PLC2701
+
+    source: dict[str, Any] = {"logicalType": logical_type}
+    target = dict(PRIMITIVE_SCHEMAS.get(avro_type, {"type": "string", "format": "binary"}))
+    if logical_type in {"decimal", "big-decimal"}:
+        source |= {"precision": 8, "scale": 2}
+    return _AvroSchemaConverter()._apply_logical_type(source, target, avro_type=avro_type)  # noqa: SLF001
+
+
+def avro_logical_type_rows() -> list[tuple[str, str, str]]:
+    """Return Avro logical type guide rows."""
+    rows = []
+    for logical_type, avro_types in avro_logical_type_cases():
+        schema = avro_logical_schema(logical_type, avro_types[0])
+        rows.append((code_label(logical_type), code_list_label(avro_types), schema_label(schema)))
+    return rows
+
+
+def generate_avro_primitive_table() -> str:
+    """Generate Avro primitive type guide table."""
+    from datamodel_code_generator.parser.avro import PRIMITIVE_SCHEMAS  # noqa: PLC0415
+
+    rows = [
+        (code_label(name), schema_label(schema), schema_constraints_label(schema))
+        for name, schema in PRIMITIVE_SCHEMAS.items()
+    ]
+    return markdown_table(("Avro primitive", "JSON Schema mapping", "Constraints"), rows)
+
+
+def generate_avro_logical_type_table() -> str:
+    """Generate Avro logical type guide table."""
+    return markdown_table(("Avro logical type", "Allowed Avro type", "JSON Schema mapping"), avro_logical_type_rows())
+
+
+def generate_protobuf_scalar_table() -> str:
+    """Generate Protocol Buffers scalar type guide table."""
+    from datamodel_code_generator.parser import protobuf as protobuf_parser  # noqa: PLC0415
+
+    type_names = {
+        value: name.removeprefix("TYPE_").lower()
+        for name, value in vars(protobuf_parser).items()
+        if name.startswith("TYPE_") and isinstance(value, int)
+    }
+    rows = [
+        (
+            code_label(type_names[type_id]),
+            schema_label(schema),
+            schema_constraints_label(schema),
+        )
+        for type_id, schema in protobuf_parser.SCALAR_SCHEMAS.items()
+    ]
+    return markdown_table(("Protobuf scalar", "JSON Schema mapping", "Constraints"), rows)
+
+
+def generate_protobuf_well_known_type_table() -> str:
+    """Generate Protocol Buffers well-known type guide table."""
+    from datamodel_code_generator.parser import protobuf as protobuf_parser  # noqa: PLC0415
+
+    rows = [(code_label(name), schema_label(schema)) for name, schema in protobuf_parser.WELL_KNOWN_SCHEMAS.items()]
+    return markdown_table(("Well-known type", "JSON Schema mapping"), rows)
+
+
+def generate_xmlschema_builtin_type_group_table() -> str:
+    """Generate XML Schema built-in datatype group table."""
+    from datamodel_code_generator.parser import xmlschema as xmlschema_parser  # noqa: PLC0415
+
+    groups: dict[str, list[str]] = {}
+    for name, schema in xmlschema_parser.BUILTIN_TYPE_SCHEMAS.items():
+        groups.setdefault(schema_label(schema), []).append(name)
+
+    rows = [(mapping, code_list_label(names, limit=8), str(len(names))) for mapping, names in groups.items()]
+    return markdown_table(("JSON Schema mapping", "XSD built-ins", "Count"), rows)
+
+
+def python_input_type_rows() -> list[tuple[str, str]]:
+    """Return Python input type guide rows from the input model error text."""
+    input_model_source = (SRC / "datamodel_code_generator" / "input_model.py").read_text(encoding="utf-8")
+    if match := re.search(r"Supported: (?P<types>[^\"']+)", input_model_source):
+        return [(code_label(name), PYTHON_INPUT_TYPE_NOTES.get(name, "-")) for name in match.group("types").split(", ")]
+    return []
+
+
+def generate_python_input_type_table() -> str:
+    """Generate Python input model type guide table."""
+    rows = python_input_type_rows()
+    rows.append(("Multiple `--input-model`", "Supported only for Pydantic v2 BaseModel classes"))
+    return markdown_table(("Python input object", "Conversion behavior"), rows)
 
 
 def generate_schema_type_table(data_formats: DataFormatMapping) -> str:
@@ -333,9 +847,76 @@ def generate_supported_data_types_format_content() -> str:
     )
 
 
+def generate_input_format_guide_content(*, heading_level: int = 3) -> str:
+    """Generate per-input-format guide content from code-owned metadata."""
+    lines = [
+        "",
+        heading(heading_level, "Input Format Guide (from code)"),
+        "",
+        (
+            "The tables below are generated from the input type enum, parser routing code, schema version enums, "
+            "raw-data conversion rules, and parser type conversion maps."
+        ),
+        "",
+        heading(heading_level + 1, "Parser Routes and Version Flags"),
+        "",
+        generate_input_format_route_table(),
+        "",
+        heading(heading_level + 1, "Accepted Source Shapes"),
+        "",
+        generate_input_source_table(),
+        "",
+        heading(heading_level + 1, "Format Type Coverage"),
+        "",
+        generate_format_type_guide_table(),
+        "",
+        heading(heading_level + 1, "GraphQL Type Kinds"),
+        "",
+        generate_graphql_type_kind_table(),
+        "",
+        heading(heading_level + 1, "Apache Avro Primitive Types"),
+        "",
+        generate_avro_primitive_table(),
+        "",
+        heading(heading_level + 1, "Apache Avro Logical Types"),
+        "",
+        generate_avro_logical_type_table(),
+        "",
+        heading(heading_level + 1, "Protocol Buffers Scalar Types"),
+        "",
+        generate_protobuf_scalar_table(),
+        "",
+        heading(heading_level + 1, "Protocol Buffers Well-Known Types"),
+        "",
+        generate_protobuf_well_known_type_table(),
+        "",
+        heading(heading_level + 1, "XML Schema Built-In Type Groups"),
+        "",
+        generate_xmlschema_builtin_type_group_table(),
+        "",
+        heading(heading_level + 1, "Python Input Types"),
+        "",
+        generate_python_input_type_table(),
+        "",
+    ]
+    return "\n".join(lines)
+
+
 def generated_docs_targets() -> tuple[GeneratedDocsTarget, ...]:
     """Return all schema docs sections generated from feature metadata."""
     return (
+        GeneratedDocsTarget(
+            path=SUPPORTED_FORMATS_DOCS_PATH,
+            begin_marker=INPUT_FORMAT_GUIDE_BEGIN_MARKER,
+            end_marker=INPUT_FORMAT_GUIDE_END_MARKER,
+            content=generate_input_format_guide_content(),
+        ),
+        GeneratedDocsTarget(
+            path=SUPPORTED_DATA_TYPES_DOCS_PATH,
+            begin_marker=INPUT_FORMAT_GUIDE_BEGIN_MARKER,
+            end_marker=INPUT_FORMAT_GUIDE_END_MARKER,
+            content=generate_input_format_guide_content(),
+        ),
         GeneratedDocsTarget(
             path=SUPPORTED_FORMATS_DOCS_PATH,
             begin_marker=BEGIN_MARKER,
