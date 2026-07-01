@@ -75,6 +75,7 @@ jobs:
             docs/cli-reference/
             docs/llms.txt
             docs/llms-full.txt
+            docs/supported-data-types.md
             docs/supported_formats.md
             src/datamodel_code_generator/prompt_data.py
             tests/data/expected/main_kr/generate_prompt/

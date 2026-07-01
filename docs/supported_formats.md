@@ -263,44 +263,77 @@ The following features are tracked in the codebase with their implementation sta
 
 ## Data Format Support
 
-### Common Formats (JSON Schema + OpenAPI)
+<!-- BEGIN AUTO-GENERATED DATA FORMAT SUPPORT -->
+### Data Format Support (from code)
 
-| Type | Format | Python Type |
-|------|--------|-------------|
-| integer | int32 | `int` |
-| integer | int64 | `int` |
-| number | float | `float` |
-| number | double | `float` |
-| number | decimal | `Decimal` |
-| string | date | `date` |
-| string | date-time | `datetime` |
-| string | time | `time` |
-| string | duration | `timedelta` |
-| string | email | `EmailStr` |
-| string | idn-email | `EmailStr` |
-| string | idn-hostname | `str` |
-| string | uri | `AnyUrl` |
-| string | uri-reference | `str` |
-| string | uri-template | `str` |
-| string | iri | `str` |
-| string | iri-reference | `str` |
-| string | uuid | `UUID` |
-| string | byte | `bytes` (base64) |
-| string | ipv4 | `IPv4Address` |
-| string | ipv4-network | `IPv4Network` |
-| string | ipv6 | `IPv6Address` |
-| string | ipv6-network | `IPv6Network` |
-| string | hostname | `str` |
-| string | json-pointer | `str` |
-| string | relative-json-pointer | `str` |
-| string | regex | `str` |
+The tables below are generated from the schema format registry and the default Pydantic v2 type mapping.
 
-### OpenAPI-Only Formats
+#### Common Formats (JSON Schema + OpenAPI)
 
-| Type | Format | Python Type | Notes |
-|------|--------|-------------|-------|
-| string | binary | `bytes` | File content |
-| string | password | `SecretStr` | Sensitive data |
+| Schema Type | Format | Default Pydantic v2 Type | Notes |
+|-------------|--------|--------------------------|-------|
+| `integer` | `default` (no `format`) | `int` | - |
+| `integer` | `int32` | `int` | - |
+| `integer` | `int64` | `int` | - |
+| `integer` | `date-time` | `AwareDatetime` | - |
+| `integer` | `unix-time` | `int` | - |
+| `integer` | `unixtime` | `int` | - |
+| `number` | `default` (no `format`) | `float` | - |
+| `number` | `float` | `float` | - |
+| `number` | `double` | `float` | - |
+| `number` | `decimal` | `Decimal` | - |
+| `number` | `date-time` | `AwareDatetime` | - |
+| `number` | `time` | `time` | - |
+| `number` | `time-delta` | `timedelta` | - |
+| `number` | `unixtime` | `int` | - |
+| `string` | `default` (no `format`) | `str` | - |
+| `string` | `byte` | `Base64Str` | Base64 encoded string |
+| `string` | `date` | `date` | - |
+| `string` | `date-time` | `AwareDatetime` | - |
+| `string` | `timestamp with time zone` | `AwareDatetime` | - |
+| `string` | `date-time-local` | `NaiveDatetime` | - |
+| `string` | `duration` | `timedelta` | - |
+| `string` | `time` | `time` | - |
+| `string` | `time-local` | `time` | - |
+| `string` | `path` | `Path` | - |
+| `string` | `email` | `EmailStr` | Requires email-validator |
+| `string` | `idn-email` | `EmailStr` | Requires email-validator |
+| `string` | `idn-hostname` | `str` | - |
+| `string` | `iri` | `str` | - |
+| `string` | `iri-reference` | `str` | - |
+| `string` | `uuid` | `UUID` | - |
+| `string` | `uuid1` | `UUID1` | - |
+| `string` | `uuid2` | `UUID` | - |
+| `string` | `uuid3` | `UUID3` | - |
+| `string` | `uuid4` | `UUID4` | - |
+| `string` | `uuid5` | `UUID5` | - |
+| `string` | `uri` | `AnyUrl` | - |
+| `string` | `uri-reference` | `str` | - |
+| `string` | `uri-template` | `str` | - |
+| `string` | `json-pointer` | `str` | - |
+| `string` | `relative-json-pointer` | `str` | - |
+| `string` | `regex` | `str` | - |
+| `string` | `hostname` | `str` | - |
+| `string` | `ipv4` | `IPv4Address` | - |
+| `string` | `ipv4-network` | `IPv4Network` | - |
+| `string` | `ipv6` | `IPv6Address` | - |
+| `string` | `ipv6-network` | `IPv6Network` | - |
+| `string` | `decimal` | `Decimal` | - |
+| `string` | `integer` | `int` | - |
+| `string` | `unixtime` | `int` | - |
+| `string` | `ulid` | `ULID` | Requires python-ulid |
+| `boolean` | `default` (no `format`) | `bool` | - |
+| `object` | `default` (no `format`) | `Dict[str, Any]` | - |
+| `null` | `default` (no `format`) | `None` | - |
+| `array` | `default` (no `format`) | `List[Any]` | - |
+
+#### OpenAPI-Only Formats
+
+| Schema Type | Format | Default Pydantic v2 Type | Notes |
+|-------------|--------|--------------------------|-------|
+| `string` | `binary` | `bytes` | File content |
+| `string` | `password` | `SecretStr` | - |
+<!-- END AUTO-GENERATED DATA FORMAT SUPPORT -->
 
 ## Limitations and Known Issues
 
