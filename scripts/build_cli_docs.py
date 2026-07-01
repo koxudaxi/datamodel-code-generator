@@ -764,28 +764,24 @@ def _format_option_link(option: str, documented_options: frozenset[str]) -> str:
 
 def _format_relation_value(value: Any) -> str:
     """Format a relationship value for Markdown output."""
-    match value:
-        case True:
-            return "enabled"
-        case False:
-            return "disabled"
-        case None:
-            return ""
-        case _:
-            return f"= `{value}`"
+    if value is True:
+        return "enabled"
+    if value is False:
+        return "disabled"
+    if value is None:
+        return ""
+    return f"= `{value}`"
 
 
 def _format_relation_condition(option: str, when: Any) -> str:
     """Format the source option condition for a relationship."""
-    match when:
-        case True:
-            return f"When `{option}` is enabled, "
-        case False:
-            return f"When `{option}` is disabled, "
-        case None:
-            return ""
-        case _:
-            return f"When `{option}={when}`, "
+    if when is True:
+        return f"When `{option}` is enabled, "
+    if when is False:
+        return f"When `{option}` is disabled, "
+    if when is None:
+        return ""
+    return f"When `{option}={when}`, "
 
 
 def _generate_option_relationships(
