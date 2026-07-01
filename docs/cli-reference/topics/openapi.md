@@ -1,0 +1,49 @@
+# OpenAPI
+
+Handle OpenAPI operation naming, path selection, scopes, and readOnly/writeOnly behavior.
+
+Options are grouped from shared CLI metadata and link back to their generated reference sections.
+
+## Groups
+
+| Group | Options | Description |
+|-------|---------|-------------|
+| [OpenAPI Naming](#openapi-naming) | 2 | Operation and response model naming. |
+| [OpenAPI Paths](#openapi-paths) | 2 | Path selection and path parameter output. |
+| [OpenAPI Scopes](#openapi-scopes) | 1 | OpenAPI generation scopes. |
+| [Read Only Write Only](#read-only-write-only) | 2 | readOnly/writeOnly model behavior. |
+
+## OpenAPI Naming {#openapi-naming}
+
+Operation and response model naming.
+
+| Option | Description |
+|--------|-------------|
+| [`--use-operation-id-as-name`](../openapi-only-options.md#use-operation-id-as-name) | Use OpenAPI operationId as the generated function/class name. |
+| [`--use-status-code-in-response-name`](../openapi-only-options.md#use-status-code-in-response-name) | Include HTTP status code in response model names. |
+
+## OpenAPI Paths {#openapi-paths}
+
+Path selection and path parameter output.
+
+| Option | Description |
+|--------|-------------|
+| [`--include-path-parameters`](../openapi-only-options.md#include-path-parameters) | Include OpenAPI path parameters in generated parameter models. |
+| [`--openapi-include-paths`](../openapi-only-options.md#openapi-include-paths) | Filter OpenAPI paths to include in model generation. |
+
+## OpenAPI Scopes {#openapi-scopes}
+
+OpenAPI generation scopes.
+
+| Option | Description |
+|--------|-------------|
+| [`--openapi-scopes`](../openapi-only-options.md#openapi-scopes) | Specify OpenAPI scopes to generate (schemas, paths, parameters). |
+
+## Read Only Write Only {#read-only-write-only}
+
+readOnly/writeOnly model behavior.
+
+| Option | Description |
+|--------|-------------|
+| [`--read-only-write-only-model-type`](../openapi-only-options.md#read-only-write-only-model-type) | Generate separate request and response models for readOnly/writeOnly fields. |
+| [`--use-frozen-field`](../model-customization.md#use-frozen-field) | Generate frozen (immutable) field definitions for readOnly properties. |

@@ -35,8 +35,11 @@ import operator
 from datamodel_code_generator.cli_options import (
     MANUAL_DOCS,
     OPTION_RELATION_KINDS,
+    OPTION_TOPIC_ALLOWED_GROUPS,
     CLIOptionMeta,
     OptionCategory,
+    OptionGroup,
+    OptionTopic,
     get_canonical_option,
     get_cli_doc_slug,
     get_cli_option_doc_name,
@@ -168,6 +171,7 @@ DATA_PATH = Path(__file__).parent.parent / "tests" / "data"
 EXPECTED_BASE_PATH = DATA_PATH / "expected"
 EXPECTED_PATH = EXPECTED_BASE_PATH / "main"
 DOCS_OUTPUT = Path(__file__).parent.parent / "docs" / "cli-reference"
+TOPICS_OUTPUT = DOCS_OUTPUT / "topics"
 MANUAL_DOCS_DIR = DOCS_OUTPUT / "manual"
 DOCS_ROOT = Path(__file__).parent.parent / "docs"
 
@@ -188,6 +192,34 @@ CATEGORY_EMOJIS = {
     OptionCategory.OPENAPI: "📘",
     OptionCategory.GENERAL: "⚙️",
 }
+
+TOPIC_DESCRIPTIONS = {
+    OptionTopic.MODEL_CUSTOMIZATION: "Choose model class shape, naming, reuse, and root-model behavior.",
+    OptionTopic.TEMPLATE_CUSTOMIZATION: "Tune generated file headers, imports, decorators, templates, and formatting.",
+    OptionTopic.TYPING_CUSTOMIZATION: "Control Python annotation syntax, collection types, imports, and type mappings.",
+    OptionTopic.OPENAPI: "Handle OpenAPI operation naming, path selection, scopes, and readOnly/writeOnly behavior.",
+}
+
+GROUP_DESCRIPTIONS = {
+    OptionGroup.MODEL_NAMING: "Class names, suffixes, prefixes, and duplicate-name behavior.",
+    OptionGroup.MODEL_REUSE: "Schema deduplication and shared generated modules.",
+    OptionGroup.MODEL_SHAPE: "Output model family and compatibility targets.",
+    OptionGroup.ROOT_MODEL: "Root model creation, collapse, and alias behavior.",
+    OptionGroup.CUSTOM_TEMPLATES: "Custom templates and extra template data.",
+    OptionGroup.GENERATED_OUTPUT: "Generated file headers and reproducible output.",
+    OptionGroup.IMPORTS: "Generated imports and type-checking import behavior.",
+    OptionGroup.OUTPUT_FORMATTING: "Formatter selection, quote style, and string wrapping.",
+    OptionGroup.COLLECTION_TYPES: "Collection and tuple/set generation.",
+    OptionGroup.TYPE_ALIAS: "TypeAlias and root-model alias output.",
+    OptionGroup.TYPE_MAPPING: "Scalar, date/time, and custom type mapping.",
+    OptionGroup.TYPE_SYNTAX: "Modern annotation syntax and Annotated usage.",
+    OptionGroup.OPENAPI_NAMING: "Operation and response model naming.",
+    OptionGroup.OPENAPI_PATHS: "Path selection and path parameter output.",
+    OptionGroup.OPENAPI_SCOPES: "OpenAPI generation scopes.",
+    OptionGroup.READ_ONLY_WRITE_ONLY: "readOnly/writeOnly model behavior.",
+}
+
+OPTION_TOPIC_ORDER = tuple(OPTION_TOPIC_ALLOWED_GROUPS)
 
 CATEGORY_RECIPES: dict[OptionCategory, tuple[CategoryRecipe, ...]] = {
     OptionCategory.BASE: (
@@ -1060,6 +1092,103 @@ def generate_quick_reference(
     return md
 
 
+TopicOptions = dict[OptionTopic, dict[OptionGroup, list[tuple[str, CLIDocOption]]]]
+
+
+def _title_from_slug(value: str) -> str:
+    """Return a display title for enum values stored as URL slugs."""
+    return value.replace("openapi", "OpenAPI").replace("-", " ").title().replace("Openapi", "OpenAPI")
+
+
+def _topic_title(topic: OptionTopic) -> str:
+    """Return a stable topic title."""
+    return _title_from_slug(topic.value)
+
+
+def _group_title(group: OptionGroup) -> str:
+    """Return a stable group title."""
+    return _title_from_slug(group.value)
+
+
+def _iter_topic_groups(topic: OptionTopic) -> tuple[OptionGroup, ...]:
+    """Return topic groups in enum order."""
+    allowed_groups = OPTION_TOPIC_ALLOWED_GROUPS.get(topic, frozenset())
+    return tuple(group for group in OptionGroup if group in allowed_groups)
+
+
+def _escape_table_cell(value: str) -> str:
+    """Escape Markdown syntax that is ambiguous inside generated tables."""
+    return value.replace("|", r"\|").replace("[", r"\[").replace("]", r"\]")
+
+
+def collect_topic_options(categories: dict[OptionCategory, dict[str, CLIDocOption]]) -> TopicOptions:
+    """Collect documented options by focused topic and subgroup."""
+    topics: TopicOptions = defaultdict(lambda: defaultdict(list))
+    for options in categories.values():
+        for option, cli_doc_option in options.items():
+            if not (meta := get_option_meta(option)):
+                continue
+            if meta.topic is None or meta.group is None:
+                continue
+            topics[meta.topic][meta.group].append((option, cli_doc_option))
+
+    for groups in topics.values():
+        for group_options in groups.values():
+            group_options.sort(key=operator.itemgetter(0))
+    return dict(topics)
+
+
+def generate_topic_index(topic_options: TopicOptions) -> str:
+    """Generate the CLI reference topic index section."""
+    if not topic_options:
+        return ""
+
+    md = "## 🎯 Focused Topics\n\n"
+    md += "Use these pages when you know the workflow area but not the exact option name.\n\n"
+    md += "| Topic | Options | Groups |\n"
+    md += "|-------|---------|--------|\n"
+    for topic in OPTION_TOPIC_ORDER:
+        if not (groups := topic_options.get(topic)):
+            continue
+        option_count = sum(len(options) for options in groups.values())
+        group_names = ", ".join(_group_title(group) for group in _iter_topic_groups(topic) if group in groups)
+        md += f"| [{_topic_title(topic)}](topics/{topic.value}.md) | {option_count} | {group_names} |\n"
+    return md + "\n"
+
+
+def generate_topic_page(topic: OptionTopic, groups: dict[OptionGroup, list[tuple[str, CLIDocOption]]]) -> str:
+    """Generate one focused CLI topic page."""
+    title = _topic_title(topic)
+    md = f"# {title}\n\n"
+    if description := TOPIC_DESCRIPTIONS.get(topic):
+        md += f"{description}\n\n"
+    md += "Options are grouped from shared CLI metadata and link back to their generated reference sections.\n\n"
+    md += "## Groups\n\n"
+    md += "| Group | Options | Description |\n"
+    md += "|-------|---------|-------------|\n"
+    for group in _iter_topic_groups(topic):
+        if group not in groups:
+            continue
+        md += f"| [{_group_title(group)}](#{get_cli_doc_slug(group.value)}) | {len(groups[group])} | "
+        md += f"{GROUP_DESCRIPTIONS.get(group, '')} |\n"
+    md += "\n"
+
+    for group in _iter_topic_groups(topic):
+        if not (options := groups.get(group)):
+            continue
+        md += f"## {_group_title(group)} {{#{get_cli_doc_slug(group.value)}}}\n\n"
+        if description := GROUP_DESCRIPTIONS.get(group):
+            md += f"{description}\n\n"
+        md += "| Option | Description |\n"
+        md += "|--------|-------------|\n"
+        for option, cli_doc_option in options:
+            option_description = cli_doc_option.get_option_description()
+            desc = summarize_description(option_description, DESC_LENGTH_LONG) if option_description else ""
+            md += f"| [`{option}`]({get_cli_option_doc_path(option, root='..')}) | {_escape_table_cell(desc)} |\n"
+        md += "\n"
+    return md
+
+
 def generate_index_page(
     categories: dict[OptionCategory, dict[str, CLIDocOption]],
     manual_docs: dict[str, str] | None = None,
@@ -1095,6 +1224,7 @@ def generate_index_page(
         md += f"| 📝 [Utility Options](utility-options.md) | {len(manual_docs)} | Help, version, debug options |\n"
 
     md += "\n"
+    md += generate_topic_index(collect_topic_options(categories))
     md += "## All Options\n\n"
     all_options: list[tuple[str, OptionCategory | None]] = []
     for category, options in categories.items():
@@ -1232,7 +1362,10 @@ def build_docs(*, check: bool = False) -> int:
 
     if not check:
         DOCS_OUTPUT.mkdir(parents=True, exist_ok=True)
+        TOPICS_OUTPUT.mkdir(parents=True, exist_ok=True)
         for old_file in DOCS_OUTPUT.glob("*.md"):
+            old_file.unlink()
+        for old_file in TOPICS_OUTPUT.glob("*.md"):
             old_file.unlink()
 
     generated = 0
@@ -1278,6 +1411,19 @@ def build_docs(*, check: bool = False) -> int:
             write_or_check(output_path, md, f"utility-options.md ({len(manual_docs)} options)")
         except (OSError, ValueError, KeyError) as e:
             print(f"Error generating utility-options.md: {e}", file=sys.stderr)
+            errors += 1
+
+    topic_options = collect_topic_options(categories)
+    for topic in OPTION_TOPIC_ORDER:
+        if not (groups := topic_options.get(topic)):
+            continue
+        try:
+            md = generate_topic_page(topic, groups)
+            output_path = TOPICS_OUTPUT / f"{topic.value}.md"
+            count = sum(len(options) for options in groups.values())
+            write_or_check(output_path, md, f"topics/{output_path.name} ({count} options)")
+        except (OSError, ValueError, KeyError) as e:
+            print(f"Error generating topics/{topic.value}.md: {e}", file=sys.stderr)
             errors += 1
 
     try:
