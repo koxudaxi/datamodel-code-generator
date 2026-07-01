@@ -113,6 +113,7 @@ def test_cli_option_doc_path_links_to_generated_cli_reference() -> None:
         == "/cli-reference/model-customization/#output-model-type"
     )
     assert get_cli_option_doc_path("-h", root="/cli-reference", extension="/") == "/cli-reference/utility-options/#help"
+    assert get_cli_option_doc_path("--unknown-option") is None
 
 
 def test_cli_option_doc_name_preserves_boolean_variants_and_canonicalizes_aliases() -> None:
