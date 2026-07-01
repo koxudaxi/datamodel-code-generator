@@ -661,6 +661,7 @@ pre {
 }
 
 .option-doc-link {
+  grid-column: 2;
   align-self: start;
   display: inline-flex;
   align-items: center;
@@ -686,6 +687,7 @@ pre {
 }
 
 .option-widget {
+  grid-column: 3;
   min-width: 0;
   display: flex;
   justify-content: flex-end;
@@ -726,6 +728,11 @@ pre {
     grid-template-columns: 1fr;
     align-items: stretch;
     gap: 8px;
+  }
+
+  .option-doc-link,
+  .option-widget {
+    grid-column: 1;
   }
 
   .option-widget {
@@ -963,6 +970,11 @@ body.workspace-collapsed .output-editor-mount {
   .option-row {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+
+  .option-doc-link,
+  .option-widget {
+    grid-column: 1;
   }
 
   .option-widget {
