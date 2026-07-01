@@ -182,8 +182,7 @@ def test_option_section_renders_implies_and_requires_metadata() -> None:
     assert (
         "- **Requires:** [`--output-model-type`](model-customization.md#output-model-type) = "
         "`pydantic_v2.BaseModel` - `--use-missing-sentinel` is only supported for "
-        "`--output-model-type pydantic_v2.BaseModel`."
-        in section
+        "`--output-model-type pydantic_v2.BaseModel`." in section
     )
 
 
@@ -208,8 +207,7 @@ def test_option_section_renders_conditional_requires_metadata() -> None:
     assert (
         "- **Requires:** When `--reuse-scope=tree`, "
         "[`--reuse-model`](model-customization.md#reuse-model) enabled - "
-        "`--reuse-scope=tree` has no effect without `--reuse-model`."
-        in section
+        "`--reuse-scope=tree` has no effect without `--reuse-model`." in section
     )
 
 
@@ -233,8 +231,7 @@ def test_option_section_renders_conflicts_metadata() -> None:
 
     assert (
         "- **Conflicts:** [`--custom-file-header-path`](template-customization.md#custom-file-header-path) - "
-        "`--custom-file-header` can not be used with `--custom-file-header-path`."
-        in section
+        "`--custom-file-header` can not be used with `--custom-file-header-path`." in section
     )
 
 

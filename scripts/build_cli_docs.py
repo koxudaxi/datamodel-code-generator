@@ -33,9 +33,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 import operator
 
 from datamodel_code_generator.cli_options import (
-    CLIOptionMeta,
     MANUAL_DOCS,
     OPTION_RELATION_KINDS,
+    CLIOptionMeta,
     OptionCategory,
     get_canonical_option,
     get_option_meta,
