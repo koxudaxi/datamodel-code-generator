@@ -15,6 +15,22 @@
 
 ---
 
+## 🍳 Recipes
+
+### Generate operation-focused models
+
+Limit OpenAPI output to operation shapes and name models from operation IDs and status codes.
+
+**Options:** [`--openapi-scopes`](#openapi-scopes), [`--use-operation-id-as-name`](#use-operation-id-as-name), [`--use-status-code-in-response-name`](#use-status-code-in-response-name)
+
+### Trim an OpenAPI build
+
+Restrict generation to selected paths while preserving parameter and info-version context.
+
+**Options:** [`--openapi-include-paths`](#openapi-include-paths), [`--include-path-parameters`](#include-path-parameters), [`--openapi-include-info-version`](#openapi-include-info-version)
+
+---
+
 ## `--include-path-parameters` {#include-path-parameters}
 
 Include OpenAPI path parameters in generated parameter models.
