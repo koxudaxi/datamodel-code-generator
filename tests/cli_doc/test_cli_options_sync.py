@@ -18,8 +18,11 @@ from datamodel_code_generator.cli_options import (
     CLI_OPTION_META,
     MANUAL_DOCS,
     OPTION_RELATION_KINDS,
+    OPTION_TOPIC_ALLOWED_GROUPS,
     CLIOptionMeta,
     OptionCategory,
+    OptionGroup,
+    OptionTopic,
     _canonical_option_key,
     get_all_argparse_options,
     get_all_canonical_options,
@@ -301,6 +304,32 @@ class TestCLIOptionMetaSync:
                 "CLI option relation targets missing from argparse:\n"
                 + "\n".join(sorted(missing))
                 + "\n\nRemove the relation or add the target option to arguments.py."
+            )
+
+    def test_option_topic_and_group_are_known_and_non_empty(self) -> None:
+        """Verify that optional topic/group metadata uses known non-empty values."""
+        for attr, enum_type in (("topic", OptionTopic), ("group", OptionGroup)):
+            for option, meta in CLI_OPTION_META.items():
+                if (value := getattr(meta, attr)) is None:
+                    continue
+                if not isinstance(value, enum_type):
+                    pytest.fail(f"{option} {attr} must be an {enum_type.__name__}, got {value!r}")
+                if not value.value:
+                    pytest.fail(f"{option} {attr} value must not be empty")
+
+    def test_option_topic_groups_are_allowed(self) -> None:
+        """Verify that topic metadata only uses groups allowed for that topic."""
+        for option, meta in CLI_OPTION_META.items():
+            if (topic := meta.topic) is None:
+                continue
+            if (group := meta.group) is None:
+                pytest.fail(f"{option} topic {topic.value!r} must also set a group")
+            if (allowed_groups := OPTION_TOPIC_ALLOWED_GROUPS.get(topic)) is None:
+                pytest.fail(f"{option} topic has no allowed groups: {topic.value!r}")
+            _fail_if_missing(
+                group,
+                allowed_groups,
+                f"{option} group for topic {topic.value!r}",
             )
 
     def test_all_argparse_options_are_documented_or_excluded(self) -> None:

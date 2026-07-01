@@ -41,6 +41,36 @@ class OptionCategory(str, Enum):
     GENERAL = "General Options"
 
 
+class OptionTopic(str, Enum):
+    """Optional topics for linking CLI options to focused documentation areas."""
+
+    MODEL_CUSTOMIZATION = "model-customization"
+    TEMPLATE_CUSTOMIZATION = "template-customization"
+    TYPING_CUSTOMIZATION = "typing-customization"
+    OPENAPI = "openapi"
+
+
+class OptionGroup(str, Enum):
+    """Optional subgroups within CLI option topics."""
+
+    MODEL_NAMING = "model-naming"
+    MODEL_REUSE = "model-reuse"
+    MODEL_SHAPE = "model-shape"
+    ROOT_MODEL = "root-model"
+    CUSTOM_TEMPLATES = "custom-templates"
+    GENERATED_OUTPUT = "generated-output"
+    IMPORTS = "imports"
+    OUTPUT_FORMATTING = "output-formatting"
+    COLLECTION_TYPES = "collection-types"
+    TYPE_ALIAS = "type-alias"
+    TYPE_MAPPING = "type-mapping"
+    TYPE_SYNTAX = "type-syntax"
+    OPENAPI_NAMING = "openapi-naming"
+    OPENAPI_PATHS = "openapi-paths"
+    OPENAPI_SCOPES = "openapi-scopes"
+    READ_ONLY_WRITE_ONLY = "read-only-write-only"
+
+
 @dataclass(frozen=True)
 class CLIOptionRelation:
     """A documented relationship from one CLI option to another.
@@ -64,6 +94,8 @@ class CLIOptionMeta:
 
     name: str
     category: OptionCategory
+    topic: OptionTopic | None = None
+    group: OptionGroup | None = None
     since_version: str | None = None
     deprecated: bool = False
     deprecated_message: str | None = None
@@ -73,6 +105,33 @@ class CLIOptionMeta:
 
 
 OPTION_RELATION_KINDS = ("implies", "requires", "conflicts")
+OPTION_TOPIC_ALLOWED_GROUPS: dict[OptionTopic, frozenset[OptionGroup]] = {
+    OptionTopic.MODEL_CUSTOMIZATION: frozenset({
+        OptionGroup.MODEL_NAMING,
+        OptionGroup.MODEL_REUSE,
+        OptionGroup.MODEL_SHAPE,
+        OptionGroup.ROOT_MODEL,
+    }),
+    OptionTopic.TEMPLATE_CUSTOMIZATION: frozenset({
+        OptionGroup.CUSTOM_TEMPLATES,
+        OptionGroup.GENERATED_OUTPUT,
+        OptionGroup.IMPORTS,
+        OptionGroup.OUTPUT_FORMATTING,
+    }),
+    OptionTopic.TYPING_CUSTOMIZATION: frozenset({
+        OptionGroup.COLLECTION_TYPES,
+        OptionGroup.IMPORTS,
+        OptionGroup.TYPE_ALIAS,
+        OptionGroup.TYPE_MAPPING,
+        OptionGroup.TYPE_SYNTAX,
+    }),
+    OptionTopic.OPENAPI: frozenset({
+        OptionGroup.OPENAPI_NAMING,
+        OptionGroup.OPENAPI_PATHS,
+        OptionGroup.OPENAPI_SCOPES,
+        OptionGroup.READ_ONLY_WRITE_ONLY,
+    }),
+}
 
 
 # Options with manual documentation (not auto-generated from tests)
@@ -117,6 +176,8 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--output-model-type": CLIOptionMeta(
         name="--output-model-type",
         category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_SHAPE,
         implies=(
             CLIOptionRelation(
                 option="--use-annotated",
@@ -125,18 +186,66 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
             ),
         ),
     ),
-    "--target-python-version": CLIOptionMeta(name="--target-python-version", category=OptionCategory.MODEL),
-    "--target-pydantic-version": CLIOptionMeta(name="--target-pydantic-version", category=OptionCategory.MODEL),
-    "--base-class": CLIOptionMeta(name="--base-class", category=OptionCategory.MODEL),
-    "--base-class-map": CLIOptionMeta(name="--base-class-map", category=OptionCategory.MODEL),
-    "--class-name": CLIOptionMeta(name="--class-name", category=OptionCategory.MODEL),
-    "--model-name-map": CLIOptionMeta(name="--model-name-map", category=OptionCategory.MODEL),
-    "--allow-leading-underscore-class-name": CLIOptionMeta(
-        name="--allow-leading-underscore-class-name", category=OptionCategory.MODEL
+    "--target-python-version": CLIOptionMeta(
+        name="--target-python-version",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_SHAPE,
     ),
-    "--class-name-prefix": CLIOptionMeta(name="--class-name-prefix", category=OptionCategory.MODEL),
-    "--class-name-suffix": CLIOptionMeta(name="--class-name-suffix", category=OptionCategory.MODEL),
-    "--class-name-affix-scope": CLIOptionMeta(name="--class-name-affix-scope", category=OptionCategory.MODEL),
+    "--target-pydantic-version": CLIOptionMeta(
+        name="--target-pydantic-version",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_SHAPE,
+    ),
+    "--base-class": CLIOptionMeta(
+        name="--base-class",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_SHAPE,
+    ),
+    "--base-class-map": CLIOptionMeta(
+        name="--base-class-map",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_SHAPE,
+    ),
+    "--class-name": CLIOptionMeta(
+        name="--class-name",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_NAMING,
+    ),
+    "--model-name-map": CLIOptionMeta(
+        name="--model-name-map",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_NAMING,
+    ),
+    "--allow-leading-underscore-class-name": CLIOptionMeta(
+        name="--allow-leading-underscore-class-name",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_NAMING,
+    ),
+    "--class-name-prefix": CLIOptionMeta(
+        name="--class-name-prefix",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_NAMING,
+    ),
+    "--class-name-suffix": CLIOptionMeta(
+        name="--class-name-suffix",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_NAMING,
+    ),
+    "--class-name-affix-scope": CLIOptionMeta(
+        name="--class-name-affix-scope",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_NAMING,
+    ),
     "--frozen-dataclasses": CLIOptionMeta(name="--frozen-dataclasses", category=OptionCategory.MODEL),
     "--keyword-only": CLIOptionMeta(
         name="--keyword-only",
@@ -152,10 +261,17 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
             ),
         ),
     ),
-    "--reuse-model": CLIOptionMeta(name="--reuse-model", category=OptionCategory.MODEL),
+    "--reuse-model": CLIOptionMeta(
+        name="--reuse-model",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_REUSE,
+    ),
     "--reuse-scope": CLIOptionMeta(
         name="--reuse-scope",
         category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_REUSE,
         requires=(
             CLIOptionRelation(
                 option="--reuse-model",
@@ -165,11 +281,23 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
             ),
         ),
     ),
-    "--collapse-root-models": CLIOptionMeta(name="--collapse-root-models", category=OptionCategory.MODEL),
-    "--no-collapse-root-models": CLIOptionMeta(name="--no-collapse-root-models", category=OptionCategory.MODEL),
+    "--collapse-root-models": CLIOptionMeta(
+        name="--collapse-root-models",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.ROOT_MODEL,
+    ),
+    "--no-collapse-root-models": CLIOptionMeta(
+        name="--no-collapse-root-models",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.ROOT_MODEL,
+    ),
     "--collapse-root-models-name-strategy": CLIOptionMeta(
         name="--collapse-root-models-name-strategy",
         category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.ROOT_MODEL,
         requires=(
             CLIOptionRelation(
                 option="--collapse-root-models",
@@ -178,7 +306,12 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
             ),
         ),
     ),
-    "--collapse-reuse-models": CLIOptionMeta(name="--collapse-reuse-models", category=OptionCategory.MODEL),
+    "--collapse-reuse-models": CLIOptionMeta(
+        name="--collapse-reuse-models",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_REUSE,
+    ),
     "--keep-model-order": CLIOptionMeta(name="--keep-model-order", category=OptionCategory.MODEL),
     "--allow-extra-fields": CLIOptionMeta(
         name="--allow-extra-fields",
@@ -218,8 +351,18 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     ),
     "--strip-default-none": CLIOptionMeta(name="--strip-default-none", category=OptionCategory.MODEL),
     "--dataclass-arguments": CLIOptionMeta(name="--dataclass-arguments", category=OptionCategory.MODEL),
-    "--use-frozen-field": CLIOptionMeta(name="--use-frozen-field", category=OptionCategory.MODEL),
-    "--no-use-frozen-field": CLIOptionMeta(name="--no-use-frozen-field", category=OptionCategory.MODEL),
+    "--use-frozen-field": CLIOptionMeta(
+        name="--use-frozen-field",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.OPENAPI,
+        group=OptionGroup.READ_ONLY_WRITE_ONLY,
+    ),
+    "--no-use-frozen-field": CLIOptionMeta(
+        name="--no-use-frozen-field",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.OPENAPI,
+        group=OptionGroup.READ_ONLY_WRITE_ONLY,
+    ),
     "--use-default-factory-for-optional-nested-models": CLIOptionMeta(
         name="--use-default-factory-for-optional-nested-models", category=OptionCategory.MODEL
     ),
@@ -237,19 +380,44 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--parent-scoped-naming": CLIOptionMeta(
         name="--parent-scoped-naming",
         category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_NAMING,
         deprecated=True,
         deprecated_message=deprecation_message("cli.parent-scoped-naming"),
         implies=(CLIOptionRelation(option="--naming-strategy", value=NamingStrategy.ParentPrefixed.value),),
     ),
-    "--naming-strategy": CLIOptionMeta(name="--naming-strategy", category=OptionCategory.MODEL),
-    "--duplicate-name-suffix": CLIOptionMeta(name="--duplicate-name-suffix", category=OptionCategory.MODEL),
+    "--naming-strategy": CLIOptionMeta(
+        name="--naming-strategy",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_NAMING,
+    ),
+    "--duplicate-name-suffix": CLIOptionMeta(
+        name="--duplicate-name-suffix",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_NAMING,
+    ),
     "--use-one-literal-as-default": CLIOptionMeta(name="--use-one-literal-as-default", category=OptionCategory.MODEL),
     "--use-serialize-as-any": CLIOptionMeta(name="--use-serialize-as-any", category=OptionCategory.MODEL),
-    "--skip-root-model": CLIOptionMeta(name="--skip-root-model", category=OptionCategory.MODEL),
-    "--use-root-model-sequence-interface": CLIOptionMeta(
-        name="--use-root-model-sequence-interface", category=OptionCategory.MODEL
+    "--skip-root-model": CLIOptionMeta(
+        name="--skip-root-model",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.ROOT_MODEL,
     ),
-    "--use-generic-base-class": CLIOptionMeta(name="--use-generic-base-class", category=OptionCategory.MODEL),
+    "--use-root-model-sequence-interface": CLIOptionMeta(
+        name="--use-root-model-sequence-interface",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.ROOT_MODEL,
+    ),
+    "--use-generic-base-class": CLIOptionMeta(
+        name="--use-generic-base-class",
+        category=OptionCategory.MODEL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_SHAPE,
+    ),
     "--model-extra-keys": CLIOptionMeta(name="--model-extra-keys", category=OptionCategory.MODEL),
     "--model-extra-keys-without-x-prefix": CLIOptionMeta(
         name="--model-extra-keys-without-x-prefix", category=OptionCategory.MODEL
@@ -311,39 +479,111 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # ==========================================================================
     # Typing Customization
     # ==========================================================================
-    "--use-union-operator": CLIOptionMeta(name="--use-union-operator", category=OptionCategory.TYPING),
-    "--no-use-union-operator": CLIOptionMeta(name="--no-use-union-operator", category=OptionCategory.TYPING),
-    "--use-standard-collections": CLIOptionMeta(name="--use-standard-collections", category=OptionCategory.TYPING),
+    "--use-union-operator": CLIOptionMeta(
+        name="--use-union-operator",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_SYNTAX,
+    ),
+    "--no-use-union-operator": CLIOptionMeta(
+        name="--no-use-union-operator",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_SYNTAX,
+    ),
+    "--use-standard-collections": CLIOptionMeta(
+        name="--use-standard-collections",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.COLLECTION_TYPES,
+    ),
     "--no-use-standard-collections": CLIOptionMeta(
-        name="--no-use-standard-collections", category=OptionCategory.TYPING
+        name="--no-use-standard-collections",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.COLLECTION_TYPES,
     ),
     "--use-generic-container-types": CLIOptionMeta(
-        name="--use-generic-container-types", category=OptionCategory.TYPING
+        name="--use-generic-container-types",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.COLLECTION_TYPES,
     ),
     "--use-annotated": CLIOptionMeta(
         name="--use-annotated",
         category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_SYNTAX,
         implies=(CLIOptionRelation(option="--field-constraints", value=True),),
     ),
-    "--no-use-annotated": CLIOptionMeta(name="--no-use-annotated", category=OptionCategory.TYPING),
-    "--use-type-alias": CLIOptionMeta(name="--use-type-alias", category=OptionCategory.TYPING),
-    "--use-root-model-type-alias": CLIOptionMeta(name="--use-root-model-type-alias", category=OptionCategory.TYPING),
-    "--strict-types": CLIOptionMeta(name="--strict-types", category=OptionCategory.TYPING),
+    "--no-use-annotated": CLIOptionMeta(
+        name="--no-use-annotated",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_SYNTAX,
+    ),
+    "--use-type-alias": CLIOptionMeta(
+        name="--use-type-alias",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_ALIAS,
+    ),
+    "--use-root-model-type-alias": CLIOptionMeta(
+        name="--use-root-model-type-alias",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_ALIAS,
+    ),
+    "--strict-types": CLIOptionMeta(
+        name="--strict-types",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_MAPPING,
+    ),
     "--enum-field-as-literal": CLIOptionMeta(name="--enum-field-as-literal", category=OptionCategory.TYPING),
     "--enum-field-as-literal-map": CLIOptionMeta(name="--enum-field-as-literal-map", category=OptionCategory.TYPING),
     "--ignore-enum-constraints": CLIOptionMeta(name="--ignore-enum-constraints", category=OptionCategory.TYPING),
-    "--disable-future-imports": CLIOptionMeta(name="--disable-future-imports", category=OptionCategory.TYPING),
-    "--use-pendulum": CLIOptionMeta(name="--use-pendulum", category=OptionCategory.TYPING),
+    "--disable-future-imports": CLIOptionMeta(
+        name="--disable-future-imports",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.IMPORTS,
+    ),
+    "--use-pendulum": CLIOptionMeta(
+        name="--use-pendulum",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_MAPPING,
+    ),
     "--use-standard-primitive-types": CLIOptionMeta(
-        name="--use-standard-primitive-types", category=OptionCategory.TYPING
+        name="--use-standard-primitive-types",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_MAPPING,
     ),
     "--no-use-standard-primitive-types": CLIOptionMeta(
-        name="--no-use-standard-primitive-types", category=OptionCategory.TYPING
+        name="--no-use-standard-primitive-types",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_MAPPING,
     ),
-    "--use-object-type": CLIOptionMeta(name="--use-object-type", category=OptionCategory.TYPING),
-    "--use-type-checking-imports": CLIOptionMeta(name="--use-type-checking-imports", category=OptionCategory.TEMPLATE),
+    "--use-object-type": CLIOptionMeta(
+        name="--use-object-type",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_MAPPING,
+    ),
+    "--use-type-checking-imports": CLIOptionMeta(
+        name="--use-type-checking-imports",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.IMPORTS,
+    ),
     "--no-use-type-checking-imports": CLIOptionMeta(
-        name="--no-use-type-checking-imports", category=OptionCategory.TEMPLATE
+        name="--no-use-type-checking-imports",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.IMPORTS,
     ),
     "--generate-schema-validators": CLIOptionMeta(
         name="--generate-schema-validators", category=OptionCategory.TEMPLATE
@@ -352,20 +592,53 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--schema-validator-base-class-name": CLIOptionMeta(
         name="--schema-validator-base-class-name", category=OptionCategory.TEMPLATE
     ),
-    "--output-datetime-class": CLIOptionMeta(name="--output-datetime-class", category=OptionCategory.TYPING),
-    "--output-date-class": CLIOptionMeta(name="--output-date-class", category=OptionCategory.TYPING),
+    "--output-datetime-class": CLIOptionMeta(
+        name="--output-datetime-class",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_MAPPING,
+    ),
+    "--output-date-class": CLIOptionMeta(
+        name="--output-date-class",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_MAPPING,
+    ),
     "--use-decimal-for-multiple-of": CLIOptionMeta(
-        name="--use-decimal-for-multiple-of", category=OptionCategory.TYPING
+        name="--use-decimal-for-multiple-of",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_MAPPING,
     ),
     "--use-non-positive-negative-number-constrained-types": CLIOptionMeta(
         name="--use-non-positive-negative-number-constrained-types", category=OptionCategory.TYPING
     ),
-    "--use-unique-items-as-set": CLIOptionMeta(name="--use-unique-items-as-set", category=OptionCategory.TYPING),
-    "--use-tuple-for-fixed-items": CLIOptionMeta(name="--use-tuple-for-fixed-items", category=OptionCategory.TYPING),
+    "--use-unique-items-as-set": CLIOptionMeta(
+        name="--use-unique-items-as-set",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.COLLECTION_TYPES,
+    ),
+    "--use-tuple-for-fixed-items": CLIOptionMeta(
+        name="--use-tuple-for-fixed-items",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.COLLECTION_TYPES,
+    ),
     "--use-closed-typed-dict": CLIOptionMeta(name="--use-closed-typed-dict", category=OptionCategory.TYPING),
     "--no-use-closed-typed-dict": CLIOptionMeta(name="--no-use-closed-typed-dict", category=OptionCategory.TYPING),
-    "--type-mappings": CLIOptionMeta(name="--type-mappings", category=OptionCategory.TYPING),
-    "--type-overrides": CLIOptionMeta(name="--type-overrides", category=OptionCategory.TYPING),
+    "--type-mappings": CLIOptionMeta(
+        name="--type-mappings",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_MAPPING,
+    ),
+    "--type-overrides": CLIOptionMeta(
+        name="--type-overrides",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_MAPPING,
+    ),
     "--use-specialized-enum": CLIOptionMeta(
         name="--use-specialized-enum",
         category=OptionCategory.TYPING,
@@ -386,13 +659,35 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # ==========================================================================
     # Template Customization
     # ==========================================================================
-    "--wrap-string-literal": CLIOptionMeta(name="--wrap-string-literal", category=OptionCategory.TEMPLATE),
-    "--custom-template-dir": CLIOptionMeta(name="--custom-template-dir", category=OptionCategory.TEMPLATE),
-    "--extra-template-data": CLIOptionMeta(name="--extra-template-data", category=OptionCategory.TEMPLATE),
-    "--validators": CLIOptionMeta(name="--validators", category=OptionCategory.TEMPLATE),
+    "--wrap-string-literal": CLIOptionMeta(
+        name="--wrap-string-literal",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.OUTPUT_FORMATTING,
+    ),
+    "--custom-template-dir": CLIOptionMeta(
+        name="--custom-template-dir",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.CUSTOM_TEMPLATES,
+    ),
+    "--extra-template-data": CLIOptionMeta(
+        name="--extra-template-data",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.CUSTOM_TEMPLATES,
+    ),
+    "--validators": CLIOptionMeta(
+        name="--validators",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.CUSTOM_TEMPLATES,
+    ),
     "--custom-file-header": CLIOptionMeta(
         name="--custom-file-header",
         category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.GENERATED_OUTPUT,
         conflicts=(
             CLIOptionRelation(
                 option="--custom-file-header-path",
@@ -403,6 +698,8 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--custom-file-header-path": CLIOptionMeta(
         name="--custom-file-header-path",
         category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.GENERATED_OUTPUT,
         conflicts=(
             CLIOptionRelation(
                 option="--custom-file-header",
@@ -410,36 +707,115 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
             ),
         ),
     ),
-    "--additional-imports": CLIOptionMeta(name="--additional-imports", category=OptionCategory.TEMPLATE),
-    "--class-decorators": CLIOptionMeta(name="--class-decorators", category=OptionCategory.TEMPLATE),
-    "--use-double-quotes": CLIOptionMeta(name="--use-double-quotes", category=OptionCategory.TEMPLATE),
-    "--use-exact-imports": CLIOptionMeta(name="--use-exact-imports", category=OptionCategory.TEMPLATE),
+    "--additional-imports": CLIOptionMeta(
+        name="--additional-imports",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.IMPORTS,
+    ),
+    "--class-decorators": CLIOptionMeta(
+        name="--class-decorators",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.GENERATED_OUTPUT,
+    ),
+    "--use-double-quotes": CLIOptionMeta(
+        name="--use-double-quotes",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.OUTPUT_FORMATTING,
+    ),
+    "--use-exact-imports": CLIOptionMeta(
+        name="--use-exact-imports",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.IMPORTS,
+    ),
     "--disable-appending-item-suffix": CLIOptionMeta(
         name="--disable-appending-item-suffix", category=OptionCategory.TEMPLATE
     ),
     "--no-treat-dot-as-module": CLIOptionMeta(name="--no-treat-dot-as-module", category=OptionCategory.TEMPLATE),
-    "--disable-timestamp": CLIOptionMeta(name="--disable-timestamp", category=OptionCategory.TEMPLATE),
-    "--enable-version-header": CLIOptionMeta(name="--enable-version-header", category=OptionCategory.TEMPLATE),
-    "--enable-command-header": CLIOptionMeta(name="--enable-command-header", category=OptionCategory.TEMPLATE),
-    "--enable-generated-header-marker": CLIOptionMeta(
-        name="--enable-generated-header-marker", category=OptionCategory.TEMPLATE
+    "--disable-timestamp": CLIOptionMeta(
+        name="--disable-timestamp",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.GENERATED_OUTPUT,
     ),
-    "--formatters": CLIOptionMeta(name="--formatters", category=OptionCategory.TEMPLATE),
-    "--custom-formatters": CLIOptionMeta(name="--custom-formatters", category=OptionCategory.TEMPLATE),
-    "--custom-formatters-kwargs": CLIOptionMeta(name="--custom-formatters-kwargs", category=OptionCategory.TEMPLATE),
+    "--enable-version-header": CLIOptionMeta(
+        name="--enable-version-header",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.GENERATED_OUTPUT,
+    ),
+    "--enable-command-header": CLIOptionMeta(
+        name="--enable-command-header",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.GENERATED_OUTPUT,
+    ),
+    "--enable-generated-header-marker": CLIOptionMeta(
+        name="--enable-generated-header-marker",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.GENERATED_OUTPUT,
+    ),
+    "--formatters": CLIOptionMeta(
+        name="--formatters",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.OUTPUT_FORMATTING,
+    ),
+    "--custom-formatters": CLIOptionMeta(
+        name="--custom-formatters",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.OUTPUT_FORMATTING,
+    ),
+    "--custom-formatters-kwargs": CLIOptionMeta(
+        name="--custom-formatters-kwargs",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.OUTPUT_FORMATTING,
+    ),
     # ==========================================================================
     # OpenAPI-only Options
     # ==========================================================================
-    "--openapi-scopes": CLIOptionMeta(name="--openapi-scopes", category=OptionCategory.OPENAPI),
-    "--use-operation-id-as-name": CLIOptionMeta(name="--use-operation-id-as-name", category=OptionCategory.OPENAPI),
+    "--openapi-scopes": CLIOptionMeta(
+        name="--openapi-scopes",
+        category=OptionCategory.OPENAPI,
+        topic=OptionTopic.OPENAPI,
+        group=OptionGroup.OPENAPI_SCOPES,
+    ),
+    "--use-operation-id-as-name": CLIOptionMeta(
+        name="--use-operation-id-as-name",
+        category=OptionCategory.OPENAPI,
+        topic=OptionTopic.OPENAPI,
+        group=OptionGroup.OPENAPI_NAMING,
+    ),
     "--use-status-code-in-response-name": CLIOptionMeta(
-        name="--use-status-code-in-response-name", category=OptionCategory.OPENAPI
+        name="--use-status-code-in-response-name",
+        category=OptionCategory.OPENAPI,
+        topic=OptionTopic.OPENAPI,
+        group=OptionGroup.OPENAPI_NAMING,
     ),
     "--read-only-write-only-model-type": CLIOptionMeta(
-        name="--read-only-write-only-model-type", category=OptionCategory.OPENAPI
+        name="--read-only-write-only-model-type",
+        category=OptionCategory.OPENAPI,
+        topic=OptionTopic.OPENAPI,
+        group=OptionGroup.READ_ONLY_WRITE_ONLY,
     ),
-    "--include-path-parameters": CLIOptionMeta(name="--include-path-parameters", category=OptionCategory.OPENAPI),
-    "--openapi-include-paths": CLIOptionMeta(name="--openapi-include-paths", category=OptionCategory.OPENAPI),
+    "--include-path-parameters": CLIOptionMeta(
+        name="--include-path-parameters",
+        category=OptionCategory.OPENAPI,
+        topic=OptionTopic.OPENAPI,
+        group=OptionGroup.OPENAPI_PATHS,
+    ),
+    "--openapi-include-paths": CLIOptionMeta(
+        name="--openapi-include-paths",
+        category=OptionCategory.OPENAPI,
+        topic=OptionTopic.OPENAPI,
+        group=OptionGroup.OPENAPI_PATHS,
+    ),
     "--openapi-include-info-version": CLIOptionMeta(
         name="--openapi-include-info-version", category=OptionCategory.OPENAPI
     ),
@@ -469,7 +845,12 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--ignore-pyproject": CLIOptionMeta(name="--ignore-pyproject", category=OptionCategory.GENERAL),
     "--generate-cli-command": CLIOptionMeta(name="--generate-cli-command", category=OptionCategory.GENERAL),
     "--generate-pyproject-config": CLIOptionMeta(name="--generate-pyproject-config", category=OptionCategory.GENERAL),
-    "--shared-module-name": CLIOptionMeta(name="--shared-module-name", category=OptionCategory.GENERAL),
+    "--shared-module-name": CLIOptionMeta(
+        name="--shared-module-name",
+        category=OptionCategory.GENERAL,
+        topic=OptionTopic.MODEL_CUSTOMIZATION,
+        group=OptionGroup.MODEL_REUSE,
+    ),
     "--all-exports-scope": CLIOptionMeta(name="--all-exports-scope", category=OptionCategory.GENERAL),
     "--all-exports-collision-strategy": CLIOptionMeta(
         name="--all-exports-collision-strategy",
@@ -487,6 +868,23 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--watch": CLIOptionMeta(name="--watch", category=OptionCategory.GENERAL),
     "--watch-delay": CLIOptionMeta(name="--watch-delay", category=OptionCategory.GENERAL),
 }
+
+
+def _validate_option_topic_groups() -> None:
+    """Validate CLI option topic/group invariants at import time."""
+    for option, meta in CLI_OPTION_META.items():
+        if meta.topic is None or meta.group is None:
+            continue
+        allowed_groups = OPTION_TOPIC_ALLOWED_GROUPS.get(meta.topic)
+        if allowed_groups is None:  # pragma: no cover
+            msg = f"{option}: topic {meta.topic.value!r} has no allowed groups"
+            raise AssertionError(msg)
+        if meta.group not in allowed_groups:  # pragma: no cover
+            msg = f"{option}: group {meta.group.value!r} is not allowed for topic {meta.topic.value!r}"
+            raise AssertionError(msg)
+
+
+_validate_option_topic_groups()
 
 
 def _canonical_option_key(option: str) -> tuple[int, str]:
