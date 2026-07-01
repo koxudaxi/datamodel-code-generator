@@ -1393,6 +1393,22 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options
 
 ---
 
+## 🍳 Recipes
+
+### Generate a local schema file
+
+Pin the input type and destination when the source extension is ambiguous or generated output needs a stable path.
+
+**Options:** [`--input`](#input), [`--input-file-type`](#input-file-type), [`--output`](#output)
+
+### Fetch a protected remote schema
+
+Use URL input together with HTTP request controls for schemas served behind headers or slower endpoints.
+
+**Options:** [`--url`](#url), [`--http-headers`](general-options.md#http-headers), [`--http-timeout`](general-options.md#http-timeout)
+
+---
+
 ## `--emit-model-metadata` {#emit-model-metadata}
 
 Write a separate JSON map from source schema references to the final generated models, modules, fields, and type hints.
@@ -2391,6 +2407,22 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-custom
 
 ---
 
+## 🍳 Recipes
+
+### Target Pydantic v2 on modern Python
+
+Set the output model family and Python/Pydantic compatibility targets together.
+
+**Options:** [`--output-model-type`](#output-model-type), [`--target-python-version`](#target-python-version), [`--target-pydantic-version`](#target-pydantic-version)
+
+### Deduplicate reusable schemas
+
+Reuse equivalent models and tune the scope or root-model behavior when schemas repeat.
+
+**Options:** [`--reuse-model`](#reuse-model), [`--reuse-scope`](#reuse-scope), [`--collapse-root-models`](#collapse-root-models)
+
+---
+
 ## `--alias-generator` {#alias-generator}
 
 Use a Pydantic v2 alias generator in model_config.
@@ -2398,7 +2430,7 @@ Use a Pydantic v2 alias generator in model_config.
 The `--alias-generator` option emits a per-model ConfigDict alias generator for
 Pydantic v2 BaseModel output and omits matching per-field aliases.
 
-**Related:** [`--output-model-type`](model-customization.md#output-model-type), [`--snake-case-field`](field-customization.md#snake-case-field)
+**Related:** [`--output-model-type`](#output-model-type), [`--snake-case-field`](field-customization.md#snake-case-field)
 
 !!! tip "Usage"
 
@@ -2770,7 +2802,7 @@ model names. Use --allow-leading-underscore-class-name together with an explicit
 --class-name when you need the generated root model to preserve that name
 exactly.
 
-**Related:** [`--class-name`](model-customization.md#class-name)
+**Related:** [`--class-name`](#class-name)
 
 !!! tip "Usage"
 
@@ -3433,7 +3465,7 @@ You can pass the mapping either inline as JSON or as a path to a JSON file.
 When using multiple base classes, the specified classes are used directly without
 adding `BaseModel`. Ensure your mixins inherit from `BaseModel` if needed.
 
-**Related:** [`--base-class`](model-customization.md#base-class)
+**Related:** [`--base-class`](#base-class)
 
 !!! tip "Usage"
 
@@ -3565,7 +3597,7 @@ prefix or suffix specified by --class-name-prefix or --class-name-suffix:
 - 'models': Apply only to model classes (BaseModel, dataclass, TypedDict, etc.)
 - 'enums': Apply only to enum classes
 
-**Related:** [`--class-name-prefix`](model-customization.md#class-name-prefix), [`--class-name-suffix`](model-customization.md#class-name-suffix)
+**Related:** [`--class-name-prefix`](#class-name-prefix), [`--class-name-suffix`](#class-name-suffix)
 
 !!! tip "Usage"
 
@@ -3645,7 +3677,7 @@ The --class-name-prefix option allows you to add a prefix to all generated class
 names, including both models and enums. This is useful for namespacing generated
 code or avoiding conflicts with existing classes.
 
-**Related:** [`--class-name-affix-scope`](model-customization.md#class-name-affix-scope), [`--class-name-suffix`](model-customization.md#class-name-suffix)
+**Related:** [`--class-name-affix-scope`](#class-name-affix-scope), [`--class-name-suffix`](#class-name-suffix)
 
 !!! tip "Usage"
 
@@ -3725,7 +3757,7 @@ The --class-name-suffix option allows you to add a suffix to all generated class
 names, including both models and enums. This is useful for distinguishing generated
 classes (e.g., adding 'Schema' or 'Model' suffix).
 
-**Related:** [`--class-name-affix-scope`](model-customization.md#class-name-affix-scope), [`--class-name-prefix`](model-customization.md#class-name-prefix)
+**Related:** [`--class-name-affix-scope`](#class-name-affix-scope), [`--class-name-prefix`](#class-name-prefix)
 
 !!! tip "Usage"
 
@@ -3805,7 +3837,7 @@ The `--collapse-reuse-models` flag, when used with `--reuse-model`,
 eliminates redundant empty subclasses (e.g., `class Foo(Bar): pass`)
 by replacing all references to duplicate models with the canonical model.
 
-**Related:** [`--reuse-model`](model-customization.md#reuse-model)
+**Related:** [`--reuse-model`](#reuse-model)
 
 !!! tip "Usage"
 
@@ -4054,7 +4086,7 @@ Select which name to keep when collapsing root models with object references.
 The --collapse-root-models-name-strategy option controls naming when collapsing
 root models. 'child' keeps the inner model's name, 'parent' uses the wrapper's name.
 
-**Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
+**Related:** [`--collapse-root-models`](#collapse-root-models)
 
 **Option relationships:**
 
@@ -4129,7 +4161,7 @@ dictionary (e.g., '{"frozen": true, "kw_only": true, "slots": true, "order": tru
 This overrides individual flags like --frozen-dataclasses and provides fine-grained
 control over dataclass generation.
 
-**Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--keyword-only`](model-customization.md#keyword-only)
+**Related:** [`--frozen-dataclasses`](#frozen-dataclasses), [`--keyword-only`](#keyword-only)
 
 **See also:** [Output Model Types](../output-model-types.md)
 
@@ -4465,7 +4497,7 @@ resolving duplicate names by type. The value is a JSON mapping where keys
 are type names ('model', 'enum', 'default') and values are suffix strings.
 For example, `{"model": "Schema"}` changes `Item1` to `ItemSchema`.
 
-**Related:** [`--naming-strategy`](model-customization.md#naming-strategy)
+**Related:** [`--naming-strategy`](#naming-strategy)
 
 !!! tip "Usage"
 
@@ -5136,7 +5168,7 @@ The `--frozen-dataclasses` flag generates dataclass instances that are immutable
 (frozen=True). Combined with `--keyword-only` (Python 3.10+), all fields become
 keyword-only arguments.
 
-**Related:** [`--keyword-only`](model-customization.md#keyword-only), [`--output-model-type`](model-customization.md#output-model-type)
+**Related:** [`--keyword-only`](#keyword-only), [`--output-model-type`](#output-model-type)
 
 **See also:** [Output Model Types](../output-model-types.md)
 
@@ -5209,7 +5241,7 @@ order either. Inheritance and other runtime ordering requirements can force a
 non-alphabetical arrangement. The value of the flag is that repeated runs on the
 same schema produce the same ordering, which keeps diffs stable.
 
-**Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
+**Related:** [`--collapse-root-models`](#collapse-root-models)
 
 !!! tip "Usage"
 
@@ -5390,7 +5422,7 @@ Python 3.10+. When combined with `--frozen-dataclasses`, it creates immutable
 dataclasses with keyword-only arguments, improving code clarity and preventing
 positional argument errors.
 
-**Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--output-model-type`](model-customization.md#output-model-type), [`--target-python-version`](model-customization.md#target-python-version)
+**Related:** [`--frozen-dataclasses`](#frozen-dataclasses), [`--output-model-type`](#output-model-type), [`--target-python-version`](#target-python-version)
 
 **See also:** [Output Model Types](../output-model-types.md)
 
@@ -5900,7 +5932,7 @@ This is useful when a schema cannot be edited but generated model names must be
 stable for public APIs or downstream code. Colliding mapped names fail instead
 of being silently suffixed.
 
-**Related:** [`--naming-strategy`](model-customization.md#naming-strategy), [`--use-title-as-name`](field-customization.md#use-title-as-name)
+**Related:** [`--naming-strategy`](#naming-strategy), [`--use-title-as-name`](field-customization.md#use-title-as-name)
 
 !!! tip "Usage"
 
@@ -5998,7 +6030,7 @@ The `--naming-strategy parent-prefixed` flag prefixes model names with their
 parent model name when duplicates occur. For example, if both `Order` and
 `Cart` have an inline `Item` definition, they become `OrderItem` and `CartItem`.
 
-**Related:** [`--duplicate-name-suffix`](model-customization.md#duplicate-name-suffix), [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming)
+**Related:** [`--duplicate-name-suffix`](#duplicate-name-suffix), [`--parent-scoped-naming`](#parent-scoped-naming)
 
 !!! tip "Usage"
 
@@ -6803,7 +6835,7 @@ The `--reuse-model` flag detects identical enum or model definitions
 across the schema and generates a single shared definition, reducing
 code duplication in the output.
 
-**Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
+**Related:** [`--collapse-root-models`](#collapse-root-models)
 
 **See also:** [Model Reuse and Deduplication](../model-reuse.md)
 
@@ -7099,7 +7131,7 @@ with their exact schema type (non-nullable), rather than being made nullable.
 This is particularly useful when combined with `--use-default` to generate models
 where optional fields have defaults but cannot accept `None` values.
 
-**Related:** [`--use-default`](model-customization.md#use-default)
+**Related:** [`--use-default`](#use-default)
 
 !!! tip "Usage"
 
@@ -7900,7 +7932,7 @@ When `--strict-nullable` is enabled, the field type still follows the schema's
 nullability. For example, a required string field with a default is generated
 as `str = 'value'`, not `str | None = 'value'`, unless the schema allows null.
 
-**Related:** [`--strict-nullable`](model-customization.md#strict-nullable)
+**Related:** [`--strict-nullable`](#strict-nullable)
 
 !!! tip "Usage"
 
@@ -8381,7 +8413,7 @@ The `--use-missing-sentinel` flag generates `MISSING` as the default for optiona
 Pydantic v2 fields that do not define a schema default. This preserves the
 difference between an omitted field and a nullable field set to `None`.
 
-**Related:** [`--strict-nullable`](model-customization.md#strict-nullable), [`--target-pydantic-version`](model-customization.md#target-pydantic-version)
+**Related:** [`--strict-nullable`](#strict-nullable), [`--target-pydantic-version`](#target-pydantic-version)
 
 **Option relationships:**
 
@@ -9100,6 +9132,22 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/field-custom
 
 ---
 
+## 🍳 Recipes
+
+### Normalize incoming field names
+
+Convert source names to Python identifiers while preserving explicit alias data for runtime IO.
+
+**Options:** [`--snake-case-field`](#snake-case-field), [`--original-field-name-delimiter`](#original-field-name-delimiter), [`--aliases`](#aliases)
+
+### Carry schema documentation into models
+
+Promote schema and field descriptions into generated docstrings or field metadata.
+
+**Options:** [`--use-schema-description`](#use-schema-description), [`--use-field-description`](#use-field-description), [`--use-field-description-example`](#use-field-description-example)
+
+---
+
 ## `--aliases` {#aliases}
 
 Apply custom field and class name aliases via inline JSON or a JSON file path.
@@ -9509,7 +9557,7 @@ The `--capitalize-enum-members` flag converts enum member names to
 UPPER_CASE format (e.g., `active` becomes `ACTIVE`), following Python
 naming conventions for constants.
 
-**Aliases:** `--capitalise-enum-members` | **Related:** [`--snake-case-field`](field-customization.md#snake-case-field)
+**Aliases:** `--capitalise-enum-members` | **Related:** [`--snake-case-field`](#snake-case-field)
 
 !!! tip "Usage"
 
@@ -10821,7 +10869,7 @@ receive position-based names such as `Event` and `Event1`.
 The literal value can also come from a single-value enum or an internal `$ref`.
 Existing generated output is preserved unless this option is enabled.
 
-**Related:** [`--use-title-as-name`](field-customization.md#use-title-as-name)
+**Related:** [`--use-title-as-name`](#use-title-as-name)
 
 !!! tip "Usage"
 
@@ -11560,7 +11608,7 @@ The `--snake-case-field` flag converts camelCase or PascalCase field names
 to snake_case format in the generated Python code, following Python naming
 conventions (PEP 8).
 
-**Related:** [`--capitalize-enum-members`](field-customization.md#capitalize-enum-members)
+**Related:** [`--capitalize-enum-members`](#capitalize-enum-members)
 
 !!! tip "Usage"
 
@@ -11689,7 +11737,7 @@ format (PEP 224 attribute docstrings) rather than in Field(..., description=...)
 This provides better IDE support for hovering over attributes. Requires
 `--use-field-description` to be enabled.
 
-**Related:** [`--use-field-description`](field-customization.md#use-field-description)
+**Related:** [`--use-field-description`](#use-field-description)
 
 !!! tip "Usage"
 
@@ -11858,7 +11906,7 @@ The `--use-field-description` flag extracts the `description` property from
 schema fields and includes them as docstrings or Field descriptions in the
 generated models, preserving documentation from the original schema.
 
-**Related:** [`--use-inline-field-description`](field-customization.md#use-inline-field-description), [`--use-schema-description`](field-customization.md#use-schema-description)
+**Related:** [`--use-inline-field-description`](#use-inline-field-description), [`--use-schema-description`](#use-schema-description)
 
 !!! tip "Usage"
 
@@ -12226,7 +12274,7 @@ The `--use-field-description-example` flag adds the `example` or `examples`
 property from schema fields as docstrings. This provides documentation that
 is visible in IDE intellisense.
 
-**Related:** [`--use-field-description`](field-customization.md#use-field-description), [`--use-inline-field-description`](field-customization.md#use-inline-field-description)
+**Related:** [`--use-field-description`](#use-field-description), [`--use-inline-field-description`](#use-inline-field-description)
 
 !!! tip "Usage"
 
@@ -12321,7 +12369,7 @@ The `--use-inline-field-description` flag adds the `description` property from
 schema fields as inline comments after each field definition. This provides
 documentation without using Field() wrappers.
 
-**Related:** [`--use-field-description`](field-customization.md#use-field-description), [`--use-schema-description`](field-customization.md#use-schema-description)
+**Related:** [`--use-field-description`](#use-field-description), [`--use-schema-description`](#use-schema-description)
 
 !!! tip "Usage"
 
@@ -12657,7 +12705,7 @@ The `--use-schema-description` flag extracts the `description` property from
 schema definitions and adds it as a docstring to the generated class. This is
 useful for preserving documentation from your schema in the generated code.
 
-**Related:** [`--use-field-description`](field-customization.md#use-field-description), [`--use-inline-field-description`](field-customization.md#use-inline-field-description)
+**Related:** [`--use-field-description`](#use-field-description), [`--use-inline-field-description`](#use-inline-field-description)
 
 !!! tip "Usage"
 
@@ -13025,7 +13073,7 @@ The `--use-single-line-docstring` flag formats docstrings that fit on one line
 as compact single-line docstrings while keeping the historical multi-line
 format as the default.
 
-**Related:** [`--use-field-description`](field-customization.md#use-field-description), [`--use-schema-description`](field-customization.md#use-schema-description)
+**Related:** [`--use-field-description`](#use-field-description), [`--use-schema-description`](#use-schema-description)
 
 !!! tip "Usage"
 
@@ -13322,6 +13370,22 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/typing-custo
 | [`--use-type-alias`](#use-type-alias) | Use TypeAlias instead of root models for type definitions (e... |
 | [`--use-union-operator`](#use-union-operator) | Use | operator for Union types (PEP 604). |
 | [`--use-unique-items-as-set`](#use-unique-items-as-set) | Generate set types for arrays with uniqueItems constraint. |
+
+---
+
+## 🍳 Recipes
+
+### Use modern Python annotations
+
+Target a recent Python version and prefer built-in collection and union syntax in generated types.
+
+**Options:** [`--target-python-version`](model-customization.md#target-python-version), [`--use-union-operator`](#use-union-operator), [`--use-standard-collections`](#use-standard-collections)
+
+### Keep validation constraints in type hints
+
+Combine Annotated hints with strict scalar handling when downstream tooling reads type metadata.
+
+**Options:** [`--use-annotated`](#use-annotated), [`--field-constraints`](field-customization.md#field-constraints), [`--strict-types`](#strict-types)
 
 ---
 
@@ -15091,7 +15155,7 @@ The `--no-use-specialized-enum` flag prevents the generator from using
 specialized Enum classes (StrEnum, IntEnum) when generating code for
 Python 3.11+, falling back to standard Enum classes instead.
 
-**Related:** [`--target-python-version`](model-customization.md#target-python-version), [`--use-specialized-enum`](typing-customization.md#use-specialized-enum), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
+**Related:** [`--target-python-version`](model-customization.md#target-python-version), [`--use-specialized-enum`](#use-specialized-enum), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 
 !!! tip "Usage"
 
@@ -15366,7 +15430,7 @@ The `--no-use-standard-collections` flag generates typing module containers
 (Dict, List) instead of built-in types. This is useful for older Python
 versions or when explicit typing imports are preferred.
 
-**Related:** [`--use-standard-collections`](typing-customization.md#use-standard-collections)
+**Related:** [`--use-standard-collections`](#use-standard-collections)
 
 !!! tip "Usage"
 
@@ -15574,7 +15638,7 @@ The `--no-use-union-operator` flag generates union types using typing.Union
 and typing.Optional instead of the | operator (PEP 604). This is useful
 for older Python versions or when explicit typing imports are preferred.
 
-**Related:** [`--use-union-operator`](typing-customization.md#use-union-operator)
+**Related:** [`--use-union-operator`](#use-union-operator)
 
 !!! tip "Usage"
 
@@ -16710,7 +16774,7 @@ The `--use-generic-container-types` flag generates abstract container types
 If `--use-standard-collections` is set, imports from `collections.abc`;
 otherwise imports from `typing`.
 
-**Related:** [`--use-standard-collections`](typing-customization.md#use-standard-collections)
+**Related:** [`--use-standard-collections`](#use-standard-collections)
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
@@ -17294,7 +17358,7 @@ The `--use-specialized-enum` flag generates specialized enum types:
 
 This is the default behavior for Python 3.11+ targets.
 
-**Related:** [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
+**Related:** [`--no-use-specialized-enum`](#no-use-specialized-enum), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 
 **Option relationships:**
 
@@ -17433,7 +17497,7 @@ The `--use-standard-collections` flag generates built-in container types
 (dict, list) instead of typing module equivalents. This produces cleaner
 code for Python 3.10+ where built-in types support subscripting.
 
-**Related:** [`--use-generic-container-types`](typing-customization.md#use-generic-container-types)
+**Related:** [`--use-generic-container-types`](#use-generic-container-types)
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
@@ -17643,7 +17707,7 @@ Python standard library types (UUID, IPv4Address, IPv6Address, Path) for corresp
 string formats instead of plain str. This affects dataclass, msgspec, and TypedDict
 output types. Pydantic already uses these types by default.
 
-**Related:** [`--output-datetime-class`](typing-customization.md#output-datetime-class), [`--output-model-type`](model-customization.md#output-model-type)
+**Related:** [`--output-datetime-class`](#output-datetime-class), [`--output-model-type`](model-customization.md#output-model-type)
 
 !!! tip "Usage"
 
@@ -17962,7 +18026,7 @@ The `--use-union-operator` flag generates union types using the | operator
 (e.g., `str | None`) instead of `Union[str, None]` or `Optional[str]`.
 This is the default behavior.
 
-**Related:** [`--no-use-union-operator`](typing-customization.md#no-use-union-operator)
+**Related:** [`--no-use-union-operator`](#no-use-union-operator)
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
@@ -18412,6 +18476,22 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/template-cus
 
 ---
 
+## 🍳 Recipes
+
+### Control generated file headers
+
+Choose a header source and remove volatile timestamp content for reproducible output.
+
+**Options:** [`--custom-file-header`](#custom-file-header), [`--custom-file-header-path`](#custom-file-header-path), [`--disable-timestamp`](#disable-timestamp)
+
+### Inject project-specific code
+
+Add imports, decorators, or custom templates when generated classes must fit local framework conventions.
+
+**Options:** [`--additional-imports`](#additional-imports), [`--class-decorators`](#class-decorators), [`--custom-template-dir`](#custom-template-dir)
+
+---
+
 ## `--additional-imports` {#additional-imports}
 
 Add custom imports to generated output files.
@@ -18509,7 +18589,7 @@ This is useful for integrating with serialization libraries like `dataclasses_js
 Use with `--additional-imports` to add the required imports for the decorators.
 The `@` prefix is optional and will be added automatically if missing.
 
-**Related:** [`--additional-imports`](template-customization.md#additional-imports), [`--output-model-type`](model-customization.md#output-model-type)
+**Related:** [`--additional-imports`](#additional-imports), [`--output-model-type`](model-customization.md#output-model-type)
 
 **See also:** [Custom Class Decorators](../class-decorators.md)
 
@@ -21458,7 +21538,7 @@ In the multi-module Pydantic + `ruff-check` case, runtime imports are preserved 
 `--use-type-checking-imports` opts back into the old TYPE_CHECKING-only behavior, which can
 require manual `model_rebuild()` calls for cross-module runtime references.
 
-**Related:** [`--formatters`](template-customization.md#formatters), [`--use-exact-imports`](template-customization.md#use-exact-imports), [`--use-type-checking-imports`](template-customization.md#use-type-checking-imports)
+**Related:** [`--formatters`](#formatters), [`--use-exact-imports`](#use-exact-imports), [`--use-type-checking-imports`](#use-type-checking-imports)
 
 !!! tip "Usage"
 
@@ -21839,7 +21919,7 @@ The `--schema-validator-base-class-name` option changes the name of the generate
 shared base class that owns schema-derived runtime validators. It is only used when
 `--generate-schema-validators` emits shared validator code.
 
-**Related:** [`--generate-schema-validators`](template-customization.md#generate-schema-validators)
+**Related:** [`--generate-schema-validators`](#generate-schema-validators)
 
 !!! tip "Usage"
 
@@ -21950,7 +22030,7 @@ Pydantic v2 model-validator backend for JSON Schema rules that cannot be
 represented as type hints alone. The explicit type keeps the CLI ready for
 additional validator backends without adding them in this release.
 
-**Related:** [`--generate-schema-validators`](template-customization.md#generate-schema-validators)
+**Related:** [`--generate-schema-validators`](#generate-schema-validators)
 
 !!! tip "Usage"
 
@@ -22680,7 +22760,7 @@ Allow Ruff to move typing-only imports into TYPE_CHECKING blocks.
 The `--use-type-checking-imports` flag explicitly re-enables Ruff's TYPE_CHECKING import moves
 for multi-module Pydantic output where runtime imports might otherwise be preserved by default.
 
-**Related:** [`--formatters`](template-customization.md#formatters), [`--no-use-type-checking-imports`](template-customization.md#no-use-type-checking-imports), [`--use-exact-imports`](template-customization.md#use-exact-imports)
+**Related:** [`--formatters`](#formatters), [`--no-use-type-checking-imports`](#no-use-type-checking-imports), [`--use-exact-imports`](#use-exact-imports)
 
 !!! tip "Usage"
 
@@ -23230,6 +23310,22 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/openapi-only
 | [`--use-operation-id-as-name`](#use-operation-id-as-name) | Use OpenAPI operationId as the generated function/class name... |
 | [`--use-status-code-in-response-name`](#use-status-code-in-response-name) | Include HTTP status code in response model names. |
 | [`--validation`](#validation) | Enable validation constraints (deprecated, use --field-const... |
+
+---
+
+## 🍳 Recipes
+
+### Generate operation-focused models
+
+Limit OpenAPI output to operation shapes and name models from operation IDs and status codes.
+
+**Options:** [`--openapi-scopes`](#openapi-scopes), [`--use-operation-id-as-name`](#use-operation-id-as-name), [`--use-status-code-in-response-name`](#use-status-code-in-response-name)
+
+### Trim an OpenAPI build
+
+Restrict generation to selected paths while preserving parameter and info-version context.
+
+**Options:** [`--openapi-include-paths`](#openapi-include-paths), [`--include-path-parameters`](#include-path-parameters), [`--openapi-include-info-version`](#openapi-include-info-version)
 
 ---
 
@@ -25227,6 +25323,16 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/graphql-only
 
 ---
 
+## 🍳 Recipes
+
+### Trim GraphQL metadata fields
+
+Skip injected typename fields when generated models should expose only business data.
+
+**Options:** [`--graphql-no-typename`](#graphql-no-typename)
+
+---
+
 ## `--graphql-no-typename` {#graphql-no-typename}
 
 Exclude __typename field from generated GraphQL models.
@@ -25339,6 +25445,22 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/general-opti
 
 ---
 
+## 🍳 Recipes
+
+### Resolve remote references deliberately
+
+Enable remote `$ref` loading and configure request metadata, timeouts, or local ref roots.
+
+**Options:** [`--allow-remote-refs`](#allow-remote-refs), [`--http-headers`](#http-headers), [`--http-timeout`](#http-timeout), [`--http-local-ref-path`](#http-local-ref-path)
+
+### Regenerate during schema edits
+
+Watch input files with a short debounce while writing output to a stable target path.
+
+**Options:** [`--watch`](#watch), [`--watch-delay`](#watch-delay), [`--output`](base-options.md#output)
+
+---
+
 ## `--all-exports-collision-strategy` {#all-exports-collision-strategy}
 
 Handle name collisions when exporting recursive module hierarchies.
@@ -25348,7 +25470,7 @@ when using `--all-exports-scope=recursive`. The 'minimal-prefix' strategy adds t
 minimum module path prefix needed to disambiguate colliding names, while 'full-prefix'
 uses the complete module path. Requires `--all-exports-scope=recursive`.
 
-**Related:** [`--all-exports-scope`](general-options.md#all-exports-scope)
+**Related:** [`--all-exports-scope`](#all-exports-scope)
 
 **See also:** [Module Structure and Exports](../module-exports.md)
 
@@ -25921,7 +26043,7 @@ The `--all-exports-scope=children` flag adds __all__ to each __init__.py contain
 exports from direct child modules. This improves IDE autocomplete and explicit exports.
 Use 'recursive' to include all descendant exports with collision handling.
 
-**Related:** [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy)
+**Related:** [`--all-exports-collision-strategy`](#all-exports-collision-strategy)
 
 **See also:** [Module Structure and Exports](../module-exports.md)
 
@@ -27263,7 +27385,7 @@ The `--module-split-mode=single` flag generates each model class in its own file
 named after the class in snake_case. Use with `--all-exports-scope=recursive` to
 create an __init__.py that re-exports all models for convenient imports.
 
-**Related:** [`--all-exports-scope`](general-options.md#all-exports-scope), [`--use-exact-imports`](template-customization.md#use-exact-imports)
+**Related:** [`--all-exports-scope`](#all-exports-scope), [`--use-exact-imports`](template-customization.md#use-exact-imports)
 
 !!! tip "Usage"
 
