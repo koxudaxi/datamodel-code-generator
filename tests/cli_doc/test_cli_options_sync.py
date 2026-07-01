@@ -31,7 +31,13 @@ from datamodel_code_generator.cli_options import (
     is_excluded_from_docs,
     is_manual_doc,
 )
-from scripts.build_cli_docs import _documented_related_option, scan_docs_for_cli_option_tags
+from scripts.build_cli_docs import (
+    CLIDocExample,
+    CLIDocOption,
+    _documented_related_option,
+    generate_option_section,
+    scan_docs_for_cli_option_tags,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Collection
@@ -121,6 +127,35 @@ def test_cli_option_doc_name_preserves_boolean_variants_and_canonicalizes_aliase
     assert get_cli_option_doc_name("--treat-dot-as-module") == "--treat-dot-as-module"
     assert get_cli_option_doc_name("--no-treat-dot-as-module") == "--no-treat-dot-as-module"
     assert get_cli_option_doc_name("--capitalise-enum-members") == "--capitalize-enum-members"
+
+
+def test_generate_option_section_uses_canonical_anchor_for_aliases() -> None:
+    """Alias-keyed sections should link to the canonical generated anchor."""
+    section = generate_option_section(
+        "--capitalise-enum-members",
+        CLIDocOption(
+            option_name="--capitalise-enum-members",
+            examples=[
+                CLIDocExample(
+                    node_id="tests/main/jsonschema/test_main_jsonschema.py::test_capitalise",
+                    option_description="Capitalize enum member names to UPPER_CASE format.",
+                    cli_args=["--capitalise-enum-members"],
+                    is_primary=True,
+                ),
+            ],
+        ),
+    )
+
+    _fail_if_missing(
+        "## `--capitalise-enum-members` {#capitalize-enum-members}",
+        section,
+        "--capitalise-enum-members section anchor",
+    )
+    _fail_if_present(
+        "{#capitalise-enum-members}",
+        section,
+        "--capitalise-enum-members raw alias anchor",
+    )
 
 
 def test_documented_related_option_prefers_existing_generated_section() -> None:

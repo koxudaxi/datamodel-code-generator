@@ -37,6 +37,7 @@ from datamodel_code_generator.cli_options import (
     OptionCategory,
     get_canonical_option,
     get_cli_doc_slug,
+    get_cli_option_doc_name,
     get_cli_option_doc_path,
     get_option_meta,
     is_manual_doc,
@@ -609,7 +610,7 @@ def generate_option_section(
     if not primary:
         return ""
 
-    md = f"## `{option}` {{#{get_cli_doc_slug(option)}}}\n\n"
+    md = f"## `{option}` {{#{get_cli_doc_slug(get_cli_option_doc_name(option))}}}\n\n"
 
     # Parse option_description to separate description from admonitions
     option_description = cli_doc_option.get_option_description()
