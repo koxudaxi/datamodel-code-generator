@@ -23,41 +23,142 @@ or `yaml` depending on the intended input.
 
 Below are the data types and features recognized by datamodel-code-generator for OpenAPI 3 and JSON Schema.
 
+<!-- BEGIN AUTO-GENERATED SCHEMA FEATURE SUPPORT -->
+### Schema Feature Support (from code)
+
+The JSON Schema and OpenAPI feature matrix below is generated from the same code metadata used by the schema version support page.
+
+#### JSON Schema Features
+
+| Feature | Introduced | Status | Description |
+|---------|------------|--------|-------------|
+| `Null in type array` | 2020-12 | ✅ Supported | Allows `type: ['string', 'null']` syntax for nullable types |
+| `$defs` | 2019-09 | ✅ Supported | Uses `$defs` instead of `definitions` for schema definitions |
+| `prefixItems` | 2020-12 | ✅ Supported | Tuple validation using `prefixItems` keyword |
+| `Boolean schemas` | Draft 6 | ✅ Supported | Allows `true` and `false` as valid schemas |
+| `$id` | Draft 6 | ✅ Supported | Schema identifier field (`id` in Draft 4, `$id` in Draft 6+) |
+| `definitions/$defs` | Draft 4 | ✅ Supported | Key for reusable schema definitions |
+| `exclusiveMinimum/Maximum as number` | Draft 6 | ✅ Supported | Numeric `exclusiveMinimum`/`exclusiveMaximum` (boolean in Draft 4) |
+| `readOnly/writeOnly` | Draft 7 | ✅ Supported | Field visibility hints for read-only and write-only properties |
+| `const` | Draft 6 | ✅ Supported | Single constant value constraint |
+| `propertyNames` | Draft 6 | ✅ Supported | Dict key type constraints via pattern, enum, or $ref |
+| `contains` | Draft 6 | ⚠️ Partial | Count constraints are modeled when contains matches every item; general schema-valued contains is not supported |
+| `deprecated` | 2019-09 | ⚠️ Partial | Marks schema elements as deprecated |
+| `if/then/else` | Draft 7 | ❌ Not Supported | Conditional schema validation |
+| `contentMediaType/contentEncoding` | Draft 7 | ⚠️ Partial | Content type and encoding hints for strings |
+| `contentSchema` | 2019-09 | ⚠️ Partial | Schema for decoded string content |
+| `$anchor` | 2019-09 | ✅ Supported | Location-independent schema references |
+| `$vocabulary` | 2019-09 | ❌ Not Supported | Vocabulary declarations for meta-schemas |
+| `unevaluatedProperties` | 2019-09 | ⚠️ Partial | Additional properties not evaluated by subschemas |
+| `unevaluatedItems` | 2019-09 | ⚠️ Partial | Additional items not evaluated by subschemas |
+| `dependentRequired` | 2019-09 | ❌ Not Supported | Conditional property requirements |
+| `dependentSchemas` | 2019-09 | ❌ Not Supported | Conditional schema application based on property presence |
+| `$recursiveRef/$recursiveAnchor` | 2019-09 | ✅ Supported | Recursive reference resolution via anchors |
+| `$dynamicRef/$dynamicAnchor` | 2020-12 | ✅ Supported | Dynamic reference resolution across schemas |
+
+#### OpenAPI-Specific Features
+
+| Feature | Introduced | Status | Description |
+|---------|------------|--------|-------------|
+| `nullable` | OAS 3.0 | ✅ Supported | Uses `nullable: true` for nullable types (deprecated in 3.1) |
+| `discriminator` | OAS 3.0 | ✅ Supported | Polymorphism support via `discriminator` keyword |
+| `webhooks` | OAS 3.1 | ✅ Supported | Top-level webhooks object for incoming events |
+| `$ref with sibling keywords` | OAS 3.1 | ⚠️ Partial | $ref can coexist with description, summary (no allOf workaround) |
+| `itemSchema` | OAS 3.2 | ✅ Supported | Media Type Object item schema for sequential media |
+| `$self` | OAS 3.2 | ✅ Supported | Root document URI for relative and absolute reference resolution |
+| `querystring` | OAS 3.2 | ✅ Supported | Query string parameter object without a parameter name |
+| `xml` | OAS 3.0 | ⚠️ Partial | XML serialization metadata (name, namespace, prefix) |
+| `externalDocs` | OAS 3.0 | ⚠️ Partial | Reference to external documentation |
+| `links` | OAS 3.0 | ❌ Not Supported | Links between operations |
+| `callbacks` | OAS 3.0 | ❌ Not Supported | Callback definitions for webhooks |
+| `securitySchemes` | OAS 3.0 | ❌ Not Supported | API security mechanism definitions |
+<!-- END AUTO-GENERATED SCHEMA FEATURE SUPPORT -->
+
 ## ✅ Implemented data types and features
 
-### 📊 Data Types
-- string (supported keywords: pattern/minLength/maxLength)
-- number (supported keywords: maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf)
-- integer (supported keywords: maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf)
-- boolean
-- array
-- object
+<!-- BEGIN AUTO-GENERATED DATA TYPE SUPPORT -->
+### Implemented Data Types and Formats
 
-### 📝 String Formats
-- date
-- datetime
-- time
-- password
-- email (requires [`email-validator`](https://github.com/JoshData/python-email-validator))
-- idn-email (requires [`email-validator`](https://github.com/JoshData/python-email-validator))
-- idn-hostname
-- path
-- uuid (uuid1/uuid2/uuid3/uuid4/uuid5)
-- ulid (requires [`python-ulid`](https://github.com/mdomke/python-ulid))
-- ipv4
-- ipv4-network
-- ipv6
-- ipv6-network
-- hostname
-- decimal
-- uri
-- uri-reference
-- uri-template
-- iri
-- iri-reference
-- json-pointer
-- relative-json-pointer
-- regex
+The schema type, format, and default Pydantic v2 type columns below are generated from the parser's schema format registry and the default Pydantic v2 type mapping; keyword and note columns document supplemental schema details.
+
+#### Schema Data Types
+
+| Schema Type | Default Pydantic v2 Type | Supported Keywords |
+|-------------|--------------------------|--------------------|
+| `integer` | `int` | maximum, exclusiveMaximum, minimum, exclusiveMinimum, multipleOf |
+| `number` | `float` | maximum, exclusiveMaximum, minimum, exclusiveMinimum, multipleOf |
+| `string` | `str` | pattern, minLength, maxLength |
+| `boolean` | `bool` | - |
+| `object` | `Dict[str, Any]` | properties, required, additionalProperties, patternProperties |
+| `null` | `None` | - |
+| `array` | `List[Any]` | items, prefixItems, minItems, maxItems, uniqueItems |
+
+#### Common Formats (JSON Schema + OpenAPI)
+
+| Schema Type | Format | Default Pydantic v2 Type | Notes |
+|-------------|--------|--------------------------|-------|
+| `integer` | `default` (no `format`) | `int` | - |
+| `integer` | `int32` | `int` | - |
+| `integer` | `int64` | `int` | - |
+| `integer` | `date-time` | `AwareDatetime` | - |
+| `integer` | `unix-time` | `int` | - |
+| `integer` | `unixtime` | `int` | - |
+| `number` | `default` (no `format`) | `float` | - |
+| `number` | `float` | `float` | - |
+| `number` | `double` | `float` | - |
+| `number` | `decimal` | `Decimal` | - |
+| `number` | `date-time` | `AwareDatetime` | - |
+| `number` | `time` | `time` | - |
+| `number` | `time-delta` | `timedelta` | - |
+| `number` | `unixtime` | `int` | - |
+| `string` | `default` (no `format`) | `str` | - |
+| `string` | `byte` | `Base64Str` | Base64 encoded string |
+| `string` | `date` | `date` | - |
+| `string` | `date-time` | `AwareDatetime` | - |
+| `string` | `timestamp with time zone` | `AwareDatetime` | - |
+| `string` | `date-time-local` | `NaiveDatetime` | - |
+| `string` | `duration` | `timedelta` | - |
+| `string` | `time` | `time` | - |
+| `string` | `time-local` | `time` | - |
+| `string` | `path` | `Path` | - |
+| `string` | `email` | `EmailStr` | Requires email-validator |
+| `string` | `idn-email` | `EmailStr` | Requires email-validator |
+| `string` | `idn-hostname` | `str` | - |
+| `string` | `iri` | `str` | - |
+| `string` | `iri-reference` | `str` | - |
+| `string` | `uuid` | `UUID` | - |
+| `string` | `uuid1` | `UUID1` | - |
+| `string` | `uuid2` | `UUID` | - |
+| `string` | `uuid3` | `UUID3` | - |
+| `string` | `uuid4` | `UUID4` | - |
+| `string` | `uuid5` | `UUID5` | - |
+| `string` | `uri` | `AnyUrl` | - |
+| `string` | `uri-reference` | `str` | - |
+| `string` | `uri-template` | `str` | - |
+| `string` | `json-pointer` | `str` | - |
+| `string` | `relative-json-pointer` | `str` | - |
+| `string` | `regex` | `str` | - |
+| `string` | `hostname` | `str` | - |
+| `string` | `ipv4` | `IPv4Address` | - |
+| `string` | `ipv4-network` | `IPv4Network` | - |
+| `string` | `ipv6` | `IPv6Address` | - |
+| `string` | `ipv6-network` | `IPv6Network` | - |
+| `string` | `decimal` | `Decimal` | - |
+| `string` | `integer` | `int` | - |
+| `string` | `unixtime` | `int` | - |
+| `string` | `ulid` | `ULID` | Requires python-ulid |
+| `boolean` | `default` (no `format`) | `bool` | - |
+| `object` | `default` (no `format`) | `Dict[str, Any]` | - |
+| `null` | `default` (no `format`) | `None` | - |
+| `array` | `default` (no `format`) | `List[Any]` | - |
+
+#### OpenAPI-Only Formats
+
+| Schema Type | Format | Default Pydantic v2 Type | Notes |
+|-------------|--------|--------------------------|-------|
+| `string` | `binary` | `bytes` | File content |
+| `string` | `password` | `SecretStr` | - |
+<!-- END AUTO-GENERATED DATA TYPE SUPPORT -->
 
 ### 🔗 Other schema
 - enum (as enum.Enum or typing.Literal)
