@@ -1,0 +1,55 @@
+
+**Output with `--reuse-scope tree`:**
+
+```text
+models/
+|-- __init__.py
+|-- schema_a.py
+|-- schema_b.py
+`-- shared.py
+```
+
+**models/schema_a.py:**
+
+```python
+from __future__ import annotations
+
+from pydantic import BaseModel
+
+from .shared import SharedModel as SharedModel_1
+
+
+class SharedModel(SharedModel_1):
+    pass
+
+
+class Model(BaseModel):
+    data: SharedModel | None = None
+```
+
+**models/schema_b.py:**
+
+```python
+from __future__ import annotations
+
+from pydantic import BaseModel
+
+from . import shared
+
+
+class Model(BaseModel):
+    info: shared.SharedModel | None = None
+```
+
+**models/shared.py:**
+
+```python
+from __future__ import annotations
+
+from pydantic import BaseModel
+
+
+class SharedModel(BaseModel):
+    id: int | None = None
+    name: str | None = None
+```
