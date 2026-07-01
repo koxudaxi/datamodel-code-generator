@@ -189,6 +189,17 @@ CATEGORY_EMOJIS = {
     OptionCategory.GENERAL: "⚙️",
 }
 
+OPTION_CATEGORY_ORDER = (
+    OptionCategory.BASE,
+    OptionCategory.TYPING,
+    OptionCategory.FIELD,
+    OptionCategory.MODEL,
+    OptionCategory.TEMPLATE,
+    OptionCategory.OPENAPI,
+    OptionCategory.GRAPHQL,
+    OptionCategory.GENERAL,
+)
+
 CATEGORY_RECIPES: dict[OptionCategory, tuple[CategoryRecipe, ...]] = {
     OptionCategory.BASE: (
         CategoryRecipe(
@@ -943,6 +954,61 @@ def _generate_option_relationships(
     return "**Option relationships:**\n\n" + "\n".join(relationship_lines) + "\n\n"
 
 
+def _escape_table_cell(value: str) -> str:
+    """Escape Markdown table delimiters in generated table content."""
+    return value.replace("|", "\\|")
+
+
+def _format_relation_condition_cell(option: str, when: Any) -> str:
+    """Format a relationship condition for a summary table cell."""
+    if when is True:
+        return f"`{option}` enabled"
+    if when is False:
+        return f"`{option}` disabled"
+    if when is None:
+        return "Always"
+    return f"`{option}` = `{when}`"
+
+
+def generate_relationship_summary(
+    categories: dict[OptionCategory, dict[str, CLIDocOption]],
+    documented_options: frozenset[str],
+) -> str:
+    """Generate an index-level summary of CLI option relationship metadata."""
+    rows: list[tuple[str, str, str, str, str]] = []
+    for category in OPTION_CATEGORY_ORDER:
+        for option in sorted(categories.get(category, {})):
+            if not (meta := get_option_meta(option)):
+                continue
+            source = _format_option_link(option, documented_options)
+            for relation_kind in OPTION_RELATION_KINDS:
+                for relation in getattr(meta, relation_kind):
+                    target = _format_option_link(relation.option, documented_options)
+                    if relation_value := _format_relation_value(relation.value):
+                        target = f"{target} {relation_value}"
+                    rows.append((
+                        source,
+                        relation_kind.capitalize(),
+                        _format_relation_condition_cell(option, relation.when),
+                        target,
+                        relation.message or "-",
+                    ))
+
+    if not rows:
+        return ""
+
+    md = "## 🔗 Option Relationships\n\n"
+    md += (
+        "These links are generated from CLI option metadata and summarize options that imply, require, "
+        "or conflict with other options.\n\n"
+    )
+    md += "| Source | Kind | Condition | Target | Note |\n"
+    md += "|--------|------|-----------|--------|------|\n"
+    for row in rows:
+        md += "| " + " | ".join(_escape_table_cell(cell) for cell in row) + " |\n"
+    return md + "\n"
+
+
 def generate_category_page(
     category: OptionCategory,
     options: dict[str, CLIDocOption],
@@ -1095,6 +1161,10 @@ def generate_index_page(
         md += f"| 📝 [Utility Options](utility-options.md) | {len(manual_docs)} | Help, version, debug options |\n"
 
     md += "\n"
+    documented_options = frozenset(option for options in categories.values() for option in options)
+    if relationship_summary := generate_relationship_summary(categories, documented_options):
+        md += relationship_summary
+
     md += "## All Options\n\n"
     all_options: list[tuple[str, OptionCategory | None]] = []
     for category, options in categories.items():

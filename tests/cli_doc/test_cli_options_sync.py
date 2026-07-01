@@ -417,6 +417,46 @@ def test_option_section_renders_conflicts_metadata() -> None:
     )
 
 
+def test_relationship_summary_lists_metadata_with_links() -> None:
+    """CLI index relationship summary should list cross-option metadata."""
+    option = CLIDocOption(option_name="--use-missing-sentinel")
+    summary = build_cli_docs.generate_relationship_summary(
+        {OptionCategory.MODEL: {"--use-missing-sentinel": option}},
+        documented_options=frozenset({
+            "--output-model-type",
+            "--target-pydantic-version",
+            "--use-missing-sentinel",
+        }),
+    )
+
+    _fail_if_missing("## 🔗 Option Relationships", summary, "relationship summary heading")
+    _fail_if_missing(
+        "| [`--use-missing-sentinel`](model-customization.md#use-missing-sentinel) "
+        "| Implies | Always | "
+        "[`--target-pydantic-version`](model-customization.md#target-pydantic-version) = `2.12` | - |",
+        summary,
+        "--use-missing-sentinel implies row",
+    )
+    _fail_if_missing(
+        "`--use-missing-sentinel` is only supported for `--output-model-type pydantic_v2.BaseModel`.",
+        summary,
+        "--use-missing-sentinel requires note",
+    )
+
+
+def test_relationship_summary_omits_empty_metadata() -> None:
+    """CLI index relationship summary should not render without relationships."""
+    option = CLIDocOption(option_name="--input")
+    _fail_if_not_equal(
+        build_cli_docs.generate_relationship_summary(
+            {OptionCategory.BASE: {"--input": option}},
+            documented_options=frozenset({"--input"}),
+        ),
+        "",
+        "empty relationship summary",
+    )
+
+
 class TestCLIOptionMetaSync:
     """Synchronization tests for CLI_OPTION_META."""
 
