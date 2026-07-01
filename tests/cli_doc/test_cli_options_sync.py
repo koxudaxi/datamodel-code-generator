@@ -17,9 +17,8 @@ from datamodel_code_generator.arguments import arg_parser as argument_parser
 from datamodel_code_generator.cli_options import (
     CLI_OPTION_META,
     MANUAL_DOCS,
-    OPTION_GROUP_VALUES,
     OPTION_RELATION_KINDS,
-    OPTION_TOPIC_VALUES,
+    OPTION_TOPIC_ALLOWED_GROUPS,
     CLIOptionMeta,
     OptionCategory,
     OptionGroup,
@@ -227,8 +226,6 @@ class TestCLIOptionMetaSync:
                 pytest.fail(f"{option} topic must be an OptionTopic, got {topic!r}")
             if not topic.value:
                 pytest.fail(f"{option} topic value must not be empty")
-            if topic.value not in OPTION_TOPIC_VALUES:
-                pytest.fail(f"{option} topic value is not known: {topic.value!r}")
 
     def test_option_groups_are_known_and_non_empty(self) -> None:
         """Verify that optional group metadata uses known non-empty values."""
@@ -239,8 +236,21 @@ class TestCLIOptionMetaSync:
                 pytest.fail(f"{option} group must be an OptionGroup, got {group!r}")
             if not group.value:
                 pytest.fail(f"{option} group value must not be empty")
-            if group.value not in OPTION_GROUP_VALUES:
-                pytest.fail(f"{option} group value is not known: {group.value!r}")
+
+    def test_option_topic_groups_are_allowed(self) -> None:
+        """Verify that topic metadata only uses groups allowed for that topic."""
+        for option, meta in CLI_OPTION_META.items():
+            if (topic := meta.topic) is None:
+                continue
+            if (group := meta.group) is None:
+                pytest.fail(f"{option} topic {topic.value!r} must also set a group")
+            if (allowed_groups := OPTION_TOPIC_ALLOWED_GROUPS.get(topic)) is None:
+                pytest.fail(f"{option} topic has no allowed groups: {topic.value!r}")
+            _fail_if_missing(
+                group,
+                allowed_groups,
+                f"{option} group for topic {topic.value!r}",
+            )
 
     def test_all_argparse_options_are_documented_or_excluded(self) -> None:
         """Verify that all argparse options are either documented or explicitly excluded.

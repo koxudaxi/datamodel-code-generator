@@ -105,8 +105,33 @@ class CLIOptionMeta:
 
 
 OPTION_RELATION_KINDS = ("implies", "requires", "conflicts")
-OPTION_TOPIC_VALUES = frozenset(topic.value for topic in OptionTopic)
-OPTION_GROUP_VALUES = frozenset(group.value for group in OptionGroup)
+OPTION_TOPIC_ALLOWED_GROUPS: dict[OptionTopic, frozenset[OptionGroup]] = {
+    OptionTopic.MODEL_CUSTOMIZATION: frozenset({
+        OptionGroup.MODEL_NAMING,
+        OptionGroup.MODEL_REUSE,
+        OptionGroup.MODEL_SHAPE,
+        OptionGroup.ROOT_MODEL,
+    }),
+    OptionTopic.TEMPLATE_CUSTOMIZATION: frozenset({
+        OptionGroup.CUSTOM_TEMPLATES,
+        OptionGroup.GENERATED_OUTPUT,
+        OptionGroup.IMPORTS,
+        OptionGroup.OUTPUT_FORMATTING,
+    }),
+    OptionTopic.TYPING_CUSTOMIZATION: frozenset({
+        OptionGroup.COLLECTION_TYPES,
+        OptionGroup.IMPORTS,
+        OptionGroup.TYPE_ALIAS,
+        OptionGroup.TYPE_MAPPING,
+        OptionGroup.TYPE_SYNTAX,
+    }),
+    OptionTopic.OPENAPI: frozenset({
+        OptionGroup.OPENAPI_NAMING,
+        OptionGroup.OPENAPI_PATHS,
+        OptionGroup.OPENAPI_SCOPES,
+        OptionGroup.READ_ONLY_WRITE_ONLY,
+    }),
+}
 
 
 # Options with manual documentation (not auto-generated from tests)
