@@ -17,9 +17,13 @@ from datamodel_code_generator.arguments import arg_parser as argument_parser
 from datamodel_code_generator.cli_options import (
     CLI_OPTION_META,
     MANUAL_DOCS,
+    OPTION_GROUP_VALUES,
     OPTION_RELATION_KINDS,
+    OPTION_TOPIC_VALUES,
     CLIOptionMeta,
     OptionCategory,
+    OptionGroup,
+    OptionTopic,
     _canonical_option_key,
     get_all_argparse_options,
     get_all_canonical_options,
@@ -213,6 +217,30 @@ class TestCLIOptionMetaSync:
                 + "\n".join(sorted(missing))
                 + "\n\nRemove the relation or add the target option to arguments.py."
             )
+
+    def test_option_topics_are_known_and_non_empty(self) -> None:
+        """Verify that optional topic metadata uses known non-empty values."""
+        for option, meta in CLI_OPTION_META.items():
+            if (topic := meta.topic) is None:
+                continue
+            if not isinstance(topic, OptionTopic):
+                pytest.fail(f"{option} topic must be an OptionTopic, got {topic!r}")
+            if not topic.value:
+                pytest.fail(f"{option} topic value must not be empty")
+            if topic.value not in OPTION_TOPIC_VALUES:
+                pytest.fail(f"{option} topic value is not known: {topic.value!r}")
+
+    def test_option_groups_are_known_and_non_empty(self) -> None:
+        """Verify that optional group metadata uses known non-empty values."""
+        for option, meta in CLI_OPTION_META.items():
+            if (group := meta.group) is None:
+                continue
+            if not isinstance(group, OptionGroup):
+                pytest.fail(f"{option} group must be an OptionGroup, got {group!r}")
+            if not group.value:
+                pytest.fail(f"{option} group value must not be empty")
+            if group.value not in OPTION_GROUP_VALUES:
+                pytest.fail(f"{option} group value is not known: {group.value!r}")
 
     def test_all_argparse_options_are_documented_or_excluded(self) -> None:
         """Verify that all argparse options are either documented or explicitly excluded.
