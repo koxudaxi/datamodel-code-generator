@@ -145,6 +145,10 @@ The `--allow-extra-fields` flag configures the code generation behavior.
 
 **Deprecated:** --allow-extra-fields is deprecated. Use --extra-fields=allow instead.
 
+**Option relationships:**
+
+- **Implies:** [`--extra-fields`](field-customization.md#extra-fields) = `allow`
+
 !!! tip "Usage"
 
     ```bash
@@ -1728,6 +1732,10 @@ root models. 'child' keeps the inner model's name, 'parent' uses the wrapper's n
 
 **Related:** [`--collapse-root-models`](#collapse-root-models)
 
+**Option relationships:**
+
+- **Requires:** [`--collapse-root-models`](model-customization.md#collapse-root-models) enabled - `--collapse-root-models-name-strategy` requires `--collapse-root-models`.
+
 !!! tip "Usage"
 
     ```bash
@@ -3062,6 +3070,10 @@ positional argument errors.
 
 **See also:** [Output Model Types](../output-model-types.md)
 
+**Option relationships:**
+
+- **Requires:** [`--target-python-version`](model-customization.md#target-python-version) = `3.10+` - `--keyword-only` requires `--target-python-version` 3.10 or higher for dataclasses.
+
 !!! tip "Usage"
 
     ```bash
@@ -3753,6 +3765,10 @@ for the generated code. Supported values include `pydantic_v2.BaseModel`,
 
 **See also:** [Output Model Types](../output-model-types.md)
 
+**Option relationships:**
+
+- **Implies:** When `--output-model-type=msgspec.Struct`, [`--use-annotated`](typing-customization.md#use-annotated) enabled
+
 !!! tip "Usage"
 
     ```bash
@@ -4311,6 +4327,10 @@ appears in different contexts within an OpenAPI specification.
 
 **Deprecated:** --parent-scoped-naming is deprecated. Use --naming-strategy parent-prefixed instead.
 
+**Option relationships:**
+
+- **Implies:** [`--naming-strategy`](model-customization.md#naming-strategy) = `parent-prefixed`
+
 !!! tip "Usage"
 
     ```bash
@@ -4576,6 +4596,10 @@ Scope for model reuse detection (root or tree).
 The `--reuse-scope` flag configures the code generation behavior.
 
 **See also:** [Model Reuse and Deduplication](../model-reuse.md)
+
+**Option relationships:**
+
+- **Requires:** When `--reuse-scope=tree`, [`--reuse-model`](model-customization.md#reuse-model) enabled - `--reuse-scope=tree` has no effect without `--reuse-model`.
 
 !!! tip "Usage"
 
@@ -5425,6 +5449,10 @@ Union mode for combining anyOf/oneOf schemas (smart or left_to_right).
 
 The `--union-mode` flag configures the code generation behavior.
 
+**Option relationships:**
+
+- **Requires:** [`--output-model-type`](model-customization.md#output-model-type) = `pydantic_v2.BaseModel` - `--union-mode` is only supported for `--output-model-type pydantic_v2.BaseModel`.
+
 !!! tip "Usage"
 
     ```bash
@@ -6030,6 +6058,11 @@ Pydantic v2 fields that do not define a schema default. This preserves the
 difference between an omitted field and a nullable field set to `None`.
 
 **Related:** [`--strict-nullable`](#strict-nullable), [`--target-pydantic-version`](#target-pydantic-version)
+
+**Option relationships:**
+
+- **Implies:** [`--target-pydantic-version`](model-customization.md#target-pydantic-version) = `2.12`
+- **Requires:** [`--output-model-type`](model-customization.md#output-model-type) = `pydantic_v2.BaseModel` - `--use-missing-sentinel` is only supported for `--output-model-type pydantic_v2.BaseModel`.
 
 !!! tip "Usage"
 

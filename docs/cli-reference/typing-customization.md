@@ -2899,6 +2899,10 @@ generated type to enforce uniqueness for array schemas.
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
+**Option relationships:**
+
+- **Implies:** [`--field-constraints`](field-customization.md#field-constraints) enabled
+
 !!! tip "Usage"
 
     ```bash
@@ -4019,6 +4023,10 @@ The `--use-specialized-enum` flag generates specialized enum types:
 This is the default behavior for Python 3.11+ targets.
 
 **Related:** [`--no-use-specialized-enum`](#no-use-specialized-enum), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
+
+**Option relationships:**
+
+- **Requires:** [`--target-python-version`](model-customization.md#target-python-version) = `3.11+` - `--use-specialized-enum` requires `--target-python-version` 3.11 or higher.
 
 !!! tip "Usage"
 

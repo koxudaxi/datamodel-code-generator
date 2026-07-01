@@ -1,0 +1,17 @@
+
+<details>
+<summary>schema.yaml</summary>
+
+```yaml
+name: User
+```
+</details>
+
+```yaml
+name: User
+```
+
+```python
+class User:
+    pass
+```

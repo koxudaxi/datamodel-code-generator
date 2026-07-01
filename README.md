@@ -224,25 +224,31 @@ See [Performance Benchmarks](https://datamodel-code-generator.koxudaxi.dev/perfo
 
 ## 📥 Supported Input
 
+<!-- BEGIN AUTO-GENERATED README SUPPORTED INPUT -->
 - OpenAPI 3 (YAML/JSON)
 - AsyncAPI (YAML/JSON)
 - JSON Schema
-- Apache Avro schema (AVSC)
+- MCP tool schemas
 - XML Schema (XSD)
 - Protocol Buffers / gRPC (`.proto`)
-- MCP tool schemas
-- JSON / YAML / CSV data
+- Apache Avro schema (AVSC)
+- JSON data
+- YAML data
+- Python dictionary
+- CSV data
 - GraphQL schema
 - Python types (Pydantic, dataclass, TypedDict) via `--input-model`
-- Python dictionary
+<!-- END AUTO-GENERATED README SUPPORTED INPUT -->
 
 ## 📤 Supported Output
 
+<!-- BEGIN AUTO-GENERATED README SUPPORTED OUTPUT -->
 - [pydantic v2](https://docs.pydantic.dev/) BaseModel
 - [pydantic v2](https://docs.pydantic.dev/) dataclass
 - [dataclasses](https://docs.python.org/3/library/dataclasses.html)
 - [TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict)
 - [msgspec](https://github.com/jcrist/msgspec) Struct
+<!-- END AUTO-GENERATED README SUPPORTED OUTPUT -->
 
 ## ✅ Conformance Signals
 

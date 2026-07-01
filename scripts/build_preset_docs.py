@@ -28,6 +28,10 @@ QUICK_START_TARGET_PYTHON_VERSION = "3.12"
 PRESET_VERSION_DATE_LENGTH = 8
 QUICK_START_BEGIN_MARKER = "<!-- BEGIN AUTO-GENERATED PRESET QUICK START -->"
 QUICK_START_END_MARKER = "<!-- END AUTO-GENERATED PRESET QUICK START -->"
+README_SUPPORTED_INPUT_BEGIN_MARKER = "<!-- BEGIN AUTO-GENERATED README SUPPORTED INPUT -->"
+README_SUPPORTED_INPUT_END_MARKER = "<!-- END AUTO-GENERATED README SUPPORTED INPUT -->"
+README_SUPPORTED_OUTPUT_BEGIN_MARKER = "<!-- BEGIN AUTO-GENERATED README SUPPORTED OUTPUT -->"
+README_SUPPORTED_OUTPUT_END_MARKER = "<!-- END AUTO-GENERATED README SUPPORTED OUTPUT -->"
 README_PRESETS_LINK = "https://datamodel-code-generator.koxudaxi.dev/presets/"
 README_CLI_REFERENCE_LINK = "https://datamodel-code-generator.koxudaxi.dev/cli-reference/"
 README_PRESET_OPTION_LINK = "https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options/#preset"
@@ -50,12 +54,37 @@ DOCS_PERFORMANCE_BENCHMARKS_LINK = "performance-benchmarks.md"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
+from datamodel_code_generator.enums import DataModelType, InputFileType  # noqa: E402
 from datamodel_code_generator.preset import get_preset_names, render_presets  # noqa: E402
 
 if TYPE_CHECKING:
     from datamodel_code_generator.preset_names import PresetName
 
 PresetDocsFormat = Literal["markdown", "json"]
+
+README_INPUT_TYPE_LABELS: dict[InputFileType, str] = {
+    InputFileType.OpenAPI: "OpenAPI 3 (YAML/JSON)",
+    InputFileType.AsyncAPI: "AsyncAPI (YAML/JSON)",
+    InputFileType.JsonSchema: "JSON Schema",
+    InputFileType.MCPTools: "MCP tool schemas",
+    InputFileType.XMLSchema: "XML Schema (XSD)",
+    InputFileType.Protobuf: "Protocol Buffers / gRPC (`.proto`)",
+    InputFileType.Avro: "Apache Avro schema (AVSC)",
+    InputFileType.Json: "JSON data",
+    InputFileType.Yaml: "YAML data",
+    InputFileType.Dict: "Python dictionary",
+    InputFileType.CSV: "CSV data",
+    InputFileType.GraphQL: "GraphQL schema",
+}
+README_EXTRA_INPUT_ITEMS = ("Python types (Pydantic, dataclass, TypedDict) via `--input-model`",)
+
+README_OUTPUT_TYPE_LABELS: dict[DataModelType, str] = {
+    DataModelType.PydanticV2BaseModel: "[pydantic v2](https://docs.pydantic.dev/) BaseModel",
+    DataModelType.PydanticV2Dataclass: "[pydantic v2](https://docs.pydantic.dev/) dataclass",
+    DataModelType.DataclassesDataclass: "[dataclasses](https://docs.python.org/3/library/dataclasses.html)",
+    DataModelType.TypingTypedDict: "[TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict)",
+    DataModelType.MsgspecStruct: "[msgspec](https://github.com/jcrist/msgspec) Struct",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,24 +139,39 @@ def _generate_docs(preset_names_doc: GeneratedDoc) -> tuple[GeneratedDoc, ...]:
         target_python_version=QUICK_START_TARGET_PYTHON_VERSION,
     )
     standard_model_output = _generate_quick_start_model(standard_preset_name)
+    readme_content = README_PATH.read_text(encoding="utf-8")
+    readme_content = _replace_marked_section(
+        readme_content,
+        QUICK_START_BEGIN_MARKER,
+        QUICK_START_END_MARKER,
+        _render_readme_quick_start(
+            standard_preset_name,
+            standard_model_output,
+            practical_preset_name,
+        ),
+    )
+    readme_content = _replace_marked_section(
+        readme_content,
+        README_SUPPORTED_INPUT_BEGIN_MARKER,
+        README_SUPPORTED_INPUT_END_MARKER,
+        _render_readme_supported_input(),
+    )
+    readme_content = _replace_marked_section(
+        readme_content,
+        README_SUPPORTED_OUTPUT_BEGIN_MARKER,
+        README_SUPPORTED_OUTPUT_END_MARKER,
+        _render_readme_supported_output(),
+    )
     return (
         preset_names_doc,
         GeneratedDoc(DOCS_PATH, render_presets("markdown")),
-        GeneratedDoc(
-            README_PATH,
-            _replace_quick_start_section(
-                README_PATH.read_text(encoding="utf-8"),
-                _render_readme_quick_start(
-                    standard_preset_name,
-                    standard_model_output,
-                    practical_preset_name,
-                ),
-            ),
-        ),
+        GeneratedDoc(README_PATH, readme_content),
         GeneratedDoc(
             DOCS_INDEX_PATH,
-            _replace_quick_start_section(
+            _replace_marked_section(
                 DOCS_INDEX_PATH.read_text(encoding="utf-8"),
+                QUICK_START_BEGIN_MARKER,
+                QUICK_START_END_MARKER,
                 _render_docs_index_quick_start(
                     standard_preset_name,
                     standard_model_output,
@@ -179,15 +223,40 @@ PRESET_NAMES: Final[tuple[PresetName, ...]] = {names_literal}
 '''
 
 
-def _replace_quick_start_section(markdown_text: str, generated: str) -> str:
-    start = markdown_text.find(QUICK_START_BEGIN_MARKER)
-    end = markdown_text.find(QUICK_START_END_MARKER)
-    if start == -1 or end == -1 or end < start:
-        msg = f"Could not find quick-start markers: {QUICK_START_BEGIN_MARKER} / {QUICK_START_END_MARKER}"
+def _replace_marked_section(markdown_text: str, begin_marker: str, end_marker: str, generated: str) -> str:
+    if (start := markdown_text.find(begin_marker)) == -1:
+        msg = f"Could not find generated section begin marker: {begin_marker}"
         raise ValueError(msg)
+    content_start = start + len(begin_marker)
+    if (end := markdown_text.find(end_marker, content_start)) == -1:
+        msg = f"Could not find generated section end marker after {begin_marker}: {end_marker}"
+        raise ValueError(msg)
+    return markdown_text[:content_start] + "\n" + generated.rstrip() + "\n" + markdown_text[end:]
+
+
+def _render_readme_supported_input() -> str:
+    return _render_markdown_list(_readme_supported_input_items())
+
+
+def _readme_supported_input_items() -> tuple[str, ...]:
     return (
-        markdown_text[: start + len(QUICK_START_BEGIN_MARKER)] + "\n" + generated.rstrip() + "\n" + markdown_text[end:]
+        tuple(
+            README_INPUT_TYPE_LABELS[input_type] for input_type in InputFileType if input_type is not InputFileType.Auto
+        )
+        + README_EXTRA_INPUT_ITEMS
     )
+
+
+def _render_readme_supported_output() -> str:
+    return _render_markdown_list(tuple(README_OUTPUT_TYPE_LABELS[model_type] for model_type in DataModelType))
+
+
+def _render_readme_supported_sections() -> str:
+    return f"{_render_readme_supported_input()}\n\n{_render_readme_supported_output()}\n"
+
+
+def _render_markdown_list(items: tuple[str, ...]) -> str:
+    return "\n".join(f"- {item}" for item in items)
 
 
 def _quick_start_args(preset_name: str) -> tuple[str, ...]:
@@ -397,8 +466,8 @@ def parse_args() -> argparse.Namespace:
         "--check",
         action="store_true",
         help=(
-            "Check whether preset docs and preset-powered quick-start examples are up to date "
-            "(docs/presets.md plus quick-start sections in README.md and docs/index.md)"
+            "Check whether preset docs, preset-powered quick-start examples, and README support lists are up to date "
+            "(docs/presets.md, docs/index.md, and generated sections in README.md)"
         ),
     )
     parser.add_argument(

@@ -1968,6 +1968,10 @@ the delimiter used in original field names. This is useful when field names cont
 delimiters like spaces or hyphens that should be treated as word boundaries during
 snake_case conversion.
 
+**Option relationships:**
+
+- **Requires:** [`--snake-case-field`](field-customization.md#snake-case-field) enabled - `--original-field-name-delimiter` can not be used without `--snake-case-field`.
+
 !!! tip "Usage"
 
     ```bash

@@ -18,8 +18,11 @@ from datamodel_code_generator.cli_options import (
     CLI_OPTION_META,
     MANUAL_DOCS,
     OPTION_RELATION_KINDS,
+    OPTION_TOPIC_ALLOWED_GROUPS,
     CLIOptionMeta,
     OptionCategory,
+    OptionGroup,
+    OptionTopic,
     _canonical_option_key,
     get_all_argparse_options,
     get_all_canonical_options,
@@ -29,7 +32,14 @@ from datamodel_code_generator.cli_options import (
     is_manual_doc,
 )
 from scripts import build_cli_docs
-from scripts.build_cli_docs import _documented_related_option, _format_option_link, scan_docs_for_cli_option_tags
+from scripts.build_cli_docs import (
+    CLIDocExample,
+    CLIDocOption,
+    _documented_related_option,
+    _format_option_link,
+    generate_option_section,
+    scan_docs_for_cli_option_tags,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Collection
@@ -268,6 +278,89 @@ def test_category_page_omits_recipes_without_category_data(monkeypatch: pytest.M
     assert page.index("---") < page.index("## `--input`")
 
 
+def test_option_section_renders_implies_and_requires_metadata() -> None:
+    """Generated option docs should include relationship metadata from CLIOptionMeta."""
+    section = generate_option_section(
+        "--use-missing-sentinel",
+        CLIDocOption(
+            option_name="--use-missing-sentinel",
+            examples=[
+                CLIDocExample(
+                    node_id="tests/cli_doc/test_cli_options_sync.py::test_use_missing_sentinel",
+                    option_description="Use missing sentinel.",
+                    cli_args=["--use-missing-sentinel"],
+                    is_primary=True,
+                ),
+            ],
+        ),
+        documented_options=frozenset({
+            "--output-model-type",
+            "--target-pydantic-version",
+            "--use-missing-sentinel",
+        }),
+    )
+
+    assert "**Option relationships:**" in section
+    assert (
+        "- **Implies:** [`--target-pydantic-version`](model-customization.md#target-pydantic-version) = `2.12`"
+        in section
+    )
+    assert (
+        "- **Requires:** [`--output-model-type`](model-customization.md#output-model-type) = "
+        "`pydantic_v2.BaseModel` - `--use-missing-sentinel` is only supported for "
+        "`--output-model-type pydantic_v2.BaseModel`." in section
+    )
+
+
+def test_option_section_renders_conditional_requires_metadata() -> None:
+    """Relationship metadata should include source option value conditions."""
+    section = generate_option_section(
+        "--reuse-scope",
+        CLIDocOption(
+            option_name="--reuse-scope",
+            examples=[
+                CLIDocExample(
+                    node_id="tests/cli_doc/test_cli_options_sync.py::test_reuse_scope",
+                    option_description="Scope reuse.",
+                    cli_args=["--reuse-scope", "tree"],
+                    is_primary=True,
+                ),
+            ],
+        ),
+        documented_options=frozenset({"--reuse-model", "--reuse-scope"}),
+    )
+
+    assert (
+        "- **Requires:** When `--reuse-scope=tree`, "
+        "[`--reuse-model`](model-customization.md#reuse-model) enabled - "
+        "`--reuse-scope=tree` has no effect without `--reuse-model`." in section
+    )
+
+
+def test_option_section_renders_conflicts_metadata() -> None:
+    """Generated option docs should include conflict metadata from CLIOptionMeta."""
+    section = generate_option_section(
+        "--custom-file-header",
+        CLIDocOption(
+            option_name="--custom-file-header",
+            examples=[
+                CLIDocExample(
+                    node_id="tests/cli_doc/test_cli_options_sync.py::test_custom_file_header",
+                    option_description="Custom header.",
+                    cli_args=["--custom-file-header", "# Header"],
+                    is_primary=True,
+                ),
+            ],
+        ),
+        documented_options=frozenset({"--custom-file-header", "--custom-file-header-path"}),
+    )
+
+    assert (
+        "- **Conflicts:** [`--custom-file-header-path`](template-customization.md#custom-file-header-path) - "
+        "`--custom-file-header` can not be used with `--custom-file-header-path`." in section
+    )
+
+
 class TestCLIOptionMetaSync:
     """Synchronization tests for CLI_OPTION_META."""
 
@@ -334,6 +427,32 @@ class TestCLIOptionMetaSync:
                 "CLI option relation targets missing from argparse:\n"
                 + "\n".join(sorted(missing))
                 + "\n\nRemove the relation or add the target option to arguments.py."
+            )
+
+    def test_option_topic_and_group_are_known_and_non_empty(self) -> None:
+        """Verify that optional topic/group metadata uses known non-empty values."""
+        for attr, enum_type in (("topic", OptionTopic), ("group", OptionGroup)):
+            for option, meta in CLI_OPTION_META.items():
+                if (value := getattr(meta, attr)) is None:
+                    continue
+                if not isinstance(value, enum_type):
+                    pytest.fail(f"{option} {attr} must be an {enum_type.__name__}, got {value!r}")
+                if not value.value:
+                    pytest.fail(f"{option} {attr} value must not be empty")
+
+    def test_option_topic_groups_are_allowed(self) -> None:
+        """Verify that topic metadata only uses groups allowed for that topic."""
+        for option, meta in CLI_OPTION_META.items():
+            if (topic := meta.topic) is None:
+                continue
+            if (group := meta.group) is None:
+                pytest.fail(f"{option} topic {topic.value!r} must also set a group")
+            if (allowed_groups := OPTION_TOPIC_ALLOWED_GROUPS.get(topic)) is None:
+                pytest.fail(f"{option} topic has no allowed groups: {topic.value!r}")
+            _fail_if_missing(
+                group,
+                allowed_groups,
+                f"{option} group for topic {topic.value!r}",
             )
 
     def test_all_argparse_options_are_documented_or_excluded(self) -> None:

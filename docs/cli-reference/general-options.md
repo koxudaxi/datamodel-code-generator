@@ -54,6 +54,10 @@ uses the complete module path. Requires `--all-exports-scope=recursive`.
 
 **See also:** [Module Structure and Exports](../module-exports.md)
 
+**Option relationships:**
+
+- **Requires:** [`--all-exports-scope`](general-options.md#all-exports-scope) = `recursive` - `--all-exports-collision-strategy` can only be used with `--all-exports-scope=recursive`.
+
 !!! tip "Usage"
 
     ```bash
