@@ -34,6 +34,8 @@ import operator
 
 from datamodel_code_generator.cli_options import (
     MANUAL_DOCS,
+    OPTION_RELATION_KINDS,
+    CLIOptionMeta,
     OptionCategory,
     get_canonical_option,
     get_option_meta,
@@ -654,12 +656,7 @@ def generate_option_section(
             # Also skip if canonical form is the current option
             if canonical == option:
                 continue
-            r_meta = get_option_meta(canonical)
-            if r_meta:
-                cat_slug = slugify(r_meta.category.value)
-                related_links.append(f"[`{canonical}`]({cat_slug}.md#{slugify(canonical)})")
-            else:
-                related_links.append(f"`{canonical}`")
+            related_links.append(_format_option_link(canonical, documented_options or frozenset()))
         if related_links:  # Only add Related if there are non-self-referencing options
             meta_parts.append(f"**Related:** {', '.join(related_links)}")
 
@@ -671,6 +668,8 @@ def generate_option_section(
         for page_path, page_title in option_related_pages[option]:
             related_page_links.append(f"[{page_title}](../{page_path})")
         md += f"**See also:** {', '.join(related_page_links)}\n\n"
+
+    md += _generate_option_relationships(option, meta, documented_options or frozenset())
 
     # Usage section (from primary example)
     md += '!!! tip "Usage"\n\n'
@@ -752,6 +751,62 @@ def _documented_related_option(option: str, documented_options: frozenset[str]) 
         if candidate in documented_options:
             return candidate
     return canonical
+
+
+def _format_option_link(option: str, documented_options: frozenset[str]) -> str:
+    """Format a generated CLI option link when metadata is available."""
+    documented_option = _documented_related_option(option, documented_options)
+    if meta := get_option_meta(documented_option):
+        category_slug = slugify(meta.category.value)
+        return f"[`{documented_option}`]({category_slug}.md#{slugify(documented_option)})"
+    return f"`{documented_option}`"
+
+
+def _format_relation_value(value: Any) -> str:
+    """Format a relationship value for Markdown output."""
+    if value is True:
+        return "enabled"
+    if value is False:
+        return "disabled"
+    if value is None:
+        return ""
+    return f"= `{value}`"
+
+
+def _format_relation_condition(option: str, when: Any) -> str:
+    """Format the source option condition for a relationship."""
+    if when is True:
+        return f"When `{option}` is enabled, "
+    if when is False:
+        return f"When `{option}` is disabled, "
+    if when is None:
+        return ""
+    return f"When `{option}={when}`, "
+
+
+def _generate_option_relationships(
+    option: str,
+    meta: CLIOptionMeta | None,
+    documented_options: frozenset[str],
+) -> str:
+    """Generate Markdown for CLI option relationship metadata."""
+    if not meta:
+        return ""
+
+    relationship_lines: list[str] = []
+    for relation_kind in OPTION_RELATION_KINDS:
+        for relation in getattr(meta, relation_kind):
+            option_link = _format_option_link(relation.option, documented_options)
+            relation_value = _format_relation_value(relation.value)
+            target = f"{option_link} {relation_value}".rstrip()
+            condition = _format_relation_condition(option, relation.when)
+            message = f" - {relation.message}" if relation.message else ""
+            relationship_lines.append(f"- **{relation_kind.capitalize()}:** {condition}{target}{message}")
+
+    if not relationship_lines:
+        return ""
+
+    return "**Option relationships:**\n\n" + "\n".join(relationship_lines) + "\n\n"
 
 
 def generate_category_page(
