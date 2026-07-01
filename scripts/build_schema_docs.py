@@ -359,10 +359,12 @@ def parser_routes_from_source() -> dict[InputFileType, str]:
     tree = ast.parse(INIT_PATH.read_text(encoding="utf-8"))
     direct_routes: dict[InputFileType, str] = {}
     default_route = "JsonSchemaParser"
+    found_build_parser = False
 
     for node in ast.walk(tree):
         if not isinstance(node, ast.FunctionDef) or node.name != "_build_parser":
             continue
+        found_build_parser = True
         for child in ast.walk(node):
             if not isinstance(child, ast.Match):
                 continue
@@ -373,6 +375,10 @@ def parser_routes_from_source() -> dict[InputFileType, str]:
                     default_route = parser_name
                     continue
                 direct_routes[InputFileType[input_type_name]] = parser_name
+
+    if not found_build_parser or not direct_routes:
+        msg = "Could not infer parser routes from _build_parser()"
+        raise RuntimeError(msg)
 
     return {
         input_file_type: PARSER_ROUTE_OVERRIDES.get(input_file_type, direct_routes.get(input_file_type, default_route))
@@ -393,7 +399,7 @@ def input_schema_version_label(input_file_type: InputFileType) -> str:
 
 def input_format_order() -> tuple[InputFileType, ...]:
     """Return input formats in docs-friendly order."""
-    return (
+    order = (
         InputFileType.JsonSchema,
         InputFileType.OpenAPI,
         InputFileType.AsyncAPI,
@@ -407,6 +413,11 @@ def input_format_order() -> tuple[InputFileType, ...]:
         InputFileType.CSV,
         InputFileType.Dict,
     )
+    if missing := set(InputFileType) - {InputFileType.Auto, *order}:
+        labels = ", ".join(sorted(item.value for item in missing))
+        msg = f"Input format guide is missing InputFileType values: {labels}"
+        raise RuntimeError(msg)
+    return order
 
 
 def generate_input_format_route_table() -> str:
@@ -500,8 +511,10 @@ def generate_format_type_guide_table() -> str:
         ),
         (
             "Protocol Buffers",
-            (f"{len(protobuf_parser.SCALAR_SCHEMAS)} scalar field types, "
-            f"{len(protobuf_parser.WELL_KNOWN_SCHEMAS)} well-known type mappings"),
+            (
+                f"{len(protobuf_parser.SCALAR_SCHEMAS)} scalar field types, "
+                f"{len(protobuf_parser.WELL_KNOWN_SCHEMAS)} well-known type mappings"
+            ),
             "Converts descriptors to JSON Schema definitions",
         ),
         (
@@ -589,8 +602,8 @@ def avro_logical_type_cases() -> list[tuple[str, tuple[str, ...]]]:
 def _literal_patterns(pattern: ast.pattern) -> tuple[str, ...]:
     """Return string literal values from a match pattern."""
     match pattern:
-        case ast.MatchValue(value=ast.Constant(value=str() as value)):
-            return (value,)
+        case ast.MatchValue(value=ast.Constant(value=str() as literal_value)):
+            return (literal_value,)
         case ast.MatchOr(patterns=patterns):
             return tuple(value for pattern in patterns for value in _literal_patterns(pattern))
     return ()
@@ -602,9 +615,9 @@ def _avro_type_guard_values(guard: ast.expr | None) -> tuple[str, ...]:
         case ast.Compare(
             left=ast.Name(id="avro_type"),
             ops=[ast.Eq()],
-            comparators=[ast.Constant(value=str() as value)],
+            comparators=[ast.Constant(value=str() as literal_value)],
         ):
-            return (value,)
+            return (literal_value,)
         case ast.Compare(
             left=ast.Name(id="avro_type"),
             ops=[ast.In()],
@@ -695,7 +708,8 @@ def python_input_type_rows() -> list[tuple[str, str]]:
     input_model_source = (SRC / "datamodel_code_generator" / "input_model.py").read_text(encoding="utf-8")
     if match := re.search(r"Supported: (?P<types>[^\"']+)", input_model_source):
         return [(code_label(name), PYTHON_INPUT_TYPE_NOTES.get(name, "-")) for name in match.group("types").split(", ")]
-    return []
+    msg = "Could not extract supported Python input model types"
+    raise RuntimeError(msg)
 
 
 def generate_python_input_type_table() -> str:
