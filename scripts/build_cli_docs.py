@@ -763,7 +763,13 @@ def generate_option_section(
             # Also skip if canonical form is the current option
             if canonical == option:
                 continue
-            related_links.append(_format_option_link(canonical, documented_options or frozenset()))
+            related_links.append(
+                _format_option_link(
+                    canonical,
+                    documented_options or frozenset(),
+                    current_category=meta.category if meta else None,
+                )
+            )
         if related_links:  # Only add Related if there are non-self-referencing options
             meta_parts.append(f"**Related:** {', '.join(related_links)}")
 

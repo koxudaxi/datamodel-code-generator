@@ -74,7 +74,7 @@ Use a Pydantic v2 alias generator in model_config.
 The `--alias-generator` option emits a per-model ConfigDict alias generator for
 Pydantic v2 BaseModel output and omits matching per-field aliases.
 
-**Related:** [`--output-model-type`](model-customization.md#output-model-type), [`--snake-case-field`](field-customization.md#snake-case-field)
+**Related:** [`--output-model-type`](#output-model-type), [`--snake-case-field`](field-customization.md#snake-case-field)
 
 !!! tip "Usage"
 
@@ -442,7 +442,7 @@ model names. Use --allow-leading-underscore-class-name together with an explicit
 --class-name when you need the generated root model to preserve that name
 exactly.
 
-**Related:** [`--class-name`](model-customization.md#class-name)
+**Related:** [`--class-name`](#class-name)
 
 !!! tip "Usage"
 
@@ -1105,7 +1105,7 @@ You can pass the mapping either inline as JSON or as a path to a JSON file.
 When using multiple base classes, the specified classes are used directly without
 adding `BaseModel`. Ensure your mixins inherit from `BaseModel` if needed.
 
-**Related:** [`--base-class`](model-customization.md#base-class)
+**Related:** [`--base-class`](#base-class)
 
 !!! tip "Usage"
 
@@ -1237,7 +1237,7 @@ prefix or suffix specified by --class-name-prefix or --class-name-suffix:
 - 'models': Apply only to model classes (BaseModel, dataclass, TypedDict, etc.)
 - 'enums': Apply only to enum classes
 
-**Related:** [`--class-name-prefix`](model-customization.md#class-name-prefix), [`--class-name-suffix`](model-customization.md#class-name-suffix)
+**Related:** [`--class-name-prefix`](#class-name-prefix), [`--class-name-suffix`](#class-name-suffix)
 
 !!! tip "Usage"
 
@@ -1317,7 +1317,7 @@ The --class-name-prefix option allows you to add a prefix to all generated class
 names, including both models and enums. This is useful for namespacing generated
 code or avoiding conflicts with existing classes.
 
-**Related:** [`--class-name-affix-scope`](model-customization.md#class-name-affix-scope), [`--class-name-suffix`](model-customization.md#class-name-suffix)
+**Related:** [`--class-name-affix-scope`](#class-name-affix-scope), [`--class-name-suffix`](#class-name-suffix)
 
 !!! tip "Usage"
 
@@ -1397,7 +1397,7 @@ The --class-name-suffix option allows you to add a suffix to all generated class
 names, including both models and enums. This is useful for distinguishing generated
 classes (e.g., adding 'Schema' or 'Model' suffix).
 
-**Related:** [`--class-name-affix-scope`](model-customization.md#class-name-affix-scope), [`--class-name-prefix`](model-customization.md#class-name-prefix)
+**Related:** [`--class-name-affix-scope`](#class-name-affix-scope), [`--class-name-prefix`](#class-name-prefix)
 
 !!! tip "Usage"
 
@@ -1477,7 +1477,7 @@ The `--collapse-reuse-models` flag, when used with `--reuse-model`,
 eliminates redundant empty subclasses (e.g., `class Foo(Bar): pass`)
 by replacing all references to duplicate models with the canonical model.
 
-**Related:** [`--reuse-model`](model-customization.md#reuse-model)
+**Related:** [`--reuse-model`](#reuse-model)
 
 !!! tip "Usage"
 
@@ -1726,7 +1726,7 @@ Select which name to keep when collapsing root models with object references.
 The --collapse-root-models-name-strategy option controls naming when collapsing
 root models. 'child' keeps the inner model's name, 'parent' uses the wrapper's name.
 
-**Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
+**Related:** [`--collapse-root-models`](#collapse-root-models)
 
 !!! tip "Usage"
 
@@ -1797,7 +1797,7 @@ dictionary (e.g., '{"frozen": true, "kw_only": true, "slots": true, "order": tru
 This overrides individual flags like --frozen-dataclasses and provides fine-grained
 control over dataclass generation.
 
-**Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--keyword-only`](model-customization.md#keyword-only)
+**Related:** [`--frozen-dataclasses`](#frozen-dataclasses), [`--keyword-only`](#keyword-only)
 
 **See also:** [Output Model Types](../output-model-types.md)
 
@@ -2133,7 +2133,7 @@ resolving duplicate names by type. The value is a JSON mapping where keys
 are type names ('model', 'enum', 'default') and values are suffix strings.
 For example, `{"model": "Schema"}` changes `Item1` to `ItemSchema`.
 
-**Related:** [`--naming-strategy`](model-customization.md#naming-strategy)
+**Related:** [`--naming-strategy`](#naming-strategy)
 
 !!! tip "Usage"
 
@@ -2804,7 +2804,7 @@ The `--frozen-dataclasses` flag generates dataclass instances that are immutable
 (frozen=True). Combined with `--keyword-only` (Python 3.10+), all fields become
 keyword-only arguments.
 
-**Related:** [`--keyword-only`](model-customization.md#keyword-only), [`--output-model-type`](model-customization.md#output-model-type)
+**Related:** [`--keyword-only`](#keyword-only), [`--output-model-type`](#output-model-type)
 
 **See also:** [Output Model Types](../output-model-types.md)
 
@@ -2877,7 +2877,7 @@ order either. Inheritance and other runtime ordering requirements can force a
 non-alphabetical arrangement. The value of the flag is that repeated runs on the
 same schema produce the same ordering, which keeps diffs stable.
 
-**Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
+**Related:** [`--collapse-root-models`](#collapse-root-models)
 
 !!! tip "Usage"
 
@@ -3058,7 +3058,7 @@ Python 3.10+. When combined with `--frozen-dataclasses`, it creates immutable
 dataclasses with keyword-only arguments, improving code clarity and preventing
 positional argument errors.
 
-**Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--output-model-type`](model-customization.md#output-model-type), [`--target-python-version`](model-customization.md#target-python-version)
+**Related:** [`--frozen-dataclasses`](#frozen-dataclasses), [`--output-model-type`](#output-model-type), [`--target-python-version`](#target-python-version)
 
 **See also:** [Output Model Types](../output-model-types.md)
 
@@ -3564,7 +3564,7 @@ This is useful when a schema cannot be edited but generated model names must be
 stable for public APIs or downstream code. Colliding mapped names fail instead
 of being silently suffixed.
 
-**Related:** [`--naming-strategy`](model-customization.md#naming-strategy), [`--use-title-as-name`](field-customization.md#use-title-as-name)
+**Related:** [`--naming-strategy`](#naming-strategy), [`--use-title-as-name`](field-customization.md#use-title-as-name)
 
 !!! tip "Usage"
 
@@ -3662,7 +3662,7 @@ The `--naming-strategy parent-prefixed` flag prefixes model names with their
 parent model name when duplicates occur. For example, if both `Order` and
 `Cart` have an inline `Item` definition, they become `OrderItem` and `CartItem`.
 
-**Related:** [`--duplicate-name-suffix`](model-customization.md#duplicate-name-suffix), [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming)
+**Related:** [`--duplicate-name-suffix`](#duplicate-name-suffix), [`--parent-scoped-naming`](#parent-scoped-naming)
 
 !!! tip "Usage"
 
@@ -4459,7 +4459,7 @@ The `--reuse-model` flag detects identical enum or model definitions
 across the schema and generates a single shared definition, reducing
 code duplication in the output.
 
-**Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
+**Related:** [`--collapse-root-models`](#collapse-root-models)
 
 **See also:** [Model Reuse and Deduplication](../model-reuse.md)
 
@@ -4751,7 +4751,7 @@ with their exact schema type (non-nullable), rather than being made nullable.
 This is particularly useful when combined with `--use-default` to generate models
 where optional fields have defaults but cannot accept `None` values.
 
-**Related:** [`--use-default`](model-customization.md#use-default)
+**Related:** [`--use-default`](#use-default)
 
 !!! tip "Usage"
 
@@ -5548,7 +5548,7 @@ When `--strict-nullable` is enabled, the field type still follows the schema's
 nullability. For example, a required string field with a default is generated
 as `str = 'value'`, not `str | None = 'value'`, unless the schema allows null.
 
-**Related:** [`--strict-nullable`](model-customization.md#strict-nullable)
+**Related:** [`--strict-nullable`](#strict-nullable)
 
 !!! tip "Usage"
 
@@ -6029,7 +6029,7 @@ The `--use-missing-sentinel` flag generates `MISSING` as the default for optiona
 Pydantic v2 fields that do not define a schema default. This preserves the
 difference between an omitted field and a nullable field set to `None`.
 
-**Related:** [`--strict-nullable`](model-customization.md#strict-nullable), [`--target-pydantic-version`](model-customization.md#target-pydantic-version)
+**Related:** [`--strict-nullable`](#strict-nullable), [`--target-pydantic-version`](#target-pydantic-version)
 
 !!! tip "Usage"
 

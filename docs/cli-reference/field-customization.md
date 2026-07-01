@@ -459,7 +459,7 @@ The `--capitalize-enum-members` flag converts enum member names to
 UPPER_CASE format (e.g., `active` becomes `ACTIVE`), following Python
 naming conventions for constants.
 
-**Aliases:** `--capitalise-enum-members` | **Related:** [`--snake-case-field`](field-customization.md#snake-case-field)
+**Aliases:** `--capitalise-enum-members` | **Related:** [`--snake-case-field`](#snake-case-field)
 
 !!! tip "Usage"
 
@@ -1771,7 +1771,7 @@ receive position-based names such as `Event` and `Event1`.
 The literal value can also come from a single-value enum or an internal `$ref`.
 Existing generated output is preserved unless this option is enabled.
 
-**Related:** [`--use-title-as-name`](field-customization.md#use-title-as-name)
+**Related:** [`--use-title-as-name`](#use-title-as-name)
 
 !!! tip "Usage"
 
@@ -2506,7 +2506,7 @@ The `--snake-case-field` flag converts camelCase or PascalCase field names
 to snake_case format in the generated Python code, following Python naming
 conventions (PEP 8).
 
-**Related:** [`--capitalize-enum-members`](field-customization.md#capitalize-enum-members)
+**Related:** [`--capitalize-enum-members`](#capitalize-enum-members)
 
 !!! tip "Usage"
 
@@ -2635,7 +2635,7 @@ format (PEP 224 attribute docstrings) rather than in Field(..., description=...)
 This provides better IDE support for hovering over attributes. Requires
 `--use-field-description` to be enabled.
 
-**Related:** [`--use-field-description`](field-customization.md#use-field-description)
+**Related:** [`--use-field-description`](#use-field-description)
 
 !!! tip "Usage"
 
@@ -2804,7 +2804,7 @@ The `--use-field-description` flag extracts the `description` property from
 schema fields and includes them as docstrings or Field descriptions in the
 generated models, preserving documentation from the original schema.
 
-**Related:** [`--use-inline-field-description`](field-customization.md#use-inline-field-description), [`--use-schema-description`](field-customization.md#use-schema-description)
+**Related:** [`--use-inline-field-description`](#use-inline-field-description), [`--use-schema-description`](#use-schema-description)
 
 !!! tip "Usage"
 
@@ -3172,7 +3172,7 @@ The `--use-field-description-example` flag adds the `example` or `examples`
 property from schema fields as docstrings. This provides documentation that
 is visible in IDE intellisense.
 
-**Related:** [`--use-field-description`](field-customization.md#use-field-description), [`--use-inline-field-description`](field-customization.md#use-inline-field-description)
+**Related:** [`--use-field-description`](#use-field-description), [`--use-inline-field-description`](#use-inline-field-description)
 
 !!! tip "Usage"
 
@@ -3267,7 +3267,7 @@ The `--use-inline-field-description` flag adds the `description` property from
 schema fields as inline comments after each field definition. This provides
 documentation without using Field() wrappers.
 
-**Related:** [`--use-field-description`](field-customization.md#use-field-description), [`--use-schema-description`](field-customization.md#use-schema-description)
+**Related:** [`--use-field-description`](#use-field-description), [`--use-schema-description`](#use-schema-description)
 
 !!! tip "Usage"
 
@@ -3603,7 +3603,7 @@ The `--use-schema-description` flag extracts the `description` property from
 schema definitions and adds it as a docstring to the generated class. This is
 useful for preserving documentation from your schema in the generated code.
 
-**Related:** [`--use-field-description`](field-customization.md#use-field-description), [`--use-inline-field-description`](field-customization.md#use-inline-field-description)
+**Related:** [`--use-field-description`](#use-field-description), [`--use-inline-field-description`](#use-inline-field-description)
 
 !!! tip "Usage"
 
@@ -3971,7 +3971,7 @@ The `--use-single-line-docstring` flag formats docstrings that fit on one line
 as compact single-line docstrings while keeping the historical multi-line
 format as the default.
 
-**Related:** [`--use-field-description`](field-customization.md#use-field-description), [`--use-schema-description`](field-customization.md#use-schema-description)
+**Related:** [`--use-field-description`](#use-field-description), [`--use-schema-description`](#use-schema-description)
 
 !!! tip "Usage"
 

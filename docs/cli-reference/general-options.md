@@ -50,7 +50,7 @@ when using `--all-exports-scope=recursive`. The 'minimal-prefix' strategy adds t
 minimum module path prefix needed to disambiguate colliding names, while 'full-prefix'
 uses the complete module path. Requires `--all-exports-scope=recursive`.
 
-**Related:** [`--all-exports-scope`](general-options.md#all-exports-scope)
+**Related:** [`--all-exports-scope`](#all-exports-scope)
 
 **See also:** [Module Structure and Exports](../module-exports.md)
 
@@ -619,7 +619,7 @@ The `--all-exports-scope=children` flag adds __all__ to each __init__.py contain
 exports from direct child modules. This improves IDE autocomplete and explicit exports.
 Use 'recursive' to include all descendant exports with collision handling.
 
-**Related:** [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy)
+**Related:** [`--all-exports-collision-strategy`](#all-exports-collision-strategy)
 
 **See also:** [Module Structure and Exports](../module-exports.md)
 
@@ -1961,7 +1961,7 @@ The `--module-split-mode=single` flag generates each model class in its own file
 named after the class in snake_case. Use with `--all-exports-scope=recursive` to
 create an __init__.py that re-exports all models for convenient imports.
 
-**Related:** [`--all-exports-scope`](general-options.md#all-exports-scope), [`--use-exact-imports`](template-customization.md#use-exact-imports)
+**Related:** [`--all-exports-scope`](#all-exports-scope), [`--use-exact-imports`](template-customization.md#use-exact-imports)
 
 !!! tip "Usage"
 

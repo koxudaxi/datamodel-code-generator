@@ -145,7 +145,7 @@ This is useful for integrating with serialization libraries like `dataclasses_js
 Use with `--additional-imports` to add the required imports for the decorators.
 The `@` prefix is optional and will be added automatically if missing.
 
-**Related:** [`--additional-imports`](template-customization.md#additional-imports), [`--output-model-type`](model-customization.md#output-model-type)
+**Related:** [`--additional-imports`](#additional-imports), [`--output-model-type`](model-customization.md#output-model-type)
 
 **See also:** [Custom Class Decorators](../class-decorators.md)
 
@@ -3086,7 +3086,7 @@ In the multi-module Pydantic + `ruff-check` case, runtime imports are preserved 
 `--use-type-checking-imports` opts back into the old TYPE_CHECKING-only behavior, which can
 require manual `model_rebuild()` calls for cross-module runtime references.
 
-**Related:** [`--formatters`](template-customization.md#formatters), [`--use-exact-imports`](template-customization.md#use-exact-imports), [`--use-type-checking-imports`](template-customization.md#use-type-checking-imports)
+**Related:** [`--formatters`](#formatters), [`--use-exact-imports`](#use-exact-imports), [`--use-type-checking-imports`](#use-type-checking-imports)
 
 !!! tip "Usage"
 
@@ -3467,7 +3467,7 @@ The `--schema-validator-base-class-name` option changes the name of the generate
 shared base class that owns schema-derived runtime validators. It is only used when
 `--generate-schema-validators` emits shared validator code.
 
-**Related:** [`--generate-schema-validators`](template-customization.md#generate-schema-validators)
+**Related:** [`--generate-schema-validators`](#generate-schema-validators)
 
 !!! tip "Usage"
 
@@ -3578,7 +3578,7 @@ Pydantic v2 model-validator backend for JSON Schema rules that cannot be
 represented as type hints alone. The explicit type keeps the CLI ready for
 additional validator backends without adding them in this release.
 
-**Related:** [`--generate-schema-validators`](template-customization.md#generate-schema-validators)
+**Related:** [`--generate-schema-validators`](#generate-schema-validators)
 
 !!! tip "Usage"
 
@@ -4308,7 +4308,7 @@ Allow Ruff to move typing-only imports into TYPE_CHECKING blocks.
 The `--use-type-checking-imports` flag explicitly re-enables Ruff's TYPE_CHECKING import moves
 for multi-module Pydantic output where runtime imports might otherwise be preserved by default.
 
-**Related:** [`--formatters`](template-customization.md#formatters), [`--no-use-type-checking-imports`](template-customization.md#no-use-type-checking-imports), [`--use-exact-imports`](template-customization.md#use-exact-imports)
+**Related:** [`--formatters`](#formatters), [`--no-use-type-checking-imports`](#no-use-type-checking-imports), [`--use-exact-imports`](#use-exact-imports)
 
 !!! tip "Usage"
 

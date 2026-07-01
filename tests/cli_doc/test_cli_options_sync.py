@@ -165,6 +165,35 @@ def test_format_option_link_uses_current_category_anchor() -> None:
     assert _format_option_link("--unknown-option", documented_options) == "`--unknown-option`"
 
 
+def test_related_option_links_use_current_category_anchor() -> None:
+    """Related option links should stay on-page when the option belongs to the current category."""
+    option = build_cli_docs.CLIDocOption(
+        option_name="--input",
+        examples=[
+            build_cli_docs.CLIDocExample(
+                node_id="tests/test_cli_doc.py::test_input",
+                option_description="Specify the input schema file path.",
+                cli_args=["--input", "schema.json"],
+                related_options=["--input-file-type", "--target-python-version"],
+                is_primary=True,
+            )
+        ],
+    )
+
+    section = build_cli_docs.generate_option_section(
+        "--input",
+        option,
+        documented_options=frozenset({"--input", "--input-file-type", "--target-python-version"}),
+    )
+
+    _fail_if_missing(
+        "**Related:** [`--input-file-type`](#input-file-type), "
+        "[`--target-python-version`](model-customization.md#target-python-version)",
+        section,
+        "--input related option links",
+    )
+
+
 def test_category_recipe_options_have_registered_metadata() -> None:
     """Generated recipes should not point at stale CLI option names."""
     registered_options = frozenset(CLI_OPTION_META)

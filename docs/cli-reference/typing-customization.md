@@ -1819,7 +1819,7 @@ The `--no-use-specialized-enum` flag prevents the generator from using
 specialized Enum classes (StrEnum, IntEnum) when generating code for
 Python 3.11+, falling back to standard Enum classes instead.
 
-**Related:** [`--target-python-version`](model-customization.md#target-python-version), [`--use-specialized-enum`](typing-customization.md#use-specialized-enum), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
+**Related:** [`--target-python-version`](model-customization.md#target-python-version), [`--use-specialized-enum`](#use-specialized-enum), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 
 !!! tip "Usage"
 
@@ -2094,7 +2094,7 @@ The `--no-use-standard-collections` flag generates typing module containers
 (Dict, List) instead of built-in types. This is useful for older Python
 versions or when explicit typing imports are preferred.
 
-**Related:** [`--use-standard-collections`](typing-customization.md#use-standard-collections)
+**Related:** [`--use-standard-collections`](#use-standard-collections)
 
 !!! tip "Usage"
 
@@ -2302,7 +2302,7 @@ The `--no-use-union-operator` flag generates union types using typing.Union
 and typing.Optional instead of the | operator (PEP 604). This is useful
 for older Python versions or when explicit typing imports are preferred.
 
-**Related:** [`--use-union-operator`](typing-customization.md#use-union-operator)
+**Related:** [`--use-union-operator`](#use-union-operator)
 
 !!! tip "Usage"
 
@@ -3434,7 +3434,7 @@ The `--use-generic-container-types` flag generates abstract container types
 If `--use-standard-collections` is set, imports from `collections.abc`;
 otherwise imports from `typing`.
 
-**Related:** [`--use-standard-collections`](typing-customization.md#use-standard-collections)
+**Related:** [`--use-standard-collections`](#use-standard-collections)
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
@@ -4018,7 +4018,7 @@ The `--use-specialized-enum` flag generates specialized enum types:
 
 This is the default behavior for Python 3.11+ targets.
 
-**Related:** [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
+**Related:** [`--no-use-specialized-enum`](#no-use-specialized-enum), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 
 !!! tip "Usage"
 
@@ -4153,7 +4153,7 @@ The `--use-standard-collections` flag generates built-in container types
 (dict, list) instead of typing module equivalents. This produces cleaner
 code for Python 3.10+ where built-in types support subscripting.
 
-**Related:** [`--use-generic-container-types`](typing-customization.md#use-generic-container-types)
+**Related:** [`--use-generic-container-types`](#use-generic-container-types)
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
@@ -4363,7 +4363,7 @@ Python standard library types (UUID, IPv4Address, IPv6Address, Path) for corresp
 string formats instead of plain str. This affects dataclass, msgspec, and TypedDict
 output types. Pydantic already uses these types by default.
 
-**Related:** [`--output-datetime-class`](typing-customization.md#output-datetime-class), [`--output-model-type`](model-customization.md#output-model-type)
+**Related:** [`--output-datetime-class`](#output-datetime-class), [`--output-model-type`](model-customization.md#output-model-type)
 
 !!! tip "Usage"
 
@@ -4682,7 +4682,7 @@ The `--use-union-operator` flag generates union types using the | operator
 (e.g., `str | None`) instead of `Union[str, None]` or `Optional[str]`.
 This is the default behavior.
 
-**Related:** [`--no-use-union-operator`](typing-customization.md#no-use-union-operator)
+**Related:** [`--no-use-union-operator`](#no-use-union-operator)
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
