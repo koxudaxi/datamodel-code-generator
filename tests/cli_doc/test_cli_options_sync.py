@@ -27,6 +27,9 @@ from datamodel_code_generator.cli_options import (
     get_all_argparse_options,
     get_all_canonical_options,
     get_canonical_option,
+    get_cli_doc_slug,
+    get_cli_option_doc_name,
+    get_cli_option_doc_path,
     get_option_meta,
     is_excluded_from_docs,
     is_manual_doc,
@@ -105,6 +108,59 @@ def test_get_option_meta_returns_default_for_known_argparse_option(monkeypatch: 
     monkeypatch.setattr(cli_options, "get_all_canonical_options", get_future_options)
 
     assert get_option_meta(option) == CLIOptionMeta(name=option, category=OptionCategory.GENERAL)
+
+
+def test_cli_doc_slug_matches_generated_anchor_format() -> None:
+    """CLI documentation slugs should match generated page and anchor paths."""
+    assert get_cli_doc_slug("--frozen-dataclasses") == "frozen-dataclasses"
+    assert get_cli_doc_slug("Model Customization") == "model-customization"
+
+
+def test_cli_option_doc_path_links_to_generated_cli_reference() -> None:
+    """CLI option documentation paths should point at generated option sections."""
+    assert get_cli_option_doc_path("--output-model-type") == "model-customization.md#output-model-type"
+    assert (
+        get_cli_option_doc_path("--output-model-type", root="/cli-reference", extension="/")
+        == "/cli-reference/model-customization/#output-model-type"
+    )
+    assert get_cli_option_doc_path("-h", root="/cli-reference", extension="/") == "/cli-reference/utility-options/#help"
+    assert get_cli_option_doc_path("--unknown-option") is None
+
+
+def test_cli_option_doc_name_preserves_boolean_variants_and_canonicalizes_aliases() -> None:
+    """Boolean option variants have distinct sections, but regular aliases share one section."""
+    assert get_cli_option_doc_name("--treat-dot-as-module") == "--treat-dot-as-module"
+    assert get_cli_option_doc_name("--no-treat-dot-as-module") == "--no-treat-dot-as-module"
+    assert get_cli_option_doc_name("--capitalise-enum-members") == "--capitalize-enum-members"
+
+
+def test_generate_option_section_uses_canonical_anchor_for_aliases() -> None:
+    """Alias-keyed sections should link to the canonical generated anchor."""
+    section = generate_option_section(
+        "--capitalise-enum-members",
+        CLIDocOption(
+            option_name="--capitalise-enum-members",
+            examples=[
+                CLIDocExample(
+                    node_id="tests/main/jsonschema/test_main_jsonschema.py::test_capitalise",
+                    option_description="Capitalize enum member names to UPPER_CASE format.",
+                    cli_args=["--capitalise-enum-members"],
+                    is_primary=True,
+                ),
+            ],
+        ),
+    )
+
+    _fail_if_missing(
+        "## `--capitalise-enum-members` {#capitalize-enum-members}",
+        section,
+        "--capitalise-enum-members section anchor",
+    )
+    _fail_if_present(
+        "{#capitalise-enum-members}",
+        section,
+        "--capitalise-enum-members raw alias anchor",
+    )
 
 
 def test_documented_related_option_prefers_existing_generated_section() -> None:
