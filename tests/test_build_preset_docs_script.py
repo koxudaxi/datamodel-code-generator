@@ -18,6 +18,7 @@ from datamodel_code_generator.preset import (
     get_preset_infos,
     render_presets,
 )
+from scripts import build_preset_docs
 from tests.conftest import assert_output
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "build_preset_docs.py"
@@ -62,6 +63,24 @@ def test_preset_metadata_renderers() -> None:
     assert_output(
         f"{get_latest_preset_name()}\n{get_preset_infos()[0].name.value}\n",
         EXPECTED_PRESET_DOCS_PATH / "preset_names.txt",
+    )
+
+
+def test_readme_supported_sections_are_rendered_from_enums() -> None:
+    """README supported input/output lists are synchronized from public enums."""
+    assert_output(
+        build_preset_docs._render_readme_supported_sections(),
+        EXPECTED_PRESET_DOCS_PATH / "readme_supported_sections.txt",
+    )
+
+
+def test_marked_section_replacement_uses_end_marker_after_begin() -> None:
+    """Marked section replacement ignores matching text before the begin marker."""
+    markdown = "Earlier literal <!-- END -->\n<!-- BEGIN -->\nstale\n<!-- END -->\nAfter\n"
+
+    assert_output(
+        build_preset_docs._replace_marked_section(markdown, "<!-- BEGIN -->", "<!-- END -->", "Generated"),
+        EXPECTED_PRESET_DOCS_PATH / "marked_section_replacement.txt",
     )
 
 

@@ -7,6 +7,7 @@ on:
       - 'src/datamodel_code_generator/parser/schema_version.py'
       - 'scripts/build_schema_docs.py'
       - 'docs/supported_formats.md'
+      - 'docs/supported-data-types.md'
 
 permissions:
   contents: read
