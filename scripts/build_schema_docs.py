@@ -158,9 +158,7 @@ def iter_data_formats(data_formats: DataFormatMapping) -> list[tuple[str, str, T
         if default_type := formats.get("default"):
             rows.append((schema_type, "default", default_type))
         rows.extend(
-            (schema_type, format_name, type_)
-            for format_name, type_ in formats.items()
-            if format_name != "default"
+            (schema_type, format_name, type_) for format_name, type_ in formats.items() if format_name != "default"
         )
     return rows
 
