@@ -87,7 +87,7 @@ def _assert_same_output(first: str, second: str, context: str) -> None:
     if first == second:
         return
 
-    _fail_with_diff(first, second, context)
+    _fail_with_diff(first, second, context)  # pragma: no cover
 
 
 def _generate_output_with_hash_seed(input_path: Path, input_file_type: InputFileType, seed: str) -> str:
