@@ -4,7 +4,7 @@
     "kind": "cli-option",
     "message": "Schema-derived runtime validators are experimental and may change as JSON Schema coverage is expanded.",
     "note": "The option currently targets Pydantic v2 BaseModel output and covers selected object-level rules such as patternProperties, required-only oneOf/anyOf groups, and simple if/then/else required-property conditions.",
-    "since_version": "0.59.0",
+    "since_version": "0.66.1",
     "target": "--generate-schema-validators",
     "tracking_issue": null
   },
@@ -13,8 +13,17 @@
     "kind": "cli-option",
     "message": "Schema-derived runtime validator backend selection is experimental and may change as validation backends are added.",
     "note": "The only currently implemented backend is 'pydantic-v2', which preserves the existing generated Pydantic v2 validator behavior.",
-    "since_version": "0.59.0",
+    "since_version": "0.66.1",
     "target": "--schema-validator-type",
+    "tracking_issue": null
+  },
+  {
+    "id": "cli-option.use-missing-sentinel",
+    "kind": "cli-option",
+    "message": "Pydantic MISSING sentinel output is experimental because it depends on pydantic.experimental.missing_sentinel.",
+    "note": "The option requires Pydantic v2 BaseModel output and a target Pydantic version that supports the MISSING sentinel.",
+    "since_version": "0.66.1",
+    "target": "--use-missing-sentinel",
     "tracking_issue": null
   },
   {

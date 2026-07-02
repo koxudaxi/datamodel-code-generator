@@ -12,6 +12,7 @@ ExperimentalFeatureFormat = Literal["table", "json", "markdown"]
 ExperimentalFeatureId = Literal[
     "cli-option.generate-schema-validators",
     "cli-option.schema-validator-type",
+    "cli-option.use-missing-sentinel",
     "input-format.asyncapi",
     "input-format.avro",
     "input-format.mcp-tools",
@@ -42,7 +43,7 @@ EXPERIMENTAL_FEATURES: dict[ExperimentalFeatureId, ExperimentalFeature] = {
         message=(
             "Schema-derived runtime validators are experimental and may change as JSON Schema coverage is expanded."
         ),
-        since_version="0.59.0",
+        since_version="0.66.1",
         note=(
             "The option currently targets Pydantic v2 BaseModel output and covers selected object-level rules such as "
             "patternProperties, required-only oneOf/anyOf groups, and simple if/then/else required-property conditions."
@@ -56,10 +57,24 @@ EXPERIMENTAL_FEATURES: dict[ExperimentalFeatureId, ExperimentalFeature] = {
             "Schema-derived runtime validator backend selection is experimental and may change as validation "
             "backends are added."
         ),
-        since_version="0.59.0",
+        since_version="0.66.1",
         note=(
             "The only currently implemented backend is 'pydantic-v2', which preserves the existing generated "
             "Pydantic v2 validator behavior."
+        ),
+    ),
+    "cli-option.use-missing-sentinel": ExperimentalFeature(
+        id="cli-option.use-missing-sentinel",
+        kind="cli-option",
+        target="--use-missing-sentinel",
+        message=(
+            "Pydantic MISSING sentinel output is experimental because it depends on "
+            "pydantic.experimental.missing_sentinel."
+        ),
+        since_version="0.66.1",
+        note=(
+            "The option requires Pydantic v2 BaseModel output and a target Pydantic version that supports the "
+            "MISSING sentinel."
         ),
     ),
     "input-format.asyncapi": ExperimentalFeature(
