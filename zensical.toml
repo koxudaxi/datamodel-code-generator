@@ -21,6 +21,12 @@ nav = [
     { "GraphQL Options" = "cli-reference/graphql-only-options.md" },
     { "General Options" = "cli-reference/general-options.md" },
     { "Utility Options" = "cli-reference/utility-options.md" },
+    { "Focused Topics" = [
+      { "Model Customization" = "cli-reference/topics/model-customization.md" },
+      { "Template Customization" = "cli-reference/topics/template-customization.md" },
+      { "Typing Customization" = "cli-reference/topics/typing-customization.md" },
+      { "OpenAPI" = "cli-reference/topics/openapi.md" }
+    ]},
     { "Quick Reference" = "cli-reference/quick-reference.md" },
     { "Manual" = [
       { "Help" = "cli-reference/manual/help.md" },
