@@ -1524,8 +1524,11 @@ def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
 
     try:
         data = load_yaml(text)
-    except get_yaml_parse_errors():
-        return InputFileType.CSV
+    except get_yaml_parse_errors() as exc:
+        if not _is_json_text(text) and _looks_like_csv_text(text):
+            return InputFileType.CSV
+        msg = _infer_input_type_error_message(parse_error=exc)
+        raise Error(msg) from exc
     if isinstance(data, dict):
         if is_asyncapi(data):
             return InputFileType.AsyncAPI
@@ -1546,15 +1549,39 @@ def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
         if is_avro_schema_data(data):
             return InputFileType.Avro
     if isinstance(data, str):
+        if _looks_like_csv_text(text):
+            return InputFileType.CSV
         from datamodel_code_generator.parser._avro_detection import is_avro_schema_data  # noqa: PLC0415
 
         if is_avro_schema_data(data):
             return InputFileType.Avro
-    msg = (
-        "Can't infer input file type from the input data. "
-        "Please specify the input file type explicitly with --input-file-type option."
-    )
+    msg = _infer_input_type_error_message()
     raise Error(msg)
+
+
+def _infer_input_type_error_message(*, parse_error: Exception | None = None) -> str:
+    message = "Can't infer input file type from the input data."
+    hint = "Please specify the input file type explicitly with --input-file-type option."
+    if parse_error is None:
+        return f"{message} {hint}"
+    return f"{message} YAML parser error: {type(parse_error).__name__}: {parse_error}. {hint}"
+
+
+def _looks_like_csv_text(text: str) -> bool:
+    comma_count: int | None = None
+    for raw_line in text.splitlines():
+        if not (line := raw_line.strip()):
+            continue
+        if (current_comma_count := line.count(",")) == 0:
+            return False
+        match comma_count:
+            case None:
+                comma_count = current_comma_count
+            case _ if current_comma_count == comma_count:
+                return True
+            case _:
+                return False
+    return False
 
 
 inferred_message = (

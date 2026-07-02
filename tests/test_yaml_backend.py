@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
-from datamodel_code_generator import InputFileType, infer_input_type, load_yaml, load_yaml_dict_from_path
+from datamodel_code_generator import Error, InputFileType, infer_input_type, load_yaml, load_yaml_dict_from_path
 from datamodel_code_generator.util import (
     _is_yaml_deprecated_bool_warning_enabled,
     get_yaml_backend,
@@ -214,14 +214,26 @@ class TestInferInputType:
             assert result == InputFileType.CSV
 
     def test_csv_with_ryaml_error(self) -> None:
-        """YAML parse error from ryaml returns CSV type."""
+        """CSV-looking YAML parse error from ryaml returns CSV type."""
         mock_invalid_yaml_error = type("InvalidYamlError", (Exception,), {})
         mock_ryaml = MagicMock()
         mock_ryaml.InvalidYamlError = mock_invalid_yaml_error
         mock_ryaml.loads.side_effect = mock_invalid_yaml_error("parse error")
         with patch.dict("sys.modules", {"ryaml": mock_ryaml}):
-            result = infer_input_type(":::invalid yaml:::")
+            result = infer_input_type("a,b,c\n1,2,3\n")
             assert result == InputFileType.CSV
+
+    def test_non_csv_ryaml_error_raises_error(self) -> None:
+        """Non-CSV YAML parse error from ryaml raises inference error."""
+        mock_invalid_yaml_error = type("InvalidYamlError", (Exception,), {})
+        mock_ryaml = MagicMock()
+        mock_ryaml.InvalidYamlError = mock_invalid_yaml_error
+        mock_ryaml.loads.side_effect = mock_invalid_yaml_error("parse error")
+        with (
+            patch.dict("sys.modules", {"ryaml": mock_ryaml}),
+            pytest.raises(Error, match=r"YAML parser error: InvalidYamlError: parse error"),
+        ):
+            infer_input_type(":::invalid yaml:::")
 
     def test_openapi_detection(self) -> None:
         """OpenAPI input is detected correctly regardless of backend."""
