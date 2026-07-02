@@ -9,7 +9,7 @@ import tokenize
 from collections import defaultdict
 from enum import IntEnum
 from io import StringIO
-from typing import TYPE_CHECKING, Any, TypeGuard
+from typing import TYPE_CHECKING, Any, TypeGuard, cast
 
 from datamodel_code_generator.util import load_toml
 
@@ -22,6 +22,12 @@ if TYPE_CHECKING:
         @property
         def version_key(self) -> tuple[int, int]:
             raise NotImplementedError
+
+    class _SourceLocationNode(Protocol):
+        lineno: int
+        end_lineno: int | None
+        col_offset: int
+        end_col_offset: int | None
 
 
 class _AliasSortCategory(IntEnum):
@@ -454,15 +460,24 @@ def _source_lines(source: str) -> list[str]:
 
 
 def _source_segment_from_cached_lines(source: str, node: ast.AST) -> str | None:
-    try:
-        if node.end_lineno is None or node.end_col_offset is None:
-            return None
-        lineno = node.lineno - 1
-        end_lineno = node.end_lineno - 1
-        col_offset = node.col_offset
-        end_col_offset = node.end_col_offset
-    except AttributeError:
+    if not (
+        hasattr(node, "lineno")
+        and hasattr(node, "end_lineno")
+        and hasattr(node, "col_offset")
+        and hasattr(node, "end_col_offset")
+    ):
         return None
+
+    location_node = cast("_SourceLocationNode", node)
+    lineno = location_node.lineno
+    end_lineno = location_node.end_lineno
+    col_offset = location_node.col_offset
+    end_col_offset = location_node.end_col_offset
+    if end_lineno is None or end_col_offset is None:
+        return None
+
+    lineno -= 1
+    end_lineno -= 1
 
     lines = _source_lines(source)
     if end_lineno == lineno:
