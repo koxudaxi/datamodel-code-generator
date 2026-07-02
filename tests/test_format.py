@@ -1094,7 +1094,7 @@ def test_builtin_formatter_source_segment_reuses_split_source_lines(monkeypatch:
         split_call_count += 1
         return original_splitlines(value)
 
-    monkeypatch.setattr(builtin_formatter, "_SOURCE_LINES_CACHE", None)
+    monkeypatch.setattr(builtin_formatter, "_SOURCE_LINES_CACHE", [])
     monkeypatch.setattr(builtin_formatter, "_splitlines_no_ff", spy_splitlines)
 
     for node in nodes:

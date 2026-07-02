@@ -53,7 +53,7 @@ TYPE_ALIAS_INLINE_ARGUMENT_COUNT = 2
 STRING_PREFIX_PATTERN = re.compile(r"(?i)^([rubf]*)(\"\"\"|'''|\"|')")
 PEP695_TYPE_ALIAS_START_PATTERN = re.compile(r"^(?P<indent>\s*)type\s+(?P<target>[A-Za-z_]\w*(?:\[.*?\])?)\s*=")
 PEP695_TYPE_ALIAS_PLACEHOLDER = "__datamodel_codegen_builtin_type_alias__"
-_SOURCE_LINES_CACHE: tuple[str, list[str]] | None = None
+_SOURCE_LINES_CACHE: list[tuple[str, list[str]]] = []
 
 
 def _is_valid_builtin_line_length(line_length: Any) -> TypeGuard[int]:
@@ -447,15 +447,13 @@ def _splitlines_no_ff(source: str) -> list[str]:
 
 
 def _source_lines(source: str) -> list[str]:
-    global _SOURCE_LINES_CACHE  # noqa: PLW0603
-
-    if _SOURCE_LINES_CACHE is not None:
-        cached_source, cached_lines = _SOURCE_LINES_CACHE
+    if _SOURCE_LINES_CACHE:
+        cached_source, cached_lines = _SOURCE_LINES_CACHE[0]
         if source is cached_source or source == cached_source:
             return cached_lines
 
     lines = _splitlines_no_ff(source)
-    _SOURCE_LINES_CACHE = (source, lines)
+    _SOURCE_LINES_CACHE[:] = [(source, lines)]
     return lines
 
 
