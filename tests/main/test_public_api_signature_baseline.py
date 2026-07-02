@@ -197,6 +197,54 @@ _PUBLIC_MODULE_EXPORTS: dict[str, frozenset[str]] = {
 }
 
 
+_DE_FACTO_PUBLIC_SYMBOLS: dict[str, frozenset[str]] = {
+    "datamodel_code_generator.format": frozenset({
+        "CodeFormatter",
+        "Formatter",
+        "PythonVersion",
+        "PythonVersionMin",
+    }),
+    "datamodel_code_generator.imports": frozenset({
+        "IMPORT_ANNOTATIONS",
+        "Import",
+        "Imports",
+    }),
+    "datamodel_code_generator.parser.base": frozenset({
+        "Parser",
+        "SPECIAL_PATH_FORMAT",
+        "Source",
+        "YamlValue",
+        "title_to_class_name",
+    }),
+    "datamodel_code_generator.parser.graphql": frozenset({"GraphQLParser"}),
+    "datamodel_code_generator.parser.jsonschema": frozenset({
+        "JsonSchemaObject",
+        "JsonSchemaParser",
+        "get_model_by_path",
+        "get_special_path",
+    }),
+    "datamodel_code_generator.parser.openapi": frozenset({
+        "MediaObject",
+        "OpenAPIParser",
+        "Operation",
+        "ParameterObject",
+        "RequestBodyObject",
+        "ResponseObject",
+    }),
+    "datamodel_code_generator.reference": frozenset({
+        "ModelResolver",
+        "Reference",
+        "snake_to_upper_camel",
+    }),
+    "datamodel_code_generator.types": frozenset({
+        "DataType",
+        "DataTypeManager",
+        "StrictTypes",
+        "Types",
+    }),
+}
+
+
 def _baseline_generate(
     input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     *,
@@ -669,6 +717,15 @@ def test_public_module_all_exports_match_baseline(module_name: str, expected_exp
         f"  added: {sorted(actual_exports - expected_exports)}"
     )
     assert missing_exports == [], f"{module_name}.__all__ contains non-importable names: {missing_exports}"
+
+
+@pytest.mark.parametrize(("module_name", "expected_symbols"), _DE_FACTO_PUBLIC_SYMBOLS.items())
+def test_de_facto_public_symbols_remain_importable(module_name: str, expected_symbols: frozenset[str]) -> None:
+    """Pin importable symbols used downstream without requiring module __all__ changes."""
+    module = importlib.import_module(module_name)
+    missing_symbols = sorted(name for name in expected_symbols if not hasattr(module, name))
+
+    assert missing_symbols == [], f"{module_name} no longer exposes de facto public symbols: {missing_symbols}"
 
 
 def test_generate_signature_matches_baseline() -> None:
