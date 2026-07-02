@@ -8,9 +8,15 @@ These tests verify that:
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar
 
 import pytest
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 
 from datamodel_code_generator import cli_options
 from datamodel_code_generator.arguments import arg_parser as argument_parser
@@ -40,7 +46,10 @@ from scripts.build_cli_docs import (
     CLIDocOption,
     _documented_related_option,
     _format_option_link,
+    collect_topic_options,
     generate_option_section,
+    generate_topic_index,
+    generate_topic_page,
     scan_docs_for_cli_option_tags,
 )
 
@@ -334,6 +343,131 @@ def test_category_page_omits_recipes_without_category_data(monkeypatch: pytest.M
     assert page.index("---") < page.index("## `--input`")
 
 
+def test_topic_pages_group_documented_options_by_metadata() -> None:
+    """Focused topic pages should group documented options by topic metadata."""
+    options = {
+        "--class-name": CLIDocOption(
+            option_name="--class-name",
+            examples=[
+                CLIDocExample(
+                    node_id="tests/cli_doc/test_cli_options_sync.py::test_class_name",
+                    option_description="Set class name.",
+                    cli_args=["--class-name", "Pet"],
+                    is_primary=True,
+                ),
+            ],
+        ),
+        "--output-model-type": CLIDocOption(
+            option_name="--output-model-type",
+            examples=[
+                CLIDocExample(
+                    node_id="tests/cli_doc/test_cli_options_sync.py::test_output_model_type",
+                    option_description="Set output model type.",
+                    cli_args=["--output-model-type", "pydantic_v2.BaseModel"],
+                    is_primary=True,
+                ),
+            ],
+        ),
+    }
+
+    topic_options = collect_topic_options({OptionCategory.MODEL: options})
+    page = generate_topic_page(
+        OptionTopic.MODEL_CUSTOMIZATION,
+        topic_options[OptionTopic.MODEL_CUSTOMIZATION],
+    )
+
+    _fail_if_missing("## Model Naming {#model-naming}", page, "model naming group")
+    _fail_if_missing("## Model Shape {#model-shape}", page, "model shape group")
+    _fail_if_missing("[`--class-name`](../model-customization.md#class-name)", page, "class name topic link")
+    _fail_if_missing(
+        "[`--output-model-type`](../model-customization.md#output-model-type)",
+        page,
+        "output model type topic link",
+    )
+
+
+def test_topic_index_lists_generated_topic_pages() -> None:
+    """CLI reference index should link to generated focused topic pages."""
+    option = CLIDocOption(
+        option_name="--use-union-operator",
+        examples=[
+            CLIDocExample(
+                node_id="tests/cli_doc/test_cli_options_sync.py::test_use_union_operator",
+                option_description="Use union operator.",
+                cli_args=["--use-union-operator"],
+                is_primary=True,
+            ),
+        ],
+    )
+
+    index = generate_topic_index(collect_topic_options({OptionCategory.TYPING: {"--use-union-operator": option}}))
+
+    _fail_if_missing(
+        "[Typing Customization](topics/typing-customization.md)",
+        index,
+        "typing topic index link",
+    )
+    _fail_if_missing("Type Syntax", index, "typing topic group label")
+
+
+def test_topic_page_escapes_markdown_table_descriptions() -> None:
+    """Focused topic tables should not turn type syntax into Markdown links."""
+    option = CLIDocOption(
+        option_name="--no-use-union-operator",
+        examples=[
+            CLIDocExample(
+                node_id="tests/cli_doc/test_cli_options_sync.py::test_no_use_union_operator",
+                option_description="Use Union[X, Y] / Optional[X] instead of X | Y union operator.",
+                cli_args=["--no-use-union-operator"],
+                is_primary=True,
+            ),
+        ],
+    )
+
+    topic_options = collect_topic_options({OptionCategory.TYPING: {"--no-use-union-operator": option}})
+    page = generate_topic_page(
+        OptionTopic.TYPING_CUSTOMIZATION,
+        topic_options[OptionTopic.TYPING_CUSTOMIZATION],
+    )
+
+    _fail_if_missing(r"Union\[X, Y\] / Optional\[X\] instead of X \| Y", page, "escaped type syntax")
+
+
+def test_cli_docs_preserve_injected_doc_example_sections() -> None:
+    """CLI docs regeneration should not delete docs examples injected by the examples builder."""
+    generated = (
+        "# CLI Reference\n\n"
+        "## `--input-model` {#input-model}\n\n"
+        '??? example "Examples"\n\n'
+        "    **Output:**\n\n"
+        "---\n\n"
+        "## `--other` {#other}\n\n"
+    )
+    existing = (
+        "# CLI Reference\n\n"
+        "## `--input-model` {#input-model}\n\n"
+        "<!-- BEGIN AUTO-GENERATED DOC EXAMPLE: cli-reference.base-options.input-model.example -->\n"
+        '??? example "Examples"\n\n'
+        "    **Command:**\n"
+        "    ```bash\n"
+        "    datamodel-codegen --input-model tests.data:User\n"
+        "    ```\n"
+        "<!-- END AUTO-GENERATED DOC EXAMPLE: cli-reference.base-options.input-model.example -->\n\n"
+        "---\n\n"
+        "## `--other` {#other}\n\n"
+    )
+
+    preserved = build_cli_docs.preserve_existing_doc_example_sections(generated, existing)
+
+    _fail_if_missing(
+        "<!-- BEGIN AUTO-GENERATED DOC EXAMPLE: cli-reference.base-options.input-model.example -->",
+        preserved,
+        "preserved docs example begin marker",
+    )
+    _fail_if_missing("datamodel-codegen --input-model tests.data:User", preserved, "preserved docs example content")
+    _fail_if_present("    **Output:**\n\n---", preserved, "replaced generated fallback example")
+
+
 def test_option_section_renders_implies_and_requires_metadata() -> None:
     """Generated option docs should include relationship metadata from CLIOptionMeta."""
     section = generate_option_section(
@@ -550,6 +684,23 @@ class TestCLIOptionMetaSync:
                 allowed_groups,
                 f"{option} group for topic {topic.value!r}",
             )
+
+    def test_focused_topics_nav_matches_option_topics(self) -> None:
+        """Verify that focused topic docs stay linked from the site nav."""
+        root = Path(__file__).resolve().parents[2]
+        with (root / "zensical.toml").open("rb") as f:
+            nav = tomllib.load(f)["project"]["nav"]
+
+        cli_reference_nav = next(value for item in nav for title, value in item.items() if title == "CLI Reference")
+        focused_topics_nav = next(
+            value for item in cli_reference_nav for title, value in item.items() if title == "Focused Topics"
+        )
+        expected_nav = [
+            {build_cli_docs._topic_title(topic): f"cli-reference/topics/{topic.value}.md"}
+            for topic in build_cli_docs.OPTION_TOPIC_ORDER
+        ]
+
+        _fail_if_not_equal(focused_topics_nav, expected_nav, "Focused Topics nav")
 
     def test_all_argparse_options_are_documented_or_excluded(self) -> None:
         """Verify that all argparse options are either documented or explicitly excluded.

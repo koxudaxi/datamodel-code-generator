@@ -18,6 +18,17 @@ This documentation is auto-generated from test cases.
 | ⚙️ [General Options](general-options.md) | 18 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 10 | Help, version, debug options |
 
+## 🎯 Focused Topics
+
+Use these pages when you know the workflow area but not the exact option name.
+
+| Topic | Options | Groups |
+|-------|---------|--------|
+| [Model Customization](topics/model-customization.md) | 23 | Model Naming, Model Reuse, Model Shape, Root Model |
+| [Template Customization](topics/template-customization.md) | 19 | Custom Templates, Generated Output, Imports, Output Formatting |
+| [Typing Customization](topics/typing-customization.md) | 20 | Imports, Collection Types, Type Alias, Type Mapping, Type Syntax |
+| [OpenAPI](topics/openapi.md) | 7 | OpenAPI Naming, OpenAPI Paths, OpenAPI Scopes, Read Only Write Only |
+
 ## 🔗 Option Relationships
 
 These links are generated from CLI option metadata and summarize options that imply, require, or conflict with other options.

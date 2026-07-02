@@ -1125,6 +1125,39 @@ This documentation is auto-generated from test cases.
 | ⚙️ [General Options](general-options.md) | 18 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 10 | Help, version, debug options |
 
+## 🎯 Focused Topics
+
+Use these pages when you know the workflow area but not the exact option name.
+
+| Topic | Options | Groups |
+|-------|---------|--------|
+| [Model Customization](topics/model-customization.md) | 23 | Model Naming, Model Reuse, Model Shape, Root Model |
+| [Template Customization](topics/template-customization.md) | 19 | Custom Templates, Generated Output, Imports, Output Formatting |
+| [Typing Customization](topics/typing-customization.md) | 20 | Imports, Collection Types, Type Alias, Type Mapping, Type Syntax |
+| [OpenAPI](topics/openapi.md) | 7 | OpenAPI Naming, OpenAPI Paths, OpenAPI Scopes, Read Only Write Only |
+
+## 🔗 Option Relationships
+
+These links are generated from CLI option metadata and summarize options that imply, require, or conflict with other options.
+
+| Source | Kind | Condition | Target | Note |
+|--------|------|-----------|--------|------|
+| [`--use-annotated`](typing-customization.md#use-annotated) | Implies | Always | [`--field-constraints`](field-customization.md#field-constraints) enabled | - |
+| [`--use-specialized-enum`](typing-customization.md#use-specialized-enum) | Requires | Always | [`--target-python-version`](model-customization.md#target-python-version) = `3.11+` | `--use-specialized-enum` requires `--target-python-version` 3.11 or higher. |
+| [`--original-field-name-delimiter`](field-customization.md#original-field-name-delimiter) | Requires | Always | [`--snake-case-field`](field-customization.md#snake-case-field) enabled | `--original-field-name-delimiter` can not be used without `--snake-case-field`. |
+| [`--allow-extra-fields`](model-customization.md#allow-extra-fields) | Implies | Always | [`--extra-fields`](field-customization.md#extra-fields) = `allow` | - |
+| [`--collapse-root-models-name-strategy`](model-customization.md#collapse-root-models-name-strategy) | Requires | Always | [`--collapse-root-models`](model-customization.md#collapse-root-models) enabled | `--collapse-root-models-name-strategy` requires `--collapse-root-models`. |
+| [`--keyword-only`](model-customization.md#keyword-only) | Requires | Always | [`--target-python-version`](model-customization.md#target-python-version) = `3.10+` | `--keyword-only` requires `--target-python-version` 3.10 or higher for dataclasses. |
+| [`--output-model-type`](model-customization.md#output-model-type) | Implies | `--output-model-type` = `msgspec.Struct` | [`--use-annotated`](typing-customization.md#use-annotated) enabled | - |
+| [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) | Implies | Always | [`--naming-strategy`](model-customization.md#naming-strategy) = `parent-prefixed` | - |
+| [`--reuse-scope`](model-customization.md#reuse-scope) | Requires | `--reuse-scope` = `tree` | [`--reuse-model`](model-customization.md#reuse-model) enabled | `--reuse-scope=tree` has no effect without `--reuse-model`. |
+| [`--union-mode`](model-customization.md#union-mode) | Requires | Always | [`--output-model-type`](model-customization.md#output-model-type) = `pydantic_v2.BaseModel` | `--union-mode` is only supported for `--output-model-type pydantic_v2.BaseModel`. |
+| [`--use-missing-sentinel`](model-customization.md#use-missing-sentinel) | Implies | Always | [`--target-pydantic-version`](model-customization.md#target-pydantic-version) = `2.12` | - |
+| [`--use-missing-sentinel`](model-customization.md#use-missing-sentinel) | Requires | Always | [`--output-model-type`](model-customization.md#output-model-type) = `pydantic_v2.BaseModel` | `--use-missing-sentinel` is only supported for `--output-model-type pydantic_v2.BaseModel`. |
+| [`--custom-file-header`](template-customization.md#custom-file-header) | Conflicts | Always | [`--custom-file-header-path`](template-customization.md#custom-file-header-path) | `--custom-file-header` can not be used with `--custom-file-header-path`. |
+| [`--custom-file-header-path`](template-customization.md#custom-file-header-path) | Conflicts | Always | [`--custom-file-header`](template-customization.md#custom-file-header) | `--custom-file-header-path` can not be used with `--custom-file-header`. |
+| [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy) | Requires | Always | [`--all-exports-scope`](general-options.md#all-exports-scope) = `recursive` | `--all-exports-collision-strategy` can only be used with `--all-exports-scope=recursive`. |
+
 ## All Options
 
 **Jump to:** [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [K](#k) · [L](#l) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
@@ -1828,9 +1861,42 @@ Use the format `module:Object` or `path/to/file.py:Object` to specify the type.
 
     1. :material-arrow-left: `--input-model` - the option documented here
 
+<!-- BEGIN AUTO-GENERATED DOC EXAMPLE: cli-reference.base-options.input-model.example -->
 ??? example "Examples"
 
+    **Command:**
+    ```bash
+    datamodel-codegen \
+      --input-model tests.data.python.input_model.typeddict_models:User \
+      --output model.py
+    ```
+
+    **Input Model (`tests/data/python/input_model/typeddict_models.py`):**
+    ```python
+    """TypedDict models for --input-model tests."""
+
+    from typing_extensions import TypedDict
+
+
+    class User(TypedDict):
+        """User TypedDict with basic fields."""
+
+        name: str
+        age: int
+    ```
+
     **Output:**
+    ```python
+    from __future__ import annotations
+
+    from pydantic import BaseModel, Field
+
+
+    class User(BaseModel):
+        name: str = Field(..., title='Name')
+        age: int = Field(..., title='Age')
+    ```
+<!-- END AUTO-GENERATED DOC EXAMPLE: cli-reference.base-options.input-model.example -->
 
 ---
 
@@ -3475,10 +3541,10 @@ adding `BaseModel`. Ensure your mixins inherit from `BaseModel` if needed.
 
     1. :material-arrow-left: `--base-class-map` - the option documented here
 
+<!-- BEGIN AUTO-GENERATED DOC EXAMPLE: cli-reference.model-customization.base-class-map.example -->
 ??? example "Examples"
 
     **Input Schema:**
-
     ```json
     {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -3506,8 +3572,31 @@ adding `BaseModel`. Ensure your mixins inherit from `BaseModel` if needed.
     ```
 
     **Output:**
+    ```python
+    from __future__ import annotations
 
-    > **Error:** File not found: base_class_map.py
+    from typing import Any
+
+    from custom.bases import AnimalBase, PersonBase
+    from pydantic import BaseModel, RootModel
+
+
+    class Model(RootModel[Any]):
+        root: Any
+
+
+    class Person(PersonBase):
+        name: str | None = None
+
+
+    class Animal(AnimalBase):
+        species: str | None = None
+
+
+    class Car(BaseModel):
+        model: str | None = None
+    ```
+<!-- END AUTO-GENERATED DOC EXAMPLE: cli-reference.model-customization.base-class-map.example -->
 
 ---
 
@@ -16648,10 +16737,10 @@ parameters based on `additionalProperties` constraints in the schema.
 
     1. :material-arrow-left: `--use-closed-typed-dict` - the option documented here
 
+<!-- BEGIN AUTO-GENERATED DOC EXAMPLE: cli-reference.typing-customization.use-closed-typed-dict.example -->
 ??? example "Examples"
 
     **Input Schema:**
-
     ```json
     {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -16667,12 +16756,7 @@ parameters based on `additionalProperties` constraints in the schema.
     ```
 
     **Output:**
-
     ```python
-    # generated by datamodel-codegen:
-    #   filename:  typed_dict_closed.json
-    #   timestamp: 2019-07-26T00:00:00+00:00
-
     from __future__ import annotations
 
     from typing_extensions import NotRequired, TypedDict
@@ -16682,6 +16766,7 @@ parameters based on `additionalProperties` constraints in the schema.
         name: str
         age: NotRequired[int]
     ```
+<!-- END AUTO-GENERATED DOC EXAMPLE: cli-reference.typing-customization.use-closed-typed-dict.example -->
 
 ---
 
@@ -19172,10 +19257,10 @@ to the templates.
 
     1. :material-arrow-left: `--custom-template-dir` - the option documented here
 
+<!-- BEGIN AUTO-GENERATED DOC EXAMPLE: cli-reference.template-customization.custom-template-dir.example -->
 ??? example "Examples"
 
-    **Input Schema:**
-
+    **Input Schema (`api.yaml`):**
     ```yaml
     openapi: "3.0.0"
     info:
@@ -19358,13 +19443,43 @@ to the templates.
                 $ref: '#/components/schemas/Event'
     ```
 
+    **Template (`templates/pydantic/BaseModel.jinja2`):**
+    ```jinja2
+    {% for decorator in decorators -%}
+    {{ decorator }}
+    {% endfor -%}
+    class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comment }}{% endif %}
+    {%- if not fields %}
+        pass
+    {%- endif %}
+    {%- for field in fields -%}
+        {%- if field.required %}
+        {{ field.name }}: {{ field.type_hint }}
+        {%- else %}
+        {{ field.name }}: {{ field.type_hint }} = {{ field.default }}
+        {%- endif %}
+        {%- if field.docstring %}
+        """
+        {{ field.docstring }}
+        """
+        {%- endif %}
+    {%- endfor -%}
+    ```
+
+    **Extra Template Data (`openapi/extra_data.json`):**
+    ```json
+    {
+      "Pet": {
+        "comment": "1 2, 1 2, this is just a pet",
+        "config":{
+          "arbitrary_types_allowed": "True",
+          "coerce_numbers_to_str": "True"}
+      }
+    }
+    ```
+
     **Output:**
-
     ```python
-    # generated by datamodel-codegen:
-    #   filename:  api.yaml
-    #   timestamp: 1985-10-26T08:21:00+00:00
-
     from __future__ import annotations
 
     from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
@@ -19433,6 +19548,7 @@ to the templates.
     class Result(BaseModel):
         event: Event | None = None
     ```
+<!-- END AUTO-GENERATED DOC EXAMPLE: cli-reference.template-customization.custom-template-dir.example -->
 
 ---
 
@@ -28087,6 +28203,271 @@ Displays the installed version of datamodel-code-generator.
 
 ---
 
+# Model Customization
+
+Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/topics/model-customization/
+
+Choose model class shape, naming, reuse, and root-model behavior.
+
+Options are grouped from shared CLI metadata and link back to their generated reference sections.
+
+## Groups
+
+| Group | Options | Description |
+|-------|---------|-------------|
+| [Model Naming](#model-naming) | 9 | Class names, suffixes, prefixes, and duplicate-name behavior. |
+| [Model Reuse](#model-reuse) | 4 | Schema deduplication and shared generated modules. |
+| [Model Shape](#model-shape) | 6 | Output model family and compatibility targets. |
+| [Root Model](#root-model) | 4 | Root model creation, collapse, and alias behavior. |
+
+## Model Naming {#model-naming}
+
+Class names, suffixes, prefixes, and duplicate-name behavior.
+
+| Option | Description |
+|--------|-------------|
+| [`--allow-leading-underscore-class-name`](../model-customization.md#allow-leading-underscore-class-name) | Allow an explicitly specified root class name to start with an underscore. |
+| [`--class-name`](../model-customization.md#class-name) | Override the auto-generated class name with a custom name. |
+| [`--class-name-affix-scope`](../model-customization.md#class-name-affix-scope) | Control which classes receive the prefix/suffix. |
+| [`--class-name-prefix`](../model-customization.md#class-name-prefix) | Add a prefix to all generated class names. |
+| [`--class-name-suffix`](../model-customization.md#class-name-suffix) | Add a suffix to all generated class names. |
+| [`--duplicate-name-suffix`](../model-customization.md#duplicate-name-suffix) | Customize suffix for duplicate model names. |
+| [`--model-name-map`](../model-customization.md#model-name-map) | Rename generated model classes from a JSON mapping. |
+| [`--naming-strategy`](../model-customization.md#naming-strategy) | Use parent-prefixed naming strategy for duplicate model names. |
+| [`--parent-scoped-naming`](../model-customization.md#parent-scoped-naming) | Namespace models by their parent scope to avoid naming conflicts. |
+
+## Model Reuse {#model-reuse}
+
+Schema deduplication and shared generated modules.
+
+| Option | Description |
+|--------|-------------|
+| [`--collapse-reuse-models`](../model-customization.md#collapse-reuse-models) | Collapse duplicate models by replacing references instead of inheritance. |
+| [`--reuse-model`](../model-customization.md#reuse-model) | Reuse identical model definitions instead of generating duplicates. |
+| [`--reuse-scope`](../model-customization.md#reuse-scope) | Scope for model reuse detection (root or tree). |
+| [`--shared-module-name`](../general-options.md#shared-module-name) | Customize the name of the shared module for deduplicated models. |
+
+## Model Shape {#model-shape}
+
+Output model family and compatibility targets.
+
+| Option | Description |
+|--------|-------------|
+| [`--base-class`](../model-customization.md#base-class) | Specify a custom base class for generated models. |
+| [`--base-class-map`](../model-customization.md#base-class-map) | Specify different base classes for specific models via JSON mapping. |
+| [`--output-model-type`](../model-customization.md#output-model-type) | Select the output model type (Pydantic v2, Pydantic v2 dataclass, dataclasses, T... |
+| [`--target-pydantic-version`](../model-customization.md#target-pydantic-version) | Target Pydantic version for generated code compatibility. |
+| [`--target-python-version`](../model-customization.md#target-python-version) | Target Python version for generated code syntax and imports. |
+| [`--use-generic-base-class`](../model-customization.md#use-generic-base-class) | Generate a shared base class with model configuration to avoid repetition (DRY). |
+
+## Root Model {#root-model}
+
+Root model creation, collapse, and alias behavior.
+
+| Option | Description |
+|--------|-------------|
+| [`--collapse-root-models`](../model-customization.md#collapse-root-models) | Inline root model definitions instead of creating separate wrapper classes. |
+| [`--collapse-root-models-name-strategy`](../model-customization.md#collapse-root-models-name-strategy) | Select which name to keep when collapsing root models with object references. |
+| [`--skip-root-model`](../model-customization.md#skip-root-model) | Skip generation of root model when schema contains nested definitions. |
+| [`--use-root-model-sequence-interface`](../model-customization.md#use-root-model-sequence-interface) | Make non-null sequence-like Pydantic v2 RootModel classes implement collections.... |
+
+---
+
+# Template Customization
+
+Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/topics/template-customization/
+
+Tune generated file headers, imports, decorators, templates, and formatting.
+
+Options are grouped from shared CLI metadata and link back to their generated reference sections.
+
+## Groups
+
+| Group | Options | Description |
+|-------|---------|-------------|
+| [Custom Templates](#custom-templates) | 3 | Custom templates and extra template data. |
+| [Generated Output](#generated-output) | 7 | Generated file headers and reproducible output. |
+| [Imports](#imports) | 4 | Generated imports and type-checking import behavior. |
+| [Output Formatting](#output-formatting) | 5 | Formatter selection, quote style, and string wrapping. |
+
+## Custom Templates {#custom-templates}
+
+Custom templates and extra template data.
+
+| Option | Description |
+|--------|-------------|
+| [`--custom-template-dir`](../template-customization.md#custom-template-dir) | Use custom Jinja2 templates for model generation. |
+| [`--extra-template-data`](../template-customization.md#extra-template-data) | Pass custom template variables via inline JSON or a JSON file path. |
+| [`--validators`](../template-customization.md#validators) | Add custom field validators to generated Pydantic v2 models. |
+
+## Generated Output {#generated-output}
+
+Generated file headers and reproducible output.
+
+| Option | Description |
+|--------|-------------|
+| [`--class-decorators`](../template-customization.md#class-decorators) | Add custom decorators to generated model classes. |
+| [`--custom-file-header`](../template-customization.md#custom-file-header) | Add custom header text to the generated file. |
+| [`--custom-file-header-path`](../template-customization.md#custom-file-header-path) | Add custom header content from file to generated code. |
+| [`--disable-timestamp`](../template-customization.md#disable-timestamp) | Disable timestamp in generated file header for reproducible output. |
+| [`--enable-command-header`](../template-customization.md#enable-command-header) | Include command-line options in file header for reproducibility. |
+| [`--enable-generated-header-marker`](../template-customization.md#enable-generated-header-marker) | Include the @generated marker in file header for generated-code tooling. |
+| [`--enable-version-header`](../template-customization.md#enable-version-header) | Include tool version information in file header. |
+
+## Imports {#imports}
+
+Generated imports and type-checking import behavior.
+
+| Option | Description |
+|--------|-------------|
+| [`--additional-imports`](../template-customization.md#additional-imports) | Add custom imports to generated output files. |
+| [`--no-use-type-checking-imports`](../template-customization.md#no-use-type-checking-imports) | Keep generated model imports available at runtime when using Ruff fixes. |
+| [`--use-exact-imports`](../template-customization.md#use-exact-imports) | Import exact types instead of modules. |
+| [`--use-type-checking-imports`](../template-customization.md#use-type-checking-imports) | Allow Ruff to move typing-only imports into TYPE_CHECKING blocks. |
+
+## Output Formatting {#output-formatting}
+
+Formatter selection, quote style, and string wrapping.
+
+| Option | Description |
+|--------|-------------|
+| [`--custom-formatters`](../template-customization.md#custom-formatters) | Apply custom Python code formatters to generated output. |
+| [`--custom-formatters-kwargs`](../template-customization.md#custom-formatters-kwargs) | Pass custom arguments to custom formatters via inline JSON or a JSON file path. |
+| [`--formatters`](../template-customization.md#formatters) | Specify code formatters to apply to generated output. |
+| [`--use-double-quotes`](../template-customization.md#use-double-quotes) | Use double quotes for string literals in generated code. |
+| [`--wrap-string-literal`](../template-customization.md#wrap-string-literal) | Wrap long string literals across multiple lines. |
+
+---
+
+# Typing Customization
+
+Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/topics/typing-customization/
+
+Control Python annotation syntax, collection types, imports, and type mappings.
+
+Options are grouped from shared CLI metadata and link back to their generated reference sections.
+
+## Groups
+
+| Group | Options | Description |
+|-------|---------|-------------|
+| [Imports](#imports) | 1 | Generated imports and type-checking import behavior. |
+| [Collection Types](#collection-types) | 5 | Collection and tuple/set generation. |
+| [Type Alias](#type-alias) | 2 | TypeAlias and root-model alias output. |
+| [Type Mapping](#type-mapping) | 9 | Scalar, date/time, and custom type mapping. |
+| [Type Syntax](#type-syntax) | 3 | Modern annotation syntax and Annotated usage. |
+
+## Imports {#imports}
+
+Generated imports and type-checking import behavior.
+
+| Option | Description |
+|--------|-------------|
+| [`--disable-future-imports`](../typing-customization.md#disable-future-imports) | Prevent automatic addition of __future__ imports in generated code. |
+
+## Collection Types {#collection-types}
+
+Collection and tuple/set generation.
+
+| Option | Description |
+|--------|-------------|
+| [`--no-use-standard-collections`](../typing-customization.md#no-use-standard-collections) | Use typing.Dict/List instead of built-in dict/list for container types. |
+| [`--use-generic-container-types`](../typing-customization.md#use-generic-container-types) | Use generic container types (Sequence, Mapping) for type hinting. |
+| [`--use-standard-collections`](../typing-customization.md#use-standard-collections) | Use built-in dict/list instead of typing.Dict/List. |
+| [`--use-tuple-for-fixed-items`](../typing-customization.md#use-tuple-for-fixed-items) | Generate tuple types for arrays with items array syntax. |
+| [`--use-unique-items-as-set`](../typing-customization.md#use-unique-items-as-set) | Generate set types for arrays with uniqueItems constraint. |
+
+## Type Alias {#type-alias}
+
+TypeAlias and root-model alias output.
+
+| Option | Description |
+|--------|-------------|
+| [`--use-root-model-type-alias`](../typing-customization.md#use-root-model-type-alias) | Generate RootModel as type alias format for better mypy support. |
+| [`--use-type-alias`](../typing-customization.md#use-type-alias) | Use TypeAlias instead of root models for type definitions (experimental). |
+
+## Type Mapping {#type-mapping}
+
+Scalar, date/time, and custom type mapping.
+
+| Option | Description |
+|--------|-------------|
+| [`--output-date-class`](../typing-customization.md#output-date-class) | Specify date class type for date schema fields. |
+| [`--output-datetime-class`](../typing-customization.md#output-datetime-class) | Specify datetime class type for date-time schema fields. |
+| [`--strict-types`](../typing-customization.md#strict-types) | Enable strict type validation for specified Python types. |
+| [`--type-mappings`](../typing-customization.md#type-mappings) | Override default type mappings for schema formats. |
+| [`--type-overrides`](../typing-customization.md#type-overrides) | Replace schema model types with custom Python types via JSON mapping. |
+| [`--use-decimal-for-multiple-of`](../typing-customization.md#use-decimal-for-multiple-of) | Generate Decimal types for fields with multipleOf constraint. |
+| [`--use-object-type`](../typing-customization.md#use-object-type) | Use object instead of Any for unspecified object and array values. |
+| [`--use-pendulum`](../typing-customization.md#use-pendulum) | Use pendulum types for date, time, and duration fields. |
+| [`--use-standard-primitive-types`](../typing-customization.md#use-standard-primitive-types) | Use Python standard library types for string formats instead of str. |
+
+## Type Syntax {#type-syntax}
+
+Modern annotation syntax and Annotated usage.
+
+| Option | Description |
+|--------|-------------|
+| [`--no-use-union-operator`](../typing-customization.md#no-use-union-operator) | Use Union\[X, Y\] / Optional\[X\] instead of X \| Y union operator. |
+| [`--use-annotated`](../typing-customization.md#use-annotated) | Use typing.Annotated for Field() with constraints. |
+| [`--use-union-operator`](../typing-customization.md#use-union-operator) | Use \| operator for Union types (PEP 604). |
+
+---
+
+# OpenAPI
+
+Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/topics/openapi/
+
+Handle OpenAPI operation naming, path selection, scopes, and readOnly/writeOnly behavior.
+
+Options are grouped from shared CLI metadata and link back to their generated reference sections.
+
+## Groups
+
+| Group | Options | Description |
+|-------|---------|-------------|
+| [OpenAPI Naming](#openapi-naming) | 2 | Operation and response model naming. |
+| [OpenAPI Paths](#openapi-paths) | 2 | Path selection and path parameter output. |
+| [OpenAPI Scopes](#openapi-scopes) | 1 | OpenAPI generation scopes. |
+| [Read Only Write Only](#read-only-write-only) | 2 | readOnly/writeOnly model behavior. |
+
+## OpenAPI Naming {#openapi-naming}
+
+Operation and response model naming.
+
+| Option | Description |
+|--------|-------------|
+| [`--use-operation-id-as-name`](../openapi-only-options.md#use-operation-id-as-name) | Use OpenAPI operationId as the generated function/class name. |
+| [`--use-status-code-in-response-name`](../openapi-only-options.md#use-status-code-in-response-name) | Include HTTP status code in response model names. |
+
+## OpenAPI Paths {#openapi-paths}
+
+Path selection and path parameter output.
+
+| Option | Description |
+|--------|-------------|
+| [`--include-path-parameters`](../openapi-only-options.md#include-path-parameters) | Include OpenAPI path parameters in generated parameter models. |
+| [`--openapi-include-paths`](../openapi-only-options.md#openapi-include-paths) | Filter OpenAPI paths to include in model generation. |
+
+## OpenAPI Scopes {#openapi-scopes}
+
+OpenAPI generation scopes.
+
+| Option | Description |
+|--------|-------------|
+| [`--openapi-scopes`](../openapi-only-options.md#openapi-scopes) | Specify OpenAPI scopes to generate (schemas, paths, parameters). |
+
+## Read Only Write Only {#read-only-write-only}
+
+readOnly/writeOnly model behavior.
+
+| Option | Description |
+|--------|-------------|
+| [`--read-only-write-only-model-type`](../openapi-only-options.md#read-only-write-only-model-type) | Generate separate request and response models for readOnly/writeOnly fields. |
+| [`--use-frozen-field`](../model-customization.md#use-frozen-field) | Generate frozen (immutable) field definitions for readOnly properties. |
+
+---
+
 # Quick Reference
 
 Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/quick-reference/
@@ -28795,6 +29176,175 @@ type when a file extension is ambiguous. For example, YAML can contain either an
 OpenAPI/JSON Schema document or raw sample data, so use `jsonschema`, `openapi`,
 or `yaml` depending on the intended input.
 
+## Input Format Guide
+
+<!-- BEGIN AUTO-GENERATED INPUT FORMAT GUIDE -->
+### Input Format Guide (from code)
+
+The tables below are generated from the input type enum, parser routing code, schema version enums, raw-data conversion rules, and parser type conversion maps.
+
+#### Parser Routes and Version Flags
+
+| Input format | Selector | Parser route | `--schema-version` | Auto detection |
+| --- | --- | --- | --- | --- |
+| JSON Schema | `jsonschema` | `JsonSchemaParser` | `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | `$schema`, `type`, `properties`, or composition keywords |
+| OpenAPI | `openapi` | `OpenAPIParser` | `3.0`, `3.1`, `3.2`, `auto` | `openapi` field |
+| AsyncAPI | `asyncapi` | `AsyncAPIParser` | `2.0`, `3.0`, `auto` | `asyncapi` field |
+| GraphQL schema | `graphql` | `GraphQLParser` | Not supported | Explicit only |
+| XML Schema | `xmlschema` | `XMLSchemaParser` | `1.0`, `1.1`, `auto` | XML Schema namespace on the root element |
+| Protocol Buffers | `protobuf` | `ProtobufParser` | `proto2`, `proto3`, `2023`, `auto` | Protocol Buffers syntax/message-like text |
+| Apache Avro | `avro` | `AvroParser` | Not supported | Avro schema object, union, or primitive schema form |
+| MCP tool schemas | `mcp-tools` | `JsonSchemaParser after MCP conversion` | Converted to JSON Schema; `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | Explicit only |
+| JSON data | `json` | `JsonSchemaParser after genson conversion` | Converted to JSON Schema; `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | Mapping that is not a schema/OpenAPI/AsyncAPI/Avro document |
+| YAML data | `yaml` | `JsonSchemaParser after genson conversion` | Converted to JSON Schema; `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | Explicit for YAML sample data |
+| CSV data | `csv` | `JsonSchemaParser after genson conversion` | Converted to JSON Schema; `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | Fallback when text cannot parse as YAML |
+| Python dictionary data | `dict` | `JsonSchemaParser after genson conversion` | Converted to JSON Schema; `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | Explicit for mapping input |
+| Python input model | `--input-model` | `JsonSchemaParser` after Python schema conversion | JSON Schema after conversion; dict input can select another explicit schema type | Explicit only |
+
+#### Accepted Source Shapes
+
+| Input format | Accepted source shape |
+| --- | --- |
+| JSON Schema | JSON Schema document as JSON/YAML, mapping, URL, or file |
+| OpenAPI | OpenAPI document as JSON/YAML, mapping, URL, or file |
+| AsyncAPI | AsyncAPI document as JSON/YAML, mapping, URL, or file |
+| GraphQL schema | GraphQL SDL text, URL, or file |
+| XML Schema | XSD XML text, URL, or file |
+| Protocol Buffers | .proto text, file, directory, URL, or path list |
+| Apache Avro | Avro schema JSON/YAML, mapping, list, URL, or file |
+| MCP tool schemas | MCP tool list/profile as JSON/YAML, mapping, list, URL, or file |
+| JSON data | JSON sample data text or file |
+| YAML data | YAML sample data text or file |
+| CSV data | CSV text or file with a header row and at least one data row |
+| Python dictionary data | In-memory mapping or Python literal data |
+| Python input model | `module:Object` or `path/to/file.py:Object` via `--input-model` |
+
+#### Format Type Coverage
+
+| Input family | Code-derived coverage | Guide |
+| --- | --- | --- |
+| JSON Schema | 7 schema types, 54 common formats | Uses JSON Schema type/format mappings and feature metadata below |
+| OpenAPI | JSON Schema mappings plus 2 OpenAPI-only formats | Adds OpenAPI-specific schema features and formats |
+| GraphQL | 6 GraphQL type kinds | Uses GraphQL SDL parser order and parser method map |
+| XML Schema | 50 built-in XSD datatypes | Converts XSD built-ins to JSON Schema fragments |
+| Protocol Buffers | 15 scalar field types, 17 well-known type mappings | Converts descriptors to JSON Schema definitions |
+| Apache Avro | 8 primitives, 13 logical type mappings | Converts Avro schemas to JSON Schema while preserving Avro metadata |
+| JSON/YAML/CSV/Dict data | 4 raw data selectors | Samples are converted to JSON Schema with genson before parsing |
+| Python input model | 4 supported object kinds | Python objects are converted to schema data before normal generation |
+
+#### GraphQL Type Kinds
+
+| GraphQL kind | Parser method | Generated shape |
+| --- | --- | --- |
+| `scalar` | `parse_scalar` | Generates scalar aliases |
+| `enum` | `parse_enum` | Generates enums or literals depending on enum options |
+| `interface` | `parse_interface` | Generates model classes from interface fields |
+| `object` | `parse_object` | Generates model classes except root Query/Mutation objects |
+| `input_object` | `parse_input_object` | Generates model classes for input objects |
+| `union` | `parse_union` | Generates union type aliases |
+
+#### Apache Avro Primitive Types
+
+| Avro primitive | JSON Schema mapping | Constraints |
+| --- | --- | --- |
+| `null` | `null` | - |
+| `boolean` | `boolean` | - |
+| `int` | `integer` + `int32` | - |
+| `long` | `integer` + `int64` | - |
+| `float` | `number` + `float` | - |
+| `double` | `number` + `double` | - |
+| `bytes` | `string` + `binary` | - |
+| `string` | `string` | - |
+
+#### Apache Avro Logical Types
+
+| Avro logical type | Allowed Avro type | JSON Schema mapping |
+| --- | --- | --- |
+| `decimal` | `bytes`, `fixed` | `string` + `decimal` |
+| `big-decimal` | `bytes` | `string` + `decimal` |
+| `uuid` | `string`, `fixed` | `string` + `uuid` |
+| `date` | `int` | `string` + `date` |
+| `time-millis` | `int` | `string` + `time` |
+| `time-micros` | `long` | `string` + `time` |
+| `timestamp-millis` | `long` | `string` + `date-time` |
+| `timestamp-micros` | `long` | `string` + `date-time` |
+| `timestamp-nanos` | `long` | `string` + `date-time` |
+| `local-timestamp-millis` | `long` | `string` + `date-time-local` |
+| `local-timestamp-micros` | `long` | `string` + `date-time-local` |
+| `local-timestamp-nanos` | `long` | `string` + `date-time-local` |
+| `duration` | `fixed` | `string` + `duration` |
+
+#### Protocol Buffers Scalar Types
+
+| Protobuf scalar | JSON Schema mapping | Constraints |
+| --- | --- | --- |
+| `double` | `number` + `double` | - |
+| `float` | `number` + `float` | - |
+| `int64` | `integer` + `int64` | - |
+| `uint64` | `integer` + `int64` | minimum=0, maximum=18446744073709551615 |
+| `int32` | `integer` + `int32` | - |
+| `uint32` | `integer` + `int32` | minimum=0, maximum=4294967295 |
+| `sint32` | `integer` + `int32` | - |
+| `sint64` | `integer` + `int64` | - |
+| `fixed32` | `integer` + `int32` | minimum=0, maximum=4294967295 |
+| `fixed64` | `integer` + `int64` | minimum=0, maximum=18446744073709551615 |
+| `sfixed32` | `integer` + `int32` | - |
+| `sfixed64` | `integer` + `int64` | - |
+| `bool` | `boolean` | - |
+| `string` | `string` | - |
+| `bytes` | `string` + `binary` | - |
+
+#### Protocol Buffers Well-Known Types
+
+| Well-known type | JSON Schema mapping |
+| --- | --- |
+| `google.protobuf.Timestamp` | `string` + `date-time` |
+| `google.protobuf.Duration` | `string` + `duration` |
+| `google.protobuf.Struct` | `object` map |
+| `google.protobuf.ListValue` | `array` |
+| `google.protobuf.Value` | `null` \| `boolean` \| `number` \| `string` \| `object` map \| `array` |
+| `google.protobuf.Any` | `object` map |
+| `google.protobuf.Empty` | `object` |
+| `google.protobuf.FieldMask` | `string` |
+| `google.protobuf.DoubleValue` | `number` + `double` \| `null` |
+| `google.protobuf.FloatValue` | `number` + `float` \| `null` |
+| `google.protobuf.Int64Value` | `integer` + `int64` \| `null` |
+| `google.protobuf.UInt64Value` | `integer` + `int64` \| `null` |
+| `google.protobuf.Int32Value` | `integer` + `int32` \| `null` |
+| `google.protobuf.UInt32Value` | `integer` + `int32` \| `null` |
+| `google.protobuf.BoolValue` | `boolean` \| `null` |
+| `google.protobuf.StringValue` | `string` \| `null` |
+| `google.protobuf.BytesValue` | `string` + `binary` \| `null` |
+
+#### XML Schema Built-In Type Groups
+
+| JSON Schema mapping | XSD built-ins | Count |
+| --- | --- | --- |
+| `Any` | `anySimpleType`, `anyAtomicType`, `anyType` | 3 |
+| `string` + `uri` | `anyURI` | 1 |
+| `string` + `byte` | `base64Binary` | 1 |
+| `boolean` | `boolean` | 1 |
+| `integer` | `byte`, `int`, `integer`, `long`, `negativeInteger`, `nonNegativeInteger`, `nonPositiveInteger`, `positiveInteger`, +5 more | 13 |
+| `string` + `date` | `date` | 1 |
+| `string` + `date-time` | `dateTime`, `dateTimeStamp` | 2 |
+| `number` + `decimal` | `decimal` | 1 |
+| `number` | `double`, `float` | 2 |
+| `string` | `duration`, `ENTITY`, `gDay`, `gMonth`, `gMonthDay`, `gYear`, `gYearMonth`, `hexBinary`, +12 more | 20 |
+| `string` + `duration` | `dayTimeDuration` | 1 |
+| `array` | `ENTITIES`, `IDREFS`, `NMTOKENS` | 3 |
+| `string` + `time` | `time` | 1 |
+
+#### Python Input Types
+
+| Python input object | Conversion behavior |
+| --- | --- |
+| `dict` | Returned directly as the schema; `--input-file-type` is required |
+| `Pydantic v2 BaseModel` | Converted with Pydantic `model_json_schema()` |
+| `dataclass` | Converted with Pydantic `TypeAdapter`; includes stdlib and Pydantic dataclasses |
+| `TypedDict` | Converted with Pydantic `TypeAdapter` |
+| Multiple `--input-model` | Supported only for Pydantic v2 BaseModel classes |
+<!-- END AUTO-GENERATED INPUT FORMAT GUIDE -->
+
 ## 📘 OpenAPI 3 and JSON Schema {#openapi-3-and-json-schema}
 
 Below are the data types and features recognized by datamodel-code-generator for OpenAPI 3 and JSON Schema.
@@ -28955,6 +29505,175 @@ This document describes the JSON Schema, OpenAPI, AsyncAPI, Apache Avro, XML Sch
 ## Overview
 
 datamodel-code-generator supports multiple schema formats including JSON Schema, OpenAPI, AsyncAPI, Apache Avro, XML Schema, and Protocol Buffers. By default, the tool operates in **Lenient mode**, accepting all features regardless of version declarations for formats that carry version information. This ensures maximum compatibility with real-world schemas that often mix features from different versions.
+
+## Input Format Guide
+
+<!-- BEGIN AUTO-GENERATED INPUT FORMAT GUIDE -->
+### Input Format Guide (from code)
+
+The tables below are generated from the input type enum, parser routing code, schema version enums, raw-data conversion rules, and parser type conversion maps.
+
+#### Parser Routes and Version Flags
+
+| Input format | Selector | Parser route | `--schema-version` | Auto detection |
+| --- | --- | --- | --- | --- |
+| JSON Schema | `jsonschema` | `JsonSchemaParser` | `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | `$schema`, `type`, `properties`, or composition keywords |
+| OpenAPI | `openapi` | `OpenAPIParser` | `3.0`, `3.1`, `3.2`, `auto` | `openapi` field |
+| AsyncAPI | `asyncapi` | `AsyncAPIParser` | `2.0`, `3.0`, `auto` | `asyncapi` field |
+| GraphQL schema | `graphql` | `GraphQLParser` | Not supported | Explicit only |
+| XML Schema | `xmlschema` | `XMLSchemaParser` | `1.0`, `1.1`, `auto` | XML Schema namespace on the root element |
+| Protocol Buffers | `protobuf` | `ProtobufParser` | `proto2`, `proto3`, `2023`, `auto` | Protocol Buffers syntax/message-like text |
+| Apache Avro | `avro` | `AvroParser` | Not supported | Avro schema object, union, or primitive schema form |
+| MCP tool schemas | `mcp-tools` | `JsonSchemaParser after MCP conversion` | Converted to JSON Schema; `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | Explicit only |
+| JSON data | `json` | `JsonSchemaParser after genson conversion` | Converted to JSON Schema; `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | Mapping that is not a schema/OpenAPI/AsyncAPI/Avro document |
+| YAML data | `yaml` | `JsonSchemaParser after genson conversion` | Converted to JSON Schema; `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | Explicit for YAML sample data |
+| CSV data | `csv` | `JsonSchemaParser after genson conversion` | Converted to JSON Schema; `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | Fallback when text cannot parse as YAML |
+| Python dictionary data | `dict` | `JsonSchemaParser after genson conversion` | Converted to JSON Schema; `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | Explicit for mapping input |
+| Python input model | `--input-model` | `JsonSchemaParser` after Python schema conversion | JSON Schema after conversion; dict input can select another explicit schema type | Explicit only |
+
+#### Accepted Source Shapes
+
+| Input format | Accepted source shape |
+| --- | --- |
+| JSON Schema | JSON Schema document as JSON/YAML, mapping, URL, or file |
+| OpenAPI | OpenAPI document as JSON/YAML, mapping, URL, or file |
+| AsyncAPI | AsyncAPI document as JSON/YAML, mapping, URL, or file |
+| GraphQL schema | GraphQL SDL text, URL, or file |
+| XML Schema | XSD XML text, URL, or file |
+| Protocol Buffers | .proto text, file, directory, URL, or path list |
+| Apache Avro | Avro schema JSON/YAML, mapping, list, URL, or file |
+| MCP tool schemas | MCP tool list/profile as JSON/YAML, mapping, list, URL, or file |
+| JSON data | JSON sample data text or file |
+| YAML data | YAML sample data text or file |
+| CSV data | CSV text or file with a header row and at least one data row |
+| Python dictionary data | In-memory mapping or Python literal data |
+| Python input model | `module:Object` or `path/to/file.py:Object` via `--input-model` |
+
+#### Format Type Coverage
+
+| Input family | Code-derived coverage | Guide |
+| --- | --- | --- |
+| JSON Schema | 7 schema types, 54 common formats | Uses JSON Schema type/format mappings and feature metadata below |
+| OpenAPI | JSON Schema mappings plus 2 OpenAPI-only formats | Adds OpenAPI-specific schema features and formats |
+| GraphQL | 6 GraphQL type kinds | Uses GraphQL SDL parser order and parser method map |
+| XML Schema | 50 built-in XSD datatypes | Converts XSD built-ins to JSON Schema fragments |
+| Protocol Buffers | 15 scalar field types, 17 well-known type mappings | Converts descriptors to JSON Schema definitions |
+| Apache Avro | 8 primitives, 13 logical type mappings | Converts Avro schemas to JSON Schema while preserving Avro metadata |
+| JSON/YAML/CSV/Dict data | 4 raw data selectors | Samples are converted to JSON Schema with genson before parsing |
+| Python input model | 4 supported object kinds | Python objects are converted to schema data before normal generation |
+
+#### GraphQL Type Kinds
+
+| GraphQL kind | Parser method | Generated shape |
+| --- | --- | --- |
+| `scalar` | `parse_scalar` | Generates scalar aliases |
+| `enum` | `parse_enum` | Generates enums or literals depending on enum options |
+| `interface` | `parse_interface` | Generates model classes from interface fields |
+| `object` | `parse_object` | Generates model classes except root Query/Mutation objects |
+| `input_object` | `parse_input_object` | Generates model classes for input objects |
+| `union` | `parse_union` | Generates union type aliases |
+
+#### Apache Avro Primitive Types
+
+| Avro primitive | JSON Schema mapping | Constraints |
+| --- | --- | --- |
+| `null` | `null` | - |
+| `boolean` | `boolean` | - |
+| `int` | `integer` + `int32` | - |
+| `long` | `integer` + `int64` | - |
+| `float` | `number` + `float` | - |
+| `double` | `number` + `double` | - |
+| `bytes` | `string` + `binary` | - |
+| `string` | `string` | - |
+
+#### Apache Avro Logical Types
+
+| Avro logical type | Allowed Avro type | JSON Schema mapping |
+| --- | --- | --- |
+| `decimal` | `bytes`, `fixed` | `string` + `decimal` |
+| `big-decimal` | `bytes` | `string` + `decimal` |
+| `uuid` | `string`, `fixed` | `string` + `uuid` |
+| `date` | `int` | `string` + `date` |
+| `time-millis` | `int` | `string` + `time` |
+| `time-micros` | `long` | `string` + `time` |
+| `timestamp-millis` | `long` | `string` + `date-time` |
+| `timestamp-micros` | `long` | `string` + `date-time` |
+| `timestamp-nanos` | `long` | `string` + `date-time` |
+| `local-timestamp-millis` | `long` | `string` + `date-time-local` |
+| `local-timestamp-micros` | `long` | `string` + `date-time-local` |
+| `local-timestamp-nanos` | `long` | `string` + `date-time-local` |
+| `duration` | `fixed` | `string` + `duration` |
+
+#### Protocol Buffers Scalar Types
+
+| Protobuf scalar | JSON Schema mapping | Constraints |
+| --- | --- | --- |
+| `double` | `number` + `double` | - |
+| `float` | `number` + `float` | - |
+| `int64` | `integer` + `int64` | - |
+| `uint64` | `integer` + `int64` | minimum=0, maximum=18446744073709551615 |
+| `int32` | `integer` + `int32` | - |
+| `uint32` | `integer` + `int32` | minimum=0, maximum=4294967295 |
+| `sint32` | `integer` + `int32` | - |
+| `sint64` | `integer` + `int64` | - |
+| `fixed32` | `integer` + `int32` | minimum=0, maximum=4294967295 |
+| `fixed64` | `integer` + `int64` | minimum=0, maximum=18446744073709551615 |
+| `sfixed32` | `integer` + `int32` | - |
+| `sfixed64` | `integer` + `int64` | - |
+| `bool` | `boolean` | - |
+| `string` | `string` | - |
+| `bytes` | `string` + `binary` | - |
+
+#### Protocol Buffers Well-Known Types
+
+| Well-known type | JSON Schema mapping |
+| --- | --- |
+| `google.protobuf.Timestamp` | `string` + `date-time` |
+| `google.protobuf.Duration` | `string` + `duration` |
+| `google.protobuf.Struct` | `object` map |
+| `google.protobuf.ListValue` | `array` |
+| `google.protobuf.Value` | `null` \| `boolean` \| `number` \| `string` \| `object` map \| `array` |
+| `google.protobuf.Any` | `object` map |
+| `google.protobuf.Empty` | `object` |
+| `google.protobuf.FieldMask` | `string` |
+| `google.protobuf.DoubleValue` | `number` + `double` \| `null` |
+| `google.protobuf.FloatValue` | `number` + `float` \| `null` |
+| `google.protobuf.Int64Value` | `integer` + `int64` \| `null` |
+| `google.protobuf.UInt64Value` | `integer` + `int64` \| `null` |
+| `google.protobuf.Int32Value` | `integer` + `int32` \| `null` |
+| `google.protobuf.UInt32Value` | `integer` + `int32` \| `null` |
+| `google.protobuf.BoolValue` | `boolean` \| `null` |
+| `google.protobuf.StringValue` | `string` \| `null` |
+| `google.protobuf.BytesValue` | `string` + `binary` \| `null` |
+
+#### XML Schema Built-In Type Groups
+
+| JSON Schema mapping | XSD built-ins | Count |
+| --- | --- | --- |
+| `Any` | `anySimpleType`, `anyAtomicType`, `anyType` | 3 |
+| `string` + `uri` | `anyURI` | 1 |
+| `string` + `byte` | `base64Binary` | 1 |
+| `boolean` | `boolean` | 1 |
+| `integer` | `byte`, `int`, `integer`, `long`, `negativeInteger`, `nonNegativeInteger`, `nonPositiveInteger`, `positiveInteger`, +5 more | 13 |
+| `string` + `date` | `date` | 1 |
+| `string` + `date-time` | `dateTime`, `dateTimeStamp` | 2 |
+| `number` + `decimal` | `decimal` | 1 |
+| `number` | `double`, `float` | 2 |
+| `string` | `duration`, `ENTITY`, `gDay`, `gMonth`, `gMonthDay`, `gYear`, `gYearMonth`, `hexBinary`, +12 more | 20 |
+| `string` + `duration` | `dayTimeDuration` | 1 |
+| `array` | `ENTITIES`, `IDREFS`, `NMTOKENS` | 3 |
+| `string` + `time` | `time` | 1 |
+
+#### Python Input Types
+
+| Python input object | Conversion behavior |
+| --- | --- |
+| `dict` | Returned directly as the schema; `--input-file-type` is required |
+| `Pydantic v2 BaseModel` | Converted with Pydantic `model_json_schema()` |
+| `dataclass` | Converted with Pydantic `TypeAdapter`; includes stdlib and Pydantic dataclasses |
+| `TypedDict` | Converted with Pydantic `TypeAdapter` |
+| Multiple `--input-model` | Supported only for Pydantic v2 BaseModel classes |
+<!-- END AUTO-GENERATED INPUT FORMAT GUIDE -->
 
 ## JSON Schema Version Support
 
@@ -36583,6 +37302,24 @@ This page tracks datamodel-code-generator release and main-branch benchmark resu
 
 datamodel-code-generator supports many schema styles and production use cases, so it includes a broad set of useful options. As releases add more capabilities, these benchmarks help keep the implementation measured, managed, and tuned so code generation stays fast in everyday use.
 
+## Scenario Guide
+
+Each scenario combines an input type with a case size. This guide is generated from the scenario keys in the benchmark JSON and the collector case definitions, so it changes when the benchmark matrix changes.
+
+| Scenario | Input fixture | Formatters | Represents |
+| --- | --- | --- | --- |
+| Small / JSON Schema | `tests/data/jsonschema/person.json` | `default` (black/isort default), `builtin` (Built-in), `ruff` (Ruff) | Compact fixture that emphasizes CLI startup, parsing, and formatter overhead for JSON Schema to Pydantic v2 model generation. |
+| Small / OpenAPI | `tests/data/openapi/api.yaml` | `default` (black/isort default), `builtin` (Built-in), `ruff` (Ruff) | Compact fixture that emphasizes CLI startup, parsing, and formatter overhead for OpenAPI component resolution and Pydantic v2 model generation. |
+| Large / JSON Schema | `tests/data/performance/large_models.json` | `default` (black/isort default), `builtin` (Built-in), `ruff` (Ruff) | Larger fixture that emphasizes parser and model graph throughput for JSON Schema to Pydantic v2 model generation. |
+| Large / OpenAPI | `tests/data/performance/openapi_large.yaml` | `default` (black/isort default), `builtin` (Built-in), `ruff` (Ruff) | Larger fixture that emphasizes parser and model graph throughput for OpenAPI component resolution and Pydantic v2 model generation. |
+
+## Interpreting Metrics
+
+- `median_ms` is the primary comparison value: it is the median generation duration after warmup runs, and lower is faster.
+- `min_ms`, `max_ms`, and `stdev_ms` describe the measured spread for the same row; wide ranges usually mean CI runner noise rather than a deliberate code change.
+- Formatter comparisons are scoped to the same scenario and version. `default` is the black/isort default baseline, while `builtin` and `ruff` ratios compare their medians to that baseline.
+- `ok` rows have timing data. `unsupported` means the formatter or option was unavailable in that release. `failed` means installation or command execution failed, so timing cells are intentionally empty.
+
 ## Historical Trends
 
 The benchmark data on this page is loaded from `docs/data/release-benchmarks.json` and rendered in the browser. Release runs update that JSON file directly, so the published page reflects new release measurements after the docs deployment without rewriting this Markdown file.
@@ -37534,13 +38271,10 @@ $ tox run -e 3.13
 ## 8. Format and lint code (will print errors that cannot be automatically fixed)
 $ tox run -e fix
 
-## 9. Check README help text is up to date
-$ tox run -e readme
+## 9. Check generated docs, diagrams, and playground assets are up to date
+$ tox run -e docs-check-all -- --check
 
-## 10. Check CLI documentation is up to date
-$ tox run -e cli-docs
-
-## 11. Commit and Push...
+## 10. Commit and Push...
 ```
 
 ## 🧪 E2E test assertions
@@ -37671,8 +38405,8 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
 $ pytest --collect-cli-docs -p no:xdist -q
 $ python scripts/build_cli_docs.py
 
-# Verify docs are correct
-$ tox run -e cli-docs
+# Verify generated docs are correct
+$ tox run -e docs-check-all -- --check
 
 # If you modified config.py, regenerate config TypedDicts
 $ tox run -e config-types
@@ -37680,7 +38414,7 @@ $ tox run -e config-types
 
 ### 🔧 Troubleshooting
 
-If `tox run -e cli-docs` fails:
+If the `tox run -e docs-check-all -- --check` CLI docs step fails:
 
 - **"No test found documenting option --xxx"**: Add `@pytest.mark.cli_doc(options=["--xxx"], ...)` to a test
 - **"File not found: ..."**: Check that `input_schema` and `golden_output` paths are correct

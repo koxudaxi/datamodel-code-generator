@@ -7,3 +7,7 @@ model-reuse.reuse-model.output: model-reuse.md
 model-reuse.reuse-scope-tree.output: model-reuse.md
 model-reuse.use-type-alias.schema: model-reuse.md
 model-reuse.use-type-alias.output: model-reuse.md
+cli-reference.base-options.input-model.example: base-options.md
+cli-reference.model-customization.base-class-map.example: model-customization.md
+cli-reference.template-customization.custom-template-dir.example: template-customization.md
+cli-reference.typing-customization.use-closed-typed-dict.example: typing-customization.md
