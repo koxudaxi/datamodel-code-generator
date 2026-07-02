@@ -36,18 +36,12 @@ ERROR_CASES: tuple[tuple[str, InputFileTypeLiteral, str], ...] = (
 
 MISSING_INPUT_CASES: tuple[tuple[InputFileTypeLiteral | None, str], ...] = (
     (None, "File not found"),
+    # Explicit input types currently bypass auto-detection's missing-file check.
+    # Keep this pinned until the diagnostic behavior is intentionally changed.
     ("jsonschema", TRACEBACK_HEADER),
 )
 
 TOLERATED_CASES: tuple[tuple[str, InputFileTypeLiteral], ...] = (("dangling_local_ref.json", "jsonschema"),)
-
-
-def _input_file_type_id(input_file_type: InputFileTypeLiteral | None) -> str:
-    match input_file_type:
-        case None:
-            return "auto"
-        case input_type:
-            return input_type
 
 
 @pytest.mark.parametrize(
@@ -77,7 +71,7 @@ def test_malformed_input_error_messages(
 @pytest.mark.parametrize(
     ("input_file_type", "expected_stderr_contains"),
     MISSING_INPUT_CASES,
-    ids=[_input_file_type_id(input_file_type) for input_file_type, _ in MISSING_INPUT_CASES],
+    ids=[input_file_type or "auto" for input_file_type, _ in MISSING_INPUT_CASES],
 )
 def test_missing_input_error_messages(
     input_file_type: InputFileTypeLiteral | None,
