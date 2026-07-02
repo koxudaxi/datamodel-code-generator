@@ -8,6 +8,7 @@ on:
       - .github/actions/smoke-docker-image/action.yml
       - .github/workflows/docker.yaml
       - .github/workflows/publish.yaml
+      - tests/data/jsonschema/simple_string.json
   pull_request:
     branches: [main]
     paths:
@@ -15,6 +16,7 @@ on:
       - .github/actions/smoke-docker-image/action.yml
       - .github/workflows/docker.yaml
       - .github/workflows/publish.yaml
+      - tests/data/jsonschema/simple_string.json
   workflow_dispatch:
 
 concurrency:

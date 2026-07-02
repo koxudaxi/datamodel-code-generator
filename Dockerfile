@@ -15,7 +15,14 @@ RUN test -n "${VERSION}" \
 
 FROM python:3.14.2-slim-bookworm
 
-LABEL maintainer="Koudai Aono <koxudaxi@gmail.com>"
+ARG VERSION
+
+LABEL maintainer="Koudai Aono <koxudaxi@gmail.com>" \
+    org.opencontainers.image.description="Generate Python data models from schema definitions" \
+    org.opencontainers.image.licenses="MIT" \
+    org.opencontainers.image.source="https://github.com/koxudaxi/datamodel-code-generator" \
+    org.opencontainers.image.title="datamodel-code-generator" \
+    org.opencontainers.image.version="${VERSION}"
 
 ENV VIRTUAL_ENV=/opt/datamodel-code-generator
 ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
