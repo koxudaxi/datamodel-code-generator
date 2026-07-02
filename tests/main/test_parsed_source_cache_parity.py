@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from datamodel_code_generator import InputFileType, _clear_parser_source_data_cache
+from datamodel_code_generator import InputFileType, _clear_parser_source_data_cache, _parser_source_data_cache
 from tests.conftest import assert_output
 from tests.main.conftest import JSON_SCHEMA_DATA_PATH, OPEN_API_DATA_PATH, run_main_with_args
 
@@ -55,13 +55,14 @@ def _run_generate_with_parsed_source_cache(
     *,
     use_cache: bool,
     extra_args: Sequence[str] | None,
-) -> None:
+) -> int:
     _clear_parser_source_data_cache()
     run_main_with_args(
         _build_generate_args(input_path, output_path, input_file_type, extra_args),
         use_parsed_source_cache=use_cache,
         use_builtin_default_formatter=False,
     )
+    return len(_parser_source_data_cache)
 
 
 @pytest.mark.parametrize(
@@ -103,14 +104,14 @@ def test_generate_output_matches_with_and_without_parsed_source_cache(
     cached_output = tmp_path / "cached.py"
     uncached_output = tmp_path / "uncached.py"
 
-    _run_generate_with_parsed_source_cache(
+    cached_entry_count = _run_generate_with_parsed_source_cache(
         input_path,
         cached_output,
         input_file_type,
         use_cache=True,
         extra_args=extra_args,
     )
-    _run_generate_with_parsed_source_cache(
+    uncached_entry_count = _run_generate_with_parsed_source_cache(
         input_path,
         uncached_output,
         input_file_type,
@@ -118,4 +119,6 @@ def test_generate_output_matches_with_and_without_parsed_source_cache(
         extra_args=extra_args,
     )
 
+    assert cached_entry_count > 0
+    assert uncached_entry_count == 0
     assert_output(uncached_output.read_text(encoding="utf-8"), cached_output)
