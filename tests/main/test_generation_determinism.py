@@ -101,12 +101,12 @@ def _generate_output_with_hash_seed(input_path: Path, input_file_type: InputFile
             text=True,
             timeout=HASH_SEED_TIMEOUT_SECONDS,
         )
-    except subprocess.TimeoutExpired:  # pragma: no cover
-        pytest.fail(
+    except subprocess.TimeoutExpired as exc:  # pragma: no cover
+        message = (
             f"Generation timed out after {HASH_SEED_TIMEOUT_SECONDS}s for "
-            f"{input_path.as_posix()} with PYTHONHASHSEED={seed}",
-            pytrace=False,
+            f"{input_path.as_posix()} with PYTHONHASHSEED={seed}"
         )
+        raise AssertionError(message) from exc
     return result.stdout
 
 
