@@ -3,13 +3,121 @@ name: Publish
 on:
   push:
     tags:
-      - '**'
+      - '[0-9]*.[0-9]*.[0-9]*'
+  workflow_dispatch:
+    inputs:
+      skip_test_gate:
+        description: "Skip the test-gate check for an emergency release. Run only with --ref <tag>."
+        required: false
+        default: false
+        type: boolean
 
 env:
   dists-artifact-name: python-package-distributions
 
 jobs:
+  verify:
+    name: Verify release gate
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+    steps:
+      - name: Validate release tag
+        env:
+          RELEASE_REF: ${{ github.ref }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ "$RELEASE_REF" != "refs/tags/$RELEASE_TAG" ]; then
+            echo "Publish must run from a release tag ref. Use: gh workflow run publish.yaml --ref <tag>" >&2
+            exit 1
+          fi
+          python3 - <<'PY'
+          import os
+          import re
+          import sys
+
+          tag = os.environ["RELEASE_TAG"]
+          if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+[0-9A-Za-z.+-]*", tag):
+              sys.exit(0)
+          print(f"Release tag {tag!r} must look like 0.66.3 or 0.66.3rc1.", file=sys.stderr)
+          sys.exit(1)
+          PY
+      - name: Verify test-gate passed
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.skip_test_gate == false }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          response="$(
+            gh api "repos/${REPOSITORY}/commits/refs/tags/${RELEASE_TAG}/check-runs?check_name=test-gate&filter=latest"
+          )"
+          runs="$(
+            jq -c '
+              [
+                .check_runs[]?
+                | select(.name == "test-gate")
+                | {
+                    status,
+                    conclusion,
+                    completed_at,
+                    started_at,
+                    head_sha,
+                    html_url,
+                    run_id: (try ((.html_url // "") | capture("/actions/runs/(?<id>[0-9]+)/job/").id) catch "")
+                  }
+              ]
+              | sort_by(.completed_at // .started_at // "")
+              | reverse
+              | .[]
+            ' <<< "$response"
+          )"
+          if [ -z "$runs" ]; then
+            echo "No test-gate check run was found for tag ${RELEASE_TAG}." >&2
+            echo "Wait for Test on main to finish, then re-run Publish. For emergency releases, dispatch with skip_test_gate=true." >&2
+            exit 1
+          fi
+
+          while IFS= read -r run; do
+            run_id="$(jq -r '.run_id' <<< "$run")"
+            head_sha="$(jq -r '.head_sha' <<< "$run")"
+            if [ -z "$run_id" ]; then
+              continue
+            fi
+            metadata="$(gh api "repos/${REPOSITORY}/actions/runs/${run_id}")"
+            if ! jq -e --arg head_sha "$head_sha" \
+              '.name == "Test" and .event == "push" and .head_branch == "main" and .head_sha == $head_sha' \
+              <<< "$metadata" > /dev/null; then
+              continue
+            fi
+            status="$(jq -r '.status' <<< "$run")"
+            conclusion="$(jq -r '.conclusion' <<< "$run")"
+            html_url="$(jq -r '.html_url' <<< "$run")"
+            if [ "$status" != "completed" ]; then
+              echo "test-gate for tag ${RELEASE_TAG} is ${status}; re-run Publish after it completes." >&2
+              exit 1
+            fi
+            if [ "$conclusion" != "success" ]; then
+              echo "test-gate for tag ${RELEASE_TAG} concluded ${conclusion}: ${html_url}" >&2
+              exit 1
+            fi
+            exit 0
+          done <<< "$runs"
+
+          echo "Found test-gate check runs for tag ${RELEASE_TAG}, but none came from the Test workflow push on main." >&2
+          echo "Wait for Test on main to finish, then re-run Publish. For emergency releases, dispatch with skip_test_gate=true." >&2
+          exit 1
+      - name: Report skipped test gate
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_test_gate }}
+        run: echo "::warning::test-gate verification was skipped for this manual release."
+
   build:
+    needs:
+      - verify
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -20,6 +128,8 @@ jobs:
           persist-credentials: false
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: false
       - name: Build package
         run: uv build --python 3.13 --python-preference only-managed --sdist --wheel . --out-dir dist
       - name: Store the distribution packages
@@ -85,3 +195,5 @@ jobs:
           build-args: |
             VERSION=${{ github.ref_name }}
           platforms: linux/amd64,linux/arm64
+          provenance: mode=max
+          sbom: true
