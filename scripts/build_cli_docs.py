@@ -181,6 +181,13 @@ DESC_LENGTH_LONG = 80
 # Regex pattern for extracting CLI options from markdown files
 # Format: <!-- related-cli-options: --option1, --option2, ... -->
 CLI_OPTIONS_TAG_PATTERN = re.compile(r"<!--\s*related-cli-options:\s*([^>]+?)\s*-->", re.IGNORECASE)
+DOC_EXAMPLE_BLOCK_PATTERN = re.compile(
+    r"(?ms)^<!-- BEGIN AUTO-GENERATED DOC EXAMPLE: (?P<example_id>[^>]+) -->\n"
+    r".*?"
+    r"^<!-- END AUTO-GENERATED DOC EXAMPLE: (?P=example_id) -->\n?"
+)
+OPTION_HEADING_PATTERN = re.compile(r"^## `(?P<option>--[^`]+)` \{#(?P<slug>[^}]+)\}\n", re.MULTILINE)
+EXAMPLES_ADMONITION = '??? example "Examples"'
 
 # Emoji mapping for categories
 CATEGORY_EMOJIS = {
@@ -192,6 +199,17 @@ CATEGORY_EMOJIS = {
     OptionCategory.OPENAPI: "📘",
     OptionCategory.GENERAL: "⚙️",
 }
+
+OPTION_CATEGORY_ORDER = (
+    OptionCategory.BASE,
+    OptionCategory.TYPING,
+    OptionCategory.FIELD,
+    OptionCategory.MODEL,
+    OptionCategory.TEMPLATE,
+    OptionCategory.OPENAPI,
+    OptionCategory.GRAPHQL,
+    OptionCategory.GENERAL,
+)
 
 TOPIC_DESCRIPTIONS = {
     OptionTopic.MODEL_CUSTOMIZATION: "Choose model class shape, naming, reuse, and root-model behavior.",
@@ -1027,6 +1045,61 @@ def _generate_option_relationships(
     return "**Option relationships:**\n\n" + "\n".join(relationship_lines) + "\n\n"
 
 
+def _escape_relationship_table_cell(value: str) -> str:
+    """Escape Markdown table delimiters while preserving generated links."""
+    return value.replace("|", "\\|")
+
+
+def _format_relation_condition_cell(option: str, when: Any) -> str:
+    """Format a relationship condition for a summary table cell."""
+    if when is True:
+        return f"`{option}` enabled"
+    if when is False:
+        return f"`{option}` disabled"
+    if when is None:
+        return "Always"
+    return f"`{option}` = `{when}`"
+
+
+def generate_relationship_summary(
+    categories: dict[OptionCategory, dict[str, CLIDocOption]],
+    documented_options: frozenset[str],
+) -> str:
+    """Generate an index-level summary of CLI option relationship metadata."""
+    rows: list[tuple[str, str, str, str, str]] = []
+    for category in OPTION_CATEGORY_ORDER:
+        for option in sorted(categories.get(category, {})):
+            if not (meta := get_option_meta(option)):
+                continue
+            source = _format_option_link(option, documented_options)
+            for relation_kind in OPTION_RELATION_KINDS:
+                for relation in getattr(meta, relation_kind):
+                    target = _format_option_link(relation.option, documented_options)
+                    if relation_value := _format_relation_value(relation.value):
+                        target = f"{target} {relation_value}"
+                    rows.append((
+                        source,
+                        relation_kind.capitalize(),
+                        _format_relation_condition_cell(option, relation.when),
+                        target,
+                        relation.message or "-",
+                    ))
+
+    if not rows:
+        return ""
+
+    md = "## 🔗 Option Relationships\n\n"
+    md += (
+        "These links are generated from CLI option metadata and summarize options that imply, require, "
+        "or conflict with other options.\n\n"
+    )
+    md += "| Source | Kind | Condition | Target | Note |\n"
+    md += "|--------|------|-----------|--------|------|\n"
+    for row in rows:
+        md += "| " + " | ".join(_escape_relationship_table_cell(cell) for cell in row) + " |\n"
+    return md + "\n"
+
+
 def generate_category_page(
     category: OptionCategory,
     options: dict[str, CLIDocOption],
@@ -1277,6 +1350,10 @@ def generate_index_page(
 
     md += "\n"
     md += generate_topic_index(collect_topic_options(categories))
+    documented_options = frozenset(option for options in categories.values() for option in options)
+    if relationship_summary := generate_relationship_summary(categories, documented_options):
+        md += relationship_summary
+
     md += "## All Options\n\n"
     all_options: list[tuple[str, OptionCategory | None]] = []
     for category, options in categories.items():
@@ -1304,6 +1381,43 @@ def generate_index_page(
             md += f"- [`{option}`]({slug_cat}.md#{slug_opt})\n"
 
     return md
+
+
+def _doc_example_blocks_by_option_slug(existing_text: str) -> dict[str, str]:
+    """Return existing injected docs example blocks keyed by CLI option heading slug."""
+    headings = list(OPTION_HEADING_PATTERN.finditer(existing_text))
+    blocks: dict[str, str] = {}
+    for block_match in DOC_EXAMPLE_BLOCK_PATTERN.finditer(existing_text):
+        heading = next((heading for heading in reversed(headings) if heading.end() <= block_match.start()), None)
+        if heading is None:
+            continue
+        blocks[heading.group("slug")] = block_match.group(0).rstrip()
+    return blocks
+
+
+def _replace_option_example_block(generated_text: str, *, option_slug: str, replacement: str) -> str:
+    """Replace a generated option example admonition with a preserved docs example block."""
+    heading_match = re.search(rf"^## `[^`]+` \{{#{re.escape(option_slug)}\}}\n", generated_text, re.MULTILINE)
+    if heading_match is None:
+        return generated_text
+
+    next_heading = OPTION_HEADING_PATTERN.search(generated_text, heading_match.end())
+    section_end = next_heading.start() if next_heading else len(generated_text)
+    example_start = generated_text.find(EXAMPLES_ADMONITION, heading_match.end(), section_end)
+    if example_start == -1:
+        return generated_text
+
+    divider_start = generated_text.find("\n---\n", example_start, section_end)
+    example_end = divider_start if divider_start != -1 else section_end
+    return generated_text[:example_start] + replacement.rstrip() + "\n" + generated_text[example_end:]
+
+
+def preserve_existing_doc_example_sections(generated_text: str, existing_text: str) -> str:
+    """Preserve docs example sections injected after CLI docs generation."""
+    updated_text = generated_text
+    for option_slug, block in _doc_example_blocks_by_option_slug(existing_text).items():
+        updated_text = _replace_option_example_block(updated_text, option_slug=option_slug, replacement=block)
+    return updated_text
 
 
 def read_manual_docs() -> dict[str, str]:
@@ -1412,6 +1526,10 @@ def build_docs(*, check: bool = False) -> int:
     documented_options = frozenset(options_map)
     option_related_pages = scan_docs_for_cli_option_tags(documented_options)
 
+    existing_docs: dict[Path, str] = {}
+    if DOCS_OUTPUT.exists():
+        existing_docs = {path: path.read_text(encoding="utf-8") for path in DOCS_OUTPUT.rglob("*.md")}
+
     if not check:
         DOCS_OUTPUT.mkdir(parents=True, exist_ok=True)
         TOPICS_OUTPUT.mkdir(parents=True, exist_ok=True)
@@ -1428,6 +1546,11 @@ def build_docs(*, check: bool = False) -> int:
         """Write content to file or check if it matches existing content."""
         nonlocal generated, errors
         normalized_content = content.rstrip() + "\n"
+        existing_text = (
+            output_path.read_text(encoding="utf-8") if output_path.exists() else existing_docs.get(output_path)
+        )
+        if existing_text:
+            normalized_content = preserve_existing_doc_example_sections(normalized_content, existing_text)
         if check:
             if not output_path.exists():
                 mismatches.append(f"{label}: file does not exist")

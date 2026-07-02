@@ -463,6 +463,41 @@ def test_topic_page_escapes_markdown_table_descriptions() -> None:
     _fail_if_missing(r"Union\[X, Y\] / Optional\[X\] instead of X \| Y", page, "escaped type syntax")
 
 
+def test_cli_docs_preserve_injected_doc_example_sections() -> None:
+    """CLI docs regeneration should not delete docs examples injected by the examples builder."""
+    generated = (
+        "# CLI Reference\n\n"
+        "## `--input-model` {#input-model}\n\n"
+        '??? example "Examples"\n\n'
+        "    **Output:**\n\n"
+        "---\n\n"
+        "## `--other` {#other}\n\n"
+    )
+    existing = (
+        "# CLI Reference\n\n"
+        "## `--input-model` {#input-model}\n\n"
+        "<!-- BEGIN AUTO-GENERATED DOC EXAMPLE: cli-reference.base-options.input-model.example -->\n"
+        '??? example "Examples"\n\n'
+        "    **Command:**\n"
+        "    ```bash\n"
+        "    datamodel-codegen --input-model tests.data:User\n"
+        "    ```\n"
+        "<!-- END AUTO-GENERATED DOC EXAMPLE: cli-reference.base-options.input-model.example -->\n\n"
+        "---\n\n"
+        "## `--other` {#other}\n\n"
+    )
+
+    preserved = build_cli_docs.preserve_existing_doc_example_sections(generated, existing)
+
+    _fail_if_missing(
+        "<!-- BEGIN AUTO-GENERATED DOC EXAMPLE: cli-reference.base-options.input-model.example -->",
+        preserved,
+        "preserved docs example begin marker",
+    )
+    _fail_if_missing("datamodel-codegen --input-model tests.data:User", preserved, "preserved docs example content")
+    _fail_if_present("    **Output:**\n\n---", preserved, "replaced generated fallback example")
+
+
 def test_option_section_renders_implies_and_requires_metadata() -> None:
     """Generated option docs should include relationship metadata from CLIOptionMeta."""
     section = generate_option_section(
@@ -543,6 +578,46 @@ def test_option_section_renders_conflicts_metadata() -> None:
     assert (
         "- **Conflicts:** [`--custom-file-header-path`](template-customization.md#custom-file-header-path) - "
         "`--custom-file-header` can not be used with `--custom-file-header-path`." in section
+    )
+
+
+def test_relationship_summary_lists_metadata_with_links() -> None:
+    """CLI index relationship summary should list cross-option metadata."""
+    option = CLIDocOption(option_name="--use-missing-sentinel")
+    summary = build_cli_docs.generate_relationship_summary(
+        {OptionCategory.MODEL: {"--use-missing-sentinel": option}},
+        documented_options=frozenset({
+            "--output-model-type",
+            "--target-pydantic-version",
+            "--use-missing-sentinel",
+        }),
+    )
+
+    _fail_if_missing("## 🔗 Option Relationships", summary, "relationship summary heading")
+    _fail_if_missing(
+        "| [`--use-missing-sentinel`](model-customization.md#use-missing-sentinel) "
+        "| Implies | Always | "
+        "[`--target-pydantic-version`](model-customization.md#target-pydantic-version) = `2.12` | - |",
+        summary,
+        "--use-missing-sentinel implies row",
+    )
+    _fail_if_missing(
+        "`--use-missing-sentinel` is only supported for `--output-model-type pydantic_v2.BaseModel`.",
+        summary,
+        "--use-missing-sentinel requires note",
+    )
+
+
+def test_relationship_summary_omits_empty_metadata() -> None:
+    """CLI index relationship summary should not render without relationships."""
+    option = CLIDocOption(option_name="--input")
+    _fail_if_not_equal(
+        build_cli_docs.generate_relationship_summary(
+            {OptionCategory.BASE: {"--input": option}},
+            documented_options=frozenset({"--input"}),
+        ),
+        "",
+        "empty relationship summary",
     )
 
 

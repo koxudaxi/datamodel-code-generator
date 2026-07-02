@@ -29,6 +29,28 @@ Use these pages when you know the workflow area but not the exact option name.
 | [Typing Customization](topics/typing-customization.md) | 20 | Imports, Collection Types, Type Alias, Type Mapping, Type Syntax |
 | [OpenAPI](topics/openapi.md) | 7 | OpenAPI Naming, OpenAPI Paths, OpenAPI Scopes, Read Only Write Only |
 
+## 🔗 Option Relationships
+
+These links are generated from CLI option metadata and summarize options that imply, require, or conflict with other options.
+
+| Source | Kind | Condition | Target | Note |
+|--------|------|-----------|--------|------|
+| [`--use-annotated`](typing-customization.md#use-annotated) | Implies | Always | [`--field-constraints`](field-customization.md#field-constraints) enabled | - |
+| [`--use-specialized-enum`](typing-customization.md#use-specialized-enum) | Requires | Always | [`--target-python-version`](model-customization.md#target-python-version) = `3.11+` | `--use-specialized-enum` requires `--target-python-version` 3.11 or higher. |
+| [`--original-field-name-delimiter`](field-customization.md#original-field-name-delimiter) | Requires | Always | [`--snake-case-field`](field-customization.md#snake-case-field) enabled | `--original-field-name-delimiter` can not be used without `--snake-case-field`. |
+| [`--allow-extra-fields`](model-customization.md#allow-extra-fields) | Implies | Always | [`--extra-fields`](field-customization.md#extra-fields) = `allow` | - |
+| [`--collapse-root-models-name-strategy`](model-customization.md#collapse-root-models-name-strategy) | Requires | Always | [`--collapse-root-models`](model-customization.md#collapse-root-models) enabled | `--collapse-root-models-name-strategy` requires `--collapse-root-models`. |
+| [`--keyword-only`](model-customization.md#keyword-only) | Requires | Always | [`--target-python-version`](model-customization.md#target-python-version) = `3.10+` | `--keyword-only` requires `--target-python-version` 3.10 or higher for dataclasses. |
+| [`--output-model-type`](model-customization.md#output-model-type) | Implies | `--output-model-type` = `msgspec.Struct` | [`--use-annotated`](typing-customization.md#use-annotated) enabled | - |
+| [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) | Implies | Always | [`--naming-strategy`](model-customization.md#naming-strategy) = `parent-prefixed` | - |
+| [`--reuse-scope`](model-customization.md#reuse-scope) | Requires | `--reuse-scope` = `tree` | [`--reuse-model`](model-customization.md#reuse-model) enabled | `--reuse-scope=tree` has no effect without `--reuse-model`. |
+| [`--union-mode`](model-customization.md#union-mode) | Requires | Always | [`--output-model-type`](model-customization.md#output-model-type) = `pydantic_v2.BaseModel` | `--union-mode` is only supported for `--output-model-type pydantic_v2.BaseModel`. |
+| [`--use-missing-sentinel`](model-customization.md#use-missing-sentinel) | Implies | Always | [`--target-pydantic-version`](model-customization.md#target-pydantic-version) = `2.12` | - |
+| [`--use-missing-sentinel`](model-customization.md#use-missing-sentinel) | Requires | Always | [`--output-model-type`](model-customization.md#output-model-type) = `pydantic_v2.BaseModel` | `--use-missing-sentinel` is only supported for `--output-model-type pydantic_v2.BaseModel`. |
+| [`--custom-file-header`](template-customization.md#custom-file-header) | Conflicts | Always | [`--custom-file-header-path`](template-customization.md#custom-file-header-path) | `--custom-file-header` can not be used with `--custom-file-header-path`. |
+| [`--custom-file-header-path`](template-customization.md#custom-file-header-path) | Conflicts | Always | [`--custom-file-header`](template-customization.md#custom-file-header) | `--custom-file-header-path` can not be used with `--custom-file-header`. |
+| [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy) | Requires | Always | [`--all-exports-scope`](general-options.md#all-exports-scope) = `recursive` | `--all-exports-collision-strategy` can only be used with `--all-exports-scope=recursive`. |
+
 ## All Options
 
 **Jump to:** [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [K](#k) · [L](#l) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
