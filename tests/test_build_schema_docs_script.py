@@ -78,6 +78,14 @@ def test_supported_data_types_format_content() -> None:
     )
 
 
+def test_input_format_guide_content() -> None:
+    """Input format guide docs are generated from parser metadata."""
+    assert_output(
+        build_schema_docs.generate_input_format_guide_content(),
+        EXPECTED_SCHEMA_DOCS_PATH / "input_format_guide.txt",
+    )
+
+
 def test_update_docs_target_replaces_marked_section(tmp_path: Path) -> None:
     """Generated docs targets replace only their marked section."""
     docs_path = tmp_path / "doc.md"
