@@ -441,7 +441,7 @@ jobs:
           UV_PYTHON_PREFERENCE: "only-managed"
       - name: Cache W3C XML Schema Test Suite
         id: cache-w3c-xsdtests
-        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .tox/w3c-xsdtests
           key: e2e-xsdtests-7bc3365c652a322f3d762021b3879eb92dae7e30
@@ -504,7 +504,7 @@ jobs:
           UV_PYTHON_PREFERENCE: "only-managed"
       - name: Cache AsyncAPI spec JSON Schemas
         id: cache-asyncapi-spec-json-schemas
-        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .tox/asyncapi-spec-json-schemas
           key: e2e-asyncapi-spec-json-schemas-469c2b2bf5ed88e0cdf1e48975b93a87c710d229
@@ -539,7 +539,7 @@ jobs:
           UV_PYTHON_PREFERENCE: "only-managed"
       - name: Cache Apache Avro
         id: cache-apache-avro
-        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .tox/apache-avro
           key: e2e-apache-avro-9110c693767c1dde2665b2b57939333478b12036
@@ -574,7 +574,7 @@ jobs:
           UV_PYTHON_PREFERENCE: "only-managed"
       - name: Cache Protocol Buffers
         id: cache-protobuf
-        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .tox/protobuf
           key: e2e-protobuf-4376cba55d9e2f44f7e317d9c10e0259d145f8cf
