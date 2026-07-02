@@ -1103,6 +1103,20 @@ def test_builtin_formatter_source_segment_reuses_split_source_lines(monkeypatch:
     assert split_call_count == 1
 
 
+def test_builtin_formatter_source_segment_handles_missing_locations() -> None:
+    """Source extraction should fall back when a node lacks complete location data."""
+    source = "field: str\n"
+    node_without_location = ast.Load()
+    node_without_end_location = ast.Name(id="field", ctx=ast.Load())
+    node_without_end_location.lineno = 1
+    node_without_end_location.col_offset = 0
+    node_without_end_location.end_lineno = None
+    node_without_end_location.end_col_offset = None
+
+    assert builtin_formatter._source_segment_from_cached_lines(source, node_without_location) is None
+    assert builtin_formatter._source_segment_from_cached_lines(source, node_without_end_location) is None
+
+
 def test_apply_builtin_formatter_parenthesizes_short_annotated_default() -> None:
     """Test built-in formatter matches black for short overflowing Annotated defaults."""
     code = (
