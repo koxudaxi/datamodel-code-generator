@@ -129,7 +129,12 @@ def extract_page_info(md_path: Path, url: str, depth: int = 0) -> PageInfo | Non
     if len(desc) > MAX_DESC_LEN:
         desc = desc[: MAX_DESC_LEN - 3] + "..."
     return PageInfo(
-        title=title, path=str(md_path.relative_to(DOCS_DIR)), url=url, description=desc, content=content, depth=depth
+        title=title,
+        path=md_path.relative_to(DOCS_DIR).as_posix(),
+        url=url,
+        description=desc,
+        content=content,
+        depth=depth,
     )
 
 
