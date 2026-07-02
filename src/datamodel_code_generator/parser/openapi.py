@@ -232,7 +232,7 @@ class OpenAPIParser(JsonSchemaParser):
         """Initialize the OpenAPI parser with extensive configuration options."""
         if config is None and options.get("wrap_string_literal") is None:
             options["wrap_string_literal"] = False
-        super().__init__(source=source, config=config, **options)  # type: ignore[arg-type]
+        super().__init__(source=source, config=config, **options)
         self.open_api_scopes: list[OpenAPIScope] = self.config.openapi_scopes or [OpenAPIScope.Schemas]  # ty: ignore
         self.include_path_parameters: bool = self.config.include_path_parameters  # ty: ignore
         self.use_status_code_in_response_name: bool = self.config.use_status_code_in_response_name  # ty: ignore

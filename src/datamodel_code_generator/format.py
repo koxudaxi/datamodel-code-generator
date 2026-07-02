@@ -398,7 +398,7 @@ class CodeFormatter:
                 **black_kwargs,
             )
         else:
-            self.black_mode = None  # type: ignore[assignment]
+            self.black_mode = None
 
         if use_isort:
             isort = _get_isort()

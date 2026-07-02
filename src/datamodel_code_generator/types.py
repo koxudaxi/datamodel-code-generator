@@ -498,7 +498,7 @@ class Nullable(Protocol):
 class DataType(_BaseModel):
     """Represents a type in generated code with imports and references."""
 
-    model_config = ConfigDict(  # ty: ignore
+    model_config = ConfigDict(
         extra="forbid",
         revalidate_instances="never",
         defer_build=True,

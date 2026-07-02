@@ -643,7 +643,7 @@ class JsonSchemaObject(BaseModel):
     is_boolean_schema_false: bool = Field(default=False, exclude=True)
     extras: dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
     discriminator: Optional[Union[Discriminator, str]] = None  # noqa: UP007, UP045
-    model_config = ConfigDict(  # ty: ignore
+    model_config = ConfigDict(
         arbitrary_types_allowed=True,
         ignored_types=(cached_property,),
         defer_build=True,
@@ -842,11 +842,7 @@ EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA: set[str] = {
     "writeOnly",
 }
 
-EXCLUDE_FIELD_KEYS = (
-    set(JsonSchemaObject.get_fields())  # ty: ignore
-    - DEFAULT_FIELD_KEYS
-    - EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA
-) | {
+EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.get_fields()) - DEFAULT_FIELD_KEYS - EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA) | {
     "$id",
     "$ref",
     "$recursiveRef",
@@ -6338,7 +6334,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         schema_object_type: type[JsonSchemaObject],
     ) -> tuple[frozenset[str], frozenset[str]]:
         keys = {"definitions", "$defs"}
-        for name, field in schema_object_type.get_fields().items():  # ty: ignore
+        for name, field in schema_object_type.get_fields().items():
             keys.add(name)
             if alias := getattr(field, "alias", None):
                 keys.add(alias)

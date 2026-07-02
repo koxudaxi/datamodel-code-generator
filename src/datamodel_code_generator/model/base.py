@@ -263,7 +263,7 @@ class ConstraintsBase(_BaseModel):
 
     unique_items: Optional[bool] = Field(None, alias="uniqueItems")  # noqa: UP045
     _exclude_fields: ClassVar[set[str]] = {"has_constraints", "_exclude_unset_dump"}
-    model_config = ConfigDict(  # ty: ignore
+    model_config = ConfigDict(
         arbitrary_types_allowed=True,
         ignored_types=(cached_property,),
         defer_build=True,
@@ -312,7 +312,7 @@ class DataModelFieldBase(_BaseModel):
     _FIELD_IMPORTS_CACHE_MAX_SIZE: ClassVar[int] = 4096
     _field_imports_cache: ClassVar[dict[tuple[Any, ...], tuple[Import, ...]]] = {}
 
-    model_config = ConfigDict(  # ty: ignore
+    model_config = ConfigDict(
         arbitrary_types_allowed=True,
         defer_build=True,
     )

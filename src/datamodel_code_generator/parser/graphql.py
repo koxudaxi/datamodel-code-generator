@@ -50,7 +50,7 @@ if TYPE_CHECKING:
 try:  # graphql-core < 3.2.7
     graphql_resolver_kind = graphql.type.introspection.TypeResolvers().kind  # ty: ignore
 except AttributeError:
-    graphql_resolver_kind = graphql.type.introspection.TypeFields.kind  # ty: ignore
+    graphql_resolver_kind = graphql.type.introspection.TypeFields.kind
 
 
 def build_graphql_schema(schema_str: str) -> graphql.GraphQLSchema:
@@ -179,7 +179,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
         """Return whether a GraphQL input field defines a schema default."""
         return isinstance(field, graphql.GraphQLInputField) and field.default_value != graphql.pyutils.Undefined
 
-    def parse_scalar(self, scalar_graphql_object: graphql.GraphQLScalarType) -> None:  # ty: ignore
+    def parse_scalar(self, scalar_graphql_object: graphql.GraphQLScalarType) -> None:
         """Parse a GraphQL scalar type and add it to results."""
         self.generation_store.register_model(
             self.data_model_scalar_type(
@@ -199,7 +199,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             return len(obj.values) == 1
         return False
 
-    def parse_enum(self, enum_object: graphql.GraphQLEnumType) -> None:  # ty: ignore
+    def parse_enum(self, enum_object: graphql.GraphQLEnumType) -> None:
         """Parse a GraphQL enum type and add it to results."""
         if self.ignore_enum_constraints:
             return self.parse_enum_as_str_type(enum_object)
@@ -439,19 +439,19 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
         )
         self.generation_store.register_model(data_model_type)
 
-    def parse_interface(self, interface_graphql_object: graphql.GraphQLInterfaceType) -> None:  # ty: ignore
+    def parse_interface(self, interface_graphql_object: graphql.GraphQLInterfaceType) -> None:
         """Parse a GraphQL interface type and add it to results."""
         self.parse_object_like(interface_graphql_object)
 
-    def parse_object(self, graphql_object: graphql.GraphQLObjectType) -> None:  # ty: ignore
+    def parse_object(self, graphql_object: graphql.GraphQLObjectType) -> None:
         """Parse a GraphQL object type and add it to results."""
         self.parse_object_like(graphql_object)
 
-    def parse_input_object(self, input_graphql_object: graphql.GraphQLInputObjectType) -> None:  # ty: ignore
+    def parse_input_object(self, input_graphql_object: graphql.GraphQLInputObjectType) -> None:
         """Parse a GraphQL input object type and add it to results."""
         self.parse_object_like(input_graphql_object)
 
-    def parse_union(self, union_object: graphql.GraphQLUnionType) -> None:  # ty: ignore
+    def parse_union(self, union_object: graphql.GraphQLUnionType) -> None:
         """Parse a GraphQL union type and add it to results."""
         fields = [
             self.data_model_field_type(
