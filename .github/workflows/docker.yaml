@@ -1,0 +1,58 @@
+name: Docker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .github/actions/smoke-docker-image/action.yml
+      - .github/workflows/docker.yaml
+      - .github/workflows/publish.yaml
+  pull_request:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .github/actions/smoke-docker-image/action.yml
+      - .github/workflows/docker.yaml
+      - .github/workflows/publish.yaml
+  workflow_dispatch:
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Resolve latest release version
+        id: release
+        run: |
+          set -euo pipefail
+          version="$(
+            curl -fsSL https://pypi.org/pypi/datamodel-code-generator/json \
+              | python3 -c 'import json, sys; print(json.load(sys.stdin)["info"]["version"])'
+          )"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+      - name: Build Docker image
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: .
+          load: true
+          tags: datamodel-code-generator:smoke
+          build-args: |
+            VERSION=${{ steps.release.outputs.version }}
+      - name: Smoke test Docker image
+        uses: ./.github/actions/smoke-docker-image
+        with:
+          image: datamodel-code-generator:smoke

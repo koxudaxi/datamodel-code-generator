@@ -1,0 +1,34 @@
+name: Smoke test Docker image
+description: Generate a small model with a datamodel-code-generator Docker image.
+
+inputs:
+  image:
+    description: Docker image tag to smoke test.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Generate and validate model
+      shell: bash
+      env:
+        SMOKE_IMAGE: ${{ inputs.image }}
+        SMOKE_WORKSPACE: ${{ github.workspace }}
+      run: |
+        set -euo pipefail
+
+        output="$(
+          docker run --rm \
+            --volume "$SMOKE_WORKSPACE/tests/data/jsonschema:/data:ro" \
+            "$SMOKE_IMAGE" \
+            --input /data/simple_string.json \
+            --input-file-type jsonschema \
+            --disable-timestamp
+        )"
+
+        printf '%s\n' "$output" | grep -Fqx "class Model(BaseModel):"
+        printf '%s\n' "$output" | grep -Fqx "    s: str"
+        if printf '%s\n' "$output" | grep -Fq "timestamp:"; then
+          echo "generated output contains a timestamp" >&2
+          exit 1
+        fi
