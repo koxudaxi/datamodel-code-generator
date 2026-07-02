@@ -64,7 +64,7 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
     """Extend imports property with msgspec-specific imports."""
     original_imports: property = cls.imports
 
-    @wraps(original_imports.fget)  # ty: ignore
+    @wraps(original_imports.fget)
     def new_imports(self: DataModelFieldBaseT) -> tuple[Import, ...]:
         if self.extras.get("is_classvar"):
             return ()
@@ -84,12 +84,12 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
             and (self.default is None or self.default is UNDEFINED)
         ):
             extra_imports.append(IMPORT_MSGSPEC_UNSET)
-        imports = original_imports.fget(self)  # ty: ignore
+        imports = original_imports.fget(self)
         if isinstance(self, DataModelField) and self._not_required and not self.nullable and self.data_type.is_optional:
             imports = tuple(import_ for import_ in imports if import_ != IMPORT_OPTIONAL)
         return chain_as_tuple(imports, extra_imports)
 
-    cls.imports = property(new_imports)  # ty: ignore
+    cls.imports = property(new_imports)
     return cls
 
 

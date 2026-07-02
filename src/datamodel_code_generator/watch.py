@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 def _get_watchfiles() -> Any:
     """Lazily import watchfiles."""
     try:
-        import watchfiles  # noqa: PLC0415  # ty: ignore
+        import watchfiles  # noqa: PLC0415
     except ImportError as exc:
         msg = "Please run `pip install 'datamodel-code-generator[watch]'` to use watch mode"
         raise Exception(msg) from exc  # noqa: TRY002

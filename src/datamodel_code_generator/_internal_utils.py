@@ -49,10 +49,10 @@ def to_hashable(item: Any) -> HashableComparable:
             )
         )
     if isinstance(item, set):
-        return frozenset(to_hashable(i) for i in item)  # type: ignore[return-value]
+        return frozenset(to_hashable(i) for i in item)
     if isinstance(item, BaseModel):
         return to_hashable(item.model_dump())
-    return item  # type: ignore[return-value]
+    return item
 
 
 @runtime_checkable

@@ -164,7 +164,7 @@ def _execute_multi_module(
             if previous_module is _MISSING_MODULE:
                 sys.modules.pop(created_module_name, None)
             else:
-                sys.modules[created_module_name] = previous_module  # type: ignore[assignment]
+                sys.modules[created_module_name] = previous_module
 
 
 def _should_extract_model_name(name: str, *, include_private: bool = False) -> bool:

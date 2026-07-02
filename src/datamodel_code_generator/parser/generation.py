@@ -196,7 +196,7 @@ class _GenerationModelList(list["DataModel"]):
         index: SupportsIndex | slice,
         item: Any | Iterable[Any],
     ) -> None:  # ty: ignore[invalid-method-override]
-        super().__setitem__(index, item)  # type: ignore[arg-type]
+        super().__setitem__(index, item)
         self._invalidate()
 
     @overload

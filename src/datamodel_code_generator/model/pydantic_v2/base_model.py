@@ -80,7 +80,7 @@ class Constraints(_Constraints):
     regex: Optional[str] = Field(None, alias="regex")  # noqa: UP045
     pattern: Optional[str] = Field(None, alias="pattern")  # noqa: UP045
 
-    @model_validator(mode="before")  # ty: ignore
+    @model_validator(mode="before")
     def validate_min_max_items(cls, values: Any) -> dict[str, Any]:  # noqa: N805
         """Validate and convert minItems/maxItems to minLength/maxLength."""
         if not isinstance(values, dict):  # pragma: no cover
@@ -202,7 +202,7 @@ class DataModelField(_PydanticBaseDataModelField):
         "pattern",
     }
     _DEFAULT_FIELD_KEYS: ClassVar[frozenset[str]] = _PYDANTIC_V2_DEFAULT_FIELD_KEYS
-    constraints: Optional[Constraints] = None  # ty: ignore  # noqa: UP045
+    constraints: Optional[Constraints] = None  # noqa: UP045
     can_have_extra_keys: ClassVar[bool] = False
     _PYDANTIC_EXTRA_FIELD_NAME: ClassVar[str] = "__pydantic_extra__"
 
@@ -655,7 +655,7 @@ class BaseModel(BaseModelBase):
         if config_parameters:
             from datamodel_code_generator.model.pydantic_v2 import ConfigDict  # noqa: PLC0415
 
-            self.extra_template_data["config"] = ConfigDict.model_validate(config_parameters)  # ty: ignore
+            self.extra_template_data["config"] = ConfigDict.model_validate(config_parameters)
             self.extra_template_data[_CONFIG_ITEMS_TEMPLATE_DATA_KEY] = _config_dict_items(
                 self.extra_template_data["config"]
             )
@@ -743,7 +743,7 @@ class BaseModel(BaseModelBase):
             self._additional_imports.append(Import.from_full_path(function_path))
 
         if prepared_validators:
-            self.extra_template_data["prepared_validators"] = prepared_validators  # ty: ignore
+            self.extra_template_data["prepared_validators"] = prepared_validators
             self._additional_imports.append(IMPORT_FIELD_VALIDATOR)
             self._additional_imports.append(IMPORT_ANY)
 

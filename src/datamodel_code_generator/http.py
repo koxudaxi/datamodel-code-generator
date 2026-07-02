@@ -490,7 +490,7 @@ def _get_http_response(  # noqa: PLR0913
             headers=headers,
             verify=verify,
             follow_redirects=follow_redirects,
-            params=query_parameters,  # ty: ignore
+            params=query_parameters,
             timeout=timeout,
         )
 
@@ -500,7 +500,7 @@ def _get_http_response(  # noqa: PLR0913
             url,
             headers=headers,
             follow_redirects=follow_redirects,
-            params=query_parameters,  # ty: ignore
+            params=query_parameters,
         )
 
 

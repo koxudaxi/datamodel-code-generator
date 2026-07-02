@@ -552,7 +552,7 @@ def _alias_base_class_imports(
             continue
         old_import = base_class.import_
         aliased_import = aliased_imports[key]
-        base_class.type = aliased_import.alias  # type: ignore[assignment]
+        base_class.type = aliased_import.alias
         base_class.import_ = aliased_import
         for i, additional_import in enumerate(model._additional_imports):  # pragma: no branch  # noqa: SLF001
             if (
@@ -1211,7 +1211,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         return getattr(module, cls._config_class_name)
 
     @classmethod
-    def _create_default_config(cls, options: ParserConfigDict) -> ParserConfigT:  # ty: ignore
+    def _create_default_config(cls, options: ParserConfigDict) -> ParserConfigT:
         """Create a default config from options.
 
         Uses _get_config_class() to determine which config class to instantiate.
@@ -1663,7 +1663,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 return None
             if isinstance(value, list):
                 seen: set[str] = set()
-                result = [v for v in value if isinstance(v, str) and v and v not in seen and not seen.add(v)]  # type: ignore[func-returns-value]
+                result = [v for v in value if isinstance(v, str) and v and v not in seen and not seen.add(v)]
                 if not result:
                     return None
                 return result[0] if len(result) == 1 else result
@@ -2052,7 +2052,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 break
 
                     if not discriminator_values and mapping:
-                        _check_discriminator_mapping_paths(  # ty: ignore
+                        _check_discriminator_mapping_paths(
                             discriminator_model,
                             mapping,
                             discriminator_values,
@@ -2987,7 +2987,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 key = (data_type.import_.from_, data_type.import_.import_)
                 if key in aliased_imports:
                     aliased_import = aliased_imports[key]
-                    data_type.type = aliased_import.alias  # type: ignore[assignment]
+                    data_type.type = aliased_import.alias
                     data_type.import_ = aliased_import
 
         for model in models:

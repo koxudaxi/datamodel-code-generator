@@ -283,7 +283,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
         arbitrary_types_allowed=True,
         protected_namespaces=(),
         defer_build=True,
-    )  # ty: ignore
+    )
 
     def get(self, item: str) -> Any:  # pragma: no cover
         """Get attribute value by name."""
@@ -291,7 +291,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
 
     def __getitem__(self, item: str) -> Any:  # pragma: no cover
         """Get item by key."""
-        return self.get(item)  # ty: ignore
+        return self.get(item)
 
     @classmethod
     def get_fields(cls) -> dict[str, Any]:
@@ -384,7 +384,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
             value_error_name="http_query_parameters",
         )
 
-    @model_validator(mode="before")  # ty: ignore
+    @model_validator(mode="before")
     def validate_additional_imports(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
         """Validate and split additional imports."""
         additional_imports = values.get("additional_imports")
@@ -392,7 +392,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
             values["additional_imports"] = additional_imports.split(",")
         return values
 
-    @model_validator(mode="before")  # ty: ignore
+    @model_validator(mode="before")
     def validate_custom_formatters(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
         """Validate and split custom formatters."""
         custom_formatters = values.get("custom_formatters")
@@ -400,7 +400,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
             values["custom_formatters"] = custom_formatters.split(",")
         return values
 
-    @model_validator(mode="before")  # ty: ignore
+    @model_validator(mode="before")
     @classmethod
     def validate_naming_strategy_migration(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Migrate deprecated --parent-scoped-naming to --naming-strategy."""
@@ -409,7 +409,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
             warn_deprecated("cli.parent-scoped-naming", stacklevel=2)
         return values
 
-    @model_validator(mode="before")  # ty: ignore
+    @model_validator(mode="before")
     @classmethod
     def validate_allow_extra_fields_migration(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Migrate deprecated --allow-extra-fields to --extra-fields."""
@@ -418,7 +418,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
             warn_deprecated("cli.allow-extra-fields", stacklevel=2)
         return values
 
-    @model_validator(mode="before")  # ty: ignore
+    @model_validator(mode="before")
     def validate_class_decorators(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
         """Validate and split class decorators, adding @ prefix if missing."""
         class_decorators = values.get("class_decorators")
@@ -433,7 +433,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
             values["class_decorators"] = decorators
         return values
 
-    @model_validator(mode="before")  # ty: ignore
+    @model_validator(mode="before")
     def validate_external_ref_mapping(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
         """Parse external_ref_mapping from list of KEY=VALUE strings to dict."""
         raw = values.get("external_ref_mapping")
@@ -470,16 +470,16 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
         "`--all-exports-collision-strategy` can only be used with `--all-exports-scope=recursive`."
     )
 
-    @model_validator(mode="after")  # ty: ignore
-    def validate_output_datetime_class(self: Self) -> Self:  # ty: ignore
+    @model_validator(mode="after")
+    def validate_output_datetime_class(self: Self) -> Self:
         """Validate output datetime class compatibility."""
         _validate_output_datetime_class(self.output_model_type, self.output_datetime_class)
         return self
 
     __validate_original_field_name_delimiter_err: ClassVar[str] = ORIGINAL_FIELD_NAME_DELIMITER_ERROR
 
-    @model_validator(mode="after")  # ty: ignore
-    def validate_alias_generator(self: Self) -> Self:  # ty: ignore
+    @model_validator(mode="after")
+    def validate_alias_generator(self: Self) -> Self:
         """Validate alias generator compatibility."""
         _validate_alias_generator(self.output_model_type, self.alias_generator)
         return self
@@ -489,15 +489,15 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
         if self.original_field_name_delimiter is not None and not self.snake_case_field:
             raise Error(self.__validate_original_field_name_delimiter_err)
 
-    @model_validator(mode="after")  # ty: ignore
-    def validate_custom_file_header(self: Self) -> Self:  # ty: ignore
+    @model_validator(mode="after")
+    def validate_custom_file_header(self: Self) -> Self:
         """Validate custom file header options are mutually exclusive."""
         if self.custom_file_header and self.custom_file_header_path:
             raise Error(self.__validate_custom_file_header_err)
         return self
 
-    @model_validator(mode="after")  # ty: ignore
-    def validate_keyword_only(self: Self) -> Self:  # ty: ignore
+    @model_validator(mode="after")
+    def validate_keyword_only(self: Self) -> Self:
         """Validate keyword-only compatibility with target Python version."""
         output_model_type: DataModelType = self.output_model_type
         python_target: PythonVersion = self.target_python_version
@@ -509,15 +509,15 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
             raise Error(self.__validate_keyword_only_err)  # pragma: no cover
         return self
 
-    @model_validator(mode="after")  # ty: ignore
-    def validate_root(self: Self) -> Self:  # ty: ignore
+    @model_validator(mode="after")
+    def validate_root(self: Self) -> Self:
         """Validate root model configuration."""
         if self.use_annotated:
             self.field_constraints = True
         return self
 
-    @model_validator(mode="after")  # ty: ignore
-    def validate_all_exports_collision_strategy(self: Self) -> Self:  # ty: ignore
+    @model_validator(mode="after")
+    def validate_all_exports_collision_strategy(self: Self) -> Self:
         """Validate all_exports_collision_strategy requires recursive scope."""
         if self.all_exports_collision_strategy is not None and self.all_exports_scope != AllExportsScope.Recursive:
             raise Error(self.__validate_all_exports_collision_strategy_err)
@@ -525,7 +525,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
 
     @field_validator("input_model", mode="before")
     @classmethod
-    def coerce_input_model_to_list(cls, v: str | list[str] | None) -> list[str] | None:  # ty: ignore
+    def coerce_input_model_to_list(cls, v: str | list[str] | None) -> list[str] | None:
         """Convert string input_model to list for backwards compatibility."""
         if isinstance(v, str):
             return [v]
@@ -533,7 +533,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
 
     @field_validator("class_name_affix_scope", mode="before")
     @classmethod
-    def validate_class_name_affix_scope(cls, v: str | ClassNameAffixScope | None) -> ClassNameAffixScope:  # ty: ignore
+    def validate_class_name_affix_scope(cls, v: str | ClassNameAffixScope | None) -> ClassNameAffixScope:
         """Convert string to ClassNameAffixScope enum."""
         if v is None:  # pragma: no cover
             return ClassNameAffixScope.All
@@ -543,7 +543,7 @@ class Config(BaseGenerateConfig):  # noqa: PLR0904
 
     @field_validator("schema_validator_base_class_name")
     @classmethod
-    def validate_schema_validator_base_class_name(cls, v: str | None) -> str | None:  # ty: ignore
+    def validate_schema_validator_base_class_name(cls, v: str | None) -> str | None:
         """Validate schema validator base class name."""
         if v is None:  # pragma: no cover
             return v

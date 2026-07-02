@@ -128,7 +128,7 @@ class Reference(_BaseModel):
     children: list[ReferenceChild] = Field(default_factory=list)
     _exclude_fields: ClassVar[set[str]] = {"children"}
 
-    @model_validator(mode="before")  # ty: ignore
+    @model_validator(mode="before")
     def validate_original_name(cls, values: Any) -> Any:  # noqa: N805
         """Assign name to original_name if original_name is empty."""
         if not isinstance(values, dict):  # pragma: no cover
@@ -140,7 +140,7 @@ class Reference(_BaseModel):
         values["original_name"] = values.get("name", original_name)
         return values
 
-    model_config = ConfigDict(  # ty: ignore
+    model_config = ConfigDict(
         arbitrary_types_allowed=True,
         ignored_types=(cached_property,),
         revalidate_instances="never",
@@ -1364,7 +1364,7 @@ def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
     singular_name = _get_inflect_engine().singular_noun(cast("inflect.Word", name))  # ty: ignore
     if singular_name is False:
         singular_name = f"{name}{suffix}"
-    return singular_name  # ty: ignore
+    return singular_name
 
 
 @lru_cache(maxsize=4096)
