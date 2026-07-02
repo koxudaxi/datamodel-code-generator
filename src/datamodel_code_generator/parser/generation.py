@@ -654,7 +654,9 @@ class GenerationStore:  # noqa: PLR0904
 
     def replace_data_type_ref(self, data_type: DataType, new_reference: Reference | None) -> None:
         """Set ``data_type.reference`` while preserving reverse reference links."""
+        owner_model = self._owner_model_for_data_type(data_type)
         self._replace_data_type_reference(data_type, new_reference)
+        self._clear_imports_cache_for_model(owner_model)
         self._invalidate_after_mutation()
 
     def detach_data_type_ref(self, data_type: DataType) -> None:
@@ -679,6 +681,7 @@ class GenerationStore:  # noqa: PLR0904
             model.set_reference_path(new_path)
         if new_file_path is not None:
             model.file_path = new_file_path
+        self._clear_imports_cache_for_model(model)
         self._invalidate_after_mutation()
 
     def rename_model(
@@ -697,7 +700,9 @@ class GenerationStore:  # noqa: PLR0904
 
     def replace_field_type(self, field_: DataModelFieldBase, new_data_type: DataType) -> None:
         """Replace a field's data type and invalidate derived facts."""
+        owner_model = self._owner_model_for_field(field_)
         field_.replace_data_type(new_data_type)
+        self._clear_imports_cache_for_model(owner_model)
         self._invalidate_after_mutation()
 
     def replace_nested_data_type(
@@ -715,36 +720,54 @@ class GenerationStore:  # noqa: PLR0904
 
     def set_nested_data_types(self, data_type: DataType, nested_data_types: Iterable[DataType]) -> None:
         """Replace nested data types and invalidate derived facts."""
+        owner_model = self._owner_model_for_data_type(data_type)
         for nested_data_type in data_type.data_types:
             nested_data_type.parent = None
         data_type.data_types = list(nested_data_types)
         for nested_data_type in data_type.data_types:
             nested_data_type.parent = data_type
+        self._clear_imports_cache_for_model(owner_model)
         self._invalidate_after_mutation()
 
     def append_field(self, model: DataModel, field_: DataModelFieldBase) -> None:
         """Append a field to ``model`` and invalidate derived facts."""
+        field_.parent = model
         model.fields.append(field_)
+        self._clear_imports_cache_for_model(model)
         self._invalidate_after_mutation()
 
     def insert_field(self, model: DataModel, index: int, field_: DataModelFieldBase) -> None:
         """Insert a field into ``model`` and invalidate derived facts."""
+        field_.parent = model
         model.fields.insert(index, field_)
+        self._clear_imports_cache_for_model(model)
         self._invalidate_after_mutation()
 
     def remove_field(self, model: DataModel, field_: DataModelFieldBase) -> None:
         """Remove a field from ``model`` and invalidate derived facts."""
         model.fields.remove(field_)
+        if field_.parent is model:
+            field_.parent = None
+        self._clear_imports_cache_for_model(model)
         self._invalidate_after_mutation()
 
     def set_fields(self, model: DataModel, fields: Iterable[DataModelFieldBase]) -> None:
         """Replace all fields on ``model`` and invalidate derived facts."""
+        old_fields = model.fields
         model.fields = list(fields)
+        new_field_ids = {id(field_) for field_ in model.fields}
+        for field_ in old_fields:
+            if field_.parent is model and id(field_) not in new_field_ids:
+                field_.parent = None
+        for field_ in model.fields:
+            field_.parent = model
+        self._clear_imports_cache_for_model(model)
         self._invalidate_after_mutation()
 
     def set_base_classes(self, model: DataModel, base_classes: Iterable[BaseClassDataType]) -> None:
         """Replace ``model`` base classes and invalidate derived facts."""
         model.base_classes = list(base_classes)
+        self._clear_imports_cache_for_model(model)
         self._invalidate_after_mutation()
 
     def reset_base_classes(self, model: DataModel) -> None:
@@ -754,7 +777,13 @@ class GenerationStore:  # noqa: PLR0904
 
     def redirect_reference_users(self, old_reference: Reference, new_reference: Reference) -> None:
         """Redirect every user of ``old_reference`` to ``new_reference``."""
+        owner_models = [
+            self._owner_model_for_data_type(child)
+            for child in old_reference.children[:]
+            if hasattr(child, "replace_reference")
+        ]
         self._replace_reference_children(old_reference, new_reference)
+        self._clear_imports_cache_for_models(owner_models)
         self._invalidate_after_mutation()
 
     def redirect_model_reference_users(
@@ -765,9 +794,12 @@ class GenerationStore:  # noqa: PLR0904
     ) -> None:
         """Redirect ``model`` reference users owned by ``models`` to ``new_reference``."""
         model_ids = {id(candidate) for candidate in models}
+        owner_models = []
         for child in model.reference.children[:]:
             if id(_outermost_parent(child)) in model_ids and hasattr(child, "replace_reference"):
+                owner_models.append(self._owner_model_for_data_type(child))
                 child.replace_reference(new_reference)
+        self._clear_imports_cache_for_models(owner_models)
         self._invalidate_after_mutation()
 
     def collapse_root_data_type(self, data_type: DataType, inner_reference: Reference) -> None:
@@ -827,6 +859,29 @@ class GenerationStore:  # noqa: PLR0904
 
     def _invalidate_after_mutation(self) -> None:
         self._invalidate()
+
+    @staticmethod
+    def _owner_model_for_field(field_: DataModelFieldBase) -> DataModel | None:
+        owner_model = getattr(field_, "parent", None)
+        return owner_model if hasattr(owner_model, "clear_imports_cache") else None
+
+    @staticmethod
+    def _owner_model_for_data_type(data_type: DataType) -> DataModel | None:
+        owner_model = _outermost_parent(data_type)
+        return owner_model if hasattr(owner_model, "clear_imports_cache") else None
+
+    @staticmethod
+    def _clear_imports_cache_for_model(model: DataModel | None) -> None:
+        if model is not None:
+            model.clear_imports_cache()
+
+    def _clear_imports_cache_for_models(self, models: Iterable[DataModel | None]) -> None:
+        seen: set[int] = set()
+        for model in models:
+            if model is None or id(model) in seen:
+                continue
+            seen.add(id(model))
+            self._clear_imports_cache_for_model(model)
 
     def __iter__(self) -> Iterator[DataModel]:
         return iter(self.models)
