@@ -39,9 +39,7 @@ MISSING_INPUT_CASES: tuple[tuple[InputFileTypeLiteral | None, str], ...] = (
     ("jsonschema", TRACEBACK_HEADER),
 )
 
-TOLERATED_CASES: tuple[tuple[str, InputFileTypeLiteral], ...] = (
-    ("dangling_local_ref.json", "jsonschema"),
-)
+TOLERATED_CASES: tuple[tuple[str, InputFileTypeLiteral], ...] = (("dangling_local_ref.json", "jsonschema"),)
 
 
 def _input_file_type_id(input_file_type: InputFileTypeLiteral | None) -> str:
