@@ -154,7 +154,9 @@ INPUT_AUTO_DETECTION_NOTES: dict[InputFileType, str] = {
     InputFileType.Json: "Mapping that is not a schema/OpenAPI/AsyncAPI/Avro document",
     InputFileType.Yaml: "Explicit for YAML sample data",
     InputFileType.Dict: "Explicit for mapping input",
-    InputFileType.CSV: "Fallback when text cannot parse as YAML",
+    InputFileType.CSV: (
+        "Detected from CSV-like text with consistent comma counts across non-empty lines or explicit `csv`"
+    ),
     InputFileType.GraphQL: "Explicit only",
 }
 

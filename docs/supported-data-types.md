@@ -40,7 +40,7 @@ The tables below are generated from the input type enum, parser routing code, sc
 | MCP tool schemas | `mcp-tools` | `JsonSchemaParser after MCP conversion` | Converted to JSON Schema; `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | Explicit only |
 | JSON data | `json` | `JsonSchemaParser after genson conversion` | Converted to JSON Schema; `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | Mapping that is not a schema/OpenAPI/AsyncAPI/Avro document |
 | YAML data | `yaml` | `JsonSchemaParser after genson conversion` | Converted to JSON Schema; `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | Explicit for YAML sample data |
-| CSV data | `csv` | `JsonSchemaParser after genson conversion` | Converted to JSON Schema; `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | Fallback when text cannot parse as YAML |
+| CSV data | `csv` | `JsonSchemaParser after genson conversion` | Converted to JSON Schema; `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | Detected from CSV-like text with consistent comma counts across non-empty lines or explicit `csv` |
 | Python dictionary data | `dict` | `JsonSchemaParser after genson conversion` | Converted to JSON Schema; `draft-04`, `draft-06`, `draft-07`, `2019-09`, `2020-12`, `auto` | Explicit for mapping input |
 | Python input model | `--input-model` | `JsonSchemaParser` after Python schema conversion | JSON Schema after conversion; dict input can select another explicit schema type | Explicit only |
 

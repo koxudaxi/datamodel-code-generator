@@ -12,6 +12,8 @@ from tests.conftest import create_assert_file_content
 from tests.main.conftest import (
     CSV_DATA_PATH,
     EXPECTED_CSV_PATH,
+    JSON_DATA_PATH,
+    YAML_DATA_PATH,
     run_main_and_assert,
 )
 
@@ -30,6 +32,41 @@ def test_csv_file(output_file: Path) -> None:
         input_file_type="csv",
         assert_func=assert_file_content,
         expected_file="csv_file_simple.py",
+    )
+
+
+def test_csv_file_auto_detection(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test CSV file input is detected by auto input type."""
+    run_main_and_assert(
+        input_path=CSV_DATA_PATH / "simple.csv",
+        output_path=output_file,
+        assert_func=assert_file_content,
+        expected_file="csv_file_simple.py",
+        capsys=capsys,
+        expected_stderr_contains="The input file type was determined to be: csv",
+    )
+
+
+@pytest.mark.parametrize(
+    "input_path",
+    [
+        JSON_DATA_PATH / "broken.json",
+        YAML_DATA_PATH / "broken.yaml",
+    ],
+)
+def test_auto_detection_rejects_malformed_non_csv_input(
+    input_path: Path,
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test auto input type does not treat malformed JSON/YAML as CSV data."""
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Please specify the input file type explicitly with --input-file-type option.",
+        output_should_not_exist=True,
     )
 
 

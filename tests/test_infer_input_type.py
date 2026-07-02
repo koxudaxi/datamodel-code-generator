@@ -10,7 +10,14 @@ from pathlib import Path
 
 import pytest
 
-from datamodel_code_generator import Error, InputFileType, _is_json_text, _is_xml_text, infer_input_type
+from datamodel_code_generator import (
+    Error,
+    InputFileType,
+    _is_json_text,
+    _is_xml_text,
+    _looks_like_csv_text,
+    infer_input_type,
+)
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 HEAVY_INFERENCE_MODULES = (
@@ -164,6 +171,56 @@ def test_is_json_text() -> None:
     assert not _is_json_text("")
     assert not _is_json_text(" \n\t\ufeff")
     assert not _is_json_text("name: value")
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("id,name\n1,taro\n", True),
+        ("\n id, name \n 1, taro \n", True),
+        ("id,name\n", False),
+        ("name\nvalue\n", False),
+        ("id,name,tel\n1,taro\n", False),
+        ("id,name\n1,taro\n2,jiro,extra\n", False),
+        ("", False),
+    ],
+)
+def test_looks_like_csv_text(text: str, expected: bool) -> None:
+    """Test bounded CSV text detection for auto inference fallback."""
+    assert _looks_like_csv_text(text) is expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("id,name\n1,taro\n", InputFileType.CSV),
+        ("\n id, name \n 1, taro \n", InputFileType.CSV),
+    ],
+)
+def test_infer_input_type_detects_csv_text(text: str, expected: InputFileType) -> None:
+    """Test auto inference detects CSV data without treating all YAML errors as CSV."""
+    assert infer_input_type(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        '{"Pet": {',
+        "root:\n  child: [",
+        "id,name,tel\n1,taro\n",
+        "id,name\n1,taro\n2,jiro,extra\n",
+    ],
+)
+def test_infer_input_type_rejects_non_csv_parse_errors(text: str) -> None:
+    """Test malformed JSON/YAML and uneven comma data do not infer as CSV."""
+    with pytest.raises(
+        Error,
+        match=(
+            r"(?s)Can't infer input file type from the input data\..*"
+            r"Please specify the input file type explicitly with --input-file-type option\."
+        ),
+    ):
+        infer_input_type(text)
 
 
 def test_infer_input_type_non_schema_xml() -> None:
