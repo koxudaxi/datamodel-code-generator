@@ -17,6 +17,13 @@
 - [GraphQL-only Options](https://datamodel-code-generator.koxudaxi.dev/cli-reference/graphql-only-options/)
 - [General Options](https://datamodel-code-generator.koxudaxi.dev/cli-reference/general-options/)
 - [Utility Options](https://datamodel-code-generator.koxudaxi.dev/cli-reference/utility-options/)
+### Focused Topics
+
+- [Model Customization](https://datamodel-code-generator.koxudaxi.dev/cli-reference/topics/model-customization/): Choose model class shape, naming, reuse, and root-model behavior.
+- [Template Customization](https://datamodel-code-generator.koxudaxi.dev/cli-reference/topics/template-customization/): Tune generated file headers, imports, decorators, templates, and formatting.
+- [Typing Customization](https://datamodel-code-generator.koxudaxi.dev/cli-reference/topics/typing-customization/): Control Python annotation syntax, collection types, imports, and type mappings.
+- [OpenAPI](https://datamodel-code-generator.koxudaxi.dev/cli-reference/topics/openapi/): Handle OpenAPI operation naming, path selection, scopes, and readOnly/writeOnly behavior.
+
 - [Quick Reference](https://datamodel-code-generator.koxudaxi.dev/cli-reference/quick-reference/): All CLI options in one page for easy **Ctrl+F** searching.
 ### Manual
 

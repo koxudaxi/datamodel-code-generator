@@ -1140,6 +1140,17 @@ This documentation is auto-generated from test cases.
 | ⚙️ [General Options](general-options.md) | 18 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 10 | Help, version, debug options |
 
+## 🎯 Focused Topics
+
+Use these pages when you know the workflow area but not the exact option name.
+
+| Topic | Options | Groups |
+|-------|---------|--------|
+| [Model Customization](topics/model-customization.md) | 23 | Model Naming, Model Reuse, Model Shape, Root Model |
+| [Template Customization](topics/template-customization.md) | 19 | Custom Templates, Generated Output, Imports, Output Formatting |
+| [Typing Customization](topics/typing-customization.md) | 20 | Imports, Collection Types, Type Alias, Type Mapping, Type Syntax |
+| [OpenAPI](topics/openapi.md) | 7 | OpenAPI Naming, OpenAPI Paths, OpenAPI Scopes, Read Only Write Only |
+
 ## All Options
 
 **Jump to:** [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [K](#k) · [L](#l) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
@@ -28099,6 +28110,271 @@ Displays the installed version of datamodel-code-generator.
     ```
 
 ---
+
+---
+
+# Model Customization
+
+Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/topics/model-customization/
+
+Choose model class shape, naming, reuse, and root-model behavior.
+
+Options are grouped from shared CLI metadata and link back to their generated reference sections.
+
+## Groups
+
+| Group | Options | Description |
+|-------|---------|-------------|
+| [Model Naming](#model-naming) | 9 | Class names, suffixes, prefixes, and duplicate-name behavior. |
+| [Model Reuse](#model-reuse) | 4 | Schema deduplication and shared generated modules. |
+| [Model Shape](#model-shape) | 6 | Output model family and compatibility targets. |
+| [Root Model](#root-model) | 4 | Root model creation, collapse, and alias behavior. |
+
+## Model Naming {#model-naming}
+
+Class names, suffixes, prefixes, and duplicate-name behavior.
+
+| Option | Description |
+|--------|-------------|
+| [`--allow-leading-underscore-class-name`](../model-customization.md#allow-leading-underscore-class-name) | Allow an explicitly specified root class name to start with an underscore. |
+| [`--class-name`](../model-customization.md#class-name) | Override the auto-generated class name with a custom name. |
+| [`--class-name-affix-scope`](../model-customization.md#class-name-affix-scope) | Control which classes receive the prefix/suffix. |
+| [`--class-name-prefix`](../model-customization.md#class-name-prefix) | Add a prefix to all generated class names. |
+| [`--class-name-suffix`](../model-customization.md#class-name-suffix) | Add a suffix to all generated class names. |
+| [`--duplicate-name-suffix`](../model-customization.md#duplicate-name-suffix) | Customize suffix for duplicate model names. |
+| [`--model-name-map`](../model-customization.md#model-name-map) | Rename generated model classes from a JSON mapping. |
+| [`--naming-strategy`](../model-customization.md#naming-strategy) | Use parent-prefixed naming strategy for duplicate model names. |
+| [`--parent-scoped-naming`](../model-customization.md#parent-scoped-naming) | Namespace models by their parent scope to avoid naming conflicts. |
+
+## Model Reuse {#model-reuse}
+
+Schema deduplication and shared generated modules.
+
+| Option | Description |
+|--------|-------------|
+| [`--collapse-reuse-models`](../model-customization.md#collapse-reuse-models) | Collapse duplicate models by replacing references instead of inheritance. |
+| [`--reuse-model`](../model-customization.md#reuse-model) | Reuse identical model definitions instead of generating duplicates. |
+| [`--reuse-scope`](../model-customization.md#reuse-scope) | Scope for model reuse detection (root or tree). |
+| [`--shared-module-name`](../general-options.md#shared-module-name) | Customize the name of the shared module for deduplicated models. |
+
+## Model Shape {#model-shape}
+
+Output model family and compatibility targets.
+
+| Option | Description |
+|--------|-------------|
+| [`--base-class`](../model-customization.md#base-class) | Specify a custom base class for generated models. |
+| [`--base-class-map`](../model-customization.md#base-class-map) | Specify different base classes for specific models via JSON mapping. |
+| [`--output-model-type`](../model-customization.md#output-model-type) | Select the output model type (Pydantic v2, Pydantic v2 dataclass, dataclasses, T... |
+| [`--target-pydantic-version`](../model-customization.md#target-pydantic-version) | Target Pydantic version for generated code compatibility. |
+| [`--target-python-version`](../model-customization.md#target-python-version) | Target Python version for generated code syntax and imports. |
+| [`--use-generic-base-class`](../model-customization.md#use-generic-base-class) | Generate a shared base class with model configuration to avoid repetition (DRY). |
+
+## Root Model {#root-model}
+
+Root model creation, collapse, and alias behavior.
+
+| Option | Description |
+|--------|-------------|
+| [`--collapse-root-models`](../model-customization.md#collapse-root-models) | Inline root model definitions instead of creating separate wrapper classes. |
+| [`--collapse-root-models-name-strategy`](../model-customization.md#collapse-root-models-name-strategy) | Select which name to keep when collapsing root models with object references. |
+| [`--skip-root-model`](../model-customization.md#skip-root-model) | Skip generation of root model when schema contains nested definitions. |
+| [`--use-root-model-sequence-interface`](../model-customization.md#use-root-model-sequence-interface) | Make non-null sequence-like Pydantic v2 RootModel classes implement collections.... |
+
+---
+
+# Template Customization
+
+Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/topics/template-customization/
+
+Tune generated file headers, imports, decorators, templates, and formatting.
+
+Options are grouped from shared CLI metadata and link back to their generated reference sections.
+
+## Groups
+
+| Group | Options | Description |
+|-------|---------|-------------|
+| [Custom Templates](#custom-templates) | 3 | Custom templates and extra template data. |
+| [Generated Output](#generated-output) | 7 | Generated file headers and reproducible output. |
+| [Imports](#imports) | 4 | Generated imports and type-checking import behavior. |
+| [Output Formatting](#output-formatting) | 5 | Formatter selection, quote style, and string wrapping. |
+
+## Custom Templates {#custom-templates}
+
+Custom templates and extra template data.
+
+| Option | Description |
+|--------|-------------|
+| [`--custom-template-dir`](../template-customization.md#custom-template-dir) | Use custom Jinja2 templates for model generation. |
+| [`--extra-template-data`](../template-customization.md#extra-template-data) | Pass custom template variables via inline JSON or a JSON file path. |
+| [`--validators`](../template-customization.md#validators) | Add custom field validators to generated Pydantic v2 models. |
+
+## Generated Output {#generated-output}
+
+Generated file headers and reproducible output.
+
+| Option | Description |
+|--------|-------------|
+| [`--class-decorators`](../template-customization.md#class-decorators) | Add custom decorators to generated model classes. |
+| [`--custom-file-header`](../template-customization.md#custom-file-header) | Add custom header text to the generated file. |
+| [`--custom-file-header-path`](../template-customization.md#custom-file-header-path) | Add custom header content from file to generated code. |
+| [`--disable-timestamp`](../template-customization.md#disable-timestamp) | Disable timestamp in generated file header for reproducible output. |
+| [`--enable-command-header`](../template-customization.md#enable-command-header) | Include command-line options in file header for reproducibility. |
+| [`--enable-generated-header-marker`](../template-customization.md#enable-generated-header-marker) | Include the @generated marker in file header for generated-code tooling. |
+| [`--enable-version-header`](../template-customization.md#enable-version-header) | Include tool version information in file header. |
+
+## Imports {#imports}
+
+Generated imports and type-checking import behavior.
+
+| Option | Description |
+|--------|-------------|
+| [`--additional-imports`](../template-customization.md#additional-imports) | Add custom imports to generated output files. |
+| [`--no-use-type-checking-imports`](../template-customization.md#no-use-type-checking-imports) | Keep generated model imports available at runtime when using Ruff fixes. |
+| [`--use-exact-imports`](../template-customization.md#use-exact-imports) | Import exact types instead of modules. |
+| [`--use-type-checking-imports`](../template-customization.md#use-type-checking-imports) | Allow Ruff to move typing-only imports into TYPE_CHECKING blocks. |
+
+## Output Formatting {#output-formatting}
+
+Formatter selection, quote style, and string wrapping.
+
+| Option | Description |
+|--------|-------------|
+| [`--custom-formatters`](../template-customization.md#custom-formatters) | Apply custom Python code formatters to generated output. |
+| [`--custom-formatters-kwargs`](../template-customization.md#custom-formatters-kwargs) | Pass custom arguments to custom formatters via inline JSON or a JSON file path. |
+| [`--formatters`](../template-customization.md#formatters) | Specify code formatters to apply to generated output. |
+| [`--use-double-quotes`](../template-customization.md#use-double-quotes) | Use double quotes for string literals in generated code. |
+| [`--wrap-string-literal`](../template-customization.md#wrap-string-literal) | Wrap long string literals across multiple lines. |
+
+---
+
+# Typing Customization
+
+Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/topics/typing-customization/
+
+Control Python annotation syntax, collection types, imports, and type mappings.
+
+Options are grouped from shared CLI metadata and link back to their generated reference sections.
+
+## Groups
+
+| Group | Options | Description |
+|-------|---------|-------------|
+| [Imports](#imports) | 1 | Generated imports and type-checking import behavior. |
+| [Collection Types](#collection-types) | 5 | Collection and tuple/set generation. |
+| [Type Alias](#type-alias) | 2 | TypeAlias and root-model alias output. |
+| [Type Mapping](#type-mapping) | 9 | Scalar, date/time, and custom type mapping. |
+| [Type Syntax](#type-syntax) | 3 | Modern annotation syntax and Annotated usage. |
+
+## Imports {#imports}
+
+Generated imports and type-checking import behavior.
+
+| Option | Description |
+|--------|-------------|
+| [`--disable-future-imports`](../typing-customization.md#disable-future-imports) | Prevent automatic addition of __future__ imports in generated code. |
+
+## Collection Types {#collection-types}
+
+Collection and tuple/set generation.
+
+| Option | Description |
+|--------|-------------|
+| [`--no-use-standard-collections`](../typing-customization.md#no-use-standard-collections) | Use typing.Dict/List instead of built-in dict/list for container types. |
+| [`--use-generic-container-types`](../typing-customization.md#use-generic-container-types) | Use generic container types (Sequence, Mapping) for type hinting. |
+| [`--use-standard-collections`](../typing-customization.md#use-standard-collections) | Use built-in dict/list instead of typing.Dict/List. |
+| [`--use-tuple-for-fixed-items`](../typing-customization.md#use-tuple-for-fixed-items) | Generate tuple types for arrays with items array syntax. |
+| [`--use-unique-items-as-set`](../typing-customization.md#use-unique-items-as-set) | Generate set types for arrays with uniqueItems constraint. |
+
+## Type Alias {#type-alias}
+
+TypeAlias and root-model alias output.
+
+| Option | Description |
+|--------|-------------|
+| [`--use-root-model-type-alias`](../typing-customization.md#use-root-model-type-alias) | Generate RootModel as type alias format for better mypy support. |
+| [`--use-type-alias`](../typing-customization.md#use-type-alias) | Use TypeAlias instead of root models for type definitions (experimental). |
+
+## Type Mapping {#type-mapping}
+
+Scalar, date/time, and custom type mapping.
+
+| Option | Description |
+|--------|-------------|
+| [`--output-date-class`](../typing-customization.md#output-date-class) | Specify date class type for date schema fields. |
+| [`--output-datetime-class`](../typing-customization.md#output-datetime-class) | Specify datetime class type for date-time schema fields. |
+| [`--strict-types`](../typing-customization.md#strict-types) | Enable strict type validation for specified Python types. |
+| [`--type-mappings`](../typing-customization.md#type-mappings) | Override default type mappings for schema formats. |
+| [`--type-overrides`](../typing-customization.md#type-overrides) | Replace schema model types with custom Python types via JSON mapping. |
+| [`--use-decimal-for-multiple-of`](../typing-customization.md#use-decimal-for-multiple-of) | Generate Decimal types for fields with multipleOf constraint. |
+| [`--use-object-type`](../typing-customization.md#use-object-type) | Use object instead of Any for unspecified object and array values. |
+| [`--use-pendulum`](../typing-customization.md#use-pendulum) | Use pendulum types for date, time, and duration fields. |
+| [`--use-standard-primitive-types`](../typing-customization.md#use-standard-primitive-types) | Use Python standard library types for string formats instead of str. |
+
+## Type Syntax {#type-syntax}
+
+Modern annotation syntax and Annotated usage.
+
+| Option | Description |
+|--------|-------------|
+| [`--no-use-union-operator`](../typing-customization.md#no-use-union-operator) | Use Union\[X, Y\] / Optional\[X\] instead of X \| Y union operator. |
+| [`--use-annotated`](../typing-customization.md#use-annotated) | Use typing.Annotated for Field() with constraints. |
+| [`--use-union-operator`](../typing-customization.md#use-union-operator) | Use \| operator for Union types (PEP 604). |
+
+---
+
+# OpenAPI
+
+Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/topics/openapi/
+
+Handle OpenAPI operation naming, path selection, scopes, and readOnly/writeOnly behavior.
+
+Options are grouped from shared CLI metadata and link back to their generated reference sections.
+
+## Groups
+
+| Group | Options | Description |
+|-------|---------|-------------|
+| [OpenAPI Naming](#openapi-naming) | 2 | Operation and response model naming. |
+| [OpenAPI Paths](#openapi-paths) | 2 | Path selection and path parameter output. |
+| [OpenAPI Scopes](#openapi-scopes) | 1 | OpenAPI generation scopes. |
+| [Read Only Write Only](#read-only-write-only) | 2 | readOnly/writeOnly model behavior. |
+
+## OpenAPI Naming {#openapi-naming}
+
+Operation and response model naming.
+
+| Option | Description |
+|--------|-------------|
+| [`--use-operation-id-as-name`](../openapi-only-options.md#use-operation-id-as-name) | Use OpenAPI operationId as the generated function/class name. |
+| [`--use-status-code-in-response-name`](../openapi-only-options.md#use-status-code-in-response-name) | Include HTTP status code in response model names. |
+
+## OpenAPI Paths {#openapi-paths}
+
+Path selection and path parameter output.
+
+| Option | Description |
+|--------|-------------|
+| [`--include-path-parameters`](../openapi-only-options.md#include-path-parameters) | Include OpenAPI path parameters in generated parameter models. |
+| [`--openapi-include-paths`](../openapi-only-options.md#openapi-include-paths) | Filter OpenAPI paths to include in model generation. |
+
+## OpenAPI Scopes {#openapi-scopes}
+
+OpenAPI generation scopes.
+
+| Option | Description |
+|--------|-------------|
+| [`--openapi-scopes`](../openapi-only-options.md#openapi-scopes) | Specify OpenAPI scopes to generate (schemas, paths, parameters). |
+
+## Read Only Write Only {#read-only-write-only}
+
+readOnly/writeOnly model behavior.
+
+| Option | Description |
+|--------|-------------|
+| [`--read-only-write-only-model-type`](../openapi-only-options.md#read-only-write-only-model-type) | Generate separate request and response models for readOnly/writeOnly fields. |
+| [`--use-frozen-field`](../model-customization.md#use-frozen-field) | Generate frozen (immutable) field definitions for readOnly properties. |
 
 ---
 
