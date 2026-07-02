@@ -3,7 +3,8 @@ name: Publish
 on:
   push:
     tags:
-      - '[0-9]*.[0-9]*.[0-9]*'
+      - '[0-9]+.[0-9]+.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+rc[0-9]+'
   workflow_dispatch:
     inputs:
       skip_test_gate:
@@ -40,7 +41,7 @@ jobs:
           import sys
 
           tag = os.environ["RELEASE_TAG"]
-          if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+[0-9A-Za-z.+-]*", tag):
+          if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:rc[0-9]+)?", tag):
               sys.exit(0)
           print(f"Release tag {tag!r} must look like 0.66.3 or 0.66.3rc1.", file=sys.stderr)
           sys.exit(1)
