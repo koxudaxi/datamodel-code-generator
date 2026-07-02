@@ -42,13 +42,10 @@ $ tox run -e 3.13
 ## 8. Format and lint code (will print errors that cannot be automatically fixed)
 $ tox run -e fix
 
-## 9. Check README help text is up to date
-$ tox run -e readme
+## 9. Check generated docs, diagrams, and playground assets are up to date
+$ tox run -e docs-check-all -- --check
 
-## 10. Check CLI documentation is up to date
-$ tox run -e cli-docs
-
-## 11. Commit and Push...
+## 10. Commit and Push...
 ```
 
 ## 🧪 E2E test assertions
@@ -179,8 +176,8 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
 $ pytest --collect-cli-docs -p no:xdist -q
 $ python scripts/build_cli_docs.py
 
-# Verify docs are correct
-$ tox run -e cli-docs
+# Verify generated docs are correct
+$ tox run -e docs-check-all -- --check
 
 # If you modified config.py, regenerate config TypedDicts
 $ tox run -e config-types
@@ -188,7 +185,7 @@ $ tox run -e config-types
 
 ### 🔧 Troubleshooting
 
-If `tox run -e cli-docs` fails:
+If the `tox run -e docs-check-all -- --check` CLI docs step fails:
 
 - **"No test found documenting option --xxx"**: Add `@pytest.mark.cli_doc(options=["--xxx"], ...)` to a test
 - **"File not found: ..."**: Check that `input_schema` and `golden_output` paths are correct
