@@ -94,6 +94,7 @@ def _run_generate_with_parsed_source_cache(
         ),
     ],
 )
+@pytest.mark.allow_direct_assert
 def test_generate_output_matches_with_and_without_parsed_source_cache(
     input_path: Path,
     input_file_type: InputFileType,
