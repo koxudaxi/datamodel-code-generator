@@ -16,7 +16,7 @@ The official GitHub Action provides a simple way to validate generated models in
 ### Basic Usage
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@0.44.0
+- uses: koxudaxi/datamodel-code-generator@0.66.3
   with:
     input: schema.yaml
     output: src/models.py
@@ -58,7 +58,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: koxudaxi/datamodel-code-generator@0.44.0
+      - uses: koxudaxi/datamodel-code-generator@0.66.3
         with:
           input: schemas/api.yaml
           output: src/models/api.py
@@ -86,7 +86,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: koxudaxi/datamodel-code-generator@0.44.0
+      - uses: koxudaxi/datamodel-code-generator@0.66.3
         with:
           input: ${{ matrix.input }}
           output: ${{ matrix.output }}
@@ -98,7 +98,7 @@ jobs:
 ### Example: Using Profiles
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@0.44.0
+- uses: koxudaxi/datamodel-code-generator@0.66.3
   with:
     input: schemas/api.yaml
     output: src/models.py
@@ -112,7 +112,7 @@ jobs:
 Set `check: 'false'` to actually generate the models:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@0.44.0
+- uses: koxudaxi/datamodel-code-generator@0.66.3
   with:
     input: schema.yaml
     output: src/models.py
@@ -126,7 +126,7 @@ Set `check: 'false'` to actually generate the models:
 For GraphQL schemas, use the `extras` input to install the required dependency:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@0.44.0
+- uses: koxudaxi/datamodel-code-generator@0.66.3
   with:
     input: schema.graphql
     output: src/models.py
@@ -138,7 +138,7 @@ For GraphQL schemas, use the `extras` input to install the required dependency:
 ### Example: Apache Avro Schema
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@0.44.0
+- uses: koxudaxi/datamodel-code-generator@0.66.3
   with:
     input: schema.avsc
     output: src/models.py
@@ -151,7 +151,7 @@ For GraphQL schemas, use the `extras` input to install the required dependency:
 You can install multiple extras with comma-separated values:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@0.44.0
+- uses: koxudaxi/datamodel-code-generator@0.66.3
   with:
     input: schema.yaml
     output: src/models.py
@@ -165,7 +165,7 @@ You can install multiple extras with comma-separated values:
 Use `extra-args` for CLI options not covered by the inputs:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@0.44.0
+- uses: koxudaxi/datamodel-code-generator@0.66.3
   with:
     input: schema.yaml
     output: src/models.py
@@ -175,7 +175,7 @@ Use `extra-args` for CLI options not covered by the inputs:
 ```
 
 !!! tip "Version Pinning"
-    Always pin the action to a specific version tag (e.g., `@0.44.0`) to ensure reproducible builds. The action installs the same version of `datamodel-code-generator` as the tag.
+    Always pin the action to a specific version tag (e.g., `@0.66.3`) to ensure reproducible builds. The action installs the same version of `datamodel-code-generator` as the tag.
 
 ---
 

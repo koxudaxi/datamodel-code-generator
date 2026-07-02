@@ -93,6 +93,10 @@ pip install 'datamodel-code-generator[protobuf]'
 docker pull koxudaxi/datamodel-code-generator
 ```
 
+Published Docker images run as a non-root `appuser`. When writing generated files
+to a bind-mounted directory, make sure the directory is writable by the container
+user or pass an explicit Docker user, for example `--user "$(id -u):$(id -g)"`.
+
 </details>
 
 ---
@@ -314,7 +318,7 @@ See [pyproject.toml Configuration](https://datamodel-code-generator.koxudaxi.dev
 Validate generated models in your CI pipeline:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@0.44.0
+- uses: koxudaxi/datamodel-code-generator@0.66.3
   with:
     input: schemas/api.yaml
     output: src/models/api.py
