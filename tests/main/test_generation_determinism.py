@@ -61,16 +61,17 @@ def _assert_same_output(first: str, second: str, context: str) -> None:
     if first == second:
         return
 
-    diff = "\n".join(
-        difflib.unified_diff(
-            first.splitlines(),
-            second.splitlines(),
-            fromfile="first",
-            tofile="second",
-            lineterm="",
+    if first != second:  # pragma: no cover
+        diff = "\n".join(
+            difflib.unified_diff(
+                first.splitlines(),
+                second.splitlines(),
+                fromfile="first",
+                tofile="second",
+                lineterm="",
+            )
         )
-    )
-    pytest.fail(f"Generated output changed for {context}:\n{diff}", pytrace=False)
+        pytest.fail(f"Generated output changed for {context}:\n{diff}", pytrace=False)
 
 
 def _generate_output_with_hash_seed(input_path: Path, input_file_type: InputFileType, seed: str) -> str:
