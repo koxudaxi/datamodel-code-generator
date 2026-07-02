@@ -794,11 +794,11 @@ def test_config_models_force_rebuild_after_defer_build() -> None:
     """Ensure deferred config model schemas can still be rebuilt at import-test time."""
     from pydantic import BaseModel as PydanticBaseModel
 
-    import datamodel_code_generator.config as config_module
     from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
     from datamodel_code_generator.types import DataTypeManager, StrictTypes
 
+    config_module = importlib.import_module("datamodel_code_generator.config")
     expected_model_names = {
         "AsyncAPIParserConfig",
         "AvroParserConfig",
