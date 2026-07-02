@@ -210,7 +210,7 @@ class TestInferInputType:
     def test_csv_with_pyyaml_error(self) -> None:
         """YAML parse error from PyYAML returns CSV type."""
         with patch.dict("sys.modules", {"ryaml": None}):
-            result = infer_input_type("a,b,c\n1,2,3\n::")
+            result = infer_input_type("a,b:\n1,2\n")
             assert result == InputFileType.CSV
 
     def test_csv_with_ryaml_error(self) -> None:

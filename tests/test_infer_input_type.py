@@ -181,6 +181,7 @@ def test_is_json_text() -> None:
         ("id,name\n", False),
         ("name\nvalue\n", False),
         ("id,name,tel\n1,taro\n", False),
+        ("id,name\n1,taro\n2,jiro,extra\n", False),
         ("", False),
     ],
 )
@@ -207,6 +208,7 @@ def test_infer_input_type_detects_csv_text(text: str, expected: InputFileType) -
         '{"Pet": {',
         "root:\n  child: [",
         "id,name,tel\n1,taro\n",
+        "id,name\n1,taro\n2,jiro,extra\n",
     ],
 )
 def test_infer_input_type_rejects_non_csv_parse_errors(text: str) -> None:

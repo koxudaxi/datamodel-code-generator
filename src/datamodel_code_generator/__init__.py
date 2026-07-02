@@ -1567,8 +1567,12 @@ def _infer_input_type_error_message(*, parse_error: Exception | None = None) -> 
     return f"{message} YAML parser error: {type(parse_error).__name__}: {parse_error}. {hint}"
 
 
+_MIN_CSV_NON_EMPTY_LINES = 2
+
+
 def _looks_like_csv_text(text: str) -> bool:
     comma_count: int | None = None
+    matched_lines = 0
     for raw_line in text.splitlines():
         if not (line := raw_line.strip()):
             continue
@@ -1577,11 +1581,10 @@ def _looks_like_csv_text(text: str) -> bool:
         match comma_count:
             case None:
                 comma_count = current_comma_count
-            case _ if current_comma_count == comma_count:
-                return True
-            case _:
+            case _ if current_comma_count != comma_count:
                 return False
-    return False
+        matched_lines += 1
+    return matched_lines >= _MIN_CSV_NON_EMPTY_LINES
 
 
 inferred_message = (
