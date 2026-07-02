@@ -1,4 +1,4 @@
-FROM python:3.14.2-slim-bookworm AS builder
+FROM python:3.14.6-slim-bookworm AS builder
 
 ARG VERSION
 
@@ -13,7 +13,7 @@ RUN test -n "${VERSION}" \
     && pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir "datamodel-code-generator[http]==${VERSION}"
 
-FROM python:3.14.2-slim-bookworm
+FROM python:3.14.6-slim-bookworm
 
 LABEL maintainer="Koudai Aono <koxudaxi@gmail.com>"
 
