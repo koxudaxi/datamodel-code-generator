@@ -307,7 +307,7 @@ See [pyproject.toml Configuration](pyproject_toml.md) for more options.
 Validate generated models in your CI pipeline:
 
 ```yaml title=".github/workflows/validate-models.yml"
-- uses: koxudaxi/datamodel-code-generator@0.44.0
+- uses: koxudaxi/datamodel-code-generator@0.66.3
   with:
     input: schemas/api.yaml
     output: src/models/api.py
