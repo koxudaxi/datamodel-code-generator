@@ -260,6 +260,21 @@ for the generated summary of runner scripts, tox environments, CI jobs, expected
 
 ## 🍳 Common Recipes
 
+<!-- BEGIN AUTO-GENERATED CLI RECIPE QUICK STARTS -->
+### CLI option quick starts
+
+Use these starting points when combining options; each option links to the generated CLI reference for details and examples.
+
+- **Generate a local schema file:** Pin the input type and destination when the source extension is ambiguous or generated output needs a stable path. Options: [`--input`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options/#input), [`--input-file-type`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options/#input-file-type), [`--output`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options/#output).
+- **Target Pydantic v2 on modern Python:** Set the output model family and Python/Pydantic compatibility targets together. Options: [`--output-model-type`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-customization/#output-model-type), [`--target-python-version`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-customization/#target-python-version), [`--target-pydantic-version`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-customization/#target-pydantic-version).
+- **Use modern Python annotations:** Target a recent Python version and prefer built-in collection and union syntax in generated types. Options: [`--target-python-version`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-customization/#target-python-version), [`--use-union-operator`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/typing-customization/#use-union-operator), [`--use-standard-collections`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/typing-customization/#use-standard-collections).
+- **Normalize incoming field names:** Convert source names to Python identifiers while preserving explicit alias data for runtime IO. Options: [`--snake-case-field`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/field-customization/#snake-case-field), [`--original-field-name-delimiter`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/field-customization/#original-field-name-delimiter), [`--aliases`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/field-customization/#aliases).
+- **Generate operation-focused models:** Limit OpenAPI output to operation shapes and name models from operation IDs and status codes. Options: [`--openapi-scopes`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/openapi-only-options/#openapi-scopes), [`--use-operation-id-as-name`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/openapi-only-options/#use-operation-id-as-name), [`--use-status-code-in-response-name`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/openapi-only-options/#use-status-code-in-response-name).
+- **Resolve remote references deliberately:** Enable remote `$ref` loading and configure request metadata, timeouts, or local ref roots. Options: [`--allow-remote-refs`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/general-options/#allow-remote-refs), [`--http-headers`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/general-options/#http-headers), [`--http-timeout`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/general-options/#http-timeout), [`--http-local-ref-path`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/general-options/#http-local-ref-path).
+
+See the [CLI Reference](https://datamodel-code-generator.koxudaxi.dev/cli-reference/) for the full option list and category-specific recipes.
+<!-- END AUTO-GENERATED CLI RECIPE QUICK STARTS -->
+
 ### 🤖 Get CLI Help from LLMs
 
 Generate a prompt to ask LLMs about CLI options:

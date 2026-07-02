@@ -321,6 +321,15 @@ CATEGORY_RECIPES: dict[OptionCategory, tuple[CategoryRecipe, ...]] = {
     ),
 }
 
+HOMEPAGE_RECIPE_CATEGORIES: tuple[OptionCategory, ...] = (
+    OptionCategory.BASE,
+    OptionCategory.MODEL,
+    OptionCategory.TYPING,
+    OptionCategory.FIELD,
+    OptionCategory.OPENAPI,
+    OptionCategory.GENERAL,
+)
+
 # Manual option descriptions for utility options
 MANUAL_OPTION_DESCRIPTIONS = {
     "--help": "Show help message and exit",
@@ -894,6 +903,8 @@ def _format_option_link(
     documented_options: frozenset[str],
     *,
     current_category: OptionCategory | None = None,
+    root: str = "",
+    extension: str = ".md",
 ) -> str:
     """Return a Markdown link to a generated option section when metadata is available."""
     documented_option = _documented_related_option(option, documented_options)
@@ -902,11 +913,52 @@ def _format_option_link(
 
     if current_category == meta.category:
         target = f"#{get_cli_doc_slug(get_cli_option_doc_name(documented_option))}"
-    elif doc_path := get_cli_option_doc_path(documented_option):
+    elif doc_path := get_cli_option_doc_path(documented_option, root=root, extension=extension):
         target = doc_path
     else:
         return f"`{documented_option}`"
     return f"[`{documented_option}`]({target})"
+
+
+def _recipe_option_names(recipes: tuple[CategoryRecipe, ...]) -> frozenset[str]:
+    """Return recipe option names for preserving generated documentation aliases."""
+    return frozenset(option for recipe in recipes for option in recipe.options)
+
+
+def _homepage_recipes() -> tuple[CategoryRecipe, ...]:
+    """Return a bounded recipe set for README and docs-home quick-start sections."""
+    return tuple(recipes[0] for category in HOMEPAGE_RECIPE_CATEGORIES if (recipes := CATEGORY_RECIPES.get(category)))
+
+
+def generate_homepage_recipe_quick_starts(
+    *,
+    cli_reference_root: str,
+    cli_reference_extension: str,
+    cli_reference_index: str,
+) -> str:
+    """Generate concise CLI recipe quick-starts for README and docs home."""
+    if not (recipes := _homepage_recipes()):
+        return ""
+
+    documented_options = _recipe_option_names(recipes)
+    md = "### CLI option quick starts\n\n"
+    md += (
+        "Use these starting points when combining options; each option links to the generated CLI reference for "
+        "details and examples.\n\n"
+    )
+    for recipe in recipes:
+        option_links = ", ".join(
+            _format_option_link(
+                option,
+                documented_options,
+                root=cli_reference_root,
+                extension=cli_reference_extension,
+            )
+            for option in recipe.options
+        )
+        md += f"- **{recipe.title}:** {recipe.description} Options: {option_links}.\n"
+    md += f"\nSee the [CLI Reference]({cli_reference_index}) for the full option list and category-specific recipes.\n"
+    return md
 
 
 def generate_category_recipes(
