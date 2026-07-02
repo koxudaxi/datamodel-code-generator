@@ -253,6 +253,21 @@ See [Supported Data Types](supported-data-types.md) for the full list.
 
 ## 🍳 Common Recipes
 
+<!-- BEGIN AUTO-GENERATED CLI RECIPE QUICK STARTS -->
+### CLI option quick starts
+
+Use these starting points when combining options; each option links to the generated CLI reference for details and examples.
+
+- **Generate a local schema file:** Pin the input type and destination when the source extension is ambiguous or generated output needs a stable path. Options: [`--input`](cli-reference/base-options.md#input), [`--input-file-type`](cli-reference/base-options.md#input-file-type), [`--output`](cli-reference/base-options.md#output).
+- **Target Pydantic v2 on modern Python:** Set the output model family and Python/Pydantic compatibility targets together. Options: [`--output-model-type`](cli-reference/model-customization.md#output-model-type), [`--target-python-version`](cli-reference/model-customization.md#target-python-version), [`--target-pydantic-version`](cli-reference/model-customization.md#target-pydantic-version).
+- **Use modern Python annotations:** Target a recent Python version and prefer built-in collection and union syntax in generated types. Options: [`--target-python-version`](cli-reference/model-customization.md#target-python-version), [`--use-union-operator`](cli-reference/typing-customization.md#use-union-operator), [`--use-standard-collections`](cli-reference/typing-customization.md#use-standard-collections).
+- **Normalize incoming field names:** Convert source names to Python identifiers while preserving explicit alias data for runtime IO. Options: [`--snake-case-field`](cli-reference/field-customization.md#snake-case-field), [`--original-field-name-delimiter`](cli-reference/field-customization.md#original-field-name-delimiter), [`--aliases`](cli-reference/field-customization.md#aliases).
+- **Generate operation-focused models:** Limit OpenAPI output to operation shapes and name models from operation IDs and status codes. Options: [`--openapi-scopes`](cli-reference/openapi-only-options.md#openapi-scopes), [`--use-operation-id-as-name`](cli-reference/openapi-only-options.md#use-operation-id-as-name), [`--use-status-code-in-response-name`](cli-reference/openapi-only-options.md#use-status-code-in-response-name).
+- **Resolve remote references deliberately:** Enable remote `$ref` loading and configure request metadata, timeouts, or local ref roots. Options: [`--allow-remote-refs`](cli-reference/general-options.md#allow-remote-refs), [`--http-headers`](cli-reference/general-options.md#http-headers), [`--http-timeout`](cli-reference/general-options.md#http-timeout), [`--http-local-ref-path`](cli-reference/general-options.md#http-local-ref-path).
+
+See the [CLI Reference](cli-reference/index.md) for the full option list and category-specific recipes.
+<!-- END AUTO-GENERATED CLI RECIPE QUICK STARTS -->
+
 ### 🤖 Get CLI Help from LLMs
 
 Generate a prompt to ask LLMs about CLI options:
