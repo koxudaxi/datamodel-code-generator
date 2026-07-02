@@ -59,6 +59,7 @@ def test_experimental_markdown_output_includes_details() -> None:
     assert "input-format.protobuf" in output
     assert "input-format.xmlschema" in output
     assert "cli-option.generate-schema-validators" in output
+    assert "cli-option.use-missing-sentinel" in output
     assert "formatter.builtin" in output
 
 
@@ -79,8 +80,17 @@ def test_release_note_output_filters_by_version() -> None:
     assert "--input-file-type avro" in output
     assert "--input-file-type protobuf" in output
     assert "--input-file-type xmlschema" in output
-    assert "--generate-schema-validators" in output
     assert "--formatters builtin" in output
+
+
+def test_release_note_output_includes_schema_validation_features() -> None:
+    """Release-note snippets include experimental schema validation features."""
+    output = render_release_note_experimental_features("0.66.1")
+
+    assert "## Experimental Features" in output
+    assert "--generate-schema-validators" in output
+    assert "--schema-validator-type" in output
+    assert "--use-missing-sentinel" in output
 
 
 def test_experimental_markdown_includes_tracking_issue(monkeypatch: pytest.MonkeyPatch) -> None:
