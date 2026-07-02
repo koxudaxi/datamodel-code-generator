@@ -567,6 +567,24 @@ def test_generation_store_field_mutations_clear_model_imports_cache() -> None:
     assert list_field.parent is None
     assert IMPORT_LIST not in model.imports
 
+    detached_field = DataModelField(data_type=DataType(is_set=True))
+    model.fields.append(detached_field)
+    assert detached_field.parent is None
+
+    store.remove_field(model, detached_field)
+    assert detached_field.parent is None
+    assert IMPORT_SET not in model.imports
+
+    store.set_fields(model, [list_field])
+    assert list_field.parent is model
+    assert IMPORT_LIST in model.imports
+
+    store.set_fields(model, [detached_field])
+    assert list_field.parent is None
+    assert detached_field.parent is model
+    assert IMPORT_LIST not in model.imports
+    assert IMPORT_SET in model.imports
+
 
 def test_generation_store_nested_type_mutation_clears_model_imports_cache() -> None:
     """Nested DataType replacement should refresh cached field-derived imports."""
