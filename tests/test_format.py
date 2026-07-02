@@ -1052,6 +1052,57 @@ def test_builtin_formatter_pep695_type_alias_replacement_edges() -> None:
     ]
 
 
+def test_builtin_formatter_source_segment_matches_ast() -> None:
+    """Source extraction should match ast.get_source_segment, including UTF-8 byte offsets."""
+    source = (
+        "from typing import Annotated\r\n"
+        "from pydantic import Field\n"
+        "\n"
+        "EXTRA = {'emoji': '🍣'}\n"
+        "\n"
+        "class Model:\n"
+        '    """説明."""\n'
+        "    field: Annotated[\n"
+        "        str,\n"
+        "        Field(default='é', description='長い説明'),\n"
+        "    ]\n"
+        "    data = {\n"
+        "        'emoji': '🍣',\n"
+        "        **EXTRA,\n"
+        "    }\n"
+        "\n"
+        "lambda_value = lambda: '空'\n"
+    )
+
+    for node in ast.walk(ast.parse(source)):
+        expected = ast.get_source_segment(source, node)
+        if not expected:
+            continue
+
+        assert builtin_formatter._source_segment(source, node) == expected
+
+
+def test_builtin_formatter_source_segment_reuses_split_source_lines(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Repeated source extraction should split one source object once."""
+    source = "class Model:\n    field: str = 'é'\n    other: str = '🍣'\n"
+    nodes = [node for node in ast.walk(ast.parse(source)) if ast.get_source_segment(source, node)]
+    split_call_count = 0
+    original_splitlines = builtin_formatter._splitlines_no_ff
+
+    def spy_splitlines(value: str) -> list[str]:
+        nonlocal split_call_count
+        split_call_count += 1
+        return original_splitlines(value)
+
+    monkeypatch.setattr(builtin_formatter, "_SOURCE_LINES_CACHE", None)
+    monkeypatch.setattr(builtin_formatter, "_splitlines_no_ff", spy_splitlines)
+
+    for node in nodes:
+        builtin_formatter._source_segment(source, node)
+
+    assert split_call_count == 1
+
+
 def test_apply_builtin_formatter_parenthesizes_short_annotated_default() -> None:
     """Test built-in formatter matches black for short overflowing Annotated defaults."""
     code = (
