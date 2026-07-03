@@ -137,13 +137,11 @@ def _config_dict_items(config: Any) -> list[tuple[str, Any]]:
     if isinstance(config, dict):
         return list(config.items())
 
-    if model_dump := getattr(config, "model_dump", None):
-        return list(model_dump(exclude_unset=True).items())
-
-    if dict_ := getattr(config, "dict", None):
-        return list(dict_(exclude_unset=True).items())
-
-    return []
+    dump = getattr(config, "model_dump", None) or getattr(config, "dict", None)
+    if not dump:
+        return []
+    values = dump(exclude_unset=True)
+    return list(values.items()) if isinstance(values, dict) else []
 
 
 _PYDANTIC_V2_BASE_FIELD_KEYS: frozenset[str] = frozenset({
@@ -643,8 +641,11 @@ class BaseModel(BaseModelBase):
             config_parameters[_ALIAS_GENERATOR_TEMPLATE_DATA_KEY] = alias_generator
             self._additional_imports.append(_ALIAS_GENERATOR_IMPORTS[alias_generator])
 
-        if isinstance(config := self.extra_template_data.get("config"), dict):
+        config = self.extra_template_data.get("config")
+        if isinstance(config, dict):
             config_parameters.update(dict(config.items()))
+        elif config_items := _config_dict_items(config):
+            config_parameters.update(dict(config_items))
 
         # Handle json_schema_extra from schema extensions (x-* fields)
         model_extras = self.extra_template_data.get("model_extras")
@@ -661,6 +662,7 @@ class BaseModel(BaseModelBase):
             )
             self._additional_imports.append(IMPORT_CONFIG_DICT)
         else:
+            self.extra_template_data.pop("config", None)
             self.extra_template_data.pop(_CONFIG_ITEMS_TEMPLATE_DATA_KEY, None)
 
         self._process_schema_runtime_validation()
