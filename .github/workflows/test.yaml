@@ -91,9 +91,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - tox_env: py314-parallel
-            name: "3.14"
-            coverage_name: "3.14"
           - tox_env: pydantic20
             name: pydantic20
             coverage_name: pydantic20
@@ -254,6 +251,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - tox_env: py314-parallel
+            name: "3.14"
+            os: ubuntu-24.04
+            coverage: true
+            shard: 1
+            shard_total: 2
+          - tox_env: py314-parallel
+            name: "3.14"
+            os: ubuntu-24.04
+            coverage: true
+            shard: 2
+            shard_total: 2
           - tox_env: py313-parallel
             name: "3.13"
             os: ubuntu-24.04
