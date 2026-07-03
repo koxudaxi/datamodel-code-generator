@@ -257,6 +257,7 @@ jobs:
             coverage: true
             shard: 1
             shard_total: 2
+            extra_tests: tests/cli_doc/test_cli_options_sync.py
           - tox_env: py314-parallel
             name: "3.14"
             os: ubuntu-24.04
@@ -401,6 +402,7 @@ jobs:
       SHARD_INDEX: ${{ matrix.shard }}
       SHARD_TOTAL: ${{ matrix.shard_total }}
       TOX_ENV: ${{ matrix.tox_env }}
+      EXTRA_TESTS: ${{ matrix.extra_tests }}
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
@@ -424,6 +426,9 @@ jobs:
         python scripts/select_ci_test_shard.py --write-recipe .tox/ci-shard-recipe.json
         python scripts/select_ci_test_shard.py "$SHARD_INDEX" "$SHARD_TOTAL" \
           --recipe .tox/ci-shard-recipe.json | tee .tox/ci-shard-tests.txt
+        if [ -n "$EXTRA_TESTS" ]; then
+          printf '%s\n' "$EXTRA_TESTS" >> .tox/ci-shard-tests.txt
+        fi
       shell: bash
     - name: Run sharded test suite
       run: |
