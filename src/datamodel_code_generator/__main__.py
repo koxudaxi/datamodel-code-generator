@@ -188,7 +188,7 @@ BOOLEAN_OPTIONAL_OPTIONS: frozenset[str] = frozenset({
 })
 
 ORIGINAL_FIELD_NAME_DELIMITER_ERROR = "`--original-field-name-delimiter` can not be used without `--snake-case-field`."
-SENSITIVE_COMMAND_OPTIONS: frozenset[str] = frozenset({"--http-headers"})
+SENSITIVE_COMMAND_OPTIONS: frozenset[str] = frozenset({"--http-headers", "--http-query-parameters"})
 REDACTED_COMMAND_ARGUMENT = "<redacted>"
 
 

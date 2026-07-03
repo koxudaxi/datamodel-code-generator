@@ -2896,6 +2896,27 @@ def test_generate_keeps_non_path_string_input(output_file: Path) -> None:
     assert_file_content(output_file, "generate_keeps_non_path_string_input.py")
 
 
+def test_generate_keeps_string_input_when_expanduser_fails(output_file: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test generate() keeps inline strings when user expansion fails."""
+
+    def raise_runtime_error(_self: object) -> None:
+        msg = "home directory cannot be resolved"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(type(output_file), "expanduser", raise_runtime_error)
+
+    result = generate(
+        input_="name: Alice",
+        input_file_type=InputFileType.Yaml,
+        input_filename="inline.yaml",
+        output=output_file,
+        disable_timestamp=True,
+        formatters=[],
+    )
+    assert_generate_wrote_file(result, output_file)
+    assert_file_content(output_file, "generate_keeps_non_path_string_input.py")
+
+
 def test_generate_returns_string_with_pydantic_v2() -> None:
     """Test that generate() returns str for Pydantic v2 models."""
     json_schema = '{"type": "object", "properties": {"value": {"type": "number"}}}'

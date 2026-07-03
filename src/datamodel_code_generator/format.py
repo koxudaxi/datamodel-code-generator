@@ -540,7 +540,7 @@ class CodeFormatter:
         *,
         stdin: bytes | None = None,
         allow_stdout_on_error: bool = False,
-    ) -> subprocess.CompletedProcess:
+    ) -> subprocess.CompletedProcess[bytes]:
         kwargs: dict[str, Any] = {}
         if stdin is not None:
             kwargs["input"] = stdin

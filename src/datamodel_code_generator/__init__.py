@@ -773,7 +773,7 @@ def _coerce_existing_path_input(
     try:
         path = Path(input_).expanduser()
         path_exists = path.exists()
-    except (OSError, ValueError):  # pragma: no cover
+    except (OSError, RuntimeError, ValueError):  # pragma: no cover
         return input_
     return path if path_exists else input_
 
