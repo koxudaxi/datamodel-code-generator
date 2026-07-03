@@ -397,12 +397,31 @@ jobs:
       with:
         fetch-depth: 1
         persist-credentials: false
+    - name: Install uv (Windows)
+      if: matrix.os == 'windows-latest'
+      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      with:
+        version: "0.11.26"
+        enable-cache: true
+        cache-local-path: .tox/uv-cache
+        cache-python: true
+        cache-dependency-glob: |
+          pyproject.toml
+          tox.ini
+          uv.lock
+        cache-suffix: "windows-${{ matrix.tox_env }}-uv0.11.26-tox4.56.1-toxuv1.35.2"
+        save-cache: ${{ matrix.shard == 1 }}
     - name: Install the latest version of uv
+      if: matrix.os != 'windows-latest'
       uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
       with:
         enable-cache: true
         cache-suffix: "${{ matrix.tox_env }}-shard-${{ matrix.shard }}"
+    - name: Install tox (Windows)
+      if: matrix.os == 'windows-latest'
+      run: uv tool install --python-preference only-managed --python 3.13 "tox==4.56.1" --with "tox-uv==1.35.2"
     - name: Install tox
+      if: matrix.os != 'windows-latest'
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
     - name: Setup Python test environment
       run: |
