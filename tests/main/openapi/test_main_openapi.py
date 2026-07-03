@@ -42,6 +42,7 @@ from tests.conftest import (
     assert_directory_content,
     assert_error_message,
     assert_httpx_get_kwargs,
+    assert_output,
     assert_warnings_contain,
     freeze_time,
 )
@@ -1426,6 +1427,47 @@ def test_enable_command_header(output_file: Path) -> None:
         expected_file="enable_command_header.py",
         extra_args=["--enable-command-header"],
         transform=normalize_command,
+    )
+
+
+@pytest.mark.parametrize(
+    ("header_args", "expected_visible"),
+    [
+        (["--http-headers", "Authorization: Bearer secret-token"], None),
+        (["--http-headers=Authorization: Bearer secret-token"], None),
+        (["--http-headers", "Authorization: Bearer secret-token", "--encoding", "utf-8"], "utf-8"),
+        (["--http-query-parameters", "api_key=secret-token"], None),
+        (["--http-query-parameters=api_key=secret-token"], None),
+    ],
+)
+def test_enable_command_header_redacts_http_headers(
+    output_file: Path, header_args: list[str], expected_visible: str | None
+) -> None:
+    """Redact sensitive HTTP headers from reproducibility command headers."""
+
+    def normalize_command(s: str) -> str:
+        return re.sub(r"#   command:   datamodel-codegen .*", "#   command:   datamodel-codegen [COMMAND]", s)
+
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enable_command_header.py",
+        extra_args=["--enable-command-header", *header_args],
+        transform=normalize_command,
+    )
+    content = output_file.read_text(encoding="utf-8")
+    command_line = next(line for line in content.splitlines() if line.startswith("#   command:"))
+    following_option_preserved = expected_visible is None or expected_visible in command_line
+    assert_output(
+        "\n".join([
+            f"redacted={'yes' if '<redacted>' in command_line else 'no'}",
+            f"secret_absent={'yes' if 'secret-token' not in command_line else 'no'}",
+            f"following_option_preserved={'yes' if following_option_preserved else 'no'}",
+        ])
+        + "\n",
+        EXPECTED_OPENAPI_PATH / "enable_command_header_redacts_http_headers.txt",
     )
 
 

@@ -9,6 +9,7 @@ import pytest
 
 from datamodel_code_generator import Error
 from datamodel_code_generator.model import DataModelFieldBase
+from datamodel_code_generator.model.pydantic_v2 import ConfigDict
 from datamodel_code_generator.model.pydantic_v2.base_model import _CONFIG_ITEMS_TEMPLATE_DATA_KEY
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.reference import Reference
@@ -268,3 +269,81 @@ def test_root_model_ignores_arbitrary_types_config() -> None:
     )
 
     assert "model_config" not in root_model.render()
+
+
+def test_root_model_renders_existing_config_object() -> None:
+    """RootModel renders config objects with their derived config_items."""
+    root_model = RootModel(
+        fields=[
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(type="str"),
+                required=True,
+            )
+        ],
+        reference=Reference(name="TestRootModel", path="test_root_model"),
+        extra_template_data=defaultdict(
+            dict,
+            {"test_root_model": {"config": ConfigDict(regex_engine='"python-re"')}},
+        ),
+    )
+
+    rendered = root_model.render()
+
+    assert "model_config = ConfigDict(" in rendered
+    assert 'regex_engine="python-re",' in rendered
+    assert isinstance(root_model.extra_template_data["config"], ConfigDict)
+    assert root_model.extra_template_data["config"].dict(exclude_unset=True) == {"regex_engine": '"python-re"'}
+    assert _CONFIG_ITEMS_TEMPLATE_DATA_KEY in root_model.extra_template_data
+
+
+def test_root_model_renders_late_config_dict() -> None:
+    """RootModel syncs config_items for config added after initialization."""
+    root_model = RootModel(
+        fields=[
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(type="str"),
+                required=True,
+            )
+        ],
+        reference=Reference(name="TestRootModel", path="test_root_model"),
+    )
+    root_model.extra_template_data["config"] = {"regex_engine": '"python-re"'}
+
+    rendered = root_model.render()
+
+    assert "model_config = ConfigDict(" in rendered
+    assert 'regex_engine="python-re",' in rendered
+    assert _CONFIG_ITEMS_TEMPLATE_DATA_KEY in root_model.extra_template_data
+
+
+def test_root_model_rebuilds_stale_config_items() -> None:
+    """RootModel rebuilds stale config_items before rendering ConfigDict."""
+    root_model = RootModel(
+        fields=[
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(type="str"),
+                required=True,
+            )
+        ],
+        reference=Reference(name="TestRootModel", path="test_root_model"),
+        extra_template_data=defaultdict(
+            dict,
+            {
+                "test_root_model": {
+                    "config": ConfigDict(regex_engine='"python-re"'),
+                    _CONFIG_ITEMS_TEMPLATE_DATA_KEY: object(),
+                }
+            },
+        ),
+    )
+
+    rendered = root_model.render()
+
+    assert "model_config = ConfigDict(" in rendered
+    assert 'regex_engine="python-re",' in rendered
+    assert isinstance(root_model.extra_template_data["config"], ConfigDict)
+    assert root_model.extra_template_data["config"].dict(exclude_unset=True) == {"regex_engine": '"python-re"'}
+    assert root_model.extra_template_data[_CONFIG_ITEMS_TEMPLATE_DATA_KEY] == [("regex_engine", '"python-re"')]

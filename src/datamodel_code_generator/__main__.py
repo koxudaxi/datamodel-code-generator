@@ -188,6 +188,8 @@ BOOLEAN_OPTIONAL_OPTIONS: frozenset[str] = frozenset({
 })
 
 ORIGINAL_FIELD_NAME_DELIMITER_ERROR = "`--original-field-name-delimiter` can not be used without `--snake-case-field`."
+SENSITIVE_COMMAND_OPTIONS: frozenset[str] = frozenset({"--http-headers", "--http-query-parameters"})
+REDACTED_COMMAND_ARGUMENT = "<redacted>"
 
 
 class Exit(IntEnum):
@@ -202,6 +204,31 @@ class Exit(IntEnum):
 def sig_int_handler(_: int, __: Any) -> None:  # pragma: no cover
     """Handle SIGINT signal gracefully."""
     sys.exit(Exit.OK)
+
+
+def _redact_command_args(args: Sequence[str]) -> list[str]:
+    redacted: list[str] = []
+    redact_values = False
+    for arg in args:
+        match arg:
+            case option if option in SENSITIVE_COMMAND_OPTIONS:
+                redacted.append(option)
+                redact_values = True
+            case option_value if (option := option_value.partition("="))[1] and option[0] in SENSITIVE_COMMAND_OPTIONS:
+                redacted.append(f"{option[0]}={REDACTED_COMMAND_ARGUMENT}")
+                redact_values = False
+            case option if redact_values and option.startswith("-"):
+                redacted.append(option)
+                redact_values = False
+            case _ if redact_values:
+                redacted.append(REDACTED_COMMAND_ARGUMENT)
+            case _:
+                redacted.append(arg)
+    return redacted
+
+
+def _command_header(args: Sequence[str]) -> str:
+    return shlex.join(["datamodel-codegen", *_redact_command_args(args)])
 
 
 signal.signal(signal.SIGINT, sig_int_handler)
@@ -1393,6 +1420,11 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         generate_output = config.output
         is_directory_output = False
 
+    def cleanup_and_return(exit_code: Exit) -> Exit:
+        if temp_context is not None:
+            temp_context.cleanup()
+        return exit_code
+
     try:
         input_: Path | str | ParseResult
         if config.input_model:
@@ -1421,7 +1453,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             extra_template_data=extra_template_data,
             aliases=aliases,
             serialization_aliases=serialization_aliases,
-            command_line=shlex.join(["datamodel-codegen", *args]) if config.enable_command_header else None,
+            command_line=_command_header(args) if config.enable_command_header else None,
             custom_formatters_kwargs=custom_formatters_kwargs,
             settings_path=config.output,
             validators=validators_config,
@@ -1429,21 +1461,15 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201
-        if temp_context is not None:
-            temp_context.cleanup()
-        return Exit.ERROR
+        return cleanup_and_return(Exit.ERROR)
     except Error as e:
         print(str(e), file=sys.stderr)  # noqa: T201
-        if temp_context is not None:
-            temp_context.cleanup()
-        return Exit.ERROR
+        return cleanup_and_return(Exit.ERROR)
     except Exception:  # noqa: BLE001
         import traceback  # noqa: PLC0415
 
         print(traceback.format_exc(), file=sys.stderr)  # noqa: T201
-        if temp_context is not None:
-            temp_context.cleanup()
-        return Exit.ERROR
+        return cleanup_and_return(Exit.ERROR)
 
     if writes_json_output_file and generate_output is not None and config.output is not None:
         _copy_generated_output(generate_output, config.output, is_directory_output=is_directory_output)
@@ -1459,10 +1485,6 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             )
             + "\n"
         )
-        if temp_context is not None:  # pragma: no branch
-            temp_context.cleanup()
-            temp_context = None
-
     if config.check and config.output is not None and generate_output is not None:
         from datamodel_code_generator._structured_output import CheckDifferencePayload  # noqa: PLC0415
 
@@ -1536,9 +1558,6 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
                     print("".join(single_file_diff_lines), end="")  # noqa: T201
                 has_differences = True
 
-        if temp_context is not None:  # pragma: no branch
-            temp_context.cleanup()
-
         if namespace.output_format == "json":
             content = "".join(single_file_diff_lines)
             content += "".join("".join(changed_file.diff_lines) for changed_file in changed_files)
@@ -1553,25 +1572,27 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
                 + "\n"
             )
 
-        return Exit.DIFF if has_differences else Exit.OK
+        return cleanup_and_return(Exit.DIFF if has_differences else Exit.OK)
 
     if config.watch:
         try:
             from datamodel_code_generator.watch import watch_and_regenerate  # noqa: PLC0415
 
-            return watch_and_regenerate(
-                config,
-                extra_template_data,
-                aliases,
-                serialization_aliases,
-                custom_formatters_kwargs,
-                default_value_overrides,
+            return cleanup_and_return(
+                watch_and_regenerate(
+                    config,
+                    extra_template_data,
+                    aliases,
+                    serialization_aliases,
+                    custom_formatters_kwargs,
+                    default_value_overrides,
+                )
             )
         except Exception as e:  # noqa: BLE001
             print(str(e), file=sys.stderr)  # noqa: T201
-            return Exit.ERROR
+            return cleanup_and_return(Exit.ERROR)
 
-    return Exit.OK
+    return cleanup_and_return(Exit.OK)
 
 
 if __name__ == "__main__":

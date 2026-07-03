@@ -504,45 +504,63 @@ class CodeFormatter:
 
     def apply_ruff_lint(self, code: str) -> str:
         """Run ruff check with auto-fix on code."""
-        result = subprocess.run(  # noqa: S603
+        result = self._run_ruff_command(
             self._ruff_check_command("-"),
-            input=code.encode(self.encoding),
-            capture_output=True,
-            check=False,
-            cwd=self.settings_path,
+            stdin=code.encode(self.encoding),
+            allow_stdout_on_error=True,
         )
         return result.stdout.decode(self.encoding)
 
     def apply_ruff_formatter(self, code: str) -> str:
         """Format code using ruff format."""
         ruff_path = self._find_ruff_path()
-        result = subprocess.run(  # noqa: S603
+        result = self._run_ruff_command(
             (ruff_path, "format", "-"),
-            input=code.encode(self.encoding),
-            capture_output=True,
-            check=False,
-            cwd=self.settings_path,
+            stdin=code.encode(self.encoding),
         )
         return result.stdout.decode(self.encoding)
 
     def apply_ruff_check_and_format(self, code: str) -> str:
         """Run ruff check and format sequentially for reliable processing."""
         ruff_path = self._find_ruff_path()
-        check_result = subprocess.run(  # noqa: S603
+        check_result = self._run_ruff_command(
             self._ruff_check_command("-", ruff_path=ruff_path),
-            input=code.encode(self.encoding),
-            capture_output=True,
-            check=False,
-            cwd=self.settings_path,
+            stdin=code.encode(self.encoding),
+            allow_stdout_on_error=True,
         )
-        format_result = subprocess.run(  # noqa: S603
+        format_result = self._run_ruff_command(
             (ruff_path, "format", "-"),
-            input=check_result.stdout,
-            capture_output=True,
-            check=False,
-            cwd=self.settings_path,
+            stdin=check_result.stdout,
         )
         return format_result.stdout.decode(self.encoding)
+
+    def _run_ruff_command(
+        self,
+        command: tuple[str, ...],
+        *,
+        stdin: bytes | None = None,
+        allow_stdout_on_error: bool = False,
+    ) -> subprocess.CompletedProcess[bytes]:
+        kwargs: dict[str, Any] = {}
+        if stdin is not None:
+            kwargs["input"] = stdin
+        result = subprocess.run(  # noqa: S603
+            command,
+            capture_output=True,
+            check=False,
+            cwd=self.settings_path,
+            **kwargs,
+        )
+        if result.returncode == 0 or (allow_stdout_on_error and result.returncode == 1 and result.stdout):
+            return result
+        if (message := result.stderr.decode(self.encoding, errors="replace").strip()) or (
+            message := result.stdout.decode(self.encoding, errors="replace").strip()
+        ):
+            detail = message
+        else:
+            detail = "no output"
+        msg = f"Ruff command failed with exit code {result.returncode}: {' '.join(command)}\n{detail}"
+        raise RuntimeError(msg)
 
     def _ruff_check_command(self, *paths: str, ruff_path: str | None = None) -> tuple[str, ...]:
         """Build the Ruff check command for the current formatter settings."""
@@ -561,7 +579,10 @@ class CodeFormatter:
         ruff_in_venv = bin_dir / ruff_name
         if ruff_in_venv.exists():
             return str(ruff_in_venv)
-        return shutil.which("ruff") or "ruff"  # pragma: no cover
+        if ruff_path := shutil.which("ruff"):
+            return ruff_path
+        msg = "Ruff executable was not found. Install it with `pip install 'datamodel-code-generator[ruff]'`."
+        raise RuntimeError(msg)
 
     def apply_isort(self, code: str) -> str:
         """Sort imports using isort."""
@@ -578,18 +599,12 @@ class CodeFormatter:
         """Apply ruff formatting to all Python files in a directory."""
         ruff_path = self._find_ruff_path()
         if Formatter.RUFF_CHECK in self.formatters:
-            subprocess.run(  # noqa: S603
+            self._run_ruff_command(
                 self._ruff_check_command(str(directory), ruff_path=ruff_path),
-                capture_output=True,
-                check=False,
-                cwd=self.settings_path,
             )
         if Formatter.RUFF_FORMAT in self.formatters:
-            subprocess.run(  # noqa: S603
+            self._run_ruff_command(
                 (ruff_path, "format", str(directory)),
-                capture_output=True,
-                check=False,
-                cwd=self.settings_path,
             )
 
 
