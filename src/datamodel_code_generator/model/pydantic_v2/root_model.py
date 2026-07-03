@@ -24,6 +24,15 @@ IMPORT_SUPPORTS_INDEX = Import.from_full_path("typing.SupportsIndex")
 _SEQUENCE_BASE_CLASS_TEMPLATE_DATA_KEY = "sequence_base_class"
 _SEQUENCE_ITEM_TYPE_TEMPLATE_DATA_KEY = "sequence_item_type"
 _SEQUENCE_SLICE_TYPE_TEMPLATE_DATA_KEY = "sequence_slice_type"
+_ROOT_MODEL_CONFIG_KEYS: frozenset[str] = frozenset({"regex_engine", "frozen"})
+
+
+def _root_model_config_items(config: Any) -> list[tuple[str, Any]]:
+    return [
+        (field_name, value)
+        for field_name, value in _config_dict_items(config)
+        if field_name in _ROOT_MODEL_CONFIG_KEYS and value is not None
+    ]
 
 
 class RootModel(BaseModel):
@@ -56,28 +65,25 @@ class RootModel(BaseModel):
 
     @staticmethod
     def _has_meaningful_config(config: Any) -> bool:
+        has_config = False
         match config:
             case None:
-                return False
-            case dict():
-                return config.get("regex_engine") is not None or config.get("frozen") is not None
+                pass
             case _:
-                return getattr(config, "regex_engine", None) is not None or getattr(config, "frozen", None) is not None
+                has_config = bool(_root_model_config_items(config))
+        return has_config
 
     def _sync_config_items(self) -> None:
-        if _CONFIG_ITEMS_TEMPLATE_DATA_KEY in self.extra_template_data:
-            return
         config = self.extra_template_data.get("config")
-        if not self._has_meaningful_config(config):
-            self.extra_template_data.pop("config", None)
-            return
-        if config_items := _config_dict_items(config):
+        if config_items := _root_model_config_items(config):
+            self.extra_template_data["config"] = dict(config_items)
             self.extra_template_data[_CONFIG_ITEMS_TEMPLATE_DATA_KEY] = config_items
             if IMPORT_CONFIG_DICT not in self._additional_imports:
                 self._additional_imports.append(IMPORT_CONFIG_DICT)
             self.clear_imports_cache()
             return
         self.extra_template_data.pop("config", None)
+        self.extra_template_data.pop(_CONFIG_ITEMS_TEMPLATE_DATA_KEY, None)
         self._additional_imports = [imp for imp in self._additional_imports if imp != IMPORT_CONFIG_DICT]
         self.clear_imports_cache()
 

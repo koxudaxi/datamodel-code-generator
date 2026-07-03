@@ -314,3 +314,32 @@ def test_root_model_renders_late_config_dict() -> None:
     assert "model_config = ConfigDict(" in rendered
     assert 'regex_engine="python-re",' in rendered
     assert _CONFIG_ITEMS_TEMPLATE_DATA_KEY in root_model.extra_template_data
+
+
+def test_root_model_rebuilds_stale_config_items() -> None:
+    """RootModel rebuilds stale config_items before rendering ConfigDict."""
+    root_model = RootModel(
+        fields=[
+            DataModelFieldBase(
+                name="a",
+                data_type=DataType(type="str"),
+                required=True,
+            )
+        ],
+        reference=Reference(name="TestRootModel", path="test_root_model"),
+        extra_template_data=defaultdict(
+            dict,
+            {
+                "test_root_model": {
+                    "config": ConfigDict(regex_engine='"python-re"'),
+                    _CONFIG_ITEMS_TEMPLATE_DATA_KEY: object(),
+                }
+            },
+        ),
+    )
+
+    rendered = root_model.render()
+
+    assert "model_config = ConfigDict(" in rendered
+    assert 'regex_engine="python-re",' in rendered
+    assert root_model.extra_template_data[_CONFIG_ITEMS_TEMPLATE_DATA_KEY] == [("regex_engine", '"python-re"')]
