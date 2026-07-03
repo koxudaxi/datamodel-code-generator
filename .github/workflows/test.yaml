@@ -419,6 +419,10 @@ jobs:
     - name: Run sharded test suite
       run: |
         mapfile -t test_paths < .tox/ci-shard-tests.txt
+        if [ "${#test_paths[@]}" -eq 0 ]; then
+          echo "No tests selected for this shard; skipping."
+          exit 0
+        fi
         coverage_args=()
         if [ "${{ matrix.coverage }}" = "true" ]; then
           coverage_args=(
