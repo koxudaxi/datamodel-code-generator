@@ -5,6 +5,59 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.67.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.67.0) - 2026-07-03
+
+## Breaking Changes
+
+
+### Default Behavior Changes
+* Auto input-type CSV fallback is now conditional - When `--input-file-type auto` is used, `infer_input_type()` previously treated **any** YAML parse failure as CSV data. It now falls back to CSV only when the text looks like CSV (non-empty lines with consistent, non-zero comma counts). Inputs that were previously inferred as `csv` — including malformed JSON/YAML and ragged CSV with inconsistent column counts (e.g. `id,name,tel\n1,taro\n`) — will no longer be inferred as CSV. (#3536)
+* GitHub Action `extra-args` no longer undergoes shell expansion - The Action previously appended `extra-args` directly into the shell command (`datamodel-codegen "${ARGS[@]}" ${{ inputs.extra-args }}`), so the value was subject to word-splitting, glob expansion, variable expansion, and command substitution. It is now tokenized with Python's `shlex.split`. Workflows that relied on shell features inside `extra-args` (globs like `*.json`, variables like `$HOME`, or command substitution `$(...)`) will no longer have them expanded and must pass literal, individually-quoted arguments instead. (#3542)
+* GitHub Action `extras` input is now validated against a whitelist - Previously any value passed to the `extras` input was accepted and injected into the pip install spec. It is now validated against the fixed set `graphql`, `http`, `validation`, `ruff`, `all`; any other value now fails the install step with `::error::Unsupported extras value: <value>` instead of being passed through. Workflows passing extras values outside this set will now error. (#3542)
+
+### Error Handling Changes
+* Malformed auto-detected input now raises an error instead of silently inferring CSV - Under `auto` inference, input that fails YAML parsing and does not look like CSV now raises `Error` rather than falling back to CSV and attempting generation. The error message was also expanded to include the underlying YAML parser error, e.g. `Can't infer input file type from the input data. YAML parser error: <Type>: <detail>. Please specify the input file type explicitly with --input-file-type option.` Workflows depending on the old blanket-CSV fallback must now pass `--input-file-type csv` explicitly. (#3536)
+
+## What's Changed
+* Update CHANGELOG for 0.66.3 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3515
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3516
+* Update supported data type docs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3517
+* Render CLI option relationships in docs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3518
+* Generate tested docs examples by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3519
+* Add CLI option topic metadata foundation by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3522
+* Sync README support lists by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3523
+* Add CLI reference recipe sections by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3520
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3524
+* Add Playground option documentation links by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3521
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3525
+* Add CLI topic pages by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3526
+* Add aggregate docs check by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3527
+* Expand tested docs examples by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3528
+* Add schema format guide tables by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3529
+* Add benchmark scenario guidance by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3531
+* Sync README quick-start recipes by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3532
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3534
+* Add CLI relationship summary by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3530
+* Cover parsed source cache parity by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3535
+* Fix auto CSV fallback by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3536
+* Cover input error messages by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3537
+* Refresh Docker image by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3538
+* Gate release publishing by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3539
+* Harden GitHub Action by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3542
+* Document Docker image and action usage by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3544
+* Add Docker metadata coverage by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3548
+* Gate unused type ignores by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3547
+* Assert parsed source cache population by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3546
+* Harden action cache key by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3545
+* Cover de facto public symbols by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3550
+* Correct experimental feature metadata by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3551
+* Add generation determinism guard by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3549
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.66.3...0.67.0
+
+---
+
 ## [0.66.3](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.66.3) - 2026-07-01
 
 ## What's Changed
