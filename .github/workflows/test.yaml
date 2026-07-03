@@ -505,17 +505,24 @@ jobs:
           merge-multiple: true
       - name: Combine and report coverage
         id: coverage
-        run: tox run -e coverage --skip-uv-sync --skip-pkg-install
+        run: |
+          .tox/coverage/bin/coverage combine
+          .tox/coverage/bin/coverage xml -o .tox/coverage.xml
+          .tox/coverage/bin/diff-cover --compare-branch "${DIFF_AGAINST:-origin/main}" .tox/coverage.xml
+          .tox/coverage/bin/coverage report --fail-under=100 --skip-covered --show-missing
         continue-on-error: true
         env:
-          UV_PYTHON_PREFERENCE: only-managed
+          COVERAGE_FILE: .tox/.coverage
       - name: Show uncovered lines on failure
         if: steps.coverage.outcome == 'failure'
         run: |
           echo "::error::Coverage check failed. Lines not covered:"
           COVERAGE_FILE=.tox/.coverage .tox/coverage/bin/coverage report --show-missing --fail-under=0 | grep -v "100%"
+      - name: Generate HTML report on failure
+        if: steps.coverage.outcome == 'failure'
+        run: COVERAGE_FILE=.tox/.coverage .tox/coverage/bin/coverage html --fail-under=0 -d .tox/htmlcov
       - name: Upload HTML report
-        if: always()
+        if: steps.coverage.outcome == 'failure'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: html-report
