@@ -62,6 +62,11 @@ class _FakeInterpreters:
         return interpreter
 
 
+@pytest.fixture(autouse=True)
+def _reset_subinterpreter_unsupported(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(main_conftest, "_SUBINTERPRETER_UNSUPPORTED", False)
+
+
 @_SKIP_BLACK
 def test_openapi_api_exec_current_version(output_file: Path) -> None:
     """Test that api.yaml schema generates executable code on current Python."""
@@ -194,6 +199,22 @@ def test_try_import_generated_output_falls_back_for_unsupported_subinterpreter_e
     monkeypatch.setattr(main_conftest, "_get_concurrent_interpreters_module", lambda: fake_interpreters)
 
     assert not _try_import_generated_output_in_subinterpreter(output_file)
+    assert fake_interpreters.instances[0].closed
+
+
+@pytest.mark.allow_direct_assert
+def test_try_import_generated_output_caches_unsupported_subinterpreter_extension(
+    output_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test subinterpreter-incompatible extensions are detected once per worker."""
+    fake_interpreters = _FakeInterpreters(
+        RuntimeError("ImportError: module _pydantic_core does not support loading in subinterpreter")
+    )
+    monkeypatch.setattr(main_conftest, "_get_concurrent_interpreters_module", lambda: fake_interpreters)
+
+    assert not _try_import_generated_output_in_subinterpreter(output_file)
+    assert not _try_import_generated_output_in_subinterpreter(output_file)
+    assert len(fake_interpreters.instances) == 1
     assert fake_interpreters.instances[0].closed
 
 

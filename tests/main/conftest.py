@@ -1284,19 +1284,30 @@ def _get_concurrent_interpreters_module() -> Any | None:
     return interpreters
 
 
+_SUBINTERPRETER_UNSUPPORTED = False
+
+
 def _is_subinterpreter_unsupported_import_error(exception: BaseException) -> bool:
     messages = [str(exception)]
-    excinfo = getattr(exception, "excinfo", None)
-    if excinfo is not None:
+    if (excinfo := getattr(exception, "excinfo", None)) is not None:
         messages.append(str(excinfo))
-    return any(
-        "does not support loading in subinterpreter" in message
-        or "does not support loading in subinterpreters" in message
-        for message in messages
-    )
+    for message in messages:
+        match message:
+            case str() if (
+                "does not support loading in subinterpreter" in message
+                or "does not support loading in subinterpreters" in message
+            ):
+                return True
+            case _:
+                continue
+    return False
 
 
 def _try_import_generated_output_in_subinterpreter(output_path: Path) -> bool:
+    global _SUBINTERPRETER_UNSUPPORTED  # noqa: PLW0603
+    if _SUBINTERPRETER_UNSUPPORTED:
+        return False
+
     interpreters = _get_concurrent_interpreters_module()
     if interpreters is None:
         return False
@@ -1307,6 +1318,7 @@ def _try_import_generated_output_in_subinterpreter(output_path: Path) -> bool:
     except Exception as exception:
         if _is_subinterpreter_unsupported_import_error(exception):
             # Keep import validation active when an extension dependency cannot run in subinterpreters.
+            _SUBINTERPRETER_UNSUPPORTED = True
             return False
         raise
     finally:
