@@ -91,9 +91,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - tox_env: py314-parallel
-            name: "3.14"
-            coverage_name: "3.14"
           - tox_env: pydantic20
             name: pydantic20
             coverage_name: pydantic20
@@ -254,6 +251,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - tox_env: py314-parallel
+            name: "3.14"
+            os: ubuntu-24.04
+            coverage: true
+            shard: 1
+            shard_total: 2
+            extra_tests: tests/cli_doc/test_cli_options_sync.py
+          - tox_env: py314-parallel
+            name: "3.14"
+            os: ubuntu-24.04
+            coverage: true
+            shard: 2
+            shard_total: 2
           - tox_env: py313-parallel
             name: "3.13"
             os: ubuntu-24.04
@@ -392,6 +402,7 @@ jobs:
       SHARD_INDEX: ${{ matrix.shard }}
       SHARD_TOTAL: ${{ matrix.shard_total }}
       TOX_ENV: ${{ matrix.tox_env }}
+      EXTRA_TESTS: ${{ matrix.extra_tests }}
       WINDOWS_TOX_UV_VERSION: "1.35.2"
       WINDOWS_TOX_VERSION: "4.56.1"
       WINDOWS_UV_VERSION: "0.11.26"
@@ -438,6 +449,9 @@ jobs:
         python scripts/select_ci_test_shard.py --write-recipe .tox/ci-shard-recipe.json
         python scripts/select_ci_test_shard.py "$SHARD_INDEX" "$SHARD_TOTAL" \
           --recipe .tox/ci-shard-recipe.json | tee .tox/ci-shard-tests.txt
+        if [ -n "$EXTRA_TESTS" ]; then
+          printf '%s\n' "$EXTRA_TESTS" >> .tox/ci-shard-tests.txt
+        fi
       shell: bash
     - name: Run sharded test suite
       run: |
@@ -514,17 +528,24 @@ jobs:
           merge-multiple: true
       - name: Combine and report coverage
         id: coverage
-        run: tox run -e coverage --skip-uv-sync --skip-pkg-install
+        run: |
+          .tox/coverage/bin/coverage combine
+          .tox/coverage/bin/coverage xml -o .tox/coverage.xml
+          .tox/coverage/bin/diff-cover --compare-branch "${DIFF_AGAINST:-origin/main}" .tox/coverage.xml
+          .tox/coverage/bin/coverage report --fail-under=100 --skip-covered --show-missing
         continue-on-error: true
         env:
-          UV_PYTHON_PREFERENCE: only-managed
+          COVERAGE_FILE: .tox/.coverage
       - name: Show uncovered lines on failure
         if: steps.coverage.outcome == 'failure'
         run: |
           echo "::error::Coverage check failed. Lines not covered:"
           COVERAGE_FILE=.tox/.coverage .tox/coverage/bin/coverage report --show-missing --fail-under=0 | grep -v "100%"
+      - name: Generate HTML report on failure
+        if: steps.coverage.outcome == 'failure'
+        run: COVERAGE_FILE=.tox/.coverage .tox/coverage/bin/coverage html --fail-under=0 -d .tox/htmlcov
       - name: Upload HTML report
-        if: always()
+        if: steps.coverage.outcome == 'failure'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: html-report
@@ -543,15 +564,8 @@ jobs:
         run: exit 1
 
   check:
-    name: ${{ matrix.tox_env }}
+    name: checks
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        tox_env:
-          - type
-          - docs
-          - pkg_meta
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -561,17 +575,48 @@ jobs:
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
       - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
-      - name: Setup check suite
-        run: tox r -vv --notest --skip-missing-interpreters false -e ${{ matrix.tox_env }}
+      - name: Setup check suites
+        id: setup-check-suites
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          failed=0
+          for tox_env in type docs pkg_meta; do
+            if ! tox r -vv --notest --skip-missing-interpreters false -e "$tox_env"; then
+              failed=1
+            fi
+          done
+          exit "$failed"
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Run check for ${{ matrix.tox_env }}
-        run: tox run --skip-uv-sync --skip-pkg-install -e ${{ matrix.tox_env }}
+      - name: Run check suites
+        id: run-check-suites
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          failed=0
+          for tox_env in type docs pkg_meta; do
+            if ! tox run --skip-uv-sync --skip-pkg-install -e "$tox_env"; then
+              failed=1
+            fi
+          done
+          exit "$failed"
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Fail if any check suite failed
+        if: always()
+        run: |
+          setup_outcome='${{ steps.setup-check-suites.outcome }}'
+          run_outcome='${{ steps.run-check-suites.outcome }}'
 
-  w3c-xmlschema-e2e:
-    name: W3C XML Schema e2e
+          echo "setup check suites: ${setup_outcome}"
+          echo "run check suites: ${run_outcome}"
+
+          [ "${setup_outcome}" = "success" ] || exit 1
+          [ "${run_outcome}" = "success" ] || exit 1
+
+  e2e:
+    name: e2e
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -582,22 +627,47 @@ jobs:
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
       - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
-      - name: Setup W3C XML Schema e2e suite
-        run: tox r -vv --notest --skip-missing-interpreters false -e w3c-xmlschema-e2e
+      - name: Setup e2e suites
+        id: setup-e2e-suites
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          failed=0
+          for tox_env in \
+            w3c-xmlschema-e2e \
+            jsonschema-suite-conformance \
+            asyncapi-spec-json-schemas-e2e \
+            apache-avro-schema-pass-e2e \
+            protobuf-official-e2e; do
+            if ! tox r -vv --notest --skip-missing-interpreters false -e "$tox_env"; then
+              failed=1
+            fi
+          done
+          exit "$failed"
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Cache W3C XML Schema Test Suite
+      - name: Restore W3C XML Schema Test Suite
         id: cache-w3c-xsdtests
-        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
         with:
           path: .tox/w3c-xsdtests
           key: e2e-xsdtests-7bc3365c652a322f3d762021b3879eb92dae7e30
       - name: Checkout W3C XML Schema Test Suite
+        id: checkout-w3c-xsdtests
         if: steps.cache-w3c-xsdtests.outputs.cache-hit != 'true'
+        continue-on-error: true
         run: |
           git clone --filter=blob:none https://github.com/w3c/xsdtests.git .tox/w3c-xsdtests
           git -C .tox/w3c-xsdtests checkout 7bc3365c652a322f3d762021b3879eb92dae7e30
+      - name: Save W3C XML Schema Test Suite
+        if: steps.cache-w3c-xsdtests.outputs.cache-hit != 'true' && steps.checkout-w3c-xsdtests.outcome == 'success'
+        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        with:
+          path: .tox/w3c-xsdtests
+          key: e2e-xsdtests-7bc3365c652a322f3d762021b3879eb92dae7e30
       - name: Run W3C XML Schema e2e suite
+        id: run-w3c-xmlschema-e2e
+        continue-on-error: true
         run: |
           tox run --skip-uv-sync --skip-pkg-install -e w3c-xmlschema-e2e -- \
             .tox/w3c-xsdtests \
@@ -605,140 +675,150 @@ jobs:
             --expected-unique-documents 5283
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
-
-  jsonschema-suite-conformance:
-    name: JSON-Schema-Test-Suite conformance
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Restore JSON-Schema-Test-Suite
+        id: cache-json-schema-test-suite
+        uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
         with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
-      - name: Install tox
-        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
-      - name: Setup JSON-Schema-Test-Suite conformance
-        run: tox r -vv --notest --skip-missing-interpreters false -e jsonschema-suite-conformance
-        env:
-          UV_PYTHON_PREFERENCE: "only-managed"
+          path: .tox/json-schema-test-suite
+          key: e2e-json-schema-test-suite-fe8c2f0de2041943975932b6bf4bd882625b6cfb
       - name: Checkout JSON-Schema-Test-Suite
+        id: checkout-json-schema-test-suite
+        if: steps.cache-json-schema-test-suite.outputs.cache-hit != 'true'
+        continue-on-error: true
         run: |
           git clone --filter=blob:none https://github.com/json-schema-org/JSON-Schema-Test-Suite.git .tox/json-schema-test-suite
           git -C .tox/json-schema-test-suite checkout fe8c2f0de2041943975932b6bf4bd882625b6cfb
+      - name: Save JSON-Schema-Test-Suite
+        if: steps.cache-json-schema-test-suite.outputs.cache-hit != 'true' && steps.checkout-json-schema-test-suite.outcome == 'success'
+        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        with:
+          path: .tox/json-schema-test-suite
+          key: e2e-json-schema-test-suite-fe8c2f0de2041943975932b6bf4bd882625b6cfb
       - name: Run JSON-Schema-Test-Suite conformance
+        id: run-jsonschema-suite-conformance
+        continue-on-error: true
         run: |
           tox run --skip-uv-sync --skip-pkg-install -e jsonschema-suite-conformance -- \
             .tox/json-schema-test-suite
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
-
-  asyncapi-spec-json-schemas-e2e:
-    name: AsyncAPI spec JSON Schemas e2e
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
-      - name: Install tox
-        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
-      - name: Setup AsyncAPI spec JSON Schemas e2e suite
-        run: tox r -vv --notest --skip-missing-interpreters false -e asyncapi-spec-json-schemas-e2e
-        env:
-          UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Cache AsyncAPI spec JSON Schemas
+      - name: Restore AsyncAPI spec JSON Schemas
         id: cache-asyncapi-spec-json-schemas
-        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
         with:
           path: .tox/asyncapi-spec-json-schemas
           key: e2e-asyncapi-spec-json-schemas-469c2b2bf5ed88e0cdf1e48975b93a87c710d229
       - name: Checkout AsyncAPI spec JSON Schemas
+        id: checkout-asyncapi-spec-json-schemas
         if: steps.cache-asyncapi-spec-json-schemas.outputs.cache-hit != 'true'
+        continue-on-error: true
         run: |
           git clone --filter=blob:none https://github.com/asyncapi/spec-json-schemas.git .tox/asyncapi-spec-json-schemas
           git -C .tox/asyncapi-spec-json-schemas checkout 469c2b2bf5ed88e0cdf1e48975b93a87c710d229
+      - name: Save AsyncAPI spec JSON Schemas
+        if: steps.cache-asyncapi-spec-json-schemas.outputs.cache-hit != 'true' && steps.checkout-asyncapi-spec-json-schemas.outcome == 'success'
+        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        with:
+          path: .tox/asyncapi-spec-json-schemas
+          key: e2e-asyncapi-spec-json-schemas-469c2b2bf5ed88e0cdf1e48975b93a87c710d229
       - name: Run AsyncAPI spec JSON Schemas e2e suite
+        id: run-asyncapi-spec-json-schemas-e2e
+        continue-on-error: true
         run: |
           tox run --skip-uv-sync --skip-pkg-install -e asyncapi-spec-json-schemas-e2e -- \
             .tox/asyncapi-spec-json-schemas/schemas \
             --expected-schemas 12
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
-
-  apache-avro-schema-pass-e2e:
-    name: Apache Avro schema pass e2e
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
-      - name: Install tox
-        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
-      - name: Setup Apache Avro schema pass e2e suite
-        run: tox r -vv --notest --skip-missing-interpreters false -e apache-avro-schema-pass-e2e
-        env:
-          UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Cache Apache Avro
+      - name: Restore Apache Avro
         id: cache-apache-avro
-        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
         with:
           path: .tox/apache-avro
           key: e2e-apache-avro-9110c693767c1dde2665b2b57939333478b12036
       - name: Checkout Apache Avro
+        id: checkout-apache-avro
         if: steps.cache-apache-avro.outputs.cache-hit != 'true'
+        continue-on-error: true
         run: |
           git clone --filter=blob:none https://github.com/apache/avro.git .tox/apache-avro
           git -C .tox/apache-avro checkout 9110c693767c1dde2665b2b57939333478b12036
+      - name: Save Apache Avro
+        if: steps.cache-apache-avro.outputs.cache-hit != 'true' && steps.checkout-apache-avro.outcome == 'success'
+        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        with:
+          path: .tox/apache-avro
+          key: e2e-apache-avro-9110c693767c1dde2665b2b57939333478b12036
       - name: Run Apache Avro schema pass e2e suite
+        id: run-apache-avro-schema-pass-e2e
+        continue-on-error: true
         run: |
           tox run --skip-uv-sync --skip-pkg-install -e apache-avro-schema-pass-e2e -- \
             .tox/apache-avro/lang/c/tests/schema_tests/pass \
             --expected-schemas 28
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
-
-  protobuf-official-e2e:
-    name: Protocol Buffers official e2e
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
-      - name: Install tox
-        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
-      - name: Setup Protocol Buffers official e2e suite
-        run: tox r -vv --notest --skip-missing-interpreters false -e protobuf-official-e2e
-        env:
-          UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Cache Protocol Buffers
+      - name: Restore Protocol Buffers
         id: cache-protobuf
-        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
         with:
           path: .tox/protobuf
           key: e2e-protobuf-4376cba55d9e2f44f7e317d9c10e0259d145f8cf
       - name: Checkout Protocol Buffers
+        id: checkout-protobuf
         if: steps.cache-protobuf.outputs.cache-hit != 'true'
+        continue-on-error: true
         run: |
           git clone --filter=blob:none --no-checkout https://github.com/protocolbuffers/protobuf.git .tox/protobuf
           git -C .tox/protobuf sparse-checkout init --cone
           git -C .tox/protobuf sparse-checkout set src conformance benchmarks
           git -C .tox/protobuf checkout 4376cba55d9e2f44f7e317d9c10e0259d145f8cf
+      - name: Save Protocol Buffers
+        if: steps.cache-protobuf.outputs.cache-hit != 'true' && steps.checkout-protobuf.outcome == 'success'
+        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        with:
+          path: .tox/protobuf
+          key: e2e-protobuf-4376cba55d9e2f44f7e317d9c10e0259d145f8cf
       - name: Run Protocol Buffers official e2e suite
+        id: run-protobuf-official-e2e
+        continue-on-error: true
         run: |
           tox run --skip-uv-sync --skip-pkg-install -e protobuf-official-e2e -- \
             .tox/protobuf \
             --expected-schemas 65
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Fail if any e2e suite failed
+        if: always()
+        run: |
+          failed=0
+          check_outcome() {
+            label="$1"
+            outcome="$2"
+
+            echo "${label}: ${outcome}"
+            case "$outcome" in
+              success|skipped)
+                return
+                ;;
+            esac
+
+            failed=1
+          }
+
+          check_outcome "setup e2e suites" '${{ steps.setup-e2e-suites.outcome }}'
+          check_outcome "checkout W3C XML Schema Test Suite" '${{ steps.checkout-w3c-xsdtests.outcome }}'
+          check_outcome "run W3C XML Schema e2e suite" '${{ steps.run-w3c-xmlschema-e2e.outcome }}'
+          check_outcome "checkout JSON-Schema-Test-Suite" '${{ steps.checkout-json-schema-test-suite.outcome }}'
+          check_outcome "run JSON-Schema-Test-Suite conformance" '${{ steps.run-jsonschema-suite-conformance.outcome }}'
+          check_outcome "checkout AsyncAPI spec JSON Schemas" '${{ steps.checkout-asyncapi-spec-json-schemas.outcome }}'
+          check_outcome "run AsyncAPI spec JSON Schemas e2e suite" '${{ steps.run-asyncapi-spec-json-schemas-e2e.outcome }}'
+          check_outcome "checkout Apache Avro" '${{ steps.checkout-apache-avro.outcome }}'
+          check_outcome "run Apache Avro schema pass e2e suite" '${{ steps.run-apache-avro-schema-pass-e2e.outcome }}'
+          check_outcome "checkout Protocol Buffers" '${{ steps.checkout-protobuf.outcome }}'
+          check_outcome "run Protocol Buffers official e2e suite" '${{ steps.run-protobuf-official-e2e.outcome }}'
+
+          exit "$failed"
 
   test-gate:
     name: test-gate
@@ -751,11 +831,7 @@ jobs:
       - test-shard
       - coverage
       - check
-      - w3c-xmlschema-e2e
-      - jsonschema-suite-conformance
-      - asyncapi-spec-json-schemas-e2e
-      - apache-avro-schema-pass-e2e
-      - protobuf-official-e2e
+      - e2e
     steps:
       - name: Fail if any test workflow job failed
         run: |
@@ -765,11 +841,7 @@ jobs:
           test_shard_result='${{ needs.test-shard.result }}'
           coverage_result='${{ needs.coverage.result }}'
           check_result='${{ needs.check.result }}'
-          w3c_xmlschema_e2e_result='${{ needs.w3c-xmlschema-e2e.result }}'
-          jsonschema_suite_conformance_result='${{ needs.jsonschema-suite-conformance.result }}'
-          asyncapi_spec_json_schemas_e2e_result='${{ needs.asyncapi-spec-json-schemas-e2e.result }}'
-          apache_avro_schema_pass_e2e_result='${{ needs.apache-avro-schema-pass-e2e.result }}'
-          protobuf_official_e2e_result='${{ needs.protobuf-official-e2e.result }}'
+          e2e_result='${{ needs.e2e.result }}'
 
           echo "test: ${test_result}"
           echo "test coverage: ${test_coverage_result}"
@@ -777,11 +849,7 @@ jobs:
           echo "test shard: ${test_shard_result}"
           echo "coverage: ${coverage_result}"
           echo "check: ${check_result}"
-          echo "w3c xmlschema e2e: ${w3c_xmlschema_e2e_result}"
-          echo "jsonschema suite conformance: ${jsonschema_suite_conformance_result}"
-          echo "asyncapi spec json schemas e2e: ${asyncapi_spec_json_schemas_e2e_result}"
-          echo "apache avro schema pass e2e: ${apache_avro_schema_pass_e2e_result}"
-          echo "protobuf official e2e: ${protobuf_official_e2e_result}"
+          echo "e2e: ${e2e_result}"
 
           [ "${test_result}" = "success" ] || exit 1
           [ "${test_coverage_result}" = "success" ] || exit 1
@@ -789,8 +857,4 @@ jobs:
           [ "${test_shard_result}" = "success" ] || exit 1
           [ "${coverage_result}" = "success" ] || exit 1
           [ "${check_result}" = "success" ] || exit 1
-          [ "${w3c_xmlschema_e2e_result}" = "success" ] || exit 1
-          [ "${jsonschema_suite_conformance_result}" = "success" ] || exit 1
-          [ "${asyncapi_spec_json_schemas_e2e_result}" = "success" ] || exit 1
-          [ "${apache_avro_schema_pass_e2e_result}" = "success" ] || exit 1
-          [ "${protobuf_official_e2e_result}" = "success" ] || exit 1
+          [ "${e2e_result}" = "success" ] || exit 1
