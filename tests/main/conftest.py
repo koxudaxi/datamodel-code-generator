@@ -1284,7 +1284,7 @@ def _get_concurrent_interpreters_module() -> Any | None:
     return interpreters
 
 
-_SUBINTERPRETER_UNSUPPORTED = False
+_SUBINTERPRETER_UNSUPPORTED: list[None] = []
 
 
 def _is_subinterpreter_unsupported_import_error(exception: BaseException) -> bool:
@@ -1304,7 +1304,6 @@ def _is_subinterpreter_unsupported_import_error(exception: BaseException) -> boo
 
 
 def _try_import_generated_output_in_subinterpreter(output_path: Path) -> bool:
-    global _SUBINTERPRETER_UNSUPPORTED  # noqa: PLW0603
     if _SUBINTERPRETER_UNSUPPORTED:
         return False
 
@@ -1318,7 +1317,7 @@ def _try_import_generated_output_in_subinterpreter(output_path: Path) -> bool:
     except Exception as exception:
         if _is_subinterpreter_unsupported_import_error(exception):
             # Keep import validation active when an extension dependency cannot run in subinterpreters.
-            _SUBINTERPRETER_UNSUPPORTED = True
+            _SUBINTERPRETER_UNSUPPORTED.append(None)
             return False
         raise
     finally:

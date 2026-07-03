@@ -64,7 +64,7 @@ class _FakeInterpreters:
 
 @pytest.fixture(autouse=True)
 def _reset_subinterpreter_unsupported(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(main_conftest, "_SUBINTERPRETER_UNSUPPORTED", False)
+    monkeypatch.setattr(main_conftest, "_SUBINTERPRETER_UNSUPPORTED", [])
 
 
 @_SKIP_BLACK
