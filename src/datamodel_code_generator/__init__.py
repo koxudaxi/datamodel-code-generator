@@ -106,6 +106,8 @@ Maps module path tuples (e.g., ("models", "user.py")) to generated code strings.
 Returned by generate() when output=None and multiple modules are generated.
 """
 
+_SCHEMA_TEXT_START_CHARS = ("{", "[", "<")
+
 
 def _apply_generate_config_preset(config: GenerateConfig) -> GenerateConfig:
     """Return a generate config with preset defaults applied."""
@@ -759,6 +761,23 @@ def _generate_config_values(generate_config: GenerateConfig) -> dict[str, Any]:
     return values
 
 
+def _coerce_existing_path_input(
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+) -> Path | str | ParseResult | Mapping[str, Any] | list[Any]:
+    if not isinstance(input_, str):
+        return input_
+    if not input_ or "\n" in input_ or "\r" in input_:
+        return input_
+    if (stripped := input_.lstrip()).startswith(_SCHEMA_TEXT_START_CHARS) or "://" in stripped:
+        return input_
+    try:
+        path = Path(input_).expanduser()
+        path_exists = path.exists()
+    except (OSError, ValueError):  # pragma: no cover
+        return input_
+    return path if path_exists else input_
+
+
 def _create_parser_config(
     generate_config: GenerateConfig,
     additional_options: ParserConfigDict
@@ -1148,7 +1167,7 @@ def _build_parser(  # noqa: PLR0911, PLR0913
     raise Error(msg)
 
 
-def _emit_results(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
+def _emit_results(  # noqa: PLR0912, PLR0913, PLR0915
     results: str | dict[tuple[str, ...], Any],
     input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     input_filename: str | None,
@@ -1225,25 +1244,24 @@ def _emit_results(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             for name, result in sorted(results.items())
         }
 
-    file: IO[Any] | None
     for path, (body, future_imports, filename) in modules.items():
         if not path.parent.exists():
             path.parent.mkdir(parents=True)
 
         safe_filename = filename.replace("\n", " ").replace("\r", " ") if filename else ""
         effective_header = custom_file_header or header.format(safe_filename)
-        file = path.open("wt", encoding=config.encoding)
-        if custom_file_header and body:
-            file.write(
-                _build_module_content(body, effective_header, custom_file_header, future_imports=future_imports) + "\n"
-            )
-        else:
-            file.write(effective_header)
-            if body:
-                file.write("\n\n")
-                file.write(body.rstrip())
-            file.write("\n")
-        file.close()
+        with path.open("wt", encoding=config.encoding) as file:
+            if custom_file_header and body:
+                file.write(
+                    _build_module_content(body, effective_header, custom_file_header, future_imports=future_imports)
+                    + "\n"
+                )
+            else:
+                file.write(effective_header)
+                if body:
+                    file.write("\n\n")
+                    file.write(body.rstrip())
+                file.write("\n")
 
     if defer_formatting and config.formatters:
         from datamodel_code_generator._format_types import Formatter  # noqa: PLC0415
@@ -1342,6 +1360,8 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     custom_file_header = config.custom_file_header
     skip_root_model = config.skip_root_model
     source_override: Mapping[str, Any] | None = None
+
+    input_ = _coerce_existing_path_input(input_)
 
     if (
         isinstance(input_, list)

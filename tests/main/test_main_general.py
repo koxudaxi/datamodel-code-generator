@@ -2869,6 +2869,33 @@ def test_generate_returns_string_when_output_none() -> None:
     )
 
 
+def test_generate_accepts_string_path(output_file: Path) -> None:
+    """Test generate() reads existing string paths as local schema files."""
+    result = generate(
+        input_=str(JSON_SCHEMA_DATA_PATH / "person.json"),
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        disable_timestamp=True,
+        formatters=[],
+    )
+    assert_generate_wrote_file(result, output_file)
+    assert_file_content(output_file, "generate_accepts_string_path.py")
+
+
+def test_generate_keeps_non_path_string_input(output_file: Path) -> None:
+    """Test generate() keeps non-path strings as inline source text."""
+    result = generate(
+        input_="name: Alice",
+        input_file_type=InputFileType.Yaml,
+        input_filename="inline.yaml",
+        output=output_file,
+        disable_timestamp=True,
+        formatters=[],
+    )
+    assert_generate_wrote_file(result, output_file)
+    assert_file_content(output_file, "generate_keeps_non_path_string_input.py")
+
+
 def test_generate_returns_string_with_pydantic_v2() -> None:
     """Test that generate() returns str for Pydantic v2 models."""
     json_schema = '{"type": "object", "properties": {"value": {"type": "number"}}}'
