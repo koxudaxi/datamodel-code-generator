@@ -3,15 +3,83 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from inline_snapshot import snapshot
 
 from datamodel_code_generator.imports import IMPORT_DECIMAL, IMPORT_LIST, IMPORT_SET
 from datamodel_code_generator.model.base import BaseClassDataType
 from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField
-from datamodel_code_generator.parser.generation import GenerationStore, set_model_base_classes
+from datamodel_code_generator.parser.generation import (
+    GENERATION_STORE_MUTATION_METHODS,
+    GenerationStore,
+    set_model_base_classes,
+)
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+IMPORT_CACHE_CLEARING_MUTATION_METHODS = frozenset({
+    "append_field",
+    "collapse_root_data_type",
+    "detach_data_type_ref",
+    "detach_model_data_type_refs",
+    "insert_field",
+    "move_model",
+    "redirect_model_reference_users",
+    "redirect_reference_users",
+    "remove_field",
+    "rename_model",
+    "replace_data_type_ref",
+    "replace_field_type",
+    "replace_nested_data_type",
+    "reset_base_classes",
+    "set_base_classes",
+    "set_fields",
+    "set_nested_data_types",
+    "update_model_reference",
+})
+IMPORT_CACHE_NEUTRAL_MUTATION_METHODS = frozenset({
+    "defer_refresh",
+    "register_model",
+})
+
+
+def _base_model(name: str = "Model", fields: list[DataModelField] | None = None) -> BaseModel:
+    return BaseModel(fields=fields or [], reference=Reference(path=name, original_name=name, name=name))
+
+
+def _track_import_cache_clears(model: BaseModel) -> list[None]:
+    calls: list[None] = []
+    original_clear = model.clear_imports_cache
+
+    def clear_imports_cache() -> None:
+        calls.append(None)
+        original_clear()
+
+    model.clear_imports_cache = clear_imports_cache
+    return calls
+
+
+def _assert_clears_cached_imports(model: BaseModel, calls: list[None], action: Callable[[], None]) -> None:
+    assert model.imports is not None
+    assert model._IMPORTS_CACHE_KEY in model.__dict__
+    call_count = len(calls)
+
+    action()
+
+    assert len(calls) > call_count
+    assert model._IMPORTS_CACHE_KEY not in model.__dict__
+
+
+def test_generation_store_import_cache_contract_covers_mutation_surface() -> None:
+    """New store mutation APIs must be classified for import-cache safety."""
+    assert (
+        IMPORT_CACHE_CLEARING_MUTATION_METHODS | IMPORT_CACHE_NEUTRAL_MUTATION_METHODS
+    ) == GENERATION_STORE_MUTATION_METHODS
 
 
 def test_generation_store_indexes_model_and_reference_order() -> None:
@@ -619,6 +687,162 @@ def test_generation_store_field_type_replacement_clears_model_imports_cache() ->
 
     assert IMPORT_LIST not in model.imports
     assert IMPORT_SET in model.imports
+
+
+def test_generation_store_model_mutations_clear_cached_imports_contract() -> None:
+    """Model-level store mutations must clear an already populated imports cache."""
+    model = _base_model()
+    store = GenerationStore()
+    store.register_model(model)
+    clear_calls = _track_import_cache_clears(model)
+
+    _assert_clears_cached_imports(
+        model,
+        clear_calls,
+        lambda: store.update_model_reference(model, reference_name="Renamed"),
+    )
+    _assert_clears_cached_imports(
+        model,
+        clear_calls,
+        lambda: store.rename_model(model, reference_name="RenamedAgain"),
+    )
+    _assert_clears_cached_imports(
+        model,
+        clear_calls,
+        lambda: store.move_model(model, new_path="pkg.RenamedAgain", new_file_path=Path("pkg.py")),
+    )
+    _assert_clears_cached_imports(
+        model,
+        clear_calls,
+        lambda: store.set_base_classes(model, [BaseClassDataType(type="object")]),
+    )
+    _assert_clears_cached_imports(model, clear_calls, lambda: store.reset_base_classes(model))
+
+
+def test_generation_store_field_collection_mutations_clear_cached_imports_contract() -> None:
+    """Field collection helpers must invalidate stale model imports."""
+    model = _base_model()
+    store = GenerationStore()
+    store.register_model(model)
+    clear_calls = _track_import_cache_clears(model)
+    list_field = DataModelField(data_type=DataType(is_list=True))
+    set_field = DataModelField(data_type=DataType(is_set=True))
+
+    _assert_clears_cached_imports(model, clear_calls, lambda: store.append_field(model, list_field))
+    _assert_clears_cached_imports(model, clear_calls, lambda: store.insert_field(model, 0, set_field))
+    _assert_clears_cached_imports(model, clear_calls, lambda: store.remove_field(model, list_field))
+    _assert_clears_cached_imports(
+        model,
+        clear_calls,
+        lambda: store.set_fields(model, [DataModelField(data_type=DataType.from_import(IMPORT_DECIMAL))]),
+    )
+
+
+def test_generation_store_data_type_mutations_clear_cached_imports_contract() -> None:
+    """DataType helpers must clear the cache for the owner model they mutate."""
+    old_reference = Reference(path="Old", original_name="Old", name="Old")
+    new_reference = Reference(path="New", original_name="New", name="New")
+    data_type = DataType(reference=old_reference)
+    field = DataModelField(data_type=data_type)
+    model = _base_model(fields=[field])
+    store = GenerationStore()
+    store.register_model(model)
+    clear_calls = _track_import_cache_clears(model)
+
+    _assert_clears_cached_imports(model, clear_calls, lambda: store.replace_data_type_ref(data_type, new_reference))
+    _assert_clears_cached_imports(model, clear_calls, lambda: store.detach_data_type_ref(data_type))
+    _assert_clears_cached_imports(model, clear_calls, lambda: store.replace_field_type(field, DataType(is_set=True)))
+
+
+def test_generation_store_nested_data_type_mutations_clear_cached_imports_contract() -> None:
+    """Nested DataType helpers must invalidate the imports cache of the outer model."""
+    list_type = DataType(is_list=True, data_types=[DataType(type="str")])
+    model = _base_model(fields=[DataModelField(data_type=list_type)])
+    store = GenerationStore()
+    store.register_model(model)
+    clear_calls = _track_import_cache_clears(model)
+
+    _assert_clears_cached_imports(
+        model,
+        clear_calls,
+        lambda: store.set_nested_data_types(list_type, [DataType.from_import(IMPORT_DECIMAL)]),
+    )
+    nested_type = list_type.data_types[0]
+    _assert_clears_cached_imports(
+        model,
+        clear_calls,
+        lambda: store.replace_nested_data_type(list_type, nested_type, DataType(type="str")),
+    )
+
+
+def test_generation_store_reference_detach_helpers_clear_cached_imports_contract() -> None:
+    """Bulk reference helpers must clear the cache through their delegated mutations."""
+    reference = Reference(path="Referenced", original_name="Referenced", name="Referenced")
+    root_type = DataType(reference=reference)
+    model = _base_model(fields=[DataModelField(data_type=root_type)])
+    store = GenerationStore()
+    store.register_model(model)
+    clear_calls = _track_import_cache_clears(model)
+
+    _assert_clears_cached_imports(
+        model,
+        clear_calls,
+        lambda: store.collapse_root_data_type(root_type, Reference(path="Inner", original_name="Inner", name="Inner")),
+    )
+    _assert_clears_cached_imports(model, clear_calls, lambda: store.detach_model_data_type_refs(model))
+
+
+def test_generation_store_reference_redirects_clear_each_owner_imports_cache_once() -> None:
+    """Reference redirects should clear each affected owner model once."""
+    old_reference = Reference(path="Old", original_name="Old", name="Old")
+    new_reference = Reference(path="New", original_name="New", name="New")
+    model = _base_model(
+        fields=[
+            DataModelField(data_type=DataType(reference=old_reference)),
+            DataModelField(data_type=DataType(reference=old_reference)),
+        ]
+    )
+    store = GenerationStore()
+    store.register_model(model)
+    clear_calls = _track_import_cache_clears(model)
+    assert model.imports is not None
+
+    store.redirect_reference_users(old_reference, new_reference)
+
+    assert len(clear_calls) == 1
+    assert model._IMPORTS_CACHE_KEY not in model.__dict__
+
+
+def test_generation_store_model_reference_redirect_clears_only_affected_owner_imports_cache() -> None:
+    """Scoped model reference redirects should invalidate only matching owner models."""
+    target_model = _base_model("Target")
+    owner_model = _base_model(
+        "Owner",
+        fields=[
+            DataModelField(data_type=DataType(reference=target_model.reference)),
+            DataModelField(data_type=DataType(reference=target_model.reference)),
+        ],
+    )
+    other_model = _base_model("Other", fields=[DataModelField(data_type=DataType(reference=target_model.reference))])
+    store = GenerationStore()
+    store.register_model(target_model)
+    store.register_model(owner_model)
+    store.register_model(other_model)
+    owner_clear_calls = _track_import_cache_clears(owner_model)
+    other_clear_calls = _track_import_cache_clears(other_model)
+    assert owner_model.imports is not None
+    assert other_model.imports is not None
+
+    store.redirect_model_reference_users(
+        target_model,
+        [owner_model],
+        Reference(path="NewTarget", original_name="NewTarget", name="NewTarget"),
+    )
+
+    assert len(owner_clear_calls) == 1
+    assert len(other_clear_calls) == 0
+    assert owner_model._IMPORTS_CACHE_KEY not in owner_model.__dict__
+    assert other_model._IMPORTS_CACHE_KEY in other_model.__dict__
 
 
 def test_generation_store_redirects_model_reference_users_by_owner() -> None:
