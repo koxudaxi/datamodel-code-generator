@@ -1248,6 +1248,8 @@ def _preload_heavy_modules() -> None:
     import black  # noqa: F401
     import inflect  # noqa: F401
     import isort  # noqa: F401
+    import msgspec  # noqa: F401
+    import pydantic_core  # noqa: F401
 
     import datamodel_code_generator  # noqa: F401
 
