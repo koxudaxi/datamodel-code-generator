@@ -292,6 +292,8 @@ def test_root_model_renders_existing_config_object() -> None:
 
     assert "model_config = ConfigDict(" in rendered
     assert 'regex_engine="python-re",' in rendered
+    assert isinstance(root_model.extra_template_data["config"], ConfigDict)
+    assert root_model.extra_template_data["config"].dict(exclude_unset=True) == {"regex_engine": '"python-re"'}
     assert _CONFIG_ITEMS_TEMPLATE_DATA_KEY in root_model.extra_template_data
 
 
@@ -342,4 +344,6 @@ def test_root_model_rebuilds_stale_config_items() -> None:
 
     assert "model_config = ConfigDict(" in rendered
     assert 'regex_engine="python-re",' in rendered
+    assert isinstance(root_model.extra_template_data["config"], ConfigDict)
+    assert root_model.extra_template_data["config"].dict(exclude_unset=True) == {"regex_engine": '"python-re"'}
     assert root_model.extra_template_data[_CONFIG_ITEMS_TEMPLATE_DATA_KEY] == [("regex_engine", '"python-re"')]

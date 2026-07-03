@@ -76,7 +76,6 @@ class RootModel(BaseModel):
     def _sync_config_items(self) -> None:
         config = self.extra_template_data.get("config")
         if config_items := _root_model_config_items(config):
-            self.extra_template_data["config"] = dict(config_items)
             self.extra_template_data[_CONFIG_ITEMS_TEMPLATE_DATA_KEY] = config_items
             if IMPORT_CONFIG_DICT not in self._additional_imports:
                 self._additional_imports.append(IMPORT_CONFIG_DICT)
