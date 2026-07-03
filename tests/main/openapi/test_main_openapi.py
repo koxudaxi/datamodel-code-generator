@@ -1435,7 +1435,7 @@ def test_enable_command_header(output_file: Path) -> None:
     [
         (["--http-headers", "Authorization: Bearer secret-token"], None),
         (["--http-headers=Authorization: Bearer secret-token"], None),
-        (["--http-headers", "Authorization: Bearer secret-token", "--target-python-version", "3.11"], "3.11"),
+        (["--http-headers", "Authorization: Bearer secret-token", "--encoding", "utf-8"], "utf-8"),
     ],
 )
 def test_enable_command_header_redacts_http_headers(
