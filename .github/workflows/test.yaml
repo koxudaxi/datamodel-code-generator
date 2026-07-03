@@ -392,6 +392,9 @@ jobs:
       SHARD_INDEX: ${{ matrix.shard }}
       SHARD_TOTAL: ${{ matrix.shard_total }}
       TOX_ENV: ${{ matrix.tox_env }}
+      WINDOWS_TOX_UV_VERSION: "1.35.2"
+      WINDOWS_TOX_VERSION: "4.56.1"
+      WINDOWS_UV_VERSION: "0.11.26"
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
@@ -401,7 +404,7 @@ jobs:
       if: matrix.os == 'windows-latest'
       uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
       with:
-        version: "0.11.26"
+        version: ${{ env.WINDOWS_UV_VERSION }}
         enable-cache: true
         cache-local-path: .tox/uv-cache
         cache-python: true
@@ -409,17 +412,18 @@ jobs:
           pyproject.toml
           tox.ini
           uv.lock
-        cache-suffix: "windows-${{ matrix.tox_env }}-uv0.11.26-tox4.56.1-toxuv1.35.2"
+        cache-suffix: "windows-${{ matrix.tox_env }}-uv${{ env.WINDOWS_UV_VERSION }}-tox${{ env.WINDOWS_TOX_VERSION }}-toxuv${{ env.WINDOWS_TOX_UV_VERSION }}"
         save-cache: ${{ matrix.shard == 1 }}
     - name: Install the latest version of uv
       if: matrix.os != 'windows-latest'
       uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
       with:
         enable-cache: true
-        cache-suffix: "${{ matrix.tox_env }}-shard-${{ matrix.shard }}"
+        cache-suffix: "${{ matrix.tox_env }}-shard-${{ matrix.shard_total }}"
+        save-cache: ${{ matrix.shard == 1 }}
     - name: Install tox (Windows)
       if: matrix.os == 'windows-latest'
-      run: uv tool install --python-preference only-managed --python 3.13 "tox==4.56.1" --with "tox-uv==1.35.2"
+      run: uv tool install --python-preference only-managed --python 3.13 "tox==$WINDOWS_TOX_VERSION" --with "tox-uv==$WINDOWS_TOX_UV_VERSION"
     - name: Install tox
       if: matrix.os != 'windows-latest'
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
