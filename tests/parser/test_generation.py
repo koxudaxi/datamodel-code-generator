@@ -6,6 +6,7 @@ from pathlib import Path
 
 from inline_snapshot import snapshot
 
+from datamodel_code_generator.imports import IMPORT_DECIMAL, IMPORT_LIST, IMPORT_SET
 from datamodel_code_generator.model.base import BaseClassDataType
 from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField
 from datamodel_code_generator.parser.generation import GenerationStore, set_model_base_classes
@@ -546,6 +547,78 @@ def test_generation_store_updates_model_and_field_metadata() -> None:
             "reference_classes": ["B"],
         },
     )
+
+
+def test_generation_store_field_mutations_clear_model_imports_cache() -> None:
+    """Field list mutations should not leave DataModel.imports stale."""
+    reference_model = Reference(path="Model", original_name="Model", name="Model")
+    model = BaseModel(fields=[], reference=reference_model)
+    list_field = DataModelField(data_type=DataType(is_list=True))
+    store = GenerationStore()
+    store.register_model(model)
+
+    assert IMPORT_LIST not in model.imports
+
+    store.append_field(model, list_field)
+    assert list_field.parent is model
+    assert IMPORT_LIST in model.imports
+
+    store.remove_field(model, list_field)
+    assert list_field.parent is None
+    assert IMPORT_LIST not in model.imports
+
+    detached_field = DataModelField(data_type=DataType(is_set=True))
+    model.fields.append(detached_field)
+    assert detached_field.parent is None
+
+    store.remove_field(model, detached_field)
+    assert detached_field.parent is None
+    assert IMPORT_SET not in model.imports
+
+    store.set_fields(model, [list_field])
+    assert list_field.parent is model
+    assert IMPORT_LIST in model.imports
+
+    store.set_fields(model, [detached_field])
+    assert list_field.parent is None
+    assert detached_field.parent is model
+    assert IMPORT_LIST not in model.imports
+    assert IMPORT_SET in model.imports
+
+
+def test_generation_store_nested_type_mutation_clears_model_imports_cache() -> None:
+    """Nested DataType replacement should refresh cached field-derived imports."""
+    reference_model = Reference(path="Model", original_name="Model", name="Model")
+    list_type = DataType(is_list=True, data_types=[DataType(type="str")])
+    model = BaseModel(fields=[DataModelField(data_type=list_type)], reference=reference_model)
+    store = GenerationStore()
+    store.register_model(model)
+
+    assert IMPORT_LIST in model.imports
+    assert IMPORT_DECIMAL not in model.imports
+
+    store.set_nested_data_types(list_type, [DataType.from_import(IMPORT_DECIMAL)])
+
+    assert IMPORT_LIST in model.imports
+    assert IMPORT_DECIMAL in model.imports
+
+
+def test_generation_store_field_type_replacement_clears_model_imports_cache() -> None:
+    """Store-owned field type replacement should clear the cached owner model imports."""
+    reference_model = Reference(path="Model", original_name="Model", name="Model")
+    field = DataModelField(data_type=DataType(is_list=True))
+    model = BaseModel(fields=[], reference=reference_model)
+    store = GenerationStore()
+    store.register_model(model)
+    store.append_field(model, field)
+
+    assert IMPORT_LIST in model.imports
+    assert IMPORT_SET not in model.imports
+
+    store.replace_field_type(field, DataType(is_set=True))
+
+    assert IMPORT_LIST not in model.imports
+    assert IMPORT_SET in model.imports
 
 
 def test_generation_store_redirects_model_reference_users_by_owner() -> None:
