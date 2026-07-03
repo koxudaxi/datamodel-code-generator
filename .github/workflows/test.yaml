@@ -423,7 +423,7 @@ jobs:
         save-cache: ${{ matrix.shard == 1 }}
     - name: Install tox (Windows)
       if: matrix.os == 'windows-latest'
-      run: uv tool install --python-preference only-managed --python 3.13 "tox==$WINDOWS_TOX_VERSION" --with "tox-uv==$WINDOWS_TOX_UV_VERSION"
+      run: uv tool install --python-preference only-managed --python 3.13 "tox==${{ env.WINDOWS_TOX_VERSION }}" --with "tox-uv==${{ env.WINDOWS_TOX_UV_VERSION }}"
     - name: Install tox
       if: matrix.os != 'windows-latest'
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
