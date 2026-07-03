@@ -1937,6 +1937,27 @@ def test_format_code_ruff_check_uses_stdout_when_fix_exits_nonzero(
     assert formatted_code == "fixed"
 
 
+def test_format_code_ruff_check_internal_error_raises_with_stdout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test Ruff check abnormal failures do not use stdout as formatted code."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.RUFF_CHECK],
+    )
+    with (
+        mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
+        mock.patch("subprocess.run") as mock_run,
+    ):
+        mock_run.return_value.returncode = 2
+        mock_run.return_value.stdout = b"partial output"
+        mock_run.return_value.stderr = b"invalid config"
+
+        with pytest.raises(RuntimeError, match="invalid config"):
+            formatter.format_code("input")
+
+
 def test_format_code_ruff_format_failure_raises_with_stdout(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test Ruff format failures report stdout when stderr is empty."""
     monkeypatch.chdir(tmp_path)

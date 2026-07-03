@@ -551,7 +551,7 @@ class CodeFormatter:
             cwd=self.settings_path,
             **kwargs,
         )
-        if result.returncode == 0 or (allow_stdout_on_error and result.stdout):
+        if result.returncode == 0 or (allow_stdout_on_error and result.returncode == 1 and result.stdout):
             return result
         if (message := result.stderr.decode(self.encoding, errors="replace").strip()) or (
             message := result.stdout.decode(self.encoding, errors="replace").strip()
