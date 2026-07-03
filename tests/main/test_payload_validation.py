@@ -45,6 +45,7 @@ from .payload_validation import (
     source_schema_validator,
     validate_with_source_schema,
 )
+from .payload_validation import codegen as payload_codegen
 
 
 def _max_examples_from_env(raw_examples: str | None = None) -> int:
@@ -429,6 +430,29 @@ def test_msgspec_schema_runtime_exclusions_detect_untyped_fractional_multiple_of
 
     assert backend_acceptance_exclusion_reason(case, PayloadBackend.MSGSPEC)
     assert backend_rejection_exclusion_reason(case, PayloadBackend.MSGSPEC)
+
+
+@pytest.mark.allow_direct_assert
+def test_payload_codegen_restores_parsed_source_cache_on_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Payload codegen restores the parsed-source cache hook after generation failures."""
+    events: list[str] = []
+
+    def enable_cache() -> Any:
+        events.append("enable")
+        return lambda: events.append("restore")
+
+    def fail_codegen(_args: list[str]) -> payload_codegen.Exit:
+        events.append("main")
+        msg = "generation failed"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(payload_codegen, "enable_parsed_source_cache", enable_cache)
+    monkeypatch.setattr(payload_codegen, "main", fail_codegen)
+
+    with pytest.raises(RuntimeError, match="generation failed"):
+        payload_codegen._run_payload_codegen([])
+
+    assert events == ["enable", "main", "restore"]
 
 
 def test_payload_round_trip_exclusions_are_classified() -> None:
