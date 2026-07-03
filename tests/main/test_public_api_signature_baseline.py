@@ -847,6 +847,47 @@ def test_pydantic_v2_compatibility_reexports_remain_importable() -> None:
     assert PydanticV2DataclassConstraints is PydanticV2BaseConstraints
 
 
+def test_config_models_force_rebuild_after_defer_build() -> None:
+    """Ensure deferred config model schemas can still be rebuilt at import-test time."""
+    from pydantic import BaseModel as PydanticBaseModel
+
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.model.pydantic_v2 import UnionMode
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    config_module = importlib.import_module("datamodel_code_generator.config")
+    expected_model_names = {
+        "AsyncAPIParserConfig",
+        "AvroParserConfig",
+        "BaseGenerateConfig",
+        "GenerateConfig",
+        "GraphQLParserConfig",
+        "JSONSchemaParserConfig",
+        "OpenAPIParserConfig",
+        "ParseConfig",
+        "ParserConfig",
+        "ProtobufParserConfig",
+        "XMLSchemaParserConfig",
+    }
+    config_model_types = {
+        name: model_type
+        for name, model_type in inspect.getmembers(config_module, inspect.isclass)
+        if issubclass(model_type, PydanticBaseModel)
+        and model_type.__module__ in {"datamodel_code_generator.base_config", config_module.__name__}
+    }
+    rebuild_namespace = {
+        "DataModel": DataModel,
+        "DataModelFieldBase": DataModelFieldBase,
+        "DataTypeManager": DataTypeManager,
+        "StrictTypes": StrictTypes,
+        "UnionMode": UnionMode,
+    }
+
+    assert set(config_model_types) == expected_model_names
+    for model_type in config_model_types.values():
+        assert model_type.model_rebuild(force=True, _types_namespace=rebuild_namespace)
+
+
 def test_generate_config_dict_fields_match_generate_config() -> None:
     """Ensure GenerateConfigDict has same field names as GenerateConfig."""
     from datamodel_code_generator._types import GenerateConfigDict
