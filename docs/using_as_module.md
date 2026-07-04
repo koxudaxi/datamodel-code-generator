@@ -44,8 +44,9 @@ print(result)
 
 ### 📝 Reading Input From a File
 
-Pass a `Path` to `input_` for file input. A string passed to `input_` is treated
-as schema text.
+Pass a `Path` to `input_` for file input. Plain strings are treated as schema
+text; if a string points to an existing file and parsing fails, `generate()`
+warns and recommends using `Path`.
 
 ```python
 from pathlib import Path

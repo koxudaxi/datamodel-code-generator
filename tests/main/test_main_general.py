@@ -2917,6 +2917,22 @@ def test_generate_warns_when_input_string_is_existing_path_on_failure(tmp_path: 
         )
 
 
+def test_generate_warning_does_not_mask_original_error_with_strict_warning_filter(tmp_path: Path) -> None:
+    """Test strict warning filters do not replace the original generate error."""
+    input_path = tmp_path / "schema.json"
+    input_path.write_text("{", encoding="utf-8")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        with pytest.raises(Error):
+            generate(
+                input_=str(input_path),
+                input_file_type=InputFileType.Json,
+                disable_timestamp=True,
+                formatters=[],
+            )
+
+
 def test_generate_does_not_warn_for_non_existing_path_string_on_failure(tmp_path: Path) -> None:
     """Test failed string input only warns for values resolving to existing paths."""
     invalid_input_path = tmp_path / "invalid.json"

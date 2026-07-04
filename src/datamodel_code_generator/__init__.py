@@ -777,11 +777,23 @@ def _warn_if_input_string_points_to_existing_path(
 
     import warnings  # noqa: PLC0415
 
-    warnings.warn(
-        "`input_` strings are treated as schema text. "
-        "The value also resolves to an existing path; pass a `Path` object to read it as a file.",
-        stacklevel=3,
-    )
+    with contextlib.suppress(Warning):
+        warnings.warn(
+            "`input_` strings are treated as schema text. "
+            "The value also resolves to an existing path; pass a `Path` object to read it as a file.",
+            stacklevel=3,
+        )
+
+
+@contextlib.contextmanager
+def _warn_on_input_string_path_failure(
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+) -> Iterator[None]:
+    try:
+        yield
+    except Exception:
+        _warn_if_input_string_points_to_existing_path(input_)
+        raise
 
 
 def _create_parser_config(
@@ -1450,10 +1462,10 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             raise Error(msg) from exc
 
         try:
-            assert isinstance(input_text_, str)
-            input_file_type = infer_input_type(input_text_)
+            with _warn_on_input_string_path_failure(input_):
+                assert isinstance(input_text_, str)
+                input_file_type = infer_input_type(input_text_)
         except Exception as exc:
-            _warn_if_input_string_points_to_existing_path(input_)
             raise InvalidFileFormatError(exc) from exc
         else:
             print(  # noqa: T201
@@ -1465,23 +1477,17 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             if isinstance(input_, Path) and input_.is_file() and input_file_type not in RAW_DATA_TYPES:
                 input_text = input_text_
 
-    try:
+    with _warn_on_input_string_path_failure(input_):
         input_text = _normalize_raw_input(input_, input_text, input_file_type, config)
-    except Exception:
-        _warn_if_input_string_points_to_existing_path(input_)
-        raise
 
     if input_file_type == InputFileType.MCPTools:
-        try:
+        with _warn_on_input_string_path_failure(input_):
             source_override, input_file_type, skip_root_model = _convert_mcp_tools(
                 input_,
                 input_text,
                 config,
                 remote_text_cache,
             )
-        except Exception:
-            _warn_if_input_string_points_to_existing_path(input_)
-            raise
 
     if isinstance(input_, ParseResult) and input_file_type not in RAW_DATA_TYPES:
         input_text = None
@@ -1502,7 +1508,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         _resolve_schema_versions(input_file_type, config.schema_version)
     )
 
-    try:
+    with _warn_on_input_string_path_failure(input_):
         parser = _build_parser(
             input_file_type,
             source,
@@ -1515,22 +1521,19 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             xmlschema_version=xmlschema_version,
             protobuf_version=protobuf_version,
         )
-    except Exception:
-        _warn_if_input_string_points_to_existing_path(input_)
-        raise
 
     with chdir(config.output):
         try:
-            results = parser.parse(
-                settings_path=config.settings_path,
-                disable_future_imports=config.disable_future_imports,
-                all_exports_scope=config.all_exports_scope,
-                all_exports_collision_strategy=config.all_exports_collision_strategy,
-                module_split_mode=config.module_split_mode,
-                collect_model_metadata=config.emit_model_metadata is not None,
-            )
+            with _warn_on_input_string_path_failure(input_):
+                results = parser.parse(
+                    settings_path=config.settings_path,
+                    disable_future_imports=config.disable_future_imports,
+                    all_exports_scope=config.all_exports_scope,
+                    all_exports_collision_strategy=config.all_exports_collision_strategy,
+                    module_split_mode=config.module_split_mode,
+                    collect_model_metadata=config.emit_model_metadata is not None,
+                )
         except Exception:
-            _warn_if_input_string_points_to_existing_path(input_)
             with contextlib.suppress(BaseException):
                 parser._dispose()  # noqa: SLF001
             raise
