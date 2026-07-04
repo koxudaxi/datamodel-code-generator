@@ -106,8 +106,6 @@ Maps module path tuples (e.g., ("models", "user.py")) to generated code strings.
 Returned by generate() when output=None and multiple modules are generated.
 """
 
-_SCHEMA_TEXT_START_CHARS = ("{", "[", "<")
-
 
 def _apply_generate_config_preset(config: GenerateConfig) -> GenerateConfig:
     """Return a generate config with preset defaults applied."""
@@ -761,21 +759,29 @@ def _generate_config_values(generate_config: GenerateConfig) -> dict[str, Any]:
     return values
 
 
-def _coerce_existing_path_input(
+def _warn_if_input_string_points_to_existing_path(
     input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
-) -> Path | str | ParseResult | Mapping[str, Any] | list[Any]:
-    if not isinstance(input_, str):
-        return input_
-    if not input_ or "\n" in input_ or "\r" in input_:
-        return input_
-    if (stripped := input_.lstrip()).startswith(_SCHEMA_TEXT_START_CHARS) or "://" in stripped:
-        return input_
+) -> None:
+    match input_:
+        case str() as input_text if input_text and "\n" not in input_text and "\r" not in input_text:
+            pass
+        case _:
+            return
     try:
-        path = Path(input_).expanduser()
+        path = Path(input_text).expanduser()
         path_exists = path.exists()
-    except (OSError, RuntimeError, ValueError):  # pragma: no cover
-        return input_
-    return path if path_exists else input_
+    except (OSError, RuntimeError, ValueError):
+        return
+    if not path_exists:
+        return
+
+    import warnings  # noqa: PLC0415
+
+    warnings.warn(
+        "`input_` strings are treated as schema text. "
+        "The value also resolves to an existing path; pass a `Path` object to read it as a file.",
+        stacklevel=3,
+    )
 
 
 def _create_parser_config(
@@ -1320,7 +1326,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     (JSON, YAML, Dict, CSV) as input.
 
     Args:
-        input_: The input source (file path, string content, URL, dict,
+        input_: The input source (Path file input, string content, URL, dict,
             list of file paths, or MCP tools list when input_file_type is
             InputFileType.MCPTools).
         config: A GenerateConfig object with all options. Cannot be used together with **options.
@@ -1360,8 +1366,6 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     custom_file_header = config.custom_file_header
     skip_root_model = config.skip_root_model
     source_override: Mapping[str, Any] | None = None
-
-    input_ = _coerce_existing_path_input(input_)
 
     if (
         isinstance(input_, list)
@@ -1449,6 +1453,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             assert isinstance(input_text_, str)
             input_file_type = infer_input_type(input_text_)
         except Exception as exc:
+            _warn_if_input_string_points_to_existing_path(input_)
             raise InvalidFileFormatError(exc) from exc
         else:
             print(  # noqa: T201
@@ -1460,15 +1465,23 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             if isinstance(input_, Path) and input_.is_file() and input_file_type not in RAW_DATA_TYPES:
                 input_text = input_text_
 
-    input_text = _normalize_raw_input(input_, input_text, input_file_type, config)
+    try:
+        input_text = _normalize_raw_input(input_, input_text, input_file_type, config)
+    except Exception:
+        _warn_if_input_string_points_to_existing_path(input_)
+        raise
 
     if input_file_type == InputFileType.MCPTools:
-        source_override, input_file_type, skip_root_model = _convert_mcp_tools(
-            input_,
-            input_text,
-            config,
-            remote_text_cache,
-        )
+        try:
+            source_override, input_file_type, skip_root_model = _convert_mcp_tools(
+                input_,
+                input_text,
+                config,
+                remote_text_cache,
+            )
+        except Exception:
+            _warn_if_input_string_points_to_existing_path(input_)
+            raise
 
     if isinstance(input_, ParseResult) and input_file_type not in RAW_DATA_TYPES:
         input_text = None
@@ -1489,18 +1502,22 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         _resolve_schema_versions(input_file_type, config.schema_version)
     )
 
-    parser = _build_parser(
-        input_file_type,
-        source,
-        config,
-        additional_options,
-        data_model_types,
-        jsonschema_version=jsonschema_version,
-        openapi_version=openapi_version,
-        asyncapi_version=asyncapi_version,
-        xmlschema_version=xmlschema_version,
-        protobuf_version=protobuf_version,
-    )
+    try:
+        parser = _build_parser(
+            input_file_type,
+            source,
+            config,
+            additional_options,
+            data_model_types,
+            jsonschema_version=jsonschema_version,
+            openapi_version=openapi_version,
+            asyncapi_version=asyncapi_version,
+            xmlschema_version=xmlschema_version,
+            protobuf_version=protobuf_version,
+        )
+    except Exception:
+        _warn_if_input_string_points_to_existing_path(input_)
+        raise
 
     with chdir(config.output):
         try:
@@ -1512,6 +1529,11 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
                 module_split_mode=config.module_split_mode,
                 collect_model_metadata=config.emit_model_metadata is not None,
             )
+        except Exception:
+            _warn_if_input_string_points_to_existing_path(input_)
+            with contextlib.suppress(BaseException):
+                parser._dispose()  # noqa: SLF001
+            raise
         except BaseException:
             with contextlib.suppress(BaseException):
                 parser._dispose()  # noqa: SLF001
