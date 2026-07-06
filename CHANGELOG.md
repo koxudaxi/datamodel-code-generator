@@ -5,6 +5,48 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.68.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.68.0) - 2026-07-06
+
+## Breaking Changes
+
+
+### Error Handling Changes
+* Ruff formatting failures now raise instead of being ignored - Ruff subprocess calls previously ran with `check=False` and used their stdout regardless of exit code, so a failed ruff run silently produced (possibly empty or partial) output. `_run_ruff_command` now raises `RuntimeError` when ruff exits non-zero (except the allowed check-with-remaining-diagnostics case), and `_find_ruff_path` raises a `RuntimeError` with an install hint when ruff is missing instead of falling back to `"ruff"`. Workflows that relied on generation silently succeeding despite a ruff error will now fail with an exception. (#3561)
+
+### Code Generation Changes
+* `--enable-command-header` now redacts sensitive HTTP options - When `--enable-command-header` is combined with `--http-headers` or `--http-query-parameters`, the reproducibility command line embedded in generated files now writes `<redacted>` in place of those values instead of the literal arguments. Generated file headers change for these flag combinations, so committed output or snapshot tests will differ. (#3561)
+* RootModel config rendering for config objects - Pydantic v2 `RootModel` now synchronizes and renders `model_config` derived from config objects (e.g. `regex_engine`, `frozen`) that were previously dropped, and non-dict config objects are now applied in the base model. Generated output for affected pydantic v2 root models may now include a `model_config = ConfigDict(...)` that was not emitted before. (#3561)
+
+## Bug Fixes
+* `generate()` keeps `str` inputs as inline source text. Pass a `Path` to `input_` for local file input; if a failed string input resolves to an existing path, `generate()` warns and recommends using `Path`. (#3573)
+
+## What's Changed
+* Update CHANGELOG for 0.67.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3556
+* Cover llms txt generation check by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3555
+* Cache builtin formatter source lines by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3552
+* Cover config model force rebuild by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3553
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3557
+* Clear imports cache in generation store by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3554
+* Cover imports cache mutation contract by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3559
+* Shard Windows test jobs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3560
+* Shard Python 3.14 coverage job by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3562
+* Rebalance CI test shards with measured weights by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3563
+* Generate HTML coverage report only on failure by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3564
+* Consolidate e2e and check CI jobs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3566
+* Speed up Windows CI setup by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3565
+* Fix generation reliability edge cases by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3561
+* Ignore test fixtures in CodeQL analysis by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3568
+* Cache unsupported subinterpreter checks by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3569
+* Preload validation dependencies by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3570
+* Register snapshot formats once by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3571
+* Cache payload codegen sources by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3572
+* Keep generate string input inline by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3573
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.67.0...0.68.0
+
+---
+
 ## [0.67.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.67.0) - 2026-07-03
 
 ## Breaking Changes
