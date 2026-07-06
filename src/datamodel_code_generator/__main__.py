@@ -379,14 +379,16 @@ def _get_config_class() -> type:
             "http_local_ref_path",
             mode="before",
         )
-        def validate_path(cls, value: Any) -> Path | None:  # noqa: N805
+        @classmethod
+        def validate_path(cls, value: Any) -> Path | None:
             """Validate and resolve path."""
             if value is None or isinstance(value, Path):
                 return value  # pragma: no cover
             return Path(value).expanduser().resolve()
 
         @field_validator("url", mode="before")
-        def validate_url(cls, value: Any) -> ParseResult | None:  # noqa: N805
+        @classmethod
+        def validate_url(cls, value: Any) -> ParseResult | None:
             """Validate and parse URL."""
             if isinstance(value, str) and is_url(value):  # pragma: no cover
                 return urlparse(value)
@@ -397,7 +399,8 @@ def _get_config_class() -> type:
 
         # Pydantic 1.5.1 doesn't support each_item=True correctly
         @field_validator("http_headers", mode="before")
-        def validate_http_headers(cls, value: Any) -> list[tuple[str, str]] | None:  # noqa: N805
+        @classmethod
+        def validate_http_headers(cls, value: Any) -> list[tuple[str, str]] | None:
             """Validate HTTP headers."""
             return _validate_http_key_value_options(
                 value,
@@ -407,7 +410,8 @@ def _get_config_class() -> type:
             )
 
         @field_validator("http_query_parameters", mode="before")
-        def validate_http_query_parameters(cls, value: Any) -> list[tuple[str, str]] | None:  # noqa: N805
+        @classmethod
+        def validate_http_query_parameters(cls, value: Any) -> list[tuple[str, str]] | None:
             """Validate HTTP query parameters."""
             return _validate_http_key_value_options(
                 value,
@@ -417,7 +421,8 @@ def _get_config_class() -> type:
             )
 
         @model_validator(mode="before")
-        def validate_additional_imports(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+        @classmethod
+        def validate_additional_imports(cls, values: dict[str, Any]) -> dict[str, Any]:
             """Validate and split additional imports."""
             additional_imports = values.get("additional_imports")
             if additional_imports is not None:
@@ -425,7 +430,8 @@ def _get_config_class() -> type:
             return values
 
         @model_validator(mode="before")
-        def validate_custom_formatters(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+        @classmethod
+        def validate_custom_formatters(cls, values: dict[str, Any]) -> dict[str, Any]:
             """Validate and split custom formatters."""
             custom_formatters = values.get("custom_formatters")
             if custom_formatters is not None:
@@ -451,7 +457,8 @@ def _get_config_class() -> type:
             return values
 
         @model_validator(mode="before")
-        def validate_class_decorators(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+        @classmethod
+        def validate_class_decorators(cls, values: dict[str, Any]) -> dict[str, Any]:
             """Validate and split class decorators, adding @ prefix if missing."""
             class_decorators = values.get("class_decorators")
             if class_decorators is not None:
@@ -466,7 +473,8 @@ def _get_config_class() -> type:
             return values
 
         @model_validator(mode="before")
-        def validate_external_ref_mapping(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+        @classmethod
+        def validate_external_ref_mapping(cls, values: dict[str, Any]) -> dict[str, Any]:
             """Parse external_ref_mapping from list of KEY=VALUE strings to dict."""
             raw = values.get("external_ref_mapping")
             if raw is not None and isinstance(raw, list):
