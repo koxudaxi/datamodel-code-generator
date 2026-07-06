@@ -6,7 +6,7 @@ from typing import cast
 
 import pytest
 
-from datamodel_code_generator.reference import FieldNameResolver
+from datamodel_code_generator.reference import FieldNameResolver, ModelResolver
 
 
 @pytest.mark.parametrize(
@@ -247,3 +247,90 @@ def test_alias_lists_with_non_string_values_are_ignored() -> None:
 
     assert field_name == "name"
     assert alias is None
+
+
+def test_model_resolver_unique_name_hints_keep_numbered_sequence() -> None:
+    """Keep duplicate model names in the same numbered order while storing the next hint."""
+    resolver = ModelResolver()
+
+    names = [resolver.add(["models", str(index)], "Name", class_name=True).name for index in range(5)]
+
+    assert names == ["Name", "Name1", "Name2", "Name3", "Name4"]
+    assert resolver._unique_name_start_hints["Name", "", ""] == 5
+
+
+def test_model_resolver_unique_name_direct_probe_does_not_consume_hint() -> None:
+    """Keep direct uniqueness probes stable when the returned name is not registered."""
+    resolver = ModelResolver()
+    resolver.add(["models", "0"], "Name", class_name=True)
+
+    assert resolver._get_unique_name("Name", camel=True) == "Name1"
+    assert resolver._get_unique_name("Name", camel=True) == "Name1"
+
+
+def test_model_resolver_unique_name_hints_reuse_deleted_suffix() -> None:
+    """Reuse a freed duplicate suffix after deleting a reference."""
+    resolver = ModelResolver()
+    for index in range(4):
+        resolver.add(["models", str(index)], "Name", class_name=True)
+
+    resolver.delete(["models", "1"])
+
+    assert resolver.add(["models", "next"], "Name", class_name=True).name == "Name1"
+
+
+def test_model_resolver_unique_name_hints_reuse_renamed_suffix() -> None:
+    """Reuse a freed duplicate suffix after renaming an existing reference."""
+    resolver = ModelResolver()
+    for index in range(3):
+        resolver.add(["models", str(index)], "Name", class_name=True)
+
+    resolver.add(["models", "1"], "Other", class_name=True)
+
+    assert resolver.add(["models", "next"], "Name", class_name=True).name == "Name1"
+
+
+def test_model_resolver_unique_name_hints_clear_on_reuse_reset() -> None:
+    """Clear duplicate-name hints when the resolver naming state is reset."""
+    resolver = ModelResolver()
+    for index in range(3):
+        resolver.add(["models", str(index)], "Name", class_name=True)
+
+    resolver._reset_for_reuse({"Name"})
+
+    assert resolver._unique_name_start_hints == {}
+    assert resolver.add(["models", "next"], "Name", class_name=True).name == "Name1"
+
+
+def test_model_resolver_unique_name_hints_reuse_custom_suffix() -> None:
+    """Reuse a freed duplicate suffix when duplicate-name-suffix is configured."""
+    resolver = ModelResolver(duplicate_name_suffix_map={"model": "Schema"})
+    names = [resolver.add(["models", str(index)], "Name", class_name=True).name for index in range(4)]
+
+    assert names == ["Name", "NameSchema", "NameSchema1", "NameSchema2"]
+
+    resolver.delete(["models", "1"])
+
+    assert resolver.add(["models", "next"], "Name", class_name=True).name == "NameSchema"
+
+
+def test_model_resolver_unique_name_hints_invalidate_delimited_suffix() -> None:
+    """Invalidate suffix hints for non-camel duplicate names."""
+    resolver = ModelResolver()
+    resolver._unique_name_start_hints["Name", "Schema", "_"] = 3
+
+    resolver._invalidate_unique_name_hints("Name_Schema_1")
+
+    assert resolver._unique_name_start_hints == {}
+
+
+def test_model_resolver_unique_name_hints_scale_same_enum_names() -> None:
+    """Keep hundreds of duplicate enum names in the same numbered order."""
+    resolver = ModelResolver()
+
+    names = [
+        resolver.add(["enums", str(index)], "Status", class_name=True, model_type="enum").name for index in range(300)
+    ]
+
+    assert names[:4] == ["Status", "Status1", "Status2", "Status3"]
+    assert names[-1] == "Status299"
