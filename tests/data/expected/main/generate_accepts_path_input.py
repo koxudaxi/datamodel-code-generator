@@ -2,13 +2,17 @@
 #   filename:  person.json
 
 from __future__ import annotations
-from pydantic import BaseModel, Field, conint
+
 from typing import Any
+
+from pydantic import BaseModel, Field, conint
 
 
 class Person(BaseModel):
     firstName: str | None = Field(None, description="The person's first name.")
     lastName: str | None = Field(None, description="The person's last name.")
-    age: conint(ge=0) | None = Field(None, description='Age in years which must be equal to or greater than zero.')
+    age: conint(ge=0) | None = Field(
+        None, description='Age in years which must be equal to or greater than zero.'
+    )
     friends: list[Any] | None = None
     comment: None = Field(None)
