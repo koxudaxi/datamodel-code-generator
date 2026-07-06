@@ -982,6 +982,30 @@ def test_builtin_formatter_blank_line_guard_keeps_docstring_body_lines() -> None
     )
 
 
+@pytest.mark.parametrize("line_separator", ["\n", "\r\n"])
+def test_builtin_formatter_blank_line_guard_keeps_backslash_continuation_body_lines(line_separator: str) -> None:
+    """Test backslash-continued string lines are not treated as top-level code."""
+    code = line_separator.join([
+        "value = 'first\\",
+        "class NotCode:'",
+        "",
+        "",
+        "",
+        "class Model:",
+        "    pass",
+    ])
+    expected_lines = [
+        "value = 'first\\",
+        "class NotCode:'",
+        "",
+        "",
+        "class Model:",
+        "    pass",
+    ]
+
+    assert builtin_formatter._normalize_top_level_blank_lines(code) == "\n".join(expected_lines)
+
+
 @pytest.mark.skipif(sys.version_info < (3, 12), reason="type statements require Python 3.12")
 def test_apply_builtin_formatter_normalizes_type_alias_blank_lines_without_imports() -> None:
     """Test built-in formatter normalizes top-level blanks between type statements."""
