@@ -108,13 +108,11 @@ import tempfile
 import warnings
 from collections.abc import Mapping, Sequence
 from enum import Enum, IntEnum
+from functools import lru_cache
 from keyword import iskeyword
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
-
-from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
-from typing_extensions import Self
 
 from datamodel_code_generator import (
     AllExportsScope,
@@ -134,7 +132,6 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator._format_types import Formatter, PythonVersion
 from datamodel_code_generator.arguments import arg_parser, namespace
-from datamodel_code_generator.base_config import BaseGenerateConfig
 from datamodel_code_generator.deprecations import render_deprecations, warn_deprecated
 from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.util import load_toml
@@ -151,6 +148,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.json_config import JsonConfigFieldName, JsonConfigSource
     from datamodel_code_generator.validators import ModelValidators
 
+    Config = cast("Any", object)
     ValidatorsConfigValue: TypeAlias = Mapping[str, ModelValidators]
 else:
     ValidatorsConfigValue: TypeAlias = Mapping[str, Any]
@@ -302,327 +300,346 @@ def _validate_http_key_value_options(
     raise Error(msg)  # pragma: no cover
 
 
-class Config(BaseGenerateConfig):  # noqa: PLR0904
-    """Configuration model for code generation."""
+@lru_cache(maxsize=1)
+def _get_config_class() -> type:
+    from pydantic import ConfigDict, Field, ValidationInfo, field_validator, model_validator  # noqa: PLC0415
+    from typing_extensions import Self  # noqa: PLC0415
 
-    model_config = ConfigDict(
-        extra="ignore",
-        arbitrary_types_allowed=True,
-        protected_namespaces=(),
-        defer_build=True,
-    )
+    from datamodel_code_generator.base_config import BaseGenerateConfig  # noqa: PLC0415
 
-    def get(self, item: str) -> Any:  # pragma: no cover
-        """Get attribute value by name."""
-        return getattr(self, item)
+    class Config(BaseGenerateConfig):  # noqa: PLR0904
+        """Configuration model for code generation."""
 
-    def __getitem__(self, item: str) -> Any:  # pragma: no cover
-        """Get item by key."""
-        return self.get(item)
-
-    @classmethod
-    def get_fields(cls) -> dict[str, Any]:
-        """Get model fields."""
-        return cls.model_fields
-
-    @field_validator(
-        "aliases",
-        "serialization_aliases",
-        "extra_template_data",
-        "custom_formatters_kwargs",
-        "default_values",
-        "base_class_map",
-        "model_name_map",
-        "enum_field_as_literal_map",
-        "duplicate_name_suffix",
-        "type_overrides",
-        mode="before",
-    )
-    @classmethod
-    def validate_json_config(cls, value: Any, info: ValidationInfo) -> Any:
-        """Load and validate JSON configuration values from inline JSON or file paths."""
-        if value is None:  # pragma: no cover
-            return value
-        from datamodel_code_generator.json_config import JsonConfigError, load_json_config_field  # noqa: PLC0415
-
-        field_name: JsonConfigFieldName = cast("JsonConfigFieldName", info.field_name)
-        try:
-            json_config_source: JsonConfigSource = cast("JsonConfigSource", value)
-            return load_json_config_field(field_name, json_config_source)
-        except JsonConfigError as e:
-            raise Error(str(e)) from e
-
-    @field_validator("validators", mode="before")
-    @classmethod
-    def validate_validators_config(cls, value: Any) -> Any:
-        """Validate validators lazily only when the option is present."""
-        if value is None:
-            return None
-
-        from datamodel_code_generator.json_config import JsonConfigError, load_json_config_field  # noqa: PLC0415
-
-        try:
-            return load_json_config_field("validators", cast("JsonConfigSource", value))
-        except JsonConfigError as e:
-            raise Error(str(e)) from e
-
-    @field_validator(
-        "input",
-        "output",
-        "custom_template_dir",
-        "custom_file_header_path",
-        "http_local_ref_path",
-        mode="before",
-    )
-    def validate_path(cls, value: Any) -> Path | None:  # noqa: N805
-        """Validate and resolve path."""
-        if value is None or isinstance(value, Path):
-            return value  # pragma: no cover
-        return Path(value).expanduser().resolve()
-
-    @field_validator("url", mode="before")
-    def validate_url(cls, value: Any) -> ParseResult | None:  # noqa: N805
-        """Validate and parse URL."""
-        if isinstance(value, str) and is_url(value):  # pragma: no cover
-            return urlparse(value)
-        if value is None:  # pragma: no cover
-            return None
-        msg = f"Unsupported URL scheme. Supported: http, https, file. --input={value}"  # pragma: no cover
-        raise Error(msg)  # pragma: no cover
-
-    # Pydantic 1.5.1 doesn't support each_item=True correctly
-    @field_validator("http_headers", mode="before")
-    def validate_http_headers(cls, value: Any) -> list[tuple[str, str]] | None:  # noqa: N805
-        """Validate HTTP headers."""
-        return _validate_http_key_value_options(
-            value,
-            separator=":",
-            item_error_name="http header",
-            value_error_name="http_headers",
+        model_config = ConfigDict(
+            extra="ignore",
+            arbitrary_types_allowed=True,
+            protected_namespaces=(),
+            defer_build=True,
         )
 
-    @field_validator("http_query_parameters", mode="before")
-    def validate_http_query_parameters(cls, value: Any) -> list[tuple[str, str]] | None:  # noqa: N805
-        """Validate HTTP query parameters."""
-        return _validate_http_key_value_options(
-            value,
-            separator="=",
-            item_error_name="http query parameter",
-            value_error_name="http_query_parameters",
+        def get(self, item: str) -> Any:  # pragma: no cover
+            """Get attribute value by name."""
+            return getattr(self, item)
+
+        def __getitem__(self, item: str) -> Any:  # pragma: no cover
+            """Get item by key."""
+            return self.get(item)
+
+        @classmethod
+        def get_fields(cls) -> dict[str, Any]:
+            """Get model fields."""
+            return cls.model_fields
+
+        @field_validator(
+            "aliases",
+            "serialization_aliases",
+            "extra_template_data",
+            "custom_formatters_kwargs",
+            "default_values",
+            "base_class_map",
+            "model_name_map",
+            "enum_field_as_literal_map",
+            "duplicate_name_suffix",
+            "type_overrides",
+            mode="before",
+        )
+        @classmethod
+        def validate_json_config(cls, value: Any, info: ValidationInfo) -> Any:
+            """Load and validate JSON configuration values from inline JSON or file paths."""
+            if value is None:  # pragma: no cover
+                return value
+            from datamodel_code_generator.json_config import JsonConfigError, load_json_config_field  # noqa: PLC0415
+
+            field_name: JsonConfigFieldName = cast("JsonConfigFieldName", info.field_name)
+            try:
+                json_config_source: JsonConfigSource = cast("JsonConfigSource", value)
+                return load_json_config_field(field_name, json_config_source)
+            except JsonConfigError as e:
+                raise Error(str(e)) from e
+
+        @field_validator("validators", mode="before")
+        @classmethod
+        def validate_validators_config(cls, value: Any) -> Any:
+            """Validate validators lazily only when the option is present."""
+            if value is None:
+                return None
+
+            from datamodel_code_generator.json_config import JsonConfigError, load_json_config_field  # noqa: PLC0415
+
+            try:
+                return load_json_config_field("validators", cast("JsonConfigSource", value))
+            except JsonConfigError as e:
+                raise Error(str(e)) from e
+
+        @field_validator(
+            "input",
+            "output",
+            "custom_template_dir",
+            "custom_file_header_path",
+            "http_local_ref_path",
+            mode="before",
+        )
+        def validate_path(cls, value: Any) -> Path | None:  # noqa: N805
+            """Validate and resolve path."""
+            if value is None or isinstance(value, Path):
+                return value  # pragma: no cover
+            return Path(value).expanduser().resolve()
+
+        @field_validator("url", mode="before")
+        def validate_url(cls, value: Any) -> ParseResult | None:  # noqa: N805
+            """Validate and parse URL."""
+            if isinstance(value, str) and is_url(value):  # pragma: no cover
+                return urlparse(value)
+            if value is None:  # pragma: no cover
+                return None
+            msg = f"Unsupported URL scheme. Supported: http, https, file. --input={value}"  # pragma: no cover
+            raise Error(msg)  # pragma: no cover
+
+        # Pydantic 1.5.1 doesn't support each_item=True correctly
+        @field_validator("http_headers", mode="before")
+        def validate_http_headers(cls, value: Any) -> list[tuple[str, str]] | None:  # noqa: N805
+            """Validate HTTP headers."""
+            return _validate_http_key_value_options(
+                value,
+                separator=":",
+                item_error_name="http header",
+                value_error_name="http_headers",
+            )
+
+        @field_validator("http_query_parameters", mode="before")
+        def validate_http_query_parameters(cls, value: Any) -> list[tuple[str, str]] | None:  # noqa: N805
+            """Validate HTTP query parameters."""
+            return _validate_http_key_value_options(
+                value,
+                separator="=",
+                item_error_name="http query parameter",
+                value_error_name="http_query_parameters",
+            )
+
+        @model_validator(mode="before")
+        def validate_additional_imports(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+            """Validate and split additional imports."""
+            additional_imports = values.get("additional_imports")
+            if additional_imports is not None:
+                values["additional_imports"] = additional_imports.split(",")
+            return values
+
+        @model_validator(mode="before")
+        def validate_custom_formatters(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+            """Validate and split custom formatters."""
+            custom_formatters = values.get("custom_formatters")
+            if custom_formatters is not None:
+                values["custom_formatters"] = custom_formatters.split(",")
+            return values
+
+        @model_validator(mode="before")
+        @classmethod
+        def validate_naming_strategy_migration(cls, values: dict[str, Any]) -> dict[str, Any]:
+            """Migrate deprecated --parent-scoped-naming to --naming-strategy."""
+            if values.get("parent_scoped_naming") and not values.get("naming_strategy"):
+                values["naming_strategy"] = NamingStrategy.ParentPrefixed
+                warn_deprecated("cli.parent-scoped-naming", stacklevel=2)
+            return values
+
+        @model_validator(mode="before")
+        @classmethod
+        def validate_allow_extra_fields_migration(cls, values: dict[str, Any]) -> dict[str, Any]:
+            """Migrate deprecated --allow-extra-fields to --extra-fields."""
+            if values.get("allow_extra_fields") and not values.get("extra_fields"):
+                values["extra_fields"] = "allow"
+                warn_deprecated("cli.allow-extra-fields", stacklevel=2)
+            return values
+
+        @model_validator(mode="before")
+        def validate_class_decorators(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+            """Validate and split class decorators, adding @ prefix if missing."""
+            class_decorators = values.get("class_decorators")
+            if class_decorators is not None:
+                decorators = []
+                for raw_decorator in class_decorators.split(","):
+                    stripped = raw_decorator.strip()
+                    if stripped:
+                        if not stripped.startswith("@"):
+                            stripped = f"@{stripped}"
+                        decorators.append(stripped)
+                values["class_decorators"] = decorators
+            return values
+
+        @model_validator(mode="before")
+        def validate_external_ref_mapping(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+            """Parse external_ref_mapping from list of KEY=VALUE strings to dict."""
+            raw = values.get("external_ref_mapping")
+            if raw is not None and isinstance(raw, list):
+                mapping: dict[str, str] = {}
+                for item in raw:
+                    if not isinstance(item, str) or "=" not in item:
+                        msg = (
+                            f"Invalid --external-ref-mapping format: {item!r}. "
+                            "Expected FILE_PATH=PYTHON_PACKAGE (e.g., '../common/schema.yaml=mypackage.models')"
+                        )
+                        raise Error(msg)
+                    file_path, python_package = item.split("=", maxsplit=1)
+                    file_path = file_path.strip()
+                    python_package = python_package.strip()
+                    if not file_path or not python_package:
+                        msg = (
+                            f"Invalid --external-ref-mapping format: {item!r}. "
+                            "Both FILE_PATH and PYTHON_PACKAGE must be non-empty."
+                        )
+                        raise Error(msg)
+                    mapping[file_path] = python_package
+                values["external_ref_mapping"] = mapping
+            return values
+
+        __validate_custom_file_header_err: ClassVar[str] = (
+            "`--custom_file_header_path` can not be used with `--custom_file_header`."
+        )
+        __validate_keyword_only_err: ClassVar[str] = (
+            f"`--keyword-only` requires `--target-python-version` {PythonVersion.PY_310.value} or higher."
         )
 
-    @model_validator(mode="before")
-    def validate_additional_imports(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
-        """Validate and split additional imports."""
-        additional_imports = values.get("additional_imports")
-        if additional_imports is not None:
-            values["additional_imports"] = additional_imports.split(",")
-        return values
+        __validate_all_exports_collision_strategy_err: ClassVar[str] = (
+            "`--all-exports-collision-strategy` can only be used with `--all-exports-scope=recursive`."
+        )
 
-    @model_validator(mode="before")
-    def validate_custom_formatters(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
-        """Validate and split custom formatters."""
-        custom_formatters = values.get("custom_formatters")
-        if custom_formatters is not None:
-            values["custom_formatters"] = custom_formatters.split(",")
-        return values
+        @model_validator(mode="after")
+        def validate_output_datetime_class(self: Self) -> Self:
+            """Validate output datetime class compatibility."""
+            _validate_output_datetime_class(self.output_model_type, self.output_datetime_class)
+            return self
 
-    @model_validator(mode="before")
-    @classmethod
-    def validate_naming_strategy_migration(cls, values: dict[str, Any]) -> dict[str, Any]:
-        """Migrate deprecated --parent-scoped-naming to --naming-strategy."""
-        if values.get("parent_scoped_naming") and not values.get("naming_strategy"):
-            values["naming_strategy"] = NamingStrategy.ParentPrefixed
-            warn_deprecated("cli.parent-scoped-naming", stacklevel=2)
-        return values
+        __validate_original_field_name_delimiter_err: ClassVar[str] = ORIGINAL_FIELD_NAME_DELIMITER_ERROR
 
-    @model_validator(mode="before")
-    @classmethod
-    def validate_allow_extra_fields_migration(cls, values: dict[str, Any]) -> dict[str, Any]:
-        """Migrate deprecated --allow-extra-fields to --extra-fields."""
-        if values.get("allow_extra_fields") and not values.get("extra_fields"):
-            values["extra_fields"] = "allow"
-            warn_deprecated("cli.allow-extra-fields", stacklevel=2)
-        return values
+        @model_validator(mode="after")
+        def validate_alias_generator(self: Self) -> Self:
+            """Validate alias generator compatibility."""
+            _validate_alias_generator(self.output_model_type, self.alias_generator)
+            return self
 
-    @model_validator(mode="before")
-    def validate_class_decorators(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
-        """Validate and split class decorators, adding @ prefix if missing."""
-        class_decorators = values.get("class_decorators")
-        if class_decorators is not None:
-            decorators = []
-            for raw_decorator in class_decorators.split(","):
-                stripped = raw_decorator.strip()
-                if stripped:
-                    if not stripped.startswith("@"):
-                        stripped = f"@{stripped}"
-                    decorators.append(stripped)
-            values["class_decorators"] = decorators
-        return values
+        def validate_original_field_name_delimiter(self) -> None:
+            """Validate original field name delimiter requires snake case after preset merging."""
+            if self.original_field_name_delimiter is not None and not self.snake_case_field:
+                raise Error(self.__validate_original_field_name_delimiter_err)
 
-    @model_validator(mode="before")
-    def validate_external_ref_mapping(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
-        """Parse external_ref_mapping from list of KEY=VALUE strings to dict."""
-        raw = values.get("external_ref_mapping")
-        if raw is not None and isinstance(raw, list):
-            mapping: dict[str, str] = {}
-            for item in raw:
-                if not isinstance(item, str) or "=" not in item:
-                    msg = (
-                        f"Invalid --external-ref-mapping format: {item!r}. "
-                        "Expected FILE_PATH=PYTHON_PACKAGE (e.g., '../common/schema.yaml=mypackage.models')"
-                    )
-                    raise Error(msg)
-                file_path, python_package = item.split("=", maxsplit=1)
-                file_path = file_path.strip()
-                python_package = python_package.strip()
-                if not file_path or not python_package:
-                    msg = (
-                        f"Invalid --external-ref-mapping format: {item!r}. "
-                        "Both FILE_PATH and PYTHON_PACKAGE must be non-empty."
-                    )
-                    raise Error(msg)
-                mapping[file_path] = python_package
-            values["external_ref_mapping"] = mapping
-        return values
+        @model_validator(mode="after")
+        def validate_custom_file_header(self: Self) -> Self:
+            """Validate custom file header options are mutually exclusive."""
+            if self.custom_file_header and self.custom_file_header_path:
+                raise Error(self.__validate_custom_file_header_err)
+            return self
 
-    __validate_custom_file_header_err: ClassVar[str] = (
-        "`--custom_file_header_path` can not be used with `--custom_file_header`."
-    )
-    __validate_keyword_only_err: ClassVar[str] = (
-        f"`--keyword-only` requires `--target-python-version` {PythonVersion.PY_310.value} or higher."
-    )
+        @model_validator(mode="after")
+        def validate_keyword_only(self: Self) -> Self:
+            """Validate keyword-only compatibility with target Python version."""
+            output_model_type: DataModelType = self.output_model_type
+            python_target: PythonVersion = self.target_python_version
+            if (
+                self.keyword_only
+                and output_model_type == DataModelType.DataclassesDataclass
+                and not python_target.has_kw_only_dataclass
+            ):
+                raise Error(self.__validate_keyword_only_err)  # pragma: no cover
+            return self
 
-    __validate_all_exports_collision_strategy_err: ClassVar[str] = (
-        "`--all-exports-collision-strategy` can only be used with `--all-exports-scope=recursive`."
-    )
+        @model_validator(mode="after")
+        def validate_root(self: Self) -> Self:
+            """Validate root model configuration."""
+            if self.use_annotated:
+                self.field_constraints = True
+            return self
 
-    @model_validator(mode="after")
-    def validate_output_datetime_class(self: Self) -> Self:
-        """Validate output datetime class compatibility."""
-        _validate_output_datetime_class(self.output_model_type, self.output_datetime_class)
-        return self
+        @model_validator(mode="after")
+        def validate_all_exports_collision_strategy(self: Self) -> Self:
+            """Validate all_exports_collision_strategy requires recursive scope."""
+            if self.all_exports_collision_strategy is not None and self.all_exports_scope != AllExportsScope.Recursive:
+                raise Error(self.__validate_all_exports_collision_strategy_err)
+            return self
 
-    __validate_original_field_name_delimiter_err: ClassVar[str] = ORIGINAL_FIELD_NAME_DELIMITER_ERROR
-
-    @model_validator(mode="after")
-    def validate_alias_generator(self: Self) -> Self:
-        """Validate alias generator compatibility."""
-        _validate_alias_generator(self.output_model_type, self.alias_generator)
-        return self
-
-    def validate_original_field_name_delimiter(self) -> None:
-        """Validate original field name delimiter requires snake case after preset merging."""
-        if self.original_field_name_delimiter is not None and not self.snake_case_field:
-            raise Error(self.__validate_original_field_name_delimiter_err)
-
-    @model_validator(mode="after")
-    def validate_custom_file_header(self: Self) -> Self:
-        """Validate custom file header options are mutually exclusive."""
-        if self.custom_file_header and self.custom_file_header_path:
-            raise Error(self.__validate_custom_file_header_err)
-        return self
-
-    @model_validator(mode="after")
-    def validate_keyword_only(self: Self) -> Self:
-        """Validate keyword-only compatibility with target Python version."""
-        output_model_type: DataModelType = self.output_model_type
-        python_target: PythonVersion = self.target_python_version
-        if (
-            self.keyword_only
-            and output_model_type == DataModelType.DataclassesDataclass
-            and not python_target.has_kw_only_dataclass
-        ):
-            raise Error(self.__validate_keyword_only_err)  # pragma: no cover
-        return self
-
-    @model_validator(mode="after")
-    def validate_root(self: Self) -> Self:
-        """Validate root model configuration."""
-        if self.use_annotated:
-            self.field_constraints = True
-        return self
-
-    @model_validator(mode="after")
-    def validate_all_exports_collision_strategy(self: Self) -> Self:
-        """Validate all_exports_collision_strategy requires recursive scope."""
-        if self.all_exports_collision_strategy is not None and self.all_exports_scope != AllExportsScope.Recursive:
-            raise Error(self.__validate_all_exports_collision_strategy_err)
-        return self
-
-    @field_validator("input_model", mode="before")
-    @classmethod
-    def coerce_input_model_to_list(cls, v: str | list[str] | None) -> list[str] | None:
-        """Convert string input_model to list for backwards compatibility."""
-        if isinstance(v, str):
-            return [v]
-        return v
-
-    @field_validator("class_name_affix_scope", mode="before")
-    @classmethod
-    def validate_class_name_affix_scope(cls, v: str | ClassNameAffixScope | None) -> ClassNameAffixScope:
-        """Convert string to ClassNameAffixScope enum."""
-        if v is None:  # pragma: no cover
-            return ClassNameAffixScope.All
-        if isinstance(v, str):
-            return ClassNameAffixScope(v)
-        return v  # pragma: no cover
-
-    @field_validator("schema_validator_base_class_name")
-    @classmethod
-    def validate_schema_validator_base_class_name(cls, v: str | None) -> str | None:
-        """Validate schema validator base class name."""
-        if v is None:  # pragma: no cover
+        @field_validator("input_model", mode="before")
+        @classmethod
+        def coerce_input_model_to_list(cls, v: str | list[str] | None) -> list[str] | None:
+            """Convert string input_model to list for backwards compatibility."""
+            if isinstance(v, str):
+                return [v]
             return v
-        if not v.isidentifier() or iskeyword(v):
-            msg = f"--schema-validator-base-class-name '{v}' is not a valid Python identifier"
-            raise Error(msg)
-        return v
 
-    input: Optional[Union[Path, str]] = None  # noqa: UP007, UP045
-    input_model: Optional[list[str]] = None  # noqa: UP045
-    input_model_ref_strategy: Optional[InputModelRefStrategy] = None  # noqa: UP045
-    input_file_type: InputFileType = InputFileType.Auto
-    output_model_type: DataModelType = DataModelType.PydanticV2BaseModel
-    output: Optional[Path] = None  # noqa: UP045
-    check: bool = False
-    debug: bool = False
-    disable_warnings: bool = False
-    extra_template_data: Mapping[str, dict[str, Any]] | None = None
-    validators: Optional[ValidatorsConfigValue] = None  # noqa: UP045
-    aliases: Optional[Mapping[str, str | list[str]]] = None  # noqa: UP045
-    serialization_aliases: Optional[Mapping[str, str]] = None  # noqa: UP045
-    default_values: Optional[Mapping[str, Any]] = None  # noqa: UP045
-    use_default: bool = False
-    force_optional: bool = False
-    url: Optional[ParseResult] = None  # noqa: UP045
-    strict_types: list[StrictTypes] = Field(default_factory=list)
-    openapi_scopes: Optional[list[OpenAPIScope]] = Field(default_factory=lambda: [OpenAPIScope.Schemas])  # noqa: UP045
-    custom_formatters_kwargs: Optional[dict[str, str]] = None  # noqa: UP045
-    watch: bool = False
-    watch_delay: float = 0.5
-    list_deprecations: Optional[str] = None  # noqa: UP045
-    list_experimental: Optional[str] = None  # noqa: UP045
+        @field_validator("class_name_affix_scope", mode="before")
+        @classmethod
+        def validate_class_name_affix_scope(cls, v: str | ClassNameAffixScope | None) -> ClassNameAffixScope:
+            """Convert string to ClassNameAffixScope enum."""
+            if v is None:  # pragma: no cover
+                return ClassNameAffixScope.All
+            if isinstance(v, str):
+                return ClassNameAffixScope(v)
+            return v  # pragma: no cover
 
-    def merge_args(self, args: Namespace) -> None:
-        """Merge command-line arguments into config."""
-        set_args = _prepare_cli_config_args(_explicit_config_args(args))
-        explicit_input_sources = {
-            field_name for field_name in ("input", "url", "input_model") if field_name in set_args
-        }
+        @field_validator("schema_validator_base_class_name")
+        @classmethod
+        def validate_schema_validator_base_class_name(cls, v: str | None) -> str | None:
+            """Validate schema validator base class name."""
+            if v is None:  # pragma: no cover
+                return v
+            if not v.isidentifier() or iskeyword(v):
+                msg = f"--schema-validator-base-class-name '{v}' is not a valid Python identifier"
+                raise Error(msg)
+            return v
 
-        if explicit_input_sources:
-            for field_name in {"input", "url", "input_model"} - explicit_input_sources:
-                setattr(self, field_name, None)
+        input: Optional[Union[Path, str]] = None  # noqa: UP007, UP045
+        input_model: Optional[list[str]] = None  # noqa: UP045
+        input_model_ref_strategy: Optional[InputModelRefStrategy] = None  # noqa: UP045
+        input_file_type: InputFileType = InputFileType.Auto
+        output_model_type: DataModelType = DataModelType.PydanticV2BaseModel
+        output: Optional[Path] = None  # noqa: UP045
+        check: bool = False
+        debug: bool = False
+        disable_warnings: bool = False
+        extra_template_data: Mapping[str, dict[str, Any]] | None = None
+        validators: Optional[ValidatorsConfigValue] = None  # noqa: UP045
+        aliases: Optional[Mapping[str, str | list[str]]] = None  # noqa: UP045
+        serialization_aliases: Optional[Mapping[str, str]] = None  # noqa: UP045
+        default_values: Optional[Mapping[str, Any]] = None  # noqa: UP045
+        use_default: bool = False
+        force_optional: bool = False
+        url: Optional[ParseResult] = None  # noqa: UP045
+        strict_types: list[StrictTypes] = Field(default_factory=list)
+        openapi_scopes: Optional[list[OpenAPIScope]] = Field(default_factory=lambda: [OpenAPIScope.Schemas])  # noqa: UP045
+        custom_formatters_kwargs: Optional[dict[str, str]] = None  # noqa: UP045
+        watch: bool = False
+        watch_delay: float = 0.5
+        list_deprecations: Optional[str] = None  # noqa: UP045
+        list_experimental: Optional[str] = None  # noqa: UP045
 
-        parsed_args = Config.model_validate(set_args)
-        for field_name in set_args:
-            setattr(self, field_name, getattr(parsed_args, field_name))
+        def merge_args(self, args: Namespace) -> None:
+            """Merge command-line arguments into config."""
+            set_args = _prepare_cli_config_args(_explicit_config_args(args))
+            explicit_input_sources = {
+                field_name for field_name in ("input", "url", "input_model") if field_name in set_args
+            }
+
+            if explicit_input_sources:
+                for field_name in {"input", "url", "input_model"} - explicit_input_sources:
+                    setattr(self, field_name, None)
+
+            parsed_args = Config.model_validate(set_args)
+            for field_name in set_args:
+                setattr(self, field_name, getattr(parsed_args, field_name))
+
+    Config.__qualname__ = "Config"
+    globals()["Config"] = Config
+    return Config
+
+
+def __getattr__(name: str) -> Any:
+    if name == "Config":
+        return _get_config_class()
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
 
 
 def _explicit_config_args(args: Namespace) -> dict[str, _RawConfigValue]:
     """Return command-line values that explicitly target Config fields."""
-    return {field: value for field in Config.get_fields() if (value := getattr(args, field, None)) is not None}
+    config_class = _get_config_class()
+    return {field: value for field in config_class.get_fields() if (value := getattr(args, field, None)) is not None}
 
 
 def _prepare_cli_config_args(set_args: Mapping[str, _RawConfigValue]) -> dict[str, _RawConfigValue]:
@@ -645,12 +662,13 @@ def _create_config(
     cli_config_args: Mapping[str, _RawConfigValue],
 ) -> Config:
     """Create the final CLI config while preserving pyproject/CLI validation order."""
+    config_class = _get_config_class()
     if not pyproject_config:
-        return Config.model_validate(_prepare_cli_config_args(cli_config_args))
+        return config_class.model_validate(_prepare_cli_config_args(cli_config_args))
 
     from argparse import Namespace as ArgNamespace  # noqa: PLC0415
 
-    config = Config.model_validate(pyproject_config)
+    config = config_class.model_validate(pyproject_config)
     cli_namespace = ArgNamespace(**cli_config_args)
     config.merge_args(cli_namespace)
     return config
@@ -809,6 +827,8 @@ TomlValue: TypeAlias = str | bool | list["TomlValue"] | tuple["TomlValue", ...]
 
 
 def _json_ready(value: Any) -> Any:
+    from pydantic import BaseModel  # noqa: PLC0415
+
     if isinstance(value, Enum):
         return value.value
     if isinstance(value, Path):
