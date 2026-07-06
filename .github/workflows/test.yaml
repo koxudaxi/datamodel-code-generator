@@ -648,7 +648,7 @@ jobs:
           UV_PYTHON_PREFERENCE: "only-managed"
       - name: Restore W3C XML Schema Test Suite
         id: cache-w3c-xsdtests
-        uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .tox/w3c-xsdtests
           key: e2e-xsdtests-7bc3365c652a322f3d762021b3879eb92dae7e30
@@ -661,7 +661,7 @@ jobs:
           git -C .tox/w3c-xsdtests checkout 7bc3365c652a322f3d762021b3879eb92dae7e30
       - name: Save W3C XML Schema Test Suite
         if: steps.cache-w3c-xsdtests.outputs.cache-hit != 'true' && steps.checkout-w3c-xsdtests.outcome == 'success'
-        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .tox/w3c-xsdtests
           key: e2e-xsdtests-7bc3365c652a322f3d762021b3879eb92dae7e30
@@ -677,7 +677,7 @@ jobs:
           UV_PYTHON_PREFERENCE: "only-managed"
       - name: Restore JSON-Schema-Test-Suite
         id: cache-json-schema-test-suite
-        uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .tox/json-schema-test-suite
           key: e2e-json-schema-test-suite-fe8c2f0de2041943975932b6bf4bd882625b6cfb
@@ -690,7 +690,7 @@ jobs:
           git -C .tox/json-schema-test-suite checkout fe8c2f0de2041943975932b6bf4bd882625b6cfb
       - name: Save JSON-Schema-Test-Suite
         if: steps.cache-json-schema-test-suite.outputs.cache-hit != 'true' && steps.checkout-json-schema-test-suite.outcome == 'success'
-        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .tox/json-schema-test-suite
           key: e2e-json-schema-test-suite-fe8c2f0de2041943975932b6bf4bd882625b6cfb
@@ -704,7 +704,7 @@ jobs:
           UV_PYTHON_PREFERENCE: "only-managed"
       - name: Restore AsyncAPI spec JSON Schemas
         id: cache-asyncapi-spec-json-schemas
-        uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .tox/asyncapi-spec-json-schemas
           key: e2e-asyncapi-spec-json-schemas-469c2b2bf5ed88e0cdf1e48975b93a87c710d229
@@ -717,7 +717,7 @@ jobs:
           git -C .tox/asyncapi-spec-json-schemas checkout 469c2b2bf5ed88e0cdf1e48975b93a87c710d229
       - name: Save AsyncAPI spec JSON Schemas
         if: steps.cache-asyncapi-spec-json-schemas.outputs.cache-hit != 'true' && steps.checkout-asyncapi-spec-json-schemas.outcome == 'success'
-        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .tox/asyncapi-spec-json-schemas
           key: e2e-asyncapi-spec-json-schemas-469c2b2bf5ed88e0cdf1e48975b93a87c710d229
@@ -732,7 +732,7 @@ jobs:
           UV_PYTHON_PREFERENCE: "only-managed"
       - name: Restore Apache Avro
         id: cache-apache-avro
-        uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .tox/apache-avro
           key: e2e-apache-avro-9110c693767c1dde2665b2b57939333478b12036
@@ -745,7 +745,7 @@ jobs:
           git -C .tox/apache-avro checkout 9110c693767c1dde2665b2b57939333478b12036
       - name: Save Apache Avro
         if: steps.cache-apache-avro.outputs.cache-hit != 'true' && steps.checkout-apache-avro.outcome == 'success'
-        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .tox/apache-avro
           key: e2e-apache-avro-9110c693767c1dde2665b2b57939333478b12036
@@ -760,7 +760,7 @@ jobs:
           UV_PYTHON_PREFERENCE: "only-managed"
       - name: Restore Protocol Buffers
         id: cache-protobuf
-        uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .tox/protobuf
           key: e2e-protobuf-4376cba55d9e2f44f7e317d9c10e0259d145f8cf
@@ -775,7 +775,7 @@ jobs:
           git -C .tox/protobuf checkout 4376cba55d9e2f44f7e317d9c10e0259d145f8cf
       - name: Save Protocol Buffers
         if: steps.cache-protobuf.outputs.cache-hit != 'true' && steps.checkout-protobuf.outcome == 'success'
-        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .tox/protobuf
           key: e2e-protobuf-4376cba55d9e2f44f7e317d9c10e0259d145f8cf
