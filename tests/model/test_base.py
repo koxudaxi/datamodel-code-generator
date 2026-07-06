@@ -24,6 +24,8 @@ from datamodel_code_generator.model.base import (
     DataModelFieldBase,
     TemplateBase,
     _annotation_typing_import_names,
+    _get_environment,
+    _get_environment_with_absolute_path,
     _RenderedDataModelField,
     _TypingImportRequirements,
     comment_safe,
@@ -283,6 +285,77 @@ def test_rendered_pydantic_v2_class_var_field_values_are_none() -> None:
     assert field.field is None
     assert rendered_field.field is None
     assert rendered_field.annotated is None
+
+
+def test_rendered_data_model_field_caches_delegated_attributes() -> None:
+    """Test delegated field attributes are stored directly on the rendered proxy."""
+
+    @dataclass
+    class DelegatedField:
+        """Test field with counted attribute access."""
+
+        calls: int = 0
+
+        @property
+        def value(self) -> str:
+            """Return a counted delegated value."""
+            self.calls += 1
+            return "cached value"
+
+    field = DelegatedField()
+    rendered_field = _RenderedDataModelField(field, "docstring")
+
+    assert rendered_field.docstring == "docstring"
+    assert rendered_field.value == "cached value"
+    assert rendered_field.value == "cached value"
+    assert field.calls == 1
+    assert rendered_field.__dict__["value"] == "cached value"
+
+
+def test_rendered_data_model_field_preserves_missing_attribute_errors() -> None:
+    """Test missing delegated field attributes still raise AttributeError."""
+    rendered_field = _RenderedDataModelField(object(), "")
+
+    with pytest.raises(AttributeError):
+        _ = rendered_field.missing
+
+
+def test_rendered_data_model_field_batches_field_and_annotated_values() -> None:
+    """Test field and annotated template values share one lazy render call."""
+
+    @dataclass
+    class RenderValuesField:
+        """Test field that batches rendered field values."""
+
+        calls: int = 0
+
+        def _rendered_field_values(self) -> tuple[str, str]:
+            """Return counted rendered values."""
+            self.calls += 1
+            return "field value", "annotated value"
+
+    field = RenderValuesField()
+    rendered_field = _RenderedDataModelField(field, "")
+
+    assert rendered_field.annotated == "annotated value"
+    assert rendered_field.field == "field value"
+    assert field.calls == 1
+    assert rendered_field.__dict__["field"] == "field value"
+    assert rendered_field.__dict__["annotated"] == "annotated value"
+
+
+def test_jinja_environment_auto_reload_only_for_custom_templates(tmp_path: Path) -> None:
+    """Test built-in templates disable Jinja auto-reload while custom templates keep it."""
+    _get_environment.cache_clear()
+    _get_environment_with_absolute_path.cache_clear()
+
+    builtin_environment = _get_environment(Path(), None)
+    custom_environment = _get_environment(Path(), tmp_path)
+    absolute_path_environment = _get_environment_with_absolute_path(tmp_path, Path())
+
+    assert builtin_environment.auto_reload is False
+    assert custom_environment.auto_reload is True
+    assert absolute_path_environment.auto_reload is True
 
 
 def test_pydantic_base_class_var_imports_do_not_require_field() -> None:

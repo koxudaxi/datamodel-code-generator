@@ -220,27 +220,25 @@ def _safe_extra_template_data(extra_template_data: dict[str, Any]) -> dict[str, 
 class _RenderedDataModelField:
     """Proxy a field with a pre-rendered docstring for built-in templates."""
 
-    __slots__ = ("_cache", "_field", "docstring")
-
     def __init__(self, field: DataModelFieldBase, docstring: str) -> None:
-        self._field = field
-        self._cache: dict[str, Any] = {}
-        self.docstring = docstring
+        field_values = self.__dict__
+        field_values["_field"] = field
+        field_values["docstring"] = docstring
 
     def __getattr__(self, name: str) -> Any:
-        try:
-            return self._cache[name]
-        except KeyError:
-            if name in {"annotated", "field"} and (
-                rendered_field_values := getattr(self._field, "_rendered_field_values", None)
-            ):
-                field, annotated = rendered_field_values()
-                self._cache["field"] = field
-                self._cache["annotated"] = annotated
-                return self._cache[name]
-            value = getattr(self._field, name)
-            self._cache[name] = value
-            return value
+        field_values = self.__dict__
+        field = field_values["_field"]
+        if (
+            name in {"annotated", "field"}
+            and (rendered_field_values := getattr(field, "_rendered_field_values", None)) is not None
+        ):
+            rendered_field, annotated = rendered_field_values()
+            field_values["field"] = rendered_field
+            field_values["annotated"] = annotated
+            return field_values[name]
+        value = getattr(field, name)
+        field_values[name] = value
+        return value
 
 
 ALL_MODEL: str = "#all#"
@@ -965,13 +963,14 @@ def _nested_model_default_factory(field: DataModelFieldBase, model_cls: type[Dat
     return None
 
 
-def _build_environment(loader: Any) -> Environment:
+def _build_environment(loader: Any, *, auto_reload: bool = True) -> Environment:
     """Build a Jinja environment with built-in filters."""
     from jinja2 import Environment, select_autoescape  # noqa: PLC0415
 
     env = Environment(
         loader=loader,
         autoescape=select_autoescape(["html", "xml"]),
+        auto_reload=auto_reload,
     )
     env.filters["escape_docstring"] = escape_docstring  # For old custom templates
     env.filters["format_docstring"] = format_docstring
@@ -994,7 +993,7 @@ def _get_environment(template_subdir: Path, custom_template_dir: Path | None) ->
     loaders.append(FileSystemLoader(str(TEMPLATE_DIR / template_subdir)))
 
     loader: ChoiceLoader | FileSystemLoader = ChoiceLoader(loaders) if len(loaders) > 1 else loaders[0]
-    return _build_environment(loader)
+    return _build_environment(loader, auto_reload=custom_template_dir is not None)
 
 
 @lru_cache
