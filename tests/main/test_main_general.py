@@ -2869,6 +2869,97 @@ def test_generate_returns_string_when_output_none() -> None:
     )
 
 
+def test_generate_accepts_path_input(output_file: Path) -> None:
+    """Test generate() reads Path inputs as local schema files."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        disable_timestamp=True,
+        assert_func=assert_file_content,
+        expected_file="generate_accepts_path_input.py",
+    )
+
+
+def test_generate_keeps_existing_path_string_input() -> None:
+    """Test generate() keeps existing path strings as inline source text."""
+    run_generate_and_assert(
+        input_=str(JSON_SCHEMA_DATA_PATH / "person.json"),
+        input_file_type=InputFileType.Yaml,
+        input_filename="inline.yaml",
+        disable_timestamp=True,
+        expected_file=EXPECTED_MAIN_PATH / "generate_keeps_existing_path_string_input.py",
+    )
+
+
+def test_generate_keeps_non_path_string_input() -> None:
+    """Test generate() keeps non-path strings as inline source text."""
+    run_generate_and_assert(
+        input_="name: Alice",
+        input_file_type=InputFileType.Yaml,
+        input_filename="inline.yaml",
+        disable_timestamp=True,
+        expected_file=EXPECTED_MAIN_PATH / "generate_keeps_non_path_string_input.py",
+    )
+
+
+def test_generate_warns_when_input_string_is_existing_path_on_failure(tmp_path: Path) -> None:
+    """Test failed string input warns when the value is an existing path."""
+    input_path = tmp_path / "schema.json"
+    input_path.write_text("{", encoding="utf-8")
+
+    with pytest.warns(UserWarning, match="Path"), pytest.raises(Error):
+        generate(
+            input_=str(input_path),
+            input_file_type=InputFileType.Json,
+            disable_timestamp=True,
+            formatters=[],
+        )
+
+
+def test_generate_warning_does_not_mask_original_error_with_strict_warning_filter(tmp_path: Path) -> None:
+    """Test strict warning filters do not replace the original generate error."""
+    input_path = tmp_path / "schema.json"
+    input_path.write_text("{", encoding="utf-8")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        with pytest.raises(Error):
+            generate(
+                input_=str(input_path),
+                input_file_type=InputFileType.Json,
+                disable_timestamp=True,
+                formatters=[],
+            )
+
+
+def test_generate_does_not_warn_for_non_existing_path_string_on_failure(tmp_path: Path) -> None:
+    """Test failed string input only warns for values resolving to existing paths."""
+    invalid_input_path = tmp_path / "invalid.json"
+    invalid_input_path.write_text("{", encoding="utf-8")
+
+    failed_inputs: tuple[Path | str, ...] = (
+        invalid_input_path,
+        "not\njson",
+        str(tmp_path / "missing.json"),
+        "~this-user-should-not-exist-20260703/schema.json",
+    )
+    for failed_input in failed_inputs:
+        with warnings.catch_warnings(record=True) as warning_records:
+            warnings.simplefilter("always")
+            with pytest.raises(Error):
+                generate(
+                    input_=failed_input,
+                    input_file_type=InputFileType.Json,
+                    disable_timestamp=True,
+                    formatters=[],
+                )
+        assert_warnings_do_not_contain(
+            warning_records,
+            "pass a `Path` object to read it as a file",
+        )
+
+
 def test_generate_returns_string_with_pydantic_v2() -> None:
     """Test that generate() returns str for Pydantic v2 models."""
     json_schema = '{"type": "object", "properties": {"value": {"type": "number"}}}'

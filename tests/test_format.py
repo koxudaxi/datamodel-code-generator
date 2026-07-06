@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import pickle
+import shutil
 import subprocess
 import sys
 import warnings
@@ -1052,6 +1053,71 @@ def test_builtin_formatter_pep695_type_alias_replacement_edges() -> None:
     ]
 
 
+def test_builtin_formatter_source_segment_matches_ast() -> None:
+    """Source extraction should match ast.get_source_segment, including UTF-8 byte offsets."""
+    source = (
+        "from typing import Annotated\r\n"
+        "from pydantic import Field\n"
+        "\n"
+        "EXTRA = {'emoji': '🍣'}\n"
+        "\n"
+        "class Model:\n"
+        '    """説明."""\n'
+        "    field: Annotated[\n"
+        "        str,\n"
+        "        Field(default='é', description='長い説明'),\n"
+        "    ]\n"
+        "    data = {\n"
+        "        'emoji': '🍣',\n"
+        "        **EXTRA,\n"
+        "    }\n"
+        "\n"
+        "lambda_value = lambda: '空'\n"
+    )
+
+    for node in ast.walk(ast.parse(source)):
+        expected = ast.get_source_segment(source, node)
+        if not expected:
+            continue
+
+        assert builtin_formatter._source_segment(source, node) == expected
+
+
+def test_builtin_formatter_source_segment_reuses_split_source_lines(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Repeated source extraction should split one source object once."""
+    source = "class Model:\n    field: str = 'é'\n    other: str = '🍣'\n"
+    nodes = [node for node in ast.walk(ast.parse(source)) if ast.get_source_segment(source, node)]
+    split_call_count = 0
+    original_splitlines = builtin_formatter._splitlines_no_ff
+
+    def spy_splitlines(value: str) -> list[str]:
+        nonlocal split_call_count
+        split_call_count += 1
+        return original_splitlines(value)
+
+    monkeypatch.setattr(builtin_formatter, "_SOURCE_LINES_CACHE", [])
+    monkeypatch.setattr(builtin_formatter, "_splitlines_no_ff", spy_splitlines)
+
+    for node in nodes:
+        builtin_formatter._source_segment(source, node)
+
+    assert split_call_count == 1
+
+
+def test_builtin_formatter_source_segment_handles_missing_locations() -> None:
+    """Source extraction should fall back when a node lacks complete location data."""
+    source = "field: str\n"
+    node_without_location = ast.Load()
+    node_without_end_location = ast.Name(id="field", ctx=ast.Load())
+    node_without_end_location.lineno = 1
+    node_without_end_location.col_offset = 0
+    node_without_end_location.end_lineno = None
+    node_without_end_location.end_col_offset = None
+
+    assert builtin_formatter._source_segment_from_cached_lines(source, node_without_location) is None
+    assert builtin_formatter._source_segment_from_cached_lines(source, node_without_end_location) is None
+
+
 def test_apply_builtin_formatter_parenthesizes_short_annotated_default() -> None:
     """Test built-in formatter matches black for short overflowing Annotated defaults."""
     code = (
@@ -1678,6 +1744,7 @@ def test_format_code_ruff_format_formatter(tmp_path: Path, monkeypatch: pytest.M
         mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("subprocess.run") as mock_run,
     ):
+        mock_run.return_value.returncode = 0
         mock_run.return_value.stdout = b"output"
         formatted_code = formatter.format_code("input")
 
@@ -1702,6 +1769,7 @@ def test_format_code_ruff_check_formatter(tmp_path: Path, monkeypatch: pytest.Mo
         mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("subprocess.run") as mock_run,
     ):
+        mock_run.return_value.returncode = 0
         mock_run.return_value.stdout = b"output"
         formatted_code = formatter.format_code("input")
 
@@ -1729,6 +1797,7 @@ def test_format_code_ruff_check_formatter_without_type_checking_imports(
         mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("subprocess.run") as mock_run,
     ):
+        mock_run.return_value.returncode = 0
         mock_run.return_value.stdout = b"output"
         formatted_code = formatter.format_code("input")
 
@@ -1802,8 +1871,8 @@ def test_format_code_ruff_check_and_format_uses_resolved_ruff_path(
         mock.patch("subprocess.run") as mock_run,
     ):
         mock_run.side_effect = [
-            mock.Mock(stdout=b"checked"),
-            mock.Mock(stdout=b"formatted"),
+            mock.Mock(returncode=0, stdout=b"checked"),
+            mock.Mock(returncode=0, stdout=b"formatted"),
         ]
         formatted_code = formatter.format_code("input")
 
@@ -1825,6 +1894,131 @@ def test_format_code_ruff_check_and_format_uses_resolved_ruff_path(
             cwd=str(tmp_path),
         ),
     ]
+
+
+def test_format_code_ruff_check_failure_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test Ruff check failures do not replace generated code with stdout."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.RUFF_CHECK],
+    )
+    with (
+        mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
+        mock.patch("subprocess.run") as mock_run,
+    ):
+        mock_run.return_value.returncode = 1
+        mock_run.return_value.stdout = b""
+        mock_run.return_value.stderr = b"parse error"
+
+        with pytest.raises(RuntimeError, match="parse error"):
+            formatter.format_code("input")
+
+
+def test_format_code_ruff_check_uses_stdout_when_fix_exits_nonzero(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test Ruff check can return fixed stdout while reporting remaining diagnostics."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.RUFF_CHECK],
+    )
+    with (
+        mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
+        mock.patch("subprocess.run") as mock_run,
+    ):
+        mock_run.return_value.returncode = 1
+        mock_run.return_value.stdout = b"fixed"
+        mock_run.return_value.stderr = b"remaining lint"
+
+        formatted_code = formatter.format_code("input")
+
+    assert formatted_code == "fixed"
+
+
+def test_format_code_ruff_check_internal_error_raises_with_stdout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test Ruff check abnormal failures do not use stdout as formatted code."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.RUFF_CHECK],
+    )
+    with (
+        mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
+        mock.patch("subprocess.run") as mock_run,
+    ):
+        mock_run.return_value.returncode = 2
+        mock_run.return_value.stdout = b"partial output"
+        mock_run.return_value.stderr = b"invalid config"
+
+        with pytest.raises(RuntimeError, match="invalid config"):
+            formatter.format_code("input")
+
+
+def test_format_code_ruff_format_failure_raises_with_stdout(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test Ruff format failures report stdout when stderr is empty."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.RUFF_FORMAT],
+    )
+    with (
+        mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
+        mock.patch("subprocess.run") as mock_run,
+    ):
+        mock_run.return_value.returncode = 2
+        mock_run.return_value.stdout = b"formatter output"
+        mock_run.return_value.stderr = b""
+
+        with pytest.raises(RuntimeError, match="formatter output"):
+            formatter.format_code("input")
+
+
+def test_format_code_ruff_failure_raises_without_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test Ruff failures without output still include the exit code."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.RUFF_FORMAT],
+    )
+    with (
+        mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
+        mock.patch("subprocess.run") as mock_run,
+    ):
+        mock_run.return_value.returncode = 2
+        mock_run.return_value.stdout = b""
+        mock_run.return_value.stderr = b""
+
+        with pytest.raises(RuntimeError, match="no output"):
+            formatter.format_code("input")
+
+
+def test_find_ruff_path_prefers_virtualenv_executable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test Ruff lookup prefers the executable next to the active Python."""
+    monkeypatch.setattr(Path, "exists", lambda _path: True)
+
+    ruff_name = "ruff.exe" if sys.platform == "win32" else "ruff"
+    assert CodeFormatter._find_ruff_path() == str(Path(sys.executable).parent / ruff_name)
+
+
+def test_find_ruff_path_uses_path_executable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test Ruff lookup falls back to PATH."""
+    monkeypatch.setattr(Path, "exists", lambda _path: False)
+    monkeypatch.setattr(shutil, "which", lambda _name: FAKE_RUFF_PATH)
+
+    assert CodeFormatter._find_ruff_path() == FAKE_RUFF_PATH
+
+
+def test_find_ruff_path_missing_raises_install_hint(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test missing Ruff is detected before subprocess execution."""
+    monkeypatch.setattr(Path, "exists", lambda _path: False)
+    monkeypatch.setattr(shutil, "which", lambda _name: None)
+
+    with pytest.raises(RuntimeError, match=r"datamodel-code-generator\[ruff\]"):
+        CodeFormatter._find_ruff_path()
 
 
 def test_settings_path_with_existing_file(tmp_path: Path) -> None:
@@ -1881,6 +2075,7 @@ def test_format_directory_ruff_check(tmp_path: Path, monkeypatch: pytest.MonkeyP
         mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("subprocess.run") as mock_run,
     ):
+        mock_run.return_value.returncode = 0
         formatter.format_directory(output_dir)
 
     mock_run.assert_called_once_with(
@@ -1905,6 +2100,7 @@ def test_format_directory_ruff_format(tmp_path: Path, monkeypatch: pytest.Monkey
         mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("subprocess.run") as mock_run,
     ):
+        mock_run.return_value.returncode = 0
         formatter.format_directory(output_dir)
 
     mock_run.assert_called_once_with(
@@ -1929,6 +2125,7 @@ def test_format_directory_both_ruff_formatters(tmp_path: Path, monkeypatch: pyte
         mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("subprocess.run") as mock_run,
     ):
+        mock_run.return_value.returncode = 0
         formatter.format_directory(output_dir)
 
     assert mock_run.call_count == 2
@@ -1963,6 +2160,7 @@ def test_format_directory_ruff_check_without_type_checking_imports(
         mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("subprocess.run") as mock_run,
     ):
+        mock_run.return_value.returncode = 0
         formatter.format_directory(output_dir)
 
     mock_run.assert_called_once_with(
@@ -1990,6 +2188,7 @@ def test_format_directory_both_ruff_formatters_without_type_checking_imports(
         mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("subprocess.run") as mock_run,
     ):
+        mock_run.return_value.returncode = 0
         formatter.format_directory(output_dir)
 
     assert mock_run.call_count == 2
@@ -2039,6 +2238,7 @@ def test_generate_with_ruff_batch_formatting(tmp_path: Path) -> None:
         mock.patch("datamodel_code_generator.format.CodeFormatter._find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("datamodel_code_generator.format.subprocess.run") as mock_run,
     ):
+        mock_run.return_value.returncode = 0
         datamodel_code_generator.generate(
             input_=schema,
             output=output_dir,
@@ -2085,6 +2285,7 @@ def test_generate_with_ruff_batch_formatting_and_explicit_type_checking_imports(
         mock.patch("datamodel_code_generator.format.CodeFormatter._find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("datamodel_code_generator.format.subprocess.run") as mock_run,
     ):
+        mock_run.return_value.returncode = 0
         datamodel_code_generator.generate(
             input_=schema,
             output=output_dir,

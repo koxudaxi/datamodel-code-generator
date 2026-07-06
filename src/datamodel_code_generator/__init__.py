@@ -759,6 +759,43 @@ def _generate_config_values(generate_config: GenerateConfig) -> dict[str, Any]:
     return values
 
 
+def _warn_if_input_string_points_to_existing_path(
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+) -> None:
+    match input_:
+        case str() as input_text if input_text and "\n" not in input_text and "\r" not in input_text:
+            pass
+        case _:
+            return
+    try:
+        path = Path(input_text).expanduser()
+        path_exists = path.exists()
+    except (OSError, RuntimeError, ValueError):
+        return
+    if not path_exists:
+        return
+
+    import warnings  # noqa: PLC0415
+
+    with contextlib.suppress(Warning):
+        warnings.warn(
+            "`input_` strings are treated as schema text. "
+            "The value also resolves to an existing path; pass a `Path` object to read it as a file.",
+            stacklevel=3,
+        )
+
+
+@contextlib.contextmanager
+def _warn_on_input_string_path_failure(
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+) -> Iterator[None]:
+    try:
+        yield
+    except Exception:
+        _warn_if_input_string_points_to_existing_path(input_)
+        raise
+
+
 def _create_parser_config(
     generate_config: GenerateConfig,
     additional_options: ParserConfigDict
@@ -1148,7 +1185,7 @@ def _build_parser(  # noqa: PLR0911, PLR0913
     raise Error(msg)
 
 
-def _emit_results(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
+def _emit_results(  # noqa: PLR0912, PLR0913, PLR0915
     results: str | dict[tuple[str, ...], Any],
     input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     input_filename: str | None,
@@ -1225,25 +1262,24 @@ def _emit_results(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             for name, result in sorted(results.items())
         }
 
-    file: IO[Any] | None
     for path, (body, future_imports, filename) in modules.items():
         if not path.parent.exists():
             path.parent.mkdir(parents=True)
 
         safe_filename = filename.replace("\n", " ").replace("\r", " ") if filename else ""
         effective_header = custom_file_header or header.format(safe_filename)
-        file = path.open("wt", encoding=config.encoding)
-        if custom_file_header and body:
-            file.write(
-                _build_module_content(body, effective_header, custom_file_header, future_imports=future_imports) + "\n"
-            )
-        else:
-            file.write(effective_header)
-            if body:
-                file.write("\n\n")
-                file.write(body.rstrip())
-            file.write("\n")
-        file.close()
+        with path.open("wt", encoding=config.encoding) as file:
+            if custom_file_header and body:
+                file.write(
+                    _build_module_content(body, effective_header, custom_file_header, future_imports=future_imports)
+                    + "\n"
+                )
+            else:
+                file.write(effective_header)
+                if body:
+                    file.write("\n\n")
+                    file.write(body.rstrip())
+                file.write("\n")
 
     if defer_formatting and config.formatters:
         from datamodel_code_generator._format_types import Formatter  # noqa: PLC0415
@@ -1302,7 +1338,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     (JSON, YAML, Dict, CSV) as input.
 
     Args:
-        input_: The input source (file path, string content, URL, dict,
+        input_: The input source (Path file input, string content, URL, dict,
             list of file paths, or MCP tools list when input_file_type is
             InputFileType.MCPTools).
         config: A GenerateConfig object with all options. Cannot be used together with **options.
@@ -1426,8 +1462,9 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             raise Error(msg) from exc
 
         try:
-            assert isinstance(input_text_, str)
-            input_file_type = infer_input_type(input_text_)
+            with _warn_on_input_string_path_failure(input_):
+                assert isinstance(input_text_, str)
+                input_file_type = infer_input_type(input_text_)
         except Exception as exc:
             raise InvalidFileFormatError(exc) from exc
         else:
@@ -1440,15 +1477,17 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             if isinstance(input_, Path) and input_.is_file() and input_file_type not in RAW_DATA_TYPES:
                 input_text = input_text_
 
-    input_text = _normalize_raw_input(input_, input_text, input_file_type, config)
+    with _warn_on_input_string_path_failure(input_):
+        input_text = _normalize_raw_input(input_, input_text, input_file_type, config)
 
     if input_file_type == InputFileType.MCPTools:
-        source_override, input_file_type, skip_root_model = _convert_mcp_tools(
-            input_,
-            input_text,
-            config,
-            remote_text_cache,
-        )
+        with _warn_on_input_string_path_failure(input_):
+            source_override, input_file_type, skip_root_model = _convert_mcp_tools(
+                input_,
+                input_text,
+                config,
+                remote_text_cache,
+            )
 
     if isinstance(input_, ParseResult) and input_file_type not in RAW_DATA_TYPES:
         input_text = None
@@ -1469,29 +1508,35 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         _resolve_schema_versions(input_file_type, config.schema_version)
     )
 
-    parser = _build_parser(
-        input_file_type,
-        source,
-        config,
-        additional_options,
-        data_model_types,
-        jsonschema_version=jsonschema_version,
-        openapi_version=openapi_version,
-        asyncapi_version=asyncapi_version,
-        xmlschema_version=xmlschema_version,
-        protobuf_version=protobuf_version,
-    )
+    with _warn_on_input_string_path_failure(input_):
+        parser = _build_parser(
+            input_file_type,
+            source,
+            config,
+            additional_options,
+            data_model_types,
+            jsonschema_version=jsonschema_version,
+            openapi_version=openapi_version,
+            asyncapi_version=asyncapi_version,
+            xmlschema_version=xmlschema_version,
+            protobuf_version=protobuf_version,
+        )
 
     with chdir(config.output):
         try:
-            results = parser.parse(
-                settings_path=config.settings_path,
-                disable_future_imports=config.disable_future_imports,
-                all_exports_scope=config.all_exports_scope,
-                all_exports_collision_strategy=config.all_exports_collision_strategy,
-                module_split_mode=config.module_split_mode,
-                collect_model_metadata=config.emit_model_metadata is not None,
-            )
+            with _warn_on_input_string_path_failure(input_):
+                results = parser.parse(
+                    settings_path=config.settings_path,
+                    disable_future_imports=config.disable_future_imports,
+                    all_exports_scope=config.all_exports_scope,
+                    all_exports_collision_strategy=config.all_exports_collision_strategy,
+                    module_split_mode=config.module_split_mode,
+                    collect_model_metadata=config.emit_model_metadata is not None,
+                )
+        except Exception:
+            with contextlib.suppress(BaseException):
+                parser._dispose()  # noqa: SLF001
+            raise
         except BaseException:
             with contextlib.suppress(BaseException):
                 parser._dispose()  # noqa: SLF001

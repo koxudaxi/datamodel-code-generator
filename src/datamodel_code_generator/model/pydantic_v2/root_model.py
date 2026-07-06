@@ -9,7 +9,12 @@ from typing import Any, ClassVar
 
 from datamodel_code_generator import Error
 from datamodel_code_generator.imports import IMPORT_ANY, Import
-from datamodel_code_generator.model.pydantic_v2.base_model import _CONFIG_ITEMS_TEMPLATE_DATA_KEY, BaseModel
+from datamodel_code_generator.model.base import _safe_extra_template_data
+from datamodel_code_generator.model.pydantic_v2.base_model import (
+    _CONFIG_ITEMS_TEMPLATE_DATA_KEY,
+    BaseModel,
+    _config_dict_items,
+)
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
 
 IMPORT_ABC_ITERATOR = Import.from_full_path("collections.abc.Iterator")
@@ -19,6 +24,15 @@ IMPORT_SUPPORTS_INDEX = Import.from_full_path("typing.SupportsIndex")
 _SEQUENCE_BASE_CLASS_TEMPLATE_DATA_KEY = "sequence_base_class"
 _SEQUENCE_ITEM_TYPE_TEMPLATE_DATA_KEY = "sequence_item_type"
 _SEQUENCE_SLICE_TYPE_TEMPLATE_DATA_KEY = "sequence_slice_type"
+_ROOT_MODEL_CONFIG_KEYS: frozenset[str] = frozenset({"regex_engine", "frozen"})
+
+
+def _root_model_config_items(config: Any) -> list[tuple[str, Any]]:
+    return [
+        (field_name, value)
+        for field_name, value in _config_dict_items(config)
+        if field_name in _ROOT_MODEL_CONFIG_KEYS and value is not None
+    ]
 
 
 class RootModel(BaseModel):
@@ -44,14 +58,33 @@ class RootModel(BaseModel):
 
         super().__init__(**kwargs)
 
-        config = self.extra_template_data.get("config")
-        has_meaningful_config = config is not None and (
-            getattr(config, "regex_engine", None) is not None or getattr(config, "frozen", None) is not None
-        )
-        if not has_meaningful_config:
+        if not self._has_meaningful_config(self.extra_template_data.get("config")):
             self.extra_template_data.pop("config", None)
             self.extra_template_data.pop(_CONFIG_ITEMS_TEMPLATE_DATA_KEY, None)
             self._additional_imports = [imp for imp in self._additional_imports if imp != IMPORT_CONFIG_DICT]
+
+    @staticmethod
+    def _has_meaningful_config(config: Any) -> bool:
+        has_config = False
+        match config:
+            case None:
+                pass
+            case _:
+                has_config = bool(_root_model_config_items(config))
+        return has_config
+
+    def _sync_config_items(self) -> None:
+        config = self.extra_template_data.get("config")
+        if config_items := _root_model_config_items(config):
+            self.extra_template_data[_CONFIG_ITEMS_TEMPLATE_DATA_KEY] = config_items
+            if IMPORT_CONFIG_DICT not in self._additional_imports:
+                self._additional_imports.append(IMPORT_CONFIG_DICT)
+            self.clear_imports_cache()
+            return
+        self.extra_template_data.pop("config", None)
+        self.extra_template_data.pop(_CONFIG_ITEMS_TEMPLATE_DATA_KEY, None)
+        self._additional_imports = [imp for imp in self._additional_imports if imp != IMPORT_CONFIG_DICT]
+        self.clear_imports_cache()
 
     def add_sequence_interface(self, item_type: str, slice_type: str) -> None:
         """Add sequence interface helpers that delegate to the wrapped root value."""
@@ -68,7 +101,27 @@ class RootModel(BaseModel):
 
     def render(self, *, class_name: str | None = None) -> str:
         """Render the RootModel and validate custom sequence templates when needed."""
-        rendered = super().render(class_name=class_name)
+        use_custom_template = self.template_file_path.is_absolute()
+        fields = self.fields if use_custom_template else self.rendered_fields
+        if fields:
+            _ = fields[0].type_hint
+        self._sync_config_items()
+        extra_template_data = (
+            self.extra_template_data if use_custom_template else _safe_extra_template_data(self.extra_template_data)
+        )
+        rendered = self._render(
+            class_name=class_name or self.class_name,
+            fields=fields,
+            decorators=self.decorators,
+            base_class=self.base_class,
+            methods=self.methods,
+            description=self.description
+            if use_custom_template or not self.FORMAT_DESCRIPTION_AS_DOCSTRING
+            else self.rendered_description,
+            dataclass_arguments=self.dataclass_arguments,
+            path=self.path,
+            **extra_template_data,
+        )
         self._validate_custom_template_sequence_interface(rendered)
         return rendered
 

@@ -1225,7 +1225,7 @@ def _isolate_builtin_formatter_config(
     monkeypatch.chdir(settings_path)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def _inline_snapshot_file_formats() -> None:
     register_format_alias(".py", ".txt")
     register_format_alias(".pyi", ".txt")
@@ -1248,6 +1248,8 @@ def _preload_heavy_modules() -> None:
     import black  # noqa: F401
     import inflect  # noqa: F401
     import isort  # noqa: F401
+    import msgspec  # noqa: F401
+    import pydantic_core  # noqa: F401
 
     import datamodel_code_generator  # noqa: F401
 

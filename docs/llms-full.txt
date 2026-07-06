@@ -35736,6 +35736,24 @@ result = generate(json_schema, config=config)
 print(result)
 ```
 
+### 📝 Reading Input From a File
+
+Pass a `Path` to `input_` for file input. Plain strings are treated as schema
+text; if a string points to an existing file and parsing fails, `generate()`
+warns and recommends using `Path`.
+
+```python
+from pathlib import Path
+
+from datamodel_code_generator import InputFileType, generate
+
+result = generate(
+    input_=Path("example.json"),
+    input_file_type=InputFileType.JsonSchema,
+)
+print(result)
+```
+
 ### 📝 Multiple Module Output
 
 When the schema generates multiple modules, `generate()` returns a `GeneratedModules` dictionary mapping module path tuples to generated code:
@@ -35743,7 +35761,7 @@ When the schema generates multiple modules, `generate()` returns a `GeneratedMod
 ```python
 from datamodel_code_generator import InputFileType, generate, GenerateConfig, GeneratedModules
 
-# Your OpenAPI specification (string, Path, or dict)
+# Your OpenAPI specification (string schema text, Path, or dict)
 openapi_spec: str = "..."  # Replace with your actual OpenAPI spec
 
 # Schema that generates multiple modules (e.g., with $ref to other files)
@@ -37293,11 +37311,11 @@ These suites are compatibility and coverage signals. They show that CI exercises
 
 | Suite name | Input format / scope | Source corpus or upstream project | Local runner script | tox environment | CI job name | Expected corpus size/count | External checkout/network in CI | What the suite proves |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| W3C XML Schema Test Suite | XML Schema (`.xsd`) generation from valid schema documents | [w3c/xsdtests](https://github.com/w3c/xsdtests) @ `7bc3365c652a322f3d762021b3879eb92dae7e30` | `scripts/run_w3c_xmlschema_e2e.py` | `w3c-xmlschema-e2e` | `W3C XML Schema e2e` (`w3c-xmlschema-e2e`) | 5,284 valid schemaDocument entries; 5,283 unique valid schemaDocument paths | Yes; cached external checkout, network on cache miss | CI exercises XML Schema generation against valid schema documents in the pinned W3C test suite and imports the generated Python modules. |
-| JSON-Schema-Test-Suite | JSON Schema generated Pydantic v2 model validation for configured drafts | [json-schema-org/JSON-Schema-Test-Suite](https://github.com/json-schema-org/JSON-Schema-Test-Suite) @ `fe8c2f0de2041943975932b6bf4bd882625b6cfb` | `scripts/run_jsonschema_suite_conformance.py` | `jsonschema-suite-conformance` | `JSON-Schema-Test-Suite conformance` (`jsonschema-suite-conformance`) | 640 groups / 2,226 tests for default drafts `draft7`, `draft2020-12` (asserted by pytest) | Yes; external checkout cloned during the CI job | CI exercises generated Pydantic v2 models against JSON-Schema-Test-Suite expectations for the configured drafts, with unsupported cases classified in tests. |
-| AsyncAPI spec JSON Schemas | Stable AsyncAPI specification JSON Schema files used as JSON Schema input | [asyncapi/spec-json-schemas](https://github.com/asyncapi/spec-json-schemas) @ `469c2b2bf5ed88e0cdf1e48975b93a87c710d229` | `scripts/run_asyncapi_spec_json_schemas_e2e.py` | `asyncapi-spec-json-schemas-e2e` | `AsyncAPI spec JSON Schemas e2e` (`asyncapi-spec-json-schemas-e2e`) | 12 schemas | Yes; cached external checkout, network on cache miss | CI exercises generation and import of Python models from stable AsyncAPI specification JSON Schema files, including local handling of HTTP references. |
-| Apache Avro schema pass corpus | Apache Avro schema pass files from the upstream C test corpus | [apache/avro](https://github.com/apache/avro) @ `9110c693767c1dde2665b2b57939333478b12036` | `scripts/run_apache_avro_schema_pass_e2e.py` | `apache-avro-schema-pass-e2e` | `Apache Avro schema pass e2e` (`apache-avro-schema-pass-e2e`) | 28 schemas | Yes; cached external checkout, network on cache miss | CI exercises Avro generation against upstream pass-corpus schemas and imports the generated Python module. |
-| Protocol Buffers official corpus | Official Protocol Buffers `.proto` files selected by the local runner | [protocolbuffers/protobuf](https://github.com/protocolbuffers/protobuf) @ `4376cba55d9e2f44f7e317d9c10e0259d145f8cf`; sparse checkout: `src`, `conformance`, `benchmarks` | `scripts/run_protobuf_official_e2e.py` | `protobuf-official-e2e` | `Protocol Buffers official e2e` (`protobuf-official-e2e`) | 65 schemas | Yes; cached external checkout, network on cache miss | CI exercises Protocol Buffers generation against supported files in the pinned official corpus subset and imports the generated Python module. |
+| W3C XML Schema Test Suite | XML Schema (`.xsd`) generation from valid schema documents | [w3c/xsdtests](https://github.com/w3c/xsdtests) @ `7bc3365c652a322f3d762021b3879eb92dae7e30` | `scripts/run_w3c_xmlschema_e2e.py` | `w3c-xmlschema-e2e` | `e2e` (`e2e`) | 5,284 valid schemaDocument entries; 5,283 unique valid schemaDocument paths | Yes; cached external checkout, network on cache miss | CI exercises XML Schema generation against valid schema documents in the pinned W3C test suite and imports the generated Python modules. |
+| JSON-Schema-Test-Suite | JSON Schema generated Pydantic v2 model validation for configured drafts | [json-schema-org/JSON-Schema-Test-Suite](https://github.com/json-schema-org/JSON-Schema-Test-Suite) @ `fe8c2f0de2041943975932b6bf4bd882625b6cfb` | `scripts/run_jsonschema_suite_conformance.py` | `jsonschema-suite-conformance` | `e2e` (`e2e`) | 640 groups / 2,226 tests for default drafts `draft7`, `draft2020-12` (asserted by pytest) | Yes; cached external checkout, network on cache miss | CI exercises generated Pydantic v2 models against JSON-Schema-Test-Suite expectations for the configured drafts, with unsupported cases classified in tests. |
+| AsyncAPI spec JSON Schemas | Stable AsyncAPI specification JSON Schema files used as JSON Schema input | [asyncapi/spec-json-schemas](https://github.com/asyncapi/spec-json-schemas) @ `469c2b2bf5ed88e0cdf1e48975b93a87c710d229` | `scripts/run_asyncapi_spec_json_schemas_e2e.py` | `asyncapi-spec-json-schemas-e2e` | `e2e` (`e2e`) | 12 schemas | Yes; cached external checkout, network on cache miss | CI exercises generation and import of Python models from stable AsyncAPI specification JSON Schema files, including local handling of HTTP references. |
+| Apache Avro schema pass corpus | Apache Avro schema pass files from the upstream C test corpus | [apache/avro](https://github.com/apache/avro) @ `9110c693767c1dde2665b2b57939333478b12036` | `scripts/run_apache_avro_schema_pass_e2e.py` | `apache-avro-schema-pass-e2e` | `e2e` (`e2e`) | 28 schemas | Yes; cached external checkout, network on cache miss | CI exercises Avro generation against upstream pass-corpus schemas and imports the generated Python module. |
+| Protocol Buffers official corpus | Official Protocol Buffers `.proto` files selected by the local runner | [protocolbuffers/protobuf](https://github.com/protocolbuffers/protobuf) @ `4376cba55d9e2f44f7e317d9c10e0259d145f8cf`; sparse checkout: `src`, `conformance`, `benchmarks` | `scripts/run_protobuf_official_e2e.py` | `protobuf-official-e2e` | `e2e` (`e2e`) | 65 schemas | Yes; cached external checkout, network on cache miss | CI exercises Protocol Buffers generation against supported files in the pinned official corpus subset and imports the generated Python module. |
 
 ## Generated Sources
 
@@ -37518,8 +37536,9 @@ This page lists features that are available but still experimental.
 
 | ID | Kind | Target | Since | Tracking |
 |----|------|--------|-------|----------|
-| `cli-option.generate-schema-validators` | cli-option | `--generate-schema-validators` | 0.59.0 | - |
-| `cli-option.schema-validator-type` | cli-option | `--schema-validator-type` | 0.59.0 | - |
+| `cli-option.generate-schema-validators` | cli-option | `--generate-schema-validators` | 0.66.1 | - |
+| `cli-option.schema-validator-type` | cli-option | `--schema-validator-type` | 0.66.1 | - |
+| `cli-option.use-missing-sentinel` | cli-option | `--use-missing-sentinel` | 0.66.1 | - |
 | `formatter.builtin` | formatter | `--formatters builtin` | 0.59.0 | - |
 | `input-format.asyncapi` | input-format | `--input-file-type asyncapi` | 0.59.0 | - |
 | `input-format.avro` | input-format | `--input-file-type avro` | 0.59.0 | - |
@@ -37533,7 +37552,7 @@ This page lists features that are available but still experimental.
 
 - **Kind:** cli-option
 - **Target:** `--generate-schema-validators`
-- **Since:** 0.59.0
+- **Since:** 0.66.1
 
 Schema-derived runtime validators are experimental and may change as JSON Schema coverage is expanded.
 
@@ -37543,11 +37562,21 @@ The option currently targets Pydantic v2 BaseModel output and covers selected ob
 
 - **Kind:** cli-option
 - **Target:** `--schema-validator-type`
-- **Since:** 0.59.0
+- **Since:** 0.66.1
 
 Schema-derived runtime validator backend selection is experimental and may change as validation backends are added.
 
 The only currently implemented backend is 'pydantic-v2', which preserves the existing generated Pydantic v2 validator behavior.
+
+### `cli-option.use-missing-sentinel`
+
+- **Kind:** cli-option
+- **Target:** `--use-missing-sentinel`
+- **Since:** 0.66.1
+
+Pydantic MISSING sentinel output is experimental because it depends on pydantic.experimental.missing_sentinel.
+
+The option requires Pydantic v2 BaseModel output and a target Pydantic version that supports the MISSING sentinel.
 
 ### `formatter.builtin`
 

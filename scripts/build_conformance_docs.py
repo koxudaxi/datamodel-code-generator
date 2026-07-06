@@ -29,8 +29,11 @@ WORKFLOW_CLONE_RE = re.compile(
     r"git clone\b(?P<options>[^\n]*?)\s+(?P<url>https://[^\s]+)\s+(?P<path>\S+)",
 )
 WORKFLOW_CHECKOUT_RE = re.compile(r"git -C (?P<path>\S+) checkout (?P<ref>[0-9a-f]{40})")
+WORKFLOW_CACHE_PATH_RE = re.compile(r"^\s+path:\s*(?P<path>\S+)\s*$", re.MULTILINE)
 WORKFLOW_SPARSE_CHECKOUT_RE = re.compile(r"git -C \S+ sparse-checkout set (?P<paths>[^\n]+)")
 WORKFLOW_EXPECTED_COUNT_RE = re.compile(r"--expected-(?P<name>[a-z-]+)\s+(?P<count>\d+)")
+WORKFLOW_TOX_RUN_RE = re.compile(r"\btox\s+run\b[^\n]*\s-e\s+(?P<tox_env>[A-Za-z0-9_-]+)\b")
+WORKFLOW_TOX_INPUT_PATH_RE = re.compile(r"(?P<path>\.tox/[^\s\\]+)")
 
 
 @dataclass(frozen=True)
@@ -137,6 +140,7 @@ CONFORMANCE_SUITES = (
         ),
     ),
 )
+CONFORMANCE_TOX_ENVS = frozenset(spec.tox_env for spec in CONFORMANCE_SUITES)
 
 
 def _literal_assignment(tree: ast.Module, name: str) -> Any:
@@ -220,6 +224,108 @@ def _workflow_job_blocks(path: Path) -> dict[str, str]:
     return blocks
 
 
+def _workflow_step_blocks(block: str) -> list[str]:
+    """Split a workflow job block into top-level step blocks."""
+    steps: list[str] = []
+    current_step: list[str] = []
+
+    for line in block.splitlines():
+        if line.startswith("      - "):
+            if current_step:
+                steps.append("\n".join(current_step))
+            current_step = [line]
+            continue
+        if current_step:
+            current_step.append(line)
+
+    if current_step:
+        steps.append("\n".join(current_step))
+    return steps
+
+
+def _workflow_path_is_inside(path: str | None, base_path: str | None) -> bool:
+    """Return whether a workflow path is the base path or below it."""
+    if path is None or base_path is None:
+        return False
+    return path == base_path or path.startswith(f"{base_path}/")
+
+
+def _workflow_tox_input_path(step: str) -> str | None:
+    """Return the first .tox input path from a tox run step."""
+    if match := WORKFLOW_TOX_INPUT_PATH_RE.search(step):
+        return match.group("path")
+    return None
+
+
+def _workflow_clone_step(steps: list[str], input_path: str | None, end_index: int) -> str:
+    """Find the nearest preceding clone step for a tox run input path."""
+    if input_path is None:
+        return ""
+
+    for index in range(end_index - 1, -1, -1):
+        step = steps[index]
+        if (match := WORKFLOW_CLONE_RE.search(step)) and _workflow_path_is_inside(input_path, match.group("path")):
+            return step
+    return ""
+
+
+def _workflow_cache_enabled(steps: list[str], input_path: str | None, end_index: int) -> bool:
+    """Return whether a preceding cache step covers a tox run input path."""
+    if input_path is None:
+        return False
+
+    for index in range(end_index):
+        step = steps[index]
+        if (
+            "uses: actions/cache" in step
+            and (match := WORKFLOW_CACHE_PATH_RE.search(step))
+            and _workflow_path_is_inside(input_path, match.group("path"))
+        ):
+            return True
+    return False
+
+
+def _workflow_suite_jobs(job_id: str, job_name: str, steps: list[str]) -> dict[str, WorkflowJobMetadata]:
+    """Build suite-keyed metadata from consolidated e2e workflow steps."""
+    suite_jobs: dict[str, WorkflowJobMetadata] = {}
+
+    for index, step in enumerate(steps):
+        if not (tox_match := WORKFLOW_TOX_RUN_RE.search(step)):
+            continue
+        if (tox_env := tox_match.group("tox_env")) not in CONFORMANCE_TOX_ENVS:
+            continue
+
+        input_path = _workflow_tox_input_path(step)
+        end_index = index + 1
+        clone_step = _workflow_clone_step(steps, input_path, end_index)
+
+        clone_url: str | None = None
+        if match := WORKFLOW_CLONE_RE.search(clone_step):
+            clone_url = match.group("url")
+
+        checkout_ref: str | None = None
+        if match := WORKFLOW_CHECKOUT_RE.search(clone_step):
+            checkout_ref = match.group("ref")
+
+        sparse_checkout_paths: tuple[str, ...] = ()
+        if match := WORKFLOW_SPARSE_CHECKOUT_RE.search(clone_step):
+            sparse_checkout_paths = tuple(match.group("paths").split())
+
+        suite_jobs[tox_env] = WorkflowJobMetadata(
+            job_id=job_id,
+            job_name=job_name,
+            clone_url=clone_url,
+            checkout_ref=checkout_ref,
+            cache_enabled=_workflow_cache_enabled(steps, input_path, end_index),
+            sparse_checkout_paths=sparse_checkout_paths,
+            expected_counts={
+                match.group("name"): int(match.group("count")) for match in WORKFLOW_EXPECTED_COUNT_RE.finditer(step)
+            },
+        )
+
+    return suite_jobs
+
+
 def load_workflow_jobs(path: Path = WORKFLOW_PATH) -> dict[str, WorkflowJobMetadata]:
     """Load workflow job metadata needed by the conformance dashboard."""
     jobs: dict[str, WorkflowJobMetadata] = {}
@@ -227,6 +333,7 @@ def load_workflow_jobs(path: Path = WORKFLOW_PATH) -> dict[str, WorkflowJobMetad
         job_name = job_id
         if match := WORKFLOW_JOB_NAME_RE.search(block):
             job_name = match.group("name").strip("\"'")
+        steps = _workflow_step_blocks(block)
 
         clone_url: str | None = None
         if match := WORKFLOW_CLONE_RE.search(block):
@@ -248,10 +355,11 @@ def load_workflow_jobs(path: Path = WORKFLOW_PATH) -> dict[str, WorkflowJobMetad
             job_name=job_name,
             clone_url=clone_url,
             checkout_ref=checkout_ref,
-            cache_enabled="uses: actions/cache@" in block,
+            cache_enabled="uses: actions/cache" in block,
             sparse_checkout_paths=sparse_checkout_paths,
             expected_counts=expected_counts,
         )
+        jobs.update(_workflow_suite_jobs(job_id, job_name, steps))
     return jobs
 
 

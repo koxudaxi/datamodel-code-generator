@@ -49,18 +49,21 @@ runs:
       with:
         python-version: '3.14'
 
-    - uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
-      with:
-        path: ~/.cache/pip
-        key: datamodel-codegen-${{ runner.os }}-python-3.14
-
-    - name: Install datamodel-code-generator
+    - name: Resolve install package
+      id: install-package
       env:
         ACTION_REF: ${{ github.action_ref }}
         INPUT_EXTRAS: ${{ inputs.extras }}
         INPUT_VERSION: ${{ inputs.version }}
       run: |
         set -euo pipefail
+
+        case "$INPUT_VERSION" in
+          *$'\n'*|*$'\r'*)
+            echo "::error::Version must be a single line"
+            exit 1
+            ;;
+        esac
 
         EXTRAS=""
         if [ -n "$INPUT_EXTRAS" ]; then
@@ -90,6 +93,31 @@ runs:
         if [ -n "$VERSION" ]; then
           PACKAGE="${PACKAGE}==${VERSION}"
         fi
+
+        CACHE_KEY="$(PACKAGE="$PACKAGE" python3 - <<'PY'
+        import hashlib
+        import os
+
+        print(hashlib.sha256(os.environ["PACKAGE"].encode()).hexdigest())
+        PY
+        )"
+
+        {
+          printf 'cache-key=%s\n' "$CACHE_KEY"
+          printf 'package=%s\n' "$PACKAGE"
+        } >> "$GITHUB_OUTPUT"
+      shell: bash
+
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/pip
+        key: datamodel-codegen-${{ runner.os }}-python-3.14-${{ steps.install-package.outputs.cache-key }}
+
+    - name: Install datamodel-code-generator
+      env:
+        PACKAGE: ${{ steps.install-package.outputs.package }}
+      run: |
+        set -euo pipefail
 
         pip install "$PACKAGE"
       shell: bash

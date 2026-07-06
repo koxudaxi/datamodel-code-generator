@@ -9,7 +9,7 @@ import tokenize
 from collections import defaultdict
 from enum import IntEnum
 from io import StringIO
-from typing import TYPE_CHECKING, Any, TypeGuard
+from typing import TYPE_CHECKING, Any, TypeGuard, cast
 
 from datamodel_code_generator.util import load_toml
 
@@ -22,6 +22,12 @@ if TYPE_CHECKING:
         @property
         def version_key(self) -> tuple[int, int]:
             raise NotImplementedError
+
+    class _SourceLocationNode(Protocol):
+        lineno: int
+        end_lineno: int | None
+        col_offset: int
+        end_col_offset: int | None
 
 
 class _AliasSortCategory(IntEnum):
@@ -47,6 +53,7 @@ TYPE_ALIAS_INLINE_ARGUMENT_COUNT = 2
 STRING_PREFIX_PATTERN = re.compile(r"(?i)^([rubf]*)(\"\"\"|'''|\"|')")
 PEP695_TYPE_ALIAS_START_PATTERN = re.compile(r"^(?P<indent>\s*)type\s+(?P<target>[A-Za-z_]\w*(?:\[.*?\])?)\s*=")
 PEP695_TYPE_ALIAS_PLACEHOLDER = "__datamodel_codegen_builtin_type_alias__"
+_SOURCE_LINES_CACHE: list[tuple[str, list[str]]] = []
 
 
 def _is_valid_builtin_line_length(line_length: Any) -> TypeGuard[int]:
@@ -417,8 +424,70 @@ def _is_type_checking_if(node: ast.AST) -> TypeGuard[ast.If]:
     return isinstance(node, ast.If) and _is_name_or_attr(node.test, "TYPE_CHECKING")
 
 
+def _splitlines_no_ff(source: str) -> list[str]:
+    """Split source lines like the Python parser, without form-feed splitting."""
+    index = 0
+    lines: list[str] = []
+    next_line = ""
+    while index < len(source):
+        character = source[index]
+        next_line += character
+        index += 1
+
+        if character == "\r" and index < len(source) and source[index] == "\n":
+            next_line += "\n"
+            index += 1
+        if character in "\r\n":
+            lines.append(next_line)
+            next_line = ""
+
+    if next_line:
+        lines.append(next_line)
+    return lines
+
+
+def _source_lines(source: str) -> list[str]:
+    if _SOURCE_LINES_CACHE:
+        cached_source, cached_lines = _SOURCE_LINES_CACHE[0]
+        if source is cached_source or source == cached_source:
+            return cached_lines
+
+    lines = _splitlines_no_ff(source)
+    _SOURCE_LINES_CACHE[:] = [(source, lines)]
+    return lines
+
+
+def _source_segment_from_cached_lines(source: str, node: ast.AST) -> str | None:
+    if not (
+        hasattr(node, "lineno")
+        and hasattr(node, "end_lineno")
+        and hasattr(node, "col_offset")
+        and hasattr(node, "end_col_offset")
+    ):
+        return None
+
+    location_node = cast("_SourceLocationNode", node)
+    lineno = location_node.lineno
+    end_lineno = location_node.end_lineno
+    col_offset = location_node.col_offset
+    end_col_offset = location_node.end_col_offset
+    if end_lineno is None or end_col_offset is None:
+        return None
+
+    lineno -= 1
+    end_lineno -= 1
+
+    lines = _source_lines(source)
+    if end_lineno == lineno:
+        return lines[lineno].encode()[col_offset:end_col_offset].decode()
+
+    first = lines[lineno].encode()[col_offset:].decode()
+    last = lines[end_lineno].encode()[:end_col_offset].decode()
+    return "".join([first, *lines[lineno + 1 : end_lineno], last])
+
+
 def _source_segment(source: str, node: ast.AST) -> str:
-    return ast.get_source_segment(source, node) or ast.unparse(node)
+    return _source_segment_from_cached_lines(source, node) or ast.unparse(node)
 
 
 def _inline_source_segment(source: str, node: ast.AST) -> str:
