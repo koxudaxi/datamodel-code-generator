@@ -984,16 +984,18 @@ def _get_environment(template_subdir: Path, custom_template_dir: Path | None) ->
     from jinja2 import ChoiceLoader, FileSystemLoader  # noqa: PLC0415
 
     loaders: list[FileSystemLoader] = []
+    has_custom_loader = False
 
     if custom_template_dir is not None:
         custom_dir = custom_template_dir / template_subdir
         if cached_path_exists(custom_dir):
             loaders.append(FileSystemLoader(str(custom_dir)))
+            has_custom_loader = True
 
     loaders.append(FileSystemLoader(str(TEMPLATE_DIR / template_subdir)))
 
     loader: ChoiceLoader | FileSystemLoader = ChoiceLoader(loaders) if len(loaders) > 1 else loaders[0]
-    return _build_environment(loader, auto_reload=custom_template_dir is not None)
+    return _build_environment(loader, auto_reload=has_custom_loader)
 
 
 @lru_cache

@@ -351,10 +351,12 @@ def test_jinja_environment_auto_reload_only_for_custom_templates(tmp_path: Path)
 
     builtin_environment = _get_environment(Path(), None)
     custom_environment = _get_environment(Path(), tmp_path)
+    missing_custom_subdir_environment = _get_environment(Path("pydantic_v2"), tmp_path)
     absolute_path_environment = _get_environment_with_absolute_path(tmp_path, Path())
 
     assert builtin_environment.auto_reload is False
     assert custom_environment.auto_reload is True
+    assert missing_custom_subdir_environment.auto_reload is False
     assert absolute_path_environment.auto_reload is True
 
 
