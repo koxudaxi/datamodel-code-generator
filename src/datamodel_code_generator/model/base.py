@@ -54,6 +54,8 @@ _TYPING_IMPORT_NAMES: frozenset[str] = frozenset({
     IMPORT_OPTIONAL.import_,
     IMPORT_UNION.import_,
 })
+_MODULE_NAME_INVALID_CHAR_PATTERN = re.compile(r"[^0-9a-zA-Z_]")
+_MODULE_NAME_INVALID_CHAR_WITH_DOTS_PATTERN = re.compile(r"[^0-9a-zA-Z_.]")
 
 
 @dataclass(frozen=True, slots=True)
@@ -1050,8 +1052,8 @@ def sanitize_module_name(name: str, *, treat_dot_as_module: bool | None) -> str:
     If treat_dot_as_module is True, dots are preserved in the name.
     If treat_dot_as_module is False or None (default), dots are replaced with underscores.
     """
-    pattern = r"[^0-9a-zA-Z_.]" if treat_dot_as_module else r"[^0-9a-zA-Z_]"
-    sanitized = re.sub(pattern, "_", name)
+    pattern = _MODULE_NAME_INVALID_CHAR_WITH_DOTS_PATTERN if treat_dot_as_module else _MODULE_NAME_INVALID_CHAR_PATTERN
+    sanitized = pattern.sub("_", name)
     if sanitized and sanitized[0].isdigit():
         sanitized = f"_{sanitized}"
     return sanitized

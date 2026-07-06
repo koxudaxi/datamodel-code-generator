@@ -105,6 +105,7 @@ _PYDANTIC_V2_DATACLASS_MODULE: Final = "datamodel_code_generator.model.pydantic_
 _PYDANTIC_V2_MODULE: Final = "datamodel_code_generator.model.pydantic_v2"
 _PYDANTIC_V2_ROOT_MODEL_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.root_model"
 _TYPED_DICT_MODULE: Final = "datamodel_code_generator.model.typed_dict"
+_CLASS_NAME_SEPARATOR_PATTERN: Final = re.compile(r"[^A-Za-z0-9]+")
 
 
 @cache
@@ -935,7 +936,7 @@ def get_module_directory(module: tuple[str, ...]) -> tuple[str, ...]:
 
 def title_to_class_name(title: str) -> str:
     """Convert a schema title to a valid Python class name."""
-    classname = re.sub(r"[^A-Za-z0-9]+", " ", title)
+    classname = _CLASS_NAME_SEPARATOR_PATTERN.sub(" ", title)
     return "".join(x for x in classname.title() if not x.isspace())
 
 
@@ -1333,6 +1334,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.use_single_line_docstring: bool = config.use_single_line_docstring
         self.use_default_kwarg: bool = config.use_default_kwarg
         self.use_missing_sentinel: bool = config.use_missing_sentinel
+        self._data_model_field_common_kwargs_cache: dict[str, Any] = {"use_missing_sentinel": self.use_missing_sentinel}
         self.reuse_model: bool = config.reuse_model
         self.reuse_scope: ReuseScope | None = config.reuse_scope
         self.shared_module_name: str = config.shared_module_name
@@ -1529,7 +1531,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.field_type_collision_strategy: FieldTypeCollisionStrategy | None = config.field_type_collision_strategy
 
     def _data_model_field_common_kwargs(self) -> dict[str, Any]:
-        return {"use_missing_sentinel": self.use_missing_sentinel}
+        return self._data_model_field_common_kwargs_cache
 
     def _should_preserve_explicit_root_class_name(self, class_name: str) -> bool:
         if not self.allow_leading_underscore_class_name:
