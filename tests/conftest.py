@@ -1225,7 +1225,7 @@ def _isolate_builtin_formatter_config(
     monkeypatch.chdir(settings_path)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def _inline_snapshot_file_formats() -> None:
     register_format_alias(".py", ".txt")
     register_format_alias(".pyi", ".txt")

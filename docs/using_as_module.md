@@ -42,6 +42,24 @@ result = generate(json_schema, config=config)
 print(result)
 ```
 
+### 📝 Reading Input From a File
+
+Pass a `Path` to `input_` for file input. Plain strings are treated as schema
+text; if a string points to an existing file and parsing fails, `generate()`
+warns and recommends using `Path`.
+
+```python
+from pathlib import Path
+
+from datamodel_code_generator import InputFileType, generate
+
+result = generate(
+    input_=Path("example.json"),
+    input_file_type=InputFileType.JsonSchema,
+)
+print(result)
+```
+
 ### 📝 Multiple Module Output
 
 When the schema generates multiple modules, `generate()` returns a `GeneratedModules` dictionary mapping module path tuples to generated code:
@@ -49,7 +67,7 @@ When the schema generates multiple modules, `generate()` returns a `GeneratedMod
 ```python
 from datamodel_code_generator import InputFileType, generate, GenerateConfig, GeneratedModules
 
-# Your OpenAPI specification (string, Path, or dict)
+# Your OpenAPI specification (string schema text, Path, or dict)
 openapi_spec: str = "..."  # Replace with your actual OpenAPI spec
 
 # Schema that generates multiple modules (e.g., with $ref to other files)

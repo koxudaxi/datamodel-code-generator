@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
+from datamodel_code_generator import enable_parsed_source_cache
 from datamodel_code_generator.__main__ import Exit, main
 
 from .constants import PAYLOAD_CLASS_NAME, PAYLOAD_TARGET_PYTHON_VERSION
@@ -141,6 +142,14 @@ def _payload_codegen_args(case: SchemaCase, input_path: Path, output_path: Path,
     return args
 
 
+def _run_payload_codegen(args: list[str]) -> Exit:
+    restore = enable_parsed_source_cache()
+    try:
+        return main(args)
+    finally:
+        restore()
+
+
 def _load_payload_type(module_name: str, output_path: Path) -> type[Any]:
     spec = importlib.util.spec_from_file_location(module_name, output_path)
     if spec is None or spec.loader is None:
@@ -207,8 +216,7 @@ def generate_payload_runtime(
     case_dir.mkdir(parents=True, exist_ok=True)
     input_path = _write_input_schema(case, case_dir)
     output_path = case_dir / "model.py"
-    return_code = main(_payload_codegen_args(case, input_path, output_path, backend))
-    if return_code != Exit.OK:
+    if (return_code := _run_payload_codegen(_payload_codegen_args(case, input_path, output_path, backend))) != Exit.OK:
         msg = f"Generation failed with exit code {return_code!r}"
         raise PayloadAdapterError(msg)
     module_digest = hashlib.sha256("\0".join(cache_key).encode()).hexdigest()
