@@ -2,6 +2,9 @@
 
 Generate Python models from AsyncAPI 2.x and 3.x documents.
 
+!!! warning "Experimental"
+    AsyncAPI input support is experimental and may change as real-world usage is validated.
+
 ## 🚀 Quick Start
 
 ```bash

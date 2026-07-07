@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Literal, cast
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS_PATH = ROOT / "docs" / "presets.md"
-DOCS_INDEX_PATH = ROOT / "docs" / "index.md"
+DOCS_GETTING_STARTED_PATH = ROOT / "docs" / "getting-started.md"
 README_PATH = ROOT / "README.md"
 SRC_PATH = ROOT / "src"
 PRESET_NAMES_PATH = SRC_PATH / "datamodel_code_generator" / "preset_names.py"
@@ -167,12 +167,12 @@ def _generate_docs(preset_names_doc: GeneratedDoc) -> tuple[GeneratedDoc, ...]:
         GeneratedDoc(DOCS_PATH, render_presets("markdown")),
         GeneratedDoc(README_PATH, readme_content),
         GeneratedDoc(
-            DOCS_INDEX_PATH,
+            DOCS_GETTING_STARTED_PATH,
             _replace_marked_section(
-                DOCS_INDEX_PATH.read_text(encoding="utf-8"),
+                DOCS_GETTING_STARTED_PATH.read_text(encoding="utf-8"),
                 QUICK_START_BEGIN_MARKER,
                 QUICK_START_END_MARKER,
-                _render_docs_index_quick_start(
+                _render_docs_quick_start(
                     standard_preset_name,
                     standard_model_output,
                     practical_preset_name,
@@ -401,7 +401,7 @@ See [Performance Benchmarks]({README_PERFORMANCE_BENCHMARKS_LINK}) for release b
 """
 
 
-def _render_docs_index_quick_start(
+def _render_docs_quick_start(
     preset_name: str,
     model_output: str,
     practical_preset_name: str,
@@ -467,7 +467,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help=(
             "Check whether preset docs, preset-powered quick-start examples, and README support lists are up to date "
-            "(docs/presets.md, docs/index.md, and generated sections in README.md)"
+            "(docs/presets.md, docs/getting-started.md, and generated sections in README.md)"
         ),
     )
     parser.add_argument(

@@ -18,7 +18,7 @@ How do I convert enums to Literal types?
 - `--external-ref-mapping`: Map external `$ref` files to Python packages.
 - `--input`: Specify the input schema file path.
 - `--input-file-type`: Specify the input file type for code generation.
-- `--input-model`: Import a Python type or dict schema from a module.
+- `--input-model`: Import a Python type or dict schema from a module or Python file.
 - `--input-model-ref-strategy`: Strategy for referenced types when using --input-model.
 - `--output`: Specify the destination path for generated Python code.
 - `--preset`: Apply an immutable built-in option preset.
@@ -276,9 +276,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         'xmlschema', 'protobuf', or 'avro' for schema
                         definitions. Use 'json', 'yaml', or 'csv' for raw
                         sample data to infer a schema automatically.
-  --input-model MODULE:NAME
-                        Python import path to a Pydantic v2 model or schema
-                        dict (e.g., 'mypackage.module:ClassName' or
+  --input-model MODULE_OR_PATH:NAME
+                        Python import path or file path to a Pydantic v2 model
+                        or schema dict (e.g., 'mypackage.module:ClassName',
+                        './models.py:ClassName', or
                         'mypackage.schemas:SCHEMA_DICT'). Can be specified
                         multiple times for related models with inheritance.
                         For dict input, --input-file-type is required. Cannot

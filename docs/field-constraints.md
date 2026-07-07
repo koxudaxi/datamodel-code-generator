@@ -1,4 +1,4 @@
-<!-- related-cli-options: --field-constraints, --validation -->
+<!-- related-cli-options: --field-constraints -->
 
 # 🔒 Field Constraints
 
@@ -29,7 +29,7 @@ Convert simple JSON Schema `model.json` to pydantic model `model.py`:
 ### ❌ Without `--field-constraints` option
 
 ```bash
-datamodel-codegen --input model.json --input-file-type jsonschema > model.py
+datamodel-codegen --input model.json --input-file-type jsonschema --output-model-type pydantic_v2.BaseModel > model.py
 ```
 
 **Generated model.py**
@@ -62,7 +62,13 @@ mypy shows errors! 😱
 ### ✅ With `--field-constraints` option
 
 ```bash
-datamodel-codegen --input model.json --input-file-type jsonschema --field-constraints > model.py
+datamodel-codegen \
+  --input model.json \
+  --input-file-type jsonschema \
+  --output-model-type pydantic_v2.BaseModel \
+  --use-annotated \
+  --field-constraints \
+  > model.py
 ```
 
 **Generated model.py**
@@ -73,11 +79,13 @@ datamodel-codegen --input model.json --input-file-type jsonschema --field-constr
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from pydantic import BaseModel, Field
 
 
 class Model(BaseModel):
-    name: str = Field(..., max_length=64)
+    name: Annotated[str, Field(max_length=64)]
 ```
 
 **🟢 Run mypy...**
@@ -93,7 +101,8 @@ No errors! 🎉
 ## 📖 See Also
 
 - 🖥️ [CLI Reference: `--field-constraints`](cli-reference/field-customization.md#field-constraints) - Detailed CLI option documentation with examples
+- 🔁 [Type Mappings](type-mappings.md) - Override schema types before field constraints are applied
 
 ## 🔗 Related Issues
 
-- [pydantic/pydantic#156](https://github.com/samuelcolvin/pydantic/issues/156)
+- [pydantic/pydantic#156](https://github.com/pydantic/pydantic/issues/156)

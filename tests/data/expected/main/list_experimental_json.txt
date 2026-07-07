@@ -27,6 +27,15 @@
     "tracking_issue": null
   },
   {
+    "id": "cli-option.use-type-alias",
+    "kind": "cli-option",
+    "message": "Type alias output is experimental and may change as Python typing support evolves.",
+    "note": "The option replaces root model classes with type aliases where possible. Pydantic v2 output may use TypeAliasType or Python 3.12 type statements depending on the target Python version.",
+    "since_version": "0.36.0",
+    "target": "--use-type-alias",
+    "tracking_issue": null
+  },
+  {
     "id": "formatter.builtin",
     "kind": "formatter",
     "message": "The internal formatter is experimental and may change as generated-output coverage is expanded.",

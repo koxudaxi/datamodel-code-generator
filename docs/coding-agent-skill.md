@@ -95,7 +95,7 @@ Expected agent behavior:
 
 - The CLI command is `datamodel-codegen`.
 - The package name is `datamodel-code-generator`.
-- Use extras for HTTP, GraphQL, msgspec, and protobuf when needed.
+- Use extras for HTTP, GraphQL, and protobuf when needed. Install `msgspec` separately when targeting `msgspec.Struct`.
 - If a JSON or YAML file is a schema, choose `openapi`, `asyncapi`, or `jsonschema` input type instead of raw sample data mode.
 
 ## References

@@ -38,7 +38,7 @@ datamodel-codegen --input schemas/ --output models/
 ### Example: `local`
 
 ```bash
-datamodel-codegen --input schemas/ --output models/ --all-exports-scope local
+datamodel-codegen --input schemas/ --output models/ --all-exports-scope children
 ```
 
 ```python
@@ -167,12 +167,12 @@ This is useful for:
 
 ## Common Patterns
 
-### Pattern 1: Flat output with local exports
+### Pattern 1: Flat directory output with child exports
 
-Best for small to medium projects with a single output file or simple structure.
+Best for small to medium projects with a single generated package or simple directory structure.
 
 ```bash
-datamodel-codegen --input schema.yaml --output models/ --all-exports-scope local
+datamodel-codegen --input schema.yaml --output models/ --all-exports-scope children
 ```
 
 ### Pattern 2: Hierarchical with recursive exports
@@ -206,7 +206,7 @@ If you see `ImportError: cannot import name 'X'`:
 
 1. Check if `__all__` is generated correctly
 2. Verify the module structure matches your imports
-3. Try `--all-exports-scope local` first, then `recursive`
+3. Try `--all-exports-scope children` first, then `recursive`
 
 ### Name collisions
 
@@ -221,7 +221,7 @@ If you see duplicate class names:
 If you encounter circular import errors:
 
 1. Check the generated `__init__.py` files
-2. Consider using `--all-exports-scope local` instead of `recursive`
+2. Consider using `--all-exports-scope children` instead of `recursive`
 3. Use lazy imports in your application code
 
 ---

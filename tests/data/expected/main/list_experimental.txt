@@ -3,6 +3,7 @@ ID                                     Kind          Target                     
 cli-option.generate-schema-validators  cli-option    --generate-schema-validators  0.66.1  -
 cli-option.schema-validator-type       cli-option    --schema-validator-type       0.66.1  -
 cli-option.use-missing-sentinel        cli-option    --use-missing-sentinel        0.66.1  -
+cli-option.use-type-alias              cli-option    --use-type-alias              0.36.0  -
 formatter.builtin                      formatter     --formatters builtin          0.59.0  -
 input-format.asyncapi                  input-format  --input-file-type asyncapi    0.59.0  -
 input-format.avro                      input-format  --input-file-type avro        0.59.0  -

@@ -12,9 +12,9 @@ datamodel-codegen \
     --output model.py
 ```
 
-!!! tip "Why `--output-model-type`?"
-    Starting from version 0.53.0, explicitly specifying `--output-model-type` is recommended.
-    See [Omitting --output-model-type is deprecated](index.md#omitting---output-model-type-is-deprecated) for details.
+!!! tip "Default output model"
+    When `--output-model-type` is omitted, datamodel-code-generator generates Pydantic v2 BaseModel output
+    (`pydantic_v2.BaseModel`). Pass `--output-model-type` explicitly when you want another model family.
 
 !!! note "📦 Installation"
     GraphQL support requires the `graphql` extra:
@@ -256,10 +256,26 @@ class Book(BaseModel):
     discrimination during deserialization, excluding this field may break that functionality.
     Consider using this option only for input types or schemas without unions.
 
+## Supported GraphQL Features
+
+| Feature | Generation behavior |
+|---------|---------------------|
+| Object and input object types | Generated as model classes |
+| Enums | Generated as Python enum types |
+| Scalars | Built-in scalars map to Python aliases; custom scalars can be configured |
+| Lists and non-null markers | Converted into Python collection and optionality annotations |
+| `__typename` | Included by default and removable with `--graphql-no-typename` |
+
+## Limitations
+
+GraphQL input generates data models from schema definitions. It does not generate query builders, clients, resolvers,
+schema execution code, or runtime GraphQL validation.
+
 ---
 
 ## 📖 See Also
 
+- 🚀 [Getting Started](getting-started.md) - Installation and first model
 - 🖥️ [CLI Reference](cli-reference/index.md) - Complete CLI options reference
 - 🔧 [CLI Reference: Typing Customization](cli-reference/typing-customization.md) - Type annotation options
 - 🎨 [CLI Reference: `--extra-template-data`](cli-reference/template-customization.md#extra-template-data) - Custom scalar type mappings

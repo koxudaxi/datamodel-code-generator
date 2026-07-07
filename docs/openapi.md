@@ -2,6 +2,10 @@
 
 Generate Pydantic models from OpenAPI 3 schema definitions.
 
+This page covers OpenAPI input behavior and examples. For task-oriented OpenAPI options, see
+[OpenAPI Options](openapi-options.md). For the generated option reference, see
+[CLI Reference: OpenAPI-only Options](cli-reference/openapi-only-options.md).
+
 ## 🚀 Quick Start
 
 ```bash
@@ -446,9 +450,27 @@ readOnly/writeOnly resolution works with local and file reference types:
 | Local | `#/components/schemas/User` | ✅ Supported |
 | File | `./common.yaml#/User` | ✅ Supported |
 
+## Supported OpenAPI Features
+
+| Feature | Generation behavior |
+|---------|---------------------|
+| `components.schemas` | Default model generation scope |
+| `components.parameters` | Generated with `--openapi-scopes parameters` |
+| `paths` operation schemas | Generated with `--openapi-scopes paths` |
+| `readOnly` / `writeOnly` | Request/response variants with `--read-only-write-only-model-type` |
+| Discriminators and combined schemas | Converted into Python unions and inheritance-aware models where possible |
+| Local and file `$ref` | Resolved before model generation |
+
+## Limitations
+
+OpenAPI input is used for model generation. It does not generate HTTP clients, server handlers, route definitions, or
+runtime request dispatch logic. Full OpenAPI document validation is outside the generation path unless you explicitly
+enable validation-related options.
+
 ---
 
 ## 📖 See Also
 
+- 🚀 [Getting Started](getting-started.md) - Installation and first model
 - 🖥️ [CLI Reference: OpenAPI-only Options](cli-reference/openapi-only-options.md) - All OpenAPI-specific CLI options
 - ⚙️ [CLI Reference: Base Options](cli-reference/base-options.md) - Input/output configuration options

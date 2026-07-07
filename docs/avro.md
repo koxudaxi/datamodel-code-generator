@@ -2,6 +2,9 @@
 
 Generate Python models from JSON-encoded Apache Avro schemas (`.avsc`).
 
+!!! warning "Experimental"
+    Apache Avro schema input support is experimental and may change as real-world usage is validated.
+
 ## 🚀 Quick Start
 
 ```bash
