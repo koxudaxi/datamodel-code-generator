@@ -168,6 +168,7 @@ class Reference(_BaseModel):
 SINGULAR_NAME_SUFFIX: str = "Item"
 
 ID_PATTERN: Pattern[str] = re.compile(r"^#[^/].*")
+_NON_IDENTIFIER_PATTERN: Pattern[str] = re.compile(r"[¹²³⁴⁵⁶⁷⁸⁹]|\W")
 
 SPECIAL_PATH_MARKER: str = "#-datamodel-code-generator-#-"
 
@@ -267,7 +268,7 @@ class FieldNameResolver:
         if self.snake_case_field and not ignore_snake_case_field and self.original_delimiter is not None:
             name = snake_to_upper_camel(name, delimiter=self.original_delimiter)
 
-        name = re.sub(r"[¹²³⁴⁵⁶⁷⁸⁹]|\W", "_", name)
+        name = _NON_IDENTIFIER_PATTERN.sub("_", name)
         if name[0].isnumeric():
             name = f"{self.special_field_name_prefix}_{name}"
 
