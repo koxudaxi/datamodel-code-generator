@@ -1501,12 +1501,13 @@ instead of generating them.
 
 | Format | Description |
 |--------|-------------|
-| `{"ModelName": "package.Type"}` | Model-level: Skip generating `ModelName` and import from `package` |
+| `{"ModelName": "package.Type"}` | Model-level: Skip generation; replace field and inheritance refs |
 | `{"Model.field": "package.Type"}` | Scoped: Override only specific field in specific model |
 
 !!! note "Model-level overrides skip generation"
     When you specify a model-level override (without a dot in the key), the generator will
     **skip generating that model entirely** and import it from the specified package instead.
+    References to that model are replaced in field annotations and `allOf` inheritance base classes.
 
 **Common Use Cases:**
 
@@ -1606,6 +1607,68 @@ def test_type_overrides_nested_types(output_file: Path) -> None:
         extra_args=[
             "--type-overrides",
             '{"Tag": "my_app.Tag"}',
+        ],
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_type_overrides_model_level_base_class(
+    output_file: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test model-level --type-overrides replaces base class references."""
+    package_dir = tmp_path / "my_app"
+    package_dir.mkdir()
+    (package_dir / "__init__.py").write_text("", encoding="utf-8")
+    (package_dir / "models.py").write_text(
+        "from __future__ import annotations\n\n"
+        "from pydantic import BaseModel\n\n\n"
+        "class Base(BaseModel):\n"
+        "    id: int | None = None\n",
+        encoding="utf-8",
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    module_names = ("my_app", "my_app.models")
+    for module_name in module_names:
+        monkeypatch.delitem(sys.modules, module_name, raising=False)
+
+    try:
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "type_overrides_base_class.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="type_overrides_base_class.py",
+            extra_args=[
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--formatters",
+                "builtin",
+                "--type-overrides",
+                '{"Base": "my_app.models.Base"}',
+            ],
+            importable_module_name="generated_type_overrides_base_class",
+            importable_module_attribute="Holder",
+        )
+    finally:
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+
+
+@freeze_time(TIMESTAMP)
+def test_type_overrides_model_level_dict_key(output_file: Path) -> None:
+    """Test model-level --type-overrides replaces dict key references."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_overrides_dict_key.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_overrides_dict_key.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--type-overrides",
+            '{"Key": "my_app.keys.Key"}',
         ],
     )
 

@@ -24606,7 +24606,7 @@ instead of generating them.
 
 | Format | Description |
 |--------|-------------|
-| `{"ModelName": "package.Type"}` | Model-level: Skip generating `ModelName` and import from `package` |
+| `{"ModelName": "package.Type"}` | Model-level: Skip generation; replace field and inheritance refs |
 | `{"Model.field": "package.Type"}` | Scoped: Override only specific field in specific model |
 
 **Common Use Cases:**
@@ -24629,6 +24629,7 @@ instead of generating them.
 !!! note "Model-level overrides skip generation"
     When you specify a model-level override (without a dot in the key), the generator will
     **skip generating that model entirely** and import it from the specified package instead.
+    References to that model are replaced in field annotations and `allOf` inheritance base classes.
 
 
 ??? example "Examples"

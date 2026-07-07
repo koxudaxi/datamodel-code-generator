@@ -1522,6 +1522,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self._type_override_imports: dict[str, Import] = {
             key: Import.from_full_path(value) for key, value in self.type_overrides.items()
         }
+        self._model_type_override_imports: dict[str, Import] = {
+            key: import_ for key, import_ in self._type_override_imports.items() if "." not in key
+        }
         self.read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = config.read_only_write_only_model_type
         self.use_frozen_field: bool = config.use_frozen_field
         self.use_serialization_alias: bool = config.use_serialization_alias
@@ -2805,14 +2808,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         Only model-level overrides (keys without dots) cause model removal.
         Scoped overrides (ClassName.field) only affect specific fields.
         """
-        if not self.type_overrides:
+        if not self._model_type_override_imports:
             return models
-        # Only model-level overrides (no dot) cause model removal
-        model_level_overrides = {k for k in self.type_overrides if "." not in k}
-        return [m for m in models if m.class_name not in model_level_overrides]
+        return [m for m in models if m.class_name not in self._model_type_override_imports]
 
     def __apply_type_overrides(self, models: list[DataModel]) -> None:
-        """Replace field type references with custom import types.
+        """Replace type references with custom import types.
 
         Supports two key formats:
         - Model-level: {"CustomType": "my_app.Type"} - applies to all references
@@ -2823,14 +2824,31 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if not self._type_override_imports:
             return
         for model in models:
+            fields_overridden = False
             for field in model.fields:
                 # Check scoped override first: "ClassName.field_name"
                 scoped_key = f"{model.class_name}.{field.name}"
-                if scoped_key in self._type_override_imports:
-                    self._apply_override_to_field(field, self._type_override_imports[scoped_key])
-                else:
-                    # Apply model-level overrides to nested types
-                    self._apply_override_to_data_type(field.data_type)
+                match self._type_override_imports.get(scoped_key):
+                    case Import() as override_import:
+                        self._apply_override_to_field(field, override_import)
+                        fields_overridden = True
+                    case None if self._model_type_override_imports:
+                        # Apply model-level overrides to nested types
+                        fields_overridden = self._apply_override_to_data_type(field.data_type) or fields_overridden
+                    case None:
+                        pass
+            if fields_overridden:
+                model.clear_imports_cache()
+            if not self._model_type_override_imports:
+                continue
+            base_classes_overridden = False
+            for base_class in model.base_classes:
+                if self._apply_override_to_data_type(base_class):
+                    base_classes_overridden = True
+                    for import_ in base_class.all_imports:
+                        Parser._append_model_import(model, import_)
+            if base_classes_overridden:
+                model.clear_imports_cache()
 
     def _apply_override_to_field(self, field: DataModelFieldBase, override_import: Import) -> None:
         """Apply override to entire field's data_type."""
@@ -2841,16 +2859,27 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.generation_store.detach_data_type_ref(field.data_type)
         self.generation_store.set_nested_data_types(field.data_type, [])
 
-    def _apply_override_to_data_type(self, data_type: DataType) -> None:
+    @staticmethod
+    def _append_model_import(model: DataModel, import_: Import) -> None:
+        """Append an import to a model once."""
+        if import_ in model.imports:
+            return
+        model._additional_imports.append(import_)  # noqa: SLF001
+
+    def _apply_override_to_data_type(self, data_type: DataType) -> bool:
         """Recursively apply model-level overrides to a DataType."""
-        if data_type.reference and data_type.reference.name in self._type_override_imports:
-            override_import = self._type_override_imports[data_type.reference.name]
+        overridden = False
+        if data_type.reference and (override_import := self._model_type_override_imports.get(data_type.reference.name)):
             data_type.import_ = override_import
             data_type.alias = override_import.import_
             self.generation_store.detach_data_type_ref(data_type)
+            overridden = True
         # Handle nested types (List[CustomType], Optional[CustomType], etc.)
         for nested in data_type.data_types:
-            self._apply_override_to_data_type(nested)
+            overridden = self._apply_override_to_data_type(nested) or overridden
+        if data_type.dict_key:
+            overridden = self._apply_override_to_data_type(data_type.dict_key) or overridden
+        return overridden
 
     @staticmethod
     def __disable_union_operator_for_forward_ref_parents(data_type: DataType) -> None:
