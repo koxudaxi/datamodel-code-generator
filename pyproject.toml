@@ -227,7 +227,7 @@ skip = ".git,*.lock,tests,docs/cli-reference,CHANGELOG.md,docs/changelog.md,docs
 [tool.ty]
 src.include = [ "src" ]
 environment.python-version = "3.10"
-rules.deprecated = "ignore"
+rules.deprecated = "warn"
 
 [tool.pytest]
 ini_options.norecursedirs = [ ".hypothesis", ".tox", "tests/data/*" ]

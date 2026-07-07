@@ -301,7 +301,7 @@ def _validate_http_key_value_options(
 
 
 @lru_cache(maxsize=1)
-def _get_config_class() -> type:
+def _get_config_class() -> type[Config]:
     from pydantic import ConfigDict, Field, ValidationInfo, field_validator, model_validator  # noqa: PLC0415
     from typing_extensions import Self  # noqa: PLC0415
 
@@ -1159,7 +1159,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     )
     return generate(
         input_=input_,
-        config=cast("Any", generation_config),
+        config=generation_config,
     )
 
 
