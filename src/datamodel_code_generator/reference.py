@@ -104,7 +104,7 @@ class _BaseModel(BaseModel):
             exclude_none: bool = False,
         ) -> dict[str, Any]:
             return self.model_dump(
-                include=include,  # ty: ignore
+                include=include,  # ty: ignore[invalid-argument-type]
                 exclude=set(exclude or ()) | self._exclude_fields,
                 by_alias=by_alias,
                 exclude_unset=exclude_unset,
@@ -672,7 +672,7 @@ class ModelResolver:  # noqa: PLR0904
         """Temporarily set the current base path within a context."""
         if base_path:
             base_path = (self._base_path / base_path).resolve()
-        with context_variable(self.set_current_base_path, self.current_base_path, base_path):  # ty: ignore
+        with context_variable(self.set_current_base_path, self.current_base_path, base_path):  # ty: ignore[invalid-argument-type]
             yield
 
     @contextmanager
@@ -686,7 +686,7 @@ class ModelResolver:  # noqa: PLR0904
         this method was previously a no-op.
         """
         if self._base_url or (base_url and is_url(base_url)):
-            with context_variable(self.set_base_url, self.base_url, base_url):  # ty: ignore
+            with context_variable(self.set_base_url, self.base_url, base_url):  # ty: ignore[invalid-argument-type]
                 yield
         else:
             yield
@@ -703,7 +703,7 @@ class ModelResolver:  # noqa: PLR0904
     @contextmanager
     def current_root_context(self, current_root: Sequence[str]) -> Generator[None, None, None]:
         """Temporarily set the current root path within a context."""
-        with context_variable(self.set_current_root, self.current_root, current_root):  # ty: ignore
+        with context_variable(self.set_current_root, self.current_root, current_root):  # ty: ignore[invalid-argument-type]
             yield
 
     @property
@@ -1407,7 +1407,7 @@ def _get_inflect_engine() -> inflect.engine:
 @lru_cache(maxsize=4096)
 def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
     """Convert a plural name to singular form."""
-    singular_name = _get_inflect_engine().singular_noun(cast("inflect.Word", name))  # ty: ignore
+    singular_name = _get_inflect_engine().singular_noun(cast("inflect.Word", name))  # ty: ignore[redundant-cast]
     if singular_name is False:
         singular_name = f"{name}{suffix}"
     return singular_name
