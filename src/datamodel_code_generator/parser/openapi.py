@@ -491,7 +491,7 @@ class OpenAPIParser(JsonSchemaParser):
 
         result_fields: list[DataModelFieldBase] = []
         for field_obj in fields:
-            field = properties.get(field_obj.original_name)  # ty: ignore
+            field = properties.get(field_obj.original_name)  # ty: ignore[invalid-argument-type]
 
             if (
                 isinstance(field, JsonSchemaObject)
@@ -503,7 +503,7 @@ class OpenAPIParser(JsonSchemaParser):
                     result_fields.append(field_obj)
                     continue
                 normalized_discriminator = self._normalize_discriminator(discriminator)
-                field_obj = self.data_model_field_type(**{  # noqa: PLW2901  # ty: ignore
+                field_obj = self.data_model_field_type(**{  # noqa: PLW2901  # ty: ignore[invalid-argument-type]
                     **field_obj.__dict__,
                     "data_type": new_field_type,
                     "extras": {**field_obj.extras, "discriminator": normalized_discriminator},
@@ -723,7 +723,7 @@ class OpenAPIParser(JsonSchemaParser):
                     continue
                 schema_path = self._media_schema_path(response_path, from_item_schema=media_schema.from_item_schema)
                 data_type = self._parse_schema_or_ref(response_name, media_schema.schema, schema_path)
-                data_types[status_code][content_type] = data_type  # ty: ignore
+                data_types[status_code][content_type] = data_type  # ty: ignore[invalid-assignment]
 
         return data_types
 

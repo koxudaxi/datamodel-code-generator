@@ -676,7 +676,7 @@ class DataType(_BaseModel):
         if self.dict_key:
             self.dict_key.walk(visitor, visited)
 
-    def find_source(self, source_type: type[SourceT]) -> SourceT | None:  # ty: ignore
+    def find_source(self, source_type: type[SourceT]) -> SourceT | None:  # ty: ignore[invalid-type-form]
         """Find the first reference source matching the given type from all nested data types."""
         for data_type in self.all_data_types:
             if not data_type.reference:  # pragma: no cover

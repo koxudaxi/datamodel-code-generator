@@ -337,7 +337,7 @@ def generate_dynamic_models(
             while len(_dynamic_models_cache) >= cache_size:
                 oldest_key = next(iter(_dynamic_models_cache))
                 del _dynamic_models_cache[oldest_key]
-            _dynamic_models_cache[cache_key] = models  # type: ignore[index]
+            _dynamic_models_cache[cache_key] = models  # ty: ignore[invalid-assignment]
 
         return _filter_target_models(models, normalized_target_model_names)
 

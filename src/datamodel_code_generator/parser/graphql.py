@@ -48,7 +48,7 @@ if TYPE_CHECKING:
 # graphql-core >=3.2.7 removed TypeResolvers in favor of TypeFields.kind.
 # Normalize to a single callable for resolving type kinds.
 try:  # graphql-core < 3.2.7
-    graphql_resolver_kind = graphql.type.introspection.TypeResolvers().kind  # ty: ignore
+    graphql_resolver_kind = graphql.type.introspection.TypeResolvers().kind  # ty: ignore[unresolved-attribute]
 except AttributeError:
     graphql_resolver_kind = graphql.type.introspection.TypeFields.kind
 
@@ -422,7 +422,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
 
         base_classes = []
         if hasattr(obj, "interfaces"):
-            base_classes = [self.references[i.name] for i in obj.interfaces]  # ty: ignore
+            base_classes = [self.references[i.name] for i in obj.interfaces]  # ty: ignore[not-iterable]
 
         data_model_type = self._create_data_model(
             reference=self.references[obj.name],
@@ -505,4 +505,4 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
         for next_type in self.parse_order:
             for obj in self.support_graphql_types[next_type]:
                 parser_ = mapper_from_graphql_type_to_parser_method[next_type]
-                parser_(obj)  # ty: ignore
+                parser_(obj)  # ty: ignore[invalid-argument-type]

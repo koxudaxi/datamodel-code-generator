@@ -1159,7 +1159,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     )
     return generate(
         input_=input_,
-        config=generation_config,
+        config=cast("Any", generation_config),  # ty: ignore[redundant-cast]
     )
 
 

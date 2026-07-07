@@ -1227,7 +1227,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 "DataTypeManager": DataTypeManager,
             }
         )
-        return config_class.model_validate(options)  # type: ignore[return-value]
+        return config_class.model_validate(options)  # ty: ignore[invalid-return-type]
 
     def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
         """Create data model instance with dataclass_arguments support for DataClass."""
@@ -1277,7 +1277,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             raise ValueError(msg)
 
         if config is None:
-            config = self._create_default_config(options)  # ty: ignore
+            config = self._create_default_config(options)  # ty: ignore[invalid-argument-type]
 
         self.config = config
 
@@ -2570,7 +2570,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 if data_type.alias:
                     if isinstance(enum_member, list):
                         for enum_member_ in enum_member:
-                            enum_member_.alias = data_type.alias  # ty: ignore
+                            enum_member_.alias = data_type.alias  # ty: ignore[unresolved-attribute]
                     else:
                         enum_member.alias = data_type.alias
 
@@ -2694,7 +2694,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     resolver._reset_for_reuse(all_class_names.copy())  # noqa: SLF001
                     source = cast("DataModel", colliding_reference.source)
                     resolver.exclude_names.add(cast("str", filed_name))
-                    new_class_name = resolver.add(["type"], cast("str", source.class_name)).name  # ty: ignore
+                    new_class_name = resolver.add(["type"], cast("str", source.class_name)).name  # ty: ignore[redundant-cast]
                     source.class_name = new_class_name
                     all_class_names.add(new_class_name)
                 elif not rename_type:

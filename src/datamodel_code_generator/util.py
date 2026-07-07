@@ -18,9 +18,9 @@ if TYPE_CHECKING:
 def _get_toml_loader() -> Callable[[Any], dict[str, Any]]:
     """Get the TOML parser lazily."""
     try:
-        from tomllib import load as load_toml_data  # noqa: PLC0415  # type: ignore[ignoreMissingImports]
+        from tomllib import load as load_toml_data  # noqa: PLC0415  # ty: ignore[unresolved-import]
     except ImportError:  # pragma: no cover
-        from tomli import load as load_toml_data  # noqa: PLC0415  # type: ignore[ignoreMissingImports]
+        from tomli import load as load_toml_data  # noqa: PLC0415  # ty: ignore[unresolved-import]
 
     return load_toml_data
 
@@ -132,7 +132,7 @@ def get_safe_loader() -> type:
     except ImportError:  # pragma: no cover
         from yaml import SafeLoader as _SafeLoader  # noqa: PLC0415
 
-    class CustomSafeLoader(_SafeLoader):  # type: ignore[valid-type,misc]
+    class CustomSafeLoader(_SafeLoader):  # ty: ignore[unsupported-base]
         """SafeLoader with YAML 1.2 bool handling and timestamp-as-string."""
 
         yaml_constructors = _SafeLoader.yaml_constructors.copy()

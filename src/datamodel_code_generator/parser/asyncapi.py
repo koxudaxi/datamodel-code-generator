@@ -239,7 +239,7 @@ class AsyncAPIParser(OpenAPIParser):
         **options: Unpack[AsyncAPIParserConfigDict],
     ) -> None:
         """Initialize the AsyncAPI parser."""
-        super().__init__(source=source, config=config, **options)  # type: ignore[arg-type]
+        super().__init__(source=source, config=config, **options)  # ty: ignore[invalid-argument-type]
 
     @property
     def schema_features(self) -> OpenAPISchemaFeatures:
