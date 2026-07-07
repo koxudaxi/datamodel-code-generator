@@ -89,6 +89,8 @@ from datamodel_code_generator.util import BaseModel
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
 
+    from typing_extensions import TypeIs
+
     from datamodel_code_generator._types import JSONSchemaParserConfigDict
     from datamodel_code_generator.config import JSONSchemaParserConfig
     from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
@@ -3614,7 +3616,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Parse oneOf schema into a list of data types."""
         return self.parse_combined_schema(name, obj, path, "oneOf")
 
-    def _is_required_only_schema(self, item: JsonSchemaObject | bool) -> bool:  # noqa: FBT001
+    def _is_required_only_schema(self, item: JsonSchemaObject | bool) -> TypeIs[JsonSchemaObject]:  # noqa: FBT001
         """Return whether a combined-schema branch is only a property presence rule."""
         if not isinstance(item, JsonSchemaObject):
             return False

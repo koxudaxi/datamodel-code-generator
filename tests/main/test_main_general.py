@@ -738,7 +738,7 @@ def test_run_generate_from_config_generate_kwargs_are_pinned() -> None:
     """Pin the validated CLI Config values overlaid before generate() runs."""
     assert _run_generate_from_config_generate_kwargs() == snapshot([
         ("input_", "input_"),
-        ("config", "cast('Any', generation_config)"),
+        ("config", "generation_config"),
     ])
     assert _run_generate_from_config_model_copy_updates() == snapshot([
         ("input_filename", "None"),
