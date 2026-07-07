@@ -176,11 +176,23 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _extract_snapshot_for_cli(path: Path, *, source: str) -> OverviewSnapshot:
+    try:
+        return extract_snapshot(path, source=source)
+    except ValueError as error:
+        msg = f"{path}: {error}"
+        raise ValueError(msg) from error
+
+
 def main() -> int:
     """Run the overview synchronization check."""
     args = parse_args()
-    readme = extract_snapshot(args.readme, source="readme")
-    docs = extract_snapshot(args.docs_index, source="docs")
+    try:
+        readme = _extract_snapshot_for_cli(args.readme, source="readme")
+        docs = _extract_snapshot_for_cli(args.docs_index, source="docs")
+    except ValueError as error:
+        print(f"Could not extract overview snapshot: {error}", file=sys.stderr)
+        return 1
     if not (mismatches := compare_snapshots(readme, docs)):
         print("README.md and docs/index.md overview blocks are synchronized")
         return 0

@@ -319,6 +319,7 @@ See [pyproject.toml Configuration](https://datamodel-code-generator.koxudaxi.dev
 Validate generated models in your CI pipeline:
 
 ```yaml
+# Replace vX.Y.Z with a released action version.
 - uses: koxudaxi/datamodel-code-generator@vX.Y.Z
   with:
     input: schemas/api.yaml

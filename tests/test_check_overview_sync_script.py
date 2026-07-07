@@ -13,6 +13,10 @@ SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "check_overview_sync.
 EXPECTED_OVERVIEW_SYNC_PATH = Path(__file__).resolve().parent / "data" / "expected" / "overview_sync"
 
 
+def _completed_process_output(result: subprocess.CompletedProcess[str]) -> str:
+    return f"returncode: {result.returncode}\nstdout:\n{result.stdout}stderr:\n{result.stderr}"
+
+
 def test_check_overview_sync_reports_current_files_are_synchronized() -> None:
     """The committed README and docs overview blocks stay in sync."""
     result = subprocess.run([sys.executable, str(SCRIPT)], check=True, capture_output=True, text=True)
@@ -41,6 +45,31 @@ def test_compare_snapshots_reports_changed_fields() -> None:
         "\n".join((*check_overview_sync.compare_snapshots(readme, docs), "")),
         EXPECTED_OVERVIEW_SYNC_PATH / "changed_fields.txt",
     )
+
+
+def test_check_overview_sync_reports_extraction_error_without_traceback(tmp_path: Path) -> None:
+    """Extraction failures should be short CI diagnostics."""
+    readme_path = tmp_path / "bad-readme.md"
+    docs_path = tmp_path / "docs-index.md"
+    readme_path.write_text("No heading\n", encoding="utf-8")
+    docs_path.write_text("", encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--readme",
+            readme_path.name,
+            "--docs-index",
+            docs_path.name,
+        ],
+        check=False,
+        capture_output=True,
+        cwd=tmp_path,
+        text=True,
+    )
+
+    assert_output(_completed_process_output(result), EXPECTED_OVERVIEW_SYNC_PATH / "extraction_error.txt")
 
 
 def test_extract_badges_matches_known_badge_hosts_only() -> None:

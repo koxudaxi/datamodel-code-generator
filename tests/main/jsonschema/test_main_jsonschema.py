@@ -1446,7 +1446,6 @@ def test_main_local_directory_path_absolute_root_id_refs_rejects_parent_traversa
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
-            "--use-annotated",
             "--disable-timestamp",
             "--no-allow-remote-refs",
         ],
