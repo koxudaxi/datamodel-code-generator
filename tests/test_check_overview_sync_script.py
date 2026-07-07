@@ -5,6 +5,7 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
+from textwrap import dedent
 
 from scripts import check_overview_sync
 from tests.conftest import assert_output
@@ -70,6 +71,57 @@ def test_check_overview_sync_reports_extraction_error_without_traceback(tmp_path
     )
 
     assert_output(_completed_process_output(result), EXPECTED_OVERVIEW_SYNC_PATH / "extraction_error.txt")
+
+
+def test_check_overview_sync_reports_mismatched_fields(tmp_path: Path) -> None:
+    """Mismatched overview fields should be reported as CI diagnostics."""
+    readme_path = tmp_path / "README.md"
+    docs_path = tmp_path / "index.md"
+    readme_path.write_text(
+        dedent("""\
+        # datamodel-code-generator
+        Generate Python data models from schema definitions in seconds.
+        [![PyPI](https://img.shields.io/pypi/v/datamodel-code-generator.svg)](https://pypi.org/project/datamodel-code-generator/)
+        <img alt="hero" src="docs/assets/hero-light.svg">
+        > [!NOTE]
+        > Playground privacy: README note
+        ## ✨ What it does
+        - Generate models
+        ---
+        """),
+        encoding="utf-8",
+    )
+    docs_path.write_text(
+        dedent("""\
+        # datamodel-code-generator
+        Generate Python data models from schema definitions in seconds.
+        [![PyPI](https://img.shields.io/pypi/v/datamodel-code-generator.svg)](https://pypi.org/project/datamodel-code-generator/)
+        ![hero](assets/hero-light.svg)
+        !!! note "Playground privacy"
+            Docs note
+        ## ✨ What it does
+        - Generate models
+        ---
+        """),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--readme",
+            readme_path.name,
+            "--docs-index",
+            docs_path.name,
+        ],
+        check=False,
+        capture_output=True,
+        cwd=tmp_path,
+        text=True,
+    )
+
+    assert_output(_completed_process_output(result), EXPECTED_OVERVIEW_SYNC_PATH / "mismatch.txt")
 
 
 def test_extract_badges_matches_known_badge_hosts_only() -> None:
