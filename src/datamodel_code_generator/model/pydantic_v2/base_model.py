@@ -203,6 +203,7 @@ class DataModelField(_PydanticBaseDataModelField):
     constraints: Optional[Constraints] = None  # noqa: UP045
     can_have_extra_keys: ClassVar[bool] = False
     _PYDANTIC_EXTRA_FIELD_NAME: ClassVar[str] = "__pydantic_extra__"
+    _PYDANTIC_EXTRA_PLAIN_ANNOTATION_KEY: ClassVar[str] = "pydantic_extra_plain_annotation"
 
     @field_validator("extras")
     def validate_extras(cls, values: Any) -> dict[str, Any]:  # noqa: N805
@@ -305,9 +306,23 @@ class DataModelField(_PydanticBaseDataModelField):
         return type_hint
 
     @property
-    def use_pydantic_extra_annotation_assignment(self) -> bool:
-        """Return whether this field needs runtime annotation assignment."""
+    def is_pydantic_extra_field(self) -> bool:
+        """Return whether this field represents Pydantic typed extra values."""
         return self.name == self._PYDANTIC_EXTRA_FIELD_NAME
+
+    @property
+    def use_pydantic_extra_plain_annotation(self) -> bool:
+        """Return whether typed extras can use a regular class annotation."""
+        return bool(
+            self.is_pydantic_extra_field
+            and self.parent
+            and self.parent.extra_template_data.get(self._PYDANTIC_EXTRA_PLAIN_ANNOTATION_KEY)
+        )
+
+    @property
+    def use_pydantic_extra_annotations_dict(self) -> bool:
+        """Return whether typed extras need a class-body __annotations__ dict."""
+        return self.is_pydantic_extra_field and not self.use_pydantic_extra_plain_annotation
 
     @property
     def pydantic_extra_type_hint(self) -> str:
@@ -378,7 +393,7 @@ class DataModelField(_PydanticBaseDataModelField):
                 data.pop(key)
 
     def _update_alias_for_alias_generator(self, data: dict[str, Any]) -> None:
-        if self.name is None or self.use_pydantic_extra_annotation_assignment:
+        if self.name is None or self.is_pydantic_extra_field:
             return
         if (generator_name := self._alias_generator_name_from_parent()) is None:
             return
@@ -426,7 +441,7 @@ class DataModelField(_PydanticBaseDataModelField):
             extra_imports.append(IMPORT_ALIAS_CHOICES)
         if IMPORT_ANNOTATED in base_imports and self._has_discriminator_in_data_type():
             extra_imports.append(IMPORT_FIELD)
-        if self.use_pydantic_extra_annotation_assignment:
+        if self.use_pydantic_extra_annotations_dict:
             extra_imports.append(IMPORT_DICT)
         if extra_imports:
             return chain_as_tuple(base_imports, tuple(extra_imports))
@@ -485,6 +500,7 @@ class BaseModel(BaseModelBase):
     SUPPORTS_CONFIG_EXTRA: ClassVar[bool] = True
     SUPPORTS_ARBITRARY_TYPES_ALLOWED: ClassVar[bool] = True
     TYPED_EXTRA_FIELD_NAME: ClassVar[str] = "__pydantic_extra__"
+    TYPED_EXTRA_PLAIN_ANNOTATION_TEMPLATE_DATA_KEY: ClassVar[str] = "pydantic_extra_plain_annotation"
     # In Pydantic 2.11+, populate_by_name is deprecated in favor of validate_by_name + validate_by_alias
     # Default to V2 compatible (populate_by_name) unless target_pydantic_version is specified
     _CONFIG_ATTRIBUTES_V2: ClassVar[list[ConfigAttribute]] = [

@@ -85,6 +85,9 @@ EXCLUDED_FILES: dict[str, str] = {
 }
 EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/all_of_any_of_base_class_ref.json": "hypothesis-jsonschema cannot satisfy the allOf/anyOf constraints",
+    "jsonschema/additional_properties_schema_with_allof_properties.json": (
+        "hypothesis-jsonschema cannot satisfy the allOf object constraints; typed extras are covered by e2e tests"
+    ),
     "jsonschema/decimal_fractional_constraints.json": (
         "format decimal strings from hypothesis-jsonschema are arbitrary text that Decimal cannot parse"
     ),

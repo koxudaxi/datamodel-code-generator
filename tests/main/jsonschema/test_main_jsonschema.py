@@ -48,6 +48,7 @@ from tests.conftest import (
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
     BLACK_PY313_SKIP,
+    BLACK_PY314_SKIP,
     DATA_PATH,
     DEFAULT_VALUES_DATA_PATH,
     EXPECTED_MAIN_PATH,
@@ -6043,37 +6044,51 @@ def test_main_jsonschema_additional_properties_schema_with_properties(output_fil
         ],
         force_exec_validation=True,
     )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_schema_with_properties",
+        model_name="KnownAndExtra",
+        valid_json='{"name":"known","size":1}',
+        invalid_json='{"name":"known","size":[]}',
+        expected_error_type="int_type",
+        expected_attribute_path=("__pydantic_extra__",),
+        expected_attribute_value={"size": 1},
+    )
+
+
+@BLACK_PY314_SKIP
+def test_main_jsonschema_additional_properties_schema_with_properties_target_python_314(output_file: Path) -> None:
+    """Test Python 3.14 target keeps typed extras as native deferred annotations."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_schema_with_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_schema_with_properties_py314.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.14",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_schema_with_properties_py314",
+        model_name="KnownAndExtra",
+        valid_json='{"name":"known","size":1}',
+        invalid_json='{"name":"known","size":[]}',
+        expected_error_type="int_type",
+        expected_attribute_path=("__pydantic_extra__",),
+        expected_attribute_value={"size": 1},
+    )
 
 
 def test_main_jsonschema_additional_properties_schema_with_allof_properties(output_file: Path) -> None:
     """Test allOf object schemas validate typed extra values."""
-    input_path = output_file.with_name("additional_properties_schema_with_allof_properties.json")
-    input_path.write_text(
-        json.dumps({
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "title": "AllOfKnownAndExtra",
-            "type": "object",
-            "allOf": [
-                {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string",
-                        },
-                    },
-                    "required": [
-                        "name",
-                    ],
-                },
-            ],
-            "additionalProperties": {
-                "type": "integer",
-            },
-        }),
-        encoding="utf-8",
-    )
     run_main_and_assert(
-        input_path=input_path,
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_schema_with_allof_properties.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
@@ -6098,37 +6113,8 @@ def test_main_jsonschema_additional_properties_schema_with_allof_properties(outp
 
 def test_main_jsonschema_additional_properties_schema_with_allof_ref(output_file: Path) -> None:
     """Test allOf inherited schemas validate typed extra values."""
-    input_path = output_file.with_name("additional_properties_schema_with_allof_ref.json")
-    input_path.write_text(
-        json.dumps({
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "title": "AllOfInheritedAndExtra",
-            "allOf": [
-                {
-                    "$ref": "#/definitions/Base",
-                },
-            ],
-            "additionalProperties": {
-                "type": "integer",
-            },
-            "definitions": {
-                "Base": {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string",
-                        },
-                    },
-                    "required": [
-                        "name",
-                    ],
-                },
-            },
-        }),
-        encoding="utf-8",
-    )
     run_main_and_assert(
-        input_path=input_path,
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_schema_with_allof_ref.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
@@ -6165,6 +6151,16 @@ def test_main_jsonschema_additional_properties_enum_schema_with_properties(outpu
         ],
         force_exec_validation=True,
     )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_enum_schema_with_properties",
+        model_name="KnownAndEnumExtra",
+        valid_json='{"name":"known","color":"red"}',
+        invalid_json='{"name":"known","color":"green"}',
+        expected_error_type="enum",
+        expected_attribute_path=("__pydantic_extra__", "color", "value"),
+        expected_attribute_value="red",
+    )
 
 
 def test_main_jsonschema_additional_properties_const_schema_with_properties(output_file: Path) -> None:
@@ -6180,6 +6176,16 @@ def test_main_jsonschema_additional_properties_const_schema_with_properties(outp
             "pydantic_v2.BaseModel",
         ],
         force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_const_schema_with_properties",
+        model_name="KnownAndConstExtra",
+        valid_json='{"name":"known","color":"red"}',
+        invalid_json='{"name":"known","color":"blue"}',
+        expected_error_type="literal_error",
+        expected_attribute_path=("__pydantic_extra__",),
+        expected_attribute_value={"color": "red"},
     )
 
 
@@ -6197,6 +6203,16 @@ def test_main_jsonschema_additional_properties_object_schema_with_properties(out
         ],
         force_exec_validation=True,
     )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_object_schema_with_properties",
+        model_name="KnownAndObjectExtra",
+        valid_json='{"name":"known","payload":{"count":1}}',
+        invalid_json='{"name":"known","payload":{"count":[]}}',
+        expected_error_type="int_type",
+        expected_attribute_path=("__pydantic_extra__", "payload", "count"),
+        expected_attribute_value=1,
+    )
 
 
 def test_main_jsonschema_additional_properties_array_schema_with_properties(output_file: Path) -> None:
@@ -6212,6 +6228,16 @@ def test_main_jsonschema_additional_properties_array_schema_with_properties(outp
             "pydantic_v2.BaseModel",
         ],
         force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_array_schema_with_properties",
+        model_name="KnownAndArrayExtra",
+        valid_json='{"name":"known","items":["a",1]}',
+        invalid_json='{"name":"known","items":{}}',
+        expected_error_type="list_type",
+        expected_attribute_path=("__pydantic_extra__",),
+        expected_attribute_value={"items": ["a", 1]},
     )
 
 
@@ -6229,6 +6255,16 @@ def test_main_jsonschema_additional_properties_ref_schema_with_properties(output
         ],
         force_exec_validation=True,
     )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_ref_schema_with_properties",
+        model_name="KnownAndRefExtra",
+        valid_json='{"name":"known","payload":{"count":1}}',
+        invalid_json='{"name":"known","payload":{"count":[]}}',
+        expected_error_type="int_type",
+        expected_attribute_path=("__pydantic_extra__", "payload", "count"),
+        expected_attribute_value=1,
+    )
 
 
 def test_main_jsonschema_additional_properties_ref_schema_with_keywords_and_properties(output_file: Path) -> None:
@@ -6244,6 +6280,16 @@ def test_main_jsonschema_additional_properties_ref_schema_with_keywords_and_prop
             "pydantic_v2.BaseModel",
         ],
         force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_ref_schema_with_keywords_and_properties",
+        model_name="KnownAndRefExtra",
+        valid_json='{"name":"known","payload":{"count":1,"enabled":true}}',
+        invalid_json='{"name":"known","payload":{"count":1,"enabled":[]}}',
+        expected_error_type="bool_type",
+        expected_attribute_path=("__pydantic_extra__", "payload", "enabled"),
+        expected_attribute_value=True,
     )
 
 
@@ -6275,36 +6321,8 @@ def test_main_jsonschema_additional_properties_oneof_schema_with_required_proper
 
 def test_main_jsonschema_additional_properties_anyof_schema_with_required_property(output_file: Path) -> None:
     """Test typed extras include nullable anyOf branches."""
-    input_path = output_file.with_name("additional_properties_anyof_schema_with_required_property.json")
-    input_path.write_text(
-        json.dumps({
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "title": "AnyOfConfig",
-            "type": "object",
-            "properties": {
-                "type": {
-                    "type": "string",
-                },
-            },
-            "required": [
-                "type",
-            ],
-            "additionalProperties": {
-                "anyOf": [
-                    {
-                        "type": "integer",
-                    },
-                    {
-                        "type": "string",
-                        "nullable": True,
-                    },
-                ],
-            },
-        }),
-        encoding="utf-8",
-    )
     run_main_and_assert(
-        input_path=input_path,
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_anyof_schema_with_required_property.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
@@ -6329,35 +6347,8 @@ def test_main_jsonschema_additional_properties_anyof_schema_with_required_proper
 
 def test_main_jsonschema_additional_properties_anyof_schema_without_nullable_property(output_file: Path) -> None:
     """Test typed extras keep non-nullable anyOf branches unchanged."""
-    input_path = output_file.with_name("additional_properties_anyof_schema_without_nullable_property.json")
-    input_path.write_text(
-        json.dumps({
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "title": "AnyOfNonNullableConfig",
-            "type": "object",
-            "properties": {
-                "type": {
-                    "type": "string",
-                },
-            },
-            "required": [
-                "type",
-            ],
-            "additionalProperties": {
-                "anyOf": [
-                    {
-                        "type": "integer",
-                    },
-                    {
-                        "type": "string",
-                    },
-                ],
-            },
-        }),
-        encoding="utf-8",
-    )
     run_main_and_assert(
-        input_path=input_path,
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_anyof_schema_without_nullable_property.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
@@ -6377,6 +6368,32 @@ def test_main_jsonschema_additional_properties_anyof_schema_without_nullable_pro
         expected_error_type="int_type",
         expected_attribute_path=("__pydantic_extra__",),
         expected_attribute_value={"size": 1},
+    )
+
+
+def test_main_jsonschema_additional_properties_self_ref(output_file: Path) -> None:
+    """Test typed extras can reference their containing model."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_self_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_self_ref.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_self_ref",
+        model_name="Node",
+        valid_json='{"name":"root","child":{"name":"leaf"}}',
+        invalid_json='{"name":"root","child":{"name":"leaf","bad":1}}',
+        expected_error_type="model_type",
+        expected_attribute_path=("__pydantic_extra__", "child", "name"),
+        expected_attribute_value="leaf",
     )
 
 

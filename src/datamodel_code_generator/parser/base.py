@@ -1387,6 +1387,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.extra_template_data: defaultdict[str, Any] = config.extra_template_data or defaultdict(dict)
         self.validators = config.validators
         self.generate_schema_validators: bool = config.generate_schema_validators
+        if typed_extra_plain_annotation_key := self.data_model_type.TYPED_EXTRA_PLAIN_ANNOTATION_TEMPLATE_DATA_KEY:
+            self.extra_template_data.setdefault(ALL_MODEL, {})[typed_extra_plain_annotation_key] = (
+                config.target_python_version.has_native_deferred_annotations
+            )
 
         if self.validators:
             for model_name, model_config in self.validators.items():
@@ -2913,14 +2917,20 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             )
             # When annotations are deferred (from __future__ or native PEP-649) only
             # TypeAliasBase / RootModel need quoting; regular DataModels are fine as-is.
-            # Without deferred annotations, self-referencing fields in any model need quoting.
-            if not is_type_alias_or_root and use_deferred_annotations:
+            # Class-body __annotations__ dicts are an exception: their right hand side is
+            # evaluated immediately, so typed extra references still need forward refs.
+            process_all_fields = is_type_alias_or_root or not use_deferred_annotations
+            if not process_all_fields and not any(
+                getattr(field, "use_pydantic_extra_annotations_dict", False) for field in model.fields
+            ):
                 continue
             if isinstance(model, TypeStatement):
                 continue
 
             has_forward_ref = False
             for field in model.fields:
+                if not process_all_fields and not getattr(field, "use_pydantic_extra_annotations_dict", False):
+                    continue
                 for data_type in field.data_type.all_data_types:
                     if not data_type.reference:
                         continue
