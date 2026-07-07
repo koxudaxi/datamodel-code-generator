@@ -43,7 +43,6 @@ if TYPE_CHECKING:
 
     import inflect
 
-    from datamodel_code_generator.model.base import DataModel
     from datamodel_code_generator.types import DataType
 
 
@@ -54,7 +53,7 @@ def _is_data_type(value: object) -> TypeIs[DataType]:
     return isinstance(value, DataType_)
 
 
-def _is_data_model(value: object) -> TypeIs[DataModel]:
+def _is_data_model(value: object) -> bool:
     """Check if value is a DataModel instance."""
     from datamodel_code_generator.model.base import DataModel as DataModel_  # noqa: PLC0415
 
@@ -75,6 +74,32 @@ class ReferenceChild(Protocol):
     def reference(self) -> Reference | None:
         """Return the reference associated with this object."""
         ...
+
+
+if TYPE_CHECKING:
+
+    class _ReferenceSource(ReferenceChild, Protocol):
+        """Protocol for objects that can be assigned to Reference.source."""
+
+        fields: Sequence[Any]
+
+        @property
+        def is_alias(self) -> bool:
+            """Return whether this source renders as an alias."""
+            raise NotImplementedError
+
+        @property
+        def module_name(self) -> str | None:
+            """Return this source module name."""
+            raise NotImplementedError
+
+        @property
+        def nullable(self) -> bool:
+            """Return whether this source is nullable."""
+            raise NotImplementedError
+
+else:
+    _ReferenceSource = ReferenceChild
 
 
 class _BaseModel(BaseModel):
@@ -124,7 +149,7 @@ class Reference(_BaseModel):
     name: str
     duplicate_name: Optional[str] = None  # noqa: UP045
     loaded: bool = True
-    source: Optional[ReferenceChild] = None  # noqa: UP045
+    source: Optional[_ReferenceSource] = None  # noqa: UP045
     children: list[ReferenceChild] = Field(default_factory=list)
     _exclude_fields: ClassVar[set[str]] = {"children"}
 
@@ -158,7 +183,7 @@ class Reference(_BaseModel):
             if _is_data_type(child):
                 child.replace_reference(new_reference)
 
-    def iter_data_model_children(self) -> Iterator[DataModel]:
+    def iter_data_model_children(self) -> Iterator[Any]:
         """Yield all DataModel children."""
         for child in self.children:
             if _is_data_model(child):
