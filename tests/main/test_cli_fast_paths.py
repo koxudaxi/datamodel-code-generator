@@ -160,9 +160,40 @@ def _run_main_import_probe() -> dict[str, Any]:
                 "imported_format": "datamodel_code_generator.format" in sys.modules,
                 "imported_builtin_formatter": "datamodel_code_generator._builtin_formatter" in sys.modules,
                 "imported_model": "datamodel_code_generator.model" in sys.modules,
+                "imported_pydantic": "pydantic" in sys.modules,
                 "imported_reference": "datamodel_code_generator.reference" in sys.modules,
                 "imported_types": "datamodel_code_generator.types" in sys.modules,
                 "imported_validators": "datamodel_code_generator.validators" in sys.modules,
+            }))
+            """
+        )
+    )
+
+
+def _run_invalid_args_probe() -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            """
+            import contextlib
+            import io
+            import json
+            import sys
+
+            from datamodel_code_generator.__main__ import main
+
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                try:
+                    main(["--unknown-option"])
+                except SystemExit as exc:
+                    code = exc.code
+                else:
+                    code = None
+
+            print(json.dumps({
+                "code": code,
+                "stderr": stderr.getvalue(),
+                "imported_pydantic": "pydantic" in sys.modules,
             }))
             """
         )
@@ -175,9 +206,11 @@ def _run_config_api_probe() -> dict[str, Any]:
             """
             import json
 
+            import datamodel_code_generator.__main__ as main_module
             from datamodel_code_generator.__main__ import Config
 
             default_config = Config()
+            attribute_config = main_module.Config
             validated = Config.model_validate({
                 "validators": {
                     "User": {
@@ -206,6 +239,7 @@ def _run_config_api_probe() -> dict[str, Any]:
 
             print(json.dumps({
                 "default_input_file_type": default_config.input_file_type.value,
+                "same_config_class": Config is attribute_config,
                 "validator_function": validated.validators["User"].validators[0].function,
                 "json_input_file_type": json_validated.input_file_type.value,
                 "strings_input_file_type": strings_validated.input_file_type.value,
@@ -331,9 +365,20 @@ def test_main_import_skips_formatter_runtime() -> None:
     assert imported["imported_format"] is False
     assert imported["imported_builtin_formatter"] is False
     assert imported["imported_model"] is False
+    assert imported["imported_pydantic"] is False
     assert imported["imported_reference"] is False
     assert imported["imported_types"] is False
     assert imported["imported_validators"] is False
+
+
+@pytest.mark.allow_direct_assert
+def test_invalid_args_skip_pydantic_import() -> None:
+    """Argparse errors exit before loading CLI Config or Pydantic."""
+    invalid_args = _run_invalid_args_probe()
+
+    assert invalid_args["code"] == 2
+    assert "--unknown-option" in invalid_args["stderr"]
+    assert invalid_args["imported_pydantic"] is False
 
 
 @pytest.mark.allow_direct_assert
@@ -342,6 +387,7 @@ def test_cli_config_public_construction_rebuilds_lazy_validator_types() -> None:
     config = _run_config_api_probe()
 
     assert config["default_input_file_type"] == "auto"
+    assert config["same_config_class"] is True
     assert config["validator_function"] == "myapp.validators.validate_name"
     assert config["json_input_file_type"] == "jsonschema"
     assert config["strings_input_file_type"] == "openapi"
