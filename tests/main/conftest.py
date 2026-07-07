@@ -1398,7 +1398,11 @@ def assert_generated_model_json_validation(
         if expected_attribute_path:
             actual: Any = parsed
             for attribute in expected_attribute_path:
-                actual = getattr(actual, attribute)
+                match actual:
+                    case Mapping() if attribute in actual:
+                        actual = actual[attribute]
+                    case _:
+                        actual = getattr(actual, attribute)
             if actual != expected_attribute_value:  # pragma: no cover
                 pytest.fail(
                     f"Expected {'.'.join(expected_attribute_path)} to be {expected_attribute_value!r}, got {actual!r}",

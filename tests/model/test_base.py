@@ -215,6 +215,36 @@ def test_pydantic_v2_extra_type_hint_uses_structured_root_dict() -> None:
     assert IMPORT_DICT in field.imports
 
 
+def test_pydantic_v2_extra_annotation_mode_defaults_to_annotations_dict() -> None:
+    """Test typed extras use class-body __annotations__ by default."""
+    field = PydanticV2DataModelField(
+        name="__pydantic_extra__",
+        data_type=DataType(type="str", is_dict=True, use_standard_collections=True),
+        required=True,
+    )
+
+    assert field.is_pydantic_extra_field
+    assert field.use_pydantic_extra_annotations_dict
+    assert not field.use_pydantic_extra_plain_annotation
+    assert IMPORT_DICT in field.imports
+
+
+def test_pydantic_v2_extra_annotation_mode_uses_plain_annotation_for_native_deferred() -> None:
+    """Test typed extras use plain annotations for native deferred annotation targets."""
+    field = PydanticV2DataModelField(
+        name="__pydantic_extra__",
+        data_type=DataType(type="str", is_dict=True, use_standard_collections=True),
+        required=True,
+    )
+    model = BaseModel(fields=[field], reference=Reference(path="Model", original_name="Model", name="Model"))
+
+    model.extra_template_data["pydantic_extra_plain_annotation"] = True
+
+    assert field.use_pydantic_extra_plain_annotation
+    assert not field.use_pydantic_extra_annotations_dict
+    assert IMPORT_DICT not in field.imports
+
+
 def test_pydantic_v2_missing_sentinel_default_keeps_explicit_default() -> None:
     """Test explicit defaults are not replaced by the MISSING sentinel."""
     field = PydanticV2DataModelField(

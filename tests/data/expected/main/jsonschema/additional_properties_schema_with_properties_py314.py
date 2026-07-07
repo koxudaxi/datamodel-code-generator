@@ -2,10 +2,6 @@
 #   filename:  additional_properties_schema_with_properties.json
 #   timestamp: 2019-07-26T00:00:00+00:00
 
-from __future__ import annotations
-
-from typing import Dict
-
 from pydantic import BaseModel, ConfigDict
 
 
@@ -13,7 +9,5 @@ class KnownAndExtra(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    __annotations__ = {
-        '__pydantic_extra__': Dict[str, int],
-    }
+    __pydantic_extra__: dict[str, int]
     name: str
