@@ -18,6 +18,23 @@ def _completed_process_output(result: subprocess.CompletedProcess[str]) -> str:
     return f"returncode: {result.returncode}\nstdout:\n{result.stdout}stderr:\n{result.stderr}"
 
 
+def _run_overview_sync(tmp_path: Path, readme_path: Path, docs_path: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--readme",
+            readme_path.name,
+            "--docs-index",
+            docs_path.name,
+        ],
+        check=False,
+        capture_output=True,
+        cwd=tmp_path,
+        text=True,
+    )
+
+
 def test_check_overview_sync_reports_current_files_are_synchronized() -> None:
     """The committed README and docs overview blocks stay in sync."""
     result = subprocess.run([sys.executable, str(SCRIPT)], check=True, capture_output=True, text=True)
@@ -55,20 +72,7 @@ def test_check_overview_sync_reports_extraction_error_without_traceback(tmp_path
     readme_path.write_text("No heading\n", encoding="utf-8")
     docs_path.write_text("", encoding="utf-8")
 
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(SCRIPT),
-            "--readme",
-            readme_path.name,
-            "--docs-index",
-            docs_path.name,
-        ],
-        check=False,
-        capture_output=True,
-        cwd=tmp_path,
-        text=True,
-    )
+    result = _run_overview_sync(tmp_path, readme_path, docs_path)
 
     assert_output(_completed_process_output(result), EXPECTED_OVERVIEW_SYNC_PATH / "extraction_error.txt")
 
@@ -106,20 +110,7 @@ def test_check_overview_sync_reports_mismatched_fields(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(SCRIPT),
-            "--readme",
-            readme_path.name,
-            "--docs-index",
-            docs_path.name,
-        ],
-        check=False,
-        capture_output=True,
-        cwd=tmp_path,
-        text=True,
-    )
+    result = _run_overview_sync(tmp_path, readme_path, docs_path)
 
     assert_output(_completed_process_output(result), EXPECTED_OVERVIEW_SYNC_PATH / "mismatch.txt")
 
