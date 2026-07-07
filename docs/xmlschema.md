@@ -2,6 +2,9 @@
 
 Generate Python models from W3C XML Schema documents (`.xsd`).
 
+!!! warning "Experimental"
+    XML Schema input support is experimental and may change as real-world usage is validated.
+
 ## 🚀 Quick Start
 
 ```bash

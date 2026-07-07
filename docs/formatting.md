@@ -4,6 +4,13 @@
 
 Generated code is automatically formatted using code formatters. By default, `black` and `isort` are used to produce consistent, well-formatted output.
 
+!!! warning "Experimental"
+    The built-in formatter (`--formatters builtin`) is experimental and may change as generated-output coverage is
+    expanded.
+
+This page is a practical guide for choosing and configuring formatters. For the exact built-in formatter scope and
+configuration precedence, see [Formatter Behavior](formatter-behavior.md).
+
 ## 🎯 Default Behavior
 
 !!! warning "Future Change"
@@ -114,7 +121,7 @@ Formatters read their configuration from `pyproject.toml`. The effective search 
 The built-in formatter uses line length for import wrapping and generated model statement wrapping. Its precedence is:
 
 1. API `builtin_format_line_length`
-2. `[tool.datamodel-codegen].builtin-format-line-length`
+2. `[tool.datamodel-codegen].builtin-format-line-length` or `[tool.datamodel-codegen].builtin_format_line_length`
 3. `[tool.ruff].line-length`
 4. `[tool.black].line-length`
 5. `[tool.isort].line_length`

@@ -156,6 +156,18 @@ class User:
 datamodel-codegen --input-model ./mymodule.py:User --output model.py
 ```
 
+**✨ Generated model.py**
+```python
+from __future__ import annotations
+
+from pydantic import BaseModel
+
+
+class User(BaseModel):
+    name: str
+    age: int
+```
+
 ### TypedDict {#typeddict}
 
 **mymodule.py**
@@ -169,6 +181,18 @@ class User(TypedDict):
 
 ```bash
 datamodel-codegen --input-model ./mymodule.py:User --output model.py
+```
+
+**✨ Generated model.py**
+```python
+from __future__ import annotations
+
+from pydantic import BaseModel, Field
+
+
+class User(BaseModel):
+    name: str = Field(..., title='Name')
+    age: int = Field(..., title='Age')
 ```
 
 ### Dict Schema (JSON Schema) {#dict-jsonschema}
@@ -187,6 +211,18 @@ USER_SCHEMA = {
 
 ```bash
 datamodel-codegen --input-model ./mymodule.py:USER_SCHEMA --input-file-type jsonschema --output model.py
+```
+
+**✨ Generated model.py**
+```python
+from __future__ import annotations
+
+from pydantic import BaseModel
+
+
+class Model(BaseModel):
+    name: str
+    age: int
 ```
 
 !!! warning "Dict requires --input-file-type"
@@ -216,6 +252,18 @@ OPENAPI_SPEC = {
 
 ```bash
 datamodel-codegen --input-model ./mymodule.py:OPENAPI_SPEC --input-file-type openapi --output model.py
+```
+
+**✨ Generated model.py**
+```python
+from __future__ import annotations
+
+from pydantic import BaseModel
+
+
+class User(BaseModel):
+    name: str | None = None
+    age: int | None = None
 ```
 
 ---
@@ -288,10 +336,27 @@ class Config(TypedDict):
 - `--url` (URL input)
 - `--watch` (file watching)
 
+## Supported Python Model Features {#supported-python-model-features}
+
+| Input type | Generation behavior |
+|------------|---------------------|
+| Pydantic v2 `BaseModel` | Uses `model_json_schema()` |
+| Standard dataclasses | Uses Pydantic TypeAdapter to derive schema |
+| Pydantic dataclasses | Uses Pydantic schema support |
+| TypedDict | Uses Pydantic TypeAdapter to derive schema |
+| Dict schemas | Treated as JSON Schema or OpenAPI based on `--input-file-type` |
+
+## Limitations {#limitations}
+
+Python model input imports and evaluates the specified object, so the target module must be importable and safe to
+import in your environment. Raw dict input requires `--input-file-type` because the generator cannot infer whether the
+dict is JSON Schema, OpenAPI, or another schema profile.
+
 ---
 
 ## 📖 See Also
 
+- 🚀 [Getting Started](getting-started.md) - Installation and first model
 - 🖥️ [CLI Reference](cli-reference/index.md) - Complete CLI options reference
 - 📁 [CLI Reference: Base Options](cli-reference/base-options.md#input-model) - `--input-model` option details
 - 📋 [Generate from JSON Schema](jsonschema.md) - JSON Schema input documentation

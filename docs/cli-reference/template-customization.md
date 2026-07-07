@@ -4739,7 +4739,7 @@ This allows injecting custom validation logic into generated models.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --validators tests/data/jsonschema/field_validators_config.json --output-model-type pydantic_v2.BaseModel --disable-timestamp # (1)!
+    datamodel-codegen --input schema.json --validators tests/data/jsonschema/field_validators_config.json --output-model-type pydantic_v2.BaseModel --use-annotated --disable-timestamp # (1)!
     ```
 
     1. :material-arrow-left: `--validators` - the option documented here
@@ -4778,16 +4778,16 @@ This allows injecting custom validation logic into generated models.
 
     from __future__ import annotations
 
-    from typing import Any
+    from typing import Annotated, Any
 
     from myapp.validators import validate_email, validate_name
-    from pydantic import BaseModel, EmailStr, ValidationInfo, conint, field_validator
+    from pydantic import BaseModel, EmailStr, Field, ValidationInfo, field_validator
 
 
     class User(BaseModel):
         name: str
         email: EmailStr
-        age: conint(ge=0) | None = None
+        age: Annotated[int | None, Field(ge=0)] = None
 
         @field_validator('name', mode='before')
         @classmethod

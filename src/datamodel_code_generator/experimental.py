@@ -13,6 +13,7 @@ ExperimentalFeatureId = Literal[
     "cli-option.generate-schema-validators",
     "cli-option.schema-validator-type",
     "cli-option.use-missing-sentinel",
+    "cli-option.use-type-alias",
     "input-format.asyncapi",
     "input-format.avro",
     "input-format.mcp-tools",
@@ -75,6 +76,17 @@ EXPERIMENTAL_FEATURES: dict[ExperimentalFeatureId, ExperimentalFeature] = {
         note=(
             "The option requires Pydantic v2 BaseModel output and a target Pydantic version that supports the "
             "MISSING sentinel."
+        ),
+    ),
+    "cli-option.use-type-alias": ExperimentalFeature(
+        id="cli-option.use-type-alias",
+        kind="cli-option",
+        target="--use-type-alias",
+        message="Type alias output is experimental and may change as Python typing support evolves.",
+        since_version="0.36.0",
+        note=(
+            "The option replaces root model classes with type aliases where possible. Pydantic v2 output may use "
+            "TypeAliasType or Python 3.12 type statements depending on the target Python version."
         ),
     ),
     "input-format.asyncapi": ExperimentalFeature(

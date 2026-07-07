@@ -78,7 +78,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--infer-union-variant-names": "Infer names for inline oneOf/anyOf object variants from literal fields.",
     "--input": "Specify the input schema file path.",
     "--input-file-type": "Specify the input file type for code generation.",
-    "--input-model": "Import a Python type or dict schema from a module.",
+    "--input-model": "Import a Python type or dict schema from a module or Python file.",
     "--input-model-ref-strategy": "Strategy for referenced types when using --input-model.",
     "--keep-model-order": "Keep generated model order deterministic while respecting dependency constraints.",
     "--keyword-only": "Generate dataclasses with keyword-only fields (Python 3.10+).",

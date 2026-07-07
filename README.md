@@ -5,7 +5,7 @@
 🧪 Try it in your browser: [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/)
 
 > [!NOTE]
-> Playground privacy: generation runs locally in your browser with Pyodide. Schemas and options are not sent to a
+> Playground privacy: Generation runs locally in your browser with Pyodide. Your schema and options are not sent to a
 > backend. Shared repro URLs encode them in the URL fragment (`#state=...`), which browsers do not send to the server;
 > the full URL can still be stored in your browser history or wherever you share it.
 
@@ -214,6 +214,7 @@ See [Performance Benchmarks](https://datamodel-code-generator.koxudaxi.dev/perfo
 **👉 [datamodel-code-generator.koxudaxi.dev](https://datamodel-code-generator.koxudaxi.dev)**
 
 - 🧰 [Presets](https://datamodel-code-generator.koxudaxi.dev/presets/) - Recommended option bundles for modern output
+- 🚀 [Getting Started](https://datamodel-code-generator.koxudaxi.dev/getting-started/) - Installation and first model
 - 🖥️ [CLI Reference](https://datamodel-code-generator.koxudaxi.dev/cli-reference/) - All command-line options
 - 🧪 [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/) - Try generation in your browser
 - ⚙️ [pyproject.toml](https://datamodel-code-generator.koxudaxi.dev/pyproject_toml/) - Configuration file
@@ -318,7 +319,8 @@ See [pyproject.toml Configuration](https://datamodel-code-generator.koxudaxi.dev
 Validate generated models in your CI pipeline:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@0.66.3
+# Replace vX.Y.Z with a released action version.
+- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
   with:
     input: schemas/api.yaml
     output: src/models/api.py

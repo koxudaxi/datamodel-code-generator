@@ -9,6 +9,7 @@ The `--validators` option allows you to add custom field validators to generated
 ```bash
 datamodel-codegen --input schema.json --output model.py \
   --validators validators.json \
+  --use-annotated \
   --output-model-type pydantic_v2.BaseModel
 ```
 
@@ -17,6 +18,7 @@ You can also pass the same JSON object inline:
 ```bash
 datamodel-codegen --input schema.json --output model.py \
   --validators '{"User":{"validators":[{"field":"name","function":"myapp.validators.validate_name"}]}}' \
+  --use-annotated \
   --output-model-type pydantic_v2.BaseModel
 ```
 
@@ -165,16 +167,16 @@ def validate_contact_info(v: Any, info: ValidationInfo) -> Any:
 ```python
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
 from myapp.validators import validate_contact_info, validate_email, validate_name
-from pydantic import BaseModel, EmailStr, ValidationInfo, conint, field_validator
+from pydantic import BaseModel, EmailStr, Field, ValidationInfo, field_validator
 
 
 class User(BaseModel):
     name: str
     email: EmailStr
-    age: conint(ge=0) | None = None
+    age: Annotated[int | None, Field(ge=0)] = None
 
     @field_validator('name', mode='before')
     @classmethod
@@ -203,5 +205,5 @@ class User(BaseModel):
 
 ## See Also
 
-- [CLI Reference: `--validators`](cli-reference/general-options.md) - CLI option documentation
+- [CLI Reference: `--validators`](cli-reference/template-customization.md#validators) - CLI option documentation
 - [Pydantic v2 Validators Documentation](https://docs.pydantic.dev/latest/concepts/validators/) - Official Pydantic documentation

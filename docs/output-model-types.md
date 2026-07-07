@@ -237,7 +237,7 @@ closed TypedDicts.
 [msgspec](https://github.com/jcrist/msgspec) offers high-performance serialization with validation.
 
 ```bash
-pip install 'datamodel-code-generator[msgspec]'
+pip install msgspec
 datamodel-codegen --input schema.json --output-model-type msgspec.Struct --output model.py
 ```
 

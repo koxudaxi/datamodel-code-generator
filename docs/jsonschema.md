@@ -9,6 +9,7 @@ datamodel-codegen \
     --input person.json \
     --input-file-type jsonschema \
     --output-model-type pydantic_v2.BaseModel \
+    --use-annotated \
     --output model.py
 ```
 
@@ -53,19 +54,23 @@ datamodel-codegen \
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, Field, conint
+from pydantic import BaseModel, Field
 
 
 class Person(BaseModel):
-    firstName: str | None = Field(None, description="The person's first name.")
-    lastName: str | None = Field(None, description="The person's last name.")
-    age: conint(ge=0) | None = Field(
-        None, description='Age in years which must be equal to or greater than zero.'
-    )
-    friends: list | None = None
-    comment: Any | None = None
+    firstName: Annotated[str | None, Field(description="The person's first name.")] = None
+    lastName: Annotated[str | None, Field(description="The person's last name.")] = None
+    age: Annotated[
+        int | None,
+        Field(
+            description='Age in years which must be equal to or greater than zero.',
+            ge=0,
+        ),
+    ] = None
+    friends: list[Any] | None = None
+    comment: Annotated[None, Field(None)] = None
 ```
 
 ## Tuple validation
@@ -202,10 +207,28 @@ When multiple base class configurations are present, they are resolved in this o
 
 This allows you to set a default base class with `--base-class`, override specific models in the schema with `customBasePath`, and further override at the CLI level with `--base-class-map`.
 
+## Supported JSON Schema Features
+
+| Feature | Generation behavior |
+|---------|---------------------|
+| Object properties and required fields | Generated as model fields |
+| `$ref`, `$defs`, and `definitions` | Resolved before model generation |
+| `oneOf`, `anyOf`, `allOf` | Converted into unions and composed models where possible |
+| Scalar constraints | Generated as `Field(...)` metadata with `--field-constraints` / `--use-annotated` |
+| `format` values | Mapped to Python/Pydantic types where supported |
+| Custom extensions | `customBasePath` and related options can steer generated base classes |
+
+## Limitations
+
+JSON Schema input generates Python model definitions. It does not perform runtime validation by itself, and some
+schema keywords are represented as type hints or field metadata rather than full JSON Schema validator behavior. See
+[Schema Version Support](supported_formats.md) for version-specific coverage.
+
 ---
 
 ## 📖 See Also
 
+- 🚀 [Getting Started](getting-started.md) - Installation and first model
 - 🖥️ [CLI Reference](cli-reference/index.md) - Complete CLI options reference
 - 🔧 [CLI Reference: Typing Customization](cli-reference/typing-customization.md) - Type annotation options
 - 🏷️ [CLI Reference: Field Customization](cli-reference/field-customization.md) - Field naming and constraint options

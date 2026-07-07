@@ -2,6 +2,9 @@
 
 Generate Python models from Protocol Buffers schema files (`.proto`), including message types referenced by gRPC service definitions.
 
+!!! warning "Experimental"
+    Protocol Buffers input support is experimental and may change as real-world usage is validated.
+
 ## 🚀 Quick Start
 
 Install the Protocol Buffers parser extra:
