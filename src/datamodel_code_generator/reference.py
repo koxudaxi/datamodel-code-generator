@@ -43,6 +43,7 @@ if TYPE_CHECKING:
 
     import inflect
 
+    from datamodel_code_generator.model.base import DataModel
     from datamodel_code_generator.types import DataType
 
 
@@ -53,7 +54,7 @@ def _is_data_type(value: object) -> TypeIs[DataType]:
     return isinstance(value, DataType_)
 
 
-def _is_data_model(value: object) -> bool:
+def _is_data_model(value: object) -> TypeIs[DataModel]:
     """Check if value is a DataModel instance."""
     from datamodel_code_generator.model.base import DataModel as DataModel_  # noqa: PLC0415
 
