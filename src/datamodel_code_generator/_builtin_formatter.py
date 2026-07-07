@@ -196,6 +196,8 @@ def _has_inline_comment(lines: list[str], node: ast.AST) -> bool:
 
 
 def _has_comment_token(line: str) -> bool:
+    if "#" not in line:
+        return False
     try:
         tokens = tokenize.generate_tokens(StringIO(line).readline)
         return any(token.type == tokenize.COMMENT for token in tokens)
@@ -1715,9 +1717,11 @@ def _ensure_post_class_annotation_assignment_spacing(
 
 def _normalize_top_level_blank_lines(code: str) -> str:
     string_lines: set[int] = set()
-    for token in tokenize.generate_tokens(StringIO(code).readline):
-        if token.type == tokenize.STRING and token.start[0] != token.end[0]:
-            string_lines.update(range(token.start[0], token.end[0] + 1))
+    # Multi-line STRING tokens can only come from triple quotes or backslash-continuation.
+    if ('"""' in code) or ("'''" in code) or ("\\\n" in code) or ("\\\r\n" in code):
+        for token in tokenize.generate_tokens(StringIO(code).readline):
+            if token.type == tokenize.STRING and token.start[0] != token.end[0]:
+                string_lines.update(range(token.start[0], token.end[0] + 1))
 
     lines = code.splitlines()
     formatted_lines: list[str] = []
