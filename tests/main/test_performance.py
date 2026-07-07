@@ -126,6 +126,38 @@ def test_perf_large_models_pydantic_v2(tmp_path: Path) -> None:
 
 
 @pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_large_models_pydantic_v2_builtin(tmp_path: Path) -> None:
+    """Performance test: Generate 500 Pydantic v2 models with the built-in formatter."""
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=PERFORMANCE_DATA_PATH / "large_models.json",
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        formatters=[Formatter.BUILTIN],
+    )
+    content = output_file.read_text()
+    assert content.count("class Model") >= 500
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_large_models_pydantic_v2_noformat(tmp_path: Path) -> None:
+    """Performance test: Generate 500 Pydantic v2 models without formatting."""
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=PERFORMANCE_DATA_PATH / "large_models.json",
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        formatters=[],
+    )
+    content = output_file.read_text()
+    assert content.count("class Model") >= 500
+
+
+@pytest.mark.perf
 @pytest.mark.parametrize(
     ("formatter_case", "formatters"),
     [

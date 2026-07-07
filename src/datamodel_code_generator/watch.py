@@ -54,7 +54,7 @@ def watch_and_regenerate(  # noqa: PLR0913, PLR0917
             try:
                 run_generate_from_config(
                     config=config,
-                    input_=config.input,  # ty: ignore
+                    input_=config.input,
                     output=config.output,
                     extra_template_data=extra_template_data,
                     aliases=aliases,

@@ -931,6 +931,81 @@ def test_apply_builtin_formatter_normalizes_blank_lines_without_imports() -> Non
     assert apply_builtin_formatter(code) == "Alias = str\n\n\nOtherAlias = Alias\n"
 
 
+def test_builtin_formatter_comment_token_guard_skips_lines_without_hash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test comment-token detection avoids tokenization when a line cannot contain comments."""
+
+    def fail_generate_tokens(*_args: object, **_kwargs: object) -> None:
+        pytest.fail("comment-token guard should skip tokenization")  # pragma: no cover
+
+    monkeypatch.setattr(builtin_formatter.tokenize, "generate_tokens", fail_generate_tokens)
+
+    assert not builtin_formatter._has_comment_token("value = 1")
+
+
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        ("value = '# not a comment'", False),
+        ("value = 1  # comment", True),
+    ],
+)
+def test_builtin_formatter_comment_token_guard_tokenizes_hash_lines(line: str, expected: bool) -> None:
+    """Test comment-token detection still tokenizes lines that contain a hash."""
+    assert builtin_formatter._has_comment_token(line) is expected
+
+
+def test_builtin_formatter_blank_line_guard_skips_tokenize_without_multiline_strings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test blank-line normalization avoids tokenization when multi-line strings are impossible."""
+
+    def fail_generate_tokens(*_args: object, **_kwargs: object) -> None:
+        pytest.fail("blank-line guard should skip tokenization")  # pragma: no cover
+
+    monkeypatch.setattr(builtin_formatter.tokenize, "generate_tokens", fail_generate_tokens)
+
+    code = "class Model:\n    pass\n\n\n\nclass OtherModel:\n    pass"
+
+    assert builtin_formatter._normalize_top_level_blank_lines(code) == (
+        "class Model:\n    pass\n\n\nclass OtherModel:\n    pass"
+    )
+
+
+def test_builtin_formatter_blank_line_guard_keeps_docstring_body_lines() -> None:
+    """Test blank-line normalization tokenizes code that may contain multi-line strings."""
+    code = '"""doc\nclass NotCode:\n    pass\n"""\n\n\n\nclass Model:\n    pass'
+
+    assert builtin_formatter._normalize_top_level_blank_lines(code) == (
+        '"""doc\nclass NotCode:\n    pass\n"""\n\n\nclass Model:\n    pass'
+    )
+
+
+@pytest.mark.parametrize("line_separator", ["\n", "\r\n"])
+def test_builtin_formatter_blank_line_guard_keeps_backslash_continuation_body_lines(line_separator: str) -> None:
+    """Test backslash-continued string lines are not treated as top-level code."""
+    code = line_separator.join([
+        "value = 'first\\",
+        "class NotCode:'",
+        "",
+        "",
+        "",
+        "class Model:",
+        "    pass",
+    ])
+    expected_lines = [
+        "value = 'first\\",
+        "class NotCode:'",
+        "",
+        "",
+        "class Model:",
+        "    pass",
+    ]
+
+    assert builtin_formatter._normalize_top_level_blank_lines(code) == "\n".join(expected_lines)
+
+
 @pytest.mark.skipif(sys.version_info < (3, 12), reason="type statements require Python 3.12")
 def test_apply_builtin_formatter_normalizes_type_alias_blank_lines_without_imports() -> None:
     """Test built-in formatter normalizes top-level blanks between type statements."""
