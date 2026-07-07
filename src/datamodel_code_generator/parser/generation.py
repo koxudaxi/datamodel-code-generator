@@ -40,17 +40,21 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator
     from pathlib import Path
 
+    from datamodel_code_generator.model.base import BaseClassDataType, DataModel, DataModelFieldBase
+    from datamodel_code_generator.types import DataType
 
-BaseClassDataType: TypeAlias = Any
-DataModel: TypeAlias = Any
-DataModelFieldBase: TypeAlias = Any
-DataType: TypeAlias = Any
+else:
+    BaseClassDataType: TypeAlias = Any
+    DataModel: TypeAlias = Any
+    DataModelFieldBase: TypeAlias = Any
+    DataType: TypeAlias = Any
+
+Reference: TypeAlias = Any
 ModelId: TypeAlias = int
 DataTypeId: TypeAlias = int
 DataTypeRole = Literal["field", "base", "nested", "dict_key"]
 _OrderedSetItem = TypeVar("_OrderedSetItem")
 OrderedSet: TypeAlias = dict[_OrderedSetItem, None]
-Reference: TypeAlias = Any
 _PYDANTIC_V2_MODEL_MODULE_PREFIX = "datamodel_code_generator.model.pydantic_v2."
 
 GENERATION_STORE_MUTATION_METHODS: frozenset[str] = frozenset({
@@ -196,7 +200,7 @@ class _GenerationModelList(list["DataModel"]):
         index: SupportsIndex | slice,
         item: Any | Iterable[Any],
     ) -> None:  # ty: ignore[invalid-method-override]
-        super().__setitem__(index, item)
+        super().__setitem__(index, item)  # ty: ignore[no-matching-overload]
         self._invalidate()
 
     @overload
@@ -798,7 +802,7 @@ class GenerationStore:  # noqa: PLR0904
         for child in model.reference.children[:]:
             if id(_outermost_parent(child)) in model_ids and hasattr(child, "replace_reference"):
                 owner_models.append(self._owner_model_for_data_type(child))
-                child.replace_reference(new_reference)
+                child.replace_reference(new_reference)  # ty: ignore[call-non-callable]
         self._clear_imports_cache_for_models(owner_models)
         self._invalidate_after_mutation()
 
@@ -866,8 +870,8 @@ class GenerationStore:  # noqa: PLR0904
         return owner_model if hasattr(owner_model, "clear_imports_cache") else None
 
     @staticmethod
-    def _owner_model_for_data_type(data_type: DataType) -> DataModel | None:
-        owner_model = _outermost_parent(data_type)
+    def _owner_model_for_data_type(data_type: object) -> Any:
+        owner_model: Any = _outermost_parent(data_type)
         return owner_model if hasattr(owner_model, "clear_imports_cache") else None
 
     @staticmethod
