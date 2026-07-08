@@ -5,6 +5,35 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.68.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.68.1) - 2026-07-08
+
+## What's Changed
+* Skip docs preview deploy for dependabot PRs by @gaborbernat in https://github.com/koxudaxi/datamodel-code-generator/pull/3576
+* Update CHANGELOG for 0.68.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3574
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3575
+* Bump the github-actions group across 1 directory with 12 updates by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3567
+* Bump python from 3.14.2-slim-bookworm to 3.14.6-slim-bookworm by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3540
+* [pre-commit.ci] pre-commit autoupdate by @pre-commit-ci[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3577
+* Delay CLI config imports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3579
+* Guard builtin formatter tokenization by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3580
+* Cache parser regex helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3581
+* Cache rendered template field values by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3582
+* Speed up unique name lookup by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3583
+* Add getting started docs and overview sync by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3586
+* Fix ty diagnostics by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3585
+* Enforce ty diagnostics by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3588
+* Fix type overrides for base refs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3589
+* Type generation models by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3590
+* Annotate ty ignores by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3587
+* Type reference sources by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3591
+* Use TypeIs for reference models by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3592
+* Fix pydantic extra annotations by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3593
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.68.0...0.68.1
+
+---
+
 ## [0.68.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.68.0) - 2026-07-06
 
 ## Breaking Changes
