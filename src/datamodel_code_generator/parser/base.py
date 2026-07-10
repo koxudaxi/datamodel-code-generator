@@ -3938,7 +3938,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self._cache_local_sources = False
         self._local_source_cache = None
 
-    def parse(  # noqa: PLR0913, PLR0914, PLR0917
+    def parse(  # noqa: PLR0912, PLR0913, PLR0914, PLR0917
         self,
         with_import: bool | None = True,  # noqa: FBT001, FBT002
         format_: bool | None = True,  # noqa: FBT001, FBT002
@@ -3980,12 +3980,22 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         ) = self._build_module_structure(sorted_data_models, require_update_action_models, module_split_mode)
 
         if format_:
-            config = config._replace(
-                code_formatter=self._build_code_formatter(
-                    settings_path,
-                    is_multi_module_output=self.defer_formatting or len(module_models) > 1,
-                )
-            )
+            match self.formatters:
+                case [] if (
+                    not self.custom_formatter
+                    and "_build_code_formatter" not in self.__dict__
+                    and type(self)._build_code_formatter is Parser._build_code_formatter  # noqa: SLF001
+                ):
+                    pass
+                case _ if (
+                    code_formatter := self._build_code_formatter(
+                        settings_path,
+                        is_multi_module_output=self.defer_formatting or len(module_models) > 1,
+                    )
+                ) is not None:
+                    config = config._replace(
+                        code_formatter=code_formatter,
+                    )
 
         results: dict[ModulePath, Result] = {}
         unused_models: list[DataModel] = []

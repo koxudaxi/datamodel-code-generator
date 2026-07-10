@@ -55,6 +55,7 @@ from tests.conftest import (
     assert_generated_modules_output,
     assert_httpx_get_kwargs,
     assert_no_uncommented_generated_code,
+    assert_output,
     assert_runtime_import_package,
     assert_warnings_contain,
     assert_warnings_do_not_contain,
@@ -2941,6 +2942,108 @@ def test_generate_accepts_path_input(output_file: Path) -> None:
         disable_timestamp=True,
         assert_func=assert_file_content,
         expected_file="generate_accepts_path_input.py",
+    )
+
+
+@pytest.mark.parametrize("custom_formatters", [None, []], ids=["custom-unset", "custom-empty"])
+def test_generate_with_empty_formatters(output_file: Path, custom_formatters: list[str] | None) -> None:
+    """Skip formatter work when the explicit formatter list is empty."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        disable_timestamp=True,
+        formatters=[],
+        custom_formatters=custom_formatters,
+        assert_func=assert_file_content,
+        expected_file="generate_with_empty_formatters.py",
+    )
+
+
+def test_generate_with_custom_formatter_and_empty_formatters(output_file: Path) -> None:
+    """Keep custom formatting when the built-in formatter list is empty."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        disable_timestamp=True,
+        formatters=[],
+        custom_formatters=["tests.data.python.custom_formatters.add_comment"],
+        assert_func=assert_file_content,
+        expected_file="generate_with_custom_formatter_and_empty_formatters.py",
+    )
+
+
+def test_parser_formatter_builder_override_with_empty_formatters() -> None:
+    """Keep subclass formatter-builder hooks active with an empty formatter list."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+    from tests.data.python.custom_formatters.add_comment import CodeFormatter as AddCommentFormatter
+
+    class ConfiguringJsonSchemaParser(JsonSchemaParser):
+        code_formatter_build_count = 0
+
+        def _build_code_formatter(
+            self,
+            settings_path: Path | None,
+            *,
+            is_multi_module_output: bool,
+        ) -> CodeFormatter:
+            code_formatter = super()._build_code_formatter(
+                settings_path,
+                is_multi_module_output=is_multi_module_output,
+            )
+            code_formatter.custom_formatters.append(AddCommentFormatter(formatter_kwargs={}))
+            self.code_formatter_build_count += 1
+            return code_formatter
+
+    parser = ConfiguringJsonSchemaParser(
+        source=(JSON_SCHEMA_DATA_PATH / "person.json").resolve(),
+        formatters=[],
+    )
+    assert_output(
+        f"{parser.parse()}\n",
+        EXPECTED_MAIN_PATH / "parser_formatter_builder_override_with_empty_formatters.py",
+    )
+    assert_output(
+        f"{parser.code_formatter_build_count}\n",
+        EXPECTED_MAIN_PATH / "parser_formatter_builder_override_with_empty_formatters_calls.txt",
+    )
+
+
+def test_parser_instance_formatter_builder_with_empty_formatters() -> None:
+    """Keep an instance-injected formatter builder active with an empty formatter list."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+    from tests.data.python.custom_formatters.add_comment import CodeFormatter as AddCommentFormatter
+
+    parser = JsonSchemaParser(
+        source=(JSON_SCHEMA_DATA_PATH / "person.json").resolve(),
+        formatters=[],
+    )
+    default_builder = parser._build_code_formatter
+    code_formatter_build_count = 0
+
+    def build_code_formatter(
+        settings_path: Path | None,
+        *,
+        is_multi_module_output: bool,
+    ) -> CodeFormatter:
+        nonlocal code_formatter_build_count
+        code_formatter = default_builder(
+            settings_path,
+            is_multi_module_output=is_multi_module_output,
+        )
+        code_formatter.custom_formatters.append(AddCommentFormatter(formatter_kwargs={}))
+        code_formatter_build_count += 1
+        return code_formatter
+
+    parser._build_code_formatter = build_code_formatter  # type: ignore[method-assign]
+    assert_output(
+        f"{parser.parse()}\n",
+        EXPECTED_MAIN_PATH / "parser_formatter_builder_override_with_empty_formatters.py",
+    )
+    assert_output(
+        f"{code_formatter_build_count}\n",
+        EXPECTED_MAIN_PATH / "parser_formatter_builder_override_with_empty_formatters_calls.txt",
     )
 
 
