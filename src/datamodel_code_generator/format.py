@@ -439,28 +439,25 @@ class CodeFormatter:
         self.use_type_checking_imports = use_type_checking_imports
         self.python_version = python_version
 
-        # Auto-disable black/isort when not installed, fall back to built-in.
-        if Formatter.BLACK in formatters and not _is_formatter_available(Formatter.BLACK):
-            warn(
-                "black is not installed; falling back to the built-in formatter. "
-                "Install black or pass formatters=[Formatter.BUILTIN] to suppress this warning.",
-                UserWarning,
-                stacklevel=2,
-            )
-            formatters = [f for f in formatters if f is not Formatter.BLACK]
-            if Formatter.BUILTIN not in formatters and not EXTERNAL_FORMATTERS.intersection(formatters):
-                formatters = [*formatters, Formatter.BUILTIN]
-
-        if Formatter.ISORT in formatters and not _is_formatter_available(Formatter.ISORT):
-            warn(
-                "isort is not installed; the isort formatting step will be skipped. "
-                "Install isort or pass formatters=[Formatter.BUILTIN] to suppress this warning.",
-                UserWarning,
-                stacklevel=2,
-            )
-            formatters = [f for f in formatters if f is not Formatter.ISORT]
-            if Formatter.BUILTIN not in formatters and not EXTERNAL_FORMATTERS.intersection(formatters):
-                formatters = [*formatters, Formatter.BUILTIN]
+        missing_formatters = [
+            formatter
+            for formatter in (Formatter.BLACK, Formatter.ISORT)
+            if formatter in formatters and not _is_formatter_available(formatter)
+        ]
+        if missing_formatters:
+            if len(missing_formatters) == 1:
+                formatter_name = missing_formatters[0].value
+                msg = (
+                    f"{formatter_name} is not installed but was requested as an output formatter. "
+                    f"Install {formatter_name}, or pass --formatters builtin to use the built-in formatter."
+                )
+            else:
+                formatter_names = " and ".join(formatter.value for formatter in missing_formatters)
+                msg = (
+                    f"{formatter_names} are not installed but were requested as output formatters. "
+                    f"Install {formatter_names}, or pass --formatters builtin to use the built-in formatter."
+                )
+            raise ImportError(msg)
 
         self.formatters = formatters
 
