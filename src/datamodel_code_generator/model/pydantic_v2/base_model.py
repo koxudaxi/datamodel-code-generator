@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
@@ -101,11 +102,20 @@ _ALIAS_GENERATOR_INTERNAL_KEY = "_alias_generator"
 _NO_ALIAS_INTERNAL_KEY = "_no_alias"
 _MISSING_SENTINEL = "MISSING"
 _CONFIG_ITEMS_TEMPLATE_DATA_KEY = "config_items"
+_LEGACY_PYDANTIC_EXTRA_TEMPLATE_PATTERN = re.compile(
+    r"{%-?\s*(?:if|elif)\s+(?:not\s+)?field\.use_pydantic_extra_annotation_assignment\b"
+)
 _ALIAS_GENERATOR_IMPORTS: dict[str, Import] = {
     AliasGenerator.ToCamel.value: IMPORT_ALIAS_GENERATOR_TO_CAMEL,
     AliasGenerator.ToPascal.value: IMPORT_ALIAS_GENERATOR_TO_PASCAL,
     AliasGenerator.ToSnake.value: IMPORT_ALIAS_GENERATOR_TO_SNAKE,
 }
+
+
+@lru_cache(maxsize=16)
+def _uses_legacy_pydantic_extra_template(template_file_path: Path) -> bool:
+    """Return whether a custom template uses the pre-0.68.1 typed-extra property."""
+    return bool(_LEGACY_PYDANTIC_EXTRA_TEMPLATE_PATTERN.search(template_file_path.read_text(encoding="utf-8")))
 
 
 def _alias_generator_name(value: Any) -> str | None:
@@ -325,6 +335,11 @@ class DataModelField(_PydanticBaseDataModelField):
         return self.is_pydantic_extra_field and not self.use_pydantic_extra_plain_annotation
 
     @property
+    def use_pydantic_extra_annotation_assignment(self) -> bool:
+        """Support the typed-extra property used by pre-0.68.1 custom templates."""
+        return self.use_pydantic_extra_annotations_dict
+
+    @property
     def pydantic_extra_type_hint(self) -> str:
         """Return a Dict-based type hint for Pydantic 2.0 typed extras."""
         data_type = self.data_type
@@ -517,6 +532,29 @@ class BaseModel(BaseModelBase):
         ConfigAttribute("frozen", "frozen", False),  # noqa: FBT003
         ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False),  # noqa: FBT003
     ]
+
+    def _render(self, *args: Any, **kwargs: Any) -> str:
+        """Render evaluated typed extras for legacy custom templates."""
+        if self._custom_template_dir is None:
+            return super()._render(*args, **kwargs)
+
+        match self.template.filename:
+            case str() as filename if _uses_legacy_pydantic_extra_template(Path(filename)):
+                if field := next(
+                    (
+                        field
+                        for field in self.fields
+                        if isinstance(field, DataModelField) and field.use_pydantic_extra_annotations_dict
+                    ),
+                    None,
+                ):
+                    kwargs["class_body_lines"] = [
+                        "__annotations__ = {",
+                        f"    '__pydantic_extra__': {field.pydantic_extra_type_hint},",
+                        "}",
+                        *(kwargs.get("class_body_lines") or ()),
+                    ]
+        return super()._render(*args, **kwargs)
 
     @classmethod
     def render_module_code(cls, models: list[DataModel]) -> str:

@@ -245,6 +245,25 @@ def test_pydantic_v2_extra_annotation_mode_uses_plain_annotation_for_native_defe
     assert IMPORT_DICT not in field.imports
 
 
+def test_pydantic_v2_legacy_extra_template_supports_relative_custom_path() -> None:
+    """Test legacy typed extras render through a relative custom template path."""
+    field = PydanticV2DataModelField(
+        name="__pydantic_extra__",
+        data_type=DataType(type="str", is_dict=True),
+        required=True,
+    )
+    model = BaseModel(
+        fields=[field],
+        reference=Reference(path="Model", original_name="Model", name="Model"),
+        custom_template_dir=Path("tests/data/templates_pydantic_extra_pre_3593"),
+    )
+
+    rendered = model.render()
+
+    assert "'__pydantic_extra__': Dict[str, str]," in rendered
+    assert "locals()" not in rendered
+
+
 def test_pydantic_v2_missing_sentinel_default_keeps_explicit_default() -> None:
     """Test explicit defaults are not replaced by the MISSING sentinel."""
     field = PydanticV2DataModelField(
