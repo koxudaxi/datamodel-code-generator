@@ -6397,6 +6397,122 @@ def test_main_jsonschema_additional_properties_self_ref(output_file: Path) -> No
     )
 
 
+@BLACK_PY314_SKIP
+def test_main_jsonschema_additional_properties_self_ref_target_python_314(output_file: Path) -> None:
+    """Test Python 3.14 typed extras keep self-references safe at runtime."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_self_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_self_ref_py314.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.14",
+        ],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_self_ref_py314",
+        model_name="Node",
+        valid_json='{"name":"root","child":{"name":"leaf"}}',
+        invalid_json='{"name":"root","child":{"name":"leaf","bad":1}}',
+        expected_error_type="model_type",
+        expected_attribute_path=("__pydantic_extra__", "child", "name"),
+        expected_attribute_value="leaf",
+    )
+
+
+def test_main_jsonschema_additional_properties_scalar_no_future_imports_target_python_313(
+    output_file: Path,
+) -> None:
+    """Test typed extras do not hide ordinary fields without deferred annotations."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_schema_with_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_schema_with_properties_py313_no_future_imports.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.13",
+            "--disable-future-imports",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_schema_with_properties_py313_no_future_imports",
+        model_name="KnownAndExtra",
+        valid_json='{"name":"known","size":1}',
+        invalid_json='{"name":"known","size":[]}',
+        expected_error_type="int_type",
+        expected_attribute_path=("__pydantic_extra__",),
+        expected_attribute_value={"size": 1},
+    )
+
+
+def test_main_jsonschema_additional_properties_self_ref_use_union_operator_force_optional(
+    output_file: Path,
+) -> None:
+    """Test typed self-references do not rewrite unrelated PEP 604 annotations."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_self_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_self_ref_union_operator_force_optional.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-union-operator",
+            "--force-optional",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_self_ref_union_operator_force_optional",
+        model_name="Node",
+        valid_json='{"name":"root","child":{"name":"leaf"}}',
+        invalid_json='{"name":"root","child":{"name":"leaf","bad":1}}',
+        expected_error_type="model_type",
+        expected_attribute_path=("__pydantic_extra__", "child", "name"),
+        expected_attribute_value="leaf",
+    )
+
+
+def test_main_jsonschema_additional_properties_nullable_self_ref_use_union_operator(output_file: Path) -> None:
+    """Test typed-extra forward refs invalidate retained import caches."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_nullable_self_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_nullable_self_ref_union_operator.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-union-operator",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_nullable_self_ref_union_operator",
+        model_name="Node",
+        valid_json='{"name":"root","child":{"name":"leaf"},"empty":null}',
+        invalid_json='{"name":"root","child":{"name":"leaf","bad":1}}',
+        expected_error_type="model_type",
+        expected_attribute_path=("__pydantic_extra__", "child", "name"),
+        expected_attribute_value="leaf",
+    )
+
+
 def test_main_jsonschema_property_names_type_non_string(output_file: Path) -> None:
     """Test non-string propertyNames type rejects every JSON object key."""
     run_main_and_assert(

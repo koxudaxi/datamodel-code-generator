@@ -1426,10 +1426,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.extra_template_data: defaultdict[str, Any] = config.extra_template_data or defaultdict(dict)
         self.validators = config.validators
         self.generate_schema_validators: bool = config.generate_schema_validators
-        if typed_extra_plain_annotation_key := self.data_model_type.TYPED_EXTRA_PLAIN_ANNOTATION_TEMPLATE_DATA_KEY:
-            self.extra_template_data.setdefault(ALL_MODEL, {})[typed_extra_plain_annotation_key] = (
-                config.target_python_version.has_native_deferred_annotations
-            )
+        self._set_typed_extra_annotation_mode(use_deferred_annotations=True)
 
         if self.validators:
             for model_name, model_config in self.validators.items():
@@ -2988,19 +2985,20 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             )
             # When annotations are deferred (from __future__ or native PEP-649) only
             # TypeAliasBase / RootModel need quoting; regular DataModels are fine as-is.
-            # Class-body __annotations__ dicts are an exception: their right hand side is
-            # evaluated immediately, so typed extra references still need forward refs.
+            # Typed extra annotations are an exception: class-body __annotations__ dicts
+            # are evaluated immediately, and Pydantic can force native deferred annotations
+            # while constructing the class, so their forward references must stay quoted.
             process_all_fields = is_type_alias_or_root or not use_deferred_annotations
             if not process_all_fields and not any(
-                getattr(field, "use_pydantic_extra_annotations_dict", False) for field in model.fields
+                getattr(field, "is_pydantic_extra_field", False) for field in model.fields
             ):
                 continue
             if isinstance(model, TypeStatement):
                 continue
 
-            has_forward_ref = False
+            has_aliased_forward_ref = False
             for field in model.fields:
-                if not process_all_fields and not getattr(field, "use_pydantic_extra_annotations_dict", False):
+                if not process_all_fields and not getattr(field, "is_pydantic_extra_field", False):
                     continue
                 for data_type in field.data_type.all_data_types:
                     if not data_type.reference:
@@ -3017,10 +3015,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     if source_index is not None and source_index >= i:
                         data_type.alias = f'"{name}"'
                         cls.__disable_union_operator_for_forward_ref_parents(data_type)
-                        has_forward_ref = True
+                        has_aliased_forward_ref = True
 
-            if has_forward_ref:
-                model.has_forward_reference = True
+            if has_aliased_forward_ref:
+                model.has_forward_reference = model.has_forward_reference or process_all_fields
                 _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
 
     @classmethod
@@ -3648,6 +3646,32 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             ),
         ]
 
+    def _uses_deferred_annotations(
+        self,
+        with_import: bool | None,  # noqa: FBT001
+        disable_future_imports: bool,  # noqa: FBT001
+    ) -> bool:
+        """Return whether generated annotations use deferred evaluation."""
+        return bool(
+            self.target_python_version.has_native_deferred_annotations or (with_import and not disable_future_imports)
+        )
+
+    def _set_typed_extra_annotation_mode(self, *, use_deferred_annotations: bool) -> None:
+        """Select the safe typed-extra annotation form for the generated runtime."""
+        if not (key := self.data_model_type.TYPED_EXTRA_PLAIN_ANNOTATION_TEMPLATE_DATA_KEY):
+            return
+
+        native_deferred_annotations = self.target_python_version.has_native_deferred_annotations
+        match native_deferred_annotations:
+            case True:
+                use_plain_annotation = True
+            case False if use_deferred_annotations:
+                use_plain_annotation = False
+            case _:
+                use_plain_annotation = True
+
+        self.extra_template_data.setdefault(ALL_MODEL, {})[key] = use_plain_annotation
+
     def _prepare_parse_config(
         self,
         with_import: bool | None,  # noqa: FBT001
@@ -3657,9 +3681,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         module_split_mode: ModuleSplitMode | None,
     ) -> ParseConfig:
         """Prepare configuration for the parse operation."""
-        use_deferred_annotations = bool(
-            self.target_python_version.has_native_deferred_annotations or (with_import and not disable_future_imports)
-        )
+        use_deferred_annotations = self._uses_deferred_annotations(with_import, disable_future_imports)
 
         if (
             with_import
@@ -4058,6 +4080,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         collect_model_metadata: bool = False,  # noqa: FBT001, FBT002
     ) -> str | dict[tuple[str, ...], Result]:
         """Parse schema and generate code, returning single file or module dict."""
+        self._set_typed_extra_annotation_mode(
+            use_deferred_annotations=self._uses_deferred_annotations(with_import, disable_future_imports)
+        )
         self.parse_raw()
 
         config = self._prepare_parse_config(
