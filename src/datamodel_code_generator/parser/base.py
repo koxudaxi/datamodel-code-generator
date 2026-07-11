@@ -3987,14 +3987,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     and type(self)._build_code_formatter is Parser._build_code_formatter  # noqa: SLF001
                 ):
                     pass
-                case _ if (
-                    code_formatter := self._build_code_formatter(
-                        settings_path,
-                        is_multi_module_output=self.defer_formatting or len(module_models) > 1,
-                    )
-                ) is not None:
+                case _:
                     config = config._replace(
-                        code_formatter=code_formatter,
+                        code_formatter=self._build_code_formatter(
+                            settings_path,
+                            is_multi_module_output=self.defer_formatting or len(module_models) > 1,
+                        ),
                     )
 
         results: dict[ModulePath, Result] = {}
