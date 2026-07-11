@@ -81,7 +81,7 @@ from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_co
 from datamodel_code_generator.parser.generation import GenerationIndex, GenerationStore, set_model_base_classes
 from datamodel_code_generator.parser.schema_version import SchemaFeaturesT
 from datamodel_code_generator.reference import ModelResolver, ModelType, Reference
-from datamodel_code_generator.types import ANY, DataType, DataTypeManager
+from datamodel_code_generator.types import ANY, NONE, DataType, DataTypeManager
 from datamodel_code_generator.util import camel_to_snake
 
 if TYPE_CHECKING:
@@ -1100,6 +1100,145 @@ def _get_discriminator_field_value(discriminator_field: DataModelFieldBase) -> D
     return None
 
 
+def _find_discriminator_value(fields: Iterable[DataModelFieldBase], field_name: str) -> DiscriminatorValue | None:
+    for field in fields:
+        if (
+            field_name in {field.original_name, field.name}
+            and (value := _get_discriminator_field_value(field)) is not None
+        ):
+            return value
+    return None
+
+
+def _get_discriminator_values(
+    discriminator_model: DataModel,
+    field_name: str,
+    mapping: dict[str, str],
+    *,
+    require_literal: bool = False,
+) -> list[DiscriminatorValue]:
+    if (value := _find_discriminator_value(discriminator_model.fields, field_name)) is not None:
+        return [value]
+
+    # Reuse models are created as empty subclasses with a "/reuse" path suffix.
+    # Nested choices cannot be updated later, so also accept inherited literals.
+    if (require_literal or discriminator_model.path.endswith("/reuse")) and (
+        value := _find_discriminator_value(discriminator_model.iter_all_fields(), field_name)
+    ) is not None:
+        return [value]
+    if require_literal:
+        return []
+
+    discriminator_values: list[DiscriminatorValue] = []
+    if mapping:
+        _check_discriminator_mapping_paths(discriminator_model, mapping, discriminator_values)
+        if not discriminator_values:
+            for base_class in discriminator_model.base_classes:
+                if base_class.reference:
+                    _check_discriminator_mapping_paths(base_class.reference, mapping, discriminator_values)
+
+    return discriminator_values or [discriminator_model.path.split("/")[-1]]
+
+
+def _remove_discriminator(field: DataModelFieldBase) -> None:
+    field.extras.pop("discriminator", None)
+    field.data_type.discriminator = None
+
+
+def _is_discriminator_container(data_type: DataType) -> bool:
+    return (
+        data_type.is_dict
+        or data_type.is_list
+        or data_type.is_set
+        or data_type.is_frozen_set
+        or data_type.is_mapping
+        or data_type.is_sequence
+        or data_type.is_tuple
+    )
+
+
+def _iter_discriminator_data_types(
+    data_types: Iterable[DataType],
+    pydantic_v2_root_model_type: type[DataModel] | None,
+    active_union_models: set[int] | None = None,
+    *,
+    can_update_discriminator: bool = True,
+    discriminator_owner: int | None = None,
+) -> Iterator[tuple[DataType, bool, int]]:
+    for data_type in data_types:
+        if data_type.is_union and not _is_discriminator_container(data_type):
+            yield from _iter_discriminator_data_types(
+                data_type.data_types,
+                pydantic_v2_root_model_type,
+                active_union_models,
+                can_update_discriminator=False,
+                discriminator_owner=discriminator_owner,
+            )
+        else:
+            source = data_type.reference.source if data_type.reference else None
+            owner = discriminator_owner or (id(source) if source is not None else id(data_type))
+            if not isinstance(source, DataModel) or not (
+                isinstance(source, TypeAliasBase) or _is_pydantic_v2_root_model(source, pydantic_v2_root_model_type)
+            ):
+                yield data_type, can_update_discriminator, owner
+            else:
+                source_id = id(source)
+                if active_union_models is None:
+                    active_union_models = set()
+                if source_id in active_union_models or not source.fields:
+                    yield data_type, can_update_discriminator, owner
+                else:
+                    active_union_models.add(source_id)
+                    try:
+                        yield from _iter_discriminator_data_types(
+                            (source.fields[0].data_type,),
+                            pydantic_v2_root_model_type,
+                            active_union_models,
+                            can_update_discriminator=False,
+                            discriminator_owner=owner,
+                        )
+                    finally:
+                        active_union_models.remove(source_id)
+
+
+def _discriminator_variants_are_valid(
+    data_types: Iterable[DataType],
+    field_name: str,
+    mapping: dict[str, str],
+    pydantic_v2_root_model_type: type[DataModel] | None,
+) -> bool:
+    discriminator_value_owners: dict[DiscriminatorValue, int] = {}
+    for data_type, can_update_discriminator, owner in _iter_discriminator_data_types(
+        data_types, pydantic_v2_root_model_type
+    ):
+        if not data_type.reference and data_type.type == NONE:
+            continue
+        if _is_discriminator_container(data_type) or not data_type.reference:
+            return False
+        discriminator_model = data_type.reference.source
+        if (
+            not isinstance(discriminator_model, DataModel)
+            or not discriminator_model.SUPPORTS_DISCRIMINATOR
+            or isinstance(discriminator_model, TypeAliasBase)
+            or _is_pydantic_v2_root_model(discriminator_model, pydantic_v2_root_model_type)
+        ):
+            return False
+
+        discriminator_values = _get_discriminator_values(
+            discriminator_model,
+            field_name,
+            mapping,
+            require_literal=not can_update_discriminator,
+        )
+        if not discriminator_values:
+            return False
+        for value in discriminator_values:
+            if (previous_owner := discriminator_value_owners.get(value)) is not None and previous_owner != owner:
+                return False
+            discriminator_value_owners[value] = owner
+    return True
+
+
 def _get_enum_from_base(discriminator_model: DataModel, field_name: str) -> Enum | None:
     for base_class in discriminator_model.base_classes:
         if not base_class.reference or not base_class.reference.source:  # pragma: no cover
@@ -2051,12 +2190,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     ) -> None:
         for model in models:  # noqa: PLR1702
             for field in model.fields:
-                discriminator = field.extras.get("discriminator")
-                if not discriminator or not isinstance(discriminator, dict):
-                    continue
-                property_name = discriminator.get("propertyName")
-                if not property_name:  # pragma: no cover
-                    continue
+                match field.extras.get("discriminator"):
+                    case {"propertyName": str() as property_name} as discriminator if property_name:
+                        pass
+                    case _:
+                        continue
                 field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
                     field_name=property_name, model_type=self.field_name_model_type
                 )
@@ -2065,64 +2203,32 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 # Any type cannot be a discriminated union variant (Pydantic v2 rejects it)
                 has_any_variant = any(_is_any_variant(dt) for dt in field.data_type.data_types)
                 if has_any_variant:  # pragma: no cover
-                    field.extras.pop("discriminator", None)
-                    field.data_type.discriminator = None
+                    _remove_discriminator(field)
                     _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
                     continue
+                if not _discriminator_variants_are_valid(
+                    field.data_type.data_types,
+                    field_name,
+                    mapping,
+                    self.pydantic_v2_root_model_type,
+                ):
+                    _remove_discriminator(field)
+                    _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
+                    continue
+
                 for data_type in field.data_type.data_types:
                     if not data_type.reference:  # pragma: no cover
                         continue
                     discriminator_model = data_type.reference.source
-
                     if (
-                        not isinstance(discriminator_model, DataModel) or not discriminator_model.SUPPORTS_DISCRIMINATOR
+                        not isinstance(discriminator_model, DataModel)
+                        or not discriminator_model.SUPPORTS_DISCRIMINATOR
+                        or isinstance(discriminator_model, TypeAliasBase)
+                        or _is_pydantic_v2_root_model(discriminator_model, self.pydantic_v2_root_model_type)
                     ):  # pragma: no cover
                         continue
 
-                    discriminator_values: list[DiscriminatorValue] = []
-
-                    for discriminator_field in discriminator_model.fields:
-                        if field_name not in {discriminator_field.original_name, discriminator_field.name}:
-                            continue
-                        discriminator_value = _get_discriminator_field_value(discriminator_field)
-                        if discriminator_value is not None:
-                            discriminator_values = [discriminator_value]
-                            break
-                    # Reuse models are created as empty subclasses with a "/reuse" path suffix.
-                    # Scan inherited fields to recover the discriminator literal from the base.
-                    if not discriminator_values and discriminator_model.path.endswith("/reuse"):
-                        for discriminator_field in discriminator_model.iter_all_fields():  # pragma: no branch
-                            if field_name not in {discriminator_field.original_name, discriminator_field.name}:
-                                continue
-                            discriminator_value = _get_discriminator_field_value(discriminator_field)
-                            if discriminator_value is not None:  # pragma: no branch
-                                discriminator_values = [discriminator_value]
-                                break
-
-                    if not discriminator_values and mapping:
-                        _check_discriminator_mapping_paths(
-                            discriminator_model,
-                            mapping,
-                            discriminator_values,
-                        )
-
-                        if len(discriminator_values) == 0:
-                            for base_class in discriminator_model.base_classes:
-                                if not base_class.reference:
-                                    continue
-
-                                _check_discriminator_mapping_paths(base_class.reference, mapping, discriminator_values)
-
-                        if not discriminator_values:
-                            discriminator_values = [discriminator_model.path.split("/")[-1]]
-
-                    if not discriminator_values:
-                        discriminator_values = [discriminator_model.path.split("/")[-1]]
-
-                    if not discriminator_values:  # pragma: no cover
-                        msg = f"Discriminator type is not found. {data_type.reference.path}"
-                        raise RuntimeError(msg)
-
+                    discriminator_values = _get_discriminator_values(discriminator_model, field_name, mapping)
                     has_one_literal = False
                     for discriminator_field in discriminator_model.fields:
                         if field_name not in {discriminator_field.original_name, discriminator_field.name}:
@@ -2565,11 +2671,18 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                     if isinstance(discriminator, dict)
                                     else discriminator
                                 )
+                                mapping = discriminator.get("mapping", {}) if isinstance(discriminator, dict) else {}
                                 field_name, _ = self.model_resolver.get_valid_field_name_and_alias(
                                     field_name=prop_name,
                                     model_type=self.field_name_model_type,
                                 )
-                                copied_data_type.discriminator = field_name
+                                if _discriminator_variants_are_valid(
+                                    copied_data_type.data_types,
+                                    field_name,
+                                    mapping,
+                                    self.pydantic_v2_root_model_type,
+                                ):
+                                    copied_data_type.discriminator = field_name
                         assert isinstance(data_type.parent, DataType)
                         self.generation_store.replace_nested_data_type(data_type.parent, data_type, copied_data_type)
 
