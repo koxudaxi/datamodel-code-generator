@@ -16,6 +16,8 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import assert_output
+
 ROOT = Path(__file__).parents[2]
 SRC = ROOT / "src"
 MISSING = object()
@@ -165,6 +167,31 @@ def _run_main_import_probe() -> dict[str, Any]:
                 "imported_types": "datamodel_code_generator.types" in sys.modules,
                 "imported_validators": "datamodel_code_generator.validators" in sys.modules,
             }))
+            """
+        )
+    )
+
+
+def _run_no_formatter_generation_probe() -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            """
+            import json
+            import sys
+            from pathlib import Path
+
+            from datamodel_code_generator import InputFileType, generate
+
+            generated = generate(
+                Path("tests/data/jsonschema/person.json"),
+                input_file_type=InputFileType.JsonSchema,
+                disable_timestamp=True,
+                formatters=[],
+            )
+            print(json.dumps({
+                "generated": generated,
+                "imported_format": "datamodel_code_generator.format" in sys.modules,
+            }, indent=2, sort_keys=True))
             """
         )
     )
@@ -369,6 +396,16 @@ def test_main_import_skips_formatter_runtime() -> None:
     assert imported["imported_reference"] is False
     assert imported["imported_types"] is False
     assert imported["imported_validators"] is False
+
+
+def test_empty_formatters_skip_formatter_runtime() -> None:
+    """Explicit empty formatters keep the formatter runtime out of a fresh process."""
+    result = _run_no_formatter_generation_probe()
+
+    assert_output(
+        f"{json.dumps(result, indent=2, sort_keys=True)}\n",
+        ROOT / "tests/data/expected/main/cli_fast_paths/empty_formatters.txt",
+    )
 
 
 @pytest.mark.allow_direct_assert
