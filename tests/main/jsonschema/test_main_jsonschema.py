@@ -6425,6 +6425,7 @@ def test_main_jsonschema_additional_properties_self_ref_target_python_314(output
     )
 
 
+@BLACK_PY313_SKIP
 def test_main_jsonschema_additional_properties_scalar_no_future_imports_target_python_313(
     output_file: Path,
 ) -> None:
