@@ -11,7 +11,7 @@ import warnings
 from argparse import ArgumentTypeError, BooleanOptionalAction, Namespace
 from collections import defaultdict
 from io import StringIO
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import black
 import pytest
@@ -55,6 +55,7 @@ from tests.conftest import (
     assert_generated_modules_output,
     assert_httpx_get_kwargs,
     assert_no_uncommented_generated_code,
+    assert_output,
     assert_runtime_import_package,
     assert_warnings_contain,
     assert_warnings_do_not_contain,
@@ -91,6 +92,222 @@ BLACK_LT_24 = version.parse("24.0.0") > BLACK_VERSION
 
 class _GenerateParseAbort(BaseException):
     """Test-only parse abort that is not an Exception subclass."""
+
+
+def test_parser_retains_builtin_import_cache_and_invalidates_custom_cache() -> None:
+    """Retain built-in caches while keeping the legacy custom-model invalidation contract."""
+    from datamodel_code_generator.model import DataModel, get_data_model_types
+    from datamodel_code_generator.model.pydantic_v2 import BaseModel
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    class CacheProbeJsonSchemaParser(JsonSchemaParser):
+        cache_reuse_manifest: tuple[str, ...] = ()
+
+        def _process_single_module(self, module_: Any, models: list[Any], *args: Any, **kwargs: Any) -> Any:
+            for model in models:
+                _ = model.imports
+            cached_imports = tuple(model.__dict__[model._IMPORTS_CACHE_KEY] for model in models)
+            context = super()._process_single_module(module_, models, *args, **kwargs)
+            self.cache_reuse_manifest += tuple(
+                f"{model.class_name}:"
+                f"{'retained' if cached is model.__dict__.get(model._IMPORTS_CACHE_KEY) else 'invalidated'}"
+                for cached, model in zip(cached_imports, context.models, strict=True)
+            )
+            return context
+
+    class CacheAwareBaseModel(BaseModel):
+        def clear_imports_cache(self) -> None:
+            cache_state = "cached" if self._IMPORTS_CACHE_KEY in self.__dict__ else "empty"
+            history = self.__dict__.setdefault("cache_clear_history", [])
+            history.append(cache_state)
+            if (extra_template_data := getattr(self, "extra_template_data", None)) is not None:
+                extra_template_data["class_body_lines"] = [f"cache_clear_history = {history!r}"]
+            super().clear_imports_cache()
+
+    class InjectingJsonSchemaParser(JsonSchemaParser):
+        def _create_data_model(
+            self,
+            model_type: type[DataModel] | None = None,
+            **kwargs: Any,
+        ) -> DataModel:
+            if model_type is None or model_type is self.data_model_type:
+                model_type = CacheAwareBaseModel
+            return super()._create_data_model(model_type, **kwargs)
+
+    model_types = get_data_model_types(
+        DataModelType.PydanticV2BaseModel,
+        target_python_version=PythonVersion.PY_311,
+    )
+    input_path = JSON_SCHEMA_DATA_PATH / "field_has_same_name.json"
+    parser_options = {
+        "base_path": input_path.parent,
+        "data_model_root_type": model_types.root_model,
+        "data_model_field_type": model_types.field_model,
+        "data_type_manager_type": model_types.data_type_manager,
+        "dump_resolve_reference_action": model_types.dump_resolve_reference_action,
+        "formatters": [Formatter.BUILTIN],
+        "target_python_version": PythonVersion.PY_311,
+    }
+    parser = CacheProbeJsonSchemaParser(input_path, **parser_options)
+    assert_output(parser.parse(), EXPECTED_MAIN_PATH / "builtin_import_cache_retention.py")
+    assert_output(
+        "\n".join(parser.cache_reuse_manifest) + "\n",
+        EXPECTED_MAIN_PATH / "builtin_import_cache_retention.txt",
+    )
+
+    input_path = JSON_SCHEMA_DATA_PATH / "person.json"
+    custom_parser = JsonSchemaParser(
+        input_path,
+        data_model_type=CacheAwareBaseModel,
+        **parser_options,
+    )
+    assert_output(
+        custom_parser.parse(),
+        EXPECTED_MAIN_PATH / "custom_import_cache_invalidation.py",
+    )
+
+    injected_parser = InjectingJsonSchemaParser(input_path, **parser_options)
+    assert_output(
+        injected_parser.parse(),
+        EXPECTED_MAIN_PATH / "custom_import_cache_invalidation.py",
+    )
+
+    alias_input_path = JSON_SCHEMA_DATA_PATH / "alias_import_alias" / "date.schema.json"
+    alias_parser = JsonSchemaParser(
+        alias_input_path,
+        data_model_type=CacheAwareBaseModel,
+        **{**parser_options, "base_path": alias_input_path.parent},
+    )
+    assert_output(
+        alias_parser.parse(),
+        EXPECTED_MAIN_PATH / "custom_import_cache_alias_invalidation.py",
+    )
+
+    generic_input_path = JSON_SCHEMA_DATA_PATH / "extra_fields.json"
+    generic_parser = JsonSchemaParser(
+        generic_input_path,
+        data_model_type=CacheAwareBaseModel,
+        extra_fields="forbid",
+        use_generic_base_class=True,
+        **{**parser_options, "base_path": generic_input_path.parent},
+    )
+    assert_output(
+        generic_parser.parse(),
+        EXPECTED_MAIN_PATH / "custom_import_cache_generic_base.py",
+    )
+
+
+def test_parser_preserves_cross_module_external_import_cache_hook() -> None:
+    """Do not invoke an external model's cache hook from another built-in module."""
+    from datamodel_code_generator.model import DataModel, get_data_model_types
+    from datamodel_code_generator.model.msgspec import Struct
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    class ProbeStruct(Struct):
+        clear_history: ClassVar[list[str]] = []
+
+        def clear_imports_cache(self) -> None:
+            state = "cached" if self._IMPORTS_CACHE_KEY in self.__dict__ else "empty"
+            name = getattr(self, "class_name", "") or "?"
+            self.clear_history.append(f"{name}:{state}")
+            super().clear_imports_cache()
+
+    class SelectiveExternalStructParser(JsonSchemaParser):
+        def _create_data_model(
+            self,
+            model_type: type[DataModel] | None = None,
+            **kwargs: Any,
+        ) -> DataModel:
+            reference = kwargs.get("reference")
+            if (
+                reference is not None
+                and reference.name == "Type1"
+                and (model_type is None or model_type is self.data_model_type)
+            ):
+                model_type = ProbeStruct
+            return super()._create_data_model(model_type, **kwargs)
+
+    model_types = get_data_model_types(
+        DataModelType.MsgspecStruct,
+        target_python_version=PythonVersion.PY_311,
+    )
+    input_path = JSON_SCHEMA_DATA_PATH / "discriminator_with_external_reference"
+    parser = SelectiveExternalStructParser(
+        input_path,
+        base_path=input_path,
+        data_model_type=model_types.data_model,
+        data_model_root_type=model_types.root_model,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=model_types.data_type_manager,
+        dump_resolve_reference_action=model_types.dump_resolve_reference_action,
+        formatters=[Formatter.BUILTIN],
+        target_python_version=PythonVersion.PY_311,
+    )
+    modules = cast("dict[tuple[str, ...], Any]", parser.parse())
+
+    assert_generated_modules_output(modules, EXPECTED_MAIN_PATH / "custom_import_cache_cross_module")
+    assert_output(
+        "\n".join(ProbeStruct.clear_history) + "\n",
+        EXPECTED_MAIN_PATH / "custom_import_cache_cross_module_history.txt",
+    )
+    assert_output(
+        "\n".join("/".join(module) for module in modules) + "\n",
+        EXPECTED_MAIN_PATH / "custom_import_cache_cross_module_order.txt",
+    )
+
+
+def test_parser_rechecks_external_enum_after_module_materialization() -> None:
+    """Keep the external hook fallback when an inherited enum replaces a built-in wrapper."""
+    from datamodel_code_generator import ModuleSplitMode
+    from datamodel_code_generator.model import get_data_model_types
+    from datamodel_code_generator.model.enum import Enum
+    from datamodel_code_generator.parser.openapi import OpenAPIParser, OpenAPIScope
+
+    class ProbeEnum(Enum):
+        clear_history: ClassVar[list[str]] = []
+
+        def clear_imports_cache(self) -> None:
+            state = "cached" if self._IMPORTS_CACHE_KEY in self.__dict__ else "empty"
+            name = getattr(self, "class_name", "") or "?"
+            self.clear_history.append(f"{name}:{state}")
+            super().clear_imports_cache()
+
+    class SelectiveExternalEnumParser(OpenAPIParser):
+        def _get_enum_model_class(self, type_: Any, enum_values: list[Any]) -> tuple[type[Enum], Any]:
+            _, remaining_type = super()._get_enum_model_class(type_, enum_values)
+            return ProbeEnum, remaining_type
+
+    model_types = get_data_model_types(
+        DataModelType.PydanticV2BaseModel,
+        target_python_version=PythonVersion.PY_311,
+    )
+    input_path = OPEN_API_DATA_PATH / "nested_enum.json"
+    parser = SelectiveExternalEnumParser(
+        input_path,
+        base_path=input_path.parent,
+        data_model_type=model_types.data_model,
+        data_model_root_type=model_types.root_model,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=model_types.data_type_manager,
+        dump_resolve_reference_action=model_types.dump_resolve_reference_action,
+        formatters=[Formatter.BUILTIN],
+        openapi_scopes=[OpenAPIScope.Schemas],
+        target_python_version=PythonVersion.PY_311,
+    )
+    modules = cast(
+        "dict[tuple[str, ...], Any]",
+        parser.parse(module_split_mode=ModuleSplitMode.Single),
+    )
+
+    assert_generated_modules_output(modules, EXPECTED_MAIN_PATH / "custom_import_cache_inherited_enum")
+    assert_output(
+        "\n".join(ProbeEnum.clear_history) + "\n",
+        EXPECTED_MAIN_PATH / "custom_import_cache_inherited_enum_history.txt",
+    )
+    assert_output(
+        "\n".join("/".join(module) for module in modules) + "\n",
+        EXPECTED_MAIN_PATH / "custom_import_cache_inherited_enum_order.txt",
+    )
 
 
 CLI_E2E_COVERED_GENERATE_KWARGS = {
