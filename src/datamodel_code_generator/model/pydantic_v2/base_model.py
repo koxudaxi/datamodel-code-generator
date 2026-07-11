@@ -113,9 +113,10 @@ _ALIAS_GENERATOR_IMPORTS: dict[str, Import] = {
 
 
 @lru_cache(maxsize=16)
-def _uses_legacy_pydantic_extra_template(template_file_path: Path) -> bool:
+def _uses_legacy_pydantic_extra_template(template_file_path: str) -> bool:
     """Return whether a custom template uses the pre-0.68.1 typed-extra property."""
-    return bool(_LEGACY_PYDANTIC_EXTRA_TEMPLATE_PATTERN.search(template_file_path.read_text(encoding="utf-8")))
+    template_source = Path(template_file_path).read_text(encoding="utf-8")
+    return bool(_LEGACY_PYDANTIC_EXTRA_TEMPLATE_PATTERN.search(template_source))
 
 
 def _alias_generator_name(value: Any) -> str | None:
@@ -539,7 +540,7 @@ class BaseModel(BaseModelBase):
             return super()._render(*args, **kwargs)
 
         match self.template.filename:
-            case str() as filename if _uses_legacy_pydantic_extra_template(Path(filename)):
+            case str() as filename if _uses_legacy_pydantic_extra_template(filename):
                 if field := next(
                     (
                         field
