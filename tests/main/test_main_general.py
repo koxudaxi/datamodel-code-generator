@@ -130,8 +130,10 @@ def test_parser_retains_builtin_import_cache_and_invalidates_custom_cache() -> N
             model_type: type[DataModel] | None = None,
             **kwargs: Any,
         ) -> DataModel:
-            if model_type is None or model_type is self.data_model_type:
-                model_type = CacheAwareBaseModel
+            model_type = {
+                None: CacheAwareBaseModel,
+                self.data_model_type: CacheAwareBaseModel,
+            }.get(model_type, model_type)
             return super()._create_data_model(model_type, **kwargs)
 
     model_types = get_data_model_types(
@@ -155,6 +157,25 @@ def test_parser_retains_builtin_import_cache_and_invalidates_custom_cache() -> N
         EXPECTED_MAIN_PATH / "builtin_import_cache_retention.txt",
     )
 
+    input_path = JSON_SCHEMA_DATA_PATH / "unique_items_unhashable_default.json"
+    unhashable_default_parser = CacheProbeJsonSchemaParser(
+        input_path,
+        **{
+            **parser_options,
+            "collapse_reuse_models": True,
+            "reuse_model": True,
+            "use_unique_items_as_set": True,
+        },
+    )
+    assert_output(
+        unhashable_default_parser.parse(),
+        EXPECTED_MAIN_PATH / "builtin_import_cache_unique_items_unhashable.py",
+    )
+    assert_output(
+        "\n".join(unhashable_default_parser.cache_reuse_manifest) + "\n",
+        EXPECTED_MAIN_PATH / "builtin_import_cache_unique_items_unhashable.txt",
+    )
+
     input_path = JSON_SCHEMA_DATA_PATH / "person.json"
     custom_parser = JsonSchemaParser(
         input_path,
@@ -170,6 +191,17 @@ def test_parser_retains_builtin_import_cache_and_invalidates_custom_cache() -> N
     assert_output(
         injected_parser.parse(),
         EXPECTED_MAIN_PATH / "custom_import_cache_invalidation.py",
+    )
+
+    input_path = JSON_SCHEMA_DATA_PATH / "unique_items_enum_set.json"
+    unique_items_parser = JsonSchemaParser(
+        input_path,
+        data_model_type=CacheAwareBaseModel,
+        **{**parser_options, "use_unique_items_as_set": True},
+    )
+    assert_output(
+        unique_items_parser.parse(),
+        EXPECTED_MAIN_PATH / "custom_import_cache_unique_items.py",
     )
 
     alias_input_path = JSON_SCHEMA_DATA_PATH / "alias_import_alias" / "date.schema.json"

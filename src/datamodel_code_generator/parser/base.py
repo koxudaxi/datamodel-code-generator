@@ -2249,8 +2249,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         try:
                             converted_default = set(model_field.default)
                         except TypeError:
-                            # Elements are not hashable (e.g., contains dicts)
-                            # Skip both type and default conversion to keep consistency
+                            # Keep the unhashable default unchanged. Nested list types may
+                            # already have been converted in place, so invalidate their imports.
+                            _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
                             continue
                         model_field.default = converted_default
                     self.generation_store.replace_field_type(model_field, set_data_type)
