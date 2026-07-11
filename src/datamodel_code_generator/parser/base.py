@@ -1133,9 +1133,10 @@ def _get_discriminator_values(
     if mapping:
         _check_discriminator_mapping_paths(discriminator_model, mapping, discriminator_values)
         if not discriminator_values:
-            for base_class in discriminator_model.base_classes:
-                if base_class.reference:
-                    _check_discriminator_mapping_paths(base_class.reference, mapping, discriminator_values)
+            for base_reference in filter(
+                None, (base_class.reference for base_class in discriminator_model.base_classes)
+            ):
+                _check_discriminator_mapping_paths(base_reference, mapping, discriminator_values)
 
     return discriminator_values or [discriminator_model.path.split("/")[-1]]
 
