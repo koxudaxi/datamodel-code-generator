@@ -11,6 +11,7 @@ from collections import defaultdict
 from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from warnings import warn
 
 from pydantic import Field, ValidationError, field_validator, model_validator
 from pydantic.alias_generators import to_camel, to_pascal, to_snake
@@ -58,6 +59,8 @@ from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
 
 if TYPE_CHECKING:
+    from jinja2 import Template
+
     from datamodel_code_generator.reference import Reference
     from datamodel_code_generator.types import DataType
 
@@ -126,7 +129,7 @@ def _uses_legacy_pydantic_extra_template(template_file_path: str) -> bool:
     return bool(_LEGACY_PYDANTIC_EXTRA_TEMPLATE_PATTERN.search(template_source))
 
 
-def _strip_legacy_pydantic_extra_post_class_assignment(rendered: str, class_name: str) -> str:
+def _strip_legacy_pydantic_extra_post_class_assignment(rendered: str, class_name: str) -> str | None:
     """Remove the unsupported post-class typed-extra assignment for the rendered model."""
     if (
         assignment := next(
@@ -138,8 +141,67 @@ def _strip_legacy_pydantic_extra_post_class_assignment(rendered: str, class_name
             None,
         )
     ) is None:
-        return rendered
+        return None
     return f"{rendered[: assignment.start()]}{rendered[assignment.end() :]}"
+
+
+class _LegacyPydanticExtraTemplate:
+    """Adapt pre-0.68.1 custom templates without affecting normal render paths."""
+
+    __slots__ = ("_template",)
+
+    def __init__(self, template: Template) -> None:
+        self._template = template
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._template, name)
+
+    def _warn_template_update(self, status: str) -> None:
+        warn(
+            f"Legacy custom template {self._template.filename!r} {status} for Pydantic typed-extra compatibility. "
+            "Update the template to declare __pydantic_extra__ in the class body and remove the post-class "
+            "annotation assignment and model_rebuild(force=True).",
+            stacklevel=3,
+        )
+
+    def render(self, *args: Any, **kwargs: Any) -> str:
+        """Render typed extras in the class body and remove the unsupported legacy tail."""
+        if (
+            field := next(
+                (
+                    field
+                    for field in kwargs.get("fields", ())
+                    if getattr(field, "use_pydantic_extra_annotations_dict", False)
+                ),
+                None,
+            )
+        ) is None:
+            return self._template.render(*args, **kwargs)
+
+        annotation_line = f"    '__pydantic_extra__': {field.pydantic_extra_type_hint},"
+        kwargs["class_body_lines"] = [
+            "__annotations__ = {",
+            annotation_line,
+            "}",
+            *(kwargs.get("class_body_lines") or ()),
+        ]
+        rendered = self._template.render(*args, **kwargs)
+        if annotation_line not in rendered:
+            self._warn_template_update("could not be fully rewritten automatically")
+            return rendered
+        if (adapted := _strip_legacy_pydantic_extra_post_class_assignment(rendered, kwargs["class_name"])) is None:
+            self._warn_template_update("could not be fully rewritten automatically")
+            return rendered
+        self._warn_template_update("was rewritten automatically")
+        return adapted
+
+
+def _adapt_legacy_pydantic_extra_template(template: Template) -> Template:
+    """Wrap only custom templates that use the removed typed-extra property."""
+    match template.filename:
+        case str() as filename if _uses_legacy_pydantic_extra_template(filename):
+            return cast("Template", _LegacyPydanticExtraTemplate(template))
+    return template
 
 
 def _alias_generator_name(value: Any) -> str | None:
@@ -538,6 +600,7 @@ class BaseModel(BaseModelBase):
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
     SUPPORTS_CONFIG_EXTRA: ClassVar[bool] = True
     SUPPORTS_ARBITRARY_TYPES_ALLOWED: ClassVar[bool] = True
+    CUSTOM_TEMPLATE_ADAPTER = staticmethod(_adapt_legacy_pydantic_extra_template)
     TYPED_EXTRA_FIELD_NAME: ClassVar[str] = "__pydantic_extra__"
     TYPED_EXTRA_PLAIN_ANNOTATION_TEMPLATE_DATA_KEY: ClassVar[str] = "pydantic_extra_plain_annotation"
     # In Pydantic 2.11+, populate_by_name is deprecated in favor of validate_by_name + validate_by_alias
@@ -556,32 +619,6 @@ class BaseModel(BaseModelBase):
         ConfigAttribute("frozen", "frozen", False),  # noqa: FBT003
         ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False),  # noqa: FBT003
     ]
-
-    def _render(self, *args: Any, **kwargs: Any) -> str:
-        """Render evaluated typed extras for legacy custom templates."""
-        if self._custom_template_dir is None:
-            return super()._render(*args, **kwargs)
-
-        match self.template.filename:
-            case str() as filename if _uses_legacy_pydantic_extra_template(filename):
-                if field := next(
-                    (
-                        field
-                        for field in self.fields
-                        if isinstance(field, DataModelField) and field.use_pydantic_extra_annotations_dict
-                    ),
-                    None,
-                ):
-                    kwargs["class_body_lines"] = [
-                        "__annotations__ = {",
-                        f"    '__pydantic_extra__': {field.pydantic_extra_type_hint},",
-                        "}",
-                        *(kwargs.get("class_body_lines") or ()),
-                    ]
-                    return _strip_legacy_pydantic_extra_post_class_assignment(
-                        super()._render(*args, **kwargs), kwargs["class_name"]
-                    )
-        return super()._render(*args, **kwargs)
 
     @classmethod
     def render_module_code(cls, models: list[DataModel]) -> str:

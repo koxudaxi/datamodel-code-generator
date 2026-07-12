@@ -42,7 +42,7 @@ from datamodel_code_generator.types import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
 
     from jinja2 import Environment, Template
 
@@ -1001,7 +1001,11 @@ def _get_environment(template_subdir: Path, custom_template_dir: Path | None) ->
 
 
 @lru_cache
-def _get_template_with_custom_dir(template_file_path: Path, custom_template_dir: Path | None) -> Template:
+def _get_template_with_custom_dir(
+    template_file_path: Path,
+    custom_template_dir: Path | None,
+    template_adapter: Callable[[Template], Template] | None = None,
+) -> Template:
     """Load and cache a Jinja2 template with optional custom directory support.
 
     When custom_template_dir is provided, templates are searched in this order:
@@ -1013,7 +1017,8 @@ def _get_template_with_custom_dir(template_file_path: Path, custom_template_dir:
     """
     template_subdir = template_file_path.parent
     environment = _get_environment(template_subdir, custom_template_dir)
-    return environment.get_template(template_file_path.name)
+    template = environment.get_template(template_file_path.name)
+    return template_adapter(template) if template_adapter is not None else template
 
 
 @lru_cache(maxsize=16)
@@ -1029,7 +1034,11 @@ def _get_environment_with_absolute_path(absolute_template_dir: Path, builtin_sub
 
 
 @lru_cache
-def _get_template_with_absolute_path(absolute_template_path: Path, builtin_subdir: Path) -> Template:
+def _get_template_with_absolute_path(
+    absolute_template_path: Path,
+    builtin_subdir: Path,
+    template_adapter: Callable[[Template], Template] | None = None,
+) -> Template:
     """Load a Jinja2 template from an absolute path with fallback to built-in directory.
 
     This handles backward compatibility for custom templates found at absolute paths.
@@ -1038,7 +1047,8 @@ def _get_template_with_absolute_path(absolute_template_path: Path, builtin_subdi
     2. TEMPLATE_DIR/<builtin_subdir>/ (fallback for includes not in custom dir)
     """
     environment = _get_environment_with_absolute_path(absolute_template_path.parent, builtin_subdir)
-    return environment.get_template(absolute_template_path.name)
+    template = environment.get_template(absolute_template_path.name)
+    return template_adapter(template) if template_adapter is not None else template
 
 
 @lru_cache
@@ -1141,6 +1151,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     DOCSTRING_INDENT: ClassVar[int] = 4
     FIELD_DOCSTRING_INDENT: ClassVar[int] = 4
     FORMAT_DESCRIPTION_AS_DOCSTRING: ClassVar[bool] = True
+    CUSTOM_TEMPLATE_ADAPTER: ClassVar[Callable[[Template], Template] | None] = None
     _IMPORTS_CACHE_KEY: ClassVar[str] = "_cached_imports"
     has_forward_reference: bool = False
 
@@ -1341,9 +1352,22 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     def template(self) -> Template:
         """Get the Jinja2 template with custom directory support for includes."""
         resolved_path = self.template_file_path
+        template_adapter = self.CUSTOM_TEMPLATE_ADAPTER if self._custom_template_dir is not None else None
+        if template_adapter is None:
+            if resolved_path.is_absolute():
+                return _get_template_with_absolute_path(resolved_path, Path(self.TEMPLATE_FILE_PATH).parent)
+            return _get_template_with_custom_dir(Path(self.TEMPLATE_FILE_PATH), self._custom_template_dir)
         if resolved_path.is_absolute():
-            return _get_template_with_absolute_path(resolved_path, Path(self.TEMPLATE_FILE_PATH).parent)
-        return _get_template_with_custom_dir(Path(self.TEMPLATE_FILE_PATH), self._custom_template_dir)
+            return _get_template_with_absolute_path(
+                resolved_path,
+                Path(self.TEMPLATE_FILE_PATH).parent,
+                template_adapter,
+            )
+        return _get_template_with_custom_dir(
+            Path(self.TEMPLATE_FILE_PATH),
+            self._custom_template_dir,
+            template_adapter,
+        )
 
     @property
     def imports(self) -> tuple[Import, ...]:

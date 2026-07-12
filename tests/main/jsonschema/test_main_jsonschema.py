@@ -8,6 +8,7 @@ import json
 import os
 import sys
 import tempfile
+import warnings
 from collections import defaultdict
 from collections.abc import Sequence
 from pathlib import Path
@@ -41,6 +42,8 @@ from tests.conftest import (
     assert_directory_content,
     assert_httpx_get_kwargs,
     assert_output,
+    assert_warnings_contain,
+    assert_warnings_do_not_contain,
     create_assert_file_content,
     freeze_time,
     validate_generated_code,
@@ -6109,24 +6112,34 @@ def test_main_jsonschema_legacy_pydantic_extra_custom_template(
     template_dir = (DATA_PATH / "templates_pydantic_extra_pre_3593").relative_to(Path.cwd())
     copy_files = None
     if old_style_template:
-        copy_files = [(template_dir / "pydantic_v2/BaseModel.jinja2", tmp_path / "BaseModel.jinja2")]
+        copied_template = tmp_path / "pydantic_v2/BaseModel.jinja2"
+        copied_template.parent.mkdir()
+        copy_files = [(template_dir / "pydantic_v2/BaseModel.jinja2", copied_template)]
         template_dir = tmp_path
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / input_name,
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file=expected_file,
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-            "--custom-template-dir",
-            str(template_dir),
-            *mode_args,
-        ],
-        copy_files=copy_files,
-        force_exec_validation=True,
-    )
+    with warnings.catch_warnings(record=True) as recorded_warnings:
+        warnings.simplefilter("always", UserWarning)
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / input_name,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            extra_args=[
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--custom-template-dir",
+                str(template_dir),
+                *mode_args,
+            ],
+            copy_files=copy_files,
+            force_exec_validation=True,
+        )
+
+    warning_fragment = "was rewritten automatically for Pydantic typed-extra compatibility"
+    if disable_future_imports:
+        assert_warnings_do_not_contain(recorded_warnings, warning_fragment)
+    else:
+        assert_warnings_contain(recorded_warnings, warning_fragment)
 
     validation_case: tuple[str, str, str, str, tuple[str, ...], object] | None = None
     match input_name:
