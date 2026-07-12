@@ -17,7 +17,3 @@ class KnownAndExtra(BaseModel):
         '__pydantic_extra__': Dict[str, int],
     }
     name: str
-
-
-KnownAndExtra.__annotations__['__pydantic_extra__'] = Dict[str, int]
-KnownAndExtra.model_rebuild(force=True)

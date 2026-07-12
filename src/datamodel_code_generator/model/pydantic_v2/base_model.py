@@ -105,6 +105,13 @@ _CONFIG_ITEMS_TEMPLATE_DATA_KEY = "config_items"
 _LEGACY_PYDANTIC_EXTRA_TEMPLATE_PATTERN = re.compile(
     r"{%-?\s*(?:if|elif)\s+(?:not\s+)?field\.use_pydantic_extra_annotation_assignment\b"
 )
+_LEGACY_PYDANTIC_EXTRA_POST_CLASS_PATTERN = re.compile(
+    r"(?m)^(?P<class_name>[^.\s]+)[ \t]*\.[ \t]*__annotations__[ \t]*"
+    r"\[[ \t]*(?P<quote>['\"])__pydantic_extra__(?P=quote)[ \t]*\][ \t]*=[^\r\n]*\r?\n"
+    r"(?:[ \t]*\r?\n)*"
+    r"(?P=class_name)[ \t]*\.[ \t]*model_rebuild[ \t]*"
+    r"\([ \t]*force[ \t]*=[ \t]*True[ \t]*\)[ \t]*(?:#[^\r\n]*)?(?:\r?\n)?"
+)
 _ALIAS_GENERATOR_IMPORTS: dict[str, Import] = {
     AliasGenerator.ToCamel.value: IMPORT_ALIAS_GENERATOR_TO_CAMEL,
     AliasGenerator.ToPascal.value: IMPORT_ALIAS_GENERATOR_TO_PASCAL,
@@ -117,6 +124,22 @@ def _uses_legacy_pydantic_extra_template(template_file_path: str) -> bool:
     """Return whether a custom template uses the pre-0.68.1 typed-extra property."""
     template_source = Path(template_file_path).read_text(encoding="utf-8")
     return bool(_LEGACY_PYDANTIC_EXTRA_TEMPLATE_PATTERN.search(template_source))
+
+
+def _strip_legacy_pydantic_extra_post_class_assignment(rendered: str, class_name: str) -> str:
+    """Remove the unsupported post-class typed-extra assignment for the rendered model."""
+    if (
+        assignment := next(
+            (
+                match
+                for match in _LEGACY_PYDANTIC_EXTRA_POST_CLASS_PATTERN.finditer(rendered)
+                if match["class_name"] == class_name
+            ),
+            None,
+        )
+    ) is None:
+        return rendered
+    return f"{rendered[: assignment.start()]}{rendered[assignment.end() :]}"
 
 
 def _alias_generator_name(value: Any) -> str | None:
@@ -555,6 +578,9 @@ class BaseModel(BaseModelBase):
                         "}",
                         *(kwargs.get("class_body_lines") or ()),
                     ]
+                    return _strip_legacy_pydantic_extra_post_class_assignment(
+                        super()._render(*args, **kwargs), kwargs["class_name"]
+                    )
         return super()._render(*args, **kwargs)
 
     @classmethod

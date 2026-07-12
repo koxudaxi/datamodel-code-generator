@@ -19,8 +19,4 @@ class Node(BaseModel):
     name: str
 
 
-Node.__annotations__['__pydantic_extra__'] = Dict[str, "Node"]
-Node.model_rebuild(force=True)
-
-
 Node.model_rebuild()
