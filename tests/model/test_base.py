@@ -150,7 +150,7 @@ def test_data_model_relative_custom_template_without_adapter() -> None:
         custom_template_dir=Path("tests/data/templates_pydantic_extra_pre_3593"),
     )
 
-    assert model.template.filename.endswith("pydantic_v2/BaseModel.jinja2")
+    assert Path(model.template.filename).parts[-2:] == ("pydantic_v2", "BaseModel.jinja2")
 
 
 def test_data_model_create_typed_extra_field_unsupported() -> None:
@@ -281,7 +281,7 @@ def test_pydantic_v2_legacy_extra_template_supports_relative_custom_path() -> No
     with pytest.warns(UserWarning, match="was rewritten automatically for Pydantic typed-extra"):
         rendered = model.render()
 
-    assert model.template.filename.endswith("pydantic_v2/BaseModel.jinja2")
+    assert Path(model.template.filename).parts[-2:] == ("pydantic_v2", "BaseModel.jinja2")
     assert "'__pydantic_extra__': Dict[str, str]," in rendered
     assert "Model.__annotations__['__pydantic_extra__']" not in rendered
     assert "Model.model_rebuild(force=True)" not in rendered
