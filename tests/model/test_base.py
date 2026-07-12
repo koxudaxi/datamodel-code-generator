@@ -298,7 +298,7 @@ def test_pydantic_v2_legacy_extra_template_warns_when_not_fully_rewritten(custom
     match customization:
         case "missing-tail":
             template_source = template_source.rsplit("{%- for field in fields %}", 1)[0]
-        case "missing-class-body":
+        case _:
             template_source = template_source.replace(
                 "{%- for line in class_body_lines %}\n    {{ line }}\n{%- endfor %}\n",
                 "",
@@ -321,7 +321,7 @@ def test_pydantic_v2_legacy_extra_template_warns_when_not_fully_rewritten(custom
     match customization:
         case "missing-tail":
             assert "'__pydantic_extra__': Dict[str, str]," in rendered
-        case "missing-class-body":
+        case _:
             assert "Model.__annotations__['__pydantic_extra__'] = Dict[str, str]" in rendered
 
 
