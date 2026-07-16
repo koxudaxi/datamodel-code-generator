@@ -112,6 +112,9 @@ PYDANTIC_V2_DATACLASS_MUTABLE_DEFAULT_EXCLUDED_CASES: Final[dict[str, str]] = {
     "jsonschema/root_model_default_value_branches.json": (
         "dataclass output needs default_factory handling for generated mutable defaults"
     ),
+    "jsonschema/unique_items_unhashable_default.json": (
+        "dataclass output needs default_factory handling for generated mutable defaults"
+    ),
     "openapi/allof_partial_override_deeply_nested_array.yaml::components.schemas.Thing": (
         "dataclass output needs default_factory handling for generated mutable defaults"
     ),
