@@ -269,6 +269,9 @@ PYDANTIC_V2_LEGACY_RUNTIME_ROUND_TRIP_EXCLUDED_CASES: dict[PayloadBackend, dict[
         "jsonschema/property_names_ref_enum.json": (
             "Pydantic before 2.5.0 emits JSON-mode serializer warnings for enum dictionary keys"
         ),
+        "jsonschema/type_overrides_dict_key.json": (
+            "Pydantic before 2.5.0 emits JSON-mode serializer warnings for enum dictionary keys"
+        ),
     },
 }
 
