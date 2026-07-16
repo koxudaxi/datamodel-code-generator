@@ -249,6 +249,37 @@ def test_main_openapi_discriminator_enum_duplicate(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("option", "expected_file"),
+    [
+        (None, "discriminator/duplicate_value.py"),
+        ("--collapse-root-models", "discriminator/duplicate_value_collapse_root_models.py"),
+        ("--use-type-alias", "discriminator/duplicate_value_type_alias.py"),
+    ],
+)
+def test_main_openapi_discriminator_duplicate_value(option: str | None, expected_file: str, output_file: Path) -> None:
+    """Duplicate discriminator values fall back to a regular union."""
+    extra_args = [
+        "--target-python-version",
+        "3.10",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--formatters",
+        "builtin",
+    ]
+    if option:
+        extra_args.append(option)
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_duplicate_value.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=extra_args,
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
