@@ -710,6 +710,12 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
             ),
         ),
     ),
+    "--custom-file-header-mode": CLIOptionMeta(
+        name="--custom-file-header-mode",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.GENERATED_OUTPUT,
+    ),
     "--additional-imports": CLIOptionMeta(
         name="--additional-imports",
         category=OptionCategory.TEMPLATE,

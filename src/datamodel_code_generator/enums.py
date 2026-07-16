@@ -258,6 +258,13 @@ class UnionMode(Enum):
     left_to_right = "left_to_right"
 
 
+class CustomFileHeaderMode(Enum):
+    """Strategy for combining custom and generated file headers."""
+
+    Replace = "replace"
+    Prepend = "prepend"
+
+
 class InputModelRefStrategy(Enum):
     """Strategy for handling referenced types in --input-model.
 
@@ -365,6 +372,7 @@ __all__ = [
     "AsyncAPIVersion",
     "ClassNameAffixScope",
     "CollapseRootModelsNameStrategy",
+    "CustomFileHeaderMode",
     "DataModelType",
     "DataclassArguments",
     "FieldTypeCollisionStrategy",

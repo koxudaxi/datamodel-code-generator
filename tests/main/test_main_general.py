@@ -21,6 +21,7 @@ from packaging import version
 import datamodel_code_generator
 from datamodel_code_generator import (
     AllExportsScope,
+    CustomFileHeaderMode,
     DataModelType,
     Error,
     GeneratedModules,
@@ -2394,6 +2395,25 @@ def test_all_exports_scope_recursive_jsonschema_multi_file(output_dir: Path) -> 
     )
 
 
+def test_custom_file_header_path_prepend_jsonschema_multi_file(output_dir: Path) -> None:
+    """Prepend a custom header while preserving per-file provenance and future imports."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "all_exports_multi_file",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "recursive",
+            "--custom-file-header-path",
+            str(DATA_PATH / "custom_file_header_with_docstring_and_import.txt"),
+            "--custom-file-header-mode",
+            "prepend",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "custom_file_header_path_prepend_multi_file",
+    )
+
+
 def test_all_exports_recursive_local_model_collision_error(
     output_dir: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -3539,14 +3559,132 @@ def test_generated_modules_type_alias_is_exported() -> None:
 
 
 def test_generate_returns_string_with_custom_file_header() -> None:
-    """Test generate() with custom_file_header when output=None."""
+    """Default to replacing the generated header when output=None."""
     json_schema = '{"type": "object", "properties": {"name": {"type": "string"}}}'
     custom_header = "# Custom header\n# More comments"
     run_generate_and_assert(
         input_=json_schema,
         input_file_type=InputFileType.JsonSchema,
         custom_file_header=custom_header,
+        enable_version_header=True,
         expected_file=EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header.py",
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--custom-file-header-mode"],
+    option_description="""Choose how a custom file header combines with generated provenance.
+
+The `prepend` mode places a license or copyright header before the generated filename,
+timestamp, version, and command metadata. The default `replace` mode preserves existing behavior.""",
+    input_schema="jsonschema/simple_string.json",
+    cli_args=[
+        "--custom-file-header",
+        "# Copyright {year}",
+        "--custom-file-header-mode",
+        "prepend",
+        "--disable-timestamp",
+        "--enable-version-header",
+    ],
+    golden_output="main/custom_file_header_prepend.py",
+    related_options=["--custom-file-header", "--custom-file-header-path", "--enable-version-header"],
+)
+def test_main_custom_file_header_prepend(output_file: Path) -> None:
+    """Choose how a custom file header combines with generated provenance."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="custom_file_header_prepend.py",
+        extra_args=[
+            "--custom-file-header",
+            "# Copyright {year}",
+            "--custom-file-header-mode",
+            "prepend",
+            "--disable-timestamp",
+            "--enable-version-header",
+        ],
+        transform=lambda output: output.replace(
+            f"#   version:   {datamodel_code_generator.get_version()}", "#   version:   0.0.0"
+        ),
+    )
+
+
+def test_generate_returns_string_with_custom_file_header_prepend() -> None:
+    """Prepend a custom header to provenance when output=None."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        custom_file_header="# SPDX-License-Identifier: MIT",
+        custom_file_header_mode=CustomFileHeaderMode.Prepend,
+        disable_timestamp=True,
+        expected_file=EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header_prepend.py",
+    )
+
+
+def test_generate_returns_modules_with_custom_file_header_prepend() -> None:
+    """Prepend custom and per-file provenance headers for output=None modules."""
+    result = generate(
+        JSON_SCHEMA_DATA_PATH / "all_exports_multi_file",
+        input_file_type=InputFileType.JsonSchema,
+        custom_file_header_path=DATA_PATH / "custom_file_header_with_docstring_and_import.txt",
+        custom_file_header_mode=CustomFileHeaderMode.Prepend,
+        disable_timestamp=True,
+        all_exports_scope=AllExportsScope.Recursive,
+    )
+
+    assert_generated_modules_output(
+        result,
+        EXPECTED_MAIN_PATH / "jsonschema" / "custom_file_header_path_prepend_multi_file",
+        transform=lambda output: f"{output}\n",
+    )
+
+
+def test_generate_custom_file_header_prepend_after_formatter_comment() -> None:
+    """Extract future imports after comments added by a custom formatter."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        formatters=[],
+        custom_formatters=["tests.data.python.custom_formatters.add_comment"],
+        custom_file_header='"""Module docstring."""\n\nimport sys',
+        custom_file_header_mode=CustomFileHeaderMode.Prepend,
+        disable_timestamp=True,
+        expected_file=EXPECTED_MAIN_PATH / "generate_custom_file_header_prepend_after_formatter_comment.py",
+    )
+
+
+def test_generate_custom_file_header_prepend_after_formatter_docstring() -> None:
+    """Extract future imports after a module docstring added by a custom formatter."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        formatters=[],
+        custom_formatters=["tests.data.python.custom_formatters.add_docstring"],
+        custom_file_header='"""Module docstring."""\n\nimport sys',
+        custom_file_header_mode=CustomFileHeaderMode.Prepend,
+        disable_timestamp=True,
+        expected_file=EXPECTED_MAIN_PATH / "generate_custom_file_header_prepend_after_formatter_docstring.py",
+    )
+
+
+def test_custom_file_header_prepend_preserves_future_import_text(output_file: Path) -> None:
+    """Preserve future-import text inside generated schema descriptions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_file_header_schema_description_future.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="jsonschema/custom_file_header_schema_description_future.py",
+        extra_args=[
+            "--custom-file-header",
+            "# SPDX-License-Identifier: MIT",
+            "--custom-file-header-mode",
+            "prepend",
+            "--disable-timestamp",
+            "--use-schema-description",
+        ],
     )
 
 

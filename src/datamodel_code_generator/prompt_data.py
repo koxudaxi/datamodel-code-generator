@@ -32,6 +32,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--collapse-root-models": "Inline root model definitions instead of creating separate wrapper classes.",
     "--collapse-root-models-name-strategy": "Select which name to keep when collapsing root models with object refe...",
     "--custom-file-header": "Add custom header text to the generated file.",
+    "--custom-file-header-mode": "Choose how a custom file header combines with generated provenance.",
     "--custom-file-header-path": "Add custom header content from file to generated code.",
     "--custom-formatters": "Apply custom Python code formatters to generated output.",
     "--custom-formatters-kwargs": "Pass custom arguments to custom formatters via inline JSON or a JSON file path.",

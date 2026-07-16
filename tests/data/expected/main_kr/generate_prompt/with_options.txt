@@ -145,6 +145,7 @@ What other options should I use?
 - `--additional-imports`: Add custom imports to generated output files.
 - `--class-decorators`: Add custom decorators to generated model classes.
 - `--custom-file-header`: Add custom header text to the generated file.
+- `--custom-file-header-mode`: Choose how a custom file header combines with generated provenance.
 - `--custom-file-header-path`: Add custom header content from file to generated code.
 - `--custom-formatters`: Apply custom Python code formatters to generated output.
 - `--custom-formatters-kwargs`: Pass custom arguments to custom formatters via inline JSON or a JSON file path.
@@ -688,6 +689,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         'id': 'id_'} generates `id_: ... = Field(alias='id')`.
   --custom-file-header CUSTOM_FILE_HEADER
                         Custom file header
+  --custom-file-header-mode {replace,prepend}
+                        How to combine a custom file header with the generated
+                        header (default: replace)
   --custom-file-header-path CUSTOM_FILE_HEADER_PATH
                         Custom file header file path
   --custom-formatters-kwargs CUSTOM_FORMATTERS_KWARGS

@@ -30,6 +30,7 @@ from datamodel_code_generator.enums import (
     AllOfMergeMode,
     ClassNameAffixScope,
     CollapseRootModelsNameStrategy,
+    CustomFileHeaderMode,
     DataclassArguments,
     DataModelType,
     FieldTypeCollisionStrategy,
@@ -165,6 +166,7 @@ class BaseGenerateConfig(BaseModel):
     keep_model_order: bool = False
     custom_file_header: str | None = None
     custom_file_header_path: Path | None = None
+    custom_file_header_mode: CustomFileHeaderMode = CustomFileHeaderMode.Replace
     custom_formatters: list[str] | None = None
     use_pendulum: bool = False
     use_standard_primitive_types: bool = False

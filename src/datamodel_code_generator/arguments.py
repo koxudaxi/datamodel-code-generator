@@ -24,6 +24,7 @@ from datamodel_code_generator.enums import (
     AllOfMergeMode,
     ClassNameAffixScope,
     CollapseRootModelsNameStrategy,
+    CustomFileHeaderMode,
     DataclassArguments,
     DataModelType,
     FieldTypeCollisionStrategy,
@@ -1015,6 +1016,12 @@ template_options.add_argument(
     help="Custom file header file path",
     default=None,
     type=str,
+)
+template_options.add_argument(
+    "--custom-file-header-mode",
+    help="How to combine a custom file header with the generated header (default: replace)",
+    choices=[mode.value for mode in CustomFileHeaderMode],
+    default=None,
 )
 template_options.add_argument(
     "--custom-template-dir",

@@ -3390,7 +3390,10 @@ def test_main_custom_file_header_path(output_file: Path) -> None:
     )
 
 
-def test_main_custom_file_header_duplicate_options(capsys: pytest.CaptureFixture, output_file: Path) -> None:
+@pytest.mark.parametrize("custom_file_header", ["abc", ""])
+def test_main_custom_file_header_duplicate_options(
+    capsys: pytest.CaptureFixture, output_file: Path, custom_file_header: str
+) -> None:
     """Test OpenAPI generation with duplicate custom file header options."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
@@ -3401,7 +3404,7 @@ def test_main_custom_file_header_duplicate_options(capsys: pytest.CaptureFixture
             "--custom-file-header-path",
             str(DATA_PATH / "custom_file_header.txt"),
             "--custom-file-header",
-            "abc",
+            custom_file_header,
         ],
         capsys=capsys,
         expected_stderr_contains="`--custom_file_header_path` can not be used with `--custom_file_header`.",
