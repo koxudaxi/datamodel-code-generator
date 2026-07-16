@@ -3685,6 +3685,8 @@ def test_main_openapi_discriminator_optional_pydantic_v2(
         assert_func=assert_file_content,
         expected_file=expected_file,
         extra_args=[
+            "--formatters",
+            "builtin",
             "--target-python-version",
             "3.10",
             "--output-model-type",

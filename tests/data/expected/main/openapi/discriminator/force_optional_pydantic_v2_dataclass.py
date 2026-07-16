@@ -25,5 +25,7 @@ class CashPayment:
 
 Payment = TypeAliasType(
     "Payment",
-    Annotated[CardPayment | CashPayment | None, Field(None, discriminator='kind')],
+    Annotated[
+        CardPayment | CashPayment | None, Field(None, discriminator='kind')
+    ],
 )
