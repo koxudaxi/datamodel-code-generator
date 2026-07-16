@@ -1,0 +1,10 @@
+{
+  "CardPayment": {
+    "kind": "card",
+    "card_number": null
+  },
+  "Payment": {
+    "kind": "cash",
+    "received_amount": 50
+  }
+}

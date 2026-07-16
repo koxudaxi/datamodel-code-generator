@@ -2042,6 +2042,23 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             return member_value
         return value
 
+    def __set_force_optional_discriminator_literal_default(
+        self,
+        model: DataModel,
+        discriminator_field: DataModelFieldBase,
+        literal: DiscriminatorValue,
+        *,
+        can_retain_cache: bool,
+    ) -> None:
+        """Keep Pydantic v2 single-literal discriminator fields valid when forced optional."""
+        if not self.force_optional_for_required_fields or not _is_pydantic_v2_data_model_field(discriminator_field):
+            return
+
+        discriminator_field.default = literal
+        discriminator_field.required = False
+        discriminator_field.nullable = False
+        _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
+
     def __apply_discriminator_type(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         models: list[DataModel],
@@ -2127,24 +2144,31 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     for discriminator_field in discriminator_model.fields:
                         if field_name not in {discriminator_field.original_name, discriminator_field.name}:
                             continue
-                        literals = discriminator_field.data_type.literals
                         const_value = discriminator_field.extras.get("const")
                         expected_value = discriminator_values[0] if discriminator_values else None
 
-                        # Check if literals match (existing behavior)
-                        literals_match = len(literals) == 1 and literals[0] == expected_value
-                        # Check if const value matches (for msgspec with type: string + const)
                         const_match = const_value is not None and const_value == expected_value
 
-                        if literals_match:
+                        if (
+                            len(literals := discriminator_field.data_type.literals) == 1
+                            and (literal := literals[0]) == expected_value
+                        ):
                             has_one_literal = True
-                            if _is_msgspec_struct(discriminator_model):  # pragma: no cover
-                                _add_msgspec_base_class_kwarg(discriminator_model, "tag_field", f"'{field_name}'")
-                                _add_msgspec_base_class_kwarg(discriminator_model, "tag", repr(expected_value))
-                                discriminator_field.extras["is_classvar"] = True
-                                _clear_model_imports_cache_if_retained(
-                                    discriminator_model, can_retain_cache=can_retain_cache
-                                )
+                            match discriminator_model:
+                                case _ if _is_msgspec_struct(discriminator_model):  # pragma: no cover
+                                    _add_msgspec_base_class_kwarg(discriminator_model, "tag_field", f"'{field_name}'")
+                                    _add_msgspec_base_class_kwarg(discriminator_model, "tag", repr(expected_value))
+                                    discriminator_field.extras["is_classvar"] = True
+                                    _clear_model_imports_cache_if_retained(
+                                        discriminator_model, can_retain_cache=can_retain_cache
+                                    )
+                                case _:
+                                    self.__set_force_optional_discriminator_literal_default(
+                                        discriminator_model,
+                                        discriminator_field,
+                                        literal,
+                                        can_retain_cache=can_retain_cache,
+                                    )
                             # Found the discriminator field, no need to keep looking
                             break
 

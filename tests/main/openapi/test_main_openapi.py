@@ -3653,6 +3653,48 @@ def test_main_openapi_discriminator_one_literal_as_default(
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model", "optional_args", "expected_file"),
+    [
+        ("pydantic_v2.BaseModel", (), "discriminator/required_pydantic_v2.py"),
+        (
+            "pydantic_v2.BaseModel",
+            ("--force-optional",),
+            "discriminator/force_optional_pydantic_v2.py",
+        ),
+        (
+            "pydantic_v2.BaseModel",
+            ("--force-optional", "--use-one-literal-as-default"),
+            "discriminator/force_optional_pydantic_v2.py",
+        ),
+        (
+            "pydantic_v2.dataclass",
+            ("--force-optional",),
+            "discriminator/force_optional_pydantic_v2_dataclass.py",
+        ),
+    ],
+)
+def test_main_openapi_discriminator_optional_pydantic_v2(
+    output_model: str, optional_args: tuple[str, ...], expected_file: str, output_file: Path
+) -> None:
+    """Keep required and force-optional Pydantic v2 discriminator literals importable."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_force_optional.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--target-python-version",
+            "3.10",
+            "--output-model-type",
+            output_model,
+            *optional_args,
+        ],
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
