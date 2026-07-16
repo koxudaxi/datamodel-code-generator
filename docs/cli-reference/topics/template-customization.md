@@ -9,7 +9,7 @@ Options are grouped from shared CLI metadata and link back to their generated re
 | Group | Options | Description |
 |-------|---------|-------------|
 | [Custom Templates](#custom-templates) | 3 | Custom templates and extra template data. |
-| [Generated Output](#generated-output) | 7 | Generated file headers and reproducible output. |
+| [Generated Output](#generated-output) | 8 | Generated file headers and reproducible output. |
 | [Imports](#imports) | 4 | Generated imports and type-checking import behavior. |
 | [Output Formatting](#output-formatting) | 5 | Formatter selection, quote style, and string wrapping. |
 
@@ -31,6 +31,7 @@ Generated file headers and reproducible output.
 |--------|-------------|
 | [`--class-decorators`](../template-customization.md#class-decorators) | Add custom decorators to generated model classes. |
 | [`--custom-file-header`](../template-customization.md#custom-file-header) | Add custom header text to the generated file. |
+| [`--custom-file-header-mode`](../template-customization.md#custom-file-header-mode) | Choose how a custom file header combines with generated provenance. |
 | [`--custom-file-header-path`](../template-customization.md#custom-file-header-path) | Add custom header content from file to generated code. |
 | [`--disable-timestamp`](../template-customization.md#disable-timestamp) | Disable timestamp in generated file header for reproducible output. |
 | [`--enable-command-header`](../template-customization.md#enable-command-header) | Include command-line options in file header for reproducibility. |

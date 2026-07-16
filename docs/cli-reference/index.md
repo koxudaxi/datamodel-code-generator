@@ -12,7 +12,7 @@ This documentation is auto-generated from test cases.
 | 🔧 [Typing Customization](typing-customization.md) | 30 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 27 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 44 | Model generation behavior |
-| 🎨 [Template Customization](template-customization.md) | 25 | Output formatting and custom rendering |
+| 🎨 [Template Customization](template-customization.md) | 26 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
 | ⚙️ [General Options](general-options.md) | 18 | Utilities and meta options |
@@ -25,7 +25,7 @@ Use these pages when you know the workflow area but not the exact option name.
 | Topic | Options | Groups |
 |-------|---------|--------|
 | [Model Customization](topics/model-customization.md) | 23 | Model Naming, Model Reuse, Model Shape, Root Model |
-| [Template Customization](topics/template-customization.md) | 19 | Custom Templates, Generated Output, Imports, Output Formatting |
+| [Template Customization](topics/template-customization.md) | 20 | Custom Templates, Generated Output, Imports, Output Formatting |
 | [Typing Customization](topics/typing-customization.md) | 20 | Imports, Collection Types, Type Alias, Type Mapping, Type Syntax |
 | [OpenAPI](topics/openapi.md) | 7 | OpenAPI Naming, OpenAPI Paths, OpenAPI Scopes, Read Only Write Only |
 
@@ -89,6 +89,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--collapse-root-models`](model-customization.md#collapse-root-models)
 - [`--collapse-root-models-name-strategy`](model-customization.md#collapse-root-models-name-strategy)
 - [`--custom-file-header`](template-customization.md#custom-file-header)
+- [`--custom-file-header-mode`](template-customization.md#custom-file-header-mode)
 - [`--custom-file-header-path`](template-customization.md#custom-file-header-path)
 - [`--custom-formatters`](template-customization.md#custom-formatters)
 - [`--custom-formatters-kwargs`](template-customization.md#custom-formatters-kwargs)

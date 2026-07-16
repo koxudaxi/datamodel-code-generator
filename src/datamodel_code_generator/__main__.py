@@ -532,7 +532,7 @@ def _get_config_class() -> type[Config]:
         @model_validator(mode="after")
         def validate_custom_file_header(self: Self) -> Self:
             """Validate custom file header options are mutually exclusive."""
-            if self.custom_file_header and self.custom_file_header_path:
+            if self.custom_file_header is not None and self.custom_file_header_path is not None:
                 raise Error(self.__validate_custom_file_header_err)
             return self
 

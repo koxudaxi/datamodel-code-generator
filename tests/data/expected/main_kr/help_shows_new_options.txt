@@ -481,6 +481,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         'id': 'id_'} generates `id_: ... = Field(alias='id')`.
   --custom-file-header CUSTOM_FILE_HEADER
                         Custom file header
+  --custom-file-header-mode {replace,prepend}
+                        How to combine a custom file header with the generated
+                        header (default: replace)
   --custom-file-header-path CUSTOM_FILE_HEADER_PATH
                         Custom file header file path
   --custom-formatters-kwargs CUSTOM_FORMATTERS_KWARGS
