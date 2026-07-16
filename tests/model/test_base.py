@@ -41,6 +41,9 @@ from datamodel_code_generator.model.msgspec import Struct as MsgspecStruct
 from datamodel_code_generator.model.pydantic_base import DataModelField as PydanticBaseDataModelField
 from datamodel_code_generator.model.pydantic_v2 import BaseModel
 from datamodel_code_generator.model.pydantic_v2 import DataModelField as PydanticV2DataModelField
+from datamodel_code_generator.model.pydantic_v2.base_model import (
+    _strip_legacy_pydantic_extra_post_class_assignment,
+)
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_FIELD, IMPORT_MISSING
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import ANY, NONE, DataType, Types
@@ -131,6 +134,23 @@ def test_data_model() -> None:
     assert data_model.decorators == ["@validate"]
     assert data_model.base_class == "Base"
     assert data_model.render() == "@validate\n@dataclass\nclass test_model:\n    a: str"
+
+
+def test_data_model_relative_custom_template_without_adapter() -> None:
+    """Load a relative custom template unchanged when the model has no adapter."""
+
+    class RelativeTemplateModel(B):
+        """Data model using an existing relative custom template fixture."""
+
+        TEMPLATE_FILE_PATH = "pydantic_v2/BaseModel.jinja2"
+
+    model = RelativeTemplateModel(
+        fields=[],
+        reference=Reference(path="Model", original_name="Model", name="Model"),
+        custom_template_dir=Path("tests/data/templates_pydantic_extra_pre_3593"),
+    )
+
+    assert Path(model.template.filename).parts[-2:] == ("pydantic_v2", "BaseModel.jinja2")
 
 
 def test_data_model_create_typed_extra_field_unsupported() -> None:
@@ -243,6 +263,91 @@ def test_pydantic_v2_extra_annotation_mode_uses_plain_annotation_for_native_defe
     assert field.use_pydantic_extra_plain_annotation
     assert not field.use_pydantic_extra_annotations_dict
     assert IMPORT_DICT not in field.imports
+
+
+def test_pydantic_v2_legacy_extra_template_supports_relative_custom_path() -> None:
+    """Test legacy typed extras render through a relative custom template path."""
+    field = PydanticV2DataModelField(
+        name="__pydantic_extra__",
+        data_type=DataType(type="str", is_dict=True),
+        required=True,
+    )
+    model = BaseModel(
+        fields=[field],
+        reference=Reference(path="Model", original_name="Model", name="Model"),
+        custom_template_dir=Path("tests/data/templates_pydantic_extra_pre_3593"),
+    )
+
+    with pytest.warns(UserWarning, match="was rewritten automatically for Pydantic typed-extra"):
+        rendered = model.render()
+
+    assert Path(model.template.filename).parts[-2:] == ("pydantic_v2", "BaseModel.jinja2")
+    assert "'__pydantic_extra__': Dict[str, str]," in rendered
+    assert "Model.__annotations__['__pydantic_extra__']" not in rendered
+    assert "Model.model_rebuild(force=True)" not in rendered
+    assert "locals()" not in rendered
+
+
+@pytest.mark.parametrize("customization", ["missing-tail", "missing-class-body"])
+def test_pydantic_v2_legacy_extra_template_warns_when_not_fully_rewritten(customization: str, tmp_path: Path) -> None:
+    """Warn without failing when a customized legacy template cannot be fully rewritten."""
+    source_template = Path("tests/data/templates_pydantic_extra_pre_3593/pydantic_v2/BaseModel.jinja2")
+    custom_template = tmp_path / "pydantic_v2/BaseModel.jinja2"
+    custom_template.parent.mkdir()
+    template_source = source_template.read_text(encoding="utf-8")
+    match customization:
+        case "missing-tail":
+            template_source = template_source.rsplit("{%- for field in fields %}", 1)[0]
+        case _:
+            template_source = template_source.replace(
+                "{%- for line in class_body_lines %}\n    {{ line }}\n{%- endfor %}\n",
+                "",
+            )
+    custom_template.write_text(template_source, encoding="utf-8")
+    field = PydanticV2DataModelField(
+        name="__pydantic_extra__",
+        data_type=DataType(type="str", is_dict=True),
+        required=True,
+    )
+    model = BaseModel(
+        fields=[field],
+        reference=Reference(path="Model", original_name="Model", name="Model"),
+        custom_template_dir=tmp_path,
+    )
+
+    with pytest.warns(UserWarning, match="could not be fully rewritten automatically"):
+        rendered = model.render()
+
+    match customization:
+        case "missing-tail":
+            assert "'__pydantic_extra__': Dict[str, str]," in rendered
+        case _:
+            assert "Model.__annotations__['__pydantic_extra__'] = Dict[str, str]" in rendered
+
+
+def test_strip_legacy_pydantic_extra_post_class_assignment_is_model_scoped() -> None:
+    """Strip only the target model's old assignment while preserving rebuilds and helpers."""
+    rendered = (
+        "Helper.__annotations__['__pydantic_extra__'] = Dict[str, int]\n"
+        "Helper.model_rebuild(force=True)\n"
+        'Model . __annotations__ [ "__pydantic_extra__" ] = Dict[str, int]\r\n'
+        "\r\n"
+        "Model . model_rebuild ( force = True )  # legacy\r\n"
+        "Model.model_rebuild()\n"
+    )
+
+    assert _strip_legacy_pydantic_extra_post_class_assignment(rendered, "Missing") is None
+    assert _strip_legacy_pydantic_extra_post_class_assignment(rendered, "Model") == (
+        "Helper.__annotations__['__pydantic_extra__'] = Dict[str, int]\n"
+        "Helper.model_rebuild(force=True)\n"
+        "Model.model_rebuild()\n"
+    )
+    unicode_stripped = _strip_legacy_pydantic_extra_post_class_assignment(
+        "℘Model.__annotations__['__pydantic_extra__'] = Dict[str, int]\n℘Model.model_rebuild(force=True)\n",
+        "℘Model",
+    )
+    assert unicode_stripped is not None
+    assert not unicode_stripped
 
 
 def test_pydantic_v2_missing_sentinel_default_keeps_explicit_default() -> None:

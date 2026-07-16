@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from warnings import warn
 
 from pydantic import Field, ValidationError, field_validator, model_validator
 from pydantic.alias_generators import to_camel, to_pascal, to_snake
@@ -57,6 +59,8 @@ from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
 
 if TYPE_CHECKING:
+    from jinja2 import Template
+
     from datamodel_code_generator.reference import Reference
     from datamodel_code_generator.types import DataType
 
@@ -101,11 +105,103 @@ _ALIAS_GENERATOR_INTERNAL_KEY = "_alias_generator"
 _NO_ALIAS_INTERNAL_KEY = "_no_alias"
 _MISSING_SENTINEL = "MISSING"
 _CONFIG_ITEMS_TEMPLATE_DATA_KEY = "config_items"
+_LEGACY_PYDANTIC_EXTRA_TEMPLATE_PATTERN = re.compile(
+    r"{%-?\s*(?:if|elif)\s+(?:not\s+)?field\.use_pydantic_extra_annotation_assignment\b"
+)
+_LEGACY_PYDANTIC_EXTRA_POST_CLASS_PATTERN = re.compile(
+    r"(?m)^(?P<class_name>[^.\s]+)[ \t]*\.[ \t]*__annotations__[ \t]*"
+    r"\[[ \t]*(?P<quote>['\"])__pydantic_extra__(?P=quote)[ \t]*\][ \t]*=[^\r\n]*\r?\n"
+    r"(?:[ \t]*\r?\n)*"
+    r"(?P=class_name)[ \t]*\.[ \t]*model_rebuild[ \t]*"
+    r"\([ \t]*force[ \t]*=[ \t]*True[ \t]*\)[ \t]*(?:#[^\r\n]*)?(?:\r?\n)?"
+)
 _ALIAS_GENERATOR_IMPORTS: dict[str, Import] = {
     AliasGenerator.ToCamel.value: IMPORT_ALIAS_GENERATOR_TO_CAMEL,
     AliasGenerator.ToPascal.value: IMPORT_ALIAS_GENERATOR_TO_PASCAL,
     AliasGenerator.ToSnake.value: IMPORT_ALIAS_GENERATOR_TO_SNAKE,
 }
+
+
+@lru_cache(maxsize=16)
+def _uses_legacy_pydantic_extra_template(template_file_path: str) -> bool:
+    """Return whether a custom template uses the pre-0.68.1 typed-extra property."""
+    template_source = Path(template_file_path).read_text(encoding="utf-8")
+    return bool(_LEGACY_PYDANTIC_EXTRA_TEMPLATE_PATTERN.search(template_source))
+
+
+def _strip_legacy_pydantic_extra_post_class_assignment(rendered: str, class_name: str) -> str | None:
+    """Remove the unsupported post-class typed-extra assignment for the rendered model."""
+    if (
+        assignment := next(
+            (
+                match
+                for match in _LEGACY_PYDANTIC_EXTRA_POST_CLASS_PATTERN.finditer(rendered)
+                if match["class_name"] == class_name
+            ),
+            None,
+        )
+    ) is None:
+        return None
+    return f"{rendered[: assignment.start()]}{rendered[assignment.end() :]}"
+
+
+class _LegacyPydanticExtraTemplate:
+    """Adapt pre-0.68.1 custom templates without affecting normal render paths."""
+
+    __slots__ = ("_template",)
+
+    def __init__(self, template: Template) -> None:
+        self._template = template
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._template, name)
+
+    def _warn_template_update(self, status: str) -> None:
+        warn(
+            f"Legacy custom template {self._template.filename!r} {status} for Pydantic typed-extra compatibility. "
+            "Update the template to declare __pydantic_extra__ in the class body and remove the post-class "
+            "annotation assignment and model_rebuild(force=True).",
+            stacklevel=3,
+        )
+
+    def render(self, *args: Any, **kwargs: Any) -> str:
+        """Render typed extras in the class body and remove the unsupported legacy tail."""
+        if (
+            field := next(
+                (
+                    field
+                    for field in kwargs.get("fields", ())
+                    if getattr(field, "use_pydantic_extra_annotations_dict", False)
+                ),
+                None,
+            )
+        ) is None:
+            return self._template.render(*args, **kwargs)
+
+        annotation_line = f"    '__pydantic_extra__': {field.pydantic_extra_type_hint},"
+        kwargs["class_body_lines"] = [
+            "__annotations__ = {",
+            annotation_line,
+            "}",
+            *(kwargs.get("class_body_lines") or ()),
+        ]
+        rendered = self._template.render(*args, **kwargs)
+        if annotation_line not in rendered:
+            self._warn_template_update("could not be fully rewritten automatically")
+            return rendered
+        if (adapted := _strip_legacy_pydantic_extra_post_class_assignment(rendered, kwargs["class_name"])) is None:
+            self._warn_template_update("could not be fully rewritten automatically")
+            return rendered
+        self._warn_template_update("was rewritten automatically")
+        return adapted
+
+
+def _adapt_legacy_pydantic_extra_template(template: Template) -> Template:
+    """Wrap only custom templates that use the removed typed-extra property."""
+    match template.filename:
+        case str() as filename if _uses_legacy_pydantic_extra_template(filename):
+            return cast("Template", _LegacyPydanticExtraTemplate(template))
+    return template
 
 
 def _alias_generator_name(value: Any) -> str | None:
@@ -325,6 +421,11 @@ class DataModelField(_PydanticBaseDataModelField):
         return self.is_pydantic_extra_field and not self.use_pydantic_extra_plain_annotation
 
     @property
+    def use_pydantic_extra_annotation_assignment(self) -> bool:
+        """Support the typed-extra property used by pre-0.68.1 custom templates."""
+        return self.use_pydantic_extra_annotations_dict
+
+    @property
     def pydantic_extra_type_hint(self) -> str:
         """Return a Dict-based type hint for Pydantic 2.0 typed extras."""
         data_type = self.data_type
@@ -499,6 +600,7 @@ class BaseModel(BaseModelBase):
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
     SUPPORTS_CONFIG_EXTRA: ClassVar[bool] = True
     SUPPORTS_ARBITRARY_TYPES_ALLOWED: ClassVar[bool] = True
+    CUSTOM_TEMPLATE_ADAPTER = staticmethod(_adapt_legacy_pydantic_extra_template)
     TYPED_EXTRA_FIELD_NAME: ClassVar[str] = "__pydantic_extra__"
     TYPED_EXTRA_PLAIN_ANNOTATION_TEMPLATE_DATA_KEY: ClassVar[str] = "pydantic_extra_plain_annotation"
     # In Pydantic 2.11+, populate_by_name is deprecated in favor of validate_by_name + validate_by_alias
