@@ -46,6 +46,10 @@ ADD_COMMENT_FORMATTER = "tests.data.python.custom_formatters.add_comment"
 ADD_LICENSE_FORMATTER = "tests.data.python.custom_formatters.add_license"
 FAKE_RUFF_PATH = "/opt/fake-ruff/bin/ruff"
 BLACK_VERSION_DEPENDENT_NORMALIZED_EXPECTED_FILES = {
+    "main/jsonschema/custom_file_header_path_prepend_multi_file/__init__.py",
+    "main/jsonschema/custom_file_header_path_prepend_multi_file/order.py",
+    "main/jsonschema/custom_file_header_path_prepend_multi_file/product.py",
+    "main/jsonschema/custom_file_header_path_prepend_multi_file/user.py",
     "main/openapi/custom_file_header_with_docstring_and_import.py",
 }
 BUILTIN_FORMATTER_LOCAL_CONSTANTS = {
