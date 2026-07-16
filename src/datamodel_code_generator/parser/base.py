@@ -1158,9 +1158,12 @@ def _is_discriminator_container(data_type: DataType) -> bool:
     )
 
 
+def _is_discriminator_wrapper(model: DataModel) -> bool:
+    return model.IS_ALIAS or model.IS_ROOT_MODEL
+
+
 def _iter_discriminator_data_types(
     data_types: Iterable[DataType],
-    pydantic_v2_root_model_type: type[DataModel] | None,
     active_union_models: set[int] | None = None,
     *,
     can_update_discriminator: bool = True,
@@ -1170,7 +1173,6 @@ def _iter_discriminator_data_types(
         if data_type.is_union and not _is_discriminator_container(data_type):
             yield from _iter_discriminator_data_types(
                 data_type.data_types,
-                pydantic_v2_root_model_type,
                 active_union_models,
                 can_update_discriminator=False,
                 discriminator_owner=discriminator_owner,
@@ -1178,9 +1180,7 @@ def _iter_discriminator_data_types(
         else:
             source = data_type.reference.source if data_type.reference else None
             owner = discriminator_owner or (id(source) if source is not None else id(data_type))
-            if not isinstance(source, DataModel) or not (
-                isinstance(source, TypeAliasBase) or _is_pydantic_v2_root_model(source, pydantic_v2_root_model_type)
-            ):
+            if not isinstance(source, DataModel) or not _is_discriminator_wrapper(source):
                 yield data_type, can_update_discriminator, owner
             else:
                 source_id = id(source)
@@ -1193,7 +1193,6 @@ def _iter_discriminator_data_types(
                     try:
                         yield from _iter_discriminator_data_types(
                             (source.fields[0].data_type,),
-                            pydantic_v2_root_model_type,
                             active_union_models,
                             can_update_discriminator=False,
                             discriminator_owner=owner,
@@ -1206,12 +1205,9 @@ def _discriminator_variants_are_valid(
     data_types: Iterable[DataType],
     field_name: str,
     mapping: dict[str, str],
-    pydantic_v2_root_model_type: type[DataModel] | None,
 ) -> bool:
     discriminator_value_owners: dict[DiscriminatorValue, int] = {}
-    for data_type, can_update_discriminator, owner in _iter_discriminator_data_types(
-        data_types, pydantic_v2_root_model_type
-    ):
+    for data_type, can_update_discriminator, owner in _iter_discriminator_data_types(data_types):
         if not data_type.reference and data_type.type == NONE:
             continue
         if _is_discriminator_container(data_type) or not data_type.reference:
@@ -1220,8 +1216,7 @@ def _discriminator_variants_are_valid(
         if (
             not isinstance(discriminator_model, DataModel)
             or not discriminator_model.SUPPORTS_DISCRIMINATOR
-            or isinstance(discriminator_model, TypeAliasBase)
-            or _is_pydantic_v2_root_model(discriminator_model, pydantic_v2_root_model_type)
+            or _is_discriminator_wrapper(discriminator_model)
         ):
             return False
 
@@ -2211,7 +2206,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     field.data_type.data_types,
                     field_name,
                     mapping,
-                    self.pydantic_v2_root_model_type,
                 ):
                     _remove_discriminator(field)
                     _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
@@ -2224,8 +2218,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     if (
                         not isinstance(discriminator_model, DataModel)
                         or not discriminator_model.SUPPORTS_DISCRIMINATOR
-                        or isinstance(discriminator_model, TypeAliasBase)
-                        or _is_pydantic_v2_root_model(discriminator_model, self.pydantic_v2_root_model_type)
+                        or _is_discriminator_wrapper(discriminator_model)
                     ):  # pragma: no cover
                         continue
 
@@ -2681,7 +2674,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                     copied_data_type.data_types,
                                     field_name,
                                     mapping,
-                                    self.pydantic_v2_root_model_type,
                                 ):
                                     copied_data_type.discriminator = field_name
                         assert isinstance(data_type.parent, DataType)

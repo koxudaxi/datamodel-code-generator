@@ -40,6 +40,7 @@ class RootModel(BaseModel):
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic_v2/RootModel.jinja2"
     BASE_CLASS: ClassVar[str] = "pydantic.RootModel"
+    IS_ROOT_MODEL: ClassVar[bool] = True
     SUPPORTS_CONFIG_EXTRA: ClassVar[bool] = False
     SUPPORTS_ARBITRARY_TYPES_ALLOWED: ClassVar[bool] = False
 

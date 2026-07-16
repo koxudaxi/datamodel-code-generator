@@ -1131,6 +1131,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     BASE_CLASS: ClassVar[str] = ""
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
     IS_ALIAS: ClassVar[bool] = False
+    IS_ROOT_MODEL: ClassVar[bool] = False
     SUPPORTS_GENERIC_BASE_CLASS: ClassVar[bool] = True
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = False
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False
