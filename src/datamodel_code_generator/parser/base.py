@@ -1120,6 +1120,23 @@ def _get_enum_from_base(discriminator_model: DataModel, field_name: str) -> Enum
     return None
 
 
+def _get_single_discriminator_default(
+    data_type: DataType,
+    enum_source: Enum | None,
+    expected_value: DiscriminatorValue | None,
+) -> DiscriminatorValue | Member | None:
+    """Return the only valid discriminator default after resolving its type."""
+    if len(literals := data_type.literals) == 1:
+        return literals[0]
+    if (
+        len(data_type.enum_member_literals) != 1
+        or enum_source is None
+        or (member := enum_source.find_member(expected_value, coerce_strings=True)) is None
+    ):
+        return None
+    return member
+
+
 def _get_model_module_name(model: DataModel, model_path_to_module_name: Mapping[str, str]) -> str:
     return model_path_to_module_name.get(model.path, model.module_name)
 
@@ -2046,7 +2063,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self,
         model: DataModel,
         discriminator_field: DataModelFieldBase,
-        literal: DiscriminatorValue,
+        literal: DiscriminatorValue | Member,
         *,
         can_retain_cache: bool,
     ) -> None:
@@ -2191,17 +2208,32 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             if field_data_type.reference:  # pragma: no cover
                                 self.generation_store.detach_data_type_ref(field_data_type)
 
-                        self.generation_store.replace_field_type(
-                            discriminator_field,
-                            self._create_discriminator_data_type(
-                                enum_source,
-                                discriminator_values,
-                                discriminator_model,
-                                imports,
-                            ),
+                        new_discriminator_data_type = self._create_discriminator_data_type(
+                            enum_source,
+                            discriminator_values,
+                            discriminator_model,
+                            imports,
                         )
+                        self.generation_store.replace_field_type(discriminator_field, new_discriminator_data_type)
                         discriminator_field.data_type.parent = discriminator_field
                         discriminator_field.required = True
+                        if (
+                            self.force_optional_for_required_fields
+                            and (
+                                literal_default := _get_single_discriminator_default(
+                                    new_discriminator_data_type,
+                                    enum_source,
+                                    expected_value,
+                                )
+                            )
+                            is not None
+                        ):
+                            self.__set_force_optional_discriminator_literal_default(
+                                discriminator_model,
+                                discriminator_field,
+                                literal_default,
+                                can_retain_cache=can_retain_cache,
+                            )
                         imports.append(discriminator_field.imports)
                         has_one_literal = True
                     if not has_one_literal:

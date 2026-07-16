@@ -480,6 +480,7 @@ def test_force_optional_discriminator_literals() -> None:
         schema,
         {
             "CardPayment": {},
+            "CashPayment": {},
             "Payment": {"kind": "cash", "received_amount": 50},
         },
         EXPECTED_PATH / "force_optional_discriminator_literals.json",

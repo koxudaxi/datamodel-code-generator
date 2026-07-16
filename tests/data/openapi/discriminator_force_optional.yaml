@@ -24,7 +24,6 @@ components:
       properties:
         kind:
           type: string
-          const: cash
         received_amount:
           type: integer
     Payment:
