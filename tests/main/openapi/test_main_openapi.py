@@ -789,6 +789,27 @@ def test_main_modular_filename(output_file: Path) -> None:
     )
 
 
+def test_main_invalid_dotted_schema_name(output_file: Path) -> None:
+    """Generate one valid Python file for a dotted name that is not a Python path."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "invalid_dotted_schema_name.yaml",
+            output_path=output_file,
+            assert_func=assert_file_content,
+        )
+
+
+def test_main_invalid_dotted_schema_name_explicit_module(output_dir: Path) -> None:
+    """Preserve forced module splitting for a dotted non-identifier name."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "invalid_dotted_schema_name.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "invalid_dotted_schema_name_explicit_module",
+            extra_args=["--treat-dot-as-module"],
+        )
+
+
 @pytest.mark.isolate_builtin_formatter_config
 def test_main_openapi_no_file(
     capsys: pytest.CaptureFixture[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch

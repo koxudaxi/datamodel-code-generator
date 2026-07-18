@@ -34,6 +34,7 @@ from typing_extensions import TypeIs
 
 from datamodel_code_generator import Error, NamingStrategy
 from datamodel_code_generator._format_types import PythonVersion
+from datamodel_code_generator._module_name import split_module_name
 from datamodel_code_generator.enums import ClassNameAffixScope
 from datamodel_code_generator.util import camel_to_snake
 
@@ -1193,8 +1194,7 @@ class ModelResolver:  # noqa: PLR0904
         preserve_name: bool = False,  # noqa: FBT001, FBT002
     ) -> ClassName:
         """Generate a unique class name with optional singularization."""
-        if "." in name and self.treat_dot_as_module is not False:
-            split_name = name.split(".")
+        if "." in name and (split_name := split_module_name(name, treat_dot_as_module=self.treat_dot_as_module)):
             prefix = ".".join(
                 # TODO: create a validate for class name
                 self.field_name_resolvers[ModelType.CLASS].get_valid_name(n, ignore_snake_case_field=True)

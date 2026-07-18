@@ -1312,10 +1312,11 @@ def test_sanitize_module_name(name: str, expected_true: str, expected_false: str
     ("treat_dot_as_module", "expected"),
     [
         (True, ["inputs", "array_commons.schema", "array-commons"]),
+        (None, ["inputs", "array_commons_schema"]),
         (False, ["inputs", "array_commons_schema"]),
     ],
 )
-def test_get_module_path_with_file_path(treat_dot_as_module: bool, expected: list[str]) -> None:
+def test_get_module_path_with_file_path(treat_dot_as_module: bool | None, expected: list[str]) -> None:
     """Test module path generation with a file path."""
     file_path = Path("inputs/array-commons.schema.json")
     result = get_module_path("array-commons.schema", file_path, treat_dot_as_module=treat_dot_as_module)
@@ -1340,15 +1341,25 @@ def test_get_module_path_without_file_path_treat_dot_false() -> None:
     ("treat_dot_as_module", "name", "expected"),
     [
         (True, "a.b.c", ["a", "b"]),
+        (True, "a.1.c", ["a", "1"]),
         (True, "simple", []),
         (True, "with.dot", ["with"]),
         (False, "a.b.c", []),
         (False, "simple", []),
         (False, "with.dot", []),
+        (None, "a.b.c", ["a", "b"]),
+        (None, "日本語.モデル", ["日本語"]),
+        (None, "a.1.c", []),
+        (None, "a.c.1", []),
+        (None, "a.class.c", []),
+        (None, "a.user-name.c", []),
+        (None, "a..c", []),
+        (None, "\N{KELVIN SIGN}.Model", []),
+        (None, "simple", []),
     ],
 )
 def test_get_module_path_without_file_path_parametrized(
-    treat_dot_as_module: bool, name: str, expected: list[str]
+    treat_dot_as_module: bool | None, name: str, expected: list[str]
 ) -> None:
     """Test module path generation without file path for various module names."""
     result = get_module_path(name, None, treat_dot_as_module=treat_dot_as_module)

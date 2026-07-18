@@ -23,6 +23,7 @@ from typing_extensions import Self
 
 from datamodel_code_generator import cached_path_exists
 from datamodel_code_generator._internal_utils import get_most_of_parent, to_hashable
+from datamodel_code_generator._module_name import split_module_name
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
     IMPORT_ANY,
@@ -1074,21 +1075,23 @@ def get_module_path(name: str, file_path: Path | None, *, treat_dot_as_module: b
     """Get the module path components from a name and file path.
 
     The treat_dot_as_module flag controls behavior:
-    - None (default): Split names on dots (backward compat), but sanitize file names (replace dots)
+    - None (default): Split valid Python dotted names, but sanitize file names (replace dots)
     - True: Split names on dots AND keep dots in file names (for modular output)
     - False: Don't split names on dots AND sanitize file names (new feature for flat output)
     """
-    should_split_names = treat_dot_as_module is not False
     should_keep_dots_in_files = treat_dot_as_module is True
+    if "." in name and (module_parts := split_module_name(name, treat_dot_as_module=treat_dot_as_module)):
+        module_parts.pop()
+    else:
+        module_parts = []
     if file_path:
         sanitized_stem = sanitize_module_name(file_path.stem, treat_dot_as_module=should_keep_dots_in_files)
-        module_parts = name.split(".")[:-1] if should_split_names else []
         return [
             *file_path.parts[:-1],
             sanitized_stem,
             *module_parts,
         ]
-    return name.split(".")[:-1] if should_split_names else []
+    return module_parts
 
 
 def get_module_name(name: str, file_path: Path | None, *, treat_dot_as_module: bool | None) -> str:
