@@ -36438,6 +36438,9 @@ Choose the command output format.
 The default output format is `text`. Use `json` when another program or LLM
 agent should inspect structured output.
 
+Text stdout supports single-module generation only; when generation produces
+multiple modules, use `--output <directory>` or `--output-format json`.
+
 In normal generation mode, `--output-format json` wraps generated modules in a
 structured payload on stdout. If `--output` is also supplied, files are still
 written to disk and the JSON payload mirrors the generated files. `--check`
@@ -37608,6 +37611,9 @@ Choose the command output format.
 
 The default output format is `text`. Use `json` when another program or LLM
 agent should inspect structured output.
+
+Text stdout supports single-module generation only; when generation produces
+multiple modules, use `--output <directory>` or `--output-format json`.
 
 In normal generation mode, `--output-format json` wraps generated modules in a
 structured payload on stdout. If `--output` is also supplied, files are still

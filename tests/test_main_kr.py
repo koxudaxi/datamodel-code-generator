@@ -150,12 +150,39 @@ def test_main_modular(output_dir: Path) -> None:
 @pytest.mark.isolate_builtin_formatter_config
 @freeze_time(TIMESTAMP)
 def test_main_modular_no_file(capsys: pytest.CaptureFixture[str]) -> None:
-    """Test main function on modular file with no output name outputs to stdout."""
+    """Test modular text output without a directory reports an error."""
     run_main_with_args(
-        ["--input", str(OPEN_API_DATA_PATH / "modular.yaml")],
+        [
+            "--input",
+            str(OPEN_API_DATA_PATH / "modular.yaml"),
+            "--input-file-type",
+            "openapi",
+        ],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_EMPTY_OUTPUT_PATH,
+        expected_stderr=(EXPECTED_MAIN_KR_PATH / "main_modular_no_file" / "error.txt").read_text(),
+    )
+
+
+@pytest.mark.isolate_builtin_formatter_config
+@freeze_time(TIMESTAMP)
+def test_main_modular_json_no_file(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test modular JSON output preserves each generated module on stdout."""
+    run_main_with_args(
+        [
+            "--input",
+            str(OPEN_API_DATA_PATH / "modular.yaml"),
+            "--input-file-type",
+            "openapi",
+            "--output-format",
+            "json",
+            "--disable-timestamp",
+        ],
         expected_exit=Exit.OK,
         capsys=capsys,
-        expected_stdout_path=EXPECTED_MAIN_KR_PATH / "main_modular_no_file" / "output.py",
+        expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_modular_stdout.txt",
+        assert_no_stderr=True,
     )
 
 
