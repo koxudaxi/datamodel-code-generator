@@ -192,13 +192,13 @@ components:
             birth-date:
               type: string
               format: date-time
-    model-s.Specie-s:
+    model_s.SpecieS:
       type: string
       enum:
         - dog
         - cat
         - snake
-    model-s.Pe-t:
+    model_s.PeT:
       required:
         - id
         - name
@@ -211,8 +211,8 @@ components:
         tag:
           type: string
         species:
-          $ref: '#/components/schemas/model-s.Specie-s'
-    model-s.Use-r:
+          $ref: '#/components/schemas/model_s.SpecieS'
+    model_s.UseR:
       required:
         - id
         - name
@@ -224,21 +224,21 @@ components:
           type: string
         tag:
           type: string
-    collection-s.Pet-s:
+    collection_s.PetS:
       type: array
       items:
-        $ref: "#/components/schemas/model-s.Pe-t"
-    collection-s.User-s:
+        $ref: "#/components/schemas/model_s.PeT"
+    collection_s.UserS:
       type: array
       items:
-        $ref: "#/components/schemas/model-s.Use-r"
+        $ref: "#/components/schemas/model_s.UseR"
     Id:
       type: string
-    collection-s.Rule-s:
+    collection_s.RuleS:
       type: array
       items:
         type: string
-    collection-s.api-s:
+    collection_s.ApiS:
       type: array
       items:
         type: object
@@ -257,7 +257,7 @@ components:
             type: string
             format: uri
             description: A URL to the API console for each API
-    model-s.Even-t:
+    model_s.EvenT:
       type: object
       properties:
         name:
@@ -274,21 +274,21 @@ components:
       type: object
       properties:
         event:
-          $ref: '#/components/schemas/model-s.Even-t'
-    fo-o.ba-r.Thin-g:
+          $ref: '#/components/schemas/model_s.EvenT'
+    fo_o.ba_r.ThinG:
       properties:
         attribute-s:
           type: object
-    fo-o.ba-r.Than-g:
+    fo_o.ba_r.ThanG:
       properties:
         attributes:
           type: array
           items:
             type: object
-    fo-o.ba-r.Clon-e:
+    fo_o.ba_r.ClonE:
       allOf:
-        - $ref: '#/components/schemas/fo-o.ba-r.Thin-g'
-    fo-o.Te-a:
+        - $ref: '#/components/schemas/fo_o.ba_r.ThinG'
+    fo_o.TeA:
       properties:
         flavour-name:
           type: string
@@ -298,15 +298,15 @@ components:
       properties:
         country-name:
           type: string
-    fo-o.Coco-a:
+    fo_o.CocoA:
       properties:
         quality:
           type: integer
-    wo-o.bo-o.Chocolat-e:
+    wo_o.bo_o.ChocolatE:
       properties:
         flavour-name:
           type: string
         sourc-e:
           $ref: '#/components/schemas/Source'
         coco-a:
-          $ref: '#/components/schemas/fo-o.Coco-a'
+          $ref: '#/components/schemas/fo_o.CocoA'
