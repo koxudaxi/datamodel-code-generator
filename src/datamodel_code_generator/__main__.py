@@ -1126,13 +1126,13 @@ def _write_generated_result(result: str | Mapping[tuple[str, ...], str], output_
     match output_format:
         case "json":
             sys.stdout.write(_generation_output_json(_generated_files_from_result(result)) + "\n")
-            return None
         case _:
             sys.stderr.write(
                 "Error: Multiple modules were generated. Use --output <directory> to write them as files "
                 "or --output-format json for structured stdout.\n"
             )
             return Exit.ERROR
+    return None
 
 
 def run_generate_from_config(  # noqa: PLR0913, PLR0917
