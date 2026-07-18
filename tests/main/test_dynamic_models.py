@@ -21,12 +21,14 @@ from datamodel_code_generator import (
     clear_dynamic_models_cache,
     generate,
     generate_dynamic_models,
+    load_yaml_dict_from_path,
 )
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.enums import ModuleSplitMode
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.types import StrictTypes
 from tests.conftest import assert_output
+from tests.main.conftest import OPEN_API_DATA_PATH
 
 if TYPE_CHECKING:
     from typing import Any
@@ -463,6 +465,26 @@ def test_openapi_auto_detection() -> None:
         openapi_schema = json.load(f)
     assert_dynamic_models(
         openapi_schema, {"User": {"id": 1, "name": "Alice"}}, EXPECTED_PATH / "openapi_auto_detection.json"
+    )
+
+
+def test_force_optional_discriminator_literals() -> None:
+    """Keep force-optional discriminator literals valid in dynamic Pydantic v2 models."""
+    schema = load_yaml_dict_from_path(OPEN_API_DATA_PATH / "discriminator_force_optional.yaml", "utf-8")
+    config = GenerateConfig(
+        input_file_type=InputFileType.OpenAPI,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        force_optional_for_required_fields=True,
+    )
+    assert_dynamic_models(
+        schema,
+        {
+            "CardPayment": {},
+            "CashPayment": {},
+            "Payment": {"kind": "cash", "received_amount": 50},
+        },
+        EXPECTED_PATH / "force_optional_discriminator_literals.json",
+        config=config,
     )
 
 

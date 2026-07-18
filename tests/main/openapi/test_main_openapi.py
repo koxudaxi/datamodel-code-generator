@@ -449,6 +449,43 @@ def test_main_openapi_discriminator_enum_single_value_anyof_use_enum(output_file
     )
 
 
+@pytest.mark.parametrize(
+    ("input_file", "expected_file"),
+    [
+        (
+            "discriminator_enum_single_value_anyof.yaml",
+            "discriminator/enum_single_value_anyof_use_enum_force_optional.py",
+        ),
+        (
+            "discriminator_integer_mapping.yaml",
+            "discriminator/integer_mapping_use_enum_force_optional.py",
+        ),
+    ],
+)
+def test_main_openapi_discriminator_enum_use_values_force_optional(
+    input_file: str, expected_file: str, output_file: Path
+) -> None:
+    """Default only single enum-member discriminator literals when forced optional."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / input_file,
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--formatters",
+            "builtin",
+            "--target-python-version",
+            "3.10",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--force-optional",
+            "--use-enum-values-in-discriminator",
+        ],
+        force_exec_validation=True,
+    )
+
+
 def test_main_openapi_discriminator_enum_single_value_msgspec(output_file: Path) -> None:
     """Single-value enum discriminator is used as the msgspec tag."""
     run_main_and_assert(
@@ -3684,6 +3721,50 @@ def test_main_openapi_discriminator_one_literal_as_default(
         assert_func=assert_file_content,
         expected_file=EXPECTED_OPENAPI_PATH / expected_file,
         extra_args=["--output-model-type", output_model, "--use-one-literal-as-default"],
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "optional_args", "expected_file"),
+    [
+        ("pydantic_v2.BaseModel", (), "discriminator/required_pydantic_v2.py"),
+        (
+            "pydantic_v2.BaseModel",
+            ("--force-optional",),
+            "discriminator/force_optional_pydantic_v2.py",
+        ),
+        (
+            "pydantic_v2.BaseModel",
+            ("--force-optional", "--use-one-literal-as-default"),
+            "discriminator/force_optional_pydantic_v2.py",
+        ),
+        (
+            "pydantic_v2.dataclass",
+            ("--force-optional",),
+            "discriminator/force_optional_pydantic_v2_dataclass.py",
+        ),
+    ],
+)
+def test_main_openapi_discriminator_optional_pydantic_v2(
+    output_model: str, optional_args: tuple[str, ...], expected_file: str, output_file: Path
+) -> None:
+    """Keep required and force-optional Pydantic v2 discriminator literals importable."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_force_optional.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--formatters",
+            "builtin",
+            "--target-python-version",
+            "3.10",
+            "--output-model-type",
+            output_model,
+            *optional_args,
+        ],
+        force_exec_validation=True,
     )
 
 
