@@ -59,6 +59,7 @@ from tests.main.conftest import (
     LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
     TIMESTAMP,
+    _generated_model,
     assert_generated_model_json_invalid,
     assert_generated_model_json_validation,
     assert_path_cache_invalidates_after_write,
@@ -495,6 +496,7 @@ def test_main_keep_model_order_field_references(output_file: Path) -> None:
     )
 
 
+@pytest.mark.benchmark
 @pytest.mark.parametrize(
     ("target_python_version", "keep_model_order", "disable_future_imports"),
     [
@@ -3762,6 +3764,175 @@ def test_main_jsonschema_special_field_name(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="special_field_name.py",
     )
+
+
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_file"),
+    [
+        pytest.param(DataModelType.PydanticV2BaseModel, "empty_field_name.py", id="pydantic-v2"),
+        pytest.param(DataModelType.MsgspecStruct, "empty_field_name_msgspec.py", id="msgspec"),
+        pytest.param(DataModelType.TypingTypedDict, "empty_field_name_typed_dict.py", id="typed-dict"),
+    ],
+)
+def test_main_jsonschema_empty_field_name(  # noqa: PLR0912
+    output_file: Path,
+    output_model_type: DataModelType,
+    expected_file: str,
+) -> None:
+    """Preserve empty property names through generation, inheritance, and runtime round-trips."""
+    metadata_path = output_file.with_suffix(".metadata.json")
+    extra_args = ["--output-model-type", output_model_type.value, "--disable-timestamp"]
+    if output_model_type is DataModelType.PydanticV2BaseModel:
+        extra_args.extend([
+            "--read-only-write-only-model-type",
+            "all",
+            "--emit-model-metadata",
+            str(metadata_path),
+        ])
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "empty_field_name.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=extra_args,
+        force_exec_validation=True,
+    )
+
+    payload = {"": "value"}
+    match output_model_type:
+        case DataModelType.PydanticV2BaseModel:
+            assert_output(
+                metadata_path.read_text(encoding="utf-8"),
+                EXPECTED_JSON_SCHEMA_PATH / "empty_field_name_metadata.txt",
+            )
+            for model_name in ("RequiredEmpty", "AllOfRequiredEmpty", "AllOfOverrideEmpty"):
+                assert_generated_model_json_validation(
+                    output_file,
+                    module_name=f"empty_field_name_{model_name}",
+                    model_name=model_name,
+                    valid_json=json.dumps(payload),
+                    invalid_json="{}",
+                    expected_error_type="missing",
+                    expected_attribute_path=("field_",),
+                    expected_attribute_value="value",
+                )
+            assert_generated_model_json_validation(
+                output_file,
+                module_name="empty_field_name_request",
+                model_name="ReadWriteEmptyRequest",
+                valid_json='{"field_":1}',
+                invalid_json="{}",
+                expected_error_type="missing",
+                expected_attribute_path=("field__1",),
+                expected_attribute_value=1,
+            )
+            assert_generated_model_json_validation(
+                output_file,
+                module_name="empty_field_name_response",
+                model_name="ReadWriteEmptyResponse",
+                valid_json=json.dumps(payload),
+                invalid_json="{}",
+                expected_error_type="missing",
+                expected_attribute_path=("field_",),
+                expected_attribute_value="value",
+            )
+            with _generated_model(output_file, "empty_field_name_dump", "ReadWriteEmpty") as model:
+                instance = model.model_validate({**payload, "field_": 1})
+                if (dumped := instance.model_dump(by_alias=True, exclude_unset=True)) == {  # pragma: no branch
+                    **payload,
+                    "field_": 1,
+                }:
+                    return
+                pytest.fail(f"Empty alias was not preserved in Pydantic dump: {dumped!r}")  # pragma: no cover
+
+        case DataModelType.MsgspecStruct:
+            import msgspec
+
+            for model_name in ("RequiredEmpty", "AllOfRequiredEmpty", "AllOfOverrideEmpty"):
+                with _generated_model(output_file, f"empty_field_name_{model_name}", model_name) as model:
+                    instance = msgspec.json.decode(b'{"":"value"}', type=model)
+                    if (dumped := msgspec.to_builtins(instance)) != payload:  # pragma: no cover
+                        pytest.fail(f"Empty alias was not preserved in {model_name}: {dumped!r}")
+                    with pytest.raises(msgspec.ValidationError):
+                        msgspec.json.decode(b"{}", type=model)
+            with _generated_model(output_file, "empty_field_name_optional", "OptionalEmpty") as model:
+                if (dumped := msgspec.to_builtins(msgspec.json.decode(b"{}", type=model))) != {}:  # pragma: no cover
+                    pytest.fail(f"Unset empty alias was not omitted from msgspec dump: {dumped!r}")
+            with _generated_model(output_file, "empty_field_name_msgspec_dump", "ReadWriteEmpty") as model:
+                instance = msgspec.json.decode(b'{"":"value","field_":1}', type=model)
+                if (dumped := msgspec.to_builtins(instance)) == {**payload, "field_": 1}:  # pragma: no branch
+                    return
+                pytest.fail(f"Empty alias collided in msgspec dump: {dumped!r}")  # pragma: no cover
+
+        case DataModelType.TypingTypedDict:
+            from typing import get_origin, is_typeddict
+
+            from typing_extensions import NotRequired
+
+            expected_fields = {
+                "RequiredEmpty": (frozenset({"", "a"}), frozenset({"a"})),
+                "OptionalEmpty": (frozenset({"", "a"}), frozenset({"", "a"})),
+                "AllOfRequiredEmpty": (frozenset({"", "a"}), frozenset({"a"})),
+                "AllOfOverrideEmpty": (frozenset({"", "a"}), frozenset({"a"})),
+                "ReadWriteEmpty": (frozenset({"", "field_", "shared"}), frozenset({"shared"})),
+            }
+            for model_name, (field_names, optional_names) in expected_fields.items():
+                with _generated_model(output_file, f"empty_field_name_{model_name}", model_name) as model:
+                    if not is_typeddict(model):  # pragma: no cover
+                        pytest.fail(f"Expected {model_name} to be a TypedDict")
+                    if (actual_names := frozenset(model.__annotations__)) != field_names:  # pragma: no cover
+                        pytest.fail(f"Unexpected fields for {model_name}: {actual_names!r}")
+                    actual_optional_names = frozenset(
+                        name
+                        for name, annotation in model.__annotations__.items()
+                        if get_origin(annotation) is NotRequired
+                    )
+                    if actual_optional_names != optional_names:  # pragma: no cover
+                        pytest.fail(f"Unexpected optional fields for {model_name}: {actual_optional_names!r}")
+            return
+
+    pytest.fail(f"Unhandled output model type: {output_model_type}")  # pragma: no cover
+
+
+def test_main_jsonschema_empty_field_name_schema_validators(output_file: Path) -> None:
+    """Treat an empty property name as declared in direct and inherited schema validators."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "empty_field_name_schema_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="empty_field_name_schema_validators.py",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+
+    valid_payload = {"": "ok", "x_1": "7"}
+    expected_dump = {"": "ok", "x_1": 7}
+    for model_name in ("DirectEmptyPattern", "InheritedEmptyPattern"):
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"empty_field_name_validator_{model_name}",
+            model_name=model_name,
+            valid_json=json.dumps(valid_payload),
+            invalid_json='{"":"ok","bad":1}',
+            expected_error_type="value_error",
+            expected_attribute_path=("field_",),
+            expected_attribute_value="ok",
+        )
+        with _generated_model(output_file, f"empty_field_name_dump_{model_name}", model_name) as model:
+            instance = model.model_validate(valid_payload)
+            if (dumped := instance.model_dump(by_alias=True, exclude_unset=True)) != expected_dump:  # pragma: no cover
+                pytest.fail(f"Empty alias was not preserved by {model_name}: {dumped!r}")
 
 
 def test_main_jsonschema_complex_one_of(output_file: Path) -> None:

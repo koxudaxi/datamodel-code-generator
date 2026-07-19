@@ -22,7 +22,7 @@ from datamodel_code_generator.types import NOT_REQUIRED_PREFIX, READ_ONLY_PREFIX
 
 if TYPE_CHECKING:
     from collections import defaultdict
-    from collections.abc import Iterator
+    from collections.abc import Iterable, Iterator
     from pathlib import Path
 
     from datamodel_code_generator.imports import Import
@@ -40,9 +40,12 @@ escape_characters = str.maketrans({
 })
 
 
+def _field_source_name(field: DataModelFieldBase) -> str | None:
+    return field.original_name if field.original_name is not None else field.name
+
+
 def _is_valid_field_name(field: DataModelFieldBase) -> bool:
-    name = field.original_name or field.name
-    if name is None:  # pragma: no cover
+    if (name := _field_source_name(field)) is None:  # pragma: no cover
         return False
     return name.isidentifier() and not keyword.iskeyword(name)
 
@@ -161,7 +164,10 @@ class TypedDict(DataModel):
     @property
     def all_fields(self) -> Iterator[DataModelFieldBase]:
         """Iterate over all fields, without docstrings the functional dict literal cannot hold."""
-        for field in self.iter_all_fields():
+        fields: Iterable[DataModelFieldBase] = self.fields
+        if any(base.reference and isinstance(base.reference.source, DataModel) for base in self.base_classes):
+            fields = {_field_source_name(field): field for field in self.iter_all_fields()}.values()
+        for field in fields:
             yield field.model_copy(update={"use_field_description": False, "use_inline_field_description": False})
 
     def render(self, *, class_name: str | None = None) -> str:
@@ -199,9 +205,8 @@ class DataModelField(DataModelFieldBase):
     @property
     def key(self) -> str:
         """Get escaped field key for TypedDict."""
-        return (self.original_name or self.name or "").translate(  # pragma: no cover
-            escape_characters
-        )
+        name = _field_source_name(self)
+        return (name if name is not None else "").translate(escape_characters)
 
     @property
     def type_hint(self) -> str:

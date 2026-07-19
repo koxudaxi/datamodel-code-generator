@@ -398,7 +398,7 @@ class DataModelField(DataModelFieldBase):
     def __str__(self) -> str:  # noqa: PLR0912
         """Generate field() call or default value representation."""
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._FIELD_KEYS}
-        if self.alias:
+        if self.alias is not None:
             data["name"] = self.alias
 
         if self.default is not UNDEFINED and self.default is not None:

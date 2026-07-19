@@ -140,7 +140,8 @@ def test_schema_validator_input_names_include_validation_aliases_and_schema_base
         validation_aliases=["fieldAlias", "field-alt"],
         data_type=DataType(type="str"),
     )
-    empty_field = DataModelFieldBase(name="", original_name="", data_type=DataType(type="str"))
+    empty_field = DataModelFieldBase(name="field_", original_name="", alias="", data_type=DataType(type="str"))
+    nameless_field = DataModelFieldBase(data_type=DataType(type="str"))
     parser.raw_obj = {
         "$defs": {
             "Empty": {"type": "object"},
@@ -153,13 +154,13 @@ def test_schema_validator_input_names_include_validation_aliases_and_schema_base
 
     assert parser._field_input_names(field) == ("field", "fieldAlias", "field_name", "field-alt")
     assert parser._get_input_names_by_property(
-        [empty_field],
+        [empty_field, nameless_field],
         [Reference(path="#/$defs/Empty", name="Empty"), Reference(path="#/$defs/Base", name="Base")],
-    ) == {"base": ("base",)}
+    ) == {"": ("", "field_"), "base": ("base",)}
 
 
-def test_schema_validator_input_names_skip_empty_datamodel_base_fields() -> None:
-    """Test inherited generated model fields include usable names and skip empty names."""
+def test_schema_validator_input_names_include_empty_datamodel_base_fields() -> None:
+    """Test inherited generated model fields retain empty source names."""
     parser = JsonSchemaParser("", generate_schema_validators=True)
     base_field = DataModelFieldBase(
         name="base_field",
@@ -168,13 +169,124 @@ def test_schema_validator_input_names_skip_empty_datamodel_base_fields() -> None
         validation_aliases=["baseAlias", "base-alt"],
         data_type=DataType(type="str"),
     )
-    empty_field = DataModelFieldBase(name="", original_name="", data_type=DataType(type="str"))
+    empty_field = DataModelFieldBase(name="field_", original_name="", alias="", data_type=DataType(type="str"))
+    nameless_field = DataModelFieldBase(data_type=DataType(type="str"))
     base_ref = Reference(path="#/$defs/Base", name="Base")
-    BaseModel(reference=base_ref, fields=[base_field, empty_field])
+    BaseModel(reference=base_ref, fields=[base_field, empty_field, nameless_field])
 
     assert parser._get_input_names_by_property([], [base_ref]) == {
-        "base": ("base", "baseAlias", "base_field", "base-alt")
+        "": ("", "field_"),
+        "base": ("base", "baseAlias", "base_field", "base-alt"),
     }
+
+
+@pytest.mark.parametrize(
+    "schema",
+    [
+        {
+            "title": "Model",
+            "type": "object",
+            "properties": {"": {"type": "string"}, "field_": {"type": "integer"}},
+            "allOf": [{"required": [""]}],
+        },
+        {
+            "title": "Model",
+            "required": [""],
+            "allOf": [
+                {
+                    "type": "object",
+                    "properties": {"": {"type": "string"}, "field_": {"type": "integer"}},
+                }
+            ],
+        },
+        {
+            "title": "Model",
+            "allOf": [
+                {
+                    "type": "object",
+                    "properties": {"": {"type": "string"}, "field_": {"type": "integer"}},
+                    "required": [""],
+                }
+            ],
+        },
+    ],
+    ids=["allof-required", "root-required", "inline-required"],
+)
+def test_allof_required_preserves_empty_property_name(schema: dict[str, Any]) -> None:
+    """Test allOf required handling neither misses nor duplicates an empty property name."""
+    parser = JsonSchemaParser(json.dumps(schema))
+
+    parser.parse(format_=False)
+
+    model = next(result for result in parser.results if result.class_name == "Model")
+    fields = {field.original_name: field for field in model.fields}
+    assert len(model.fields) == len(fields) == 2
+    assert fields[""].required
+    assert not fields["field_"].required
+
+
+def test_allof_inheritance_uses_empty_original_name() -> None:
+    """Test an empty property override inherits its own type, not the generated-name collision."""
+    parser = JsonSchemaParser(
+        json.dumps({
+            "title": "Child",
+            "type": "object",
+            "properties": {"": {}},
+            "allOf": [{"$ref": "#/$defs/Base"}],
+            "$defs": {
+                "Base": {
+                    "type": "object",
+                    "properties": {"": {"type": "string"}, "field_": {"type": "integer"}},
+                }
+            },
+        })
+    )
+
+    parser.parse(format_=False)
+
+    child = next(result for result in parser.results if result.class_name == "Child")
+    assert len(child.fields) == 1
+    assert child.fields[0].original_name is not None
+    assert not child.fields[0].original_name
+    assert child.fields[0].data_type.type == "str"
+
+
+def test_read_write_variants_keep_empty_and_generated_name_collision() -> None:
+    """Test request/response deduplication distinguishes empty and generated-looking source names."""
+    parser = JsonSchemaParser(
+        json.dumps({
+            "title": "Model",
+            "type": "object",
+            "properties": {
+                "": {"type": "string", "readOnly": True},
+                "field_": {"type": "integer", "writeOnly": True},
+                "shared": {"type": "boolean"},
+            },
+            "required": ["", "field_"],
+        }),
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.All,
+    )
+
+    parser.parse(format_=False)
+
+    models = {result.class_name: result for result in parser.results}
+    assert [field.original_name for field in models["ModelRequest"].fields] == ["field_", "shared"]
+    assert [field.original_name for field in models["ModelResponse"].fields] == ["", "shared"]
+    assert [field.original_name for field in models["Model"].fields] == ["", "field_", "shared"]
+
+
+def test_empty_original_name_supports_explicit_serialization_alias() -> None:
+    """Test serialization alias lookup treats an empty original name as present."""
+    parser = JsonSchemaParser(
+        json.dumps({"title": "Model", "type": "object", "properties": {"": {"type": "string"}}}),
+        serialization_aliases={"": "serialized"},
+    )
+
+    parser.parse(format_=False)
+
+    model = next(result for result in parser.results if result.class_name == "Model")
+    assert len(model.fields) == 1
+    assert model.fields[0].serialization_alias == "serialized"
 
 
 def test_schema_runtime_validation_reuses_existing_instance() -> None:

@@ -4519,10 +4519,16 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     @staticmethod
     def _field_metadata(field: DataModelFieldBase) -> ModelFieldMetadata:
-        source_name = field.original_name or field.alias or field.name or ""
+        source_name = field.original_name
+        if source_name is None:
+            source_name = field.alias
+        if source_name is None:
+            source_name = field.name
+        if source_name is None:
+            source_name = ""
         return {
-            "name": field.name or source_name,
-            "alias": field.alias or source_name,
+            "name": field.name if field.name is not None else source_name,
+            "alias": field.alias if field.alias is not None else source_name,
             "original_name": field.original_name,
             "type": field.type_hint,
             "required": field.required,

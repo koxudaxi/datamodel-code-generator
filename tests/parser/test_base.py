@@ -84,6 +84,38 @@ def test_parser() -> None:
     assert c.schema_features.prefix_items is True
 
 
+@pytest.mark.parametrize(
+    ("original_name", "alias", "name", "expected_alias"),
+    [
+        pytest.param("", None, "field_", "", id="empty-original-name"),
+        pytest.param("source", "", "field_", "", id="empty-alias"),
+        pytest.param(None, None, None, "", id="missing-names"),
+    ],
+)
+def test_field_metadata_preserves_empty_names(
+    original_name: str | None,
+    alias: str | None,
+    name: str | None,
+    expected_alias: str,
+) -> None:
+    """Treat empty metadata names as explicit values rather than missing values."""
+    field = DataModelFieldBase(
+        name=name,
+        original_name=original_name,
+        alias=alias,
+        data_type=DataType(type="str"),
+        required=True,
+    )
+
+    assert Parser._field_metadata(field) == {
+        "name": name if name is not None else "",
+        "alias": expected_alias,
+        "original_name": original_name,
+        "type": "str",
+        "required": True,
+    }
+
+
 def test_local_source_cache_yields_fresh_source_objects(tmp_path: Path) -> None:
     """Test cached local source materialization preserves fresh Source object semantics."""
     source_path = tmp_path / "schema.json"
