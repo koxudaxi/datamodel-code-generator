@@ -3864,23 +3864,30 @@ def test_main_jsonschema_empty_field_name(  # noqa: PLR0912
                 pytest.fail(f"Empty alias collided in msgspec dump: {dumped!r}")
 
         case DataModelType.TypingTypedDict:
-            from typing import is_typeddict
+            from typing import get_origin, is_typeddict
 
-            expected_keys = {
-                "RequiredEmpty": (frozenset({""}), frozenset({"a"})),
-                "OptionalEmpty": (frozenset(), frozenset({"", "a"})),
-                "AllOfRequiredEmpty": (frozenset({""}), frozenset({"a"})),
-                "AllOfOverrideEmpty": (frozenset({""}), frozenset({"a"})),
-                "ReadWriteEmpty": (frozenset({"", "field_"}), frozenset({"shared"})),
+            from typing_extensions import NotRequired
+
+            expected_fields = {
+                "RequiredEmpty": (frozenset({"", "a"}), frozenset({"a"})),
+                "OptionalEmpty": (frozenset({"", "a"}), frozenset({"", "a"})),
+                "AllOfRequiredEmpty": (frozenset({"", "a"}), frozenset({"a"})),
+                "AllOfOverrideEmpty": (frozenset({"", "a"}), frozenset({"a"})),
+                "ReadWriteEmpty": (frozenset({"", "field_", "shared"}), frozenset({"shared"})),
             }
-            for model_name, (required_keys, optional_keys) in expected_keys.items():
+            for model_name, (field_names, optional_names) in expected_fields.items():
                 with _generated_model(output_file, f"empty_field_name_{model_name}", model_name) as model:
                     if not is_typeddict(model):
                         pytest.fail(f"Expected {model_name} to be a TypedDict")
-                    if (actual_keys := model.__required_keys__) != required_keys:
-                        pytest.fail(f"Unexpected required keys for {model_name}: {actual_keys!r}")
-                    if (actual_keys := model.__optional_keys__) != optional_keys:
-                        pytest.fail(f"Unexpected optional keys for {model_name}: {actual_keys!r}")
+                    if (actual_names := frozenset(model.__annotations__)) != field_names:
+                        pytest.fail(f"Unexpected fields for {model_name}: {actual_names!r}")
+                    actual_optional_names = frozenset(
+                        name
+                        for name, annotation in model.__annotations__.items()
+                        if get_origin(annotation) is NotRequired
+                    )
+                    if actual_optional_names != optional_names:
+                        pytest.fail(f"Unexpected optional fields for {model_name}: {actual_optional_names!r}")
             return
 
     pytest.fail(f"Unhandled output model type: {output_model_type}")  # pragma: no cover
