@@ -1400,9 +1400,7 @@ def test_generate_inline_openapi_relative_ref_uses_caller_base(source_type: str,
     """Resolve inline OpenAPI refs from the caller cwd when output is elsewhere."""
     input_path = OPEN_API_DATA_PATH / "all_of_with_relative_ref" / "openapi.yaml"
     source = (
-        input_path.read_text(encoding="utf-8")
-        if source_type == "text"
-        else load_data_from_path(input_path, "utf-8")
+        input_path.read_text(encoding="utf-8") if source_type == "text" else load_data_from_path(input_path, "utf-8")
     )
 
     with chdir(input_path.parent):
@@ -1429,9 +1427,7 @@ def test_generate_invalid_dotted_retry_preserves_relative_ref_base(source_type: 
     """Reuse the first parser base for an invalid-dotted stdout repair retry."""
     input_path = OPEN_API_DATA_PATH / "invalid_dotted_external_relative_ref.yaml"
     source = (
-        input_path.read_text(encoding="utf-8")
-        if source_type == "text"
-        else load_data_from_path(input_path, "utf-8")
+        input_path.read_text(encoding="utf-8") if source_type == "text" else load_data_from_path(input_path, "utf-8")
     )
     config = GenerateConfig(
         input_file_type=InputFileType.OpenAPI,
