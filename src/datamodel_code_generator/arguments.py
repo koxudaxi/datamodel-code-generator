@@ -1288,6 +1288,13 @@ general_options.add_argument(
     help="Format for command output (default: text). Use json for structured output when supported.",
 )
 general_options.add_argument(
+    "--fail-on-multi-module-stdout",
+    action="store_true",
+    default=None,
+    help="Return an error instead of concatenating multiple generated modules in text stdout. "
+    "This does not affect single-module, JSON, or file output.",
+)
+general_options.add_argument(
     "--output-format-json-schema",
     choices=["config", "generate-prompt", "generation", "model-metadata", "structured-output"],
     default=None,

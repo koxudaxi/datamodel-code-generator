@@ -188,6 +188,7 @@ How do I convert enums to Literal types?
 - `--allow-remote-refs`: Enable fetching of `$ref` targets over HTTP/HTTPS.
 - `--check`: Verify generated code matches existing output without modifying files.
 - `--disable-warnings`: Suppress warning messages during code generation.
+- `--fail-on-multi-module-stdout`: Fail instead of concatenating multiple modules in text stdout.
 - `--generate-cli-command`: Generate CLI command from pyproject.toml configuration.
 - `--generate-pyproject-config`: Generate pyproject.toml configuration from CLI arguments.
 - `--http-headers`: Fetch schema from URL with custom HTTP headers.
@@ -798,6 +799,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --debug               show debug message (require "debug". `$ pip install
                         'datamodel-code-generator[debug]'`)
   --disable-warnings    disable warnings
+  --fail-on-multi-module-stdout
+                        Return an error instead of concatenating multiple
+                        generated modules in text stdout. This does not affect
+                        single-module, JSON, or file output.
   --generate-cli-command
                         Generate CLI command from pyproject.toml configuration
                         and exit

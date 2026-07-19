@@ -1118,14 +1118,31 @@ def _copy_generated_output(generated_output: Path, actual_output: Path, *, is_di
     shutil.copyfile(generated_output, actual_output)
 
 
-def _write_generated_result(result: str | Mapping[tuple[str, ...], str], output_format: str | None) -> None:
-    if output_format == "json":
-        sys.stdout.write(_generation_output_json(_generated_files_from_result(result)) + "\n")
-    elif isinstance(result, str):
+def _write_generated_result(
+    result: str | Mapping[tuple[str, ...], str],
+    output_format: str | None,
+    *,
+    fail_on_multi_module_stdout: bool = False,
+) -> Exit | None:
+    if isinstance(result, str):
+        if output_format == "json":
+            result = _generation_output_json(_generated_files_from_result(result))
         sys.stdout.write(result + "\n")
-    else:
-        for content in result.values():
-            sys.stdout.write(content + "\n")
+        return None
+
+    match output_format:
+        case "json":
+            sys.stdout.write(_generation_output_json(_generated_files_from_result(result)) + "\n")
+        case _ if fail_on_multi_module_stdout and len(result) > 1:
+            sys.stderr.write(
+                "Error: Multiple modules were generated. Use --output <directory> to write them as files "
+                "or --output-format json for structured stdout.\n"
+            )
+            return Exit.ERROR
+        case _:
+            for content in result.values():
+                sys.stdout.write(content + "\n")
+    return None
 
 
 def run_generate_from_config(  # noqa: PLR0913, PLR0917
@@ -1453,6 +1470,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
     repair_invalid_dotted_stdout = (
         generate_output is None
         and namespace.output_format != "json"
+        and namespace.fail_on_multi_module_stdout is not True
         and config.treat_dot_as_module is None
         and not config.strict_dotted_module_names
         and config.module_split_mode is None
@@ -1523,7 +1541,14 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         _copy_generated_output(generate_output, config.output, is_directory_output=is_directory_output)
 
     if generate_output is None and result is not None:
-        _write_generated_result(result, namespace.output_format)
+        if (
+            write_error := _write_generated_result(
+                result,
+                namespace.output_format,
+                fail_on_multi_module_stdout=namespace.fail_on_multi_module_stdout is True,
+            )
+        ) is not None:
+            return cleanup_and_return(write_error)
     elif namespace.output_format == "json" and generate_output is not None and not config.check:
         display_output = config.output if writes_json_output_file else None
         sys.stdout.write(
