@@ -45,6 +45,8 @@ from datamodel_code_generator.model.pydantic_v2.base_model import (
     _strip_legacy_pydantic_extra_post_class_assignment,
 )
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_FIELD, IMPORT_MISSING
+from datamodel_code_generator.model.typed_dict import DataModelField as TypedDictDataModelField
+from datamodel_code_generator.model.typed_dict import TypedDict as TypedDictModel
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import ANY, NONE, DataType, Types
 
@@ -639,6 +641,69 @@ def test_msgspec_required_annotated_nullable_keeps_none_outside_annotated() -> N
         IMPORT_ANNOTATED,
         IMPORT_MSGSPEC_META,
     )
+
+
+def test_typed_dict_empty_original_name_uses_functional_syntax_and_key() -> None:
+    """Preserve an empty source key instead of falling back to the generated field name."""
+    field = TypedDictDataModelField(
+        name="field_",
+        original_name="",
+        data_type=DataType(type="str"),
+        required=True,
+    )
+    model = TypedDictModel(
+        fields=[field],
+        reference=Reference(path="EmptyField", original_name="EmptyField", name="EmptyField"),
+    )
+
+    rendered = model.render()
+    assert model.is_functional_syntax
+    assert not field.key
+    assert "EmptyField = TypedDict('EmptyField', {" in rendered
+    assert "    '': str," in rendered
+
+
+@pytest.mark.parametrize("source_name", ["", "value"], ids=["empty", "regular"])
+def test_typed_dict_functional_syntax_replaces_inherited_source_key(source_name: str) -> None:
+    """Render only the child override when an inherited source key is repeated."""
+    base_reference = Reference(path="Base", original_name="Base", name="Base")
+    TypedDictModel(
+        fields=[
+            TypedDictDataModelField(
+                name="base_value",
+                original_name=source_name,
+                data_type=DataType(type="str"),
+                required=False,
+            )
+        ],
+        reference=base_reference,
+    )
+    child = TypedDictModel(
+        fields=[
+            TypedDictDataModelField(
+                name="child_value",
+                original_name=source_name,
+                data_type=DataType(type="int"),
+                required=True,
+            ),
+            TypedDictDataModelField(
+                name="trigger_key",
+                original_name="trigger-key",
+                data_type=DataType(type="bool"),
+                required=True,
+            ),
+        ],
+        base_classes=[base_reference],
+        reference=Reference(path="Child", original_name="Child", name="Child"),
+    )
+
+    matching_fields = [field for field in child.all_fields if field.original_name == source_name]
+    rendered = child.render()
+    assert len(matching_fields) == 1
+    assert matching_fields[0].name == "child_value"
+    assert matching_fields[0].type_hint == "int"
+    assert rendered.count(f"'{source_name}':") == 1
+    assert f"'{source_name}': int," in rendered
 
 
 def test_ordered_union_type_hint_handles_empty_and_discriminator() -> None:
