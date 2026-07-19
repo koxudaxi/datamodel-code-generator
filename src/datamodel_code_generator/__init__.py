@@ -1413,10 +1413,11 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         raise ValueError(msg)
 
     if config is None:
-        from datamodel_code_generator.config import GenerateConfig, _rebuild_generate_config  # noqa: PLC0415
+        from datamodel_code_generator.config import GenerateConfig as _GenerateConfig  # noqa: PLC0415
+        from datamodel_code_generator.config import _rebuild_generate_config  # noqa: PLC0415
 
         _rebuild_generate_config()
-        config = GenerateConfig.model_validate(options)
+        config = _GenerateConfig.model_validate(options)
     config = _apply_generate_config_preset(config)
     config = _apply_missing_sentinel_config(config)
 
@@ -1611,16 +1612,28 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         results = parse_with_disposal(parser, config)
         model_metadata = parser.model_metadata
         repair_modules = parser.invalid_dotted_stdout_repair_modules
-        if repair_modules:
-            legacy_inventory = parser.generated_model_inventory
-            legacy_source_fingerprint = parser.source_data_fingerprint
-            retry_remote_text_cache = parser.remote_text_cache
-            retry_reference_cache = getattr(parser, "remote_object_cache", None)
-            retry_base_path = parser.base_path
+        repair_state = (
+            (
+                parser.generated_model_inventory,
+                parser.source_data_fingerprint,
+                parser.remote_text_cache,
+                getattr(parser, "remote_object_cache", None),
+                parser.base_path,
+            )
+            if repair_modules
+            else None
+        )
         parser._dispose()  # noqa: SLF001
         del parser
 
-        if repair_modules:
+        if repair_state is not None:
+            (
+                legacy_inventory,
+                legacy_source_fingerprint,
+                retry_remote_text_cache,
+                retry_reference_cache,
+                retry_base_path,
+            ) = repair_state
             retry_config = config.model_copy(
                 update={
                     "repair_invalid_dotted_stdout": False,
@@ -1656,7 +1669,6 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             # This is a compatibility repair: retain the completed legacy result if it cannot be proven safe.
             if retry_parse is not None:
                 retry_parser, retry_results = retry_parse
-                retry_parse = None
                 try:
                     if (
                         isinstance(retry_results, str)

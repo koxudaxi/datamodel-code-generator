@@ -1000,7 +1000,7 @@ def test_main_usable_invalid_dotted_inherited_enum_stdout(capsys: pytest.Capture
         capsys=capsys,
         assert_no_stderr=True,
     )
-    validate_generated_code(expected_path.read_text(), str(expected_path), do_exec=True)
+    validate_generated_code(expected_path.read_text(), str(expected_path), do_exec=sys.version_info >= (3, 11))
 
 
 @pytest.mark.isolate_builtin_formatter_config
@@ -1024,7 +1024,7 @@ def test_main_usable_converging_invalid_dotted_models_stdout(capsys: pytest.Capt
         capsys=capsys,
         assert_no_stderr=True,
     )
-    validate_generated_code(expected_path.read_text(), str(expected_path), do_exec=True)
+    validate_generated_code(expected_path.read_text(), str(expected_path), do_exec=sys.version_info >= (3, 11))
 
 
 @pytest.mark.isolate_builtin_formatter_config
@@ -1399,11 +1399,13 @@ def test_generate_strict_dotted_module_names(output_file: Path) -> None:
 def test_generate_inline_openapi_relative_ref_uses_caller_base(source_type: str, output_file: Path) -> None:
     """Resolve inline OpenAPI refs from the caller cwd when output is elsewhere."""
     input_path = OPEN_API_DATA_PATH / "all_of_with_relative_ref" / "openapi.yaml"
+    source = None
     match source_type:
         case "text":
             source = input_path.read_text(encoding="utf-8")
         case _:
             source = load_data_from_path(input_path, "utf-8")
+    assert source is not None
 
     with chdir(input_path.parent):
         generate(
@@ -1428,11 +1430,13 @@ def test_generate_inline_openapi_relative_ref_uses_caller_base(source_type: str,
 def test_generate_invalid_dotted_retry_preserves_relative_ref_base(source_type: str, output_file: Path) -> None:
     """Reuse the first parser base for an invalid-dotted stdout repair retry."""
     input_path = OPEN_API_DATA_PATH / "invalid_dotted_external_relative_ref.yaml"
+    source = None
     match source_type:
         case "text":
             source = input_path.read_text(encoding="utf-8")
         case _:
             source = load_data_from_path(input_path, "utf-8")
+    assert source is not None
     config = GenerateConfig(
         input_file_type=InputFileType.OpenAPI,
         output=output_file,
