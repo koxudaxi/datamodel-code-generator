@@ -307,7 +307,8 @@ uvx datamodel-codegen \
   --all-exports-scope recursive
 ```
 
-Common flags: `--all-exports-scope`, `--all-exports-collision-strategy`, `--treat-dot-as-module`, `--reuse-model`, `--reuse-scope`.
+Common flags: `--all-exports-scope`, `--all-exports-collision-strategy`, `--treat-dot-as-module`,
+`--strict-dotted-module-names`, `--reuse-model`, `--reuse-scope`.
 
 Verify with:
 

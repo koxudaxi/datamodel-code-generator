@@ -473,6 +473,14 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
+    "--strict-dotted-module-names",
+    help="Only infer dotted schema names as module paths when every segment is a canonical Python identifier. "
+    "This applies only to automatic inference and does not override --treat-dot-as-module or "
+    "--no-treat-dot-as-module.",
+    action=BooleanOptionalAction,
+    default=None,
+)
+model_options.add_argument(
     "--use-generic-base-class",
     help="Generate a shared base class with model configuration (e.g., extra='forbid') "
     "instead of repeating the configuration in each model. Keeps code DRY.",

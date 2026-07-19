@@ -599,6 +599,8 @@ def _get_config_class() -> type[Config]:
         output_model_type: DataModelType = DataModelType.PydanticV2BaseModel
         output: Optional[Path] = None  # noqa: UP045
         check: bool = False
+        repair_invalid_dotted_stdout: bool = Field(default=False, exclude=True)
+        forced_invalid_dotted_stdout_repair_modules: tuple[tuple[str, ...], ...] = Field(default=(), exclude=True)
         debug: bool = False
         disable_warnings: bool = False
         extra_template_data: Mapping[str, dict[str, Any]] | None = None
@@ -1464,6 +1466,25 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         temp_context = None
         generate_output = config.output
         is_directory_output = False
+
+    repair_invalid_dotted_stdout = (
+        generate_output is None
+        and namespace.output_format != "json"
+        and namespace.fail_on_multi_module_stdout is not True
+        and config.treat_dot_as_module is None
+        and not config.strict_dotted_module_names
+        and config.module_split_mode is None
+        and not config.generate_schema_validators
+        and not config.use_generic_base_class
+        and getattr(config, "custom_class_name_generator", None) is None
+        and config.custom_template_dir is None
+        and not config.custom_formatters
+        and config.custom_file_header is None
+        and config.custom_file_header_path is None
+        and config.extra_template_data is None
+        and not config.additional_imports
+    )
+    config.repair_invalid_dotted_stdout = repair_invalid_dotted_stdout
 
     def cleanup_and_return(exit_code: Exit) -> Exit:
         if temp_context is not None:

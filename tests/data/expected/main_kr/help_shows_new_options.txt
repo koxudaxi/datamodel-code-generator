@@ -432,6 +432,12 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         (default: "shared"). Use this option if your schema
                         has a file named "shared".
   --skip-root-model     Skip generating the model for the root schema element
+  --strict-dotted-module-names, --no-strict-dotted-module-names
+                        Only infer dotted schema names as module paths when
+                        every segment is a canonical Python identifier. This
+                        applies only to automatic inference and does not
+                        override --treat-dot-as-module or --no-treat-dot-as-
+                        module.
   --target-pydantic-version {2,2.11,2.12}
                         Target Pydantic version for generated code. '2':
                         Pydantic 2.0+ compatible (default, uses

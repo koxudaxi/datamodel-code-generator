@@ -970,6 +970,7 @@ def test_boolean_optional_option_sets_are_pinned() -> None:
         "allow_population_by_field_name",
         "collapse_root_models",
         "treat_dot_as_module",
+        "strict_dotted_module_names",
         "use_standard_primitive_types",
         "use_annotated",
         "use_standard_collections",

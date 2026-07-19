@@ -988,9 +988,14 @@ def run_main_and_assert(  # noqa: PLR0912
     elif output_path is None:
         if input_path is None:  # pragma: no cover
             pytest.fail("input_path is required when output_path is None")
+        _copy_files(copy_files)
         args = []
         use_builtin_default = _extend_args(
-            args, input_path=input_path, input_file_type=input_file_type, extra_args=extra_args
+            args,
+            input_path=input_path,
+            input_file_type=input_file_type,
+            extra_args=extra_args,
+            copy_files=copy_files,
         )
         with (
             _enable_test_parsed_source_cache(),

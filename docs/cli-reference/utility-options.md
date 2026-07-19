@@ -211,7 +211,9 @@ agent should inspect structured output.
 For backward compatibility, text stdout concatenates generated modules and does
 not preserve their paths. Use `--fail-on-multi-module-stdout` to reject that
 case, `--output <directory>` to preserve files, or `--output-format json` for
-structured stdout.
+structured stdout. The fail option takes precedence over automatic repair of an
+unusable modular stdout result, so an explicitly requested guard always rejects
+the modular result instead of coalescing it.
 
 In normal generation mode, `--output-format json` wraps generated modules in a
 structured payload on stdout. If `--output` is also supplied, files are still

@@ -162,12 +162,19 @@ def test_main_modular_no_file(capsys: pytest.CaptureFixture[str]) -> None:
     )
 
 
-def test_main_fail_on_multi_module_stdout(capsys: pytest.CaptureFixture[str]) -> None:
+@pytest.mark.parametrize(
+    "input_path",
+    [
+        pytest.param(OPEN_API_DATA_PATH / "modular.yaml", id="modular"),
+        pytest.param(OPEN_API_DATA_PATH / "invalid_dotted_schema_name.yaml", id="invalid-dotted-repair"),
+    ],
+)
+def test_main_fail_on_multi_module_stdout(input_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Reject concatenated modular text only when explicitly requested."""
     run_main_with_args(
         [
             "--input",
-            str(OPEN_API_DATA_PATH / "modular.yaml"),
+            str(input_path),
             "--input-file-type",
             "openapi",
             "--fail-on-multi-module-stdout",
@@ -185,7 +192,9 @@ def test_main_fail_on_multi_module_stdout(capsys: pytest.CaptureFixture[str]) ->
     option_description="""Fail instead of concatenating multiple modules in text stdout.
 
 The `--fail-on-multi-module-stdout` flag detects modular results while preserving
-the legacy default, single-module output, JSON output, and file output.""",
+the legacy default, single-module output, JSON output, and file output. It takes
+precedence over automatic unusable-stdout repair, rejecting the modular result
+instead of coalescing it.""",
     input_schema="jsonschema/person.json",
     cli_args=["--fail-on-multi-module-stdout", "--disable-timestamp"],
     golden_output="main/person.py",

@@ -744,6 +744,18 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
         name="--disable-appending-item-suffix", category=OptionCategory.TEMPLATE
     ),
     "--no-treat-dot-as-module": CLIOptionMeta(name="--no-treat-dot-as-module", category=OptionCategory.TEMPLATE),
+    "--strict-dotted-module-names": CLIOptionMeta(
+        name="--strict-dotted-module-names",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.GENERATED_OUTPUT,
+    ),
+    "--no-strict-dotted-module-names": CLIOptionMeta(
+        name="--no-strict-dotted-module-names",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.GENERATED_OUTPUT,
+    ),
     "--disable-timestamp": CLIOptionMeta(
         name="--disable-timestamp",
         category=OptionCategory.TEMPLATE,

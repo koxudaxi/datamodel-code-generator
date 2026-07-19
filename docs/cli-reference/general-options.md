@@ -1536,7 +1536,9 @@ or potential issues). Useful for clean output in CI/CD pipelines.
 Fail instead of concatenating multiple modules in text stdout.
 
 The `--fail-on-multi-module-stdout` flag detects modular results while preserving
-the legacy default, single-module output, JSON output, and file output.
+the legacy default, single-module output, JSON output, and file output. It takes
+precedence over automatic unusable-stdout repair, rejecting the modular result
+instead of coalescing it.
 
 !!! tip "Usage"
 

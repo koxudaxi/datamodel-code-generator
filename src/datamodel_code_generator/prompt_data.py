@@ -120,6 +120,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--skip-root-model": "Skip generation of root model when schema contains nested definitions.",
     "--snake-case-field": "Convert field names to snake_case format.",
     "--special-field-name-prefix": "Prefix to add to special field names (like reserved keywords).",
+    "--strict-dotted-module-names": "Require canonical Python identifiers when inferring dotted module paths.",
     "--strict-nullable": "Treat default field as a non-nullable field.",
     "--strict-types": "Enable strict type validation for specified Python types.",
     "--strip-default-none": "Remove fields with None as default value from generated models.",
