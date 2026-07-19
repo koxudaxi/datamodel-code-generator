@@ -73,7 +73,13 @@ from datamodel_code_generator.parser.base import (
     title_to_class_name,
 )
 from datamodel_code_generator.parser.schema_version import get_data_formats
-from datamodel_code_generator.reference import SPECIAL_PATH_MARKER, ModelType, Reference, is_url
+from datamodel_code_generator.reference import (
+    SPECIAL_PATH_MARKER,
+    ModelType,
+    Reference,
+    get_inferred_module_name,
+    is_url,
+)
 from datamodel_code_generator.types import (
     ANY,
     DataType,
@@ -1643,7 +1649,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         visited: set[str] = set()
 
         def iter_from_schema(obj: JsonSchemaObject, path: list[str]) -> Iterable[DataModelFieldBase]:
-            module_name = get_module_name(path[-1] if path else "", None, treat_dot_as_module=self.treat_dot_as_module)
+            module_name = get_inferred_module_name(
+                path[-1] if path else "",
+                treat_dot_as_module=self.treat_dot_as_module,
+                strict_dotted_module_names=self.strict_dotted_module_names,
+            )
             if obj.properties:
                 yield from self.parse_object_fields(obj, path, module_name)
             for item in obj.allOf:
@@ -3981,7 +3991,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 self.parse_object_fields(
                     obj,
                     path,
-                    get_module_name(name, None, treat_dot_as_module=self.treat_dot_as_module),
+                    get_inferred_module_name(
+                        name,
+                        treat_dot_as_module=self.treat_dot_as_module,
+                        strict_dotted_module_names=self.strict_dotted_module_names,
+                    ),
                     class_name=name,
                 )
             )
@@ -4139,7 +4153,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             else:
                 # Merge child properties with parent constraints before processing
                 merged_item = self._merge_properties_with_parent_constraints(all_of_item, parent_refs)
-                module_name = get_module_name(name, None, treat_dot_as_module=self.treat_dot_as_module)
+                module_name = get_inferred_module_name(
+                    name,
+                    treat_dot_as_module=self.treat_dot_as_module,
+                    strict_dotted_module_names=self.strict_dotted_module_names,
+                )
                 object_fields = self.parse_object_fields(
                     merged_item,
                     path,

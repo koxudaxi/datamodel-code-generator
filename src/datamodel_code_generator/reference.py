@@ -47,6 +47,56 @@ if TYPE_CHECKING:
     from datamodel_code_generator.types import DataType
 
 
+def split_module_name(
+    name: str,
+    *,
+    treat_dot_as_module: bool | None,
+    strict_dotted_module_names: bool = False,
+) -> list[str] | None:
+    """Split a dotted model name according to the configured inference policy."""
+    match treat_dot_as_module:
+        case False:
+            return None
+        case _ if "." not in name:
+            return None
+        case True:
+            return name.split(".")
+        case _ if not strict_dotted_module_names:
+            return name.split(".")
+
+    is_normalized = None
+    if not name.isascii():
+        from unicodedata import is_normalized  # noqa: PLC0415
+
+    parts = name.split(".")
+    for part in parts:
+        if (
+            not part.isidentifier()
+            or iskeyword(part)
+            or (is_normalized is not None and not is_normalized("NFKC", part))
+        ):
+            return None
+    return parts
+
+
+def get_inferred_module_name(
+    name: str,
+    *,
+    treat_dot_as_module: bool | None,
+    strict_dotted_module_names: bool = False,
+) -> str:
+    """Return the inferred parent module for a dotted model name."""
+    if not (
+        parts := split_module_name(
+            name,
+            treat_dot_as_module=treat_dot_as_module,
+            strict_dotted_module_names=strict_dotted_module_names,
+        )
+    ):
+        return ""
+    return ".".join(parts[:-1])
+
+
 def _is_data_type(value: object) -> TypeIs[DataType]:
     """Check if value is a DataType instance."""
     from datamodel_code_generator.types import DataType as DataType_  # noqa: PLC0415
@@ -514,6 +564,7 @@ class ModelResolver:  # noqa: PLR0904
         remove_suffix_number: bool = False,  # noqa: FBT001, FBT002
         parent_scoped_naming: bool = False,  # noqa: FBT001, FBT002
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
+        strict_dotted_module_names: bool = False,  # noqa: FBT001, FBT002
         naming_strategy: NamingStrategy | None = None,
         duplicate_name_suffix_map: dict[str, str] | None = None,
         class_name_prefix: str | None = None,
@@ -565,6 +616,7 @@ class ModelResolver:  # noqa: PLR0904
         self.naming_strategy: NamingStrategy = naming_strategy or NamingStrategy.Numbered
         self.parent_scoped_naming = parent_scoped_naming or (self.naming_strategy == NamingStrategy.ParentPrefixed)
         self.treat_dot_as_module = treat_dot_as_module
+        self.strict_dotted_module_names = strict_dotted_module_names
 
         # Duplicate name suffix map for type-specific suffixes
         # Only use suffixes when explicitly provided via --duplicate-name-suffix
@@ -674,6 +726,11 @@ class ModelResolver:  # noqa: PLR0904
         """Remove a name from the reference names cache."""
         self._reference_names_cache.discard(name)
         self._invalidate_unique_name_hints(name)
+
+    def refresh_reference_names(self) -> None:
+        """Refresh cached names after a batch reference rename."""
+        self._reference_names_cache = {reference.name for reference in self.references.values()}
+        self._unique_name_start_hints.clear()
 
     @property
     def current_base_path(self) -> Path | None:
@@ -1193,8 +1250,18 @@ class ModelResolver:  # noqa: PLR0904
         preserve_name: bool = False,  # noqa: FBT001, FBT002
     ) -> ClassName:
         """Generate a unique class name with optional singularization."""
+        split_name = None
         if "." in name and self.treat_dot_as_module is not False:
-            split_name = name.split(".")
+            split_name = (
+                split_module_name(
+                    name,
+                    treat_dot_as_module=self.treat_dot_as_module,
+                    strict_dotted_module_names=self.strict_dotted_module_names,
+                )
+                if self.strict_dotted_module_names and self.treat_dot_as_module is None
+                else name.split(".")
+            )
+        if split_name:
             prefix = ".".join(
                 # TODO: create a validate for class name
                 self.field_name_resolvers[ModelType.CLASS].get_valid_name(n, ignore_snake_case_field=True)

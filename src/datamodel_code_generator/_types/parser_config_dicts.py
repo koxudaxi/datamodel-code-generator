@@ -158,6 +158,7 @@ class ParserConfigDict(TypedDict):
     use_object_type: NotRequired[bool]
     http_query_parameters: NotRequired[Sequence[tuple[str, str]] | None]
     treat_dot_as_module: NotRequired[bool | None]
+    strict_dotted_module_names: NotRequired[bool]
     use_exact_imports: NotRequired[bool]
     use_type_checking_imports: NotRequired[bool | None]
     default_field_extras: NotRequired[dict[str, Any] | None]

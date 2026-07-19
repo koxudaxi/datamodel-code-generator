@@ -9,7 +9,7 @@ Options are grouped from shared CLI metadata and link back to their generated re
 | Group | Options | Description |
 |-------|---------|-------------|
 | [Custom Templates](#custom-templates) | 3 | Custom templates and extra template data. |
-| [Generated Output](#generated-output) | 8 | Generated file headers and reproducible output. |
+| [Generated Output](#generated-output) | 9 | Generated file headers and reproducible output. |
 | [Imports](#imports) | 4 | Generated imports and type-checking import behavior. |
 | [Output Formatting](#output-formatting) | 5 | Formatter selection, quote style, and string wrapping. |
 
@@ -37,6 +37,7 @@ Generated file headers and reproducible output.
 | [`--enable-command-header`](../template-customization.md#enable-command-header) | Include command-line options in file header for reproducibility. |
 | [`--enable-generated-header-marker`](../template-customization.md#enable-generated-header-marker) | Include the @generated marker in file header for generated-code tooling. |
 | [`--enable-version-header`](../template-customization.md#enable-version-header) | Include tool version information in file header. |
+| [`--strict-dotted-module-names`](../template-customization.md#strict-dotted-module-names) | Require canonical Python identifiers when inferring dotted module paths. |
 
 ## Imports {#imports}
 

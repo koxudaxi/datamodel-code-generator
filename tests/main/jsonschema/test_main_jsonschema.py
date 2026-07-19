@@ -182,6 +182,20 @@ def test_main_external_ref_slash_containing_key(output_dir: Path) -> None:
     )
 
 
+def test_generate_external_ref_slash_containing_key_strict(output_file: Path) -> None:
+    """Flatten URL-like inferred names only when strict inference is enabled."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "external_ref_slash_key" / "schema.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="external_ref_slash_key_strict.py",
+        strict_dotted_module_names=True,
+        disable_timestamp=True,
+        target_python_version=PythonVersion.PY_310,
+    )
+
+
 def test_main_root_ref(output_file: Path) -> None:
     """Generate root models referenced through a JSON Pointer root ref."""
     run_main_and_assert(
@@ -5019,6 +5033,7 @@ def test_main_use_union_operator(output_dir: Path) -> None:
         (["--treat-dot-as-module"], "treat_dot_as_module"),
         (None, "treat_dot_not_as_module"),
         (["--no-treat-dot-as-module"], "treat_dot_not_as_module"),
+        (["--strict-dotted-module-names", "--no-treat-dot-as-module"], "treat_dot_not_as_module"),
     ],
 )
 def test_treat_dot_as_module(extra_args: list[str] | None, expected_suffix: str, output_dir: Path) -> None:
