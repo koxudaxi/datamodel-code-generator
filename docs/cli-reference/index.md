@@ -15,7 +15,7 @@ This documentation is auto-generated from test cases.
 | 🎨 [Template Customization](template-customization.md) | 26 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
-| ⚙️ [General Options](general-options.md) | 18 | Utilities and meta options |
+| ⚙️ [General Options](general-options.md) | 19 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 10 | Help, version, debug options |
 
 ## 🎯 Focused Topics
@@ -123,6 +123,7 @@ These links are generated from CLI option metadata and summarize options that im
 
 ### F {#f}
 
+- [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout)
 - [`--field-constraints`](field-customization.md#field-constraints)
 - [`--field-extra-keys`](field-customization.md#field-extra-keys)
 - [`--field-extra-keys-without-x-prefix`](field-customization.md#field-extra-keys-without-x-prefix)

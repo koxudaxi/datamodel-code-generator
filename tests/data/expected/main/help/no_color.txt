@@ -584,6 +584,10 @@ General options:
   --debug               show debug message (require "debug". `$ pip install
                         'datamodel-code-generator[debug]'`)
   --disable-warnings    disable warnings
+  --fail-on-multi-module-stdout
+                        Return an error instead of concatenating multiple
+                        generated modules in text stdout. This does not affect
+                        single-module, JSON, or file output.
   --generate-cli-command
                         Generate CLI command from pyproject.toml configuration
                         and exit

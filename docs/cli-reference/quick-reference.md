@@ -205,6 +205,7 @@ datamodel-codegen [OPTIONS]
 | [`--allow-remote-refs`](general-options.md#allow-remote-refs) | Enable fetching of `$ref` targets over HTTP/HTTPS. |
 | [`--check`](general-options.md#check) | Verify generated code matches existing output without modifying files. |
 | [`--disable-warnings`](general-options.md#disable-warnings) | Suppress warning messages during code generation. |
+| [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout) | Fail instead of concatenating multiple modules in text stdout. |
 | [`--generate-cli-command`](general-options.md#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
 | [`--generate-pyproject-config`](general-options.md#generate-pyproject-config) | Generate pyproject.toml configuration from CLI arguments. |
 | [`--http-headers`](general-options.md#http-headers) | Fetch schema from URL with custom HTTP headers. |
@@ -289,6 +290,7 @@ All options sorted alphabetically:
 - [`--external-ref-mapping`](base-options.md#external-ref-mapping) - Map external `$ref` files to Python packages.
 - [`--extra-fields`](field-customization.md#extra-fields) - Configure how generated models handle extra fields not defin...
 - [`--extra-template-data`](template-customization.md#extra-template-data) - Pass custom template variables via inline JSON or a JSON fil...
+- [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout) - Fail instead of concatenating multiple modules in text stdou...
 - [`--field-constraints`](field-customization.md#field-constraints) - Generate Field() with validation constraints from schema.
 - [`--field-extra-keys`](field-customization.md#field-extra-keys) - Include specific extra keys in Field() definitions.
 - [`--field-extra-keys-without-x-prefix`](field-customization.md#field-extra-keys-without-x-prefix) - Include schema extension keys in Field() without requiring '...

@@ -842,6 +842,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # General Options
     # ==========================================================================
     "--check": CLIOptionMeta(name="--check", category=OptionCategory.GENERAL),
+    "--fail-on-multi-module-stdout": CLIOptionMeta(
+        name="--fail-on-multi-module-stdout", category=OptionCategory.GENERAL
+    ),
     "--allow-remote-refs": CLIOptionMeta(name="--allow-remote-refs", category=OptionCategory.GENERAL),
     "--no-allow-remote-refs": CLIOptionMeta(name="--no-allow-remote-refs", category=OptionCategory.GENERAL),
     "--allow-private-network": CLIOptionMeta(name="--allow-private-network", category=OptionCategory.GENERAL),

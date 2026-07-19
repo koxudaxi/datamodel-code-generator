@@ -56,6 +56,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--external-ref-mapping": "Map external `$ref` files to Python packages.",
     "--extra-fields": "Configure how generated models handle extra fields not defined in schema.",
     "--extra-template-data": "Pass custom template variables via inline JSON or a JSON file path.",
+    "--fail-on-multi-module-stdout": "Fail instead of concatenating multiple modules in text stdout.",
     "--field-constraints": "Generate Field() with validation constraints from schema.",
     "--field-extra-keys": "Include specific extra keys in Field() definitions.",
     "--field-extra-keys-without-x-prefix": "Include schema extension keys in Field() without requiring 'x-' prefix.",

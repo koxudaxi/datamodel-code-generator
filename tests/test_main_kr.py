@@ -18,6 +18,7 @@ from datamodel_code_generator.__main__ import (
     _generated_files_from_result,
     _generation_output_json,
     _json_ready,
+    _write_generated_result,
     generate_pyproject_config,
 )
 from datamodel_code_generator.arguments import arg_parser
@@ -37,6 +38,7 @@ from tests.main.conftest import (
     LEGACY_BLACK_SKIP,
     OPEN_API_DATA_PATH,
     TIMESTAMP,
+    _assert_captured_output,
     run_main_and_assert,
     run_main_url_and_assert,
     run_main_with_args,
@@ -144,24 +146,69 @@ def test_main_modular(output_dir: Path) -> None:
             input_path=OPEN_API_DATA_PATH / "modular.yaml",
             output_path=output_dir,
             expected_directory=EXPECTED_MAIN_KR_PATH / "main_modular",
+            extra_args=["--fail-on-multi-module-stdout"],
         )
 
 
 @pytest.mark.isolate_builtin_formatter_config
 @freeze_time(TIMESTAMP)
 def test_main_modular_no_file(capsys: pytest.CaptureFixture[str]) -> None:
-    """Test modular text output without a directory reports an error."""
+    """Preserve legacy concatenated modular text stdout by default."""
+    run_main_with_args(
+        ["--input", str(OPEN_API_DATA_PATH / "modular.yaml")],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_KR_PATH / "main_modular_no_file" / "output.py",
+    )
+
+
+def test_main_fail_on_multi_module_stdout(capsys: pytest.CaptureFixture[str]) -> None:
+    """Reject concatenated modular text only when explicitly requested."""
     run_main_with_args(
         [
             "--input",
             str(OPEN_API_DATA_PATH / "modular.yaml"),
             "--input-file-type",
             "openapi",
+            "--fail-on-multi-module-stdout",
         ],
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stdout_path=EXPECTED_EMPTY_OUTPUT_PATH,
-        expected_stderr=(EXPECTED_MAIN_KR_PATH / "main_modular_no_file" / "error.txt").read_text(),
+        expected_stderr=(EXPECTED_MAIN_KR_PATH / "multi_module_stdout" / "error.txt").read_text(),
+    )
+
+
+@pytest.mark.isolate_builtin_formatter_config
+@pytest.mark.cli_doc(
+    options=["--fail-on-multi-module-stdout"],
+    option_description="""Fail instead of concatenating multiple modules in text stdout.
+
+The `--fail-on-multi-module-stdout` flag detects modular results while preserving
+the legacy default, single-module output, JSON output, and file output.""",
+    input_schema="jsonschema/person.json",
+    cli_args=["--fail-on-multi-module-stdout", "--disable-timestamp"],
+    golden_output="main/person.py",
+)
+def test_fail_on_multi_module_stdout_single_file(capsys: pytest.CaptureFixture[str]) -> None:
+    """Fail instead of concatenating multiple modules in text stdout.
+
+    The `--fail-on-multi-module-stdout` flag detects modular results while preserving
+    the legacy default, single-module output, JSON output, and file output.
+    """
+    run_main_with_args(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "person.json"),
+            "--input-file-type",
+            "jsonschema",
+            "--fail-on-multi-module-stdout",
+            "--disable-timestamp",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=DATA_PATH / "expected" / "main" / "person.py",
+        assert_no_stderr=True,
     )
 
 
@@ -178,12 +225,25 @@ def test_main_modular_json_no_file(capsys: pytest.CaptureFixture[str]) -> None:
             "--output-format",
             "json",
             "--disable-timestamp",
+            "--fail-on-multi-module-stdout",
         ],
         expected_exit=Exit.OK,
         capsys=capsys,
         expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "generation_modular_stdout.txt",
         assert_no_stderr=True,
     )
+
+
+def test_single_module_mapping_text_stdout(capsys: pytest.CaptureFixture[str]) -> None:
+    """Preserve valid text stdout for a generated mapping with one module."""
+    expected_path = EXPECTED_MAIN_KR_PATH / "single_module_mapping" / "output.py"
+    _write_generated_result(
+        {("model.py",): expected_path.read_text().removesuffix("\n")},
+        None,
+        fail_on_multi_module_stdout=True,
+    )
+
+    _assert_captured_output(capsys, expected_stdout_path=expected_path, assert_no_stderr=True)
 
 
 def test_main_modular_filename(output_file: Path) -> None:

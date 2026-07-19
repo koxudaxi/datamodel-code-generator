@@ -5,8 +5,10 @@ Choose the command output format.
 The default output format is `text`. Use `json` when another program or LLM
 agent should inspect structured output.
 
-Text stdout supports single-module generation only; when generation produces
-multiple modules, use `--output <directory>` or `--output-format json`.
+For backward compatibility, text stdout concatenates generated modules and does
+not preserve their paths. Use `--fail-on-multi-module-stdout` to reject that
+case, `--output <directory>` to preserve files, or `--output-format json` for
+structured stdout.
 
 In normal generation mode, `--output-format json` wraps generated modules in a
 structured payload on stdout. If `--output` is also supplied, files are still
