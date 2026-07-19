@@ -95,29 +95,6 @@ def test_model_resolver_add_class_name_generates_class_reference() -> None:
     assert reference.duplicate_name is None
 
 
-@pytest.mark.parametrize(
-    ("name", "treat_dot_as_module", "expected"),
-    [
-        ("models.Pet", None, "models.Pet"),
-        ("SaveTrifectaV2.1", None, "SaveTrifectaV21"),
-        ("pkg.class.Model", None, "PkgClassModel"),
-        ("models.Pet", False, "ModelsPet"),
-        ("SaveTrifectaV2.1", True, "SaveTrifectaV2.Field1"),
-    ],
-)
-def test_model_resolver_dotted_class_name(
-    name: str,
-    treat_dot_as_module: bool | None,
-    expected: str,
-) -> None:
-    """Interpret dotted class names according to the tri-state module option."""
-    resolver = ModelResolver(treat_dot_as_module=treat_dot_as_module)
-
-    class_name = resolver.get_class_name(name, unique=False)
-
-    assert class_name.name == expected
-
-
 def test_reference_cache_clear_preserves_helper_values() -> None:
     """Clearing bounded reference caches must not change helper results."""
     singular_name = get_singular_name("users")

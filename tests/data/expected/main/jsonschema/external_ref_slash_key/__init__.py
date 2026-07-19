@@ -5,17 +5,11 @@ from __future__ import annotations
 
 from pydantic import BaseModel, RootModel
 
-
-class HttpsExampleComSchemaJson(BaseModel):
-    name: str | None = None
+from .https___example import com_schema
 
 
 class Name(RootModel[str]):
     root: str
-
-
-class HttpsExampleComSchemaJson2(BaseModel):
-    code: str | None = None
 
 
 class UserCreated(BaseModel):
@@ -23,8 +17,8 @@ class UserCreated(BaseModel):
 
 
 class Model(BaseModel):
-    escaped: HttpsExampleComSchemaJson | None = None
-    unescaped: HttpsExampleComSchemaJson | None = None
+    escaped: com_schema.Json | None = None
+    unescaped: com_schema.Json | None = None
     nestedName: Name | None = None
-    listItem: HttpsExampleComSchemaJson2 | None = None
+    listItem: com_schema.JsonModel | None = None
     slashKey: UserCreated | None = None

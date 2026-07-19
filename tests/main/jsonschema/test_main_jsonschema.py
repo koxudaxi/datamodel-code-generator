@@ -171,14 +171,13 @@ def test_main_inheritance_forward_ref(output_file: Path, tmp_path: Path) -> None
     )
 
 
-def test_main_external_ref_slash_containing_key(output_file: Path) -> None:
-    """Generate resolvable models for external refs targeting slash-containing keys."""
+def test_main_external_ref_slash_containing_key(output_dir: Path) -> None:
+    """Generate importable modular output for external refs targeting slash-containing keys."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "external_ref_slash_key" / "schema.json",
-        output_path=output_file,
+        output_path=output_dir,
         input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="external_ref_slash_key.py",
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "external_ref_slash_key",
         extra_args=["--disable-timestamp", "--target-python-version", "3.10"],
     )
 
