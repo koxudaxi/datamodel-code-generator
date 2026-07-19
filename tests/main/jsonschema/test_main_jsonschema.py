@@ -2462,6 +2462,26 @@ def test_main_msgspec_structured_imports(output_file: Path) -> None:
     )
 
 
+def test_main_msgspec_reserved_field_name(output_file: Path) -> None:
+    """A field named ``field`` must not shadow msgspec's imported ``field``."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_reserved_field_name.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="msgspec_reserved_field_name.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--class-name",
+            "Payload",
+        ],
+        force_exec_validation=True,
+        importable_module_name="generated_msgspec_reserved_field_name",
+        importable_module_attribute="Payload",
+    )
+
+
 def test_main_root_model_with_additional_properties_literal(min_version: str, output_file: Path) -> None:
     """Test root model additional properties with literal types."""
     run_main_and_assert(
