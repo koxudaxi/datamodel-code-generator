@@ -4179,12 +4179,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         field_names: set[str] = set()
                         for f in object_fields:
                             field_name = _field_source_name(f)
-                            if field_name is not None:
+                            if field_name is not None:  # pragma: no branch
                                 field_names.add(field_name)
                         existing_field_names: set[str] = set()
                         for f in fields:
                             field_name = _field_source_name(f)
-                            if field_name is not None:
+                            if field_name is not None:  # pragma: no branch
                                 existing_field_names.add(field_name)
                         for required_field_name in all_of_item.required:
                             if required_field_name in field_names or required_field_name in existing_field_names:

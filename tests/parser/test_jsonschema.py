@@ -141,6 +141,7 @@ def test_schema_validator_input_names_include_validation_aliases_and_schema_base
         data_type=DataType(type="str"),
     )
     empty_field = DataModelFieldBase(name="field_", original_name="", alias="", data_type=DataType(type="str"))
+    nameless_field = DataModelFieldBase(data_type=DataType(type="str"))
     parser.raw_obj = {
         "$defs": {
             "Empty": {"type": "object"},
@@ -153,7 +154,7 @@ def test_schema_validator_input_names_include_validation_aliases_and_schema_base
 
     assert parser._field_input_names(field) == ("field", "fieldAlias", "field_name", "field-alt")
     assert parser._get_input_names_by_property(
-        [empty_field],
+        [empty_field, nameless_field],
         [Reference(path="#/$defs/Empty", name="Empty"), Reference(path="#/$defs/Base", name="Base")],
     ) == {"": ("", "field_"), "base": ("base",)}
 
@@ -169,8 +170,9 @@ def test_schema_validator_input_names_include_empty_datamodel_base_fields() -> N
         data_type=DataType(type="str"),
     )
     empty_field = DataModelFieldBase(name="field_", original_name="", alias="", data_type=DataType(type="str"))
+    nameless_field = DataModelFieldBase(data_type=DataType(type="str"))
     base_ref = Reference(path="#/$defs/Base", name="Base")
-    BaseModel(reference=base_ref, fields=[base_field, empty_field])
+    BaseModel(reference=base_ref, fields=[base_field, empty_field, nameless_field])
 
     assert parser._get_input_names_by_property([], [base_ref]) == {
         "": ("", "field_"),

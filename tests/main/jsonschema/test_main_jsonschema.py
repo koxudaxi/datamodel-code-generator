@@ -3840,9 +3840,12 @@ def test_main_jsonschema_empty_field_name(  # noqa: PLR0912
             )
             with _generated_model(output_file, "empty_field_name_dump", "ReadWriteEmpty") as model:
                 instance = model.model_validate({**payload, "field_": 1})
-                if (dumped := instance.model_dump(by_alias=True, exclude_unset=True)) == {**payload, "field_": 1}:
+                if (dumped := instance.model_dump(by_alias=True, exclude_unset=True)) == {  # pragma: no branch
+                    **payload,
+                    "field_": 1,
+                }:
                     return
-                pytest.fail(f"Empty alias was not preserved in Pydantic dump: {dumped!r}")
+                pytest.fail(f"Empty alias was not preserved in Pydantic dump: {dumped!r}")  # pragma: no cover
 
         case DataModelType.MsgspecStruct:
             import msgspec
@@ -3850,18 +3853,18 @@ def test_main_jsonschema_empty_field_name(  # noqa: PLR0912
             for model_name in ("RequiredEmpty", "AllOfRequiredEmpty", "AllOfOverrideEmpty"):
                 with _generated_model(output_file, f"empty_field_name_{model_name}", model_name) as model:
                     instance = msgspec.json.decode(b'{"":"value"}', type=model)
-                    if (dumped := msgspec.to_builtins(instance)) != payload:
+                    if (dumped := msgspec.to_builtins(instance)) != payload:  # pragma: no cover
                         pytest.fail(f"Empty alias was not preserved in {model_name}: {dumped!r}")
                     with pytest.raises(msgspec.ValidationError):
                         msgspec.json.decode(b"{}", type=model)
             with _generated_model(output_file, "empty_field_name_optional", "OptionalEmpty") as model:
-                if (dumped := msgspec.to_builtins(msgspec.json.decode(b"{}", type=model))) != {}:
+                if (dumped := msgspec.to_builtins(msgspec.json.decode(b"{}", type=model))) != {}:  # pragma: no cover
                     pytest.fail(f"Unset empty alias was not omitted from msgspec dump: {dumped!r}")
             with _generated_model(output_file, "empty_field_name_msgspec_dump", "ReadWriteEmpty") as model:
                 instance = msgspec.json.decode(b'{"":"value","field_":1}', type=model)
-                if (dumped := msgspec.to_builtins(instance)) == {**payload, "field_": 1}:
+                if (dumped := msgspec.to_builtins(instance)) == {**payload, "field_": 1}:  # pragma: no branch
                     return
-                pytest.fail(f"Empty alias collided in msgspec dump: {dumped!r}")
+                pytest.fail(f"Empty alias collided in msgspec dump: {dumped!r}")  # pragma: no cover
 
         case DataModelType.TypingTypedDict:
             from typing import get_origin, is_typeddict
@@ -3877,16 +3880,16 @@ def test_main_jsonschema_empty_field_name(  # noqa: PLR0912
             }
             for model_name, (field_names, optional_names) in expected_fields.items():
                 with _generated_model(output_file, f"empty_field_name_{model_name}", model_name) as model:
-                    if not is_typeddict(model):
+                    if not is_typeddict(model):  # pragma: no cover
                         pytest.fail(f"Expected {model_name} to be a TypedDict")
-                    if (actual_names := frozenset(model.__annotations__)) != field_names:
+                    if (actual_names := frozenset(model.__annotations__)) != field_names:  # pragma: no cover
                         pytest.fail(f"Unexpected fields for {model_name}: {actual_names!r}")
                     actual_optional_names = frozenset(
                         name
                         for name, annotation in model.__annotations__.items()
                         if get_origin(annotation) is NotRequired
                     )
-                    if actual_optional_names != optional_names:
+                    if actual_optional_names != optional_names:  # pragma: no cover
                         pytest.fail(f"Unexpected optional fields for {model_name}: {actual_optional_names!r}")
             return
 
@@ -3928,7 +3931,7 @@ def test_main_jsonschema_empty_field_name_schema_validators(output_file: Path) -
         )
         with _generated_model(output_file, f"empty_field_name_dump_{model_name}", model_name) as model:
             instance = model.model_validate(valid_payload)
-            if (dumped := instance.model_dump(by_alias=True, exclude_unset=True)) != expected_dump:
+            if (dumped := instance.model_dump(by_alias=True, exclude_unset=True)) != expected_dump:  # pragma: no cover
                 pytest.fail(f"Empty alias was not preserved by {model_name}: {dumped!r}")
 
 
