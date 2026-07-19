@@ -1391,8 +1391,8 @@ def test_main_invalid_dotted_unsafe_retry_preserves_legacy(
                         return original_build_parser(*args, **kwargs)
                     case 2:
                         raise RuntimeError
-                    case _:  # pragma: no cover - guards the fixed two-pass contract
-                        return pytest.fail("unexpected extra parser build")
+                message = "unexpected extra parser build"  # pragma: no cover
+                raise AssertionError(message)  # pragma: no cover
 
             probe.side_effect = fail_retry
             expected_call = mocker.call(
@@ -1417,8 +1417,8 @@ def test_main_invalid_dotted_unsafe_retry_preserves_legacy(
                         return bytes(32)
                     case 2:
                         return bytes([1]) * 32
-                    case _:  # pragma: no cover - guards the fixed two-pass contract
-                        return pytest.fail("unexpected extra source fingerprint")
+                message = "unexpected extra source fingerprint"  # pragma: no cover
+                raise AssertionError(message)  # pragma: no cover
 
             probe.side_effect = change_source_fingerprint
             expected_calls = [mocker.call(mocker.ANY), mocker.call(mocker.ANY)]
