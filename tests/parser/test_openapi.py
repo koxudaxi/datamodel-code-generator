@@ -581,6 +581,21 @@ def test_openapi_parser_parse_modular(tmp_path: Path, monkeypatch: pytest.Monkey
     assert_parser_modules(modules, EXPECTED_OPEN_API_PATH / "openapi_parser_parse_modular")
 
 
+def test_openapi_parser_parse_invalid_dotted_without_imports() -> None:
+    """Inspect multiple final modules when import rendering is disabled."""
+    parser = OpenAPIParser(
+        (DATA_PATH / "invalid_dotted_schema_name.yaml").resolve(),
+        data_model_field_type=DataModelFieldBase,
+        formatters=[Formatter.BUILTIN],
+    )
+    parser.repair_invalid_dotted_stdout = True
+    modules = parser.parse(with_import=False, format_=True)
+    assert_parser_modules(
+        modules,
+        EXPECTED_OPEN_API_PATH / "openapi_parser_parse_invalid_dotted_without_imports",
+    )
+
+
 def test_openapi_parser_parse_modular_pydantic_v2_ruff_keeps_runtime_imports(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

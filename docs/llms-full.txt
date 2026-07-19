@@ -5268,7 +5268,7 @@ This pattern is ideal when:
 
 Source: https://datamodel-code-generator.koxudaxi.dev/module-exports/
 
-<!-- related-cli-options: --all-exports-scope, --all-exports-collision-strategy, --treat-dot-as-module -->
+<!-- related-cli-options: --all-exports-scope, --all-exports-collision-strategy, --treat-dot-as-module, --strict-dotted-module-names -->
 
 # Module Structure and Exports
 
@@ -5281,6 +5281,7 @@ When generating models to a directory structure, datamodel-code-generator can au
 | `--all-exports-scope` | Control which modules get `__all__` exports |
 | `--all-exports-collision-strategy` | Handle name collisions in recursive exports |
 | `--treat-dot-as-module` | Convert dots in names to nested modules |
+| `--strict-dotted-module-names` | Restrict automatic dotted-name inference to canonical Python identifiers |
 
 ---
 
@@ -5429,9 +5430,43 @@ models/
 ```
 
 This is useful for:
+
 - Organizing large schemas by namespace
 - Mirroring API versioning structure
 - Keeping related models together
+
+When writing plain Python text to stdout with the standard renderer and without
+an explicit `--treat-dot-as-module` setting, historical automatic module
+inference is preserved whenever the final concatenated result remains usable. A
+retry coalesces the stdout models into one flat namespace only when a
+non-canonical inferred module boundary leaves conflicting generated
+definitions, repeats a future import after generated code, hides a generated
+model with a later import, or emits a relative import that cannot resolve in
+standalone stdout. Existing root and canonical model names are reserved first.
+Directory output, JSON output, schema runtime validator or generic-base
+generation, custom rendering, and the Python API retain their existing default
+inference. Use directory or JSON output when module paths must be preserved.
+
+## `--strict-dotted-module-names`
+
+By default, automatic inference retains the historical behavior of treating dots
+as module separators. Enable `--strict-dotted-module-names` to infer a module path
+only when every raw segment, including the model name, is a canonical Python
+identifier. Hard keywords, numeric or empty segments, punctuation, and names that
+change under NFKC normalization fall back to a flat model name.
+
+```bash
+datamodel-codegen \
+  --input schema.json \
+  --output models.py \
+  --strict-dotted-module-names
+```
+
+This option affects automatic inference only. Explicit
+`--treat-dot-as-module` or `--no-treat-dot-as-module` takes precedence. The
+negative form, `--no-strict-dotted-module-names`, can disable a value enabled in
+`pyproject.toml`; it does not disable the narrow unusable-stdout repair described
+above. Use explicit `--treat-dot-as-module` when module boundaries must be kept.
 
 ---
 
@@ -5501,6 +5536,7 @@ If you encounter circular import errors:
 - [CLI Reference: `--all-exports-scope`](cli-reference/general-options.md#all-exports-scope)
 - [CLI Reference: `--all-exports-collision-strategy`](cli-reference/general-options.md#all-exports-collision-strategy)
 - [CLI Reference: `--treat-dot-as-module`](cli-reference/template-customization.md#treat-dot-as-module)
+- [CLI Reference: `--strict-dotted-module-names`](cli-reference/template-customization.md#strict-dotted-module-names)
 - [Model Reuse and Deduplication](model-reuse.md)
 
 ---
@@ -9487,7 +9523,7 @@ This documentation is auto-generated from test cases.
 | 🔧 [Typing Customization](typing-customization.md) | 30 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 27 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 44 | Model generation behavior |
-| 🎨 [Template Customization](template-customization.md) | 26 | Output formatting and custom rendering |
+| 🎨 [Template Customization](template-customization.md) | 27 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
 | ⚙️ [General Options](general-options.md) | 18 | Utilities and meta options |
@@ -9500,7 +9536,7 @@ Use these pages when you know the workflow area but not the exact option name.
 | Topic | Options | Groups |
 |-------|---------|--------|
 | [Model Customization](topics/model-customization.md) | 23 | Model Naming, Model Reuse, Model Shape, Root Model |
-| [Template Customization](topics/template-customization.md) | 20 | Custom Templates, Generated Output, Imports, Output Formatting |
+| [Template Customization](topics/template-customization.md) | 21 | Custom Templates, Generated Output, Imports, Output Formatting |
 | [Typing Customization](topics/typing-customization.md) | 20 | Imports, Collection Types, Type Alias, Type Mapping, Type Syntax |
 | [OpenAPI](topics/openapi.md) | 7 | OpenAPI Naming, OpenAPI Paths, OpenAPI Scopes, Read Only Write Only |
 
@@ -9702,6 +9738,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--skip-root-model`](model-customization.md#skip-root-model)
 - [`--snake-case-field`](field-customization.md#snake-case-field)
 - [`--special-field-name-prefix`](field-customization.md#special-field-name-prefix)
+- [`--strict-dotted-module-names`](template-customization.md#strict-dotted-module-names)
 - [`--strict-nullable`](model-customization.md#strict-nullable)
 - [`--strict-types`](typing-customization.md#strict-types)
 - [`--strip-default-none`](model-customization.md#strip-default-none)
@@ -26923,6 +26960,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/template-cus
 | [`--no-use-type-checking-imports`](#no-use-type-checking-imports) | Keep generated model imports available at runtime when using... |
 | [`--schema-validator-base-class-name`](#schema-validator-base-class-name) | Set the generated shared Pydantic v2 schema runtime validato... |
 | [`--schema-validator-type`](#schema-validator-type) | Select the schema-derived runtime validator backend. |
+| [`--strict-dotted-module-names`](#strict-dotted-module-names) | Require canonical Python identifiers when inferring dotted m... |
 | [`--treat-dot-as-module`](#treat-dot-as-module) | Treat dots in schema names as module separators. |
 | [`--use-double-quotes`](#use-double-quotes) | Use double quotes for string literals in generated code. |
 | [`--use-exact-imports`](#use-exact-imports) | Import exact types instead of modules. |
@@ -30996,6 +31034,83 @@ additional validator backends without adding them in this release.
 
     class Model(RootModel[PatternTarget]):
         root: PatternTarget
+    ```
+
+---
+
+## `--strict-dotted-module-names` {#strict-dotted-module-names}
+
+Require canonical Python identifiers when inferring dotted module paths.
+
+The `--strict-dotted-module-names` flag applies only to automatic module inference.
+
+**See also:** [Module Structure and Exports](../module-exports.md)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --strict-dotted-module-names # (1)!
+    ```
+
+    1. :material-arrow-left: `--strict-dotted-module-names` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```yaml
+    openapi: 3.0.0
+    info:
+      title: Invalid dotted schema name
+      version: 1.0.0
+    paths: {}
+    components:
+      schemas:
+        Shipment:
+          type: object
+          properties:
+            trackingNumber:
+              type: string
+        SaveTrifectaV2.1:
+          type: object
+          properties:
+            shipment:
+              type: object
+              properties:
+                trackingNumber:
+                  type: string
+        SaveRequest:
+          type: object
+          properties:
+            shipment:
+              $ref: '#/components/schemas/Shipment'
+            trifecta:
+              $ref: '#/components/schemas/SaveTrifectaV2.1'
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  invalid_dotted_schema_name.yaml
+    #   timestamp: 1985-10-26T08:21:00+00:00
+
+    from __future__ import annotations
+
+    from pydantic import BaseModel
+
+
+    class Shipment(BaseModel):
+        trackingNumber: str | None = None
+
+
+    class SaveTrifectaV21(BaseModel):
+        shipment: Shipment | None = None
+
+
+    class SaveRequest(BaseModel):
+        shipment: Shipment | None = None
+        trifecta: SaveTrifectaV21 | None = None
     ```
 
 ---
@@ -36709,7 +36824,7 @@ Options are grouped from shared CLI metadata and link back to their generated re
 | Group | Options | Description |
 |-------|---------|-------------|
 | [Custom Templates](#custom-templates) | 3 | Custom templates and extra template data. |
-| [Generated Output](#generated-output) | 8 | Generated file headers and reproducible output. |
+| [Generated Output](#generated-output) | 9 | Generated file headers and reproducible output. |
 | [Imports](#imports) | 4 | Generated imports and type-checking import behavior. |
 | [Output Formatting](#output-formatting) | 5 | Formatter selection, quote style, and string wrapping. |
 
@@ -36737,6 +36852,7 @@ Generated file headers and reproducible output.
 | [`--enable-command-header`](../template-customization.md#enable-command-header) | Include command-line options in file header for reproducibility. |
 | [`--enable-generated-header-marker`](../template-customization.md#enable-generated-header-marker) | Include the @generated marker in file header for generated-code tooling. |
 | [`--enable-version-header`](../template-customization.md#enable-version-header) | Include tool version information in file header. |
+| [`--strict-dotted-module-names`](../template-customization.md#strict-dotted-module-names) | Require canonical Python identifiers when inferring dotted module paths. |
 
 ## Imports {#imports}
 
@@ -37065,6 +37181,7 @@ datamodel-codegen [OPTIONS]
 | [`--no-use-type-checking-imports`](template-customization.md#no-use-type-checking-imports) | Keep generated model imports available at runtime when using Ruff fixes. |
 | [`--schema-validator-base-class-name`](template-customization.md#schema-validator-base-class-name) | Set the generated shared Pydantic v2 schema runtime validator base class name. |
 | [`--schema-validator-type`](template-customization.md#schema-validator-type) | Select the schema-derived runtime validator backend. |
+| [`--strict-dotted-module-names`](template-customization.md#strict-dotted-module-names) | Require canonical Python identifiers when inferring dotted module paths. |
 | [`--treat-dot-as-module`](template-customization.md#treat-dot-as-module) | Treat dots in schema names as module separators. |
 | [`--use-double-quotes`](template-customization.md#use-double-quotes) | Use double quotes for string literals in generated code. |
 | [`--use-exact-imports`](template-customization.md#use-exact-imports) | Import exact types instead of modules. |
@@ -37256,6 +37373,7 @@ All options sorted alphabetically:
 - [`--skip-root-model`](model-customization.md#skip-root-model) - Skip generation of root model when schema contains nested de...
 - [`--snake-case-field`](field-customization.md#snake-case-field) - Convert field names to snake_case format.
 - [`--special-field-name-prefix`](field-customization.md#special-field-name-prefix) - Prefix to add to special field names (like reserved keywords...
+- [`--strict-dotted-module-names`](template-customization.md#strict-dotted-module-names) - Require canonical Python identifiers when inferring dotted m...
 - [`--strict-nullable`](model-customization.md#strict-nullable) - Treat default field as a non-nullable field.
 - [`--strict-types`](typing-customization.md#strict-types) - Enable strict type validation for specified Python types.
 - [`--strip-default-none`](model-customization.md#strip-default-none) - Remove fields with None as default value from generated mode...
@@ -38569,16 +38687,16 @@ classDiagram
 
 | Config model | Field count | Purpose |
 | --- | ---: | --- |
-| `BaseGenerateConfig` | 140 | Shared generation options. |
-| `GenerateConfig` | 155 | Public `generate()` configuration. |
-| `ParserConfig` | 135 | Base parser dependency injection and parser options. |
-| `JSONSchemaParserConfig` | 137 | JSON Schema parser options. |
-| `OpenAPIParserConfig` | 143 | OpenAPI-specific parser options. |
-| `AsyncAPIParserConfig` | 144 | AsyncAPI-specific parser options. |
-| `XMLSchemaParserConfig` | 138 | XML Schema-specific parser options. |
-| `ProtobufParserConfig` | 138 | Protocol Buffers-specific parser options. |
-| `AvroParserConfig` | 137 | Avro-specific parser options. |
-| `GraphQLParserConfig` | 138 | GraphQL-specific parser options. |
+| `BaseGenerateConfig` | 141 | Shared generation options. |
+| `GenerateConfig` | 156 | Public `generate()` configuration. |
+| `ParserConfig` | 136 | Base parser dependency injection and parser options. |
+| `JSONSchemaParserConfig` | 138 | JSON Schema parser options. |
+| `OpenAPIParserConfig` | 144 | OpenAPI-specific parser options. |
+| `AsyncAPIParserConfig` | 145 | AsyncAPI-specific parser options. |
+| `XMLSchemaParserConfig` | 139 | XML Schema-specific parser options. |
+| `ProtobufParserConfig` | 139 | Protocol Buffers-specific parser options. |
+| `AvroParserConfig` | 138 | Avro-specific parser options. |
+| `GraphQLParserConfig` | 139 | GraphQL-specific parser options. |
 
 ### Formatter Names
 
