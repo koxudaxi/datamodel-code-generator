@@ -5077,7 +5077,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return self.data_type(
                     data_types=[
                         self.parse_item(
-                            name, item.additionalProperties, get_special_path("additionalProperties", object_path)
+                            name,
+                            item.additionalProperties,
+                            get_special_path("additionalProperties", object_path),
+                            parent=item,
                         )
                     ],
                     **dict_flags,
