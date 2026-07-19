@@ -1413,10 +1413,11 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         raise ValueError(msg)
 
     if config is None:
-        from datamodel_code_generator.config import GenerateConfig, _rebuild_generate_config  # noqa: PLC0415
+        from datamodel_code_generator.config import GenerateConfig as _GenerateConfig  # noqa: PLC0415
+        from datamodel_code_generator.config import _rebuild_generate_config  # noqa: PLC0415
 
         _rebuild_generate_config()
-        config = GenerateConfig.model_validate(options)
+        config = _GenerateConfig.model_validate(options)
     config = _apply_generate_config_preset(config)
     config = _apply_missing_sentinel_config(config)
 
@@ -1563,41 +1564,129 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         _resolve_schema_versions(input_file_type, config.schema_version)
     )
 
-    with _warn_on_input_string_path_failure(input_):
-        parser = _build_parser(
-            input_file_type,
-            source,
-            config,
-            additional_options,
-            data_model_types,
-            jsonschema_version=jsonschema_version,
-            openapi_version=openapi_version,
-            asyncapi_version=asyncapi_version,
-            xmlschema_version=xmlschema_version,
-            protobuf_version=protobuf_version,
-        )
+    def build_parser(
+        active_config: GenerateConfig,
+        parser_source: Any,
+        parser_options: ParserConfigDict,
+        active_data_model_types: Any,
+        reference_cache: Any | None = None,
+    ) -> Any:
+        """Build one fresh parser using the caller's reference-resolution base."""
+        with _warn_on_input_string_path_failure(input_):
+            active_parser = _build_parser(
+                input_file_type,
+                parser_source,
+                active_config,
+                parser_options,
+                active_data_model_types,
+                jsonschema_version=jsonschema_version,
+                openapi_version=openapi_version,
+                asyncapi_version=asyncapi_version,
+                xmlschema_version=xmlschema_version,
+                protobuf_version=protobuf_version,
+            )
+        if reference_cache is not None and hasattr(active_parser, "remote_object_cache"):
+            active_parser.remote_object_cache = reference_cache
+        return active_parser
 
-    with chdir(config.output):
+    def parse_with_disposal(active_parser: Any, active_config: GenerateConfig) -> Any:
+        """Parse with one parser and dispose it if parsing fails."""
         try:
             with _warn_on_input_string_path_failure(input_):
-                results = parser.parse(
-                    settings_path=config.settings_path,
-                    disable_future_imports=config.disable_future_imports,
-                    all_exports_scope=config.all_exports_scope,
-                    all_exports_collision_strategy=config.all_exports_collision_strategy,
-                    module_split_mode=config.module_split_mode,
-                    collect_model_metadata=config.emit_model_metadata is not None,
+                active_results = active_parser.parse(
+                    settings_path=active_config.settings_path,
+                    disable_future_imports=active_config.disable_future_imports,
+                    all_exports_scope=active_config.all_exports_scope,
+                    all_exports_collision_strategy=active_config.all_exports_collision_strategy,
+                    module_split_mode=active_config.module_split_mode,
+                    collect_model_metadata=active_config.emit_model_metadata is not None,
                 )
-        except Exception:
-            with contextlib.suppress(BaseException):
-                parser._dispose()  # noqa: SLF001
-            raise
         except BaseException:
             with contextlib.suppress(BaseException):
-                parser._dispose()  # noqa: SLF001
+                active_parser._dispose()  # noqa: SLF001
             raise
-    model_metadata = parser.model_metadata
-    parser._dispose()  # noqa: SLF001
+        return active_results
+
+    parser = build_parser(config, source, additional_options, data_model_types)
+    with chdir(config.output):
+        results = parse_with_disposal(parser, config)
+        model_metadata = parser.model_metadata
+        repair_modules = parser.invalid_dotted_stdout_repair_modules
+        repair_state = (
+            (
+                parser.generated_model_inventory,
+                parser.source_data_fingerprint,
+                parser.remote_text_cache,
+                getattr(parser, "remote_object_cache", None),
+                parser.base_path,
+            )
+            if repair_modules
+            else None
+        )
+        parser._dispose()  # noqa: SLF001
+        del parser
+
+        if repair_state is not None:
+            (
+                legacy_inventory,
+                legacy_source_fingerprint,
+                retry_remote_text_cache,
+                retry_reference_cache,
+                retry_base_path,
+            ) = repair_state
+            retry_config = config.model_copy(
+                update={
+                    "repair_invalid_dotted_stdout": False,
+                    "forced_invalid_dotted_stdout_repair_modules": repair_modules,
+                }
+            )
+            retry_parse: tuple[Any, Any] | None = None
+            with contextlib.suppress(Exception):
+                retry_data_model_types, retry_source, retry_defer_formatting, retry_options = (
+                    _prepare_parser_common_options(
+                        input_,
+                        input_text,
+                        input_file_type,
+                        source_override,
+                        retry_config,
+                        extra_template_data,
+                        dataclass_arguments,
+                        skip_root_model=skip_root_model,
+                        remote_text_cache=retry_remote_text_cache,
+                    )
+                )
+                retry_options["base_path"] = retry_base_path
+                retry_parser = build_parser(
+                    retry_config,
+                    retry_source,
+                    retry_options,
+                    retry_data_model_types,
+                    retry_reference_cache,
+                )
+                retry_results = parse_with_disposal(retry_parser, retry_config)
+                retry_parse = retry_parser, retry_results
+
+            # This is a compatibility repair: retain the completed legacy result if it cannot be proven safe.
+            if retry_parse is not None:
+                retry_parser, retry_results = retry_parse
+                try:
+                    if (
+                        isinstance(retry_results, str)
+                        and retry_results
+                        and retry_parser.stdout_result_usable
+                        and retry_parser.generated_model_inventory == legacy_inventory
+                        and retry_parser.source_data_fingerprint == legacy_source_fingerprint
+                    ):
+                        results = retry_results
+                        model_metadata = retry_parser.model_metadata
+                        data_model_types = retry_data_model_types
+                        defer_formatting = retry_defer_formatting
+                finally:
+                    retry_parser._dispose()  # noqa: SLF001
+                del retry_parser
+
+            del retry_reference_cache, retry_remote_text_cache
+
     generated = _emit_results(
         results,
         input_,

@@ -160,6 +160,8 @@ Formatting, custom templates, and generated file headers.
 - `--enable-generated-header-marker`: Enable @generated marker on file headers
 - `--treat-dot-as-module`: Treat dotted schema names as module paths, creating nested directory structures (e.g., 'foo.bar.Model' becomes 'foo/bar.py'). Use --no-treat-dot-as-module to keep dots in names as underscores for single-file output.
 - `--no-treat-dot-as-module`: Treat dotted schema names as module paths, creating nested directory structures (e.g., 'foo.bar.Model' becomes 'foo/bar.py'). Use --no-treat-dot-as-module to keep dots in names as underscores for single-file output.
+- `--strict-dotted-module-names`: Only infer dotted schema names as module paths when every segment is a canonical Python identifier. This applies only to automatic inference and does not override --treat-dot-as-module or --no-treat-dot-as-module.
+- `--no-strict-dotted-module-names`: Only infer dotted schema names as module paths when every segment is a canonical Python identifier. This applies only to automatic inference and does not override --treat-dot-as-module or --no-treat-dot-as-module.
 - `--use-exact-imports`: import exact types instead of modules, for example: "from .foo import Bar" instead of "from . import foo" with "foo.Bar"
 - `--custom-file-header`: Custom file header
 - `--custom-file-header-path`: Custom file header file path

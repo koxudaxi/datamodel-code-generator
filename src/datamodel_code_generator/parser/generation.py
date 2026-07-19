@@ -694,9 +694,12 @@ class GenerationStore:  # noqa: PLR0904
         *,
         class_name: str | None = None,
         reference_name: str | None = None,
+        clear_duplicate_name: bool = False,
     ) -> None:
         """Update a model's generated class or reference name."""
         self.update_model_reference(model, class_name=class_name, reference_name=reference_name)
+        if clear_duplicate_name:
+            model.reference.duplicate_name = None
 
     def move_model(self, model: DataModel, *, new_path: str, new_file_path: Path | None = None) -> None:
         """Update a model's reference path and optional output file path."""

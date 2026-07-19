@@ -33,7 +33,7 @@ from datamodel_code_generator import (
     load_data_from_path,
 )
 from datamodel_code_generator.__main__ import Exit
-from datamodel_code_generator.format import is_supported_in_black
+from datamodel_code_generator.format import Formatter, is_supported_in_black
 from datamodel_code_generator.model import base as model_base
 from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK
 from tests.conftest import (
@@ -180,6 +180,44 @@ def test_main_external_ref_slash_containing_key(output_dir: Path) -> None:
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "external_ref_slash_key",
         extra_args=["--disable-timestamp", "--target-python-version", "3.10"],
     )
+
+
+def test_generate_external_ref_slash_containing_key_strict(output_file: Path) -> None:
+    """Flatten URL-like inferred names only when strict inference is enabled."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "external_ref_slash_key" / "schema.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="external_ref_slash_key_strict.py",
+        strict_dotted_module_names=True,
+        disable_timestamp=True,
+        target_python_version=PythonVersion.PY_310,
+    )
+
+
+def test_generate_strict_dotted_custom_generator_nested(output_dir: Path) -> None:
+    """Apply strict module inference to names returned by a custom generator."""
+
+    def invalid_module_prefix(name: str) -> str:
+        return f"bad-name.{name}"
+
+    generate(
+        JSON_SCHEMA_DATA_PATH / "strict_dotted_custom_generator_nested.json",
+        input_file_type=InputFileType.JsonSchema,
+        output=output_dir,
+        custom_class_name_generator=invalid_module_prefix,
+        strict_dotted_module_names=True,
+        disable_timestamp=True,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    assert_directory_content(
+        output_dir,
+        EXPECTED_JSON_SCHEMA_PATH / "strict_dotted_custom_generator_nested",
+    )
+    generated_file = output_dir / "bad_name.py"
+    validate_generated_code(generated_file.read_text(encoding="utf-8"), str(generated_file), do_exec=True)
 
 
 def test_main_root_ref(output_file: Path) -> None:
@@ -5019,6 +5057,7 @@ def test_main_use_union_operator(output_dir: Path) -> None:
         (["--treat-dot-as-module"], "treat_dot_as_module"),
         (None, "treat_dot_not_as_module"),
         (["--no-treat-dot-as-module"], "treat_dot_not_as_module"),
+        (["--strict-dotted-module-names", "--no-treat-dot-as-module"], "treat_dot_not_as_module"),
     ],
 )
 def test_treat_dot_as_module(extra_args: list[str] | None, expected_suffix: str, output_dir: Path) -> None:
