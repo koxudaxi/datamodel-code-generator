@@ -11,7 +11,7 @@ import sys
 import warnings
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import black
 import pydantic
@@ -1365,6 +1365,78 @@ def test_main_invalid_dotted_fingerprint_failure_preserves_legacy(
         capsys=capsys,
         assert_no_stderr=True,
     )
+
+
+@pytest.mark.parametrize("retry_outcome", ["build_failure", "source_mismatch"])
+@pytest.mark.isolate_builtin_formatter_config
+def test_main_invalid_dotted_unsafe_retry_preserves_legacy(
+    retry_outcome: str,
+    capsys: pytest.CaptureFixture[str],
+    mocker: MockerFixture,
+) -> None:
+    """Keep completed legacy stdout whenever its compatibility retry is unsafe."""
+    import datamodel_code_generator
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+    probe: Any = None
+    expected_calls: list[Any] = []
+    match retry_outcome:
+        case "build_failure":
+            original_build_parser = datamodel_code_generator._build_parser
+            probe = mocker.patch.object(datamodel_code_generator, "_build_parser", autospec=True)
+
+            def fail_retry(*args: Any, **kwargs: Any) -> Any:
+                match probe.call_count:
+                    case 1:
+                        return original_build_parser(*args, **kwargs)
+                    case 2:
+                        raise RuntimeError
+                    case _:  # pragma: no cover - guards the fixed two-pass contract
+                        pytest.fail("unexpected extra parser build")
+
+            probe.side_effect = fail_retry
+            expected_call = mocker.call(
+                InputFileType.OpenAPI,
+                mocker.ANY,
+                mocker.ANY,
+                mocker.ANY,
+                mocker.ANY,
+                jsonschema_version=mocker.ANY,
+                openapi_version=mocker.ANY,
+                asyncapi_version=mocker.ANY,
+                xmlschema_version=mocker.ANY,
+                protobuf_version=mocker.ANY,
+            )
+            expected_calls = [expected_call, expected_call]
+        case "source_mismatch":
+            probe = mocker.patch.object(OpenAPIParser, "_get_source_data_fingerprint", autospec=True)
+
+            def change_source_fingerprint(_: OpenAPIParser) -> bytes:
+                match probe.call_count:
+                    case 1:
+                        return bytes(32)
+                    case 2:
+                        return bytes([1]) * 32
+                    case _:  # pragma: no cover - guards the fixed two-pass contract
+                        pytest.fail("unexpected extra source fingerprint")
+
+            probe.side_effect = change_source_fingerprint
+            expected_calls = [mocker.call(mocker.ANY), mocker.call(mocker.ANY)]
+        case _:  # pragma: no cover - fixed parametrization
+            pytest.fail(f"unexpected retry outcome: {retry_outcome}")
+
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "invalid_dotted_schema_name.yaml",
+        output_path=None,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--formatters", "builtin"],
+        expected_stdout_path=EXPECTED_OPENAPI_PATH / "invalid_dotted_schema_name_legacy_stdout.py",
+        capsys=capsys,
+        assert_no_stderr=True,
+    )
+    if probe is None:  # pragma: no cover - fixed parametrization
+        pytest.fail(f"retry probe was not configured: {retry_outcome}")
+    probe.assert_has_calls(expected_calls)
 
 
 def test_generate_invalid_dotted_schema_name_default_modules() -> None:

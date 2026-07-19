@@ -49,7 +49,7 @@ from datamodel_code_generator._format_types import (
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
-from datamodel_code_generator.model.base import UNDEFINED, get_module_name, sanitize_module_name
+from datamodel_code_generator.model.base import UNDEFINED, sanitize_module_name
 from datamodel_code_generator.model.enum import (
     SPECIALIZED_ENUM_TYPE_MATCH,
     Enum,
@@ -4600,7 +4600,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         fields = self.parse_object_fields(
             obj,
             path,
-            get_module_name(class_name, None, treat_dot_as_module=self.treat_dot_as_module),
+            get_inferred_module_name(
+                class_name,
+                treat_dot_as_module=self.treat_dot_as_module,
+                strict_dotted_module_names=self.strict_dotted_module_names,
+            ),
             class_name=class_name,
         )
         has_declared_fields = bool(fields)
