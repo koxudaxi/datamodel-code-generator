@@ -1375,15 +1375,15 @@ def test_main_invalid_dotted_unsafe_retry_preserves_legacy(
     mocker: MockerFixture,
 ) -> None:
     """Keep completed legacy stdout whenever its compatibility retry is unsafe."""
-    import datamodel_code_generator
     from datamodel_code_generator.parser.openapi import OpenAPIParser
 
+    datamodel_code_generator_module: Any = sys.modules["datamodel_code_generator"]
     probe: Any = None
     expected_calls: list[Any] = []
     match retry_outcome:
         case "build_failure":
-            original_build_parser = datamodel_code_generator._build_parser
-            probe = mocker.patch.object(datamodel_code_generator, "_build_parser", autospec=True)
+            original_build_parser = datamodel_code_generator_module._build_parser
+            probe = mocker.patch.object(datamodel_code_generator_module, "_build_parser", autospec=True)
 
             def fail_retry(*args: Any, **kwargs: Any) -> Any:
                 match probe.call_count:
@@ -1392,7 +1392,7 @@ def test_main_invalid_dotted_unsafe_retry_preserves_legacy(
                     case 2:
                         raise RuntimeError
                     case _:  # pragma: no cover - guards the fixed two-pass contract
-                        pytest.fail("unexpected extra parser build")
+                        return pytest.fail("unexpected extra parser build")
 
             probe.side_effect = fail_retry
             expected_call = mocker.call(
@@ -1418,7 +1418,7 @@ def test_main_invalid_dotted_unsafe_retry_preserves_legacy(
                     case 2:
                         return bytes([1]) * 32
                     case _:  # pragma: no cover - guards the fixed two-pass contract
-                        pytest.fail("unexpected extra source fingerprint")
+                        return pytest.fail("unexpected extra source fingerprint")
 
             probe.side_effect = change_source_fingerprint
             expected_calls = [mocker.call(mocker.ANY), mocker.call(mocker.ANY)]
