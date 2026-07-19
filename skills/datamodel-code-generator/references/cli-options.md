@@ -226,6 +226,7 @@ General utility, HTTP, checking, and project integration options.
 - `--help` (alias: `-h`): show this help message and exit
 - `--no-color`: disable colorized output
 - `--output-format`: Format for command output (default: text). Use json for structured output when supported. Choices: `text`, `json`.
+- `--fail-on-multi-module-stdout`: Return an error instead of concatenating multiple generated modules in text stdout. This does not affect single-module, JSON, or file output.
 - `--output-format-json-schema`: Output JSON Schema for the selected JSON output or JSON configuration format and exit. Choices: `config`, `generate-prompt`, `generation`, `model-metadata`, `structured-output`.
 - `--generate-pyproject-config`: Generate pyproject.toml configuration from the provided CLI arguments and exit
 - `--generate-cli-command`: Generate CLI command from pyproject.toml configuration and exit
