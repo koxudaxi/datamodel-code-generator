@@ -3726,6 +3726,18 @@ def test_main_jsonschema_special_field_name(output_file: Path) -> None:
     )
 
 
+@pytest.mark.benchmark
+def test_main_jsonschema_empty_field_name(output_file: Path) -> None:
+    """An empty ("") property name must keep its alias so the model round-trips."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "empty_field_name.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="empty_field_name.py",
+    )
+
+
 def test_main_jsonschema_complex_one_of(output_file: Path) -> None:
     """Test complex oneOf schemas."""
     run_main_and_assert(

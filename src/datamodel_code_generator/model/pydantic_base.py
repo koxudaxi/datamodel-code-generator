@@ -136,7 +136,7 @@ class DataModelField(DataModelFieldBase):
 
         has_field_metadata = (
             self.extras
-            or self.alias
+            or self.alias is not None
             or self.const
             or self.constraints is not None
             or (self.use_frozen_field and self.read_only)
@@ -238,7 +238,7 @@ class DataModelField(DataModelFieldBase):
     def _get_field_data_and_default_factory(self) -> tuple[dict[str, Any], Any]:
         """Build Field() keyword data and the effective default_factory."""
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS}
-        if self.alias:
+        if self.alias is not None:
             data["alias"] = self.alias
         has_type_constraints = self.data_type.kwargs is not None and len(self.data_type.kwargs) > 0
         if (
