@@ -1520,11 +1520,13 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         _copy_generated_output(generate_output, config.output, is_directory_output=is_directory_output)
 
     if generate_output is None and result is not None:
-        if write_error := _write_generated_result(
-            result,
-            namespace.output_format,
-            fail_on_multi_module_stdout=namespace.fail_on_multi_module_stdout is True,
-        ):
+        if (
+            write_error := _write_generated_result(
+                result,
+                namespace.output_format,
+                fail_on_multi_module_stdout=namespace.fail_on_multi_module_stdout is True,
+            )
+        ) is not None:
             return cleanup_and_return(write_error)
     elif namespace.output_format == "json" and generate_output is not None and not config.check:
         display_output = config.output if writes_json_output_file else None
