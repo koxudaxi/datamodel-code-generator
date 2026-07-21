@@ -523,8 +523,7 @@ def _format_nested_literal(
             )
         case ast.Tuple(elts=[_, *_]):
             return _format_tuple_literal(node, indent, source, line_length)
-        case _:
-            return None
+    return None
 
 
 def _format_dict_literal(
@@ -1051,8 +1050,7 @@ def _classvar_tuple_value(statement: ast.AnnAssign) -> ast.Tuple | None:
             value=ast.Tuple() as value,
         ) if _is_name_or_attr(class_var, "ClassVar"):
             return value
-        case _:
-            return None
+    return None
 
 
 def _format_generated_annotation_assignment(  # noqa: PLR0911, PLR0912
@@ -1700,8 +1698,7 @@ def _has_overlong_tuple_value(statement: ast.stmt, lines: list[str], line_length
                 )
                 for node in ast.walk(value)
             )
-        case _:
-            return False
+    return False
 
 
 def _collect_builtin_replacements(  # noqa: PLR0912, PLR0913
