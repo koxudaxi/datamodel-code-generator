@@ -60,6 +60,7 @@ from tests.main.conftest import (
     MSGSPEC_LEGACY_BLACK_SKIP,
     TIMESTAMP,
     _generated_model,
+    _uses_external_test_default_formatter,
     assert_generated_model_json_invalid,
     assert_generated_model_json_validation,
     assert_path_cache_invalidates_after_write,
@@ -5756,6 +5757,10 @@ _ADDITIONAL_PROPERTIES_CONSTRAINTS_VALID_JSON = (
 )
 
 
+@pytest.mark.skipif(
+    _uses_external_test_default_formatter() and not is_supported_in_black(PythonVersion.PY_311),
+    reason="Installed black doesn't support Python version 3.11",
+)
 @pytest.mark.parametrize(
     ("output_model_type", "expected_file"),
     [
@@ -5899,6 +5904,21 @@ def test_main_jsonschema_additional_properties_value_constraints_annotated(
                     '"modeledValueMap":{"entry":{}}',
                     "missing",
                 ),
+                (
+                    '"titledMap":{"ok":9}',
+                    '"titledMap":{"bad":10}',
+                    "less_than_equal",
+                ),
+                (
+                    '"namedMap":{"ok":5}',
+                    '"namedMap":{"ok":10}',
+                    "less_than_equal",
+                ),
+                (
+                    '"namedMap":{"ok":5}',
+                    '"namedMap":{"Bad":5}',
+                    "string_pattern_mismatch",
+                ),
             )
             for index, (valid_fragment, invalid_fragment, expected_error_type) in enumerate(invalid_cases):
                 assert_generated_model_json_invalid(
@@ -5939,6 +5959,8 @@ def test_main_jsonschema_additional_properties_value_constraints_annotated(
                     ),
                     ('"objectValueMap":{"entry":{"key":"value"}}', '"objectValueMap":{"entry":{}}'),
                     ('"modeledValueMap":{"entry":{"value":1}}', '"modeledValueMap":{"entry":{}}'),
+                    ('"titledMap":{"ok":9}', '"titledMap":{"bad":10}'),
+                    ('"namedMap":{"ok":5}', '"namedMap":{"ok":10}'),
                 )
                 for valid_fragment, invalid_fragment in invalid_fragments:
                     with pytest.raises(msgspec.ValidationError):
@@ -5960,6 +5982,10 @@ def test_main_jsonschema_additional_properties_value_constraints_annotated(
             return
 
 
+@pytest.mark.skipif(
+    _uses_external_test_default_formatter() and not is_supported_in_black(PythonVersion.PY_312),
+    reason="Installed black doesn't support Python version 3.12",
+)
 def test_main_jsonschema_additional_properties_value_constraints_annotated_py312(output_file: Path) -> None:
     """Use runtime-compatible lightweight aliases for constrained mapping values on Python 3.12."""
     run_main_and_assert(
@@ -5980,6 +6006,10 @@ def test_main_jsonschema_additional_properties_value_constraints_annotated_py312
     )
 
 
+@pytest.mark.skipif(
+    _uses_external_test_default_formatter() and not is_supported_in_black(PythonVersion.PY_311),
+    reason="Installed black doesn't support Python version 3.11",
+)
 def test_main_jsonschema_additional_properties_value_constraints_schema_validators(output_file: Path) -> None:
     """Preserve constrained unmatched values in generated patternProperties validators."""
     run_main_and_assert(
