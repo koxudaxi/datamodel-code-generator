@@ -4667,7 +4667,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                             return None
                         case True:
                             continue
-                        case JsonSchemaObject():
+                        case JsonSchemaObject():  # pragma: no branch
                             pending.append(item)
                 continue
             if (
