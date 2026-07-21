@@ -28,7 +28,7 @@ from datamodel_code_generator.enums import ModuleSplitMode
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.types import StrictTypes
 from tests.conftest import assert_output
-from tests.main.conftest import OPEN_API_DATA_PATH
+from tests.main.conftest import JSON_SCHEMA_DATA_PATH, OPEN_API_DATA_PATH
 
 if TYPE_CHECKING:
     from typing import Any
@@ -100,6 +100,21 @@ def test_nested_models() -> None:
     """Test generating nested models and validating nested data."""
     schema = make_object_schema({"user": {"type": "object", "properties": {"name": {"type": "string"}}}})
     assert_dynamic_models(schema, {"Model": {"user": {"name": "Alice"}}}, EXPECTED_PATH / "nested_models.json")
+
+
+@pytest.mark.parametrize(
+    "fixture_name",
+    ["unsafe_custom_base_path_scalar.json", "unsafe_custom_base_path_list_nested.json"],
+)
+def test_generate_apis_reject_unsafe_custom_base_path(fixture_name: str) -> None:
+    """Reject unsafe scalar and nested list customBasePath values before dynamic execution."""
+    schema = json.loads((JSON_SCHEMA_DATA_PATH / fixture_name).read_text(encoding="utf-8"))
+    config = make_config()
+
+    with pytest.raises(Error, match="customBasePath must be a dotted Python identifier path"):
+        generate(input_=schema, config=config)
+    with pytest.raises(Error, match="customBasePath must be a dotted Python identifier path"):
+        generate_dynamic_models(schema, config=config)
 
 
 def test_asyncapi_dynamic_models() -> None:

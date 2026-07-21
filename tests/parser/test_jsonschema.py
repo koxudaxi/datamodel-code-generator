@@ -478,6 +478,28 @@ def test_validate_schema_python_import_path_rejects_non_string() -> None:
         _validate_schema_python_import_path(1, "customTypePath")
 
 
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (None, None),
+        ("custom.Base", "custom.Base"),
+        (["custom.Base", "mixins.Other"], ["custom.Base", "mixins.Other"]),
+    ],
+)
+def test_json_schema_object_validates_custom_base_path(
+    value: object,
+    expected: str | list[str] | None,
+) -> None:
+    """Test schema custom base paths preserve valid scalar, list, and null values."""
+    assert JsonSchemaObject.model_validate({"customBasePath": value}).custom_base_path == expected
+
+
+def test_json_schema_object_rejects_invalid_custom_base_path_list_item() -> None:
+    """Test invalid list members report the schema extension name."""
+    with pytest.raises(Error, match="customBasePath must be a dotted Python identifier path: 1"):
+        JsonSchemaObject.model_validate({"customBasePath": ["custom.Base", 1]})
+
+
 def test_get_x_python_import_path_handles_empty_and_incomplete_metadata() -> None:
     """Test x-python-import accepts an empty object but rejects partial metadata."""
     parser = JsonSchemaParser("")

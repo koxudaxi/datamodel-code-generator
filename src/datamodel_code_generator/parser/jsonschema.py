@@ -694,6 +694,19 @@ class JsonSchemaObject(BaseModel):
         # this condition expects empty dict
         return None if values == {} else values
 
+    @field_validator("custom_base_path", mode="before")
+    def validate_custom_base_path(cls, value: Any) -> Any:  # noqa: N805
+        """Validate schema-controlled custom base class import paths."""
+        match value:
+            case None:
+                return None
+            case list():
+                for item in value:
+                    _validate_schema_python_import_path(item, "customBasePath")
+            case _:
+                _validate_schema_python_import_path(value, "customBasePath")
+        return value
+
     @cached_property
     def has_default(self) -> bool:
         """Check if the schema has a default value or default factory."""

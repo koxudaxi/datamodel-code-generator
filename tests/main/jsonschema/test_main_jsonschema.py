@@ -4365,6 +4365,27 @@ def test_main_jsonschema_rejects_unsafe_python_import_extensions(
     )
 
 
+@pytest.mark.parametrize(
+    "fixture_name",
+    ["unsafe_custom_base_path_scalar.json", "unsafe_custom_base_path_list_nested.json"],
+)
+def test_main_jsonschema_rejects_unsafe_custom_base_path(
+    fixture_name: str,
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject unsafe scalar and nested list customBasePath values before writing output."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / fixture_name,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        output_should_not_exist=True,
+        capsys=capsys,
+        expected_stderr_contains="customBasePath must be a dotted Python identifier path",
+    )
+
+
 @pytest.mark.parametrize("ref_template", ["../secret/leak.json", "{file_uri}"])
 def test_main_jsonschema_warns_local_ref_outside_base_path(
     ref_template: str,
@@ -4487,6 +4508,18 @@ def test_main_jsonschema_custom_base_path(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="custom_base_path.py",
+    )
+
+
+@pytest.mark.parametrize("fixture_name", ["custom_base_path.json", "custom_base_paths_list.json"])
+def test_generate_jsonschema_custom_base_path(fixture_name: str, output_file: Path) -> None:
+    """Test generate() preserves valid scalar, nested, and list customBasePath output."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / fixture_name,
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file=Path(fixture_name).with_suffix(".py"),
     )
 
 
