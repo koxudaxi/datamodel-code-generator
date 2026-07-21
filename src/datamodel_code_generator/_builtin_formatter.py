@@ -1406,7 +1406,16 @@ def _format_type_alias_type_argument(
     argument_source = _source_segment(source, argument)
     if not _is_annotated(argument):
         return [f"{continuation_indent}{argument_source},"]
-    if "\n" not in argument_source and len(f"{continuation_indent}{argument_source},") <= line_length:
+    match argument.slice:
+        case ast.Tuple(elts=[ast.BinOp(op=ast.BitOr()), *_]):
+            has_bit_or_value = True
+        case _:
+            has_bit_or_value = False
+    if (
+        not has_bit_or_value
+        and "\n" not in argument_source
+        and len(f"{continuation_indent}{argument_source},") <= line_length
+    ):
         return [f"{continuation_indent}{argument_source},"]
 
     annotated_lines = _format_annotated(argument, continuation_indent, line_length, source, ",").splitlines()

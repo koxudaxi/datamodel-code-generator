@@ -914,6 +914,23 @@ def test_apply_builtin_formatter_wraps_long_annotated_type_alias_type_argument()
     )
 
 
+def test_apply_builtin_formatter_wraps_annotated_type_alias_type_union_argument() -> None:
+    """Keep an Annotated PEP 604 union expanded inside TypeAliasType."""
+    code = (
+        'Payment = TypeAliasType("Payment", '
+        "Annotated[CardPayment | CashPayment | None, Field(None, discriminator='kind')])\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "Payment = TypeAliasType(\n"
+        '    "Payment",\n'
+        "    Annotated[\n"
+        "        CardPayment | CashPayment | None, Field(None, discriminator='kind')\n"
+        "    ],\n"
+        ")\n"
+    )
+
+
 def test_apply_builtin_formatter_wraps_type_alias_union_assignment() -> None:
     """Test built-in formatter matches black for TypeAlias Union assignments."""
     code = (
