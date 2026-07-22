@@ -23,6 +23,7 @@ _OUTPUT_CAPABILITIES: dict[DataModelType, tuple[bool, bool, bool, bool]] = {
 }
 
 
+@pytest.mark.allow_direct_assert
 def test_output_capability_matrix_covers_every_data_model_type() -> None:
     """Require every output target to declare an intentional capability contract."""
     assert set(_OUTPUT_CAPABILITIES) == set(DataModelType)
@@ -42,6 +43,7 @@ def test_output_capability_matrix_covers_every_data_model_type() -> None:
         for output_model_type, capabilities in _OUTPUT_CAPABILITIES.items()
     ],
 )
+@pytest.mark.allow_direct_assert
 def test_output_capabilities_for_standard_generation_types(
     output_model_type: DataModelType,
     expected_capabilities: tuple[bool, bool, bool, bool],
@@ -91,6 +93,7 @@ def test_output_capabilities_for_standard_generation_types(
         pytest.param(PythonVersion.PY_312, id="py312"),
     ],
 )
+@pytest.mark.allow_direct_assert
 def test_pydantic_root_model_variants_preserve_annotated_constraint_capability(
     target_python_version: PythonVersion,
     use_type_alias: bool,
@@ -125,6 +128,7 @@ def test_pydantic_root_model_variants_preserve_annotated_constraint_capability(
         pytest.param(False, False, id="both-disabled"),
     ],
 )
+@pytest.mark.allow_direct_assert
 def test_annotated_constraint_capability_requires_both_gates(
     use_annotated: bool,
     configured_types_are_builtin: bool,
@@ -183,6 +187,7 @@ def test_annotated_constraint_capability_requires_both_gates(
         ),
     ],
 )
+@pytest.mark.allow_direct_assert
 def test_mixed_builtin_generation_contexts_fail_closed_for_annotated_constraints(
     data_model_target: DataModelType,
     root_target: DataModelType,
@@ -220,6 +225,7 @@ def test_mixed_builtin_generation_contexts_fail_closed_for_annotated_constraints
         pytest.param("type-manager", id="type-manager"),
     ],
 )
+@pytest.mark.allow_direct_assert
 def test_custom_generation_type_subclasses_fail_closed_for_annotated_constraints(custom_component: str) -> None:
     """Keep inherited custom generator classes on the parser's legacy path."""
     model_types = get_data_model_types(
@@ -260,6 +266,7 @@ def test_custom_generation_type_subclasses_fail_closed_for_annotated_constraints
     assert parser._output_model_context.requires_additional_properties_reference_classes is False
 
 
+@pytest.mark.allow_direct_assert
 def test_output_context_import_does_not_load_output_backends() -> None:
     """Keep importing the context independent from concrete output backends."""
     result = subprocess.run(
@@ -281,6 +288,7 @@ def test_output_context_import_does_not_load_output_backends() -> None:
     assert result.stdout.splitlines() == ["False", "False"]
 
 
+@pytest.mark.allow_direct_assert
 def test_pydantic_nested_constraint_alias_import_is_lazy() -> None:
     """Load the Pydantic compatibility alias only when resolution needs it."""
     result = subprocess.run(
