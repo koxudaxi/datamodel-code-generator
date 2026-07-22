@@ -311,6 +311,8 @@ class DataModelFieldBase(_BaseModel):
 
     _FIELD_IMPORTS_CACHE_MAX_SIZE: ClassVar[int] = 4096
     _field_imports_cache: ClassVar[dict[tuple[Any, ...], tuple[Import, ...]]] = {}
+    SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = False
+    ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = None
 
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
@@ -1146,6 +1148,11 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = False
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False
     SUPPORTS_KW_ONLY: ClassVar[bool] = False
+    SUPPORTS_BOOLEAN_LITERAL: ClassVar[bool] = True
+    REQUIRES_TAGGED_UNION_DISCRIMINATOR: ClassVar[bool] = False
+    REQUIRES_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES: ClassVar[bool] = False
+    SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = False
+    ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = None
     TYPED_EXTRA_FIELD_NAME: ClassVar[str | None] = None
     TYPED_EXTRA_PLAIN_ANNOTATION_TEMPLATE_DATA_KEY: ClassVar[str | None] = None
     REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK: ClassVar[bool] = False
@@ -1165,6 +1172,14 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     ) -> DataModelFieldBase | None:
         """Create a model-specific typed extra field when supported."""
         return None
+
+    @classmethod
+    def resolve_nested_constrained_model_type(
+        cls,
+        configured_root_model_type: type[DataModel],
+    ) -> type[DataModel]:
+        """Return the model type used for nested constrained values."""
+        return configured_root_model_type
 
     def __init__(  # noqa: PLR0913
         self,

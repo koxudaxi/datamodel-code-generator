@@ -62,14 +62,11 @@ from datamodel_code_generator.model.runtime_validation import (
     SchemaRuntimeValidation,
 )
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
+from datamodel_code_generator.parser._output_context import OutputModelContext
 from datamodel_code_generator.parser.base import (
     SPECIAL_PATH_FORMAT,
     Parser,
     Source,
-    _is_msgspec_struct,
-    _is_pydantic_v2_base_model,
-    _is_pydantic_v2_dataclass,
-    _is_typed_dict_data_model,
     escape_characters,
     get_special_path,
     title_to_class_name,
@@ -118,7 +115,7 @@ JsonSchemaConstraintKey = Literal[
 ]
 JsonSchemaConstraintValue = int | float | str | bool
 JsonSchemaDataTypeKwargValue = JsonSchemaConstraintValue
-MsgspecTagValue = Union[int, str]  # noqa: UP007
+TaggedUnionValue = Union[int, str]  # noqa: UP007
 _MIN_UNION_VARIANT_LITERAL_VALUES = 2
 _NUMBER_CONSTRAINT_KEYS: tuple[JsonSchemaConstraintKey, ...] = (
     "minimum",
@@ -296,8 +293,8 @@ def _get_union_variant_name(name: str, literal: JsonSchemaLiteral) -> str | None
     return f"{module_name}{separator}{variant_name}" if module_name else variant_name
 
 
-def _get_msgspec_tag_value(literal: JsonSchemaLiteral) -> MsgspecTagValue | None:
-    """Return a msgspec-supported Struct tag value for a JSON Schema literal."""
+def _get_tagged_union_value(literal: JsonSchemaLiteral) -> TaggedUnionValue | None:
+    """Return a supported tagged-union value for a JSON Schema literal."""
     match literal:
         case bool():
             return None
@@ -1013,16 +1010,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self.raw_obj: dict[str, YamlValue] = {}
         self._root_id: Optional[str] = None  # noqa: UP045
         self._root_id_base_path: Optional[str] = None  # noqa: UP045
-        self._is_msgspec_struct_output = _is_msgspec_struct(self.data_model_type)
-        self._is_pydantic_v2_base_model_output = _is_pydantic_v2_base_model(self.data_model_type)
-        self._supports_annotated_additional_properties_constraints = (
-            self.use_annotated
-            and self._configured_generation_types_are_builtin
-            and (
-                self._is_msgspec_struct_output
-                or self._is_pydantic_v2_base_model_output
-                or _is_pydantic_v2_dataclass(self.data_model_type)
-            )
+        self._output_model_context = OutputModelContext.from_generation_types(
+            data_model_type=self.data_model_type,
+            data_model_root_type=self.data_model_root_type,
+            data_model_field_type=self.data_model_field_type,
+            data_type_manager_type=type(self.data_type_manager),
+            configured_types_are_builtin=self._configured_generation_types_are_builtin,
+            use_annotated=self.use_annotated,
         )
 
         # Normalize external ref mapping paths to absolute for reliable matching
@@ -1655,7 +1649,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _get_const_data_type(self, const: object) -> DataType:
         """Return a DataType for a JSON Schema const value."""
         if isinstance(const, bool):
-            if self._is_msgspec_struct_output:
+            if not self._output_model_context.supports_boolean_literals:
                 return self.data_type_manager.get_data_type(Types.boolean)
             return self.data_type(literals=[const])
         if isinstance(const, (int, str)):
@@ -2224,7 +2218,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             additional_props_type = self._build_lightweight_type(obj.additionalProperties)
             if additional_props_type:  # pragma: no branch
                 self.extra_template_data[path]["additionalPropertiesType"] = additional_props_type.type_hint
-                if _is_typed_dict_data_model(self.data_model_type) and (
+                if self._output_model_context.requires_additional_properties_reference_classes and (
                     reference_classes := {
                         data_type.reference.path
                         for data_type in additional_props_type.all_data_types
@@ -2541,12 +2535,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return None
         return self._infer_union_variant_names(name, obj, combined_schemas)
 
-    def _get_msgspec_union_tag_field_values(
+    def _get_tagged_union_field_values(
         self,
         obj: JsonSchemaObject,
         combined_schemas: Sequence[JsonSchemaObject],
-    ) -> tuple[str, dict[int, MsgspecTagValue]] | None:
-        """Return the shared required literal field and supported msgspec tags for a Struct union."""
+    ) -> tuple[str, dict[int, TaggedUnionValue]] | None:
+        """Return the shared required literal field and supported values for a tagged union."""
         discriminator_schemas = [
             self._load_ref_schema_object(item.ref) if item.ref and item.ref_type == JSONReference.LOCAL else item
             for item in combined_schemas
@@ -2557,14 +2551,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if len(literal_values) != len(discriminator_schemas):
                 continue
 
-            tag_values: dict[int, MsgspecTagValue] = {}
+            tag_values: dict[int, TaggedUnionValue] = {}
             for index, literal in literal_values.items():
                 match discriminator_schemas[index]:
                     case JsonSchemaObject(required=required) if field_name in required:
                         pass
                     case _:
                         break
-                if (tag_value := _get_msgspec_tag_value(literal)) is None:
+                if (tag_value := _get_tagged_union_value(literal)) is None:
                     break
                 tag_values[index] = tag_value
             else:
@@ -2572,13 +2566,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return None
 
-    def _set_msgspec_union_discriminator(
+    def _set_tagged_union_discriminator(
         self,
         obj: JsonSchemaObject,
         combined_schemas: Sequence[JsonSchemaObject],
     ) -> None:
-        """Set a discriminator extra when msgspec can use a tagged Struct union."""
-        if not (tag_data := self._get_msgspec_union_tag_field_values(obj, combined_schemas)):
+        """Set a discriminator extra when the output requires a tagged union."""
+        if not (tag_data := self._get_tagged_union_field_values(obj, combined_schemas)):
             return
         tag_field, _tag_values = tag_data
         match obj.extras.get("discriminator"):
@@ -3656,8 +3650,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 )
 
         variant_names = self._get_inferred_union_variant_names(name, obj, combined_schemas)
-        if self._is_msgspec_struct_output:
-            self._set_msgspec_union_discriminator(obj, combined_schemas)
+        if self._output_model_context.requires_tagged_union_discriminator:
+            self._set_tagged_union_discriminator(obj, combined_schemas)
         parsed_schemas = self._parse_combined_schema_items(name, obj, path, combined_schemas, variant_names)
         if not parsed_schemas:
             self._raise_unsatisfiable_schema(path, target_attribute_name)
@@ -4635,11 +4629,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
 
     @cached_property
-    def _additional_properties_value_type_alias(self) -> type[DataModel]:
-        """Return a lightweight alias compatible with the minimum Pydantic v2."""
-        from datamodel_code_generator.model.type_alias import TypeAliasTypeBackport  # noqa: PLC0415
-
-        return TypeAliasTypeBackport
+    def _nested_constrained_model_type(self) -> type[DataModel]:
+        """Resolve the output-specific model for an inline constrained value."""
+        return self._output_model_context.resolve_nested_constrained_model_type()
 
     def _flatten_additional_properties_all_of(self, obj: JsonSchemaObject) -> list[JsonSchemaObject] | None:
         """Resolve and flatten an additionalProperties allOf schema."""
@@ -4708,7 +4700,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         constrained_name: str | None = None,
     ) -> DataType:
         """Parse a mapping value schema while preserving supported Annotated constraints."""
-        if not self._supports_annotated_additional_properties_constraints:
+        if not self._output_model_context.supports_annotated_constraints:
             return self.parse_item(name, additional_properties, path)
         if (
             self._should_create_type_alias_for_title(additional_properties, name)
@@ -4748,11 +4740,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             value_schema,
             path,
             parent=parent,
-            data_model_root_type=(
-                self._additional_properties_value_type_alias
-                if self._is_pydantic_v2_base_model_output and not preserve_root_model
-                else None
-            ),
+            data_model_root_type=(self._nested_constrained_model_type if not preserve_root_model else None),
             preserve_constraints=True,
         )
 

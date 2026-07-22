@@ -56,6 +56,7 @@ class TypedDict(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = "TypedDict.jinja2"
     BASE_CLASS: ClassVar[str] = "typing.TypedDict"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPED_DICT,)
+    REQUIRES_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES: ClassVar[bool] = True
 
     def __init__(  # noqa: PLR0913
         self,
