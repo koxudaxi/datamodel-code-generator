@@ -331,9 +331,6 @@ def test_parser_extension_hooks_keep_legacy_signatures_and_fail_closed(custom_co
             default=default,
         )
 
-    def private_name_collision(*_args: Any, **_kwargs: Any) -> Any:
-        pytest.fail("An internal helper dispatched to a subclass method with the same private name")
-
     namespace: dict[str, Any] = {}
     match custom_component:
         case "parse-item":
@@ -344,9 +341,9 @@ def test_parser_extension_hooks_keep_legacy_signatures_and_fail_closed(custom_co
             namespace = {"_register_root_model": register_root_model}
         case "private-name-collision":
             namespace = {
-                "_parse_constrained_additional_properties_value_item": private_name_collision,
-                "_parse_root_type_with_context": private_name_collision,
-                "_register_root_model_as": private_name_collision,
+                "_parse_constrained_additional_properties_value_item": pytest.fail,
+                "_parse_root_type_with_context": pytest.fail,
+                "_register_root_model_as": pytest.fail,
             }
         case _:
             pass
