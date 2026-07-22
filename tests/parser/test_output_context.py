@@ -244,7 +244,7 @@ def test_custom_generation_type_subclasses_fail_closed_for_annotated_constraints
             data_model_root_type = type("CustomRootModel", (data_model_root_type,), {})
         case "field-model":
             data_model_field_type = type("CustomFieldModel", (data_model_field_type,), {})
-        case "type-manager":
+        case _:
             data_type_manager_type = type("CustomTypeManager", (data_type_manager_type,), {})
 
     parser = JsonSchemaParser(
