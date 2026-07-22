@@ -777,6 +777,42 @@ def test_data_model_set_tuple_abi_matches_baseline() -> None:
     )
 
 
+def test_json_schema_parser_extension_method_signatures_match_baseline() -> None:
+    """Keep parser subclass hooks compatible with their established signatures."""
+    from datamodel_code_generator.model.base import UNDEFINED
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parse_item = inspect.signature(JsonSchemaParser.parse_item).parameters
+    parse_root_type = inspect.signature(JsonSchemaParser.parse_root_type).parameters
+    register_root_model = inspect.signature(JsonSchemaParser._register_root_model).parameters
+
+    assert tuple(parse_item) == ("self", "name", "item", "path", "singular_name", "parent")
+    assert all(parameter.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD for parameter in parse_item.values())
+    assert parse_item["singular_name"].default is False
+    assert parse_item["parent"].default is None
+
+    assert tuple(parse_root_type) == ("self", "name", "obj", "path")
+    assert all(parameter.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD for parameter in parse_root_type.values())
+
+    assert tuple(register_root_model) == (
+        "self",
+        "reference",
+        "fields",
+        "obj",
+        "custom_base_class_name",
+        "description",
+        "default",
+    )
+    assert register_root_model["self"].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+    assert all(
+        parameter.kind is inspect.Parameter.KEYWORD_ONLY
+        for name, parameter in register_root_model.items()
+        if name != "self"
+    )
+    assert register_root_model["description"].default is None
+    assert register_root_model["default"].default is UNDEFINED
+
+
 def test_generate_signature_matches_baseline() -> None:
     """Ensure generate keeps backward compatibility via GenerateConfigDict.
 

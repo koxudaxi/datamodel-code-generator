@@ -4310,9 +4310,36 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         custom_base_class_name: str,
         description: str | None = None,
         default: Any = UNDEFINED,
-        data_model_root_type: type[DataModel] | None = None,
     ) -> DataModel:
-        data_model_root = (data_model_root_type or self.data_model_root_type)(
+        data_model_root = self.data_model_root_type(
+            reference=reference,
+            fields=fields,
+            custom_base_class=self._resolve_base_class(custom_base_class_name, obj.custom_base_path),
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
+            description=description,
+            default=default,
+            nullable=obj.type_has_null,
+            treat_dot_as_module=self.treat_dot_as_module,
+        )
+        self._apply_root_model_sequence_interface(data_model_root, fields)
+        self.generation_store.register_model(data_model_root)
+        return data_model_root
+
+    def _register_root_model_as(  # noqa: PLR0913
+        self,
+        data_model_root_type: type[DataModel],
+        *,
+        reference: Reference,
+        fields: list[DataModelFieldBase],
+        obj: JsonSchemaObject,
+        custom_base_class_name: str,
+        description: str | None = None,
+        default: Any = UNDEFINED,
+    ) -> DataModel:
+        """Register a root using an internal alternate output representation."""
+        data_model_root = data_model_root_type(
             reference=reference,
             fields=fields,
             custom_base_class=self._resolve_base_class(custom_base_class_name, obj.custom_base_path),
@@ -4702,6 +4729,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Parse a mapping value schema while preserving supported Annotated constraints."""
         if not self._output_model_context.supports_annotated_constraints:
             return self.parse_item(name, additional_properties, path)
+        parser_type = type(self)
+        parser_attributes = self.__dict__
+        has_instance_hooks = (
+            "parse_item" in parser_attributes
+            or "parse_root_type" in parser_attributes
+            or "_register_root_model" in parser_attributes
+        )
+        has_class_hooks = parser_type is not JsonSchemaParser and (
+            parser_type.parse_item is not JsonSchemaParser.parse_item
+            or parser_type.parse_root_type is not JsonSchemaParser.parse_root_type
+            or parser_type._register_root_model is not JsonSchemaParser._register_root_model  # noqa: SLF001
+        )
+        if has_instance_hooks or has_class_hooks:
+            return self.parse_item(name, additional_properties, path)
         if (
             self._should_create_type_alias_for_title(additional_properties, name)
             or additional_properties.enum
@@ -4735,12 +4776,48 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if not self._has_effective_constraints(value_schema):
             return self.parse_item(name, additional_properties, path)
 
-        return self.parse_item(
+        return JsonSchemaParser._parse_constrained_additional_properties_value_item(
+            self,
             constrained_name or (name if preserve_root_model else f"{name}AdditionalProperty"),
             value_schema,
             path,
             parent=parent,
             data_model_root_type=(self._nested_constrained_model_type if not preserve_root_model else None),
+        )
+
+    def _parse_constrained_additional_properties_value_item(
+        self,
+        name: str,
+        item: JsonSchemaObject,
+        path: list[str],
+        *,
+        parent: JsonSchemaObject,
+        data_model_root_type: type[DataModel] | None,
+    ) -> DataType:
+        """Parse the constrained-value fast path without changing parser extension hooks."""
+        if python_type_override := self._get_python_type_override(item):
+            return python_type_override
+        if item.enum:
+            return self.parse_item(name, item, path, parent=parent)
+        if self.use_title_as_name and item.title:
+            name = sanitize_module_name(item.title, treat_dot_as_module=self.treat_dot_as_module)
+        if self._should_create_type_alias_for_title(item, name):
+            return JsonSchemaParser._parse_root_type_with_context(
+                self,
+                name,
+                item,
+                path,
+                data_model_root_type=data_model_root_type,
+                preserve_constraints=True,
+            )
+
+        root_type_path = get_special_path("array", path)
+        return JsonSchemaParser._parse_root_type_with_context(
+            self,
+            self.model_resolver.add(root_type_path, name, class_name=True).name,
+            item,
+            root_type_path,
+            data_model_root_type=data_model_root_type,
             preserve_constraints=True,
         )
 
@@ -5126,16 +5203,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self.parse_enum_as_literal(synthetic_obj)
         return self.parse_enum(name, synthetic_obj, enum_path, singular_name=singular_name)
 
-    def parse_item(  # noqa: PLR0911, PLR0912, PLR0913, PLR0915
+    def parse_item(  # noqa: PLR0911, PLR0912, PLR0915
         self,
         name: str,
         item: JsonSchemaObject,
         path: list[str],
         singular_name: bool = False,  # noqa: FBT001, FBT002
         parent: JsonSchemaObject | None = None,
-        *,
-        data_model_root_type: type[DataModel] | None = None,
-        preserve_constraints: bool = False,
     ) -> DataType:
         """Parse a single JSON Schema item into a data type."""
         python_type_override = self._get_python_type_override(item)
@@ -5145,19 +5219,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             name = sanitize_module_name(item.title, treat_dot_as_module=self.treat_dot_as_module)
             singular_name = False
         if self._should_create_type_alias_for_title(item, name):
-            return self.parse_root_type(
-                name,
-                item,
-                path,
-                data_model_root_type=data_model_root_type,
-                preserve_constraints=preserve_constraints,
-            )
-        if (
-            parent  # noqa: PLR0916
-            and not item.enum
-            and (parent.has_constraint or self.field_constraints)
-            and (item.has_constraint or (preserve_constraints and self._has_effective_constraints(item)))
-        ):
+            return self.parse_root_type(name, item, path)
+        if parent and not item.enum and item.has_constraint and (parent.has_constraint or self.field_constraints):
             root_type_path = get_special_path("array", path)
             return self.parse_root_type(
                 self.model_resolver.add(
@@ -5168,8 +5231,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 ).name,
                 item,
                 root_type_path,
-                data_model_root_type=data_model_root_type,
-                preserve_constraints=preserve_constraints,
             )
         if item.recursiveRef and not item.ref:
             return self.get_ref_data_type(self._resolve_recursive_ref(item, path) or "#")
@@ -5422,7 +5483,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         return self.data_type(reference=reference)
 
-    def parse_root_type(  # noqa: PLR0912, PLR0914, PLR0915
+    def parse_root_type(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+    ) -> DataType:
+        """Parse a root-level type into a root model."""
+        return JsonSchemaParser._parse_root_type_with_context(self, name, obj, path)
+
+    def _parse_root_type_with_context(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -5431,7 +5501,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         data_model_root_type: type[DataModel] | None = None,
         preserve_constraints: bool = False,
     ) -> DataType:
-        """Parse a root-level type into a root model."""
+        """Parse a root type with an internal output representation override."""
         reference: Reference | None = None
         array_constraints: Any = None
         if obj.ref:
@@ -5533,30 +5603,43 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         if data_type.is_dict or data_type.is_mapping:
             constraints.update(self._get_property_count_constraints(obj))
+        fields = [
+            self.data_model_field_type(
+                data_type=data_type,
+                default=default_value,
+                required=required,
+                constraints=constraints,
+                nullable=nullable,
+                strip_default_none=self.strip_default_none,
+                extras=self.get_field_extras(obj),
+                use_annotated=self.use_annotated,
+                use_field_description=self.use_field_description,
+                use_field_description_example=self.use_field_description_example,
+                use_inline_field_description=self.use_inline_field_description,
+                original_name=None,
+                has_default=has_default_override,
+                **self._data_model_field_common_kwargs(),
+            )
+        ]
+        root_default = default_value if has_default_override else UNDEFINED
+        if data_model_root_type is not None:
+            JsonSchemaParser._register_root_model_as(
+                self,
+                selected_root_type,
+                reference=reference,
+                fields=fields,
+                obj=obj,
+                custom_base_class_name=name,
+                default=root_default,
+            )
+            return self.data_type(reference=reference)
+
         self._register_root_model(
             reference=reference,
-            fields=[
-                self.data_model_field_type(
-                    data_type=data_type,
-                    default=default_value,
-                    required=required,
-                    constraints=constraints,
-                    nullable=nullable,
-                    strip_default_none=self.strip_default_none,
-                    extras=self.get_field_extras(obj),
-                    use_annotated=self.use_annotated,
-                    use_field_description=self.use_field_description,
-                    use_field_description_example=self.use_field_description_example,
-                    use_inline_field_description=self.use_inline_field_description,
-                    original_name=None,
-                    has_default=has_default_override,
-                    **self._data_model_field_common_kwargs(),
-                )
-            ],
+            fields=fields,
             obj=obj,
             custom_base_class_name=name,
-            default=default_value if has_default_override else UNDEFINED,
-            data_model_root_type=selected_root_type,
+            default=root_default,
         )
         return self.data_type(reference=reference)
 

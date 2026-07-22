@@ -4,15 +4,21 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from datamodel_code_generator import DataModelType, PythonVersion
 from datamodel_code_generator.config import JSONSchemaParserConfig
 from datamodel_code_generator.model import get_data_model_types
+from datamodel_code_generator.model.base import UNDEFINED, DataModel, DataModelFieldBase
 from datamodel_code_generator.model.type_alias import TypeAliasTypeBackport
 from datamodel_code_generator.parser._output_context import OutputModelContext
-from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+from datamodel_code_generator.parser.jsonschema import JsonSchemaObject, JsonSchemaParser
+
+if TYPE_CHECKING:
+    from datamodel_code_generator.reference import Reference
+    from datamodel_code_generator.types import DataType
 
 _OUTPUT_CAPABILITIES: dict[DataModelType, tuple[bool, bool, bool, bool]] = {
     DataModelType.PydanticV2BaseModel: (True, True, False, False),
@@ -264,6 +270,201 @@ def test_custom_generation_type_subclasses_fail_closed_for_annotated_constraints
     assert parser._output_model_context.supports_boolean_literals is True
     assert parser._output_model_context.requires_tagged_union_discriminator is False
     assert parser._output_model_context.requires_additional_properties_reference_classes is False
+
+
+@pytest.mark.parametrize(
+    "custom_component",
+    [
+        pytest.param("inherited", id="inherited"),
+        pytest.param("parse-item", id="parse-item"),
+        pytest.param("parse-root-type", id="parse-root-type"),
+        pytest.param("register-root-model", id="register-root-model"),
+        pytest.param("instance-parse-item", id="instance-parse-item"),
+        pytest.param("instance-parse-root-type", id="instance-parse-root-type"),
+        pytest.param("instance-register-root-model", id="instance-register-root-model"),
+        pytest.param("private-name-collision", id="private-name-collision"),
+    ],
+)
+@pytest.mark.allow_direct_assert
+def test_parser_extension_hooks_keep_legacy_signatures_and_fail_closed(custom_component: str) -> None:
+    """Avoid passing internal output context through established subclass hooks."""
+    hook_calls: list[str] = []
+
+    def parse_item(
+        self: JsonSchemaParser,
+        name: str,
+        item: JsonSchemaObject,
+        path: list[str],
+        singular_name: bool = False,
+        parent: JsonSchemaObject | None = None,
+    ) -> DataType:
+        hook_calls.append("parse-item")
+        return JsonSchemaParser.parse_item(self, name, item, path, singular_name, parent)
+
+    def parse_root_type(
+        self: JsonSchemaParser,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+    ) -> DataType:
+        hook_calls.append("parse-root-type")
+        return JsonSchemaParser.parse_root_type(self, name, obj, path)
+
+    def register_root_model(
+        self: JsonSchemaParser,
+        *,
+        reference: Reference,
+        fields: list[DataModelFieldBase],
+        obj: JsonSchemaObject,
+        custom_base_class_name: str,
+        description: str | None = None,
+        default: Any = UNDEFINED,
+    ) -> DataModel:
+        hook_calls.append("register-root-model")
+        return JsonSchemaParser._register_root_model(
+            self,
+            reference=reference,
+            fields=fields,
+            obj=obj,
+            custom_base_class_name=custom_base_class_name,
+            description=description,
+            default=default,
+        )
+
+    def private_name_collision(*_args: Any, **_kwargs: Any) -> Any:
+        pytest.fail("An internal helper dispatched to a subclass method with the same private name")
+
+    match custom_component:
+        case "parse-item":
+            namespace = {"parse_item": parse_item}
+        case "parse-root-type":
+            namespace = {"parse_root_type": parse_root_type}
+        case "register-root-model":
+            namespace = {"_register_root_model": register_root_model}
+        case "private-name-collision":
+            namespace = {
+                "_parse_constrained_additional_properties_value_item": private_name_collision,
+                "_parse_root_type_with_context": private_name_collision,
+                "_register_root_model_as": private_name_collision,
+            }
+        case _:
+            namespace = {}
+    parser_type = type("ExtensionJsonSchemaParser", (JsonSchemaParser,), namespace)
+    model_types = get_data_model_types(
+        DataModelType.PydanticV2BaseModel,
+        target_python_version=PythonVersion.PY_311,
+    )
+    parser = parser_type(
+        "{}",
+        config=JSONSchemaParserConfig(
+            data_model_type=model_types.data_model,
+            data_model_root_type=model_types.root_model,
+            data_model_field_type=model_types.field_model,
+            data_type_manager_type=model_types.data_type_manager,
+            field_constraints=True,
+            use_annotated=True,
+        ),
+    )
+    match custom_component:
+        case "instance-parse-item":
+            parser.__dict__["parse_item"] = parse_item.__get__(parser, parser_type)
+        case "instance-parse-root-type":
+            parser.__dict__["parse_root_type"] = parse_root_type.__get__(parser, parser_type)
+        case "instance-register-root-model":
+            parser.__dict__["_register_root_model"] = register_root_model.__get__(parser, parser_type)
+    constrained_map = JsonSchemaObject.model_validate({
+        "type": "object",
+        "additionalProperties": {"type": "integer", "minimum": 1},
+    })
+
+    parser.parse_item("Payload", constrained_map, [])
+
+    expected_models = 1 if custom_component in {"inherited", "private-name-collision"} else 0
+    assert len(list(parser.results)) == expected_models
+
+    parser.parse_root_type("LegacyRoot", JsonSchemaObject.model_validate({"type": "integer"}), ["legacy"])
+
+    expected_calls = {
+        "inherited": [],
+        "parse-item": ["parse-item", "parse-item"],
+        "parse-root-type": ["parse-root-type"],
+        "register-root-model": ["register-root-model"],
+        "instance-parse-item": ["parse-item", "parse-item"],
+        "instance-parse-root-type": ["parse-root-type"],
+        "instance-register-root-model": ["register-root-model"],
+        "private-name-collision": [],
+    }
+    assert hook_calls == expected_calls[custom_component]
+
+
+@pytest.mark.allow_direct_assert
+def test_parse_item_skips_parent_constraint_cache_for_unconstrained_children() -> None:
+    """Preserve the constraint-check ordering on the parse-item hot path."""
+    parser = JsonSchemaParser("{}")
+    parent = JsonSchemaObject.model_validate({"type": "array"})
+    child = JsonSchemaObject.model_validate({"type": "string"})
+
+    parser.parse_item("Value", child, [], parent=parent)
+
+    assert "has_constraint" in child.__dict__
+    assert "has_constraint" not in parent.__dict__
+    assert parent.model_copy(update={"minItems": 1}).has_constraint is True
+
+
+@pytest.mark.parametrize(
+    "schema_case",
+    [
+        pytest.param("python-override", id="python-override"),
+        pytest.param("enum", id="enum"),
+        pytest.param("title", id="title"),
+    ],
+)
+@pytest.mark.allow_direct_assert
+def test_constrained_item_fast_path_preserves_legacy_short_circuits(schema_case: str) -> None:
+    """Keep type overrides, enums, and titled aliases on their established paths."""
+    match schema_case:
+        case "python-override":
+            schema_data = {"type": "integer", "minimum": 1, "x-python-type": "str"}
+        case "enum":
+            schema_data = {"type": "integer", "minimum": 1, "enum": [1, 2]}
+        case _:
+            schema_data = {"title": "TitledValue", "type": "integer", "minimum": 1}
+    model_types = get_data_model_types(
+        DataModelType.PydanticV2BaseModel,
+        target_python_version=PythonVersion.PY_311,
+    )
+    parser = JsonSchemaParser(
+        "{}",
+        config=JSONSchemaParserConfig(
+            data_model_type=model_types.data_model,
+            data_model_root_type=model_types.root_model,
+            data_model_field_type=model_types.field_model,
+            data_type_manager_type=model_types.data_type_manager,
+            field_constraints=True,
+            use_annotated=True,
+            use_title_as_name=True,
+        ),
+    )
+
+    data_type = parser._parse_constrained_additional_properties_value_item(
+        "Value",
+        JsonSchemaObject.model_validate(schema_data),
+        ["value"],
+        parent=JsonSchemaObject.model_validate({"type": "object"}),
+        data_model_root_type=TypeAliasTypeBackport,
+    )
+
+    match schema_case:
+        case "python-override":
+            assert data_type.type_hint == "str"
+            assert not list(parser.results)
+        case "enum":
+            assert data_type.reference is not None
+            assert len(list(parser.results)) == 1
+        case _:
+            assert data_type.reference is not None
+            assert data_type.reference.name == "TitledValue"
+            assert len(list(parser.results)) == 1
 
 
 @pytest.mark.allow_direct_assert
