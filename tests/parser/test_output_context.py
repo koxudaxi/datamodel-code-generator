@@ -334,6 +334,7 @@ def test_parser_extension_hooks_keep_legacy_signatures_and_fail_closed(custom_co
     def private_name_collision(*_args: Any, **_kwargs: Any) -> Any:
         pytest.fail("An internal helper dispatched to a subclass method with the same private name")
 
+    namespace: dict[str, Any] = {}
     match custom_component:
         case "parse-item":
             namespace = {"parse_item": parse_item}
@@ -348,7 +349,7 @@ def test_parser_extension_hooks_keep_legacy_signatures_and_fail_closed(custom_co
                 "_register_root_model_as": private_name_collision,
             }
         case _:
-            namespace = {}
+            pass
     parser_type = type("ExtensionJsonSchemaParser", (JsonSchemaParser,), namespace)
     model_types = get_data_model_types(
         DataModelType.PydanticV2BaseModel,
@@ -422,13 +423,14 @@ def test_parse_item_skips_parent_constraint_cache_for_unconstrained_children() -
 @pytest.mark.allow_direct_assert
 def test_constrained_item_fast_path_preserves_legacy_short_circuits(schema_case: str) -> None:
     """Keep type overrides, enums, and titled aliases on their established paths."""
+    schema_data: dict[str, Any] = {"title": "TitledValue", "type": "integer", "minimum": 1}
     match schema_case:
         case "python-override":
             schema_data = {"type": "integer", "minimum": 1, "x-python-type": "str"}
         case "enum":
             schema_data = {"type": "integer", "minimum": 1, "enum": [1, 2]}
         case _:
-            schema_data = {"title": "TitledValue", "type": "integer", "minimum": 1}
+            pass
     model_types = get_data_model_types(
         DataModelType.PydanticV2BaseModel,
         target_python_version=PythonVersion.PY_311,
