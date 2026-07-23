@@ -57,9 +57,9 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER,
 )
 from datamodel_code_generator.model.pydantic_v2.version import (
-    _DICT_KEY_REFERENCE_CLASSES_CAPABILITY as _PYDANTIC_V2_DICT_KEY_REFERENCE_CLASSES_CAPABILITY,
+    PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA,
+    _get_dict_key_reference_classes_capability,
 )
-from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA
 from datamodel_code_generator.model.runtime_validation import SchemaRuntimeValidation
 from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
@@ -611,7 +611,7 @@ class BaseModel(BaseModelBase):
     SUPPORTS_CONFIG_EXTRA: ClassVar[bool] = True
     SUPPORTS_ARBITRARY_TYPES_ALLOWED: ClassVar[bool] = True
     CUSTOM_TEMPLATE_ADAPTER = staticmethod(_adapt_legacy_pydantic_extra_template)
-    _INCLUDE_DICT_KEY_REFERENCE_CLASSES = _PYDANTIC_V2_DICT_KEY_REFERENCE_CLASSES_CAPABILITY
+    _INCLUDE_DICT_KEY_REFERENCE_CLASSES = _get_dict_key_reference_classes_capability()
     TYPED_EXTRA_FIELD_NAME: ClassVar[str] = "__pydantic_extra__"
     TYPED_EXTRA_PLAIN_ANNOTATION_TEMPLATE_DATA_KEY: ClassVar[str] = "pydantic_extra_plain_annotation"
     # In Pydantic 2.11+, populate_by_name is deprecated in favor of validate_by_name + validate_by_alias

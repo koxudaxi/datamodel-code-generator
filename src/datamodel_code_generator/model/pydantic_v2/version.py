@@ -39,3 +39,8 @@ def _is_builtin_pydantic_v2_model(model_type: type[object]) -> bool:
 _DICT_KEY_REFERENCE_CLASSES_CAPABILITY = (
     staticmethod(_is_builtin_pydantic_v2_model) if PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING else None
 )
+
+
+def _get_dict_key_reference_classes_capability() -> staticmethod[[type[object]], bool] | None:
+    """Return the shared dict-key dependency capability for built-in Pydantic v2 models."""
+    return _DICT_KEY_REFERENCE_CLASSES_CAPABILITY
