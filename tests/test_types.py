@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import pytest
 
@@ -373,6 +373,28 @@ def test_datatype_type_hint_container_precedence_matches_base_type_hint() -> Non
     for data_type, expected_type_hint, expected_base_type_hint in cases:
         assert data_type.type_hint == expected_type_hint
         assert data_type.base_type_hint == expected_base_type_hint
+
+
+def test_external_datatype_subclass_keeps_legacy_rendering_contract() -> None:
+    """External DataType subclasses retain discriminator and base-hint behavior."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+
+    class ExternalDataType(DataType):
+        _CONSTRAINED_TYPE_TO_BASE: ClassVar[dict[str, str]] = {
+            **DataType._CONSTRAINED_TYPE_TO_BASE,
+            "custom_constr": "bytes",
+        }
+
+    data_type = ExternalDataType(
+        data_types=[
+            ExternalDataType(type="custom_constr", is_func=True, kwargs={"limit": 1}),
+            ExternalDataType(type="int"),
+        ],
+        discriminator="kind",
+    )
+
+    assert data_type.type_hint == "Annotated[Union[custom_constr(limit=1), int], Field(discriminator='kind')]"
+    assert data_type.base_type_hint == "Union[bytes, int]"
 
 
 def test_datatype_type_hint_uses_dict_key_render_selector() -> None:

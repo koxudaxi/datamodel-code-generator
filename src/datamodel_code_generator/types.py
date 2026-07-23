@@ -782,6 +782,15 @@ class DataType(_BaseModel):
         """
         return type_
 
+    @staticmethod
+    def _wrap_discriminator_type_hint(type_: str, discriminator: str) -> str:
+        """Preserve the historical discriminator rendering for direct DataType users.
+
+        Output-specific DataType subclasses should override this compatibility
+        fallback so their generated syntax remains owned by the output backend.
+        """
+        return f"Annotated[{type_}, Field(discriminator={discriminator!r})]"
+
     _TYPE_HINT_CONTAINER_ORDER: ClassVar[tuple[str, ...]] = (
         "frozen_set",
         "set",
@@ -867,8 +876,8 @@ class DataType(_BaseModel):
         else:
             type_ = f"{UNION_PREFIX}{UNION_DELIMITER.join(data_types)}]"
 
-        if wrap_discriminator and self.discriminator:
-            type_ = f"Annotated[{type_}, Field(discriminator={self.discriminator!r})]"
+        if wrap_discriminator and (discriminator := self.discriminator):
+            type_ = self._wrap_discriminator_type_hint(type_, discriminator)
         return type_
 
     def _render_ordered_union_type_hint(
@@ -897,8 +906,8 @@ class DataType(_BaseModel):
             case _:
                 type_ = f"{UNION_PREFIX}{UNION_DELIMITER.join(data_types)}]"
 
-        if wrap_discriminator and self.discriminator:
-            type_ = f"Annotated[{type_}, Field(discriminator={self.discriminator!r})]"
+        if wrap_discriminator and (discriminator := self.discriminator):
+            type_ = self._wrap_discriminator_type_hint(type_, discriminator)
         return type_
 
     def _apply_nullable_from_reference(self) -> None:
@@ -1026,34 +1035,25 @@ class DataType(_BaseModel):
         """Return whether this DataType represents a union of multiple types."""
         return len(self.data_types) > 1
 
-    # Mapping from constrained type functions to their base Python types.
-    # Only constr is included because it's the only type with a 'pattern' parameter
-    # that can trigger lookaround regex detection. Other constrained types (conint,
-    # confloat, condecimal, conbytes) don't have pattern constraints, so they will
-    # never need base_type_hint conversion in the regex_engine context.
+    # Historical conversion policy retained for direct DataType users and
+    # external subclasses. Output backends must declare their own policy.
     _CONSTRAINED_TYPE_TO_BASE: ClassVar[dict[str, str]] = {
         "constr": "str",
     }
 
     @property
     def base_type_hint(self) -> str:
-        """Return the base type hint without constrained type kwargs.
+        """Return a simplified hint using the backend-provided conversion policy.
 
-        For types like constr(pattern=..., min_length=...), this returns just 'str'.
-        This works recursively for nested types like list[constr(pattern=...)] -> list[str].
-
-        This is useful when the pattern contains lookaround assertions that require
-        regex_engine="python-re", which must be set in model_config. In such cases,
-        the RootModel generic cannot use the constrained type because it would be
-        evaluated at class definition time before model_config is processed.
+        The defaults preserve historical direct DataType and external subclass
+        behavior. Output-specific subclasses own the policy ClassVars.
         """
         if self.is_func and self.kwargs:
             type_: str | None = self.alias or self.type
             if type_:  # pragma: no branch
                 base_type = self._CONSTRAINED_TYPE_TO_BASE.get(type_)
                 if base_type is None:
-                    # Not a constrained type we convert (e.g., conint, confloat)
-                    # Return the full type_hint with kwargs to avoid returning bare function name
+                    # Preserve the rendered call when the backend policy does not simplify it.
                     return self.type_hint
                 if self.is_optional and base_type != ANY:  # pragma: no cover
                     return get_optional_type(base_type, self.use_union_operator)
