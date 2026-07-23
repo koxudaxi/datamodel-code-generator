@@ -1159,6 +1159,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = False
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False
     SUPPORTS_KW_ONLY: ClassVar[bool] = False
+    REQUIRES_MODEL_LEVEL_KW_ONLY: ClassVar[bool] = False
     SUPPORTS_BOOLEAN_LITERAL: ClassVar[bool] = True
     REQUIRES_FIELD_DEPENDENCY_ORDERING: ClassVar[bool] = False
     REQUIRES_TAGGED_UNION_DISCRIMINATOR: ClassVar[bool] = False
@@ -1194,6 +1195,13 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         value: Any,
     ) -> None:
         """Apply an output-specific tagged-union discriminator when supported."""
+
+    def has_keyword_only_definition(self) -> bool:  # noqa: PLR6301
+        """Return whether the model already makes inherited fields keyword-only."""
+        return False
+
+    def enable_model_keyword_only(self) -> None:
+        """Enable output-specific model-level keyword-only behavior when supported."""
 
     @classmethod
     def resolve_nested_constrained_model_type(

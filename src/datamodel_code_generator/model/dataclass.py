@@ -37,6 +37,10 @@ def has_field_assignment(field: DataModelFieldBase) -> bool:
 
 
 class _DataclassReuseMixin:
+    def has_keyword_only_definition(self) -> bool:
+        """Return whether a dataclass declaration enables keyword-only fields."""
+        return bool(cast("DataModel", self).dataclass_arguments.get("kw_only"))
+
     def create_reuse_model(self, base_ref: Reference) -> DataModel:
         """Create inherited model with empty fields pointing to base reference."""
         model = cast("DataModel", self)
