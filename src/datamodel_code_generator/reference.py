@@ -456,6 +456,15 @@ class PydanticFieldNameResolver(FieldNameResolver):
         return not hasattr(BaseModel, field_name)
 
 
+class MsgspecFieldNameResolver(FieldNameResolver):
+    """Field name resolver that avoids shadowing msgspec's imported ``field``."""
+
+    def _validate_field_name(self, field_name: str) -> bool:  # noqa: PLR6301
+        # A field named ``field`` would shadow the ``from msgspec import field``
+        # used for other fields' ``field(...)`` calls, breaking the generated module.
+        return field_name != "field"
+
+
 class EnumFieldNameResolver(FieldNameResolver):
     """Field name resolver for enum members with special handling for reserved names."""
 
@@ -495,12 +504,14 @@ class ModelType(Enum):
     PYDANTIC = auto()
     ENUM = auto()
     CLASS = auto()
+    MSGSPEC = auto()
 
 
 DEFAULT_FIELD_NAME_RESOLVERS: dict[ModelType, type[FieldNameResolver]] = {
     ModelType.ENUM: EnumFieldNameResolver,
     ModelType.PYDANTIC: PydanticFieldNameResolver,
     ModelType.CLASS: FieldNameResolver,
+    ModelType.MSGSPEC: MsgspecFieldNameResolver,
 }
 
 

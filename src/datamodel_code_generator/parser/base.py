@@ -1818,11 +1818,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """Get the ModelType for field name validation based on data_model_type.
 
         Returns ModelType.PYDANTIC for Pydantic models (which have reserved attributes
-        like 'schema', 'model_fields', etc.), and ModelType.CLASS for other model types
-        (TypedDict, dataclass, msgspec) which don't have such constraints.
+        like 'schema', 'model_fields', etc.), ModelType.MSGSPEC for msgspec Structs
+        (whose imported ``field`` must not be shadowed by a field named ``field``), and
+        ModelType.CLASS for other model types (TypedDict, dataclass) which don't have
+        such constraints.
         """
         if _is_pydantic_v2_base_model(self.data_model_type):
             return ModelType.PYDANTIC
+        if _is_msgspec_struct(self.data_model_type):
+            return ModelType.MSGSPEC
         return ModelType.CLASS
 
     def get_serialization_alias(
