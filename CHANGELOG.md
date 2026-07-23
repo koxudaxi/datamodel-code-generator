@@ -5,6 +5,43 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.70.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.70.0) - 2026-07-23
+
+## Breaking Changes
+
+
+* Preserved additionalProperties value constraints change generated output - JSON Schema `additionalProperties` (and `propertyNames`/mapping) value schemas that carry constraints (e.g. `minimum`/`maximum`, `minLength`/`maxLength`/`pattern`, array item constraints, `allOf`-merged primitives) now retain those constraints in the generated model instead of dropping them. This produces new `TypeAlias`/`RootModel`/`TypeAliasType` definitions and changes dict value type hints, so output differs for existing schemas. For example, a mapping value that previously generated `dict[str, Literal['fixed']]` now generates a dedicated alias preserving the constraints (#3616):
+
+```python
+# Before
+class DictModel(RootModel[dict[str, Literal['fixed']]]):
+    root: dict[str, Literal['fixed']]
+
+# After
+DictModelAdditionalProperty = TypeAliasType(
+    "DictModelAdditionalProperty",
+    Annotated[Literal['fixed'], Field(max_length=100, min_length=1)],
+)
+
+
+class DictModel(RootModel[dict[str, DictModelAdditionalProperty]]):
+    root: dict[str, DictModelAdditionalProperty]
+```
+
+## What's Changed
+* Update CHANGELOG for 0.69.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3613
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3614
+* [pre-commit.ci] pre-commit autoupdate by @pre-commit-ci[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3617
+* Preserve additionalProperties value constraints by @chuenchen309 in https://github.com/koxudaxi/datamodel-code-generator/pull/3616
+* Rename a msgspec field named "field" to avoid shadowing the field import by @chuenchen309 in https://github.com/koxudaxi/datamodel-code-generator/pull/3615
+* Bump the github-actions group with 8 updates by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3618
+* Update types-setuptools requirement from <70,>=67.6.0.5 to >=67.6.0.5,<84 by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3584
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.69.0...0.70.0
+
+---
+
 ## [0.69.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.69.0) - 2026-07-19
 
 ## Breaking Changes
