@@ -49,11 +49,25 @@ Recommended for standalone CLI use:
 uv tool install datamodel-code-generator
 ```
 
+Conda users can install from conda-forge:
+
+```bash
+conda install -c conda-forge datamodel-code-generator
+```
+
 For projects that should pin the generator version, add it as a development dependency instead:
 
 ```bash
 uv add --dev datamodel-code-generator
 ```
+
+> [!NOTE]
+> Community-maintained distribution packages are also available from
+> [Debian](https://packages.debian.org/search?keywords=datamodel-codegen&searchon=names&suite=all&section=all),
+> [Ubuntu](https://packages.ubuntu.com/search?keywords=datamodel-codegen&searchon=names&suite=all&section=all),
+> [nixpkgs](https://search.nixos.org/packages?query=datamodel-code-generator), and
+> [openSUSE Tumbleweed](https://software.opensuse.org/package/python-datamodel-code-generator).
+> Availability and versions vary by distribution.
 
 <details>
 <summary>Other installation methods</summary>
@@ -66,11 +80,6 @@ pip install datamodel-code-generator
 **uv (run without adding to project):**
 ```bash
 uv run --with datamodel-code-generator datamodel-codegen --help
-```
-
-**conda:**
-```bash
-conda install -c conda-forge datamodel-code-generator
 ```
 
 **With HTTP support** (for resolving remote `$ref`):
