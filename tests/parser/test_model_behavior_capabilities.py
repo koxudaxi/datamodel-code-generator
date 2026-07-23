@@ -2,34 +2,40 @@
 
 from __future__ import annotations
 
+import inspect
+import pickle
 from typing import TYPE_CHECKING
 
 import pytest
 
 from datamodel_code_generator import DataModelType, PythonVersion
-from datamodel_code_generator.model import get_data_model_types
-from datamodel_code_generator.model.base import DataModel, has_field_assignment
-from datamodel_code_generator.model.dataclass import has_field_assignment as dataclass_has_field_assignment
+from datamodel_code_generator.model import DataModelFieldBase, get_data_model_types
+from datamodel_code_generator.model.base import DataModel, _has_field_assignment
+from datamodel_code_generator.model.dataclass import (
+    DataModelField as DataclassDataModelField,
+)
+from datamodel_code_generator.model.dataclass import (
+    has_field_assignment as dataclass_has_field_assignment,
+)
 from datamodel_code_generator.model.msgspec import has_field_assignment as msgspec_has_field_assignment
 from datamodel_code_generator.model.pydantic_v2.dataclass import (
     has_field_assignment as pydantic_dataclass_has_field_assignment,
 )
 from datamodel_code_generator.parser.base import Parser
 from datamodel_code_generator.reference import Reference
+from datamodel_code_generator.types import DataType
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-    from datamodel_code_generator.model.base import DataModelFieldBase
 
 _BEHAVIOR_CAPABILITIES: dict[
     DataModelType,
     tuple[Callable[[DataModelFieldBase], bool], bool],
 ] = {
-    DataModelType.PydanticV2BaseModel: (has_field_assignment, True),
-    DataModelType.PydanticV2Dataclass: (has_field_assignment, False),
-    DataModelType.DataclassesDataclass: (has_field_assignment, True),
-    DataModelType.TypingTypedDict: (has_field_assignment, False),
+    DataModelType.PydanticV2BaseModel: (_has_field_assignment, True),
+    DataModelType.PydanticV2Dataclass: (_has_field_assignment, False),
+    DataModelType.DataclassesDataclass: (_has_field_assignment, True),
+    DataModelType.TypingTypedDict: (_has_field_assignment, False),
     DataModelType.MsgspecStruct: (msgspec_has_field_assignment, False),
 }
 
@@ -89,7 +95,52 @@ def test_external_model_subclasses_inherit_parser_behavior_capabilities(
 
 @pytest.mark.allow_direct_assert
 def test_field_assignment_helpers_preserve_public_imports() -> None:
-    """Keep dataclass helper imports compatible while sharing the neutral implementation."""
-    assert dataclass_has_field_assignment is has_field_assignment
-    assert pydantic_dataclass_has_field_assignment is has_field_assignment
-    assert msgspec_has_field_assignment is not has_field_assignment
+    """Keep public dataclass helper identity and introspection metadata compatible."""
+    signature = inspect.signature(dataclass_has_field_assignment)
+    field_parameter = signature.parameters["field"]
+
+    assert tuple(signature.parameters) == ("field",)
+    assert field_parameter.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+    assert field_parameter.default is inspect.Parameter.empty
+    assert field_parameter.annotation == "DataModelFieldBase"
+    assert signature.return_annotation == "bool"
+    assert dataclass_has_field_assignment.__module__ == "datamodel_code_generator.model.dataclass"
+    assert dataclass_has_field_assignment.__qualname__ == "has_field_assignment"
+    assert pydantic_dataclass_has_field_assignment is dataclass_has_field_assignment
+    assert pickle.loads(pickle.dumps(dataclass_has_field_assignment)) is dataclass_has_field_assignment
+    assert msgspec_has_field_assignment is not dataclass_has_field_assignment
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        pytest.param(
+            DataModelFieldBase(name="required", data_type=DataType(type="str"), required=True),
+            id="required",
+        ),
+        pytest.param(
+            DataModelFieldBase(name="optional", data_type=DataType(type="str")),
+            id="optional",
+        ),
+        pytest.param(
+            DataModelFieldBase(
+                name="stripped-default",
+                data_type=DataType(type="str"),
+                strip_default_none=True,
+            ),
+            id="stripped-default",
+        ),
+        pytest.param(
+            DataclassDataModelField(
+                name="explicit-field",
+                data_type=DataType(type="str"),
+                extras={"kw_only": True},
+            ),
+            id="explicit-field",
+        ),
+    ],
+)
+@pytest.mark.allow_direct_assert
+def test_public_dataclass_field_assignment_helper_matches_neutral_capability(field: DataModelFieldBase) -> None:
+    """Keep the compatibility wrapper behavior identical to the parser capability."""
+    assert dataclass_has_field_assignment(field) is _has_field_assignment(field)

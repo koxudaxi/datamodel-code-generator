@@ -1133,7 +1133,7 @@ class BaseClassDataType(DataType):
 UNDEFINED: Any = object()
 
 
-def has_field_assignment(field: DataModelFieldBase) -> bool:
+def _has_field_assignment(field: DataModelFieldBase) -> bool:
     """Return whether a standard model field renders with an assignment."""
     return (bool(field.field) and not field.use_annotated) or not (
         (field.required and not field.use_default_with_required) or field.should_strip_default_none()
@@ -1152,7 +1152,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     IS_ALIAS: ClassVar[bool] = False
     IS_ROOT_MODEL: ClassVar[bool] = False
     SUPPORTS_GENERIC_BASE_CLASS: ClassVar[bool] = True
-    FIELD_ASSIGNMENT_CHECKER: ClassVar[Callable[[DataModelFieldBase], bool]] = staticmethod(has_field_assignment)
+    FIELD_ASSIGNMENT_CHECKER: ClassVar[Callable[[DataModelFieldBase], bool]] = staticmethod(_has_field_assignment)
     SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = False
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = False
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False

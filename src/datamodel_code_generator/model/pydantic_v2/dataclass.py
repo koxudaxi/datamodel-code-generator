@@ -8,8 +8,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
-from datamodel_code_generator.model.base import UNDEFINED
-from datamodel_code_generator.model.dataclass import _DataclassReuseMixin, has_field_assignment
+from datamodel_code_generator.model.base import UNDEFINED, _has_field_assignment
+from datamodel_code_generator.model.dataclass import (
+    _DataclassReuseMixin,
+    has_field_assignment,  # noqa: F401  # public re-export
+)
 from datamodel_code_generator.model.pydantic_v2._config import (
     ConfigAttribute,
     build_base_config_parameters,
@@ -88,7 +91,7 @@ class DataClass(_DataclassReuseMixin, DataModel):
         """Initialize pydantic v2 dataclass with sorted fields and ConfigDict support."""
         super().__init__(
             reference=reference,
-            fields=sorted(fields, key=has_field_assignment),
+            fields=sorted(fields, key=_has_field_assignment),
             decorators=decorators,
             base_classes=base_classes,
             custom_base_class=custom_base_class,

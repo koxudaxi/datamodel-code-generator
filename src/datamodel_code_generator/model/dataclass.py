@@ -14,7 +14,7 @@ from datamodel_code_generator._format_types import (
     PythonVersionMin,
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
-from datamodel_code_generator.model.base import UNDEFINED, _nested_model_default_factory, has_field_assignment
+from datamodel_code_generator.model.base import UNDEFINED, _has_field_assignment, _nested_model_default_factory
 from datamodel_code_generator.model.imports import IMPORT_DATACLASS, IMPORT_FIELD
 from datamodel_code_generator.model.pydantic_base import Constraints  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
@@ -29,6 +29,11 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator.enums import DataclassArguments
     from datamodel_code_generator.imports import Import
+
+
+def has_field_assignment(field: DataModelFieldBase) -> bool:
+    """Check if a dataclass field renders with an assignment or default value."""
+    return _has_field_assignment(field)
 
 
 class _DataclassReuseMixin:
@@ -89,7 +94,7 @@ class DataClass(_DataclassReuseMixin, DataModel):
         """Initialize dataclass with fields sorted by field assignment requirement."""
         super().__init__(
             reference=reference,
-            fields=sorted(fields, key=has_field_assignment),
+            fields=sorted(fields, key=_has_field_assignment),
             decorators=decorators,
             base_classes=base_classes,
             custom_base_class=custom_base_class,
