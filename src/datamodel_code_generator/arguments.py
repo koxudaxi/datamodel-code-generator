@@ -153,6 +153,12 @@ base_options.add_argument(
     default=None,
 )
 base_options.add_argument(
+    "--strict-refs",
+    help="Treat unresolved local $ref JSON pointers as errors instead of generating fallback Any models.",
+    action="store_true",
+    default=None,
+)
+base_options.add_argument(
     "--allow-private-network",
     help=(
         "Allow HTTP(S) schema requests to private, loopback, link-local, or otherwise non-public network hosts. "

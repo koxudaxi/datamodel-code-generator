@@ -23,6 +23,7 @@ from typing_extensions import Unpack
 
 from datamodel_code_generator import (
     Error,
+    InputFileType,
     OpenAPIScope,
     YamlValue,
     snooper_to_methods,
@@ -203,6 +204,8 @@ class OpenAPIParser(JsonSchemaParser):
     """Parser for OpenAPI 2.0/3.0/3.1/3.2 and Swagger specifications."""
 
     SCHEMA_PATHS: ClassVar[list[str]] = ["#/components/schemas"]
+    _input_file_type: ClassVar[InputFileType] = InputFileType.OpenAPI
+    _non_dict_source_is_invalid: ClassVar[bool] = True
     config: OpenAPIParserConfig
 
     @cached_property
@@ -1005,6 +1008,17 @@ class OpenAPIParser(JsonSchemaParser):
         potential_subtypes: dict[str, list[str]] = {}
 
         for schema_name, schema in schemas.items():
+            match schema:
+                case bool():
+                    continue
+                case dict():
+                    pass
+                case _:
+                    self._validate_schema_object(
+                        schema,
+                        [*self.model_resolver.current_root, "#/components", "schemas", schema_name],
+                    )
+                    continue  # pragma: no cover - validation always raises for non-schema values
             self._register_discriminator_schema(schema_name, schema)
 
             all_of = schema.get("allOf")

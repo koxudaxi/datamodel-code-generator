@@ -122,6 +122,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--special-field-name-prefix": "Prefix to add to special field names (like reserved keywords).",
     "--strict-dotted-module-names": "Require canonical Python identifiers when inferring dotted module paths.",
     "--strict-nullable": "Treat default field as a non-nullable field.",
+    "--strict-refs": "Treat unresolved local `$ref` JSON pointers as errors.",
     "--strict-types": "Enable strict type validation for specified Python types.",
     "--strip-default-none": "Remove fields with None as default value from generated models.",
     "--target-pydantic-version": "Target Pydantic version for generated code compatibility.",

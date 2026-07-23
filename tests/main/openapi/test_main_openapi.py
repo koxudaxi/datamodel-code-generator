@@ -20,6 +20,7 @@ from packaging import version
 
 from datamodel_code_generator import (
     MIN_VERSION,
+    DanglingRefWarning,
     DataModelType,
     InputFileType,
     OpenAPIScope,
@@ -4850,23 +4851,24 @@ def test_duplicate_models(output_file: Path) -> None:
     (operation/path/parameter) to prevent name collisions when the same model name
     appears in different contexts within an OpenAPI specification.
     """
-    run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "duplicate_models2.yaml",
-        output_path=output_file,
-        input_file_type=None,
-        assert_func=assert_file_content,
-        expected_file="duplicate_models2.py",
-        extra_args=[
-            "--use-operation-id-as-name",
-            "--openapi-scopes",
-            "paths",
-            "schemas",
-            "parameters",
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-            "--parent-scoped-naming",
-        ],
-    )
+    with pytest.warns(DanglingRefWarning, match=r"Unresolved local \$ref"):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "duplicate_models2.yaml",
+            output_path=output_file,
+            input_file_type=None,
+            assert_func=assert_file_content,
+            expected_file="duplicate_models2.py",
+            extra_args=[
+                "--use-operation-id-as-name",
+                "--openapi-scopes",
+                "paths",
+                "schemas",
+                "parameters",
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--parent-scoped-naming",
+            ],
+        )
 
 
 def test_main_openapi_shadowed_imports(output_file: Path) -> None:

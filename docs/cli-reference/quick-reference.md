@@ -217,6 +217,7 @@ datamodel-codegen [OPTIONS]
 | [`--ignore-pyproject`](general-options.md#ignore-pyproject) | Ignore pyproject.toml configuration file. |
 | [`--module-split-mode`](general-options.md#module-split-mode) | Split generated models into separate files, one per model class. |
 | [`--shared-module-name`](general-options.md#shared-module-name) | Customize the name of the shared module for deduplicated models. |
+| [`--strict-refs`](general-options.md#strict-refs) | Treat unresolved local `$ref` JSON pointers as errors. |
 | [`--watch`](general-options.md#watch) | Watch input file(s) for changes and regenerate output automatically. |
 | [`--watch-delay`](general-options.md#watch-delay) | Set debounce delay in seconds for watch mode. |
 
@@ -365,6 +366,7 @@ All options sorted alphabetically:
 - [`--special-field-name-prefix`](field-customization.md#special-field-name-prefix) - Prefix to add to special field names (like reserved keywords...
 - [`--strict-dotted-module-names`](template-customization.md#strict-dotted-module-names) - Require canonical Python identifiers when inferring dotted m...
 - [`--strict-nullable`](model-customization.md#strict-nullable) - Treat default field as a non-nullable field.
+- [`--strict-refs`](general-options.md#strict-refs) - Treat unresolved local `$ref` JSON pointers as errors.
 - [`--strict-types`](typing-customization.md#strict-types) - Enable strict type validation for specified Python types.
 - [`--strip-default-none`](model-customization.md#strip-default-none) - Remove fields with None as default value from generated mode...
 - [`--target-pydantic-version`](model-customization.md#target-pydantic-version) - Target Pydantic version for generated code compatibility.

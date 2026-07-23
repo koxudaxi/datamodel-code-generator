@@ -22,6 +22,7 @@ import datamodel_code_generator
 from datamodel_code_generator import (
     AllExportsScope,
     CustomFileHeaderMode,
+    DanglingRefWarning,
     DataModelType,
     Error,
     GeneratedModules,
@@ -1087,7 +1088,6 @@ def test_direct_input_dict(tmp_path: Path) -> None:
         ("servers_list.json", "mcp_tools/servers_list.py"),
         ("top_level_tool_definitions.json", "mcp_tools/top_level_tool_definitions.py"),
         ("definitions_ref.json", "mcp_tools/definitions_ref.py"),
-        ("external_ref.json", "mcp_tools/external_ref.py"),
     ],
 )
 def test_mcp_tools(input_file: str, expected_file: str, output_file: Path) -> None:
@@ -1099,6 +1099,18 @@ def test_mcp_tools(input_file: str, expected_file: str, output_file: Path) -> No
         assert_func=assert_file_content,
         expected_file=expected_file,
     )
+
+
+def test_mcp_tools_dangling_local_ref(output_file: Path) -> None:
+    """Warn for an unresolved local ref while preserving MCP tool output."""
+    with pytest.warns(DanglingRefWarning, match=r"Unresolved local \$ref"):
+        run_main_and_assert(
+            input_path=DATA_PATH / "mcp_tools" / "external_ref.json",
+            output_path=output_file,
+            input_file_type="mcp-tools",
+            assert_func=assert_file_content,
+            expected_file="mcp_tools/external_ref.py",
+        )
 
 
 @pytest.mark.parametrize(argnames="input_kind", argvalues=["mapping", "list", "string"])

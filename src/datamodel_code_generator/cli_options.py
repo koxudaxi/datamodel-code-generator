@@ -859,6 +859,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     ),
     "--allow-remote-refs": CLIOptionMeta(name="--allow-remote-refs", category=OptionCategory.GENERAL),
     "--no-allow-remote-refs": CLIOptionMeta(name="--no-allow-remote-refs", category=OptionCategory.GENERAL),
+    "--strict-refs": CLIOptionMeta(name="--strict-refs", category=OptionCategory.GENERAL),
     "--allow-private-network": CLIOptionMeta(name="--allow-private-network", category=OptionCategory.GENERAL),
     "--no-allow-private-network": CLIOptionMeta(name="--no-allow-private-network", category=OptionCategory.GENERAL),
     "--http-headers": CLIOptionMeta(name="--http-headers", category=OptionCategory.GENERAL),

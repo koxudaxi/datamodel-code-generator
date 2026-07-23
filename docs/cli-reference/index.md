@@ -15,7 +15,7 @@ This documentation is auto-generated from test cases.
 | 🎨 [Template Customization](template-customization.md) | 27 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
-| ⚙️ [General Options](general-options.md) | 19 | Utilities and meta options |
+| ⚙️ [General Options](general-options.md) | 20 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 10 | Help, version, debug options |
 
 ## 🎯 Focused Topics
@@ -230,6 +230,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--special-field-name-prefix`](field-customization.md#special-field-name-prefix)
 - [`--strict-dotted-module-names`](template-customization.md#strict-dotted-module-names)
 - [`--strict-nullable`](model-customization.md#strict-nullable)
+- [`--strict-refs`](general-options.md#strict-refs)
 - [`--strict-types`](typing-customization.md#strict-types)
 - [`--strip-default-none`](model-customization.md#strip-default-none)
 
