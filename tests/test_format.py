@@ -1445,6 +1445,55 @@ def test_builtin_formatter_source_segment_matches_ast() -> None:
         assert builtin_formatter._source_segment(source, node) == expected
 
 
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("", []),
+        ("first\nsecond\n", ["first", "second"]),
+        ("first\r\nsecond\r\n", ["first", "second"]),
+        ("first\rsecond", ["first", "second"]),
+        ("next\u0085line\u2028paragraph\u2029end", ["next\u0085line\u2028paragraph\u2029end"]),
+    ],
+)
+def test_builtin_formatter_splits_only_physical_python_lines(source: str, expected: list[str]) -> None:
+    """Unicode separators remain source content while physical newlines are normalized."""
+    assert builtin_formatter._split_python_lines(source) == expected
+
+
+def test_builtin_formatter_splits_nested_annotated_formatting_as_python_lines() -> None:
+    """Nested Annotated formatting uses the physical-line splitter."""
+    annotated_union_source = "Annotated[str, Field(..., description='long generated field description')] | None"
+    annotated_union = ast.parse(annotated_union_source, mode="eval").body
+    assert isinstance(annotated_union, ast.BinOp)
+    assert builtin_formatter._format_annotated_union(annotated_union, "", 40, annotated_union_source) == (
+        "(\n"
+        "    Annotated[\n"
+        "        str,\n"
+        "        Field(\n"
+        "            ...,\n"
+        "            description='long generated field description',\n"
+        "        ),\n"
+        "    ]\n"
+        "    | None\n"
+        ")"
+    )
+
+    annotated_list_source = "list[Annotated[str, Field(..., description='long generated field description')]]"
+    annotated_list = ast.parse(annotated_list_source, mode="eval").body
+    assert isinstance(annotated_list, ast.Subscript)
+    assert builtin_formatter._format_list_of_annotated(annotated_list, "", 40, annotated_list_source) == (
+        "list[\n"
+        "    Annotated[\n"
+        "        str,\n"
+        "        Field(\n"
+        "            ...,\n"
+        "            description='long generated field description',\n"
+        "        ),\n"
+        "    ]\n"
+        "]"
+    )
+
+
 def test_builtin_formatter_source_segment_reuses_split_source_lines(monkeypatch: pytest.MonkeyPatch) -> None:
     """Repeated source extraction should split one source object once."""
     source = "class Model:\n    field: str = 'é'\n    other: str = '🍣'\n"
