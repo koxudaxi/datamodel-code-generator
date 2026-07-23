@@ -532,14 +532,6 @@ def _normalized_absolute_path(path: Path, *, resolve_aliases: bool = False) -> P
     return Path(os.path.abspath(expanded_path))  # noqa: PTH100
 
 
-def _paths_refer_to_same_file(first: Path, second: Path) -> bool:
-    """Return whether two existing paths refer to the same file."""
-    try:
-        return first.samefile(second)
-    except FileNotFoundError:
-        return False
-
-
 def _validate_generation_path_conflicts(
     input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     output: Path | None,
@@ -557,7 +549,7 @@ def _validate_generation_path_conflicts(
             raise Error(msg)
         if _normalized_absolute_path(output, resolve_aliases=True) == _normalized_absolute_path(
             model_metadata, resolve_aliases=True
-        ):
+        ) or (absolute_output.exists() and absolute_metadata.exists() and absolute_output.samefile(absolute_metadata)):
             msg = f"Output and model metadata paths must be different: {absolute_output}"
             raise Error(msg)
 
@@ -570,7 +562,7 @@ def _validate_generation_path_conflicts(
             return
 
     targets = tuple(
-        (label, absolute or _normalized_absolute_path(path))
+        (label, target := absolute or _normalized_absolute_path(path), target.exists())
         for label, path, absolute in (
             ("Output", output, absolute_output),
             ("Model metadata", model_metadata, absolute_metadata),
@@ -579,21 +571,13 @@ def _validate_generation_path_conflicts(
     )
     for input_path in input_paths:
         absolute_input = _normalized_absolute_path(input_path)
-        input_is_directory = input_path.is_dir()
-        resolved_input = (
-            _normalized_absolute_path(input_path, resolve_aliases=True) if input_is_directory else absolute_input
-        )
-        for label, target in targets:
+        if input_path.is_dir():
+            continue
+        for label, target, target_exists in targets:
             if target == absolute_input and input_path.exists():
                 msg = f"{label} path must not overwrite an input path: {target}"
                 raise Error(msg)
-            if input_is_directory and (
-                target.is_relative_to(absolute_input)
-                or _normalized_absolute_path(target, resolve_aliases=True).is_relative_to(resolved_input)
-            ):
-                msg = f"{label} path must not be inside an input directory: {target}"
-                raise Error(msg)
-            if not input_is_directory and _paths_refer_to_same_file(target, input_path):
+            if target_exists and target.samefile(input_path):
                 msg = f"{label} path must not overwrite an input path: {target}"
                 raise Error(msg)
 
