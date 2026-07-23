@@ -9,6 +9,7 @@ from __future__ import annotations
 import contextlib
 import os
 import sys
+import warnings
 from collections import OrderedDict, defaultdict
 from collections.abc import Callable, Iterator, Mapping
 from datetime import datetime, timezone
@@ -523,6 +524,10 @@ class Error(Exception):
         return self.message
 
 
+class DanglingRefWarning(UserWarning):
+    """Warn that a local JSON pointer target was not found."""
+
+
 class InvalidClassNameError(Error):
     """Raised when a schema title cannot be converted to a valid Python class name."""
 
@@ -590,15 +595,19 @@ class InvalidFileFormatError(Error):
         self,
         original_error: Exception,
         input_file_type: InputFileType | None = None,
+        *,
+        source: str | Path | None = None,
     ) -> None:
-        """Initialize with original error and optional input file type."""
+        """Initialize with original error, input file type, and source context."""
         self.original_error = original_error
         self.input_file_type = input_file_type
+        self.source = source
         error_detail = f"{type(original_error).__name__}: {original_error}"
+        source_detail = f" at {source}" if source is not None else ""
         if input_file_type is not None:
-            message = f"Invalid file format for {input_file_type.value}: {error_detail}"
+            message = f"Invalid file format for {input_file_type.value}{source_detail}: {error_detail}"
         else:
-            message = f"Invalid file format: {error_detail}"
+            message = f"Invalid file format{source_detail}: {error_detail}"
         super().__init__(message=message)
 
 
@@ -1434,6 +1443,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     custom_file_header = config.custom_file_header
     skip_root_model = config.skip_root_model
     source_override: Mapping[str, Any] | None = None
+    diagnostic_source_path: Path | None = None
 
     if (
         isinstance(input_, list)
@@ -1514,7 +1524,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             else:
                 input_text_ = input_text
         except FileNotFoundError as exc:
-            msg = "File not found"
+            msg = f"File not found: {input_}"
             raise Error(msg) from exc
 
         try:
@@ -1532,6 +1542,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             # Only for OpenAPI/JsonSchema (RAW_DATA_TYPES are transformed by genson)
             if isinstance(input_, Path) and input_.is_file() and input_file_type not in RAW_DATA_TYPES:
                 input_text = input_text_
+                diagnostic_source_path = Path(input_.name)
 
     with _warn_on_input_string_path_failure(input_):
         input_text = _normalize_raw_input(input_, input_text, input_file_type, config)
@@ -1587,6 +1598,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             )
         if reference_cache is not None and hasattr(active_parser, "remote_object_cache"):
             active_parser.remote_object_cache = reference_cache
+        active_parser._diagnostic_source_path = diagnostic_source_path  # noqa: SLF001
         return active_parser
 
     def parse_with_disposal(active_parser: Any, active_config: GenerateConfig) -> Any:
@@ -1641,7 +1653,8 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
                 }
             )
             retry_parse: tuple[Any, Any] | None = None
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(Exception), warnings.catch_warnings():
+                warnings.simplefilter("ignore", DanglingRefWarning)
                 retry_data_model_types, retry_source, retry_defer_formatting, retry_options = (
                     _prepare_parser_common_options(
                         input_,
@@ -1835,6 +1848,7 @@ __all__ = [
     "ClassNameAffixScope",
     "CollapseRootModelsNameStrategy",
     "CustomFileHeaderMode",
+    "DanglingRefWarning",
     "DateClassType",
     "DatetimeClassType",
     "DefaultPutDict",

@@ -1603,6 +1603,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         self.remote_text_cache: DefaultPutDict[str, str] = config.remote_text_cache or DefaultPutDict()
         self.current_source_path: Path | None = None
+        self._diagnostic_source_path: Path | None = None
         self.use_title_as_name: bool = config.use_title_as_name
         self.infer_union_variant_names: bool = config.infer_union_variant_names
         self.use_operation_id_as_name: bool = config.use_operation_id_as_name
@@ -1730,6 +1731,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.allow_leading_underscore_class_name: bool = config.allow_leading_underscore_class_name
         self.wrap_string_literal: bool | None = config.wrap_string_literal
         self.allow_remote_refs: bool | None = config.allow_remote_refs
+        self.strict_refs: bool = config.strict_refs
         self.allow_private_network: bool = config.allow_private_network
         self.http_headers: Sequence[tuple[str, str]] | None = config.http_headers
         self.http_local_ref_path: Path | None = config.http_local_ref_path
@@ -1892,9 +1894,21 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 )
 
     def _source_from_path(self, path: Path) -> Source:
-        if self._use_parsed_source_cache:
-            return Source.from_cached_path(path, self.base_path, self.encoding, keep_text=self.validation)
-        return Source.from_path(path, self.base_path, self.encoding)
+        try:
+            if self._use_parsed_source_cache:
+                return Source.from_cached_path(path, self.base_path, self.encoding, keep_text=self.validation)
+            return Source.from_path(path, self.base_path, self.encoding)
+        except FileNotFoundError as exc:
+            msg = f"File not found: {path}"
+            raise Error(msg) from exc
+
+    def _source_path_for_diagnostics(self, source_path: Path | None = None) -> str:
+        """Return source context without changing parser path semantics."""
+        if source_path is not None and source_path.parts:
+            return source_path.as_posix()
+        if self._diagnostic_source_path is not None:
+            return self._diagnostic_source_path.as_posix()
+        return "<input>"
 
     def _append_additional_imports(self, additional_imports: list[str] | None) -> None:
         if additional_imports is None:
@@ -4566,6 +4580,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self._cache_local_sources = False
         self._local_source_cache = None
 
+    def _report_parse_diagnostics(self) -> None:
+        """Report diagnostics collected while parsing the input schema."""
+
     def parse(  # noqa: PLR0912, PLR0913, PLR0914, PLR0917
         self,
         with_import: bool | None = True,  # noqa: FBT001, FBT002
@@ -4585,6 +4602,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             self.parse_raw()
         finally:
             self._close_http_fetch_session()
+        self._report_parse_diagnostics()
 
         config = self._prepare_parse_config(
             with_import,

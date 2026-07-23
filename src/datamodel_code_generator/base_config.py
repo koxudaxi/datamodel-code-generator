@@ -141,6 +141,7 @@ class BaseGenerateConfig(BaseModel):
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
     allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
     allow_remote_refs: bool | None = None
+    strict_refs: bool = False
     allow_private_network: bool = False
     http_headers: Sequence[tuple[str, str]] | None = None
     http_local_ref_path: Path | None = None

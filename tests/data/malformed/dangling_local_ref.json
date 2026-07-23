@@ -1,1 +1,4 @@
-{"$ref": "#/definitions/Missing"}
+{
+  "definitions": {},
+  "$ref": "#/definitions/Missing"
+}

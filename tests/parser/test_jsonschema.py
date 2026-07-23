@@ -610,6 +610,14 @@ def test_json_schema_parser_load_source_dict_rejects_non_dict_text_source() -> N
         parser._load_source_dict(Source(path=Path(), text="[1]"))
 
 
+def test_json_schema_parser_load_source_dict_rejects_non_dict_cached_source() -> None:
+    """Reject non-dict parsed data before parsing a JSON Schema source."""
+    parser = JsonSchemaParser("")
+
+    with pytest.raises(TypeError, match="Expected dict, got list"):
+        parser._load_source_dict(Source(path=Path(), raw_data=[]))
+
+
 def test_json_schema_iter_local_source_paths_ignores_non_local_source() -> None:
     """Test local source path iteration is empty for non-local source input."""
     assert list(JsonSchemaParser("{}")._iter_local_source_paths()) == []

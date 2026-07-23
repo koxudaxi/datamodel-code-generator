@@ -106,6 +106,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Schema version validation mode. 'lenient': accept all
                         features regardless of version (default). 'strict':
                         warn on features outside declared/detected version.
+  --strict-refs         Treat unresolved local $ref JSON pointers as errors
+                        instead of generating fallback Any models.
   --url URL             Input file URL. `--input` is ignored when `--url` is
                         used
 

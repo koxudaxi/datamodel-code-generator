@@ -78,6 +78,35 @@ def test_update_openapi_info_version_warns_when_missing() -> None:
         parser._update_openapi_info_version({"info": {"title": "Test"}})
 
 
+def test_collect_discriminator_schemas_override_keeps_no_arg_contract() -> None:
+    """Keep existing subclass overrides compatible with the no-argument hook."""
+
+    class CustomOpenAPIParser(OpenAPIParser):
+        collect_calls = 0
+
+        def _collect_discriminator_schemas(self) -> None:
+            self.collect_calls += 1
+            super()._collect_discriminator_schemas()
+
+    parser = CustomOpenAPIParser(
+        """
+openapi: 3.0.3
+info:
+  title: Compatibility
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    User:
+      type: object
+"""
+    )
+
+    parser.parse(format_=False)
+
+    assert parser.collect_calls == 1
+
+
 @pytest.mark.parametrize(
     ("raw_obj", "specification", "expected_root_id"),
     [

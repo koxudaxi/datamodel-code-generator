@@ -23,6 +23,7 @@ from datamodel_code_generator import (
     DataModelType,
     Error,
     InputFileType,
+    InvalidFileFormatError,
     PythonVersion,
     PythonVersionMin,
     SchemaValidatorType,
@@ -12902,8 +12903,8 @@ def test_main_jsonschema_non_dict_files_in_directory(output_dir: Path) -> None:
 
 
 def test_main_jsonschema_ref_to_json_list_file() -> None:
-    """Test that $ref to a JSON file containing a list raises TypeError."""
-    with pytest.raises(TypeError, match="Expected dict, got list"):
+    """Test that $ref to a JSON list file raises a concise input-format error."""
+    with pytest.raises(InvalidFileFormatError, match="Expected dict, got list"):
         generate(
             input_=JSON_SCHEMA_DATA_PATH / "ref_to_json_list" / "main.json",
             input_file_type=InputFileType.JsonSchema,

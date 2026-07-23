@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from pydantic import Field, StrictStr, ValidationError
 from typing_extensions import Unpack
 
-from datamodel_code_generator import Error, YamlValue, snooper_to_methods
+from datamodel_code_generator import Error, InputFileType, YamlValue, snooper_to_methods
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.enums import AsyncAPIVersion
 from datamodel_code_generator.parser.jsonschema import get_model_by_path, unescape_json_pointer_segment
@@ -230,6 +230,7 @@ class AsyncAPIParser(OpenAPIParser):
     """Parser for AsyncAPI 2.x and 3.x documents."""
 
     _config_class_name: ClassVar[str] = "AsyncAPIParserConfig"
+    _input_file_type: ClassVar[InputFileType] = InputFileType.AsyncAPI
 
     def __init__(
         self,

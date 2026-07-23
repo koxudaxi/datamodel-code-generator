@@ -16,6 +16,8 @@ from typing import (
 from typing_extensions import Unpack
 
 from datamodel_code_generator import (
+    InputFileType,
+    InvalidFileFormatError,
     LiteralType,
     snooper_to_methods,
 )
@@ -37,6 +39,7 @@ except ImportError as exc:  # pragma: no cover
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from pathlib import Path
     from urllib.parse import ParseResult
 
@@ -53,9 +56,12 @@ except AttributeError:
     graphql_resolver_kind = graphql.type.introspection.TypeFields.kind
 
 
-def build_graphql_schema(schema_str: str) -> graphql.GraphQLSchema:
+def build_graphql_schema(schema_str: str, *, source: str | None = None) -> graphql.GraphQLSchema:
     """Build a graphql schema from a string."""
-    schema = graphql.build_schema(schema_str)
+    try:
+        schema = graphql.build_schema(schema_str)
+    except graphql.GraphQLSyntaxError as exc:
+        raise InvalidFileFormatError(exc, InputFileType.GraphQL, source=source) from exc
     return graphql.lexicographic_sort_schema(schema)
 
 
@@ -496,8 +502,19 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             graphql.type.introspection.TypeKind.UNION: self.parse_union,
         }
 
-        combined_schema = "\n".join(source.text for source in self.iter_source)
-        schema: graphql.GraphQLSchema = build_graphql_schema(combined_schema)
+        source_paths: list[str] = []
+
+        def iter_source_texts() -> Iterator[str]:
+            for source in self.iter_source:
+                display_path = self._source_path_for_diagnostics(source.path)
+                if display_path != "<input>":
+                    source_paths.append(display_path)
+                yield source.text
+
+        schema: graphql.GraphQLSchema = build_graphql_schema(
+            "\n".join(iter_source_texts()),
+            source=", ".join(source_paths) or "<input>",
+        )
         self.raw_obj = schema
 
         self._resolve_types([], schema)

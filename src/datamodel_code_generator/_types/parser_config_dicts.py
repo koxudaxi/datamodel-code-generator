@@ -125,6 +125,7 @@ class ParserConfigDict(TypedDict):
     allof_merge_mode: NotRequired[AllOfMergeMode]
     allof_class_hierarchy: NotRequired[AllOfClassHierarchy]
     allow_remote_refs: NotRequired[bool | None]
+    strict_refs: NotRequired[bool]
     allow_private_network: NotRequired[bool]
     http_headers: NotRequired[Sequence[tuple[str, str]] | None]
     http_local_ref_path: NotRequired[Path | None]

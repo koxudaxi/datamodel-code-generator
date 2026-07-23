@@ -17,7 +17,7 @@ from fractions import Fraction
 from functools import cached_property, lru_cache
 from math import gcd, lcm
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union, cast
 from urllib.parse import ParseResult, unquote, urlparse
 from warnings import warn
 
@@ -32,8 +32,11 @@ from typing_extensions import Unpack
 from datamodel_code_generator import (
     AllOfClassHierarchy,
     AllOfMergeMode,
+    DanglingRefWarning,
     Error,
+    InputFileType,
     InvalidClassNameError,
+    InvalidFileFormatError,
     JsonSchemaVersion,
     ReadOnlyWriteOnlyModelType,
     SchemaParseError,
@@ -89,7 +92,7 @@ from datamodel_code_generator.types import (
     get_type_base_name,
     is_python_type_annotation,
 )
-from datamodel_code_generator.util import BaseModel
+from datamodel_code_generator.util import BaseModel, get_yaml_parse_errors
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
@@ -320,6 +323,7 @@ def unescape_json_pointer_segment(segment: str) -> str:
 
 
 _JSON_POINTER_ARRAY_INDEX = re.compile(r"0|[1-9][0-9]*")
+_MISSING_JSON_POINTER = object()
 
 
 def _resolve_json_pointer_array_index(sequence: list[YamlValue], segment: object) -> YamlValue:
@@ -346,7 +350,6 @@ def get_model_by_path(schema: dict[str, YamlValue] | list[YamlValue], keys: list
             return schema
         msg = f"Does not support json pointer to array. schema={schema}, key={keys}"  # pragma: no cover
         raise NotImplementedError(msg)  # pragma: no cover
-    # Unescape the key if it's a string (JSON pointer segment)
     key = keys[0]
     if isinstance(key, str):  # pragma: no branch
         key = unescape_json_pointer_segment(key)
@@ -363,6 +366,32 @@ def get_model_by_path(schema: dict[str, YamlValue] | list[YamlValue], keys: list
         return get_model_by_path(value, keys[1:])
     msg = f"Cannot traverse non-container value. schema={schema}, key={keys}"  # pragma: no cover
     raise NotImplementedError(msg)  # pragma: no cover
+
+
+def _get_model_by_path_or_missing(
+    schema: dict[str, YamlValue] | list[YamlValue],
+    keys: list[str],
+) -> YamlValue | object:
+    """Resolve a diagnostic JSON pointer with one lookup per segment and a missing sentinel."""
+    current: YamlValue = schema
+    last_index = len(keys) - 1
+    for index, raw_key in enumerate(keys):
+        key = unescape_json_pointer_segment(raw_key)
+        if isinstance(current, dict):
+            value = current.get(key, _MISSING_JSON_POINTER)
+            if value is _MISSING_JSON_POINTER:
+                return value
+        elif isinstance(current, list):
+            value = _resolve_json_pointer_array_index(current, key)
+        else:  # pragma: no cover - guarded before assigning current
+            raise TypeError(type(current))
+        if index == last_index:
+            return value
+        if not isinstance(value, (dict, list)):
+            msg = f"Cannot traverse non-container value. schema={current}, key={keys[index:]}"  # pragma: no cover
+            raise NotImplementedError(msg)  # pragma: no cover
+        current = value
+    raise AssertionError  # pragma: no cover
 
 
 def split_json_pointer(schema: dict[str, YamlValue] | list[YamlValue], pointer: str) -> list[str]:
@@ -892,6 +921,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     REQUIRED_ONLY_SCHEMA_ALLOWED_FIELDS: ClassVar[frozenset[str]] = frozenset({"required", "type", "extras"})
     _cache_local_sources_during_parse: ClassVar[bool] = True
     _cache_parsed_sources_from_path: ClassVar[bool] = True
+    _input_file_type: ClassVar[InputFileType] = InputFileType.JsonSchema
+    _non_dict_source_is_invalid: ClassVar[bool] = False
 
     COMPATIBLE_PYTHON_TYPES: ClassVar[dict[str, frozenset[str]]] = {
         "string": frozenset({"str", "String"}),
@@ -1030,6 +1061,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     abs_path = str((self.base_path / file_path).resolve())
                     self._external_ref_mapping[abs_path] = python_package
         self.reserved_refs: defaultdict[tuple[str, ...], set[str]] = defaultdict(set)
+        self._dangling_refs: set[tuple[str, str]] = set()
         self._dynamic_anchor_index: dict[tuple[str, ...], dict[str, str]] = {}
         self._recursive_anchor_index: dict[tuple[str, ...], list[str]] = {}
         self._ref_data_type_facts: dict[str, tuple[Any, bool]] = {}
@@ -6005,6 +6037,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         raise Error(msg)
 
+    def _load_ref_data_from_path(self, path: Path) -> dict[str, YamlValue]:
+        """Load one referenced path and contextualize only its decode failures."""
+        try:
+            return load_data_from_path(path, self.encoding)
+        except (json.JSONDecodeError, TypeError, *get_yaml_parse_errors()) as exc:
+            raise InvalidFileFormatError(exc, self._input_file_type, source=path) from exc
+
+    def _load_ref_data_from_text(self, text: str, source: str) -> dict[str, YamlValue]:
+        """Decode one referenced text body and contextualize only that operation."""
+        try:
+            return load_data(text)
+        except (json.JSONDecodeError, TypeError, *get_yaml_parse_errors()) as exc:
+            raise InvalidFileFormatError(exc, self._input_file_type, source=source) from exc
+
     def _get_ref_body_from_local_http_path(self, ref: str) -> dict[str, YamlValue]:
         assert self.http_local_ref_path is not None
         parsed = urlparse(ref)
@@ -6031,7 +6077,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if file_path.is_file():
                 return self.remote_object_cache.get_or_put(
                     str(file_path),
-                    default_factory=lambda _, file_path=file_path: load_data_from_path(file_path, self.encoding),
+                    default_factory=lambda _, file_path=file_path: self._load_ref_data_from_path(file_path),
                 )
 
         msg = f"$ref local file not found for {ref}: tried {', '.join(str(path) for path in file_paths)}"
@@ -6050,12 +6096,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 path = f"//{parsed.netloc}{path}"
             file_path = self._resolve_local_ref_path(Path(path), ref)
             return self.remote_object_cache.get_or_put(
-                str(file_path), default_factory=lambda _: load_data_from_path(file_path, self.encoding)
+                str(file_path),
+                default_factory=lambda _: self._load_ref_data_from_path(file_path),
             )
         if self.http_local_ref_path is not None and urlparse(ref).scheme in {"http", "https"}:
             return self._get_ref_body_from_local_http_path(ref)
         return self.remote_object_cache.get_or_put(
-            ref, default_factory=lambda key: load_data(self._get_text_from_url(key))
+            ref,
+            default_factory=lambda key: self._load_ref_data_from_text(self._get_text_from_url(key), key),
         )
 
     def _get_ref_body_from_remote(self, resolved_ref: str) -> dict[str, YamlValue]:
@@ -6065,7 +6113,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         try:
             return self.remote_object_cache.get_or_put(
                 str(full_path),
-                default_factory=lambda _: load_data_from_path(full_path, self.encoding),
+                default_factory=lambda _: self._load_ref_data_from_path(full_path),
             )
         except FileNotFoundError:
             msg = f"$ref file not found: {full_path}"
@@ -6118,6 +6166,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 relative_paths,
                 object_paths,
                 reference_paths=reference_paths,
+                ref=ref,
             )
         reference.loaded = True
         return reference
@@ -6552,14 +6601,36 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             case list() as paths:
                 yield from ((self.base_path / path) for path in paths)
 
-    def _load_source_dict(self, source: Source) -> dict[str, YamlValue]:  # noqa: PLR6301
+    def _source_from_path(self, path: Path) -> Source:
+        """Load one source path and contextualize cached JSON/YAML parse failures."""
+        try:
+            return super()._source_from_path(path)
+        except (json.JSONDecodeError, *get_yaml_parse_errors()) as exc:
+            source_path = path.relative_to(self.base_path) if path.is_relative_to(self.base_path) else path
+            raise InvalidFileFormatError(exc, self._input_file_type, source=source_path) from exc
+
+    def _load_source_dict(self, source: Source) -> dict[str, YamlValue]:
         """Load a source into a schema dictionary."""
         if source.raw_data is None:
-            return load_data(source.text)
-        if not isinstance(source.raw_data, dict):
-            msg = f"Expected dict, got {type(source.raw_data).__name__}"
-            raise TypeError(msg)
-        return dict(source.raw_data)
+            try:
+                return load_data(source.text)
+            except (json.JSONDecodeError, *get_yaml_parse_errors()) as exc:
+                source_path = self._source_path_for_diagnostics(source.path)
+                raise InvalidFileFormatError(exc, self._input_file_type, source=source_path) from exc
+            except TypeError as exc:
+                if not self._non_dict_source_is_invalid:
+                    raise
+                source_path = self._source_path_for_diagnostics(source.path)
+                raise InvalidFileFormatError(exc, self._input_file_type, source=source_path) from exc
+        if isinstance(source.raw_data, dict):
+            return dict(source.raw_data)
+
+        msg = f"Expected dict, got {type(source.raw_data).__name__}"
+        error = TypeError(msg)
+        if not self._non_dict_source_is_invalid:
+            raise error
+        source_path = self._source_path_for_diagnostics(source.path)
+        raise InvalidFileFormatError(error, self._input_file_type, source=source_path) from error
 
     def _cache_source_ref_body(self, source: Source, raw_obj: dict[str, YamlValue]) -> None:
         """Cache a local source body for later local $ref resolution."""
@@ -6657,10 +6728,47 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             reference = self.model_resolver.add_ref(ref)
             self.parse_obj(reference.name, self._validate_schema_object(raw, [ref]), [ref])
             return
-        models = get_model_by_path(raw, object_paths)
+        models = self._get_model_by_json_pointer(raw, object_paths, ref)
         model_name = reference_paths[-1]
 
         self.parse_raw_obj(model_name, models, [*path_parts, f"#/{reference_paths[0]}", *reference_paths[1:]])
+
+    def _get_model_by_json_pointer(
+        self,
+        raw: dict[str, YamlValue],
+        object_paths: list[str],
+        ref: str,
+    ) -> YamlValue:
+        """Resolve one JSON pointer, preserving the legacy empty-schema fallback when it is missing."""
+        model = _get_model_by_path_or_missing(raw, object_paths)
+        if model is not _MISSING_JSON_POINTER:
+            return cast("YamlValue", model)
+
+        source, _, fragment = ref.partition("#")
+        if not source:
+            source = self._source_path_for_diagnostics(self.current_source_path)
+        self._dangling_refs.add((source, f"#{fragment}"))
+        return {}
+
+    def _report_parse_diagnostics(self) -> None:
+        """Report each unique dangling local reference after schema parsing completes."""
+        if not self._dangling_refs:
+            return
+
+        dangling_refs = sorted(self._dangling_refs)
+        if self.strict_refs:
+            details = "\n".join(f"- {source}: {ref}" for source, ref in dangling_refs)
+            msg = f"Unresolved local $ref targets:\n{details}"
+            raise Error(msg)
+
+        for source, ref in dangling_refs:
+            warn(
+                f"Unresolved local $ref {ref!r} in {source}: JSON pointer was not found. "
+                "Generated a fallback Any model; use --strict-refs to fail instead.",
+                DanglingRefWarning,
+                stacklevel=3,
+            )
+        self._dangling_refs.clear()
 
     @staticmethod
     @lru_cache(maxsize=16)
@@ -6751,6 +6859,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         reference_paths: list[str] | None = None,
         *,
         preserve_root_class_name: bool = False,
+        ref: str | None = None,
     ) -> None:
         """Parse a file containing JSON Schema definitions and references."""
         object_paths = [o for o in object_paths or [] if o]
@@ -6814,7 +6923,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         self._dynamic_anchor_index.setdefault(root_key, {}).setdefault(obj.dynamicAnchor, ref_path)
 
                 if object_paths:
-                    models = get_model_by_path(raw, object_paths)
+                    models = (
+                        get_model_by_path(raw, object_paths)
+                        if ref is None
+                        else self._get_model_by_json_pointer(raw, object_paths, ref)
+                    )
                     model_name = object_paths[-1]
                     self.parse_obj(model_name, self._validate_schema_object(models, path), path)
                 elif not self.skip_root_model:
@@ -6842,7 +6955,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                                 reference.name, self._validate_schema_object(raw, [reserved_path]), [reserved_path]
                             )
                             continue
-                        models = get_model_by_path(raw, object_paths)
+                        models = self._get_model_by_json_pointer(raw, object_paths, reserved_path)
                         model_name = reference_paths[-1]
                         path = [*path_parts, f"#/{reference_paths[0]}", *reference_paths[1:]]
                         self.parse_obj(model_name, self._validate_schema_object(models, path), path)
