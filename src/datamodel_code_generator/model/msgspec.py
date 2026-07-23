@@ -111,6 +111,7 @@ class Struct(DataModel):
     REQUIRES_TAGGED_UNION_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = True
     ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = _ANNOTATED_CONSTRAINTS_CONTEXT
+    REQUIRES_EXPLICIT_DEFERRED_ANNOTATIONS_FOR_FORWARD_REFS: ClassVar[bool] = True
     CONFIG_MAPPING: ClassVar[dict[tuple[str, Any], tuple[str, Any] | None]] = {
         ("allow_mutation", False): ("frozen", True),
         ("extra_fields", "forbid"): ("forbid_unknown_fields", True),
@@ -271,7 +272,7 @@ class DataModelField(DataModelFieldBase):
             return data_types[0]
         return self.data_type.__class__(
             data_types=data_types,
-            use_union_operator=self.data_type.use_union_operator,
+            use_union_operator=self._use_union_operator,
             preserve_union_member_order=True,
         )
 

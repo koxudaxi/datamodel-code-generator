@@ -30,13 +30,13 @@ if TYPE_CHECKING:
 
 _BEHAVIOR_CAPABILITIES: dict[
     DataModelType,
-    tuple[Callable[[DataModelFieldBase], bool], bool],
+    tuple[Callable[[DataModelFieldBase], bool], bool, bool],
 ] = {
-    DataModelType.PydanticV2BaseModel: (_has_field_assignment, True),
-    DataModelType.PydanticV2Dataclass: (_has_field_assignment, False),
-    DataModelType.DataclassesDataclass: (_has_field_assignment, True),
-    DataModelType.TypingTypedDict: (_has_field_assignment, False),
-    DataModelType.MsgspecStruct: (msgspec_has_field_assignment, False),
+    DataModelType.PydanticV2BaseModel: (_has_field_assignment, True, False),
+    DataModelType.PydanticV2Dataclass: (_has_field_assignment, False, False),
+    DataModelType.DataclassesDataclass: (_has_field_assignment, True, False),
+    DataModelType.TypingTypedDict: (_has_field_assignment, False, False),
+    DataModelType.MsgspecStruct: (msgspec_has_field_assignment, False, True),
 }
 
 
@@ -56,11 +56,11 @@ def test_behavior_capability_matrix_covers_every_data_model_type() -> None:
 @pytest.mark.allow_direct_assert
 def test_standard_models_declare_parser_behavior_capabilities(
     output_model_type: DataModelType,
-    expected: tuple[Callable[[DataModelFieldBase], bool], bool],
+    expected: tuple[Callable[[DataModelFieldBase], bool], bool, bool],
 ) -> None:
     """Resolve field assignment and tree reuse behavior without backend inspection."""
     model_types = get_data_model_types(output_model_type, target_python_version=PythonVersion.PY_311)
-    expected_checker, expected_tree_reuse_inheritance = expected
+    expected_checker, expected_tree_reuse_inheritance, expected_explicit_deferred_annotations = expected
     model = model_types.data_model(
         reference=Reference(path=output_model_type.name, name=output_model_type.name),
         fields=[],
@@ -69,6 +69,7 @@ def test_standard_models_declare_parser_behavior_capabilities(
     assert type(model).FIELD_ASSIGNMENT_CHECKER is expected_checker
     assert Parser._get_field_assignment_checker(model) is expected_checker
     assert model.SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE is expected_tree_reuse_inheritance
+    assert model.REQUIRES_EXPLICIT_DEFERRED_ANNOTATIONS_FOR_FORWARD_REFS is expected_explicit_deferred_annotations
 
 
 @pytest.mark.parametrize(
@@ -81,16 +82,20 @@ def test_standard_models_declare_parser_behavior_capabilities(
 @pytest.mark.allow_direct_assert
 def test_external_model_subclasses_inherit_parser_behavior_capabilities(
     output_model_type: DataModelType,
-    expected: tuple[Callable[[DataModelFieldBase], bool], bool],
+    expected: tuple[Callable[[DataModelFieldBase], bool], bool, bool],
 ) -> None:
     """Preserve existing behavior for external subclasses of built-in outputs."""
     model_types = get_data_model_types(output_model_type, target_python_version=PythonVersion.PY_311)
     external_model_type = type("ExternalModel", (model_types.data_model,), {})
-    expected_checker, expected_tree_reuse_inheritance = expected
+    expected_checker, expected_tree_reuse_inheritance, expected_explicit_deferred_annotations = expected
 
     assert issubclass(external_model_type, DataModel)
     assert external_model_type.FIELD_ASSIGNMENT_CHECKER is expected_checker
     assert external_model_type.SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE is expected_tree_reuse_inheritance
+    assert (
+        external_model_type.REQUIRES_EXPLICIT_DEFERRED_ANNOTATIONS_FOR_FORWARD_REFS
+        is expected_explicit_deferred_annotations
+    )
 
 
 @pytest.mark.allow_direct_assert
