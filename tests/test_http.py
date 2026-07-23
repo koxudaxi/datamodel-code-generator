@@ -573,6 +573,45 @@ def test_http_fetch_session_closes_evicted_and_remaining_clients_despite_errors(
     assert not session._clients
 
 
+def test_http_fetch_session_cookie_cleanup_does_not_remove_replacement_client() -> None:
+    """Keep a replacement pool entry when stale-client cookie cleanup fails."""
+    client = Mock()
+    replacement_client = Mock()
+    response = Mock()
+    httpx_module = Mock()
+    httpx_module.Client.return_value = client
+    session = _HTTPFetchSession()
+
+    def replace_cached_client(*_args: object, **_kwargs: object) -> Mock:
+        key = next(iter(session._clients))
+        session._clients[key] = replacement_client
+        return response
+
+    client.get.side_effect = replace_cached_client
+    client.cookies.clear.side_effect = RuntimeError("cookie cleanup failed")
+
+    assert (
+        session.get_response(
+            httpx_module,
+            "https://schema.example/schema.json",
+            headers=None,
+            verify=True,
+            follow_redirects=False,
+            query_parameters=None,
+            timeout=1.0,
+            pinned_host=None,
+            pinned_ips=(),
+        )
+        is response
+    )
+    assert list(session._clients.values()) == [replacement_client]
+    client.close.assert_called_once_with()
+
+    session.close()
+
+    replacement_client.close.assert_called_once_with()
+
+
 @pytest.mark.parametrize(
     ("pinned_host", "pinned_ips"),
     [
