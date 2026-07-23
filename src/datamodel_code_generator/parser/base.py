@@ -2473,8 +2473,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 if not self.use_unique_items_as_set:
                     continue
 
-                if not (model_field.constraints and model_field.constraints.unique_items):
-                    continue
+                match model_field.constraints:
+                    case ConstraintsBase(unique_items=True) | {"uniqueItems": True}:
+                        pass
+                    case _:
+                        continue
                 set_data_type = self._create_set_from_list(model_field.data_type)
                 if set_data_type:  # pragma: no cover
                     # Check if default list elements are hashable before converting type
