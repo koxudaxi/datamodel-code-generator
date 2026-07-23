@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import pytest
 
 from datamodel_code_generator import DataModelType, PythonVersion
 from datamodel_code_generator.model import get_data_model_types
-from datamodel_code_generator.model.base import has_field_assignment
+from datamodel_code_generator.model.base import DataModel, has_field_assignment
 from datamodel_code_generator.model.dataclass import has_field_assignment as dataclass_has_field_assignment
 from datamodel_code_generator.model.msgspec import has_field_assignment as msgspec_has_field_assignment
 from datamodel_code_generator.model.pydantic_v2.dataclass import (
@@ -20,7 +20,7 @@ from datamodel_code_generator.reference import Reference
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.model.base import DataModelFieldBase
 
 _BEHAVIOR_CAPABILITIES: dict[
     DataModelType,
@@ -79,9 +79,10 @@ def test_external_model_subclasses_inherit_parser_behavior_capabilities(
 ) -> None:
     """Preserve existing behavior for external subclasses of built-in outputs."""
     model_types = get_data_model_types(output_model_type, target_python_version=PythonVersion.PY_311)
-    external_model_type = cast("type[DataModel]", type("ExternalModel", (model_types.data_model,), {}))
+    external_model_type = type("ExternalModel", (model_types.data_model,), {})
     expected_checker, expected_tree_reuse_inheritance = expected
 
+    assert issubclass(external_model_type, DataModel)
     assert external_model_type.FIELD_ASSIGNMENT_CHECKER is expected_checker
     assert external_model_type.SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE is expected_tree_reuse_inheritance
 
