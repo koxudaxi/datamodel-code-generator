@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import sys
 import warnings
 from typing import TYPE_CHECKING
 
@@ -124,6 +125,33 @@ def test_model_metadata_path_does_not_overwrite_input(
     )
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")
+def test_symlinked_output_path_does_not_overwrite_input(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Resolve a file symlink before checking for input overwrite."""
+    source = DATA_PATH / "jsonschema" / "person.json"
+    input_path = tmp_path / source.name
+    shutil.copyfile(source, input_path)
+    output_path = tmp_path / "schema-link.json"
+    output_path.symlink_to(input_path)
+
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_path,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Output path must not overwrite an input path",
+        skip_code_validation=True,
+    )
+    assert_output(
+        f"{input_path.read_text(encoding='utf-8')}\n",
+        EXPECTED_MALFORMED_PATH / "path_conflict_input.txt",
+    )
+
+
 def test_generate_list_input_does_not_overwrite_input(tmp_path: Path) -> None:
     """Protect every file supplied through the public list-input API."""
     source = DATA_PATH / "jsonschema" / "person.json"
@@ -149,6 +177,31 @@ def test_output_path_does_not_write_inside_input_directory(
     input_path.mkdir()
     shutil.copyfile(source, input_path / source.name)
     output_path = input_path / "model.py"
+
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_path,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Output path must not be inside an input directory",
+        output_should_not_exist=True,
+    )
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")
+def test_symlinked_output_path_does_not_write_inside_input_directory(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Resolve lexical parent segments and directory symlinks before checking containment."""
+    source = DATA_PATH / "jsonschema" / "person.json"
+    input_path = tmp_path / "schemas"
+    input_path.mkdir()
+    shutil.copyfile(source, input_path / source.name)
+    linked_input = tmp_path / "schema-link"
+    linked_input.symlink_to(input_path, target_is_directory=True)
+    output_path = input_path / ".." / linked_input.name / "model.py"
 
     run_main_and_assert(
         input_path=input_path,
