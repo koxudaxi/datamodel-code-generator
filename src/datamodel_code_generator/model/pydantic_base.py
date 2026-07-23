@@ -10,25 +10,23 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
-from pydantic import Field  # noqa: F401
+from pydantic import Field as _Field
 
 from datamodel_code_generator import cached_path_exists
 from datamodel_code_generator.model import (
     UNDEFINED,
-    ConstraintsBase,  # noqa: F401 # legacy public import
     DataModel,
     DataModelFieldBase,
     _rebuild_model_with_datamodel_namespace,
 )
-from datamodel_code_generator.model._constraints import (
-    Constraints,  # noqa: TC001 # needed for pydantic
-    PatternConstraints,  # noqa: F401 # legacy public import
-)
+from datamodel_code_generator.model import ConstraintsBase as _ConstraintsBase
+from datamodel_code_generator.model._constraints import Constraints
+from datamodel_code_generator.model._constraints import PatternConstraints as _PatternConstraints
 from datamodel_code_generator.model._pydantic_imports import IMPORT_ANYURL, IMPORT_FIELD
 from datamodel_code_generator.model.base import _nested_model_default_factory
 from datamodel_code_generator.python_literal import represent_python_value
+from datamodel_code_generator.types import UnionIntFloat as _UnionIntFloat
 from datamodel_code_generator.types import (
-    UnionIntFloat,  # noqa: F401 # legacy public import
     chain_as_tuple,
     merge_normalized_constraint,
     normalize_integer_constraint,
@@ -40,6 +38,12 @@ if TYPE_CHECKING:
     from datamodel_code_generator.imports import Import
     from datamodel_code_generator.reference import Reference
     from datamodel_code_generator.types import DataType
+
+# Preserve names that were historically importable from this module.
+Field = _Field
+ConstraintsBase = _ConstraintsBase
+PatternConstraints = _PatternConstraints
+UnionIntFloat = _UnionIntFloat
 
 
 class DataModelField(DataModelFieldBase):
