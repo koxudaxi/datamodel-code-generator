@@ -20,18 +20,26 @@ from datamodel_code_generator.imports import (
     Import,
 )
 from datamodel_code_generator.model.base import (
+    _MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS,
     DataModel,
     DataModelFieldBase,
     TemplateBase,
     _annotation_typing_import_names,
+    _clear_custom_template_caches,
     _get_environment,
     _get_environment_with_absolute_path,
+    _get_template_with_absolute_path,
+    _get_template_with_custom_dir,
+    _missing_custom_template_state,
+    _refresh_custom_template_paths,
+    _remember_missing_custom_template_subdir,
     _RenderedDataModelField,
     _TypingImportRequirements,
     comment_safe,
     escape_docstring,
     format_docstring,
     get_module_path,
+    get_template,
     inline_comment_safe,
     sanitize_module_name,
 )
@@ -230,6 +238,70 @@ def test_data_model_relative_custom_template_without_adapter() -> None:
     )
 
     assert Path(model.template.filename).parts[-2:] == ("pydantic_v2", "BaseModel.jinja2")
+
+
+def test_pydantic_custom_template_legacy_root_keeps_precedence(tmp_path: Path) -> None:
+    """The historical root layout still wins when both custom paths exist."""
+    legacy_template = tmp_path / "BaseModel.jinja2"
+    current_template = tmp_path / "pydantic_v2/BaseModel.jinja2"
+    current_template.parent.mkdir()
+    legacy_template.write_text("legacy", encoding="utf-8")
+    current_template.write_text("current", encoding="utf-8")
+
+    model = BaseModel(
+        fields=[],
+        reference=Reference(path="Model", original_name="Model", name="Model"),
+        custom_template_dir=tmp_path,
+    )
+
+    assert model.template_file_path == legacy_template
+
+
+def test_direct_data_models_reuse_bounded_custom_template_cache(tmp_path: Path) -> None:
+    """Direct model consumers retain bounded process-level template reuse."""
+    _clear_custom_template_caches()
+    try:
+        custom_template = tmp_path / "pydantic_v2/BaseModel.jinja2"
+        custom_template.parent.mkdir()
+        custom_template.write_text("class {{ class_name }}({{ base_class }}):\n    pass\n", encoding="utf-8")
+
+        models = [
+            BaseModel(
+                fields=[],
+                reference=Reference(path=name, original_name=name, name=name),
+                custom_template_dir=tmp_path,
+            )
+            for name in ("First", "Second")
+        ]
+
+        assert models[0].template is models[1].template
+        assert _get_template_with_absolute_path.cache_parameters()["maxsize"] == 128
+        assert _get_template_with_custom_dir.cache_parameters()["maxsize"] == 128
+        assert _get_environment.cache_parameters()["maxsize"] == 16
+        assert _get_environment_with_absolute_path.cache_parameters()["maxsize"] == 16
+        assert get_template.cache_parameters()["maxsize"] == 128
+
+        for index in range(_MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS + 2):
+            include_only_dir = tmp_path / f"include-only-{index}"
+            model = BaseModel(
+                fields=[],
+                reference=Reference(path=f"Model{index}", original_name=f"Model{index}", name=f"Model{index}"),
+                custom_template_dir=include_only_dir,
+            )
+            _ = model.template
+
+        assert _get_template_with_custom_dir.cache_info().currsize <= 128
+        assert _missing_custom_template_state.count == _MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS
+        _refresh_custom_template_paths(tmp_path / "overflow-refresh")
+        assert not _missing_custom_template_state.paths
+        assert _get_template_with_custom_dir.cache_info().currsize == 0
+
+        missing_subdir = tmp_path / "duplicate/pydantic_v2"
+        _remember_missing_custom_template_subdir(missing_subdir.parent, missing_subdir)
+        _remember_missing_custom_template_subdir(missing_subdir.parent, missing_subdir)
+        assert _missing_custom_template_state.count == 1
+    finally:
+        _clear_custom_template_caches()
 
 
 def test_data_model_create_typed_extra_field_unsupported() -> None:

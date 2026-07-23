@@ -512,10 +512,9 @@ def _optional_test_parsed_source_cache(enabled: bool) -> Generator[None, None, N
 def _clear_model_template_cache() -> None:
     from datamodel_code_generator.model import base as model_base
 
+    model_base._clear_custom_template_caches()
     for cached in (
         model_base.get_template,
-        model_base._get_template_with_custom_dir,
-        model_base._get_environment,
         model_base._get_template_with_absolute_path,
         model_base._get_environment_with_absolute_path,
     ):

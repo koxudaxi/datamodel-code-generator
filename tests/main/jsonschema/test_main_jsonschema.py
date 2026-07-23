@@ -6,6 +6,7 @@ import importlib.util
 import itertools
 import json
 import os
+import shutil
 import sys
 import tempfile
 import warnings
@@ -29,6 +30,7 @@ from datamodel_code_generator import (
     SchemaValidatorType,
     TargetPydanticVersion,
     _clear_parser_source_data_cache,
+    cached_path_exists,
     chdir,
     generate,
     load_data_from_path,
@@ -12757,6 +12759,37 @@ def test_main_jsonschema_schema_id(
                 "--output-model-type",
                 "pydantic_v2.BaseModel",
             ],
+        )
+
+
+def test_generate_refreshes_custom_template_directory_between_calls(tmp_path: Path) -> None:
+    """A custom template directory created after generate() starts being used on the next call."""
+    custom_template_dir = tmp_path / "templates"
+    output_file = tmp_path / "output.py"
+    generate_kwargs = {
+        "custom_template_dir": custom_template_dir,
+    }
+
+    with freeze_time(TIMESTAMP):
+        for _ in range(2):
+            run_generate_file_and_assert(
+                input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+                output_path=output_file,
+                input_file_type=InputFileType.JsonSchema,
+                assert_func=assert_file_content,
+                expected_file=EXPECTED_JSON_SCHEMA_PATH / "custom_template_refresh_default.py",
+                **generate_kwargs,
+            )
+        for index in range(257):
+            cached_path_exists(tmp_path / f"evict-{index}")
+        shutil.copytree(DATA_PATH / "templates_refresh" / "v1", custom_template_dir)
+        run_generate_file_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=EXPECTED_JSON_SCHEMA_PATH / "custom_template_refresh_v1.py",
+            **generate_kwargs,
         )
 
 
