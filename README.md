@@ -4,7 +4,7 @@
 
 📚 [Documentation](https://datamodel-code-generator.koxudaxi.dev/) ·
 🧪 [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/) ·
-💼 [Maintainer available for work](https://koxudaxi.dev/?utm_source=github_readme&utm_medium=top&utm_campaign=open_to_work)
+💼 [Lead maintainer available for work](https://koxudaxi.dev/?utm_source=github_readme&utm_medium=top&utm_campaign=open_to_work)
 
 > [!NOTE]
 > Playground privacy: Generation runs locally in your browser with Pyodide. Your schema and options are not sent to a
@@ -425,9 +425,11 @@ See [Development & Contributing](https://datamodel-code-generator.koxudaxi.dev/d
 
 ---
 
-## 👤 Maintainer
+## 👥 Maintainers
 
-[Koudai Aono](https://koxudaxi.dev/?utm_source=github_readme&utm_medium=maintainer_section&utm_campaign=open_to_work) ([@koxudaxi](https://github.com/koxudaxi))
+- [Koudai Aono](https://koxudaxi.dev/?utm_source=github_readme&utm_medium=maintainer_section&utm_campaign=open_to_work) ([@koxudaxi](https://github.com/koxudaxi)) - Lead maintainer
+- [Bernát Gábor](https://github.com/gaborbernat) ([@gaborbernat](https://github.com/gaborbernat)) - Maintainer
+- [Antonio Spadaro](https://github.com/ilovelinux) ([@ilovelinux](https://github.com/ilovelinux)) - Maintainer
 
 ---
 
