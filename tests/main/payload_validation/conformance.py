@@ -106,6 +106,9 @@ PYDANTIC_V2_DATACLASS_MUTABLE_DEFAULT_EXCLUDED_CASES: Final[dict[str, str]] = {
     "jsonschema/has_classvar_extra_set.json": (
         "dataclass output needs default_factory handling for generated mutable defaults"
     ),
+    "jsonschema/msgspec_reserved_field_name.json": (
+        "dataclass output needs default_factory handling for generated mutable defaults"
+    ),
     "jsonschema/pydantic_v2_dataclass_field.json": (
         "dataclass output needs default_factory handling for generated mutable defaults"
     ),
@@ -302,6 +305,9 @@ MSGSPEC_VALIDATION_EXCLUDED_CASES: Final[dict[str, str]] = {
     ),
     "jsonschema/reduce_duplicate_field_types.json": (
         "msgspec conversion requires tagged Struct unions for combined object schemas"
+    ),
+    "jsonschema/ref_merge_additional_properties.json": (
+        "msgspec conversion rejects length metadata attached to generated Literal types"
     ),
     "jsonschema/ref_merge_field_metadata.json": (
         "msgspec conversion rejects length metadata attached to generated Literal types"
