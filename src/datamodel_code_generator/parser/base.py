@@ -72,6 +72,7 @@ from datamodel_code_generator.model.base import (
     ConstraintsBase,
     DataModel,
     DataModelFieldBase,
+    _refresh_custom_template_paths,
 )
 from datamodel_code_generator.model.enum import Enum, Member, evaluate_member_value
 from datamodel_code_generator.model.imports import IMPORT_TYPED_DICT, IMPORT_TYPED_DICT_BACKPORT
@@ -4583,7 +4584,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     def _report_parse_diagnostics(self) -> None:
         """Report diagnostics collected while parsing the input schema."""
 
-    def parse(  # noqa: PLR0912, PLR0913, PLR0914, PLR0917
+    def parse(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915, PLR0917
         self,
         with_import: bool | None = True,  # noqa: FBT001, FBT002
         format_: bool | None = True,  # noqa: FBT001, FBT002
@@ -4595,6 +4596,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         collect_model_metadata: bool = False,  # noqa: FBT001, FBT002
     ) -> str | dict[tuple[str, ...], Result]:
         """Parse schema and generate code, returning single file or module dict."""
+        if (custom_template_dir := self.custom_template_dir) is not None:
+            _refresh_custom_template_paths(custom_template_dir)
         self._set_typed_extra_annotation_mode(
             use_deferred_annotations=self._uses_deferred_annotations(with_import, disable_future_imports)
         )

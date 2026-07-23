@@ -15,6 +15,7 @@ from copy import deepcopy
 from dataclasses import dataclass, replace
 from functools import cached_property, lru_cache
 from pathlib import Path
+from threading import RLock
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
 from warnings import warn
 
@@ -57,6 +58,22 @@ _TYPING_IMPORT_NAMES: frozenset[str] = frozenset({
 _ADDITIONAL_PROPERTIES_REFERENCE_CLASSES_TEMPLATE_DATA_KEY = "additionalPropertiesReferenceClasses"
 _MODULE_NAME_INVALID_CHAR_PATTERN = re.compile(r"[^0-9a-zA-Z_]")
 _MODULE_NAME_INVALID_CHAR_WITH_DOTS_PATTERN = re.compile(r"[^0-9a-zA-Z_.]")
+_MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS = 128
+
+
+class _MissingCustomTemplateState:
+    """Bounded bookkeeping for mutable custom-template directories."""
+
+    __slots__ = ("count", "lock", "overflow", "paths")
+
+    def __init__(self) -> None:
+        self.paths: dict[Path, tuple[Path, ...]] = {}
+        self.count = 0
+        self.overflow = False
+        self.lock = RLock()
+
+
+_missing_custom_template_state = _MissingCustomTemplateState()
 
 
 @dataclass(frozen=True, slots=True)
@@ -997,6 +1014,8 @@ def _get_environment(template_subdir: Path, custom_template_dir: Path | None) ->
         if cached_path_exists(custom_dir):
             loaders.append(FileSystemLoader(str(custom_dir)))
             has_custom_loader = True
+        else:
+            _remember_missing_custom_template_subdir(custom_template_dir, custom_dir)
 
     loaders.append(FileSystemLoader(str(TEMPLATE_DIR / template_subdir)))
 
@@ -1023,6 +1042,52 @@ def _get_template_with_custom_dir(
     environment = _get_environment(template_subdir, custom_template_dir)
     template = environment.get_template(template_file_path.name)
     return template_adapter(template) if template_adapter is not None else template
+
+
+def _clear_custom_template_caches() -> None:
+    """Clear mutable custom-template path, environment, and template caches."""
+    with _missing_custom_template_state.lock:
+        cached_path_exists.cache_clear()
+        _get_environment.cache_clear()
+        _get_template_with_custom_dir.cache_clear()
+        _missing_custom_template_state.paths.clear()
+        _missing_custom_template_state.count = 0
+        _missing_custom_template_state.overflow = False
+
+
+def _remember_missing_custom_template_subdir(custom_template_dir: Path, custom_subdir: Path) -> None:
+    """Track a missing custom subdirectory while keeping retained state bounded."""
+    with _missing_custom_template_state.lock:
+        if _missing_custom_template_state.overflow:
+            return
+        missing_subdirs = _missing_custom_template_state.paths.get(custom_template_dir, ())
+        if custom_subdir in missing_subdirs:
+            return
+        if _missing_custom_template_state.count >= _MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS:
+            _missing_custom_template_state.overflow = True
+            return
+        _missing_custom_template_state.paths[custom_template_dir] = (*missing_subdirs, custom_subdir)
+        _missing_custom_template_state.count += 1
+
+
+def _refresh_custom_template_paths(custom_template_dir: Path) -> None:
+    """Refresh cached lookups when a tracked custom subdirectory appears."""
+    with _missing_custom_template_state.lock:
+        overflow = _missing_custom_template_state.overflow
+        match _missing_custom_template_state.paths.get(custom_template_dir):
+            case None:
+                if not overflow:
+                    return
+                missing_subdirs = ()
+            case tracked_subdirs:
+                missing_subdirs = tracked_subdirs
+    if overflow:
+        _clear_custom_template_caches()
+        return
+    for path in missing_subdirs:
+        if path.exists():
+            _clear_custom_template_caches()
+            return
 
 
 @lru_cache(maxsize=16)

@@ -7,6 +7,7 @@ import json
 import pickle
 import platform
 import re
+import shutil
 import sys
 import warnings
 from collections import defaultdict
@@ -1667,6 +1668,48 @@ def test_main_openapi_custom_template_dir_include_override(
                 "--output-model-type",
                 "pydantic_v2.BaseModel",
             ],
+            expected_stderr=inferred_message.format("openapi") + "\n",
+        )
+
+
+@pytest.mark.isolate_builtin_formatter_config
+def test_main_openapi_detects_created_include_only_template_directory(
+    capsys: pytest.CaptureFixture,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A newly created include-only directory activates a new cached loader."""
+    custom_template_dir = tmp_path / "templates"
+    custom_config = custom_template_dir / "pydantic_v2/ConfigDict.jinja2"
+    extra_args = [
+        "--custom-template-dir",
+        str(custom_template_dir),
+        "--extra-template-data",
+        str(OPEN_API_DATA_PATH / "extra_data.json"),
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+    ]
+    monkeypatch.chdir(tmp_path)
+
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "api.yaml",
+            output_path=None,
+            expected_stdout_path=EXPECTED_OPENAPI_PATH / "extra_template_data_config_pydantic_v2.py",
+            capsys=capsys,
+            input_file_type=None,
+            extra_args=extra_args,
+            expected_stderr=inferred_message.format("openapi") + "\n",
+        )
+        custom_config.parent.mkdir(parents=True)
+        shutil.copyfile(DATA_PATH / "templates_include_only/pydantic_v2/ConfigDict.jinja2", custom_config)
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "api.yaml",
+            output_path=None,
+            expected_stdout_path=EXPECTED_OPENAPI_PATH / "custom_template_dir_include_override.py",
+            capsys=capsys,
+            input_file_type=None,
+            extra_args=extra_args,
             expected_stderr=inferred_message.format("openapi") + "\n",
         )
 
