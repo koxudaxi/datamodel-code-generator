@@ -8,7 +8,7 @@ import pytest
 
 from datamodel_code_generator import DataModelType, PythonVersion
 from datamodel_code_generator.model import get_data_model_types
-from datamodel_code_generator.model.base import DataModel, has_field_assignment
+from datamodel_code_generator.model.base import has_field_assignment
 from datamodel_code_generator.model.dataclass import has_field_assignment as dataclass_has_field_assignment
 from datamodel_code_generator.model.msgspec import has_field_assignment as msgspec_has_field_assignment
 from datamodel_code_generator.model.pydantic_v2.dataclass import (
@@ -20,7 +20,7 @@ from datamodel_code_generator.reference import Reference
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from datamodel_code_generator.model.base import DataModelFieldBase
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
 
 _BEHAVIOR_CAPABILITIES: dict[
     DataModelType,
