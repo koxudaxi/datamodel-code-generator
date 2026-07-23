@@ -443,6 +443,13 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
 class PydanticV2DataType(DataType):
     """Pydantic v2-specific DataType with SerializeAsAny support."""
 
+    _CONSTRAINED_TYPE_TO_BASE: ClassVar[dict[str, str]] = {"constr": "str"}
+    _BASE_TYPE_HINT_CONTAINER_ORDER: ClassVar[tuple[str, ...]] = ("list", "set", "dict")
+
+    @staticmethod
+    def _wrap_discriminator_type_hint(type_: str, discriminator: str) -> str:
+        return f"Annotated[{type_}, Field(discriminator={discriminator!r})]"
+
     def _should_wrap_with_serialize_as_any(self) -> bool:
         if not self.use_serialize_as_any:
             return False
