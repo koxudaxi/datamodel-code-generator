@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
     from datamodel_code_generator.types import DataTypeManager
 
@@ -78,3 +80,20 @@ class OutputModelContext:
     def resolve_nested_constrained_model_type(self) -> type[DataModel]:
         """Return the root model used for an inline constrained value."""
         return self._data_model_type.resolve_nested_constrained_model_type(self._data_model_root_type)
+
+    def _store_additional_properties_reference_classes(
+        self,
+        extra_template_data: dict[str, Any],
+        reference_classes: set[str],
+    ) -> None:
+        """Store parse-time dependencies through every possible output model type."""
+        store_data_model_metadata = self._data_model_type._store_additional_properties_reference_classes  # noqa: SLF001
+        store_data_model_metadata(extra_template_data, reference_classes)
+        if self._data_model_root_type is self._data_model_type:
+            return
+        store_root_model_metadata = (
+            self._data_model_root_type._store_additional_properties_reference_classes  # noqa: SLF001
+        )
+        if store_root_model_metadata is store_data_model_metadata:
+            return
+        store_root_model_metadata(extra_template_data, reference_classes)

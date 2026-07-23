@@ -2225,7 +2225,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         if data_type.reference
                     }
                 ):
-                    self.extra_template_data[path]["additionalPropertiesReferenceClasses"] = reference_classes
+                    self._output_model_context._store_additional_properties_reference_classes(  # noqa: SLF001
+                        self.extra_template_data[path],
+                        reference_classes,
+                    )
                 if not self.target_python_version.has_typed_dict_closed:  # pragma: no branch
                     self.extra_template_data[path]["use_typeddict_backport"] = True
 

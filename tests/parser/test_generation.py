@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ast
+from collections import defaultdict
 from operator import iadd, imul
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -18,6 +20,7 @@ from datamodel_code_generator.model.pydantic_v2.version import (
     PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
 )
 from datamodel_code_generator.model.type_alias import TypeAliasTypeBackport
+from datamodel_code_generator.model.typed_dict import TypedDict
 from datamodel_code_generator.parser.generation import (
     GENERATION_STORE_MUTATION_METHODS,
     GenerationStore,
@@ -117,6 +120,55 @@ def test_generation_store_import_cache_contract_covers_mutation_surface() -> Non
     assert (
         IMPORT_CACHE_CLEARING_MUTATION_METHODS | IMPORT_CACHE_NEUTRAL_MUTATION_METHODS
     ) == GENERATION_STORE_MUTATION_METHODS
+
+
+def test_parser_layers_treat_output_template_metadata_as_opaque() -> None:
+    """Parser facts must use model capabilities instead of backend template keys."""
+    generation_path = Path(__file__).parents[2] / "src/datamodel_code_generator/parser/generation.py"
+    jsonschema_path = generation_path.with_name("jsonschema.py")
+    attributes = {
+        node.attr
+        for node in ast.walk(ast.parse(generation_path.read_text(encoding="utf-8")))
+        if isinstance(node, ast.Attribute)
+    }
+
+    assert "extra_template_data" not in attributes
+    assert all(
+        "additionalPropertiesReferenceClasses" not in path.read_text(encoding="utf-8")
+        for path in (generation_path, jsonschema_path)
+    )
+
+
+def test_generation_index_does_not_use_metadata_collection_truthiness() -> None:
+    """Consume every model-owned dependency even when a collection overrides truthiness."""
+
+    class FalseyReferenceClasses(frozenset[str]):
+        def __bool__(self) -> bool:
+            return False
+
+    reference_classes = FalseyReferenceClasses({"Metadata"})
+    assert not reference_classes
+
+    class MetadataModel(TypedDict):
+        @property
+        def _additional_properties_reference_classes(self) -> frozenset[str]:
+            return reference_classes
+
+    model = MetadataModel(
+        fields=[],
+        reference=Reference(path="Model", original_name="Model", name="Model"),
+        extra_template_data=defaultdict(dict, {"Model": {"additionalPropertiesType": "Metadata"}}),
+    )
+    store = GenerationStore()
+    store.register_model(model)
+
+    assert {
+        "reference_classes": store.index.reference_classes_for_model(model),
+        "typed_dict_kwargs": model.extra_template_data["typed_dict_kwargs"],
+    } == snapshot({
+        "reference_classes": frozenset({"Metadata"}),
+        "typed_dict_kwargs": {"extra_items": "'Metadata'"},
+    })
 
 
 def test_generation_store_indexes_model_and_reference_order() -> None:
