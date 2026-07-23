@@ -14,7 +14,7 @@ from datamodel_code_generator._format_types import (
     PythonVersionMin,
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
-from datamodel_code_generator.model.base import UNDEFINED, _nested_model_default_factory
+from datamodel_code_generator.model.base import UNDEFINED, _nested_model_default_factory, has_field_assignment
 from datamodel_code_generator.model.imports import IMPORT_DATACLASS, IMPORT_FIELD
 from datamodel_code_generator.model.pydantic_base import Constraints  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
@@ -29,13 +29,6 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator.enums import DataclassArguments
     from datamodel_code_generator.imports import Import
-
-
-def has_field_assignment(field: DataModelFieldBase) -> bool:
-    """Check if a dataclass field renders with an assignment or default value."""
-    return (bool(field.field) and not field.use_annotated) or not (
-        (field.required and not field.use_default_with_required) or field.should_strip_default_none()
-    )
 
 
 class _DataclassReuseMixin:
@@ -69,6 +62,7 @@ class DataClass(_DataclassReuseMixin, DataModel):
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "dataclass.jinja2"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_DATACLASS,)
+    SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = True
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True
 

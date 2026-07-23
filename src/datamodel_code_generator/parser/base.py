@@ -2621,9 +2621,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             canonical_to_shared_ref[canonical] = canonical.reference
             shared_models.append(canonical)
 
-        supports_inheritance = _is_pydantic_v2_base_model(self.data_model_type) or _is_dataclass_data_model(
-            self.data_model_type
-        )
+        supports_inheritance = self.data_model_type.SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE
 
         module_models_sets: dict[tuple[str, ...], set[DataModel]] = {
             module: set(models) for module, models in module_models
@@ -3103,13 +3101,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     @staticmethod
     def _get_field_assignment_checker(model: DataModel) -> Callable[[DataModelFieldBase], bool]:
-        if _is_msgspec_struct(model):
-            from datamodel_code_generator.model.msgspec import has_field_assignment  # noqa: PLC0415
-
-            return has_field_assignment
-        from datamodel_code_generator.model.dataclass import has_field_assignment  # noqa: PLC0415
-
-        return has_field_assignment
+        return type(model).FIELD_ASSIGNMENT_CHECKER
 
     def __is_new_required_field(  # noqa: PLR6301
         self,
