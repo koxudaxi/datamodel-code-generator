@@ -151,6 +151,7 @@ def test_dangling_local_ref_warns_and_preserves_generated_output(
             expected_file=EXPECTED_MALFORMED_PATH / "dangling_local_ref.py",
             capsys=capsys,
             assert_no_stderr=True,
+            importable_module_name="generated_dangling_local_ref",
         )
 
 
@@ -184,6 +185,43 @@ def test_dangling_local_ref_strict_cli_error(
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Unresolved local $ref",
+        output_should_not_exist=True,
+    )
+
+
+def test_out_of_range_array_ref_warns_and_generates_importable_fallback(
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Route an unresolved array index through the default dangling-ref fallback."""
+    with pytest.warns(DanglingRefWarning, match=r"#/items/9.+out_of_range_array_ref\.json"):
+        run_main_and_assert(
+            input_path=MALFORMED_DATA_PATH / "out_of_range_array_ref.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--disable-timestamp"],
+            assert_func=assert_file_content,
+            expected_file=EXPECTED_MALFORMED_PATH / "out_of_range_array_ref.py",
+            capsys=capsys,
+            assert_no_stderr=True,
+            importable_module_name="generated_out_of_range_array_ref",
+            importable_module_attribute="Field9",
+        )
+
+
+def test_out_of_range_array_ref_strict_cli_error(
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Promote an unresolved array index through the existing strict-ref diagnostic."""
+    run_main_and_assert(
+        input_path=MALFORMED_DATA_PATH / "out_of_range_array_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--strict-refs", "--disable-timestamp"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="out_of_range_array_ref.json: #/items/9",
         output_should_not_exist=True,
     )
 
@@ -294,6 +332,8 @@ def test_empty_local_ref_is_valid_in_strict_mode(
         expected_file=EXPECTED_MALFORMED_PATH / "empty_local_ref.py",
         capsys=capsys,
         assert_no_stderr=True,
+        importable_module_name="generated_empty_local_ref",
+        importable_module_attribute="Empty",
     )
 
 

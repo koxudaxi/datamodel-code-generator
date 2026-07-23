@@ -326,6 +326,10 @@ _JSON_POINTER_ARRAY_INDEX = re.compile(r"0|[1-9][0-9]*")
 _MISSING_JSON_POINTER = object()
 
 
+class _JSONPointerArrayIndexOutOfRangeError(Error):
+    """Identify a syntactically valid JSON pointer index beyond an array's bounds."""
+
+
 def _resolve_json_pointer_array_index(sequence: list[YamlValue], segment: object) -> YamlValue:
     """Resolve a JSON-pointer segment against a list per the RFC 6901 array-index grammar."""
     text = str(segment)
@@ -339,8 +343,19 @@ def _resolve_json_pointer_array_index(sequence: list[YamlValue], segment: object
         raise Error(msg) from exc
     if index >= len(sequence):
         msg = f"JSON pointer array index {index} is out of range (array length {len(sequence)})."
-        raise Error(msg)
+        raise _JSONPointerArrayIndexOutOfRangeError(msg)
     return sequence[index]
+
+
+def _resolve_json_pointer_array_index_or_missing(
+    sequence: list[YamlValue],
+    segment: object,
+) -> YamlValue | object:
+    """Resolve an array index while marking only an unavailable valid index as missing."""
+    try:
+        return _resolve_json_pointer_array_index(sequence, segment)
+    except _JSONPointerArrayIndexOutOfRangeError:
+        return _MISSING_JSON_POINTER
 
 
 def get_model_by_path(schema: dict[str, YamlValue] | list[YamlValue], keys: list[str] | list[int]) -> YamlValue:
@@ -382,7 +397,8 @@ def _get_model_by_path_or_missing(
             if value is _MISSING_JSON_POINTER:
                 return value
         elif isinstance(current, list):
-            value = _resolve_json_pointer_array_index(current, key)
+            if (value := _resolve_json_pointer_array_index_or_missing(current, key)) is _MISSING_JSON_POINTER:
+                return value
         else:  # pragma: no cover - guarded before assigning current
             raise TypeError(type(current))
         if index == last_index:
@@ -439,7 +455,11 @@ def _split_json_pointer(schema: dict[str, YamlValue] | list[YamlValue], pointer:
         parts.append(part)
         reference_parts.append(raw_parts[index])
         if isinstance(current, list):  # pragma: no branch
-            current = _resolve_json_pointer_array_index(current, part)
+            if (resolved := _resolve_json_pointer_array_index_or_missing(current, part)) is _MISSING_JSON_POINTER:
+                parts.extend(unescape_json_pointer_segment(part) for part in raw_parts[index + 1 :])
+                reference_parts.extend(raw_parts[index + 1 :])
+                return parts, reference_parts
+            current = cast("YamlValue", resolved)
         index += 1
     return parts, reference_parts
 
