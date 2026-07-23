@@ -4537,6 +4537,24 @@ def test_main_openapi_dataclass_inheritance_parent_default(output_file: Path) ->
     )
 
 
+def test_main_openapi_pydantic_dataclass_inheritance_parent_default(output_file: Path) -> None:
+    """Keep Pydantic dataclass field ordering aligned with standard dataclasses."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "dataclass_inheritance_field_ordering.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "pydantic_dataclass_inheritance_field_ordering_py310.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.dataclass",
+            "--target-python-version",
+            "3.10",
+            "--disable-timestamp",
+        ],
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",

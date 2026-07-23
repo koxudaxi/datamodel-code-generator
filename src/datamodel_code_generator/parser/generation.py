@@ -19,6 +19,9 @@ Contributor guide:
 * Preserve output compatibility first. Store/index queries must reproduce the
   existing parse order, naming order, canonical model selection, and
   tie-break behavior before they replace a direct object traversal.
+* Override every mutating ``list`` method on ``_GenerationModelList``. The
+  list-method contract test deliberately fails when Python adds an unclassified
+  method so new mutation paths cannot silently leave facts stale.
 
 The pre-commit hook backed by ``scripts/check_generation_store_usage.py``
 guards the parser package against common direct mutations. When adding a new
@@ -33,12 +36,13 @@ from __future__ import annotations
 from collections import defaultdict
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from functools import cache
 from typing import TYPE_CHECKING, Any, Literal, SupportsIndex, TypeAlias, TypeVar, overload
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator
     from pathlib import Path
+
+    from typing_extensions import Self
 
     from datamodel_code_generator.model.base import BaseClassDataType, DataModel, DataModelFieldBase
     from datamodel_code_generator.types import DataType
@@ -55,7 +59,6 @@ DataTypeId: TypeAlias = int
 DataTypeRole = Literal["field", "base", "nested", "dict_key"]
 _OrderedSetItem = TypeVar("_OrderedSetItem")
 OrderedSet: TypeAlias = dict[_OrderedSetItem, None]
-_PYDANTIC_V2_MODEL_MODULE_PREFIX = "datamodel_code_generator.model.pydantic_v2."
 
 GENERATION_STORE_MUTATION_METHODS: frozenset[str] = frozenset({
     "append_field",
@@ -98,22 +101,6 @@ def _outermost_parent(value: object) -> object:
     while (parent := getattr(current, "parent", None)) is not None:
         current = parent
     return current
-
-
-@cache
-def _pydantic_v2_dict_key_reference_classes_enabled() -> bool:
-    from datamodel_code_generator.model.pydantic_v2.version import (  # noqa: PLC0415
-        PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
-    )
-
-    return PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING
-
-
-def _include_dict_key_reference_classes(model: DataModel) -> bool:
-    return (
-        model.__class__.__module__.startswith(_PYDANTIC_V2_MODEL_MODULE_PREFIX)
-        and _pydantic_v2_dict_key_reference_classes_enabled()
-    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -179,8 +166,10 @@ class _GenerationModelList(list["DataModel"]):
 
     def extend(self, items: Iterable[Any]) -> None:  # ty: ignore[invalid-method-override]
         """Extend the model list and invalidate derived facts."""
-        super().extend(items)
-        self._invalidate()
+        try:
+            super().extend(items)
+        finally:
+            self._invalidate()
 
     def insert(self, index: SupportsIndex, item: Any) -> None:  # ty: ignore[invalid-method-override]
         """Insert a model and invalidate derived facts."""
@@ -230,6 +219,41 @@ class _GenerationModelList(list["DataModel"]):
         """Remove a model and invalidate derived facts."""
         super().remove(item)
         self._invalidate()
+
+    def reverse(self, /) -> None:
+        """Reverse the model list and invalidate derived facts."""
+        super().reverse()
+        self._invalidate()
+
+    def sort(
+        self,
+        /,
+        *,
+        key: Callable[[Any], Any] | None = None,
+        reverse: bool = False,
+    ) -> None:
+        """Sort the model list and invalidate derived facts."""
+        try:
+            if key is None:
+                super().sort(reverse=reverse)  # ty: ignore[invalid-argument-type]
+                return
+            super().sort(key=key, reverse=reverse)
+        finally:
+            self._invalidate()
+
+    def __iadd__(self, items: Iterable[Any], /) -> Self:  # ty: ignore[invalid-method-override]
+        """Extend the model list in place and invalidate derived facts."""
+        try:
+            super().__iadd__(items)
+        finally:
+            self._invalidate()
+        return self
+
+    def __imul__(self, value: SupportsIndex, /) -> Self:
+        """Repeat the model list in place and invalidate derived facts."""
+        super().__imul__(value)
+        self._invalidate()
+        return self
 
 
 class GenerationIndexBuilder:
@@ -426,7 +450,10 @@ class GenerationIndex:
         self._reset_reference_classes_cache_if_needed()
         if (reference_classes := self._reference_classes_cache.get(model_id)) is not None:
             return reference_classes
-        include_dict_key_references = _include_dict_key_reference_classes(model)
+        model_type = model.__class__
+        include_dict_key_references = (
+            include_dict_key_reference_classes := model_type._INCLUDE_DICT_KEY_REFERENCE_CLASSES  # noqa: SLF001
+        ) is not None and include_dict_key_reference_classes(model_type)
         reference_classes = frozenset(
             reference.path
             for data_type_id in facts.data_types_by_model.get(model_id, ())

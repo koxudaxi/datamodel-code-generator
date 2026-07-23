@@ -2,7 +2,9 @@
 
 🚀 Generate Python data models from schema definitions in seconds.
 
-🧪 Try it in your browser: [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/)
+📚 [Documentation](https://datamodel-code-generator.koxudaxi.dev/) ·
+🧪 [Playground](https://datamodel-code-generator.koxudaxi.dev/playground/) ·
+💼 [Maintainer available for work](https://koxudaxi.dev/?utm_source=github_readme&utm_medium=top&utm_campaign=open_to_work)
 
 > [!NOTE]
 > Playground privacy: Generation runs locally in your browser with Pyodide. Your schema and options are not sent to a
@@ -16,8 +18,6 @@
 [![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/graph/badge.svg?token=plzSSFb9Li)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
 ![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
 [![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://pydantic.dev)
-
-> 📣 💼 Maintainer update: Open to opportunities. 🔗 [koxudaxi.dev](https://koxudaxi.dev/?utm_source=github_readme&utm_medium=top&utm_campaign=open_to_work)
 
 ## ✨ What it does
 
@@ -49,11 +49,25 @@ Recommended for standalone CLI use:
 uv tool install datamodel-code-generator
 ```
 
+Conda users can install from conda-forge:
+
+```bash
+conda install -c conda-forge datamodel-code-generator
+```
+
 For projects that should pin the generator version, add it as a development dependency instead:
 
 ```bash
 uv add --dev datamodel-code-generator
 ```
+
+> [!NOTE]
+> Community-maintained distribution packages are also available from
+> [Debian](https://packages.debian.org/search?keywords=datamodel-codegen&searchon=names&suite=all&section=all),
+> [Ubuntu](https://packages.ubuntu.com/search?keywords=datamodel-codegen&searchon=names&suite=all&section=all),
+> [nixpkgs](https://search.nixos.org/packages?query=datamodel-code-generator), and
+> [openSUSE Tumbleweed](https://software.opensuse.org/package/python-datamodel-code-generator).
+> Availability and versions vary by distribution.
 
 <details>
 <summary>Other installation methods</summary>
@@ -66,11 +80,6 @@ pip install datamodel-code-generator
 **uv (run without adding to project):**
 ```bash
 uv run --with datamodel-code-generator datamodel-codegen --help
-```
-
-**conda:**
-```bash
-conda install -c conda-forge datamodel-code-generator
 ```
 
 **With HTTP support** (for resolving remote `$ref`):
@@ -211,7 +220,7 @@ See [Performance Benchmarks](https://datamodel-code-generator.koxudaxi.dev/perfo
 
 ## 📖 Documentation
 
-**👉 [datamodel-code-generator.koxudaxi.dev](https://datamodel-code-generator.koxudaxi.dev)**
+**👉 [Read the full documentation →](https://datamodel-code-generator.koxudaxi.dev/)**
 
 - 🧰 [Presets](https://datamodel-code-generator.koxudaxi.dev/presets/) - Recommended option bundles for modern output
 - 🚀 [Getting Started](https://datamodel-code-generator.koxudaxi.dev/getting-started/) - Installation and first model

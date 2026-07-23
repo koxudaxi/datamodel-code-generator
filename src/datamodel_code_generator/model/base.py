@@ -313,6 +313,7 @@ class DataModelFieldBase(_BaseModel):
     _field_imports_cache: ClassVar[dict[tuple[Any, ...], tuple[Import, ...]]] = {}
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = False
     ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = None
+    SUPPORTS_DISCRIMINATOR: ClassVar[bool] = False
 
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
@@ -1133,6 +1134,13 @@ class BaseClassDataType(DataType):
 UNDEFINED: Any = object()
 
 
+def _has_field_assignment(field: DataModelFieldBase) -> bool:
+    """Return whether a standard model field renders with an assignment."""
+    return (bool(field.field) and not field.use_annotated) or not (
+        (field.required and not field.use_default_with_required) or field.should_strip_default_none()
+    )
+
+
 class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     """Abstract base class for all data model types.
 
@@ -1145,10 +1153,14 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     IS_ALIAS: ClassVar[bool] = False
     IS_ROOT_MODEL: ClassVar[bool] = False
     SUPPORTS_GENERIC_BASE_CLASS: ClassVar[bool] = True
+    FIELD_ASSIGNMENT_CHECKER: ClassVar[Callable[[DataModelFieldBase], bool]] = staticmethod(_has_field_assignment)
+    SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = False
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = False
+    SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = False
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False
     SUPPORTS_KW_ONLY: ClassVar[bool] = False
     SUPPORTS_BOOLEAN_LITERAL: ClassVar[bool] = True
+    REQUIRES_FIELD_DEPENDENCY_ORDERING: ClassVar[bool] = False
     REQUIRES_TAGGED_UNION_DISCRIMINATOR: ClassVar[bool] = False
     REQUIRES_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES: ClassVar[bool] = False
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = False
@@ -1160,6 +1172,8 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     FIELD_DOCSTRING_INDENT: ClassVar[int] = 4
     FORMAT_DESCRIPTION_AS_DOCSTRING: ClassVar[bool] = True
     CUSTOM_TEMPLATE_ADAPTER: ClassVar[Callable[[Template], Template] | None] = None
+    # A static callable avoids allocating bound methods on dependency-index cache misses.
+    _INCLUDE_DICT_KEY_REFERENCE_CLASSES: ClassVar[Callable[[type[DataModel]], bool] | None] = None
     _IMPORTS_CACHE_KEY: ClassVar[str] = "_cached_imports"
     has_forward_reference: bool = False
 
@@ -1172,6 +1186,14 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     ) -> DataModelFieldBase | None:
         """Create a model-specific typed extra field when supported."""
         return None
+
+    def apply_discriminator_tag(
+        self,
+        field: DataModelFieldBase,
+        field_name: str,
+        value: Any,
+    ) -> None:
+        """Apply an output-specific tagged-union discriminator when supported."""
 
     @classmethod
     def resolve_nested_constrained_model_type(

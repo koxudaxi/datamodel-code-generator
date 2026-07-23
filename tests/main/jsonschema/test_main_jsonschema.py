@@ -35,7 +35,10 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import Formatter, is_supported_in_black
 from datamodel_code_generator.model import base as model_base
-from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK
+from datamodel_code_generator.model.pydantic_v2.version import (
+    PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK,
+    PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
+)
 from tests.conftest import (
     HttpxGetMockFactory,
     MockHttpxResponse,
@@ -7435,12 +7438,17 @@ def test_main_jsonschema_property_names_allof_ref(output_file: Path) -> None:
 
 def test_main_jsonschema_property_names_ref_enum(output_file: Path) -> None:
     """Test propertyNames with $ref to enum definition uses enum type as dict key."""
+    expected_file = (
+        "property_names_ref_enum_legacy_pydantic.py"
+        if PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING
+        else "property_names_ref_enum.py"
+    )
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "property_names_ref_enum.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file="property_names_ref_enum.py",
+        expected_file=expected_file,
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
@@ -10547,6 +10555,39 @@ def test_main_jsonschema_reuse_scope_tree_typeddict(output_dir: Path) -> None:
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_typeddict",
         input_file_type="jsonschema",
         extra_args=["--reuse-model", "--reuse-scope", "tree", "--output-model-type", "typing.TypedDict"],
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_directory"),
+    [
+        pytest.param(
+            "pydantic_v2.dataclass",
+            "reuse_scope_tree_pydantic_dataclass",
+            id="pydantic-dataclass",
+        ),
+        pytest.param("msgspec.Struct", "reuse_scope_tree_msgspec", id="msgspec"),
+    ],
+)
+def test_main_jsonschema_reuse_scope_tree_non_inheriting_outputs(
+    output_model_type: str,
+    expected_directory: str,
+    output_dir: Path,
+) -> None:
+    """Keep direct shared-model references for non-inheriting tree reuse outputs."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / expected_directory,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--reuse-model",
+            "--reuse-scope",
+            "tree",
+            "--output-model-type",
+            output_model_type,
+            "--disable-timestamp",
+        ],
     )
 
 

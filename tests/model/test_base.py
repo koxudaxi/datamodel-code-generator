@@ -35,6 +35,7 @@ from datamodel_code_generator.model.base import (
     inline_comment_safe,
     sanitize_module_name,
 )
+from datamodel_code_generator.model.dataclass import DataClass as DataclassModel
 from datamodel_code_generator.model.imports import IMPORT_MSGSPEC_META, IMPORT_MSGSPEC_UNSET, IMPORT_MSGSPEC_UNSETTYPE
 from datamodel_code_generator.model.msgspec import DataModelField as MsgspecDataModelField
 from datamodel_code_generator.model.msgspec import Struct as MsgspecStruct
@@ -44,6 +45,8 @@ from datamodel_code_generator.model.pydantic_v2 import DataModelField as Pydanti
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     _strip_legacy_pydantic_extra_post_class_assignment,
 )
+from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticDataclassModel
+from datamodel_code_generator.model.pydantic_v2.dataclass import DataModelField as PydanticDataclassField
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_FIELD, IMPORT_MISSING
 from datamodel_code_generator.model.typed_dict import DataModelField as TypedDictDataModelField
 from datamodel_code_generator.model.typed_dict import TypedDict as TypedDictModel
@@ -87,6 +90,80 @@ class ReferenceSource:
 
     nullable: bool
     is_alias: bool = False
+
+
+@pytest.mark.parametrize(
+    ("model_type", "supports_inherited_enum"),
+    [
+        pytest.param(DataModel, False, id="base"),
+        pytest.param(BaseModel, True, id="pydantic"),
+        pytest.param(DataclassModel, True, id="dataclass"),
+        pytest.param(MsgspecStruct, True, id="msgspec"),
+        pytest.param(PydanticDataclassModel, False, id="pydantic-dataclass"),
+        pytest.param(TypedDictModel, False, id="typed-dict"),
+    ],
+)
+def test_inherited_discriminator_enum_capability(
+    model_type: type[DataModel],
+    *,
+    supports_inherited_enum: bool,
+) -> None:
+    """Output models explicitly declare inherited discriminator enum support."""
+    assert model_type.SUPPORTS_INHERITED_DISCRIMINATOR_ENUM is supports_inherited_enum
+    external_model_type = type(f"External{model_type.__name__}", (model_type,), {})
+    assert external_model_type.SUPPORTS_INHERITED_DISCRIMINATOR_ENUM is supports_inherited_enum
+
+
+@pytest.mark.parametrize(
+    ("field_type", "supports_discriminator"),
+    [
+        pytest.param(DataModelFieldBase, False, id="base"),
+        pytest.param(PydanticV2DataModelField, True, id="pydantic"),
+        pytest.param(PydanticDataclassField, True, id="pydantic-dataclass"),
+        pytest.param(MsgspecDataModelField, False, id="msgspec"),
+        pytest.param(TypedDictDataModelField, False, id="typed-dict"),
+    ],
+)
+def test_discriminator_field_capability(
+    field_type: type[DataModelFieldBase],
+    *,
+    supports_discriminator: bool,
+) -> None:
+    """Only Pydantic fields opt in to Pydantic discriminator behavior."""
+    assert field_type.SUPPORTS_DISCRIMINATOR is supports_discriminator
+    external_field_type = type(f"External{field_type.__name__}", (field_type,), {})
+    assert external_field_type.SUPPORTS_DISCRIMINATOR is supports_discriminator
+
+
+def test_msgspec_apply_discriminator_tag() -> None:
+    """The msgspec model owns its tagged-union mutation policy."""
+    field = MsgspecDataModelField(name="kind", data_type=DataType(literals=["pet"]))
+    model = MsgspecStruct(
+        fields=[field],
+        reference=Reference(path="Pet", original_name="Pet", name="Pet"),
+    )
+
+    model.apply_discriminator_tag(field, "kind", "pet")
+
+    assert model.extra_template_data["base_class_kwargs"] == {
+        "tag_field": "'kind'",
+        "tag": "'pet'",
+    }
+    assert field.extras["is_classvar"] is True
+
+
+def test_default_apply_discriminator_tag_is_noop() -> None:
+    """Models without tagged unions leave fields and template data unchanged."""
+    field = TypedDictDataModelField(name="kind", data_type=DataType(literals=["pet"]))
+    model = TypedDictModel(
+        fields=[field],
+        reference=Reference(path="Pet", original_name="Pet", name="Pet"),
+    )
+
+    model.apply_discriminator_tag(field, "kind", "pet")
+
+    assert model.extra_template_data == {}
+    assert field.extras == {}
 
 
 template: str = """{%- for decorator in decorators -%}

@@ -10,10 +10,10 @@ Install `datamodel-code-generator` and generate your first Pydantic v2 model.
     uv tool install datamodel-code-generator
     ```
 
-=== "pip"
+=== "conda"
 
     ```bash
-    pip install datamodel-code-generator
+    conda install -c conda-forge datamodel-code-generator
     ```
 
 === "uv (project)"
@@ -22,10 +22,10 @@ Install `datamodel-code-generator` and generate your first Pydantic v2 model.
     uv add --dev datamodel-code-generator
     ```
 
-=== "conda"
+=== "pip"
 
     ```bash
-    conda install -c conda-forge datamodel-code-generator
+    pip install datamodel-code-generator
     ```
 
 === "pipx"
@@ -37,11 +37,19 @@ Install `datamodel-code-generator` and generate your first Pydantic v2 model.
 === "uvx (one-shot)"
 
     ```bash
-    uvx datamodel-codegen --help
+    uvx --from datamodel-code-generator datamodel-codegen --help
     ```
 
 Use `uv tool install` when you want `datamodel-codegen` available as a standalone CLI. Use `uv add --dev` when a project
 or CI workflow should pin the generator version in its lockfile.
+
+!!! info "Distribution packages"
+    Community-maintained distribution packages are also available from
+    [Debian](https://packages.debian.org/search?keywords=datamodel-codegen&searchon=names&suite=all&section=all),
+    [Ubuntu](https://packages.ubuntu.com/search?keywords=datamodel-codegen&searchon=names&suite=all&section=all),
+    [nixpkgs](https://search.nixos.org/packages?query=datamodel-code-generator), and
+    [openSUSE Tumbleweed](https://software.opensuse.org/package/python-datamodel-code-generator).
+    Availability and versions vary by distribution.
 
 !!! note "Default output model"
     When `--output-model-type` is omitted, datamodel-code-generator generates Pydantic v2 BaseModel output

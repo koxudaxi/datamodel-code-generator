@@ -2,20 +2,33 @@
 
 from __future__ import annotations
 
+from operator import iadd, imul
 from pathlib import Path
+from typing import TYPE_CHECKING
 
+import pytest
 from inline_snapshot import snapshot
 
 from datamodel_code_generator.imports import IMPORT_DECIMAL, IMPORT_LIST, IMPORT_SET
-from datamodel_code_generator.model.base import BaseClassDataType
-from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField
+from datamodel_code_generator.model.base import BaseClassDataType, DataModel, DataModelFieldBase
+from datamodel_code_generator.model.dataclass import DataClass as StandardDataClass
+from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField, RootModel, RootModelTypeAlias
+from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticDataClass
+from datamodel_code_generator.model.pydantic_v2.version import (
+    PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
+)
+from datamodel_code_generator.model.type_alias import TypeAliasTypeBackport
 from datamodel_code_generator.parser.generation import (
     GENERATION_STORE_MUTATION_METHODS,
     GenerationStore,
+    _GenerationModelList,
     set_model_base_classes,
 )
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 IMPORT_CACHE_CLEARING_MUTATION_METHODS = frozenset({
     "append_field",
@@ -41,10 +54,62 @@ IMPORT_CACHE_NEUTRAL_MUTATION_METHODS = frozenset({
     "defer_refresh",
     "register_model",
 })
+GENERATION_MODEL_LIST_MUTATION_METHODS = frozenset({
+    "__delitem__",
+    "__iadd__",
+    "__imul__",
+    "__setitem__",
+    "append",
+    "clear",
+    "extend",
+    "insert",
+    "pop",
+    "remove",
+    "reverse",
+    "sort",
+})
+GENERATION_MODEL_LIST_NON_MUTATING_METHODS = frozenset({
+    "__add__",
+    "__class_getitem__",
+    "__contains__",
+    "__eq__",
+    "__ge__",
+    "__getattribute__",
+    "__getitem__",
+    "__gt__",
+    "__iter__",
+    "__le__",
+    "__len__",
+    "__lt__",
+    "__mul__",
+    "__ne__",
+    "__repr__",
+    "__reversed__",
+    "__rmul__",
+    "__sizeof__",
+    "copy",
+    "count",
+    "index",
+})
+GENERATION_MODEL_LIST_LIFECYCLE_METHODS = frozenset({"__init__", "__new__"})
 
 
 def _base_model(name: str = "Model", fields: list[DataModelField] | None = None) -> BaseModel:
     return BaseModel(fields=fields or [], reference=Reference(path=name, original_name=name, name=name))
+
+
+def _dict_key_reference_classes(model_type: type[DataModel]) -> frozenset[str]:
+    reference_model = Reference(path="Model", original_name="Model", name="Model")
+    reference_value = Reference(path="Value", original_name="Value", name="Value")
+    reference_key = Reference(path="Key", original_name="Key", name="Key")
+    data_type = DataType(
+        data_types=[DataType(reference=reference_value)],
+        dict_key=DataType(reference=reference_key),
+    )
+    model = model_type(fields=[DataModelFieldBase(data_type=data_type)], reference=reference_model)
+    store = GenerationStore()
+    store.register_model(model)
+    return store.index.reference_classes_for_model(model)
 
 
 def test_generation_store_import_cache_contract_covers_mutation_surface() -> None:
@@ -340,6 +405,58 @@ def test_generation_store_records_nested_and_dict_key_roles() -> None:
     assert store.index.reference_classes_for_model(model) == snapshot(frozenset({"Value"}))
 
 
+@pytest.mark.parametrize(
+    ("model_type", "include_dict_key_reference"),
+    [
+        pytest.param(
+            BaseModel,
+            PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
+            id="pydantic-v2-base-model",
+        ),
+        pytest.param(
+            RootModel,
+            PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
+            id="pydantic-v2-root-model",
+        ),
+        pytest.param(
+            RootModelTypeAlias,
+            PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
+            id="pydantic-v2-root-model-type-alias",
+        ),
+        pytest.param(
+            PydanticDataClass,
+            PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
+            id="pydantic-v2-dataclass",
+        ),
+        pytest.param(StandardDataClass, False, id="standard-dataclass"),
+        pytest.param(TypeAliasTypeBackport, False, id="pydantic-v2-auxiliary-type-alias"),
+    ],
+)
+def test_generation_index_dict_key_reference_policy_matrix(
+    model_type: type[DataModel],
+    include_dict_key_reference: bool,
+) -> None:
+    """Only built-in Pydantic v2 models follow the installed-version dependency policy."""
+    expected = frozenset({"Key", "Value"} if include_dict_key_reference else {"Value"})
+
+    assert _dict_key_reference_classes(model_type) == expected
+
+
+def test_generation_index_external_pydantic_subclasses_do_not_inherit_dict_key_reference_policy() -> None:
+    """Keep external Pydantic model subclasses outside the built-in compatibility policy."""
+
+    class ExternalBaseModel(BaseModel):
+        pass
+
+    class ExternalDataClass(PydanticDataClass):
+        pass
+
+    assert [
+        _dict_key_reference_classes(ExternalBaseModel),
+        _dict_key_reference_classes(ExternalDataClass),
+    ] == [frozenset({"Value"}), frozenset({"Value"})]
+
+
 def test_generation_store_replaces_nested_data_types() -> None:
     """Nested type replacement should keep parent pointers and facts in sync."""
     reference_model = Reference(path="Model", original_name="Model", name="Model")
@@ -392,46 +509,166 @@ def test_set_model_base_classes_supports_store_and_legacy_fallback() -> None:
     )
 
 
-def test_generation_model_list_invalidates_for_list_compatible_mutations() -> None:
-    """The Parser.results-compatible list still invalidates store facts for every list mutation."""
+def test_generation_model_list_contract_classifies_every_list_method() -> None:
+    """Every list-defined callable on this Python runtime must be classified."""
+    list_methods = {name for name, value in vars(list).items() if callable(value)}
 
-    def make_model(path: str) -> BaseModel:
-        return BaseModel(fields=[], reference=Reference(path=path, original_name=path, name=path))
+    # CPython may move inherited, non-mutating dunder methods out of
+    # ``list.__dict__`` between releases, so extra classifications are valid.
+    assert {
+        "unclassified": sorted(
+            list_methods
+            - GENERATION_MODEL_LIST_MUTATION_METHODS
+            - GENERATION_MODEL_LIST_NON_MUTATING_METHODS
+            - GENERATION_MODEL_LIST_LIFECYCLE_METHODS,
+        ),
+        "mutators_not_overridden": sorted(
+            GENERATION_MODEL_LIST_MUTATION_METHODS - vars(_GenerationModelList).keys(),
+        ),
+    } == snapshot({"unclassified": [], "mutators_not_overridden": []})
 
-    model_a = make_model("A")
-    model_b = make_model("B")
-    model_c = make_model("C")
-    model_d = make_model("D")
-    model_e = make_model("E")
+
+def test_generation_model_list_invalidates_each_list_mutation() -> None:  # noqa: PLR0912
+    """Each Parser.results-compatible mutation must independently invalidate and rebuild facts."""
+    expected_paths = {
+        "__delitem__": ["A"],
+        "__iadd__": ["A", "B", "C"],
+        "__imul__": [],
+        "__setitem__": ["C"],
+        "append": ["A", "B", "C"],
+        "clear": [],
+        "extend": ["A", "B", "C"],
+        "insert": ["A", "C", "B"],
+        "pop": ["A"],
+        "remove": ["B"],
+        "reverse": ["B", "A"],
+        "sort": ["B", "A"],
+    }
+    expected_returns = {"__iadd__": "self", "__imul__": "self", "pop": "B"}
+
+    for mutation in sorted(GENERATION_MODEL_LIST_MUTATION_METHODS):
+        model_a = _base_model("A")
+        model_b = _base_model("B")
+        model_c = _base_model("C")
+        store = GenerationStore()
+        store.models.extend([model_a, model_b])
+        store.refresh()
+
+        match mutation:
+            case "__delitem__":
+                del store.models[1:]
+                result = None
+            case "__iadd__":
+                result = iadd(store.models, [model_c])
+            case "__imul__":
+                result = imul(store.models, 0)
+            case "__setitem__":
+                store.models[:] = [model_c]
+                result = None
+            case "append":
+                result = store.models.append(model_c)
+            case "clear":
+                result = store.models.clear()
+            case "extend":
+                result = store.models.extend([model_c])
+            case "insert":
+                result = store.models.insert(1, model_c)
+            case "pop":
+                result = store.models.pop()
+            case "remove":
+                result = store.models.remove(model_a)
+            case "reverse":
+                result = store.models.reverse()
+            case "sort":
+                result = store.models.sort(key=lambda model: model.path, reverse=True)
+            case _:  # pragma: no cover
+                message = f"Unhandled list mutation: {mutation}"
+                raise AssertionError(message)
+
+        dirty_after_mutation = store._dirty
+        model_paths = [model.path for model in store.models]
+        fact_paths = [fact.path for fact in sorted(store.model_facts.values(), key=lambda fact: fact.parse_order)]
+        match mutation:
+            case "__iadd__" | "__imul__":
+                returned = "self" if result is store.models else "other"
+            case "pop":
+                returned = result.path
+            case _:
+                returned = result
+
+        assert {
+            "dirty": dirty_after_mutation,
+            "models": model_paths,
+            "facts": fact_paths,
+            "returned": returned,
+        } == {
+            "dirty": True,
+            "models": expected_paths[mutation],
+            "facts": expected_paths[mutation],
+            "returned": expected_returns.get(mutation),
+        }
+
+
+def test_generation_model_list_sort_without_key_invalidates_facts() -> None:
+    """The no-key list.sort overload must preserve its return value and invalidate facts."""
     store = GenerationStore()
-
-    store.models.extend([model_a, model_b])
+    store.models.append(_base_model("A"))
     store.refresh()
-    version_after_extend = store.facts_version
-    store.models.insert(1, model_c)
-    store.models[0] = model_d
-    store.models[1:2] = [model_e]
-    del store.models[2:]
-    store.models.append(model_a)
-    popped = store.models.pop()
-    store.models.remove(model_e)
-    store.models.clear()
+
+    result = store.models.sort()
 
     assert {
-        "version_after_extend": version_after_extend,
-        "dirty_after_mutations": store._dirty,
-        "popped": popped.reference.path,
-        "models": [model.reference.path for model in store.models],
-        "model_facts": list(store.model_facts.values()),
-    } == snapshot(
-        {
-            "version_after_extend": 1,
-            "dirty_after_mutations": True,
-            "popped": "A",
-            "models": [],
-            "model_facts": [],
-        },
-    )
+        "dirty": store._dirty,
+        "models": [model.path for model in store.models],
+        "facts": [fact.path for fact in store.model_facts.values()],
+        "returned": result,
+    } == snapshot({"dirty": True, "models": ["A"], "facts": ["A"], "returned": None})
+
+
+@pytest.mark.parametrize("mutation", ["extend", "__iadd__"])
+def test_generation_model_list_invalidates_partial_mutation_on_iterator_error(mutation: str) -> None:
+    """Partially consumed iterables must not leave facts marked clean."""
+    store = GenerationStore()
+    store.models.append(_base_model("A"))
+    store.refresh()
+
+    def failing_models() -> Iterator[BaseModel]:
+        yield _base_model("B")
+        raise RuntimeError
+
+    with pytest.raises(RuntimeError):
+        getattr(store.models, mutation)(failing_models())
+
+    assert {
+        "dirty": store._dirty,
+        "models": [model.path for model in store.models],
+        "facts": [fact.path for fact in sorted(store.model_facts.values(), key=lambda fact: fact.parse_order)],
+    } == snapshot({"dirty": True, "models": ["A", "B"], "facts": ["A", "B"]})
+
+
+def test_generation_model_list_invalidates_on_sort_key_error() -> None:
+    """A failing sort key must not leave facts marked clean."""
+    store = GenerationStore()
+    store.models.extend([_base_model("B"), _base_model("A")])
+    store.refresh()
+    key_calls = 0
+
+    def failing_key(model: BaseModel) -> str:
+        nonlocal key_calls
+        key_calls += 1
+        if key_calls == 1:
+            return model.path
+        raise RuntimeError
+
+    with pytest.raises(RuntimeError):
+        store.models.sort(key=failing_key)
+
+    assert {
+        "dirty": store._dirty,
+        "key_calls": key_calls,
+        "models": [model.path for model in store.models],
+        "facts": [fact.path for fact in sorted(store.model_facts.values(), key=lambda fact: fact.parse_order)],
+    } == snapshot({"dirty": True, "key_calls": 2, "models": ["B", "A"], "facts": ["B", "A"]})
 
 
 def test_generation_index_returns_empty_results_for_unknown_objects() -> None:

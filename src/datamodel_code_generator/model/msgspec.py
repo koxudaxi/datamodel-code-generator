@@ -102,7 +102,9 @@ class Struct(DataModel):
     BASE_CLASS_NAME: ClassVar[str] = "Struct"
     BASE_CLASS_ALIAS: ClassVar[str] = "_Struct"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
+    FIELD_ASSIGNMENT_CHECKER = staticmethod(has_field_assignment)
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
+    SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True
     SUPPORTS_BOOLEAN_LITERAL: ClassVar[bool] = False
     REQUIRES_TAGGED_UNION_DISCRIMINATOR: ClassVar[bool] = True
@@ -160,6 +162,12 @@ class Struct(DataModel):
     def add_base_class_kwarg(self, name: str, value: str) -> None:
         """Add keyword argument to base class constructor."""
         self.extra_template_data["base_class_kwargs"][name] = value
+
+    def apply_discriminator_tag(self, field: DataModelFieldBase, field_name: str, value: Any) -> None:
+        """Configure msgspec's tag and exclude the discriminator from instance fields."""
+        self.add_base_class_kwarg("tag_field", f"'{field_name}'")
+        self.add_base_class_kwarg("tag", repr(value))
+        field.extras["is_classvar"] = True
 
     @classmethod
     def create_base_class_model(

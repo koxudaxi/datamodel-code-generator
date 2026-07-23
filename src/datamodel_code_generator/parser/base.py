@@ -103,7 +103,6 @@ _MSGSPEC_MODULE: Final = "datamodel_code_generator.model.msgspec"
 _PYDANTIC_V2_BASE_MODEL_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.base_model"
 _PYDANTIC_V2_DATACLASS_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.dataclass"
 _PYDANTIC_V2_MODULE: Final = "datamodel_code_generator.model.pydantic_v2"
-_PYDANTIC_V2_ROOT_MODEL_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.root_model"
 _MODEL_MODULE_PREFIX: Final = "datamodel_code_generator.model."
 _CLASS_NAME_SEPARATOR_PATTERN: Final = re.compile(r"[^A-Za-z0-9]+")
 _TOP_LEVEL_FUTURE_IMPORT_PATTERN: Final = re.compile(r"(?m)^from __future__ import ")
@@ -139,10 +138,14 @@ def _is_pydantic_v2_dataclass(value: object | type[object]) -> bool:
     return _type_mro_contains_type(_model_type(value), module=_PYDANTIC_V2_DATACLASS_MODULE, name="DataClass")
 
 
+def _get_field_dependency_ordering_model_type(model_type: type[DataModel]) -> type[DataModel] | None:
+    """Return the configured model type when its fields require dependency ordering."""
+    return model_type if model_type.REQUIRES_FIELD_DEPENDENCY_ORDERING else None
+
+
 def _get_pydantic_v2_root_model_type(model_type: type[DataModel]) -> type[DataModel] | None:
-    if _type_mro_contains_type(model_type, module=_PYDANTIC_V2_ROOT_MODEL_MODULE, name="RootModel"):
-        return model_type
-    return None
+    """Return the field-ordering model type through the legacy compatibility helper."""
+    return _get_field_dependency_ordering_model_type(model_type)
 
 
 def _is_pydantic_v2_root_model(model: DataModel, root_model_type: type[DataModel] | None) -> bool:
@@ -1308,14 +1311,9 @@ def _get_enum_from_base(discriminator_model: DataModel, field_name: str) -> Enum
         if not base_class.reference or not base_class.reference.source:  # pragma: no cover
             continue
         base_model = base_class.reference.source
-        if not (
-            _is_dataclass_data_model(base_model)
-            or _is_msgspec_struct(base_model)
-            or _is_pydantic_v2_base_model(base_model)
-        ):  # pragma: no cover
+        if not isinstance(base_model, DataModel) or not base_model.SUPPORTS_INHERITED_DISCRIMINATOR_ENUM:
             continue
-        base_data_model = cast("DataModel", base_model)
-        for base_field in base_data_model.fields:  # pragma: no branch
+        for base_field in base_model.fields:  # pragma: no branch
             if field_name not in {base_field.original_name, base_field.name}:  # pragma: no cover
                 continue
             if enum_from_base := base_field.data_type.find_source(Enum):  # pragma: no branch
@@ -1548,7 +1546,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         )
         self.data_model_type: type[DataModel] = config.data_model_type
         self.data_model_root_type: type[DataModel] = config.data_model_root_type
-        self.pydantic_v2_root_model_type: type[DataModel] | None = _get_pydantic_v2_root_model_type(
+        self.pydantic_v2_root_model_type: type[DataModel] | None = _get_field_dependency_ordering_model_type(
             self.data_model_root_type
         )
         self.data_model_field_type: type[DataModelFieldBase] = config.data_model_field_type
@@ -2285,7 +2283,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         can_retain_cache: bool,
     ) -> None:
         """Keep Pydantic v2 single-literal discriminator fields valid when forced optional."""
-        if not self.force_optional_for_required_fields or not _is_pydantic_v2_data_model_field(discriminator_field):
+        if not self.force_optional_for_required_fields or not discriminator_field.SUPPORTS_DISCRIMINATOR:
             return
 
         discriminator_field.default = literal
@@ -2354,10 +2352,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         ):
                             has_one_literal = True
                             match discriminator_model:
-                                case _ if _is_msgspec_struct(discriminator_model):  # pragma: no cover
-                                    _add_msgspec_base_class_kwarg(discriminator_model, "tag_field", f"'{field_name}'")
-                                    _add_msgspec_base_class_kwarg(discriminator_model, "tag", repr(expected_value))
-                                    discriminator_field.extras["is_classvar"] = True
+                                case _ if discriminator_model.REQUIRES_TAGGED_UNION_DISCRIMINATOR:  # pragma: no cover
+                                    discriminator_model.apply_discriminator_tag(
+                                        discriminator_field,
+                                        field_name,
+                                        expected_value,
+                                    )
                                     _clear_model_imports_cache_if_retained(
                                         discriminator_model, can_retain_cache=can_retain_cache
                                     )
@@ -2372,11 +2372,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             break
 
                         # For msgspec with const value but no literal (type: string + const case)
-                        if const_match and _is_msgspec_struct(discriminator_model):  # pragma: no cover
+                        if const_match and discriminator_model.REQUIRES_TAGGED_UNION_DISCRIMINATOR:  # pragma: no cover
                             has_one_literal = True
-                            _add_msgspec_base_class_kwarg(discriminator_model, "tag_field", f"'{field_name}'")
-                            _add_msgspec_base_class_kwarg(discriminator_model, "tag", repr(const_value))
-                            discriminator_field.extras["is_classvar"] = True
+                            discriminator_model.apply_discriminator_tag(
+                                discriminator_field,
+                                field_name,
+                                const_value,
+                            )
                             _clear_model_imports_cache_if_retained(
                                 discriminator_model, can_retain_cache=can_retain_cache
                             )
@@ -2618,9 +2620,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             canonical_to_shared_ref[canonical] = canonical.reference
             shared_models.append(canonical)
 
-        supports_inheritance = _is_pydantic_v2_base_model(self.data_model_type) or _is_dataclass_data_model(
-            self.data_model_type
-        )
+        supports_inheritance = self.data_model_type.SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE
 
         module_models_sets: dict[tuple[str, ...], set[DataModel]] = {
             module: set(models) for module, models in module_models
@@ -2795,7 +2795,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 root_type_field.constraints, model_field.constraints
                             )
                         discriminator = root_type_field.extras.get("discriminator")
-                        if discriminator and _is_pydantic_v2_data_model_field(root_type_field):
+                        if discriminator and root_type_field.SUPPORTS_DISCRIMINATOR:
                             has_any_variant = any(_is_any_variant(dt) for dt in copied_data_type.data_types)
                             if not has_any_variant:  # pragma: no branch
                                 prop_name = (
@@ -3100,13 +3100,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     @staticmethod
     def _get_field_assignment_checker(model: DataModel) -> Callable[[DataModelFieldBase], bool]:
-        if _is_msgspec_struct(model):
-            from datamodel_code_generator.model.msgspec import has_field_assignment  # noqa: PLC0415
-
-            return has_field_assignment
-        from datamodel_code_generator.model.dataclass import has_field_assignment  # noqa: PLC0415
-
-        return has_field_assignment
+        return type(model).FIELD_ASSIGNMENT_CHECKER
 
     def __is_new_required_field(  # noqa: PLR6301
         self,
