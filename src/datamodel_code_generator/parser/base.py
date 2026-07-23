@@ -73,6 +73,7 @@ from datamodel_code_generator.model.base import (
     DataModel,
     DataModelFieldBase,
     _refresh_custom_template_paths,
+    _set_nested_model_default_factory_order,
 )
 from datamodel_code_generator.model.enum import Enum, Member, evaluate_member_value
 from datamodel_code_generator.model.imports import IMPORT_TYPED_DICT, IMPORT_TYPED_DICT_BACKPORT
@@ -4670,6 +4671,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             contexts.append(ctx)
 
         self._finalize_modules(contexts, unused_models, model_to_module_models, module_to_import)
+        if self.use_default_factory_for_optional_nested_models:
+            for module_index, ctx in enumerate(contexts):
+                _set_nested_model_default_factory_order(ctx.models, module_index)
 
         root_init: ModulePath = ("__init__.py",)
         if root_init not in results:

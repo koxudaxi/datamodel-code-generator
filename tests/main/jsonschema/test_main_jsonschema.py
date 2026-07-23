@@ -11935,6 +11935,38 @@ def test_main_use_default_factory_for_optional_nested_models(
 @pytest.mark.parametrize(
     ("output_model", "expected_file"),
     [
+        ("dataclasses.dataclass", "default_factory_forward_nested_models_dataclass.py"),
+        ("pydantic_v2.BaseModel", "default_factory_forward_nested_models_pydantic_v2.py"),
+        ("msgspec.Struct", "default_factory_forward_nested_models_msgspec.py"),
+    ],
+)
+def test_main_defer_forward_nested_model_default_factories(
+    output_model: str,
+    expected_file: str,
+    output_file: Path,
+) -> None:
+    """Defer only nested model factories whose classes are not yet declared."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "default_factory_forward_nested_models.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--disable-timestamp",
+            "--output-model-type",
+            output_model,
+            "--use-default-factory-for-optional-nested-models",
+        ],
+        force_exec_validation=True,
+        importable_module_name=f"generated_{Path(expected_file).stem}",
+        importable_module_attribute="Model",
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_file"),
+    [
         ("dataclasses.dataclass", "default_factory_nested_model_with_dict_dataclass.py"),
         ("pydantic_v2.BaseModel", "default_factory_nested_model_with_dict_pydantic_v2.py"),
         ("msgspec.Struct", "default_factory_nested_model_with_dict_msgspec.py"),
