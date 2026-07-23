@@ -1149,6 +1149,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False
     SUPPORTS_KW_ONLY: ClassVar[bool] = False
     SUPPORTS_BOOLEAN_LITERAL: ClassVar[bool] = True
+    REQUIRES_FIELD_DEPENDENCY_ORDERING: ClassVar[bool] = False
     REQUIRES_TAGGED_UNION_DISCRIMINATOR: ClassVar[bool] = False
     REQUIRES_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES: ClassVar[bool] = False
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = False
