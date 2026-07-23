@@ -152,6 +152,24 @@ def test_symlinked_output_path_does_not_overwrite_input(
     )
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")
+def test_generate_symlinked_output_path_does_not_overwrite_input(tmp_path: Path) -> None:
+    """Protect public API inputs when an output keeps its symlink spelling."""
+    source = DATA_PATH / "jsonschema" / "person.json"
+    input_path = tmp_path / source.name
+    shutil.copyfile(source, input_path)
+    output_path = tmp_path / "schema-link.json"
+    output_path.symlink_to(input_path)
+
+    with pytest.raises(Error, match="Output path must not overwrite an input path"):
+        generate(input_path, input_file_type=InputFileType.JsonSchema, output=output_path)
+
+    assert_output(
+        f"{input_path.read_text(encoding='utf-8')}\n",
+        EXPECTED_MALFORMED_PATH / "path_conflict_input.txt",
+    )
+
+
 def test_generate_list_input_does_not_overwrite_input(tmp_path: Path) -> None:
     """Protect every file supplied through the public list-input API."""
     source = DATA_PATH / "jsonschema" / "person.json"
@@ -245,6 +263,29 @@ def test_output_and_model_metadata_paths_must_differ(
         capsys=capsys,
         expected_stderr_contains="Output and model metadata paths must be different",
         output_should_not_exist=True,
+    )
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")
+def test_generate_output_and_model_metadata_symlinks_must_differ(tmp_path: Path) -> None:
+    """Reject public API artifact paths that alias the same existing file."""
+    source = DATA_PATH / "jsonschema" / "person.json"
+    output_path = tmp_path / source.name
+    shutil.copyfile(source, output_path)
+    metadata_path = tmp_path / "metadata-link.json"
+    metadata_path.symlink_to(output_path)
+
+    with pytest.raises(Error, match="Output and model metadata paths must be different"):
+        generate(
+            source,
+            input_file_type=InputFileType.JsonSchema,
+            output=output_path,
+            emit_model_metadata=metadata_path,
+        )
+
+    assert_output(
+        f"{output_path.read_text(encoding='utf-8')}\n",
+        EXPECTED_MALFORMED_PATH / "path_conflict_input.txt",
     )
 
 
