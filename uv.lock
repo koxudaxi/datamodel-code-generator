@@ -1023,7 +1023,7 @@ dev = [
     { name = "ty", specifier = ">=0.0.8" },
     { name = "types-jinja2" },
     { name = "types-pyyaml" },
-    { name = "types-setuptools", specifier = ">=67.6.0.5,<70" },
+    { name = "types-setuptools", specifier = ">=67.6.0.5,<84" },
     { name = "types-toml" },
     { name = "uv", specifier = ">=0.5.22" },
     { name = "watchfiles", specifier = ">=1.1" },
@@ -1081,7 +1081,7 @@ type = [
     { name = "ty", specifier = ">=0.0.8" },
     { name = "types-jinja2" },
     { name = "types-pyyaml" },
-    { name = "types-setuptools", specifier = ">=67.6.0.5,<70" },
+    { name = "types-setuptools", specifier = ">=67.6.0.5,<84" },
     { name = "types-toml" },
     { name = "watchfiles", specifier = ">=1.1" },
 ]
