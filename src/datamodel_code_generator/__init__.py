@@ -524,6 +524,54 @@ class Error(Exception):
         return self.message
 
 
+def _normalized_absolute_path(path: Path) -> Path:
+    """Return a normalized absolute path without filesystem access."""
+    return Path(os.path.abspath(path.expanduser()))  # noqa: PTH100
+
+
+def _validate_generation_path_conflicts(
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    output: Path | None,
+    model_metadata: Path | None,
+) -> None:
+    if output is None and model_metadata is None:
+        return
+
+    absolute_output: Path | None = None
+    absolute_metadata: Path | None = None
+    if output is not None and model_metadata is not None:
+        absolute_output = _normalized_absolute_path(output)
+        if absolute_output == (absolute_metadata := _normalized_absolute_path(model_metadata)):
+            msg = f"Output and model metadata paths must be different: {absolute_output}"
+            raise Error(msg)
+
+    match input_:
+        case Path() as input_path:
+            input_paths = (input_path,)
+        case [Path(), *_] as input_paths:
+            pass
+        case _:
+            return
+
+    targets = tuple(
+        (label, absolute or _normalized_absolute_path(path))
+        for label, path, absolute in (
+            ("Output", output, absolute_output),
+            ("Model metadata", model_metadata, absolute_metadata),
+        )
+        if path is not None
+    )
+    for input_path in input_paths:
+        absolute_input = _normalized_absolute_path(input_path)
+        for label, target in targets:
+            if target == absolute_input and input_path.exists():
+                msg = f"{label} path must not overwrite an input path: {target}"
+                raise Error(msg)
+            if target.is_relative_to(absolute_input) and input_path.is_dir():
+                msg = f"{label} path must not be inside an input directory: {target}"
+                raise Error(msg)
+
+
 class DanglingRefWarning(UserWarning):
     """Warn that a local JSON pointer target was not found."""
 
@@ -1454,6 +1502,8 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             "List input is only supported for file path lists or input_file_type=InputFileType.MCPTools."
         )
         raise Error(msg)  # pragma: no cover
+
+    _validate_generation_path_conflicts(input_, config.output, config.emit_model_metadata)
 
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     match input_:

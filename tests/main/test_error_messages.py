@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import warnings
 from typing import TYPE_CHECKING
 
@@ -70,6 +71,128 @@ MISSING_INPUT_CASES: tuple[tuple[InputFileTypeLiteral | None, str], ...] = (
     (None, "missing.json"),
     ("jsonschema", "File not found"),
 )
+
+
+def test_output_path_does_not_overwrite_input(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject destructive output before the input schema is changed."""
+    source = DATA_PATH / "jsonschema" / "person.json"
+    input_path = tmp_path / source.name
+    shutil.copyfile(source, input_path)
+
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=input_path,
+        input_file_type="jsonschema",
+        extra_args=["--output-format", "json"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Output path must not overwrite an input path",
+        skip_code_validation=True,
+    )
+    assert_output(
+        f"{input_path.read_text(encoding='utf-8')}\n",
+        EXPECTED_MALFORMED_PATH / "path_conflict_input.txt",
+    )
+
+
+def test_model_metadata_path_does_not_overwrite_input(
+    tmp_path: Path,
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Apply the input protection to optional generated artifacts."""
+    source = DATA_PATH / "jsonschema" / "person.json"
+    input_path = tmp_path / source.name
+    shutil.copyfile(source, input_path)
+
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--emit-model-metadata", str(input_path)],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Model metadata path must not overwrite an input path",
+        output_should_not_exist=True,
+    )
+    assert_output(
+        f"{input_path.read_text(encoding='utf-8')}\n",
+        EXPECTED_MALFORMED_PATH / "path_conflict_input.txt",
+    )
+
+
+def test_generate_list_input_does_not_overwrite_input(tmp_path: Path) -> None:
+    """Protect every file supplied through the public list-input API."""
+    source = DATA_PATH / "jsonschema" / "person.json"
+    input_path = tmp_path / source.name
+    shutil.copyfile(source, input_path)
+
+    with pytest.raises(Error, match="Output path must not overwrite an input path"):
+        generate([input_path], input_file_type=InputFileType.JsonSchema, output=input_path)
+
+    assert_output(
+        f"{input_path.read_text(encoding='utf-8')}\n",
+        EXPECTED_MALFORMED_PATH / "path_conflict_input.txt",
+    )
+
+
+def test_output_path_does_not_write_inside_input_directory(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject generated files that would become inputs on the next run."""
+    source = DATA_PATH / "jsonschema" / "person.json"
+    input_path = tmp_path / "schemas"
+    input_path.mkdir()
+    shutil.copyfile(source, input_path / source.name)
+    output_path = input_path / "model.py"
+
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_path,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Output path must not be inside an input directory",
+        output_should_not_exist=True,
+    )
+
+
+def test_missing_input_conflict_preserves_missing_file_error(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Do not replace the established missing-input diagnostic with a conflict."""
+    missing_path = tmp_path / "missing.json"
+    run_main_and_assert(
+        input_path=missing_path,
+        output_path=missing_path,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="File not found",
+        output_should_not_exist=True,
+    )
+
+
+def test_output_and_model_metadata_paths_must_differ(
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject two generated artifacts targeting the same path."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--emit-model-metadata", str(output_file)],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Output and model metadata paths must be different",
+        output_should_not_exist=True,
+    )
 
 
 @pytest.mark.parametrize(
