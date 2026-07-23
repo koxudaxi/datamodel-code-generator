@@ -438,9 +438,11 @@ def test_set_model_base_classes_supports_store_and_legacy_fallback() -> None:
 
 
 def test_generation_model_list_contract_classifies_every_list_method() -> None:
-    """Every callable list method must be explicitly classified and every mutator overridden."""
+    """Every list-defined callable on this Python runtime must be classified."""
     list_methods = {name for name, value in vars(list).items() if callable(value)}
 
+    # CPython may move inherited, non-mutating dunder methods out of
+    # ``list.__dict__`` between releases, so extra classifications are valid.
     assert {
         "unclassified": sorted(
             list_methods
@@ -448,18 +450,10 @@ def test_generation_model_list_contract_classifies_every_list_method() -> None:
             - GENERATION_MODEL_LIST_NON_MUTATING_METHODS
             - GENERATION_MODEL_LIST_LIFECYCLE_METHODS,
         ),
-        "missing": sorted(
-            (
-                GENERATION_MODEL_LIST_MUTATION_METHODS
-                | GENERATION_MODEL_LIST_NON_MUTATING_METHODS
-                | GENERATION_MODEL_LIST_LIFECYCLE_METHODS
-            )
-            - list_methods,
-        ),
         "mutators_not_overridden": sorted(
             GENERATION_MODEL_LIST_MUTATION_METHODS - vars(_GenerationModelList).keys(),
         ),
-    } == snapshot({"unclassified": [], "missing": [], "mutators_not_overridden": []})
+    } == snapshot({"unclassified": [], "mutators_not_overridden": []})
 
 
 def test_generation_model_list_invalidates_each_list_mutation() -> None:  # noqa: PLR0912
@@ -578,6 +572,31 @@ def test_generation_model_list_invalidates_partial_mutation_on_iterator_error(mu
         "models": [model.path for model in store.models],
         "facts": [fact.path for fact in sorted(store.model_facts.values(), key=lambda fact: fact.parse_order)],
     } == snapshot({"dirty": True, "models": ["A", "B"], "facts": ["A", "B"]})
+
+
+def test_generation_model_list_invalidates_on_sort_key_error() -> None:
+    """A failing sort key must not leave facts marked clean."""
+    store = GenerationStore()
+    store.models.extend([_base_model("B"), _base_model("A")])
+    store.refresh()
+    key_calls = 0
+
+    def failing_key(model: BaseModel) -> str:
+        nonlocal key_calls
+        key_calls += 1
+        if key_calls == 1:
+            return model.path
+        raise RuntimeError
+
+    with pytest.raises(RuntimeError):
+        store.models.sort(key=failing_key)
+
+    assert {
+        "dirty": store._dirty,
+        "key_calls": key_calls,
+        "models": [model.path for model in store.models],
+        "facts": [fact.path for fact in sorted(store.model_facts.values(), key=lambda fact: fact.parse_order)],
+    } == snapshot({"dirty": True, "key_calls": 2, "models": ["B", "A"], "facts": ["B", "A"]})
 
 
 def test_generation_index_returns_empty_results_for_unknown_objects() -> None:
