@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField
+from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticDataclassModel
+from datamodel_code_generator.model.pydantic_v2.dataclass import DataModelField as PydanticDataclassField
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.model.pydantic_v2.root_model_type_alias import RootModelTypeAlias
 from datamodel_code_generator.model.type_alias import TypeAlias, TypeAliasTypeBackport, TypeStatement
@@ -30,7 +32,9 @@ from datamodel_code_generator.parser.base import (
     T,
     _contains_model_reference,
     _find_field,
+    _get_enum_from_base,
     _get_pydantic_v2_root_model_type,
+    _is_pydantic_v2_data_model_field,
     _needs_validate_default,
     _unwrap_type_alias,
     add_model_path_to_list,
@@ -436,6 +440,42 @@ def parser_fixture() -> C:
 
 def _reference(path: str) -> Reference:
     return Reference(path=path, original_name=path, name=path)
+
+
+def test_pydantic_v2_data_model_field_compatibility_helper() -> None:
+    """Keep the public compatibility helper working with real field objects."""
+    pydantic_field = DataModelField(name="value", data_type=DataType(type="str"))
+    generic_field = DataModelFieldBase(name="value", data_type=DataType(type="str"))
+
+    assert _is_pydantic_v2_data_model_field(pydantic_field)
+    assert not _is_pydantic_v2_data_model_field(generic_field)
+
+
+def test_get_enum_from_base_skips_models_without_inherited_enum_capability() -> None:
+    """Do not inherit discriminator enums from output models that opt out."""
+    from datamodel_code_generator.model.enum import Enum
+
+    enum_reference = _reference("Kind")
+    Enum(fields=[], reference=enum_reference)
+    base_reference = _reference("Base")
+    base_model = PydanticDataclassModel(
+        fields=[
+            PydanticDataclassField(
+                name="kind",
+                original_name="kind",
+                data_type=DataType(reference=enum_reference),
+            )
+        ],
+        reference=base_reference,
+    )
+    child_model = BaseModel(
+        fields=[],
+        base_classes=[base_reference],
+        reference=_reference("Child"),
+    )
+
+    assert not base_model.SUPPORTS_INHERITED_DISCRIMINATOR_ENUM
+    assert _get_enum_from_base(child_model, "kind") is None
 
 
 def _create_override_required_models(
