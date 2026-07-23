@@ -25,17 +25,13 @@ class Address(Struct):
 MD5: TypeAlias = Annotated[bytes, Meta(max_length=16, min_length=16, title='MD5')]
 
 
-TraceId: TypeAlias = Annotated[str, Meta(max_length=16, min_length=16, title='TraceId')]
+TraceId: TypeAlias = Annotated[str, Meta(title='TraceId')]
 
 
-TaxDecimal: TypeAlias = Annotated[
-    Decimal, Meta(max_length=8, min_length=8, title='TaxDecimal')
-]
+TaxDecimal: TypeAlias = Annotated[Decimal, Meta(title='TaxDecimal')]
 
 
-Duration: TypeAlias = Annotated[
-    timedelta, Meta(max_length=12, min_length=12, title='Duration')
-]
+Duration: TypeAlias = Annotated[timedelta, Meta(title='Duration')]
 
 
 class User(Struct):

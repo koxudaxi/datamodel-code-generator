@@ -7,7 +7,7 @@ from typing import cast
 
 import pytest
 
-from datamodel_code_generator import load_data
+from datamodel_code_generator import DataModelType, load_data
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import PythonVersion, is_supported_in_black
 from datamodel_code_generator.parser.avro import convert_avro_schema_data
@@ -19,6 +19,7 @@ from tests.main.conftest import (
     BACKEND_GOLDEN_TARGET_ARGS,
     CURRENT_PYTHON_VERSION,
     LEGACY_BLACK_SKIP,
+    _generated_model,
     get_current_version_args,
     run_main_and_assert,
 )
@@ -111,6 +112,12 @@ def test_main_avro_output_model_types(
         importable_module_name=f"generated_avro_{expected_name}",
         importable_module_attribute="User",
     )
+    if output_model_type != DataModelType.MsgspecStruct.value:
+        return
+    import msgspec
+
+    with _generated_model(output_file, f"decoded_avro_{expected_name}", "User") as model:
+        msgspec.json.Decoder(type=model)
 
 
 @_SKIP_BLACK

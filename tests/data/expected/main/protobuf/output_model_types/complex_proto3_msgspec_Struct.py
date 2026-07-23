@@ -72,7 +72,7 @@ class ExampleShopV1Order(Struct):
         default_factory=list
     )
     shipping_address: ExampleCommonAddress | UnsetType = UNSET
-    status: ExampleCommonStatus | UnsetType = 'STATUS_UNSPECIFIED'
+    status: ExampleCommonStatus | UnsetType = ExampleCommonStatus.STATUS_UNSPECIFIED
     created_at: str | UnsetType = UNSET
     ttl: timedelta | UnsetType = UNSET
     metadata: dict[str, Any] | UnsetType = UNSET

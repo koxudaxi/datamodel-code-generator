@@ -45,11 +45,11 @@ def test_main_csv_output_model_types(
 ) -> None:
     """Generate representative CSV models across supported output backends."""
     run_main_and_assert(
-        input_path=CSV_DATA_PATH / "simple.csv",
+        input_path=CSV_DATA_PATH / "backend_matrix.csv",
         output_path=output_file,
         input_file_type="csv",
         assert_func=assert_file_content,
-        expected_file=f"output_model_types/simple_{expected_name}.py",
+        expected_file=f"output_model_types/backend_matrix_{expected_name}.py",
         extra_args=[*BACKEND_GOLDEN_TARGET_ARGS, "--output-model-type", output_model_type],
         force_exec_validation=True,
         importable_module_name=f"generated_csv_{expected_name}",
