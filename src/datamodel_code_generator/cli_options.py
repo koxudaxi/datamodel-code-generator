@@ -710,6 +710,12 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
             ),
         ),
     ),
+    "--custom-file-header-mode": CLIOptionMeta(
+        name="--custom-file-header-mode",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.GENERATED_OUTPUT,
+    ),
     "--additional-imports": CLIOptionMeta(
         name="--additional-imports",
         category=OptionCategory.TEMPLATE,
@@ -738,6 +744,18 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
         name="--disable-appending-item-suffix", category=OptionCategory.TEMPLATE
     ),
     "--no-treat-dot-as-module": CLIOptionMeta(name="--no-treat-dot-as-module", category=OptionCategory.TEMPLATE),
+    "--strict-dotted-module-names": CLIOptionMeta(
+        name="--strict-dotted-module-names",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.GENERATED_OUTPUT,
+    ),
+    "--no-strict-dotted-module-names": CLIOptionMeta(
+        name="--no-strict-dotted-module-names",
+        category=OptionCategory.TEMPLATE,
+        topic=OptionTopic.TEMPLATE_CUSTOMIZATION,
+        group=OptionGroup.GENERATED_OUTPUT,
+    ),
     "--disable-timestamp": CLIOptionMeta(
         name="--disable-timestamp",
         category=OptionCategory.TEMPLATE,
@@ -836,6 +854,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # General Options
     # ==========================================================================
     "--check": CLIOptionMeta(name="--check", category=OptionCategory.GENERAL),
+    "--fail-on-multi-module-stdout": CLIOptionMeta(
+        name="--fail-on-multi-module-stdout", category=OptionCategory.GENERAL
+    ),
     "--allow-remote-refs": CLIOptionMeta(name="--allow-remote-refs", category=OptionCategory.GENERAL),
     "--no-allow-remote-refs": CLIOptionMeta(name="--no-allow-remote-refs", category=OptionCategory.GENERAL),
     "--allow-private-network": CLIOptionMeta(name="--allow-private-network", category=OptionCategory.GENERAL),

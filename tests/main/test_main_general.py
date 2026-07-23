@@ -11,7 +11,7 @@ import warnings
 from argparse import ArgumentTypeError, BooleanOptionalAction, Namespace
 from collections import defaultdict
 from io import StringIO
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import black
 import pytest
@@ -21,6 +21,7 @@ from packaging import version
 import datamodel_code_generator
 from datamodel_code_generator import (
     AllExportsScope,
+    CustomFileHeaderMode,
     DataModelType,
     Error,
     GeneratedModules,
@@ -55,6 +56,7 @@ from tests.conftest import (
     assert_generated_modules_output,
     assert_httpx_get_kwargs,
     assert_no_uncommented_generated_code,
+    assert_output,
     assert_runtime_import_package,
     assert_warnings_contain,
     assert_warnings_do_not_contain,
@@ -91,6 +93,254 @@ BLACK_LT_24 = version.parse("24.0.0") > BLACK_VERSION
 
 class _GenerateParseAbort(BaseException):
     """Test-only parse abort that is not an Exception subclass."""
+
+
+def test_parser_retains_builtin_import_cache_and_invalidates_custom_cache() -> None:
+    """Retain built-in caches while keeping the legacy custom-model invalidation contract."""
+    from datamodel_code_generator.model import DataModel, get_data_model_types
+    from datamodel_code_generator.model.pydantic_v2 import BaseModel
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    class CacheProbeJsonSchemaParser(JsonSchemaParser):
+        cache_reuse_manifest: tuple[str, ...] = ()
+
+        def _process_single_module(self, module_: Any, models: list[Any], *args: Any, **kwargs: Any) -> Any:
+            for model in models:
+                _ = model.imports
+            cached_imports = tuple(model.__dict__[model._IMPORTS_CACHE_KEY] for model in models)
+            context = super()._process_single_module(module_, models, *args, **kwargs)
+            self.cache_reuse_manifest += tuple(
+                f"{model.class_name}:"
+                f"{'retained' if cached is model.__dict__.get(model._IMPORTS_CACHE_KEY) else 'invalidated'}"
+                for cached, model in zip(cached_imports, context.models, strict=True)
+            )
+            return context
+
+    class CacheAwareBaseModel(BaseModel):
+        def clear_imports_cache(self) -> None:
+            cache_state = "cached" if self._IMPORTS_CACHE_KEY in self.__dict__ else "empty"
+            history = self.__dict__.setdefault("cache_clear_history", [])
+            history.append(cache_state)
+            if (extra_template_data := getattr(self, "extra_template_data", None)) is not None:
+                extra_template_data["class_body_lines"] = [f"cache_clear_history = {history!r}"]
+            super().clear_imports_cache()
+
+    class InjectingJsonSchemaParser(JsonSchemaParser):
+        def _create_data_model(
+            self,
+            model_type: type[DataModel] | None = None,
+            **kwargs: Any,
+        ) -> DataModel:
+            model_type = {
+                None: CacheAwareBaseModel,
+                self.data_model_type: CacheAwareBaseModel,
+            }.get(model_type, model_type)
+            return super()._create_data_model(model_type, **kwargs)
+
+    model_types = get_data_model_types(
+        DataModelType.PydanticV2BaseModel,
+        target_python_version=PythonVersion.PY_311,
+    )
+    input_path = JSON_SCHEMA_DATA_PATH / "field_has_same_name.json"
+    parser_options = {
+        "base_path": input_path.parent,
+        "data_model_root_type": model_types.root_model,
+        "data_model_field_type": model_types.field_model,
+        "data_type_manager_type": model_types.data_type_manager,
+        "dump_resolve_reference_action": model_types.dump_resolve_reference_action,
+        "formatters": [Formatter.BUILTIN],
+        "target_python_version": PythonVersion.PY_311,
+    }
+    parser = CacheProbeJsonSchemaParser(input_path, **parser_options)
+    assert_output(parser.parse(), EXPECTED_MAIN_PATH / "builtin_import_cache_retention.py")
+    assert_output(
+        "\n".join(parser.cache_reuse_manifest) + "\n",
+        EXPECTED_MAIN_PATH / "builtin_import_cache_retention.txt",
+    )
+
+    input_path = JSON_SCHEMA_DATA_PATH / "unique_items_unhashable_default.json"
+    unhashable_default_parser = CacheProbeJsonSchemaParser(
+        input_path,
+        **{
+            **parser_options,
+            "collapse_reuse_models": True,
+            "reuse_model": True,
+            "use_unique_items_as_set": True,
+        },
+    )
+    assert_output(
+        unhashable_default_parser.parse(),
+        EXPECTED_MAIN_PATH / "builtin_import_cache_unique_items_unhashable.py",
+    )
+    assert_output(
+        "\n".join(unhashable_default_parser.cache_reuse_manifest) + "\n",
+        EXPECTED_MAIN_PATH / "builtin_import_cache_unique_items_unhashable.txt",
+    )
+
+    input_path = JSON_SCHEMA_DATA_PATH / "person.json"
+    custom_parser = JsonSchemaParser(
+        input_path,
+        data_model_type=CacheAwareBaseModel,
+        **parser_options,
+    )
+    assert_output(
+        custom_parser.parse(),
+        EXPECTED_MAIN_PATH / "custom_import_cache_invalidation.py",
+    )
+
+    injected_parser = InjectingJsonSchemaParser(input_path, **parser_options)
+    assert_output(
+        injected_parser.parse(),
+        EXPECTED_MAIN_PATH / "custom_import_cache_invalidation.py",
+    )
+
+    input_path = JSON_SCHEMA_DATA_PATH / "unique_items_enum_set.json"
+    unique_items_parser = JsonSchemaParser(
+        input_path,
+        data_model_type=CacheAwareBaseModel,
+        **{**parser_options, "use_unique_items_as_set": True},
+    )
+    assert_output(
+        unique_items_parser.parse(),
+        EXPECTED_MAIN_PATH / "custom_import_cache_unique_items.py",
+    )
+
+    alias_input_path = JSON_SCHEMA_DATA_PATH / "alias_import_alias" / "date.schema.json"
+    alias_parser = JsonSchemaParser(
+        alias_input_path,
+        data_model_type=CacheAwareBaseModel,
+        **{**parser_options, "base_path": alias_input_path.parent},
+    )
+    assert_output(
+        alias_parser.parse(),
+        EXPECTED_MAIN_PATH / "custom_import_cache_alias_invalidation.py",
+    )
+
+    generic_input_path = JSON_SCHEMA_DATA_PATH / "extra_fields.json"
+    generic_parser = JsonSchemaParser(
+        generic_input_path,
+        data_model_type=CacheAwareBaseModel,
+        extra_fields="forbid",
+        use_generic_base_class=True,
+        **{**parser_options, "base_path": generic_input_path.parent},
+    )
+    assert_output(
+        generic_parser.parse(),
+        EXPECTED_MAIN_PATH / "custom_import_cache_generic_base.py",
+    )
+
+
+def test_parser_preserves_cross_module_external_import_cache_hook() -> None:
+    """Do not invoke an external model's cache hook from another built-in module."""
+    from datamodel_code_generator.model import DataModel, get_data_model_types
+    from datamodel_code_generator.model.msgspec import Struct
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    class ProbeStruct(Struct):
+        clear_history: ClassVar[list[str]] = []
+
+        def clear_imports_cache(self) -> None:
+            state = "cached" if self._IMPORTS_CACHE_KEY in self.__dict__ else "empty"
+            name = getattr(self, "class_name", "") or "?"
+            self.clear_history.append(f"{name}:{state}")
+            super().clear_imports_cache()
+
+    class SelectiveExternalStructParser(JsonSchemaParser):
+        def _create_data_model(
+            self,
+            model_type: type[DataModel] | None = None,
+            **kwargs: Any,
+        ) -> DataModel:
+            reference = kwargs.get("reference")
+            if (
+                reference is not None
+                and reference.name == "Type1"
+                and (model_type is None or model_type is self.data_model_type)
+            ):
+                model_type = ProbeStruct
+            return super()._create_data_model(model_type, **kwargs)
+
+    model_types = get_data_model_types(
+        DataModelType.MsgspecStruct,
+        target_python_version=PythonVersion.PY_311,
+    )
+    input_path = JSON_SCHEMA_DATA_PATH / "discriminator_with_external_reference"
+    parser = SelectiveExternalStructParser(
+        input_path,
+        base_path=input_path,
+        data_model_type=model_types.data_model,
+        data_model_root_type=model_types.root_model,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=model_types.data_type_manager,
+        dump_resolve_reference_action=model_types.dump_resolve_reference_action,
+        formatters=[Formatter.BUILTIN],
+        target_python_version=PythonVersion.PY_311,
+    )
+    modules = cast("dict[tuple[str, ...], Any]", parser.parse())
+
+    assert_generated_modules_output(modules, EXPECTED_MAIN_PATH / "custom_import_cache_cross_module")
+    assert_output(
+        "\n".join(ProbeStruct.clear_history) + "\n",
+        EXPECTED_MAIN_PATH / "custom_import_cache_cross_module_history.txt",
+    )
+    assert_output(
+        "\n".join("/".join(module) for module in modules) + "\n",
+        EXPECTED_MAIN_PATH / "custom_import_cache_cross_module_order.txt",
+    )
+
+
+def test_parser_rechecks_external_enum_after_module_materialization() -> None:
+    """Keep the external hook fallback when an inherited enum replaces a built-in wrapper."""
+    from datamodel_code_generator import ModuleSplitMode
+    from datamodel_code_generator.model import get_data_model_types
+    from datamodel_code_generator.model.enum import Enum
+    from datamodel_code_generator.parser.openapi import OpenAPIParser, OpenAPIScope
+
+    class ProbeEnum(Enum):
+        clear_history: ClassVar[list[str]] = []
+
+        def clear_imports_cache(self) -> None:
+            state = "cached" if self._IMPORTS_CACHE_KEY in self.__dict__ else "empty"
+            name = getattr(self, "class_name", "") or "?"
+            self.clear_history.append(f"{name}:{state}")
+            super().clear_imports_cache()
+
+    class SelectiveExternalEnumParser(OpenAPIParser):
+        def _get_enum_model_class(self, type_: Any, enum_values: list[Any]) -> tuple[type[Enum], Any]:
+            _, remaining_type = super()._get_enum_model_class(type_, enum_values)
+            return ProbeEnum, remaining_type
+
+    model_types = get_data_model_types(
+        DataModelType.PydanticV2BaseModel,
+        target_python_version=PythonVersion.PY_311,
+    )
+    input_path = OPEN_API_DATA_PATH / "nested_enum.json"
+    parser = SelectiveExternalEnumParser(
+        input_path,
+        base_path=input_path.parent,
+        data_model_type=model_types.data_model,
+        data_model_root_type=model_types.root_model,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=model_types.data_type_manager,
+        dump_resolve_reference_action=model_types.dump_resolve_reference_action,
+        formatters=[Formatter.BUILTIN],
+        openapi_scopes=[OpenAPIScope.Schemas],
+        target_python_version=PythonVersion.PY_311,
+    )
+    modules = cast(
+        "dict[tuple[str, ...], Any]",
+        parser.parse(module_split_mode=ModuleSplitMode.Single),
+    )
+
+    assert_generated_modules_output(modules, EXPECTED_MAIN_PATH / "custom_import_cache_inherited_enum")
+    assert_output(
+        "\n".join(ProbeEnum.clear_history) + "\n",
+        EXPECTED_MAIN_PATH / "custom_import_cache_inherited_enum_history.txt",
+    )
+    assert_output(
+        "\n".join("/".join(module) for module in modules) + "\n",
+        EXPECTED_MAIN_PATH / "custom_import_cache_inherited_enum_order.txt",
+    )
 
 
 CLI_E2E_COVERED_GENERATE_KWARGS = {
@@ -720,6 +970,7 @@ def test_boolean_optional_option_sets_are_pinned() -> None:
         "allow_population_by_field_name",
         "collapse_root_models",
         "treat_dot_as_module",
+        "strict_dotted_module_names",
         "use_standard_primitive_types",
         "use_annotated",
         "use_standard_collections",
@@ -1501,12 +1752,13 @@ instead of generating them.
 
 | Format | Description |
 |--------|-------------|
-| `{"ModelName": "package.Type"}` | Model-level: Skip generating `ModelName` and import from `package` |
+| `{"ModelName": "package.Type"}` | Model-level: Skip generation; replace field and inheritance refs |
 | `{"Model.field": "package.Type"}` | Scoped: Override only specific field in specific model |
 
 !!! note "Model-level overrides skip generation"
     When you specify a model-level override (without a dot in the key), the generator will
     **skip generating that model entirely** and import it from the specified package instead.
+    References to that model are replaced in field annotations and `allOf` inheritance base classes.
 
 **Common Use Cases:**
 
@@ -1606,6 +1858,68 @@ def test_type_overrides_nested_types(output_file: Path) -> None:
         extra_args=[
             "--type-overrides",
             '{"Tag": "my_app.Tag"}',
+        ],
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_type_overrides_model_level_base_class(
+    output_file: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test model-level --type-overrides replaces base class references."""
+    package_dir = tmp_path / "my_app"
+    package_dir.mkdir()
+    (package_dir / "__init__.py").write_text("", encoding="utf-8")
+    (package_dir / "models.py").write_text(
+        "from __future__ import annotations\n\n"
+        "from pydantic import BaseModel\n\n\n"
+        "class Base(BaseModel):\n"
+        "    id: int | None = None\n",
+        encoding="utf-8",
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    module_names = ("my_app", "my_app.models")
+    for module_name in module_names:
+        monkeypatch.delitem(sys.modules, module_name, raising=False)
+
+    try:
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "type_overrides_base_class.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="type_overrides_base_class.py",
+            extra_args=[
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--formatters",
+                "builtin",
+                "--type-overrides",
+                '{"Base": "my_app.models.Base"}',
+            ],
+            importable_module_name="generated_type_overrides_base_class",
+            importable_module_attribute="Holder",
+        )
+    finally:
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+
+
+@freeze_time(TIMESTAMP)
+def test_type_overrides_model_level_dict_key(output_file: Path) -> None:
+    """Test model-level --type-overrides replaces dict key references."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_overrides_dict_key.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_overrides_dict_key.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--type-overrides",
+            '{"Key": "my_app.keys.Key"}',
         ],
     )
 
@@ -2079,6 +2393,25 @@ def test_all_exports_scope_recursive_jsonschema_multi_file(output_dir: Path) -> 
             "recursive",
         ],
         expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "all_exports_multi_file",
+    )
+
+
+def test_custom_file_header_path_prepend_jsonschema_multi_file(output_dir: Path) -> None:
+    """Prepend a custom header while preserving per-file provenance and future imports."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "all_exports_multi_file",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "recursive",
+            "--custom-file-header-path",
+            str(DATA_PATH / "custom_file_header_with_docstring_and_import.txt"),
+            "--custom-file-header-mode",
+            "prepend",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "custom_file_header_path_prepend_multi_file",
     )
 
 
@@ -2881,6 +3214,108 @@ def test_generate_accepts_path_input(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize("custom_formatters", [None, []], ids=["custom-unset", "custom-empty"])
+def test_generate_with_empty_formatters(output_file: Path, custom_formatters: list[str] | None) -> None:
+    """Skip formatter work when the explicit formatter list is empty."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        disable_timestamp=True,
+        formatters=[],
+        custom_formatters=custom_formatters,
+        assert_func=assert_file_content,
+        expected_file="generate_with_empty_formatters.py",
+    )
+
+
+def test_generate_with_custom_formatter_and_empty_formatters(output_file: Path) -> None:
+    """Keep custom formatting when the built-in formatter list is empty."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        disable_timestamp=True,
+        formatters=[],
+        custom_formatters=["tests.data.python.custom_formatters.add_comment"],
+        assert_func=assert_file_content,
+        expected_file="generate_with_custom_formatter_and_empty_formatters.py",
+    )
+
+
+def test_parser_formatter_builder_override_with_empty_formatters() -> None:
+    """Keep subclass formatter-builder hooks active with an empty formatter list."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+    from tests.data.python.custom_formatters.add_comment import CodeFormatter as AddCommentFormatter
+
+    class ConfiguringJsonSchemaParser(JsonSchemaParser):
+        code_formatter_build_count = 0
+
+        def _build_code_formatter(
+            self,
+            settings_path: Path | None,
+            *,
+            is_multi_module_output: bool,
+        ) -> CodeFormatter:
+            code_formatter = super()._build_code_formatter(
+                settings_path,
+                is_multi_module_output=is_multi_module_output,
+            )
+            code_formatter.custom_formatters.append(AddCommentFormatter(formatter_kwargs={}))
+            self.code_formatter_build_count += 1
+            return code_formatter
+
+    parser = ConfiguringJsonSchemaParser(
+        source=(JSON_SCHEMA_DATA_PATH / "person.json").resolve(),
+        formatters=[],
+    )
+    assert_output(
+        f"{parser.parse()}\n",
+        EXPECTED_MAIN_PATH / "parser_formatter_builder_override_with_empty_formatters.py",
+    )
+    assert_output(
+        f"{parser.code_formatter_build_count}\n",
+        EXPECTED_MAIN_PATH / "parser_formatter_builder_override_with_empty_formatters_calls.txt",
+    )
+
+
+def test_parser_instance_formatter_builder_with_empty_formatters() -> None:
+    """Keep an instance-injected formatter builder active with an empty formatter list."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+    from tests.data.python.custom_formatters.add_comment import CodeFormatter as AddCommentFormatter
+
+    parser = JsonSchemaParser(
+        source=(JSON_SCHEMA_DATA_PATH / "person.json").resolve(),
+        formatters=[],
+    )
+    default_builder = parser._build_code_formatter
+    code_formatter_build_count = 0
+
+    def build_code_formatter(
+        settings_path: Path | None,
+        *,
+        is_multi_module_output: bool,
+    ) -> CodeFormatter:
+        nonlocal code_formatter_build_count
+        code_formatter = default_builder(
+            settings_path,
+            is_multi_module_output=is_multi_module_output,
+        )
+        code_formatter.custom_formatters.append(AddCommentFormatter(formatter_kwargs={}))
+        code_formatter_build_count += 1
+        return code_formatter
+
+    parser._build_code_formatter = build_code_formatter  # type: ignore[method-assign]
+    assert_output(
+        f"{parser.parse()}\n",
+        EXPECTED_MAIN_PATH / "parser_formatter_builder_override_with_empty_formatters.py",
+    )
+    assert_output(
+        f"{code_formatter_build_count}\n",
+        EXPECTED_MAIN_PATH / "parser_formatter_builder_override_with_empty_formatters_calls.txt",
+    )
+
+
 def test_generate_keeps_existing_path_string_input() -> None:
     """Test generate() keeps existing path strings as inline source text."""
     run_generate_and_assert(
@@ -3125,14 +3560,132 @@ def test_generated_modules_type_alias_is_exported() -> None:
 
 
 def test_generate_returns_string_with_custom_file_header() -> None:
-    """Test generate() with custom_file_header when output=None."""
+    """Default to replacing the generated header when output=None."""
     json_schema = '{"type": "object", "properties": {"name": {"type": "string"}}}'
     custom_header = "# Custom header\n# More comments"
     run_generate_and_assert(
         input_=json_schema,
         input_file_type=InputFileType.JsonSchema,
         custom_file_header=custom_header,
+        enable_version_header=True,
         expected_file=EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header.py",
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--custom-file-header-mode"],
+    option_description="""Choose how a custom file header combines with generated provenance.
+
+The `prepend` mode places a license or copyright header before the generated filename,
+timestamp, version, and command metadata. The default `replace` mode preserves existing behavior.""",
+    input_schema="jsonschema/simple_string.json",
+    cli_args=[
+        "--custom-file-header",
+        "# Copyright {year}",
+        "--custom-file-header-mode",
+        "prepend",
+        "--disable-timestamp",
+        "--enable-version-header",
+    ],
+    golden_output="main/custom_file_header_prepend.py",
+    related_options=["--custom-file-header", "--custom-file-header-path", "--enable-version-header"],
+)
+def test_main_custom_file_header_prepend(output_file: Path) -> None:
+    """Choose how a custom file header combines with generated provenance."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="custom_file_header_prepend.py",
+        extra_args=[
+            "--custom-file-header",
+            "# Copyright {year}",
+            "--custom-file-header-mode",
+            "prepend",
+            "--disable-timestamp",
+            "--enable-version-header",
+        ],
+        transform=lambda output: output.replace(
+            f"#   version:   {datamodel_code_generator.get_version()}", "#   version:   0.0.0"
+        ),
+    )
+
+
+def test_generate_returns_string_with_custom_file_header_prepend() -> None:
+    """Prepend a custom header to provenance when output=None."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        custom_file_header="# SPDX-License-Identifier: MIT",
+        custom_file_header_mode=CustomFileHeaderMode.Prepend,
+        disable_timestamp=True,
+        expected_file=EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header_prepend.py",
+    )
+
+
+def test_generate_returns_modules_with_custom_file_header_prepend() -> None:
+    """Prepend custom and per-file provenance headers for output=None modules."""
+    result = generate(
+        JSON_SCHEMA_DATA_PATH / "all_exports_multi_file",
+        input_file_type=InputFileType.JsonSchema,
+        custom_file_header_path=DATA_PATH / "custom_file_header_with_docstring_and_import.txt",
+        custom_file_header_mode=CustomFileHeaderMode.Prepend,
+        disable_timestamp=True,
+        all_exports_scope=AllExportsScope.Recursive,
+    )
+
+    assert_generated_modules_output(
+        result,
+        EXPECTED_MAIN_PATH / "jsonschema" / "custom_file_header_path_prepend_multi_file",
+        transform=lambda output: f"{output}\n",
+    )
+
+
+def test_generate_custom_file_header_prepend_after_formatter_comment() -> None:
+    """Extract future imports after comments added by a custom formatter."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        formatters=[],
+        custom_formatters=["tests.data.python.custom_formatters.add_comment"],
+        custom_file_header='"""Module docstring."""\n\nimport sys',
+        custom_file_header_mode=CustomFileHeaderMode.Prepend,
+        disable_timestamp=True,
+        expected_file=EXPECTED_MAIN_PATH / "generate_custom_file_header_prepend_after_formatter_comment.py",
+    )
+
+
+def test_generate_custom_file_header_prepend_after_formatter_docstring() -> None:
+    """Extract future imports after a module docstring added by a custom formatter."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        formatters=[],
+        custom_formatters=["tests.data.python.custom_formatters.add_docstring"],
+        custom_file_header='"""Module docstring."""\n\nimport sys',
+        custom_file_header_mode=CustomFileHeaderMode.Prepend,
+        disable_timestamp=True,
+        expected_file=EXPECTED_MAIN_PATH / "generate_custom_file_header_prepend_after_formatter_docstring.py",
+    )
+
+
+def test_custom_file_header_prepend_preserves_future_import_text(output_file: Path) -> None:
+    """Preserve future-import text inside generated schema descriptions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_file_header_schema_description_future.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="jsonschema/custom_file_header_schema_description_future.py",
+        extra_args=[
+            "--custom-file-header",
+            "# SPDX-License-Identifier: MIT",
+            "--custom-file-header-mode",
+            "prepend",
+            "--disable-timestamp",
+            "--use-schema-description",
+        ],
     )
 
 

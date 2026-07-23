@@ -12,10 +12,10 @@ This documentation is auto-generated from test cases.
 | 🔧 [Typing Customization](typing-customization.md) | 30 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 27 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 44 | Model generation behavior |
-| 🎨 [Template Customization](template-customization.md) | 25 | Output formatting and custom rendering |
+| 🎨 [Template Customization](template-customization.md) | 27 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
-| ⚙️ [General Options](general-options.md) | 18 | Utilities and meta options |
+| ⚙️ [General Options](general-options.md) | 19 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 10 | Help, version, debug options |
 
 ## 🎯 Focused Topics
@@ -25,7 +25,7 @@ Use these pages when you know the workflow area but not the exact option name.
 | Topic | Options | Groups |
 |-------|---------|--------|
 | [Model Customization](topics/model-customization.md) | 23 | Model Naming, Model Reuse, Model Shape, Root Model |
-| [Template Customization](topics/template-customization.md) | 19 | Custom Templates, Generated Output, Imports, Output Formatting |
+| [Template Customization](topics/template-customization.md) | 21 | Custom Templates, Generated Output, Imports, Output Formatting |
 | [Typing Customization](topics/typing-customization.md) | 20 | Imports, Collection Types, Type Alias, Type Mapping, Type Syntax |
 | [OpenAPI](topics/openapi.md) | 7 | OpenAPI Naming, OpenAPI Paths, OpenAPI Scopes, Read Only Write Only |
 
@@ -89,6 +89,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--collapse-root-models`](model-customization.md#collapse-root-models)
 - [`--collapse-root-models-name-strategy`](model-customization.md#collapse-root-models-name-strategy)
 - [`--custom-file-header`](template-customization.md#custom-file-header)
+- [`--custom-file-header-mode`](template-customization.md#custom-file-header-mode)
 - [`--custom-file-header-path`](template-customization.md#custom-file-header-path)
 - [`--custom-formatters`](template-customization.md#custom-formatters)
 - [`--custom-formatters-kwargs`](template-customization.md#custom-formatters-kwargs)
@@ -122,6 +123,7 @@ These links are generated from CLI option metadata and summarize options that im
 
 ### F {#f}
 
+- [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout)
 - [`--field-constraints`](field-customization.md#field-constraints)
 - [`--field-extra-keys`](field-customization.md#field-extra-keys)
 - [`--field-extra-keys-without-x-prefix`](field-customization.md#field-extra-keys-without-x-prefix)
@@ -226,6 +228,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--skip-root-model`](model-customization.md#skip-root-model)
 - [`--snake-case-field`](field-customization.md#snake-case-field)
 - [`--special-field-name-prefix`](field-customization.md#special-field-name-prefix)
+- [`--strict-dotted-module-names`](template-customization.md#strict-dotted-module-names)
 - [`--strict-nullable`](model-customization.md#strict-nullable)
 - [`--strict-types`](typing-customization.md#strict-types)
 - [`--strip-default-none`](model-customization.md#strip-default-none)

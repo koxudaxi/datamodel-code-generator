@@ -203,6 +203,7 @@ class OpenAPIParser(JsonSchemaParser):
     """Parser for OpenAPI 2.0/3.0/3.1/3.2 and Swagger specifications."""
 
     SCHEMA_PATHS: ClassVar[list[str]] = ["#/components/schemas"]
+    config: OpenAPIParserConfig
 
     @cached_property
     def schema_features(self) -> OpenAPISchemaFeatures:
@@ -233,11 +234,11 @@ class OpenAPIParser(JsonSchemaParser):
         if config is None and options.get("wrap_string_literal") is None:
             options["wrap_string_literal"] = False
         super().__init__(source=source, config=config, **options)
-        self.open_api_scopes: list[OpenAPIScope] = self.config.openapi_scopes or [OpenAPIScope.Schemas]  # ty: ignore
-        self.include_path_parameters: bool = self.config.include_path_parameters  # ty: ignore
-        self.use_status_code_in_response_name: bool = self.config.use_status_code_in_response_name  # ty: ignore
-        self.openapi_include_paths: list[str] | None = self.config.openapi_include_paths  # ty: ignore
-        self.openapi_include_info_version: bool = self.config.openapi_include_info_version  # ty: ignore
+        self.open_api_scopes: list[OpenAPIScope] = self.config.openapi_scopes or [OpenAPIScope.Schemas]
+        self.include_path_parameters: bool = self.config.include_path_parameters
+        self.use_status_code_in_response_name: bool = self.config.use_status_code_in_response_name
+        self.openapi_include_paths: list[str] | None = self.config.openapi_include_paths
+        self.openapi_include_info_version: bool = self.config.openapi_include_info_version
         self.openapi_info_version: str | None = None
         if self.openapi_include_paths and OpenAPIScope.Paths not in self.open_api_scopes:
             warn(
@@ -490,7 +491,7 @@ class OpenAPIParser(JsonSchemaParser):
 
         result_fields: list[DataModelFieldBase] = []
         for field_obj in fields:
-            field = properties.get(field_obj.original_name)  # ty: ignore
+            field = properties.get(field_obj.original_name)  # ty: ignore[invalid-argument-type]
 
             if (
                 isinstance(field, JsonSchemaObject)
@@ -502,7 +503,7 @@ class OpenAPIParser(JsonSchemaParser):
                     result_fields.append(field_obj)
                     continue
                 normalized_discriminator = self._normalize_discriminator(discriminator)
-                field_obj = self.data_model_field_type(**{  # noqa: PLW2901  # ty: ignore
+                field_obj = self.data_model_field_type(**{  # noqa: PLW2901  # ty: ignore[invalid-argument-type]
                     **field_obj.__dict__,
                     "data_type": new_field_type,
                     "extras": {**field_obj.extras, "discriminator": normalized_discriminator},
@@ -722,7 +723,7 @@ class OpenAPIParser(JsonSchemaParser):
                     continue
                 schema_path = self._media_schema_path(response_path, from_item_schema=media_schema.from_item_schema)
                 data_type = self._parse_schema_or_ref(response_name, media_schema.schema, schema_path)
-                data_types[status_code][content_type] = data_type  # ty: ignore
+                data_types[status_code][content_type] = data_type  # ty: ignore[invalid-assignment]
 
         return data_types
 

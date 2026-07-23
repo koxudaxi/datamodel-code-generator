@@ -23,6 +23,8 @@ class TypeAliasBase(DataModel):
 
     IS_ALIAS: ClassVar[bool] = True
     SUPPORTS_GENERIC_BASE_CLASS: ClassVar[bool] = False
+    SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = True
+    ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = None
     DOCSTRING_INDENT: ClassVar[int] = 0
     FIELD_DOCSTRING_INDENT: ClassVar[int] = 0
 

@@ -48,12 +48,12 @@ jobs:
     env:
       OS: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os}}
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 1
         persist-credentials: false
     - name: Install the latest version of uv
-      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
         enable-cache: true
         cache-suffix: "${{ matrix.py || matrix.tox_env }}"
@@ -97,17 +97,20 @@ jobs:
           - tox_env: pydantic25
             name: pydantic25
             coverage_name: pydantic25
+          - tox_env: pydantic213
+            name: pydantic213
+            coverage_name: pydantic213
     runs-on: ubuntu-24.04
     env:
       OS: ubuntu-24.04
       TOX_ENV: ${{ matrix.tox_env }}
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 1
         persist-credentials: false
     - name: Install the latest version of uv
-      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
         enable-cache: true
         cache-suffix: "${{ matrix.tox_env }}"
@@ -159,12 +162,12 @@ jobs:
       OS: ubuntu-24.04
       TOX_ENV: ${{ matrix.tox_env }}
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 1
         persist-credentials: false
     - name: Install the latest version of uv
-      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
         enable-cache: true
         cache-suffix: "${{ matrix.tox_env }}-coverage"
@@ -407,13 +410,13 @@ jobs:
       WINDOWS_TOX_VERSION: "4.56.1"
       WINDOWS_UV_VERSION: "0.11.26"
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 1
         persist-credentials: false
     - name: Install uv (Windows)
       if: matrix.os == 'windows-latest'
-      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
         version: ${{ env.WINDOWS_UV_VERSION }}
         enable-cache: true
@@ -427,7 +430,7 @@ jobs:
         save-cache: ${{ matrix.shard == 1 }}
     - name: Install the latest version of uv
       if: matrix.os != 'windows-latest'
-      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
         enable-cache: true
         cache-suffix: "${{ matrix.tox_env }}-shard-${{ matrix.shard_total }}"
@@ -508,12 +511,12 @@ jobs:
       - test-formatter-coverage
       - test-shard
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
       - name: Setup coverage tool
@@ -567,12 +570,12 @@ jobs:
     name: checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
       - name: Setup check suites
@@ -619,12 +622,12 @@ jobs:
     name: e2e
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
       - name: Setup e2e suites

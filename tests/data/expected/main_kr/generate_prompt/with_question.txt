@@ -18,7 +18,7 @@ How do I convert enums to Literal types?
 - `--external-ref-mapping`: Map external `$ref` files to Python packages.
 - `--input`: Specify the input schema file path.
 - `--input-file-type`: Specify the input file type for code generation.
-- `--input-model`: Import a Python type or dict schema from a module.
+- `--input-model`: Import a Python type or dict schema from a module or Python file.
 - `--input-model-ref-strategy`: Strategy for referenced types when using --input-model.
 - `--output`: Specify the destination path for generated Python code.
 - `--preset`: Apply an immutable built-in option preset.
@@ -143,6 +143,7 @@ How do I convert enums to Literal types?
 - `--additional-imports`: Add custom imports to generated output files.
 - `--class-decorators`: Add custom decorators to generated model classes.
 - `--custom-file-header`: Add custom header text to the generated file.
+- `--custom-file-header-mode`: Choose how a custom file header combines with generated provenance.
 - `--custom-file-header-path`: Add custom header content from file to generated code.
 - `--custom-formatters`: Apply custom Python code formatters to generated output.
 - `--custom-formatters-kwargs`: Pass custom arguments to custom formatters via inline JSON or a JSON file path.
@@ -155,10 +156,12 @@ How do I convert enums to Literal types?
 - `--extra-template-data`: Pass custom template variables via inline JSON or a JSON file path.
 - `--formatters`: Specify code formatters to apply to generated output.
 - `--generate-schema-validators`: Generate experimental Pydantic v2 model validators for JSON Schema runtime rules.
+- `--no-strict-dotted-module-names`
 - `--no-treat-dot-as-module`: Keep dots in schema names as underscores for flat output.
 - `--no-use-type-checking-imports`: Keep generated model imports available at runtime when using Ruff fixes.
 - `--schema-validator-base-class-name`: Set the generated shared Pydantic v2 schema runtime validator base class...
 - `--schema-validator-type`: Select the schema-derived runtime validator backend.
+- `--strict-dotted-module-names`: Require canonical Python identifiers when inferring dotted module paths.
 - `--use-double-quotes`: Use double quotes for string literals in generated code.
 - `--use-exact-imports`: Import exact types instead of modules.
 - `--use-type-checking-imports`: Allow Ruff to move typing-only imports into TYPE_CHECKING blocks.
@@ -185,6 +188,7 @@ How do I convert enums to Literal types?
 - `--allow-remote-refs`: Enable fetching of `$ref` targets over HTTP/HTTPS.
 - `--check`: Verify generated code matches existing output without modifying files.
 - `--disable-warnings`: Suppress warning messages during code generation.
+- `--fail-on-multi-module-stdout`: Fail instead of concatenating multiple modules in text stdout.
 - `--generate-cli-command`: Generate CLI command from pyproject.toml configuration.
 - `--generate-pyproject-config`: Generate pyproject.toml configuration from CLI arguments.
 - `--http-headers`: Fetch schema from URL with custom HTTP headers.
@@ -276,9 +280,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         'xmlschema', 'protobuf', or 'avro' for schema
                         definitions. Use 'json', 'yaml', or 'csv' for raw
                         sample data to infer a schema automatically.
-  --input-model MODULE:NAME
-                        Python import path to a Pydantic v2 model or schema
-                        dict (e.g., 'mypackage.module:ClassName' or
+  --input-model MODULE_OR_PATH:NAME
+                        Python import path or file path to a Pydantic v2 model
+                        or schema dict (e.g., 'mypackage.module:ClassName',
+                        './models.py:ClassName', or
                         'mypackage.schemas:SCHEMA_DICT'). Can be specified
                         multiple times for related models with inheritance.
                         For dict input, --input-file-type is required. Cannot
@@ -636,6 +641,12 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         (default: "shared"). Use this option if your schema
                         has a file named "shared".
   --skip-root-model     Skip generating the model for the root schema element
+  --strict-dotted-module-names, --no-strict-dotted-module-names
+                        Only infer dotted schema names as module paths when
+                        every segment is a canonical Python identifier. This
+                        applies only to automatic inference and does not
+                        override --treat-dot-as-module or --no-treat-dot-as-
+                        module.
   --target-pydantic-version {2,2.11,2.12}
                         Target Pydantic version for generated code. '2':
                         Pydantic 2.0+ compatible (default, uses
@@ -685,6 +696,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         'id': 'id_'} generates `id_: ... = Field(alias='id')`.
   --custom-file-header CUSTOM_FILE_HEADER
                         Custom file header
+  --custom-file-header-mode {replace,prepend}
+                        How to combine a custom file header with the generated
+                        header (default: replace)
   --custom-file-header-path CUSTOM_FILE_HEADER_PATH
                         Custom file header file path
   --custom-formatters-kwargs CUSTOM_FORMATTERS_KWARGS
@@ -785,6 +799,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --debug               show debug message (require "debug". `$ pip install
                         'datamodel-code-generator[debug]'`)
   --disable-warnings    disable warnings
+  --fail-on-multi-module-stdout
+                        Return an error instead of concatenating multiple
+                        generated modules in text stdout. This does not affect
+                        single-module, JSON, or file output.
   --generate-cli-command
                         Generate CLI command from pyproject.toml configuration
                         and exit

@@ -42,7 +42,7 @@ from datamodel_code_generator.types import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
 
     from jinja2 import Environment, Template
 
@@ -311,6 +311,8 @@ class DataModelFieldBase(_BaseModel):
 
     _FIELD_IMPORTS_CACHE_MAX_SIZE: ClassVar[int] = 4096
     _field_imports_cache: ClassVar[dict[tuple[Any, ...], tuple[Import, ...]]] = {}
+    SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = False
+    ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = None
 
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
@@ -1001,7 +1003,11 @@ def _get_environment(template_subdir: Path, custom_template_dir: Path | None) ->
 
 
 @lru_cache
-def _get_template_with_custom_dir(template_file_path: Path, custom_template_dir: Path | None) -> Template:
+def _get_template_with_custom_dir(
+    template_file_path: Path,
+    custom_template_dir: Path | None,
+    template_adapter: Callable[[Template], Template] | None = None,
+) -> Template:
     """Load and cache a Jinja2 template with optional custom directory support.
 
     When custom_template_dir is provided, templates are searched in this order:
@@ -1013,7 +1019,8 @@ def _get_template_with_custom_dir(template_file_path: Path, custom_template_dir:
     """
     template_subdir = template_file_path.parent
     environment = _get_environment(template_subdir, custom_template_dir)
-    return environment.get_template(template_file_path.name)
+    template = environment.get_template(template_file_path.name)
+    return template_adapter(template) if template_adapter is not None else template
 
 
 @lru_cache(maxsize=16)
@@ -1029,7 +1036,11 @@ def _get_environment_with_absolute_path(absolute_template_dir: Path, builtin_sub
 
 
 @lru_cache
-def _get_template_with_absolute_path(absolute_template_path: Path, builtin_subdir: Path) -> Template:
+def _get_template_with_absolute_path(
+    absolute_template_path: Path,
+    builtin_subdir: Path,
+    template_adapter: Callable[[Template], Template] | None = None,
+) -> Template:
     """Load a Jinja2 template from an absolute path with fallback to built-in directory.
 
     This handles backward compatibility for custom templates found at absolute paths.
@@ -1038,7 +1049,8 @@ def _get_template_with_absolute_path(absolute_template_path: Path, builtin_subdi
     2. TEMPLATE_DIR/<builtin_subdir>/ (fallback for includes not in custom dir)
     """
     environment = _get_environment_with_absolute_path(absolute_template_path.parent, builtin_subdir)
-    return environment.get_template(absolute_template_path.name)
+    template = environment.get_template(absolute_template_path.name)
+    return template_adapter(template) if template_adapter is not None else template
 
 
 @lru_cache
@@ -1131,15 +1143,23 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     BASE_CLASS: ClassVar[str] = ""
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
     IS_ALIAS: ClassVar[bool] = False
+    IS_ROOT_MODEL: ClassVar[bool] = False
     SUPPORTS_GENERIC_BASE_CLASS: ClassVar[bool] = True
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = False
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False
     SUPPORTS_KW_ONLY: ClassVar[bool] = False
+    SUPPORTS_BOOLEAN_LITERAL: ClassVar[bool] = True
+    REQUIRES_TAGGED_UNION_DISCRIMINATOR: ClassVar[bool] = False
+    REQUIRES_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES: ClassVar[bool] = False
+    SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = False
+    ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = None
     TYPED_EXTRA_FIELD_NAME: ClassVar[str | None] = None
+    TYPED_EXTRA_PLAIN_ANNOTATION_TEMPLATE_DATA_KEY: ClassVar[str | None] = None
     REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK: ClassVar[bool] = False
     DOCSTRING_INDENT: ClassVar[int] = 4
     FIELD_DOCSTRING_INDENT: ClassVar[int] = 4
     FORMAT_DESCRIPTION_AS_DOCSTRING: ClassVar[bool] = True
+    CUSTOM_TEMPLATE_ADAPTER: ClassVar[Callable[[Template], Template] | None] = None
     _IMPORTS_CACHE_KEY: ClassVar[str] = "_cached_imports"
     has_forward_reference: bool = False
 
@@ -1152,6 +1172,14 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     ) -> DataModelFieldBase | None:
         """Create a model-specific typed extra field when supported."""
         return None
+
+    @classmethod
+    def resolve_nested_constrained_model_type(
+        cls,
+        configured_root_model_type: type[DataModel],
+    ) -> type[DataModel]:
+        """Return the model type used for nested constrained values."""
+        return configured_root_model_type
 
     def __init__(  # noqa: PLR0913
         self,
@@ -1340,9 +1368,22 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     def template(self) -> Template:
         """Get the Jinja2 template with custom directory support for includes."""
         resolved_path = self.template_file_path
+        template_adapter = self.CUSTOM_TEMPLATE_ADAPTER if self._custom_template_dir is not None else None
+        if template_adapter is None:
+            if resolved_path.is_absolute():
+                return _get_template_with_absolute_path(resolved_path, Path(self.TEMPLATE_FILE_PATH).parent)
+            return _get_template_with_custom_dir(Path(self.TEMPLATE_FILE_PATH), self._custom_template_dir)
         if resolved_path.is_absolute():
-            return _get_template_with_absolute_path(resolved_path, Path(self.TEMPLATE_FILE_PATH).parent)
-        return _get_template_with_custom_dir(Path(self.TEMPLATE_FILE_PATH), self._custom_template_dir)
+            return _get_template_with_absolute_path(
+                resolved_path,
+                Path(self.TEMPLATE_FILE_PATH).parent,
+                template_adapter,
+            )
+        return _get_template_with_custom_dir(
+            Path(self.TEMPLATE_FILE_PATH),
+            self._custom_template_dir,
+            template_adapter,
+        )
 
     @property
     def imports(self) -> tuple[Import, ...]:

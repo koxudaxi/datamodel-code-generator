@@ -5,6 +5,76 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.69.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.69.0) - 2026-07-19
+
+## Breaking Changes
+
+
+* Discriminated unions with duplicate or unresolvable discriminator values now fall back to a plain union - When a discriminated union contains variants that resolve to the same discriminator value, or variants that are containers, `RootModel`/type-alias wrappers, `None`/`str` members, or otherwise lack a resolvable discriminator literal, the generator no longer emits `Field(..., discriminator='...')` and instead produces a regular union. Previously such schemas emitted a `discriminator=` argument. Users regenerating models from these schemas will see the `discriminator` keyword removed from the affected fields (#3603)
+
+```python
+# Before (invalid duplicate-value discriminator was emitted):
+class GroupedItem(RootModel[Item | ItemReference]):
+    root: Item | ItemReference = Field(..., discriminator='type')
+
+# After (falls back to a plain union when variants are not valid discriminated members):
+class MixedItem(RootModel[str | ItemReference | None]):
+    root: str | ItemReference | None
+```
+
+## What's Changed
+* Update CHANGELOG for 0.68.1 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3594
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3595
+* Skip unused formatter construction by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3599
+* Retain model import caches by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3600
+* Fix pydantic typed extra runtime compatibility by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3601
+* [pre-commit.ci] pre-commit autoupdate by @pre-commit-ci[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3605
+* Fix legacy pydantic extra templates by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3602
+* Handle duplicate discriminator values by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3603
+* Bump the github-actions group across 1 directory with 7 updates by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3598
+* Allow custom and generated file headers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3607
+* Fix payload runtime validation exclusions by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3609
+* Fix optional discriminator literals by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3608
+* Fix invalid dotted model names by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3610
+* Add multi-module stdout guard by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3611
+* Fix empty ("") property name dropping its alias by @chuenchen309 in https://github.com/koxudaxi/datamodel-code-generator/pull/3612
+
+## New Contributors
+* @chuenchen309 made their first contribution in https://github.com/koxudaxi/datamodel-code-generator/pull/3612
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.68.1...0.69.0
+
+---
+
+## [0.68.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.68.1) - 2026-07-08
+
+## What's Changed
+* Skip docs preview deploy for dependabot PRs by @gaborbernat in https://github.com/koxudaxi/datamodel-code-generator/pull/3576
+* Update CHANGELOG for 0.68.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3574
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3575
+* Bump the github-actions group across 1 directory with 12 updates by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3567
+* Bump python from 3.14.2-slim-bookworm to 3.14.6-slim-bookworm by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3540
+* [pre-commit.ci] pre-commit autoupdate by @pre-commit-ci[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3577
+* Delay CLI config imports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3579
+* Guard builtin formatter tokenization by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3580
+* Cache parser regex helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3581
+* Cache rendered template field values by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3582
+* Speed up unique name lookup by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3583
+* Add getting started docs and overview sync by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3586
+* Fix ty diagnostics by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3585
+* Enforce ty diagnostics by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3588
+* Fix type overrides for base refs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3589
+* Type generation models by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3590
+* Annotate ty ignores by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3587
+* Type reference sources by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3591
+* Use TypeIs for reference models by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3592
+* Fix pydantic extra annotations by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3593
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.68.0...0.68.1
+
+---
+
 ## [0.68.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.68.0) - 2026-07-06
 
 ## Breaking Changes

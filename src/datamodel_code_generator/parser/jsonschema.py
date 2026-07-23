@@ -49,7 +49,7 @@ from datamodel_code_generator._format_types import (
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
-from datamodel_code_generator.model.base import UNDEFINED, get_module_name, sanitize_module_name
+from datamodel_code_generator.model.base import UNDEFINED, sanitize_module_name
 from datamodel_code_generator.model.enum import (
     SPECIALIZED_ENUM_TYPE_MATCH,
     Enum,
@@ -62,18 +62,23 @@ from datamodel_code_generator.model.runtime_validation import (
     SchemaRuntimeValidation,
 )
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
+from datamodel_code_generator.parser._output_context import OutputModelContext
 from datamodel_code_generator.parser.base import (
     SPECIAL_PATH_FORMAT,
     Parser,
     Source,
-    _is_msgspec_struct,
-    _is_typed_dict_data_model,
     escape_characters,
     get_special_path,
     title_to_class_name,
 )
 from datamodel_code_generator.parser.schema_version import get_data_formats
-from datamodel_code_generator.reference import SPECIAL_PATH_MARKER, ModelType, Reference, is_url
+from datamodel_code_generator.reference import (
+    SPECIAL_PATH_MARKER,
+    ModelType,
+    Reference,
+    get_inferred_module_name,
+    is_url,
+)
 from datamodel_code_generator.types import (
     ANY,
     DataType,
@@ -88,6 +93,8 @@ from datamodel_code_generator.util import BaseModel
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
+
+    from typing_extensions import TypeIs
 
     from datamodel_code_generator._types import JSONSchemaParserConfigDict
     from datamodel_code_generator.config import JSONSchemaParserConfig
@@ -108,7 +115,7 @@ JsonSchemaConstraintKey = Literal[
 ]
 JsonSchemaConstraintValue = int | float | str | bool
 JsonSchemaDataTypeKwargValue = JsonSchemaConstraintValue
-MsgspecTagValue = Union[int, str]  # noqa: UP007
+TaggedUnionValue = Union[int, str]  # noqa: UP007
 _MIN_UNION_VARIANT_LITERAL_VALUES = 2
 _NUMBER_CONSTRAINT_KEYS: tuple[JsonSchemaConstraintKey, ...] = (
     "minimum",
@@ -117,11 +124,17 @@ _NUMBER_CONSTRAINT_KEYS: tuple[JsonSchemaConstraintKey, ...] = (
     "exclusiveMaximum",
     "exclusiveMinimum",
 )
+_VALUE_STRING_CONSTRAINT_KEYS: tuple[JsonSchemaConstraintKey, ...] = ("pattern", "minLength", "maxLength")
+_ALL_OF_METADATA_FIELDS = ("nullable", "description", "default", "example", "examples", "readOnly", "writeOnly")
 
 _PYTHON_UNION_BASE_TYPES = frozenset({"Union", "Optional"})
 _QUALIFIED_PYTHON_TYPE_IMPORT_ALIASES = {
     "pydantic.main.BaseModel": Import.from_full_path("pydantic.BaseModel"),
 }
+
+
+def _field_source_name(field: DataModelFieldBase) -> str | None:
+    return field.original_name if field.original_name is not None else field.name
 
 
 def _parse_python_type_annotation(type_str: str) -> ast.expr | None:
@@ -280,8 +293,8 @@ def _get_union_variant_name(name: str, literal: JsonSchemaLiteral) -> str | None
     return f"{module_name}{separator}{variant_name}" if module_name else variant_name
 
 
-def _get_msgspec_tag_value(literal: JsonSchemaLiteral) -> MsgspecTagValue | None:
-    """Return a msgspec-supported Struct tag value for a JSON Schema literal."""
+def _get_tagged_union_value(literal: JsonSchemaLiteral) -> TaggedUnionValue | None:
+    """Return a supported tagged-union value for a JSON Schema literal."""
     match literal:
         case bool():
             return None
@@ -682,6 +695,19 @@ class JsonSchemaObject(BaseModel):
         # this condition expects empty dict
         return None if values == {} else values
 
+    @field_validator("custom_base_path", mode="before")
+    def validate_custom_base_path(cls, value: Any) -> Any:  # noqa: N805
+        """Validate schema-controlled custom base class import paths."""
+        match value:
+            case None:
+                return None
+            case list():
+                for item in value:
+                    _validate_schema_python_import_path(item, "customBasePath")
+            case _:
+                _validate_schema_python_import_path(value, "customBasePath")
+        return value
+
     @cached_property
     def has_default(self) -> bool:
         """Check if the schema has a default value or default factory."""
@@ -984,7 +1010,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self.raw_obj: dict[str, YamlValue] = {}
         self._root_id: Optional[str] = None  # noqa: UP045
         self._root_id_base_path: Optional[str] = None  # noqa: UP045
-        self._is_msgspec_struct_output = _is_msgspec_struct(self.data_model_type)
+        self._output_model_context = OutputModelContext.from_generation_types(
+            data_model_type=self.data_model_type,
+            data_model_root_type=self.data_model_root_type,
+            data_model_field_type=self.data_model_field_type,
+            data_type_manager_type=type(self.data_type_manager),
+            configured_types_are_builtin=self._configured_generation_types_are_builtin,
+            use_annotated=self.use_annotated,
+        )
 
         # Normalize external ref mapping paths to absolute for reliable matching
         raw_mapping = self.config.external_ref_mapping
@@ -1242,6 +1275,34 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 or (obj.enum and not self.ignore_enum_constraints)
             )
         )
+
+    def _has_effective_constraints(self, obj: JsonSchemaObject) -> bool:
+        """Return whether direct or derived constraints require a generated field."""
+        if obj.properties or obj.patternProperties or obj.required:
+            return False
+        if obj.is_object or obj.propertyNames is not None:
+            return bool(self._get_property_count_constraints(obj))
+        if obj.is_array:
+            return bool(obj.minItems is not None or obj.maxItems is not None or self._get_array_items_constraints(obj))
+
+        match obj.type:
+            case str() as schema_type:
+                pass
+            case list() as schema_types if (
+                schema_type := next((item for item in schema_types if item != "null"), None)
+            ) is not None and all(item in ("null", schema_type) for item in schema_types):  # noqa: PLR6201
+                pass
+            case _:
+                return False
+
+        match schema_type:
+            case "integer" | "number":
+                constraint_fields = _NUMBER_CONSTRAINT_KEYS
+            case "string":
+                constraint_fields = _VALUE_STRING_CONSTRAINT_KEYS
+            case _:
+                return False
+        return any(field in obj.model_fields_set for field in constraint_fields)
 
     def _get_constraint_values(self, obj: JsonSchemaObject) -> dict[str, Any]:  # noqa: PLR6301
         """Return JSON Schema constraint values without serializing nested schemas."""
@@ -1588,7 +1649,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _get_const_data_type(self, const: object) -> DataType:
         """Return a DataType for a JSON Schema const value."""
         if isinstance(const, bool):
-            if self._is_msgspec_struct_output:
+            if not self._output_model_context.supports_boolean_literals:
                 return self.data_type_manager.get_data_type(Types.boolean)
             return self.data_type(literals=[const])
         if isinstance(const, (int, str)):
@@ -1641,7 +1702,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         visited: set[str] = set()
 
         def iter_from_schema(obj: JsonSchemaObject, path: list[str]) -> Iterable[DataModelFieldBase]:
-            module_name = get_module_name(path[-1] if path else "", None, treat_dot_as_module=self.treat_dot_as_module)
+            module_name = get_inferred_module_name(
+                path[-1] if path else "",
+                treat_dot_as_module=self.treat_dot_as_module,
+                strict_dotted_module_names=self.strict_dotted_module_names,
+            )
             if obj.properties:
                 yield from self.parse_object_fields(obj, path, module_name)
             for item in obj.allOf:
@@ -1665,8 +1730,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         deduplicated: dict[str, DataModelFieldBase] = {}
         for field in all_fields:
-            key = field.original_name or field.name
-            if key:  # pragma: no cover
+            key = _field_source_name(field)
+            if key is not None:  # pragma: no cover
                 deduplicated[key] = field.copy_deep()
         return list(deduplicated.values())
 
@@ -1928,7 +1993,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         single_alias, validation_aliases = self._split_alias(alias)
         serialization_alias = (
             self.get_serialization_alias(original_field_name, field_name, class_name)
-            if original_field_name and field_name
+            if original_field_name is not None and field_name is not None
             else None
         )
         return self.data_model_field_type(
@@ -2153,7 +2218,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             additional_props_type = self._build_lightweight_type(obj.additionalProperties)
             if additional_props_type:  # pragma: no branch
                 self.extra_template_data[path]["additionalPropertiesType"] = additional_props_type.type_hint
-                if _is_typed_dict_data_model(self.data_model_type) and (
+                if self._output_model_context.requires_additional_properties_reference_classes and (
                     reference_classes := {
                         data_type.reference.path
                         for data_type in additional_props_type.all_data_types
@@ -2470,12 +2535,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return None
         return self._infer_union_variant_names(name, obj, combined_schemas)
 
-    def _get_msgspec_union_tag_field_values(
+    def _get_tagged_union_field_values(
         self,
         obj: JsonSchemaObject,
         combined_schemas: Sequence[JsonSchemaObject],
-    ) -> tuple[str, dict[int, MsgspecTagValue]] | None:
-        """Return the shared required literal field and supported msgspec tags for a Struct union."""
+    ) -> tuple[str, dict[int, TaggedUnionValue]] | None:
+        """Return the shared required literal field and supported values for a tagged union."""
         discriminator_schemas = [
             self._load_ref_schema_object(item.ref) if item.ref and item.ref_type == JSONReference.LOCAL else item
             for item in combined_schemas
@@ -2486,14 +2551,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if len(literal_values) != len(discriminator_schemas):
                 continue
 
-            tag_values: dict[int, MsgspecTagValue] = {}
+            tag_values: dict[int, TaggedUnionValue] = {}
             for index, literal in literal_values.items():
                 match discriminator_schemas[index]:
                     case JsonSchemaObject(required=required) if field_name in required:
                         pass
                     case _:
                         break
-                if (tag_value := _get_msgspec_tag_value(literal)) is None:
+                if (tag_value := _get_tagged_union_value(literal)) is None:
                     break
                 tag_values[index] = tag_value
             else:
@@ -2501,13 +2566,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return None
 
-    def _set_msgspec_union_discriminator(
+    def _set_tagged_union_discriminator(
         self,
         obj: JsonSchemaObject,
         combined_schemas: Sequence[JsonSchemaObject],
     ) -> None:
-        """Set a discriminator extra when msgspec can use a tagged Struct union."""
-        if not (tag_data := self._get_msgspec_union_tag_field_values(obj, combined_schemas)):
+        """Set a discriminator extra when the output requires a tagged union."""
+        if not (tag_data := self._get_tagged_union_field_values(obj, combined_schemas)):
             return
         tag_field, _tag_values = tag_data
         match obj.extras.get("discriminator"):
@@ -3585,8 +3650,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 )
 
         variant_names = self._get_inferred_union_variant_names(name, obj, combined_schemas)
-        if self._is_msgspec_struct_output:
-            self._set_msgspec_union_discriminator(obj, combined_schemas)
+        if self._output_model_context.requires_tagged_union_discriminator:
+            self._set_tagged_union_discriminator(obj, combined_schemas)
         parsed_schemas = self._parse_combined_schema_items(name, obj, path, combined_schemas, variant_names)
         if not parsed_schemas:
             self._raise_unsatisfiable_schema(path, target_attribute_name)
@@ -3614,7 +3679,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Parse oneOf schema into a list of data types."""
         return self.parse_combined_schema(name, obj, path, "oneOf")
 
-    def _is_required_only_schema(self, item: JsonSchemaObject | bool) -> bool:  # noqa: FBT001
+    def _is_required_only_schema(self, item: JsonSchemaObject | bool) -> TypeIs[JsonSchemaObject]:  # noqa: FBT001
         """Return whether a combined-schema branch is only a property presence rule."""
         if not isinstance(item, JsonSchemaObject):
             return False
@@ -3719,7 +3784,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _field_input_names(self, field: DataModelFieldBase) -> tuple[str, ...]:  # noqa: PLR6301
         names: list[str] = []
         for value in (field.original_name, field.alias, field.name):
-            if value and value not in names:
+            if value is not None and value not in names:
                 names.append(value)
         if field.validation_aliases:
             names.extend(alias for alias in field.validation_aliases if alias not in names)
@@ -3732,14 +3797,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     ) -> dict[str, tuple[str, ...]]:
         names_by_property: dict[str, tuple[str, ...]] = {}
         for field in fields:
-            if property_name := field.original_name or field.name:
+            property_name = _field_source_name(field)
+            if property_name is not None:
                 names_by_property[property_name] = self._field_input_names(field)
 
         for base_class in base_classes:
             data_model = base_class.source if isinstance(base_class.source, DataModel) else None
             if data_model is not None:
                 for field in data_model.iter_all_fields():
-                    if property_name := field.original_name or field.name:
+                    property_name = _field_source_name(field)
+                    if property_name is not None:
                         names_by_property.setdefault(property_name, self._field_input_names(field))
                 continue
 
@@ -3795,18 +3862,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     ) -> tuple[list[tuple[str, DataType]], list[str], DataType | None, bool]:
         pattern_value_types: list[tuple[str, DataType]] = []
         rejected_patterns: list[str] = []
-        additional_property_type: DataType | None = None
+        additional_property: tuple[int, JsonSchemaObject, JsonSchemaObject] | None = None
         allow_unmatched = True
 
         for source_index, source in enumerate(self._iter_schema_validation_sources(obj)):
             if source.additionalProperties is False or source.unevaluatedProperties is False:
                 allow_unmatched = False
-            if isinstance(source.additionalProperties, JsonSchemaObject) and additional_property_type is None:
-                additional_property_type = self.parse_item(
-                    f"{name}AdditionalProperty",
-                    source.additionalProperties,
-                    get_special_path(f"schemaValidators/additionalProperties/{source_index}", path),
-                )
+            if isinstance(source.additionalProperties, JsonSchemaObject) and additional_property is None:
+                additional_property = (source_index, source, source.additionalProperties)
             if not source.patternProperties:
                 continue
             for pattern_index, (pattern, schema) in enumerate(source.patternProperties.items()):
@@ -3828,6 +3891,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                             ),
                         ))
 
+        if not pattern_value_types and not rejected_patterns:
+            return pattern_value_types, rejected_patterns, None, allow_unmatched
+        if additional_property is None:
+            return pattern_value_types, rejected_patterns, None, allow_unmatched
+
+        source_index, source, additional_properties = additional_property
+        additional_property_name = f"{name}AdditionalProperty"
+        additional_property_type = self._parse_additional_properties_value(
+            additional_property_name,
+            get_special_path(f"schemaValidators/additionalProperties/{source_index}", path),
+            source,
+            additional_properties=additional_properties,
+            constrained_name=additional_property_name,
+        )
         return pattern_value_types, rejected_patterns, additional_property_type, allow_unmatched
 
     def _add_pattern_properties_validator(  # noqa: PLR0913, PLR0917
@@ -3979,22 +4056,26 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 self.parse_object_fields(
                     obj,
                     path,
-                    get_module_name(name, None, treat_dot_as_module=self.treat_dot_as_module),
+                    get_inferred_module_name(
+                        name,
+                        treat_dot_as_module=self.treat_dot_as_module,
+                        strict_dotted_module_names=self.strict_dotted_module_names,
+                    ),
                     class_name=name,
                 )
             )
         if base_classes:
             for field in fields:
                 current_type = field.data_type
-                field_name = field.original_name or field.name
-                if current_type and current_type.type == ANY and field_name:
+                field_name = _field_source_name(field)
+                if current_type and current_type.type == ANY and field_name is not None:
                     inherited_type = self._get_inherited_field_type(field_name, base_classes)
                     if inherited_type is not None:
                         new_type = inherited_type.model_copy(deep=True)
                         self._merge_type_modifiers(new_type, current_type)
                         self.generation_store.replace_field_type(field, new_type)
                 # Handle List[Any] case: inherit item type from parent if items have Any type
-                elif field_name and self._is_list_with_any_item_type(current_type):
+                elif field_name is not None and self._is_list_with_any_item_type(current_type):
                     inherited_type = self._get_inherited_field_type(field_name, base_classes)
                     if inherited_type is None or not inherited_type.is_list or not inherited_type.data_types:
                         continue
@@ -4037,12 +4118,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for field in fields:
                 if self.force_optional_for_required_fields:  # pragma: no cover
                     continue  # pragma: no cover
-                if (field.original_name or field.name) in required:
+                field_name = _field_source_name(field)
+                if field_name in required:
                     field.required = True
                     if self.apply_default_values_for_required_fields and field.has_default:
                         field.use_default_with_required = True
         if obj.required:
-            field_name_to_field = {f.original_name or f.name: f for f in fields}
+            field_name_to_field = {_field_source_name(field): field for field in fields}
             for required_ in obj.required:
                 if required_ in field_name_to_field:
                     field = field_name_to_field[required_]
@@ -4137,7 +4219,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             else:
                 # Merge child properties with parent constraints before processing
                 merged_item = self._merge_properties_with_parent_constraints(all_of_item, parent_refs)
-                module_name = get_module_name(name, None, treat_dot_as_module=self.treat_dot_as_module)
+                module_name = get_inferred_module_name(
+                    name,
+                    treat_dot_as_module=self.treat_dot_as_module,
+                    strict_dotted_module_names=self.strict_dotted_module_names,
+                )
                 object_fields = self.parse_object_fields(
                     merged_item,
                     path,
@@ -4151,16 +4237,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         required.extend(all_of_item.required)
                         field_names: set[str] = set()
                         for f in object_fields:
-                            if f.original_name:
-                                field_names.add(f.original_name)
-                            elif f.name:  # pragma: no cover
-                                field_names.add(f.name)
+                            field_name = _field_source_name(f)
+                            if field_name is not None:  # pragma: no branch
+                                field_names.add(field_name)
                         existing_field_names: set[str] = set()
                         for f in fields:
-                            if f.original_name:
-                                existing_field_names.add(f.original_name)
-                            elif f.name:  # pragma: no cover
-                                existing_field_names.add(f.name)
+                            field_name = _field_source_name(f)
+                            if field_name is not None:  # pragma: no branch
+                                existing_field_names.add(field_name)
                         for required_field_name in all_of_item.required:
                             if required_field_name in field_names or required_field_name in existing_field_names:
                                 continue
@@ -4228,6 +4312,34 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         default: Any = UNDEFINED,
     ) -> DataModel:
         data_model_root = self.data_model_root_type(
+            reference=reference,
+            fields=fields,
+            custom_base_class=self._resolve_base_class(custom_base_class_name, obj.custom_base_path),
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
+            description=description,
+            default=default,
+            nullable=obj.type_has_null,
+            treat_dot_as_module=self.treat_dot_as_module,
+        )
+        self._apply_root_model_sequence_interface(data_model_root, fields)
+        self.generation_store.register_model(data_model_root)
+        return data_model_root
+
+    def _register_root_model_as(  # noqa: PLR0913
+        self,
+        data_model_root_type: type[DataModel],
+        *,
+        reference: Reference,
+        fields: list[DataModelFieldBase],
+        obj: JsonSchemaObject,
+        custom_base_class_name: str,
+        description: str | None = None,
+        default: Any = UNDEFINED,
+    ) -> DataModel:
+        """Register a root using an internal alternate output representation."""
+        data_model_root = data_model_root_type(
             reference=reference,
             fields=fields,
             custom_base_class=self._resolve_base_class(custom_base_class_name, obj.custom_base_path),
@@ -4515,10 +4627,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if additional_props.allOf and self._contains_false_schema(additional_props.allOf):
             return None
         additional_props = self._add_nullable_combined_schema_branches(additional_props)
-        extra_value_type = self.parse_item(
-            f"{class_name}AdditionalProperty",
-            additional_props,
+        if (
+            self.generate_schema_validators
+            and any(source.patternProperties for source in self._iter_schema_validation_sources(obj))
+            and (
+                constrained_schema := self._merge_additional_properties_all_of(additional_props)
+                if additional_props.allOf
+                else additional_props
+            )
+            and self._has_effective_constraints(constrained_schema)
+        ):
+            return None
+        additional_property_name = f"{class_name}AdditionalProperty"
+        extra_value_type = self._parse_additional_properties_value(
+            additional_property_name,
             [*path, "additionalProperties"],
+            obj,
+            additional_properties=additional_props,
+            constrained_name=additional_property_name,
         )
 
         return self.data_model_type.create_typed_extra_field(
@@ -4527,6 +4653,213 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 data_types=[extra_value_type],
                 is_dict=True,
             ),
+        )
+
+    @cached_property
+    def _nested_constrained_model_type(self) -> type[DataModel]:
+        """Resolve the output-specific model for an inline constrained value."""
+        return self._output_model_context.resolve_nested_constrained_model_type()
+
+    def _flatten_additional_properties_all_of(self, obj: JsonSchemaObject) -> list[JsonSchemaObject] | None:
+        """Resolve and flatten an additionalProperties allOf schema."""
+        schemas: list[JsonSchemaObject] = []
+        pending = [obj]
+        while pending:
+            schema = pending.pop()
+            if schema.ref:
+                if self._load_ref_schema_object(schema.ref).is_boolean_schema_false:
+                    return None
+                schema = self._merge_ref_with_schema(schema)
+                if schema.ref:  # pragma: no cover
+                    return None  # pragma: no cover
+            if schema.title:
+                schema = self.SCHEMA_OBJECT_TYPE.model_validate(
+                    schema.model_dump(exclude={"title"}, exclude_unset=True, by_alias=True)
+                )
+            if schema.allOf:
+                own_schema = self._without_allof_keywords(schema)
+                if self._schema_has_own_value_keywords(own_schema):
+                    pending.append(own_schema)
+                for item in reversed(schema.allOf):
+                    match item:
+                        case False:
+                            return None
+                        case True:
+                            continue
+                        case JsonSchemaObject():  # pragma: no branch
+                            pending.append(item)
+                continue
+            if (
+                self._schema_requires_model_type(schema)
+                or any((schema.anyOf, schema.oneOf, schema.enum))
+                or "const" in schema.extras
+                or isinstance(schema.type, list)
+            ):
+                return None  # pragma: no cover
+            schemas.append(schema)
+        return schemas
+
+    def _merge_additional_properties_all_of(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
+        """Merge a primitive allOf value schema so every constraint is retained."""
+        if not (schemas := self._flatten_additional_properties_all_of(obj)):
+            return None
+
+        schema_types = {schema.type for schema in schemas if schema.type}
+        if not schema_types or not schema_types <= {"integer", "number", "string"}:  # pragma: no cover
+            return None  # pragma: no cover
+        if len(schema_types) > 1 and schema_types != {"integer", "number"}:  # pragma: no cover
+            return None  # pragma: no cover
+        if (merged_schema := self._merge_primitive_schemas_for_allof(schemas)) is None:  # pragma: no cover
+            return None  # pragma: no cover
+
+        metadata = {field: getattr(obj, field) for field in _ALL_OF_METADATA_FIELDS if field in obj.model_fields_set}
+        if obj.extras:
+            metadata["extras"] = obj.extras
+        return merged_schema.model_copy(update=metadata) if metadata else merged_schema
+
+    def _parse_additional_properties_value(
+        self,
+        name: str,
+        path: list[str],
+        parent: JsonSchemaObject,
+        *,
+        additional_properties: JsonSchemaObject,
+        constrained_name: str | None = None,
+    ) -> DataType:
+        """Parse a mapping value schema while preserving supported Annotated constraints."""
+        if not self._output_model_context.supports_annotated_constraints:
+            return self.parse_item(name, additional_properties, path)
+        parser_type = type(self)
+        parser_attributes = self.__dict__
+        has_instance_hooks = (
+            "parse_item" in parser_attributes
+            or "parse_root_type" in parser_attributes
+            or "_register_root_model" in parser_attributes
+        )
+        has_class_hooks = parser_type is not JsonSchemaParser and (
+            parser_type.parse_item is not JsonSchemaParser.parse_item
+            or parser_type.parse_root_type is not JsonSchemaParser.parse_root_type
+            or parser_type._register_root_model is not JsonSchemaParser._register_root_model  # noqa: SLF001
+        )
+        if has_instance_hooks or has_class_hooks:
+            return self.parse_item(name, additional_properties, path)
+        if (
+            self._should_create_type_alias_for_title(additional_properties, name)
+            or additional_properties.enum
+            or additional_properties.anyOf
+            or additional_properties.oneOf
+        ):
+            return self.parse_item(name, additional_properties, path)
+
+        preserve_root_model = bool(additional_properties.allOf)
+        if preserve_root_model:
+            if (value_schema := self._merge_additional_properties_all_of(additional_properties)) is None:
+                return self.parse_item(name, additional_properties, path)
+        else:
+            value_schema = additional_properties
+        if (
+            not preserve_root_model
+            and value_schema.has_ref_with_schema_keywords
+            and not value_schema.is_ref_with_nullable_only
+        ):
+            value_schema = self._merge_ref_with_schema(value_schema)
+            if value_schema.title:
+                extras = value_schema.extras
+                if not additional_properties.title:
+                    extras = {key: value for key, value in extras.items() if key != "title"}
+                value_schema = value_schema.model_copy(
+                    update={
+                        "title": None,
+                        "extras": extras,
+                    }
+                )
+        if not self._has_effective_constraints(value_schema):
+            return self.parse_item(name, additional_properties, path)
+
+        return JsonSchemaParser._parse_constrained_additional_properties_value_item(
+            self,
+            constrained_name or (name if preserve_root_model else f"{name}AdditionalProperty"),
+            value_schema,
+            path,
+            parent=parent,
+            data_model_root_type=(self._nested_constrained_model_type if not preserve_root_model else None),
+        )
+
+    def _parse_constrained_additional_properties_value_item(
+        self,
+        name: str,
+        item: JsonSchemaObject,
+        path: list[str],
+        *,
+        parent: JsonSchemaObject,
+        data_model_root_type: type[DataModel] | None,
+    ) -> DataType:
+        """Parse the constrained-value fast path without changing parser extension hooks."""
+        if python_type_override := self._get_python_type_override(item):
+            return python_type_override
+        if item.enum:
+            return self.parse_item(name, item, path, parent=parent)
+        if self.use_title_as_name and item.title:
+            name = sanitize_module_name(item.title, treat_dot_as_module=self.treat_dot_as_module)
+        if self._should_create_type_alias_for_title(item, name):
+            return JsonSchemaParser._parse_root_type_with_context(
+                self,
+                name,
+                item,
+                path,
+                data_model_root_type=data_model_root_type,
+                preserve_constraints=True,
+            )
+
+        root_type_path = get_special_path("array", path)
+        return JsonSchemaParser._parse_root_type_with_context(
+            self,
+            self.model_resolver.add(root_type_path, name, class_name=True).name,
+            item,
+            root_type_path,
+            data_model_root_type=data_model_root_type,
+            preserve_constraints=True,
+        )
+
+    def _get_additional_properties_root_field(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+    ) -> DataModelFieldBase:
+        """Build a dict root field without leaking value constraints onto the container."""
+        match obj.additionalProperties:
+            case JsonSchemaObject() as additional_properties:
+                additional_props_type = self._parse_additional_properties_value(
+                    name,
+                    [*path, "additionalProperties"],
+                    obj,
+                    additional_properties=additional_properties,
+                )
+            case _:
+                additional_props_type = None
+
+        additional_props_field = self.SCHEMA_OBJECT_TYPE.model_validate({
+            "minProperties": obj.minProperties,
+            "maxProperties": obj.maxProperties,
+            "propertyNames": obj.propertyNames,
+            "additionalProperties": obj.additionalProperties,
+        })
+
+        return self.get_object_field(
+            field_name=None,
+            field=additional_props_field,
+            required=True,
+            original_field_name=None,
+            field_type=self.data_type(
+                data_types=[
+                    additional_props_type
+                    if additional_props_type is not None
+                    else self.data_type_manager.get_data_type(Types.any)
+                ],
+                is_dict=True,
+            ),
+            alias=None,
         )
 
     def _add_nullable_combined_schema_branches(self, obj: JsonSchemaObject) -> JsonSchemaObject:
@@ -4580,7 +4913,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         fields = self.parse_object_fields(
             obj,
             path,
-            get_module_name(class_name, None, treat_dot_as_module=self.treat_dot_as_module),
+            get_inferred_module_name(
+                class_name,
+                treat_dot_as_module=self.treat_dot_as_module,
+                strict_dotted_module_names=self.strict_dotted_module_names,
+            ),
             class_name=class_name,
         )
         has_declared_fields = bool(fields)
@@ -4592,49 +4929,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if not should_parse_dict_root:
             data_model_type_class = self.data_model_type
         else:
-            additional_props = (
-                obj.additionalProperties
-                if isinstance(obj.additionalProperties, JsonSchemaObject)
-                else self.SCHEMA_OBJECT_TYPE.model_validate({})
-            )
-            if additional_props.has_ref_with_schema_keywords and not additional_props.is_ref_with_nullable_only:
-                additional_props = self._merge_ref_with_schema(additional_props)
-            additional_props_update = {
-                "minProperties": obj.minProperties,
-                "maxProperties": obj.maxProperties,
-                "propertyNames": obj.propertyNames,
-                "additionalProperties": obj.additionalProperties,
-            }
-            if (
-                isinstance(obj.additionalProperties, JsonSchemaObject)
-                and obj.additionalProperties.has_ref_with_schema_keywords
-                and not obj.additionalProperties.is_ref_with_nullable_only
-            ):
-                additional_props_field = self.SCHEMA_OBJECT_TYPE.model_validate(additional_props_update)
-            else:
-                additional_props_field = additional_props.model_copy(update=additional_props_update)
-            fields.append(
-                self.get_object_field(
-                    field_name=None,
-                    field=additional_props_field,
-                    required=True,
-                    original_field_name=None,
-                    field_type=self.data_type(
-                        data_types=[
-                            self.parse_item(
-                                # TODO: Improve naming for nested ClassName
-                                name,
-                                additional_props,
-                                [*path, "additionalProperties"],
-                            )
-                            if isinstance(obj.additionalProperties, JsonSchemaObject)
-                            else self.data_type_manager.get_data_type(Types.any)
-                        ],
-                        is_dict=True,
-                    ),
-                    alias=None,
-                )
-            )
+            fields.append(self._get_additional_properties_root_field(name, obj, path))
             data_model_type_class = self.data_model_root_type
 
         self._set_schema_metadata(reference.path, obj)
@@ -4802,10 +5097,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         # Determine value type from additionalProperties
         if isinstance(additional_properties, JsonSchemaObject):
-            value_type = self.parse_item(
+            value_type = self._parse_additional_properties_value(
                 name,
-                additional_properties,
                 get_special_path("propertyNames/value", path),
+                parent_obj or additional_properties,
+                additional_properties=additional_properties,
             )
         else:
             value_type = self.data_type_manager.get_data_type(Types.any)
@@ -5030,14 +5326,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     name, item.propertyNames, item.additionalProperties, object_path, parent_obj=item
                 )
             if isinstance(item.additionalProperties, JsonSchemaObject):
+                additional_props_type = self._parse_additional_properties_value(
+                    name,
+                    get_special_path("additionalProperties", object_path),
+                    item,
+                    additional_properties=item.additionalProperties,
+                )
                 python_type_flags = self._get_python_type_flags(item)
                 dict_flags = python_type_flags or {"is_dict": True}
                 return self.data_type(
-                    data_types=[
-                        self.parse_item(
-                            name, item.additionalProperties, get_special_path("additionalProperties", object_path)
-                        )
-                    ],
+                    data_types=[additional_props_type],
                     **dict_flags,
                 )
             return self.data_type_manager.get_data_type(
@@ -5185,14 +5483,27 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         return self.data_type(reference=reference)
 
-    def parse_root_type(  # noqa: PLR0912, PLR0915
+    def parse_root_type(
         self,
         name: str,
         obj: JsonSchemaObject,
         path: list[str],
     ) -> DataType:
         """Parse a root-level type into a root model."""
+        return JsonSchemaParser._parse_root_type_with_context(self, name, obj, path)
+
+    def _parse_root_type_with_context(  # noqa: PLR0912, PLR0914, PLR0915
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+        *,
+        data_model_root_type: type[DataModel] | None = None,
+        preserve_constraints: bool = False,
+    ) -> DataType:
+        """Parse a root type with an internal output representation override."""
         reference: Reference | None = None
+        array_constraints: Any = None
         if obj.ref:
             data_type: DataType = self.get_ref_data_type(obj.ref)
         elif obj.custom_type_path:
@@ -5201,9 +5512,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 is_custom_type=True,
             )  # pragma: no cover
         elif obj.is_array:
-            data_type = self.parse_array_fields(
-                name, obj, get_special_path("array", path)
-            ).data_type  # pragma: no cover
+            array_field = self.parse_array_fields(name, obj, get_special_path("array", path))
+            data_type = array_field.data_type  # pragma: no cover
+            if preserve_constraints:
+                array_constraints = array_field.constraints
         elif obj.anyOf or obj.oneOf:
             combined_items = obj.anyOf or obj.oneOf
             if const_enum_type := self._parse_combined_const_enum(name, obj, combined_items, path):
@@ -5234,12 +5546,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 name, obj.propertyNames, obj.additionalProperties, path, parent_obj=obj
             )
         elif obj.is_object and not obj.properties and isinstance(obj.additionalProperties, JsonSchemaObject):
+            additional_props_type = self._parse_additional_properties_value(
+                name,
+                get_special_path("additionalProperties", path),
+                obj,
+                additional_properties=obj.additionalProperties,
+            )
             python_type_flags = self._get_python_type_flags(obj)
             dict_flags = python_type_flags or {"is_dict": True}
             data_type = self.data_type(
-                data_types=[
-                    self.parse_item(name, obj.additionalProperties, get_special_path("additionalProperties", path))
-                ],
+                data_types=[additional_props_type],
                 **dict_flags,
             )
         elif obj.enum and not self.ignore_enum_constraints:
@@ -5253,7 +5569,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             data_type = self.data_type_manager.get_data_type(
                 Types.any,
             )
-        is_type_alias = self.data_model_root_type.IS_ALIAS
+        selected_root_type = data_model_root_type or self.data_model_root_type
+        is_type_alias = selected_root_type.IS_ALIAS
         if self.force_optional_for_required_fields:
             required = False
             nullable = None
@@ -5279,36 +5596,50 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
-        constraints = self._get_constraint_values(obj) if self.field_constraints else {}
+        constraints = array_constraints or (self._get_constraint_values(obj) if self.field_constraints else {})
         if self._should_skip_root_field_constraints_for_multiple_types(obj):
             constraints = {}
         elif self.field_constraints and obj.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         if data_type.is_dict or data_type.is_mapping:
             constraints.update(self._get_property_count_constraints(obj))
+        fields = [
+            self.data_model_field_type(
+                data_type=data_type,
+                default=default_value,
+                required=required,
+                constraints=constraints,
+                nullable=nullable,
+                strip_default_none=self.strip_default_none,
+                extras=self.get_field_extras(obj),
+                use_annotated=self.use_annotated,
+                use_field_description=self.use_field_description,
+                use_field_description_example=self.use_field_description_example,
+                use_inline_field_description=self.use_inline_field_description,
+                original_name=None,
+                has_default=has_default_override,
+                **self._data_model_field_common_kwargs(),
+            )
+        ]
+        root_default = default_value if has_default_override else UNDEFINED
+        if data_model_root_type is not None:
+            JsonSchemaParser._register_root_model_as(
+                self,
+                selected_root_type,
+                reference=reference,
+                fields=fields,
+                obj=obj,
+                custom_base_class_name=name,
+                default=root_default,
+            )
+            return self.data_type(reference=reference)
+
         self._register_root_model(
             reference=reference,
-            fields=[
-                self.data_model_field_type(
-                    data_type=data_type,
-                    default=default_value,
-                    required=required,
-                    constraints=constraints,
-                    nullable=nullable,
-                    strip_default_none=self.strip_default_none,
-                    extras=self.get_field_extras(obj),
-                    use_annotated=self.use_annotated,
-                    use_field_description=self.use_field_description,
-                    use_field_description_example=self.use_field_description_example,
-                    use_inline_field_description=self.use_inline_field_description,
-                    original_name=None,
-                    has_default=has_default_override,
-                    **self._data_model_field_common_kwargs(),
-                )
-            ],
+            fields=fields,
             obj=obj,
             custom_base_class_name=name,
-            default=default_value if has_default_override else UNDEFINED,
+            default=root_default,
         )
         return self.data_type(reference=reference)
 

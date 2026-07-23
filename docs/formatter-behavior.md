@@ -4,6 +4,13 @@
 
 `datamodel-codegen` formats generated Python code after model generation. The default formatter list is currently `black` and `isort`.
 
+!!! warning "Experimental"
+    The built-in formatter (`--formatters builtin`) is experimental and may change as generated-output coverage is
+    expanded.
+
+This page is the reference for the built-in formatter's exact scope and precedence. For a formatter selection guide,
+see [Code Formatting](formatting.md).
+
 This default will change in a future release. The default formatter will become `builtin`, and external formatter
 dependencies will become opt-in so that generated output can be produced without installing formatter packages.
 
@@ -98,16 +105,17 @@ formatters = ["builtin"]
 builtin-format-line-length = 100
 ```
 
-When `builtin-format-line-length` is not set, the built-in formatter reuses existing formatter configuration in this order:
+The built-in formatter uses line length in this order:
 
-1. `[tool.ruff].line-length`
-2. `[tool.black].line-length`
-3. `[tool.isort].line_length`
-4. `88`
+1. API `builtin_format_line_length`
+2. `[tool.datamodel-codegen].builtin-format-line-length` or `[tool.datamodel-codegen].builtin_format_line_length`
+3. `[tool.ruff].line-length`
+4. `[tool.black].line-length`
+5. `[tool.isort].line_length`
+6. `88`
 
-This fallback only reads configuration values. It does not require Ruff, Black, or isort to be installed.
-
-An explicit API value always wins over `pyproject.toml`.
+The fallback formatter settings only read configuration values. They do not require Ruff, Black, or isort to be
+installed.
 
 ## String normalization
 

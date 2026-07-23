@@ -21,12 +21,14 @@ from datamodel_code_generator import (
     clear_dynamic_models_cache,
     generate,
     generate_dynamic_models,
+    load_yaml_dict_from_path,
 )
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.enums import ModuleSplitMode
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.types import StrictTypes
 from tests.conftest import assert_output
+from tests.main.conftest import JSON_SCHEMA_DATA_PATH, OPEN_API_DATA_PATH
 
 if TYPE_CHECKING:
     from typing import Any
@@ -98,6 +100,21 @@ def test_nested_models() -> None:
     """Test generating nested models and validating nested data."""
     schema = make_object_schema({"user": {"type": "object", "properties": {"name": {"type": "string"}}}})
     assert_dynamic_models(schema, {"Model": {"user": {"name": "Alice"}}}, EXPECTED_PATH / "nested_models.json")
+
+
+@pytest.mark.parametrize(
+    "fixture_name",
+    ["unsafe_custom_base_path_scalar.json", "unsafe_custom_base_path_list_nested.json"],
+)
+def test_generate_apis_reject_unsafe_custom_base_path(fixture_name: str) -> None:
+    """Reject unsafe scalar and nested list customBasePath values before dynamic execution."""
+    schema = json.loads((JSON_SCHEMA_DATA_PATH / fixture_name).read_text(encoding="utf-8"))
+    config = make_config()
+
+    with pytest.raises(Error, match="customBasePath must be a dotted Python identifier path"):
+        generate(input_=schema, config=config)
+    with pytest.raises(Error, match="customBasePath must be a dotted Python identifier path"):
+        generate_dynamic_models(schema, config=config)
 
 
 def test_asyncapi_dynamic_models() -> None:
@@ -463,6 +480,26 @@ def test_openapi_auto_detection() -> None:
         openapi_schema = json.load(f)
     assert_dynamic_models(
         openapi_schema, {"User": {"id": 1, "name": "Alice"}}, EXPECTED_PATH / "openapi_auto_detection.json"
+    )
+
+
+def test_force_optional_discriminator_literals() -> None:
+    """Keep force-optional discriminator literals valid in dynamic Pydantic v2 models."""
+    schema = load_yaml_dict_from_path(OPEN_API_DATA_PATH / "discriminator_force_optional.yaml", "utf-8")
+    config = GenerateConfig(
+        input_file_type=InputFileType.OpenAPI,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        force_optional_for_required_fields=True,
+    )
+    assert_dynamic_models(
+        schema,
+        {
+            "CardPayment": {},
+            "CashPayment": {},
+            "Payment": {"kind": "cash", "received_amount": 50},
+        },
+        EXPECTED_PATH / "force_optional_discriminator_literals.json",
+        config=config,
     )
 
 

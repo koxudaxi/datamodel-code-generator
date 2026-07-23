@@ -20,7 +20,7 @@ Input sources, output paths, and schema version handling.
 - `--emit-model-metadata`: Write a separate JSON map from source schema references to generated models and fields.
 - `--preset`: Apply an immutable built-in option preset. Preset names include the target Python version so generated syntax is pinned. Choices: `standard-py310-20260619`, `standard-py311-20260619`, `standard-py312-20260619`, `standard-py313-20260619`, `standard-py314-20260619`, `practical-py310-20260619`, `practical-py311-20260619`, `practical-py312-20260619`, `practical-py313-20260619`, `practical-py314-20260619`.
 - `--url`: Input file URL. `--input` is ignored when `--url` is used
-- `--input-model`: Python import path to a Pydantic v2 model or schema dict (e.g., 'mypackage.module:ClassName' or 'mypackage.schemas:SCHEMA_DICT'). Can be specified multiple times for related models with inheritance. For dict input, --input-file-type is required. Cannot be used with --input or --url.
+- `--input-model`: Python import path or file path to a Pydantic v2 model or schema dict (e.g., 'mypackage.module:ClassName', './models.py:ClassName', or 'mypackage.schemas:SCHEMA_DICT'). Can be specified multiple times for related models with inheritance. For dict input, --input-file-type is required. Cannot be used with --input or --url.
 - `--input-model-ref-strategy`: Strategy for referenced types in --input-model. 'regenerate-all': Regenerate all types. 'reuse-foreign': Reuse types from different families (Enum, etc.), regenerate same-family. 'reuse-all': Reuse all referenced types via import. If not specified, defaults to regenerate-all behavior. Choices: `regenerate-all`, `reuse-foreign`, `reuse-all`.
 - `--encoding`: The encoding of input and output (default: utf-8)
 - `--schema-version`: Schema version. Valid values depend on input type: JsonSchema: auto, draft-04, draft-06, draft-07, 2019-09, 2020-12. OpenAPI: auto, 3.0, 3.1, 3.2. AsyncAPI: auto, 2.0, 3.0. XMLSchema: auto, 1.0, 1.1. Protobuf: auto, proto2, proto3, 2023. (default: auto - detected from $schema, openapi/asyncapi field, XML Schema versioning attributes, or Protobuf syntax/edition)
@@ -160,9 +160,12 @@ Formatting, custom templates, and generated file headers.
 - `--enable-generated-header-marker`: Enable @generated marker on file headers
 - `--treat-dot-as-module`: Treat dotted schema names as module paths, creating nested directory structures (e.g., 'foo.bar.Model' becomes 'foo/bar.py'). Use --no-treat-dot-as-module to keep dots in names as underscores for single-file output.
 - `--no-treat-dot-as-module`: Treat dotted schema names as module paths, creating nested directory structures (e.g., 'foo.bar.Model' becomes 'foo/bar.py'). Use --no-treat-dot-as-module to keep dots in names as underscores for single-file output.
+- `--strict-dotted-module-names`: Only infer dotted schema names as module paths when every segment is a canonical Python identifier. This applies only to automatic inference and does not override --treat-dot-as-module or --no-treat-dot-as-module.
+- `--no-strict-dotted-module-names`: Only infer dotted schema names as module paths when every segment is a canonical Python identifier. This applies only to automatic inference and does not override --treat-dot-as-module or --no-treat-dot-as-module.
 - `--use-exact-imports`: import exact types instead of modules, for example: "from .foo import Bar" instead of "from . import foo" with "foo.Bar"
 - `--custom-file-header`: Custom file header
 - `--custom-file-header-path`: Custom file header file path
+- `--custom-file-header-mode`: How to combine a custom file header with the generated header (default: replace) Choices: `replace`, `prepend`.
 - `--custom-template-dir`: Custom template directory
 - `--extra-template-data`: Extra template data for output models as inline JSON or a JSON file path. For OpenAPI and Jsonschema the keys are the spec path of the object, or the name of the object if you want to apply the template data to multiple objects with the same name. If you are using another input file type (e.g. GraphQL), the key is the name of the object. The value is a dictionary of the template data to add.
 - `--validators`: Validators configuration as inline JSON or a JSON file path. Defines field validators for Pydantic v2 models. Keys are model names, values contain validator definitions with field, function, and mode.
@@ -223,6 +226,7 @@ General utility, HTTP, checking, and project integration options.
 - `--help` (alias: `-h`): show this help message and exit
 - `--no-color`: disable colorized output
 - `--output-format`: Format for command output (default: text). Use json for structured output when supported. Choices: `text`, `json`.
+- `--fail-on-multi-module-stdout`: Return an error instead of concatenating multiple generated modules in text stdout. This does not affect single-module, JSON, or file output.
 - `--output-format-json-schema`: Output JSON Schema for the selected JSON output or JSON configuration format and exit. Choices: `config`, `generate-prompt`, `generation`, `model-metadata`, `structured-output`.
 - `--generate-pyproject-config`: Generate pyproject.toml configuration from the provided CLI arguments and exit
 - `--generate-cli-command`: Generate CLI command from pyproject.toml configuration and exit

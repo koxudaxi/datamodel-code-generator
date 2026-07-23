@@ -35,6 +35,9 @@ ClassNameAffixScope: TypeAlias = Literal['all', 'models', 'enums']
 CollapseRootModelsNameStrategy: TypeAlias = Literal['child', 'parent']
 
 
+CustomFileHeaderMode: TypeAlias = Literal['replace', 'prepend']
+
+
 DataModelType: TypeAlias = Literal[
     'pydantic_v2.BaseModel',
     'pydantic_v2.dataclass',
@@ -241,12 +244,14 @@ class BaseGenerateConfig(TypedDict):
     keep_model_order: NotRequired[bool]
     custom_file_header: NotRequired[str | None]
     custom_file_header_path: NotRequired[str | None]
+    custom_file_header_mode: NotRequired[CustomFileHeaderMode]
     custom_formatters: NotRequired[list[str] | None]
     use_pendulum: NotRequired[bool]
     use_standard_primitive_types: NotRequired[bool]
     use_object_type: NotRequired[bool]
     http_query_parameters: NotRequired[Sequence[tuple[str, str]] | None]
     treat_dot_as_module: NotRequired[bool | None]
+    strict_dotted_module_names: NotRequired[bool]
     use_exact_imports: NotRequired[bool]
     use_type_checking_imports: NotRequired[bool | None]
     union_mode: NotRequired[UnionMode | None]

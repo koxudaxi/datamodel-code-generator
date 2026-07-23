@@ -199,6 +199,13 @@ CATEGORY_EMOJIS = {
     OptionCategory.OPENAPI: "📘",
     OptionCategory.GENERAL: "⚙️",
 }
+CATEGORY_INTROS = {
+    OptionCategory.OPENAPI: (
+        "This generated reference lists every OpenAPI-only CLI flag and its tested examples. "
+        "For a workflow-oriented guide, see [OpenAPI Options](../openapi-options.md). "
+        "For input format basics, see [Generate from OpenAPI](../openapi.md)."
+    ),
+}
 
 OPTION_CATEGORY_ORDER = (
     OptionCategory.BASE,
@@ -1109,6 +1116,8 @@ def generate_category_page(
     """Generate a category page with all options."""
     emoji = CATEGORY_EMOJIS.get(category, "📋")
     md = f"# {emoji} {category.value}\n\n"
+    if intro := CATEGORY_INTROS.get(category):
+        md += f"{intro}\n\n"
     md += "## 📋 Options\n\n"
     md += "| Option | Description |\n"
     md += "|--------|-------------|\n"

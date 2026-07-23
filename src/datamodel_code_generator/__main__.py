@@ -301,7 +301,7 @@ def _validate_http_key_value_options(
 
 
 @lru_cache(maxsize=1)
-def _get_config_class() -> type:
+def _get_config_class() -> type[Config]:
     from pydantic import ConfigDict, Field, ValidationInfo, field_validator, model_validator  # noqa: PLC0415
     from typing_extensions import Self  # noqa: PLC0415
 
@@ -532,7 +532,7 @@ def _get_config_class() -> type:
         @model_validator(mode="after")
         def validate_custom_file_header(self: Self) -> Self:
             """Validate custom file header options are mutually exclusive."""
-            if self.custom_file_header and self.custom_file_header_path:
+            if self.custom_file_header is not None and self.custom_file_header_path is not None:
                 raise Error(self.__validate_custom_file_header_err)
             return self
 
@@ -599,6 +599,8 @@ def _get_config_class() -> type:
         output_model_type: DataModelType = DataModelType.PydanticV2BaseModel
         output: Optional[Path] = None  # noqa: UP045
         check: bool = False
+        repair_invalid_dotted_stdout: bool = Field(default=False, exclude=True)
+        forced_invalid_dotted_stdout_repair_modules: tuple[tuple[str, ...], ...] = Field(default=(), exclude=True)
         debug: bool = False
         disable_warnings: bool = False
         extra_template_data: Mapping[str, dict[str, Any]] | None = None
@@ -1116,14 +1118,31 @@ def _copy_generated_output(generated_output: Path, actual_output: Path, *, is_di
     shutil.copyfile(generated_output, actual_output)
 
 
-def _write_generated_result(result: str | Mapping[tuple[str, ...], str], output_format: str | None) -> None:
-    if output_format == "json":
-        sys.stdout.write(_generation_output_json(_generated_files_from_result(result)) + "\n")
-    elif isinstance(result, str):
+def _write_generated_result(
+    result: str | Mapping[tuple[str, ...], str],
+    output_format: str | None,
+    *,
+    fail_on_multi_module_stdout: bool = False,
+) -> Exit | None:
+    if isinstance(result, str):
+        if output_format == "json":
+            result = _generation_output_json(_generated_files_from_result(result))
         sys.stdout.write(result + "\n")
-    else:
-        for content in result.values():
-            sys.stdout.write(content + "\n")
+        return None
+
+    match output_format:
+        case "json":
+            sys.stdout.write(_generation_output_json(_generated_files_from_result(result)) + "\n")
+        case _ if fail_on_multi_module_stdout and len(result) > 1:
+            sys.stderr.write(
+                "Error: Multiple modules were generated. Use --output <directory> to write them as files "
+                "or --output-format json for structured stdout.\n"
+            )
+            return Exit.ERROR
+        case _:
+            for content in result.values():
+                sys.stdout.write(content + "\n")
+    return None
 
 
 def run_generate_from_config(  # noqa: PLR0913, PLR0917
@@ -1159,7 +1178,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     )
     return generate(
         input_=input_,
-        config=cast("Any", generation_config),
+        config=cast("Any", generation_config),  # ty: ignore[redundant-cast]
     )
 
 
@@ -1448,6 +1467,25 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         generate_output = config.output
         is_directory_output = False
 
+    repair_invalid_dotted_stdout = (
+        generate_output is None
+        and namespace.output_format != "json"
+        and namespace.fail_on_multi_module_stdout is not True
+        and config.treat_dot_as_module is None
+        and not config.strict_dotted_module_names
+        and config.module_split_mode is None
+        and not config.generate_schema_validators
+        and not config.use_generic_base_class
+        and getattr(config, "custom_class_name_generator", None) is None
+        and config.custom_template_dir is None
+        and not config.custom_formatters
+        and config.custom_file_header is None
+        and config.custom_file_header_path is None
+        and config.extra_template_data is None
+        and not config.additional_imports
+    )
+    config.repair_invalid_dotted_stdout = repair_invalid_dotted_stdout
+
     def cleanup_and_return(exit_code: Exit) -> Exit:
         if temp_context is not None:
             temp_context.cleanup()
@@ -1503,7 +1541,14 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         _copy_generated_output(generate_output, config.output, is_directory_output=is_directory_output)
 
     if generate_output is None and result is not None:
-        _write_generated_result(result, namespace.output_format)
+        if (
+            write_error := _write_generated_result(
+                result,
+                namespace.output_format,
+                fail_on_multi_module_stdout=namespace.fail_on_multi_module_stdout is True,
+            )
+        ) is not None:
+            return cleanup_and_return(write_error)
     elif namespace.output_format == "json" and generate_output is not None and not config.check:
         display_output = config.output if writes_json_output_file else None
         sys.stdout.write(

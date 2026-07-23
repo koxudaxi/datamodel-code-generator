@@ -47,6 +47,56 @@ if TYPE_CHECKING:
     from datamodel_code_generator.types import DataType
 
 
+def split_module_name(
+    name: str,
+    *,
+    treat_dot_as_module: bool | None,
+    strict_dotted_module_names: bool = False,
+) -> list[str] | None:
+    """Split a dotted model name according to the configured inference policy."""
+    match treat_dot_as_module:
+        case False:
+            return None
+        case _ if "." not in name:
+            return None
+        case True:
+            return name.split(".")
+        case _ if not strict_dotted_module_names:
+            return name.split(".")
+
+    is_normalized = None
+    if not name.isascii():
+        from unicodedata import is_normalized  # noqa: PLC0415
+
+    parts = name.split(".")
+    for part in parts:
+        if (
+            not part.isidentifier()
+            or iskeyword(part)
+            or (is_normalized is not None and not is_normalized("NFKC", part))
+        ):
+            return None
+    return parts
+
+
+def get_inferred_module_name(
+    name: str,
+    *,
+    treat_dot_as_module: bool | None,
+    strict_dotted_module_names: bool = False,
+) -> str:
+    """Return the inferred parent module for a dotted model name."""
+    if not (
+        parts := split_module_name(
+            name,
+            treat_dot_as_module=treat_dot_as_module,
+            strict_dotted_module_names=strict_dotted_module_names,
+        )
+    ):
+        return ""
+    return ".".join(parts[:-1])
+
+
 def _is_data_type(value: object) -> TypeIs[DataType]:
     """Check if value is a DataType instance."""
     from datamodel_code_generator.types import DataType as DataType_  # noqa: PLC0415
@@ -77,6 +127,32 @@ class ReferenceChild(Protocol):
         ...
 
 
+if TYPE_CHECKING:
+
+    class _ReferenceSource(ReferenceChild, Protocol):
+        """Protocol for objects that can be assigned to Reference.source."""
+
+        fields: Sequence[Any]
+
+        @property
+        def is_alias(self) -> bool:
+            """Return whether this source renders as an alias."""
+            raise NotImplementedError
+
+        @property
+        def module_name(self) -> str | None:
+            """Return this source module name."""
+            raise NotImplementedError
+
+        @property
+        def nullable(self) -> bool:
+            """Return whether this source is nullable."""
+            raise NotImplementedError
+
+else:
+    _ReferenceSource = ReferenceChild
+
+
 class _BaseModel(BaseModel):
     """Base model with field exclusion and pass-through support."""
 
@@ -104,7 +180,7 @@ class _BaseModel(BaseModel):
             exclude_none: bool = False,
         ) -> dict[str, Any]:
             return self.model_dump(
-                include=include,  # ty: ignore
+                include=include,  # ty: ignore[invalid-argument-type]
                 exclude=set(exclude or ()) | self._exclude_fields,
                 by_alias=by_alias,
                 exclude_unset=exclude_unset,
@@ -124,7 +200,7 @@ class Reference(_BaseModel):
     name: str
     duplicate_name: Optional[str] = None  # noqa: UP045
     loaded: bool = True
-    source: Optional[ReferenceChild] = None  # noqa: UP045
+    source: Optional[_ReferenceSource] = None  # noqa: UP045
     children: list[ReferenceChild] = Field(default_factory=list)
     _exclude_fields: ClassVar[set[str]] = {"children"}
 
@@ -158,7 +234,7 @@ class Reference(_BaseModel):
             if _is_data_type(child):
                 child.replace_reference(new_reference)
 
-    def iter_data_model_children(self) -> Iterator[DataModel]:
+    def iter_data_model_children(self) -> Iterator[Any]:
         """Yield all DataModel children."""
         for child in self.children:
             if _is_data_model(child):
@@ -380,6 +456,15 @@ class PydanticFieldNameResolver(FieldNameResolver):
         return not hasattr(BaseModel, field_name)
 
 
+class MsgspecFieldNameResolver(FieldNameResolver):
+    """Field name resolver that avoids shadowing msgspec's imported ``field``."""
+
+    def _validate_field_name(self, field_name: str) -> bool:  # noqa: PLR6301
+        # A field named ``field`` would shadow the ``from msgspec import field``
+        # used for other fields' ``field(...)`` calls, breaking the generated module.
+        return field_name != "field"
+
+
 class EnumFieldNameResolver(FieldNameResolver):
     """Field name resolver for enum members with special handling for reserved names."""
 
@@ -419,12 +504,14 @@ class ModelType(Enum):
     PYDANTIC = auto()
     ENUM = auto()
     CLASS = auto()
+    MSGSPEC = auto()
 
 
 DEFAULT_FIELD_NAME_RESOLVERS: dict[ModelType, type[FieldNameResolver]] = {
     ModelType.ENUM: EnumFieldNameResolver,
     ModelType.PYDANTIC: PydanticFieldNameResolver,
     ModelType.CLASS: FieldNameResolver,
+    ModelType.MSGSPEC: MsgspecFieldNameResolver,
 }
 
 
@@ -488,6 +575,7 @@ class ModelResolver:  # noqa: PLR0904
         remove_suffix_number: bool = False,  # noqa: FBT001, FBT002
         parent_scoped_naming: bool = False,  # noqa: FBT001, FBT002
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
+        strict_dotted_module_names: bool = False,  # noqa: FBT001, FBT002
         naming_strategy: NamingStrategy | None = None,
         duplicate_name_suffix_map: dict[str, str] | None = None,
         class_name_prefix: str | None = None,
@@ -539,6 +627,7 @@ class ModelResolver:  # noqa: PLR0904
         self.naming_strategy: NamingStrategy = naming_strategy or NamingStrategy.Numbered
         self.parent_scoped_naming = parent_scoped_naming or (self.naming_strategy == NamingStrategy.ParentPrefixed)
         self.treat_dot_as_module = treat_dot_as_module
+        self.strict_dotted_module_names = strict_dotted_module_names
 
         # Duplicate name suffix map for type-specific suffixes
         # Only use suffixes when explicitly provided via --duplicate-name-suffix
@@ -649,6 +738,11 @@ class ModelResolver:  # noqa: PLR0904
         self._reference_names_cache.discard(name)
         self._invalidate_unique_name_hints(name)
 
+    def refresh_reference_names(self) -> None:
+        """Refresh cached names after a batch reference rename."""
+        self._reference_names_cache = {reference.name for reference in self.references.values()}
+        self._unique_name_start_hints.clear()
+
     @property
     def current_base_path(self) -> Path | None:
         """Return the current base path for file resolution."""
@@ -672,7 +766,7 @@ class ModelResolver:  # noqa: PLR0904
         """Temporarily set the current base path within a context."""
         if base_path:
             base_path = (self._base_path / base_path).resolve()
-        with context_variable(self.set_current_base_path, self.current_base_path, base_path):  # ty: ignore
+        with context_variable(self.set_current_base_path, self.current_base_path, base_path):  # ty: ignore[invalid-argument-type]
             yield
 
     @contextmanager
@@ -686,7 +780,7 @@ class ModelResolver:  # noqa: PLR0904
         this method was previously a no-op.
         """
         if self._base_url or (base_url and is_url(base_url)):
-            with context_variable(self.set_base_url, self.base_url, base_url):  # ty: ignore
+            with context_variable(self.set_base_url, self.base_url, base_url):  # ty: ignore[invalid-argument-type]
                 yield
         else:
             yield
@@ -703,7 +797,7 @@ class ModelResolver:  # noqa: PLR0904
     @contextmanager
     def current_root_context(self, current_root: Sequence[str]) -> Generator[None, None, None]:
         """Temporarily set the current root path within a context."""
-        with context_variable(self.set_current_root, self.current_root, current_root):  # ty: ignore
+        with context_variable(self.set_current_root, self.current_root, current_root):  # ty: ignore[invalid-argument-type]
             yield
 
     @property
@@ -1167,8 +1261,18 @@ class ModelResolver:  # noqa: PLR0904
         preserve_name: bool = False,  # noqa: FBT001, FBT002
     ) -> ClassName:
         """Generate a unique class name with optional singularization."""
+        split_name = None
         if "." in name and self.treat_dot_as_module is not False:
-            split_name = name.split(".")
+            split_name = (
+                split_module_name(
+                    name,
+                    treat_dot_as_module=self.treat_dot_as_module,
+                    strict_dotted_module_names=self.strict_dotted_module_names,
+                )
+                if self.strict_dotted_module_names and self.treat_dot_as_module is None
+                else name.split(".")
+            )
+        if split_name:
             prefix = ".".join(
                 # TODO: create a validate for class name
                 self.field_name_resolvers[ModelType.CLASS].get_valid_name(n, ignore_snake_case_field=True)
@@ -1407,7 +1511,7 @@ def _get_inflect_engine() -> inflect.engine:
 @lru_cache(maxsize=4096)
 def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
     """Convert a plural name to singular form."""
-    singular_name = _get_inflect_engine().singular_noun(cast("inflect.Word", name))  # ty: ignore
+    singular_name = _get_inflect_engine().singular_noun(cast("inflect.Word", name))  # ty: ignore[redundant-cast]
     if singular_name is False:
         singular_name = f"{name}{suffix}"
     return singular_name

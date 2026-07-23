@@ -50,7 +50,7 @@ class ConfigDict(_BaseModel):
     use_attribute_docstrings: Optional[bool] = None  # noqa: UP045
     json_schema_extra: Optional[Dict[str, Any]] = None  # noqa: UP006, UP045
 
-    def dict(self, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
+    def dict(self, **kwargs: Any) -> dict[str, Any]:  # ty: ignore[invalid-type-form]
         """Return dict for templates."""
         return self.model_dump(**kwargs)
 

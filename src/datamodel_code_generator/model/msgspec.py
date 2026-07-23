@@ -42,6 +42,7 @@ class _UNSET:
 
 
 UNSET = _UNSET()
+_ANNOTATED_CONSTRAINTS_CONTEXT: object = object()
 
 
 if TYPE_CHECKING:
@@ -103,6 +104,10 @@ class Struct(DataModel):
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True
+    SUPPORTS_BOOLEAN_LITERAL: ClassVar[bool] = False
+    REQUIRES_TAGGED_UNION_DISCRIMINATOR: ClassVar[bool] = True
+    SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = True
+    ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = _ANNOTATED_CONSTRAINTS_CONTEXT
     CONFIG_MAPPING: ClassVar[dict[tuple[str, Any], tuple[str, Any] | None]] = {
         ("allow_mutation", False): ("frozen", True),
         ("extra_fields", "forbid"): ("forbid_unknown_fields", True),
@@ -205,6 +210,8 @@ class Constraints(_Constraints):
 class DataModelField(DataModelFieldBase):
     """Field implementation for msgspec Struct models."""
 
+    SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = True
+    ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = _ANNOTATED_CONSTRAINTS_CONTEXT
     _FIELD_KEYS: ClassVar[set[str]] = {
         "default",
         "default_factory",
@@ -398,7 +405,7 @@ class DataModelField(DataModelFieldBase):
     def __str__(self) -> str:  # noqa: PLR0912
         """Generate field() call or default value representation."""
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._FIELD_KEYS}
-        if self.alias:
+        if self.alias is not None:
             data["name"] = self.alias
 
         if self.default is not UNDEFINED and self.default is not None:
@@ -589,6 +596,9 @@ class DataModelField(DataModelFieldBase):
 
 class DataTypeManager(_DataTypeManager):
     """Type manager for msgspec Struct models."""
+
+    SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = True
+    ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = _ANNOTATED_CONSTRAINTS_CONTEXT
 
 
 _rebuild_model_with_datamodel_namespace(DataModelField)

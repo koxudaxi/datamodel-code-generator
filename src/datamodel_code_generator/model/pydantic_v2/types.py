@@ -25,6 +25,9 @@ from datamodel_code_generator.imports import (
     IMPORT_ULID,
     IMPORT_UUID,
 )
+from datamodel_code_generator.model.pydantic_v2._output_context import (
+    ANNOTATED_CONSTRAINTS_CONTEXT as _ANNOTATED_CONSTRAINTS_CONTEXT,
+)
 from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_ANYURL,
     IMPORT_AWARE_DATETIME,
@@ -382,7 +385,7 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
         strict = StrictTypes.str in self.strict_types
         if data_type_kwargs:
             if strict:
-                data_type_kwargs["strict"] = True  # ty: ignore
+                data_type_kwargs["strict"] = True  # ty: ignore[invalid-assignment]
             if self.PATTERN_KEY in data_type_kwargs:
                 data_type_kwargs[self.PATTERN_KEY] = _get_regex_literal(data_type_kwargs[self.PATTERN_KEY])
             return self.data_type.from_import(IMPORT_CONSTR, kwargs=data_type_kwargs)
@@ -474,6 +477,9 @@ class PydanticV2DataType(DataType):
 
 class DataTypeManager(_PydanticDataTypeManager):
     """Type manager for Pydantic v2 with pattern key support."""
+
+    SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = True
+    ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = _ANNOTATED_CONSTRAINTS_CONTEXT
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,

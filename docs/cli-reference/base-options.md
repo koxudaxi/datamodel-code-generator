@@ -9,7 +9,7 @@
 | [`--external-ref-mapping`](#external-ref-mapping) | Map external `$ref` files to Python packages. |
 | [`--input`](#input) | Specify the input schema file path. |
 | [`--input-file-type`](#input-file-type) | Specify the input file type for code generation. |
-| [`--input-model`](#input-model) | Import a Python type or dict schema from a module. |
+| [`--input-model`](#input-model) | Import a Python type or dict schema from a module or Python ... |
 | [`--input-model-ref-strategy`](#input-model-ref-strategy) | Strategy for referenced types when using --input-model. |
 | [`--output`](#output) | Specify the destination path for generated Python code. |
 | [`--preset`](#preset) | Apply an immutable built-in option preset. |
@@ -442,7 +442,7 @@ not `--input-file-type yaml`. The `yaml` type treats the file as raw data and in
 
 ## `--input-model` {#input-model}
 
-Import a Python type or dict schema from a module.
+Import a Python type or dict schema from a module or Python file.
 
 Use the format `module:Object` or `path/to/file.py:Object` to specify the type.
 

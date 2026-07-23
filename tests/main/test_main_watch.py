@@ -107,7 +107,11 @@ def _start_watch_cli(
         text=True,
         bufsize=1,
         cwd=PROJECT_ROOT,
-        env={**os.environ, "PYTHONUNBUFFERED": "1"},
+        env={
+            **os.environ,
+            "PYTHONUNBUFFERED": "1",
+            "WATCHFILES_FORCE_POLLING": os.environ.get("WATCHFILES_FORCE_POLLING", "true"),
+        },
         creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0,
     )
     if process.stdout is None or process.stderr is None:  # pragma: no cover

@@ -988,9 +988,14 @@ def run_main_and_assert(  # noqa: PLR0912
     elif output_path is None:
         if input_path is None:  # pragma: no cover
             pytest.fail("input_path is required when output_path is None")
+        _copy_files(copy_files)
         args = []
         use_builtin_default = _extend_args(
-            args, input_path=input_path, input_file_type=input_file_type, extra_args=extra_args
+            args,
+            input_path=input_path,
+            input_file_type=input_file_type,
+            extra_args=extra_args,
+            copy_files=copy_files,
         )
         with (
             _enable_test_parsed_source_cache(),
@@ -1398,7 +1403,11 @@ def assert_generated_model_json_validation(
         if expected_attribute_path:
             actual: Any = parsed
             for attribute in expected_attribute_path:
-                actual = getattr(actual, attribute)
+                match actual:
+                    case Mapping() if attribute in actual:
+                        actual = actual[attribute]
+                    case _:
+                        actual = getattr(actual, attribute)
             if actual != expected_attribute_value:  # pragma: no cover
                 pytest.fail(
                     f"Expected {'.'.join(expected_attribute_path)} to be {expected_attribute_value!r}, got {actual!r}",

@@ -1,8 +1,12 @@
 <!-- related-cli-options: --openapi-scopes, --include-path-parameters, --use-operation-id-as-name, --read-only-write-only-model-type, --validation -->
 
-# OpenAPI-Specific Options
+# OpenAPI Options
 
 When working with OpenAPI specifications, datamodel-code-generator provides several options to control how schemas, operations, and special properties are handled. This page explains when and how to use each option.
+
+This page is a task-oriented guide for OpenAPI-specific generation behavior. For input format basics, see
+[Generate from OpenAPI](openapi.md). For every flag, choice, and generated example, see
+[CLI Reference: OpenAPI-only Options](cli-reference/openapi-only-options.md).
 
 ## Quick Overview
 

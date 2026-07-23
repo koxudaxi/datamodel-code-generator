@@ -38,6 +38,7 @@ from datamodel_code_generator.enums import (
     AsyncAPIVersion,
     ClassNameAffixScope,
     CollapseRootModelsNameStrategy,
+    CustomFileHeaderMode,
     DataclassArguments,
     DataModelType,
     FieldTypeCollisionStrategy,
@@ -676,48 +677,101 @@ def _find_future_import_insertion_point(header: str) -> int:
     return pos
 
 
+def _format_file_header(
+    header_prefix: str,
+    header_suffix: str | None,
+    filename: str | None,
+) -> str:
+    """Format a per-file header, skipping all work for replace mode."""
+    if header_suffix is None:
+        return header_prefix
+    safe_filename = filename.replace("\n", " ").replace("\r", " ") if filename else ""
+    return f"{header_prefix}{safe_filename}{header_suffix}"
+
+
+def _build_file_header_parts(custom_file_header: str | None, config: GenerateConfig) -> tuple[str, str | None]:
+    """Build shared file-header parts, using a None suffix for replace mode."""
+    match config.custom_file_header_mode:
+        case CustomFileHeaderMode.Replace if custom_file_header:
+            return custom_file_header, None
+
+    generated_marker = "@generated" if config.enable_generated_header_marker else "generated"
+    header_prefix = f"""\
+# {generated_marker} by datamodel-codegen:
+#   filename:  """
+    header_suffix = ""
+    if not config.disable_timestamp:
+        timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+        header_suffix += f"\n#   timestamp: {timestamp}"
+    if config.enable_version_header:
+        header_suffix += f"\n#   version:   {get_version()}"
+    if config.enable_command_header and config.command_line:
+        safe_command_line = config.command_line.replace("\n", " ").replace("\r", " ")
+        header_suffix += f"\n#   command:   {safe_command_line}"
+    if custom_file_header:
+        custom_header = custom_file_header.rstrip("\r\n")
+        header_prefix = f"{custom_header}\n#\n{header_prefix}"
+    return header_prefix, header_suffix
+
+
+def _extract_leading_future_imports(body: str, future_imports: str) -> tuple[str, str]:
+    """Extract generated future imports after leading comments or a module docstring."""
+    future_start = 0
+    while (
+        not body.startswith("from __future__ import ", future_start)
+        and (line_end := body.find("\n", future_start)) >= 0
+    ):
+        if (leading_line := body[future_start:line_end].lstrip()) and not leading_line.startswith("#"):
+            if not leading_line.lstrip("rubfRUBF").startswith(("'", '"')):
+                break
+            future_start = _find_future_import_insertion_point(body)
+            break
+        future_start = line_end + 1
+    if not body.startswith("from __future__ import ", future_start):
+        return body, future_imports
+
+    future_end = future_start
+    while body.startswith("from __future__ import ", future_end):
+        future_end = body.find("\n", future_end) + 1 or len(body)
+    if not future_imports:
+        future_imports = body[future_start:future_end].rstrip()
+    body_without_future = (f"{body[:future_start]}{body[future_end:]}" if future_start else body[future_end:]).lstrip(
+        "\n"
+    )
+    return body_without_future, future_imports
+
+
 def _build_module_content(
     body: str,
     header: str,
-    custom_file_header: str | None,
     *,
+    has_custom_file_header: bool,
     future_imports: str = "",
 ) -> str:
     """Build module content by combining header and body.
 
     Handles future imports extraction and placement when custom_file_header is provided.
     """
-    lines: list[str] = []
+    if not body:
+        return header
+    if not has_custom_file_header:
+        return f"{header}\n\n{body.rstrip()}"
 
-    if custom_file_header and body:
-        # Extract future imports from body for correct placement after custom_file_header
-        body_without_future = body
-        extracted_future = future_imports
-        body_lines = body.split("\n")
-        future_indices = [i for i, line in enumerate(body_lines) if line.strip().startswith("from __future__")]
-        if future_indices:
-            if not extracted_future:
-                extracted_future = "\n".join(body_lines[i] for i in future_indices)
-            remaining_lines = [line for i, line in enumerate(body_lines) if i not in future_indices]
-            body_without_future = "\n".join(remaining_lines).lstrip("\n")
+    # Custom formatters may add comments or a module docstring before the import.
+    body_without_future, extracted_future = _extract_leading_future_imports(body, future_imports)
 
-        if extracted_future:
-            insertion_point = _find_future_import_insertion_point(custom_file_header)
-            header_before = custom_file_header[:insertion_point].rstrip()
-            header_after = custom_file_header[insertion_point:].strip()
-            if header_after:
-                content = header_before + "\n" + extracted_future + "\n\n" + header_after
-            else:
-                content = header_before + "\n\n" + extracted_future
-            lines.extend((content, "", body_without_future.rstrip()))
-        else:
-            lines.extend((custom_file_header, "", body.rstrip()))
+    if not extracted_future:
+        return f"{header}\n\n{body.rstrip()}"
+
+    insertion_point = _find_future_import_insertion_point(header)
+    header_before = header[:insertion_point].rstrip()
+    header_after = header[insertion_point:].strip()
+    if header_after:
+        content = header_before + "\n" + extracted_future + "\n\n" + header_after
     else:
-        lines.append(header)
-        if body:
-            lines.extend(("", body.rstrip()))
+        content = header_before + "\n\n" + extracted_future
 
-    return "\n".join(lines)
+    return f"{content}\n\n{body_without_future.rstrip()}"
 
 
 @_lru_cache(maxsize=1)
@@ -1209,37 +1263,34 @@ def _emit_results(  # noqa: PLR0912, PLR0913, PLR0915
     if not results:
         msg = "Models not found in the input data"
         raise Error(msg)
-    timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
-    if custom_file_header is None and config.custom_file_header_path:
-        custom_file_header = config.custom_file_header_path.read_text(encoding=config.encoding)
+    if custom_file_header is None and (custom_file_header_path := config.custom_file_header_path):
+        custom_file_header = custom_file_header_path.read_text(encoding=config.encoding)
 
-    generated_marker = "@generated" if config.enable_generated_header_marker else "generated"
-    header = f"""\
-# {generated_marker} by datamodel-codegen:
-#   filename:  {{}}"""
-    if not config.disable_timestamp:
-        header += f"\n#   timestamp: {timestamp}"
-    if config.enable_version_header:
-        header += f"\n#   version:   {get_version()}"
-    if config.enable_command_header and config.command_line:
-        safe_command_line = config.command_line.replace("\n", " ").replace("\r", " ")
-        header += f"\n#   command:   {safe_command_line}"
+    has_custom_file_header = bool(custom_file_header)
+    header_prefix, header_suffix = _build_file_header_parts(custom_file_header, config)
 
     # When output is None, return generated code as string(s) instead of writing to files
     if config.output is None:
         if isinstance(results, str):
             # Single-file output: return str
-            safe_filename = input_filename.replace("\n", " ").replace("\r", " ") if input_filename else ""
-            effective_header = custom_file_header or header.format(safe_filename)
-            return _build_module_content(results, effective_header, custom_file_header)
+            effective_header = _format_file_header(header_prefix, header_suffix, input_filename)
+            return _build_module_content(
+                results,
+                effective_header,
+                has_custom_file_header=has_custom_file_header,
+            )
         # Multiple modules: return GeneratedModules dict
         generated: GeneratedModules = {}
         for name, result in sorted(results.items()):
             source_filename = str(result.source.as_posix() if result.source else input_filename)
-            safe_filename = source_filename.replace("\n", " ").replace("\r", " ") if source_filename else ""
-            effective_header = custom_file_header or header.format(safe_filename)
-            generated[name] = _build_module_content(result.body, effective_header, custom_file_header)
+            effective_header = _format_file_header(header_prefix, header_suffix, source_filename)
+            generated[name] = _build_module_content(
+                result.body,
+                effective_header,
+                has_custom_file_header=has_custom_file_header,
+                future_imports=result.future_imports,
+            )
         return generated
 
     # When output is a Path, write to file system
@@ -1266,12 +1317,16 @@ def _emit_results(  # noqa: PLR0912, PLR0913, PLR0915
         if not path.parent.exists():
             path.parent.mkdir(parents=True)
 
-        safe_filename = filename.replace("\n", " ").replace("\r", " ") if filename else ""
-        effective_header = custom_file_header or header.format(safe_filename)
+        effective_header = _format_file_header(header_prefix, header_suffix, filename)
         with path.open("wt", encoding=config.encoding) as file:
-            if custom_file_header and body:
+            if has_custom_file_header and body:
                 file.write(
-                    _build_module_content(body, effective_header, custom_file_header, future_imports=future_imports)
+                    _build_module_content(
+                        body,
+                        effective_header,
+                        has_custom_file_header=True,
+                        future_imports=future_imports,
+                    )
                     + "\n"
                 )
             else:
@@ -1358,10 +1413,11 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         raise ValueError(msg)
 
     if config is None:
-        from datamodel_code_generator.config import GenerateConfig, _rebuild_generate_config  # noqa: PLC0415
+        from datamodel_code_generator.config import GenerateConfig as _GenerateConfig  # noqa: PLC0415
+        from datamodel_code_generator.config import _rebuild_generate_config  # noqa: PLC0415
 
         _rebuild_generate_config()
-        config = GenerateConfig.model_validate(options)
+        config = _GenerateConfig.model_validate(options)
     config = _apply_generate_config_preset(config)
     config = _apply_missing_sentinel_config(config)
 
@@ -1508,41 +1564,129 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         _resolve_schema_versions(input_file_type, config.schema_version)
     )
 
-    with _warn_on_input_string_path_failure(input_):
-        parser = _build_parser(
-            input_file_type,
-            source,
-            config,
-            additional_options,
-            data_model_types,
-            jsonschema_version=jsonschema_version,
-            openapi_version=openapi_version,
-            asyncapi_version=asyncapi_version,
-            xmlschema_version=xmlschema_version,
-            protobuf_version=protobuf_version,
-        )
+    def build_parser(
+        active_config: GenerateConfig,
+        parser_source: Any,
+        parser_options: ParserConfigDict,
+        active_data_model_types: Any,
+        reference_cache: Any | None = None,
+    ) -> Any:
+        """Build one fresh parser using the caller's reference-resolution base."""
+        with _warn_on_input_string_path_failure(input_):
+            active_parser = _build_parser(
+                input_file_type,
+                parser_source,
+                active_config,
+                parser_options,
+                active_data_model_types,
+                jsonschema_version=jsonschema_version,
+                openapi_version=openapi_version,
+                asyncapi_version=asyncapi_version,
+                xmlschema_version=xmlschema_version,
+                protobuf_version=protobuf_version,
+            )
+        if reference_cache is not None and hasattr(active_parser, "remote_object_cache"):
+            active_parser.remote_object_cache = reference_cache
+        return active_parser
 
-    with chdir(config.output):
+    def parse_with_disposal(active_parser: Any, active_config: GenerateConfig) -> Any:
+        """Parse with one parser and dispose it if parsing fails."""
         try:
             with _warn_on_input_string_path_failure(input_):
-                results = parser.parse(
-                    settings_path=config.settings_path,
-                    disable_future_imports=config.disable_future_imports,
-                    all_exports_scope=config.all_exports_scope,
-                    all_exports_collision_strategy=config.all_exports_collision_strategy,
-                    module_split_mode=config.module_split_mode,
-                    collect_model_metadata=config.emit_model_metadata is not None,
+                active_results = active_parser.parse(
+                    settings_path=active_config.settings_path,
+                    disable_future_imports=active_config.disable_future_imports,
+                    all_exports_scope=active_config.all_exports_scope,
+                    all_exports_collision_strategy=active_config.all_exports_collision_strategy,
+                    module_split_mode=active_config.module_split_mode,
+                    collect_model_metadata=active_config.emit_model_metadata is not None,
                 )
-        except Exception:
-            with contextlib.suppress(BaseException):
-                parser._dispose()  # noqa: SLF001
-            raise
         except BaseException:
             with contextlib.suppress(BaseException):
-                parser._dispose()  # noqa: SLF001
+                active_parser._dispose()  # noqa: SLF001
             raise
-    model_metadata = parser.model_metadata
-    parser._dispose()  # noqa: SLF001
+        return active_results
+
+    parser = build_parser(config, source, additional_options, data_model_types)
+    with chdir(config.output):
+        results = parse_with_disposal(parser, config)
+        model_metadata = parser.model_metadata
+        repair_modules = parser.invalid_dotted_stdout_repair_modules
+        repair_state = (
+            (
+                parser.generated_model_inventory,
+                parser.source_data_fingerprint,
+                parser.remote_text_cache,
+                getattr(parser, "remote_object_cache", None),
+                parser.base_path,
+            )
+            if repair_modules
+            else None
+        )
+        parser._dispose()  # noqa: SLF001
+        del parser
+
+        if repair_state is not None:
+            (
+                legacy_inventory,
+                legacy_source_fingerprint,
+                retry_remote_text_cache,
+                retry_reference_cache,
+                retry_base_path,
+            ) = repair_state
+            retry_config = config.model_copy(
+                update={
+                    "repair_invalid_dotted_stdout": False,
+                    "forced_invalid_dotted_stdout_repair_modules": repair_modules,
+                }
+            )
+            retry_parse: tuple[Any, Any] | None = None
+            with contextlib.suppress(Exception):
+                retry_data_model_types, retry_source, retry_defer_formatting, retry_options = (
+                    _prepare_parser_common_options(
+                        input_,
+                        input_text,
+                        input_file_type,
+                        source_override,
+                        retry_config,
+                        extra_template_data,
+                        dataclass_arguments,
+                        skip_root_model=skip_root_model,
+                        remote_text_cache=retry_remote_text_cache,
+                    )
+                )
+                retry_options["base_path"] = retry_base_path
+                retry_parser = build_parser(
+                    retry_config,
+                    retry_source,
+                    retry_options,
+                    retry_data_model_types,
+                    retry_reference_cache,
+                )
+                retry_results = parse_with_disposal(retry_parser, retry_config)
+                retry_parse = retry_parser, retry_results
+
+            # This is a compatibility repair: retain the completed legacy result if it cannot be proven safe.
+            if retry_parse is not None:
+                retry_parser, retry_results = retry_parse
+                try:
+                    if (
+                        isinstance(retry_results, str)
+                        and retry_results
+                        and retry_parser.stdout_result_usable
+                        and retry_parser.generated_model_inventory == legacy_inventory
+                        and retry_parser.source_data_fingerprint == legacy_source_fingerprint
+                    ):
+                        results = retry_results
+                        model_metadata = retry_parser.model_metadata
+                        data_model_types = retry_data_model_types
+                        defer_formatting = retry_defer_formatting
+                finally:
+                    retry_parser._dispose()  # noqa: SLF001
+                del retry_parser
+
+            del retry_reference_cache, retry_remote_text_cache
+
     generated = _emit_results(
         results,
         input_,
@@ -1690,6 +1834,7 @@ __all__ = [
     "AsyncAPIVersion",
     "ClassNameAffixScope",
     "CollapseRootModelsNameStrategy",
+    "CustomFileHeaderMode",
     "DateClassType",
     "DatetimeClassType",
     "DefaultPutDict",

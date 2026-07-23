@@ -676,7 +676,7 @@ class DataType(_BaseModel):
         if self.dict_key:
             self.dict_key.walk(visitor, visited)
 
-    def find_source(self, source_type: type[SourceT]) -> SourceT | None:  # ty: ignore
+    def find_source(self, source_type: type[SourceT]) -> SourceT | None:  # ty: ignore[invalid-type-form]
         """Find the first reference source matching the given type from all nested data types."""
         for data_type in self.all_data_types:
             if not data_type.reference:  # pragma: no cover
@@ -1168,6 +1168,8 @@ class DataTypeManager(ABC):
         r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$"
     )
     CONSTRAINED_TYPE_CONSUMED_KEYS: ClassVar[dict[str, tuple[str, ...]]] = {}
+    SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = False
+    ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = None
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,

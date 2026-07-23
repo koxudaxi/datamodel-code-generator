@@ -71,9 +71,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         'xmlschema', 'protobuf', or 'avro' for schema
                         definitions. Use 'json', 'yaml', or 'csv' for raw
                         sample data to infer a schema automatically.
-  --input-model MODULE:NAME
-                        Python import path to a Pydantic v2 model or schema
-                        dict (e.g., 'mypackage.module:ClassName' or
+  --input-model MODULE_OR_PATH:NAME
+                        Python import path or file path to a Pydantic v2 model
+                        or schema dict (e.g., 'mypackage.module:ClassName',
+                        './models.py:ClassName', or
                         'mypackage.schemas:SCHEMA_DICT'). Can be specified
                         multiple times for related models with inheritance.
                         For dict input, --input-file-type is required. Cannot
@@ -431,6 +432,12 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         (default: "shared"). Use this option if your schema
                         has a file named "shared".
   --skip-root-model     Skip generating the model for the root schema element
+  --strict-dotted-module-names, --no-strict-dotted-module-names
+                        Only infer dotted schema names as module paths when
+                        every segment is a canonical Python identifier. This
+                        applies only to automatic inference and does not
+                        override --treat-dot-as-module or --no-treat-dot-as-
+                        module.
   --target-pydantic-version {2,2.11,2.12}
                         Target Pydantic version for generated code. '2':
                         Pydantic 2.0+ compatible (default, uses
@@ -480,6 +487,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         'id': 'id_'} generates `id_: ... = Field(alias='id')`.
   --custom-file-header CUSTOM_FILE_HEADER
                         Custom file header
+  --custom-file-header-mode {replace,prepend}
+                        How to combine a custom file header with the generated
+                        header (default: replace)
   --custom-file-header-path CUSTOM_FILE_HEADER_PATH
                         Custom file header file path
   --custom-formatters-kwargs CUSTOM_FORMATTERS_KWARGS
@@ -580,6 +590,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --debug               show debug message (require "debug". `$ pip install
                         'datamodel-code-generator[debug]'`)
   --disable-warnings    disable warnings
+  --fail-on-multi-module-stdout
+                        Return an error instead of concatenating multiple
+                        generated modules in text stdout. This does not affect
+                        single-module, JSON, or file output.
   --generate-cli-command
                         Generate CLI command from pyproject.toml configuration
                         and exit

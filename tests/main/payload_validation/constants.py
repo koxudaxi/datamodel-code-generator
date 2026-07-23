@@ -85,6 +85,9 @@ EXCLUDED_FILES: dict[str, str] = {
 }
 EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/all_of_any_of_base_class_ref.json": "hypothesis-jsonschema cannot satisfy the allOf/anyOf constraints",
+    "jsonschema/additional_properties_schema_with_allof_properties.json": (
+        "hypothesis-jsonschema cannot satisfy the allOf object constraints; typed extras are covered by e2e tests"
+    ),
     "jsonschema/decimal_fractional_constraints.json": (
         "format decimal strings from hypothesis-jsonschema are arbitrary text that Decimal cannot parse"
     ),
@@ -264,6 +267,9 @@ PYDANTIC_V2_LEGACY_RUNTIME_ROUND_TRIP_EXCLUDED_CASES: dict[PayloadBackend, dict[
             "Pydantic before 2.5.0 emits JSON-mode serializer warnings for enum dictionary keys"
         ),
         "jsonschema/property_names_ref_enum.json": (
+            "Pydantic before 2.5.0 emits JSON-mode serializer warnings for enum dictionary keys"
+        ),
+        "jsonschema/type_overrides_dict_key.json": (
             "Pydantic before 2.5.0 emits JSON-mode serializer warnings for enum dictionary keys"
         ),
     },
