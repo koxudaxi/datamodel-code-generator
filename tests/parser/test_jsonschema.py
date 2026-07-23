@@ -495,7 +495,7 @@ def test_parse_deferred_json_pointer_rejects_invalid_array_index(ref: str, match
 
 
 @pytest.mark.skipif(
-    not hasattr(sys, "set_int_max_str_digits"),
+    not hasattr(sys, "set_int_max_str_digits") or sys.get_int_max_str_digits() == 0,
     reason="int string-conversion length limit requires Python 3.11+",
 )
 def test_parse_deferred_json_pointer_rejects_overlong_array_index() -> None:
