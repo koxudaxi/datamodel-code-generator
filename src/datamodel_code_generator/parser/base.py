@@ -103,7 +103,6 @@ _MSGSPEC_MODULE: Final = "datamodel_code_generator.model.msgspec"
 _PYDANTIC_V2_BASE_MODEL_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.base_model"
 _PYDANTIC_V2_DATACLASS_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.dataclass"
 _PYDANTIC_V2_MODULE: Final = "datamodel_code_generator.model.pydantic_v2"
-_PYDANTIC_V2_ROOT_MODEL_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.root_model"
 _MODEL_MODULE_PREFIX: Final = "datamodel_code_generator.model."
 _CLASS_NAME_SEPARATOR_PATTERN: Final = re.compile(r"[^A-Za-z0-9]+")
 _TOP_LEVEL_FUTURE_IMPORT_PATTERN: Final = re.compile(r"(?m)^from __future__ import ")
@@ -139,10 +138,14 @@ def _is_pydantic_v2_dataclass(value: object | type[object]) -> bool:
     return _type_mro_contains_type(_model_type(value), module=_PYDANTIC_V2_DATACLASS_MODULE, name="DataClass")
 
 
+def _get_field_dependency_ordering_model_type(model_type: type[DataModel]) -> type[DataModel] | None:
+    """Return the configured model type when its fields require dependency ordering."""
+    return model_type if model_type.REQUIRES_FIELD_DEPENDENCY_ORDERING else None
+
+
 def _get_pydantic_v2_root_model_type(model_type: type[DataModel]) -> type[DataModel] | None:
-    if _type_mro_contains_type(model_type, module=_PYDANTIC_V2_ROOT_MODEL_MODULE, name="RootModel"):
-        return model_type
-    return None
+    """Return the field-ordering model type through the legacy compatibility helper."""
+    return _get_field_dependency_ordering_model_type(model_type)
 
 
 def _is_pydantic_v2_root_model(model: DataModel, root_model_type: type[DataModel] | None) -> bool:
@@ -1548,7 +1551,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         )
         self.data_model_type: type[DataModel] = config.data_model_type
         self.data_model_root_type: type[DataModel] = config.data_model_root_type
-        self.pydantic_v2_root_model_type: type[DataModel] | None = _get_pydantic_v2_root_model_type(
+        self.pydantic_v2_root_model_type: type[DataModel] | None = _get_field_dependency_ordering_model_type(
             self.data_model_root_type
         )
         self.data_model_field_type: type[DataModelFieldBase] = config.data_model_field_type

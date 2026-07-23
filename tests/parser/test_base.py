@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
 from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
+from datamodel_code_generator.model.pydantic_v2.root_model_type_alias import RootModelTypeAlias
 from datamodel_code_generator.model.type_alias import TypeAlias, TypeAliasTypeBackport, TypeStatement
 from datamodel_code_generator.parser.base import (
     Child,
@@ -29,6 +30,7 @@ from datamodel_code_generator.parser.base import (
     T,
     _contains_model_reference,
     _find_field,
+    _get_pydantic_v2_root_model_type,
     _needs_validate_default,
     _unwrap_type_alias,
     add_model_path_to_list,
@@ -50,6 +52,12 @@ class A(DataModel):
 
 class B(DataModel):
     """Test data model class B."""
+
+
+class FieldDependencyModel(DataModel):
+    """Test model whose field references require definition ordering."""
+
+    REQUIRES_FIELD_DEPENDENCY_ORDERING = True
 
 
 class C(Parser):
@@ -82,6 +90,32 @@ def test_parser() -> None:
     assert c.base_class == "Base"
     # Test schema_features property of test stub
     assert c.schema_features.prefix_items is True
+
+
+@pytest.mark.parametrize(
+    ("model_type", "expected"),
+    [
+        pytest.param(B, None, id="default-model"),
+        pytest.param(RootModel, RootModel, id="root-model"),
+        pytest.param(RootModelTypeAlias, RootModelTypeAlias, id="root-model-type-alias"),
+        pytest.param(FieldDependencyModel, FieldDependencyModel, id="custom-capability"),
+    ],
+)
+def test_field_dependency_ordering_capability(
+    model_type: type[DataModel],
+    expected: type[DataModel] | None,
+) -> None:
+    """Resolve field dependency ordering without importing a concrete backend in the parser."""
+    assert _get_pydantic_v2_root_model_type(model_type) is expected
+
+
+def test_field_dependency_ordering_capability_is_inherited() -> None:
+    """External RootModel subclasses preserve the existing MRO-based behavior."""
+
+    class ExternalRootModel(RootModel):
+        pass
+
+    assert _get_pydantic_v2_root_model_type(ExternalRootModel) is ExternalRootModel
 
 
 @pytest.mark.parametrize(
