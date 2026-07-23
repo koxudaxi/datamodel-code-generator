@@ -11962,6 +11962,37 @@ def test_main_defer_forward_nested_model_default_factories(
         importable_module_name=f"generated_{Path(expected_file).stem}",
         importable_module_attribute="Model",
     )
+    match output_model:
+        case "msgspec.Struct":
+            from msgspec import UNSET
+
+            terminal_default = UNSET
+        case _:
+            terminal_default = None
+
+    recursive_fields = {
+        "Node": "child",
+        "CycleA": "b",
+        "CycleB": "a",
+    }
+    for model_name, field_name in recursive_fields.items():
+        with _generated_model(
+            output_file,
+            f"constructed_{Path(expected_file).stem}_{model_name}",
+            model_name,
+        ) as model:
+            if getattr(model(), field_name) is not terminal_default:  # pragma: no cover
+                pytest.fail(f"{model_name}.{field_name} did not retain its terminating default")
+
+    with _generated_model(
+        output_file,
+        f"constructed_{Path(expected_file).stem}_Model",
+        "Model",
+    ) as model:
+        instance = model()
+        actual_nested_types = tuple(type(getattr(instance, name)).__name__ for name in ("existing", "cycle", "node"))
+        if actual_nested_types != ("Existing", "CycleA", "Node"):  # pragma: no cover
+            pytest.fail(f"Model factories did not construct the expected nested types: {actual_nested_types!r}")
 
 
 @pytest.mark.parametrize(

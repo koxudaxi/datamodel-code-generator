@@ -11,7 +11,7 @@ class Existing(BaseModel):
 
 
 class Node(BaseModel):
-    child: Node | None = Field(default_factory=lambda: Node())
+    child: Node | None = None
 
 
 class Model(BaseModel):
@@ -21,11 +21,11 @@ class Model(BaseModel):
 
 
 class CycleA(BaseModel):
-    b: CycleB | None = Field(default_factory=lambda: CycleB())
+    b: CycleB | None = None
 
 
 class CycleB(BaseModel):
-    a: CycleA | None = Field(default_factory=CycleA)
+    a: CycleA | None = None
 
 
 Node.model_rebuild()

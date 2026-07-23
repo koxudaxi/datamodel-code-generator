@@ -11,7 +11,7 @@ class Existing(Struct):
 
 
 class Node(Struct):
-    child: Node | UnsetType = field(default_factory=lambda: Node())
+    child: Node | UnsetType = UNSET
 
 
 class Model(Struct):
@@ -21,8 +21,8 @@ class Model(Struct):
 
 
 class CycleA(Struct):
-    b: CycleB | UnsetType = field(default_factory=lambda: CycleB())
+    b: CycleB | UnsetType = UNSET
 
 
 class CycleB(Struct):
-    a: CycleA | UnsetType = field(default_factory=CycleA)
+    a: CycleA | UnsetType = UNSET

@@ -13,7 +13,7 @@ class Existing:
 
 @dataclass
 class Node:
-    child: Node | None = field(default_factory=lambda: Node())
+    child: Node | None = None
 
 
 @dataclass
@@ -25,9 +25,9 @@ class Model:
 
 @dataclass
 class CycleA:
-    b: CycleB | None = field(default_factory=lambda: CycleB())
+    b: CycleB | None = None
 
 
 @dataclass
 class CycleB:
-    a: CycleA | None = field(default_factory=CycleA)
+    a: CycleA | None = None

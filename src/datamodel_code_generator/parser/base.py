@@ -4404,6 +4404,31 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 ),
             )
 
+    def _set_nested_model_default_factory_metadata(
+        self,
+        contexts: list[ModuleContext],
+        require_update_action_models: list[str],
+    ) -> None:
+        """Record declaration order and recursive model components for default factories."""
+        recursive_paths_by_model: dict[str, frozenset[str]] = {}
+        if require_update_action_models:
+            models = [model for ctx in contexts for model in ctx.models]
+            live_paths = {model.path for model in models}
+            graph = {
+                (model.path,): {
+                    (reference_path,)
+                    for reference_path in self.generation_store.index.reference_classes_for_model(model)
+                    if reference_path in live_paths
+                }
+                for model in models
+            }
+            for component in find_circular_sccs(graph):
+                recursive_paths = frozenset(node[0] for node in component)
+                recursive_paths_by_model.update((path, recursive_paths) for path in recursive_paths)
+
+        for module_index, ctx in enumerate(contexts):
+            _set_nested_model_default_factory_order(ctx.models, module_index, recursive_paths_by_model)
+
     def _generate_module_output(  # noqa: PLR0913, PLR0917
         self,
         ctx: ModuleContext,
@@ -4672,8 +4697,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         self._finalize_modules(contexts, unused_models, model_to_module_models, module_to_import)
         if self.use_default_factory_for_optional_nested_models:
-            for module_index, ctx in enumerate(contexts):
-                _set_nested_model_default_factory_order(ctx.models, module_index)
+            self._set_nested_model_default_factory_metadata(contexts, require_update_action_models)
 
         root_init: ModulePath = ("__init__.py",)
         if root_init not in results:
