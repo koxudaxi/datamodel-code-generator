@@ -5,7 +5,7 @@
 <p>
   <a class="md-button md-button--primary" href="getting-started.md">Getting Started</a>
   <a class="md-button md-button--primary" href="playground.md">Open Playground</a>
-  <a class="md-button md-button--primary" href="https://koxudaxi.dev/?utm_source=dm_docs&utm_medium=top&utm_campaign=open_to_work">Maintainer available for work</a>
+  <a class="md-button md-button--primary" href="https://koxudaxi.dev/?utm_source=dm_docs&utm_medium=top&utm_campaign=open_to_work">Lead maintainer available for work</a>
 </p>
 
 [![PyPI version](https://img.shields.io/pypi/v/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
@@ -231,3 +231,11 @@ These public examples are grouped by how each project uses datamodel-code-genera
 - [stanfordnlp/dspy](https://github.com/stanfordnlp/dspy) - *[Generate Pydantic models from JSON Schema for reliability tests](https://github.com/stanfordnlp/dspy/blob/main/tests/reliability/generate/utils.py)*
 
 [See all dependents →](https://github.com/koxudaxi/datamodel-code-generator/network/dependents)
+
+---
+
+## 👥 Maintainers
+
+- [Koudai Aono](https://koxudaxi.dev/?utm_source=dm_docs&utm_medium=maintainer_section&utm_campaign=open_to_work) ([@koxudaxi](https://github.com/koxudaxi)) - Lead maintainer
+- [Bernát Gábor](https://github.com/gaborbernat) ([@gaborbernat](https://github.com/gaborbernat)) - Maintainer
+- [Antonio Spadaro](https://github.com/ilovelinux) ([@ilovelinux](https://github.com/ilovelinux)) - Maintainer
