@@ -10558,6 +10558,39 @@ def test_main_jsonschema_reuse_scope_tree_typeddict(output_dir: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_directory"),
+    [
+        pytest.param(
+            "pydantic_v2.dataclass",
+            "reuse_scope_tree_pydantic_dataclass",
+            id="pydantic-dataclass",
+        ),
+        pytest.param("msgspec.Struct", "reuse_scope_tree_msgspec", id="msgspec"),
+    ],
+)
+def test_main_jsonschema_reuse_scope_tree_non_inheriting_outputs(
+    output_model_type: str,
+    expected_directory: str,
+    output_dir: Path,
+) -> None:
+    """Keep direct shared-model references for non-inheriting tree reuse outputs."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / expected_directory,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--reuse-model",
+            "--reuse-scope",
+            "tree",
+            "--output-model-type",
+            output_model_type,
+            "--disable-timestamp",
+        ],
+    )
+
+
 def test_main_jsonschema_empty_items_array(output_file: Path) -> None:
     """Test that arrays with empty items ({}) generate List[Any] instead of bare List."""
     run_main_and_assert(

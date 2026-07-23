@@ -102,6 +102,7 @@ class Struct(DataModel):
     BASE_CLASS_NAME: ClassVar[str] = "Struct"
     BASE_CLASS_ALIAS: ClassVar[str] = "_Struct"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
+    FIELD_ASSIGNMENT_CHECKER = staticmethod(has_field_assignment)
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True
