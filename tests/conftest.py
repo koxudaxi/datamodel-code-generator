@@ -1143,12 +1143,25 @@ def mock_httpx_get(mocker: Any) -> HttpxGetMockFactory:
                 timeout=timeout,
             )
 
+        def _response_for_session(
+            _session: Any,
+            httpx_module: Any,
+            url: str,
+            **kwargs: Any,
+        ) -> Any:
+            return _response_for_validated_url(httpx_module, url, **kwargs)
+
         mocker.patch("socket.getaddrinfo", autospec=True, side_effect=_getaddrinfo_for_public_host)
         httpx_get_mock = cast("HttpxGetMock", mocker.patch("httpx.get", autospec=True, side_effect=_response_for_url))
         mocker.patch(
             "datamodel_code_generator.http._get_http_response",
             autospec=True,
             side_effect=_response_for_validated_url,
+        )
+        mocker.patch(
+            "datamodel_code_generator.http._HTTPFetchSession.get_response",
+            autospec=True,
+            side_effect=_response_for_session,
         )
         return httpx_get_mock
 

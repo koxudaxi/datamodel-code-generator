@@ -6,7 +6,7 @@ import json
 import socket
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from ipaddress import ip_address
+from ipaddress import IPv4Address, IPv6Address, ip_address
 from typing import TYPE_CHECKING, ClassVar
 from unittest.mock import Mock
 
@@ -22,11 +22,13 @@ from datamodel_code_generator.http import (
     _get_httpx,
     _get_redirect_headers,
     _get_url_origin,
+    _HTTPFetchSession,
     _is_safe_ip,
     _normalize_dns_host,
     _PinnedNetworkBackend,
     get_body,
 )
+from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -41,9 +43,19 @@ def block_dns_by_default(mocker: MockerFixture) -> None:
 
 
 class _SchemaHandler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+    client_connections: ClassVar[set[tuple[str, int]]] = set()
+    connections_closed: ClassVar[threading.Event] = threading.Event()
+    cookie_redirect_target: ClassVar[str | None] = None
+    received_cookies: ClassVar[list[str | None]] = []
     routes: ClassVar[dict[str, tuple[int, dict[str, str], bytes]]] = {
         "/schema.json": (200, {"content-type": "application/json"}, b'{"type":"object"}'),
     }
+
+    def setup(self) -> None:
+        """Record each accepted TCP connection."""
+        super().setup()
+        self.client_connections.add(self.client_address)
 
     def do_GET(self) -> None:
         if self.path.startswith("/echo"):
@@ -51,6 +63,20 @@ class _SchemaHandler(BaseHTTPRequestHandler):
                 "path": self.path,
                 "test_header": self.headers.get("X-Test-Header"),
             }).encode()
+            status, headers = 200, {"content-type": "application/json"}
+        elif self.path == "/cookie-redirect" and self.cookie_redirect_target is not None:
+            status, headers, body = (
+                302,
+                {
+                    "location": self.cookie_redirect_target,
+                    "set-cookie": "session=secret; Path=/",
+                },
+                b"",
+            )
+        elif self.path == "/cookie-target":
+            cookie = self.headers.get("Cookie")
+            self.received_cookies.append(cookie)
+            body = json.dumps({"cookie": cookie}).encode()
             status, headers = 200, {"content-type": "application/json"}
         else:
             status, headers, body = self.routes.get(
@@ -65,6 +91,12 @@ class _SchemaHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def finish(self) -> None:
+        try:
+            super().finish()
+        finally:
+            self.connections_closed.set()
+
     def log_message(self, _format: str, *_args: object) -> None:
         return
 
@@ -72,6 +104,8 @@ class _SchemaHandler(BaseHTTPRequestHandler):
 @pytest.fixture
 def local_http_server() -> Iterator[str]:
     """Run a local HTTP server for transport-level tests."""
+    _SchemaHandler.client_connections.clear()
+    _SchemaHandler.connections_closed.clear()
     server = ThreadingHTTPServer(("127.0.0.1", 0), _SchemaHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -81,6 +115,30 @@ def local_http_server() -> Iterator[str]:
         server.shutdown()
         server.server_close()
         thread.join(timeout=2.0)
+
+
+@pytest.fixture
+def cross_port_cookie_redirect_server() -> Iterator[str]:
+    """Run a real redirect across two local ports."""
+    _SchemaHandler.client_connections.clear()
+    _SchemaHandler.connections_closed.clear()
+    _SchemaHandler.received_cookies.clear()
+    target_server = ThreadingHTTPServer(("127.0.0.1", 0), _SchemaHandler)
+    source_server = ThreadingHTTPServer(("127.0.0.1", 0), _SchemaHandler)
+    _SchemaHandler.cookie_redirect_target = f"http://localhost:{target_server.server_port}/cookie-target"
+    servers = (target_server, source_server)
+    threads = tuple(threading.Thread(target=server.serve_forever, daemon=True) for server in servers)
+    for thread in threads:
+        thread.start()
+    try:
+        yield f"http://localhost:{source_server.server_port}/cookie-redirect"
+    finally:
+        _SchemaHandler.cookie_redirect_target = None
+        for server in servers:
+            server.shutdown()
+            server.server_close()
+        for thread in threads:
+            thread.join(timeout=2.0)
 
 
 def test_get_body_raises_on_http_error(mocker: MockerFixture) -> None:
@@ -426,6 +484,269 @@ def test_get_http_response_uses_pinned_backend_with_real_local_http(
 
     assert schema_response.status_code == 200
     assert schema_response.text == '{"type":"object"}'
+
+
+def test_http_fetch_session_reuses_successful_dns_result(mocker: MockerFixture) -> None:
+    """Reuse successful DNS validation only within one fetch session."""
+    mocker.stopall()
+
+    with _HTTPFetchSession() as session:
+        first_result = session.get_ips_from_host("localhost")
+        second_result = session.get_ips_from_host("localhost")
+
+    assert first_result
+    assert second_result is first_result
+
+
+def test_http_fetch_session_retries_failed_dns_result(mocker: MockerFixture) -> None:
+    """Do not retain failed DNS lookups that may recover during a parser run."""
+    public_ip = ip_address("93.184.216.34")
+    resolver = mocker.patch(
+        "datamodel_code_generator.http._get_ips_from_host",
+        side_effect=[(), (public_ip,)],
+    )
+
+    with _HTTPFetchSession() as session:
+        assert session.get_ips_from_host("schema.example") == ()
+        assert session.get_ips_from_host("schema.example") == (public_ip,)
+
+    assert resolver.call_count == 2
+
+
+def test_http_fetch_session_bounds_successful_dns_cache_with_lru_eviction(mocker: MockerFixture) -> None:
+    """Retain only the most recently used successful DNS results."""
+    public_ip = ip_address("93.184.216.34")
+    mocker.patch("datamodel_code_generator.http._HTTP_FETCH_DNS_CACHE_MAX_SIZE", 2)
+    resolver = mocker.patch("datamodel_code_generator.http._get_ips_from_host", return_value=(public_ip,))
+
+    with _HTTPFetchSession() as session:
+        assert session.get_ips_from_host("one.example") == (public_ip,)
+        assert session.get_ips_from_host("two.example") == (public_ip,)
+        assert session.get_ips_from_host("one.example") == (public_ip,)
+        assert session.get_ips_from_host("three.example") == (public_ip,)
+        assert session.get_ips_from_host("two.example") == (public_ip,)
+
+    assert [call.args[0] for call in resolver.call_args_list] == [
+        "one.example",
+        "two.example",
+        "three.example",
+        "two.example",
+    ]
+
+
+def test_http_fetch_session_closes_evicted_and_remaining_clients_despite_errors(
+    mocker: MockerFixture,
+) -> None:
+    """Bound pooled clients and isolate cleanup failures."""
+    mocker.patch("datamodel_code_generator.http._HTTP_FETCH_CLIENT_CACHE_MAX_SIZE", 2)
+    clients = [Mock() for _ in range(3)]
+    clients[1].close.side_effect = RuntimeError("eviction close failed")
+    clients[2].cookies.clear.side_effect = RuntimeError("cookie cleanup failed")
+    httpx_module = Mock()
+    httpx_module.Client.side_effect = clients
+    session = _HTTPFetchSession()
+
+    for timeout in (1.0, 2.0, 1.0, 3.0):
+        session.get_response(
+            httpx_module,
+            "https://schema.example/schema.json",
+            headers=None,
+            verify=True,
+            follow_redirects=False,
+            query_parameters=None,
+            timeout=timeout,
+            pinned_host=None,
+            pinned_ips=(),
+        )
+
+    assert len(session._clients) == 1
+    clients[0].close.assert_not_called()
+    clients[1].close.assert_called_once_with()
+    clients[2].close.assert_called_once_with()
+    clients[0].close.side_effect = RuntimeError("session close failed")
+
+    session.close()
+
+    for client in clients:
+        client.close.assert_called_once_with()
+    assert [client.cookies.clear.call_count for client in clients] == [2, 1, 1]
+    assert not session._clients
+
+
+def test_http_fetch_session_cookie_cleanup_does_not_remove_replacement_client() -> None:
+    """Keep a replacement pool entry when stale-client cookie cleanup fails."""
+    client = Mock()
+    replacement_client = Mock()
+    response = Mock()
+    httpx_module = Mock()
+    httpx_module.Client.return_value = client
+    session = _HTTPFetchSession()
+
+    def replace_cached_client(*_args: object, **_kwargs: object) -> Mock:
+        key = next(iter(session._clients))
+        session._clients[key] = replacement_client
+        return response
+
+    client.get.side_effect = replace_cached_client
+    client.cookies.clear.side_effect = RuntimeError("cookie cleanup failed")
+
+    assert (
+        session.get_response(
+            httpx_module,
+            "https://schema.example/schema.json",
+            headers=None,
+            verify=True,
+            follow_redirects=False,
+            query_parameters=None,
+            timeout=1.0,
+            pinned_host=None,
+            pinned_ips=(),
+        )
+        is response
+    )
+    assert list(session._clients.values()) == [replacement_client]
+    client.close.assert_called_once_with()
+
+    session.close()
+
+    replacement_client.close.assert_called_once_with()
+
+
+@pytest.mark.parametrize(
+    ("pinned_host", "pinned_ips"),
+    [
+        ("localhost", (ip_address("127.0.0.1"),)),
+        (None, ()),
+    ],
+    ids=["pinned", "trusted-private"],
+)
+def test_http_fetch_session_reuses_real_connection(
+    mocker: MockerFixture,
+    local_http_server: str,
+    pinned_host: str | None,
+    pinned_ips: tuple[IPv4Address | IPv6Address, ...],
+) -> None:
+    """Reuse one HTTP connection for distinct URLs on the same host."""
+    mocker.stopall()
+
+    with _HTTPFetchSession() as session:
+        echo_response = session.get_response(
+            _get_httpx(),
+            f"{local_http_server}/echo",
+            headers=None,
+            verify=True,
+            follow_redirects=False,
+            query_parameters=None,
+            timeout=5.0,
+            pinned_host=pinned_host,
+            pinned_ips=pinned_ips,
+        )
+        schema_response = session.get_response(
+            _get_httpx(),
+            f"{local_http_server}/schema.json",
+            headers=None,
+            verify=True,
+            follow_redirects=False,
+            query_parameters=None,
+            timeout=5.0,
+            pinned_host=pinned_host,
+            pinned_ips=pinned_ips,
+        )
+
+    assert echo_response.status_code == 200
+    assert schema_response.text == '{"type":"object"}'
+    assert len(_SchemaHandler.client_connections) == 1
+
+
+def test_http_fetch_session_does_not_replay_response_cookie_across_ports(
+    mocker: MockerFixture,
+    cross_port_cookie_redirect_server: str,
+) -> None:
+    """Do not turn response cookies into implicit headers on another origin."""
+    mocker.stopall()
+
+    with _HTTPFetchSession() as session:
+        result = session.get_body(
+            cross_port_cookie_redirect_server,
+            timeout=5.0,
+            allow_private_network=True,
+        )
+
+    assert json.loads(result) == {"cookie": None}
+    assert _SchemaHandler.received_cookies == [None]
+
+
+def test_parser_parse_closes_real_http_session(
+    mocker: MockerFixture,
+    local_http_server: str,
+) -> None:
+    """Close network resources for direct Parser.parse() users."""
+    mocker.stopall()
+    source = json.dumps({
+        "title": "Root",
+        "type": "object",
+        "properties": {
+            "child": {"$ref": f"{local_http_server}/schema.json"},
+        },
+    })
+    parser = JsonSchemaParser(
+        source,
+        allow_remote_refs=True,
+        allow_private_network=True,
+    )
+
+    result = parser.parse(format_=False)
+
+    assert isinstance(result, str)
+    assert "class Root" in result
+    assert parser._http_fetch_session is None
+    assert _SchemaHandler.connections_closed.wait(timeout=2.0)
+
+
+def test_parser_http_cleanup_errors_do_not_mask_generation_or_skip_disposal() -> None:
+    """Ignore HTTP cleanup errors while still returning output and disposing the graph."""
+    parser = JsonSchemaParser(
+        json.dumps({
+            "title": "Model",
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+        }),
+    )
+    parse_session = Mock()
+    parse_session.close.side_effect = RuntimeError("parse cleanup failed")
+    parser._http_fetch_session = parse_session
+
+    result = parser.parse(format_=False)
+
+    assert isinstance(result, str)
+    assert "class Model" in result
+    parse_session.close.assert_called_once_with()
+    assert parser._http_fetch_session is None
+    assert parser.model_resolver.references
+
+    dispose_session = Mock()
+    dispose_session.close.side_effect = RuntimeError("dispose cleanup failed")
+    parser._http_fetch_session = dispose_session
+    parser._dispose()
+
+    dispose_session.close.assert_called_once_with()
+    assert parser._http_fetch_session is None
+    assert not parser.model_resolver.references
+
+
+def test_parser_http_cleanup_does_not_mask_parse_error(mocker: MockerFixture) -> None:
+    """Keep the original parsing error when HTTP cleanup also fails."""
+    parser = JsonSchemaParser("")
+    session = Mock()
+    session.close.side_effect = RuntimeError("cleanup failed")
+    parser._http_fetch_session = session
+    mocker.patch.object(parser, "parse_raw", side_effect=ValueError("parse failed"))
+
+    with pytest.raises(ValueError, match="parse failed"):
+        parser.parse(format_=False)
+
+    session.close.assert_called_once_with()
+    assert parser._http_fetch_session is None
 
 
 def test_create_ssl_context_verify_modes() -> None:

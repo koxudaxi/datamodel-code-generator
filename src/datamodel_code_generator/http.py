@@ -7,9 +7,11 @@ file:// URLs are handled without additional dependencies.
 
 from __future__ import annotations
 
+import contextlib
 import socket
 import ssl
-from collections.abc import Iterable, Sequence
+from collections import OrderedDict
+from collections.abc import Callable, Iterable, Sequence
 from ipaddress import IPv4Address, IPv6Address, IPv6Network, ip_address
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Protocol, cast, overload
@@ -40,7 +42,14 @@ class _HTTPResponse(Protocol):
     text: str
 
 
+class _HTTPCookies(Protocol):
+    def clear(self) -> None:
+        raise NotImplementedError  # pragma: no cover
+
+
 class _HTTPXClient(Protocol):
+    cookies: _HTTPCookies
+
     def __enter__(self) -> Self: ...
 
     def __exit__(
@@ -59,9 +68,19 @@ class _HTTPXClient(Protocol):
         params: Sequence[tuple[str, str]] | None,
     ) -> _HTTPResponse: ...
 
+    def close(self) -> None:
+        raise NotImplementedError  # pragma: no cover
+
 
 class _HTTPXClientFactory(Protocol):
-    def __call__(self, *, transport: httpx.BaseTransport, timeout: float) -> _HTTPXClient: ...
+    def __call__(
+        self,
+        *,
+        transport: httpx.BaseTransport | None = None,
+        timeout: float,
+        verify: bool = True,
+    ) -> _HTTPXClient:
+        raise NotImplementedError  # pragma: no cover
 
 
 class _HTTPXURLJoiner(Protocol):
@@ -126,6 +145,8 @@ def _get_httpx() -> _HTTPXModule:
 
 DEFAULT_HTTP_TIMEOUT = 30.0
 MAX_HTTP_REDIRECTS = 20
+_HTTP_FETCH_CLIENT_CACHE_MAX_SIZE = 32
+_HTTP_FETCH_DNS_CACHE_MAX_SIZE = 128
 _HTTP_REDIRECT_STATUS_CODES = frozenset({301, 302, 303, 307, 308})
 _SENSITIVE_REDIRECT_HEADERS = frozenset({"authorization", "cookie", "proxy-authorization"})
 _UNSAFE_HOST_NAMES = frozenset({"localhost"})
@@ -416,12 +437,13 @@ def _build_pinned_transport(
     )
 
     class _PinnedHTTPTransport(httpx_runtime.BaseTransport):
-        """Request-scoped transport bound to a pinned httpcore connection pool."""
+        """Transport bound to a pinned httpcore connection pool."""
 
         def __init__(self) -> None:
             """Create the pool with the pinned backend.
 
-            The transport is created per fetch, so validated addresses do not leak into unrelated requests.
+            Parser sessions cache this transport only for the matching validated host,
+            address set, TLS policy, and timeout.
             """
             self._pool = httpcore.ConnectionPool(
                 ssl_context=_create_ssl_context(verify=verify),
@@ -461,10 +483,131 @@ def _build_pinned_transport(
             )
 
         def close(self) -> None:
-            """Close the request-scoped connection pool and release sockets."""
+            """Close the pinned connection pool and release sockets."""
             self._pool.close()
 
     return _PinnedHTTPTransport()
+
+
+class _HTTPFetchSession:
+    """Reuse validated DNS results and HTTP connection pools for one parser run.
+
+    The session is deliberately private and parser-scoped. Public ``get_body()``
+    calls keep their request-scoped behavior, while parsers can reuse connections
+    across distinct remote references without sharing network state globally.
+    """
+
+    def __init__(self) -> None:
+        """Initialize empty size- and parser-lifetime-bounded caches."""
+        self._dns_cache: OrderedDict[str, tuple[IPv4Address | IPv6Address, ...]] = OrderedDict()
+        self._clients: OrderedDict[
+            tuple[str | None, tuple[IPv4Address | IPv6Address, ...], bool, float],
+            _HTTPXClient,
+        ] = OrderedDict()
+
+    def __enter__(self) -> Self:
+        """Return this parser-scoped session."""
+        return self
+
+    def __exit__(
+        self,
+        _exc_type: type[BaseException] | None,
+        _exc_value: BaseException | None,
+        _traceback: TracebackType | None,
+    ) -> None:
+        """Close every cached connection pool."""
+        self.close()
+
+    def get_ips_from_host(self, host: str) -> tuple[IPv4Address | IPv6Address, ...]:
+        """Return a successful DNS result cached for this parser run."""
+        if (cached_ips := self._dns_cache.get(host)) is not None:
+            self._dns_cache.move_to_end(host)
+            return cached_ips
+        if not (resolved_ips := _get_ips_from_host(host)):
+            return resolved_ips
+        self._dns_cache[host] = resolved_ips
+        if len(self._dns_cache) > _HTTP_FETCH_DNS_CACHE_MAX_SIZE:
+            self._dns_cache.popitem(last=False)
+        return resolved_ips
+
+    def get_response(  # noqa: PLR0913
+        self,
+        httpx_module: _HTTPXModule,
+        url: str,
+        *,
+        headers: Sequence[tuple[str, str]] | None,
+        verify: bool,
+        follow_redirects: bool,
+        query_parameters: Sequence[tuple[str, str]] | None,
+        timeout: float,
+        pinned_host: str | None,
+        pinned_ips: tuple[IPv4Address | IPv6Address, ...],
+    ) -> _HTTPResponse:
+        """Fetch through a connection pool isolated by DNS pin and TLS policy."""
+        key = (pinned_host, pinned_ips, verify, timeout)
+        if (client := self._clients.get(key)) is None:
+            if pinned_host is not None and pinned_ips:
+                transport = _build_pinned_transport(
+                    pinned_host=pinned_host,
+                    pinned_ips=pinned_ips,
+                    verify=verify,
+                )
+                client = httpx_module.Client(transport=transport, timeout=timeout)
+            else:
+                client = httpx_module.Client(timeout=timeout, verify=verify)
+            self._clients[key] = client
+            if len(self._clients) > _HTTP_FETCH_CLIENT_CACHE_MAX_SIZE:
+                _, evicted_client = self._clients.popitem(last=False)
+                with contextlib.suppress(Exception):
+                    evicted_client.close()
+        else:
+            self._clients.move_to_end(key)
+        try:
+            return client.get(
+                url,
+                headers=headers,
+                follow_redirects=follow_redirects,
+                params=query_parameters,
+            )
+        finally:
+            cookie_cleanup_failed = True
+            with contextlib.suppress(Exception):
+                client.cookies.clear()
+                cookie_cleanup_failed = False
+            if cookie_cleanup_failed:
+                if self._clients.get(key) is client:
+                    del self._clients[key]
+                with contextlib.suppress(Exception):
+                    client.close()
+
+    def get_body(  # noqa: PLR0913
+        self,
+        url: str,
+        headers: Sequence[tuple[str, str]] | None = None,
+        ignore_tls: bool = False,  # noqa: FBT001, FBT002
+        query_parameters: Sequence[tuple[str, str]] | None = None,
+        timeout: float = DEFAULT_HTTP_TIMEOUT,
+        *,
+        allow_private_network: bool = False,
+    ) -> str:
+        """Fetch one URL while reusing this parser run's validated resources."""
+        return _get_body(
+            url,
+            headers,
+            ignore_tls,
+            query_parameters,
+            timeout,
+            allow_private_network=allow_private_network,
+            session=self,
+        )
+
+    def close(self) -> None:
+        """Close cached clients and discard validated DNS results."""
+        clients, self._clients = self._clients, OrderedDict()
+        self._dns_cache.clear()
+        for client in clients.values():
+            with contextlib.suppress(Exception):
+                client.close()
 
 
 def _get_http_response(  # noqa: PLR0913
@@ -532,6 +675,7 @@ def _validate_url_for_fetch(
     url: str,
     *,
     allow_private_network: bool,
+    resolve_host: Callable[[str], tuple[IPv4Address | IPv6Address, ...]] = _get_ips_from_host,
 ) -> tuple[str, tuple[IPv4Address | IPv6Address, ...]] | None:
     """Validate a fetch URL and return DNS pinning data when pinning is required.
 
@@ -567,7 +711,7 @@ def _validate_url_for_fetch(
         )
         raise SchemaFetchError(msg)
 
-    ips = _get_ips_from_host(host)
+    ips = resolve_host(host)
     if not ips:
         msg = _format_private_network_error(
             url=url,
@@ -667,14 +811,45 @@ def get_body(  # noqa: PLR0913
     can be narrowed before the next request. Once a redirect crosses origins, scoped credentials are removed
     from `current_headers` and are not restored on later hops.
     """
+    return _get_body(
+        url,
+        headers,
+        ignore_tls,
+        query_parameters,
+        timeout,
+        allow_private_network=allow_private_network,
+    )
+
+
+def _get_body(  # noqa: PLR0913
+    url: str,
+    headers: Sequence[tuple[str, str]] | None,
+    ignore_tls: bool,  # noqa: FBT001
+    query_parameters: Sequence[tuple[str, str]] | None,
+    timeout: float,
+    *,
+    allow_private_network: bool,
+    session: _HTTPFetchSession | None = None,
+) -> str:
+    """Fetch one schema body, optionally reusing parser-scoped network state."""
     httpx_module = _get_httpx()
+    resolve_host = _get_ips_from_host
+    get_response = _get_http_response
+    if session is not None:
+        resolve_host = session.get_ips_from_host
+        get_response = session.get_response
+
     current_url = url
     current_headers = headers
     for redirect_count in range(MAX_HTTP_REDIRECTS + 1):
-        validated_host = _validate_url_for_fetch(current_url, allow_private_network=allow_private_network)
+        validated_host = _validate_url_for_fetch(
+            current_url,
+            allow_private_network=allow_private_network,
+            resolve_host=resolve_host,
+        )
         pinned_host, pinned_ips = validated_host if validated_host is not None else (None, ())
         try:
-            response = _get_http_response(
+            response = get_response(
                 httpx_module,
                 current_url,
                 headers=current_headers,
@@ -685,9 +860,9 @@ def get_body(  # noqa: PLR0913
                 pinned_host=pinned_host,
                 pinned_ips=pinned_ips,
             )
-        except Exception as e:
-            msg = f"Failed to fetch {current_url}: {e}"
-            raise SchemaFetchError(msg) from e
+        except Exception as exc:
+            msg = f"Failed to fetch {current_url}: {exc}"
+            raise SchemaFetchError(msg) from exc
         if (redirect_url := _get_redirect_url(httpx_module, current_url, response)) is None:
             break
         current_headers = _get_redirect_headers(current_headers, current_url, redirect_url)
