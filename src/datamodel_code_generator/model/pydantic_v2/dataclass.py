@@ -30,6 +30,9 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_CONFIG_DICT,
     IMPORT_PYDANTIC_DATACLASS,
 )
+from datamodel_code_generator.model.pydantic_v2.version import (
+    _DICT_KEY_REFERENCE_CLASSES_CAPABILITY as _PYDANTIC_V2_DICT_KEY_REFERENCE_CLASSES_CAPABILITY,
+)
 from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK
 
 if TYPE_CHECKING:
@@ -53,6 +56,7 @@ class DataClass(_DataclassReuseMixin, DataModel):
     SUPPORTS_KW_ONLY: ClassVar[bool] = True
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = True
     ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = _ANNOTATED_CONSTRAINTS_CONTEXT
+    _INCLUDE_DICT_KEY_REFERENCE_CLASSES = _PYDANTIC_V2_DICT_KEY_REFERENCE_CLASSES_CAPABILITY
     # frozen/allow_mutation are handled as dataclass decorator arguments, not ConfigDict
     _CONFIG_ATTRIBUTES_V2: ClassVar[list[ConfigAttribute]] = [
         ConfigAttribute("allow_population_by_field_name", "populate_by_name", False),  # noqa: FBT003
