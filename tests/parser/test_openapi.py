@@ -712,7 +712,10 @@ schemas:
         "socket.getaddrinfo",
         return_value=[(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))],
     )
-    mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response", return_value=mock_response)
+    mock_fetch = mocker.patch(
+        "datamodel_code_generator.http._HTTPFetchSession.get_response",
+        return_value=mock_response,
+    )
 
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,

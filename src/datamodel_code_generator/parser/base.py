@@ -8,6 +8,7 @@ code generation.
 from __future__ import annotations
 
 import builtins
+import contextlib
 import operator
 import os.path
 import re
@@ -90,6 +91,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
     from datamodel_code_generator.format import CodeFormatter
+    from datamodel_code_generator.http import _HTTPFetchSession
     from datamodel_code_generator.model_metadata import GeneratedModelMetadata, ModelFieldMetadata, ModelMetadata
 ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
 
@@ -1419,6 +1421,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     _config_class_name: ClassVar[str] = "ParserConfig"
     _cache_local_sources_during_parse: ClassVar[bool] = False
     _cache_parsed_sources_from_path: ClassVar[bool] = False
+    _http_fetch_session: _HTTPFetchSession | None = None
 
     @classmethod
     def _get_config_class(cls) -> type[ParserConfig]:
@@ -1926,19 +1929,24 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         return self.base_class or None
 
     def _get_text_from_url(self, url: str) -> str:
-        from datamodel_code_generator.http import DEFAULT_HTTP_TIMEOUT, get_body  # noqa: PLC0415
+        def fetch(remote_url: str) -> str:
+            from datamodel_code_generator.http import DEFAULT_HTTP_TIMEOUT, _HTTPFetchSession  # noqa: PLC0415
 
-        timeout = self.http_timeout if self.http_timeout is not None else DEFAULT_HTTP_TIMEOUT
-        return self.remote_text_cache.get_or_put(
-            url,
-            default_factory=lambda _url: get_body(
-                url,
+            if (session := self._http_fetch_session) is None:
+                self._http_fetch_session = session = _HTTPFetchSession()
+            timeout = self.http_timeout if self.http_timeout is not None else DEFAULT_HTTP_TIMEOUT
+            return session.get_body(
+                remote_url,
                 self.http_headers,
                 self.http_ignore_tls,
                 self.http_query_parameters,
                 timeout,
                 allow_private_network=self.allow_private_network,
-            ),
+            )
+
+        return self.remote_text_cache.get_or_put(
+            url,
+            default_factory=fetch,
         )
 
     @classmethod
@@ -4532,6 +4540,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             ],
         }
 
+    def _close_http_fetch_session(self) -> None:
+        """Close and discard the parser-scoped HTTP session without masking parser results."""
+        if (session := self._http_fetch_session) is None:
+            return
+        self._http_fetch_session = None
+        with contextlib.suppress(Exception):
+            session.close()
+
     def _dispose(self) -> None:
         """Break reference cycles in the parsed object graph.
 
@@ -4541,6 +4557,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         counting reclaim the graph as soon as the parser is dropped, which
         matters for processes that call generate() repeatedly.
         """
+        self._close_http_fetch_session()
         self.generation_store._dispose(self.model_resolver.references.values())  # noqa: SLF001
         self.model_resolver.references.clear()
         self._reset_local_source_cache()
@@ -4564,7 +4581,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self._set_typed_extra_annotation_mode(
             use_deferred_annotations=self._uses_deferred_annotations(with_import, disable_future_imports)
         )
-        self.parse_raw()
+        try:
+            self.parse_raw()
+        finally:
+            self._close_http_fetch_session()
 
         config = self._prepare_parse_config(
             with_import,

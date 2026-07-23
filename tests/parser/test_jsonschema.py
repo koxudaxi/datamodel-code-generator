@@ -666,7 +666,7 @@ def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:
         "socket.getaddrinfo",
         return_value=[(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))],
     )
-    mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response")
+    mock_fetch = mocker.patch("datamodel_code_generator.http._HTTPFetchSession.get_response")
     mock_fetch.return_value.status_code = 200
     mock_fetch.return_value.headers = {}
     mock_fetch.return_value.text = json.dumps(
@@ -714,7 +714,7 @@ def test_json_schema_object_ref_url_yaml(mocker: MockerFixture) -> None:
         "socket.getaddrinfo",
         return_value=[(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))],
     )
-    mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response")
+    mock_fetch = mocker.patch("datamodel_code_generator.http._HTTPFetchSession.get_response")
     mock_fetch.return_value.status_code = 200
     mock_fetch.return_value.headers = {}
     mock_fetch.return_value.text = yaml.safe_dump(json.load((DATA_PATH / "user.json").open()))
@@ -761,7 +761,7 @@ def test_json_schema_object_cached_ref_url_yaml(mocker: MockerFixture) -> None:
         "socket.getaddrinfo",
         return_value=[(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))],
     )
-    mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response")
+    mock_fetch = mocker.patch("datamodel_code_generator.http._HTTPFetchSession.get_response")
     mock_fetch.return_value.status_code = 200
     mock_fetch.return_value.headers = {}
     mock_fetch.return_value.text = yaml.safe_dump(json.load((DATA_PATH / "user.json").open()))
@@ -801,7 +801,7 @@ def test_json_schema_ref_url_json(mocker: MockerFixture) -> None:
         "socket.getaddrinfo",
         return_value=[(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))],
     )
-    mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response")
+    mock_fetch = mocker.patch("datamodel_code_generator.http._HTTPFetchSession.get_response")
     mock_fetch.return_value.status_code = 200
     mock_fetch.return_value.headers = {}
     mock_fetch.return_value.text = json.dumps(json.load((DATA_PATH / "user.json").open()))
