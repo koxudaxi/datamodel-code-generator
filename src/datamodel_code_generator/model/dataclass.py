@@ -14,9 +14,9 @@ from datamodel_code_generator._format_types import (
     PythonVersionMin,
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
+from datamodel_code_generator.model._constraints import Constraints  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.model.base import UNDEFINED, _has_field_assignment, _nested_model_default_factory
 from datamodel_code_generator.model.imports import IMPORT_DATACLASS, IMPORT_FIELD
-from datamodel_code_generator.model.pydantic_base import Constraints  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
 from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.reference import Reference

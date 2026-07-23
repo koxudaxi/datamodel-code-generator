@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
 
 from datamodel_code_generator.imports import IMPORT_OPTIONAL, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
+from datamodel_code_generator.model._constraints import PatternConstraints as _Constraints
 from datamodel_code_generator.model.base import UNDEFINED, BaseClassDataType, _nested_model_default_factory
 from datamodel_code_generator.model.imports import (
     IMPORT_MSGSPEC_CONVERT,
@@ -19,9 +20,6 @@ from datamodel_code_generator.model.imports import (
     IMPORT_MSGSPEC_STRUCT,
     IMPORT_MSGSPEC_UNSET,
     IMPORT_MSGSPEC_UNSETTYPE,
-)
-from datamodel_code_generator.model.pydantic_base import (
-    PatternConstraints as _Constraints,
 )
 from datamodel_code_generator.model.type_alias import TypeAliasBase
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
