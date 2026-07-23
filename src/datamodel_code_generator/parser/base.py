@@ -159,10 +159,6 @@ def _is_pydantic_v2_dump_resolve_reference_action(value: object) -> bool:
     )
 
 
-def _add_msgspec_base_class_kwarg(model: DataModel, name: str, value: str) -> None:
-    cast("Any", model).add_base_class_kwarg(name, value)
-
-
 def __getattr__(name: str) -> Any:
     """Return compatibility model modules without importing them on parser load."""
     match name:
@@ -3050,8 +3046,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             ):
                 continue
 
-            if _is_msgspec_struct(model):
-                _add_msgspec_base_class_kwarg(model, "kw_only", "True")
+            if model.REQUIRES_MODEL_LEVEL_KW_ONLY:
+                model.enable_model_keyword_only()
             elif self.target_python_version.has_kw_only_dataclass:
                 for field in model.fields:
                     if self.__is_new_required_field(field, inherited_names, field_has_assignment):
@@ -3072,10 +3068,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """Get inherited field names and whether any has default. Returns None if not applicable."""
         if not model.SUPPORTS_KW_ONLY:
             return None
-        base_class_kw_only = None
-        if _is_msgspec_struct(model):
-            base_class_kw_only = model.extra_template_data.get("base_class_kwargs", {}).get("kw_only")
-        if not model.base_classes or model.dataclass_arguments.get("kw_only") or base_class_kw_only in {True, "True"}:
+        if not model.base_classes or model.has_keyword_only_definition():
             return None
 
         field_has_assignment = cls._get_field_assignment_checker(model)

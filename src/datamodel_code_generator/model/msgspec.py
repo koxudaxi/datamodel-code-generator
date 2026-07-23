@@ -104,6 +104,7 @@ class Struct(DataModel):
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True
+    REQUIRES_MODEL_LEVEL_KW_ONLY: ClassVar[bool] = True
     SUPPORTS_BOOLEAN_LITERAL: ClassVar[bool] = False
     REQUIRES_TAGGED_UNION_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = True
@@ -166,6 +167,14 @@ class Struct(DataModel):
         self.add_base_class_kwarg("tag_field", f"'{field_name}'")
         self.add_base_class_kwarg("tag", repr(value))
         field.extras["is_classvar"] = True
+
+    def has_keyword_only_definition(self) -> bool:
+        """Return whether msgspec's class declaration already enables keyword-only fields."""
+        return self.extra_template_data["base_class_kwargs"].get("kw_only") in {True, "True"}
+
+    def enable_model_keyword_only(self) -> None:
+        """Enable msgspec's class-level keyword-only option."""
+        self.add_base_class_kwarg("kw_only", "True")
 
     @classmethod
     def create_base_class_model(
