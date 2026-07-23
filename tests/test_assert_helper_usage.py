@@ -50,6 +50,110 @@ class DirectAssert:
     statement: str
 
 
+@dataclass(frozen=True)
+class WholeSysModulesPatch:
+    """A patch.dict call that replaces the complete module registry on teardown."""
+
+    path: Path
+    lineno: int
+    statement: str
+
+
+def _attribute_chain(node: ast.AST) -> tuple[str, ...]:
+    if isinstance(node, ast.Name):
+        return (node.id,)
+    if not isinstance(node, ast.Attribute) or not (parent := _attribute_chain(node.value)):
+        return ()
+    return (*parent, node.attr)
+
+
+def _module_registry_aliases(tree: ast.Module) -> tuple[set[str], set[str], set[str], set[str], set[str]]:
+    patch_names: set[str] = set()
+    sys_names: set[str] = set()
+    module_names: set[str] = set()
+    mock_names: set[str] = set()
+    unittest_names: set[str] = set()
+    for node in ast.walk(tree):
+        match node:
+            case ast.Import(names=names):
+                sys_names.update(alias.asname or "sys" for alias in names if alias.name == "sys")
+                mock_names.update(alias.asname for alias in names if alias.name == "unittest.mock" and alias.asname)
+                unittest_names.update(alias.asname or "unittest" for alias in names if alias.name == "unittest")
+                if any(alias.name == "unittest.mock" and not alias.asname for alias in names):
+                    unittest_names.add("unittest")
+            case ast.ImportFrom(module="sys", names=names):
+                module_names.update(alias.asname or "modules" for alias in names if alias.name == "modules")
+            case ast.ImportFrom(module="unittest", names=names):
+                mock_names.update(alias.asname or "mock" for alias in names if alias.name == "mock")
+            case ast.ImportFrom(module="unittest.mock", names=names):
+                patch_names.update(alias.asname or "patch" for alias in names if alias.name == "patch")
+            case _:
+                pass
+    return patch_names, sys_names, module_names, mock_names, unittest_names
+
+
+def _is_whole_sys_modules_patch(
+    call: ast.Call,
+    *,
+    patch_names: set[str],
+    sys_names: set[str],
+    module_names: set[str],
+    mock_names: set[str],
+    unittest_names: set[str],
+) -> bool:
+    function_chain = _attribute_chain(call.func)
+    match function_chain:
+        case (patch_name, "dict") if patch_name in patch_names:
+            pass
+        case ("mocker", "patch", "dict"):
+            pass
+        case (mock_name, "patch", "dict") if mock_name in mock_names:
+            pass
+        case (unittest_name, "mock", "patch", "dict") if unittest_name in unittest_names:
+            pass
+        case _:
+            return False
+
+    if call.args:
+        target = call.args[0]
+    elif (target_keyword := next((keyword for keyword in call.keywords if keyword.arg == "in_dict"), None)) is not None:
+        target = target_keyword.value
+    else:
+        return False
+
+    if isinstance(target, ast.Constant):
+        return target.value == "sys.modules"
+    if isinstance(target, ast.Name):
+        return target.id in module_names
+    if not isinstance(target, ast.Attribute):
+        return False
+    target_chain = _attribute_chain(target)
+    return len(target_chain) == 2 and target_chain[0] in sys_names and target_chain[1] == "modules"
+
+
+def _collect_whole_sys_modules_patches(path: Path, tests_root: Path = TESTS_ROOT) -> list[WholeSysModulesPatch]:
+    source = path.read_text(encoding="utf-8")
+    tree = ast.parse(source, filename=str(path))
+    patch_names, sys_names, module_names, mock_names, unittest_names = _module_registry_aliases(tree)
+    return [
+        WholeSysModulesPatch(
+            path=path.relative_to(tests_root),
+            lineno=node.lineno,
+            statement=" ".join((ast.get_source_segment(source, node) or ast.unparse(node)).split()),
+        )
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and _is_whole_sys_modules_patch(
+            node,
+            patch_names=patch_names,
+            sys_names=sys_names,
+            module_names=module_names,
+            mock_names=mock_names,
+            unittest_names=unittest_names,
+        )
+    ]
+
+
 def _allows_direct_assert(function: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     return any(
         ast.unparse(decorator).split("(", 1)[0] == "pytest.mark.allow_direct_assert"
@@ -190,6 +294,48 @@ def test_modules_use_shared_assertion_helpers(pytestconfig: pytest.Config) -> No
     pytest.fail(_format_direct_assert_failure(direct_asserts), pytrace=False)  # pragma: no cover
 
 
+def test_modules_never_patch_the_complete_module_registry() -> None:
+    """Module import seams must restore only exact entries; imported aliases stay reserved when shadowed."""
+    whole_registry_patches = [
+        whole_registry_patch
+        for path in sorted(TESTS_ROOT.rglob("*.py"))
+        if _is_test_file(path, TESTS_ROOT)
+        for whole_registry_patch in _collect_whole_sys_modules_patches(path, TESTS_ROOT)
+    ]
+    if not whole_registry_patches:
+        return
+
+    details = "\n".join(f"  tests/{patch.path}:{patch.lineno}: {patch.statement}" for patch in whole_registry_patches)
+    pytest.fail(  # pragma: no cover
+        "patch.dict(sys.modules, ...) restores the complete module registry and invalidates lazy-import caches. "
+        "For deterministic static enforcement, imported sys/patch aliases are reserved across every scope, "
+        "including when shadowed. "
+        "Use monkeypatch.setitem(sys.modules, name, value) so only the intended entry is restored.\n"
+        f"{details}",
+        pytrace=False,
+    )
+
+
+def test_modules_never_patch_the_complete_module_registry_reports_details(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Unsafe registry patches report the exact test location and safe replacement."""
+    test_file = tmp_path / "test_unsafe.py"
+    test_file.write_text(
+        """\
+import sys
+from unittest.mock import patch
+
+patch.dict(sys.modules, {"unsafe": None})
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(sys.modules[__name__], "TESTS_ROOT", tmp_path)
+
+    with pytest.raises(pytest.fail.Exception, match=r"(?s)monkeypatch\.setitem.*tests/test_unsafe\.py:4"):
+        test_modules_never_patch_the_complete_module_registry()
+
+
 def test_configured_exempt_files_exist(pytestconfig: pytest.Config) -> None:
     """Configured direct-assert exemptions must point to existing test files."""
     if not (
@@ -227,6 +373,128 @@ def test_modules_use_shared_assertion_helpers_reports_unmarked_assert(
 
     with pytest.raises(pytest.fail.Exception, match="shared assert helpers"):
         pytest.fail(_format_direct_assert_failure(direct_asserts), pytrace=False)
+
+
+def test_collect_whole_sys_modules_patches_covers_supported_targets(tmp_path: Path) -> None:
+    """The registry guard recognizes string, attribute, alias, and keyword targets."""
+    test_file = tmp_path / "test_module_registry.py"
+    test_file.write_text(
+        """\
+import sys as system
+from sys import modules as registry
+from unittest.mock import patch as patcher
+
+patcher.dict("sys.modules", {"one": None})
+mocker.patch.dict(system.modules, {"two": None})
+patcher.dict(registry, {"three": None})
+patcher.dict(in_dict="sys.modules", values={"four": None})
+monkeypatch.setitem(system.modules, "safe", None)
+patcher.dict("other.registry", {"safe": None})
+dict()
+""",
+        encoding="utf-8",
+    )
+
+    assert _collect_whole_sys_modules_patches(test_file, tmp_path) == [
+        WholeSysModulesPatch(
+            Path("test_module_registry.py"),
+            5,
+            'patcher.dict("sys.modules", {"one": None})',
+        ),
+        WholeSysModulesPatch(
+            Path("test_module_registry.py"),
+            6,
+            'mocker.patch.dict(system.modules, {"two": None})',
+        ),
+        WholeSysModulesPatch(
+            Path("test_module_registry.py"),
+            7,
+            'patcher.dict(registry, {"three": None})',
+        ),
+        WholeSysModulesPatch(
+            Path("test_module_registry.py"),
+            8,
+            'patcher.dict(in_dict="sys.modules", values={"four": None})',
+        ),
+    ]
+
+
+def test_collect_whole_sys_modules_patches_covers_local_aliases(tmp_path: Path) -> None:
+    """Aliases imported in function scope and exact mocker calls are guarded."""
+    test_file = tmp_path / "test_local_module_registry.py"
+    test_file.write_text(
+        """\
+def test_local_aliases(mocker):
+    import sys as system
+    from sys import modules as registry
+    from unittest import mock as mock_module
+    from unittest.mock import patch as patcher
+    import unittest as unit
+    import unittest.mock
+    import unittest.mock as imported_mock
+    patcher.dict(in_dict=system.modules, values={"one": None})
+    mock_module.patch.dict(registry, {"two": None})
+    mocker.patch.dict("sys.modules", {"three": None})
+    unit.mock.patch.dict(system.modules, {"four": None})
+    unittest.mock.patch.dict(registry, {"five": None})
+    imported_mock.patch.dict(system.modules, {"six": None})
+""",
+        encoding="utf-8",
+    )
+
+    assert _collect_whole_sys_modules_patches(test_file, tmp_path) == [
+        WholeSysModulesPatch(
+            Path("test_local_module_registry.py"),
+            9,
+            'patcher.dict(in_dict=system.modules, values={"one": None})',
+        ),
+        WholeSysModulesPatch(
+            Path("test_local_module_registry.py"),
+            10,
+            'mock_module.patch.dict(registry, {"two": None})',
+        ),
+        WholeSysModulesPatch(
+            Path("test_local_module_registry.py"),
+            11,
+            'mocker.patch.dict("sys.modules", {"three": None})',
+        ),
+        WholeSysModulesPatch(
+            Path("test_local_module_registry.py"),
+            12,
+            'unit.mock.patch.dict(system.modules, {"four": None})',
+        ),
+        WholeSysModulesPatch(
+            Path("test_local_module_registry.py"),
+            13,
+            'unittest.mock.patch.dict(registry, {"five": None})',
+        ),
+        WholeSysModulesPatch(
+            Path("test_local_module_registry.py"),
+            14,
+            'imported_mock.patch.dict(system.modules, {"six": None})',
+        ),
+    ]
+
+
+def test_collect_whole_sys_modules_patches_ignores_unrelated_calls(tmp_path: Path) -> None:
+    """Unrelated patch-like APIs, targets, and exact-entry monkeypatches remain allowed."""
+    test_file = tmp_path / "test_unrelated_module_registry.py"
+    test_file.write_text(
+        """\
+import sys
+from unittest.mock import patch
+
+foo.patch.dict(sys.modules, {"safe": None})
+factory().patch.dict(sys.modules, {"safe": None})
+patch.dict("other.registry", {"safe": None})
+patch.dict(factory(), {"safe": None})
+patch.dict()
+monkeypatch.setitem(sys.modules, "safe", None)
+""",
+        encoding="utf-8",
+    )
+
+    assert _collect_whole_sys_modules_patches(test_file, tmp_path) == []
 
 
 def test_iter_guarded_test_files_uses_all_test_files_by_default(tmp_path: Path) -> None:

@@ -98,10 +98,7 @@ to_hashable = _internal_utils.to_hashable
 
 # Keep these as module-name checks so non-pydantic-v2 outputs do not import the
 # pydantic_v2 generator package and its runtime feature gates.
-_DATACLASS_MODULE: Final = "datamodel_code_generator.model.dataclass"
-_MSGSPEC_MODULE: Final = "datamodel_code_generator.model.msgspec"
 _PYDANTIC_V2_BASE_MODEL_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.base_model"
-_PYDANTIC_V2_DATACLASS_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.dataclass"
 _PYDANTIC_V2_MODULE: Final = "datamodel_code_generator.model.pydantic_v2"
 _MODEL_MODULE_PREFIX: Final = "datamodel_code_generator.model."
 _CLASS_NAME_SEPARATOR_PATTERN: Final = re.compile(r"[^A-Za-z0-9]+")
@@ -118,24 +115,8 @@ def _model_type(value: object | type[object]) -> type[object]:
     return value if isinstance(value, type) else value.__class__
 
 
-def _is_pydantic_v2_base_model(value: object | type[object]) -> bool:
-    return _type_mro_contains_type(_model_type(value), module=_PYDANTIC_V2_BASE_MODEL_MODULE, name="BaseModel")
-
-
-def _is_dataclass_data_model(value: object | type[object]) -> bool:
-    return _type_mro_contains_type(_model_type(value), module=_DATACLASS_MODULE, name="DataClass")
-
-
-def _is_msgspec_struct(value: object | type[object]) -> bool:
-    return _type_mro_contains_type(_model_type(value), module=_MSGSPEC_MODULE, name="Struct")
-
-
 def _is_pydantic_v2_data_model_field(value: object) -> bool:
     return _type_mro_contains_type(_model_type(value), module=_PYDANTIC_V2_BASE_MODEL_MODULE, name="DataModelField")
-
-
-def _is_pydantic_v2_dataclass(value: object | type[object]) -> bool:
-    return _type_mro_contains_type(_model_type(value), module=_PYDANTIC_V2_DATACLASS_MODULE, name="DataClass")
 
 
 def _get_field_dependency_ordering_model_type(model_type: type[DataModel]) -> type[DataModel] | None:
@@ -1475,24 +1456,24 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if "decorators" not in kwargs and self.class_decorators:
             kwargs["decorators"] = list(self.class_decorators)
         data_model_class = model_type or self.data_model_type
-        if _is_dataclass_data_model(data_model_class) or _is_pydantic_v2_dataclass(data_model_class):
-            # Use dataclass_arguments from kwargs, or fall back to self.dataclass_arguments
-            # If both are None, construct from legacy frozen_dataclasses/keyword_only flags
-            dataclass_arguments = kwargs.pop("dataclass_arguments", None)
-            if dataclass_arguments is None:
-                dataclass_arguments = self.dataclass_arguments
-            if dataclass_arguments is None:
-                # Construct from legacy flags for library API compatibility
-                dataclass_arguments = {}
-                if self.frozen_dataclasses:
-                    dataclass_arguments["frozen"] = True
-                if self.keyword_only:
-                    dataclass_arguments["kw_only"] = True
-            kwargs["dataclass_arguments"] = dataclass_arguments
-            kwargs.pop("frozen", None)
-            kwargs.pop("keyword_only", None)
-        else:
+        if not data_model_class.USES_DATACLASS_ARGUMENTS:
             kwargs.pop("dataclass_arguments", None)
+            return data_model_class(**kwargs)
+
+        # Use dataclass_arguments from kwargs, or fall back to self.dataclass_arguments.
+        # If both are None, construct from legacy frozen_dataclasses/keyword_only flags.
+        if (dataclass_arguments := kwargs.pop("dataclass_arguments", None)) is None:
+            dataclass_arguments = self.dataclass_arguments
+        if dataclass_arguments is None:
+            # Construct from legacy flags for library API compatibility.
+            dataclass_arguments = {}
+            if self.frozen_dataclasses:
+                dataclass_arguments["frozen"] = True
+            if self.keyword_only:
+                dataclass_arguments["kw_only"] = True
+        kwargs["dataclass_arguments"] = dataclass_arguments
+        kwargs.pop("frozen", None)
+        kwargs.pop("keyword_only", None)
         return data_model_class(**kwargs)
 
     def __init__(  # noqa: PLR0912, PLR0915
@@ -1817,11 +1798,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         ModelType.CLASS for other model types (TypedDict, dataclass) which don't have
         such constraints.
         """
-        if _is_pydantic_v2_base_model(self.data_model_type):
-            return ModelType.PYDANTIC
-        if _is_msgspec_struct(self.data_model_type):
-            return ModelType.MSGSPEC
-        return ModelType.CLASS
+        return model_type if (model_type := self.data_model_type.FIELD_NAME_MODEL_TYPE) is not None else ModelType.CLASS
 
     def get_serialization_alias(
         self,

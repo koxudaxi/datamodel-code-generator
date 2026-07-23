@@ -24,6 +24,7 @@ from datamodel_code_generator.model.imports import (
 from datamodel_code_generator.model.type_alias import TypeAliasBase
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
 from datamodel_code_generator.python_literal import represent_python_value
+from datamodel_code_generator.reference import ModelType
 from datamodel_code_generator.types import (
     NONE,
     chain_as_tuple,
@@ -101,6 +102,7 @@ class Struct(DataModel):
     BASE_CLASS_ALIAS: ClassVar[str] = "_Struct"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
     FIELD_ASSIGNMENT_CHECKER = staticmethod(has_field_assignment)
+    FIELD_NAME_MODEL_TYPE: ClassVar[ModelType] = ModelType.MSGSPEC
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True

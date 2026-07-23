@@ -11679,6 +11679,7 @@ def test_main_jsonschema_ref_with_additional_keywords(output_dir: Path) -> None:
     [
         ("typing.TypedDict", "reserved_field_name_schema_typed_dict.py"),
         ("dataclasses.dataclass", "reserved_field_name_schema_dataclass.py"),
+        ("pydantic_v2.dataclass", "reserved_field_name_schema_pydantic_dataclass.py"),
         ("pydantic_v2.BaseModel", "reserved_field_name_schema_pydantic.py"),
     ],
 )
@@ -11695,6 +11696,7 @@ TypedDict and dataclass preserve the name, while Pydantic renames with alias."""
     model_outputs={
         "typeddict": "main/jsonschema/reserved_field_name_schema_typed_dict.py",
         "dataclass": "main/jsonschema/reserved_field_name_schema_dataclass.py",
+        "pydantic_v2.dataclass": "main/jsonschema/reserved_field_name_schema_pydantic_dataclass.py",
         "pydantic_v2": "main/jsonschema/reserved_field_name_schema_pydantic.py",
     },
 )
@@ -11706,6 +11708,7 @@ def test_main_jsonschema_reserved_field_name(output_model: str, expected_file: s
     This demonstrates how 'schema' field is handled:
     - TypedDict: not renamed (schema is not reserved)
     - dataclass: not renamed (schema is not reserved)
+    - Pydantic dataclass: not renamed (schema is not reserved)
     - Pydantic: renamed to 'schema_' with alias (BaseModel.schema conflicts)
     """
     run_main_and_assert(

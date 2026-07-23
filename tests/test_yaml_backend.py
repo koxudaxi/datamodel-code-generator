@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import io
 import re
+import sys
 import warnings
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 import yaml
@@ -37,36 +38,36 @@ def _clear_caches() -> Iterator[None]:
 class TestGetYamlBackend:
     """Tests for get_yaml_backend()."""
 
-    def test_without_ryaml(self) -> None:
+    def test_without_ryaml(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """When ryaml is not importable, returns 'pyyaml'."""
-        with patch.dict("sys.modules", {"ryaml": None}):
-            assert get_yaml_backend() == "pyyaml"
+        monkeypatch.setitem(sys.modules, "ryaml", None)
+        assert get_yaml_backend() == "pyyaml"
 
-    def test_with_ryaml(self) -> None:
+    def test_with_ryaml(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """When ryaml is importable, returns 'ryaml'."""
         mock_ryaml = MagicMock()
-        with patch.dict("sys.modules", {"ryaml": mock_ryaml}):
-            assert get_yaml_backend() == "ryaml"
+        monkeypatch.setitem(sys.modules, "ryaml", mock_ryaml)
+        assert get_yaml_backend() == "ryaml"
 
 
 class TestGetYamlParseErrors:
     """Tests for get_yaml_parse_errors()."""
 
-    def test_pyyaml_only(self) -> None:
+    def test_pyyaml_only(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Without ryaml, only yaml.YAMLError is returned."""
-        with patch.dict("sys.modules", {"ryaml": None}):
-            errors = get_yaml_parse_errors()
-            assert errors == (yaml.YAMLError,)
+        monkeypatch.setitem(sys.modules, "ryaml", None)
+        errors = get_yaml_parse_errors()
+        assert errors == (yaml.YAMLError,)
 
-    def test_includes_ryaml(self) -> None:
+    def test_includes_ryaml(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """With ryaml, InvalidYamlError is included."""
         mock_ryaml = MagicMock()
         mock_ryaml.InvalidYamlError = type("InvalidYamlError", (Exception,), {})
-        with patch.dict("sys.modules", {"ryaml": mock_ryaml}):
-            errors = get_yaml_parse_errors()
-            assert yaml.YAMLError in errors
-            assert mock_ryaml.InvalidYamlError in errors
-            assert len(errors) == 2
+        monkeypatch.setitem(sys.modules, "ryaml", mock_ryaml)
+        errors = get_yaml_parse_errors()
+        assert yaml.YAMLError in errors
+        assert mock_ryaml.InvalidYamlError in errors
+        assert len(errors) == 2
 
 
 class TestLoadYaml:
@@ -79,17 +80,17 @@ class TestLoadYaml:
 
         assert load_yaml_dict_from_path(path, "utf-8") == {"key": "value"}
 
-    def test_pyyaml_fallback_string(self) -> None:
+    def test_pyyaml_fallback_string(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """When ryaml is unavailable, PyYAML is used for string input."""
-        with patch.dict("sys.modules", {"ryaml": None}):
-            result = load_yaml("key: value")
-            assert result == {"key": "value"}
+        monkeypatch.setitem(sys.modules, "ryaml", None)
+        result = load_yaml("key: value")
+        assert result == {"key": "value"}
 
-    def test_pyyaml_fallback_textio(self) -> None:
+    def test_pyyaml_fallback_textio(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """When ryaml is unavailable, PyYAML is used for TextIO input."""
-        with patch.dict("sys.modules", {"ryaml": None}):
-            result = load_yaml(io.StringIO("key: value"))
-            assert result == {"key": "value"}
+        monkeypatch.setitem(sys.modules, "ryaml", None)
+        result = load_yaml(io.StringIO("key: value"))
+        assert result == {"key": "value"}
 
     def test_load_yaml_allows_literal_unsupported_tag_marker_text(self) -> None:
         """Literal marker text is valid YAML data when it is not a YAML tag."""
@@ -119,14 +120,14 @@ class TestLoadYaml:
         with pytest.raises(yaml.YAMLError, match=r"Unsupported YAML tag: tag:yaml\.org,2002:set"):
             load_yaml("%TAG !e! tag:yaml.org,2002:\n---\nfruits: !e!set\n  ? apple\n")
 
-    def test_with_ryaml_string(self) -> None:
+    def test_with_ryaml_string(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """When ryaml is available, ryaml.loads() is used for string input."""
         mock_ryaml = MagicMock()
         mock_ryaml.loads.return_value = {"key": "value"}
-        with patch.dict("sys.modules", {"ryaml": mock_ryaml}):
-            result = load_yaml("key: value")
-            mock_ryaml.loads.assert_called_once_with("key: value")
-            assert result == {"key": "value"}
+        monkeypatch.setitem(sys.modules, "ryaml", mock_ryaml)
+        result = load_yaml("key: value")
+        mock_ryaml.loads.assert_called_once_with("key: value")
+        assert result == {"key": "value"}
 
     def test_warn_yaml_deprecated_bool_values_skips_scan_when_warning_ignored(
         self, monkeypatch: pytest.MonkeyPatch
@@ -193,50 +194,48 @@ class TestLoadYaml:
 
         assert not _is_yaml_deprecated_bool_warning_enabled()
 
-    def test_with_ryaml_textio(self) -> None:
+    def test_with_ryaml_textio(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """When ryaml is available, TextIO.read() is called before ryaml.loads()."""
         mock_ryaml = MagicMock()
         mock_ryaml.loads.return_value = {"key": "value"}
         stream = io.StringIO("key: value")
-        with patch.dict("sys.modules", {"ryaml": mock_ryaml}):
-            result = load_yaml(stream)
-            mock_ryaml.loads.assert_called_once_with("key: value")
-            assert result == {"key": "value"}
+        monkeypatch.setitem(sys.modules, "ryaml", mock_ryaml)
+        result = load_yaml(stream)
+        mock_ryaml.loads.assert_called_once_with("key: value")
+        assert result == {"key": "value"}
 
 
 class TestInferInputType:
     """Tests for infer_input_type() with backend error handling."""
 
-    def test_csv_with_pyyaml_error(self) -> None:
+    def test_csv_with_pyyaml_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """YAML parse error from PyYAML returns CSV type."""
-        with patch.dict("sys.modules", {"ryaml": None}):
-            result = infer_input_type("a,b:\n1,2\n")
-            assert result == InputFileType.CSV
+        monkeypatch.setitem(sys.modules, "ryaml", None)
+        result = infer_input_type("a,b:\n1,2\n")
+        assert result == InputFileType.CSV
 
-    def test_csv_with_ryaml_error(self) -> None:
+    def test_csv_with_ryaml_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """CSV-looking YAML parse error from ryaml returns CSV type."""
         mock_invalid_yaml_error = type("InvalidYamlError", (Exception,), {})
         mock_ryaml = MagicMock()
         mock_ryaml.InvalidYamlError = mock_invalid_yaml_error
         mock_ryaml.loads.side_effect = mock_invalid_yaml_error("parse error")
-        with patch.dict("sys.modules", {"ryaml": mock_ryaml}):
-            result = infer_input_type("a,b,c\n1,2,3\n")
-            assert result == InputFileType.CSV
+        monkeypatch.setitem(sys.modules, "ryaml", mock_ryaml)
+        result = infer_input_type("a,b,c\n1,2,3\n")
+        assert result == InputFileType.CSV
 
-    def test_non_csv_ryaml_error_raises_error(self) -> None:
+    def test_non_csv_ryaml_error_raises_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Non-CSV YAML parse error from ryaml raises inference error."""
         mock_invalid_yaml_error = type("InvalidYamlError", (Exception,), {})
         mock_ryaml = MagicMock()
         mock_ryaml.InvalidYamlError = mock_invalid_yaml_error
         mock_ryaml.loads.side_effect = mock_invalid_yaml_error("parse error")
-        with (
-            patch.dict("sys.modules", {"ryaml": mock_ryaml}),
-            pytest.raises(Error, match=r"YAML parser error: InvalidYamlError: parse error"),
-        ):
+        monkeypatch.setitem(sys.modules, "ryaml", mock_ryaml)
+        with pytest.raises(Error, match=r"YAML parser error: InvalidYamlError: parse error"):
             infer_input_type(":::invalid yaml:::")
 
-    def test_openapi_detection(self) -> None:
+    def test_openapi_detection(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """OpenAPI input is detected correctly regardless of backend."""
-        with patch.dict("sys.modules", {"ryaml": None}):
-            result = infer_input_type("openapi: '3.0.0'\ninfo:\n  title: Test\n  version: '1.0'")
-            assert result == InputFileType.OpenAPI
+        monkeypatch.setitem(sys.modules, "ryaml", None)
+        result = infer_input_type("openapi: '3.0.0'\ninfo:\n  title: Test\n  version: '1.0'")
+        assert result == InputFileType.OpenAPI
