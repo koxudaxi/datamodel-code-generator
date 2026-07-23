@@ -14,9 +14,9 @@ from datamodel_code_generator._format_types import (
     PythonVersionMin,
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
+from datamodel_code_generator.model._constraints import Constraints  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.model.base import UNDEFINED, _has_field_assignment, _nested_model_default_factory
 from datamodel_code_generator.model.imports import IMPORT_DATACLASS, IMPORT_FIELD
-from datamodel_code_generator.model.pydantic_base import Constraints  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
 from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.reference import Reference
@@ -37,6 +37,10 @@ def has_field_assignment(field: DataModelFieldBase) -> bool:
 
 
 class _DataclassReuseMixin:
+    def has_keyword_only_definition(self) -> bool:
+        """Return whether a dataclass declaration enables keyword-only fields."""
+        return bool(cast("DataModel", self).dataclass_arguments.get("kw_only"))
+
     def create_reuse_model(self, base_ref: Reference) -> DataModel:
         """Create inherited model with empty fields pointing to base reference."""
         model = cast("DataModel", self)
@@ -68,6 +72,7 @@ class DataClass(_DataclassReuseMixin, DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = "dataclass.jinja2"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_DATACLASS,)
     SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = True
+    USES_DATACLASS_ARGUMENTS: ClassVar[bool] = True
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True

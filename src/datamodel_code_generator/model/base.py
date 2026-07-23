@@ -42,7 +42,7 @@ from datamodel_code_generator.types import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Collection, Iterator
 
     from jinja2 import Environment, Template
 
@@ -54,6 +54,7 @@ _TYPING_IMPORT_NAMES: frozenset[str] = frozenset({
     IMPORT_OPTIONAL.import_,
     IMPORT_UNION.import_,
 })
+_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES_TEMPLATE_DATA_KEY = "additionalPropertiesReferenceClasses"
 _MODULE_NAME_INVALID_CHAR_PATTERN = re.compile(r"[^0-9a-zA-Z_]")
 _MODULE_NAME_INVALID_CHAR_WITH_DOTS_PATTERN = re.compile(r"[^0-9a-zA-Z_.]")
 
@@ -1155,10 +1156,14 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     SUPPORTS_GENERIC_BASE_CLASS: ClassVar[bool] = True
     FIELD_ASSIGNMENT_CHECKER: ClassVar[Callable[[DataModelFieldBase], bool]] = staticmethod(_has_field_assignment)
     SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = False
+    # Kept opaque so this generic layer does not import reference-layer policy.
+    FIELD_NAME_MODEL_TYPE: ClassVar[Any] = None
+    USES_DATACLASS_ARGUMENTS: ClassVar[bool] = False
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = False
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = False
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False
     SUPPORTS_KW_ONLY: ClassVar[bool] = False
+    REQUIRES_MODEL_LEVEL_KW_ONLY: ClassVar[bool] = False
     SUPPORTS_BOOLEAN_LITERAL: ClassVar[bool] = True
     REQUIRES_FIELD_DEPENDENCY_ORDERING: ClassVar[bool] = False
     REQUIRES_TAGGED_UNION_DISCRIMINATOR: ClassVar[bool] = False
@@ -1195,6 +1200,13 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     ) -> None:
         """Apply an output-specific tagged-union discriminator when supported."""
 
+    def has_keyword_only_definition(self) -> bool:  # noqa: PLR6301
+        """Return whether the model already makes inherited fields keyword-only."""
+        return False
+
+    def enable_model_keyword_only(self) -> None:
+        """Enable output-specific model-level keyword-only behavior when supported."""
+
     @classmethod
     def resolve_nested_constrained_model_type(
         cls,
@@ -1202,6 +1214,19 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     ) -> type[DataModel]:
         """Return the model type used for nested constrained values."""
         return configured_root_model_type
+
+    @staticmethod
+    def _store_additional_properties_reference_classes(
+        extra_template_data: dict[str, Any],
+        reference_classes: set[str],
+    ) -> None:
+        """Store parse-time additional-properties dependencies in model-owned metadata."""
+        extra_template_data[_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES_TEMPLATE_DATA_KEY] = reference_classes
+
+    @property
+    def _additional_properties_reference_classes(self) -> Collection[str]:
+        """Return model-owned dependencies contributed by additional properties."""
+        return self.extra_template_data.get(_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES_TEMPLATE_DATA_KEY, ())
 
     def __init__(  # noqa: PLR0913
         self,

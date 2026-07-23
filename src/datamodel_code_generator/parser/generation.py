@@ -16,6 +16,8 @@ Contributor guide:
   ``model.reference.name`` directly in parser code.
 * Read dependency facts through ``GenerationIndex``. Parser post-processing
   should not treat ``Reference.children`` as the source of truth.
+* Treat output template metadata as opaque. Read model-owned dependency
+  metadata through ``DataModel`` capability methods.
 * Preserve output compatibility first. Store/index queries must reproduce the
   existing parse order, naming order, canonical model selection, and
   tie-break behavior before they replace a direct object traversal.
@@ -459,7 +461,9 @@ class GenerationIndex:
             for data_type_id in facts.data_types_by_model.get(model_id, ())
             if (reference := (fact := facts.data_type_facts[data_type_id]).reference) is not None
             if include_dict_key_references or fact.role != "dict_key"
-        ) | frozenset(model.extra_template_data.get("additionalPropertiesReferenceClasses", ()))
+        )
+        if len(additional_properties_references := model._additional_properties_reference_classes):  # noqa: SLF001
+            reference_classes = reference_classes.union(additional_properties_references)
         self._reference_classes_cache[model_id] = reference_classes
         return reference_classes
 

@@ -61,7 +61,7 @@ from datamodel_code_generator.model.pydantic_v2.version import (
     _get_dict_key_reference_classes_capability,
 )
 from datamodel_code_generator.model.runtime_validation import SchemaRuntimeValidation
-from datamodel_code_generator.reference import ModelResolver
+from datamodel_code_generator.reference import ModelResolver, ModelType
 from datamodel_code_generator.types import chain_as_tuple
 
 if TYPE_CHECKING:
@@ -606,6 +606,7 @@ class BaseModel(BaseModelBase):
     BASE_CLASS_NAME: ClassVar[str] = "BaseModel"
     BASE_CLASS_ALIAS: ClassVar[str] = "_BaseModel"
     SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = True
+    FIELD_NAME_MODEL_TYPE: ClassVar[ModelType] = ModelType.PYDANTIC
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
