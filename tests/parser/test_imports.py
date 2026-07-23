@@ -49,6 +49,23 @@ def test_jsonschema_parser_import_does_not_load_inactive_model_generators() -> N
 
 
 @pytest.mark.allow_direct_assert
+def test_generation_import_does_not_load_pydantic_v2_dependency_policy() -> None:
+    """Keep the generic generation index independent from the Pydantic v2 backend and version gate."""
+    module_names = (
+        "datamodel_code_generator.model.pydantic_v2",
+        "datamodel_code_generator.model.pydantic_v2.version",
+    )
+    code = (
+        "import sys\n"
+        "import datamodel_code_generator.parser.generation\n"
+        f"module_names = {module_names!r}\n"
+        "print('\\n'.join(name for name in module_names if name in sys.modules))\n"
+    )
+
+    assert _run_import_probe(code) == "\n"
+
+
+@pytest.mark.allow_direct_assert
 def test_parser_model_compatibility_attributes_remain_available() -> None:
     """Parser modules should keep moved compatibility attributes available."""
     code = (

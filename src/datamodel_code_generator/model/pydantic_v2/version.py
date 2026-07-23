@@ -6,6 +6,8 @@ import re
 
 from pydantic import VERSION as PYDANTIC_VERSION
 
+_PYDANTIC_V2_MODEL_MODULE_PREFIX = "datamodel_code_generator.model.pydantic_v2."
+
 
 def _version_tuple(version: str) -> tuple[int, int, int]:
     match = re.match(r"(\d+)\.(\d+)(?:\.(\d+))?", version)
@@ -28,3 +30,17 @@ PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING = (
     PYDANTIC_VERSION_TUPLE < PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_FIXED_VERSION
 )
 PYDANTIC_V2_REGEX_ENGINE_UNSUPPORTED = PYDANTIC_VERSION_TUPLE < PYDANTIC_V2_REGEX_ENGINE_FIXED_VERSION
+
+
+def _is_builtin_pydantic_v2_model(model_type: type[object]) -> bool:
+    return model_type.__module__.startswith(_PYDANTIC_V2_MODEL_MODULE_PREFIX)
+
+
+_DICT_KEY_REFERENCE_CLASSES_CAPABILITY = (
+    staticmethod(_is_builtin_pydantic_v2_model) if PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING else None
+)
+
+
+def _get_dict_key_reference_classes_capability() -> staticmethod[[type[object]], bool] | None:
+    """Return the shared dict-key dependency capability for built-in Pydantic v2 models."""
+    return _DICT_KEY_REFERENCE_CLASSES_CAPABILITY

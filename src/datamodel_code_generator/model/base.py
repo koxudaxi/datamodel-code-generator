@@ -1163,6 +1163,8 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     FIELD_DOCSTRING_INDENT: ClassVar[int] = 4
     FORMAT_DESCRIPTION_AS_DOCSTRING: ClassVar[bool] = True
     CUSTOM_TEMPLATE_ADAPTER: ClassVar[Callable[[Template], Template] | None] = None
+    # A static callable avoids allocating bound methods on dependency-index cache misses.
+    _INCLUDE_DICT_KEY_REFERENCE_CLASSES: ClassVar[Callable[[type[DataModel]], bool] | None] = None
     _IMPORTS_CACHE_KEY: ClassVar[str] = "_cached_imports"
     has_forward_reference: bool = False
 

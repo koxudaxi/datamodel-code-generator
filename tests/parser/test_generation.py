@@ -10,8 +10,14 @@ import pytest
 from inline_snapshot import snapshot
 
 from datamodel_code_generator.imports import IMPORT_DECIMAL, IMPORT_LIST, IMPORT_SET
-from datamodel_code_generator.model.base import BaseClassDataType
-from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField
+from datamodel_code_generator.model.base import BaseClassDataType, DataModel, DataModelFieldBase
+from datamodel_code_generator.model.dataclass import DataClass as StandardDataClass
+from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField, RootModel, RootModelTypeAlias
+from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticDataClass
+from datamodel_code_generator.model.pydantic_v2.version import (
+    PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
+)
+from datamodel_code_generator.model.type_alias import TypeAliasTypeBackport
 from datamodel_code_generator.parser.generation import (
     GENERATION_STORE_MUTATION_METHODS,
     GenerationStore,
@@ -90,6 +96,20 @@ GENERATION_MODEL_LIST_LIFECYCLE_METHODS = frozenset({"__init__", "__new__"})
 
 def _base_model(name: str = "Model", fields: list[DataModelField] | None = None) -> BaseModel:
     return BaseModel(fields=fields or [], reference=Reference(path=name, original_name=name, name=name))
+
+
+def _dict_key_reference_classes(model_type: type[DataModel]) -> frozenset[str]:
+    reference_model = Reference(path="Model", original_name="Model", name="Model")
+    reference_value = Reference(path="Value", original_name="Value", name="Value")
+    reference_key = Reference(path="Key", original_name="Key", name="Key")
+    data_type = DataType(
+        data_types=[DataType(reference=reference_value)],
+        dict_key=DataType(reference=reference_key),
+    )
+    model = model_type(fields=[DataModelFieldBase(data_type=data_type)], reference=reference_model)
+    store = GenerationStore()
+    store.register_model(model)
+    return store.index.reference_classes_for_model(model)
 
 
 def test_generation_store_import_cache_contract_covers_mutation_surface() -> None:
@@ -383,6 +403,58 @@ def test_generation_store_records_nested_and_dict_key_roles() -> None:
         ],
     )
     assert store.index.reference_classes_for_model(model) == snapshot(frozenset({"Value"}))
+
+
+@pytest.mark.parametrize(
+    ("model_type", "include_dict_key_reference"),
+    [
+        pytest.param(
+            BaseModel,
+            PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
+            id="pydantic-v2-base-model",
+        ),
+        pytest.param(
+            RootModel,
+            PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
+            id="pydantic-v2-root-model",
+        ),
+        pytest.param(
+            RootModelTypeAlias,
+            PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
+            id="pydantic-v2-root-model-type-alias",
+        ),
+        pytest.param(
+            PydanticDataClass,
+            PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
+            id="pydantic-v2-dataclass",
+        ),
+        pytest.param(StandardDataClass, False, id="standard-dataclass"),
+        pytest.param(TypeAliasTypeBackport, False, id="pydantic-v2-auxiliary-type-alias"),
+    ],
+)
+def test_generation_index_dict_key_reference_policy_matrix(
+    model_type: type[DataModel],
+    include_dict_key_reference: bool,
+) -> None:
+    """Only built-in Pydantic v2 models follow the installed-version dependency policy."""
+    expected = frozenset({"Key", "Value"} if include_dict_key_reference else {"Value"})
+
+    assert _dict_key_reference_classes(model_type) == expected
+
+
+def test_generation_index_external_pydantic_subclasses_do_not_inherit_dict_key_reference_policy() -> None:
+    """Keep external Pydantic model subclasses outside the built-in compatibility policy."""
+
+    class ExternalBaseModel(BaseModel):
+        pass
+
+    class ExternalDataClass(PydanticDataClass):
+        pass
+
+    assert [
+        _dict_key_reference_classes(ExternalBaseModel),
+        _dict_key_reference_classes(ExternalDataClass),
+    ] == [frozenset({"Value"}), frozenset({"Value"})]
 
 
 def test_generation_store_replaces_nested_data_types() -> None:
