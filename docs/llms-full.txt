@@ -4,6 +4,12 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 
 🚀 Generate Python data models from schema definitions in seconds.
 
+<p>
+  <a class="md-button md-button--primary" href="getting-started.md">Getting Started</a>
+  <a class="md-button md-button--primary" href="playground.md">Open Playground</a>
+  <a class="md-button md-button--primary" href="https://koxudaxi.dev/?utm_source=dm_docs&utm_medium=top&utm_campaign=open_to_work">Maintainer available for work</a>
+</p>
+
 [![PyPI version](https://img.shields.io/pypi/v/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
 [![Downloads](https://api.pepy.tech/badge/datamodel-code-generator/month)](https://pepy.tech/projects/datamodel-code-generator)
@@ -35,10 +41,6 @@ in another Python file to a different output type.
 ## 🧪 Try It In Your Browser
 
 Generate models in your browser without installing anything.
-
-<p>
-  <a class="md-button md-button--primary" href="playground.md" target="_self">Open Playground</a>
-</p>
 
 !!! note "Playground privacy"
     Generation runs locally in your browser with Pyodide. Your schema and options are not sent to a backend. Shared
