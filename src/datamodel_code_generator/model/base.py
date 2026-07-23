@@ -313,6 +313,7 @@ class DataModelFieldBase(_BaseModel):
     _field_imports_cache: ClassVar[dict[tuple[Any, ...], tuple[Import, ...]]] = {}
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = False
     ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = None
+    SUPPORTS_DISCRIMINATOR: ClassVar[bool] = False
 
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
@@ -1146,6 +1147,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     IS_ROOT_MODEL: ClassVar[bool] = False
     SUPPORTS_GENERIC_BASE_CLASS: ClassVar[bool] = True
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = False
+    SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = False
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False
     SUPPORTS_KW_ONLY: ClassVar[bool] = False
     SUPPORTS_BOOLEAN_LITERAL: ClassVar[bool] = True
@@ -1173,6 +1175,14 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     ) -> DataModelFieldBase | None:
         """Create a model-specific typed extra field when supported."""
         return None
+
+    def apply_discriminator_tag(
+        self,
+        field: DataModelFieldBase,
+        field_name: str,
+        value: Any,
+    ) -> None:
+        """Apply an output-specific tagged-union discriminator when supported."""
 
     @classmethod
     def resolve_nested_constrained_model_type(

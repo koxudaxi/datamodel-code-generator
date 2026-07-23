@@ -1311,14 +1311,9 @@ def _get_enum_from_base(discriminator_model: DataModel, field_name: str) -> Enum
         if not base_class.reference or not base_class.reference.source:  # pragma: no cover
             continue
         base_model = base_class.reference.source
-        if not (
-            _is_dataclass_data_model(base_model)
-            or _is_msgspec_struct(base_model)
-            or _is_pydantic_v2_base_model(base_model)
-        ):  # pragma: no cover
+        if not isinstance(base_model, DataModel) or not base_model.SUPPORTS_INHERITED_DISCRIMINATOR_ENUM:
             continue
-        base_data_model = cast("DataModel", base_model)
-        for base_field in base_data_model.fields:  # pragma: no branch
+        for base_field in base_model.fields:  # pragma: no branch
             if field_name not in {base_field.original_name, base_field.name}:  # pragma: no cover
                 continue
             if enum_from_base := base_field.data_type.find_source(Enum):  # pragma: no branch
@@ -2288,7 +2283,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         can_retain_cache: bool,
     ) -> None:
         """Keep Pydantic v2 single-literal discriminator fields valid when forced optional."""
-        if not self.force_optional_for_required_fields or not _is_pydantic_v2_data_model_field(discriminator_field):
+        if not self.force_optional_for_required_fields or not discriminator_field.SUPPORTS_DISCRIMINATOR:
             return
 
         discriminator_field.default = literal
@@ -2357,10 +2352,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         ):
                             has_one_literal = True
                             match discriminator_model:
-                                case _ if _is_msgspec_struct(discriminator_model):  # pragma: no cover
-                                    _add_msgspec_base_class_kwarg(discriminator_model, "tag_field", f"'{field_name}'")
-                                    _add_msgspec_base_class_kwarg(discriminator_model, "tag", repr(expected_value))
-                                    discriminator_field.extras["is_classvar"] = True
+                                case _ if discriminator_model.REQUIRES_TAGGED_UNION_DISCRIMINATOR:  # pragma: no cover
+                                    discriminator_model.apply_discriminator_tag(
+                                        discriminator_field,
+                                        field_name,
+                                        expected_value,
+                                    )
                                     _clear_model_imports_cache_if_retained(
                                         discriminator_model, can_retain_cache=can_retain_cache
                                     )
@@ -2375,11 +2372,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             break
 
                         # For msgspec with const value but no literal (type: string + const case)
-                        if const_match and _is_msgspec_struct(discriminator_model):  # pragma: no cover
+                        if const_match and discriminator_model.REQUIRES_TAGGED_UNION_DISCRIMINATOR:  # pragma: no cover
                             has_one_literal = True
-                            _add_msgspec_base_class_kwarg(discriminator_model, "tag_field", f"'{field_name}'")
-                            _add_msgspec_base_class_kwarg(discriminator_model, "tag", repr(const_value))
-                            discriminator_field.extras["is_classvar"] = True
+                            discriminator_model.apply_discriminator_tag(
+                                discriminator_field,
+                                field_name,
+                                const_value,
+                            )
                             _clear_model_imports_cache_if_retained(
                                 discriminator_model, can_retain_cache=can_retain_cache
                             )
@@ -2798,7 +2797,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 root_type_field.constraints, model_field.constraints
                             )
                         discriminator = root_type_field.extras.get("discriminator")
-                        if discriminator and _is_pydantic_v2_data_model_field(root_type_field):
+                        if discriminator and root_type_field.SUPPORTS_DISCRIMINATOR:
                             has_any_variant = any(_is_any_variant(dt) for dt in copied_data_type.data_types)
                             if not has_any_variant:  # pragma: no branch
                                 prop_name = (
