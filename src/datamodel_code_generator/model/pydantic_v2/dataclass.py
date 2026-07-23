@@ -8,11 +8,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
+from datamodel_code_generator.model import dataclass as _dataclass_module
 from datamodel_code_generator.model.base import UNDEFINED, _has_field_assignment
-from datamodel_code_generator.model.dataclass import (
-    _DataclassReuseMixin,
-    has_field_assignment,  # noqa: F401  # public re-export
-)
+from datamodel_code_generator.model.dataclass import _DataclassReuseMixin
 from datamodel_code_generator.model.pydantic_v2._config import (
     ConfigAttribute,
     build_base_config_parameters,
@@ -34,6 +32,8 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_PYDANTIC_DATACLASS,
 )
 from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK
+
+has_field_assignment = _dataclass_module.has_field_assignment
 
 if TYPE_CHECKING:
     from collections import defaultdict
