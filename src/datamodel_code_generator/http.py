@@ -43,7 +43,8 @@ class _HTTPResponse(Protocol):
 
 
 class _HTTPCookies(Protocol):
-    def clear(self) -> None: ...
+    def clear(self) -> None:
+        raise NotImplementedError  # pragma: no cover
 
 
 class _HTTPXClient(Protocol):
@@ -67,7 +68,8 @@ class _HTTPXClient(Protocol):
         params: Sequence[tuple[str, str]] | None,
     ) -> _HTTPResponse: ...
 
-    def close(self) -> None: ...
+    def close(self) -> None:
+        raise NotImplementedError  # pragma: no cover
 
 
 class _HTTPXClientFactory(Protocol):
@@ -77,7 +79,8 @@ class _HTTPXClientFactory(Protocol):
         transport: httpx.BaseTransport | None = None,
         timeout: float,
         verify: bool = True,
-    ) -> _HTTPXClient: ...
+    ) -> _HTTPXClient:
+        raise NotImplementedError  # pragma: no cover
 
 
 class _HTTPXURLJoiner(Protocol):
@@ -830,13 +833,11 @@ def _get_body(  # noqa: PLR0913
 ) -> str:
     """Fetch one schema body, optionally reusing parser-scoped network state."""
     httpx_module = _get_httpx()
-    match session:
-        case None:
-            resolve_host = _get_ips_from_host
-            get_response = _get_http_response
-        case _:
-            resolve_host = session.get_ips_from_host
-            get_response = session.get_response
+    resolve_host = _get_ips_from_host
+    get_response = _get_http_response
+    if session is not None:
+        resolve_host = session.get_ips_from_host
+        get_response = session.get_response
 
     current_url = url
     current_headers = headers
