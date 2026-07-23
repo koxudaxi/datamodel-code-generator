@@ -115,7 +115,7 @@ class TypedDict(DataModel):
         if additional_props is False and not is_base_class:
             typed_dict_kwargs["closed"] = "True"
         elif additional_props_type and not is_base_class:
-            if self.extra_template_data.get("additionalPropertiesReferenceClasses"):
+            if len(self._additional_properties_reference_classes):
                 typed_dict_kwargs["extra_items"] = repr(additional_props_type)
             else:
                 typed_dict_kwargs["extra_items"] = additional_props_type

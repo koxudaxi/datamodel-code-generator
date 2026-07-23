@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Any
+from collections import defaultdict
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
@@ -15,9 +16,9 @@ from datamodel_code_generator.model.base import UNDEFINED, DataModel, DataModelF
 from datamodel_code_generator.model.type_alias import TypeAliasTypeBackport
 from datamodel_code_generator.parser._output_context import OutputModelContext
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject, JsonSchemaParser
+from datamodel_code_generator.reference import Reference
 
 if TYPE_CHECKING:
-    from datamodel_code_generator.reference import Reference
     from datamodel_code_generator.types import DataType
 
 _OUTPUT_CAPABILITIES: dict[DataModelType, tuple[bool, bool, bool, bool]] = {
@@ -220,6 +221,89 @@ def test_mixed_builtin_generation_contexts_fail_closed_for_annotated_constraints
     assert context.supports_boolean_literals is expected_capabilities[1]
     assert context.requires_tagged_union_discriminator is expected_capabilities[2]
     assert context.requires_additional_properties_reference_classes is expected_capabilities[3]
+
+
+@pytest.mark.allow_direct_assert
+def test_output_context_stores_reference_metadata_for_data_and_root_model_types() -> None:
+    """Keep custom data and root model metadata encodings aligned with either output shape."""
+    model_types = get_data_model_types(
+        DataModelType.TypingTypedDict,
+        target_python_version=PythonVersion.PY_311,
+    )
+
+    def store_metadata(
+        model_type: type[DataModel],
+        extra_template_data: dict[str, Any],
+        reference_classes: set[str],
+    ) -> None:
+        extra_template_data[model_type.__dict__["_test_reference_key"]] = reference_classes
+
+    def metadata_references(model: DataModel) -> Any:
+        return model.extra_template_data.get(type(model).__dict__["_test_reference_key"], ())
+
+    def custom_model_type(name: str, base: type[DataModel], key: str) -> type[DataModel]:
+        return cast(
+            "type[DataModel]",
+            type(
+                name,
+                (base,),
+                {
+                    "_additional_properties_reference_classes": property(metadata_references),
+                    "_store_additional_properties_reference_classes": classmethod(store_metadata),
+                    "_test_reference_key": key,
+                },
+            ),
+        )
+
+    data_model_type = custom_model_type("CustomDataModel", model_types.data_model, "data_model_references")
+    root_model_type = custom_model_type("CustomRootModel", model_types.root_model, "root_model_references")
+    context = OutputModelContext.from_generation_types(
+        data_model_type=data_model_type,
+        data_model_root_type=root_model_type,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=model_types.data_type_manager,
+        configured_types_are_builtin=False,
+        use_annotated=False,
+    )
+    reference_classes = {"Dependency"}
+    separate_metadata: dict[str, Any] = {}
+    shared_metadata: dict[str, Any] = {}
+
+    context._store_additional_properties_reference_classes(separate_metadata, reference_classes)
+    OutputModelContext.from_generation_types(
+        data_model_type=data_model_type,
+        data_model_root_type=data_model_type,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=model_types.data_type_manager,
+        configured_types_are_builtin=False,
+        use_annotated=False,
+    )._store_additional_properties_reference_classes(shared_metadata, reference_classes)
+
+    data_model = data_model_type(
+        fields=[],
+        reference=Reference(path="DataModel", original_name="DataModel", name="DataModel"),
+        extra_template_data=defaultdict(dict, {"DataModel": separate_metadata}),
+    )
+    root_model = root_model_type(
+        fields=[],
+        reference=Reference(path="RootModel", original_name="RootModel", name="RootModel"),
+        extra_template_data=defaultdict(dict, {"RootModel": separate_metadata}),
+    )
+
+    assert {
+        "metadata": separate_metadata,
+        "data_model_references": set(data_model._additional_properties_reference_classes),
+        "root_model_references": set(root_model._additional_properties_reference_classes),
+        "shared_metadata": shared_metadata,
+    } == {
+        "metadata": {
+            "data_model_references": {"Dependency"},
+            "root_model_references": {"Dependency"},
+        },
+        "data_model_references": {"Dependency"},
+        "root_model_references": {"Dependency"},
+        "shared_metadata": {"data_model_references": {"Dependency"}},
+    }
 
 
 @pytest.mark.parametrize(
