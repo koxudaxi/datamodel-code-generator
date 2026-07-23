@@ -13,6 +13,8 @@ from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.parser.protobuf import WELL_KNOWN_SCHEMAS, convert_protobuf_schema_data
 from tests.conftest import assert_mutable_copy_is_isolated, assert_output
 from tests.main.conftest import (
+    BACKEND_GOLDEN_CASES,
+    BACKEND_GOLDEN_TARGET_ARGS,
     EXPECTED_PROTOBUF_PATH,
     PROTOBUF_DATA_PATH,
     assert_input_file_type,
@@ -36,6 +38,31 @@ def test_main_protobuf_complex_proto3(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="complex_proto3.py",
         importable_module_name="generated_protobuf",
+        importable_module_attribute="ExampleShopV1Order",
+    )
+
+
+@pytest.mark.parametrize(("output_model_type", "expected_name"), BACKEND_GOLDEN_CASES)
+def test_main_protobuf_output_model_types(
+    output_file: Path,
+    output_model_type: str,
+    expected_name: str,
+) -> None:
+    """Generate representative Protocol Buffers models across supported output backends."""
+    run_main_and_assert(
+        input_path=PROTOBUF_DATA_PATH / "complex_proto3.proto",
+        output_path=output_file,
+        input_file_type="protobuf",
+        assert_func=assert_file_content,
+        expected_file=f"output_model_types/complex_proto3_{expected_name}.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--output-model-type",
+            output_model_type,
+            "--use-field-description",
+        ],
+        force_exec_validation=True,
+        importable_module_name=f"generated_protobuf_{expected_name}",
         importable_module_attribute="ExampleShopV1Order",
     )
 

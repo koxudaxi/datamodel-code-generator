@@ -23,7 +23,7 @@ import pytest
 from packaging import version
 from pydantic import TypeAdapter, ValidationError
 
-from datamodel_code_generator import InputFileType, enable_parsed_source_cache, generate
+from datamodel_code_generator import DataModelType, InputFileType, enable_parsed_source_cache, generate
 from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.arguments import arg_parser
 from datamodel_code_generator.format import Formatter, PythonVersion, is_supported_in_black
@@ -128,6 +128,19 @@ BLACK_PY313_SKIP = pytest.mark.skipif(
 BLACK_PY314_SKIP = pytest.mark.skipif(
     _uses_external_test_default_formatter() and not is_supported_in_black(PythonVersion.PY_314),
     reason=f"Installed black ({black.__version__}) doesn't support Python 3.14",
+)
+
+BACKEND_GOLDEN_TARGET_ARGS = ("--target-python-version", "3.10")
+BACKEND_GOLDEN_CASES = (
+    pytest.param(DataModelType.PydanticV2BaseModel.value, "pydantic_v2_BaseModel", id="pydantic-v2"),
+    pytest.param(DataModelType.DataclassesDataclass.value, "dataclasses_dataclass", id="dataclass"),
+    pytest.param(DataModelType.TypingTypedDict.value, "typing_TypedDict", id="typed-dict"),
+    pytest.param(
+        DataModelType.MsgspecStruct.value,
+        "msgspec_Struct",
+        id="msgspec",
+        marks=MSGSPEC_LEGACY_BLACK_SKIP,
+    ),
 )
 
 CURRENT_PYTHON_VERSION = f"{sys.version_info[0]}.{sys.version_info[1]}"

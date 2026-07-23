@@ -14,6 +14,8 @@ from datamodel_code_generator.__main__ import Exit
 from tests.main.asyncapi.conftest import assert_file_content
 from tests.main.conftest import (
     ASYNC_API_DATA_PATH,
+    BACKEND_GOLDEN_CASES,
+    BACKEND_GOLDEN_TARGET_ARGS,
     DATA_PATH,
     run_generate_file_and_assert,
     run_main_and_assert,
@@ -90,6 +92,26 @@ def test_main_asyncapi_3_json(output_file: Path) -> None:
         input_file_type="asyncapi",
         assert_func=assert_file_content,
         expected_file="order_events.py",
+    )
+
+
+@pytest.mark.parametrize(("output_model_type", "expected_name"), BACKEND_GOLDEN_CASES)
+def test_main_asyncapi_output_model_types(
+    output_file: Path,
+    output_model_type: str,
+    expected_name: str,
+) -> None:
+    """Generate representative AsyncAPI models across supported output backends."""
+    run_main_and_assert(
+        input_path=ASYNC_API_DATA_PATH / "order-events.json",
+        output_path=output_file,
+        input_file_type="asyncapi",
+        assert_func=assert_file_content,
+        expected_file=f"output_model_types/order_events_{expected_name}.py",
+        extra_args=[*BACKEND_GOLDEN_TARGET_ARGS, "--output-model-type", output_model_type],
+        force_exec_validation=True,
+        importable_module_name=f"generated_asyncapi_{expected_name}",
+        importable_module_attribute="Order",
     )
 
 
