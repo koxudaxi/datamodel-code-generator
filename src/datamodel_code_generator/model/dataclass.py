@@ -72,6 +72,7 @@ class DataClass(_DataclassReuseMixin, DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = "dataclass.jinja2"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_DATACLASS,)
     SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = True
+    USES_DATACLASS_ARGUMENTS: ClassVar[bool] = True
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True

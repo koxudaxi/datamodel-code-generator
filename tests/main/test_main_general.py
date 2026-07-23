@@ -414,22 +414,22 @@ def _run_generate_from_config_model_copy_updates() -> list[tuple[str, str]]:
     return updates
 
 
-def test_debug(mocker: MockerFixture) -> None:
+def test_debug(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test debug flag functionality."""
     with pytest.raises(expected_exception=SystemExit):
         run_main_with_args(["--debug", "--help"])
 
     # Simulate pysnooper not being installed by making import fail
-    mocker.patch.dict("sys.modules", {"pysnooper": None})
+    monkeypatch.setitem(sys.modules, "pysnooper", None)
     with pytest.raises(expected_exception=SystemExit):
         run_main_with_args(["--debug", "--help"])
 
 
 @pytest.mark.allow_direct_assert
-def test_snooper_to_methods_without_pysnooper(mocker: MockerFixture) -> None:
+def test_snooper_to_methods_without_pysnooper(mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test snooper_to_methods function without pysnooper installed."""
     # Simulate pysnooper not being installed by making import fail
-    mocker.patch.dict("sys.modules", {"pysnooper": None})
+    monkeypatch.setitem(sys.modules, "pysnooper", None)
     mock = mocker.Mock()
     assert snooper_to_methods()(mock) == mock
 

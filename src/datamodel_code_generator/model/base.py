@@ -1156,6 +1156,9 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     SUPPORTS_GENERIC_BASE_CLASS: ClassVar[bool] = True
     FIELD_ASSIGNMENT_CHECKER: ClassVar[Callable[[DataModelFieldBase], bool]] = staticmethod(_has_field_assignment)
     SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = False
+    # Kept opaque so this generic layer does not import reference-layer policy.
+    FIELD_NAME_MODEL_TYPE: ClassVar[Any] = None
+    USES_DATACLASS_ARGUMENTS: ClassVar[bool] = False
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = False
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = False
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False

@@ -537,11 +537,11 @@ def test_watch_without_input_error() -> None:
 
 def test_watch_without_watchfiles_installed(
     output_file: Path,
-    mocker: pytest.MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Test error message when watchfiles is not installed."""
-    mocker.patch.dict("sys.modules", {"watchfiles": None})
+    monkeypatch.setitem(sys.modules, "watchfiles", None)
     run_main_with_args(
         [
             "--watch",
@@ -557,13 +557,15 @@ def test_watch_without_watchfiles_installed(
 
 
 @pytest.mark.allow_direct_assert
-def test_main_watch_uses_watch_module_import_seam(output_file: Path, mocker: pytest.MockerFixture) -> None:
+def test_main_watch_uses_watch_module_import_seam(
+    output_file: Path, mocker: pytest.MockerFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test main resolves watch_and_regenerate through datamodel_code_generator.watch."""
     mock_generate = mocker.patch("datamodel_code_generator.__main__.run_generate_from_config", return_value=None)
     mock_watch = mocker.Mock(return_value=Exit.OK)
     watch_module = ModuleType("datamodel_code_generator.watch")
     watch_module.watch_and_regenerate = mock_watch
-    mocker.patch.dict(sys.modules, {"datamodel_code_generator.watch": watch_module})
+    monkeypatch.setitem(sys.modules, "datamodel_code_generator.watch", watch_module)
 
     run_main_with_args(
         [
@@ -582,11 +584,11 @@ def test_main_watch_uses_watch_module_import_seam(output_file: Path, mocker: pyt
     assert config.input == JSON_SCHEMA_DATA_PATH / "person.json"
 
 
-def test_get_watchfiles_import_error(mocker: pytest.MockerFixture) -> None:
+def test_get_watchfiles_import_error(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test _get_watchfiles raises exception when watchfiles is not installed."""
     from datamodel_code_generator.watch import _get_watchfiles
 
-    mocker.patch.dict("sys.modules", {"watchfiles": None})
+    monkeypatch.setitem(sys.modules, "watchfiles", None)
     with pytest.raises(Exception, match="pip install"):
         _get_watchfiles()
 
