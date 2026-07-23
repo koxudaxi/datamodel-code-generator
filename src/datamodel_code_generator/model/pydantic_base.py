@@ -10,21 +10,25 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
-from pydantic import Field
+from pydantic import Field  # noqa: F401
 
 from datamodel_code_generator import cached_path_exists
 from datamodel_code_generator.model import (
     UNDEFINED,
-    ConstraintsBase,
+    ConstraintsBase,  # noqa: F401 # legacy public import
     DataModel,
     DataModelFieldBase,
     _rebuild_model_with_datamodel_namespace,
+)
+from datamodel_code_generator.model._constraints import (
+    Constraints,  # noqa: TC001 # needed for pydantic
+    PatternConstraints,  # noqa: F401 # legacy public import
 )
 from datamodel_code_generator.model._pydantic_imports import IMPORT_ANYURL, IMPORT_FIELD
 from datamodel_code_generator.model.base import _nested_model_default_factory
 from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.types import (
-    UnionIntFloat,
+    UnionIntFloat,  # noqa: F401 # legacy public import
     chain_as_tuple,
     merge_normalized_constraint,
     normalize_integer_constraint,
@@ -36,26 +40,6 @@ if TYPE_CHECKING:
     from datamodel_code_generator.imports import Import
     from datamodel_code_generator.reference import Reference
     from datamodel_code_generator.types import DataType
-
-
-class Constraints(ConstraintsBase):
-    """Pydantic field constraints (gt, ge, lt, le, regex, etc.)."""
-
-    gt: Optional[UnionIntFloat] = Field(None, alias="exclusiveMinimum")  # noqa: UP045
-    ge: Optional[UnionIntFloat] = Field(None, alias="minimum")  # noqa: UP045
-    lt: Optional[UnionIntFloat] = Field(None, alias="exclusiveMaximum")  # noqa: UP045
-    le: Optional[UnionIntFloat] = Field(None, alias="maximum")  # noqa: UP045
-    multiple_of: Optional[float] = Field(None, alias="multipleOf")  # noqa: UP045
-    min_items: Optional[int] = Field(None, alias="minItems")  # noqa: UP045
-    max_items: Optional[int] = Field(None, alias="maxItems")  # noqa: UP045
-    min_length: Optional[int] = Field(None, alias="minLength")  # noqa: UP045
-    max_length: Optional[int] = Field(None, alias="maxLength")  # noqa: UP045
-    regex: Optional[str] = Field(None, alias="pattern")  # noqa: UP045
-
-
-class PatternConstraints(Constraints):  # noqa: D101
-    regex: Optional[str] = Field(None, alias="regex")  # noqa: UP045
-    pattern: Optional[str] = Field(None, alias="pattern")  # noqa: UP045
 
 
 class DataModelField(DataModelFieldBase):
