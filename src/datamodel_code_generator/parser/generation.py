@@ -19,6 +19,9 @@ Contributor guide:
 * Preserve output compatibility first. Store/index queries must reproduce the
   existing parse order, naming order, canonical model selection, and
   tie-break behavior before they replace a direct object traversal.
+* Override every mutating ``list`` method on ``_GenerationModelList``. The
+  list-method contract test deliberately fails when Python adds an unclassified
+  method so new mutation paths cannot silently leave facts stale.
 
 The pre-commit hook backed by ``scripts/check_generation_store_usage.py``
 guards the parser package against common direct mutations. When adding a new
@@ -39,6 +42,8 @@ from typing import TYPE_CHECKING, Any, Literal, SupportsIndex, TypeAlias, TypeVa
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator
     from pathlib import Path
+
+    from typing_extensions import Self
 
     from datamodel_code_generator.model.base import BaseClassDataType, DataModel, DataModelFieldBase
     from datamodel_code_generator.types import DataType
@@ -179,8 +184,10 @@ class _GenerationModelList(list["DataModel"]):
 
     def extend(self, items: Iterable[Any]) -> None:  # ty: ignore[invalid-method-override]
         """Extend the model list and invalidate derived facts."""
-        super().extend(items)
-        self._invalidate()
+        try:
+            super().extend(items)
+        finally:
+            self._invalidate()
 
     def insert(self, index: SupportsIndex, item: Any) -> None:  # ty: ignore[invalid-method-override]
         """Insert a model and invalidate derived facts."""
@@ -230,6 +237,41 @@ class _GenerationModelList(list["DataModel"]):
         """Remove a model and invalidate derived facts."""
         super().remove(item)
         self._invalidate()
+
+    def reverse(self, /) -> None:
+        """Reverse the model list and invalidate derived facts."""
+        super().reverse()
+        self._invalidate()
+
+    def sort(
+        self,
+        /,
+        *,
+        key: Callable[[Any], Any] | None = None,
+        reverse: bool = False,
+    ) -> None:
+        """Sort the model list and invalidate derived facts."""
+        try:
+            if key is None:
+                super().sort(reverse=reverse)  # ty: ignore[invalid-argument-type]
+                return
+            super().sort(key=key, reverse=reverse)
+        finally:
+            self._invalidate()
+
+    def __iadd__(self, items: Iterable[Any], /) -> Self:  # ty: ignore[invalid-method-override]
+        """Extend the model list in place and invalidate derived facts."""
+        try:
+            super().__iadd__(items)
+        finally:
+            self._invalidate()
+        return self
+
+    def __imul__(self, value: SupportsIndex, /) -> Self:
+        """Repeat the model list in place and invalidate derived facts."""
+        super().__imul__(value)
+        self._invalidate()
+        return self
 
 
 class GenerationIndexBuilder:
