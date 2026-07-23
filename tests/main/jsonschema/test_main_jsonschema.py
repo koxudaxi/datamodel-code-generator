@@ -2489,6 +2489,7 @@ def test_main_msgspec_reserved_field_name(output_file: Path) -> None:
     )
 
 
+@BLACK_PY314_SKIP
 def test_main_msgspec_python_314_without_forward_reference(output_file: Path) -> None:
     """Keep non-forward msgspec output free of an unnecessary future import."""
     run_main_and_assert(
@@ -2511,6 +2512,7 @@ def test_main_msgspec_python_314_without_forward_reference(output_file: Path) ->
     )
 
 
+@BLACK_PY314_SKIP
 @pytest.mark.parametrize(
     ("disable_future_imports", "expected_file"),
     [
