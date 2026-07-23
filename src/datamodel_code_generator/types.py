@@ -1168,6 +1168,8 @@ class DataTypeManager(ABC):
         r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$"
     )
     CONSTRAINED_TYPE_CONSUMED_KEYS: ClassVar[dict[str, tuple[str, ...]]] = {}
+    SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = False
+    ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = None
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,

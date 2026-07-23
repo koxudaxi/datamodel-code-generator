@@ -734,6 +734,85 @@ def test_de_facto_public_symbols_remain_importable(module_name: str, expected_sy
     assert missing_symbols == [], f"{module_name} no longer exposes de facto public symbols: {missing_symbols}"
 
 
+def test_data_model_set_tuple_abi_matches_baseline() -> None:
+    """Keep DataModelSet compatible with downstream tuple construction and unpacking."""
+    from datamodel_code_generator.model import DataModelSet, get_data_model_types
+
+    expected_fields = (
+        "data_model",
+        "root_model",
+        "field_model",
+        "data_type_manager",
+        "dump_resolve_reference_action",
+        "scalar_model",
+        "union_model",
+        "known_third_party",
+    )
+    model_types = get_data_model_types(DataModelType.PydanticV2BaseModel)
+    (
+        data_model,
+        root_model,
+        field_model,
+        data_type_manager,
+        dump_resolve_reference_action,
+        scalar_model,
+        union_model,
+        known_third_party,
+    ) = model_types
+
+    assert DataModelSet._fields == expected_fields
+    assert len(model_types) == len(expected_fields)
+    assert (
+        DataModelSet(
+            data_model,
+            root_model,
+            field_model,
+            data_type_manager,
+            dump_resolve_reference_action,
+            scalar_model,
+            union_model,
+            known_third_party,
+        )
+        == model_types
+    )
+
+
+def test_json_schema_parser_extension_method_signatures_match_baseline() -> None:
+    """Keep parser subclass hooks compatible with their established signatures."""
+    from datamodel_code_generator.model.base import UNDEFINED
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parse_item = inspect.signature(JsonSchemaParser.parse_item).parameters
+    parse_root_type = inspect.signature(JsonSchemaParser.parse_root_type).parameters
+    register_root_model = inspect.signature(JsonSchemaParser._register_root_model).parameters
+
+    assert tuple(parse_item) == ("self", "name", "item", "path", "singular_name", "parent")
+    assert all(parameter.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD for parameter in parse_item.values())
+    assert parse_item["singular_name"].default is False
+    assert parse_item["parent"].default is None
+
+    assert tuple(parse_root_type) == ("self", "name", "obj", "path")
+    assert all(parameter.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD for parameter in parse_root_type.values())
+
+    assert tuple(register_root_model) == (
+        "self",
+        "reference",
+        "fields",
+        "obj",
+        "custom_base_class_name",
+        "description",
+        "default",
+    )
+    assert register_root_model["self"].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+    assert all(
+        parameter.kind is inspect.Parameter.KEYWORD_ONLY
+        for name, parameter in register_root_model.items()
+        if name != "self"
+    )
+    assert register_root_model["description"].default is None
+    assert register_root_model["default"].default is UNDEFINED
+
+
 def test_generate_signature_matches_baseline() -> None:
     """Ensure generate keeps backward compatibility via GenerateConfigDict.
 
@@ -929,6 +1008,14 @@ def test_parser_config_dict_fields_match_parser_config() -> None:
     config_fields = set(ParserConfig.model_fields.keys())
     dict_fields = set(ParserConfigDict.__annotations__.keys())
     assert config_fields == dict_fields, f"Mismatch: {config_fields ^ dict_fields}"
+
+
+def test_parser_config_dump_fields_match_public_typed_dict() -> None:
+    """Keep internal parser context state out of the serialized public configuration."""
+    from datamodel_code_generator._types import ParserConfigDict
+    from datamodel_code_generator.config import ParserConfig
+
+    assert set(ParserConfig().model_dump()) == set(ParserConfigDict.__annotations__)
 
 
 def test_parse_config_dict_fields_match_parse_config() -> None:

@@ -882,6 +882,55 @@ def test_apply_builtin_formatter_wraps_inline_type_alias_type_union() -> None:
     )
 
 
+def test_apply_builtin_formatter_keeps_fitting_annotated_type_alias_type_argument() -> None:
+    """Keep an Annotated argument inline when only the outer TypeAliasType call is long."""
+    code = (
+        'LocalTitleRefMapAdditionalProperty = TypeAliasType("LocalTitleRefMapAdditionalProperty", '
+        "Annotated[int, Field(ge=1, le=9, title='LocalValue')])\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "LocalTitleRefMapAdditionalProperty = TypeAliasType(\n"
+        '    "LocalTitleRefMapAdditionalProperty",\n'
+        "    Annotated[int, Field(ge=1, le=9, title='LocalValue')],\n"
+        ")\n"
+    )
+
+
+def test_apply_builtin_formatter_wraps_long_annotated_type_alias_type_argument() -> None:
+    """Wrap an Annotated argument when it cannot fit on its own continuation line."""
+    code = (
+        'Alias = TypeAliasType("Alias", '
+        "Annotated[VeryLongGeneratedTypeNameThatExceedsTheDefaultLineLength, Field(description='x')])\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "Alias = TypeAliasType(\n"
+        '    "Alias",\n'
+        "    Annotated[\n"
+        "        VeryLongGeneratedTypeNameThatExceedsTheDefaultLineLength, Field(description='x')\n"
+        "    ],\n"
+        ")\n"
+    )
+
+
+def test_apply_builtin_formatter_wraps_annotated_type_alias_type_union_argument() -> None:
+    """Keep an Annotated PEP 604 union expanded inside TypeAliasType."""
+    code = (
+        'Payment = TypeAliasType("Payment", '
+        "Annotated[CardPayment | CashPayment | None, Field(None, discriminator='kind')])\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "Payment = TypeAliasType(\n"
+        '    "Payment",\n'
+        "    Annotated[\n"
+        "        CardPayment | CashPayment | None, Field(None, discriminator='kind')\n"
+        "    ],\n"
+        ")\n"
+    )
+
+
 def test_apply_builtin_formatter_wraps_type_alias_union_assignment() -> None:
     """Test built-in formatter matches black for TypeAlias Union assignments."""
     code = (
@@ -908,6 +957,15 @@ def test_apply_builtin_formatter_wraps_type_alias_union_assignment() -> None:
     )
 
 
+def test_apply_builtin_formatter_wraps_type_alias_annotated_assignment() -> None:
+    """Wrap long Annotated TypeAlias assignments like Black."""
+    code = "LocalTitleRefMapAdditionalProperty: TypeAlias = Annotated[int, Meta(ge=1, le=9, title='LocalValue')]\n"
+
+    assert apply_builtin_formatter(code) == (
+        "LocalTitleRefMapAdditionalProperty: TypeAlias = Annotated[\n    int, Meta(ge=1, le=9, title='LocalValue')\n]\n"
+    )
+
+
 def test_apply_builtin_formatter_keeps_inline_type_alias_union_assignment() -> None:
     """Test built-in formatter keeps short TypeAlias Union assignments inline."""
     code = "from typing import TypeAlias, Union\n\n\nSearchResult: TypeAlias = Union['A', 'B']\n"
@@ -926,6 +984,231 @@ def test_apply_builtin_formatter_keeps_non_union_type_alias_assignment() -> None
         apply_builtin_formatter(code)
         == "from typing import TypeAlias\n\nSearchResult: TypeAlias = tuple[\n    'A',\n    'B',\n]\n"
     )
+
+
+def test_apply_builtin_formatter_wraps_long_tuple_nested_in_dict() -> None:
+    """Wrap long tuple values nested in generated class metadata like Black."""
+    code = (
+        "class Payload:\n"
+        "    __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (\n"
+        "        {\n"
+        "            'declared_properties': ('allOfValueMap', 'arrayIrrelevantConstraintMap', "
+        "'booleanIrrelevantConstraintMap'),\n"
+        "            'rejected_patterns': (),\n"
+        "        },\n"
+        "    )\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "class Payload:\n"
+        "    __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (\n"
+        "        {\n"
+        "            'declared_properties': (\n"
+        "                'allOfValueMap',\n"
+        "                'arrayIrrelevantConstraintMap',\n"
+        "                'booleanIrrelevantConstraintMap',\n"
+        "            ),\n"
+        "            'rejected_patterns': (),\n"
+        "        },\n"
+        "    )\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "nested_value",
+    ["(1, 2)", "{'key': 1}", repr("x" * 90)],
+)
+def test_apply_builtin_formatter_keeps_existing_tuple_element(nested_value: str) -> None:
+    """Keep an existing tuple element intact while wrapping an overlong sibling."""
+    code = (
+        "class Payload:\n"
+        "    value: ClassVar[tuple[Any, ...]] = (\n"
+        f"        {nested_value},\n"
+        "        {\n"
+        "            'items': ('abcdefghijklmno', 'abcdefghijklmno', 'abcdefghijklmno', 'abcdefghijklmno'),\n"
+        "        },\n"
+        "    )\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "class Payload:\n"
+        "    value: ClassVar[tuple[Any, ...]] = (\n"
+        f"        {nested_value},\n"
+        "        {\n"
+        "            'items': (\n"
+        "                'abcdefghijklmno',\n"
+        "                'abcdefghijklmno',\n"
+        "                'abcdefghijklmno',\n"
+        "                'abcdefghijklmno',\n"
+        "            ),\n"
+        "        },\n"
+        "    )\n"
+    )
+
+
+def test_apply_builtin_formatter_preserves_empty_tuple_assignment_formatting() -> None:
+    """Keep the existing generic formatting for a long empty-tuple assignment."""
+    code = (
+        "class Payload:\n"
+        "    very_long_generated_registry_name_that_exceeds_the_builtin_formatter_line_length_limit: tuple = ()\n"
+    )
+
+    assert len(code.splitlines()[1]) > 88
+    assert apply_builtin_formatter(code) == (
+        "class Payload:\n"
+        "    very_long_generated_registry_name_that_exceeds_the_builtin_formatter_line_length_limit: tuple = (\n"
+        "        ()\n"
+        "    )\n"
+    )
+
+
+def test_apply_builtin_formatter_keeps_empty_nested_literals() -> None:
+    """Keep empty nested literals intact while formatting a long tuple sibling."""
+    code = (
+        "class Payload:\n"
+        "    value: ClassVar[tuple[Any, ...]] = (\n"
+        "        {\n"
+        "            'items': ('abcdefghijklmno', 'abcdefghijklmno', 'abcdefghijklmno', 'abcdefghijklmno'),\n"
+        "            'empty_tuple_with_a_deliberately_long_generated_key_name_that_exceeds_line_length': (),\n"
+        "            'empty_dict_with_a_deliberately_long_generated_key_name_that_exceeds_line_length': {},\n"
+        "        },\n"
+        "    )\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "class Payload:\n"
+        "    value: ClassVar[tuple[Any, ...]] = (\n"
+        "        {\n"
+        "            'items': (\n"
+        "                'abcdefghijklmno',\n"
+        "                'abcdefghijklmno',\n"
+        "                'abcdefghijklmno',\n"
+        "                'abcdefghijklmno',\n"
+        "            ),\n"
+        "            'empty_tuple_with_a_deliberately_long_generated_key_name_that_exceeds_line_length': (),\n"
+        "            'empty_dict_with_a_deliberately_long_generated_key_name_that_exceeds_line_length': {},\n"
+        "        },\n"
+        "    )\n"
+    )
+
+
+def test_apply_builtin_formatter_preserves_single_entry_dict_trailing_comma() -> None:
+    """Preserve magic trailing commas when rebuilding nested dictionaries."""
+    code = (
+        "class Payload:\n"
+        "    value: ClassVar[tuple[Any, ...]] = (\n"
+        "        {\n"
+        "            'nested': {\n"
+        "                'short': 1,\n"
+        "            },\n"
+        "        },\n"
+        "        {\n"
+        "            'items': ('abcdefghijklmno', 'abcdefghijklmno', 'abcdefghijklmno', 'abcdefghijklmno'),\n"
+        "        },\n"
+        "    )\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "class Payload:\n"
+        "    value: ClassVar[tuple[Any, ...]] = (\n"
+        "        {\n"
+        "            'nested': {\n"
+        "                'short': 1,\n"
+        "            },\n"
+        "        },\n"
+        "        {\n"
+        "            'items': (\n"
+        "                'abcdefghijklmno',\n"
+        "                'abcdefghijklmno',\n"
+        "                'abcdefghijklmno',\n"
+        "                'abcdefghijklmno',\n"
+        "            ),\n"
+        "        },\n"
+        "    )\n"
+    )
+
+
+def test_apply_builtin_formatter_preserves_long_annotated_tuple_assignment() -> None:
+    """Prefer wrapping a long Annotated field over generic tuple-value formatting."""
+    code = (
+        "class Payload:\n"
+        "    value: Annotated[VeryLongGeneratedTypeNameThatMakesTheAnnotationOverflow, "
+        "Field(description='metadata')] = ('a', 'b')\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "class Payload:\n"
+        "    value: Annotated[\n"
+        "        VeryLongGeneratedTypeNameThatMakesTheAnnotationOverflow,\n"
+        "        Field(description='metadata'),\n"
+        "    ] = ('a', 'b')\n"
+    )
+
+
+def test_apply_builtin_formatter_preserves_multiline_annotated_tuple_assignment() -> None:
+    """Do not partially rewrite an unrelated multiline Annotated tuple assignment."""
+    code = (
+        "class Payload:\n"
+        "    value: Annotated[VeryLongGeneratedTypeNameThatMakesTheAnnotationOverflow, "
+        "Field(description='metadata')] = (\n"
+        "        {\n"
+        "            'items': ('abcdefghijklmno', 'abcdefghijklmno', 'abcdefghijklmno', 'abcdefghijklmno'),\n"
+        "        },\n"
+        "    )\n"
+    )
+
+    assert apply_builtin_formatter(code) == code
+
+
+def test_apply_builtin_formatter_preserves_overlong_classvar_tuple_header() -> None:
+    """Do not partially rewrite a multiline ClassVar assignment with an overlong header."""
+    code = (
+        "class Payload:\n"
+        "    value: ClassVar[tuple[VeryLongGeneratedTypeNameThatMakesTheAnnotationOverflow, ...]] = (\n"
+        "        {\n"
+        "            'items': ('abcdefghijklmno', 'abcdefghijklmno', 'abcdefghijklmno', 'abcdefghijklmno'),\n"
+        "        },\n"
+        "    )\n"
+    )
+
+    assert len(code.splitlines()[1]) > 88
+    assert apply_builtin_formatter(code) == code
+
+
+def test_apply_builtin_formatter_preserves_comment_in_multiline_tuple() -> None:
+    """Do not reconstruct multiline tuple metadata that contains a comment."""
+    code = (
+        "class Payload:\n"
+        "    value: ClassVar[tuple[Any, ...]] = (\n"
+        "        {\n"
+        "            # preserve this metadata explanation\n"
+        f"            'items': {tuple('abcdefghijklmno' for _ in range(6))!r},\n"
+        "        },\n"
+        "    )\n"
+    )
+
+    assert apply_builtin_formatter(code) == code
+
+
+def test_apply_builtin_formatter_keeps_non_name_tuple_assignment_target() -> None:
+    """Do not route non-name annotated assignments through generated-field formatting."""
+    code = (
+        "class Payload:\n"
+        "    registry['key']: ClassVar[tuple[Any, ...]] = (\n"
+        "        {\n"
+        "            'items': ('abcdefghijklmno', 'abcdefghijklmno', 'abcdefghijklmno', 'abcdefghijklmno'),\n"
+        "        },\n"
+        "    )\n"
+    )
+
+    assert apply_builtin_formatter(code) == code
+
+
+def test_apply_builtin_formatter_preserves_comment_in_annotated_alias() -> None:
+    """Do not reconstruct a multiline Annotated alias that contains a comment."""
+    code = "Alias: TypeAlias = Annotated[\n    int,\n    # preserve constraint rationale\n    Field(ge=1),\n]\n"
+
+    assert apply_builtin_formatter(code) == code
 
 
 def test_apply_builtin_formatter_normalizes_blank_lines_without_imports() -> None:

@@ -104,7 +104,6 @@ _PYDANTIC_V2_BASE_MODEL_MODULE: Final = "datamodel_code_generator.model.pydantic
 _PYDANTIC_V2_DATACLASS_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.dataclass"
 _PYDANTIC_V2_MODULE: Final = "datamodel_code_generator.model.pydantic_v2"
 _PYDANTIC_V2_ROOT_MODEL_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.root_model"
-_TYPED_DICT_MODULE: Final = "datamodel_code_generator.model.typed_dict"
 _MODEL_MODULE_PREFIX: Final = "datamodel_code_generator.model."
 _CLASS_NAME_SEPARATOR_PATTERN: Final = re.compile(r"[^A-Za-z0-9]+")
 _TOP_LEVEL_FUTURE_IMPORT_PATTERN: Final = re.compile(r"(?m)^from __future__ import ")
@@ -155,10 +154,6 @@ def _is_pydantic_v2_dump_resolve_reference_action(value: object) -> bool:
         getattr(value, "__module__", None) == _PYDANTIC_V2_MODULE
         and getattr(value, "__name__", None) == "dump_resolve_reference_action"
     )
-
-
-def _is_typed_dict_data_model(value: object | type[object]) -> bool:
-    return _type_mro_contains_type(_model_type(value), module=_TYPED_DICT_MODULE, name="TypedDict")
 
 
 def _add_msgspec_base_class_kwarg(model: DataModel, name: str, value: str) -> None:
