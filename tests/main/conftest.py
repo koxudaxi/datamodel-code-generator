@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import inspect
+import json
 import os
 import shutil
 import sys
@@ -203,6 +204,36 @@ def output_file(tmp_path: Path) -> Path:
 def output_dir(tmp_path: Path) -> Path:
     """Return standard output directory path."""
     return tmp_path / "model"
+
+
+@pytest.fixture
+def extreme_large_schema(tmp_path: Path) -> Path:  # pragma: no cover - perf-only fixture
+    """Generate a deterministic large schema with 2000 models."""
+    definitions: dict[str, object] = {}
+    schema: dict[str, object] = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "ExtremeLargeSchema",
+        "definitions": definitions,
+    }
+    for i in range(2000):
+        definitions[f"Model{i:04d}"] = {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer"},
+                "name": {"type": "string"},
+                "value": {"type": "number"},
+                "active": {"type": "boolean"},
+                "tags": {"type": "array", "items": {"type": "string"}},
+                "metadata": {"type": "object", "additionalProperties": {"type": "string"}},
+                "ref_prev": {"$ref": f"#/definitions/Model{max(0, i - 1):04d}"},
+            },
+            "required": ["id", "name"],
+        }
+    schema["$ref"] = "#/definitions/Model1999"
+
+    schema_file = tmp_path / "extreme_large.json"
+    schema_file.write_text(json.dumps(schema), encoding="utf-8")
+    return schema_file
 
 
 def get_current_version_args(*extra_args: str) -> list[str]:
