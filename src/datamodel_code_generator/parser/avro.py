@@ -451,6 +451,9 @@ class _AvroSchemaConverter:
                 return target
         converted = _copy_schema(target)
         converted.update(updates)
+        if avro_type == "fixed":
+            converted.pop("minLength", None)
+            converted.pop("maxLength", None)
         return converted
 
     @staticmethod

@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
+import pytest
+
 from datamodel_code_generator import InputFileType
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.parser import xmlschema as xmlschema_parser
@@ -15,6 +17,8 @@ from datamodel_code_generator.parser.xmlschema import (
     _read_xml_text,
 )
 from tests.main.conftest import (
+    BACKEND_GOLDEN_CASES,
+    BACKEND_GOLDEN_TARGET_ARGS,
     XML_SCHEMA_DATA_PATH,
     assert_path_cache_evicts_lru_entries,
     assert_path_cache_invalidates_after_write,
@@ -26,8 +30,6 @@ from tests.main.xmlschema.conftest import assert_file_content
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    import pytest
 
 
 def test_main_xmlschema_purchase_order(output_file: Path) -> None:
@@ -319,6 +321,26 @@ def test_main_xmlschema_advanced_constructs(output_file: Path) -> None:
         input_file_type="xmlschema",
         assert_func=assert_file_content,
         expected_file="advanced_constructs.py",
+    )
+
+
+@pytest.mark.parametrize(("output_model_type", "expected_name"), BACKEND_GOLDEN_CASES)
+def test_main_xmlschema_output_model_types(
+    output_file: Path,
+    output_model_type: str,
+    expected_name: str,
+) -> None:
+    """Generate representative XML Schema models across supported output backends."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "advanced_constructs.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file=f"output_model_types/advanced_constructs_{expected_name}.py",
+        extra_args=[*BACKEND_GOLDEN_TARGET_ARGS, "--output-model-type", output_model_type],
+        force_exec_validation=True,
+        importable_module_name=f"generated_xmlschema_{expected_name}",
+        importable_module_attribute="Zoo",
     )
 
 

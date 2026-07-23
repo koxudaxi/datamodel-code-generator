@@ -7,7 +7,7 @@ from typing import cast
 
 import pytest
 
-from datamodel_code_generator import load_data
+from datamodel_code_generator import DataModelType, load_data
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import PythonVersion, is_supported_in_black
 from datamodel_code_generator.parser.avro import convert_avro_schema_data
@@ -15,8 +15,11 @@ from tests.conftest import assert_mutable_copy_is_isolated
 from tests.main.avro.conftest import assert_file_content
 from tests.main.conftest import (
     AVRO_DATA_PATH,
+    BACKEND_GOLDEN_CASES,
+    BACKEND_GOLDEN_TARGET_ARGS,
     CURRENT_PYTHON_VERSION,
     LEGACY_BLACK_SKIP,
+    _generated_model,
     get_current_version_args,
     run_main_and_assert,
 )
@@ -84,6 +87,37 @@ def test_main_avro_constructs(output_file: Path) -> None:
         extra_args=get_current_version_args("--use-field-description"),
         force_exec_validation=True,
     )
+
+
+@pytest.mark.parametrize(("output_model_type", "expected_name"), BACKEND_GOLDEN_CASES)
+def test_main_avro_output_model_types(
+    output_file: Path,
+    output_model_type: str,
+    expected_name: str,
+) -> None:
+    """Generate representative Avro models across supported output backends."""
+    run_main_and_assert(
+        input_path=AVRO_DATA_PATH / "constructs.avsc",
+        output_path=output_file,
+        input_file_type="avro",
+        assert_func=assert_file_content,
+        expected_file=f"output_model_types/constructs_{expected_name}.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--output-model-type",
+            output_model_type,
+            "--use-field-description",
+        ],
+        force_exec_validation=True,
+        importable_module_name=f"generated_avro_{expected_name}",
+        importable_module_attribute="User",
+    )
+    if output_model_type != DataModelType.MsgspecStruct.value:
+        return
+    import msgspec
+
+    with _generated_model(output_file, f"decoded_avro_{expected_name}", "User") as model:
+        msgspec.json.Decoder(type=model)
 
 
 @_SKIP_BLACK
