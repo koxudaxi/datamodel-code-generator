@@ -639,37 +639,6 @@ def test_perf_graphql_style_typed_dict(tmp_path: Path) -> None:
 
 
 @pytest.fixture
-def extreme_large_schema(tmp_path: Path) -> Path:
-    """Generate an extremely large schema with 2000 models."""
-    import json
-
-    schema: dict = {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "ExtremeLargeSchema",
-        "definitions": {},
-    }
-    for i in range(2000):
-        schema["definitions"][f"Model{i:04d}"] = {
-            "type": "object",
-            "properties": {
-                "id": {"type": "integer"},
-                "name": {"type": "string"},
-                "value": {"type": "number"},
-                "active": {"type": "boolean"},
-                "tags": {"type": "array", "items": {"type": "string"}},
-                "metadata": {"type": "object", "additionalProperties": {"type": "string"}},
-                "ref_prev": {"$ref": f"#/definitions/Model{max(0, i - 1):04d}"},
-            },
-            "required": ["id", "name"],
-        }
-    schema["$ref"] = "#/definitions/Model1999"
-
-    schema_file = tmp_path / "extreme_large.json"
-    schema_file.write_text(json.dumps(schema))
-    return schema_file
-
-
-@pytest.fixture
 def massive_files_input(tmp_path: Path) -> Path:
     """Generate 200 separate schema files with cross-references."""
     import json
@@ -746,6 +715,7 @@ def extreme_duplicate_names_schema(tmp_path: Path) -> Path:
 
 
 @pytest.mark.perf
+@pytest.mark.benchmark
 def test_perf_extreme_large_schema(tmp_path: Path, extreme_large_schema: Path) -> None:
     """Performance test: Extremely large schema with 2000 models.
 
