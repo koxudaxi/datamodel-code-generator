@@ -27,7 +27,6 @@ from collections.abc import (
 from collections.abc import (
     Set as AbstractSet,
 )
-from contextlib import contextmanager
 from dataclasses import is_dataclass
 from enum import Enum as PyEnum
 from pathlib import Path
@@ -35,12 +34,10 @@ from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, cast, get_a
 
 from pydantic import BaseModel
 
-from datamodel_code_generator._process_state import INPUT_MODEL_LOCK, PROCESS_STATE_LOCK
+from datamodel_code_generator._process_state import PROCESS_STATE_LOCK
 from datamodel_code_generator.enums import InputModelRefStrategy
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
-
     from datamodel_code_generator import DataModelType, InputFileType
 
 
@@ -99,56 +96,45 @@ def _module_depth(module_name: str) -> int:
     return module_name.count(".")
 
 
-def _input_model_modules_are_loaded(input_models: list[str]) -> bool:
-    return all(
-        not _is_path_input_model_module(module_name) and module_name in sys.modules
-        for input_model in input_models
-        if (module_name := _split_input_model(input_model)[0])
-    )
-
-
-@contextmanager
-def _load_model_schema_context(
+def _load_model_schema_isolated(
     input_models: list[str],
     input_file_type: InputFileType,
     ref_strategy: InputModelRefStrategy | None,
     output_model_type: DataModelType | None,
-) -> Iterator[dict[str, object]]:
+) -> dict[str, object]:
     """Load a schema while restoring cwd-local import state afterwards."""
     with PROCESS_STATE_LOCK:
         cwd_entry = str(Path.cwd())
         added_path = cwd_entry not in sys.path
         if not added_path:
-            yield _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
-        else:
-            directory = Path(cwd_entry).resolve()
-            environment_directory = Path(sys.prefix).resolve()
-            importer_cache_entry = sys.path_importer_cache.get(cwd_entry, _MISSING_MODULE)
-            baseline_modules = sys.modules.copy()
-            sys.path.insert(0, cwd_entry)
-            try:
-                yield _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
-            finally:
-                # Loading owns new cwd-local modules; unrelated same-cwd imports
-                # must not overlap this scoped operation.
-                current_modules = sys.modules.copy()
-                local_module_names = sorted(
-                    (
-                        module_name
-                        for module_name, module in current_modules.items()
-                        if module_name not in baseline_modules
-                        and _module_is_from_directory(module, directory, environment_directory)
-                    ),
-                    key=_module_depth,
-                    reverse=True,
-                )
-                for module_name in local_module_names:
-                    _remove_local_module(module_name, current_modules[module_name])
-                _remove_input_model_path(cwd_entry)
-                if importer_cache_entry is _MISSING_MODULE:
-                    sys.path_importer_cache.pop(cwd_entry, None)
-                else:
-                    sys.path_importer_cache[cwd_entry] = cast("Any", importer_cache_entry)
+            return _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
+
+        directory = Path(cwd_entry).resolve()
+        environment_directory = Path(sys.prefix).resolve()
+        importer_cache_entry = sys.path_importer_cache.get(cwd_entry, _MISSING_MODULE)
+        baseline_modules = sys.modules.copy()
+        sys.path.insert(0, cwd_entry)
+        try:
+            return _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
+        finally:
+            current_modules = sys.modules.copy()
+            local_module_names = sorted(
+                (
+                    module_name
+                    for module_name, module in current_modules.items()
+                    if module_name not in baseline_modules
+                    and _module_is_from_directory(module, directory, environment_directory)
+                ),
+                key=_module_depth,
+                reverse=True,
+            )
+            for module_name in local_module_names:
+                _remove_local_module(module_name, current_modules[module_name])
+            _remove_input_model_path(cwd_entry)
+            if importer_cache_entry is _MISSING_MODULE:
+                sys.path_importer_cache.pop(cwd_entry, None)
+            else:
+                sys.path_importer_cache[cwd_entry] = cast("Any", importer_cache_entry)
 
 
 def _restore_path_module(state: _ModuleRestoreState) -> None:
@@ -872,15 +858,7 @@ def load_model_schema(
     Returns:
         Merged schema dict with anyOf referencing all root models
     """
-    with INPUT_MODEL_LOCK:
-        if _input_model_modules_are_loaded(input_models):
-            return _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
-    with (
-        PROCESS_STATE_LOCK,
-        INPUT_MODEL_LOCK,
-        _load_model_schema_context(input_models, input_file_type, ref_strategy, output_model_type) as schema,
-    ):
-        return schema
+    return _load_model_schema_isolated(input_models, input_file_type, ref_strategy, output_model_type)
 
 
 def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915

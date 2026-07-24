@@ -1521,7 +1521,7 @@ def generate(
     config = _apply_generate_config_preset(config)
     config = _apply_missing_sentinel_config(config)
 
-    if _uses_legacy_process_state(config):
+    if config.output is not None and _uses_legacy_process_state(config):
         with PROCESS_STATE_LOCK:
             return _generate(input_, config, Path.cwd(), use_output_cwd=config.output is not None)
     with PROCESS_STATE_LOCK:
@@ -1545,11 +1545,7 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
     }
     if caller_path_updates:
         config = config.model_copy(update=caller_path_updates)
-    output_context_path = (
-        caller_cwd
-        if use_output_cwd and config.http_local_ref_path is None
-        else _output_context_path(config.output, caller_cwd)
-    )
+    output_context_path = _output_context_path(config.output, caller_cwd)
     if (http_local_ref_path := _absolute_generation_path(config.http_local_ref_path, output_context_path)) is not (
         config.http_local_ref_path
     ):

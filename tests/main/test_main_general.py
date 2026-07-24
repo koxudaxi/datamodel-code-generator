@@ -3380,6 +3380,65 @@ def test_generate_serializes_cwd_dependent_extensions(tmp_path: Path) -> None:
     assert_file_content(second_output, "generate_with_empty_formatters.py")
 
 
+@pytest.mark.allow_direct_assert
+def test_generate_does_not_capture_legacy_output_cwd(tmp_path: Path) -> None:
+    """Resolve a normal request after a cwd-dependent request restores the caller context."""
+    legacy_entered = Event()
+    release_legacy = Event()
+    normal_started = Event()
+    normal_finished = Event()
+    caller_cwd = Path.cwd()
+    input_path = (JSON_SCHEMA_DATA_PATH / "person.json").relative_to(caller_cwd)
+    legacy_output = tmp_path / "legacy" / "model.py"
+    normal_output = tmp_path / "normal" / "model.py"
+    legacy_output.parent.mkdir()
+    normal_output.parent.mkdir()
+
+    def wait_in_legacy_context(name: str) -> str:
+        legacy_entered.set()
+        if not release_legacy.wait(timeout=5):  # pragma: no cover
+            pytest.fail("Timed out waiting to release legacy generation")
+        return name
+
+    def run_normal_generation() -> str | GeneratedModules | None:
+        normal_started.set()
+        try:
+            return generate(
+                input_path,
+                output=normal_output,
+                input_file_type=InputFileType.JsonSchema,
+                disable_timestamp=True,
+                formatters=[],
+            )
+        finally:
+            normal_finished.set()
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            legacy = executor.submit(
+                generate,
+                input_path,
+                output=legacy_output,
+                input_file_type=InputFileType.JsonSchema,
+                disable_timestamp=True,
+                formatters=[],
+                custom_class_name_generator=wait_in_legacy_context,
+            )
+            assert legacy_entered.wait(timeout=5)
+            normal = executor.submit(run_normal_generation)
+            assert normal_started.wait(timeout=5)
+            assert not normal_finished.wait(timeout=0.1)
+            release_legacy.set()
+            legacy.result(timeout=5)
+            normal.result(timeout=5)
+    finally:
+        release_legacy.set()
+
+    assert Path.cwd() == caller_cwd
+    assert_file_content(legacy_output, "generate_with_empty_formatters.py")
+    assert_file_content(normal_output, "generate_with_empty_formatters.py")
+
+
 def test_generate_with_custom_formatter_and_empty_formatters(output_file: Path) -> None:
     """Keep custom formatting when the built-in formatter list is empty."""
     run_generate_file_and_assert(
