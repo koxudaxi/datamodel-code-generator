@@ -35,7 +35,7 @@ from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, cast, get_a
 
 from pydantic import BaseModel
 
-from datamodel_code_generator._process_state import PROCESS_STATE_LOCK
+from datamodel_code_generator._process_state import INPUT_MODEL_LOCK, PROCESS_STATE_LOCK
 from datamodel_code_generator.enums import InputModelRefStrategy
 
 if TYPE_CHECKING:
@@ -89,6 +89,14 @@ def _module_depth(module_name: str) -> int:
     return module_name.count(".")
 
 
+def _input_model_modules_are_loaded(input_models: list[str]) -> bool:
+    return all(
+        not _is_path_input_model_module(module_name) and module_name in sys.modules
+        for input_model in input_models
+        if (module_name := _split_input_model(input_model)[0])
+    )
+
+
 @contextmanager
 def _load_model_schema_context(
     input_models: list[str],
@@ -97,45 +105,38 @@ def _load_model_schema_context(
     output_model_type: DataModelType | None,
 ) -> Iterator[dict[str, object]]:
     """Load a schema while restoring cwd-local import state afterwards."""
-    input_module_names = tuple(_split_input_model(input_model)[0] for input_model in input_models)
-    if all(
-        not _is_path_input_model_module(module_name) and module_name in sys.modules
-        for module_name in input_module_names
-    ):
-        yield _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
-    else:
-        with PROCESS_STATE_LOCK:
-            cwd_entry = str(Path.cwd())
-            added_path = cwd_entry not in sys.path
-            if not added_path:
+    with PROCESS_STATE_LOCK:
+        cwd_entry = str(Path.cwd())
+        added_path = cwd_entry not in sys.path
+        if not added_path:
+            yield _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
+        else:
+            directory = Path(cwd_entry).resolve()
+            importer_cache_entry = sys.path_importer_cache.get(cwd_entry, _MISSING_MODULE)
+            baseline_modules = sys.modules.copy()
+            sys.path.insert(0, cwd_entry)
+            try:
                 yield _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
-            else:
-                directory = Path(cwd_entry).resolve()
-                importer_cache_entry = sys.path_importer_cache.get(cwd_entry, _MISSING_MODULE)
-                baseline_modules = sys.modules.copy()
-                sys.path.insert(0, cwd_entry)
-                try:
-                    yield _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
-                finally:
-                    # Loading owns new cwd-local modules; unrelated same-cwd imports
-                    # must not overlap this scoped operation.
-                    current_modules = sys.modules.copy()
-                    local_module_names = sorted(
-                        (
-                            module_name
-                            for module_name, module in current_modules.items()
-                            if module_name not in baseline_modules and _module_is_from_directory(module, directory)
-                        ),
-                        key=_module_depth,
-                        reverse=True,
-                    )
-                    for module_name in local_module_names:
-                        _remove_local_module(module_name, current_modules[module_name])
-                    _remove_input_model_path(cwd_entry)
-                    if importer_cache_entry is _MISSING_MODULE:
-                        sys.path_importer_cache.pop(cwd_entry, None)
-                    else:
-                        sys.path_importer_cache[cwd_entry] = cast("Any", importer_cache_entry)
+            finally:
+                # Loading owns new cwd-local modules; unrelated same-cwd imports
+                # must not overlap this scoped operation.
+                current_modules = sys.modules.copy()
+                local_module_names = sorted(
+                    (
+                        module_name
+                        for module_name, module in current_modules.items()
+                        if module_name not in baseline_modules and _module_is_from_directory(module, directory)
+                    ),
+                    key=_module_depth,
+                    reverse=True,
+                )
+                for module_name in local_module_names:
+                    _remove_local_module(module_name, current_modules[module_name])
+                _remove_input_model_path(cwd_entry)
+                if importer_cache_entry is _MISSING_MODULE:
+                    sys.path_importer_cache.pop(cwd_entry, None)
+                else:
+                    sys.path_importer_cache[cwd_entry] = cast("Any", importer_cache_entry)
 
 
 def _restore_path_module(state: _ModuleRestoreState) -> None:
@@ -748,6 +749,7 @@ def _try_rebuild_model(obj: type) -> None:
     config_classes = {"GenerateConfig", "ParserConfig", "ParseConfig"}
     main_config_classes = {"Config"}
     if module in {"datamodel_code_generator.config", "config"} and class_name in config_classes:
+        from datamodel_code_generator.config import _rebuild_config_model  # noqa: PLC0415
         from datamodel_code_generator.enums import UnionMode  # noqa: PLC0415
         from datamodel_code_generator.model.base import DataModel, DataModelFieldBase  # noqa: PLC0415
         from datamodel_code_generator.types import DataTypeManager, StrictTypes  # noqa: PLC0415
@@ -759,8 +761,9 @@ def _try_rebuild_model(obj: type) -> None:
             "StrictTypes": StrictTypes,
             "UnionMode": UnionMode,
         }
-        obj.model_rebuild(_types_namespace=types_namespace)  # ty: ignore[unresolved-attribute]
+        _rebuild_config_model(obj, types_namespace)  # ty: ignore[invalid-argument-type]
     elif module == "datamodel_code_generator.__main__" and class_name in main_config_classes:  # pragma: no cover
+        from datamodel_code_generator.config import _rebuild_config_model  # noqa: PLC0415
         from datamodel_code_generator.enums import UnionMode  # noqa: PLC0415
         from datamodel_code_generator.types import StrictTypes  # noqa: PLC0415
 
@@ -768,7 +771,7 @@ def _try_rebuild_model(obj: type) -> None:
             "UnionMode": UnionMode,
             "StrictTypes": StrictTypes,
         }
-        obj.model_rebuild(_types_namespace=types_namespace)  # ty: ignore[unresolved-attribute]
+        _rebuild_config_model(obj, types_namespace)  # ty: ignore[invalid-argument-type]
     else:
         obj.model_rebuild()  # ty: ignore[unresolved-attribute]
 
@@ -857,7 +860,14 @@ def load_model_schema(
     Returns:
         Merged schema dict with anyOf referencing all root models
     """
-    with _load_model_schema_context(input_models, input_file_type, ref_strategy, output_model_type) as schema:
+    with INPUT_MODEL_LOCK:
+        if _input_model_modules_are_loaded(input_models):
+            return _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
+    with (
+        PROCESS_STATE_LOCK,
+        INPUT_MODEL_LOCK,
+        _load_model_schema_context(input_models, input_file_type, ref_strategy, output_model_type) as schema,
+    ):
         return schema
 
 

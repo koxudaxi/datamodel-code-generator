@@ -1443,15 +1443,18 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         Uses _get_config_class() to determine which config class to instantiate.
         """
+        from datamodel_code_generator.config import _rebuild_config_model  # noqa: PLC0415
+
         config_class = cls._get_config_class()
 
-        config_class.model_rebuild(
-            _types_namespace={
+        _rebuild_config_model(
+            config_class,
+            {
                 "StrictTypes": StrictTypes,
                 "DataModel": DataModel,
                 "DataModelFieldBase": DataModelFieldBase,
                 "DataTypeManager": DataTypeManager,
-            }
+            },
         )
         return config_class.model_validate(options)  # ty: ignore[invalid-return-type]
 

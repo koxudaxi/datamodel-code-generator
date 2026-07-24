@@ -6,6 +6,7 @@ from collections import defaultdict
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from keyword import iskeyword
 from pathlib import Path  # noqa: TC003 - used at runtime by Pydantic
+from threading import RLock
 from typing import TYPE_CHECKING, Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -57,6 +58,7 @@ from datamodel_code_generator.validators import ModelValidators  # noqa: TC001 -
 
 CallableSchema = Callable[[str], str]
 DumpResolveReferenceAction = Callable[[Iterable[str]], str]
+_CONFIG_REBUILD_LOCK = RLock()
 DefaultPutDictSchema = DefaultPutDict[str, str]
 if TYPE_CHECKING:
     ExtraTemplateDataType = defaultdict[str, dict[str, Any]]
@@ -98,8 +100,18 @@ class GenerateConfig(BaseGenerateConfig):
     )
 
 
+def _rebuild_config_model(model_type: type[BaseModel], types_namespace: dict[str, Any]) -> None:
+    """Build one deferred config model without racing shared Pydantic state."""
+    if model_type.__pydantic_complete__:
+        return
+    with _CONFIG_REBUILD_LOCK:
+        if model_type.__pydantic_complete__:
+            return
+        model_type.model_rebuild(_types_namespace=types_namespace)
+
+
 def _rebuild_generate_config() -> None:
-    GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
+    _rebuild_config_model(GenerateConfig, {"StrictTypes": StrictTypes, "UnionMode": UnionMode})
 
 
 class ParserConfig(BaseModel):

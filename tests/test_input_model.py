@@ -476,6 +476,75 @@ def test_input_model_preserves_unrelated_concurrent_import(
         _assert_sys_module_is(unrelated_module_name, unrelated_module)
 
 
+def test_input_model_does_not_reuse_another_loads_temporary_module(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep dotted loading isolated from a concurrent path module with the same name."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    control_name = "_input_model_temporary_control"
+    module_name = "_input_model_temporary_collision"
+    first_entered = Event()
+    release_first = Event()
+    second_started = Event()
+    second_finished = Event()
+    control = types.ModuleType(control_name)
+    control.first_entered = first_entered
+    control.release_first = release_first
+    monkeypatch.setitem(sys.modules, control_name, control)
+
+    first_directory = tmp_path / "first"
+    second_directory = tmp_path / "second"
+    first_directory.mkdir()
+    second_directory.mkdir()
+    first_path = first_directory / f"{module_name}.py"
+    first_path.write_text(
+        "from pydantic import BaseModel\n"
+        f"from {control_name} import first_entered, release_first\n\n"
+        "class Model(BaseModel):\n"
+        "    first: str\n\n"
+        "first_entered.set()\n"
+        "release_first.wait(5)\n",
+        encoding="utf-8",
+    )
+    (second_directory / f"{module_name}.py").write_text(
+        "from pydantic import BaseModel\n\nclass Model(BaseModel):\n    second: int\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(second_directory)
+
+    def load_second() -> dict[str, object]:
+        second_started.set()
+        try:
+            return load_model_schema([f"{module_name}:Model"], InputFileType.JsonSchema)
+        finally:
+            second_finished.set()
+
+    with _without_sys_module(module_name):
+        try:
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                first_future = executor.submit(
+                    load_model_schema,
+                    [f"{first_path}:Model"],
+                    InputFileType.JsonSchema,
+                )
+                assert first_entered.wait(timeout=5)
+                second_future = executor.submit(load_second)
+                assert second_started.wait(timeout=5)
+                assert not second_finished.wait(timeout=0.1)
+                release_first.set()
+                first_schema = first_future.result(timeout=5)
+                second_schema = second_future.result(timeout=5)
+        finally:
+            release_first.set()
+
+    assert "first" in first_schema["properties"]
+    assert "second" in second_schema["properties"]
+    _assert_sys_module_missing(module_name)
+
+
 def test_input_model_path_format(tmp_path: Path) -> None:
     """Test --input-model with path format (path/to/file.py:Object)."""
     run_input_model_and_assert(

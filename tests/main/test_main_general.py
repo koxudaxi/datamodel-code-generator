@@ -3285,6 +3285,40 @@ def test_copy_template_data_preserves_aliases_and_cycles() -> None:
 
 
 @pytest.mark.allow_direct_assert
+def test_deferred_config_rebuild_is_thread_safe() -> None:
+    """Build shared deferred Pydantic config state once under concurrent use."""
+    from pydantic import BaseModel as PydanticBaseModel
+    from pydantic import ConfigDict
+
+    from datamodel_code_generator.config import _rebuild_config_model
+
+    # Keep the real rebuild active long enough for competing workers to reach the locked recheck.
+    deferred_config = type(
+        "_DeferredThreadConfig",
+        (PydanticBaseModel,),
+        {
+            "__annotations__": {
+                **{f"value_{index}": "DeferredValue" for index in range(4096)},
+                "value": "DeferredValue",
+            },
+            **{f"value_{index}": 0 for index in range(4096)},
+            "model_config": ConfigDict(defer_build=True),
+        },
+    )
+    assert not deferred_config.__pydantic_complete__
+
+    def rebuild_and_validate(value: int) -> object:
+        _rebuild_config_model(deferred_config, {"DeferredValue": int})
+        return deferred_config.model_validate({"value": value})
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        results = list(executor.map(rebuild_and_validate, range(32)))
+
+    assert deferred_config.__pydantic_complete__
+    assert [result.value for result in results] == list(range(32))
+
+
+@pytest.mark.allow_direct_assert
 def test_generate_serializes_cwd_dependent_extensions(tmp_path: Path) -> None:
     """Keep cwd-dependent extension calls in their own output context."""
     first_entered = Event()
