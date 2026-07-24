@@ -156,7 +156,8 @@ _IGNORED_TEXT_PREFIX_CHARS: frozenset[str] = frozenset({"\ufeff", " ", "\t", "\r
 _PARSER_SOURCE_DATA_CACHE_MAX_SIZE = 128
 _ParserSourceDataCacheKey: TypeAlias = tuple[Path, str, str, str]
 _ParserSourceDataSeenKey: TypeAlias = tuple[Path, str]
-_parser_source_data_cache: OrderedDict[_ParserSourceDataCacheKey, YamlValue] = OrderedDict()
+# Serialized snapshots isolate mutable callers and are faster to restore than reparsing source text.
+_parser_source_data_cache: OrderedDict[_ParserSourceDataCacheKey, bytes] = OrderedDict()
 _parser_source_data_seen_keys: OrderedDict[_ParserSourceDataSeenKey, None] = OrderedDict()
 _parser_source_data_cache_lock = RLock()
 _parsed_source_cache_enable_count = 0
@@ -339,15 +340,32 @@ def _load_parser_source_data_from_path_bytes(resolved_path: Path, data: bytes, e
 
 def _load_cached_parser_source_data(cache_key: _ParserSourceDataCacheKey) -> YamlValue | None:
     with _parser_source_data_cache_lock:
-        if cache_key in _parser_source_data_cache:
-            _parser_source_data_cache.move_to_end(cache_key)
-            return _parser_source_data_cache[cache_key]
-    return None
+        if (cached_data := _parser_source_data_cache.get(cache_key)) is None:
+            return None
+        _parser_source_data_cache.move_to_end(cache_key)
+
+    import pickle  # noqa: PLC0415, S403
+
+    try:
+        return pickle.loads(cached_data)  # noqa: S301
+    except Exception:  # noqa: BLE001
+        # A damaged optimization entry must fall back to the source parser.
+        with _parser_source_data_cache_lock:
+            if _parser_source_data_cache.get(cache_key) is cached_data:
+                del _parser_source_data_cache[cache_key]
+        return None
 
 
 def _store_parser_source_data(cache_key: _ParserSourceDataCacheKey, parsed_data: YamlValue) -> YamlValue:
+    import pickle  # noqa: PLC0415, S403
+
+    try:
+        cached_data = pickle.dumps(parsed_data, protocol=pickle.HIGHEST_PROTOCOL)
+    except Exception:  # noqa: BLE001
+        # Exotic YAML values may not be picklable; they remain valid uncached input.
+        return parsed_data
     with _parser_source_data_cache_lock:
-        _parser_source_data_cache[cache_key] = parsed_data
+        _parser_source_data_cache[cache_key] = cached_data
         _parser_source_data_cache.move_to_end(cache_key)
         while len(_parser_source_data_cache) > _PARSER_SOURCE_DATA_CACHE_MAX_SIZE:
             _parser_source_data_cache.popitem(last=False)
