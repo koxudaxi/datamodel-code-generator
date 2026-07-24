@@ -27,6 +27,7 @@ from collections.abc import (
 from collections.abc import (
     Set as AbstractSet,
 )
+from contextlib import contextmanager
 from dataclasses import is_dataclass
 from enum import Enum as PyEnum
 from pathlib import Path
@@ -34,9 +35,12 @@ from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, cast, get_a
 
 from pydantic import BaseModel
 
+from datamodel_code_generator._process_state import PROCESS_STATE_LOCK
 from datamodel_code_generator.enums import InputModelRefStrategy
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from datamodel_code_generator import DataModelType, InputFileType
 
 
@@ -46,6 +50,92 @@ class Error(Exception):
 
 _MISSING_MODULE = object()
 _ModuleRestoreState = tuple[str, object]
+
+
+def _path_is_within(path: str | Path, directory: Path) -> bool:
+    try:
+        return Path(path).resolve().is_relative_to(directory)
+    except OSError:
+        return False
+
+
+def _module_is_from_directory(module: object, directory: Path) -> bool:
+    if not isinstance(module, types.ModuleType):
+        return False
+    if isinstance(module_file := getattr(module, "__file__", None), str):
+        return _path_is_within(module_file, directory)
+    return any(_path_is_within(path, directory) for path in getattr(module, "__path__", ()))
+
+
+def _remove_local_module(module_name: str, module: types.ModuleType) -> None:
+    if sys.modules.get(module_name) is not module:
+        return
+    sys.modules.pop(module_name, None)
+    parent_name, separator, child_name = module_name.rpartition(".")
+    if (
+        separator
+        and isinstance(parent := sys.modules.get(parent_name), types.ModuleType)
+        and vars(parent).get(child_name) is module
+    ):
+        vars(parent).pop(child_name, None)
+
+
+def _remove_input_model_path(cwd_entry: str) -> None:
+    for index, entry in enumerate(sys.path):
+        if entry is cwd_entry:
+            sys.path.pop(index)
+            return
+
+
+@contextmanager
+def _load_model_schema_context(
+    input_models: list[str],
+    input_file_type: InputFileType,
+    ref_strategy: InputModelRefStrategy | None,
+    output_model_type: DataModelType | None,
+) -> Iterator[dict[str, object]]:
+    """Load a schema while restoring cwd-local import state afterwards."""
+    input_module_names = tuple(_split_input_model(input_model)[0] for input_model in input_models)
+    if all(
+        not _is_path_input_model_module(module_name) and module_name in sys.modules
+        for module_name in input_module_names
+    ):
+        yield _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
+        return
+
+    with PROCESS_STATE_LOCK:
+        cwd_entry = str(Path.cwd())
+        directory = Path(cwd_entry).resolve()
+        added_path = cwd_entry not in sys.path
+        importer_cache_entry = sys.path_importer_cache.get(cwd_entry, _MISSING_MODULE)
+        baseline_modules = sys.modules.copy()
+        if added_path:
+            sys.path.insert(0, cwd_entry)
+        try:
+            schema = _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
+            yield schema
+        finally:
+            # Loading owns new cwd-local modules; unrelated same-cwd imports must not overlap this scoped operation.
+            local_module_names = sorted(
+                (
+                    module_name
+                    for module_name, module in sys.modules.copy().items()
+                    if module_name not in baseline_modules and _module_is_from_directory(module, directory)
+                ),
+                key=lambda name: name.count("."),
+                reverse=True,
+            )
+            for module_name in local_module_names:
+                if isinstance(module := sys.modules.get(module_name), types.ModuleType) and _module_is_from_directory(
+                    module, directory
+                ):
+                    _remove_local_module(module_name, module)
+            if added_path:
+                _remove_input_model_path(cwd_entry)
+                if importer_cache_entry is _MISSING_MODULE:
+                    sys.path_importer_cache.pop(cwd_entry, None)
+                else:
+                    sys.path_importer_cache[cwd_entry] = cast("Any", importer_cache_entry)
 
 
 def _restore_path_module(state: _ModuleRestoreState) -> None:
@@ -750,7 +840,7 @@ def _transform_single_model_to_inheritance(
     return new_schema
 
 
-def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
+def load_model_schema(
     input_models: list[str],
     input_file_type: InputFileType,
     ref_strategy: InputModelRefStrategy | None = None,
@@ -767,6 +857,16 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
     Returns:
         Merged schema dict with anyOf referencing all root models
     """
+    with _load_model_schema_context(input_models, input_file_type, ref_strategy, output_model_type) as schema:
+        return schema
+
+
+def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
+    input_models: list[str],
+    input_file_type: InputFileType,
+    ref_strategy: InputModelRefStrategy | None,
+    output_model_type: DataModelType | None,
+) -> dict[str, object]:
     from datamodel_code_generator import (  # noqa: PLC0415
         DataModelType,
         InputFileType,
@@ -777,10 +877,6 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
 
     if len(input_models) == 1:
         return _load_single_model_schema(input_models[0], input_file_type, ref_strategy, output_model_type)
-
-    cwd = str(Path.cwd())
-    if cwd not in sys.path:
-        sys.path.insert(0, cwd)
 
     model_classes: list[type] = []
     loaded_modules: dict[str, types.ModuleType] = {}
@@ -885,10 +981,6 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
 
     modname, qualname = _split_input_model(input_model)
 
-    cwd = str(Path.cwd())
-    if cwd not in sys.path:
-        sys.path.insert(0, cwd)
-
     module, path_module_state = _load_input_model_module(modname)
 
     try:
@@ -923,7 +1015,8 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
             if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
                 nested_models = _collect_nested_models(obj)
                 model_name = getattr(obj, "__name__", None)
-                if model_name and "$defs" in schema and model_name in schema["$defs"]:  # pragma: no cover  # ty: ignore[unsupported-operator]
+                schema_defs = cast("dict[str, object]", schema.get("$defs", {}))
+                if model_name and model_name in schema_defs:  # pragma: no cover
                     nested_models[model_name] = obj
                 schema = _filter_defs_by_strategy(schema, nested_models, output_model_type, ref_strategy)
 

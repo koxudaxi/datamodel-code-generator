@@ -4006,6 +4006,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             builtin_format_line_length=self.builtin_format_line_length,
             use_type_checking_imports=effective_use_type_checking_imports,
             defer_formatting=self.defer_formatting,
+            formatter_cwd=getattr(self, "_formatter_cwd", None),
         )
 
     def _find_invalid_inferred_modules(  # noqa: PLR6301

@@ -10,7 +10,10 @@ import sys
 import warnings
 from argparse import ArgumentTypeError, BooleanOptionalAction, Namespace
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
+from pathlib import Path
+from threading import Event
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import black
@@ -56,6 +59,7 @@ from tests.conftest import (
     assert_generated_file_matches_output,
     assert_generated_modules_output,
     assert_httpx_get_kwargs,
+    assert_inputs_not_mutated,
     assert_no_uncommented_generated_code,
     assert_output,
     assert_runtime_import_package,
@@ -82,8 +86,6 @@ from tests.main.conftest import (
 )
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from pytest_mock import MockerFixture
 
 assert_file_content = create_assert_file_content(EXPECTED_MAIN_PATH)
@@ -3216,14 +3218,18 @@ def test_generate_returns_string_when_output_none() -> None:
 
 def test_generate_accepts_path_input(output_file: Path) -> None:
     """Test generate() reads Path inputs as local schema files."""
-    run_generate_file_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
-        output_path=output_file,
-        input_file_type=InputFileType.JsonSchema,
-        disable_timestamp=True,
-        assert_func=assert_file_content,
-        expected_file="generate_accepts_path_input.py",
-    )
+    with chdir(output_file.parent):
+        relative_root = output_file.parent.relative_to(output_file.parent)
+        run_generate_file_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+            output_path=output_file.relative_to(output_file.parent),
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            settings_path=relative_root,
+            http_local_ref_path=relative_root,
+            assert_func=assert_file_content,
+            expected_file="generate_accepts_path_input.py",
+        )
 
 
 @pytest.mark.parametrize("custom_formatters", [None, []], ids=["custom-unset", "custom-empty"])
@@ -3239,6 +3245,105 @@ def test_generate_with_empty_formatters(output_file: Path, custom_formatters: li
         assert_func=assert_file_content,
         expected_file="generate_with_empty_formatters.py",
     )
+
+
+def test_generate_does_not_mutate_extra_template_data() -> None:
+    """Keep reusable GenerateConfig template data isolated per call."""
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        disable_timestamp=True,
+        allow_extra_fields=True,
+        extra_template_data={"#all#": {"unused_list": ["stable"], "unused_set": {"stable"}}},
+        formatters=[],
+    )
+
+    with assert_inputs_not_mutated({"extra_template_data": config.extra_template_data}):
+        generate(JSON_SCHEMA_DATA_PATH / "person.json", config=config)
+        result = generate(
+            JSON_SCHEMA_DATA_PATH / "person.json",
+            config=config.model_copy(update={"allow_extra_fields": False}),
+        )
+
+    assert_output(f"{result}\n", EXPECTED_MAIN_PATH / "generate_with_empty_formatters.py")
+
+
+@pytest.mark.allow_direct_assert
+def test_copy_template_data_preserves_aliases_and_cycles() -> None:
+    """Keep shared JSON-like values shared within only the detached copy."""
+    from datamodel_code_generator._template_data import copy_template_data
+
+    shared: list[object] = []
+    source = {"first": shared, "second": shared}
+    shared.append(source)
+
+    copied = copy_template_data(source, {})
+
+    assert copied is not source
+    assert copied["first"] is copied["second"]
+    assert copied["first"][0] is copied
+
+
+@pytest.mark.allow_direct_assert
+def test_generate_serializes_cwd_dependent_extensions(tmp_path: Path) -> None:
+    """Keep cwd-dependent extension calls in their own output context."""
+    first_entered = Event()
+    second_started = Event()
+    second_entered = Event()
+    release_first = Event()
+    observed_cwds: dict[str, set[Path]] = defaultdict(set)
+    first_output = tmp_path / "first" / "model.py"
+    second_output = tmp_path / "second" / "model.py"
+    first_output.parent.mkdir()
+    second_output.parent.mkdir()
+
+    def first_name_generator(name: str) -> str:
+        observed_cwds["first"].add(Path.cwd())
+        first_entered.set()
+        if not release_first.wait(timeout=5):  # pragma: no cover
+            pytest.fail("Timed out waiting to release the first generator")
+        return name
+
+    def second_name_generator(name: str) -> str:
+        observed_cwds["second"].add(Path.cwd())
+        second_entered.set()
+        return name
+
+    def run_second_generation() -> str | GeneratedModules | None:
+        second_started.set()
+        return generate(
+            **options,
+            output=second_output,
+            custom_class_name_generator=second_name_generator,
+        )
+
+    options = {
+        "input_": JSON_SCHEMA_DATA_PATH / "person.json",
+        "input_file_type": InputFileType.JsonSchema,
+        "disable_timestamp": True,
+        "formatters": [],
+    }
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(
+            generate,
+            **options,
+            output=first_output,
+            custom_class_name_generator=first_name_generator,
+        )
+        assert first_entered.wait(timeout=5)
+        second = executor.submit(run_second_generation)
+        assert second_started.wait(timeout=5)
+        assert not second_entered.wait(timeout=0.1)
+        release_first.set()
+        first.result(timeout=5)
+        second.result(timeout=5)
+
+    assert observed_cwds == {
+        "first": {first_output.parent},
+        "second": {second_output.parent},
+    }
+    assert_file_content(first_output, "generate_with_empty_formatters.py")
+    assert_file_content(second_output, "generate_with_empty_formatters.py")
 
 
 def test_generate_with_custom_formatter_and_empty_formatters(output_file: Path) -> None:
@@ -3562,6 +3667,18 @@ def test_generate_returns_dict_for_multiple_modules(tmp_path: Path) -> None:
         result,
         EXPECTED_MAIN_PATH / "generate_returns_dict_for_multiple_modules",
         transform=lambda output: output.replace(f"#   filename:  {tmp_path.name}", "#   filename:  <tmpdir>"),
+    )
+
+    with chdir(tmp_path):
+        result = generate(
+            [main_schema.relative_to(tmp_path), address_schema.relative_to(tmp_path)],
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+        )
+    assert_generated_modules_output(
+        result,
+        EXPECTED_MAIN_PATH / "generate_returns_dict_for_multiple_modules",
+        transform=lambda output: output.replace("#   filename:  <dict>", "#   filename:  <tmpdir>"),
     )
 
 
