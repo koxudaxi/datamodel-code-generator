@@ -180,10 +180,17 @@ def _should_extract_model_name(name: str, *, include_private: bool = False) -> b
 
 def _extract_models(namespace: dict[str, Any], *, include_private: bool = False) -> dict[str, type]:
     """Extract model and enum classes from namespace."""
+    match namespace.get("__name__"):
+        case str() as module_name:
+            pass
+        case _:
+            module_name = "builtins"
+
     return {
         k: v
         for k, v in namespace.items()
         if isinstance(v, type)
+        and v.__module__ == module_name
         and _should_extract_model_name(k, include_private=include_private)
         and ((issubclass(v, BaseModel) and v is not BaseModel) or (issubclass(v, Enum) and v is not Enum))
     }
