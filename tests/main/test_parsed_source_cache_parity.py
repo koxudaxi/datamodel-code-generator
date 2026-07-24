@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import marshal
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier, Event
 from typing import TYPE_CHECKING
@@ -14,13 +15,15 @@ from datamodel_code_generator import (
     _is_parsed_source_cache_enabled,
     _parser_source_data_cache,
     enable_parsed_source_cache,
+    load_data_from_path,
 )
-from tests.conftest import assert_output
+from tests.conftest import assert_mutable_copy_is_isolated, assert_output
 from tests.main.conftest import JSON_SCHEMA_DATA_PATH, OPEN_API_DATA_PATH, run_main_with_args
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path
+    from typing import Any
 
 
 def _input_file_type_option(input_file_type: InputFileType) -> str:
@@ -137,6 +140,81 @@ def test_parsed_source_cache_scope_thread_safety() -> None:
     assert not _is_parsed_source_cache_enabled()
 
 
+def _mutate_cached_schema(schema: dict[str, Any], input_file_type: InputFileType) -> None:
+    match input_file_type:
+        case InputFileType.JsonSchema:
+            schema["properties"]["firstName"]["type"] = "integer"
+        case InputFileType.OpenAPI:
+            schema["components"]["schemas"]["Pet"]["properties"]["name"]["type"] = "integer"
+        case _:  # pragma: no cover
+            msg = f"Unsupported parsed source cache mutation input type: {input_file_type}"
+            raise AssertionError(msg)
+
+
+@pytest.mark.allow_direct_assert
+def test_parser_source_cache_skips_unserializable_values(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep parsed source loading available when cache serialization fails."""
+    schema_path = tmp_path / "schema.json"
+    schema_path.write_text('{"properties": {"name": {"type": "string"}}}', encoding="utf-8")
+    _clear_parser_source_data_cache()
+    original = load_data_from_path(schema_path, "utf-8")
+
+    def raise_serialization_error(*_args: object, **_kwargs: object) -> bytes:
+        raise ValueError
+
+    monkeypatch.setattr(marshal, "dumps", raise_serialization_error)
+    assert_mutable_copy_is_isolated(
+        original=original,
+        copied=load_data_from_path(schema_path, "utf-8"),
+        mutate_copied=lambda value: value["properties"]["name"].update(type="integer"),
+        label="uncached unserializable JSON source",
+    )
+
+    assert not _parser_source_data_cache
+
+
+@pytest.mark.allow_direct_assert
+def test_parser_source_cache_isolates_non_string_yaml_keys(tmp_path: Path) -> None:
+    """Preserve non-string YAML keys in independent cached values."""
+    schema_path = tmp_path / "schema.yaml"
+    schema_path.write_text("1:\n  nested: true\n", encoding="utf-8")
+    _clear_parser_source_data_cache()
+    original = load_data_from_path(schema_path, "utf-8")
+
+    assert_mutable_copy_is_isolated(
+        original=original,
+        copied=load_data_from_path(schema_path, "utf-8"),
+        mutate_copied=lambda value: value[1].update(nested=False),
+        label="cached non-string-key YAML source",
+    )
+    assert _parser_source_data_cache
+
+
+@pytest.mark.allow_direct_assert
+def test_parser_source_cache_preserves_yaml_graph_sharing(tmp_path: Path) -> None:
+    """Preserve the YAML backend's graph-sharing semantics in an isolated cached source."""
+    schema_path = tmp_path / "schema.yaml"
+    schema_path.write_text(
+        "shared: &shared\n  type: string\nfirst: *shared\nsecond: *shared\n",
+        encoding="utf-8",
+    )
+    _clear_parser_source_data_cache()
+    original = load_data_from_path(schema_path, "utf-8")
+    load_data_from_path(schema_path, "utf-8")
+    cached = load_data_from_path(schema_path, "utf-8")
+
+    assert (cached["first"] is cached["second"]) == (original["first"] is original["second"])
+    assert_mutable_copy_is_isolated(
+        original=original,
+        copied=cached,
+        mutate_copied=lambda value: value["first"].update(type="integer"),
+        label="cached YAML aliases",
+    )
+
+
 @pytest.mark.parametrize(
     ("input_path", "input_file_type", "extra_args"),
     [
@@ -194,4 +272,52 @@ def test_generate_output_matches_with_and_without_parsed_source_cache(
 
     assert cached_entry_count > 0
     assert uncached_entry_count == 0
+    assert_output(uncached_output.read_text(encoding="utf-8"), cached_output)
+
+
+@pytest.mark.parametrize(
+    ("input_path", "input_file_type"),
+    [
+        pytest.param(
+            JSON_SCHEMA_DATA_PATH / "person.json",
+            InputFileType.JsonSchema,
+            id="json",
+        ),
+        pytest.param(
+            OPEN_API_DATA_PATH / "api.yaml",
+            InputFileType.OpenAPI,
+            id="yaml",
+        ),
+    ],
+)
+def test_generate_output_ignores_external_cached_source_mutation(
+    input_path: Path,
+    input_file_type: InputFileType,
+    tmp_path: Path,
+) -> None:
+    """Keep generated output stable after a caller mutates a cached parsed value."""
+    cached_output = tmp_path / "cached.py"
+    uncached_output = tmp_path / "uncached.py"
+    _clear_parser_source_data_cache()
+    original = load_data_from_path(input_path, "utf-8")
+    cached = load_data_from_path(input_path, "utf-8")
+    assert_mutable_copy_is_isolated(
+        original=original,
+        copied=cached,
+        mutate_copied=lambda value: _mutate_cached_schema(value, input_file_type),
+        label=f"cached {input_file_type.value} source",
+    )
+
+    run_main_with_args(
+        _build_generate_args(input_path, cached_output, input_file_type, None),
+        use_parsed_source_cache=True,
+        use_builtin_default_formatter=False,
+    )
+    _clear_parser_source_data_cache()
+    run_main_with_args(
+        _build_generate_args(input_path, uncached_output, input_file_type, None),
+        use_parsed_source_cache=False,
+        use_builtin_default_formatter=False,
+    )
+
     assert_output(uncached_output.read_text(encoding="utf-8"), cached_output)

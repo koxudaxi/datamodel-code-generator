@@ -33,6 +33,7 @@ from datamodel_code_generator import (
     cached_path_exists,
     chdir,
     generate,
+    load_data,
     load_data_from_path,
 )
 from datamodel_code_generator.__main__ import Exit
@@ -47,6 +48,7 @@ from tests.conftest import (
     MockHttpxResponse,
     assert_directory_content,
     assert_httpx_get_kwargs,
+    assert_mutable_copy_is_isolated,
     assert_output,
     assert_warnings_contain,
     assert_warnings_do_not_contain,
@@ -69,8 +71,6 @@ from tests.main.conftest import (
     _uses_external_test_default_formatter,
     assert_generated_model_json_invalid,
     assert_generated_model_json_validation,
-    assert_path_cache_invalidates_after_write,
-    assert_path_cache_reuses_value,
     run_generate_and_assert,
     run_generate_file_and_assert,
     run_main_and_assert,
@@ -2801,13 +2801,26 @@ def test_main_generate_with_parsed_source_cache(output_file: Path) -> None:
     )
 
 
-def test_load_data_from_path_caches_json_source(tmp_path: Path) -> None:
-    """Reuse parsed JSON file data by path and content hash for local reference loading."""
+def test_load_data_from_path_isolates_cached_json_source(tmp_path: Path) -> None:
+    """Return independent parsed JSON values from the process-local cache."""
     schema_path = tmp_path / "schema.json"
     schema_path.write_text((JSON_SCHEMA_DATA_PATH / "person.json").read_text(encoding="utf-8"), encoding="utf-8")
     _clear_parser_source_data_cache()
 
-    assert_path_cache_reuses_value(load_data_from_path, schema_path, warmups=1)
+    original = load_data_from_path(schema_path, "utf-8")
+    cached = load_data_from_path(schema_path, "utf-8")
+    assert_mutable_copy_is_isolated(
+        original=original,
+        copied=cached,
+        mutate_copied=lambda value: value["properties"]["firstName"].update(type="integer"),
+        label="cached JSON source",
+    )
+    assert_mutable_copy_is_isolated(
+        original=original,
+        copied=load_data_from_path(schema_path, "utf-8"),
+        mutate_copied=lambda value: value["properties"]["lastName"].update(type="integer"),
+        label="reloaded JSON source",
+    )
 
 
 def test_load_data_from_path_invalidates_updated_json_source(tmp_path: Path) -> None:
@@ -2815,13 +2828,16 @@ def test_load_data_from_path_invalidates_updated_json_source(tmp_path: Path) -> 
     schema_path = tmp_path / "schema.json"
     schema_path.write_text((JSON_SCHEMA_DATA_PATH / "person.json").read_text(encoding="utf-8"), encoding="utf-8")
     _clear_parser_source_data_cache()
+    load_data_from_path(schema_path, "utf-8")
+    load_data_from_path(schema_path, "utf-8")
+    updated_text = (JSON_SCHEMA_DATA_PATH / "simple_string.json").read_text(encoding="utf-8")
+    schema_path.write_text(updated_text, encoding="utf-8")
 
-    assert_path_cache_invalidates_after_write(
-        load_data_from_path,
-        schema_path,
-        (JSON_SCHEMA_DATA_PATH / "simple_string.json").read_text(encoding="utf-8"),
-        ["s"],
-        expected_value_path=("required",),
+    assert_mutable_copy_is_isolated(
+        original=load_data(updated_text),
+        copied=load_data_from_path(schema_path, "utf-8"),
+        mutate_copied=lambda value: value["required"].append("mutated"),
+        label="updated cached JSON source",
     )
 
 
