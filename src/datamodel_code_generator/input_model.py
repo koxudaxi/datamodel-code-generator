@@ -106,31 +106,31 @@ def _load_model_schema_context(
     else:
         with PROCESS_STATE_LOCK:
             cwd_entry = str(Path.cwd())
-            directory = Path(cwd_entry).resolve()
             added_path = cwd_entry not in sys.path
-            importer_cache_entry = sys.path_importer_cache.get(cwd_entry, _MISSING_MODULE)
-            baseline_modules = sys.modules.copy()
-            if added_path:
-                sys.path.insert(0, cwd_entry)
-            try:
+            if not added_path:
                 yield _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
-            finally:
-                # Loading owns new cwd-local modules; unrelated same-cwd imports must not overlap this scoped operation.
-                local_module_names = sorted(
-                    (
-                        module_name
-                        for module_name, module in sys.modules.copy().items()
-                        if module_name not in baseline_modules and _module_is_from_directory(module, directory)
-                    ),
-                    key=_module_depth,
-                    reverse=True,
-                )
-                for module_name in local_module_names:
-                    if isinstance(
-                        module := sys.modules.get(module_name), types.ModuleType
-                    ) and _module_is_from_directory(module, directory):
-                        _remove_local_module(module_name, module)
-                if added_path:
+            else:
+                directory = Path(cwd_entry).resolve()
+                importer_cache_entry = sys.path_importer_cache.get(cwd_entry, _MISSING_MODULE)
+                baseline_modules = sys.modules.copy()
+                sys.path.insert(0, cwd_entry)
+                try:
+                    yield _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
+                finally:
+                    # Loading owns new cwd-local modules; unrelated same-cwd imports
+                    # must not overlap this scoped operation.
+                    current_modules = sys.modules.copy()
+                    local_module_names = sorted(
+                        (
+                            module_name
+                            for module_name, module in current_modules.items()
+                            if module_name not in baseline_modules and _module_is_from_directory(module, directory)
+                        ),
+                        key=_module_depth,
+                        reverse=True,
+                    )
+                    for module_name in local_module_names:
+                        _remove_local_module(module_name, current_modules[module_name])
                     _remove_input_model_path(cwd_entry)
                     if importer_cache_entry is _MISSING_MODULE:
                         sys.path_importer_cache.pop(cwd_entry, None)

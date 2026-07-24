@@ -550,12 +550,20 @@ def test_input_model_state_cleanup_defensive_paths(
     from datamodel_code_generator.input_model import (
         _module_is_from_directory,
         _path_is_within,
+        _remove_input_model_path,
         _remove_local_module,
     )
 
     module = types.ModuleType("_input_model_cleanup_race")
     _remove_local_module(module.__name__, module)
     assert not _module_is_from_directory(object(), tmp_path)
+    namespace_module = types.ModuleType("_input_model_namespace")
+    namespace_module.__path__ = [str(tmp_path)]
+    assert _module_is_from_directory(namespace_module, tmp_path)
+
+    missing_path_entry = str(tmp_path / "already-removed")
+    _remove_input_model_path(missing_path_entry)
+    assert missing_path_entry not in sys.path
 
     def raise_os_error(_path: Path) -> Path:
         raise OSError
