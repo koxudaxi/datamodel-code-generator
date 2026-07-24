@@ -112,8 +112,7 @@ def _load_model_schema_context(
         if added_path:
             sys.path.insert(0, cwd_entry)
         try:
-            schema = _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
-            yield schema
+            yield _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
         finally:
             # Loading owns new cwd-local modules; unrelated same-cwd imports must not overlap this scoped operation.
             local_module_names = sorted(
