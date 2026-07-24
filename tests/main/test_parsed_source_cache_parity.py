@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import pickle
+import json
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier, Event
 from typing import TYPE_CHECKING
@@ -162,10 +162,10 @@ def test_parser_source_cache_skips_unserializable_values(
     _clear_parser_source_data_cache()
     original = load_data_from_path(schema_path, "utf-8")
 
-    def raise_pickling_error(*_args: object, **_kwargs: object) -> bytes:
-        raise pickle.PicklingError
+    def raise_serialization_error(*_args: object, **_kwargs: object) -> str:
+        raise ValueError
 
-    monkeypatch.setattr(pickle, "dumps", raise_pickling_error)
+    monkeypatch.setattr(json, "dumps", raise_serialization_error)
     assert_mutable_copy_is_isolated(
         original=original,
         copied=load_data_from_path(schema_path, "utf-8"),
@@ -173,6 +173,23 @@ def test_parser_source_cache_skips_unserializable_values(
         label="uncached unserializable JSON source",
     )
 
+    assert not _parser_source_data_cache
+
+
+@pytest.mark.allow_direct_assert
+def test_parser_source_cache_skips_lossy_yaml_values(tmp_path: Path) -> None:
+    """Keep values uncached when JSON serialization would change their shape."""
+    schema_path = tmp_path / "schema.yaml"
+    schema_path.write_text("1:\n  nested: true\n", encoding="utf-8")
+    _clear_parser_source_data_cache()
+    original = load_data_from_path(schema_path, "utf-8")
+
+    assert_mutable_copy_is_isolated(
+        original=original,
+        copied=load_data_from_path(schema_path, "utf-8"),
+        mutate_copied=lambda value: value[1].update(nested=False),
+        label="uncached lossy YAML source",
+    )
     assert not _parser_source_data_cache
 
 
@@ -184,7 +201,7 @@ def test_parser_source_cache_recovers_from_invalid_serialized_value(tmp_path: Pa
     original = load_data_from_path(schema_path, "utf-8")
     load_data_from_path(schema_path, "utf-8")
     cache_key = next(iter(_parser_source_data_cache))
-    _parser_source_data_cache[cache_key] = b"invalid pickle"
+    _parser_source_data_cache[cache_key] = "invalid JSON"
 
     assert_mutable_copy_is_isolated(
         original=original,
