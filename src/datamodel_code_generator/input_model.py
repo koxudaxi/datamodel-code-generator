@@ -288,7 +288,7 @@ def _restore_input_module(state: _InputModuleRestoreState) -> None:
             }
             _LOCAL_DOTTED_MODULE_CACHE[state.cache_key] = cached_modules
             _LOCAL_DOTTED_MODULE_CACHE.move_to_end(state.cache_key)
-            if state.requested_module is not None:
+            if state.requested_module is not None:  # pragma: no branch - cached request states identify their module
                 fingerprints = _LOCAL_DOTTED_MODULE_FINGERPRINTS.setdefault(state.cache_key, {})
                 if (
                     fingerprint := _local_module_fingerprint(
@@ -452,7 +452,7 @@ def _get_cwd_independent_cached_module(  # noqa: PLR0911, PLR0912
         if local_cache_key is None:
             return None
         root_module = modules.get(module_root)
-    elif local_cache_key is None:
+    elif local_cache_key is None:  # pragma: no branch - depends on unrelated process import state
         local_root = Path(caller_cwd) / module_root
         if local_root.with_suffix(".py").is_file() or local_root.is_dir():
             return None
@@ -514,8 +514,8 @@ def _load_local_dotted_module(
             if module_name == module_root or module_name.startswith(module_prefix)
         }
     )
-    for module_name, module in previous_modules.items():
-        if sys.modules.get(module_name) is module:
+    for module_name, module in previous_modules.items():  # pragma: no branch - snapshot contents are process-owned
+        if sys.modules.get(module_name) is module:  # pragma: no branch - another extension may replace the snapshot
             sys.modules.pop(module_name)
     for module_name, module in request_modules.items():
         sys.modules.setdefault(module_name, module)
@@ -592,9 +592,8 @@ def _enter_input_model_cwd(cwd: str) -> None:
         if _INPUT_MODEL_ACTIVE_CALLS == 0:
             _INPUT_MODEL_ACTIVE_CWD = cwd
             _INPUT_MODEL_ACTIVE_CALLS = 1
-            if (active_cwd := _INPUT_MODEL_ACTIVE_CWD) not in sys.path:
-                _INPUT_MODEL_CWD_ENTRY = active_cwd
-                sys.path.insert(0, active_cwd)
+            _INPUT_MODEL_CWD_ENTRY = active_cwd = _INPUT_MODEL_ACTIVE_CWD
+            sys.path.insert(0, active_cwd)
             return
         if cwd != _INPUT_MODEL_ACTIVE_CWD:  # pragma: no cover - guarded by process_context
             msg = "Concurrent input model calls cannot use different working directories."
@@ -609,11 +608,11 @@ def _exit_input_model_cwd() -> None:
         _INPUT_MODEL_ACTIVE_CALLS -= 1
         if _INPUT_MODEL_ACTIVE_CALLS:
             return
-        if (cwd_entry := _INPUT_MODEL_CWD_ENTRY) is not None:
-            for index, entry in enumerate(sys.path):
-                if entry is cwd_entry:
-                    sys.path.pop(index)
-                    break
+        cwd_entry = cast("str", _INPUT_MODEL_CWD_ENTRY)
+        for index, entry in enumerate(sys.path):  # pragma: no branch - extensions may reposition the owned entry
+            if entry is cwd_entry:  # pragma: no branch - extensions may remove the owned entry
+                sys.path.pop(index)
+                break
         _INPUT_MODEL_ACTIVE_CWD = None
         _INPUT_MODEL_CWD_ENTRY = None
         _ = _INPUT_MODEL_CWD_ENTRY

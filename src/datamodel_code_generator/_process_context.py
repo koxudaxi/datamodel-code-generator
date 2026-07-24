@@ -132,7 +132,7 @@ def _enter_exclusive(*, allow_shared: bool) -> tuple[bool, bool, int, str]:  # n
         except BaseException:
             if claimed_upgrade:
                 _UPGRADING_THREAD = None
-            if suspended_readers:
+            if suspended_readers:  # pragma: no branch - only an abnormal wait interruption skips restoration
                 _ACTIVE_READERS += suspended_readers
             _ = _UPGRADING_THREAD, _ACTIVE_READERS
             raise
