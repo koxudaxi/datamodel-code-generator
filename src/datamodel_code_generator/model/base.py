@@ -43,7 +43,7 @@ from datamodel_code_generator.types import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Collection, Iterator
+    from collections.abc import Callable, Collection, Iterator, Mapping
 
     from jinja2 import Environment, Template
 
@@ -59,6 +59,8 @@ _ADDITIONAL_PROPERTIES_REFERENCE_CLASSES_TEMPLATE_DATA_KEY = "additionalProperti
 _MODULE_NAME_INVALID_CHAR_PATTERN = re.compile(r"[^0-9a-zA-Z_]")
 _MODULE_NAME_INVALID_CHAR_WITH_DOTS_PATTERN = re.compile(r"[^0-9a-zA-Z_.]")
 _MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS = 128
+_NESTED_MODEL_DEFAULT_FACTORY_ORDER_KEY = "_nested_model_default_factory_order"
+_NESTED_MODEL_DEFAULT_FACTORY_RECURSIVE_PATHS_KEY = "_nested_model_default_factory_recursive_paths"
 
 
 class _MissingCustomTemplateState:
@@ -981,9 +983,36 @@ def _nested_model_default_factory(field: DataModelFieldBase, model_cls: type[Dat
     for data_type in field.data_type.data_types or (field.data_type,):
         if data_type.is_dict:
             continue
-        if data_type.reference and isinstance(data_type.reference.source, model_cls):
-            return data_type.alias or data_type.reference.source.class_name
+        if data_type.reference and isinstance(source := data_type.reference.source, model_cls):
+            if field.parent is not None and source.path in field.parent.__dict__.get(
+                _NESTED_MODEL_DEFAULT_FACTORY_RECURSIVE_PATHS_KEY, ()
+            ):
+                return None
+            factory_name = data_type.alias or source.class_name
+            parent_order = (
+                field.parent.__dict__.get(_NESTED_MODEL_DEFAULT_FACTORY_ORDER_KEY) if field.parent is not None else None
+            )
+            source_order = source.__dict__.get(_NESTED_MODEL_DEFAULT_FACTORY_ORDER_KEY)
+            match (parent_order, source_order):
+                case ((parent_module, parent_index), (source_module, source_index)) if (
+                    parent_module == source_module and source_index >= parent_index
+                ):
+                    return f"lambda: {source.class_name}()"
+                case _:
+                    return factory_name
     return None
+
+
+def _set_nested_model_default_factory_order(
+    models: list[DataModel],
+    module_index: int,
+    recursive_paths_by_model: Mapping[str, frozenset[str]],
+) -> None:
+    """Record final declaration order and recursive paths for nested model factories."""
+    for model_index, model in enumerate(models):
+        model.__dict__[_NESTED_MODEL_DEFAULT_FACTORY_ORDER_KEY] = (module_index, model_index)
+        if recursive_paths := recursive_paths_by_model.get(model.path):
+            model.__dict__[_NESTED_MODEL_DEFAULT_FACTORY_RECURSIVE_PATHS_KEY] = recursive_paths
 
 
 def _build_environment(loader: Any, *, auto_reload: bool = True) -> Environment:

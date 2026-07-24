@@ -12016,6 +12016,69 @@ def test_main_use_default_factory_for_optional_nested_models(
 @pytest.mark.parametrize(
     ("output_model", "expected_file"),
     [
+        ("dataclasses.dataclass", "default_factory_forward_nested_models_dataclass.py"),
+        ("pydantic_v2.BaseModel", "default_factory_forward_nested_models_pydantic_v2.py"),
+        ("msgspec.Struct", "default_factory_forward_nested_models_msgspec.py"),
+    ],
+)
+def test_main_defer_forward_nested_model_default_factories(
+    output_model: str,
+    expected_file: str,
+    output_file: Path,
+) -> None:
+    """Defer only nested model factories whose classes are not yet declared."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "default_factory_forward_nested_models.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--disable-timestamp",
+            "--output-model-type",
+            output_model,
+            "--use-default-factory-for-optional-nested-models",
+        ],
+        force_exec_validation=True,
+        importable_module_name=f"generated_{Path(expected_file).stem}",
+        importable_module_attribute="Model",
+    )
+    match output_model:
+        case "msgspec.Struct":
+            from msgspec import UNSET
+
+            terminal_default = UNSET
+        case _:
+            terminal_default = None
+
+    recursive_fields = {
+        "Node": "child",
+        "CycleA": "b",
+        "CycleB": "a",
+    }
+    for model_name, field_name in recursive_fields.items():
+        with _generated_model(
+            output_file,
+            f"constructed_{Path(expected_file).stem}_{model_name}",
+            model_name,
+        ) as model:
+            if getattr(model(), field_name) is not terminal_default:  # pragma: no cover
+                pytest.fail(f"{model_name}.{field_name} did not retain its terminating default")
+
+    with _generated_model(
+        output_file,
+        f"constructed_{Path(expected_file).stem}_Model",
+        "Model",
+    ) as model:
+        instance = model()
+        actual_nested_types = tuple(type(getattr(instance, name)).__name__ for name in ("existing", "cycle", "node"))
+        if actual_nested_types != ("Existing", "CycleA", "Node"):  # pragma: no cover
+            pytest.fail(f"Model factories did not construct the expected nested types: {actual_nested_types!r}")
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_file"),
+    [
         ("dataclasses.dataclass", "default_factory_nested_model_with_dict_dataclass.py"),
         ("pydantic_v2.BaseModel", "default_factory_nested_model_with_dict_pydantic_v2.py"),
         ("msgspec.Struct", "default_factory_nested_model_with_dict_msgspec.py"),
