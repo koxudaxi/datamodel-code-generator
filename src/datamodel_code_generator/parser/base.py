@@ -3886,9 +3886,54 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         disable_future_imports: bool,  # noqa: FBT001
     ) -> bool:
         """Return whether generated annotations use deferred evaluation."""
+        if (
+            disable_future_imports or not with_import
+        ) and self.data_model_type.REQUIRES_EXPLICIT_DEFERRED_ANNOTATIONS_FOR_FORWARD_REFS:
+            return False
         return bool(
             self.target_python_version.has_native_deferred_annotations or (with_import and not disable_future_imports)
         )
+
+    def _has_forward_references(self, models: list[DataModel]) -> bool:  # noqa: PLR6301
+        """Return whether a module contains a self or forward model reference.
+
+        This remains an instance method because ``snooper_to_methods`` does not
+        preserve staticmethod descriptors on parser subclasses.
+        """
+        positions = {model.path: index for index, model in enumerate(models)}
+        for index, model in enumerate(models):
+            for field in model.fields:
+                for data_type in field.data_type.all_data_types:
+                    if (
+                        (reference := data_type.reference)
+                        and (reference_index := positions.get(reference.path)) is not None
+                        and reference_index >= index
+                    ):
+                        return True
+        return False
+
+    def _requires_explicit_deferred_annotations(self, models: list[DataModel], config: ParseConfig) -> bool:
+        """Return whether a module needs the future annotations import."""
+        if not (config.with_import and config.use_deferred_annotations):
+            return False
+        return self._has_forward_references(models)
+
+    def _get_module_future_imports(
+        self,
+        ctx: ModuleContext,
+        config: ParseConfig,
+        future_imports_str: str,
+    ) -> str:
+        """Return future imports required by a single generated module."""
+        if not (
+            self.data_model_type.REQUIRES_EXPLICIT_DEFERRED_ANNOTATIONS_FOR_FORWARD_REFS
+            and self.target_python_version.has_native_deferred_annotations
+        ):
+            return future_imports_str
+        if not self._requires_explicit_deferred_annotations(ctx.models, config):
+            return future_imports_str
+        ctx.imports.append(IMPORT_ANNOTATIONS)
+        return "\n".join(import_ for import_ in (future_imports_str, str(ctx.imports.extract_future())) if import_)
 
     def _set_typed_extra_annotation_mode(self, *, use_deferred_annotations: bool) -> None:
         """Select the safe typed-extra annotation form for the generated runtime."""
@@ -4418,6 +4463,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """Generate output for a single module."""
         result: list[str] = []
         export_imports: Imports | None = None
+        module_future_imports_str = self._get_module_future_imports(ctx, config, future_imports_str)
 
         if config.all_exports_scope is not None and ctx.module[-1] == "__init__.py":
             child_exports = self._collect_exports_for_init(ctx.module, contexts, config.all_exports_scope)
@@ -4434,7 +4480,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         if ctx.models:
             if config.with_import:
-                import_parts = [s for s in [future_imports_str, str(self.imports), str(ctx.imports)] if s]
+                import_parts = [s for s in [module_future_imports_str, str(self.imports), str(ctx.imports)] if s]
                 result += [*import_parts, "\n"]
 
             if export_imports:
@@ -4473,7 +4519,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         return Result(
             body=body,
-            future_imports=future_imports_str,
+            future_imports=module_future_imports_str,
             source=ctx.models[0].file_path if ctx.models else None,
         )
 

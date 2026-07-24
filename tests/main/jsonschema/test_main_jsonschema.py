@@ -2489,6 +2489,66 @@ def test_main_msgspec_reserved_field_name(output_file: Path) -> None:
     )
 
 
+@BLACK_PY314_SKIP
+def test_main_msgspec_python_314_without_forward_reference(output_file: Path) -> None:
+    """Keep non-forward msgspec output free of an unnecessary future import."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_reserved_field_name.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="msgspec_reserved_field_name_python_314.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--class-name",
+            "Payload",
+            "--target-python-version",
+            "3.14",
+        ],
+        force_exec_validation=True,
+        importable_module_name="generated_msgspec_reserved_field_name_python_314",
+        importable_module_attribute="Payload",
+    )
+
+
+@BLACK_PY314_SKIP
+@pytest.mark.parametrize(
+    ("disable_future_imports", "expected_file"),
+    [
+        (False, "msgspec_forward_reference.py"),
+        (True, "msgspec_forward_reference_disable_future_imports.py"),
+    ],
+)
+def test_main_msgspec_python_314_forward_reference(
+    output_file: Path,
+    *,
+    disable_future_imports: bool,
+    expected_file: str,
+) -> None:
+    """Generate an importable msgspec self-reference for Python 3.14."""
+    extra_args = [
+        "--disable-timestamp",
+        "--output-model-type",
+        "msgspec.Struct",
+        "--target-python-version",
+        "3.14",
+    ]
+    if disable_future_imports:
+        extra_args.append("--disable-future-imports")
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_forward_reference.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=extra_args,
+        force_exec_validation=True,
+        importable_module_name=f"generated_{Path(expected_file).stem}",
+        importable_module_attribute="Node",
+    )
+
+
 def test_main_root_model_with_additional_properties_literal(min_version: str, output_file: Path) -> None:
     """Test root model additional properties with literal types."""
     run_main_and_assert(
