@@ -15,9 +15,11 @@ from datamodel_code_generator.parser.xmlschema import (
     _load_xml_schema_data_from_path,
     _read_xml_text,
 )
+from tests.conftest import assert_output
 from tests.main.conftest import (
     BACKEND_GOLDEN_CASES,
     BACKEND_GOLDEN_TARGET_ARGS,
+    EXPECTED_XML_SCHEMA_PATH,
     XML_SCHEMA_DATA_PATH,
     assert_path_cache_evicts_lru_entries,
     run_generate_file_and_assert,
@@ -65,22 +67,23 @@ def test_main_xmlschema_with_parsed_source_cache(output_file: Path) -> None:
 def test_read_xml_text_detects_byte_order_mark(tmp_path: Path, byte_order_mark: bytes, xml_encoding: str) -> None:
     """Decode XML source according to its byte order mark."""
     schema_path = tmp_path / "schema.xsd"
-    schema_text = '<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">é</xs:schema>'
+    expected_path = EXPECTED_XML_SCHEMA_PATH / "xml_text_initial.txt"
+    schema_text = expected_path.read_text(encoding="utf-8")
     schema_path.write_bytes(byte_order_mark + schema_text.encode(xml_encoding))
 
-    assert _read_xml_text(schema_path, "ascii") == schema_text
+    assert_output(_read_xml_text(schema_path, "ascii"), expected_path)
 
 
 def test_read_xml_text_reads_updated_source(tmp_path: Path) -> None:
     """Read the current XML source content without retaining stale text."""
     schema_path = tmp_path / "schema.xsd"
-    first_text = (XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8")
-    second_text = (XML_SCHEMA_DATA_PATH / "inline_root.xsd").read_text(encoding="utf-8")
-    schema_path.write_bytes(first_text.encode("latin-1"))
-    assert _read_xml_text(schema_path, "latin-1") == first_text
+    first_expected_path = EXPECTED_XML_SCHEMA_PATH / "xml_text_initial.txt"
+    second_expected_path = EXPECTED_XML_SCHEMA_PATH / "xml_text_updated.txt"
+    schema_path.write_bytes(first_expected_path.read_text(encoding="utf-8").encode("latin-1"))
+    assert_output(_read_xml_text(schema_path, "latin-1"), first_expected_path)
 
-    schema_path.write_bytes(second_text.encode("latin-1"))
-    assert _read_xml_text(schema_path, "latin-1") == second_text
+    schema_path.write_bytes(second_expected_path.read_text(encoding="utf-8").encode("latin-1"))
+    assert_output(_read_xml_text(schema_path, "latin-1"), second_expected_path)
 
 
 def test_load_xml_schema_data_from_path_evicts_lru_entries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
