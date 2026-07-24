@@ -3593,6 +3593,27 @@ def test_main_jsonschema_special_enum(output_file: Path) -> None:
     )
 
 
+@pytest.mark.isolate_builtin_formatter_config
+def test_main_jsonschema_builtin_formatter_preserves_unicode_line_separators(output_file: Path) -> None:
+    """Keep Unicode separators in generated enum values without creating source lines."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unicode_line_separators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unicode_line_separators_builtin.py",
+        extra_args=["--disable-timestamp", "--formatters", "builtin"],
+        force_exec_validation=True,
+    )
+
+    expected_values = ["next\u0085line", "line\u2028separator", "paragraph\u2029separator"]
+    with _generated_model(output_file, "unicode_line_separators", "UnicodeSeparator") as enum_model:
+        assert_output(
+            f"{json.dumps([enum_model(value).value for value in expected_values], indent=2)}\n",
+            EXPECTED_JSON_SCHEMA_PATH / "unicode_line_separators_values.txt",
+        )
+
+
 @pytest.mark.cli_doc(
     options=["--special-field-name-prefix"],
     option_description="""Prefix to add to special field names (like reserved keywords).
