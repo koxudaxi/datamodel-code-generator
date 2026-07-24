@@ -85,6 +85,10 @@ def _remove_input_model_path(cwd_entry: str) -> None:
         sys.path.pop(index)
 
 
+def _module_depth(module_name: str) -> int:
+    return module_name.count(".")
+
+
 @contextmanager
 def _load_model_schema_context(
     input_models: list[str],
@@ -118,7 +122,7 @@ def _load_model_schema_context(
                         for module_name, module in sys.modules.copy().items()
                         if module_name not in baseline_modules and _module_is_from_directory(module, directory)
                     ),
-                    key=lambda name: name.count("."),
+                    key=_module_depth,
                     reverse=True,
                 )
                 for module_name in local_module_names:
