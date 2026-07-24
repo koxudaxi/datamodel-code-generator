@@ -59,12 +59,22 @@ def _path_is_within(path: str | Path, directory: Path) -> bool:
         return False
 
 
-def _module_is_from_directory(module: object, directory: Path) -> bool:
+def _module_is_from_directory(
+    module: object,
+    directory: Path,
+    excluded_directory: Path | None = None,
+) -> bool:
     if not isinstance(module, types.ModuleType):
         return False
+
+    def is_owned_path(path: str | Path) -> bool:
+        return _path_is_within(path, directory) and (
+            excluded_directory is None or not _path_is_within(path, excluded_directory)
+        )
+
     if isinstance(module_file := getattr(module, "__file__", None), str):
-        return _path_is_within(module_file, directory)
-    return any(_path_is_within(path, directory) for path in getattr(module, "__path__", ()))
+        return is_owned_path(module_file)
+    return any(is_owned_path(path) for path in getattr(module, "__path__", ()))
 
 
 def _remove_local_module(module_name: str, module: types.ModuleType) -> None:
@@ -112,6 +122,7 @@ def _load_model_schema_context(
             yield _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
         else:
             directory = Path(cwd_entry).resolve()
+            environment_directory = Path(sys.prefix).resolve()
             importer_cache_entry = sys.path_importer_cache.get(cwd_entry, _MISSING_MODULE)
             baseline_modules = sys.modules.copy()
             sys.path.insert(0, cwd_entry)
@@ -125,7 +136,8 @@ def _load_model_schema_context(
                     (
                         module_name
                         for module_name, module in current_modules.items()
-                        if module_name not in baseline_modules and _module_is_from_directory(module, directory)
+                        if module_name not in baseline_modules
+                        and _module_is_from_directory(module, directory, environment_directory)
                     ),
                     key=_module_depth,
                     reverse=True,

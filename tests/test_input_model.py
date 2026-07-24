@@ -629,6 +629,10 @@ def test_input_model_state_cleanup_defensive_paths(
     namespace_module = types.ModuleType("_input_model_namespace")
     namespace_module.__path__ = [str(tmp_path)]
     assert _module_is_from_directory(namespace_module, tmp_path)
+    environment_directory = tmp_path / ".venv"
+    environment_module = types.ModuleType("_input_model_environment")
+    environment_module.__file__ = str(environment_directory / "site-packages" / "dependency.py")
+    assert not _module_is_from_directory(environment_module, tmp_path, environment_directory)
 
     missing_path_entry = str(tmp_path / "already-removed")
     _remove_input_model_path(missing_path_entry)
