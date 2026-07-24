@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import json
+import marshal
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier, Event
 from typing import TYPE_CHECKING
@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from datamodel_code_generator import (
+    _PARSER_SOURCE_DATA_CACHE_MAGIC,
     InputFileType,
     _clear_parser_source_data_cache,
     _is_parsed_source_cache_enabled,
@@ -162,10 +163,10 @@ def test_parser_source_cache_skips_unserializable_values(
     _clear_parser_source_data_cache()
     original = load_data_from_path(schema_path, "utf-8")
 
-    def raise_serialization_error(*_args: object, **_kwargs: object) -> str:
+    def raise_serialization_error(*_args: object, **_kwargs: object) -> bytes:
         raise ValueError
 
-    monkeypatch.setattr(json, "dumps", raise_serialization_error)
+    monkeypatch.setattr(marshal, "dumps", raise_serialization_error)
     assert_mutable_copy_is_isolated(
         original=original,
         copied=load_data_from_path(schema_path, "utf-8"),
@@ -177,8 +178,8 @@ def test_parser_source_cache_skips_unserializable_values(
 
 
 @pytest.mark.allow_direct_assert
-def test_parser_source_cache_skips_lossy_yaml_values(tmp_path: Path) -> None:
-    """Keep values uncached when JSON serialization would change their shape."""
+def test_parser_source_cache_isolates_non_string_yaml_keys(tmp_path: Path) -> None:
+    """Preserve non-string YAML keys in independent cached values."""
     schema_path = tmp_path / "schema.yaml"
     schema_path.write_text("1:\n  nested: true\n", encoding="utf-8")
     _clear_parser_source_data_cache()
@@ -188,12 +189,44 @@ def test_parser_source_cache_skips_lossy_yaml_values(tmp_path: Path) -> None:
         original=original,
         copied=load_data_from_path(schema_path, "utf-8"),
         mutate_copied=lambda value: value[1].update(nested=False),
-        label="uncached lossy YAML source",
+        label="cached non-string-key YAML source",
     )
-    assert not _parser_source_data_cache
+    assert _parser_source_data_cache
 
 
-def test_parser_source_cache_recovers_from_invalid_serialized_value(tmp_path: Path) -> None:
+@pytest.mark.allow_direct_assert
+def test_parser_source_cache_preserves_yaml_aliases(tmp_path: Path) -> None:
+    """Preserve shared YAML values inside an isolated cached source graph."""
+    schema_path = tmp_path / "schema.yaml"
+    schema_path.write_text(
+        "shared: &shared\n  type: string\nfirst: *shared\nsecond: *shared\n",
+        encoding="utf-8",
+    )
+    _clear_parser_source_data_cache()
+    original = load_data_from_path(schema_path, "utf-8")
+    load_data_from_path(schema_path, "utf-8")
+    cached = load_data_from_path(schema_path, "utf-8")
+
+    assert cached["first"] is cached["second"]
+    assert_mutable_copy_is_isolated(
+        original=original,
+        copied=cached,
+        mutate_copied=lambda value: value["first"].update(type="integer"),
+        label="cached YAML aliases",
+    )
+
+
+@pytest.mark.parametrize(
+    "invalid_snapshot",
+    [
+        pytest.param(b"invalid snapshot", id="invalid-prefix"),
+        pytest.param(_PARSER_SOURCE_DATA_CACHE_MAGIC + b"\xff", id="invalid-payload"),
+    ],
+)
+def test_parser_source_cache_recovers_from_invalid_serialized_value(
+    tmp_path: Path,
+    invalid_snapshot: bytes,
+) -> None:
     """Reparse source data after an invalid internal cache value."""
     schema_path = tmp_path / "schema.yaml"
     schema_path.write_text("properties:\n  name:\n    type: string\n", encoding="utf-8")
@@ -201,7 +234,7 @@ def test_parser_source_cache_recovers_from_invalid_serialized_value(tmp_path: Pa
     original = load_data_from_path(schema_path, "utf-8")
     load_data_from_path(schema_path, "utf-8")
     cache_key = next(iter(_parser_source_data_cache))
-    _parser_source_data_cache[cache_key] = "invalid JSON"
+    _parser_source_data_cache[cache_key] = invalid_snapshot
 
     assert_mutable_copy_is_isolated(
         original=original,
