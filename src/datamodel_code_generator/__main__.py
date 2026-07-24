@@ -126,6 +126,7 @@ from datamodel_code_generator import (
     OpenAPIScope,
     ReuseScope,
     _validate_alias_generator,
+    _validate_generation_path_conflicts,
     _validate_output_datetime_class,
     enable_debug_message,
     generate,
@@ -1511,6 +1512,9 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
                 config.input_file_type = InputFileType.JsonSchema
         else:
             input_ = config.url or config.input or sys.stdin.read()
+
+        if writes_json_output_file:
+            _validate_generation_path_conflicts(input_, config.output, config.emit_model_metadata)
 
         result = run_generate_from_config(
             config=config,
