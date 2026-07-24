@@ -154,7 +154,6 @@ def _apply_generate_config_preset(config: GenerateConfig) -> GenerateConfig:
 DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 _IGNORED_TEXT_PREFIX_CHARS: frozenset[str] = frozenset({"\ufeff", " ", "\t", "\r", "\n"})
 _PARSER_SOURCE_DATA_CACHE_MAX_SIZE = 128
-_PARSER_SOURCE_DATA_CACHE_MAGIC = b"dcg\x00"
 _ParserSourceDataCacheKey: TypeAlias = tuple[Path, str, str, str]
 _ParserSourceDataSeenKey: TypeAlias = tuple[Path, str]
 # Serialized snapshots isolate mutable callers and are faster to restore than reparsing source text.
@@ -339,37 +338,23 @@ def _load_parser_source_data_from_path_bytes(resolved_path: Path, data: bytes, e
     return _load_parser_source_data_from_bytes_with_cache(resolved_path, data, digest, encoding)
 
 
-def _discard_cached_parser_source_data(cache_key: _ParserSourceDataCacheKey) -> None:
-    with _parser_source_data_cache_lock:
-        _parser_source_data_cache.pop(cache_key, None)
-
-
 def _load_cached_parser_source_data(cache_key: _ParserSourceDataCacheKey) -> YamlValue | None:
     with _parser_source_data_cache_lock:
         if (cached_data := _parser_source_data_cache.get(cache_key)) is None:
             return None
         _parser_source_data_cache.move_to_end(cache_key)
 
-    if not cached_data.startswith(_PARSER_SOURCE_DATA_CACHE_MAGIC):
-        _discard_cached_parser_source_data(cache_key)
-        return None
-
     import marshal  # noqa: PLC0415
 
-    try:
-        # Entries are process-local values emitted by marshal.dumps below, never external bytes.
-        return marshal.loads(cached_data[len(_PARSER_SOURCE_DATA_CACHE_MAGIC) :])  # noqa: S302
-    except Exception:  # noqa: BLE001
-        # A damaged optimization entry must fall back to the source parser.
-        _discard_cached_parser_source_data(cache_key)
-        return None
+    # Entries are process-local values emitted by marshal.dumps below, never external bytes.
+    return marshal.loads(cached_data)  # noqa: S302
 
 
 def _store_parser_source_data(cache_key: _ParserSourceDataCacheKey, parsed_data: YamlValue) -> YamlValue:
     import marshal  # noqa: PLC0415
 
     try:
-        cached_data = _PARSER_SOURCE_DATA_CACHE_MAGIC + marshal.dumps(parsed_data)
+        cached_data = marshal.dumps(parsed_data)
     except Exception:  # noqa: BLE001
         # Values outside the primitive YamlValue shape remain valid uncached input.
         return parsed_data

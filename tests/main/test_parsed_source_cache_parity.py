@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 import pytest
 
 from datamodel_code_generator import (
-    _PARSER_SOURCE_DATA_CACHE_MAGIC,
     InputFileType,
     _clear_parser_source_data_cache,
     _is_parsed_source_cache_enabled,
@@ -213,40 +212,6 @@ def test_parser_source_cache_preserves_yaml_graph_sharing(tmp_path: Path) -> Non
         copied=cached,
         mutate_copied=lambda value: value["first"].update(type="integer"),
         label="cached YAML aliases",
-    )
-
-
-@pytest.mark.parametrize(
-    "invalid_snapshot",
-    [
-        pytest.param(b"invalid snapshot", id="invalid-prefix"),
-        pytest.param(_PARSER_SOURCE_DATA_CACHE_MAGIC + b"\xff", id="invalid-payload"),
-    ],
-)
-def test_parser_source_cache_recovers_from_invalid_serialized_value(
-    tmp_path: Path,
-    invalid_snapshot: bytes,
-) -> None:
-    """Reparse source data after an invalid internal cache value."""
-    schema_path = tmp_path / "schema.yaml"
-    schema_path.write_text("properties:\n  name:\n    type: string\n", encoding="utf-8")
-    _clear_parser_source_data_cache()
-    original = load_data_from_path(schema_path, "utf-8")
-    load_data_from_path(schema_path, "utf-8")
-    cache_key = next(iter(_parser_source_data_cache))
-    _parser_source_data_cache[cache_key] = invalid_snapshot
-
-    assert_mutable_copy_is_isolated(
-        original=original,
-        copied=load_data_from_path(schema_path, "utf-8"),
-        mutate_copied=lambda value: value["properties"]["name"].update(type="integer"),
-        label="reparsed YAML source",
-    )
-    assert_mutable_copy_is_isolated(
-        original=original,
-        copied=load_data_from_path(schema_path, "utf-8"),
-        mutate_copied=lambda value: value["properties"]["name"].update(type="number"),
-        label="recovered cached YAML source",
     )
 
 
