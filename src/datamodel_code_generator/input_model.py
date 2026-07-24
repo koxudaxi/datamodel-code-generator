@@ -81,10 +81,8 @@ def _remove_local_module(module_name: str, module: types.ModuleType) -> None:
 
 
 def _remove_input_model_path(cwd_entry: str) -> None:
-    for index, entry in enumerate(sys.path):
-        if entry is cwd_entry:
-            sys.path.pop(index)
-            return
+    if (index := next((index for index, entry in enumerate(sys.path) if entry is cwd_entry), None)) is not None:
+        sys.path.pop(index)
 
 
 @contextmanager
@@ -101,40 +99,39 @@ def _load_model_schema_context(
         for module_name in input_module_names
     ):
         yield _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
-        return
-
-    with PROCESS_STATE_LOCK:
-        cwd_entry = str(Path.cwd())
-        directory = Path(cwd_entry).resolve()
-        added_path = cwd_entry not in sys.path
-        importer_cache_entry = sys.path_importer_cache.get(cwd_entry, _MISSING_MODULE)
-        baseline_modules = sys.modules.copy()
-        if added_path:
-            sys.path.insert(0, cwd_entry)
-        try:
-            yield _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
-        finally:
-            # Loading owns new cwd-local modules; unrelated same-cwd imports must not overlap this scoped operation.
-            local_module_names = sorted(
-                (
-                    module_name
-                    for module_name, module in sys.modules.copy().items()
-                    if module_name not in baseline_modules and _module_is_from_directory(module, directory)
-                ),
-                key=lambda name: name.count("."),
-                reverse=True,
-            )
-            for module_name in local_module_names:
-                if isinstance(module := sys.modules.get(module_name), types.ModuleType) and _module_is_from_directory(
-                    module, directory
-                ):
-                    _remove_local_module(module_name, module)
+    else:
+        with PROCESS_STATE_LOCK:
+            cwd_entry = str(Path.cwd())
+            directory = Path(cwd_entry).resolve()
+            added_path = cwd_entry not in sys.path
+            importer_cache_entry = sys.path_importer_cache.get(cwd_entry, _MISSING_MODULE)
+            baseline_modules = sys.modules.copy()
             if added_path:
-                _remove_input_model_path(cwd_entry)
-                if importer_cache_entry is _MISSING_MODULE:
-                    sys.path_importer_cache.pop(cwd_entry, None)
-                else:
-                    sys.path_importer_cache[cwd_entry] = cast("Any", importer_cache_entry)
+                sys.path.insert(0, cwd_entry)
+            try:
+                yield _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
+            finally:
+                # Loading owns new cwd-local modules; unrelated same-cwd imports must not overlap this scoped operation.
+                local_module_names = sorted(
+                    (
+                        module_name
+                        for module_name, module in sys.modules.copy().items()
+                        if module_name not in baseline_modules and _module_is_from_directory(module, directory)
+                    ),
+                    key=lambda name: name.count("."),
+                    reverse=True,
+                )
+                for module_name in local_module_names:
+                    if isinstance(
+                        module := sys.modules.get(module_name), types.ModuleType
+                    ) and _module_is_from_directory(module, directory):
+                        _remove_local_module(module_name, module)
+                if added_path:
+                    _remove_input_model_path(cwd_entry)
+                    if importer_cache_entry is _MISSING_MODULE:
+                        sys.path_importer_cache.pop(cwd_entry, None)
+                    else:
+                        sys.path_importer_cache[cwd_entry] = cast("Any", importer_cache_entry)
 
 
 def _restore_path_module(state: _ModuleRestoreState) -> None:

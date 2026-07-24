@@ -10,9 +10,10 @@ def copy_template_data(value: Any, memo: dict[int, Any]) -> Any:
     value_id = id(value)
     if value_id in memo:
         return memo[value_id]
+    detached: Any = None
     match value:
         case dict() if type(value) is dict:
-            detached: Any = {}
+            detached = {}
             memo[value_id] = detached
             detached.update((key, copy_template_data(item, memo)) for key, item in value.items())
         case list() if type(value) is list:
