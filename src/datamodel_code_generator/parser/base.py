@@ -1423,6 +1423,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     _config_class_name: ClassVar[str] = "ParserConfig"
     _cache_local_sources_during_parse: ClassVar[bool] = False
     _cache_parsed_sources_from_path: ClassVar[bool] = False
+    _formatter_cwd: Path | None = None
     _http_fetch_session: _HTTPFetchSession | None = None
 
     @classmethod
@@ -1443,15 +1444,18 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         Uses _get_config_class() to determine which config class to instantiate.
         """
+        from datamodel_code_generator.config import _rebuild_config_model  # noqa: PLC0415
+
         config_class = cls._get_config_class()
 
-        config_class.model_rebuild(
-            _types_namespace={
+        _rebuild_config_model(
+            config_class,
+            {
                 "StrictTypes": StrictTypes,
                 "DataModel": DataModel,
                 "DataModelFieldBase": DataModelFieldBase,
                 "DataTypeManager": DataTypeManager,
-            }
+            },
         )
         return config_class.model_validate(options)  # ty: ignore[invalid-return-type]
 
@@ -4006,6 +4010,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             builtin_format_line_length=self.builtin_format_line_length,
             use_type_checking_imports=effective_use_type_checking_imports,
             defer_formatting=self.defer_formatting,
+            formatter_cwd=self._formatter_cwd,
         )
 
     def _find_invalid_inferred_modules(  # noqa: PLR6301

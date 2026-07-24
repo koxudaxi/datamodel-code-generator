@@ -271,6 +271,7 @@ class CodeFormatter:
         builtin_format_line_length: int | None = None,
         use_type_checking_imports: bool = True,  # noqa: FBT001, FBT002
         defer_formatting: bool = False,  # noqa: FBT001, FBT002
+        formatter_cwd: Path | None = None,
     ) -> None:
         """Initialize code formatter with configuration for black, isort, ruff, and custom formatters."""
         if formatters is None:
@@ -405,6 +406,8 @@ class CodeFormatter:
             self.isort_config_kwargs: dict[str, Any] = {}
             if known_third_party:
                 self.isort_config_kwargs["known_third_party"] = known_third_party
+            if formatter_cwd is not None:
+                self.isort_config_kwargs["directory"] = str(formatter_cwd)
 
             if isort.__version__.startswith("4."):  # pragma: no cover
                 self.isort_config = None

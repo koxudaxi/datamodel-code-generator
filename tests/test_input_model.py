@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import importlib
 import sys
 import types
 from argparse import Namespace
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from pathlib import Path
+from threading import Event
 from typing import TYPE_CHECKING
 
 import pytest
@@ -327,11 +330,11 @@ def test_input_model_mutual_exclusion_with_watch(
     )
 
 
-def test_input_model_adds_cwd_to_sys_path(
+def test_input_model_restores_cwd_in_sys_path(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Test that --input-model adds cwd to sys.path if not present."""
+    """Test that --input-model removes its temporary cwd import path."""
     cwd = str(tmp_path)
     monkeypatch.chdir(tmp_path)
     assert cwd not in sys.path
@@ -343,9 +346,203 @@ def test_input_model_adds_cwd_to_sys_path(
             output_path=tmp_path / "output.py",
             expected_file=EXPECTED_INPUT_MODEL_PATH / "pydantic_basemodel.py",
         )
-        assert cwd in sys.path
+        assert sys.path == original_sys_path
     finally:
         sys.path[:] = original_sys_path
+
+
+def test_input_model_restores_cwd_package_modules(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test same-named cwd packages are loaded independently."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import Error, load_model_schema
+
+    package_name = "_shadowed_input_package"
+    helper_name = "_shadowed_input_helper"
+    existing_modules = {name for name in sys.modules if name.startswith(package_name)}
+    existing_helper = sys.modules.get(helper_name)
+    for directory_name, marker in (("first", "first"), ("second", "second")):
+        directory = tmp_path / directory_name
+        package = directory / package_name
+        package.mkdir(parents=True)
+        (package / "__init__.py").write_text("", encoding="utf-8")
+        (directory / f"{helper_name}.py").write_text(f"MARKER = {marker!r}\n", encoding="utf-8")
+        (package / "model.py").write_text(
+            "import importlib\n"
+            "from pathlib import Path\n\n"
+            "from pydantic import BaseModel\n\n"
+            f"helper = importlib.import_module({helper_name!r})\n"
+            "Path(__file__).parents[1].joinpath('loaded.txt').write_text(helper.MARKER, encoding='utf-8')\n\n"
+            "class User(BaseModel):\n"
+            "    name: str\n"
+            "    age: int\n",
+            encoding="utf-8",
+        )
+
+    monkeypatch.chdir(tmp_path / "first")
+    with pytest.raises(Error):
+        load_model_schema([f"{package_name}.model:Missing"], InputFileType.JsonSchema)
+    _assert_sys_modules_with_prefix(package_name, existing_modules)
+    _assert_sys_module_is(helper_name, existing_helper)
+
+    for directory_name, marker in (("first", "first"), ("second", "second")):
+        directory = tmp_path / directory_name
+        monkeypatch.chdir(directory)
+        run_input_model_and_assert(
+            input_model=f"{package_name}.model:User",
+            output_path=directory / "output.py",
+            expected_file=EXPECTED_INPUT_MODEL_PATH / "pydantic_basemodel.py",
+        )
+        assert (directory / "loaded.txt").read_text(encoding="utf-8") == marker
+        _assert_sys_modules_with_prefix(package_name, existing_modules)
+        _assert_sys_module_is(helper_name, existing_helper)
+
+
+def test_input_model_preserves_unrelated_concurrent_import(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Do not remove cwd modules imported concurrently by another thread."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    control_name = "_input_model_import_control"
+    input_module_name = "_tracked_input_model"
+    unrelated_module_name = "_unrelated_input_model_import"
+    input_entered = Event()
+    release_input = Event()
+    unrelated_entered = Event()
+    release_unrelated = Event()
+    control = types.ModuleType(control_name)
+    control.input_entered = input_entered
+    control.release_input = release_input
+    control.unrelated_entered = unrelated_entered
+    control.release_unrelated = release_unrelated
+    monkeypatch.setitem(sys.modules, control_name, control)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / f"{input_module_name}.py").write_text(
+        f"from {control_name} import input_entered, release_input\n\n"
+        "input_entered.set()\n"
+        "release_input.wait(5)\n\n"
+        "from pydantic import BaseModel\n\n"
+        "class User(BaseModel):\n"
+        "    name: str\n",
+        encoding="utf-8",
+    )
+    unrelated_directory = tmp_path.parent / f"{tmp_path.name}_unrelated"
+    unrelated_directory.mkdir()
+    unrelated_path = unrelated_directory / f"{unrelated_module_name}.py"
+    unrelated_path.write_text(
+        f"from {control_name} import release_unrelated, unrelated_entered\n\n"
+        "unrelated_entered.set()\n"
+        "release_unrelated.wait(5)\n"
+        "VALUE = 'unrelated'\n",
+        encoding="utf-8",
+    )
+
+    def import_unrelated_module() -> types.ModuleType:
+        spec = importlib.util.spec_from_file_location(unrelated_module_name, unrelated_path)
+        assert spec is not None
+        assert spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[unrelated_module_name] = module
+        spec.loader.exec_module(module)
+        return module
+
+    with _without_sys_module(input_module_name), _without_sys_module(unrelated_module_name):
+        try:
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                input_future = executor.submit(
+                    load_model_schema,
+                    [f"{input_module_name}:User"],
+                    InputFileType.JsonSchema,
+                )
+                assert input_entered.wait(timeout=5)
+                unrelated_future = executor.submit(import_unrelated_module)
+                assert unrelated_entered.wait(timeout=5)
+                release_input.set()
+                schema = input_future.result(timeout=5)
+                release_unrelated.set()
+                unrelated_module = unrelated_future.result(timeout=5)
+        finally:
+            release_input.set()
+            release_unrelated.set()
+
+        assert schema["title"] == "User"
+        assert unrelated_module.VALUE == "unrelated"
+        _assert_sys_module_missing(input_module_name)
+        _assert_sys_module_is(unrelated_module_name, unrelated_module)
+
+
+def test_input_model_does_not_reuse_another_loads_temporary_module(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep dotted loading isolated from a concurrent path module with the same name."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    control_name = "_input_model_temporary_control"
+    module_name = "_input_model_temporary_collision"
+    first_entered = Event()
+    release_first = Event()
+    second_started = Event()
+    second_finished = Event()
+    control = types.ModuleType(control_name)
+    control.first_entered = first_entered
+    control.release_first = release_first
+    monkeypatch.setitem(sys.modules, control_name, control)
+
+    first_directory = tmp_path / "first"
+    second_directory = tmp_path / "second"
+    first_directory.mkdir()
+    second_directory.mkdir()
+    first_path = first_directory / f"{module_name}.py"
+    first_path.write_text(
+        "from pydantic import BaseModel\n"
+        f"from {control_name} import first_entered, release_first\n\n"
+        "class Model(BaseModel):\n"
+        "    first: str\n\n"
+        "first_entered.set()\n"
+        "release_first.wait(5)\n",
+        encoding="utf-8",
+    )
+    (second_directory / f"{module_name}.py").write_text(
+        "from pydantic import BaseModel\n\nclass Model(BaseModel):\n    second: int\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(second_directory)
+
+    def load_second() -> dict[str, object]:
+        second_started.set()
+        try:
+            return load_model_schema([f"{module_name}:Model"], InputFileType.JsonSchema)
+        finally:
+            second_finished.set()
+
+    with _without_sys_module(module_name):
+        try:
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                first_future = executor.submit(
+                    load_model_schema,
+                    [f"{first_path}:Model"],
+                    InputFileType.JsonSchema,
+                )
+                assert first_entered.wait(timeout=5)
+                second_future = executor.submit(load_second)
+                assert second_started.wait(timeout=5)
+                assert not second_finished.wait(timeout=0.1)
+                release_first.set()
+                first_schema = first_future.result(timeout=5)
+                second_schema = second_future.result(timeout=5)
+        finally:
+            release_first.set()
+
+    assert "first" in first_schema["properties"]
+    assert "second" in second_schema["properties"]
+    _assert_sys_module_missing(module_name)
 
 
 def test_input_model_path_format(tmp_path: Path) -> None:
@@ -412,6 +609,40 @@ def test_without_sys_module_restores_existing_module() -> None:
         _assert_sys_module_is(module_name, existing_module)
 
     _assert_sys_module_missing(module_name)
+
+
+def test_input_model_state_cleanup_defensive_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep cleanup safe when paths disappear or modules change concurrently."""
+    from datamodel_code_generator.input_model import (
+        _module_is_from_directory,
+        _path_is_within,
+        _remove_input_model_path,
+        _remove_local_module,
+    )
+
+    module = types.ModuleType("_input_model_cleanup_race")
+    _remove_local_module(module.__name__, module)
+    assert not _module_is_from_directory(object(), tmp_path)
+    namespace_module = types.ModuleType("_input_model_namespace")
+    namespace_module.__path__ = [str(tmp_path)]
+    assert _module_is_from_directory(namespace_module, tmp_path)
+    environment_directory = tmp_path / ".venv"
+    environment_module = types.ModuleType("_input_model_environment")
+    environment_module.__file__ = str(environment_directory / "site-packages" / "dependency.py")
+    assert not _module_is_from_directory(environment_module, tmp_path, environment_directory)
+
+    missing_path_entry = str(tmp_path / "already-removed")
+    _remove_input_model_path(missing_path_entry)
+    assert missing_path_entry not in sys.path
+
+    def raise_os_error(_path: Path) -> Path:
+        raise OSError
+
+    monkeypatch.setattr(Path, "resolve", raise_os_error)
+    assert not _path_is_within(tmp_path / "missing.py", tmp_path)
 
 
 def test_input_model_path_format_filename_only(

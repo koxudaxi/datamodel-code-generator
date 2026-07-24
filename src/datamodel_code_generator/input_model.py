@@ -34,6 +34,7 @@ from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, cast, get_a
 
 from pydantic import BaseModel
 
+from datamodel_code_generator._process_state import PROCESS_STATE_LOCK
 from datamodel_code_generator.enums import InputModelRefStrategy
 
 if TYPE_CHECKING:
@@ -46,6 +47,94 @@ class Error(Exception):
 
 _MISSING_MODULE = object()
 _ModuleRestoreState = tuple[str, object]
+
+
+def _path_is_within(path: str | Path, directory: Path) -> bool:
+    try:
+        return Path(path).resolve().is_relative_to(directory)
+    except OSError:
+        return False
+
+
+def _module_is_from_directory(
+    module: object,
+    directory: Path,
+    excluded_directory: Path | None = None,
+) -> bool:
+    if not isinstance(module, types.ModuleType):
+        return False
+
+    def is_owned_path(path: str | Path) -> bool:
+        return _path_is_within(path, directory) and (
+            excluded_directory is None or not _path_is_within(path, excluded_directory)
+        )
+
+    if isinstance(module_file := getattr(module, "__file__", None), str):
+        return is_owned_path(module_file)
+    return any(is_owned_path(path) for path in getattr(module, "__path__", ()))
+
+
+def _remove_local_module(module_name: str, module: types.ModuleType) -> None:
+    if sys.modules.get(module_name) is not module:
+        return
+    sys.modules.pop(module_name, None)
+    parent_name, separator, child_name = module_name.rpartition(".")
+    if (
+        separator
+        and isinstance(parent := sys.modules.get(parent_name), types.ModuleType)
+        and vars(parent).get(child_name) is module
+    ):
+        vars(parent).pop(child_name, None)
+
+
+def _remove_input_model_path(cwd_entry: str) -> None:
+    if (index := next((index for index, entry in enumerate(sys.path) if entry is cwd_entry), None)) is not None:
+        sys.path.pop(index)
+
+
+def _module_depth(module_name: str) -> int:
+    return module_name.count(".")
+
+
+def _load_model_schema_isolated(
+    input_models: list[str],
+    input_file_type: InputFileType,
+    ref_strategy: InputModelRefStrategy | None,
+    output_model_type: DataModelType | None,
+) -> dict[str, object]:
+    """Load a schema while restoring cwd-local import state afterwards."""
+    with PROCESS_STATE_LOCK:
+        cwd_entry = str(Path.cwd())
+        added_path = cwd_entry not in sys.path
+        if not added_path:
+            return _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
+
+        directory = Path(cwd_entry).resolve()
+        environment_directory = Path(sys.prefix).resolve()
+        importer_cache_entry = sys.path_importer_cache.get(cwd_entry, _MISSING_MODULE)
+        baseline_modules = sys.modules.copy()
+        sys.path.insert(0, cwd_entry)
+        try:
+            return _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
+        finally:
+            current_modules = sys.modules.copy()
+            local_module_names = sorted(
+                (
+                    module_name
+                    for module_name, module in current_modules.items()
+                    if module_name not in baseline_modules
+                    and _module_is_from_directory(module, directory, environment_directory)
+                ),
+                key=_module_depth,
+                reverse=True,
+            )
+            for module_name in local_module_names:
+                _remove_local_module(module_name, current_modules[module_name])
+            _remove_input_model_path(cwd_entry)
+            if importer_cache_entry is _MISSING_MODULE:
+                sys.path_importer_cache.pop(cwd_entry, None)
+            else:
+                sys.path_importer_cache[cwd_entry] = cast("Any", importer_cache_entry)
 
 
 def _restore_path_module(state: _ModuleRestoreState) -> None:
@@ -658,6 +747,7 @@ def _try_rebuild_model(obj: type) -> None:
     config_classes = {"GenerateConfig", "ParserConfig", "ParseConfig"}
     main_config_classes = {"Config"}
     if module in {"datamodel_code_generator.config", "config"} and class_name in config_classes:
+        from datamodel_code_generator.config import _rebuild_config_model  # noqa: PLC0415
         from datamodel_code_generator.enums import UnionMode  # noqa: PLC0415
         from datamodel_code_generator.model.base import DataModel, DataModelFieldBase  # noqa: PLC0415
         from datamodel_code_generator.types import DataTypeManager, StrictTypes  # noqa: PLC0415
@@ -669,8 +759,9 @@ def _try_rebuild_model(obj: type) -> None:
             "StrictTypes": StrictTypes,
             "UnionMode": UnionMode,
         }
-        obj.model_rebuild(_types_namespace=types_namespace)  # ty: ignore[unresolved-attribute]
+        _rebuild_config_model(obj, types_namespace)  # ty: ignore[invalid-argument-type]
     elif module == "datamodel_code_generator.__main__" and class_name in main_config_classes:  # pragma: no cover
+        from datamodel_code_generator.config import _rebuild_config_model  # noqa: PLC0415
         from datamodel_code_generator.enums import UnionMode  # noqa: PLC0415
         from datamodel_code_generator.types import StrictTypes  # noqa: PLC0415
 
@@ -678,7 +769,7 @@ def _try_rebuild_model(obj: type) -> None:
             "UnionMode": UnionMode,
             "StrictTypes": StrictTypes,
         }
-        obj.model_rebuild(_types_namespace=types_namespace)  # ty: ignore[unresolved-attribute]
+        _rebuild_config_model(obj, types_namespace)  # ty: ignore[invalid-argument-type]
     else:
         obj.model_rebuild()  # ty: ignore[unresolved-attribute]
 
@@ -750,7 +841,7 @@ def _transform_single_model_to_inheritance(
     return new_schema
 
 
-def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
+def load_model_schema(
     input_models: list[str],
     input_file_type: InputFileType,
     ref_strategy: InputModelRefStrategy | None = None,
@@ -767,6 +858,15 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
     Returns:
         Merged schema dict with anyOf referencing all root models
     """
+    return _load_model_schema_isolated(input_models, input_file_type, ref_strategy, output_model_type)
+
+
+def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
+    input_models: list[str],
+    input_file_type: InputFileType,
+    ref_strategy: InputModelRefStrategy | None,
+    output_model_type: DataModelType | None,
+) -> dict[str, object]:
     from datamodel_code_generator import (  # noqa: PLC0415
         DataModelType,
         InputFileType,
@@ -777,10 +877,6 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
 
     if len(input_models) == 1:
         return _load_single_model_schema(input_models[0], input_file_type, ref_strategy, output_model_type)
-
-    cwd = str(Path.cwd())
-    if cwd not in sys.path:
-        sys.path.insert(0, cwd)
 
     model_classes: list[type] = []
     loaded_modules: dict[str, types.ModuleType] = {}
@@ -885,10 +981,6 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
 
     modname, qualname = _split_input_model(input_model)
 
-    cwd = str(Path.cwd())
-    if cwd not in sys.path:
-        sys.path.insert(0, cwd)
-
     module, path_module_state = _load_input_model_module(modname)
 
     try:
@@ -923,7 +1015,8 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
             if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
                 nested_models = _collect_nested_models(obj)
                 model_name = getattr(obj, "__name__", None)
-                if model_name and "$defs" in schema and model_name in schema["$defs"]:  # pragma: no cover  # ty: ignore[unsupported-operator]
+                schema_defs = cast("dict[str, object]", schema.get("$defs", {}))
+                if model_name and model_name in schema_defs:  # pragma: no cover
                     nested_models[model_name] = obj
                 schema = _filter_defs_by_strategy(schema, nested_models, output_model_type, ref_strategy)
 
