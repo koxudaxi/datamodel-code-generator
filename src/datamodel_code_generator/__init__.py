@@ -351,8 +351,7 @@ def _load_cached_parser_source_data(cache_key: _ParserSourceDataCacheKey) -> Yam
     except Exception:  # noqa: BLE001
         # A damaged optimization entry must fall back to the source parser.
         with _parser_source_data_cache_lock:
-            if _parser_source_data_cache.get(cache_key) is cached_data:
-                del _parser_source_data_cache[cache_key]
+            _parser_source_data_cache.pop(cache_key, None)
         return None
 
 
