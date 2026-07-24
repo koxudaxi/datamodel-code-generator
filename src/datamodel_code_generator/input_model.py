@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 import types
 from collections import ChainMap, Counter, OrderedDict, defaultdict, deque
 from collections.abc import (
     Callable as ABCCallable,
+)
+from collections.abc import (
+    Iterator,
 )
 from collections.abc import (
     Mapping as ABCMapping,
@@ -27,13 +31,17 @@ from collections.abc import (
 from collections.abc import (
     Set as AbstractSet,
 )
-from dataclasses import is_dataclass
+from contextlib import contextmanager
+from dataclasses import dataclass, is_dataclass
 from enum import Enum as PyEnum
+from functools import lru_cache
 from pathlib import Path
+from threading import Lock
 from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, cast, get_args, get_origin, get_type_hints
 
 from pydantic import BaseModel
 
+from datamodel_code_generator._process_context import process_context, process_cwd
 from datamodel_code_generator.enums import InputModelRefStrategy
 
 if TYPE_CHECKING:
@@ -45,15 +53,264 @@ class Error(Exception):
 
 
 _MISSING_MODULE = object()
-_ModuleRestoreState = tuple[str, object]
+_INPUT_MODEL_PATH_LOCK = Lock()
+_INPUT_MODEL_ACTIVE_CWD: str | None = None
+_INPUT_MODEL_ACTIVE_CALLS = 0
+_INPUT_MODEL_CWD_ENTRY: str | None = None
+_INPUT_MODULE_BASELINE: tuple[int, str | None, frozenset[str]] | None = None
+_LOCAL_DOTTED_MODULE_CACHE: OrderedDict[tuple[str, str], dict[str, types.ModuleType]] = OrderedDict()
+_LOCAL_DOTTED_MODULE_FINGERPRINTS: dict[
+    tuple[str, str],
+    dict[str, tuple[tuple[str, int, int], ...]],
+] = {}
+_LOCAL_DOTTED_MODULE_CACHE_SIZE = 16
 
 
-def _restore_path_module(state: _ModuleRestoreState) -> None:
-    module_name, previous_module = state
-    if previous_module is _MISSING_MODULE:
-        sys.modules.pop(module_name, None)
+@dataclass(slots=True)
+class _InputModuleRestoreState:
+    entries: dict[str, tuple[object, object]]
+    baseline_names: frozenset[str]
+    local_directory: Path | None = None
+    module_root: str | None = None
+    cache_key: tuple[str, str] | None = None
+    requested_module: str | None = None
+    baseline_count: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class _CachedLocalDottedModule:
+    module: types.ModuleType
+    module_root: str
+    cache_key: tuple[str, str]
+
+
+_LocalDottedModuleContext = tuple[str, Path] | _CachedLocalDottedModule
+_CWD_INDEPENDENT_FIELD_TYPES = {bool, bytes, float, int, str}
+_INERT_PACKAGE_ATTRIBUTES = frozenset({
+    "__builtins__",
+    "__cached__",
+    "__doc__",
+    "__file__",
+    "__loader__",
+    "__name__",
+    "__package__",
+    "__path__",
+    "__spec__",
+})
+
+
+@dataclass(frozen=True, slots=True)
+class _CwdIndependentModel:
+    module: types.ModuleType
+    root_module: types.ModuleType | None
+    model: type[BaseModel]
+    caller_cwd: str
+    local_cache_key: tuple[str, str] | None
+    model_json_schema: object
+    pydantic_json_schema: object
+    pydantic_core_schema: object
+    core_schema: object
+
+
+_CWD_INDEPENDENT_MODEL_CACHE: OrderedDict[tuple[str, str], _CwdIndependentModel] = OrderedDict()
+_CWD_INDEPENDENT_MODEL_CACHE_SIZE = 16
+
+
+def _path_is_within(path: str | Path, directory: Path) -> bool:
+    try:
+        return Path(path).resolve().is_relative_to(directory)
+    except (OSError, TypeError):
+        return False
+
+
+def _module_is_from_directory(module: object, directory: Path) -> bool:
+    if (module_file := getattr(module, "__file__", None)) and _path_is_within(module_file, directory):
+        return True
+    return any(_path_is_within(module_path, directory) for module_path in getattr(module, "__path__", ()))
+
+
+@lru_cache(maxsize=128)
+def _module_origins_are_from_cwd(origins: tuple[str, ...], cwd: str) -> bool:
+    directory = Path(cwd).resolve()
+    return any(_path_is_within(origin, directory) for origin in origins)
+
+
+def _module_is_from_cwd(module: object, cwd: str) -> bool:
+    """Check the common absolute-path case before resolving possible symlinks."""
+    cwd_prefix = f"{cwd.rstrip(os.sep)}{os.sep}"
+    origins = tuple(
+        origin
+        for origin in (
+            getattr(module, "__file__", None),
+            *getattr(module, "__path__", ()),
+        )
+        if isinstance(origin, str)
+    )
+    if any(origin.startswith(cwd_prefix) for origin in origins):
+        return True
+    return _module_origins_are_from_cwd(origins, cwd)
+
+
+def _module_is_from_local_import(module_name: str, module: object, directory: Path) -> bool:
+    """Return whether a module resolves from a direct entry under the import root."""
+    module_root = module_name.partition(".")[0]
+    for origin in (
+        getattr(module, "__file__", None),
+        *getattr(module, "__path__", ()),
+    ):
+        if not isinstance(origin, str | os.PathLike):
+            continue
+        try:
+            relative_origin = Path(origin).resolve().relative_to(directory)
+        except (OSError, ValueError):
+            continue
+        origin_root = relative_origin.parts[0]
+        if origin_root == module_root or Path(origin_root).stem == module_root:
+            return True
+    return False
+
+
+def _package_has_runtime_state(module_name: str, module: types.ModuleType) -> bool:
+    """Ignore import machinery and child-module bindings in inert package initializers."""
+    for attribute, value in vars(module).items():
+        if attribute in _INERT_PACKAGE_ATTRIBUTES:
+            continue
+        if isinstance(value, types.ModuleType) and value.__name__ == f"{module_name}.{attribute}":
+            continue
+        return True
+    return False
+
+
+def _referenced_module_ids(modules: dict[str, types.ModuleType]) -> set[int]:
+    """Collect explicit module globals while ignoring import-created child bindings."""
+    referenced: set[int] = set()
+    for owner_name, owner in modules.items():
+        for attribute, value in vars(owner).items():
+            if not isinstance(value, types.ModuleType) or value.__name__ == f"{owner_name}.{attribute}":
+                continue
+            referenced.add(id(value))
+    return referenced
+
+
+def _local_module_fingerprint(
+    modname: str,
+    modules: dict[str, types.ModuleType],
+    directory: Path,
+) -> tuple[tuple[str, int, int], ...] | None:
+    """Snapshot the model source and cwd-local dependencies loaded with it."""
+    fingerprints: list[tuple[str, int, int]] = []
+    referenced_modules = _referenced_module_ids(modules)
+    for module_name, module in modules.items():
+        if module_name != modname:
+            if not _module_is_from_directory(module, directory):
+                continue
+            if (
+                modname.startswith(f"{module_name}.")
+                and id(module) not in referenced_modules
+                and not _package_has_runtime_state(module_name, module)
+            ):
+                continue
+        if not isinstance(module_file := getattr(module, "__file__", None), str):
+            if module_name == modname:
+                return None
+            continue
+        try:
+            source_stat = os.stat(module_file)  # noqa: PTH116 - avoid Path allocation while building cache metadata
+        except OSError:
+            return None
+        fingerprints.append((module_file, source_stat.st_mtime_ns, source_stat.st_size))
+    return tuple(sorted(fingerprints)) or None
+
+
+def _local_module_fingerprint_is_current(fingerprint: tuple[tuple[str, int, int], ...] | None) -> bool:
+    """Return whether every cached local source still has the recorded identity."""
+    if fingerprint is None:
+        return False
+    for module_file, mtime_ns, size in fingerprint:
+        try:
+            source_stat = os.stat(module_file)  # noqa: PTH116 - this is the cached-model hot path
+        except OSError:
+            return False
+        if source_stat.st_mtime_ns != mtime_ns or source_stat.st_size != size:
+            return False
+    return True
+
+
+def _local_dotted_module_is_current(cache_key: tuple[str, str], modname: str) -> bool:
+    return _local_module_fingerprint_is_current(_LOCAL_DOTTED_MODULE_FINGERPRINTS.get(cache_key, {}).get(modname))
+
+
+def _track_input_modules(state: _InputModuleRestoreState) -> None:
+    if len(sys.modules) == state.baseline_count:
         return
-    sys.modules[module_name] = cast("types.ModuleType", previous_module)
+    module_prefix = f"{state.module_root}." if state.module_root is not None else None
+    for module_name in sys.modules.keys() - state.baseline_names - state.entries.keys():
+        module = sys.modules.get(module_name, _MISSING_MODULE)
+        matches_module_root = module_prefix is not None and (
+            module_name == state.module_root or module_name.startswith(module_prefix)
+        )
+        if not matches_module_root and (
+            state.local_directory is None
+            or not _module_is_from_local_import(module_name, module, state.local_directory)
+        ):
+            continue
+        state.entries[module_name] = (_MISSING_MODULE, module)
+
+
+def _input_module_baseline() -> tuple[int, frozenset[str]]:
+    """Reuse the immutable sys.modules baseline while its key fingerprint is unchanged."""
+    global _INPUT_MODULE_BASELINE  # noqa: PLW0603
+
+    module_count = len(sys.modules)
+    last_module_name = next(reversed(sys.modules), None)
+    if (
+        _INPUT_MODULE_BASELINE is None
+        or _INPUT_MODULE_BASELINE[0] != module_count
+        or _INPUT_MODULE_BASELINE[1] != last_module_name
+        or _INPUT_MODULE_BASELINE[2] != sys.modules.keys()
+    ):
+        _INPUT_MODULE_BASELINE = module_count, last_module_name, frozenset(sys.modules)
+    return module_count, _INPUT_MODULE_BASELINE[2]
+
+
+def _restore_input_module(state: _InputModuleRestoreState) -> None:
+    _track_input_modules(state)
+    if state.cache_key is not None:
+        cached_modules = {
+            module_name: cast("types.ModuleType", loaded_module)
+            for module_name, (_, loaded_module) in state.entries.items()
+            if loaded_module is not _MISSING_MODULE and sys.modules.get(module_name, _MISSING_MODULE) is loaded_module
+        }
+        if cached_modules:
+            cached_modules = {
+                **_LOCAL_DOTTED_MODULE_CACHE.get(state.cache_key, {}),
+                **cached_modules,
+            }
+            _LOCAL_DOTTED_MODULE_CACHE[state.cache_key] = cached_modules
+            _LOCAL_DOTTED_MODULE_CACHE.move_to_end(state.cache_key)
+            if state.requested_module is not None:
+                fingerprints = _LOCAL_DOTTED_MODULE_FINGERPRINTS.setdefault(state.cache_key, {})
+                if (
+                    fingerprint := _local_module_fingerprint(
+                        state.requested_module,
+                        cached_modules,
+                        state.local_directory or Path(state.cache_key[0]),
+                    )
+                ) is None:  # pragma: no cover - local model modules always have a source file
+                    fingerprints.pop(state.requested_module, None)
+                else:
+                    fingerprints[state.requested_module] = fingerprint
+            if len(_LOCAL_DOTTED_MODULE_CACHE) > _LOCAL_DOTTED_MODULE_CACHE_SIZE:
+                evicted_key, _ = _LOCAL_DOTTED_MODULE_CACHE.popitem(last=False)
+                _LOCAL_DOTTED_MODULE_FINGERPRINTS.pop(evicted_key, None)
+    for module_name in sorted(state.entries, key=lambda name: name.count("."), reverse=True):
+        previous_module, loaded_module = state.entries[module_name]
+        if sys.modules.get(module_name, _MISSING_MODULE) is not loaded_module:
+            continue
+        if previous_module is _MISSING_MODULE:
+            sys.modules.pop(module_name, None)
+        else:
+            sys.modules[module_name] = cast("types.ModuleType", previous_module)
 
 
 def _get_path_module_name(file_path: Path) -> str:
@@ -76,7 +333,7 @@ def _get_path_module_name(file_path: Path) -> str:
     return f"_datamodel_code_generator_input_model_{digest}"
 
 
-def _load_module_from_path(file_path: Path, modname: str) -> tuple[types.ModuleType, _ModuleRestoreState]:
+def _load_module_from_path(file_path: Path, modname: str) -> tuple[types.ModuleType, _InputModuleRestoreState]:
     module_name = _get_path_module_name(file_path)
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     if spec is None or spec.loader is None:
@@ -85,13 +342,19 @@ def _load_module_from_path(file_path: Path, modname: str) -> tuple[types.ModuleT
 
     previous_module = sys.modules.get(module_name, _MISSING_MODULE)
     module = importlib.util.module_from_spec(spec)
+    state = _InputModuleRestoreState(
+        entries={module_name: (previous_module, module)},
+        baseline_names=frozenset(sys.modules),
+        local_directory=file_path.parent.resolve(),
+        baseline_count=len(sys.modules) + (previous_module is _MISSING_MODULE),
+    )
     sys.modules[module_name] = module
     try:
         spec.loader.exec_module(module)
     except BaseException:
-        _restore_path_module((module_name, previous_module))
+        _restore_input_module(state)
         raise
-    return module, (module_name, previous_module)
+    return module, state
 
 
 def _split_input_model(input_model: str) -> tuple[str, str]:
@@ -103,17 +366,214 @@ def _split_input_model(input_model: str) -> tuple[str, str]:
     raise Error(msg)
 
 
-def _is_path_input_model_module(modname: str) -> bool:
-    return "/" in modname or "\\" in modname or (modname.endswith(".py") and Path(modname).exists())
+def _resolve_input_model_path(modname: str, cwd: str) -> Path | None:
+    if "/" not in modname and "\\" not in modname and not modname.endswith(".py"):
+        return None
+    path = Path(modname).expanduser()
+    if not path.is_absolute():
+        path = Path(cwd) / path
+    if "/" in modname or "\\" in modname or (modname.endswith(".py") and path.exists()):
+        return path.resolve()
+    return None
 
 
-def _load_input_model_module(modname: str) -> tuple[types.ModuleType, _ModuleRestoreState | None]:
-    if _is_path_input_model_module(modname):
-        file_path = Path(modname).resolve()
+def _local_dotted_module_context(modname: str, cwd: str) -> _LocalDottedModuleContext | None:
+    module_root = modname.partition(".")[0]
+    cached_root = sys.modules.get(module_root)
+    cache_key = cwd, module_root
+    if (
+        cached_root is None
+        and (request_modules := _LOCAL_DOTTED_MODULE_CACHE.get(cache_key)) is not None
+        and (request_module := request_modules.get(modname)) is not None
+    ):
+        if _local_dotted_module_is_current(cache_key, modname):
+            return _CachedLocalDottedModule(request_module, module_root, cache_key)
+        _LOCAL_DOTTED_MODULE_CACHE.pop(cache_key, None)
+        _LOCAL_DOTTED_MODULE_FINGERPRINTS.pop(cache_key, None)
+    if cached_root is not None and _module_is_from_cwd(cached_root, cwd):
+        return None
+    cwd_path = Path(cwd)
+    module_path = cwd_path / module_root
+    if not module_path.with_suffix(".py").is_file() and not module_path.is_dir():
+        return None
+    return module_root, cwd_path.resolve()
+
+
+def _get_cwd_independent_cached_module(  # noqa: PLR0911, PLR0912
+    model_spec: tuple[str, str],
+) -> tuple[types.ModuleType, str] | None:
+    """Return a loaded simple model that cannot consult request-local import state."""
+    modname, qualname = model_spec
+    caller_cwd = process_cwd()
+    if (cached_model := _CWD_INDEPENDENT_MODEL_CACHE.get(model_spec)) is not None:
+        if cached_model.local_cache_key is not None and not _local_dotted_module_is_current(
+            cached_model.local_cache_key,
+            modname,
+        ):
+            return None
+        cached_modules = (
+            sys.modules
+            if cached_model.local_cache_key is None
+            else _LOCAL_DOTTED_MODULE_CACHE.get(cached_model.local_cache_key, {})
+        )
+        if all((
+            cached_model.caller_cwd == caller_cwd,
+            caller_cwd in sys.path,
+            cached_modules.get(modname) is cached_model.module,
+            getattr(cached_model.module, qualname, None) is cached_model.model,
+            cached_modules.get(modname.partition(".")[0]) is cached_model.root_module,
+            not cached_model.model.model_config,
+            getattr(cached_model.model.model_json_schema, "__func__", None) is cached_model.model_json_schema,
+            getattr(cached_model.model.__get_pydantic_json_schema__, "__func__", None)
+            is cached_model.pydantic_json_schema,
+            getattr(cached_model.model.__get_pydantic_core_schema__, "__func__", None)
+            is cached_model.pydantic_core_schema,
+            cached_model.model.__pydantic_core_schema__ is cached_model.core_schema,
+        )):
+            _CWD_INDEPENDENT_MODEL_CACHE.move_to_end(model_spec)
+            return cached_model.module, caller_cwd
+    if caller_cwd not in sys.path:
+        return None
+    module_root = modname.partition(".")[0]
+    local_cache_key: tuple[str, str] | None = None
+    if not isinstance(module := sys.modules.get(modname), types.ModuleType):
+        local_cache_key = caller_cwd, module_root
+        if not isinstance(
+            module := _LOCAL_DOTTED_MODULE_CACHE.get(local_cache_key, {}).get(modname),
+            types.ModuleType,
+        ):
+            return None
+        if not _local_dotted_module_is_current(local_cache_key, modname):
+            return None
+    modules = sys.modules if local_cache_key is None else _LOCAL_DOTTED_MODULE_CACHE[local_cache_key]
+    if not isinstance(root_module := sys.modules.get(module_root), types.ModuleType) or _module_is_from_cwd(
+        root_module, caller_cwd
+    ):
+        if local_cache_key is None:
+            return None
+        root_module = modules.get(module_root)
+    elif local_cache_key is None:
+        local_root = Path(caller_cwd) / module_root
+        if local_root.with_suffix(".py").is_file() or local_root.is_dir():
+            return None
+    if (
+        not isinstance(model := getattr(module, qualname, None), type)
+        or not issubclass(model, BaseModel)
+        or model.model_config
+    ):
+        return None
+    for method_name in (
+        "model_json_schema",
+        "__get_pydantic_json_schema__",
+        "__get_pydantic_core_schema__",
+    ):
+        model_method = getattr(getattr(model, method_name), "__func__", None)
+        base_method = getattr(getattr(BaseModel, method_name), "__func__", None)
+        if model_method is not base_method:
+            return None
+    if any(
+        field.annotation not in _CWD_INDEPENDENT_FIELD_TYPES
+        or field.json_schema_extra is not None
+        or field.metadata
+        or field.discriminator is not None
+        for field in model.model_fields.values()
+    ):
+        return None
+    _CWD_INDEPENDENT_MODEL_CACHE[model_spec] = _CwdIndependentModel(
+        module=module,
+        root_module=root_module,
+        model=model,
+        caller_cwd=caller_cwd,
+        local_cache_key=local_cache_key,
+        model_json_schema=getattr(model.model_json_schema, "__func__", None),
+        pydantic_json_schema=getattr(model.__get_pydantic_json_schema__, "__func__", None),
+        pydantic_core_schema=getattr(model.__get_pydantic_core_schema__, "__func__", None),
+        core_schema=model.__pydantic_core_schema__,
+    )
+    _CWD_INDEPENDENT_MODEL_CACHE.move_to_end(model_spec)
+    if len(_CWD_INDEPENDENT_MODEL_CACHE) > _CWD_INDEPENDENT_MODEL_CACHE_SIZE:
+        _CWD_INDEPENDENT_MODEL_CACHE.popitem(last=False)
+    return module, caller_cwd
+
+
+def _load_local_dotted_module(
+    modname: str,
+    module_root: str,
+    local_directory: Path,
+) -> tuple[types.ModuleType, _InputModuleRestoreState | None]:
+    module_prefix = f"{module_root}."
+    cache_key = str(local_directory), module_root
+    request_modules = _LOCAL_DOTTED_MODULE_CACHE.get(cache_key, {})
+    cached_root = sys.modules.get(module_root)
+    previous_modules = (
+        {}
+        if cached_root is not None and _module_is_from_directory(cached_root, local_directory)
+        else {
+            module_name: module
+            for module_name, module in sys.modules.items()
+            if module_name == module_root or module_name.startswith(module_prefix)
+        }
+    )
+    for module_name, module in previous_modules.items():
+        if sys.modules.get(module_name) is module:
+            sys.modules.pop(module_name)
+    for module_name, module in request_modules.items():
+        sys.modules.setdefault(module_name, module)
+    state = _InputModuleRestoreState(
+        entries={
+            **{
+                module_name: (module, sys.modules.get(module_name, _MISSING_MODULE))
+                for module_name, module in previous_modules.items()
+            },
+            **{
+                module_name: (_MISSING_MODULE, module)
+                for module_name, module in request_modules.items()
+                if module_name not in previous_modules and sys.modules.get(module_name) is module
+            },
+        },
+        baseline_names=frozenset(sys.modules),
+        local_directory=local_directory,
+        module_root=module_root,
+        cache_key=cache_key,
+        requested_module=modname,
+        baseline_count=len(sys.modules),
+    )
+    try:
+        module = importlib.import_module(modname)
+    except BaseException:
+        _restore_input_module(state)
+        raise
+    for module_name, (previous_module, loaded_module) in tuple(state.entries.items()):
+        if loaded_module is _MISSING_MODULE and (loaded_entry := sys.modules.get(module_name)) is not None:
+            state.entries[module_name] = (previous_module, loaded_entry)
+    return module, state
+
+
+def _load_input_model_module(
+    modname: str,
+    file_path: Path | None,
+    local_context: _LocalDottedModuleContext | None,
+) -> tuple[types.ModuleType, _InputModuleRestoreState | None]:
+    if file_path is not None:
         if not file_path.exists():
             msg = f"File not found: {modname!r}"
             raise Error(msg)
         return _load_module_from_path(file_path, modname)
+    if local_context is not None:
+        match local_context:
+            case _CachedLocalDottedModule(module, module_root, cache_key):
+                baseline_count, baseline_names = _input_module_baseline()
+                return module, _InputModuleRestoreState(
+                    entries={},
+                    baseline_names=baseline_names,
+                    local_directory=Path(cache_key[0]),
+                    module_root=module_root,
+                    cache_key=cache_key,
+                    requested_module=modname,
+                    baseline_count=baseline_count,
+                )
+            case _:
+                return _load_local_dotted_module(modname, *local_context)
 
     try:
         if importlib.util.find_spec(modname) is None:
@@ -123,6 +583,51 @@ def _load_input_model_module(modname: str) -> tuple[types.ModuleType, _ModuleRes
     except ImportError as e:
         msg = f"Cannot import module {modname!r}: {e}"
         raise Error(msg) from e
+
+
+def _enter_input_model_cwd(cwd: str) -> None:
+    global _INPUT_MODEL_ACTIVE_CALLS, _INPUT_MODEL_ACTIVE_CWD, _INPUT_MODEL_CWD_ENTRY  # noqa: PLW0603
+
+    with _INPUT_MODEL_PATH_LOCK:
+        if _INPUT_MODEL_ACTIVE_CALLS == 0:
+            _INPUT_MODEL_ACTIVE_CWD = cwd
+            _INPUT_MODEL_ACTIVE_CALLS = 1
+            if cwd not in sys.path:
+                _INPUT_MODEL_CWD_ENTRY = cwd
+                sys.path.insert(0, cwd)
+            return
+        if cwd != _INPUT_MODEL_ACTIVE_CWD:  # pragma: no cover - guarded by process_context
+            msg = "Concurrent input model calls cannot use different working directories."
+            raise Error(msg)  # pragma: no cover
+        _INPUT_MODEL_ACTIVE_CALLS += 1
+
+
+def _exit_input_model_cwd() -> None:
+    global _INPUT_MODEL_ACTIVE_CALLS, _INPUT_MODEL_ACTIVE_CWD, _INPUT_MODEL_CWD_ENTRY  # noqa: PLW0603
+
+    with _INPUT_MODEL_PATH_LOCK:
+        _INPUT_MODEL_ACTIVE_CALLS -= 1
+        if _INPUT_MODEL_ACTIVE_CALLS:
+            return
+        if (cwd_entry := _INPUT_MODEL_CWD_ENTRY) is not None:
+            for index, entry in enumerate(sys.path):
+                if entry is cwd_entry:
+                    sys.path.pop(index)
+                    break
+        _INPUT_MODEL_ACTIVE_CWD = None
+        _INPUT_MODEL_CWD_ENTRY = None
+
+
+@contextmanager
+def _input_model_cwd(cwd: str) -> Iterator[None]:
+    if _INPUT_MODEL_ACTIVE_CALLS == 0 and cwd in sys.path:
+        yield
+        return
+    _enter_input_model_cwd(cwd)
+    try:
+        yield
+    finally:
+        _exit_input_model_cwd()
 
 
 def _is_input_model_base_schema(value: object) -> bool:
@@ -750,7 +1255,40 @@ def _transform_single_model_to_inheritance(
     return new_schema
 
 
-def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
+def _load_single_model_schema_in_cwd(  # noqa: PLR0913, PLR0917
+    model_spec: tuple[str, str],
+    input_file_type: InputFileType,
+    ref_strategy: InputModelRefStrategy | None,
+    output_model_type: DataModelType,
+    caller_cwd: str,
+    file_path: Path | None,
+    local_context: _LocalDottedModuleContext | None,
+    loaded_module: types.ModuleType | None = None,
+) -> dict[str, object]:
+    """Use the allocation-free cwd fast path when no sys.path update is needed."""
+    if _INPUT_MODEL_ACTIVE_CALLS == 0 and caller_cwd in sys.path:
+        return _load_single_model_schema(
+            model_spec,
+            input_file_type,
+            ref_strategy,
+            output_model_type,
+            file_path,
+            local_context,
+            loaded_module,
+        )
+    with _input_model_cwd(caller_cwd):
+        return _load_single_model_schema(
+            model_spec,
+            input_file_type,
+            ref_strategy,
+            output_model_type,
+            file_path,
+            local_context,
+            loaded_module,
+        )
+
+
+def load_model_schema(
     input_models: list[str],
     input_file_type: InputFileType,
     ref_strategy: InputModelRefStrategy | None = None,
@@ -767,33 +1305,122 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
     Returns:
         Merged schema dict with anyOf referencing all root models
     """
-    from datamodel_code_generator import (  # noqa: PLC0415
-        DataModelType,
-        InputFileType,
-    )
+    from datamodel_code_generator import DataModelType  # noqa: PLC0415
 
     if output_model_type is None:
         output_model_type = DataModelType.PydanticV2BaseModel
 
     if len(input_models) == 1:
-        return _load_single_model_schema(input_models[0], input_file_type, ref_strategy, output_model_type)
+        model_spec = _split_input_model(input_models[0])
+        if (cached_context := _get_cwd_independent_cached_module(model_spec)) is not None:
+            cached_module, caller_cwd = cached_context
+            return _load_single_model_schema_in_cwd(
+                model_spec,
+                input_file_type,
+                ref_strategy,
+                output_model_type,
+                caller_cwd,
+                None,
+                None,
+                cached_module,
+            )
+        modname = model_spec[0]
+        explicit_path = "/" in modname or "\\" in modname
+        cached_local_hint = any(modname in request_modules for request_modules in _LOCAL_DOTTED_MODULE_CACHE.values())
+        initial_exclusive = explicit_path or cached_local_hint
+        with process_context(exclusive=initial_exclusive, borrow_writer=False) as caller_cwd:
+            file_path = _resolve_input_model_path(modname, caller_cwd)
+            local_context = None if file_path is not None else _local_dotted_module_context(modname, caller_cwd)
+            if (file_path is not None or local_context is not None) and not initial_exclusive:
+                with process_context(exclusive=True):
+                    return _load_single_model_schema_in_cwd(
+                        model_spec,
+                        input_file_type,
+                        ref_strategy,
+                        output_model_type,
+                        caller_cwd,
+                        file_path,
+                        local_context,
+                    )
+            return _load_single_model_schema_in_cwd(
+                model_spec,
+                input_file_type,
+                ref_strategy,
+                output_model_type,
+                caller_cwd,
+                file_path,
+                local_context,
+            )
 
-    cwd = str(Path.cwd())
-    if cwd not in sys.path:
-        sys.path.insert(0, cwd)
+    module_names = [_split_input_model(input_model)[0] for input_model in input_models]
+
+    def load_multiple(
+        caller_cwd: str,
+        path_modules: dict[str, Path],
+        local_module_contexts: dict[str, _LocalDottedModuleContext],
+    ) -> dict[str, object]:
+        with _input_model_cwd(caller_cwd):
+            return _load_multiple_model_schemas(
+                input_models,
+                input_file_type,
+                ref_strategy,
+                output_model_type,
+                path_modules,
+                local_module_contexts,
+            )
+
+    explicit_path = any("/" in module_name or "\\" in module_name for module_name in module_names)
+    cached_local_hint = any(
+        module_name in request_modules
+        for request_modules in _LOCAL_DOTTED_MODULE_CACHE.values()
+        for module_name in module_names
+    )
+    initial_exclusive = explicit_path or cached_local_hint
+    with process_context(exclusive=initial_exclusive, borrow_writer=False) as caller_cwd:
+        path_modules = {
+            module_name: path
+            for module_name in module_names
+            if (path := _resolve_input_model_path(module_name, caller_cwd)) is not None
+        }
+        local_module_contexts = {
+            module_name: local_context
+            for module_name in module_names
+            if module_name not in path_modules
+            and (local_context := _local_dotted_module_context(module_name, caller_cwd)) is not None
+        }
+        requires_local_import = bool(local_module_contexts)
+        if (path_modules or requires_local_import) and not initial_exclusive:
+            with process_context(exclusive=True):
+                return load_multiple(caller_cwd, path_modules, local_module_contexts)
+        return load_multiple(caller_cwd, path_modules, local_module_contexts)
+
+
+def _load_multiple_model_schemas(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915, PLR0917
+    input_models: list[str],
+    input_file_type: InputFileType,
+    ref_strategy: InputModelRefStrategy | None,
+    output_model_type: DataModelType,
+    path_modules: dict[str, Path],
+    local_module_contexts: dict[str, _LocalDottedModuleContext],
+) -> dict[str, object]:
+    from datamodel_code_generator import InputFileType  # noqa: PLC0415
 
     model_classes: list[type] = []
     loaded_modules: dict[str, types.ModuleType] = {}
-    path_module_states: list[_ModuleRestoreState] = []
+    module_states: list[_InputModuleRestoreState] = []
 
     try:
         for input_model in input_models:
             modname, qualname = _split_input_model(input_model)
 
             if modname not in loaded_modules:
-                module, module_state = _load_input_model_module(modname)
+                module, module_state = _load_input_model_module(
+                    modname,
+                    path_modules.get(modname),
+                    local_module_contexts.get(modname),
+                )
                 if module_state is not None:
-                    path_module_states.append(module_state)
+                    module_states.append(module_state)
                 loaded_modules[modname] = module
             else:
                 module = loaded_modules[modname]
@@ -857,20 +1484,23 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
 
         return final_schema
     finally:
-        for state in reversed(path_module_states):
-            _restore_path_module(state)
+        for state in reversed(module_states):
+            _restore_input_module(state)
 
 
-def _load_single_model_schema(  # noqa: PLR0912, PLR0915
-    input_model: str,
+def _load_single_model_schema(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917
+    model_spec: tuple[str, str],
     input_file_type: InputFileType,
     ref_strategy: InputModelRefStrategy | None,
     output_model_type: DataModelType,
+    file_path: Path | None,
+    local_context: _LocalDottedModuleContext | None,
+    loaded_module: types.ModuleType | None = None,
 ) -> dict[str, object]:
     """Load schema from a Python import path.
 
     Args:
-        input_model: Import path in 'module.path:ObjectName' format
+        model_spec: Module path and qualified object name
         input_file_type: Current input file type setting for validation
         ref_strategy: Strategy for handling referenced types
         output_model_type: Target output model type for reuse-foreign strategy
@@ -883,13 +1513,13 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
     """
     from datamodel_code_generator import InputFileType  # noqa: PLC0415
 
-    modname, qualname = _split_input_model(input_model)
+    modname, qualname = model_spec
 
-    cwd = str(Path.cwd())
-    if cwd not in sys.path:
-        sys.path.insert(0, cwd)
-
-    module, path_module_state = _load_input_model_module(modname)
+    if loaded_module is None:
+        module, module_state = _load_input_model_module(modname, file_path, local_context)
+    else:
+        module = loaded_module
+        module_state = None
 
     try:
         try:
@@ -923,7 +1553,9 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
             if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
                 nested_models = _collect_nested_models(obj)
                 model_name = getattr(obj, "__name__", None)
-                if model_name and "$defs" in schema and model_name in schema["$defs"]:  # pragma: no cover  # ty: ignore[unsupported-operator]
+                if (
+                    model_name and "$defs" in schema and model_name in schema["$defs"]  # ty: ignore[unsupported-operator]
+                ):  # pragma: no cover
                     nested_models[model_name] = obj
                 schema = _filter_defs_by_strategy(schema, nested_models, output_model_type, ref_strategy)
 
@@ -956,5 +1588,5 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
         msg = f"{qualname!r} is not a supported type. Supported: dict, Pydantic v2 BaseModel, dataclass, TypedDict"
         raise Error(msg)
     finally:
-        if path_module_state is not None:
-            _restore_path_module(path_module_state)
+        if module_state is not None:
+            _restore_input_module(module_state)

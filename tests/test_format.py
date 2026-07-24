@@ -2472,6 +2472,25 @@ def test_settings_path_with_deeply_nested_nonexistent_path(tmp_path: Path) -> No
     assert formatter.settings_path == str(tmp_path)
 
 
+def test_isort_project_root_respects_explicit_empty_src_paths(tmp_path: Path) -> None:
+    """Keep an explicit empty isort src_paths setting unchanged."""
+    project_root = tmp_path / "project"
+    settings_path = tmp_path / "settings"
+    project_root.mkdir()
+    settings_path.mkdir()
+    (project_root / "localpkg").mkdir()
+    (settings_path / "pyproject.toml").write_text("[tool.isort]\nsrc_paths = []\n", encoding="utf-8")
+
+    with format_module.isort_project_root(project_root):
+        formatter = CodeFormatter(
+            PythonVersionMin,
+            settings_path=settings_path,
+            formatters=[Formatter.ISORT],
+        )
+
+    assert formatter.format_code("import pydantic\nimport localpkg\n") == "import localpkg\nimport pydantic\n"
+
+
 def test_format_directory_ruff_check(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test format_directory with ruff check."""
     monkeypatch.chdir(tmp_path)

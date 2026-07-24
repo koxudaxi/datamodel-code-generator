@@ -10,6 +10,8 @@ import re
 import shutil
 import subprocess  # noqa: S404
 import sys
+from contextlib import contextmanager
+from contextvars import ContextVar
 from functools import lru_cache
 from importlib import import_module
 from pathlib import Path
@@ -21,7 +23,7 @@ from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.util import load_toml
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
 
 DEFAULT_FORMATTERS = _format_types.DEFAULT_FORMATTERS
 EXTERNAL_FORMATTERS = _format_types.EXTERNAL_FORMATTERS
@@ -39,6 +41,17 @@ MAX_SHORT_DEFAULT_OVERFLOW = 13
 LONG_TARGET_PREFIX_LENGTH = 30
 TYPE_ALIAS_INLINE_ARGUMENT_COUNT = 2
 STRING_PREFIX_PATTERN = re.compile(r"(?i)^([rubf]*)(\"\"\"|'''|\"|')")
+_ISORT_PROJECT_ROOT: ContextVar[Path | None] = ContextVar("_ISORT_PROJECT_ROOT", default=None)
+
+
+@contextmanager
+def isort_project_root(path: Path) -> Iterator[None]:
+    """Set the request-local project root used for isort source discovery."""
+    token = _ISORT_PROJECT_ROOT.set(path)
+    try:
+        yield
+    finally:
+        _ISORT_PROJECT_ROOT.reset(token)
 
 
 # Keep the re-export shim visible to auto-fixers without changing star-import behavior.
@@ -409,7 +422,15 @@ class CodeFormatter:
             if isort.__version__.startswith("4."):  # pragma: no cover
                 self.isort_config = None
             else:
-                self.isort_config = isort.Config(settings_path=self.settings_path, **self.isort_config_kwargs)
+                isort_config = isort.Config(settings_path=self.settings_path, **self.isort_config_kwargs)
+                if (project_root := _ISORT_PROJECT_ROOT.get()) is not None and not any(
+                    "src_paths" in source for source in isort_config.sources if source.get("source") != "defaults"
+                ):
+                    isort_config = isort.Config(
+                        config=isort_config,
+                        src_paths=(project_root / "src", project_root),
+                    )
+                self.isort_config = isort_config
         else:
             self.isort_config_kwargs = {}
             self.isort_config = None

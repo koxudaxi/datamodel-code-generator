@@ -20,12 +20,15 @@ from datamodel_code_generator.imports import (
     Import,
 )
 from datamodel_code_generator.model.base import (
+    _MAX_CUSTOM_TEMPLATE_VARIABLES,
     _MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS,
     DataModel,
     DataModelFieldBase,
     TemplateBase,
     _annotation_typing_import_names,
     _clear_custom_template_caches,
+    _custom_template_variable_state,
+    _get_custom_template_variables,
     _get_environment,
     _get_environment_with_absolute_path,
     _get_template_with_absolute_path,
@@ -238,6 +241,103 @@ def test_data_model_relative_custom_template_without_adapter() -> None:
     )
 
     assert Path(model.template.filename).parts[-2:] == ("pydantic_v2", "BaseModel.jinja2")
+
+
+def test_custom_template_variables_follow_static_references(tmp_path: Path) -> None:
+    """Collect variables through repeated and fallback template references."""
+    from jinja2 import Environment, FileSystemLoader
+
+    (tmp_path / "root.jinja2").write_text(
+        '{% include "shared.jinja2" %}'
+        '{% include "shared.jinja2" %}'
+        '{% include ["fallback.jinja2", "shared.jinja2"] %}'
+        "{{ root_value }}",
+        encoding="utf-8",
+    )
+    (tmp_path / "shared.jinja2").write_text("{{ shared_value }}", encoding="utf-8")
+    (tmp_path / "fallback.jinja2").write_text("{{ fallback_value }}", encoding="utf-8")
+    template = Environment(loader=FileSystemLoader(tmp_path)).get_template("root.jinja2")
+    expected_variables = {
+        "fallback_value",
+        "root_value",
+        "shared_value",
+    }
+
+    assert _get_custom_template_variables(template) == expected_variables
+    assert _get_custom_template_variables(template) == expected_variables
+
+
+def test_custom_template_variables_detect_dynamic_reference(tmp_path: Path) -> None:
+    """Disable selective copying when a referenced template name is dynamic."""
+    from jinja2 import Environment, FileSystemLoader
+
+    (tmp_path / "root.jinja2").write_text("{% include selected_template %}", encoding="utf-8")
+    template = Environment(loader=FileSystemLoader(tmp_path)).get_template("root.jinja2")
+
+    assert _get_custom_template_variables(template) is None
+
+
+def test_custom_template_variables_refresh_after_source_removal(tmp_path: Path) -> None:
+    """Let rendering retain Jinja's error when an included source disappears."""
+    from jinja2 import Environment, FileSystemLoader, TemplateNotFound
+
+    template_path = tmp_path / "included.jinja2"
+    (tmp_path / "root.jinja2").write_text('{% include "included.jinja2" %}', encoding="utf-8")
+    template_path.write_text("{{ value }}", encoding="utf-8")
+    template = Environment(loader=FileSystemLoader(tmp_path)).get_template("root.jinja2")
+    assert _get_custom_template_variables(template) == {"value"}
+
+    template_path.unlink()
+
+    assert _get_custom_template_variables(template) is None
+    with pytest.raises(TemplateNotFound):
+        template.render()
+
+
+def test_custom_template_variables_preserve_ignore_missing(tmp_path: Path) -> None:
+    """Treat a missing optional include as dynamic without changing render semantics."""
+    from jinja2 import Environment, FileSystemLoader
+
+    (tmp_path / "root.jinja2").write_text(
+        '{% include "optional.jinja2" ignore missing %}{{ value }}',
+        encoding="utf-8",
+    )
+    template = Environment(loader=FileSystemLoader(tmp_path)).get_template("root.jinja2")
+
+    assert _get_custom_template_variables(template) is None
+    assert template.render(value="rendered") == "rendered"
+
+
+def test_custom_template_variables_keep_compiled_root_source(tmp_path: Path) -> None:
+    """Keep analysis aligned with a directly retained Jinja root template."""
+    from os import utime
+
+    from jinja2 import Environment, FileSystemLoader
+
+    template_path = tmp_path / "root.jinja2"
+    template_path.write_text("{{ initial_value }}", encoding="utf-8")
+    template = Environment(loader=FileSystemLoader(tmp_path)).get_template("root.jinja2")
+    assert _get_custom_template_variables(template) == {"initial_value"}
+
+    updated_mtime = template_path.stat().st_mtime + 2
+    template_path.write_text("{{ updated_value }}", encoding="utf-8")
+    utime(template_path, (updated_mtime, updated_mtime))
+
+    assert _get_custom_template_variables(template) == {"initial_value"}
+
+
+def test_custom_template_variables_cache_is_bounded(tmp_path: Path) -> None:
+    """Discard the oldest analysis when the custom-template cache is full."""
+    from jinja2 import Environment, FileSystemLoader
+
+    _clear_custom_template_caches()
+    environment = Environment(loader=FileSystemLoader(tmp_path))
+    for index in range(_MAX_CUSTOM_TEMPLATE_VARIABLES + 1):
+        template_name = f"{index}.jinja2"
+        (tmp_path / template_name).write_text("{{ value }}", encoding="utf-8")
+        _get_custom_template_variables(environment.get_template(template_name))
+
+    assert len(_custom_template_variable_state.entries) == _MAX_CUSTOM_TEMPLATE_VARIABLES
 
 
 def test_pydantic_custom_template_legacy_root_keeps_precedence(tmp_path: Path) -> None:

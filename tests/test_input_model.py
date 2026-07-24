@@ -7,6 +7,7 @@ import types
 from argparse import Namespace
 from contextlib import contextmanager
 from pathlib import Path
+from threading import Event, Lock, Thread
 from typing import TYPE_CHECKING
 
 import pytest
@@ -331,21 +332,38 @@ def test_input_model_adds_cwd_to_sys_path(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Test that --input-model adds cwd to sys.path if not present."""
-    cwd = str(tmp_path)
-    monkeypatch.chdir(tmp_path)
+    """Test that --input-model temporarily adds cwd to sys.path."""
+    input_model_dir = Path("tests/data/python/input_model").resolve()
+    cwd = str(input_model_dir)
+    monkeypatch.chdir(input_model_dir)
     assert cwd not in sys.path
 
-    original_sys_path = sys.path.copy()
-    try:
-        run_input_model_and_assert(
-            input_model="tests.data.python.input_model.pydantic_models:User",
-            output_path=tmp_path / "output.py",
-            expected_file=EXPECTED_INPUT_MODEL_PATH / "pydantic_basemodel.py",
-        )
-        assert cwd in sys.path
-    finally:
-        sys.path[:] = original_sys_path
+    run_input_model_and_assert(
+        input_model="pydantic_models:User",
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "pydantic_basemodel.py",
+    )
+
+    assert cwd not in sys.path
+
+
+def test_input_model_restores_cwd_in_sys_path_on_error(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test an input-model error restores a temporarily added cwd."""
+    input_model_dir = Path("tests/data/python/input_model").resolve()
+    cwd = str(input_model_dir)
+    monkeypatch.chdir(input_model_dir)
+    assert cwd not in sys.path
+
+    run_input_model_error_and_assert(
+        input_model="pydantic_models:Missing",
+        capsys=capsys,
+        expected_stderr_contains="has no attribute",
+    )
+
+    assert cwd not in sys.path
 
 
 def test_input_model_path_format(tmp_path: Path) -> None:
@@ -534,11 +552,1103 @@ def test_load_module_from_path_restores_sys_modules_on_exec_error(tmp_path: Path
     model_path.write_text("raise RuntimeError('module failed')\n", encoding="utf-8")
     module_name = model_path.stem
 
+    with (
+        _without_sys_module(module_name),
+        pytest.raises(RuntimeError, match="module failed"),
+    ):
+        _load_module_from_path(model_path, str(model_path))
+
+    _assert_sys_module_missing(module_name)
+
+
+def test_load_model_schema_serializes_path_and_dotted_module_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test a dotted import cannot observe a concurrent path module."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    model_path = (tmp_path / "concurrent_input_model.py").resolve()
+    control_name = "_input_model_concurrency_control"
+    model_path.write_text(
+        "from pydantic import BaseModel\n"
+        f"import {control_name}\n\n"
+        "class Model(BaseModel):\n"
+        "    value: str\n\n"
+        "    @classmethod\n"
+        "    def model_json_schema(cls, *args, **kwargs):\n"
+        f"        {control_name}.enter()\n"
+        "        return super().model_json_schema(*args, **kwargs)\n",
+        encoding="utf-8",
+    )
+    module_name = model_path.stem
+    monkeypatch.syspath_prepend(str(tmp_path))
+    started = [Event(), Event()]
+    entered = [Event(), Event()]
+    release = [Event(), Event()]
+    call_lock = Lock()
+    call_count = 0
+    schemas: list[dict[str, object]] = []
+
+    def enter() -> None:
+        nonlocal call_count
+        with call_lock:
+            index = call_count
+            call_count += 1
+        entered[index].set()
+        release[index].wait(timeout=5)
+
+    control_module = types.ModuleType(control_name)
+    control_module.enter = enter  # ty: ignore[unresolved-attribute]
+
+    def load_schema(index: int) -> None:
+        started[index].set()
+        match index:
+            case 0:
+                input_model = f"{model_path}:Model"
+            case _:
+                input_model = f"{module_name}:Model"
+        schemas.append(load_model_schema([input_model], InputFileType.Auto))
+
+    threads = [Thread(target=load_schema, args=(index,)) for index in range(2)]
+    with _without_sys_module(module_name), _without_sys_module(control_name):
+        sys.modules[control_name] = control_module
+        threads[0].start()
+        assert entered[0].wait(timeout=5)
+        threads[1].start()
+        assert started[1].wait(timeout=5)
+        try:
+            assert not entered[1].wait(timeout=0.1)
+            release[0].set()
+            assert entered[1].wait(timeout=5)
+        finally:
+            for event in release:
+                event.set()
+            for thread in threads:
+                thread.join(timeout=5)
+
+        assert all(not thread.is_alive() for thread in threads)
+        assert len(schemas) == 2
+        assert schemas[0] == schemas[1]
+
+    _assert_sys_module_missing(module_name)
+
+
+def test_load_model_schema_keeps_unrelated_dotted_modules_concurrent(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test unrelated dotted modules retain the concurrent fast path."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    control_name = "_input_model_dotted_concurrency_control"
+    module_names = ("first_dotted_input_model", "second_dotted_input_model")
+    for module_name in module_names:
+        (tmp_path / f"{module_name}.py").write_text(
+            "from pydantic import BaseModel\n"
+            f"import {control_name}\n\n"
+            "class Model(BaseModel):\n"
+            "    value: str\n\n"
+            "    @classmethod\n"
+            "    def model_json_schema(cls, *args, **kwargs):\n"
+            f"        {control_name}.enter({module_name!r})\n"
+            "        return super().model_json_schema(*args, **kwargs)\n",
+            encoding="utf-8",
+        )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    entered = {module_name: Event() for module_name in module_names}
+    release = {module_name: Event() for module_name in module_names}
+    schemas: list[dict[str, object]] = []
+
+    def enter(module_name: str) -> None:
+        entered[module_name].set()
+        release[module_name].wait(timeout=5)
+
+    control_module = types.ModuleType(control_name)
+    control_module.enter = enter  # ty: ignore[unresolved-attribute]
+
+    def load_schema(module_name: str) -> None:
+        schemas.append(load_model_schema([f"{module_name}:Model"], InputFileType.Auto))
+
+    threads = [Thread(target=load_schema, args=(module_name,)) for module_name in module_names]
+    with (
+        _without_sys_module(module_names[0]),
+        _without_sys_module(module_names[1]),
+        _without_sys_module(control_name),
+    ):
+        sys.modules[control_name] = control_module
+        threads[0].start()
+        assert entered[module_names[0]].wait(timeout=5)
+        threads[1].start()
+        try:
+            assert entered[module_names[1]].wait(timeout=5)
+        finally:
+            for event in release.values():
+                event.set()
+            for thread in threads:
+                thread.join(timeout=5)
+
+        assert all(not thread.is_alive() for thread in threads)
+        assert len(schemas) == 2
+        assert schemas[0] == schemas[1]
+
+
+def test_load_model_schema_imports_dotted_module_ending_in_py(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep pkg.py names as dotted imports when no matching file exists."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    package = tmp_path / "dotted_suffix"
+    package.mkdir()
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "py.py").write_text(
+        "from pydantic import BaseModel\n\nclass Model(BaseModel):\n    value: str\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    schema = load_model_schema(["dotted_suffix.py:Model"], InputFileType.Auto)
+
+    assert schema["title"] == "Model"
+
+
+def test_load_model_schema_isolates_shadowed_dotted_modules(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Load a cwd-local dotted model instead of a previous request's module."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    module_name = "_shadowed_input_model"
+    request_paths = [tmp_path / "first", tmp_path / "second"]
+    for request_path, field_name in zip(request_paths, ("first_value", "second_value"), strict=True):
+        request_path.mkdir()
+        (request_path / f"{module_name}.py").write_text(
+            f"from pydantic import BaseModel\n\nclass Model(BaseModel):\n    {field_name}: str\n",
+            encoding="utf-8",
+        )
+
     with _without_sys_module(module_name):
-        with pytest.raises(RuntimeError, match="module failed"):
-            _load_module_from_path(model_path, str(model_path))
+        monkeypatch.chdir(request_paths[0])
+        first_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        monkeypatch.chdir(request_paths[1])
+        second_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+
+    assert list(first_schema["properties"]) == ["first_value"]  # ty: ignore[invalid-argument-type]
+    assert list(second_schema["properties"]) == ["second_value"]  # ty: ignore[invalid-argument-type]
+
+
+def test_load_model_schema_isolates_shadowed_dotted_packages(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Restore dotted package parents and siblings after a cwd-local request."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    package_name = "_shadowed_input_package"
+    request_paths = [tmp_path / "first", tmp_path / "second"]
+    for request_path, field_type in zip(request_paths, ("str", "int"), strict=True):
+        package = request_path / package_name
+        package.mkdir(parents=True)
+        (package / "__init__.py").write_text("", encoding="utf-8")
+        (package / "fields.py").write_text(f"FieldType = {field_type}\n", encoding="utf-8")
+        (package / "models.py").write_text(
+            "from pydantic import BaseModel\n"
+            "from .fields import FieldType\n\n"
+            "class Model(BaseModel):\n"
+            "    value: FieldType\n",
+            encoding="utf-8",
+        )
+
+    module_name = f"{package_name}.models"
+    with (
+        _without_sys_module(package_name),
+        _without_sys_module(f"{package_name}.fields"),
+        _without_sys_module(module_name),
+    ):
+        monkeypatch.chdir(request_paths[0])
+        first_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        monkeypatch.chdir(request_paths[1])
+        second_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+
+    assert first_schema["properties"]["value"]["type"] == "string"  # ty: ignore[call-non-callable]
+    assert second_schema["properties"]["value"]["type"] == "integer"  # ty: ignore[call-non-callable]
+    _assert_sys_modules_with_prefix(package_name, set())
+
+
+def test_load_model_schema_restores_explicit_path_dependencies(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Do not reuse a cwd-local dependency from an earlier path request."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    model_name = "_request_path_model"
+    dependency_name = "_request_path_dependency"
+    request_paths = [tmp_path / "first", tmp_path / "second"]
+    for request_path, field_type in zip(request_paths, ("str", "int"), strict=True):
+        request_path.mkdir()
+        (request_path / f"{dependency_name}.py").write_text(f"FieldType = {field_type}\n", encoding="utf-8")
+        (request_path / f"{model_name}.py").write_text(
+            "from pydantic import BaseModel\n"
+            f"from {dependency_name} import FieldType\n\n"
+            "class Model(BaseModel):\n"
+            "    value: FieldType\n",
+            encoding="utf-8",
+        )
+
+    property_types: list[str] = []
+    with _without_sys_module(model_name), _without_sys_module(dependency_name):
+        for request_path in request_paths:
+            monkeypatch.chdir(request_path)
+            schema = load_model_schema(
+                [f"{(request_path / f'{model_name}.py').resolve()}:Model"],
+                InputFileType.Auto,
+            )
+            property_types.append(schema["properties"]["value"]["type"])  # ty: ignore[call-non-callable]
+            _assert_sys_module_missing(model_name)
+            _assert_sys_module_missing(dependency_name)
+
+    assert property_types == ["string", "integer"]
+
+
+def test_load_model_schema_keeps_nonlocal_path_dependency(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep standard import caching for dependencies outside the path request directory."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    model_name = "_nonlocal_dependency_model"
+    dependency_name = "_nonlocal_path_dependency"
+    model_dir = tmp_path / "model"
+    dependency_dir = tmp_path / "dependency"
+    model_dir.mkdir()
+    dependency_dir.mkdir()
+    (dependency_dir / f"{dependency_name}.py").write_text("FieldType = str\n", encoding="utf-8")
+    model_path = model_dir / f"{model_name}.py"
+    model_path.write_text(
+        "from pydantic import BaseModel\n"
+        f"from {dependency_name} import FieldType\n\n"
+        "class Model(BaseModel):\n"
+        "    value: FieldType\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(model_dir)
+    monkeypatch.syspath_prepend(str(dependency_dir))
+
+    with _without_sys_module(model_name), _without_sys_module(dependency_name):
+        schema = load_model_schema([f"{model_path}:Model"], InputFileType.Auto)
+        assert schema["properties"]["value"]["type"] == "string"  # ty: ignore[call-non-callable]
+        _assert_sys_module_missing(model_name)
+        if (dependency_module := sys.modules.get(dependency_name)) is None:  # pragma: no cover
+            pytest.fail("Expected the nonlocal dependency to retain standard import caching")
+        _assert_sys_module_is(dependency_name, dependency_module)
+
+
+def test_load_model_schema_restores_initial_cwd_local_dotted_module(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Remove a cwd-local dotted module even when no cached module preceded it."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    module_name = "_initial_local_input_model"
+    (tmp_path / f"{module_name}.py").write_text(
+        "from pydantic import BaseModel\n\nclass Model(BaseModel):\n    value: str\n",
+        encoding="utf-8",
+    )
+
+    with _without_sys_module(module_name):
+        monkeypatch.chdir(tmp_path)
+        schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        assert schema["properties"]["value"]["type"] == "string"  # ty: ignore[call-non-callable]
+        _assert_sys_module_missing(module_name)
+
+
+def test_load_model_schema_restores_cached_dotted_dynamic_dependency(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Track a cwd-local dependency imported by a cached model's schema hook."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    module_name = "_cached_dynamic_input_model"
+    dependency_name = "_cached_dynamic_input_dependency"
+    unrelated_name = "_cached_dynamic_input_unrelated"
+    (tmp_path / f"{dependency_name}.py").write_text("VALUE = 'loaded'\n", encoding="utf-8")
+    (tmp_path / f"{unrelated_name}.py").write_text("VALUE = 'preserved'\n", encoding="utf-8")
+    (tmp_path / f"{module_name}.py").write_text(
+        "from pydantic import BaseModel\n\n"
+        "_calls = 0\n\n"
+        "class Model(BaseModel):\n"
+        "    value: str\n\n"
+        "    @classmethod\n"
+        "    def model_json_schema(cls, *args, **kwargs):\n"
+        "        global _calls\n"
+        "        _calls += 1\n"
+        "        if _calls > 1:\n"
+        f"            __import__({dependency_name!r})\n"
+        "        return super().model_json_schema(*args, **kwargs)\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    with (
+        _without_sys_module(module_name),
+        _without_sys_module(dependency_name),
+        _without_sys_module(unrelated_name),
+    ):
+        first_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        unrelated_module = __import__(unrelated_name)
+        second_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+
+        assert first_schema["properties"]["value"]["type"] == "string"  # ty: ignore[call-non-callable]
+        assert second_schema["properties"]["value"]["type"] == "string"  # ty: ignore[call-non-callable]
+        _assert_sys_module_missing(module_name)
+        _assert_sys_module_missing(dependency_name)
+        _assert_sys_module_is(unrelated_name, unrelated_module)
+
+
+def test_load_model_schema_keeps_nested_nonlocal_dotted_dependency(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep dependencies imported from a nested sys.path entry cached."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    module_name = "_local_model_with_nested_dependency"
+    dependency_name = "_nested_nonlocal_dotted_dependency"
+    dependency_dir = tmp_path / "site-packages"
+    dependency_dir.mkdir()
+    (dependency_dir / f"{dependency_name}.py").write_text("FieldType = str\n", encoding="utf-8")
+    (tmp_path / f"{module_name}.py").write_text(
+        "from pydantic import BaseModel\n"
+        f"from {dependency_name} import FieldType\n\n"
+        "class Model(BaseModel):\n"
+        "    value: FieldType\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(dependency_dir))
+
+    with _without_sys_module(module_name), _without_sys_module(dependency_name):
+        schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        dependency_module = sys.modules.get(dependency_name)
+
+        assert schema["properties"]["value"]["type"] == "string"  # ty: ignore[call-non-callable]
+        _assert_sys_module_missing(module_name)
+        if dependency_module is None:  # pragma: no cover
+            pytest.fail("Expected the nested nonlocal dependency to retain standard import caching")
+        _assert_sys_module_is(dependency_name, dependency_module)
+
+
+def test_load_model_schema_reuses_cwd_independent_cached_model(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reuse a simple loaded model without entering request-local import state."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    caller_dir = tmp_path / "caller"
+    module_dir = tmp_path / "modules"
+    caller_dir.mkdir()
+    module_dir.mkdir()
+    module_name = "_cwd_independent_cached_model"
+    (module_dir / f"{module_name}.py").write_text(
+        "from pydantic import BaseModel\n\n"
+        "class Model(BaseModel):\n"
+        "    value: str\n"
+        "    count: int\n\n"
+        "class ModelList(BaseModel):\n"
+        "    values: list[str]\n\n"
+        + "".join(f"class Model{index}(BaseModel):\n    value: str\n\n" for index in range(17)),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(caller_dir)
+    monkeypatch.syspath_prepend(str(caller_dir))
+    monkeypatch.syspath_prepend(str(module_dir))
+
+    with _without_sys_module(module_name):
+        cached_module = __import__(module_name)
+        original_model = cached_module.Model
+        first_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        second_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        list_schema = load_model_schema([f"{module_name}:ModelList"], InputFileType.Auto)
+        cached_module.Model = cached_module.ModelList
+        replacement_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        cached_module.Model = original_model
+        for index in range(17):
+            load_model_schema([f"{module_name}:Model{index}"], InputFileType.Auto)
+        (caller_dir / f"{module_name}.py").write_text(
+            "from pydantic import BaseModel\n\nclass Model(BaseModel):\n    value: str\n    count: str\n",
+            encoding="utf-8",
+        )
+        collision_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+
+        assert first_schema == second_schema
+        assert first_schema["properties"]["value"]["type"] == "string"  # ty: ignore[call-non-callable]
+        assert first_schema["properties"]["count"]["type"] == "integer"  # ty: ignore[call-non-callable]
+        assert list_schema["properties"]["values"]["items"]["type"] == "string"  # ty: ignore[call-non-callable]
+        assert replacement_schema == list_schema
+        assert collision_schema == first_schema
+        _assert_sys_module_is(module_name, cached_module)
+
+
+def test_load_model_schema_reuses_safe_private_dotted_model(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Generate a primitive cached local model without restoring it into sys.modules."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    module_name = "_safe_private_cached_model"
+    module_path = tmp_path / f"{module_name}.py"
+    module_path.write_text(
+        "from pydantic import BaseModel\n\nclass Model(BaseModel):\n    value: str\n    count: int\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    with _without_sys_module(module_name):
+        first_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        second_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        third_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        module_path.write_text(
+            "from pydantic import BaseModel\n\nclass Model(BaseModel):\n    changed_value: int\n",
+            encoding="utf-8",
+        )
+        changed_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+
+        assert first_schema == second_schema == third_schema
+        assert first_schema["properties"]["value"]["type"] == "string"  # ty: ignore[call-non-callable]
+        assert first_schema["properties"]["count"]["type"] == "integer"  # ty: ignore[call-non-callable]
+        assert changed_schema["properties"]["changed_value"]["type"] == "integer"  # ty: ignore[call-non-callable]
+        _assert_sys_module_missing(module_name)
+
+
+def test_load_model_schema_refreshes_changed_private_dotted_sources(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reload a cached local model when its source or local dependency changes."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    module_name = "_refreshable_private_cached_model"
+    dependency_name = "_refreshable_private_cached_dependency"
+    module_path = tmp_path / f"{module_name}.py"
+    dependency_path = tmp_path / f"{dependency_name}.py"
+    dependency_path.write_text("FieldType = str\n", encoding="utf-8")
+    module_path.write_text(
+        "from pydantic import BaseModel\n"
+        f"from {dependency_name} import FieldType\n\n"
+        "class Model(BaseModel):\n"
+        "    value: FieldType\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    with _without_sys_module(module_name), _without_sys_module(dependency_name):
+        initial_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        dependency_path.write_text("FieldType = list[str]\n", encoding="utf-8")
+        dependency_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        module_path.write_text(
+            "from pydantic import BaseModel\n\nclass Model(BaseModel):\n    updated_value: int\n",
+            encoding="utf-8",
+        )
+        updated_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+
+        assert initial_schema["properties"]["value"]["type"] == "string"  # ty: ignore[call-non-callable]
+        assert dependency_schema["properties"]["value"]["items"]["type"] == "string"  # ty: ignore[call-non-callable]
+        assert updated_schema["properties"]["updated_value"]["type"] == "integer"  # ty: ignore[call-non-callable]
+        _assert_sys_module_missing(module_name)
+        _assert_sys_module_missing(dependency_name)
+
+
+def test_load_model_schema_refreshes_changed_private_package(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reload a cached local model when its parent package initializer changes."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    package_name = "_refreshable_private_package"
+    module_name = f"{package_name}.model"
+    package_dir = tmp_path / package_name
+    package_dir.mkdir()
+    init_path = package_dir / "__init__.py"
+    init_path.write_text("FieldType = str\n", encoding="utf-8")
+    (package_dir / "model.py").write_text(
+        f"from {package_name} import FieldType\n"
+        "from pydantic import BaseModel\n\n"
+        "class Model(BaseModel):\n"
+        "    value: FieldType\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    with _without_sys_module(package_name), _without_sys_module(module_name):
+        initial_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        init_path.write_text("FieldType = list[str]\n", encoding="utf-8")
+        updated_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+
+        assert initial_schema["properties"]["value"]["type"] == "string"  # ty: ignore[call-non-callable]
+        assert updated_schema["properties"]["value"]["items"]["type"] == "string"  # ty: ignore[call-non-callable]
+        _assert_sys_modules_with_prefix(package_name, set())
+
+
+def test_load_model_schema_refreshes_referenced_inert_parent_package(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Track an inert parent package explicitly referenced by the model module."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    package_name = "_referenced_inert_private_package"
+    module_name = f"{package_name}.model"
+    package_dir = tmp_path / package_name
+    package_dir.mkdir()
+    init_path = package_dir / "__init__.py"
+    init_path.write_text("", encoding="utf-8")
+    (package_dir / "model.py").write_text(
+        f"import {package_name}\n"
+        "from pydantic import BaseModel\n\n"
+        f"FieldType = getattr({package_name}, 'FieldType', str)\n\n"
+        "class Model(BaseModel):\n"
+        "    value: FieldType\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    with _without_sys_module(package_name), _without_sys_module(module_name):
+        initial_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        init_path.write_text("FieldType = int\n", encoding="utf-8")
+        updated_schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+
+        assert initial_schema["properties"]["value"]["type"] == "string"  # ty: ignore[call-non-callable]
+        assert updated_schema["properties"]["value"]["type"] == "integer"  # ty: ignore[call-non-callable]
+        _assert_sys_modules_with_prefix(package_name, set())
+
+
+def test_input_module_baseline_detects_same_size_key_replacement() -> None:
+    """Refresh the module baseline when its size and final key remain unchanged."""
+    from datamodel_code_generator.input_model import _input_module_baseline
+
+    removed_name = "_input_baseline_removed"
+    added_name = "_input_baseline_added"
+    last_name = "_input_baseline_last"
+    removed_module = types.ModuleType(removed_name)
+    added_module = types.ModuleType(added_name)
+    last_module = types.ModuleType(last_name)
+
+    with (
+        _without_sys_module(removed_name),
+        _without_sys_module(added_name),
+        _without_sys_module(last_name),
+    ):
+        sys.modules[removed_name] = removed_module
+        sys.modules[last_name] = last_module
+        _, initial_names = _input_module_baseline()
+        sys.modules.pop(removed_name)
+        sys.modules[added_name] = added_module
+        sys.modules.pop(last_name)
+        sys.modules[last_name] = last_module
+        _, refreshed_names = _input_module_baseline()
+
+        assert removed_name in initial_names
+        assert added_name not in initial_names
+        assert removed_name not in refreshed_names
+        assert added_name in refreshed_names
+
+
+def test_load_model_schema_cleans_lazy_import_after_same_size_module_swap(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Do not let a stale module-name baseline retain a request-local lazy import."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import _input_module_baseline, load_model_schema
+
+    module_name = "_baseline_swap_cached_model"
+    dependency_name = "_baseline_swap_lazy_dependency"
+    added_name = "_baseline_swap_added"
+    last_name = "_baseline_swap_last"
+    (tmp_path / f"{dependency_name}.py").write_text("VALUE = 'loaded'\n", encoding="utf-8")
+    (tmp_path / f"{module_name}.py").write_text(
+        "from pydantic import BaseModel\n\n"
+        "class Model(BaseModel):\n"
+        "    value: str\n\n"
+        "    @classmethod\n"
+        "    def model_json_schema(cls, *args, **kwargs):\n"
+        f"        __import__({dependency_name!r})\n"
+        "        return super().model_json_schema(*args, **kwargs)\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    with (
+        _without_sys_module(module_name),
+        _without_sys_module(dependency_name),
+        _without_sys_module(added_name),
+        _without_sys_module(last_name),
+    ):
+        load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        sys.modules[dependency_name] = types.ModuleType(dependency_name)
+        sys.modules[last_name] = last_module = types.ModuleType(last_name)
+        _input_module_baseline()
+        sys.modules.pop(dependency_name)
+        sys.modules[added_name] = types.ModuleType(added_name)
+        sys.modules.pop(last_name)
+        sys.modules[last_name] = last_module
+
+        load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
 
         _assert_sys_module_missing(module_name)
+        _assert_sys_module_missing(dependency_name)
+
+
+def test_input_model_module_origin_helpers_use_real_origins(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Recognize a real module file while rejecting a module without an origin."""
+    from datamodel_code_generator.input_model import (
+        _local_module_fingerprint,
+        _local_module_fingerprint_is_current,
+        _module_is_from_directory,
+        _module_is_from_local_import,
+    )
+
+    module_name = "_input_model_origin_helper"
+    (tmp_path / f"{module_name}.py").write_text("VALUE = 'loaded'\n", encoding="utf-8")
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    with _without_sys_module(module_name):
+        module = __import__(module_name)
+        originless_module = types.ModuleType("_originless_input_model")
+        namespace_module = types.ModuleType("_namespace_input_dependency")
+        namespace_module.__path__ = [str(tmp_path)]  # ty: ignore[unresolved-attribute]
+        missing_module = types.ModuleType("_missing_input_model")
+        missing_module.__file__ = str(tmp_path / "missing.py")
+
+        assert _module_is_from_directory(module, tmp_path)
+        assert not _module_is_from_local_import(module_name, types.ModuleType(module_name), tmp_path)
+        assert _local_module_fingerprint(
+            module_name,
+            {
+                module_name: module,
+                "_namespace_input_dependency": namespace_module,
+                "_nonlocal_input_dependency": types,
+            },
+            tmp_path,
+        )
+        assert _local_module_fingerprint(module_name, {module_name: originless_module}, tmp_path) is None
+        assert _local_module_fingerprint(module_name, {module_name: missing_module}, tmp_path) is None
+        assert not _local_module_fingerprint_is_current(None)
+        assert not _local_module_fingerprint_is_current(((str(tmp_path / "missing.py"), 0, 0),))
+
+
+def test_load_model_schema_reuses_cached_dotted_package_for_new_sibling(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reuse a private package cache when loading another module below its root."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    package_name = "_cached_sibling_input_models"
+    package_dir = tmp_path / package_name
+    package_dir.mkdir()
+    (package_dir / "__init__.py").write_text("", encoding="utf-8")
+    for module_name, field_type in (("first", "str"), ("second", "int")):
+        (package_dir / f"{module_name}.py").write_text(
+            f"from pydantic import BaseModel\n\nclass Model(BaseModel):\n    value: {field_type}\n",
+            encoding="utf-8",
+        )
+    first_module = f"{package_name}.first"
+    second_module = f"{package_name}.second"
+    monkeypatch.chdir(tmp_path)
+
+    with (
+        _without_sys_module(package_name),
+        _without_sys_module(first_module),
+        _without_sys_module(second_module),
+    ):
+        first_schema = load_model_schema([f"{first_module}:Model"], InputFileType.Auto)
+        second_schema = load_model_schema([f"{second_module}:Model"], InputFileType.Auto)
+
+        assert first_schema["properties"]["value"]["type"] == "string"  # ty: ignore[call-non-callable]
+        assert second_schema["properties"]["value"]["type"] == "integer"  # ty: ignore[call-non-callable]
+        _assert_sys_modules_with_prefix(package_name, set())
+
+
+def test_load_model_schema_bounds_local_dotted_module_cache(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Evict the least-recently used private module state at the cache bound."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import (
+        _LOCAL_DOTTED_MODULE_CACHE,
+        _LOCAL_DOTTED_MODULE_CACHE_SIZE,
+        load_model_schema,
+    )
+
+    module_names = [f"_bounded_input_model_{index}" for index in range(_LOCAL_DOTTED_MODULE_CACHE_SIZE + 1)]
+    for module_name in module_names:
+        (tmp_path / f"{module_name}.py").write_text(
+            "from pydantic import BaseModel\n\nclass Model(BaseModel):\n    value: str\n",
+            encoding="utf-8",
+        )
+    monkeypatch.chdir(tmp_path)
+
+    for module_name in module_names:
+        with _without_sys_module(module_name):
+            load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+            _assert_sys_module_missing(module_name)
+
+    assert len(_LOCAL_DOTTED_MODULE_CACHE) == _LOCAL_DOTTED_MODULE_CACHE_SIZE
+
+
+def test_load_model_schema_serializes_cached_dotted_dynamic_imports(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep cached schema-hook imports isolated across concurrent requests."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    module_name = "_concurrent_cached_dynamic_model"
+    dependency_name = "_concurrent_cached_dynamic_dependency"
+    control_name = "_concurrent_cached_dynamic_control"
+    (tmp_path / f"{dependency_name}.py").write_text("VALUE = 'loaded'\n", encoding="utf-8")
+    (tmp_path / f"{module_name}.py").write_text(
+        f"import {control_name}\n"
+        "from pydantic import BaseModel\n\n"
+        "class Model(BaseModel):\n"
+        "    value: str\n\n"
+        "    @classmethod\n"
+        "    def model_json_schema(cls, *args, **kwargs):\n"
+        f"        if {control_name}.enabled:\n"
+        f"            {control_name}.enter()\n"
+        f"            __import__({dependency_name!r})\n"
+        "        return super().model_json_schema(*args, **kwargs)\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+    entered = [Event(), Event()]
+    release = [Event(), Event()]
+    enter_lock = Lock()
+    enter_count = 0
+
+    def enter() -> None:
+        nonlocal enter_count
+        with enter_lock:
+            index = enter_count
+            enter_count += 1
+        entered[index].set()
+        release[index].wait(timeout=5)
+
+    control_module = types.ModuleType(control_name)
+    control_module.enabled = False  # ty: ignore[unresolved-attribute]
+    control_module.enter = enter  # ty: ignore[unresolved-attribute]
+    schemas: list[dict[str, object]] = []
+    errors: list[Exception] = []
+
+    def load_schema() -> None:
+        try:
+            schemas.append(load_model_schema([f"{module_name}:Model"], InputFileType.Auto))
+        except Exception as exc:  # noqa: BLE001  # pragma: no cover
+            errors.append(exc)
+
+    with (
+        _without_sys_module(module_name),
+        _without_sys_module(dependency_name),
+        _without_sys_module(control_name),
+    ):
+        sys.modules[control_name] = control_module
+        load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        control_module.enabled = True  # ty: ignore[unresolved-attribute]
+        threads = [Thread(target=load_schema) for _ in range(2)]
+        threads[0].start()
+        assert entered[0].wait(timeout=5)
+        threads[1].start()
+        try:
+            assert not entered[1].wait(timeout=0.1)
+            release[0].set()
+            assert entered[1].wait(timeout=5)
+        finally:
+            for event in release:
+                event.set()
+            for thread in threads:
+                thread.join(timeout=5)
+
+        _assert_sys_module_missing(module_name)
+        _assert_sys_module_missing(dependency_name)
+
+    assert not errors
+    assert len(schemas) == 2
+    assert all(not thread.is_alive() for thread in threads)
+
+
+def test_load_model_schema_restores_failing_cwd_local_dotted_module(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Restore local dotted import state when module execution fails."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    module_name = "_failing_local_input_model"
+    (tmp_path / f"{module_name}.py").write_text("raise RuntimeError('module failed')\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    with (
+        _without_sys_module(module_name),
+        pytest.raises(RuntimeError, match="module failed"),
+    ):
+        load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+
+    _assert_sys_module_missing(module_name)
+
+
+def test_load_model_schema_isolates_cwd_local_namespace_packages(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Do not retain a same-named namespace package between request directories."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    package_name = "_request_namespace_models"
+    module_name = f"{package_name}.models"
+    request_paths = [tmp_path / "first", tmp_path / "second"]
+    for request_path, field_type in zip(request_paths, ("str", "int"), strict=True):
+        package_path = request_path / package_name
+        package_path.mkdir(parents=True)
+        (package_path / "models.py").write_text(
+            f"from pydantic import BaseModel\n\nclass Model(BaseModel):\n    value: {field_type}\n",
+            encoding="utf-8",
+        )
+
+    property_types: list[str] = []
+    with _without_sys_module(package_name), _without_sys_module(module_name):
+        for request_path in request_paths:
+            monkeypatch.chdir(request_path)
+            schema = load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+            property_types.append(schema["properties"]["value"]["type"])  # ty: ignore[call-non-callable]
+            _assert_sys_modules_with_prefix(package_name, set())
+
+    assert property_types == ["string", "integer"]
+
+
+def test_load_model_schema_restore_does_not_replace_newer_module_identity(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Leave a module replacement made after request-local loading untouched."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    module_name = "_identity_safe_input_model"
+    control_name = "_identity_safe_input_model_control"
+    (tmp_path / f"{module_name}.py").write_text(
+        "import sys\n"
+        "import types\n"
+        f"import {control_name}\n"
+        "from pydantic import BaseModel\n\n"
+        "class Model(BaseModel):\n"
+        "    value: str\n\n"
+        "    @classmethod\n"
+        "    def model_json_schema(cls, *args, **kwargs):\n"
+        "        replacement = types.ModuleType(__name__)\n"
+        f"        {control_name}.replacement = replacement\n"
+        "        sys.modules[__name__] = replacement\n"
+        "        return super().model_json_schema(*args, **kwargs)\n",
+        encoding="utf-8",
+    )
+    previous_module = types.ModuleType(module_name)
+    control_module = types.ModuleType(control_name)
+
+    with _without_sys_module(module_name), _without_sys_module(control_name):
+        sys.modules[module_name] = previous_module
+        sys.modules[control_name] = control_module
+        monkeypatch.chdir(tmp_path)
+        load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        _assert_sys_module_is(module_name, control_module.replacement)  # ty: ignore[unresolved-attribute]
+
+
+def test_load_model_schema_tracks_concurrent_cwd_sys_path_users(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep the temporary cwd path until the final concurrent dotted request exits."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    caller_dir = tmp_path / "caller"
+    module_dir = tmp_path / "modules"
+    caller_dir.mkdir()
+    module_dir.mkdir()
+    module_names = ("_first_nonlocal_input_model", "_second_nonlocal_input_model")
+    control_name = "_nonlocal_input_model_control"
+    for module_name in module_names:
+        (module_dir / f"{module_name}.py").write_text(
+            "from pydantic import BaseModel\n"
+            f"import {control_name}\n\n"
+            "class Model(BaseModel):\n"
+            "    value: str\n\n"
+            "    @classmethod\n"
+            "    def model_json_schema(cls, *args, **kwargs):\n"
+            f"        {control_name}.enter({module_name!r})\n"
+            "        return super().model_json_schema(*args, **kwargs)\n",
+            encoding="utf-8",
+        )
+    entered = {module_name: Event() for module_name in module_names}
+    release = {module_name: Event() for module_name in module_names}
+
+    def enter(module_name: str) -> None:
+        entered[module_name].set()
+        release[module_name].wait(timeout=5)
+
+    control_module = types.ModuleType(control_name)
+    control_module.enter = enter  # ty: ignore[unresolved-attribute]
+    errors: list[Exception] = []
+
+    def load_schema(module_name: str) -> None:
+        try:
+            load_model_schema([f"{module_name}:Model"], InputFileType.Auto)
+        except Exception as exc:  # noqa: BLE001  # pragma: no cover
+            errors.append(exc)
+
+    monkeypatch.chdir(caller_dir)
+    monkeypatch.syspath_prepend(str(module_dir))
+    cwd = str(caller_dir)
+    threads = [Thread(target=load_schema, args=(module_name,)) for module_name in module_names]
+    with (
+        _without_sys_module(module_names[0]),
+        _without_sys_module(module_names[1]),
+        _without_sys_module(control_name),
+    ):
+        sys.modules[control_name] = control_module
+        for thread in threads:
+            thread.start()
+        try:
+            for module_name in module_names:
+                assert entered[module_name].wait(timeout=5)
+            release[module_names[0]].set()
+            threads[0].join(timeout=5)
+            assert cwd in sys.path
+        finally:
+            for event in release.values():
+                event.set()
+            for thread in threads:
+                thread.join(timeout=5)
+
+    assert not errors
+    assert all(not thread.is_alive() for thread in threads)
+    assert cwd not in sys.path
+
+
+def test_path_is_within_rejects_invalid_path(tmp_path: Path) -> None:
+    """Treat an invalid third-party module path as outside the request directory."""
+    from datamodel_code_generator.input_model import _path_is_within
+
+    assert not _path_is_within(object(), tmp_path)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(("outer_is_path", "nested_is_path"), [(True, False), (False, True)])
+def test_load_model_schema_supports_recursive_path_and_dotted_contexts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    outer_is_path: bool,
+    nested_is_path: bool,
+) -> None:
+    """Keep recursive path and dotted model loads compatible without leaking context."""
+    from datamodel_code_generator import InputFileType
+    from datamodel_code_generator.input_model import load_model_schema
+
+    control_name = "_input_model_recursive_context_control"
+    outer_name = "_recursive_outer_model"
+    nested_name = "_recursive_nested_model"
+    outer_path = tmp_path / f"{outer_name}.py"
+    nested_path = tmp_path / f"{nested_name}.py"
+    outer_path.write_text(
+        "from pydantic import BaseModel\n"
+        f"import {control_name}\n\n"
+        "class Outer(BaseModel):\n"
+        "    value: str\n\n"
+        "    @classmethod\n"
+        "    def model_json_schema(cls, *args, **kwargs):\n"
+        f"        {control_name}.load_nested()\n"
+        "        return super().model_json_schema(*args, **kwargs)\n",
+        encoding="utf-8",
+    )
+    nested_path.write_text(
+        "from pydantic import BaseModel\n\nclass Nested(BaseModel):\n    value: str\n",
+        encoding="utf-8",
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    outer_module = str(outer_path.resolve()) if outer_is_path else outer_name
+    nested_module = str(nested_path.resolve()) if nested_is_path else nested_name
+    nested_schemas: list[dict[str, object]] = []
+    outer_schemas: list[dict[str, object]] = []
+    errors: list[Exception] = []
+
+    def load_nested() -> None:
+        nested_schemas.append(load_model_schema([f"{nested_module}:Nested"], InputFileType.Auto))
+
+    control_module = types.ModuleType(control_name)
+    control_module.load_nested = load_nested  # ty: ignore[unresolved-attribute]
+
+    def load_outer() -> None:
+        try:
+            outer_schemas.append(load_model_schema([f"{outer_module}:Outer"], InputFileType.Auto))
+        except Exception as exc:  # noqa: BLE001  # pragma: no cover - surfaced in the test thread
+            errors.append(exc)
+
+    thread = Thread(target=load_outer)
+    with (
+        _without_sys_module(outer_name),
+        _without_sys_module(nested_name),
+        _without_sys_module(control_name),
+    ):
+        sys.modules[control_name] = control_module
+        thread.start()
+        thread.join(timeout=5)
+
+    assert not thread.is_alive()
+    if errors:  # pragma: no cover
+        raise errors[0]
+    assert outer_schemas[0]["title"] == "Outer"
+    assert nested_schemas[0]["title"] == "Nested"
+    _assert_sys_module_missing(outer_name)
+    _assert_sys_module_missing(nested_name)
 
 
 def test_is_input_model_base_schema_requires_dict() -> None:
@@ -1447,7 +2557,7 @@ def test_input_model_cwd_already_in_path(
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
     final_count = sys.path.count(cwd)
-    assert final_count <= initial_count + 1
+    assert final_count == initial_count
 
 
 def test_input_model_multiple_py_file_without_path_separator(

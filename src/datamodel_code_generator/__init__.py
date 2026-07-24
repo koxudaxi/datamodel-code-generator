@@ -27,6 +27,11 @@ from typing import (
 )
 from urllib.parse import ParseResult
 
+from datamodel_code_generator._process_context import process_chdir, process_context, process_cwd
+from datamodel_code_generator._template_data import TemplateDataCopyContext, TemplateDataRecord
+from datamodel_code_generator._template_data import (
+    copy_template_value as _copy_extra_template_value,
+)
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     MAX_VERSION,
@@ -459,13 +464,152 @@ def chdir(path: Path | None) -> Iterator[None]:
     """Change working directory and return to previous on exit."""
     if path is None:
         yield
-    else:
-        prev_cwd = Path.cwd()
-        try:
-            os.chdir(path if path.is_dir() else path.parent)
-            yield
-        finally:
-            os.chdir(prev_cwd)
+        return
+    with process_chdir(str(path)):
+        yield
+
+
+def _absolute_generation_path(path: Path | None, caller_cwd: Path) -> Path | None:
+    """Resolve caller-relative generation paths without consulting process cwd again."""
+    if path is None or path.is_absolute():
+        return path
+    return caller_cwd / path
+
+
+def _settings_path_from(base_path: Path, settings_path: Path | None) -> Path:
+    """Resolve formatter settings from one explicit context root."""
+    if settings_path is None:
+        return base_path
+    if settings_path.is_absolute():
+        return settings_path
+    return base_path / settings_path
+
+
+def _isort_project_context(
+    path: Path,
+    formatters: list[Any] | None,
+) -> contextlib.AbstractContextManager[None]:
+    """Preserve output-relative isort source discovery without a process cwd change."""
+    if formatters is not None and not any(formatter.value == "isort" for formatter in formatters):
+        return contextlib.nullcontext()
+    from datamodel_code_generator.format import isort_project_root  # noqa: PLC0415
+
+    return isort_project_root(path)
+
+
+def _output_context_path(output: Path | None, caller_cwd: Path) -> Path:
+    """Return the directory used by the legacy output chdir context."""
+    if output is None:
+        return caller_cwd
+    return output if output.is_dir() else output.parent
+
+
+def _has_generation_extensions(config: GenerateConfig) -> bool:
+    """Return whether request callbacks can directly observe process context."""
+    return bool(
+        config.custom_template_dir or getattr(config, "custom_class_name_generator", None) or config.custom_formatters
+    )
+
+
+def _requires_output_cwd(config: GenerateConfig) -> bool:
+    """Return whether an extension can observe the legacy output cwd."""
+    return config.output is not None and _has_generation_extensions(config)
+
+
+_MISSING_TEMPLATE_DATA = object()
+_EAGER_TEMPLATE_DATA_RECORDS = 8
+_MUTABLE_BUILTIN_TEMPLATE_KEYS = frozenset({"base_class_kwargs", "class_body_lines", "config"})
+
+
+def _copy_extra_template_record(
+    model_data: dict[str, Any],
+    copy_context: TemplateDataCopyContext,
+    *,
+    deep: bool,
+) -> TemplateDataRecord:
+    """Detach one model record while leaving unused built-in values lazy."""
+    memo = copy_context.memo
+    if (model_data_id := id(model_data)) in memo:
+        return memo[model_data_id]
+    detached = TemplateDataRecord(copy_context)
+    memo[model_data_id] = detached
+    detached.update(model_data)
+    keys = model_data if deep else _MUTABLE_BUILTIN_TEMPLATE_KEYS & model_data.keys()
+    detached.update((key, _copy_extra_template_value(model_data[key], memo, use_deepcopy=False)) for key in keys)
+    return detached
+
+
+class _GenerationTemplateData(defaultdict[str, dict[str, Any]]):
+    """Detach caller-owned model data only when a generation accesses it."""
+
+    __slots__ = ("_copy_context", "_deep", "_memo", "_source")
+
+    def __init__(self, source: Mapping[str, dict[str, Any]], *, deep: bool = True) -> None:
+        copy_context = TemplateDataCopyContext()
+        super().__init__(lambda: TemplateDataRecord(copy_context), source)
+        self._copy_context = copy_context
+        self._deep = deep
+        self._memo = copy_context.memo
+        self._source = source
+
+    def __getitem__(self, key: str) -> dict[str, Any]:
+        model_data = super().__getitem__(key)
+        if self._source.get(key) is not model_data:
+            return model_data
+        if (model_data_id := id(model_data)) in self._memo:
+            detached = self._memo[model_data_id]
+            super().__setitem__(key, detached)
+            return detached
+        detached = _copy_extra_template_record(model_data, self._copy_context, deep=self._deep)
+        super().__setitem__(key, detached)
+        return detached
+
+    def setdefault(self, key: str, default: dict[str, Any] | None = None) -> dict[str, Any]:
+        if key in self:
+            return self[key]
+        value = {} if default is None else default
+        super().__setitem__(key, value)
+        return value
+
+    def get(self, key: str, default: Any = None) -> Any:
+        if key in self:
+            return self[key]
+        return default
+
+    def items(self) -> Any:
+        for key in tuple(self):
+            self[key]
+        return super().items()
+
+    def values(self) -> Any:
+        for key in tuple(self):
+            self[key]
+        return super().values()
+
+    def pop(self, key: str, default: Any = _MISSING_TEMPLATE_DATA) -> Any:
+        if key in self:
+            self[key]
+        if default is _MISSING_TEMPLATE_DATA:
+            return super().pop(key)
+        return super().pop(key, default)
+
+
+def _copy_extra_template_data(
+    extra_template_data: Mapping[str, dict[str, Any]],
+    *,
+    deep: bool,
+) -> defaultdict[str, dict[str, Any]]:
+    """Give one generation ownership of mutable per-model template data."""
+    if not deep and len(extra_template_data) <= _EAGER_TEMPLATE_DATA_RECORDS:
+        copy_context = TemplateDataCopyContext()
+        return defaultdict(
+            lambda: TemplateDataRecord(copy_context),
+            (
+                (key, _copy_extra_template_record(model_data, copy_context, deep=False))
+                for key, model_data in extra_template_data.items()
+            ),
+        )
+    return _GenerationTemplateData(extra_template_data, deep=deep)
 
 
 def is_openapi(data: Mapping[str, Any]) -> bool:
@@ -1315,6 +1459,7 @@ def _emit_results(  # noqa: PLR0912, PLR0913, PLR0915
     *,
     defer_formatting: bool,
     data_model_types: Any,
+    settings_path: Path,
 ) -> str | GeneratedModules | None:
     if not input_filename:  # pragma: no cover
         match input_:
@@ -1423,7 +1568,7 @@ def _emit_results(  # noqa: PLR0912, PLR0913, PLR0915
         )
         code_formatter = CodeFormatter(
             config.target_python_version,
-            config.settings_path,
+            settings_path,
             config.wrap_string_literal,
             skip_string_normalization=not config.use_double_quotes,
             known_third_party=data_model_types.known_third_party,
@@ -1447,7 +1592,7 @@ def _write_model_metadata(metadata_path: Path, metadata: ModelMetadata | None, e
     metadata_path.write_text(f"{dump_model_metadata(metadata)}\n", encoding=encoding)
 
 
-def generate(  # noqa: PLR0912, PLR0914, PLR0915
+def generate(
     input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     *,
     config: GenerateConfig | None = None,
@@ -1488,6 +1633,43 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     config = _apply_generate_config_preset(config)
     config = _apply_missing_sentinel_config(config)
 
+    has_extensions = _has_generation_extensions(config)
+    if not has_extensions:
+        return _generate(input_, config, Path(process_cwd()))
+
+    use_output_cwd = _requires_output_cwd(config)
+    with process_context(
+        exclusive=use_output_cwd,
+        allow_shared=use_output_cwd,
+        borrow_writer=False,
+    ) as caller_cwd:
+        return _generate(input_, config, Path(caller_cwd))
+
+
+def _generate(  # noqa: PLR0912, PLR0914, PLR0915
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    config: GenerateConfig,
+    caller_cwd: Path,
+) -> str | GeneratedModules | None:
+    """Generate models within one stable process context."""
+    caller_path_updates = {
+        field: absolute_path
+        for field in ("output", "emit_model_metadata", "custom_file_header_path")
+        if (absolute_path := _absolute_generation_path(getattr(config, field), caller_cwd))
+        is not getattr(config, field)
+    }
+    if caller_path_updates:
+        config = config.model_copy(update=caller_path_updates)
+    output_context_path = _output_context_path(config.output, caller_cwd)
+    output_path_updates = {
+        field: absolute_path
+        for field in ("http_local_ref_path",)
+        if (absolute_path := _absolute_generation_path(getattr(config, field), output_context_path))
+        is not getattr(config, field)
+    }
+    if output_path_updates:
+        config = config.model_copy(update=output_path_updates)
+
     _validate_output_datetime_class(config.output_model_type, config.output_datetime_class)
     _validate_alias_generator(config.output_model_type, config.alias_generator)
 
@@ -1496,7 +1678,10 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     input_file_type = config.input_file_type
     extra_template_data: defaultdict[str, dict[str, Any]] | None = None
     if config.extra_template_data is not None:
-        extra_template_data = defaultdict(dict, config.extra_template_data)
+        extra_template_data = _copy_extra_template_data(
+            config.extra_template_data,
+            deep=False,
+        )
     dataclass_arguments = config.dataclass_arguments
     custom_file_header = config.custom_file_header
     skip_root_model = config.skip_root_model
@@ -1512,6 +1697,14 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             "List input is only supported for file path lists or input_file_type=InputFileType.MCPTools."
         )
         raise Error(msg)  # pragma: no cover
+
+    match input_:
+        case Path() as input_path if not input_path.is_absolute():
+            input_ = (caller_cwd / input_path.expanduser()).resolve()
+        case [Path(), *_] as input_paths if input_file_type != InputFileType.MCPTools:
+            input_ = [
+                path if path.is_absolute() else (caller_cwd / path.expanduser()).resolve() for path in input_paths
+            ]
 
     _validate_generation_path_conflicts(input_, config.output, config.emit_model_metadata)
 
@@ -1544,8 +1737,6 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         if config.keyword_only:
             dataclass_arguments["kw_only"] = True
 
-    if isinstance(input_, Path) and not input_.is_absolute():
-        input_ = input_.expanduser().resolve()
     if input_file_type == InputFileType.Auto and isinstance(input_, Mapping):
         msg = (
             "input_file_type=Auto is not supported for dict input. "
@@ -1630,6 +1821,8 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         skip_root_model=skip_root_model,
         remote_text_cache=remote_text_cache,
     )
+    if additional_options["base_path"] is None and not isinstance(source, Path):
+        additional_options["base_path"] = caller_cwd
 
     jsonschema_version, openapi_version, asyncapi_version, xmlschema_version, protobuf_version = (
         _resolve_schema_versions(input_file_type, config.schema_version)
@@ -1666,7 +1859,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         try:
             with _warn_on_input_string_path_failure(input_):
                 active_results = active_parser.parse(
-                    settings_path=active_config.settings_path,
+                    settings_path=parser_settings_path,
                     disable_future_imports=active_config.disable_future_imports,
                     all_exports_scope=active_config.all_exports_scope,
                     all_exports_collision_strategy=active_config.all_exports_collision_strategy,
@@ -1679,8 +1872,16 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             raise
         return active_results
 
+    use_output_cwd = _requires_output_cwd(config)
+    parser_settings_path = (
+        config.settings_path if use_output_cwd else _settings_path_from(output_context_path, config.settings_path)
+    )
+    emit_settings_path = _settings_path_from(caller_cwd, config.settings_path)
     parser = build_parser(config, source, additional_options, data_model_types)
-    with chdir(config.output):
+    with (
+        chdir(config.output if use_output_cwd else None),
+        _isort_project_context(output_context_path, [] if use_output_cwd else config.formatters),
+    ):
         results = parse_with_disposal(parser, config)
         model_metadata = parser.model_metadata
         repair_modules = parser.invalid_dotted_stdout_repair_modules
@@ -1760,15 +1961,17 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
 
             del retry_reference_cache, retry_remote_text_cache
 
-    generated = _emit_results(
-        results,
-        input_,
-        input_filename,
-        custom_file_header,
-        config,
-        defer_formatting=defer_formatting,
-        data_model_types=data_model_types,
-    )
+    with _isort_project_context(output_context_path, config.formatters):
+        generated = _emit_results(
+            results,
+            input_,
+            input_filename,
+            custom_file_header,
+            config,
+            defer_formatting=defer_formatting,
+            data_model_types=data_model_types,
+            settings_path=emit_settings_path,
+        )
     if config.emit_model_metadata is not None:
         _write_model_metadata(config.emit_model_metadata, model_metadata, config.encoding)
     return generated

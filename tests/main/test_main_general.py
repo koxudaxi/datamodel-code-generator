@@ -56,6 +56,7 @@ from tests.conftest import (
     assert_generated_file_matches_output,
     assert_generated_modules_output,
     assert_httpx_get_kwargs,
+    assert_inputs_not_mutated,
     assert_no_uncommented_generated_code,
     assert_output,
     assert_runtime_import_package,
@@ -3867,6 +3868,577 @@ def test_generate_with_config_object(output_file: Path) -> None:
         config=config,
     )
     assert_file_content(output_file, "generate_with_config_object.py")
+
+
+def test_generate_config_extra_template_data_is_request_local() -> None:
+    """Keep parser-derived template values out of reusable GenerateConfig data."""
+    extra_template_data = defaultdict(
+        dict,
+        {
+            "#all#": {
+                "unused_dict": {"value": True},
+                "unused_list": ["value"],
+                "unused_set": {"value"},
+                "unused_value": "value",
+            }
+        },
+    )
+    extra_template_data.update((f"Unused{index}", {"unused_list": [index]}) for index in range(9))
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        disable_timestamp=True,
+        allow_extra_fields=True,
+        extra_template_data=extra_template_data,
+        formatters=[],
+    )
+    input_ = JSON_SCHEMA_DATA_PATH / "generation_context_model.json"
+
+    with assert_inputs_not_mutated({"extra_template_data": config.extra_template_data}):
+        first_output = generate(input_=input_, config=config)
+    assert_output(f"{first_output}\n", EXPECTED_MAIN_PATH / "generate_config_extra_template_data_enabled.py")
+
+    disabled_config = config.model_copy(update={"allow_extra_fields": False})
+    with assert_inputs_not_mutated({"extra_template_data": disabled_config.extra_template_data}):
+        second_output = generate(input_=input_, config=disabled_config)
+    assert_output(f"{second_output}\n", EXPECTED_MAIN_PATH / "generate_config_extra_template_data_disabled.py")
+
+
+@pytest.mark.parametrize(
+    ("custom_template_name", "relative_custom_template_dir", "expected_output"),
+    [
+        pytest.param(
+            "templates_nested_mutation",
+            False,
+            "generate_nested_extra_template_data.py",
+            id="main-absolute",
+        ),
+        pytest.param(
+            "templates_nested_mutation",
+            True,
+            "generate_nested_extra_template_data.py",
+            id="main-relative",
+        ),
+        pytest.param(
+            "templates_nested_include_mutation",
+            False,
+            "generate_nested_include_extra_template_data.py",
+            id="include-absolute",
+        ),
+        pytest.param(
+            "templates_nested_include_mutation",
+            True,
+            "generate_nested_include_extra_template_data.py",
+            id="include-relative",
+        ),
+    ],
+)
+def test_generate_nested_extra_template_data_is_request_local(
+    custom_template_name: str,
+    expected_output: str,
+    *,
+    relative_custom_template_dir: bool,
+) -> None:
+    """Keep nested custom-template mutations out of reusable GenerateConfig data."""
+    from datetime import datetime as datetime_
+
+    class UncopyableList(list[str]):  # noqa: FURB189
+        def __deepcopy__(self, memo: dict[int, Any]) -> list[str]:  # pragma: no cover - must not be called
+            memo[id(self)] = []
+            msg = "intentionally uncopyable"
+            raise TypeError(msg)
+
+    class UncopyableLeaf:
+        def __init__(self) -> None:
+            self.items: list[str] = []
+
+        def __deepcopy__(self, memo: dict[int, Any]) -> UncopyableLeaf:  # pragma: no cover - must not be called
+            memo[id(self)] = self
+            msg = "intentionally uncopyable"
+            raise TypeError(msg)
+
+    class ObservableToken:
+        def __init__(self, value: str) -> None:
+            self.value = value
+
+        def __copy__(self) -> ObservableToken:  # pragma: no cover - must not be called
+            return type(self)("copied")
+
+        def __deepcopy__(
+            self,
+            memo: dict[int, Any],
+        ) -> ObservableToken:  # pragma: no cover - must not be called
+            copied = type(self)("copied")
+            memo[id(self)] = copied
+            return copied
+
+        def __str__(self) -> str:
+            return self.value
+
+    class MutableMappingKey:
+        def __init__(self) -> None:
+            self.items: list[str] = []
+
+    class MutableDefaultFactory:
+        def __init__(self) -> None:
+            self.items: list[str] = []
+            self.mapping: defaultdict[MutableMappingKey | str, list[str]] | None = None
+
+        def __call__(self) -> list[str]:
+            return []
+
+    class CopyHookDateBase(datetime_):
+        def __copy__(self) -> CopyHookDateBase:  # pragma: no cover - must not be called
+            self.hook_calls.append("called")
+            msg = "inherited copy hook must not be called"
+            raise TypeError(msg)
+
+    class CopyHookDate(CopyHookDateBase):
+        pass
+
+    class FrozenSlotLeaf:
+        __slots__ = ("items",)
+
+        setter_calls = 0
+
+        def __init__(self) -> None:
+            object.__setattr__(self, "items", [])
+
+        def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover - must not be called
+            type(self).setter_calls += 1
+            msg = "template data copy must bypass custom setters"
+            raise TypeError(msg)
+
+    cycle: list[Any] = []
+    cycle.append(cycle)
+    tuple_items: list[str] = []
+    mapping_key = MutableMappingKey()
+    mapping_factory = MutableDefaultFactory()
+    nested_mapping: defaultdict[MutableMappingKey | str, list[str]] = defaultdict(
+        mapping_factory,
+        {mapping_key: []},
+    )
+    mapping_factory.mapping = nested_mapping
+    inherited_copy_token = CopyHookDate(2026, 7, 24)
+    inherited_copy_token.hook_calls = []
+    frozen_slot_leaf = FrozenSlotLeaf()
+    uncopyable = UncopyableList(["value"])
+    uncopyable.meta = []  # ty: ignore[unresolved-attribute]
+    uncopyable_leaf = UncopyableLeaf()
+    extra_template_data = defaultdict(
+        dict,
+        {
+            "Model": {
+                "token": ObservableToken("original"),
+                "unused_items": list(range(10_000)),
+                "nested": {
+                    "items": [],
+                    "cycle": cycle,
+                    "tuple_value": (tuple_items,),
+                    "mapping": nested_mapping,
+                    "mapping_key": mapping_key,
+                    "mapping_factory": mapping_factory,
+                    "inherited_copy_token": inherited_copy_token,
+                    "frozen_slot_leaf": frozen_slot_leaf,
+                    "alias_a": uncopyable,
+                    "alias_b": uncopyable,
+                    "leaf": uncopyable_leaf,
+                },
+            }
+        },
+    )
+    custom_template_dir = DATA_PATH / custom_template_name
+    if relative_custom_template_dir:
+        from pathlib import Path as PathLib
+
+        custom_template_dir = custom_template_dir.relative_to(PathLib.cwd())
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        custom_template_dir=custom_template_dir,
+        disable_timestamp=True,
+        allow_extra_fields=custom_template_name == "templates_nested_include_mutation",
+        extra_template_data=extra_template_data,
+        formatters=[],
+    )
+    config_extra_template_data = cast("dict[str, dict[str, Any]]", config.extra_template_data)
+    config_tuple_items = config_extra_template_data["Model"]["nested"]["tuple_value"][0]
+
+    with assert_inputs_not_mutated({
+        "items": config_extra_template_data["Model"]["nested"]["items"],
+        "mapping_item": nested_mapping[mapping_key],
+        "mapping_factory_items": mapping_factory.items,
+        "mapping_key_items": mapping_key.items,
+        "inherited_copy_hook_calls": inherited_copy_token.hook_calls,
+        "frozen_slot_items": frozen_slot_leaf.items,
+        "tuple_items": config_tuple_items,
+        "uncopyable_meta": uncopyable.meta,  # ty: ignore[unresolved-attribute]
+        "uncopyable_leaf": uncopyable_leaf.items,
+    }):
+        output = generate(input_=JSON_SCHEMA_DATA_PATH / "generation_context_model.json", config=config)
+
+    assert_output(f"{output}\n", EXPECTED_MAIN_PATH / expected_output)
+    assert_output(
+        (
+            f"{config_extra_template_data['Model']['nested']['items']}\n"
+            f"{config_tuple_items}\n{'generated' in nested_mapping}\n{nested_mapping[mapping_key]}\n"
+            f"{mapping_factory.mapping is nested_mapping}\n{uncopyable}\n"
+            f"{uncopyable.meta}\n{uncopyable_leaf.items}\n{frozen_slot_leaf.items}\n"
+            f"{FrozenSlotLeaf.setter_calls}\n{cycle[0] is cycle}\n"  # ty: ignore[unresolved-attribute]
+        ),
+        EXPECTED_MAIN_PATH / "generate_nested_extra_template_data_isolated.txt",
+    )
+
+
+def test_generate_reloaded_include_extra_template_data_is_request_local(tmp_path: Path) -> None:
+    """Refresh variable analysis when an included custom template reloads."""
+    from os import utime
+    from shutil import copyfile, copytree
+
+    template_fixtures = DATA_PATH / "templates_nested_reload"
+    custom_template_dir = tmp_path / "templates"
+    copytree(template_fixtures / "initial", custom_template_dir)
+    config_template = custom_template_dir / "pydantic_v2" / "ConfigDict.jinja2"
+    extra_template_data = {"Model": {"nested": {"items": []}}}
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        custom_template_dir=custom_template_dir,
+        disable_timestamp=True,
+        allow_extra_fields=True,
+        extra_template_data=extra_template_data,
+        formatters=[],
+    )
+
+    with assert_inputs_not_mutated({"items": extra_template_data["Model"]["nested"]["items"]}):
+        initial_output = generate(input_=JSON_SCHEMA_DATA_PATH / "generation_context_model.json", config=config)
+        updated_mtime = config_template.stat().st_mtime + 2
+        copyfile(template_fixtures / "updated" / "pydantic_v2" / "ConfigDict.jinja2", config_template)
+        utime(config_template, (updated_mtime, updated_mtime))
+        updated_output = generate(input_=JSON_SCHEMA_DATA_PATH / "generation_context_model.json", config=config)
+
+    assert_output(f"{initial_output}\n", EXPECTED_MAIN_PATH / "generate_nested_include_initial.py")
+    assert_output(f"{updated_output}\n", EXPECTED_MAIN_PATH / "generate_nested_include_updated.py")
+
+
+def test_generate_custom_template_preserves_ignore_missing_include() -> None:
+    """Keep optional Jinja includes valid while isolating their template context."""
+    output = generate(
+        input_=JSON_SCHEMA_DATA_PATH / "generation_context_model.json",
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        custom_template_dir=DATA_PATH / "templates_ignore_missing",
+        extra_template_data=defaultdict(dict, {"Model": {"optional_value": "rendered"}}),
+        disable_timestamp=True,
+        formatters=[],
+    )
+
+    assert_output(f"{output}\n", EXPECTED_MAIN_PATH / "generate_ignore_missing_template.py")
+
+
+def test_generate_cross_model_extra_template_alias_is_request_local() -> None:
+    """Preserve request-local aliases shared by multiple model records."""
+    shared: list[str] = []
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        custom_template_dir=DATA_PATH / "templates_cross_model_alias",
+        disable_timestamp=True,
+        extra_template_data=defaultdict(
+            dict,
+            {
+                "First": {"shared": shared},
+                "Second": {"shared": shared},
+            },
+        ),
+        formatters=[],
+    )
+
+    with assert_inputs_not_mutated({"shared": shared}):
+        output = generate(
+            input_=JSON_SCHEMA_DATA_PATH / "generation_context_alias_models.json",
+            config=config,
+        )
+
+    assert_output(f"{output}\n", EXPECTED_MAIN_PATH / "generate_cross_model_extra_template_alias.py")
+
+
+def test_concurrent_generate_output_contexts_are_isolated(tmp_path: Path) -> None:
+    """Keep concurrent generate() calls from changing or exchanging process cwd."""
+    from concurrent.futures import ThreadPoolExecutor
+    from pathlib import Path as PathLib
+
+    from tests.data.python.custom_formatters import synchronize_context
+
+    synchronize_context.reset()
+    original_cwd = PathLib.cwd()
+    relative_input = (JSON_SCHEMA_DATA_PATH / "person.json").relative_to(original_cwd)
+    first_output = tmp_path / "first" / "model.py"
+    second_output = tmp_path / "second" / "model.py"
+    first_output.parent.mkdir()
+    second_output.parent.mkdir()
+
+    def run_generation(name: str, output: Path) -> None:
+        generate(
+            input_=relative_input,
+            output=output,
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            formatters=[],
+            custom_formatters=["tests.data.python.custom_formatters.synchronize_context"],
+            custom_formatters_kwargs={"name": name},
+            settings_path=PathLib(),
+        )
+
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        first = executor.submit(run_generation, "first", first_output)
+        if not synchronize_context.wait_until_entered("first"):  # pragma: no cover
+            if first.done():
+                first.result()
+            pytest.fail("First formatter did not start")
+        borrowed = executor.submit(
+            generate,
+            relative_input,
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            formatters=[],
+        )
+        borrowed_output = borrowed.result(timeout=10)
+        second = executor.submit(run_generation, "second", second_output)
+        second_was_isolated = not synchronize_context.wait_until_entered("second", timeout=0.1)
+        synchronize_context.release("first")
+        first.result(timeout=10)
+        if not synchronize_context.wait_until_entered("second"):  # pragma: no cover
+            pytest.fail("Second formatter did not start")
+        synchronize_context.release("second")
+        second.result(timeout=10)
+
+    assert_file_content(first_output, "generate_with_empty_formatters.py")
+    assert_file_content(second_output, "generate_with_empty_formatters.py")
+    assert_output(f"{borrowed_output}\n", EXPECTED_MAIN_PATH / "generate_with_empty_formatters.py")
+    assert_output(
+        "\n".join((
+            str(second_was_isolated),
+            str(borrowed_output is not None),
+            str(synchronize_context.working_directory("first") == first_output.parent),
+            str(synchronize_context.working_directory("second") == second_output.parent),
+            str(PathLib.cwd() == original_cwd),
+            "",
+        )),
+        EXPECTED_MAIN_PATH / "concurrent_generate_cwd_isolated.txt",
+    )
+
+
+def test_concurrent_generate_reader_context_is_isolated(tmp_path: Path) -> None:
+    """Prevent an exclusive cwd change while an ordinary generation is active."""
+    from concurrent.futures import ThreadPoolExecutor
+    from pathlib import Path as PathLib
+    from threading import Event
+
+    entered = Event()
+    release = Event()
+    writer_entered = Event()
+    observed_cwds: list[Path] = []
+    original_cwd = PathLib.cwd()
+
+    def class_name(name: str) -> str:
+        observed_cwds.append(PathLib.cwd())
+        entered.set()
+        release.wait(timeout=5)
+        observed_cwds.append(PathLib.cwd())
+        return name
+
+    def change_cwd() -> None:
+        with chdir(tmp_path):
+            writer_entered.set()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        generated = executor.submit(
+            generate,
+            JSON_SCHEMA_DATA_PATH / "person.json",
+            input_file_type=InputFileType.JsonSchema,
+            custom_class_name_generator=class_name,
+            disable_timestamp=True,
+            formatters=[],
+        )
+        if not entered.wait(timeout=5):  # pragma: no cover
+            pytest.fail("Generation callback did not start")
+        writer = executor.submit(change_cwd)
+        writer_was_isolated = not writer_entered.wait(timeout=0.1)
+        release.set()
+        output = generated.result(timeout=10)
+        writer.result(timeout=10)
+
+    assert_output(f"{output}\n", EXPECTED_MAIN_PATH / "generate_with_empty_formatters.py")
+    assert_output(
+        "\n".join((
+            str(writer_was_isolated),
+            str(observed_cwds == [original_cwd, original_cwd]),
+            str(writer_entered.is_set()),
+            str(PathLib.cwd() == original_cwd),
+            "",
+        )),
+        EXPECTED_MAIN_PATH / "concurrent_generate_reader_cwd_isolated.txt",
+    )
+
+
+def test_concurrent_generate_extension_without_output_waits_for_writer(tmp_path: Path) -> None:
+    """Keep output-less callbacks out of another request's temporary cwd."""
+    from concurrent.futures import ThreadPoolExecutor
+    from pathlib import Path as PathLib
+    from threading import Event
+
+    from tests.data.python.custom_formatters import synchronize_context
+
+    synchronize_context.reset()
+    original_cwd = PathLib.cwd()
+    output = tmp_path / "writer" / "model.py"
+    output.parent.mkdir()
+    callback_entered = Event()
+    callback_cwds: list[Path] = []
+
+    def class_name(name: str) -> str:
+        callback_cwds.append(PathLib.cwd())
+        callback_entered.set()
+        return name
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        writer = executor.submit(
+            generate,
+            JSON_SCHEMA_DATA_PATH / "person.json",
+            output=output,
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            formatters=[],
+            custom_formatters=["tests.data.python.custom_formatters.synchronize_context"],
+            custom_formatters_kwargs={"name": "first"},
+            settings_path=PathLib(),
+        )
+        if not synchronize_context.wait_until_entered("first"):  # pragma: no cover
+            pytest.fail("Writer formatter did not start")
+        reader = executor.submit(
+            generate,
+            JSON_SCHEMA_DATA_PATH / "person.json",
+            input_file_type=InputFileType.JsonSchema,
+            custom_class_name_generator=class_name,
+            disable_timestamp=True,
+            formatters=[],
+        )
+        callback_was_isolated = not callback_entered.wait(timeout=0.1)
+        synchronize_context.release("first")
+        writer.result(timeout=10)
+        reader_output = reader.result(timeout=10)
+
+    assert_output(f"{reader_output}\n", EXPECTED_MAIN_PATH / "generate_with_empty_formatters.py")
+    assert_output(
+        "\n".join((
+            str(callback_was_isolated),
+            str(callback_cwds == [original_cwd] * len(callback_cwds)),
+            str(callback_entered.is_set()),
+            "",
+        )),
+        EXPECTED_MAIN_PATH / "concurrent_generate_extension_cwd_isolated.txt",
+    )
+
+
+def test_custom_formatter_nested_generate_inherits_stable_context(tmp_path: Path) -> None:
+    """Allow a formatter to wait for a child generation without restoring cwd early."""
+    from pathlib import Path as PathLib
+
+    from tests.data.python.custom_formatters import nested_generate
+
+    nested_generate.reset()
+    original_cwd = PathLib.cwd()
+    output = tmp_path / "outer" / "model.py"
+    output.parent.mkdir()
+
+    generate(
+        input_=JSON_SCHEMA_DATA_PATH / "person.json",
+        output=output,
+        input_file_type=InputFileType.JsonSchema,
+        disable_timestamp=True,
+        formatters=[],
+        custom_formatters=["tests.data.python.custom_formatters.nested_generate"],
+        settings_path=PathLib(),
+    )
+
+    assert_file_content(output, "generate_with_empty_formatters.py")
+    assert_output(
+        f"{nested_generate.child_output()}\n",
+        EXPECTED_MAIN_PATH / "nested_generate_child.py",
+    )
+    assert_output(
+        "\n".join((
+            str(nested_generate.child_cwd() == output.parent),
+            str(PathLib.cwd() == original_cwd),
+            str(nested_generate.child_output() is not None),
+            "",
+        )),
+        EXPECTED_MAIN_PATH / "nested_generate_context_isolated.txt",
+    )
+
+
+def test_generate_resolves_relative_output_context_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Resolve output and local HTTP references from their documented context roots."""
+    from pathlib import Path as PathLib
+
+    schema_store = tmp_path / "generated" / "schemas" / "api.example.com" / "schemas"
+    schema_store.mkdir(parents=True)
+    (schema_store / "pet.json").write_text(
+        (JSON_SCHEMA_DATA_PATH / "pet_simple.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    output = PathLib("generated/model.py")
+
+    generate(
+        input_=JSON_SCHEMA_DATA_PATH / "http_local_ref_path_root.json",
+        output=output,
+        input_file_type=InputFileType.JsonSchema,
+        http_local_ref_path=PathLib("schemas"),
+        disable_timestamp=True,
+        formatters=[],
+    )
+
+    assert_file_content(output, "generate_relative_http_local_ref_path.py")
+
+
+def test_generate_isort_uses_output_project_context(tmp_path: Path) -> None:
+    """Keep output-local packages classified as first party without changing cwd."""
+    project = tmp_path / "project"
+    (project / "localpkg").mkdir(parents=True)
+    output = project / "model.py"
+
+    generate(
+        input_=JSON_SCHEMA_DATA_PATH / "person.json",
+        output=output,
+        input_file_type=InputFileType.JsonSchema,
+        disable_timestamp=True,
+        additional_imports=["localpkg"],
+        formatters=[Formatter.BLACK, Formatter.ISORT],
+    )
+
+    assert_file_content(output, "generate_isort_output_project.py")
+
+
+def test_generate_deferred_isort_uses_output_project_context(tmp_path: Path) -> None:
+    """Keep output-local package classification during deferred directory formatting."""
+    project = tmp_path / "project"
+    (project / "localpkg").mkdir(parents=True)
+
+    generate(
+        input_=JSON_SCHEMA_DATA_PATH / "all_exports_multi_file",
+        output=project,
+        input_file_type=InputFileType.JsonSchema,
+        disable_timestamp=True,
+        additional_imports=["localpkg"],
+        formatters=[Formatter.BLACK, Formatter.ISORT],
+    )
+
+    assert_file_content(project / "order.py", "generate_deferred_isort_output_project.py")
 
 
 _EXTRA_TEMPLATE_COMMENT = "safe comment\rprint('PWNED')\nraise SystemExit(1)\vimport os\fexec('PWNED')"

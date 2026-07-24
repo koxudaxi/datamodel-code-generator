@@ -14,7 +14,7 @@ import pydantic
 import pytest
 import yaml
 
-from datamodel_code_generator import AllOfMergeMode, Error, ReadOnlyWriteOnlyModelType
+from datamodel_code_generator import AllOfMergeMode, Error, ReadOnlyWriteOnlyModelType, SchemaParseError
 from datamodel_code_generator.http import _get_httpx
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase
@@ -96,6 +96,17 @@ def test_schema_validator_required_only_schema_filters() -> None:
     assert (
         parser._get_required_groups([JsonSchemaObject.model_validate({"properties": {"a": {"type": "string"}}})]) == ()
     )
+
+
+def test_parse_file_restores_root_id_after_schema_error() -> None:
+    """Restore the enclosing schema id when validating a nested schema fails."""
+    parser = JsonSchemaParser("")
+    parser.root_id = "https://example.com/root.json"
+
+    with pytest.raises(SchemaParseError):
+        parser._parse_file({"$id": "nested.json", "type": 123}, "Nested", [])
+
+    assert parser.root_id == "https://example.com/root.json"
 
 
 def test_schema_validator_helpers_disabled() -> None:

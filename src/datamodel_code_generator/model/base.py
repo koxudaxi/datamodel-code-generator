@@ -24,6 +24,7 @@ from typing_extensions import Self
 
 from datamodel_code_generator import cached_path_exists
 from datamodel_code_generator._internal_utils import get_most_of_parent, to_hashable
+from datamodel_code_generator._template_data import TemplateDataRecord, copy_template_value
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
     IMPORT_ANY,
@@ -59,6 +60,7 @@ _ADDITIONAL_PROPERTIES_REFERENCE_CLASSES_TEMPLATE_DATA_KEY = "additionalProperti
 _MODULE_NAME_INVALID_CHAR_PATTERN = re.compile(r"[^0-9a-zA-Z_]")
 _MODULE_NAME_INVALID_CHAR_WITH_DOTS_PATTERN = re.compile(r"[^0-9a-zA-Z_.]")
 _MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS = 128
+_MAX_CUSTOM_TEMPLATE_VARIABLES = 128
 _NESTED_MODEL_DEFAULT_FACTORY_ORDER_KEY = "_nested_model_default_factory_order"
 _NESTED_MODEL_DEFAULT_FACTORY_RECURSIVE_PATHS_KEY = "_nested_model_default_factory_recursive_paths"
 
@@ -76,6 +78,26 @@ class _MissingCustomTemplateState:
 
 
 _missing_custom_template_state = _MissingCustomTemplateState()
+
+
+@dataclass(frozen=True, slots=True)
+class _CustomTemplateVariables:
+    root_source: str
+    variables: frozenset[str] | None
+    up_to_date_checks: tuple[Callable[[], bool], ...]
+
+
+class _CustomTemplateVariableState:
+    """Bounded analysis cache that follows Jinja template auto-reloading."""
+
+    __slots__ = ("entries", "lock")
+
+    def __init__(self) -> None:
+        self.entries: dict[Template, _CustomTemplateVariables] = {}
+        self.lock = RLock()
+
+
+_custom_template_variable_state = _CustomTemplateVariableState()
 
 
 @dataclass(frozen=True, slots=True)
@@ -1079,6 +1101,8 @@ def _clear_custom_template_caches() -> None:
         cached_path_exists.cache_clear()
         _get_environment.cache_clear()
         _get_template_with_custom_dir.cache_clear()
+        with _custom_template_variable_state.lock:
+            _custom_template_variable_state.entries.clear()
         _missing_custom_template_state.paths.clear()
         _missing_custom_template_state.count = 0
         _missing_custom_template_state.overflow = False
@@ -1147,6 +1171,67 @@ def _get_template_with_absolute_path(
     environment = _get_environment_with_absolute_path(absolute_template_path.parent, builtin_subdir)
     template = environment.get_template(absolute_template_path.name)
     return template_adapter(template) if template_adapter is not None else template
+
+
+def _get_custom_template_variables(template: Template) -> frozenset[str] | None:  # noqa: PLR0912
+    """Return referenced variables, or None when a template name is dynamic."""
+    from jinja2 import TemplateNotFound, meta  # noqa: PLC0415
+
+    with _custom_template_variable_state.lock:
+        if (cached := _custom_template_variable_state.entries.get(template)) is not None and all(
+            is_current() for is_current in cached.up_to_date_checks
+        ):
+            return cached.variables
+        environment = template.environment
+        if environment.loader is None:  # pragma: no cover - file-backed templates have a loader
+            return None
+        if not isinstance(template_name := template.name, str):  # pragma: no cover - file-backed templates have a name
+            return None
+        pending = [template_name]
+        root_template_name = template_name
+        root_source = cached.root_source if cached is not None else None
+        visited: set[str] = set()
+        variables: set[str] = set()
+        up_to_date_checks: list[Callable[[], bool]] = []
+        has_dynamic_reference = False
+        while pending:
+            template_name = pending.pop()
+            if template_name in visited:
+                continue
+            visited.add(template_name)
+            if template_name == root_template_name and root_source is not None:
+                source = root_source
+                filename = None
+                is_current = None
+            else:
+                try:
+                    source, filename, is_current = environment.loader.get_source(environment, template_name)
+                except TemplateNotFound:
+                    has_dynamic_reference = True
+                    continue
+            if template_name == root_template_name:
+                root_source = source
+            elif is_current is not None and not Path(filename or "").is_relative_to(TEMPLATE_DIR):  # pragma: no branch
+                up_to_date_checks.append(is_current)
+            parsed = environment.parse(source)
+            variables.update(meta.find_undeclared_variables(parsed))
+            for referenced_template in meta.find_referenced_templates(parsed):
+                if referenced_template is None:
+                    has_dynamic_reference = True
+                    continue
+                pending.append(referenced_template)
+        assert root_source is not None
+        entry = _CustomTemplateVariables(
+            root_source=root_source,
+            variables=None if has_dynamic_reference else frozenset(variables),
+            up_to_date_checks=tuple(up_to_date_checks),
+        )
+        if template not in _custom_template_variable_state.entries and (
+            len(_custom_template_variable_state.entries) >= _MAX_CUSTOM_TEMPLATE_VARIABLES
+        ):
+            del _custom_template_variable_state.entries[next(iter(_custom_template_variable_state.entries))]
+        _custom_template_variable_state.entries[template] = entry
+        return entry.variables
 
 
 @lru_cache
@@ -1661,9 +1746,28 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     def render(self, *, class_name: str | None = None) -> str:
         """Render the model to a string using the template."""
         use_custom_template = self.template_file_path.is_absolute()
-        if use_custom_template:
-            extra_template_data = self.extra_template_data
-        else:
+        extra_template_data = self.extra_template_data
+        if use_custom_template or (
+            self._custom_template_dir is not None
+            and cached_path_exists(self._custom_template_dir / Path(self.TEMPLATE_FILE_PATH).parent)
+        ):
+            template_variables = _get_custom_template_variables(self.template)
+            extra_keys = extra_template_data.keys()
+            keys_to_copy = extra_keys if template_variables is None else template_variables & extra_keys
+            if keys_to_copy:
+                memo = extra_template_data.copy_memo if isinstance(extra_template_data, TemplateDataRecord) else {}
+                extra_template_data.update(
+                    (
+                        key,
+                        copy_template_value(
+                            extra_template_data[key],
+                            memo,
+                            use_deepcopy=False,
+                        ),
+                    )
+                    for key in keys_to_copy
+                )
+        if not use_custom_template:
             extra_template_data = _safe_extra_template_data(self.extra_template_data)
         return self._render(
             class_name=class_name or self.class_name,

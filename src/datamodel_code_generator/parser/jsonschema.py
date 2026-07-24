@@ -6331,12 +6331,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         Uses schema_features.id_field to support both "id" (Draft 4) and "$id" (Draft 6+).
         Falls back to checking both fields for lenient compatibility.
         """
-        previous_root_id = self.root_id
         # Try version-specific field first, then fallback to alternative for compatibility
         id_field = self.schema_features.id_field
+        previous_root_id = self.root_id
         self.root_id = root_raw.get(id_field) or root_raw.get("$id") or root_raw.get("id") or None
-        yield
-        self.root_id = previous_root_id
+        try:
+            yield
+        finally:
+            self.root_id = previous_root_id
 
     def _validate_schema_object(
         self,

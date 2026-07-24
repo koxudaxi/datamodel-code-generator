@@ -1,0 +1,8 @@
+{% set _ = nested["items"].append("generated") -%}
+model_config = ConfigDict(
+{%- for field_name, value in config_items %}
+    {{ field_name }}={{ value }},
+{%- endfor %}
+)
+# template_version = updated
+# nested_item_count = {{ nested["items"] | length }}

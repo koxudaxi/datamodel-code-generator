@@ -1,0 +1,30 @@
+{% set _ = nested["items"].append("generated") -%}
+{% set _ = nested["tuple_value"][0].append("generated") -%}
+{% set mapping_key = nested["mapping"] | first -%}
+{% set _ = mapping_key.items.append("generated") -%}
+{% set _ = nested["mapping"].default_factory.items.append("generated") -%}
+{% set _ = nested["mapping"]["generated"].append("generated") -%}
+{% set _ = nested["alias_a"].append("generated") -%}
+{% set _ = nested["alias_a"].meta.append("generated") -%}
+{% set _ = nested["leaf"].items.append("generated") -%}
+{% set _ = nested["frozen_slot_leaf"].items.append("generated") -%}
+model_config = ConfigDict(
+{%- for field_name, value in config_items %}
+    {{ field_name }}={{ value }},
+{%- endfor %}
+)
+# nested_item_count = {{ nested["items"] | length }}
+# tuple_item_count = {{ nested["tuple_value"][0] | length }}
+# nested_mapping_count = {{ nested["mapping"]["generated"] | length }}
+# mapping_key_item_count = {{ mapping_key.items | length }}
+# mapping_key_alias_preserved = {{ mapping_key is sameas nested["mapping_key"] }}
+# mapping_factory_item_count = {{ nested["mapping"].default_factory.items | length }}
+# mapping_factory_alias_preserved = {{ nested["mapping"].default_factory is sameas nested["mapping_factory"] }}
+# mapping_factory_cycle_preserved = {{ nested["mapping"].default_factory.mapping is sameas nested["mapping"] }}
+# inherited_copy_hook_calls = {{ nested["inherited_copy_token"].hook_calls | length }}
+# inherited_copy_token_year = {{ nested["inherited_copy_token"].year }}
+# uncopyable_item_count = {{ nested["alias_a"] | length }}
+# uncopyable_meta_count = {{ nested["alias_a"].meta | length }}
+# uncopyable_leaf_count = {{ nested["leaf"].items | length }}
+# frozen_slot_item_count = {{ nested["frozen_slot_leaf"].items | length }}
+# uncopyable_alias_preserved = {{ nested["alias_a"] is sameas nested["alias_b"] }}

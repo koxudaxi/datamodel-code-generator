@@ -1,0 +1,4 @@
+{% set _ = shared.append(class_name) -%}
+class {{ class_name }}({{ base_class }}):
+    observed_alias_count = {{ shared | length }}
+    observed_alias_names = "{{ shared | join(",") }}"
