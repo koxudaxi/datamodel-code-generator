@@ -1423,6 +1423,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     _config_class_name: ClassVar[str] = "ParserConfig"
     _cache_local_sources_during_parse: ClassVar[bool] = False
     _cache_parsed_sources_from_path: ClassVar[bool] = False
+    _formatter_cwd: Path | None = None
     _http_fetch_session: _HTTPFetchSession | None = None
 
     @classmethod
@@ -4009,7 +4010,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             builtin_format_line_length=self.builtin_format_line_length,
             use_type_checking_imports=effective_use_type_checking_imports,
             defer_formatting=self.defer_formatting,
-            formatter_cwd=getattr(self, "_formatter_cwd", None),
+            formatter_cwd=self._formatter_cwd,
         )
 
     def _find_invalid_inferred_modules(  # noqa: PLR6301
