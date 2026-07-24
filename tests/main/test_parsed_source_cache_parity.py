@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier, Event
 from typing import TYPE_CHECKING
 
 import pytest
 
-from datamodel_code_generator import InputFileType, _clear_parser_source_data_cache, _parser_source_data_cache
+from datamodel_code_generator import (
+    InputFileType,
+    _clear_parser_source_data_cache,
+    _is_parsed_source_cache_enabled,
+    _parser_source_data_cache,
+    enable_parsed_source_cache,
+)
 from tests.conftest import assert_output
 from tests.main.conftest import JSON_SCHEMA_DATA_PATH, OPEN_API_DATA_PATH, run_main_with_args
 
@@ -63,6 +71,70 @@ def _run_generate_with_parsed_source_cache(
         use_builtin_default_formatter=False,
     )
     return len(_parser_source_data_cache)
+
+
+@pytest.mark.allow_direct_assert
+def test_parsed_source_cache_scope_restore_order_and_idempotence() -> None:
+    """Keep cache enabled until every active scope has been restored."""
+    restore_outer = enable_parsed_source_cache()
+    restore_inner = enable_parsed_source_cache()
+
+    try:
+        restore_outer()
+        assert _is_parsed_source_cache_enabled()
+        restore_outer()
+        assert _is_parsed_source_cache_enabled()
+    finally:
+        restore_outer()
+        restore_inner()
+    assert not _is_parsed_source_cache_enabled()
+
+    restore_outer = enable_parsed_source_cache()
+    restore_inner = enable_parsed_source_cache()
+    try:
+        restore_inner()
+        assert _is_parsed_source_cache_enabled()
+    finally:
+        restore_inner()
+        restore_outer()
+    assert not _is_parsed_source_cache_enabled()
+
+
+@pytest.mark.allow_direct_assert
+def test_parsed_source_cache_scope_thread_safety() -> None:
+    """Restore concurrent cache scopes without losing another scope's state."""
+    worker_count = 8
+    ready = Barrier(worker_count + 1)
+    release = Event()
+
+    def enable_and_restore() -> None:
+        restore = enable_parsed_source_cache()
+        try:
+            ready.wait(timeout=5)
+            release.wait(timeout=5)
+        finally:
+            restore()
+            restore()
+
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        futures = [executor.submit(enable_and_restore) for _ in range(worker_count)]
+        try:
+            ready.wait(timeout=5)
+            assert _is_parsed_source_cache_enabled()
+        finally:
+            release.set()
+        for future in futures:
+            future.result()
+
+    assert not _is_parsed_source_cache_enabled()
+
+    restore = enable_parsed_source_cache()
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        futures = [executor.submit(restore) for _ in range(worker_count)]
+        for future in futures:
+            future.result()
+
+    assert not _is_parsed_source_cache_enabled()
 
 
 @pytest.mark.parametrize(
