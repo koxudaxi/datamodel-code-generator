@@ -35,6 +35,11 @@ _dynamic_module_counter = itertools.count(1)
 _MISSING_MODULE = object()
 
 
+def _evict_dynamic_models_cache_entries(count: int) -> None:
+    for _ in range(count):
+        del _dynamic_models_cache[next(iter(_dynamic_models_cache))]
+
+
 def _is_init_file(path_tuple: tuple[str, ...]) -> bool:
     """Check if path tuple represents an __init__.py file."""
     return PurePath(path_tuple[-1]).stem == "__init__"
@@ -320,6 +325,8 @@ def generate_dynamic_models(
         if use_cache:
             assert cache_key is not None
             if (cached_models := _dynamic_models_cache.get(cache_key)) is not None:
+                if (excess := len(_dynamic_models_cache) - cache_size) > 0:
+                    _evict_dynamic_models_cache_entries(excess)
                 return _filter_target_models(cached_models, normalized_target_model_names)
 
         result = generate(input_=input_, config=config)
@@ -334,9 +341,8 @@ def generate_dynamic_models(
         )
 
         if use_cache:
-            while len(_dynamic_models_cache) >= cache_size:
-                oldest_key = next(iter(_dynamic_models_cache))
-                del _dynamic_models_cache[oldest_key]
+            if (excess := len(_dynamic_models_cache) - cache_size + 1) > 0:
+                _evict_dynamic_models_cache_entries(excess)
             _dynamic_models_cache[cache_key] = models  # ty: ignore[invalid-assignment]
 
         return _filter_target_models(models, normalized_target_model_names)

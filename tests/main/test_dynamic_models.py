@@ -406,6 +406,15 @@ def test_cache_shrinks_when_smaller_size_requested() -> None:
     assert clear_dynamic_models_cache() == 2
 
 
+def test_cache_hit_shrinks_when_smaller_size_requested() -> None:
+    """Test that a cache hit still enforces a smaller cache_size."""
+    schemas = [make_object_schema({f"field{i}": {"type": "string"}}) for i in range(5)]
+    cached_models = [generate_dynamic_models(schema, cache_size=10) for schema in schemas]
+
+    assert generate_dynamic_models(schemas[-1], cache_size=2) is cached_models[-1]
+    assert clear_dynamic_models_cache() == 2
+
+
 def test_clear_cache() -> None:
     """Test clearing the cache."""
     generate_dynamic_models(make_object_schema({"name": {"type": "string"}}))
