@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import os
+import codecs
 from typing import TYPE_CHECKING
 
 import pytest
@@ -12,17 +12,16 @@ from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.parser import xmlschema as xmlschema_parser
 from datamodel_code_generator.parser.xmlschema import (
     _clear_xml_schema_data_cache,
-    _clear_xml_text_cache,
     _load_xml_schema_data_from_path,
     _read_xml_text,
 )
+from tests.conftest import assert_output
 from tests.main.conftest import (
     BACKEND_GOLDEN_CASES,
     BACKEND_GOLDEN_TARGET_ARGS,
+    EXPECTED_XML_SCHEMA_PATH,
     XML_SCHEMA_DATA_PATH,
     assert_path_cache_evicts_lru_entries,
-    assert_path_cache_invalidates_after_write,
-    assert_path_cache_reuses_value,
     run_generate_file_and_assert,
     run_main_and_assert,
 )
@@ -55,53 +54,42 @@ def test_main_xmlschema_with_parsed_source_cache(output_file: Path) -> None:
     )
 
 
-def test_read_xml_text_caches_raw_source(tmp_path: Path) -> None:
-    """Reuse raw XML source text by path and content hash."""
+@pytest.mark.parametrize(
+    ("byte_order_mark", "xml_encoding"),
+    [
+        (codecs.BOM_UTF8, "utf-8"),
+        (codecs.BOM_UTF32_LE, "utf-32-le"),
+        (codecs.BOM_UTF32_BE, "utf-32-be"),
+        (codecs.BOM_UTF16_LE, "utf-16-le"),
+        (codecs.BOM_UTF16_BE, "utf-16-be"),
+    ],
+)
+def test_read_xml_text_detects_byte_order_mark(tmp_path: Path, byte_order_mark: bytes, xml_encoding: str) -> None:
+    """Decode XML source according to its byte order mark."""
     schema_path = tmp_path / "schema.xsd"
-    schema_path.write_text(
-        (XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8"), encoding="utf-8"
-    )
-    _clear_xml_text_cache()
+    expected_path = EXPECTED_XML_SCHEMA_PATH / "xml_text_initial.txt"
+    schema_text = expected_path.read_text(encoding="utf-8")
+    schema_path.write_bytes(byte_order_mark + schema_text.encode(xml_encoding))
 
-    assert_path_cache_reuses_value(_read_xml_text, schema_path, warmups=1)
+    assert_output(_read_xml_text(schema_path, "ascii"), expected_path)
 
 
-def test_read_xml_text_invalidates_updated_raw_source(tmp_path: Path) -> None:
-    """Reload raw XML source text when the local file changes."""
+def test_read_xml_text_reads_updated_source(tmp_path: Path) -> None:
+    """Read the current XML source content without retaining stale text."""
     schema_path = tmp_path / "schema.xsd"
-    schema_path.write_text(
-        (XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8"), encoding="utf-8"
-    )
-    _clear_xml_text_cache()
+    first_expected_path = EXPECTED_XML_SCHEMA_PATH / "xml_text_initial.txt"
+    second_expected_path = EXPECTED_XML_SCHEMA_PATH / "xml_text_updated.txt"
+    schema_path.write_bytes(first_expected_path.read_text(encoding="utf-8").encode("latin-1"))
+    assert_output(_read_xml_text(schema_path, "latin-1"), first_expected_path)
 
-    updated_text = (XML_SCHEMA_DATA_PATH / "inline_root.xsd").read_text(encoding="utf-8")
-    assert_path_cache_invalidates_after_write(
-        _read_xml_text,
-        schema_path,
-        updated_text,
-        updated_text.replace("\n", os.linesep),
-    )
-
-
-def test_read_xml_text_evicts_lru_entries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Evict old raw XML text cache entries after the configured limit."""
-    monkeypatch.setattr(xmlschema_parser, "_XML_TEXT_CACHE_MAX_SIZE", 1)
-    _clear_xml_text_cache()
-    first_path = tmp_path / "first.xsd"
-    second_path = tmp_path / "second.xsd"
-    first_text = (XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8")
-    second_text = (XML_SCHEMA_DATA_PATH / "inline_root.xsd").read_text(encoding="utf-8")
-    first_path.write_text(first_text, encoding="utf-8")
-    second_path.write_text(second_text, encoding="utf-8")
-
-    assert_path_cache_evicts_lru_entries(_read_xml_text, first_path, second_path)
+    schema_path.write_bytes(second_expected_path.read_text(encoding="utf-8").encode("latin-1"))
+    assert_output(_read_xml_text(schema_path, "latin-1"), second_expected_path)
 
 
 def test_load_xml_schema_data_from_path_evicts_lru_entries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Evict old converted XML Schema cache entries after the configured limit."""
     monkeypatch.setattr(xmlschema_parser, "_XML_SCHEMA_DATA_CACHE_MAX_SIZE", 1)
     _clear_xml_schema_data_cache()
-    _clear_xml_text_cache()
     first_path = tmp_path / "first.xsd"
     second_path = tmp_path / "second.xsd"
     first_path.write_text((XML_SCHEMA_DATA_PATH / "single_root_item.xsd").read_text(encoding="utf-8"), encoding="utf-8")
