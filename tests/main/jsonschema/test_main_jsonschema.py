@@ -14273,6 +14273,26 @@ def test_unique_items_enum_set(output_file: Path) -> None:
     )
 
 
+def test_unique_items_set_typed_dict(output_file: Path) -> None:
+    """Test uniqueItems arrays use sets in TypedDict output."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unique_items_typed_dict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unique_items_typed_dict.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.10",
+            "--use-unique-items-as-set",
+            "--use-standard-collections",
+        ],
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.benchmark
 def test_main_allof_mro(output_file: Path) -> None:
     """Test allOf with diamond inheritance pattern produces valid Python MRO."""
