@@ -159,20 +159,29 @@ _ParserSourceDataSeenKey: TypeAlias = tuple[Path, str]
 _parser_source_data_cache: OrderedDict[_ParserSourceDataCacheKey, YamlValue] = OrderedDict()
 _parser_source_data_seen_keys: OrderedDict[_ParserSourceDataSeenKey, None] = OrderedDict()
 _parser_source_data_cache_lock = RLock()
+_parsed_source_cache_enable_count = 0
 _enable_parsed_source_cache = False
 
 
 def enable_parsed_source_cache() -> Callable[[], None]:
     """Enable the process-local parsed source cache and return a restore callback."""
-    global _enable_parsed_source_cache  # noqa: PLW0603
+    global _enable_parsed_source_cache, _parsed_source_cache_enable_count  # noqa: PLW0603
 
-    previous = _enable_parsed_source_cache
-    _enable_parsed_source_cache = True
+    with _parser_source_data_cache_lock:
+        _parsed_source_cache_enable_count += 1
+        _enable_parsed_source_cache = True
+    restored = False
 
     def restore() -> None:
-        global _enable_parsed_source_cache  # noqa: PLW0603
+        nonlocal restored
+        global _enable_parsed_source_cache, _parsed_source_cache_enable_count  # noqa: PLW0603
 
-        _enable_parsed_source_cache = previous
+        with _parser_source_data_cache_lock:
+            if restored:
+                return
+            restored = True
+            _parsed_source_cache_enable_count -= 1
+            _enable_parsed_source_cache = _parsed_source_cache_enable_count > 0
 
     return restore
 
