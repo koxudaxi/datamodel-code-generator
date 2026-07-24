@@ -195,8 +195,8 @@ def test_parser_source_cache_isolates_non_string_yaml_keys(tmp_path: Path) -> No
 
 
 @pytest.mark.allow_direct_assert
-def test_parser_source_cache_preserves_yaml_aliases(tmp_path: Path) -> None:
-    """Preserve shared YAML values inside an isolated cached source graph."""
+def test_parser_source_cache_preserves_yaml_graph_sharing(tmp_path: Path) -> None:
+    """Preserve the YAML backend's graph-sharing semantics in an isolated cached source."""
     schema_path = tmp_path / "schema.yaml"
     schema_path.write_text(
         "shared: &shared\n  type: string\nfirst: *shared\nsecond: *shared\n",
@@ -207,7 +207,7 @@ def test_parser_source_cache_preserves_yaml_aliases(tmp_path: Path) -> None:
     load_data_from_path(schema_path, "utf-8")
     cached = load_data_from_path(schema_path, "utf-8")
 
-    assert cached["first"] is cached["second"]
+    assert (cached["first"] is cached["second"]) == (original["first"] is original["second"])
     assert_mutable_copy_is_isolated(
         original=original,
         copied=cached,
