@@ -131,6 +131,7 @@ def _new_template_value(value: Any, memo: dict[int, Any]) -> Any:  # noqa: PLR09
                 if any("__copy__" in cls.__dict__ for cls in type(value).__mro__):
                     return _copy_without_custom_copy_hook(value, memo)
                 return copy(value)
+    return value  # pragma: no cover - the match is exhaustive
 
 
 def _copy_object_state(

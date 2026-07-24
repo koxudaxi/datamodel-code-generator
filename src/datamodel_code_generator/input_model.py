@@ -590,6 +590,8 @@ def _enter_input_model_cwd(cwd: str) -> None:
 
     with _INPUT_MODEL_PATH_LOCK:
         if _INPUT_MODEL_ACTIVE_CALLS == 0:
+            # A later nested call observes the active cwd while this request is running.
+            # codeql[py/unused-global-variable]
             _INPUT_MODEL_ACTIVE_CWD = cwd
             _INPUT_MODEL_ACTIVE_CALLS = 1
             if cwd not in sys.path:
@@ -615,6 +617,8 @@ def _exit_input_model_cwd() -> None:
                     sys.path.pop(index)
                     break
         _INPUT_MODEL_ACTIVE_CWD = None
+        # A later request observes the reset when its cwd already exists in sys.path.
+        # codeql[py/unused-global-variable]
         _INPUT_MODEL_CWD_ENTRY = None
 
 

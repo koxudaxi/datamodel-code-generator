@@ -256,7 +256,7 @@ def test_custom_template_variables_follow_static_references(tmp_path: Path) -> N
     )
     (tmp_path / "shared.jinja2").write_text("{{ shared_value }}", encoding="utf-8")
     (tmp_path / "fallback.jinja2").write_text("{{ fallback_value }}", encoding="utf-8")
-    template = Environment(loader=FileSystemLoader(tmp_path)).get_template("root.jinja2")
+    template = Environment(loader=FileSystemLoader(tmp_path), autoescape=True).get_template("root.jinja2")
     expected_variables = {
         "fallback_value",
         "root_value",
@@ -272,7 +272,7 @@ def test_custom_template_variables_detect_dynamic_reference(tmp_path: Path) -> N
     from jinja2 import Environment, FileSystemLoader
 
     (tmp_path / "root.jinja2").write_text("{% include selected_template %}", encoding="utf-8")
-    template = Environment(loader=FileSystemLoader(tmp_path)).get_template("root.jinja2")
+    template = Environment(loader=FileSystemLoader(tmp_path), autoescape=True).get_template("root.jinja2")
 
     assert _get_custom_template_variables(template) is None
 
@@ -284,7 +284,7 @@ def test_custom_template_variables_refresh_after_source_removal(tmp_path: Path) 
     template_path = tmp_path / "included.jinja2"
     (tmp_path / "root.jinja2").write_text('{% include "included.jinja2" %}', encoding="utf-8")
     template_path.write_text("{{ value }}", encoding="utf-8")
-    template = Environment(loader=FileSystemLoader(tmp_path)).get_template("root.jinja2")
+    template = Environment(loader=FileSystemLoader(tmp_path), autoescape=True).get_template("root.jinja2")
     assert _get_custom_template_variables(template) == {"value"}
 
     template_path.unlink()
@@ -302,7 +302,7 @@ def test_custom_template_variables_preserve_ignore_missing(tmp_path: Path) -> No
         '{% include "optional.jinja2" ignore missing %}{{ value }}',
         encoding="utf-8",
     )
-    template = Environment(loader=FileSystemLoader(tmp_path)).get_template("root.jinja2")
+    template = Environment(loader=FileSystemLoader(tmp_path), autoescape=True).get_template("root.jinja2")
 
     assert _get_custom_template_variables(template) is None
     assert template.render(value="rendered") == "rendered"
@@ -316,7 +316,7 @@ def test_custom_template_variables_keep_compiled_root_source(tmp_path: Path) -> 
 
     template_path = tmp_path / "root.jinja2"
     template_path.write_text("{{ initial_value }}", encoding="utf-8")
-    template = Environment(loader=FileSystemLoader(tmp_path)).get_template("root.jinja2")
+    template = Environment(loader=FileSystemLoader(tmp_path), autoescape=True).get_template("root.jinja2")
     assert _get_custom_template_variables(template) == {"initial_value"}
 
     updated_mtime = template_path.stat().st_mtime + 2
@@ -331,7 +331,7 @@ def test_custom_template_variables_cache_is_bounded(tmp_path: Path) -> None:
     from jinja2 import Environment, FileSystemLoader
 
     _clear_custom_template_caches()
-    environment = Environment(loader=FileSystemLoader(tmp_path))
+    environment = Environment(loader=FileSystemLoader(tmp_path), autoescape=True)
     for index in range(_MAX_CUSTOM_TEMPLATE_VARIABLES + 1):
         template_name = f"{index}.jinja2"
         (tmp_path / template_name).write_text("{{ value }}", encoding="utf-8")

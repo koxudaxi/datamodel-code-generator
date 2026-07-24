@@ -604,11 +604,12 @@ def test_load_model_schema_serializes_path_and_dotted_module_context(
 
     def load_schema(index: int) -> None:
         started[index].set()
+        input_model = f"{module_name}:Model"
         match index:
             case 0:
                 input_model = f"{model_path}:Model"
             case _:
-                input_model = f"{module_name}:Model"
+                pass
         schemas.append(load_model_schema([input_model], InputFileType.Auto))
 
     threads = [Thread(target=load_schema, args=(index,)) for index in range(2)]

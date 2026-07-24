@@ -578,17 +578,17 @@ class _GenerationTemplateData(defaultdict[str, dict[str, Any]]):
 
     def items(self) -> Any:
         for key in tuple(self):
-            self[key]
+            _ = self[key]
         return super().items()
 
     def values(self) -> Any:
         for key in tuple(self):
-            self[key]
+            _ = self[key]
         return super().values()
 
     def pop(self, key: str, default: Any = _MISSING_TEMPLATE_DATA) -> Any:
         if key in self:
-            self[key]
+            _ = self[key]
         if default is _MISSING_TEMPLATE_DATA:
             return super().pop(key)
         return super().pop(key, default)

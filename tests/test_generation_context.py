@@ -11,13 +11,17 @@ from typing import Any
 import pytest
 from typing_extensions import Self
 
+import datamodel_code_generator._process_context as context_state
 from datamodel_code_generator import (
     _copy_extra_template_data,
     _copy_extra_template_value,
     _GenerationTemplateData,
     chdir,
 )
-from datamodel_code_generator._process_context import process_chdir, process_context, process_cwd
+
+process_chdir = context_state.process_chdir
+process_context = context_state.process_context
+process_cwd = context_state.process_cwd
 
 
 @pytest.mark.allow_direct_assert
@@ -77,8 +81,6 @@ def test_process_context_restores_suspended_reader_after_interrupted_upgrade(
     claim_upgrade: bool,
 ) -> None:
     """Restore coordinator state when an abnormal wait interrupts an upgrade."""
-    import datamodel_code_generator._process_context as context_state
-
     reader_entered = Event()
     release_reader = Event()
 
@@ -597,6 +599,9 @@ def test_copy_extra_template_value_discards_incomplete_container_state() -> None
         def __init__(self) -> None:
             self.fail = False
 
+        def __eq__(self, other: object) -> bool:
+            return self is other  # pragma: no cover - dictionary identity avoids equality
+
         def __hash__(self) -> int:
             if self.fail:
                 msg = "detached key cannot be hashed"
@@ -813,6 +818,7 @@ def test_generation_template_data_detaches_mapping_accesses(accessor: str) -> No
     """Do not expose source records through alternate mapping access methods."""
     source_record = {"items": []}
     data = _GenerationTemplateData({"Model": source_record})
+    detached = source_record
 
     match accessor:
         case "items":
@@ -834,10 +840,11 @@ def test_generation_template_data_detaches_get_and_setdefault_accesses() -> None
 
     detached = data.get("Model")
     inserted = data.setdefault("Inserted")
+    missing = data.pop("Missing", "fallback")
 
     assert detached is data.setdefault("Model")
     assert detached is not source_record
     assert detached["items"] is not source_record["items"]
     assert data["Inserted"] is inserted
     assert data.get("Missing", "fallback") == "fallback"
-    assert data.pop("Missing", "fallback") == "fallback"
+    assert missing == "fallback"

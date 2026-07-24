@@ -131,8 +131,12 @@ def _enter_exclusive(*, allow_shared: bool) -> tuple[bool, bool, int, str]:  # n
             _WRITER_BLOCK_SHARED = int(blocks_shared)
         except BaseException:
             if claimed_upgrade:
+                # CodeQL does not model the waiting threads that consume this release.
+                # codeql[py/unused-global-variable]
                 _UPGRADING_THREAD = None
             if suspended_readers:
+                # CodeQL does not model the waiting threads that consume this restoration.
+                # codeql[py/unused-global-variable]
                 _ACTIVE_READERS += suspended_readers
             raise
         else:
@@ -175,6 +179,8 @@ def _exit(*, writer: bool, blocks_shared: bool, retained_readers: int) -> None:
                 _WRITER_THREAD = None
                 _WRITER_CLOSING = False
                 _WRITER_RETAINED_READERS = 0
+                # The next writer observes this reset when it inherits the coordinator state.
+                # codeql[py/unused-global-variable]
                 _WRITER_SUSPENDED_READERS = 0
                 if get_ident() == _UPGRADING_THREAD:
                     _UPGRADING_THREAD = None
