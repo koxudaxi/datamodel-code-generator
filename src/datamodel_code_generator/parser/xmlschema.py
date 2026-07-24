@@ -85,12 +85,6 @@ JsonSchema = dict[str, Any]
 QNameKey = tuple[str | None, str]
 DefinitionKey = tuple[str, str | None, str]
 PYTHON_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-_XML_TEXT_CACHE_MAX_SIZE = 128
-_XMLTextCacheKey = tuple[Path, str, str]
-_XMLTextSeenKey = tuple[Path, str]
-_xml_text_cache: OrderedDict[_XMLTextCacheKey, str] = OrderedDict()
-_xml_text_seen_keys: OrderedDict[_XMLTextSeenKey, None] = OrderedDict()
-_xml_text_cache_lock = RLock()
 _XML_SCHEMA_DATA_CACHE_MAX_SIZE = 128
 _XMLSchemaDataCacheKey = tuple[Path, Path, str, str, XMLSchemaVersion | None, VersionMode | None, bool]
 _XMLSchemaDataSeenKey = tuple[Path, Path, str, XMLSchemaVersion | None, VersionMode | None, bool]
@@ -261,33 +255,7 @@ def _has_xmlschema_versioning_attribute(element: ET.Element) -> bool:
 
 
 def _read_xml_text(path: Path, encoding: str) -> str:
-    resolved_path = path.resolve()
-    seen_key = (resolved_path, encoding)
-    with _xml_text_cache_lock:
-        use_cache = seen_key in _xml_text_seen_keys
-        _xml_text_seen_keys[seen_key] = None
-        _xml_text_seen_keys.move_to_end(seen_key)
-        while len(_xml_text_seen_keys) > _XML_TEXT_CACHE_MAX_SIZE:
-            _xml_text_seen_keys.popitem(last=False)
-
-    data = resolved_path.read_bytes()
-    if not use_cache:
-        return _decode_xml_bytes(data, encoding)
-
-    cache_key = (resolved_path, _digest_bytes(data), encoding)
-
-    with _xml_text_cache_lock:
-        if cache_key in _xml_text_cache:
-            _xml_text_cache.move_to_end(cache_key)
-            return _xml_text_cache[cache_key]
-
-    text = _decode_xml_bytes(data, encoding)
-    with _xml_text_cache_lock:
-        _xml_text_cache[cache_key] = text
-        _xml_text_cache.move_to_end(cache_key)
-        while len(_xml_text_cache) > _XML_TEXT_CACHE_MAX_SIZE:
-            _xml_text_cache.popitem(last=False)
-    return text
+    return _decode_xml_bytes(path.read_bytes(), encoding)
 
 
 def _decode_xml_bytes(data: bytes, encoding: str) -> str:
@@ -301,12 +269,6 @@ def _decode_xml_bytes(data: bytes, encoding: str) -> str:
         if data.startswith(bom):
             return data.decode(xml_encoding)
     return data.decode(encoding)
-
-
-def _clear_xml_text_cache() -> None:
-    with _xml_text_cache_lock:
-        _xml_text_cache.clear()
-        _xml_text_seen_keys.clear()
 
 
 def _digest_bytes(data: bytes) -> str:
