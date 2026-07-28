@@ -8,6 +8,7 @@ lint.ignore = [
   "ARG001",  # tdom passes children to component functions
   "BLE001",  # browser bridge returns tracebacks as JSON
   "COM812",  # t-linter owns t-string formatting here
+  "CPY",     # No copyright statements
   "D",       # this file is shipped as browser runtime code
   "E501",    # t-strings often contain single-line HTML fragments
   "FBT",     # called from JavaScript/Pyodide bridge
