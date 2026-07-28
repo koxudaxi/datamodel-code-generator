@@ -56,7 +56,7 @@ optional-dependencies.graphql = [
   "graphql-core>=3.2.3",
 ]
 optional-dependencies.http = [
-  "httpx>=0.24.1",
+  "httpx2>=2,<3",
 ]
 optional-dependencies.protobuf = [
   "grpcio-tools>=1.62,<2",

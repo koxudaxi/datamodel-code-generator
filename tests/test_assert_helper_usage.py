@@ -581,7 +581,7 @@ def test_example():
 
 
 def test_assert_httpx_get_kwargs_accepts_expected_urls_with_explicit_call_count(mocker: MockerFixture) -> None:
-    """Explicit call_count works with multi-URL httpx.get assertions."""
+    """Explicit call_count works with multi-URL httpx2.get assertions."""
     mock_get = create_httpx_get_mock(mocker)
     mock_get(
         "https://example.com/person.json",
@@ -730,23 +730,23 @@ def test_assert_httpx_get_kwargs_reports_params_contains_mismatch_per_call(mocke
 
 def test_mock_httpx_get_returns_response_for_registered_url(mock_httpx_get: HttpxGetMockFactory) -> None:
     """URL-bound HTTP mocks return fixture content for the registered URL."""
-    import httpx
+    import httpx2
 
     mock_httpx_get(MockHttpxResponse("https://example.com/schema.json", '{"type": "object"}'))
 
-    response = httpx.get("https://example.com/schema.json")
+    response = httpx2.get("https://example.com/schema.json")
 
     assert response.text == '{"type": "object"}'
 
 
 def test_mock_httpx_get_rejects_unregistered_url(mock_httpx_get: HttpxGetMockFactory) -> None:
     """URL-bound HTTP mocks fail when code fetches an unexpected URL."""
-    import httpx
+    import httpx2
 
     mock_httpx_get(MockHttpxResponse("https://example.com/schema.json", '{"type": "object"}'))
 
-    with pytest.raises(pytest.fail.Exception, match=r"Unexpected httpx\.get URL"):
-        httpx.get("https://example.com/other.json")
+    with pytest.raises(pytest.fail.Exception, match=r"Unexpected httpx2\.get URL"):
+        httpx2.get("https://example.com/other.json")
 
 
 def test_assert_generated_model_json_validation_without_attribute_check(tmp_path: Path) -> None:

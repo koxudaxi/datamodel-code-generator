@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
 @pytest.fixture(autouse=True)
 def block_dns_by_default(mocker: MockerFixture) -> None:
-    """Keep tests that mock httpx.get independent from external DNS."""
+    """Keep tests that mock httpx2.get independent from external DNS."""
     mocker.patch("socket.getaddrinfo", side_effect=OSError)
 
 
@@ -146,7 +146,7 @@ def test_get_body_raises_on_http_error(mocker: MockerFixture) -> None:
     mock_response = Mock()
     mock_response.status_code = 404
     mock_response.headers = {"content-type": "text/html"}
-    mocker.patch("httpx.get", return_value=mock_response)
+    mocker.patch("httpx2.get", return_value=mock_response)
 
     with pytest.raises(SchemaFetchError, match="HTTP 404 error fetching"):
         get_body("https://example.com/missing.json", allow_private_network=True)
@@ -157,7 +157,7 @@ def test_get_body_raises_on_html_response(mocker: MockerFixture) -> None:
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.headers = {"content-type": "text/html; charset=utf-8"}
-    mocker.patch("httpx.get", return_value=mock_response)
+    mocker.patch("httpx2.get", return_value=mock_response)
 
     with pytest.raises(SchemaFetchError, match="Unexpected HTML response"):
         get_body("https://example.com/schema.json", allow_private_network=True)
@@ -169,7 +169,7 @@ def test_get_body_succeeds_with_json_response(mocker: MockerFixture) -> None:
     mock_response.status_code = 200
     mock_response.headers = {"content-type": "application/json"}
     mock_response.text = '{"type": "object"}'
-    mocker.patch("httpx.get", return_value=mock_response)
+    mocker.patch("httpx2.get", return_value=mock_response)
 
     result = get_body("https://example.com/schema.json", allow_private_network=True)
     assert result == '{"type": "object"}'
@@ -181,7 +181,7 @@ def test_get_body_succeeds_without_content_type(mocker: MockerFixture) -> None:
     mock_response.status_code = 200
     mock_response.headers = {}
     mock_response.text = '{"type": "object"}'
-    mocker.patch("httpx.get", return_value=mock_response)
+    mocker.patch("httpx2.get", return_value=mock_response)
 
     result = get_body("https://example.com/schema.json", allow_private_network=True)
     assert result == '{"type": "object"}'
@@ -207,7 +207,7 @@ def test_get_body_succeeds_without_content_type(mocker: MockerFixture) -> None:
 )
 def test_get_body_blocks_unsafe_url_hosts(mocker: MockerFixture, url: str) -> None:
     """Block local and private network targets before fetching."""
-    mock_get = mocker.patch("httpx.get")
+    mock_get = mocker.patch("httpx2.get")
 
     with pytest.raises(SchemaFetchError, match="--allow-private-network"):
         get_body(url)
@@ -259,7 +259,7 @@ def test_is_safe_ip(addr: str, safe: bool) -> None:
 def test_get_body_blocks_unsafe_ipv4_literals_without_dns(mocker: MockerFixture, url: str) -> None:
     """Block legacy IPv4 literals without depending on platform DNS behavior."""
     mocker.patch("socket.getaddrinfo", side_effect=OSError)
-    mock_get = mocker.patch("httpx.get")
+    mock_get = mocker.patch("httpx2.get")
 
     with pytest.raises(SchemaFetchError, match="--allow-private-network"):
         get_body(url)
@@ -276,7 +276,7 @@ def test_get_body_blocks_unsafe_ipv4_literals_without_dns(mocker: MockerFixture,
 def test_get_body_blocks_unresolvable_ipv4_like_hosts(mocker: MockerFixture, url: str) -> None:
     """Fail closed when an IPv4-like host is neither a valid IP literal nor resolvable."""
     mocker.patch("socket.getaddrinfo", side_effect=OSError)
-    mock_get = mocker.patch("httpx.get")
+    mock_get = mocker.patch("httpx2.get")
 
     with pytest.raises(SchemaFetchError, match="could not be resolved to a public IP address"):
         get_body(url)
@@ -298,7 +298,7 @@ def test_get_body_handles_legacy_ipv4_literal_boundaries(mocker: MockerFixture, 
     mock_response.status_code = 200
     mock_response.headers = {"content-type": "application/json"}
     mock_response.text = '{"type": "object"}'
-    mock_get = mocker.patch("httpx.get", return_value=mock_response)
+    mock_get = mocker.patch("httpx2.get", return_value=mock_response)
 
     if url == "http://127.0.1/schema.json":
         with pytest.raises(SchemaFetchError, match="--allow-private-network"):
@@ -316,7 +316,7 @@ def test_get_body_allows_unsafe_url_host_with_explicit_opt_in(mocker: MockerFixt
     mock_response.status_code = 200
     mock_response.headers = {"content-type": "application/json"}
     mock_response.text = '{"type": "object"}'
-    mock_get = mocker.patch("httpx.get", return_value=mock_response)
+    mock_get = mocker.patch("httpx2.get", return_value=mock_response)
 
     result = get_body("http://127.0.0.1/schema.json", allow_private_network=True)
 
@@ -330,7 +330,7 @@ def test_get_body_blocks_hostname_resolving_to_unsafe_ip(mocker: MockerFixture) 
         "socket.getaddrinfo",
         return_value=[(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("127.0.0.1", 0))],
     )
-    mock_get = mocker.patch("httpx.get")
+    mock_get = mocker.patch("httpx2.get")
 
     with pytest.raises(SchemaFetchError, match="--allow-private-network"):
         get_body("https://metadata.example.com/schema.json")
@@ -365,7 +365,7 @@ def test_get_body_reports_resolved_ips_in_dns_order(mocker: MockerFixture) -> No
             (socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0)),
         ],
     )
-    mock_get = mocker.patch("httpx.get")
+    mock_get = mocker.patch("httpx2.get")
 
     with pytest.raises(SchemaFetchError, match=r"Resolved IPs: 93\.184\.216\.34, 127\.0\.0\.1"):
         get_body("https://metadata.example.com/schema.json")
@@ -425,7 +425,7 @@ def test_get_body_pins_idn_hostname_as_canonical_dns_name(
     url: str,
     expected_host: str,
 ) -> None:
-    """Pin IDN hosts using the same ASCII DNS name that httpcore connects to."""
+    """Pin IDN hosts using the same ASCII DNS name that httpcore2 connects to."""
     validated_ip = "93.184.216.34"
     mock_getaddrinfo = mocker.patch(
         "socket.getaddrinfo",
@@ -452,7 +452,7 @@ def test_get_http_response_uses_pinned_backend_with_real_local_http(
     *,
     verify: bool,
 ) -> None:
-    """Exercise the pinned httpcore backend with a real local HTTP connection."""
+    """Exercise the pinned httpcore2 backend with a real local HTTP connection."""
     mocker.stopall()
 
     response = _get_http_response(
@@ -859,7 +859,7 @@ def test_pinned_network_backend_rejects_idna_mismatch_without_dns_fallback() -> 
 
 
 def test_pinned_network_backend_matches_idn_punycode_host() -> None:
-    """Pin IDN hosts even when httpcore connects with the punycode DNS name."""
+    """Pin IDN hosts even when httpcore2 connects with the punycode DNS name."""
     backend = _FakeNetworkBackend()
     pinned_backend = _PinnedNetworkBackend(
         pinned_host="bücher.example",
@@ -956,7 +956,7 @@ def test_get_body_allows_redirect_to_unsafe_url_with_explicit_opt_in(mocker: Moc
     success_response.status_code = 200
     success_response.headers = {"content-type": "application/json"}
     success_response.text = '{"type": "object"}'
-    mock_get = mocker.patch("httpx.get", side_effect=[redirect_response, success_response])
+    mock_get = mocker.patch("httpx2.get", side_effect=[redirect_response, success_response])
 
     result = get_body("https://example.com/schema.json", allow_private_network=True)
 
@@ -1097,7 +1097,7 @@ def test_get_body_drops_sensitive_headers_on_cross_origin_redirect(mocker: Mocke
     success_response.status_code = 200
     success_response.headers = {"content-type": "application/json"}
     success_response.text = '{"type": "object"}'
-    mock_get = mocker.patch("httpx.get", side_effect=[redirect_response, success_response])
+    mock_get = mocker.patch("httpx2.get", side_effect=[redirect_response, success_response])
 
     result = get_body(
         "https://schema.example/root.json",
@@ -1136,7 +1136,7 @@ def test_get_body_does_not_restore_sensitive_headers_after_cross_origin_redirect
     success_response.headers = {"content-type": "application/json"}
     success_response.text = '{"type": "object"}'
     mock_get = mocker.patch(
-        "httpx.get",
+        "httpx2.get",
         side_effect=[same_origin_redirect, cross_origin_redirect, return_redirect, success_response],
     )
     headers = [("Authorization", "Bearer token"), ("X-Trace", "1")]
@@ -1162,7 +1162,7 @@ def test_get_body_keeps_headers_on_same_origin_redirect(mocker: MockerFixture) -
     success_response.headers = {"content-type": "application/json"}
     success_response.text = '{"type": "object"}'
     headers = [("Authorization", "Bearer token")]
-    mock_get = mocker.patch("httpx.get", side_effect=[redirect_response, success_response])
+    mock_get = mocker.patch("httpx2.get", side_effect=[redirect_response, success_response])
 
     result = get_body("https://schema.example/root.json", headers=headers, allow_private_network=True)
 
@@ -1173,7 +1173,7 @@ def test_get_body_keeps_headers_on_same_origin_redirect(mocker: MockerFixture) -
 @pytest.mark.parametrize("url", ["ftp://example.com/schema.json", "https:///schema.json"])
 def test_get_body_rejects_invalid_fetch_urls(mocker: MockerFixture, url: str) -> None:
     """Reject unsupported or incomplete URLs before fetching."""
-    mock_get = mocker.patch("httpx.get")
+    mock_get = mocker.patch("httpx2.get")
 
     with pytest.raises(SchemaFetchError, match="HTTP fetch"):
         get_body(url)
@@ -1185,7 +1185,7 @@ def test_get_body_rejects_redirect_without_location(mocker: MockerFixture) -> No
     mock_response = Mock()
     mock_response.status_code = 302
     mock_response.headers = {}
-    mock_get = mocker.patch("httpx.get", return_value=mock_response)
+    mock_get = mocker.patch("httpx2.get", return_value=mock_response)
 
     with pytest.raises(SchemaFetchError, match="missing a Location header"):
         get_body("https://example.com/schema.json", allow_private_network=True)
@@ -1197,7 +1197,7 @@ def test_get_body_rejects_too_many_redirects(mocker: MockerFixture) -> None:
     mock_response = Mock()
     mock_response.status_code = 302
     mock_response.headers = {"location": "https://example.com/schema.json"}
-    mock_get = mocker.patch("httpx.get", return_value=mock_response)
+    mock_get = mocker.patch("httpx2.get", return_value=mock_response)
 
     with pytest.raises(SchemaFetchError, match="Too many redirects"):
         get_body("https://example.com/schema.json", allow_private_network=True)
@@ -1206,9 +1206,9 @@ def test_get_body_rejects_too_many_redirects(mocker: MockerFixture) -> None:
 
 def test_get_body_wraps_transport_error(mocker: MockerFixture) -> None:
     """Test that transport failures (DNS, timeout, etc.) are wrapped in SchemaFetchError."""
-    import httpx
+    import httpx2
 
-    mocker.patch("httpx.get", side_effect=httpx.ConnectError("DNS resolution failed"))
+    mocker.patch("httpx2.get", side_effect=httpx2.ConnectError("DNS resolution failed"))
 
     with pytest.raises(SchemaFetchError, match="Failed to fetch"):
         get_body("https://nonexistent.example.com/schema.json", allow_private_network=True)

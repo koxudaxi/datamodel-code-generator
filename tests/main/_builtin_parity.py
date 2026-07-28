@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-import httpx
+import httpx2
 import pytest
 
 from datamodel_code_generator import generate
@@ -183,7 +183,7 @@ def _assert_builtin_cli_formatter_parity(
         or not output_path.exists()
         or _uses_check_mode(extra_args)
         or not _uses_default_cli_formatters(extra_args)
-        or hasattr(httpx.get, "mock_calls")
+        or hasattr(httpx2.get, "mock_calls")
     ):
         return
 

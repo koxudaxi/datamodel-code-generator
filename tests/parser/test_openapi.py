@@ -42,7 +42,7 @@ EXPECTED_OPEN_API_PATH = Path(__file__).parents[1] / "data" / "expected" / "pars
 
 @pytest.fixture(autouse=True)
 def block_dns_by_default(mocker: Any) -> None:
-    """Keep tests that mock httpx.get independent from external DNS."""
+    """Keep tests that mock httpx2.get independent from external DNS."""
     mocker.patch("socket.getaddrinfo", side_effect=OSError)
 
 

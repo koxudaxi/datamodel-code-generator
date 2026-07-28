@@ -51,7 +51,7 @@ def _json_schema_object(data: dict[str, Any]) -> JsonSchemaObject:
 
 @pytest.fixture(autouse=True)
 def block_dns_by_default(mocker: MockerFixture) -> None:
-    """Keep tests that mock httpx.get independent from external DNS."""
+    """Keep tests that mock httpx2.get independent from external DNS."""
     mocker.patch("socket.getaddrinfo", side_effect=OSError)
 
 
@@ -898,7 +898,7 @@ def test_json_schema_ref_url_from_local_http_path(tmp_path: Path, mocker: Mocker
     )
 
     parser = JsonSchemaParser("", allow_remote_refs=False, http_local_ref_path=schema_store)
-    mock_get = mocker.patch("httpx.get")
+    mock_get = mocker.patch("httpx2.get")
 
     parser.parse_raw_obj(
         "Model",
@@ -946,7 +946,7 @@ def test_json_schema_ref_url_from_local_http_path_with_extension(tmp_path: Path,
     )
 
     parser = JsonSchemaParser("", allow_remote_refs=False, http_local_ref_path=schema_store)
-    mock_get = mocker.patch("httpx.get")
+    mock_get = mocker.patch("httpx2.get")
 
     assert parser._get_ref_body_from_url("http://example.com/application/package/element/sub-element.json") == {
         "title": "SubElement",

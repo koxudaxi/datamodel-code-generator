@@ -24,8 +24,8 @@ from datamodel_code_generator import SchemaFetchError
 if TYPE_CHECKING:
     from types import TracebackType
 
-    import httpcore
-    import httpx
+    import httpcore2
+    import httpx2
 
 
 class _ResponseHeaders(Protocol):
@@ -76,7 +76,7 @@ class _HTTPXClientFactory(Protocol):
     def __call__(
         self,
         *,
-        transport: httpx.BaseTransport | None = None,
+        transport: httpx2.BaseTransport | None = None,
         timeout: float,
         verify: bool = True,
     ) -> _HTTPXClient:
@@ -121,26 +121,26 @@ class _NetworkBackend(Protocol):
         timeout: float | None = None,
         local_address: str | None = None,
         socket_options: Iterable[tuple[int, int, int | bytes]] | None = None,
-    ) -> httpcore.NetworkStream: ...
+    ) -> httpcore2.NetworkStream: ...
 
     def connect_unix_socket(
         self,
         path: str,
         timeout: float | None = None,
         socket_options: Iterable[tuple[int, int, int | bytes]] | None = None,
-    ) -> httpcore.NetworkStream: ...
+    ) -> httpcore2.NetworkStream: ...
 
     def sleep(self, seconds: float) -> None: ...
 
 
 def _get_httpx() -> _HTTPXModule:
-    """Lazily import httpx, raising a helpful error if not installed."""
+    """Lazily import httpx2, raising a helpful error if not installed."""
     try:
-        import httpx  # noqa: PLC0415
+        import httpx2  # noqa: PLC0415
     except ImportError as exc:  # pragma: no cover
         msg = "Please run `$pip install 'datamodel-code-generator[http]`' to resolve HTTP(S) URL references"
         raise Exception(msg) from exc  # noqa: TRY002
-    return cast("_HTTPXModule", httpx)
+    return cast("_HTTPXModule", httpx2)
 
 
 DEFAULT_HTTP_TIMEOUT = 30.0
@@ -304,7 +304,7 @@ def _deduplicate_ips(ips: Iterable[IPv4Address | IPv6Address | None]) -> tuple[I
 def _normalize_dns_host(host: bytes | str | None) -> str | None:
     """Normalize a URL or transport host to the ASCII DNS name used for pinning.
 
-    httpcore connects with an ASCII DNS name, including IDNA encoding for Unicode hostnames. Using the same
+    httpcore2 connects with an ASCII DNS name, including IDNA encoding for Unicode hostnames. Using the same
     comparison form prevents Unicode and punycode spelling differences from bypassing the pinned host check.
     """
     if host is None:
@@ -323,7 +323,7 @@ def _normalize_dns_host(host: bytes | str | None) -> str | None:
 
 
 class _PinnedNetworkBackend:
-    """httpcore network backend that connects only to previously validated addresses.
+    """httpcore2 network backend that connects only to previously validated addresses.
 
     URL validation happens before the HTTP request, but DNS could otherwise be resolved again during the TCP
     connect. This backend closes that gap by refusing host changes and trying only the validated IP set.
@@ -338,7 +338,7 @@ class _PinnedNetworkBackend:
     ) -> None:
         """Store the validated host, validated IPs, and wrapped backend.
 
-        The host is normalized once so URL validation and httpcore's connection host are compared in the same
+        The host is normalized once so URL validation and httpcore2's connection host are compared in the same
         ASCII DNS form.
         """
         self._pinned_host = _normalize_dns_host(pinned_host)
@@ -352,7 +352,7 @@ class _PinnedNetworkBackend:
         timeout: float | None = None,
         local_address: str | None = None,
         socket_options: Iterable[tuple[int, int, int | bytes]] | None = None,
-    ) -> httpcore.NetworkStream:
+    ) -> httpcore2.NetworkStream:
         """Open a TCP connection through the pinned addresses for the validated host.
 
         A host mismatch raises before any DNS fallback. That keeps redirects, IDNA edge cases, or transport
@@ -384,17 +384,17 @@ class _PinnedNetworkBackend:
         path: str,
         timeout: float | None = None,
         socket_options: Iterable[tuple[int, int, int | bytes]] | None = None,
-    ) -> httpcore.NetworkStream:
+    ) -> httpcore2.NetworkStream:
         """Delegate Unix socket connections to the wrapped backend.
 
-        DNS pinning only applies to TCP hostnames, but httpcore expects a complete network backend interface.
+        DNS pinning only applies to TCP hostnames, but httpcore2 expects a complete network backend interface.
         """
         return self._backend.connect_unix_socket(path, timeout=timeout, socket_options=socket_options)
 
     def sleep(self, seconds: float) -> None:
         """Delegate backend sleeps unchanged.
 
-        This preserves httpcore's backend contract while keeping the pinning logic scoped to TCP connects.
+        This preserves httpcore2's backend contract while keeping the pinning logic scoped to TCP connects.
         """
         self._backend.sleep(seconds)
 
@@ -402,7 +402,7 @@ class _PinnedNetworkBackend:
 def _create_ssl_context(*, verify: bool) -> ssl.SSLContext | None:
     """Create the SSL context used by the pinned transport.
 
-    Returning `None` preserves httpcore's normal certificate verification. A custom context is needed only when
+    Returning `None` preserves httpcore2's normal certificate verification. A custom context is needed only when
     the caller requested the existing `ignore_tls` behavior.
     """
     if verify:
@@ -418,26 +418,26 @@ def _build_pinned_transport(
     pinned_host: str,
     pinned_ips: tuple[IPv4Address | IPv6Address, ...],
     verify: bool,
-) -> httpx.BaseTransport:
-    """Build an httpx transport whose TCP connects use the pinned address set.
+) -> httpx2.BaseTransport:
+    """Build an httpx2 transport whose TCP connects use the pinned address set.
 
-    httpx does not expose a per-request resolved-IP hook, so this transport keeps normal request/response
-    handling while replacing the lower-level httpcore network backend used for connection creation.
+    httpx2 does not expose a per-request resolved-IP hook, so this transport keeps normal request/response
+    handling while replacing the lower-level httpcore2 network backend used for connection creation.
     """
-    import httpcore  # noqa: PLC0415
-    import httpx as httpx_runtime  # noqa: PLC0415
+    import httpcore2  # noqa: PLC0415
+    import httpx2 as httpx2_runtime  # noqa: PLC0415
 
     network_backend = cast(
-        "httpcore.NetworkBackend",
+        "httpcore2.NetworkBackend",
         _PinnedNetworkBackend(
             pinned_host=pinned_host,
             pinned_ips=pinned_ips,
-            backend=cast("_NetworkBackend", httpcore.SyncBackend()),
+            backend=cast("_NetworkBackend", httpcore2.SyncBackend()),
         ),
     )
 
-    class _PinnedHTTPTransport(httpx_runtime.BaseTransport):
-        """Transport bound to a pinned httpcore connection pool."""
+    class _PinnedHTTPTransport(httpx2_runtime.BaseTransport):
+        """Transport bound to a pinned httpcore2 connection pool."""
 
         def __init__(self) -> None:
             """Create the pool with the pinned backend.
@@ -445,20 +445,20 @@ def _build_pinned_transport(
             Parser sessions cache this transport only for the matching validated host,
             address set, TLS policy, and timeout.
             """
-            self._pool = httpcore.ConnectionPool(
+            self._pool = httpcore2.ConnectionPool(
                 ssl_context=_create_ssl_context(verify=verify),
                 network_backend=network_backend,
             )
 
-        def handle_request(self, request: httpx.Request) -> httpx.Response:
-            """Send an httpx request through httpcore and return an httpx response.
+        def handle_request(self, request: httpx2.Request) -> httpx2.Response:
+            """Send an httpx2 request through httpcore2 and return an httpx2 response.
 
-            The translation is needed because the pinning hook lives in httpcore. The response body is read
+            The translation is needed because the pinning hook lives in httpcore2. The response body is read
             immediately so callers keep the same simple, text-based response contract.
             """
-            req = httpcore.Request(
+            req = httpcore2.Request(
                 method=request.method,
-                url=httpcore.URL(
+                url=httpcore2.URL(
                     scheme=request.url.raw_scheme,
                     host=request.url.raw_host,
                     port=request.url.port,
@@ -474,7 +474,7 @@ def _build_pinned_transport(
                 content = b"".join(stream)
             finally:
                 stream.close()
-            return httpx_runtime.Response(
+            return httpx2_runtime.Response(
                 status_code=resp.status,
                 headers=resp.headers,
                 content=content,
@@ -532,7 +532,7 @@ class _HTTPFetchSession:
 
     def get_response(  # noqa: PLR0913
         self,
-        httpx_module: _HTTPXModule,
+        httpx2_module: _HTTPXModule,
         url: str,
         *,
         headers: Sequence[tuple[str, str]] | None,
@@ -552,9 +552,9 @@ class _HTTPFetchSession:
                     pinned_ips=pinned_ips,
                     verify=verify,
                 )
-                client = httpx_module.Client(transport=transport, timeout=timeout)
+                client = httpx2_module.Client(transport=transport, timeout=timeout)
             else:
-                client = httpx_module.Client(timeout=timeout, verify=verify)
+                client = httpx2_module.Client(timeout=timeout, verify=verify)
             self._clients[key] = client
             if len(self._clients) > _HTTP_FETCH_CLIENT_CACHE_MAX_SIZE:
                 _, evicted_client = self._clients.popitem(last=False)
@@ -611,7 +611,7 @@ class _HTTPFetchSession:
 
 
 def _get_http_response(  # noqa: PLR0913
-    httpx_module: _HTTPXModule,
+    httpx2_module: _HTTPXModule,
     url: str,
     *,
     headers: Sequence[tuple[str, str]] | None,
@@ -624,11 +624,11 @@ def _get_http_response(  # noqa: PLR0913
 ) -> _HTTPResponse:
     """Fetch a URL, using DNS pinning when validation produced public addresses.
 
-    The unpinned path preserves existing httpx behavior for trusted private-network opt-in and tests. The pinned
+    The unpinned path preserves existing httpx2 behavior for trusted private-network opt-in and tests. The pinned
     path ensures the host resolved during validation is the only host used by the actual TCP connect.
     """
     if pinned_host is None or not pinned_ips:
-        return httpx_module.get(
+        return httpx2_module.get(
             url,
             headers=headers,
             verify=verify,
@@ -638,7 +638,7 @@ def _get_http_response(  # noqa: PLR0913
         )
 
     transport = _build_pinned_transport(pinned_host=pinned_host, pinned_ips=pinned_ips, verify=verify)
-    with httpx_module.Client(transport=transport, timeout=timeout) as client:
+    with httpx2_module.Client(transport=transport, timeout=timeout) as client:
         return client.get(
             url,
             headers=headers,
@@ -732,7 +732,7 @@ def _validate_url_for_fetch(
     raise SchemaFetchError(msg)
 
 
-def _get_redirect_url(httpx_module: _HTTPXModule, current_url: str, response: _HTTPResponse) -> str | None:
+def _get_redirect_url(httpx2_module: _HTTPXModule, current_url: str, response: _HTTPResponse) -> str | None:
     """Return the absolute redirect target for a redirect response.
 
     Redirects are handled manually so each target can be revalidated and re-pinned before the next HTTP request
@@ -743,7 +743,7 @@ def _get_redirect_url(httpx_module: _HTTPXModule, current_url: str, response: _H
     if not (location := response.headers.get("location")):
         msg = f"Redirect response from {current_url} is missing a Location header"
         raise SchemaFetchError(msg)
-    return str(httpx_module.URL(current_url).join(location))
+    return str(httpx2_module.URL(current_url).join(location))
 
 
 def _get_url_origin(url: str) -> tuple[str, str, int | None] | None:
@@ -807,7 +807,7 @@ def get_body(  # noqa: PLR0913
     pinned into the transport so a host cannot resolve to a safe address during validation and a private address
     during the actual connection.
 
-    Redirects are followed manually rather than by httpx so each hop can be revalidated and sensitive headers
+    Redirects are followed manually rather than by httpx2 so each hop can be revalidated and sensitive headers
     can be narrowed before the next request. Once a redirect crosses origins, scoped credentials are removed
     from `current_headers` and are not restored on later hops.
     """
@@ -832,7 +832,7 @@ def _get_body(  # noqa: PLR0913
     session: _HTTPFetchSession | None = None,
 ) -> str:
     """Fetch one schema body, optionally reusing parser-scoped network state."""
-    httpx_module = _get_httpx()
+    httpx2_module = _get_httpx()
     resolve_host = _get_ips_from_host
     get_response = _get_http_response
     if session is not None:
@@ -850,7 +850,7 @@ def _get_body(  # noqa: PLR0913
         pinned_host, pinned_ips = validated_host if validated_host is not None else (None, ())
         try:
             response = get_response(
-                httpx_module,
+                httpx2_module,
                 current_url,
                 headers=current_headers,
                 verify=not ignore_tls,
@@ -863,7 +863,7 @@ def _get_body(  # noqa: PLR0913
         except Exception as exc:
             msg = f"Failed to fetch {current_url}: {exc}"
             raise SchemaFetchError(msg) from exc
-        if (redirect_url := _get_redirect_url(httpx_module, current_url, response)) is None:
+        if (redirect_url := _get_redirect_url(httpx2_module, current_url, response)) is None:
             break
         current_headers = _get_redirect_headers(current_headers, current_url, redirect_url)
         current_url = redirect_url
@@ -887,8 +887,8 @@ def _get_body(  # noqa: PLR0913
 def join_url(url: str, ref: str = ".") -> str:  # noqa: PLR0912
     """Join a base URL with a relative reference.
 
-    File URLs need local handling because httpx URL joining is HTTP-oriented. HTTP(S) URLs are delegated to
-    httpx so normal web URL semantics stay consistent with the fetch path.
+    File URLs need local handling because httpx2 URL joining is HTTP-oriented. HTTP(S) URLs are delegated to
+    httpx2 so normal web URL semantics stay consistent with the fetch path.
     """
     if url.startswith("file://"):
         from urllib.parse import urlparse  # noqa: PLC0415
@@ -934,5 +934,5 @@ def join_url(url: str, ref: str = ".") -> str:  # noqa: PLR0912
         if frag:
             joined += f"#{frag[0]}"
         return joined
-    httpx_module = _get_httpx()
-    return str(httpx_module.URL(url).join(ref))
+    httpx2_module = _get_httpx()
+    return str(httpx2_module.URL(url).join(ref))

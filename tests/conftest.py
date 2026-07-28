@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, NoReturn, Protocol, TypedDict, cast
 from urllib.parse import urlparse
 
-import httpx
+import httpx2
 import pytest
 import time_machine
 from inline_snapshot import external_file, get_snapshot_value, register_format_alias
@@ -97,7 +97,7 @@ class CliDocKwargs(TypedDict, total=False):
 
 @dataclass(frozen=True)
 class MockHttpxResponse:
-    """URL-bound httpx.get mock response for remote schema e2e tests."""
+    """URL-bound httpx2.get mock response for remote schema e2e tests."""
 
     url: str
     content: str | Path
@@ -110,7 +110,7 @@ HttpxParams = Mapping[str, str] | Sequence[tuple[str, str]]
 
 
 class HttpxGetMock(Protocol):
-    """Typed mock interface for the httpx.get calls used by e2e URL tests."""
+    """Typed mock interface for the httpx2.get calls used by e2e URL tests."""
 
     call_count: int
     call_args: Any
@@ -126,7 +126,7 @@ class HttpxGetMock(Protocol):
         params: HttpxParams | None = None,
         timeout: float = 5.0,
     ) -> Any:
-        """Record an httpx.get-style call."""
+        """Record an httpx2.get-style call."""
         raise NotImplementedError
 
     def assert_called(self) -> None:
@@ -147,16 +147,16 @@ class HttpxGetMock(Protocol):
 
 
 class HttpxGetMockFactory(Protocol):
-    """Factory fixture type for URL-bound httpx.get mocks."""
+    """Factory fixture type for URL-bound httpx2.get mocks."""
 
     def __call__(self, *responses: MockHttpxResponse) -> HttpxGetMock:
-        """Patch httpx.get with URL-bound responses."""
+        """Patch httpx2.get with URL-bound responses."""
         raise NotImplementedError
 
 
 def create_httpx_get_mock(mocker: Any) -> HttpxGetMock:
-    """Create a typed recording mock for httpx.get-style assertions."""
-    return cast("HttpxGetMock", mocker.create_autospec(httpx.get))
+    """Create a typed recording mock for httpx2.get-style assertions."""
+    return cast("HttpxGetMock", mocker.create_autospec(httpx2.get))
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -1057,7 +1057,7 @@ def assert_httpx_get_kwargs(
     timeout: float | None = None,
     params_contains: Mapping[str, str] | None = None,
 ) -> None:
-    """Assert common httpx.get call options used by URL e2e tests."""
+    """Assert common httpx2.get call options used by URL e2e tests."""
     __tracebackhide__ = True
     if called is False:
         mock_get.assert_not_called()
@@ -1075,7 +1075,7 @@ def assert_httpx_get_kwargs(
 
 @pytest.fixture
 def mock_httpx_get(mocker: Any) -> HttpxGetMockFactory:
-    """Patch httpx.get with URL-bound mock response objects for URL e2e tests."""
+    """Patch httpx2.get with URL-bound mock response objects for URL e2e tests."""
 
     def _mock_httpx_get(
         *responses: MockHttpxResponse,
@@ -1095,7 +1095,7 @@ def mock_httpx_get(mocker: Any) -> HttpxGetMockFactory:
         def _response_for_url(url: str, *_args: Any, **_kwargs: Any) -> Any:
             if url not in queued_responses or not queued_responses[url]:  # pragma: no cover
                 pytest.fail(
-                    f"Unexpected httpx.get URL: {url!r}. Registered URLs: {sorted(queued_responses)}",
+                    f"Unexpected httpx2.get URL: {url!r}. Registered URLs: {sorted(queued_responses)}",
                     pytrace=False,
                 )
             response_config = queued_responses[url].pop(0)
@@ -1152,7 +1152,7 @@ def mock_httpx_get(mocker: Any) -> HttpxGetMockFactory:
             return _response_for_validated_url(httpx_module, url, **kwargs)
 
         mocker.patch("socket.getaddrinfo", autospec=True, side_effect=_getaddrinfo_for_public_host)
-        httpx_get_mock = cast("HttpxGetMock", mocker.patch("httpx.get", autospec=True, side_effect=_response_for_url))
+        httpx_get_mock = cast("HttpxGetMock", mocker.patch("httpx2.get", autospec=True, side_effect=_response_for_url))
         mocker.patch(
             "datamodel_code_generator.http._get_http_response",
             autospec=True,
