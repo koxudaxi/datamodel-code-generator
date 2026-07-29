@@ -47,7 +47,7 @@ from datamodel_code_generator.parser.jsonschema import (
     split_json_pointer,
 )
 from datamodel_code_generator.reference import SPECIAL_PATH_MARKER, Reference
-from datamodel_code_generator.types import DataType
+from datamodel_code_generator.types import ANY, DataType
 from tests.conftest import assert_output
 
 if TYPE_CHECKING:
@@ -2726,6 +2726,31 @@ def test_inherited_nested_schema_merge_matrix() -> None:
     """Boolean, positional, mapping, and scalar nested schemas use intersection semantics."""
     parser = JsonSchemaParser("")
 
+    assert parser._is_list_with_any_item_type(
+        DataType(
+            is_list=True,
+            data_types=[
+                DataType(
+                    data_types=[
+                        DataType(
+                            is_list=True,
+                            data_types=[DataType(type=ANY)],
+                        )
+                    ]
+                )
+            ],
+        )
+    )
+    assert not parser._is_list_with_any_item_type(
+        DataType(
+            is_list=True,
+            data_types=[
+                DataType(
+                    data_types=[DataType(type="str")],
+                )
+            ],
+        )
+    )
     assert parser._merge_inherited_nested_schemas(False, {"type": "string"}) is False
     assert parser._merge_inherited_nested_schemas({"type": "string"}, False) is False
     assert parser._merge_inherited_nested_schemas(True, {"type": "string"}) == {"type": "string"}
@@ -2748,6 +2773,14 @@ def test_inherited_nested_schema_merge_matrix() -> None:
         {"type": "string", "maxLength": 3},
         {"type": "integer", "minimum": 0},
     ]
+    assert parser._merge_property_schemas(
+        {"nested": {"type": "string"}},
+        {"nested": {"$ref": "#/$defs/Nested"}},
+    ) == {"nested": {"$ref": "#/$defs/Nested"}}
+    assert parser._merge_property_schemas(
+        {"nested": {"minimum": 1}},
+        {"nested": {"maximum": 2}},
+    ) == {"nested": {"minimum": 1, "maximum": 2}}
 
 
 def test_inherited_distributed_constraint_matrix() -> None:

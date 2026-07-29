@@ -1136,10 +1136,12 @@ def _copy_data_type(data_type: DataType, *, register_references: bool = True) ->
     if (kwargs := data_type.kwargs) is not None:
         copied_data_type.kwargs = deepcopy(kwargs)
 
-    match data_type:
-        case DataType(data_types=[], dict_key=None):
+    data_types = data_type.data_types
+    dict_key = data_type.dict_key
+    match data_types, dict_key:
+        case [], None:
             copied_data_type.data_types = []
-        case DataType(data_types=data_types, dict_key=dict_key):
+        case _:
             copied_data_type.data_types = _copy_data_types(data_types, register_references=register_references)
             for nested_data_type in copied_data_type.data_types:
                 nested_data_type.parent = copied_data_type

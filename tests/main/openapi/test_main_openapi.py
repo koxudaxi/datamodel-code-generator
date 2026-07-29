@@ -5166,6 +5166,8 @@ def test_main_openapi_allof_required_inherited_model_reference_transforms(
         "pickupWindow": {"startAt": 1, "endAt": 2},
         "fallbackField": True,
     }
+    expected_error_type = ""
+    model_name = "ScheduledPickup"
     match option, read_write_mode:
         case "--reuse-model", None:
             payload["events"] = [{"latitude": 91}]

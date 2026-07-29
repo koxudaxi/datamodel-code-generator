@@ -217,6 +217,7 @@ def _field_source_name(field: DataModelFieldBase) -> str | None:
 
 def _get_json_value_type(value: object) -> str:
     """Return a JSON Schema primitive type name for a concrete value."""
+    value_type = ""
     match value:
         case bool():
             value_type = "boolean"
@@ -233,7 +234,7 @@ def _get_json_value_type(value: object) -> str:
         case None:
             value_type = "null"
         case _:
-            value_type = ""
+            pass
     return value_type
 
 
@@ -660,7 +661,8 @@ class JsonSchemaObject(BaseModel):
     }
 
     @model_validator(mode="before")
-    def validate_exclusive_maximum_and_exclusive_minimum(cls, values: Any) -> Any:  # noqa: N805
+    @classmethod
+    def validate_exclusive_maximum_and_exclusive_minimum(cls, values: Any) -> Any:
         """Validate and convert boolean exclusive maximum and minimum to numeric values."""
         if not isinstance(values, dict):
             return values
@@ -700,7 +702,8 @@ class JsonSchemaObject(BaseModel):
         return {**values, cls.__extra_key__: extras}
 
     @field_validator("ref")
-    def validate_ref(cls, value: Any) -> Any:  # noqa: N805
+    @classmethod
+    def validate_ref(cls, value: Any) -> Any:
         """Validate and normalize $ref values."""
         if isinstance(value, str) and "#" in value:
             if value.endswith("#/"):
@@ -711,7 +714,8 @@ class JsonSchemaObject(BaseModel):
         return value
 
     @field_validator("required", mode="before")
-    def validate_required(cls, value: Any) -> Any:  # noqa: N805
+    @classmethod
+    def validate_required(cls, value: Any) -> Any:
         """Validate and normalize required field values."""
         if value is None:
             return []
@@ -739,7 +743,8 @@ class JsonSchemaObject(BaseModel):
         return value
 
     @field_validator("type", mode="before")
-    def validate_null_type(cls, value: Any) -> Any:  # noqa: N805
+    @classmethod
+    def validate_null_type(cls, value: Any) -> Any:
         """Validate and convert unquoted null type to string "null"."""
         # TODO[openapi]: This should be supported only for OpenAPI 3.1+
         # See: https://github.com/koxudaxi/datamodel-code-generator/issues/2477#issuecomment-3192480591
@@ -836,13 +841,15 @@ class JsonSchemaObject(BaseModel):
         return (self.ref or "").rsplit("/", 1)[-1]
 
     @field_validator("items", mode="before")
-    def validate_items(cls, values: Any) -> Any:  # noqa: N805
+    @classmethod
+    def validate_items(cls, values: Any) -> Any:
         """Validate items field, converting empty dicts to None."""
         # this condition expects empty dict
         return None if values == {} else values
 
     @field_validator("custom_base_path", mode="before")
-    def validate_custom_base_path(cls, value: Any) -> Any:  # noqa: N805
+    @classmethod
+    def validate_custom_base_path(cls, value: Any) -> Any:
         """Validate schema-controlled custom base class import paths."""
         match value:
             case None:
@@ -1386,7 +1393,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if not enum_values:  # pragma: no cover
             return None
 
-        final_type: str | None
+        final_type = inferred_type
         match parent_type:
             case str():
                 final_type = parent_type
@@ -1396,7 +1403,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 if "null" in parent_type:
                     nullable = True
             case _:
-                final_type = inferred_type
+                pass
 
         return (enum_values, varnames, descriptions, final_type, nullable)
 
@@ -3609,17 +3616,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _merge_inherited_nested_schemas(self, parent: object, child: object) -> object:
         """Intersect two schema-valued container keywords."""
+        result = child
         match parent, child:
             case (False, _) | (_, False):
-                return False
+                result = False
             case True, _:
-                return child
+                pass
             case _, True:
-                return parent
+                result = parent
             case dict() as parent_schema, dict() as child_schema:
-                return self._merge_property_schemas(parent_schema, child_schema)
+                result = self._merge_property_schemas(parent_schema, child_schema)
             case _:
-                return child
+                pass
+        return result
 
     def _get_inherited_positional_tail(  # noqa: PLR6301
         self,
@@ -3713,13 +3722,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             refs_resolved=refs_resolved,
         )
         nullable_types = frozenset(("null",)) if schema.nullable is True else frozenset()
+        direct_types: frozenset[str] = frozenset()
         match schema.type:
             case str() as schema_type:
                 direct_types = frozenset((schema_type,))
             case list() as schema_types:
                 direct_types = frozenset(schema_types)
             case _:
-                direct_types = frozenset()
+                pass
         if direct_types:
             return direct_types | nullable_types
 
@@ -3922,11 +3932,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         raw_items: list[Any],
     ) -> list[dict[str, Any]] | None:
         """Return normalized constraint-only branches when composition flattening is equivalent."""
+        items = raw_items
         match keyword:
             case "allOf":
                 if any(item is False for item in raw_items):
                     return None
-                items = raw_items
             case "anyOf" | "oneOf":
                 items = [item for item in raw_items if item is not False]
             case _:  # pragma: no cover
@@ -4082,7 +4092,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return False
         return True
 
-    def _is_partial_inherited_nested_value(
+    def _is_partial_inherited_nested_value(  # noqa: PLR0914
         self,
         child: object,
         parent: object,
@@ -4096,6 +4106,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return True
         if isinstance(child, dict) and self._is_unconstrained_inherited_schema(child):
             return True
+        result = False
         match child, parent:
             case dict() as child_schema, JsonSchemaObject() as parent_schema:
                 child_obj = self.SCHEMA_OBJECT_TYPE.model_validate(child_schema)
@@ -4117,13 +4128,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                             refs_resolved=parent_refs_resolved,
                         )
                     )
-                return self._is_partial_inherited_property(
+                result = self._is_partial_inherited_property(
                     child_obj,
                     effective_parent,
                     (effective_ref, next_active, effective_refs_resolved),
                 )
             case list() as child_schemas, list() as parent_schemas:
-                return all(
+                result = all(
                     self._is_partial_inherited_nested_value(
                         child_schema,
                         parent_schemas[index] if index < len(parent_schemas) else parent_tail,
@@ -4132,7 +4143,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     for index, child_schema in enumerate(child_schemas)
                 )
             case dict() as child_schema_map, dict() as parent_schema_map:
-                return all(
+                result = all(
                     key in parent_schema_map
                     and self._is_partial_inherited_nested_value(
                         child_schema,
@@ -4142,7 +4153,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     for key, child_schema in child_schema_map.items()
                 )
             case _:
-                return False
+                pass
+        return result
 
     def _has_inherited_constraints(self, schema: JsonSchemaObject) -> bool:
         """Return whether a partial schema contains constraints at any container depth."""
@@ -4206,14 +4218,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     ) -> tuple[JsonSchemaObject, str, frozenset[str], bool]:
         """Resolve pure property references before comparing nested override shapes."""
         source_schema = schema
-        cache_identity: str | int
+        cache_by_ref = False
+        cache_identity: str | int = id(schema)
         match schema.ref:
             case str() as schema_ref if schema_ref:
                 cache_by_ref = True
                 cache_identity = schema_ref
             case _:
-                cache_by_ref = False
-                cache_identity = id(schema)
+                pass
         cache_key: tuple[str | int, str, frozenset[str], bool] | None = None
         if not cache_by_ref or not schema.has_ref_with_schema_keywords:
             cache_key = (
@@ -4270,17 +4282,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         active: frozenset[str],
     ) -> object:
         """Fill a child schema value from its inherited type without parent constraints."""
+        result = child
         match parent, child:
             case False, _:
-                return False
+                result = False
             case _, False:
-                return False
+                result = False
             case _, True:
-                return parent
+                result = parent
             case True, _:
-                return True
+                result = True
             case dict() as parent_schema, dict() as child_schema:
-                return self._merge_inherited_type_shape_dict(
+                result = self._merge_inherited_type_shape_dict(
                     parent_schema,
                     child_schema,
                     parent_ref,
@@ -4292,7 +4305,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     parent_refs_resolved=True,
                 )
             case _:
-                return child
+                pass
+        return result
 
     def _merge_inherited_type_shape_keyword(
         self,
@@ -4418,7 +4432,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             filtered_types = [schema_type for schema_type in parent_type_shape if schema_type != "null"]
             if filtered_types:
                 parent_shape["type"] = filtered_types[0] if len(filtered_types) == 1 else filtered_types
-                parent_type_shape = parent_shape["type"]
         if (union_key := next((key for key in ("anyOf", "oneOf") if parent_shape.get(key)), None)) is not None:
             merged_branches = [
                 merged_branch
@@ -7651,8 +7664,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
 
         is_nullable = obj.nullable or obj.type_has_null
-        required = not (self.force_optional_for_required_fields or is_nullable)
-
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
@@ -7666,7 +7677,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 self.data_model_field_type(
                     data_type=self.data_type(data_types=data_types),
                     default=obj.default,
-                    required=required,
+                    required=not (self.force_optional_for_required_fields or is_nullable),
                     constraints=constraints,
                     nullable=obj.type_has_null if (self.strict_nullable or self.use_missing_sentinel) else None,
                     strip_default_none=self.strip_default_none,
@@ -8479,10 +8490,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             combined_items = obj.oneOf or obj.anyOf
             const_enum_data = self._extract_const_enum_from_combined(combined_items, obj.type)
             if const_enum_data is not None:
-                enum_values, varnames, descriptions, enum_type, nullable = const_enum_data
-                synthetic_obj = self._create_synthetic_enum_obj(
-                    obj, enum_values, varnames, descriptions, enum_type, nullable
-                )
+                synthetic_obj = self._create_synthetic_enum_obj(obj, *const_enum_data)
                 if not self.should_parse_enum_as_literal(synthetic_obj, property_name=name, property_obj=obj):
                     self.parse_enum(name, synthetic_obj, path)
                 else:
