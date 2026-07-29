@@ -109,6 +109,7 @@ class _HTTPXModule(Protocol):
 
 
 _HTTPBackendName = Literal["httpx", "httpx2"]
+_HTTPCoreBackendName = Literal["httpcore", "httpcore2"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -483,18 +484,12 @@ def _create_pinned_transport_type(httpx_module: _HTTPXModule, httpcore_module: A
     return _PinnedHTTPTransport
 
 
-def _load_http_stack(backend: _HTTPBackendName) -> _HTTPStack:
-    """Import one matched HTTP client/core pair without probing package metadata."""
+def _load_matched_http_stack(
+    backend: _HTTPBackendName,
+    core_backend: _HTTPCoreBackendName,
+) -> _HTTPStack:
+    """Import an already matched HTTP client/core pair."""
     from importlib import import_module  # noqa: PLC0415
-
-    match backend:
-        case "httpx":
-            core_backend = "httpcore"
-        case "httpx2":
-            core_backend = "httpcore2"
-        case _:
-            msg = f"Unexpected HTTP backend: {backend!r}"
-            raise AssertionError(msg)
 
     httpx_module = cast("_HTTPXModule", import_module(backend))
     httpcore_module = import_module(core_backend)
@@ -503,6 +498,18 @@ def _load_http_stack(backend: _HTTPBackendName) -> _HTTPStack:
         httpx=httpx_module,
         transport_type=_create_pinned_transport_type(httpx_module, httpcore_module),
     )
+
+
+def _load_http_stack(backend: _HTTPBackendName) -> _HTTPStack:
+    """Select one matched HTTP client/core pair without probing package metadata."""
+    match backend:
+        case "httpx":
+            return _load_matched_http_stack(backend, "httpcore")
+        case "httpx2":
+            return _load_matched_http_stack(backend, "httpcore2")
+        case _:
+            msg = f"Unexpected HTTP backend: {backend!r}"
+            raise AssertionError(msg)
 
 
 def _get_http_stack() -> _HTTPStack:
