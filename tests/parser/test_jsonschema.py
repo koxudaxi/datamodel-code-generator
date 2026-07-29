@@ -3950,10 +3950,11 @@ def test_request_response_schema_graph_helper_edges(tmp_path: Path) -> None:
     inline_properties = JsonSchemaObject.model_validate({
         "properties": {"direct": {"type": "string"}},
         "allOf": [
+            True,
             {
                 "type": "object",
                 "properties": {"nested": {"type": "integer"}},
-            }
+            },
         ],
     })
     assert parser._get_inline_property_names(inline_properties) == frozenset({"direct", "nested"})

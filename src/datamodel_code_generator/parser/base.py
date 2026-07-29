@@ -391,7 +391,8 @@ def _apply_dataclass_field_adjustments(
         match adjustment:
             case "assignment":
                 field._force_field_assignment()  # noqa: SLF001
-            case "keyword_only":
+            case _:
+                assert adjustment == "keyword_only"
                 if model.REQUIRES_MODEL_LEVEL_KW_ONLY:
                     enable_model_keyword_only = True
                 else:
