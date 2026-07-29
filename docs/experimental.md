@@ -10,6 +10,7 @@ This page lists features that are available but still experimental.
 | `cli-option.schema-validator-type` | cli-option | `--schema-validator-type` | 0.66.1 | - |
 | `cli-option.use-missing-sentinel` | cli-option | `--use-missing-sentinel` | 0.66.1 | - |
 | `cli-option.use-type-alias` | cli-option | `--use-type-alias` | 0.36.0 | - |
+| `extra.httpx2` | extra | `datamodel-code-generator[httpx2]` | 0.71.1 | - |
 | `formatter.builtin` | formatter | `--formatters builtin` | 0.59.0 | - |
 | `input-format.asyncapi` | input-format | `--input-file-type asyncapi` | 0.59.0 | - |
 | `input-format.avro` | input-format | `--input-file-type avro` | 0.59.0 | - |
@@ -58,6 +59,16 @@ The option requires Pydantic v2 BaseModel output and a target Pydantic version t
 Type alias output is experimental and may change as Python typing support evolves.
 
 The option replaces root model classes with type aliases where possible. Pydantic v2 output may use TypeAliasType or Python 3.12 type statements depending on the target Python version.
+
+### `extra.httpx2`
+
+- **Kind:** extra
+- **Target:** `datamodel-code-generator[httpx2]`
+- **Since:** 0.71.1
+
+The HTTPX2-backed HTTP client is experimental and may change as compatibility is validated.
+
+The http extra continues to use HTTPX and is not deprecated. When both extras are installed, the experimental HTTPX2 backend takes precedence.
 
 ### `formatter.builtin`
 

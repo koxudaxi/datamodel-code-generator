@@ -172,6 +172,28 @@ def _run_main_import_probe() -> dict[str, Any]:
     )
 
 
+def _run_file_url_http_import_probe() -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            """
+            import json
+            import sys
+
+            from datamodel_code_generator.http import join_url
+
+            joined = join_url("file:///schemas/root.json", "child.json")
+            print(json.dumps({
+                "imported_httpcore": "httpcore" in sys.modules,
+                "imported_httpcore2": "httpcore2" in sys.modules,
+                "imported_httpx": "httpx" in sys.modules,
+                "imported_httpx2": "httpx2" in sys.modules,
+                "joined": joined,
+            }, indent=2, sort_keys=True))
+            """
+        )
+    )
+
+
 def _run_no_formatter_generation_probe() -> dict[str, Any]:
     return _run_probe(
         textwrap.dedent(
@@ -405,6 +427,16 @@ def test_empty_formatters_skip_formatter_runtime() -> None:
     assert_output(
         f"{json.dumps(result, indent=2, sort_keys=True)}\n",
         ROOT / "tests/data/expected/main/cli_fast_paths/empty_formatters.txt",
+    )
+
+
+def test_file_url_join_skips_http_backend_imports() -> None:
+    """File URL handling keeps every optional HTTP package out of a fresh process."""
+    result = _run_file_url_http_import_probe()
+
+    assert_output(
+        f"{json.dumps(result, indent=2, sort_keys=True)}\n",
+        ROOT / "tests/data/expected/main/cli_fast_paths/file_url_http_imports.txt",
     )
 
 

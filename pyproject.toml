@@ -56,6 +56,9 @@ optional-dependencies.graphql = [
   "graphql-core>=3.2.3",
 ]
 optional-dependencies.http = [
+  "httpx>=0.24.1",
+]
+optional-dependencies.httpx2 = [
   "httpx2>=2,<3",
 ]
 optional-dependencies.protobuf = [

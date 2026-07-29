@@ -245,6 +245,59 @@ jobs:
         path: ".tox/.coverage.*"
         retention-days: 3
 
+  test-http-backends:
+    name: ${{ matrix.name }} on Ubuntu
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tox_env: httpx-e2e
+            name: HTTPX e2e
+          - tox_env: httpx2-e2e
+            name: HTTPX2 e2e
+          - tox_env: httpx-both-e2e
+            name: HTTPX + HTTPX2 e2e
+    runs-on: ubuntu-24.04
+    env:
+      OS: ubuntu-24.04
+      TOX_ENV: ${{ matrix.tox_env }}
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        fetch-depth: 1
+        persist-credentials: false
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      with:
+        enable-cache: true
+        cache-suffix: "${{ matrix.tox_env }}"
+    - name: Install tox
+      run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
+    - name: Setup HTTP backend e2e environment
+      run: tox run -vv --notest --skip-missing-interpreters false -e "$TOX_ENV"
+      env:
+        UV_PYTHON_PREFERENCE: "only-managed"
+    - name: Run HTTP backend e2e suite
+      run: tox run --skip-uv-sync --skip-pkg-install -e "$TOX_ENV"
+      env:
+        UV_PYTHON_PREFERENCE: "only-managed"
+    - name: Rename coverage report file
+      run: |
+        import os
+
+        os.rename(
+            f".tox/.coverage.{os.environ['TOX_ENV']}",
+            f".tox/.coverage.{os.environ['TOX_ENV']}-{os.environ['OS']}",
+        )
+      shell: python
+    - name: Upload coverage data
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        include-hidden-files: true
+        name: .coverage.${{ matrix.tox_env }}-ubuntu-24.04
+        path: ".tox/.coverage.*"
+        retention-days: 3
+
   test-shard:
     name: >-
       ${{ matrix.name }} on
@@ -509,6 +562,7 @@ jobs:
     needs:
       - test-coverage
       - test-formatter-coverage
+      - test-http-backends
       - test-shard
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -831,6 +885,7 @@ jobs:
       - test
       - test-coverage
       - test-formatter-coverage
+      - test-http-backends
       - test-shard
       - coverage
       - check
@@ -841,6 +896,7 @@ jobs:
           test_result='${{ needs.test.result }}'
           test_coverage_result='${{ needs.test-coverage.result }}'
           test_formatter_coverage_result='${{ needs.test-formatter-coverage.result }}'
+          test_http_backends_result='${{ needs.test-http-backends.result }}'
           test_shard_result='${{ needs.test-shard.result }}'
           coverage_result='${{ needs.coverage.result }}'
           check_result='${{ needs.check.result }}'
@@ -849,6 +905,7 @@ jobs:
           echo "test: ${test_result}"
           echo "test coverage: ${test_coverage_result}"
           echo "test formatter coverage: ${test_formatter_coverage_result}"
+          echo "test HTTP backends: ${test_http_backends_result}"
           echo "test shard: ${test_shard_result}"
           echo "coverage: ${coverage_result}"
           echo "check: ${check_result}"
@@ -857,6 +914,7 @@ jobs:
           [ "${test_result}" = "success" ] || exit 1
           [ "${test_coverage_result}" = "success" ] || exit 1
           [ "${test_formatter_coverage_result}" = "success" ] || exit 1
+          [ "${test_http_backends_result}" = "success" ] || exit 1
           [ "${test_shard_result}" = "success" ] || exit 1
           [ "${coverage_result}" = "success" ] || exit 1
           [ "${check_result}" = "success" ] || exit 1

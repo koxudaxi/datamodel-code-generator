@@ -16,7 +16,7 @@ from packaging import version
 
 from datamodel_code_generator import DataModelType, OpenAPIScope, OpenAPIVersion, PythonVersionMin
 from datamodel_code_generator.format import Formatter
-from datamodel_code_generator.http import _get_httpx
+from datamodel_code_generator.http import _get_http_stack
 from datamodel_code_generator.model import DataModelFieldBase, get_data_model_types
 from datamodel_code_generator.model.pydantic_v2 import DataModelField
 from datamodel_code_generator.parser.base import Result, dump_templates
@@ -42,7 +42,7 @@ EXPECTED_OPEN_API_PATH = Path(__file__).parents[1] / "data" / "expected" / "pars
 
 @pytest.fixture(autouse=True)
 def block_dns_by_default(mocker: Any) -> None:
-    """Keep tests that mock httpx2.get independent from external DNS."""
+    """Keep tests that mock HTTP requests independent from external DNS."""
     mocker.patch("socket.getaddrinfo", side_effect=OSError)
 
 
@@ -756,7 +756,7 @@ schemas:
 
     assert_output(parser.parse(), expected_file)
     mock_fetch.assert_called_once_with(
-        _get_httpx(),
+        _get_http_stack(),
         "https://teamdigitale.github.io/openapi/0.0.6/definitions.yaml",
         headers=None,
         verify=True,

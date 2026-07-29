@@ -36,6 +36,15 @@
     "tracking_issue": null
   },
   {
+    "id": "extra.httpx2",
+    "kind": "extra",
+    "message": "The HTTPX2-backed HTTP client is experimental and may change as compatibility is validated.",
+    "note": "The http extra continues to use HTTPX and is not deprecated. When both extras are installed, the experimental HTTPX2 backend takes precedence.",
+    "since_version": "0.71.1",
+    "target": "datamodel-code-generator[httpx2]",
+    "tracking_issue": null
+  },
+  {
     "id": "formatter.builtin",
     "kind": "formatter",
     "message": "The internal formatter is experimental and may change as generated-output coverage is expanded.",

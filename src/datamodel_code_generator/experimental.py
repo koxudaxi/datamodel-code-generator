@@ -7,13 +7,14 @@ from typing import Literal
 
 from datamodel_code_generator._registry_render import _render_registry_json, _render_registry_table
 
-ExperimentalFeatureKind = Literal["input-format", "formatter", "cli-option", "python-api", "behavior"]
+ExperimentalFeatureKind = Literal["input-format", "formatter", "cli-option", "python-api", "behavior", "extra"]
 ExperimentalFeatureFormat = Literal["table", "json", "markdown"]
 ExperimentalFeatureId = Literal[
     "cli-option.generate-schema-validators",
     "cli-option.schema-validator-type",
     "cli-option.use-missing-sentinel",
     "cli-option.use-type-alias",
+    "extra.httpx2",
     "input-format.asyncapi",
     "input-format.avro",
     "input-format.mcp-tools",
@@ -37,6 +38,17 @@ class ExperimentalFeature:
 
 
 EXPERIMENTAL_FEATURES: dict[ExperimentalFeatureId, ExperimentalFeature] = {
+    "extra.httpx2": ExperimentalFeature(
+        id="extra.httpx2",
+        kind="extra",
+        target="datamodel-code-generator[httpx2]",
+        message="The HTTPX2-backed HTTP client is experimental and may change as compatibility is validated.",
+        since_version="0.71.1",
+        note=(
+            "The http extra continues to use HTTPX and is not deprecated. When both extras are installed, "
+            "the experimental HTTPX2 backend takes precedence."
+        ),
+    ),
     "cli-option.generate-schema-validators": ExperimentalFeature(
         id="cli-option.generate-schema-validators",
         kind="cli-option",
