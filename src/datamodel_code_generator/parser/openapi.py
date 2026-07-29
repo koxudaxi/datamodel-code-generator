@@ -1000,6 +1000,7 @@ class OpenAPIParser(JsonSchemaParser):
             self._resolve_unparsed_json_pointer()
             self._generate_forced_base_models()
         finally:
+            self._clear_inherited_field_caches()
             self._reset_local_source_cache()
 
     def _collect_discriminator_schemas(self) -> None:

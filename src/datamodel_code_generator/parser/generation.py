@@ -68,6 +68,7 @@ GENERATION_STORE_MUTATION_METHODS: frozenset[str] = frozenset({
     "defer_refresh",
     "detach_data_type_ref",
     "detach_model_data_type_refs",
+    "discard_derived_facts",
     "insert_field",
     "move_model",
     "redirect_model_reference_users",
@@ -686,6 +687,14 @@ class GenerationStore:  # noqa: PLR0904
         self._next_model_id = result.next_model_id
         self._facts_version += 1
         self._dirty = False
+
+    def discard_derived_facts(self) -> None:
+        """Release cached dependency facts while preserving stable model identities."""
+        if self._defer_refresh_depth:
+            msg = "Derived facts cannot be discarded during a deferred refresh."
+            raise RuntimeError(msg)
+        self._facts = GenerationFacts()
+        self._dirty = True
 
     def replace_data_type_ref(self, data_type: DataType, new_reference: Reference | None) -> None:
         """Set ``data_type.reference`` while preserving reverse reference links."""

@@ -2676,7 +2676,26 @@ def test_main_all_of_ref_with_property_override(output_file: Path) -> None:
             input_file_type="jsonschema",
             assert_func=assert_file_content,
             expected_file="all_of_ref_with_property_override.py",
+            force_exec_validation=True,
         )
+    valid_payload = '{"type":"playground:Person","name":"Ada"}'
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="all_of_ref_with_property_override",
+        model_name="Person",
+        valid_json=valid_payload,
+        invalid_json='{"name":"Ada"}',
+        expected_error_type="missing",
+        expected_attribute_path=("name",),
+        expected_attribute_value="Ada",
+    )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name="all_of_ref_with_property_override_constraint",
+        model_name="Person",
+        invalid_json='{"type":"playground:Person","name":"x"}',
+        expected_error_type="string_too_short",
+    )
 
 
 def test_main_all_of_multi_ref_with_property_override(output_file: Path) -> None:
@@ -2688,7 +2707,26 @@ def test_main_all_of_multi_ref_with_property_override(output_file: Path) -> None
             input_file_type="jsonschema",
             assert_func=assert_file_content,
             expected_file="all_of_multi_ref_with_property_override.py",
+            force_exec_validation=True,
         )
+    valid_payload = '{"type":"playground:Person","name":"Ada","address":"Tokyo"}'
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="all_of_multi_ref_with_property_override",
+        model_name="Person",
+        valid_json=valid_payload,
+        invalid_json='{"name":"Ada","address":"Tokyo"}',
+        expected_error_type="missing",
+        expected_attribute_path=("address",),
+        expected_attribute_value="Tokyo",
+    )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name="all_of_multi_ref_with_property_override_constraint",
+        model_name="Person",
+        invalid_json='{"type":"playground:Person","name":"x","address":"Tokyo"}',
+        expected_error_type="string_too_short",
+    )
 
 
 def test_main_all_of_deep_hierarchy_property_override(output_file: Path) -> None:
@@ -2700,7 +2738,18 @@ def test_main_all_of_deep_hierarchy_property_override(output_file: Path) -> None
             input_file_type="jsonschema",
             assert_func=assert_file_content,
             expected_file="all_of_deep_hierarchy_property_override.py",
+            force_exec_validation=True,
         )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="all_of_deep_hierarchy_property_override",
+        model_name="Person",
+        valid_json='{"type":"playground:Person","name":"Ada"}',
+        invalid_json='{"name":"Ada"}',
+        expected_error_type="missing",
+        expected_attribute_path=("type",),
+        expected_attribute_value="playground:Person",
+    )
 
 
 def test_main_all_of_very_deep_hierarchy_property_override(output_file: Path) -> None:
@@ -2712,7 +2761,18 @@ def test_main_all_of_very_deep_hierarchy_property_override(output_file: Path) ->
             input_file_type="jsonschema",
             assert_func=assert_file_content,
             expected_file="all_of_very_deep_hierarchy_property_override.py",
+            force_exec_validation=True,
         )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="all_of_very_deep_hierarchy_property_override",
+        model_name="SpecificPerson",
+        valid_json='{"id":"specific-id","type":"SpecificPerson","name":"Ada"}',
+        invalid_json='{"type":"SpecificPerson","name":"Ada"}',
+        expected_error_type="missing",
+        expected_attribute_path=("id",),
+        expected_attribute_value="specific-id",
+    )
 
 
 def test_main_all_of_hierarchy_property_not_in_ancestor(output_file: Path) -> None:
@@ -12195,6 +12255,25 @@ def test_main_allof_class_hierarchy(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="allof_class_hierarchy.py",
         extra_args=["--allof-class-hierarchy", "always"],
+        force_exec_validation=True,
+    )
+    valid_payload = '{"type":"playground:Person","type_list":["playground:Person"],"name":"Ada","address":"Tokyo"}'
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_class_hierarchy",
+        model_name="Person",
+        valid_json=valid_payload,
+        invalid_json='{"type_list":["playground:Person"],"name":"Ada","address":"Tokyo"}',
+        expected_error_type="missing",
+        expected_attribute_path=("type_list",),
+        expected_attribute_value=["playground:Person"],
+    )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name="allof_class_hierarchy_constraint",
+        model_name="Person",
+        invalid_json=('{"type":"playground:Person","type_list":["playground:Person"],"name":"","address":"Tokyo"}'),
+        expected_error_type="string_too_short",
     )
 
 

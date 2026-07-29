@@ -55,6 +55,7 @@ IMPORT_CACHE_CLEARING_MUTATION_METHODS = frozenset({
 })
 IMPORT_CACHE_NEUTRAL_MUTATION_METHODS = frozenset({
     "defer_refresh",
+    "discard_derived_facts",
     "register_model",
 })
 GENERATION_MODEL_LIST_MUTATION_METHODS = frozenset({
@@ -425,6 +426,62 @@ def test_generation_store_nested_defer_refresh_rebuilds_on_outer_exit() -> None:
             "dirty_after_inner_exit": True,
             "version_after_outer_exit": 2,
             "reference_classes": ["C"],
+        },
+    )
+
+
+def test_generation_store_discard_derived_facts_preserves_identity_and_defer_contract() -> None:
+    """Explicit fact disposal releases snapshots without changing stable IDs or deferred reads."""
+    reference_model = Reference(path="Model", original_name="Model", name="Model")
+    reference_value = Reference(path="Value", original_name="Value", name="Value")
+    model = BaseModel(
+        fields=[DataModelField(data_type=DataType(reference=reference_value))],
+        reference=reference_model,
+    )
+    store = GenerationStore()
+    store.register_model(model)
+    store.refresh()
+    model_id = store.model_id(model)
+    facts_before = store._facts
+    version_before = store.facts_version
+
+    with store.defer_refresh():
+        with pytest.raises(RuntimeError, match="cannot be discarded"):
+            store.discard_derived_facts()
+        facts_preserved_inside_defer = store._facts is facts_before
+        classes_inside_defer = sorted(store.index.reference_classes_for_model(model))
+
+    store.discard_derived_facts()
+    discarded_fact_counts = (
+        len(store._facts.model_facts),
+        len(store._facts.data_type_facts),
+    )
+    dirty_after_discard = store._dirty
+    model_id_after_discard = store.model_id(model)
+    version_after_discard = store.facts_version
+    classes_after_refresh = sorted(store.index.reference_classes_for_model(model))
+
+    assert {
+        "facts_preserved_inside_defer": facts_preserved_inside_defer,
+        "classes_inside_defer": classes_inside_defer,
+        "discarded_fact_counts": discarded_fact_counts,
+        "dirty_after_discard": dirty_after_discard,
+        "stable_model_id": model_id_after_discard == model_id,
+        "version_before": version_before,
+        "version_after_discard": version_after_discard,
+        "version_after_refresh": store.facts_version,
+        "classes_after_refresh": classes_after_refresh,
+    } == snapshot(
+        {
+            "facts_preserved_inside_defer": True,
+            "classes_inside_defer": ["Value"],
+            "discarded_fact_counts": (0, 0),
+            "dirty_after_discard": True,
+            "stable_model_id": True,
+            "version_before": 1,
+            "version_after_discard": 1,
+            "version_after_refresh": 2,
+            "classes_after_refresh": ["Value"],
         },
     )
 

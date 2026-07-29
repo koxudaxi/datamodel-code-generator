@@ -49,6 +49,7 @@ UnionIntFloat = _UnionIntFloat
 class DataModelField(DataModelFieldBase):
     """Field implementation for Pydantic models."""
 
+    SUPPORTS_FIELD_CONSTRAINTS: ClassVar[bool] = True
     _EXCLUDE_FIELD_KEYS: ClassVar[set[str]] = {
         "alias",
         "default",

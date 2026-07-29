@@ -44,6 +44,7 @@ def test_checker_uses_generation_store_api_surface() -> None:
             "defer_refresh",
             "detach_data_type_ref",
             "detach_model_data_type_refs",
+            "discard_derived_facts",
             "insert_field",
             "move_model",
             "redirect_model_reference_users",

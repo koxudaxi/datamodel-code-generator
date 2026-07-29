@@ -16,6 +16,7 @@ import sys
 from abc import ABC, abstractmethod
 from collections import Counter, OrderedDict, defaultdict
 from copy import deepcopy
+from dataclasses import dataclass
 from functools import cache
 from itertools import chain, groupby
 from pathlib import Path
@@ -96,6 +97,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.http import _HTTPFetchSession
     from datamodel_code_generator.model_metadata import GeneratedModelMetadata, ModelFieldMetadata, ModelMetadata
 ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
+MroT = TypeVar("MroT")
 
 HashableComparable = _internal_utils.HashableComparable
 to_hashable = _internal_utils.to_hashable
@@ -108,6 +110,28 @@ _MODEL_MODULE_PREFIX: Final = "datamodel_code_generator.model."
 _CLASS_NAME_SEPARATOR_PATTERN: Final = re.compile(r"[^A-Za-z0-9]+")
 _TOP_LEVEL_FUTURE_IMPORT_PATTERN: Final = re.compile(r"(?m)^from __future__ import ")
 _TOP_LEVEL_RELATIVE_IMPORT_PATTERN: Final = re.compile(r"(?m)^from \.")
+_DEFERRED_INHERITED_CLASS_KEY: Final = "_deferred_inherited_class"
+_DEFERRED_INHERITED_FIELD_KEY: Final = "_deferred_inherited_field"
+_DEFERRED_INHERITED_TYPE_KEY: Final = "_deferred_inherited_type"
+_RAW_SCHEMA_DEFAULT_KEY: Final = "_raw_schema_default"
+_RAW_SCHEMA_DEFAULT_UNDEFINED: Final = object()
+
+
+@dataclass(frozen=True, slots=True)
+class _InheritedTypeModifiers:
+    """Compact deferred state for a partial inherited field."""
+
+    excludes_null: bool
+    is_optional: bool
+    is_dict: bool
+    is_list: bool
+    is_set: bool
+    is_frozen_set: bool
+    is_mapping: bool
+    is_sequence: bool
+    is_tuple: bool
+    kwargs: dict[str, Any] | None
+    list_wrapper: DataType | None
 
 
 @cache
@@ -837,54 +861,26 @@ def sort_base_classes_for_mro(
         if len(base_classes) <= 1:
             continue
 
-        # Build set of base class paths for quick lookup
-        base_class_paths = {b.reference.path for b in base_classes if b.reference}
-
-        def get_ancestors(
-            ref_path: str,
-            base_class_paths: set[str] = base_class_paths,
-        ) -> set[str]:
-            """Get all ancestor paths that are in our base class list."""
-            ancestors: set[str] = set()
-            source_model = sorted_data_models.get(ref_path)
-            if source_model is None:  # pragma: no cover
-                return ancestors
-            to_visit = [
-                bc.reference.path
-                for bc in source_model.base_classes
-                if bc.reference and bc.reference.path in base_class_paths
-            ]
-            while to_visit:
-                parent_path = to_visit.pop()
-                if parent_path in ancestors:
-                    continue
-                ancestors.add(parent_path)
-                parent_model = sorted_data_models.get(parent_path)
-                if not parent_model:  # pragma: no cover
-                    continue
-                to_visit.extend(
-                    bc.reference.path
-                    for bc in parent_model.base_classes
-                    if bc.reference and bc.reference.path in base_class_paths
+        source_models = [
+            source_model
+            for base_class in base_classes
+            if base_class.reference
+            and (
+                source_model := (
+                    base_class.reference.source
+                    if isinstance(base_class.reference.source, DataModel)
+                    else sorted_data_models.get(base_class.reference.path)
                 )
-            return ancestors
-
-        # Build ancestor map for each base class
-        ancestor_map = {b.reference.path: get_ancestors(b.reference.path) for b in base_classes if b.reference}
-
-        def sort_key(
-            bc: BaseClassDataType,
-            ancestor_map: dict[str, set[str]] = ancestor_map,
-        ) -> int:
-            """Sort key: classes that are ancestors of others come later."""
-            if not bc.reference:
-                return 0
-            path = bc.reference.path
-            # Count how many other base classes have this one as an ancestor
-            return sum(1 for other_path in ancestor_map if path in ancestor_map.get(other_path, set()))
-
-        # Use stable sort to preserve original order for elements with equal keys
-        sorted_base_classes = sorted(base_classes, key=sort_key)
+            )
+            is not None
+        ]
+        model_order = {
+            source_model.path: index for index, source_model in enumerate(_sort_data_models_for_mro(source_models))
+        }
+        sorted_base_classes = sorted(
+            base_classes,
+            key=lambda base_class: model_order.get(base_class.reference.path, 0) if base_class.reference else 0,
+        )
         if all(
             sorted_base_class is base_class
             for sorted_base_class, base_class in zip(sorted_base_classes, base_classes, strict=True)
@@ -1023,28 +1019,385 @@ def _find_base_classes(model: DataModel) -> list[DataModel]:
     return [b.reference.source for b in model.base_classes if b.reference and isinstance(b.reference.source, DataModel)]
 
 
-def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBase | None:
-    """Find a field by original_name in the models and their base classes."""
-    for model in models:
-        for field in model.iter_all_fields():
-            if field.original_name == original_name:
-                return field
-    return None
+def _model_ancestor_paths(model: DataModel) -> set[str]:
+    """Collect generated ancestors without assuming direct bases are already sorted."""
+    ancestors: set[str] = set()
+    to_visit = [
+        base_class.reference.source
+        for base_class in model.base_classes
+        if base_class.reference and isinstance(base_class.reference.source, DataModel)
+    ]
+    while to_visit:
+        parent = to_visit.pop()
+        if parent.path in ancestors:
+            continue
+        ancestors.add(parent.path)
+        to_visit.extend(
+            base_class.reference.source
+            for base_class in parent.base_classes
+            if base_class.reference and isinstance(base_class.reference.source, DataModel)
+        )
+    return ancestors
 
 
-def _copy_data_types(data_types: list[DataType]) -> list[DataType]:
-    """Deep copy a list of DataType objects, preserving references."""
-    copied_data_types: list[DataType] = []
-    for data_type_ in data_types:
-        if data_type_.reference:
-            copied_data_types.append(data_type_.__class__(reference=data_type_.reference))
-        elif data_type_.data_types:
-            copied_data_type = data_type_.model_copy()
-            copied_data_type.data_types = _copy_data_types(data_type_.data_types)
-            copied_data_types.append(copied_data_type)
-        else:
-            copied_data_types.append(data_type_.model_copy())
-    return copied_data_types
+def _sort_data_models_for_mro(models: list[DataModel]) -> list[DataModel]:
+    """Match the stable descendant-before-ancestor order used for rendered bases."""
+    if len(models) <= 1:
+        return models.copy()
+    ancestor_paths = {model.path: _model_ancestor_paths(model) for model in models}
+    return sorted(
+        models,
+        key=lambda model: sum(model.path in ancestors for ancestors in ancestor_paths.values()),
+    )
+
+
+def _c3_merge(sequences: list[list[MroT]], key: Callable[[MroT], str]) -> list[MroT]:
+    """Merge inheritance sequences using C3 with a deterministic cycle fallback."""
+    result: list[MroT] = []
+    result_keys: set[str] = set()
+    while sequences := [sequence for sequence in sequences if sequence]:
+        tail_keys = {key(item) for sequence in sequences for item in sequence[1:]}
+        candidate = next(
+            (sequence[0] for sequence in sequences if key(sequence[0]) not in tail_keys),
+            sequences[0][0],
+        )
+        candidate_key = key(candidate)
+        if candidate_key not in result_keys:
+            result.append(candidate)
+            result_keys.add(candidate_key)
+        for sequence in sequences:
+            sequence[:] = [item for item in sequence if key(item) != candidate_key]
+    return result
+
+
+def _linearize_data_models(models: list[DataModel]) -> list[DataModel]:
+    """Return the effective C3 order for a list of direct generated bases."""
+    linearized_models: dict[str, list[DataModel]] = {}
+
+    def linearize(model: DataModel, active: frozenset[str] = frozenset()) -> list[DataModel]:
+        if cached := linearized_models.get(model.path):
+            return cached
+        if model.path in active:
+            return [model]
+        parents = _sort_data_models_for_mro([
+            base_class.reference.source
+            for base_class in model.base_classes
+            if base_class.reference and isinstance(base_class.reference.source, DataModel)
+        ])
+        result = [
+            model,
+            *_c3_merge(
+                [
+                    *[linearize(parent, active | {model.path}).copy() for parent in parents],
+                    parents.copy(),
+                ],
+                key=lambda item: item.path,
+            ),
+        ]
+        linearized_models[model.path] = result
+        return result
+
+    direct_models = _sort_data_models_for_mro(models)
+    return _c3_merge(
+        [
+            *[linearize(model).copy() for model in direct_models],
+            direct_models.copy(),
+        ],
+        key=lambda item: item.path,
+    )
+
+
+def _get_inherited_fields(models: list[DataModel]) -> dict[str, DataModelFieldBase]:
+    """Build one effective field lookup using generated models' C3 order."""
+    original_names: dict[str, DataModelFieldBase] = {}
+    generated_names: dict[str, DataModelFieldBase] = {}
+    for model in _linearize_data_models(models):
+        for field in model.fields:
+            if field.original_name is not None:
+                original_names.setdefault(field.original_name, field)
+            if field.name is not None:
+                generated_names.setdefault(field.name, field)
+    generated_names.update(original_names)
+    return generated_names
+
+
+def _find_field(field_name: str, models: list[DataModel]) -> DataModelFieldBase | None:
+    """Find a field using generated models' C3 inheritance order."""
+    return _get_inherited_fields(models).get(field_name)
+
+
+def _copy_data_type(data_type: DataType, *, register_references: bool = True) -> DataType:
+    """Copy a DataType tree without detaching its model references."""
+    copied_data_type = data_type.model_copy()
+    copied_data_type.parent = None
+    copied_data_type.children = []
+    copied_data_type.literals = list(data_type.literals)
+    copied_data_type.enum_member_literals = list(data_type.enum_member_literals)
+    if (kwargs := data_type.kwargs) is not None:
+        copied_data_type.kwargs = deepcopy(kwargs)
+
+    match data_type:
+        case DataType(data_types=[], dict_key=None):
+            copied_data_type.data_types = []
+        case DataType(data_types=data_types, dict_key=dict_key):
+            copied_data_type.data_types = _copy_data_types(data_types, register_references=register_references)
+            for nested_data_type in copied_data_type.data_types:
+                nested_data_type.parent = copied_data_type
+            if dict_key is not None:
+                copied_data_type.dict_key = _copy_data_type(dict_key, register_references=register_references)
+                copied_data_type.dict_key.parent = copied_data_type
+
+    if register_references:
+        copied_data_type.register_reference()
+    return copied_data_type
+
+
+def _copy_data_types(data_types: list[DataType], *, register_references: bool = True) -> list[DataType]:
+    """Copy DataType trees while preserving shared model references."""
+    return [_copy_data_type(data_type, register_references=register_references) for data_type in data_types]
+
+
+def _copy_data_model_field(
+    field: DataModelFieldBase,
+    *,
+    data_type: DataType | None = None,
+    register_references: bool = True,
+) -> DataModelFieldBase:
+    """Copy a field and its mutable state without copying model references."""
+    copied_data_type = data_type or _copy_data_type(
+        field.data_type,
+        register_references=register_references,
+    )
+    copied_field = field.model_copy(
+        update={
+            "data_type": copied_data_type,
+            "parent": None,
+        }
+    )
+    copied_field.extras = deepcopy(field.extras)
+    if field.validation_aliases is not None:
+        copied_field.validation_aliases = list(field.validation_aliases)
+    match field.default:
+        case dict() | list() | set():
+            copied_field.default = deepcopy(field.default)
+    copied_data_type.parent = copied_field
+    return copied_field
+
+
+def _get_inherited_type_modifiers(
+    data_type: DataType,
+    *,
+    excludes_null: bool = False,
+) -> _InheritedTypeModifiers:
+    """Compress a partial type before replacing its forward placeholder."""
+    list_wrapper = (
+        _copy_data_type(data_type, register_references=False)
+        if not data_type.is_list and len(data_type.data_types) == 1 and data_type.data_types[0].is_list
+        else None
+    )
+    return _InheritedTypeModifiers(
+        excludes_null=excludes_null,
+        is_optional=data_type.is_optional,
+        is_dict=data_type.is_dict,
+        is_list=data_type.is_list,
+        is_set=data_type.is_set,
+        is_frozen_set=data_type.is_frozen_set,
+        is_mapping=data_type.is_mapping,
+        is_sequence=data_type.is_sequence,
+        is_tuple=data_type.is_tuple,
+        kwargs=deepcopy(data_type.kwargs),
+        list_wrapper=list_wrapper,
+    )
+
+
+def _detach_deferred_inherited_field_parents(field: DataModelFieldBase) -> None:
+    """Break parent cycles on a deferred field that is about to be discarded."""
+    field.parent = None
+    for data_type in field.data_type.all_data_types:
+        data_type.parent = None
+    match field.__dict__.get(_DEFERRED_INHERITED_TYPE_KEY):
+        case DataType() as deferred_type:
+            for data_type in deferred_type.all_data_types:
+                data_type.parent = None
+        case _InheritedTypeModifiers(list_wrapper=DataType() as list_wrapper):
+            for data_type in list_wrapper.all_data_types:
+                data_type.parent = None
+
+
+def _merge_data_type_modifiers(
+    new_type: DataType,
+    current_type: DataType | _InheritedTypeModifiers,
+    *,
+    preserve_container_shape: bool = False,
+    preserve_optional: bool = False,
+    preserve_inherited_kwargs: bool = False,
+) -> None:
+    """Merge an overriding type's container modifiers into an inherited type."""
+    if preserve_optional:
+        new_type.is_optional = new_type.is_optional or current_type.is_optional
+    if isinstance(current_type, _InheritedTypeModifiers) and current_type.excludes_null:
+        new_type.is_optional = False
+    inherited_is_container = any((
+        new_type.is_dict,
+        new_type.is_list,
+        new_type.is_set,
+        new_type.is_frozen_set,
+        new_type.is_mapping,
+        new_type.is_sequence,
+        new_type.is_tuple,
+    ))
+    if preserve_container_shape or inherited_is_container or not (new_type.reference or new_type.type):
+        new_type.is_dict = new_type.is_dict or current_type.is_dict
+        new_type.is_list = new_type.is_list or current_type.is_list
+        new_type.is_set = new_type.is_set or current_type.is_set
+        new_type.is_frozen_set = new_type.is_frozen_set or current_type.is_frozen_set
+        new_type.is_mapping = new_type.is_mapping or current_type.is_mapping
+        new_type.is_sequence = new_type.is_sequence or current_type.is_sequence
+        new_type.is_tuple = new_type.is_tuple or current_type.is_tuple
+    if preserve_inherited_kwargs or current_type.kwargs is None:
+        return
+    if new_type.kwargs is None:
+        new_type.kwargs = deepcopy(current_type.kwargs)
+        return
+    for name, value in current_type.kwargs.items():
+        new_type.kwargs[name] = deepcopy(value)
+
+
+def _intersect_constraints(
+    inherited: ConstraintsBase | None,
+    overriding: ConstraintsBase | None,
+) -> ConstraintsBase | None:
+    """Overlay a partial field's constraints on its inherited field constraints."""
+    constraints_class = type(inherited or overriding)
+    if not issubclass(constraints_class, ConstraintsBase):
+        return None  # pragma: no cover
+    inherited_values = inherited.model_dump(by_alias=True, exclude_none=True) if inherited else {}
+    overriding_values = overriding.model_dump(by_alias=True, exclude_none=True) if overriding else {}
+    merged_values = inherited_values.copy()
+    merged_values.update(overriding_values)
+    return constraints_class.model_validate(merged_values)
+
+
+def _apply_inherited_field_nullability(
+    field: DataModelFieldBase,
+    inherited_field: DataModelFieldBase,
+    copied_field: DataModelFieldBase,
+    current_type: DataType | _InheritedTypeModifiers,
+) -> None:
+    """Keep omission optionality separate from the schema's null intersection."""
+    if not copied_field.required and current_type.is_optional:
+        copied_field.data_type.is_optional = True
+
+    match current_type:
+        case _InheritedTypeModifiers(excludes_null=True):
+            copied_field.nullable = False if copied_field.required or field.nullable is False else None
+            copied_field.type_has_null = False
+        case _:
+            copied_field.nullable = inherited_field.nullable
+            copied_field.type_has_null = inherited_field.type_has_null
+
+
+def _copy_resolved_inherited_field(  # noqa: PLR0913, PLR0915
+    field: DataModelFieldBase,
+    inherited_field: DataModelFieldBase,
+    *,
+    force_optional: bool = False,
+    partial_merge_mode: AllOfMergeMode = AllOfMergeMode.All,
+    register_references: bool = True,
+    reserved_names: set[str] | None = None,
+) -> DataModelFieldBase | None:
+    """Resolve a deferred inherited field without copying its reference graph."""
+    deferred_type = field.__dict__.get(_DEFERRED_INHERITED_TYPE_KEY)
+    deferred_field = field.__dict__.get(_DEFERRED_INHERITED_FIELD_KEY)
+    match deferred_type, deferred_field:
+        case (DataType() | _InheritedTypeModifiers()) as current_type, _:
+            metadata_source = field if partial_merge_mode == AllOfMergeMode.NoMerge else inherited_field
+            copied_data_type = _copy_data_type(
+                inherited_field.data_type,
+                register_references=register_references,
+            )
+            wrapper_template = (
+                current_type.list_wrapper
+                if isinstance(current_type, _InheritedTypeModifiers)
+                else (
+                    current_type
+                    if not current_type.is_list
+                    and len(current_type.data_types) == 1
+                    and current_type.data_types[0].is_list
+                    else None
+                )
+            )
+            if wrapper_template is not None and copied_data_type.is_list:
+                wrapper = _copy_data_type(wrapper_template, register_references=register_references)
+                wrapper.data_types[0] = copied_data_type
+                copied_data_type.parent = wrapper
+                copied_data_type = wrapper
+            else:
+                _merge_data_type_modifiers(
+                    copied_data_type,
+                    current_type,
+                    preserve_inherited_kwargs=partial_merge_mode == AllOfMergeMode.NoMerge,
+                )
+            copied_field = _copy_data_model_field(
+                metadata_source,
+                data_type=copied_data_type,
+                register_references=False,
+            )
+            copied_field.name = field.name
+            copied_field.required = False if force_optional else inherited_field.required or field.required
+            _apply_inherited_field_nullability(field, inherited_field, copied_field, current_type)
+            copied_field.original_name = field.original_name
+            copied_field.alias = field.alias
+            copied_field.validation_aliases = (
+                list(field.validation_aliases) if field.validation_aliases is not None else None
+            )
+            copied_field.serialization_alias = field.serialization_alias
+            copied_field.use_serialization_alias = field.use_serialization_alias
+            if partial_merge_mode != AllOfMergeMode.NoMerge:
+                copied_field.constraints = _intersect_constraints(
+                    inherited_field.constraints,
+                    field.constraints,
+                )
+                copied_field.extras.update(deepcopy(field.extras))
+                copied_field.read_only = inherited_field.read_only or field.read_only
+                copied_field.write_only = inherited_field.write_only or field.write_only
+            if field.has_default:
+                copied_field.default = deepcopy(field.default)
+                copied_field.has_default = True
+                copied_field.use_default_with_required = field.use_default_with_required
+                if _RAW_SCHEMA_DEFAULT_KEY in field.__dict__:
+                    copied_field.__dict__[_RAW_SCHEMA_DEFAULT_KEY] = field.__dict__[_RAW_SCHEMA_DEFAULT_KEY]
+            elif partial_merge_mode != AllOfMergeMode.All:
+                copied_field.default = field.default
+                copied_field.has_default = False
+                copied_field.use_default_with_required = False
+                if _RAW_SCHEMA_DEFAULT_KEY in field.__dict__:
+                    copied_field.__dict__[_RAW_SCHEMA_DEFAULT_KEY] = field.__dict__[_RAW_SCHEMA_DEFAULT_KEY]
+        case _, str():
+            copied_field = _copy_data_model_field(inherited_field, register_references=register_references)
+            copied_field.required = field.required
+            copied_field.original_name = field.original_name
+            copied_field.alias = field.alias
+            copied_field.validation_aliases = (
+                list(field.validation_aliases) if field.validation_aliases is not None else None
+            )
+            copied_field.serialization_alias = field.serialization_alias
+            copied_field.use_serialization_alias = field.use_serialization_alias
+            if inherited_field.name and (
+                inherited_field.name == field.name
+                or reserved_names is None
+                or inherited_field.name not in reserved_names
+            ):
+                copied_field.name = inherited_field.name
+            else:
+                copied_field.name = field.name
+        case _:
+            return None
+
+    copied_field.__dict__.pop(_DEFERRED_INHERITED_FIELD_KEY, None)
+    copied_field.__dict__.pop(_DEFERRED_INHERITED_CLASS_KEY, None)
+    copied_field.__dict__.pop(_DEFERRED_INHERITED_TYPE_KEY, None)
+    return copied_field
 
 
 class Result(BaseModel):
@@ -2905,54 +3258,124 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 model_field.extras["validate_default"] = True
                 _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
 
+    def _apply_inherited_field_default(
+        self,
+        field: DataModelFieldBase,
+        inherited_field: DataModelFieldBase,
+        *,
+        class_name: str,
+    ) -> None:
+        """Resolve an inherited schema default in the derived class scope."""
+        if self.model_resolver.default_value_overrides and _RAW_SCHEMA_DEFAULT_KEY in inherited_field.__dict__:
+            raw_default = inherited_field.__dict__[_RAW_SCHEMA_DEFAULT_KEY]
+            has_default = raw_default is not _RAW_SCHEMA_DEFAULT_UNDEFINED
+            field.default, field.has_default = self.model_resolver.resolve_default_value(
+                field.original_name or field.name or "",
+                None if not has_default else raw_default,
+                has_default,
+                class_name=class_name,
+            )
+            match field.default:
+                case dict() | list() | set():
+                    field.default = deepcopy(field.default)
+        field.use_default_with_required = (
+            self.apply_default_values_for_required_fields and field.required and field.has_default
+        )
+
     def __override_required_field(
         self,
         models: list[DataModel],
         *,
         can_retain_cache: bool = False,
     ) -> None:
+        pending_models = (
+            model
+            for model in models
+            if not isinstance(model, (Enum, self.data_model_root_type))
+            and any(
+                field.original_name is not None
+                and not field.data_type.data_types
+                and not field.data_type.reference
+                and not field.data_type.type
+                and not field.data_type.literals
+                and not field.data_type.dict_key
+                for field in model.fields
+            )
+        )
+        if (first_model := next(pending_models, None)) is None:
+            return
+
+        self.generation_store.discard_derived_facts()
         changed = False
-        for model in models:
-            if isinstance(model, (Enum, self.data_model_root_type)):
-                continue
-            for index, model_field in enumerate(model.fields[:]):
+        for model in chain((first_model,), pending_models):
+            resolved_fields: list[DataModelFieldBase] = []
+            reserved_names = {field.name for field in model.fields if field.name}
+            inherited_fields = _get_inherited_fields(_find_base_classes(model))
+            pending_fields = model.fields
+            pending_fields.reverse()
+            self.generation_store.set_fields(model, [])
+            while pending_fields:
+                model_field = pending_fields.pop()
+                model_field.parent = None
                 data_type = model_field.data_type
                 if (
-                    not model_field.original_name  # noqa: PLR0916
+                    model_field.original_name is None  # noqa: PLR0916
                     or data_type.data_types
                     or data_type.reference
                     or data_type.type
                     or data_type.literals
                     or data_type.dict_key
                 ):
+                    resolved_fields.append(model_field)
                     continue
 
-                original_field = _find_field(model_field.original_name, _find_base_classes(model))
+                _detach_deferred_inherited_field_parents(model_field)
+                original_field = inherited_fields.get(model_field.original_name)
                 if not original_field:
-                    self.generation_store.remove_field(model, model_field)
                     changed = True
                     continue
-                copied_original_field = original_field.model_copy()
-                if original_field.data_type.reference:
-                    data_type = self.data_type_manager.data_type(
-                        reference=original_field.data_type.reference,
+                if (
+                    copied_original_field := _copy_resolved_inherited_field(
+                        model_field,
+                        original_field,
+                        force_optional=self.force_optional_for_required_fields,
+                        partial_merge_mode=self.allof_merge_mode,
+                        reserved_names=reserved_names,
                     )
-                elif original_field.data_type.data_types:
-                    data_type = original_field.data_type.model_copy()
-                    data_type.data_types = _copy_data_types(original_field.data_type.data_types)
-                    for data_type_ in data_type.data_types:
-                        data_type_.parent = data_type
-                else:
-                    data_type = original_field.data_type.model_copy()
-                data_type.parent = copied_original_field
-                self.generation_store.replace_field_type(copied_original_field, data_type)
-                copied_original_field.parent = model
-                copied_original_field.required = True
-                if self.apply_default_values_for_required_fields and copied_original_field.has_default:
+                ) is None:
+                    copied_original_field = _copy_data_model_field(original_field)
+                    copied_original_field.name = model_field.name
+                    copied_original_field.original_name = model_field.original_name
+                    copied_original_field.alias = model_field.alias
+                    copied_original_field.validation_aliases = (
+                        list(model_field.validation_aliases) if model_field.validation_aliases is not None else None
+                    )
+                    copied_original_field.serialization_alias = model_field.serialization_alias
+                    copied_original_field.use_serialization_alias = model_field.use_serialization_alias
+                    copied_original_field.required = True
+                if class_name := model_field.__dict__.get(_DEFERRED_INHERITED_FIELD_KEY):
+                    self._apply_inherited_field_default(
+                        copied_original_field,
+                        original_field,
+                        class_name=class_name,
+                    )
+                elif class_name := model_field.__dict__.get(_DEFERRED_INHERITED_CLASS_KEY):
+                    default_source = model_field
+                    if self.allof_merge_mode == AllOfMergeMode.All and not (
+                        _RAW_SCHEMA_DEFAULT_KEY in model_field.__dict__
+                        and model_field.__dict__[_RAW_SCHEMA_DEFAULT_KEY] is not _RAW_SCHEMA_DEFAULT_UNDEFINED
+                    ):
+                        default_source = original_field
+                    self._apply_inherited_field_default(
+                        copied_original_field,
+                        default_source,
+                        class_name=class_name,
+                    )
+                elif self.apply_default_values_for_required_fields and copied_original_field.has_default:
                     copied_original_field.use_default_with_required = True
-                self.generation_store.insert_field(model, index, copied_original_field)
-                self.generation_store.remove_field(model, model_field)
+                resolved_fields.append(copied_original_field)
                 changed = True
+            self.generation_store.set_fields(model, resolved_fields)
         if changed and not can_retain_cache:
             _clear_model_imports_cache(models)
 

@@ -615,6 +615,20 @@ class DataType(_BaseModel):
         if reference:
             reference.children.append(self)
 
+    def register_reference(self) -> None:
+        """Register this newly copied type with its existing reference."""
+        if self.reference:
+            self.reference.children.append(self)
+
+    def unregister_reference(self) -> None:
+        """Detach this temporary type from reverse-reference tracking without losing its target."""
+        if not self.reference:
+            return
+        children = self.reference.children
+        for index in range(len(children) - 1, -1, -1):
+            if children[index] is self:
+                children.pop(index)
+
     def remove_reference(self) -> None:
         """Remove the reference from this DataType."""
         self.replace_reference(None)

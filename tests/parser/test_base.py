@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import gc
+import weakref
 from collections import OrderedDict
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
@@ -10,6 +12,7 @@ import pytest
 from pydantic import BaseModel as PydanticBaseModel
 
 import datamodel_code_generator._internal_utils as internal_utils
+from datamodel_code_generator import AllOfMergeMode
 from datamodel_code_generator.enums import CollapseRootModelsNameStrategy
 from datamodel_code_generator.imports import Imports
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -20,21 +23,32 @@ if TYPE_CHECKING:
     from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField
+from datamodel_code_generator.model.pydantic_v2.base_model import Constraints
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticDataclassModel
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataModelField as PydanticDataclassField
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.model.pydantic_v2.root_model_type_alias import RootModelTypeAlias
 from datamodel_code_generator.model.type_alias import TypeAlias, TypeAliasTypeBackport, TypeStatement
 from datamodel_code_generator.parser.base import (
+    _DEFERRED_INHERITED_CLASS_KEY,
+    _DEFERRED_INHERITED_FIELD_KEY,
+    _DEFERRED_INHERITED_TYPE_KEY,
+    _RAW_SCHEMA_DEFAULT_KEY,
     Child,
     HashableComparable,
     Parser,
     T,
     _contains_model_reference,
+    _copy_data_model_field,
+    _copy_data_type,
+    _copy_resolved_inherited_field,
+    _detach_deferred_inherited_field_parents,
     _find_field,
     _get_enum_from_base,
+    _get_inherited_type_modifiers,
     _get_pydantic_v2_root_model_type,
     _is_pydantic_v2_data_model_field,
+    _merge_data_type_modifiers,
     _needs_validate_default,
     _unwrap_type_alias,
     add_model_path_to_list,
@@ -529,6 +543,123 @@ def test_find_field_skips_non_matching_fields() -> None:
     assert _find_field("second", [model]) is second_field
 
 
+def test_find_field_prefers_effective_override_and_original_name() -> None:
+    """Field lookup honors parent overrides and exact source names across direct bases."""
+    grandparent_reference = _reference("Grandparent")
+    grandparent_field = DataModelField(
+        name="value",
+        original_name="value",
+        data_type=DataType(type="str"),
+    )
+    BaseModel(fields=[grandparent_field], reference=grandparent_reference)
+    parent_field = DataModelField(
+        name="value",
+        original_name="value",
+        data_type=DataType(type="int"),
+    )
+    parent = BaseModel(
+        fields=[parent_field],
+        base_classes=[grandparent_reference],
+        reference=_reference("Parent"),
+    )
+    generated_name_collision = DataModelField(
+        name="target",
+        original_name="other",
+        data_type=DataType(type="bool"),
+    )
+    collision_base = BaseModel(
+        fields=[generated_name_collision],
+        reference=_reference("CollisionBase"),
+    )
+    exact_original_name = DataModelField(
+        name="target_field",
+        original_name="target",
+        data_type=DataType(type="float"),
+    )
+    exact_base = BaseModel(
+        fields=[exact_original_name],
+        reference=_reference("ExactBase"),
+    )
+
+    assert _find_field("value", [parent]) is parent_field
+    assert _find_field("target", [collision_base, exact_base]) is exact_original_name
+
+
+def test_find_field_follows_multiple_inheritance_mro() -> None:
+    """The first declared base wins when a nested model inherits duplicate fields."""
+    first_reference = _reference("FirstBase")
+    first_field = DataModelField(
+        name="value",
+        original_name="value",
+        data_type=DataType(type="str"),
+    )
+    BaseModel(fields=[first_field], reference=first_reference)
+    second_reference = _reference("SecondBase")
+    second_field = DataModelField(
+        name="value",
+        original_name="value",
+        data_type=DataType(type="int"),
+    )
+    BaseModel(fields=[second_field], reference=second_reference)
+    combined = BaseModel(
+        fields=[],
+        base_classes=[first_reference, second_reference],
+        reference=_reference("Combined"),
+    )
+
+    assert _find_field("value", [combined]) is first_field
+
+
+def test_find_field_follows_c3_diamond_mro() -> None:
+    """A later direct base takes precedence over an earlier base's shared ancestor."""
+    root_reference = _reference("RootBase")
+    root_field = DataModelField(
+        name="value",
+        original_name="value",
+        data_type=DataType(type="str"),
+    )
+    BaseModel(fields=[root_field], reference=root_reference)
+    first_reference = _reference("FirstBranch")
+    BaseModel(fields=[], base_classes=[root_reference], reference=first_reference)
+    second_reference = _reference("SecondBranch")
+    second_field = DataModelField(
+        name="value",
+        original_name="value",
+        data_type=DataType(type="int"),
+    )
+    BaseModel(fields=[second_field], base_classes=[root_reference], reference=second_reference)
+    diamond = BaseModel(
+        fields=[],
+        base_classes=[first_reference, second_reference],
+        reference=_reference("Diamond"),
+    )
+
+    assert _find_field("value", [diamond]) is second_field
+
+
+def test_find_field_handles_cyclic_generated_bases() -> None:
+    """Malformed cyclic inheritance terminates and keeps the nearest declaration."""
+    first_reference = _reference("FirstCycle")
+    second_reference = _reference("SecondCycle")
+    first_field = DataModelField(
+        name="value",
+        original_name="value",
+        data_type=DataType(type="str"),
+    )
+    first = BaseModel(
+        fields=[first_field],
+        base_classes=[second_reference],
+        reference=first_reference,
+    )
+    second = BaseModel(
+        fields=[],
+        base_classes=[first_reference],
+        reference=second_reference,
+    )
+
+    assert _find_field("value", [first, second]) is first_field
+
+
 def test_override_required_field_copies_reference_type(parser_fixture: C) -> None:
     """Required inherited placeholders are replaced with reference-backed fields."""
     target_reference = _reference("TargetModel")
@@ -551,7 +682,7 @@ def test_override_required_field_copies_reference_type(parser_fixture: C) -> Non
 
 
 def test_override_required_field_copies_nested_types(parser_fixture: C) -> None:
-    """Nested inherited data types are recursively copied with current parent-link behavior pinned."""
+    """Nested inherited data types are recursively copied with complete parent links."""
     target_reference = _reference("NestedTarget")
     BaseModel(fields=[], reference=target_reference)
     original_data_type = DataType(
@@ -578,10 +709,245 @@ def test_override_required_field_copies_nested_types(parser_fixture: C) -> None:
     assert copied_data_type.data_types[1] is not original_data_type.data_types[1]
     assert copied_data_type.data_types[1].data_types[0].type == "str"
     assert copied_data_type.data_types[1].parent is copied_data_type
-    assert copied_data_type.data_types[1].data_types[0].parent is None
+    assert copied_data_type.data_types[1].data_types[0].parent is copied_data_type.data_types[1]
     assert copied_data_type.data_types[2].type == "int"
     assert copied_data_type.data_types[2] is not original_data_type.data_types[2]
     assert copied_data_type.data_types[2].parent is copied_data_type
+
+
+def test_copy_data_type_preserves_reference_graph_and_isolates_mutable_state() -> None:
+    """Reference-preserving copies own every mutable node in the DataType tree."""
+
+    class SpecializedDataType(DataType):
+        pass
+
+    value_reference = _reference("ValueModel")
+    key_reference = _reference("KeyModel")
+    original_value_type = SpecializedDataType(
+        reference=value_reference,
+        is_optional=True,
+        kwargs={"metadata": ["original"]},
+        literals=["value"],
+        enum_member_literals=[("ValueModel", "value")],
+    )
+    original_key_type = SpecializedDataType(reference=key_reference)
+    original_data_type = SpecializedDataType(
+        data_types=[original_value_type],
+        is_dict=True,
+        dict_key=original_key_type,
+        kwargs={"constraints": {"minimum": 1}},
+        literals=["root"],
+        enum_member_literals=[("Root", "root")],
+    )
+
+    copied_data_type = _copy_data_type(original_data_type)
+    copied_value_type = copied_data_type.data_types[0]
+    copied_key_type = copied_data_type.dict_key
+
+    assert isinstance(copied_data_type, SpecializedDataType)
+    assert copied_data_type is not original_data_type
+    assert copied_value_type is not original_value_type
+    assert copied_key_type is not original_key_type
+    assert copied_value_type.parent is copied_data_type
+    assert copied_key_type is not None
+    assert copied_key_type.parent is copied_data_type
+    assert copied_value_type.reference is value_reference
+    assert copied_key_type.reference is key_reference
+    assert copied_value_type.is_optional is True
+    assert sum(child is copied_value_type for child in value_reference.children) == 1
+    assert sum(child is copied_key_type for child in key_reference.children) == 1
+
+    copied_data_type.kwargs["constraints"]["minimum"] = 2
+    copied_data_type.literals.append("copied")
+    copied_data_type.enum_member_literals.append(("Root", "copied"))
+    copied_value_type.kwargs["metadata"].append("copied")
+
+    assert original_data_type.kwargs == {"constraints": {"minimum": 1}}
+    assert original_data_type.literals == ["root"]
+    assert original_data_type.enum_member_literals == [("Root", "root")]
+    assert original_value_type.kwargs == {"metadata": ["original"]}
+
+
+def test_copy_data_model_field_isolates_aliases_and_mutable_default() -> None:
+    """Inherited field copies do not share aliases or mutable default state."""
+    field = DataModelField(
+        name="value",
+        original_name="value",
+        validation_aliases=["value", "legacy-value"],
+        data_type=DataType(type="str"),
+        default={"nested": ["original"]},
+        has_default=True,
+    )
+
+    copied_field = _copy_data_model_field(field)
+    copied_field.validation_aliases.append("copied")
+    copied_field.default["nested"].append("copied")
+
+    assert field.validation_aliases == ["value", "legacy-value"]
+    assert field.default == {"nested": ["original"]}
+
+
+def test_merge_inherited_type_modifiers_overlays_kwargs() -> None:
+    """Deferred type modifiers copy and overlay independent constraint maps."""
+    copied_kwargs_type = DataType(type="str")
+    _merge_data_type_modifiers(
+        copied_kwargs_type,
+        DataType(kwargs={"min_length": 2}),
+    )
+
+    intersected_kwargs_type = DataType(type="str", kwargs={"min_length": 1})
+    _merge_data_type_modifiers(
+        intersected_kwargs_type,
+        DataType(kwargs={"min_length": 3, "max_length": 8}),
+    )
+
+    container_type = DataType(type="str")
+    _merge_data_type_modifiers(
+        container_type,
+        DataType(
+            is_optional=True,
+            is_dict=True,
+            is_list=True,
+            is_set=True,
+            is_frozen_set=True,
+            is_mapping=True,
+            is_sequence=True,
+            is_tuple=True,
+        ),
+        preserve_container_shape=True,
+        preserve_optional=True,
+    )
+
+    assert copied_kwargs_type.kwargs == {"min_length": 2}
+    assert intersected_kwargs_type.kwargs == {"min_length": 3, "max_length": 8}
+    assert container_type.is_optional
+    assert container_type.is_dict
+    assert container_type.is_list
+    assert container_type.is_set
+    assert container_type.is_frozen_set
+    assert container_type.is_mapping
+    assert container_type.is_sequence
+    assert container_type.is_tuple
+
+
+def test_copy_resolved_inherited_field_preserves_wrapper_and_schema_metadata() -> None:
+    """A partial array wrapper retains optionality, constraints, and raw defaults."""
+    inherited_field = DataModelField(
+        name="items",
+        original_name="items",
+        data_type=DataType(data_types=[DataType(type="str")], is_list=True),
+        constraints=Constraints(minLength=2, pattern="^a"),
+    )
+    field = DataModelField(
+        name="items",
+        original_name="items",
+        data_type=DataType(
+            data_types=[DataType(data_types=[DataType(type="str")], is_list=True)],
+            is_optional=True,
+        ),
+        constraints=Constraints(minLength=3, pattern="z$"),
+        default=["az"],
+        has_default=True,
+    )
+    field.__dict__[_DEFERRED_INHERITED_TYPE_KEY] = field.data_type
+    field.__dict__[_RAW_SCHEMA_DEFAULT_KEY] = ["raw"]
+
+    copied_field = _copy_resolved_inherited_field(
+        field,
+        inherited_field,
+        partial_merge_mode=AllOfMergeMode.All,
+    )
+
+    assert copied_field is not None
+    assert copied_field.data_type.is_optional
+    assert not copied_field.data_type.is_list
+    assert copied_field.data_type.data_types[0].is_list
+    assert copied_field.data_type.data_types[0].data_types[0].type == "str"
+    assert copied_field.constraints == Constraints(
+        minLength=3,
+        pattern="z$",
+    )
+    assert copied_field.default == ["az"]
+    assert copied_field.__dict__[_RAW_SCHEMA_DEFAULT_KEY] == ["raw"]
+
+
+def test_copy_resolved_required_only_inherited_field_metadata() -> None:
+    """A required-only declaration keeps child aliases on the inherited field type."""
+    inherited_field = DataModelField(
+        name="inherited_name",
+        original_name="source-name",
+        data_type=DataType(type="str"),
+    )
+    field = DataModelField(
+        name="source_name",
+        original_name="source-name",
+        data_type=DataType(),
+        required=True,
+        serialization_alias="serialized-name",
+        use_serialization_alias=True,
+    )
+    field.__dict__[_DEFERRED_INHERITED_FIELD_KEY] = "Derived"
+
+    copied_field = _copy_resolved_inherited_field(field, inherited_field)
+
+    assert copied_field is not None
+    assert copied_field.required
+    assert copied_field.serialization_alias == "serialized-name"
+    assert copied_field.use_serialization_alias
+
+
+def test_detach_deferred_inherited_field_parents_releases_cycles_without_gc() -> None:
+    """Discarded placeholder trees are reclaimed immediately without touching live references."""
+    gc_was_enabled = gc.isenabled()
+    gc.disable()
+    try:
+        field = DataModelField(
+            name="items",
+            original_name="items",
+            data_type=DataType(
+                data_types=[
+                    DataType(
+                        data_types=[DataType(type="str")],
+                        is_list=True,
+                    ),
+                ],
+            ),
+        )
+        modifiers = _get_inherited_type_modifiers(field.data_type)
+        field.__dict__[_DEFERRED_INHERITED_TYPE_KEY] = modifiers
+        assert modifiers.list_wrapper is not None
+        tracked_objects = [
+            field,
+            *field.data_type.all_data_types,
+            modifiers.list_wrapper,
+            *modifiers.list_wrapper.all_data_types,
+        ]
+        weak_references = [weakref.ref(value) for value in tracked_objects]
+
+        _detach_deferred_inherited_field_parents(field)
+        del field, modifiers, tracked_objects
+
+        assert all(reference() is None for reference in weak_references)
+    finally:
+        if gc_was_enabled:
+            gc.enable()
+
+
+def test_detach_deferred_inherited_field_data_type_releases_parent_links() -> None:
+    """The pre-compression deferred type form also releases every parent link."""
+    field = DataModelField(
+        name="items",
+        original_name="items",
+        data_type=DataType(data_types=[DataType(type="str")], is_list=True),
+    )
+    deferred_type = DataType(data_types=[DataType(type="int")], is_list=True)
+    deferred_type.parent = field
+    field.__dict__[_DEFERRED_INHERITED_TYPE_KEY] = deferred_type
+
+    _detach_deferred_inherited_field_parents(field)
+
+    assert field.parent is None
+    assert all(data_type.parent is None for data_type in deferred_type.all_data_types)
 
 
 def test_override_required_field_copies_plain_type_with_required_default() -> None:
@@ -595,6 +961,12 @@ def test_override_required_field_copies_plain_type_with_required_default() -> No
     )
     parser.generation_store.register_model(base_model)
     parser.generation_store.register_model(child_model)
+    concrete_field = DataModelField(
+        name="local",
+        original_name="local",
+        data_type=DataType(type="int"),
+    )
+    child_model.fields.append(concrete_field)
 
     _override_required_fields(parser, [base_model, child_model])
 
@@ -607,6 +979,34 @@ def test_override_required_field_copies_plain_type_with_required_default() -> No
     assert replacement.has_default is True
     assert replacement.default == "'fallback'"
     assert replacement.use_default_with_required is True
+    assert child_model.fields[1] is concrete_field
+
+
+def test_override_required_field_resolves_scoped_mutable_default() -> None:
+    """Late inherited defaults use the derived scope and own mutable values."""
+    parser = C(
+        source="",
+        default_value_overrides={"ChildModel.value": {"source": ["override"]}},
+        allof_merge_mode=AllOfMergeMode.All,
+    )
+    base_model, child_model, child_field = _create_override_required_models(
+        DataType(type="str"),
+        original_default="'schema'",
+        original_has_default=True,
+    )
+    base_model.fields[0].__dict__[_RAW_SCHEMA_DEFAULT_KEY] = "schema"
+    child_field.__dict__[_DEFERRED_INHERITED_CLASS_KEY] = "ChildModel"
+    parser.generation_store.register_model(base_model)
+    parser.generation_store.register_model(child_model)
+
+    _override_required_fields(parser, [base_model, child_model])
+
+    replacement = child_model.fields[0]
+    replacement.default["source"].append("child")
+    assert replacement.default == {"source": ["override", "child"]}
+    assert parser.model_resolver.default_value_overrides["ChildModel.value"] == {
+        "source": ["override"],
+    }
 
 
 def test_override_required_field_removes_placeholder_without_inherited_field(parser_fixture: C) -> None:
