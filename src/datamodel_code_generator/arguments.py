@@ -248,7 +248,15 @@ base_options.add_argument(
 )
 base_options.add_argument(
     "--url",
-    help="Input file URL. `--input` is ignored when `--url` is used",
+    help=(
+        "Input file URL. `--input` is ignored when `--url` is used. "
+        "For HTTP(S), datamodel-code-generator[http] remains the stable HTTPX backend and is not deprecated, while "
+        "datamodel-code-generator[httpx2] is experimental. On the first HTTP(S) request, backend selection is lazy "
+        "and then cached for the process: httpx2 + httpcore2 takes precedence over httpx + httpcore when both "
+        "client/core pairs are installed. Fallback to httpx + httpcore occurs only when the top-level httpx2 client "
+        "module itself is not installed; a missing or broken paired dependency is an error and does not trigger "
+        "fallback."
+    ),
 )
 base_options.add_argument(
     "--input-model",
@@ -1267,7 +1275,7 @@ general_options.add_argument(
 )
 general_options.add_argument(
     "--list-experimental",
-    help="List registered experimental features, then exit.",
+    help="List registered experimental features and their compatibility notes, then exit.",
     nargs="?",
     const="table",
     choices=["table", "json", "markdown"],

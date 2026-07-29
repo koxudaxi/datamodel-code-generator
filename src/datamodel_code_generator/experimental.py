@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from textwrap import fill
 from typing import Literal
 
 from datamodel_code_generator._registry_render import _render_registry_json, _render_registry_table
@@ -45,8 +46,12 @@ EXPERIMENTAL_FEATURES: dict[ExperimentalFeatureId, ExperimentalFeature] = {
         message="The HTTPX2-backed HTTP client is experimental and may change as compatibility is validated.",
         since_version="0.71.1",
         note=(
-            "The http extra continues to use HTTPX and is not deprecated. When both extras are installed, "
-            "the experimental HTTPX2 backend takes precedence."
+            "datamodel-code-generator[http] remains the stable HTTPX backend and is not deprecated; "
+            "datamodel-code-generator[httpx2] is experimental. On the first HTTP(S) request, backend selection is "
+            "lazy and then cached for the process: httpx2 + httpcore2 takes precedence over httpx + httpcore when "
+            "both client/core pairs are installed. Fallback to httpx + httpcore occurs only when the top-level "
+            "httpx2 client module itself is not installed; a missing or broken paired dependency is an error and "
+            "does not trigger fallback."
         ),
     ),
     "cli-option.generate-schema-validators": ExperimentalFeature(
@@ -174,7 +179,8 @@ def render_experimental_features_json() -> str:
 
 
 def render_experimental_features_table() -> str:
-    """Render all experimental features as a plain text table."""
+    """Render all experimental features as a plain text table with readable notes."""
+    features = iter_experimental_features()
     table = _render_registry_table([
         [
             "ID",
@@ -191,10 +197,21 @@ def render_experimental_features_table() -> str:
                 feature.since_version,
                 feature.tracking_issue or "-",
             ]
-            for feature in iter_experimental_features()
+            for feature in features
         ],
     ])
-    return "\n".join(line.rstrip() for line in table.splitlines()) + "\n"
+    notes = [
+        f"{feature.id}:\n{fill(note, width=100, initial_indent='  ', subsequent_indent='  ', break_on_hyphens=False)}"
+        for feature in features
+        if (note := feature.note) is not None
+    ]
+    return "\n".join([
+        *(line.rstrip() for line in table.splitlines()),
+        "",
+        "Notes:",
+        *notes,
+        "",
+    ])
 
 
 def render_experimental_features_markdown(*, include_header: bool = True) -> str:

@@ -68,7 +68,7 @@ The option replaces root model classes with type aliases where possible. Pydanti
 
 The HTTPX2-backed HTTP client is experimental and may change as compatibility is validated.
 
-The http extra continues to use HTTPX and is not deprecated. When both extras are installed, the experimental HTTPX2 backend takes precedence.
+datamodel-code-generator[http] remains the stable HTTPX backend and is not deprecated; datamodel-code-generator[httpx2] is experimental. On the first HTTP(S) request, backend selection is lazy and then cached for the process: httpx2 + httpcore2 takes precedence over httpx + httpcore when both client/core pairs are installed. Fallback to httpx + httpcore occurs only when the top-level httpx2 client module itself is not installed; a missing or broken paired dependency is an error and does not trigger fallback.
 
 ### `formatter.builtin`
 

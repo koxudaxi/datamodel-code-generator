@@ -1513,6 +1513,11 @@ def generate(
     JSON Schema, GraphQL, XML Schema, Protocol Buffers, Avro, and raw data formats
     (JSON, YAML, Dict, CSV) as input.
 
+    HTTP(S) URL inputs and references select their backend lazily on first use and cache it for the process. The
+    experimental `httpx2`/`httpcore2` pair is preferred, falling back to `httpx`/`httpcore` only when the `httpx2`
+    client module itself is absent. Missing paired or internal dependencies are reported instead. File URL reference
+    joining uses a dependency-free local fast path.
+
     Args:
         input_: The input source (Path file input, string content, URL, dict,
             list of file paths, or MCP tools list when input_file_type is

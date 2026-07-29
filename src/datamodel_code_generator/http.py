@@ -1,9 +1,13 @@
 """HTTP utilities for fetching remote schema files.
 
 Provides functions to fetch schema content from URLs and join URL references.
-HTTP(S) URLs require the 'http' extra: `pip install 'datamodel-code-generator[http]'`.
-The experimental HTTPX2 backend is available through `datamodel-code-generator[httpx2]`.
-file:// URLs are handled without additional dependencies.
+HTTP(S) operations require either the stable `datamodel-code-generator[http]` extra
+(`httpx` with `httpcore`) or the experimental `datamodel-code-generator[httpx2]`
+extra (`httpx2` with `httpcore2`). The backend is selected lazily on the first
+HTTP(S) operation and cached for the process. The experimental pair is preferred;
+selection falls back to the stable pair only when the `httpx2` client module itself
+is absent. Missing paired or internal dependencies are reported instead of causing
+a fallback. Joining file:// URLs uses a dependency-free local fast path.
 """
 
 from __future__ import annotations
@@ -1028,6 +1032,10 @@ def get_body(  # noqa: PLR0913
     Redirects are followed manually rather than by the HTTP client so each hop can be revalidated and sensitive headers
     can be narrowed before the next request. Once a redirect crosses origins, scoped credentials are removed
     from `current_headers` and are not restored on later hops.
+
+    The HTTP backend is selected lazily on the first HTTP(S) operation and cached for the process. The experimental
+    `httpx2`/`httpcore2` pair is preferred. Selection falls back to `httpx`/`httpcore` only when the `httpx2` client
+    module itself is absent; missing paired or internal dependencies are reported instead.
     """
     return _get_body(
         url,
@@ -1105,8 +1113,10 @@ def _get_body(  # noqa: PLR0913
 def join_url(url: str, ref: str = ".") -> str:  # noqa: PLR0912
     """Join a base URL with a relative reference.
 
-    File URLs need local handling because client URL joining is HTTP-oriented. HTTP(S) URLs are delegated to
-    the selected client so normal web URL semantics stay consistent with the fetch path.
+    File URLs use a dependency-free local fast path because client URL joining is HTTP-oriented. HTTP(S) URLs are
+    delegated to the backend selected lazily on the first HTTP(S) operation and cached for the process. The experimental
+    `httpx2`/`httpcore2` pair is preferred. Selection falls back to `httpx`/`httpcore` only when the `httpx2` client
+    module itself is absent; missing paired or internal dependencies are reported instead.
     """
     if url.startswith("file://"):
         from urllib.parse import urlparse  # noqa: PLC0415

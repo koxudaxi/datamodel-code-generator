@@ -44,11 +44,14 @@ Use a directory as input, or use `$ref` to reference other files:
 datamodel-codegen --input schemas/ --output models/
 ```
 
-For schemas with cross-file `$ref`, ensure you have the HTTP extra for remote refs:
+For schemas with remote cross-file `$ref`, install an HTTP extra:
 
 ```bash
 pip install 'datamodel-code-generator[http]'
 ```
+
+See [HTTP backend selection](#http-backend-selection) for the stable and
+experimental choices.
 
 📎 Related: [#215](https://github.com/koxudaxi/datamodel-code-generator/issues/215)
 
@@ -250,6 +253,10 @@ Install the HTTP extra:
 pip install 'datamodel-code-generator[http]'
 ```
 
+The `http` extra is the stable choice. See
+[HTTP backend selection](#http-backend-selection) if you want to use the
+experimental HTTPX2 backend.
+
 For authenticated endpoints:
 
 ```bash
@@ -257,6 +264,35 @@ datamodel-codegen --url https://api.example.com/schema.yaml \
     --http-headers "Authorization: Bearer TOKEN" \
     --output model.py
 ```
+
+### 🔄 Which HTTP client backend is selected? {#http-backend-selection}
+
+The HTTP extras install separate, matched client and transport stacks:
+
+| Extra | Status | Client and transport |
+|-------|--------|----------------------|
+| `datamodel-code-generator[http]` | Stable, supported, and not deprecated | `httpx` + `httpcore` |
+| `datamodel-code-generator[httpx2]` | Experimental | `httpx2` + `httpcore2` |
+
+`datamodel-code-generator[all]` includes the stable `http` extra but
+intentionally does not include the experimental `httpx2` extra.
+
+The backend is selected lazily on the first HTTP(S) use and the result is
+cached for the lifetime of the process:
+
+1. The experimental `httpx2` + `httpcore2` stack is preferred when it is
+   available, including when both extras are installed.
+2. Selection falls back to `httpx` + `httpcore` only when the `httpx2` client
+   module itself is not installed.
+3. A missing paired transport or another broken dependency in an installed
+   stack raises its import error. It does not silently fall back, because that
+   would hide an invalid environment.
+4. If neither client is installed, the request fails with instructions to
+   install an HTTP extra.
+
+Because selection is cached process-wide, installing or removing an extra
+while a process is running does not switch that process to another backend.
+Restart the process after changing the installed extras.
 
 ### 🔒 SSL certificate errors
 

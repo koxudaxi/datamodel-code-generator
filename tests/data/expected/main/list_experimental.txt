@@ -11,3 +11,40 @@ input-format.avro                      input-format  --input-file-type avro     
 input-format.mcp-tools                 input-format  --input-file-type mcp-tools       0.60.0  -
 input-format.protobuf                  input-format  --input-file-type protobuf        0.59.0  -
 input-format.xmlschema                 input-format  --input-file-type xmlschema       0.59.0  -
+
+Notes:
+cli-option.generate-schema-validators:
+  The option currently targets Pydantic v2 BaseModel output and covers selected object-level rules
+  such as patternProperties, required-only oneOf/anyOf groups, and simple if/then/else
+  required-property conditions.
+cli-option.schema-validator-type:
+  The only currently implemented backend is 'pydantic-v2', which preserves the existing generated
+  Pydantic v2 validator behavior.
+cli-option.use-missing-sentinel:
+  The option requires Pydantic v2 BaseModel output and a target Pydantic version that supports the
+  MISSING sentinel.
+cli-option.use-type-alias:
+  The option replaces root model classes with type aliases where possible. Pydantic v2 output may
+  use TypeAliasType or Python 3.12 type statements depending on the target Python version.
+extra.httpx2:
+  datamodel-code-generator[http] remains the stable HTTPX backend and is not deprecated;
+  datamodel-code-generator[httpx2] is experimental. On the first HTTP(S) request, backend selection
+  is lazy and then cached for the process: httpx2 + httpcore2 takes precedence over httpx + httpcore
+  when both client/core pairs are installed. Fallback to httpx + httpcore occurs only when the
+  top-level httpx2 client module itself is not installed; a missing or broken paired dependency is
+  an error and does not trigger fallback.
+formatter.builtin:
+  The formatter is designed for generated model modules and is not a general-purpose Python
+  formatter.
+input-format.asyncapi:
+  The parser focuses on message payload model generation from AsyncAPI documents.
+input-format.avro:
+  The parser generates Python models from Avro schemas; it does not provide Avro runtime validation.
+input-format.mcp-tools:
+  The input is converted from MCP tool inputSchema/outputSchema entries into JSON Schema definitions
+  before model generation.
+input-format.protobuf:
+  The parser generates Python models from .proto schemas; it does not provide protobuf runtime
+  validation or gRPC code generation.
+input-format.xmlschema:
+  The parser focuses on model generation from XSD documents, not full XML instance validation.
