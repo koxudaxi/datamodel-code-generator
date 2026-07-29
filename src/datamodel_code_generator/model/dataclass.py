@@ -173,7 +173,19 @@ class DataModelField(DataModelFieldBase):
         """Generate field() call or default value representation."""
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._FIELD_KEYS}
 
-        if self.default != UNDEFINED and self.default is not None:
+        needs_nested_factory = (
+            self.use_default_factory_for_optional_nested_models
+            and not self.required
+            and (self.default is None or self.default is UNDEFINED)
+            and "default_factory" not in data
+        )
+        if needs_nested_factory and (nested_model_name := self._get_default_factory_for_nested_model()):
+            data["default_factory"] = nested_model_name
+
+        if self.default is None:
+            if data and "default_factory" not in data and (not self.strip_default_none or data.get("init") is False):
+                data["default"] = None
+        elif self.default != UNDEFINED and "default_factory" not in data:
             data["default"] = self.default
 
         if self.required and not self.use_default_with_required:
@@ -186,16 +198,6 @@ class DataModelField(DataModelFieldBase):
                     "default_factory",
                 }
             }
-
-        if (
-            self.use_default_factory_for_optional_nested_models
-            and not self.required
-            and (self.default is None or self.default is UNDEFINED)
-            and "default_factory" not in data
-        ):
-            nested_model_name = self._get_default_factory_for_nested_model()
-            if nested_model_name:
-                data["default_factory"] = nested_model_name
 
         if not data:
             return "field()" if self._has_forced_field_assignment else ""

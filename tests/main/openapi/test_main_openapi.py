@@ -3773,16 +3773,30 @@ def test_main_openapi_allof_required_inherited_dataclass_metadata(
         case _:
             return
 
-    if model_type in {DataModelType.PydanticV2BaseModel, DataModelType.PydanticV2Dataclass}:
+    if model_type in {
+        DataModelType.PydanticV2BaseModel,
+        DataModelType.PydanticV2Dataclass,
+        DataModelType.DataclassesDataclass,
+    }:
+        base_invalid_json, base_error_type = (
+            ("[]", "dataclass_type")
+            if model_type is DataModelType.DataclassesDataclass
+            else ('{"inheritedFactory":[1]}', "string_type")
+        )
         assert_generated_model_json_validation(
             output_file,
             module_name=f"allof_required_dataclass_metadata_{expected_name}_base_defaults",
             model_name="InitBase",
             valid_json="{}",
-            invalid_json='{"inheritedFactory":[1]}',
-            expected_error_type="string_type",
-            expected_attribute_path=("inheritedScalar",),
-            expected_attribute_value="inherited",
+            invalid_json=base_invalid_json,
+            expected_error_type=base_error_type,
+            expected_attribute_path=("inheritedMetadata",),
+            expected_attribute_value=None,
+            expected_repr=(
+                "InitBase(inheritedScalar='inherited', inheritedFactory=[], inheritedMetadata=None)"
+                if model_type is DataModelType.DataclassesDataclass
+                else None
+            ),
         )
 
     required_override_payload = {
@@ -3866,6 +3880,11 @@ def test_main_openapi_allof_required_inherited_dataclass_metadata(
         expected_error_type="missing",
         expected_attribute_path=("positionalOverride",),
         expected_attribute_value="fresh",
+        expected_keyword_only_fields=(
+            {"positionalOverride"}
+            if model_type in {DataModelType.PydanticV2Dataclass, DataModelType.DataclassesDataclass}
+            else None
+        ),
     )
 
     assert_generated_model_json_validation(
@@ -3885,8 +3904,14 @@ def test_main_openapi_allof_required_inherited_dataclass_metadata(
         valid_json='{"newAfterInheritedInit":1}',
         invalid_json="{}",
         expected_error_type="missing",
-        expected_attribute_path=("newAfterInheritedInit",),
-        expected_attribute_value=1,
+        expected_attribute_path=("inheritedMetadata",),
+        expected_attribute_value=None,
+        expected_repr=(
+            "InheritedInitDefaultChild(inheritedScalar='inherited', inheritedFactory=[], "
+            "inheritedMetadata=None, newAfterInheritedInit=1)"
+            if model_type is DataModelType.DataclassesDataclass
+            else None
+        ),
     )
 
     ordering_payload = {
@@ -3913,6 +3938,48 @@ def test_main_openapi_allof_required_inherited_dataclass_metadata(
         expected_error_type="int_parsing",
         expected_attribute_path=("earlyFactory",),
         expected_attribute_value=["early"],
+        expected_keyword_only_fields=(
+            {"lateFactory", "newRequired"}
+            if model_type in {DataModelType.PydanticV2Dataclass, DataModelType.DataclassesDataclass}
+            else None
+        ),
+    )
+
+
+def test_main_openapi_dataclass_optional_metadata_defaults(output_file: Path) -> None:
+    """Preserve optional None and computed factory defaults behind dataclass field metadata."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "dataclass_optional_metadata_defaults.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="dataclass_optional_metadata_defaults.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--formatters",
+            "builtin",
+            "--output-model-type",
+            DataModelType.DataclassesDataclass.value,
+            "--field-extra-keys",
+            "init",
+            "repr",
+            "kw_only",
+            "--use-default-factory-for-optional-nested-models",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="dataclass_optional_metadata_defaults",
+        model_name="Model",
+        valid_json="{}",
+        invalid_json="[]",
+        expected_error_type="dataclass_type",
+        expected_attribute_path=("nested", "value"),
+        expected_attribute_value=None,
+        expected_keyword_only_fields={"keywordOnly"},
+        expected_repr="Model(keywordOnly=None, nested=Nested(value=None))",
     )
 
 
@@ -8374,6 +8441,15 @@ def test_main_openapi_read_only_write_only_variant_graph(
         invalid_json='{"values":[]}',
         expected_error_type="dict_type",
     )
+    if DataModelType(output_model_type) is DataModelType.PydanticV2BaseModel:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="read_only_write_only_variant_graph_forward_dict_key_root",
+            model_name="ApiForwardDictKeyMapResponseModel",
+            valid_json="{}",
+            invalid_json="[]",
+            expected_error_type="dict_type",
+        )
 
 
 def test_main_openapi_read_only_write_only_variant_graph_schema_validators(

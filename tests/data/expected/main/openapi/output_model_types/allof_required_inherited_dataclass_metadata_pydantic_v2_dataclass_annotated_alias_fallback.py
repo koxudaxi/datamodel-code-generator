@@ -92,7 +92,7 @@ class KeywordOverrideBase:
 
 @dataclass
 class KeywordOverrideChild(KeywordOverrideBase):
-    positionalOverride: Annotated[str, Field(kw_only=False)] = Field(kw_only=False)
+    positionalOverride: Annotated[str, Field(kw_only=True)] = Field(kw_only=True)
 
 
 @dataclass
@@ -109,5 +109,5 @@ class OrderingBase:
 @dataclass
 class OrderingChild(OrderingBase):
     earlyFactory: Annotated[list[str], Field(...)] = Field(...)
-    lateFactory: Annotated[list[str], Field(...)] = Field(...)
+    lateFactory: Annotated[list[str], Field(kw_only=True)] = Field(kw_only=True)
     newRequired: Annotated[int, Field(kw_only=True)] = Field(kw_only=True)

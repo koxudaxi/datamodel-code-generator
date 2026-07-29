@@ -73,7 +73,7 @@ class KeywordOverrideBase:
 
 @dataclass
 class KeywordOverrideChild(KeywordOverrideBase):
-    positionalOverride: str = Field(..., kw_only=False)
+    positionalOverride: str = Field(..., kw_only=True)
 
 
 @dataclass
@@ -86,5 +86,5 @@ class OrderingBase:
 @dataclass
 class OrderingChild(OrderingBase):
     earlyFactory: list[str] = Field(...)
-    lateFactory: list[str] = Field(...)
+    lateFactory: list[str] = Field(..., kw_only=True)
     newRequired: int = Field(..., kw_only=True)

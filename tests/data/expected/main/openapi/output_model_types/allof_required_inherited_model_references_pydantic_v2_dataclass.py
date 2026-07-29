@@ -128,7 +128,7 @@ class ScheduledPickup(Pickup):
         ..., alias='pickupWindow', title='pickup_window'
     )
     mode: str = 'scheduled'
-    fallback_field: Any = Field(..., alias='fallbackField')
+    fallback_field: Any = Field(..., alias='fallbackField', kw_only=True)
 
 
 @dataclass

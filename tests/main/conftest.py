@@ -13,7 +13,7 @@ import textwrap
 import time
 import warnings
 from argparse import Namespace
-from collections.abc import Callable, Generator, Mapping, Sequence
+from collections.abc import Callable, Collection, Generator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import fields as dataclass_fields
 from dataclasses import is_dataclass
@@ -1392,11 +1392,31 @@ def assert_generated_model_json_validation(
     expected_error_type: str,
     expected_attribute_path: Sequence[str] = (),
     expected_attribute_value: Any = None,
+    expected_keyword_only_fields: Collection[str] | None = None,
+    expected_repr: str | None = None,
 ) -> None:
     """Import a generated module and validate JSON data through a generated Pydantic model or dataclass."""
     with _generated_model(output_path, module_name, model_name) as model:
         validate_json = _model_json_validator(model)
         parsed = validate_json(valid_json)
+
+        if expected_keyword_only_fields is not None:
+            signature = inspect.signature(model)
+            actual_keyword_only_fields = (
+                {name for name, field in pydantic_fields.items() if field.kw_only}
+                if (pydantic_fields := getattr(model, "__pydantic_fields__", None)) is not None
+                else {
+                    name
+                    for name, parameter in signature.parameters.items()
+                    if parameter.kind is inspect.Parameter.KEYWORD_ONLY
+                }
+            )
+            if actual_keyword_only_fields != set(expected_keyword_only_fields):  # pragma: no cover
+                pytest.fail(
+                    f"Expected keyword-only fields {set(expected_keyword_only_fields)!r}, "
+                    f"got {actual_keyword_only_fields!r}",
+                    pytrace=False,
+                )
 
         if expected_attribute_path:
             actual: Any = parsed
@@ -1411,6 +1431,9 @@ def assert_generated_model_json_validation(
                     f"Expected {'.'.join(expected_attribute_path)} to be {expected_attribute_value!r}, got {actual!r}",
                     pytrace=False,
                 )
+
+        if expected_repr is not None and repr(parsed) != expected_repr:  # pragma: no cover
+            pytest.fail(f"Expected repr {expected_repr!r}, got {parsed!r}", pytrace=False)
 
         _assert_model_json_invalid(validate_json, invalid_json, expected_error_type)
 

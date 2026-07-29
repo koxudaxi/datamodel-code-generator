@@ -3604,7 +3604,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         required_assignment_names: set[str],
     ) -> frozenset[str]:
         """Return child positional fields that follow an effective positional default."""
-        seen_default = False
+        seen_dataclass_default = False
+        seen_signature_default = False
         ordering_conflicts: set[str] = set()
         for field_name, (field, declaring_model, inherited_has_default) in effective_fields.items():
             if model.FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT and field.extras.get("init") is False:
@@ -3612,23 +3613,29 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             kw_only = field.extras.get("kw_only")
             if kw_only is True or (kw_only is None and declaring_model.has_keyword_only_definition()):
                 continue
-            if (
+            required_assignment_is_dataclass_default = (
                 model.REQUIRED_FIELD_ASSIGNMENT_IS_DATACLASS_DEFAULT
                 and field.required
                 and not field.use_default_with_required
                 and (field_name in required_assignment_names or field_has_assignment(field))
-            ):
-                field_has_default = True
-            else:
-                field_has_default = (
+            )
+            field_has_signature_default = (
+                False
+                if required_assignment_is_dataclass_default
+                else (
                     cls.__get_dataclass_field_default_info(field, field_has_assignment)[0]
                     if inherited_has_default is None
                     else inherited_has_default
                 )
-            if field_has_default:
-                seen_default = True
-            elif declaring_model is model and seen_default:
+            )
+            field_has_dataclass_default = required_assignment_is_dataclass_default or field_has_signature_default
+            if declaring_model is model and (
+                (seen_dataclass_default and not field_has_dataclass_default)
+                or (seen_signature_default and not field_has_signature_default)
+            ):
                 ordering_conflicts.add(field_name)
+            seen_dataclass_default = seen_dataclass_default or field_has_dataclass_default
+            seen_signature_default = seen_signature_default or field_has_signature_default
         return frozenset(ordering_conflicts)
 
     @staticmethod

@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 class InitBase:
     inheritedScalar: str | None = field(init=False, default='inherited')
     inheritedFactory: list[str] = field(default_factory=list, init=False)
-    inheritedMetadata: str | None = field(init=False)
+    inheritedMetadata: str | None = field(init=False, default=None)
 
 
 @dataclass
