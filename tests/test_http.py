@@ -27,6 +27,7 @@ from datamodel_code_generator.http import (
     _get_url_origin,
     _HTTPFetchSession,
     _is_safe_ip,
+    _load_http_stack,
     _normalize_dns_host,
     _PinnedNetworkBackend,
     get_body,
@@ -521,6 +522,12 @@ def test_cli_fetches_external_schema_with_selected_backend(
 
     if (expected_backend := os.environ.get("DATAMODEL_CODE_GENERATOR_EXPECTED_HTTP_BACKEND")) is not None:
         assert _get_http_stack().backend == expected_backend
+
+
+def test_load_http_stack_rejects_unknown_backend() -> None:
+    """Reject backend names outside the exhaustive internal selector."""
+    with pytest.raises(AssertionError, match="invalid"):
+        _load_http_stack("invalid")  # type: ignore[arg-type]
 
 
 def test_http_stack_falls_back_and_caches_when_httpx2_is_absent(mocker: MockerFixture) -> None:
