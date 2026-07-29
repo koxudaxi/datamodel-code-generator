@@ -19,7 +19,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, overload
 from urllib.parse import urlparse
 
-from typing_extensions import Self, assert_never
+from typing_extensions import Self
 
 from datamodel_code_generator import SchemaFetchError
 
@@ -493,7 +493,8 @@ def _load_http_stack(backend: _HTTPBackendName) -> _HTTPStack:
         case "httpx2":
             core_backend = "httpcore2"
         case _:
-            assert_never(backend)
+            msg = f"Unexpected HTTP backend: {backend!r}"
+            raise AssertionError(msg)
 
     httpx_module = cast("_HTTPXModule", import_module(backend))
     httpcore_module = import_module(core_backend)
