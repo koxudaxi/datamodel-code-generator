@@ -3756,7 +3756,7 @@ def test_main_openapi_allof_required_inherited_dataclass_metadata(
     match model_type := DataModelType(output_model_type):
         case DataModelType.PydanticV2BaseModel | DataModelType.PydanticV2Dataclass | DataModelType.DataclassesDataclass:
             pass
-        case DataModelType.TypingTypedDict:
+        case DataModelType.TypingTypedDict if sys.version_info >= (3, 12):
             assert_generated_model_json_validation(
                 output_file,
                 module_name="allof_required_dataclass_metadata_typed_dict",
@@ -3767,6 +3767,8 @@ def test_main_openapi_allof_required_inherited_dataclass_metadata(
                 expected_attribute_path=("newAfterInheritedInit",),
                 expected_attribute_value=1,
             )
+            return
+        case DataModelType.TypingTypedDict:
             return
         case _:
             return
