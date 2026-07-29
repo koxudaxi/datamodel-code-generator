@@ -1361,8 +1361,7 @@ def _model_json_validator(model: Any) -> Callable[[str], Any]:
         )
         candidate.__annotations__.update(resolved_annotations)
         for field in dataclass_fields(candidate):
-            if (resolved_type := resolved_annotations.get(field.name)) is not None:
-                field.type = resolved_type
+            field.type = resolved_annotations.get(field.name, field.type)
     return TypeAdapter(model).validate_json
 
 

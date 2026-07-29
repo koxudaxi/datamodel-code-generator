@@ -380,6 +380,26 @@ class _DataclassInheritedInfo(NamedTuple):
     ordering_conflicts: frozenset[str]
 
 
+def _apply_dataclass_field_adjustments(
+    model: DataModel,
+    first_adjustment: tuple[DataModelFieldBase, _DataclassFieldAdjustment],
+    adjustments: Iterable[tuple[DataModelFieldBase, _DataclassFieldAdjustment]],
+) -> None:
+    """Apply exact required-field assignments and keyword-only ordering fixes."""
+    enable_model_keyword_only = False
+    for field, adjustment in chain((first_adjustment,), adjustments):
+        match adjustment:
+            case "assignment":
+                field._force_field_assignment()  # noqa: SLF001
+            case "keyword_only":
+                if model.REQUIRES_MODEL_LEVEL_KW_ONLY:
+                    enable_model_keyword_only = True
+                else:
+                    field.extras["kw_only"] = True
+    if enable_model_keyword_only:
+        model.enable_model_keyword_only()
+
+
 def _collect_keep_model_order_deps(
     model: DataModel,
     *,
@@ -3518,44 +3538,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     self.generation_store.set_fields(model, sorted(model.fields, key=field_has_assignment))
                 continue
 
-            if self.__apply_dataclass_field_adjustments(
+            _apply_dataclass_field_adjustments(
                 model,
                 first_adjustment,
                 field_adjustments,
-            ):
-                warn(
-                    f"Dataclass '{model.class_name}' has a required field conflict due to inheritance. "
-                    f"An inherited field has a default value, but a required field follows or overrides it. "
-                    f"This will cause a TypeError at runtime. Consider using --target-python-version 3.10 "
-                    f"or higher to enable automatic field(kw_only=True) fix.",
-                    category=UserWarning,
-                    stacklevel=2,
-                )
+            )
             model.clear_imports_cache()
             self.generation_store.set_fields(model, sorted(model.fields, key=field_has_assignment))
-
-    def __apply_dataclass_field_adjustments(
-        self,
-        model: DataModel,
-        first_adjustment: tuple[DataModelFieldBase, _DataclassFieldAdjustment],
-        adjustments: Iterable[tuple[DataModelFieldBase, _DataclassFieldAdjustment]],
-    ) -> bool:
-        """Apply exact required-field assignments and report unsupported ordering conflicts."""
-        enable_model_keyword_only = False
-        unresolved_ordering_conflict = False
-        for field, adjustment in chain((first_adjustment,), adjustments):
-            match adjustment:
-                case "assignment":
-                    field._force_field_assignment()  # noqa: SLF001
-                case "keyword_only" if model.REQUIRES_MODEL_LEVEL_KW_ONLY:
-                    enable_model_keyword_only = True
-                case "keyword_only" if self.target_python_version.has_kw_only_dataclass:
-                    field.extras["kw_only"] = True
-                case _:  # pragma: no cover
-                    unresolved_ordering_conflict = True
-        if enable_model_keyword_only:
-            model.enable_model_keyword_only()
-        return unresolved_ordering_conflict
 
     @classmethod
     def __get_dataclass_inherited_info(cls, model: DataModel) -> _DataclassInheritedInfo | None:

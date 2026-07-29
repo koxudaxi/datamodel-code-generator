@@ -549,8 +549,9 @@ def test_dataclass_inherited_init_cleanup_without_other_adjustments(parser_fixtu
         extras={"init": False},
     )
     required_override.__dict__[_DEFERRED_INHERITED_INIT_KEY] = True
+    unnamed_child = DataclassField(name=None, data_type=DataType(type="str"), required=True)
     child = DataclassModel(
-        fields=[required_override],
+        fields=[required_override, unnamed_child],
         base_classes=[base_reference],
         reference=_reference("InitChild"),
     )
@@ -559,6 +560,7 @@ def test_dataclass_inherited_init_cleanup_without_other_adjustments(parser_fixtu
 
     assert required_override.extras == {}
     assert not str(required_override)
+    assert unnamed_child.extras == {}
 
 
 def test_get_enum_from_base_skips_models_without_inherited_enum_capability() -> None:

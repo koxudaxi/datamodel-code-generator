@@ -29,6 +29,11 @@ from datamodel_code_generator.model import DataModelFieldBase, get_data_model_ty
 from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
+from datamodel_code_generator.model.runtime_validation import (
+    ConditionalRequiredRule,
+    PatternPropertiesRule,
+    SchemaRuntimeValidation,
+)
 from datamodel_code_generator.model.type_alias import TypeAlias
 from datamodel_code_generator.parser.base import (
     _DEFERRED_INHERITED_CLASS_KEY,
@@ -3915,10 +3920,23 @@ def test_request_response_schema_graph_helper_edges(tmp_path: Path) -> None:
     assert parser._ref_schema_exists("")
 
     external_schema = tmp_path / "external.json"
+    mapped_schema = {
+        "$defs": {
+            "MappedProperty": {
+                "type": "object",
+                "properties": {"value": {"$ref": f"{external_schema}#/$defs/External"}},
+            },
+            "MappedPropertyName": {
+                "type": "object",
+                "propertyNames": {"$ref": f"{external_schema}#/$defs/External"},
+            },
+        }
+    }
     mapped_parser = JsonSchemaParser(
-        "",
+        json.dumps(mapped_schema),
         external_ref_mapping={str(external_schema): "external.models"},
     )
+    mapped_parser.raw_obj = mapped_schema
     assert (
         mapped_parser._resolve_rw_model_reference(
             f"{external_schema}#/$defs/External",
@@ -3926,6 +3944,19 @@ def test_request_response_schema_graph_helper_edges(tmp_path: Path) -> None:
         )
         is None
     )
+    assert mapped_parser._get_ref_schema_rw_model_reference_facts("#/$defs/MappedProperty") == (False, ())
+    assert mapped_parser._get_ref_schema_rw_model_reference_facts("#/$defs/MappedPropertyName") == (False, ())
+
+    inline_properties = JsonSchemaObject.model_validate({
+        "properties": {"direct": {"type": "string"}},
+        "allOf": [
+            {
+                "type": "object",
+                "properties": {"nested": {"type": "integer"}},
+            }
+        ],
+    })
+    assert parser._get_inline_property_names(inline_properties) == frozenset({"direct", "nested"})
 
 
 def test_request_response_variant_source_path_collision_fallbacks() -> None:
@@ -4127,6 +4158,85 @@ def test_request_response_runtime_validation_is_copied_filtered_and_retargeted()
     assert {data_type.type_hint for data_type in source_runtime.data_types} == {"Child"}
 
 
+def test_request_response_runtime_validation_copy_handles_empty_optional_parts() -> None:
+    """Copy pattern rules without an additional type and discard fully filtered conditional rules."""
+    parser = JsonSchemaParser(
+        "",
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.RequestResponse,
+    )
+    field = DataModelFieldBase(
+        name="kept",
+        original_name="kept",
+        data_type=DataType(type="str"),
+    )
+    pattern_source_path = "#/PatternSource"
+    pattern_target_path = "#/PatternTarget"
+    parser.extra_template_data[pattern_source_path]["schema_runtime_validation"] = SchemaRuntimeValidation(
+        pattern_properties=[
+            PatternPropertiesRule(
+                declared_properties=("kept", "removed"),
+                pattern_properties=(("^x", DataType(type="str")),),
+            )
+        ]
+    )
+
+    parser._copy_schema_runtime_validation_for_variant(
+        pattern_source_path,
+        pattern_target_path,
+        [field],
+        "Request",
+    )
+
+    pattern_target = parser.extra_template_data[pattern_target_path]["schema_runtime_validation"]
+    assert pattern_target.pattern_properties[0].declared_properties == ("kept",)
+    assert pattern_target.pattern_properties[0].additional_property_type is None
+
+    conditional_source_path = "#/ConditionalSource"
+    conditional_target_path = "#/ConditionalTarget"
+    parser.extra_template_data[conditional_source_path]["schema_runtime_validation"] = SchemaRuntimeValidation(
+        conditional_required=[
+            ConditionalRequiredRule(
+                condition=((("removed",), ("value",)),),
+                then_groups=((("kept",),),),
+                else_groups=(),
+            )
+        ]
+    )
+
+    parser._copy_schema_runtime_validation_for_variant(
+        conditional_source_path,
+        conditional_target_path,
+        [field],
+        "Response",
+    )
+
+    assert "schema_runtime_validation" not in parser.extra_template_data[conditional_target_path]
+
+
+def test_all_mode_skips_empty_variant_model() -> None:
+    """Do not register an empty variant in all-model mode."""
+    parser = JsonSchemaParser(
+        "",
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.All,
+    )
+    reference = parser.model_resolver.add(
+        ["#", "$defs", "Empty"],
+        "Empty",
+        class_name=True,
+        loaded=True,
+    )
+
+    parser._create_variant_model(
+        reference,
+        "Request",
+        [],
+        JsonSchemaObject.model_validate({"type": "object"}),
+        BaseModel,
+    )
+
+    assert not parser.results
+
+
 def test_json_schema_object_x_property_names_dict() -> None:
     """Test OpenAPI x-propertyNames dict is normalized to propertyNames."""
     obj = JsonSchemaObject.model_validate({"x-propertyNames": {"type": "string", "pattern": "^x-"}})
@@ -4253,6 +4363,16 @@ def test_standard_schema_metadata_is_included_in_model_extras() -> None:
                 ]
             },
             "Dict[str, str]",
+        ),
+        ({"allOf": [{"type": "object", "additionalProperties": {}}]}, "Dict[str, Any]"),
+        (
+            {
+                "allOf": [
+                    {"type": "object", "additionalProperties": {}},
+                    {"type": "object", "additionalProperties": {"type": "integer"}},
+                ]
+            },
+            "Dict[str, int]",
         ),
         ({"type": "array", "items": {"$ref": "#/$defs/Item"}}, "List[Item]"),
         ({"type": ["string", "null"]}, "Optional[str]"),
