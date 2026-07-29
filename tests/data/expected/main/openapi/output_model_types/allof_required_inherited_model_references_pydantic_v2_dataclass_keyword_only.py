@@ -11,61 +11,61 @@ from pydantic.dataclasses import dataclass
 from typing_extensions import TypeAliasType
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Detail:
     code: constr(min_length=1)
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ForwardEvent:
     latitude: confloat(ge=-90.0, le=90.0)
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ForwardWindow:
     start_at: conint(ge=0) = Field(..., alias='startAt')
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ForwardBasePickup:
     detail: Detail | None = None
     forward_events: list[ForwardEvent] | None = Field(None, alias='forwardEvents')
     forward_window: ForwardWindow | None = Field(None, alias='forwardWindow')
 
 
-@dataclass
+@dataclass(kw_only=True)
 class LegacyContact:
     legacy_name: str | None = Field(None, alias='legacyName')
 
 
-@dataclass
+@dataclass(kw_only=True)
 class BasePickup:
     contact_details: LegacyContact | None = Field(None, alias='contactDetails')
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ContactDetails:
     name: constr(min_length=1)
     legacy_name: str | None = Field(None, alias='legacyName')
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Event:
     latitude: confloat(ge=-90.0, le=90.0)
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PickupWindow:
     start_at: int = Field(..., alias='startAt')
     end_at: int = Field(..., alias='endAt')
 
 
-@dataclass
+@dataclass(kw_only=True)
 class LabelPackage:
     label_id: constr(min_length=1) = Field(..., alias='labelId')
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Package:
     sku: constr(min_length=1)
 
@@ -73,34 +73,34 @@ class Package:
 TrackingCode = TypeAliasType("TrackingCode", constr(min_length=1))
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ForwardDeclaredPickup(ForwardBasePickup):
     detail: Detail = Field(...)
     forward_events: list[ForwardEvent] = Field(..., alias='forwardEvents')
     forward_window: ForwardWindow = Field(..., alias='forwardWindow')
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ForwardInlineRequiredPickup(ForwardBasePickup):
     detail: Detail = Field(...)
     forward_events: list[ForwardEvent] = Field(..., alias='forwardEvents')
     forward_window: ForwardWindow = Field(..., alias='forwardWindow')
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ForwardPartialPickup(ForwardBasePickup):
     detail: Detail | None = None
     forward_events: list[ForwardEvent] | None = Field(None, alias='forwardEvents')
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PackageModel(LabelPackage):
     alternative_identifiers: list[constr(min_length=1)] = Field(
         ..., alias='alternativeIdentifiers'
     )
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Pickup(BasePickup):
     contact_details: ContactDetails | None = Field(
         None, alias='contactDetails', title='contact_details'
@@ -115,7 +115,7 @@ class Pickup(BasePickup):
     mode: str | None = 'standard'
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ScheduledPickup(Pickup):
     events: list[Event] = Field(...)
     packages: list[PackageModel] = Field(...)
@@ -131,7 +131,7 @@ class ScheduledPickup(Pickup):
     fallback_field: Any = Field(..., alias='fallbackField')
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ReverseScheduledPickup(Pickup):
     events: list[Event] = Field(...)
     packages: list[PackageModel] = Field(...)

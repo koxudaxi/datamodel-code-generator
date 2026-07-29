@@ -22,6 +22,8 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
+from datamodel_code_generator.model.dataclass import DataClass as DataclassModel
+from datamodel_code_generator.model.dataclass import DataModelField as DataclassField
 from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField
 from datamodel_code_generator.model.pydantic_v2.base_model import Constraints
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticDataclassModel
@@ -32,6 +34,7 @@ from datamodel_code_generator.model.type_alias import TypeAlias, TypeAliasTypeBa
 from datamodel_code_generator.parser.base import (
     _DEFERRED_INHERITED_CLASS_KEY,
     _DEFERRED_INHERITED_FIELD_KEY,
+    _DEFERRED_INHERITED_INIT_KEY,
     _DEFERRED_INHERITED_TYPE_KEY,
     _RAW_SCHEMA_DEFAULT_KEY,
     Child,
@@ -465,6 +468,99 @@ def test_pydantic_v2_data_model_field_compatibility_helper() -> None:
     assert not _is_pydantic_v2_data_model_field(generic_field)
 
 
+@pytest.mark.parametrize(
+    ("model_type", "field_type", "expected_assignment", "expected_new_extras", "keyword_only"),
+    [
+        pytest.param(DataclassModel, DataclassField, "field()", {}, False, id="stdlib"),
+        pytest.param(DataclassModel, DataclassField, "field()", {}, True, id="stdlib-model-kw-only"),
+        pytest.param(
+            PydanticDataclassModel,
+            PydanticDataclassField,
+            "Field(...)",
+            {"kw_only": True},
+            False,
+            id="pydantic-v2",
+        ),
+        pytest.param(
+            PydanticDataclassModel,
+            PydanticDataclassField,
+            "Field(...)",
+            {},
+            True,
+            id="pydantic-v2-model-kw-only",
+        ),
+    ],
+)
+def test_dataclass_required_override_of_inherited_default_uses_exact_assignment(
+    parser_fixture: C,
+    model_type: type[DataModel],
+    field_type: type[DataModelFieldBase],
+    expected_assignment: str,
+    expected_new_extras: dict[str, bool],
+    *,
+    keyword_only: bool,
+) -> None:
+    """Clear only the leaking inherited default without restricting later positional fields."""
+    base_reference = _reference("Base")
+    model_type(
+        fields=[
+            field_type(name="defaulted", data_type=DataType(type="str"), required=False),
+            field_type(name="required", data_type=DataType(type="str"), required=True),
+        ],
+        reference=base_reference,
+    )
+    required_override = field_type(name="defaulted", data_type=DataType(type="str"), required=True)
+    unchanged_override = field_type(name="required", data_type=DataType(type="str"), required=True)
+    new_required = field_type(name="child", data_type=DataType(type="str"), required=True)
+    child = model_type(
+        fields=[required_override, unchanged_override, new_required],
+        base_classes=[base_reference],
+        reference=_reference("Child"),
+        keyword_only=keyword_only,
+    )
+
+    parser_fixture._Parser__fix_dataclass_field_ordering([child])
+
+    assert required_override.extras == {}
+    assert str(required_override) == expected_assignment
+    assert unchanged_override.extras == {}
+    assert new_required.extras == expected_new_extras
+
+
+def test_dataclass_inherited_init_cleanup_without_other_adjustments(parser_fixture: C) -> None:
+    """Clearing inherited init metadata alone refreshes ordering and skips unnamed base fields."""
+    base_reference = _reference("InitBase")
+    DataclassModel(
+        fields=[
+            DataclassField(name=None, data_type=DataType(type="str"), required=True),
+            DataclassField(
+                name="value",
+                data_type=DataType(type="str"),
+                required=True,
+                extras={"init": False},
+            ),
+        ],
+        reference=base_reference,
+    )
+    required_override = DataclassField(
+        name="value",
+        data_type=DataType(type="str"),
+        required=True,
+        extras={"init": False},
+    )
+    required_override.__dict__[_DEFERRED_INHERITED_INIT_KEY] = True
+    child = DataclassModel(
+        fields=[required_override],
+        base_classes=[base_reference],
+        reference=_reference("InitChild"),
+    )
+
+    parser_fixture._Parser__fix_dataclass_field_ordering([child])
+
+    assert required_override.extras == {}
+    assert not str(required_override)
+
+
 def test_get_enum_from_base_skips_models_without_inherited_enum_capability() -> None:
     """Do not inherit discriminator enums from output models that opt out."""
     from datamodel_code_generator.model.enum import Enum
@@ -896,9 +992,15 @@ def test_copy_resolved_required_only_inherited_field_metadata() -> None:
     assert copied_field.use_serialization_alias
 
 
-def test_detach_deferred_inherited_field_parents_releases_cycles_without_gc() -> None:
+@pytest.mark.parametrize("gc_initially_enabled", [True, False])
+def test_detach_deferred_inherited_field_parents_releases_cycles_without_gc(
+    *,
+    gc_initially_enabled: bool,
+) -> None:
     """Discarded placeholder trees are reclaimed immediately without touching live references."""
-    gc_was_enabled = gc.isenabled()
+    gc_state_setters = (gc.disable, gc.enable)
+    restore_gc = gc_state_setters[gc.isenabled()]
+    gc_state_setters[gc_initially_enabled]()
     gc.disable()
     try:
         field = DataModelField(
@@ -929,8 +1031,7 @@ def test_detach_deferred_inherited_field_parents_releases_cycles_without_gc() ->
 
         assert all(reference() is None for reference in weak_references)
     finally:
-        if gc_was_enabled:
-            gc.enable()
+        restore_gc()
 
 
 def test_detach_deferred_inherited_field_data_type_releases_parent_links() -> None:

@@ -21,6 +21,7 @@ from datamodel_code_generator.imports import (
 )
 from datamodel_code_generator.model.base import (
     _MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS,
+    UNDEFINED,
     DataModel,
     DataModelFieldBase,
     TemplateBase,
@@ -658,6 +659,98 @@ def test_pydantic_base_class_var_imports_do_not_require_field() -> None:
 
     assert IMPORT_FIELD not in field.imports
     assert field.__dict__["_computed_default_factory"] is None
+
+
+def test_pydantic_forced_required_assignment_imports_field() -> None:
+    """A required override rendered as Field(...) must contribute its only import."""
+    field = PydanticV2DataModelField(
+        name="name",
+        data_type=DataType(type="str"),
+        required=True,
+    )
+
+    field._force_field_assignment()
+
+    assert str(field) == "Field(...)"
+    assert IMPORT_FIELD in field.imports
+
+
+@pytest.mark.parametrize(
+    ("use_default_with_required", "expected"),
+    [
+        pytest.param(False, "", id="required"),
+        pytest.param(True, "Field(default_factory=list)", id="required-with-default"),
+    ],
+)
+def test_pydantic_required_default_factory_respects_default_policy(
+    *,
+    use_default_with_required: bool,
+    expected: str,
+) -> None:
+    """A required schema factory is used only when required defaults are enabled."""
+    field = PydanticV2DataModelField(
+        name="items",
+        data_type=DataType(type="str", is_list=True),
+        required=True,
+        has_default=True,
+        extras={"default_factory": "list"},
+        use_default_with_required=use_default_with_required,
+    )
+
+    assert str(field) == expected
+
+
+@pytest.mark.parametrize(
+    ("default", "extras", "use_default_kwarg", "expected"),
+    [
+        pytest.param("value", {"kw_only": True}, False, "Field('value', kw_only=True)", id="scalar"),
+        pytest.param(
+            "value",
+            {"kw_only": True},
+            True,
+            "Field(default='value', kw_only=True)",
+            id="scalar-default-keyword",
+        ),
+        pytest.param(
+            UNDEFINED,
+            {"default_factory": "list"},
+            False,
+            "Field(default_factory=list)",
+            id="factory",
+        ),
+    ],
+)
+def test_pydantic_annotated_dataclass_field_preserves_constructor_default(
+    default: object,
+    extras: dict[str, object],
+    use_default_kwarg: bool,
+    expected: str,
+) -> None:
+    """Annotated metadata must keep scalar and factory defaults on the dataclass RHS."""
+    field = PydanticV2DataModelField(
+        name="items",
+        data_type=DataType(type="str"),
+        default=default,
+        required=False,
+        has_default=True,
+        extras=extras,
+        use_annotated=True,
+        use_default_kwarg=use_default_kwarg,
+    )
+
+    assert field.dataclass_field == expected
+
+
+def test_pydantic_annotated_dataclass_field_skips_empty_assignment() -> None:
+    """A plain required Annotated field does not synthesize an empty RHS."""
+    field = PydanticV2DataModelField(
+        name="item",
+        data_type=DataType(type="str"),
+        required=True,
+        use_annotated=True,
+    )
+
+    assert field.dataclass_field is None
 
 
 def test_pydantic_v2_leaf_field_imports_skip_discriminator_scan(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1570,9 +1663,10 @@ def test_get_module_path_without_file_path_parametrized(
 
 
 def test_copy_deep_with_dict_key() -> None:
-    """Test that copy_deep properly copies dict_key."""
+    """Test that copy_deep properly copies dict key and value types."""
     dict_key_type = DataType(type="str")
-    data_type = DataType(is_dict=True, dict_key=dict_key_type)
+    dict_value_type = DataType(type="str")
+    data_type = DataType(data_types=[dict_value_type], is_dict=True, dict_key=dict_key_type)
     field = DataModelFieldBase(name="a", data_type=data_type, required=True)
 
     copied = field.copy_deep()
@@ -1580,6 +1674,9 @@ def test_copy_deep_with_dict_key() -> None:
     assert copied.data_type.dict_key is not None
     assert copied.data_type.dict_key is not field.data_type.dict_key
     assert copied.data_type.dict_key.type == "str"
+    assert copied.data_type.data_types[0] is not dict_value_type
+    copied.data_type.data_types[0].type = "int"
+    assert dict_value_type.type == "str"
 
 
 def test_copy_deep_with_extras() -> None:

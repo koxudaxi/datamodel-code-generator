@@ -31,7 +31,9 @@ class {{ class_name }}:
     pass
 {%- endif %}
 {%- for field in fields -%}
-    {%- if not field.annotated and field.field %}
+    {%- if field.annotated and field.requires_dataclass_field_assignment and field.dataclass_field %}
+    {{ field.name }}: {{ field.annotated }} = {{ field.dataclass_field }}
+    {%- elif not field.annotated and field.field %}
     {{ field.name }}: {{ field.type_hint }} = {{ field.field }}
     {%- else %}
     {%- if field.annotated %}

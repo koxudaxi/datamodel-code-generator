@@ -15,14 +15,17 @@ import warnings
 from argparse import Namespace
 from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import contextmanager
+from dataclasses import fields as dataclass_fields
+from dataclasses import is_dataclass
 from functools import cache
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, get_type_hints
 
 import black
 import pytest
 from packaging import version
 from pydantic import TypeAdapter, ValidationError
+from pydantic.errors import PydanticUndefinedAnnotation
 
 from datamodel_code_generator import DataModelType, InputFileType, enable_parsed_source_cache, generate
 from datamodel_code_generator.__main__ import Exit, main
@@ -1339,6 +1342,27 @@ def _model_json_validator(model: Any) -> Callable[[str], Any]:
     """Return a JSON validation callable for a generated Pydantic model or dataclass."""
     if callable(validate_json := getattr(model, "model_validate_json", None)):
         return validate_json
+    if not is_dataclass(model):
+        return TypeAdapter(model).validate_json
+    try:
+        return TypeAdapter(model).validate_json
+    except PydanticUndefinedAnnotation:
+        pass
+
+    module_namespace = vars(sys.modules[model.__module__])
+    for candidate in tuple(module_namespace.values()):
+        if not (isinstance(candidate, type) and candidate.__module__ == model.__module__ and is_dataclass(candidate)):
+            continue
+        resolved_annotations = get_type_hints(
+            candidate,
+            globalns=module_namespace,
+            localns=module_namespace,
+            include_extras=True,
+        )
+        candidate.__annotations__.update(resolved_annotations)
+        for field in dataclass_fields(candidate):
+            if (resolved_type := resolved_annotations.get(field.name)) is not None:
+                field.type = resolved_type
     return TypeAdapter(model).validate_json
 
 

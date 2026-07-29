@@ -81,6 +81,22 @@ class OutputModelContext:
         """Return the root model used for an inline constrained value."""
         return self._data_model_type.resolve_nested_constrained_model_type(self._data_model_root_type)
 
+    @staticmethod
+    def _has_additional_properties_type(extra_template_data: dict[str, Any]) -> bool:
+        """Return whether output metadata contains a typed additional-properties entry."""
+        return "additionalPropertiesType" in extra_template_data
+
+    def _store_additional_properties_type(
+        self,
+        extra_template_data: dict[str, Any],
+        type_hint: str,
+        reference_classes: set[str] | None = None,
+    ) -> None:
+        """Store output-owned typed additional-properties metadata."""
+        extra_template_data["additionalPropertiesType"] = type_hint
+        if reference_classes is not None:
+            self._store_additional_properties_reference_classes(extra_template_data, reference_classes)
+
     def _store_additional_properties_reference_classes(
         self,
         extra_template_data: dict[str, Any],

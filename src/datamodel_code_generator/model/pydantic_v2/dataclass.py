@@ -38,6 +38,14 @@ from datamodel_code_generator.model.pydantic_v2.version import (
 
 has_field_assignment = _dataclass_module.has_field_assignment
 
+
+def _has_pydantic_dataclass_field_assignment(field: DataModelFieldBase) -> bool:
+    """Check assignments that must remain visible to Python dataclasses."""
+    if field.use_annotated and getattr(field, "requires_dataclass_field_assignment", False):
+        return bool(field.field)
+    return _has_field_assignment(field)
+
+
 if TYPE_CHECKING:
     from collections import defaultdict
     from pathlib import Path
@@ -54,7 +62,10 @@ class DataClass(_DataclassReuseMixin, DataModel):
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic_v2/dataclass.jinja2"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_PYDANTIC_DATACLASS,)
+    FIELD_ASSIGNMENT_CHECKER = staticmethod(_has_pydantic_dataclass_field_assignment)
     USES_DATACLASS_ARGUMENTS: ClassVar[bool] = True
+    REQUIRES_EXPLICIT_INHERITED_FACTORY_OVERRIDE: ClassVar[bool] = True
+    REQUIRED_FIELD_ASSIGNMENT_IS_DATACLASS_DEFAULT: ClassVar[bool] = True
     REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK: ClassVar[bool] = True
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True
@@ -96,7 +107,7 @@ class DataClass(_DataclassReuseMixin, DataModel):
         """Initialize pydantic v2 dataclass with sorted fields and ConfigDict support."""
         super().__init__(
             reference=reference,
-            fields=sorted(fields, key=_has_field_assignment),
+            fields=sorted(fields, key=_has_pydantic_dataclass_field_assignment),
             decorators=decorators,
             base_classes=base_classes,
             custom_base_class=custom_base_class,
@@ -186,6 +197,13 @@ if PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK:
                 self.serialization_alias = self.alias
             self.validation_aliases = validation_aliases
             self.alias = None
+
+        @property
+        def requires_dataclass_field_assignment(self) -> bool:
+            """Keep legacy alias metadata on the assignment Pydantic 2.0 consumes."""
+            return (
+                bool(self.validation_aliases or self.serialization_alias) or super().requires_dataclass_field_assignment
+            )
 
 else:
 

@@ -915,6 +915,15 @@ class DataModelFieldBase(_BaseModel):
         """For backwards compatibility."""
         return None
 
+    def _force_field_assignment(self) -> None:
+        """Render an explicit required-field assignment without changing its semantics."""
+        self.__dict__["_forced_field_assignment"] = True
+
+    @property
+    def _has_forced_field_assignment(self) -> bool:
+        """Return whether an explicit required-field assignment must be rendered."""
+        return self.__dict__.get("_forced_field_assignment", False)
+
     @property
     def method(self) -> str | None:
         """Get the method string for this field, if any."""
@@ -1254,6 +1263,9 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     # Kept opaque so this generic layer does not import reference-layer policy.
     FIELD_NAME_MODEL_TYPE: ClassVar[Any] = None
     USES_DATACLASS_ARGUMENTS: ClassVar[bool] = False
+    REQUIRES_EXPLICIT_INHERITED_FACTORY_OVERRIDE: ClassVar[bool] = False
+    REQUIRED_FIELD_ASSIGNMENT_IS_DATACLASS_DEFAULT: ClassVar[bool] = False
+    FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT: ClassVar[bool] = False
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = False
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = False
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False

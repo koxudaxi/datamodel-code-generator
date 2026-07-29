@@ -17,12 +17,22 @@ class MixedGeneratedForwardDerivedRequest(BaseModel):
     mixedValue: conint(ge=1)
 
 
+class MixedGeneratedForwardDerivedResponse(BaseModel):
+    mixedValue: conint(ge=1)
+    mixedReadOnly: str | None = None
+
+
 class MixedForwardBase(BaseModel):
     mixedValue: str | None = None
 
 
 class DiamondDerivedRequest(BaseModel):
     diamondValue: conint(ge=1)
+
+
+class DiamondDerivedResponse(BaseModel):
+    diamondValue: conint(ge=1)
+    diamondReadOnly: str | None = None
 
 
 class DiamondRoot(BaseModel):
@@ -35,10 +45,25 @@ class RequiredOnlyDerivedRequest(BaseModel):
     )
 
 
+class RequiredOnlyDerivedResponse(BaseModel):
+    legacyValue: constr(min_length=2) = Field(
+        ..., serialization_alias='legacy-value-out'
+    )
+    middleReadOnly: str | None = None
+    requiredOnlyReadOnly: str | None = None
+
+
 class RequiredOnlyMiddleRequest(BaseModel):
     legacyValue: constr(min_length=2) = Field(
         ..., serialization_alias='legacy-value-out'
     )
+
+
+class RequiredOnlyMiddleResponse(BaseModel):
+    legacyValue: constr(min_length=2) = Field(
+        ..., serialization_alias='legacy-value-out'
+    )
+    middleReadOnly: str | None = None
 
 
 class RequiredOnlyBase(BaseModel):
@@ -49,6 +74,13 @@ class TitleDerivedRequest(BaseModel):
     renamedValue: constr(min_length=2) = Field(
         ..., serialization_alias='titled-value-out'
     )
+
+
+class TitleDerivedResponse(BaseModel):
+    renamedValue: constr(min_length=2) = Field(
+        ..., serialization_alias='titled-value-out'
+    )
+    titleReadOnly: str | None = None
 
 
 class CanonicalTitleBase(BaseModel):
@@ -64,6 +96,12 @@ class ChainItem(BaseModel):
 class BooleanDerivedRequest(BaseModel):
     acceptsAnything: Any
     rejectsAnything: Any | None = None
+
+
+class BooleanDerivedResponse(BaseModel):
+    acceptsAnything: Any
+    rejectsAnything: Any | None = None
+    booleanReadOnly: str | None = None
 
 
 class BooleanBase(BaseModel):
@@ -93,6 +131,11 @@ class RwC3ReversedRequest(BaseModel):
     c3Value: int | None = None
 
 
+class RwC3ReversedResponse(BaseModel):
+    c3Value: int | None = None
+    reversedReadOnly: str | None = None
+
+
 class DiamondLeft(DiamondRoot):
     pass
 
@@ -103,6 +146,11 @@ class DiamondRight(DiamondRoot):
 
 class ChainDerivedRequest(BaseModel):
     detail: ChainItem
+
+
+class ChainDerivedResponse(BaseModel):
+    detail: ChainItem
+    chainReadOnly: str | None = None
 
 
 class ChainGrandparent(BaseModel):

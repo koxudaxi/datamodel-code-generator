@@ -38,7 +38,10 @@ from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.format import Formatter
 from datamodel_code_generator.model import base as model_base
-from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA
+from datamodel_code_generator.model.pydantic_v2.version import (
+    PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK,
+    PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA,
+)
 from datamodel_code_generator.reference import get_singular_name
 from tests.conftest import (
     HttpxGetMockFactory,
@@ -3523,6 +3526,16 @@ def test_main_openapi_allof_with_required_inherited_comprehensive(output_file: P
             "pydantic_v2_dataclass",
             id="pydantic-v2-dataclass",
         ),
+        pytest.param(
+            DataModelType.DataclassesDataclass.value,
+            "dataclasses_dataclass_keyword_only",
+            id="dataclass-keyword-only",
+        ),
+        pytest.param(
+            DataModelType.PydanticV2Dataclass.value,
+            "pydantic_v2_dataclass_keyword_only",
+            id="pydantic-v2-dataclass-keyword-only",
+        ),
     ],
 )
 def test_main_openapi_allof_required_inherited_model_references(
@@ -3547,25 +3560,48 @@ def test_main_openapi_allof_required_inherited_model_references(
             "--use-default",
             "--default-values",
             str(DEFAULT_VALUES_DATA_PATH / "allof_required_inherited_model_references.json"),
+            *(["--keyword-only"] if expected_name.endswith("_keyword_only") else []),
         ],
         force_exec_validation=True,
     )
 
-    match DataModelType(output_model_type):
+    match model_type := DataModelType(output_model_type):
+        case DataModelType.DataclassesDataclass:
+            valid_payload = {
+                "contact_details": {"name": "Ada"},
+                "events": [{"latitude": 45}],
+                "packages": [{"label_id": "label-1", "alternative_identifiers": ["alt-1"]}],
+                "package": {"sku": "sku-1"},
+                "tracking_code": "track-1",
+                "pickup_window": {"start_at": 1, "end_at": 2},
+                "fallback_field": True,
+            }
         case DataModelType.PydanticV2BaseModel | DataModelType.PydanticV2Dataclass:
-            pass
+            valid_payload = {
+                "contactDetails": {"name": "Ada"},
+                "events": [{"latitude": 45}],
+                "packages": [{"labelId": "label-1", "alternativeIdentifiers": ["alt-1"]}],
+                "package": {"sku": "sku-1"},
+                "trackingCode": "track-1",
+                "pickupWindow": {"startAt": 1, "endAt": 2},
+                "fallbackField": True,
+            }
         case _:
             return
 
-    valid_payload = {
-        "contactDetails": {"name": "Ada"},
-        "events": [{"latitude": 45}],
-        "packages": [{"labelId": "label-1", "alternativeIdentifiers": ["alt-1"]}],
-        "package": {"sku": "sku-1"},
-        "trackingCode": "track-1",
-        "pickupWindow": {"startAt": 1, "endAt": 2},
-        "fallbackField": True,
-    }
+    for required_field in valid_payload:
+        assert_generated_model_json_invalid(
+            output_file,
+            module_name=f"allof_required_inherited_{expected_name}_{required_field}",
+            model_name="ScheduledPickup",
+            invalid_json=json.dumps({
+                field_name: value for field_name, value in valid_payload.items() if field_name != required_field
+            }),
+            expected_error_type="missing",
+        )
+    if model_type is DataModelType.DataclassesDataclass:
+        return
+
     assert_generated_model_json_validation(
         output_file,
         module_name="allof_required_inherited_contact",
@@ -3604,13 +3640,6 @@ def test_main_openapi_allof_required_inherited_model_references(
         invalid_json=json.dumps({**valid_payload, "pickupWindow": {"startAt": "bad", "endAt": 2}}),
         expected_error_type="int_parsing",
     )
-    assert_generated_model_json_invalid(
-        output_file,
-        module_name="allof_required_inherited_fallback",
-        model_name="ScheduledPickup",
-        invalid_json=json.dumps({key: value for key, value in valid_payload.items() if key != "fallbackField"}),
-        expected_error_type="missing",
-    )
     forward_payload = {
         "detail": {"code": "ready"},
         "forwardEvents": [{"latitude": 45}],
@@ -3626,6 +3655,17 @@ def test_main_openapi_allof_required_inherited_model_references(
         expected_attribute_path=("detail", "code"),
         expected_attribute_value="ready",
     )
+    for model_name in ("ForwardDeclaredPickup", "ForwardInlineRequiredPickup"):
+        for required_field in forward_payload:
+            assert_generated_model_json_invalid(
+                output_file,
+                module_name=f"allof_required_inherited_{expected_name}_{model_name}_{required_field}",
+                model_name=model_name,
+                invalid_json=json.dumps({
+                    field_name: value for field_name, value in forward_payload.items() if field_name != required_field
+                }),
+                expected_error_type="missing",
+            )
     assert_generated_model_json_invalid(
         output_file,
         module_name="allof_required_inherited_forward_inline",
@@ -3639,6 +3679,238 @@ def test_main_openapi_allof_required_inherited_model_references(
         model_name="ForwardPartialPickup",
         invalid_json=json.dumps({**forward_payload, "detail": {"code": ""}}),
         expected_error_type="string_too_short",
+    )
+    reverse_payload = {
+        "contactDetails": {"name": "Ada"},
+        "events": [{"latitude": 45}],
+        "packages": [{"labelId": "label-1", "alternativeIdentifiers": ["alt-1"]}],
+    }
+    for required_field in reverse_payload:
+        assert_generated_model_json_invalid(
+            output_file,
+            module_name=f"allof_required_inherited_{expected_name}_reverse_{required_field}",
+            model_name="ReverseScheduledPickup",
+            invalid_json=json.dumps({
+                field_name: value for field_name, value in reverse_payload.items() if field_name != required_field
+            }),
+            expected_error_type="missing",
+        )
+
+
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_name", "additional_args"),
+    [
+        *(
+            pytest.param(*backend_case.values, (), id=backend_case.id, marks=backend_case.marks)
+            for backend_case in BACKEND_GOLDEN_CASES
+        ),
+        pytest.param(
+            DataModelType.PydanticV2Dataclass.value,
+            "pydantic_v2_dataclass",
+            (),
+            id="pydantic-v2-dataclass",
+        ),
+        pytest.param(
+            DataModelType.PydanticV2Dataclass.value,
+            "pydantic_v2_dataclass_annotated",
+            ("--use-annotated", "--field-constraints"),
+            id="pydantic-v2-dataclass-annotated",
+        ),
+    ],
+)
+def test_main_openapi_allof_required_inherited_dataclass_metadata(
+    output_file: Path,
+    output_model_type: str,
+    expected_name: str,
+    additional_args: tuple[str, ...],
+) -> None:
+    """Preserve explicit field metadata and exact dataclass ordering across required overrides."""
+    expected_output_name = (
+        f"{expected_name}_alias_fallback"
+        if output_model_type == DataModelType.PydanticV2Dataclass.value and PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK
+        else expected_name
+    )
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_required_inherited_dataclass_metadata.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=f"output_model_types/allof_required_inherited_dataclass_metadata_{expected_output_name}.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--formatters",
+            "builtin",
+            "--output-model-type",
+            output_model_type,
+            "--field-extra-keys",
+            "init",
+            "default_factory",
+            "repr",
+            "kw_only",
+            *additional_args,
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+    match model_type := DataModelType(output_model_type):
+        case DataModelType.PydanticV2BaseModel | DataModelType.PydanticV2Dataclass | DataModelType.DataclassesDataclass:
+            pass
+        case DataModelType.TypingTypedDict:
+            assert_generated_model_json_validation(
+                output_file,
+                module_name="allof_required_dataclass_metadata_typed_dict",
+                model_name="InheritedInitDefaultChild",
+                valid_json='{"newAfterInheritedInit":1}',
+                invalid_json="{}",
+                expected_error_type="missing",
+                expected_attribute_path=("newAfterInheritedInit",),
+                expected_attribute_value=1,
+            )
+            return
+        case _:
+            return
+
+    if model_type in {DataModelType.PydanticV2BaseModel, DataModelType.PydanticV2Dataclass}:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"allof_required_dataclass_metadata_{expected_name}_base_defaults",
+            model_name="InitBase",
+            valid_json="{}",
+            invalid_json='{"inheritedFactory":[1]}',
+            expected_error_type="string_type",
+            expected_attribute_path=("inheritedScalar",),
+            expected_attribute_value="inherited",
+        )
+
+    required_override_payload = {
+        "inheritedScalar": "fresh",
+        "inheritedFactory": ["item"],
+        "inheritedMetadata": "metadata",
+        "newRequired": 1,
+    }
+    for required_field in required_override_payload:
+        assert_generated_model_json_invalid(
+            output_file,
+            module_name=f"allof_required_dataclass_metadata_{expected_name}_{required_field}",
+            model_name="RequiredOverrideChild",
+            invalid_json=json.dumps({
+                field_name: value
+                for field_name, value in required_override_payload.items()
+                if field_name != required_field
+            }),
+            expected_error_type="missing",
+        )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"allof_required_dataclass_metadata_{expected_name}_override",
+        model_name="RequiredOverrideChild",
+        valid_json=json.dumps(required_override_payload),
+        invalid_json=json.dumps({**required_override_payload, "inheritedFactory": [1]}),
+        expected_error_type="string_type",
+        expected_attribute_path=("inheritedScalar",),
+        expected_attribute_value="fresh",
+    )
+    if additional_args:
+        assert_generated_model_json_invalid(
+            output_file,
+            module_name="allof_required_dataclass_metadata_annotated_constraint",
+            model_name="RequiredOverrideChild",
+            invalid_json=json.dumps({**required_override_payload, "inheritedScalar": "x"}),
+            expected_error_type="string_too_short",
+        )
+
+    alias_field = "aliased_value" if model_type is DataModelType.DataclassesDataclass else "aliased-value"
+    alias_payload = {alias_field: "alias", "newAfterAlias": 1}
+    for required_field in alias_payload:
+        assert_generated_model_json_invalid(
+            output_file,
+            module_name=f"allof_required_dataclass_alias_{expected_name}_{required_field}",
+            model_name="RequiredAliasChild",
+            invalid_json=json.dumps({
+                field_name: value for field_name, value in alias_payload.items() if field_name != required_field
+            }),
+            expected_error_type="missing",
+        )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"allof_required_dataclass_alias_{expected_name}_valid",
+        model_name="RequiredAliasChild",
+        valid_json=json.dumps(alias_payload),
+        invalid_json=json.dumps({**alias_payload, "newAfterAlias": "bad"}),
+        expected_error_type="int_parsing",
+        expected_attribute_path=("newAfterAlias",),
+        expected_attribute_value=1,
+    )
+
+    metadata_payload = {"requiredMetadata": "metadata", "newAfterMetadata": 1}
+    for required_field in metadata_payload:
+        assert_generated_model_json_invalid(
+            output_file,
+            module_name=f"allof_required_dataclass_structural_{expected_name}_{required_field}",
+            model_name="RequiredMetadataChild",
+            invalid_json=json.dumps({
+                field_name: value for field_name, value in metadata_payload.items() if field_name != required_field
+            }),
+            expected_error_type="missing",
+        )
+
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"allof_required_dataclass_keyword_override_{expected_name}",
+        model_name="KeywordOverrideChild",
+        valid_json='{"positionalOverride":"fresh"}',
+        invalid_json="{}",
+        expected_error_type="missing",
+        expected_attribute_path=("positionalOverride",),
+        expected_attribute_value="fresh",
+    )
+
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"allof_required_dataclass_explicit_init_{expected_name}",
+        model_name="ExplicitInitChild",
+        valid_json='{"explicitInit":"fresh","newAfterExplicitInit":1}',
+        invalid_json='{"explicitInit":"fresh"}',
+        expected_error_type="missing",
+        expected_attribute_path=("newAfterExplicitInit",),
+        expected_attribute_value=1,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"allof_required_dataclass_inherited_init_{expected_name}",
+        model_name="InheritedInitDefaultChild",
+        valid_json='{"newAfterInheritedInit":1}',
+        invalid_json="{}",
+        expected_error_type="missing",
+        expected_attribute_path=("newAfterInheritedInit",),
+        expected_attribute_value=1,
+    )
+
+    ordering_payload = {
+        "earlyFactory": ["early"],
+        "lateFactory": ["late"],
+        "newRequired": 1,
+    }
+    for required_field in ordering_payload:
+        assert_generated_model_json_invalid(
+            output_file,
+            module_name=f"allof_required_dataclass_ordering_{expected_name}_{required_field}",
+            model_name="OrderingChild",
+            invalid_json=json.dumps({
+                field_name: value for field_name, value in ordering_payload.items() if field_name != required_field
+            }),
+            expected_error_type="missing",
+        )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"allof_required_dataclass_ordering_{expected_name}_valid",
+        model_name="OrderingChild",
+        valid_json=json.dumps(ordering_payload),
+        invalid_json=json.dumps({**ordering_payload, "newRequired": "bad"}),
+        expected_error_type="int_parsing",
+        expected_attribute_path=("earlyFactory",),
+        expected_attribute_value=["early"],
     )
 
 
@@ -4167,6 +4439,38 @@ def test_main_openapi_allof_required_inherited_external(
         expected_attribute_path=("mapping", "item", "code"),
         expected_attribute_value="ok",
     )
+    if read_write_mode == "request-response":
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="allof_required_inherited_external_nested_response",
+            model_name="ExternalNestedWrapperResponse",
+            valid_json=json.dumps({**valid_payload, "responseOnly": "visible"}),
+            invalid_json=json.dumps({**valid_payload, "responseOnly": 1}),
+            expected_error_type="string_type",
+            expected_attribute_path=("responseOnly",),
+            expected_attribute_value="visible",
+        )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"allof_required_inherited_external_write_response_{read_write_mode or 'standard'}",
+        model_name=("ExternalWriteOnlyWrapper" if read_write_mode is None else "ExternalWriteOnlyWrapperResponse"),
+        valid_json=json.dumps(valid_payload),
+        invalid_json=json.dumps({**valid_payload, "detail": {"code": "x"}}),
+        expected_error_type="string_too_short",
+        expected_attribute_path=("mapping", "item", "code"),
+        expected_attribute_value="ok",
+    )
+    if read_write_mode == "request-response":
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="allof_required_inherited_external_write_request",
+            model_name="ExternalWriteOnlyWrapperRequest",
+            valid_json=json.dumps({**valid_payload, "requestOnly": "secret"}),
+            invalid_json=json.dumps({**valid_payload, "requestOnly": 1}),
+            expected_error_type="string_type",
+            expected_attribute_path=("requestOnly",),
+            expected_attribute_value="secret",
+        )
 
 
 @pytest.mark.parametrize(
@@ -7805,10 +8109,7 @@ def test_main_openapi_read_only_write_only_empty_base(output_file: Path) -> None
 def test_main_openapi_read_only_write_only_ref_request_response(output_file: Path) -> None:
     """Test readOnly/writeOnly with $ref in request-response mode (issue #2940).
 
-    When a schema references another schema via $ref:
-    - If the referenced schema generates variants, use the variant reference
-    - If the referenced schema would have no model (only readOnly/writeOnly fields),
-      force generation of the base model
+    Every split schema generates both variants, including empty one-sided and recursive models.
     """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "read_only_write_only_ref_request_response.yaml",
@@ -7822,6 +8123,319 @@ def test_main_openapi_read_only_write_only_ref_request_response(output_file: Pat
             "--read-only-write-only-model-type",
             "request-response",
         ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="read_only_write_only_ref_request_response_recursive_read",
+        model_name="RecursiveOnlyReadOnlyResponse",
+        valid_json='{"id":1,"child":{"id":2}}',
+        invalid_json='{"id":1,"child":{"id":"bad"}}',
+        expected_error_type="int_parsing",
+        expected_attribute_path=("child", "id"),
+        expected_attribute_value=2,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="read_only_write_only_ref_request_response_recursive_write",
+        model_name="RecursiveOnlyWriteOnlyRequest",
+        valid_json='{"secret":"one","child":{"secret":"two"}}',
+        invalid_json='{"secret":"one","child":{"secret":1}}',
+        expected_error_type="string_type",
+        expected_attribute_path=("child", "secret"),
+        expected_attribute_value="two",
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_name"),
+    [
+        *BACKEND_GOLDEN_CASES,
+        pytest.param(
+            DataModelType.PydanticV2Dataclass.value,
+            "pydantic_v2_dataclass",
+            id="pydantic-v2-dataclass",
+        ),
+    ],
+)
+def test_main_openapi_read_only_write_only_variant_graph(
+    output_file: Path,
+    output_model_type: str,
+    expected_name: str,
+) -> None:
+    """Resolve request/response variants through every supported reference shape."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "read_only_write_only_variant_graph.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=f"output_model_types/read_only_write_only_variant_graph_{expected_name}.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--formatters",
+            "builtin",
+            "--output-model-type",
+            output_model_type,
+            "--read-only-write-only-model-type",
+            "request-response",
+            "--openapi-scopes",
+            "schemas",
+            "--class-name-prefix",
+            "Api",
+            "--class-name-suffix",
+            "Model",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+    match DataModelType(output_model_type):
+        case DataModelType.PydanticV2BaseModel | DataModelType.PydanticV2Dataclass | DataModelType.DataclassesDataclass:
+            pass
+        case _:
+            return
+
+    graph_request = {
+        "alias": {},
+        "items": [{}],
+        "values": {"first": {}},
+        "keyedValues": {"alpha": {}},
+    }
+    graph_response = {
+        "alias": {"id": 1},
+        "items": [{"id": 2}],
+        "values": {"first": {"id": 3}},
+        "keyedValues": {"alpha": {"id": 4}},
+    }
+    runtime_cases = (
+        (
+            "graph_request",
+            "ApiForwardGraphWrapperRequestModel",
+            graph_request,
+            {field: value for field, value in graph_request.items() if field != "alias"},
+            "missing",
+            (),
+            None,
+        ),
+        (
+            "graph_response",
+            "ApiForwardGraphWrapperResponseModel",
+            graph_response,
+            {**graph_response, "alias": {"id": "bad"}},
+            "int_parsing",
+            (),
+            None,
+        ),
+        (
+            "direct_inline",
+            "ApiDirectInlineContainerResponseModel",
+            {"child": {"id": 1, "label": "direct"}},
+            {"child": {"id": 1, "label": 2}},
+            "string_type",
+            ("child", "label"),
+            "direct",
+        ),
+        (
+            "direct_inline_request",
+            "ApiDirectInlineContainerRequestModel",
+            {"child": {"label": "direct-request"}},
+            {"child": {"label": 2}},
+            "string_type",
+            ("child", "label"),
+            "direct-request",
+        ),
+        (
+            "forward_inline",
+            "ApiForwardInlineWrapperResponseModel",
+            {"container": {"child": {"id": 2, "label": "forward"}}},
+            {"container": {"child": {"id": "bad", "label": "forward"}}},
+            "int_parsing",
+            ("container", "child", "label"),
+            "forward",
+        ),
+        (
+            "forward_inline_request",
+            "ApiForwardInlineWrapperRequestModel",
+            {"container": {"child": {"label": "forward-request"}}},
+            {"container": {"child": {"label": 2}}},
+            "string_type",
+            ("container", "child", "label"),
+            "forward-request",
+        ),
+        (
+            "root_inline_array",
+            "ApiForwardRootInlineArrayWrapperResponseModel",
+            {"items": [{"id": 3, "label": "array"}]},
+            {"items": [{"id": "bad", "label": "array"}]},
+            "int_parsing",
+            (),
+            None,
+        ),
+        (
+            "root_inline_array_request",
+            "ApiForwardRootInlineArrayWrapperRequestModel",
+            {"items": [{"label": "array-request"}]},
+            {"items": [{"label": 2}]},
+            "string_type",
+            (),
+            None,
+        ),
+        (
+            "root_inline_union",
+            "ApiForwardRootInlineUnionWrapperResponseModel",
+            {"value": {"id": 4, "label": "union"}},
+            {"value": {"id": "bad", "label": "union"}},
+            "int_parsing",
+            (),
+            None,
+        ),
+        (
+            "root_inline_union_request",
+            "ApiForwardRootInlineUnionWrapperRequestModel",
+            {"value": {"label": "union-request"}},
+            {"value": {"label": 2}},
+            "string_type",
+            (),
+            None,
+        ),
+        (
+            "positive_scc",
+            "ApiPositiveSccWrapperResponseModel",
+            {"node": {"name": "a", "b": {"id": 5, "label": "b", "a": {"name": "nested"}}}},
+            {"node": {"name": "a", "b": {"id": "bad", "label": "b"}}},
+            "int_parsing",
+            ("node", "b", "id"),
+            5,
+        ),
+        (
+            "positive_scc_request",
+            "ApiPositiveSccWrapperRequestModel",
+            {"node": {"name": "a", "b": {"label": "request-b", "a": {"name": "nested"}}}},
+            {"node": {"name": "a", "b": {"label": 2}}},
+            "string_type",
+            ("node", "b", "label"),
+            "request-b",
+        ),
+        (
+            "negative_scc",
+            "ApiNegativeSccWrapperModel",
+            {"node": {"name": "a", "b": {"label": "b", "a": {"name": "nested"}}}},
+            {"node": {"name": 1}},
+            "string_type",
+            ("node", "b", "label"),
+            "b",
+        ),
+        (
+            "source_name_collision",
+            "ApiCollisionWrapperRequestModel",
+            {"user": {"name": "Ada"}, "sourceRequest": {"legacy": True}},
+            {"user": {"name": 1}, "sourceRequest": {"legacy": True}},
+            "string_type",
+            ("user", "name"),
+            "Ada",
+        ),
+        (
+            "source_name_collision_response",
+            "ApiCollisionWrapperResponseModel",
+            {"user": {"id": 1, "name": "Ada"}, "sourceRequest": {"legacy": True}},
+            {"user": {"id": "bad", "name": "Ada"}, "sourceRequest": {"legacy": True}},
+            "int_parsing",
+            ("user", "id"),
+            1,
+        ),
+    )
+    for (
+        module_suffix,
+        model_name,
+        valid_payload,
+        invalid_payload,
+        expected_error_type,
+        expected_attribute_path,
+        expected_attribute_value,
+    ) in runtime_cases:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"read_only_write_only_variant_graph_{expected_name}_{module_suffix}",
+            model_name=model_name,
+            valid_json=json.dumps(valid_payload),
+            invalid_json=json.dumps(invalid_payload),
+            expected_error_type=expected_error_type,
+            expected_attribute_path=expected_attribute_path,
+            expected_attribute_value=expected_attribute_value,
+        )
+
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"read_only_write_only_variant_graph_{expected_name}_dict_key",
+        model_name="ApiForwardDictKeyWrapperResponseModel",
+        valid_json='{"values":{}}',
+        invalid_json='{"values":[]}',
+        expected_error_type="dict_type",
+    )
+
+
+def test_main_openapi_read_only_write_only_variant_graph_schema_validators(
+    output_file: Path,
+) -> None:
+    """Apply both JSON Schema conditional branches from the comprehensive fixture."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "read_only_write_only_variant_graph.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="read_only_write_only_variant_graph_schema_validators.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--formatters",
+            "builtin",
+            "--output-model-type",
+            DataModelType.PydanticV2BaseModel.value,
+            "--generate-schema-validators",
+            "--read-only-write-only-model-type",
+            "request-response",
+            "--openapi-scopes",
+            "paths",
+            "--class-name-prefix",
+            "Api",
+            "--class-name-suffix",
+            "Model",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+    for module_suffix, valid_json, invalid_json, expected_kind in (
+        (
+            "then",
+            '{"payload":{"kind":"metric","metricLeaf":{}}}',
+            '{"payload":{"kind":"metric"}}',
+            "metric",
+        ),
+        (
+            "else",
+            '{"payload":{"kind":"note","noteLeaf":{}}}',
+            '{"payload":{"kind":"note"}}',
+            "note",
+        ),
+    ):
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"read_only_write_only_variant_graph_validator_{module_suffix}",
+            model_name="ApiConditionalForwardWrapperRequestModel",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+            expected_attribute_path=("payload", "kind"),
+            expected_attribute_value=expected_kind,
+        )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="read_only_write_only_variant_graph_validator_response_ref",
+        model_name="ApiConditionalForwardWrapperResponseModel",
+        valid_json='{"payload":{"kind":"metric","metricLeaf":{"id":1}}}',
+        invalid_json='{"payload":{"kind":"metric","metricLeaf":{"id":"bad"}}}',
+        expected_error_type="int_parsing",
+        expected_attribute_path=("payload", "metricLeaf", "id"),
+        expected_attribute_value=1,
     )
 
 

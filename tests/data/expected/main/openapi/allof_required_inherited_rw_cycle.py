@@ -12,6 +12,18 @@ class CycleARequest(BaseModel):
     b: conint(ge=1)
 
 
+class CycleAResponse(BaseModel):
+    a: constr(min_length=2)
+    responseOnly: str | None = None
+    b: conint(ge=1)
+
+
 class CycleBRequest(BaseModel):
     b: conint(ge=1)
     a: constr(min_length=2)
+
+
+class CycleBResponse(BaseModel):
+    b: conint(ge=1)
+    a: constr(min_length=2)
+    responseOnly: str | None = None

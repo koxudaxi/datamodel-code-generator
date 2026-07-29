@@ -16,6 +16,11 @@ class ExternalNestedWrapperRequest(BaseModel):
     mapping: dict[str, ExternalDetail]
 
 
+class ExternalWriteOnlyWrapperResponse(BaseModel):
+    detail: ExternalDetail
+    mapping: dict[str, ExternalDetail]
+
+
 class ExternalBase(BaseModel):
     detail: ExternalDetail
     mapping: dict[str, ExternalDetail]
@@ -30,3 +35,9 @@ class ExternalNestedWrapper(ExternalDerived):
     detail: ExternalDetail
     mapping: dict[str, ExternalDetail]
     responseOnly: str | None = None
+
+
+class ExternalWriteOnlyWrapper(ExternalDerived):
+    detail: ExternalDetail
+    mapping: dict[str, ExternalDetail]
+    requestOnly: str | None = None

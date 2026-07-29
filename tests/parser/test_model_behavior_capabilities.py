@@ -18,6 +18,7 @@ from datamodel_code_generator.model.dataclass import (
     has_field_assignment as dataclass_has_field_assignment,
 )
 from datamodel_code_generator.model.msgspec import has_field_assignment as msgspec_has_field_assignment
+from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticDataClass
 from datamodel_code_generator.model.pydantic_v2.dataclass import (
     has_field_assignment as pydantic_dataclass_has_field_assignment,
 )
@@ -33,7 +34,7 @@ _BEHAVIOR_CAPABILITIES: dict[
     tuple[Callable[[DataModelFieldBase], bool], bool, bool],
 ] = {
     DataModelType.PydanticV2BaseModel: (_has_field_assignment, True, False),
-    DataModelType.PydanticV2Dataclass: (_has_field_assignment, False, False),
+    DataModelType.PydanticV2Dataclass: (PydanticDataClass.FIELD_ASSIGNMENT_CHECKER, False, False),
     DataModelType.DataclassesDataclass: (_has_field_assignment, True, False),
     DataModelType.TypingTypedDict: (_has_field_assignment, False, False),
     DataModelType.MsgspecStruct: (msgspec_has_field_assignment, False, True),

@@ -26,6 +26,7 @@ from typing import (
     ClassVar,
     Final,
     Generic,
+    Literal,
     NamedTuple,
     Optional,
     TypeAlias,
@@ -98,6 +99,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.model_metadata import GeneratedModelMetadata, ModelFieldMetadata, ModelMetadata
 ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
 MroT = TypeVar("MroT")
+_DataclassFieldAdjustment: TypeAlias = Literal["assignment", "keyword_only"]
 
 HashableComparable = _internal_utils.HashableComparable
 to_hashable = _internal_utils.to_hashable
@@ -112,9 +114,11 @@ _TOP_LEVEL_FUTURE_IMPORT_PATTERN: Final = re.compile(r"(?m)^from __future__ impo
 _TOP_LEVEL_RELATIVE_IMPORT_PATTERN: Final = re.compile(r"(?m)^from \.")
 _DEFERRED_INHERITED_CLASS_KEY: Final = "_deferred_inherited_class"
 _DEFERRED_INHERITED_FIELD_KEY: Final = "_deferred_inherited_field"
+_DEFERRED_INHERITED_INIT_KEY: Final = "_deferred_inherited_init"
 _DEFERRED_INHERITED_TYPE_KEY: Final = "_deferred_inherited_type"
 _RAW_SCHEMA_DEFAULT_KEY: Final = "_raw_schema_default"
 _RAW_SCHEMA_DEFAULT_UNDEFINED: Final = object()
+_SOURCE_REFERENCE_PATH_KEY: Final = "_source_reference_path"
 
 
 @dataclass(frozen=True, slots=True)
@@ -369,6 +373,11 @@ class _KeepModelOrderDeps(NamedTuple):
 class _KeepModelOrderComponents(NamedTuple):
     components: Components
     comp_of: ComponentOf
+
+
+class _DataclassInheritedInfo(NamedTuple):
+    required_assignment_names: frozenset[str]
+    ordering_conflicts: frozenset[str]
 
 
 def _collect_keep_model_order_deps(
@@ -1054,7 +1063,6 @@ def _sort_data_models_for_mro(models: list[DataModel]) -> list[DataModel]:
 def _c3_merge(sequences: list[list[MroT]], key: Callable[[MroT], str]) -> list[MroT]:
     """Merge inheritance sequences using C3 with a deterministic cycle fallback."""
     result: list[MroT] = []
-    result_keys: set[str] = set()
     while sequences := [sequence for sequence in sequences if sequence]:
         tail_keys = {key(item) for sequence in sequences for item in sequence[1:]}
         candidate = next(
@@ -1062,9 +1070,7 @@ def _c3_merge(sequences: list[list[MroT]], key: Callable[[MroT], str]) -> list[M
             sequences[0][0],
         )
         candidate_key = key(candidate)
-        if candidate_key not in result_keys:
-            result.append(candidate)
-            result_keys.add(candidate_key)
+        result.append(candidate)
         for sequence in sequences:
             sequence[:] = [item for item in sequence if key(item) != candidate_key]
     return result
@@ -3470,72 +3476,214 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     def __fix_dataclass_field_ordering(self, models: list[DataModel]) -> None:
         """Fix field ordering for dataclasses with inheritance after defaults are set."""
         for model in models:
+            supports_inherited_override = model.USES_DATACLASS_ARGUMENTS
+            cleared_inherited_init = False
+            if model.FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT:
+                for field in model.fields:
+                    if not (
+                        field.required
+                        and supports_inherited_override
+                        and field.__dict__.pop(_DEFERRED_INHERITED_INIT_KEY, False)
+                    ):
+                        continue
+                    if field.extras.get("init") is False:  # pragma: no branch
+                        field.extras.pop("init")
+                        cleared_inherited_init = True
+
             if (inherited := self.__get_dataclass_inherited_info(model)) is None:
+                if cleared_inherited_init:  # pragma: no cover - marker requires a generated base
+                    model.clear_imports_cache()
                 continue
-            inherited_names, has_default = inherited
             field_has_assignment = Parser._get_field_assignment_checker(model)
-            if not has_default or not any(
-                self.__is_new_required_field(f, inherited_names, field_has_assignment) for f in model.fields
-            ):
+            field_adjustments: Iterator[tuple[DataModelFieldBase, _DataclassFieldAdjustment]] = (
+                (field, adjustment)
+                for field in model.fields
+                if (
+                    adjustment := self.__get_dataclass_field_adjustment(
+                        field,
+                        inherited,
+                        field_has_assignment,
+                        supports_inherited_override=supports_inherited_override,
+                    )
+                )
+                is not None
+            )
+            first_adjustment: tuple[DataModelFieldBase, _DataclassFieldAdjustment] | None = next(
+                field_adjustments,
+                None,
+            )
+            if first_adjustment is None:
+                if cleared_inherited_init:
+                    model.clear_imports_cache()
+                    self.generation_store.set_fields(model, sorted(model.fields, key=field_has_assignment))
                 continue
 
-            if model.REQUIRES_MODEL_LEVEL_KW_ONLY:
-                model.enable_model_keyword_only()
-            elif self.target_python_version.has_kw_only_dataclass:
-                for field in model.fields:
-                    if self.__is_new_required_field(field, inherited_names, field_has_assignment):
-                        field.extras["kw_only"] = True
-            else:  # pragma: no cover
+            if self.__apply_dataclass_field_adjustments(
+                model,
+                first_adjustment,
+                field_adjustments,
+            ):
                 warn(
-                    f"Dataclass '{model.class_name}' has a field ordering conflict due to inheritance. "
-                    f"An inherited field has a default value, but new required fields are added. "
+                    f"Dataclass '{model.class_name}' has a required field conflict due to inheritance. "
+                    f"An inherited field has a default value, but a required field follows or overrides it. "
                     f"This will cause a TypeError at runtime. Consider using --target-python-version 3.10 "
                     f"or higher to enable automatic field(kw_only=True) fix.",
                     category=UserWarning,
                     stacklevel=2,
                 )
+            model.clear_imports_cache()
             self.generation_store.set_fields(model, sorted(model.fields, key=field_has_assignment))
 
+    def __apply_dataclass_field_adjustments(
+        self,
+        model: DataModel,
+        first_adjustment: tuple[DataModelFieldBase, _DataclassFieldAdjustment],
+        adjustments: Iterable[tuple[DataModelFieldBase, _DataclassFieldAdjustment]],
+    ) -> bool:
+        """Apply exact required-field assignments and report unsupported ordering conflicts."""
+        enable_model_keyword_only = False
+        unresolved_ordering_conflict = False
+        for field, adjustment in chain((first_adjustment,), adjustments):
+            match adjustment:
+                case "assignment":
+                    field._force_field_assignment()  # noqa: SLF001
+                case "keyword_only" if model.REQUIRES_MODEL_LEVEL_KW_ONLY:
+                    enable_model_keyword_only = True
+                case "keyword_only" if self.target_python_version.has_kw_only_dataclass:
+                    field.extras["kw_only"] = True
+                case _:  # pragma: no cover
+                    unresolved_ordering_conflict = True
+        if enable_model_keyword_only:
+            model.enable_model_keyword_only()
+        return unresolved_ordering_conflict
+
     @classmethod
-    def __get_dataclass_inherited_info(cls, model: DataModel) -> tuple[set[str], bool] | None:
-        """Get inherited field names and whether any has default. Returns None if not applicable."""
+    def __get_dataclass_inherited_info(cls, model: DataModel) -> _DataclassInheritedInfo | None:
+        """Return inherited value leaks and exact positional ordering conflicts."""
         if not model.SUPPORTS_KW_ONLY:
             return None
-        if not model.base_classes or model.has_keyword_only_definition():
+        if not model.base_classes:
             return None
 
         field_has_assignment = cls._get_field_assignment_checker(model)
-        inherited_names: set[str] = set()
-        has_default = False
-        for base in model.base_classes:
-            if not base.reference or not isinstance(base.reference.source, DataModel):
-                continue  # pragma: no cover
-            for f in base.reference.source.iter_all_fields():
-                if not f.name or f.extras.get("init") is False:
-                    continue  # pragma: no cover
-                inherited_names.add(f.name)
-                if field_has_assignment(f):
-                    has_default = True
+        inherited_models = _linearize_data_models([
+            base.reference.source
+            for base in model.base_classes
+            if base.reference and isinstance(base.reference.source, DataModel)
+        ])
+        if not inherited_models:
+            return None  # pragma: no cover
 
-        for f in model.fields:
-            if f.name not in inherited_names or f.extras.get("init") is False:
+        supports_inherited_override = model.USES_DATACLASS_ARGUMENTS
+        required_assignment_names: set[str] = set()
+        effective_fields: dict[str, tuple[DataModelFieldBase, DataModel, bool | None]] = {}
+        for inherited_model in reversed(inherited_models):
+            for field in inherited_model.fields:
+                if not (field_name := field.name):
+                    continue
+                has_default: bool | None = None
+                if supports_inherited_override:
+                    has_default, has_value_default = cls.__get_dataclass_field_default_info(
+                        field,
+                        field_has_assignment,
+                    )
+                    if has_value_default or (has_default and model.REQUIRES_EXPLICIT_INHERITED_FACTORY_OVERRIDE):
+                        required_assignment_names.add(field_name)
+                effective_fields[field_name] = field, inherited_model, has_default
+        for field in model.fields:
+            if field.name:
+                effective_fields[field.name] = field, model, None
+
+        ordering_conflicts = cls.__get_dataclass_ordering_conflicts(
+            model,
+            effective_fields,
+            field_has_assignment,
+            required_assignment_names,
+        )
+        return _DataclassInheritedInfo(
+            frozenset(required_assignment_names),
+            ordering_conflicts,
+        )
+
+    @classmethod
+    def __get_dataclass_ordering_conflicts(
+        cls,
+        model: DataModel,
+        effective_fields: Mapping[str, tuple[DataModelFieldBase, DataModel, bool | None]],
+        field_has_assignment: Callable[[DataModelFieldBase], bool],
+        required_assignment_names: set[str],
+    ) -> frozenset[str]:
+        """Return child positional fields that follow an effective positional default."""
+        seen_default = False
+        ordering_conflicts: set[str] = set()
+        for field_name, (field, declaring_model, inherited_has_default) in effective_fields.items():
+            if model.FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT and field.extras.get("init") is False:
                 continue
-            if field_has_assignment(f):  # pragma: no branch
-                has_default = True
-        return (inherited_names, has_default) if inherited_names else None
+            kw_only = field.extras.get("kw_only")
+            if kw_only is True or (kw_only is None and declaring_model.has_keyword_only_definition()):
+                continue
+            if (
+                model.REQUIRED_FIELD_ASSIGNMENT_IS_DATACLASS_DEFAULT
+                and field.required
+                and not field.use_default_with_required
+                and (field_name in required_assignment_names or field_has_assignment(field))
+            ):
+                field_has_default = True
+            else:
+                field_has_default = (
+                    cls.__get_dataclass_field_default_info(field, field_has_assignment)[0]
+                    if inherited_has_default is None
+                    else inherited_has_default
+                )
+            if field_has_default:
+                seen_default = True
+            elif declaring_model is model and seen_default:
+                ordering_conflicts.add(field_name)
+        return frozenset(ordering_conflicts)
+
+    @staticmethod
+    def __get_dataclass_field_default_info(
+        field: DataModelFieldBase,
+        field_has_assignment: Callable[[DataModelFieldBase], bool],
+    ) -> tuple[bool, bool]:
+        """Return whether a field has any init default and whether it is a value default."""
+        if not field_has_assignment(field) or (field.required and not field.use_default_with_required):
+            return False, False
+        rendered_assignment = str(field)
+        if "default_factory=" in rendered_assignment:
+            return True, False
+        if rendered_assignment.startswith("Field(...)") or (
+            rendered_assignment.startswith("field(") and "default=" not in rendered_assignment
+        ):
+            return False, False
+        return True, True
 
     @staticmethod
     def _get_field_assignment_checker(model: DataModel) -> Callable[[DataModelFieldBase], bool]:
         return type(model).FIELD_ASSIGNMENT_CHECKER
 
-    def __is_new_required_field(  # noqa: PLR6301
+    def __get_dataclass_field_adjustment(  # noqa: PLR6301
         self,
         field: DataModelFieldBase,
-        inherited: set[str],
+        inherited: _DataclassInheritedInfo,
         field_has_assignment: Callable[[DataModelFieldBase], bool],
-    ) -> bool:
-        """Check if field is a new required init field."""
-        return field.name not in inherited and field.extras.get("init") is not False and not field_has_assignment(field)
+        *,
+        supports_inherited_override: bool,
+    ) -> _DataclassFieldAdjustment | None:
+        """Return the exact explicit assignment needed for a required child field."""
+        if (
+            field.parent
+            and field.parent.FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT
+            and field.extras.get("init") is False
+        ):
+            return None
+        if field.name in inherited.ordering_conflicts:
+            return "keyword_only"
+        if field_has_assignment(field):
+            return None
+        if field.required and supports_inherited_override and field.name in inherited.required_assignment_names:
+            return "assignment"
+        return None
 
     def __remove_overridden_models(self, models: list[DataModel]) -> list[DataModel]:
         """Remove models that are being overridden by custom types (model-level only).
@@ -5127,7 +5275,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         )
         source_reference_paths: dict[DataModel, str] = {}
         if collect_model_metadata:
-            source_reference_paths = {model: model.reference.path for model in sorted_data_models.values()}
+            source_reference_paths = {
+                model: model.__dict__.get(_SOURCE_REFERENCE_PATH_KEY, model.reference.path)
+                for model in sorted_data_models.values()
+            }
         sort_base_classes_for_mro(sorted_data_models, self.generation_store)
 
         (

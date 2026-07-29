@@ -73,6 +73,7 @@ class DataClass(_DataclassReuseMixin, DataModel):
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_DATACLASS,)
     SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = True
     USES_DATACLASS_ARGUMENTS: ClassVar[bool] = True
+    FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT: ClassVar[bool] = True
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True
@@ -197,7 +198,7 @@ class DataModelField(DataModelFieldBase):
                 data["default_factory"] = nested_model_name
 
         if not data:
-            return ""
+            return "field()" if self._has_forced_field_assignment else ""
 
         if len(data) == 1 and "default" in data:
             default = data["default"]

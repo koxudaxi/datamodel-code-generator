@@ -116,14 +116,17 @@ def _build_inherited_required_performance_schema(
     }
 
 
-INHERITED_REQUIRED_PERFORMANCE_SCHEMAS = {
-    (component_order, partial_override): _build_inherited_required_performance_schema(
-        base_first=component_order == "base-first",
-        partial_override=partial_override,
-    )
-    for component_order in ("base-first", "derived-first")
-    for partial_override in (False, True)
-}
+@pytest.fixture(scope="module")
+def inherited_required_performance_schemas() -> dict[tuple[str, bool], dict[str, object]]:
+    """Build inherited schemas during fixture setup, outside CodSpeed's measured call."""
+    return {
+        (component_order, partial_override): _build_inherited_required_performance_schema(
+            base_first=component_order == "base-first",
+            partial_override=partial_override,
+        )
+        for component_order in ("base-first", "derived-first")
+        for partial_override in (False, True)
+    }
 
 
 def _run_python(args: list[str]) -> subprocess.CompletedProcess[str]:
@@ -147,10 +150,15 @@ def _run_python(args: list[str]) -> subprocess.CompletedProcess[str]:
         pytest.param("derived-first", True, id="partial-derived-first"),
     ],
 )
-def test_perf_inherited_required_fields(component_order: str, *, partial_override: bool) -> None:
+def test_perf_inherited_required_fields(
+    component_order: str,
+    inherited_required_performance_schemas: dict[tuple[str, bool], dict[str, object]],
+    *,
+    partial_override: bool,
+) -> None:
     """Guard direct/deferred required inheritance and partial override performance."""
     result = generate(
-        INHERITED_REQUIRED_PERFORMANCE_SCHEMAS[component_order, partial_override],
+        inherited_required_performance_schemas[component_order, partial_override],
         input_file_type=InputFileType.OpenAPI,
         output_model_type=DataModelType.PydanticV2BaseModel,
         formatters=[],

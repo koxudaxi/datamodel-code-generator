@@ -8,61 +8,61 @@ from dataclasses import dataclass, field
 from typing import Any, TypeAlias
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Detail:
     code: str
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ForwardEvent:
     latitude: float
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ForwardWindow:
     start_at: int
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ForwardBasePickup:
     detail: Detail | None = None
     forward_events: list[ForwardEvent] | None = None
     forward_window: ForwardWindow | None = None
 
 
-@dataclass
+@dataclass(kw_only=True)
 class LegacyContact:
     legacy_name: str | None = None
 
 
-@dataclass
+@dataclass(kw_only=True)
 class BasePickup:
     contact_details: LegacyContact | None = None
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ContactDetails:
     name: str
     legacy_name: str | None = None
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Event:
     latitude: float
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PickupWindow:
     start_at: int
     end_at: int
 
 
-@dataclass
+@dataclass(kw_only=True)
 class LabelPackage:
     label_id: str
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Package:
     sku: str
 
@@ -70,32 +70,32 @@ class Package:
 TrackingCode: TypeAlias = str
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ForwardDeclaredPickup(ForwardBasePickup):
     detail: Detail = field()
     forward_events: list[ForwardEvent] = field()
     forward_window: ForwardWindow = field()
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ForwardInlineRequiredPickup(ForwardBasePickup):
     detail: Detail = field()
     forward_events: list[ForwardEvent] = field()
     forward_window: ForwardWindow = field()
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ForwardPartialPickup(ForwardBasePickup):
     detail: Detail | None = None
     forward_events: list[ForwardEvent] | None = None
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PackageModel(LabelPackage):
     alternative_identifiers: list[str]
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Pickup(BasePickup):
     contact_details: ContactDetails | None = None
     events: list[Event] | None = None
@@ -106,19 +106,19 @@ class Pickup(BasePickup):
     mode: str | None = 'standard'
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ScheduledPickup(Pickup):
+    fallback_field: Any
     contact_details: ContactDetails = field()
     events: list[Event] = field()
     packages: list[PackageModel] = field()
     package: Package = field()
     tracking_code: TrackingCode = field()
     pickup_window: PickupWindow = field()
-    fallback_field: Any = field(kw_only=True)
     mode: str = 'scheduled'
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ReverseScheduledPickup(Pickup):
     contact_details: ContactDetails = field()
     events: list[Event] = field()

@@ -19,8 +19,18 @@ class BaseFirstDerivedRequest(BaseModel):
     detail: BaseFirstItem
 
 
+class BaseFirstDerivedResponse(BaseModel):
+    detail: BaseFirstItem
+    responseOnly: str | None = None
+
+
 class BaseFirstGrandchildRequest(BaseModel):
     detail: BaseFirstItem
+
+
+class BaseFirstGrandchildResponse(BaseModel):
+    detail: BaseFirstItem
+    responseOnly: str | None = None
 
 
 class ForwardItem(BaseModel):
@@ -29,6 +39,11 @@ class ForwardItem(BaseModel):
 
 class DeepDerivedRequest(BaseModel):
     detail: BaseFirstItem
+
+
+class DeepDerivedResponse(BaseModel):
+    detail: BaseFirstItem
+    responseOnly: str | None = None
 
 
 class DiamondItem(BaseModel):
@@ -51,12 +66,27 @@ class DiamondDerivedRequest(BaseModel):
     detail: DiamondItem
 
 
+class DiamondDerivedResponse(BaseModel):
+    detail: DiamondItem
+    responseOnly: str | None = None
+
+
 class ForwardGrandchildRequest(BaseModel):
     detail: ForwardItem
 
 
+class ForwardGrandchildResponse(BaseModel):
+    detail: ForwardItem
+    responseOnly: str | None = None
+
+
 class ForwardDerivedRequest(BaseModel):
     detail: ForwardItem
+
+
+class ForwardDerivedResponse(BaseModel):
+    detail: ForwardItem
+    responseOnly: str | None = None
 
 
 class ForwardBase(BaseModel):

@@ -17,3 +17,13 @@ components:
             responseOnly:
               type: string
               readOnly: true
+    ExternalWriteOnlyWrapper:
+      allOf:
+        - allOf:
+            - $ref: "./schemas/inherited.yaml#/ExternalDerived"
+          properties:
+            detail: {}
+            mapping: {}
+            requestOnly:
+              type: string
+              writeOnly: true

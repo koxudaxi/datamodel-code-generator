@@ -11,6 +11,7 @@ from datamodel_code_generator.model.dataclass import has_field_assignment as has
 from datamodel_code_generator.model.msgspec import Struct as MsgspecStruct
 from datamodel_code_generator.model.msgspec import has_field_assignment as has_msgspec_field_assignment
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel as PydanticBaseModel
+from datamodel_code_generator.model.pydantic_v2.base_model import DataModelField as PydanticDataModelField
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticDataClass
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
@@ -28,6 +29,11 @@ def test_dataclass_ordering_capabilities_are_owned_by_output_models() -> None:
     assert PydanticDataClass.REQUIRES_MODEL_LEVEL_KW_ONLY is False
     assert MsgspecStruct.REQUIRES_MODEL_LEVEL_KW_ONLY is True
     assert ExternalStruct.REQUIRES_MODEL_LEVEL_KW_ONLY is True
+    assert DataModel.FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT is False
+    assert StandardDataClass.FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT is True
+    assert PydanticDataClass.FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT is False
+    assert MsgspecStruct.FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT is False
+    assert ExternalStruct.FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT is False
     assert MsgspecStruct.has_keyword_only_definition is not DataModel.has_keyword_only_definition
     assert MsgspecStruct.enable_model_keyword_only is not DataModel.enable_model_keyword_only
     assert ExternalStruct.has_keyword_only_definition is MsgspecStruct.has_keyword_only_definition
@@ -44,9 +50,17 @@ def test_dataclass_field_assignment_policy_keeps_legacy_helpers() -> None:
         default="value",
         required=False,
     )
+    annotated_override = PydanticDataModelField(
+        name="annotated_override",
+        data_type=DataType(type="str"),
+        required=True,
+        use_annotated=True,
+    )
+    annotated_override._force_field_assignment()
 
     assert StandardDataClass.FIELD_ASSIGNMENT_CHECKER(required) is has_dataclass_field_assignment(required) is False
     assert StandardDataClass.FIELD_ASSIGNMENT_CHECKER(defaulted) is has_dataclass_field_assignment(defaulted) is True
+    assert PydanticDataClass.FIELD_ASSIGNMENT_CHECKER(annotated_override) is True
     assert MsgspecStruct.FIELD_ASSIGNMENT_CHECKER(required) is has_msgspec_field_assignment(required) is False
     assert MsgspecStruct.FIELD_ASSIGNMENT_CHECKER(defaulted) is has_msgspec_field_assignment(defaulted) is True
 
