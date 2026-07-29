@@ -3773,31 +3773,26 @@ def test_main_openapi_allof_required_inherited_dataclass_metadata(
         case _:
             return
 
-    if model_type in {
-        DataModelType.PydanticV2BaseModel,
-        DataModelType.PydanticV2Dataclass,
-        DataModelType.DataclassesDataclass,
-    }:
-        base_invalid_json, base_error_type = (
-            ("[]", "dataclass_type")
+    base_invalid_json, base_error_type = (
+        ("[]", "dataclass_type")
+        if model_type is DataModelType.DataclassesDataclass
+        else ('{"inheritedFactory":[1]}', "string_type")
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"allof_required_dataclass_metadata_{expected_name}_base_defaults",
+        model_name="InitBase",
+        valid_json="{}",
+        invalid_json=base_invalid_json,
+        expected_error_type=base_error_type,
+        expected_attribute_path=("inheritedMetadata",),
+        expected_attribute_value=None,
+        expected_repr=(
+            "InitBase(inheritedScalar='inherited', inheritedFactory=[], inheritedMetadata=None)"
             if model_type is DataModelType.DataclassesDataclass
-            else ('{"inheritedFactory":[1]}', "string_type")
-        )
-        assert_generated_model_json_validation(
-            output_file,
-            module_name=f"allof_required_dataclass_metadata_{expected_name}_base_defaults",
-            model_name="InitBase",
-            valid_json="{}",
-            invalid_json=base_invalid_json,
-            expected_error_type=base_error_type,
-            expected_attribute_path=("inheritedMetadata",),
-            expected_attribute_value=None,
-            expected_repr=(
-                "InitBase(inheritedScalar='inherited', inheritedFactory=[], inheritedMetadata=None)"
-                if model_type is DataModelType.DataclassesDataclass
-                else None
-            ),
-        )
+            else None
+        ),
+    )
 
     required_override_payload = {
         "inheritedScalar": "fresh",

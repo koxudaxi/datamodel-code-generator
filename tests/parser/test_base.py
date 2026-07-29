@@ -563,6 +563,35 @@ def test_dataclass_inherited_init_cleanup_without_other_adjustments(parser_fixtu
     assert unnamed_child.extras == {}
 
 
+def test_dataclass_metadata_assignment_without_default_stays_positional(parser_fixture: C) -> None:
+    """Do not treat metadata-only field() assignments as constructor defaults."""
+    base_reference = _reference("MetadataBase")
+    metadata_field = DataclassField(
+        name="metadata",
+        data_type=DataType(type="str"),
+        default=None,
+        required=False,
+        strip_default_none=True,
+        extras={"repr": False},
+    )
+    DataclassModel(fields=[metadata_field], reference=base_reference)
+    child_field = DataclassField(
+        name="child",
+        data_type=DataType(type="str"),
+        required=True,
+    )
+    child = DataclassModel(
+        fields=[child_field],
+        base_classes=[base_reference],
+        reference=_reference("MetadataChild"),
+    )
+
+    parser_fixture._Parser__fix_dataclass_field_ordering([child])
+
+    assert str(metadata_field) == "field(repr=False)"
+    assert child_field.extras == {}
+
+
 def test_get_enum_from_base_skips_models_without_inherited_enum_capability() -> None:
     """Do not inherit discriminator enums from output models that opt out."""
     from datamodel_code_generator.model.enum import Enum
