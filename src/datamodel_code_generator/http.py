@@ -12,11 +12,10 @@ import contextlib
 import socket
 import ssl
 from collections import OrderedDict
-from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from ipaddress import IPv4Address, IPv6Address, IPv6Network, ip_address
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, overload
+from typing import TYPE_CHECKING, Generic, Literal, TypeVar, cast
 from urllib.parse import urlparse
 
 from typing_extensions import Self
@@ -24,131 +23,277 @@ from typing_extensions import Self
 from datamodel_code_generator import SchemaFetchError
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Mapping, Sequence
     from types import TracebackType
+    from typing import Protocol, overload
+
+    class _ResponseHeaders(Protocol):
+        @overload
+        def get(self, key: str) -> str | None: ...
+
+        @overload
+        def get(self, key: str, default: str) -> str: ...
+
+    class _HTTPResponse(Protocol):
+        status_code: int
+        headers: _ResponseHeaders
+        text: str
 
 
-class _ResponseHeaders(Protocol):
-    @overload
-    def get(self, key: str) -> str | None: ...
-
-    @overload
-    def get(self, key: str, default: str) -> str: ...
+_HTTPTransportT_co = TypeVar("_HTTPTransportT_co", bound="_HTTPTransport", covariant=True)
 
 
-class _HTTPResponse(Protocol):
-    status_code: int
-    headers: _ResponseHeaders
-    text: str
+if TYPE_CHECKING:
+
+    class _HTTPTransportURL(Protocol):
+        @property
+        def raw_scheme(self) -> bytes: ...
+
+        @property
+        def raw_host(self) -> bytes: ...
+
+        @property
+        def port(self) -> int | None: ...
+
+        @property
+        def raw_path(self) -> bytes: ...
+
+    class _HTTPTransportHeaders(Protocol):
+        @property
+        def raw(self) -> Sequence[tuple[bytes, bytes]]: ...
+
+    # Extension payloads are dynamically typed upstream. Keep them opaque so values must be narrowed before use.
+    _Extensions = Mapping[str, object]
+
+    class _HTTPTransportRequest(Protocol):
+        @property
+        def method(self) -> str: ...
+
+        @property
+        def url(self) -> _HTTPTransportURL: ...
+
+        @property
+        def headers(self) -> _HTTPTransportHeaders: ...
+
+        @property
+        def stream(self) -> Iterable[bytes]: ...
+
+        @property
+        def extensions(self) -> _Extensions: ...
+
+    class _HTTPTransport(Protocol):
+        def handle_request(self, request: _HTTPTransportRequest) -> _HTTPResponse: ...
+
+        def close(self) -> None: ...
+
+    _SocketOption = tuple[int, int, int] | tuple[int, int, bytes | bytearray] | tuple[int, int, None, int]
+
+    class _HTTPTransportFactory(Protocol[_HTTPTransportT_co]):
+        def __call__(
+            self,
+            *,
+            pinned_host: str,
+            pinned_ips: tuple[IPv4Address | IPv6Address, ...],
+            verify: bool,
+        ) -> _HTTPTransportT_co: ...
 
 
-class _HTTPCookies(Protocol):
-    def clear(self) -> None:
-        raise NotImplementedError  # pragma: no cover
+if TYPE_CHECKING:
 
+    class _HTTPCookies(Protocol):
+        def clear(self) -> None: ...
 
-class _HTTPXClient(Protocol):
-    cookies: _HTTPCookies
+    class _HTTPXClient(Protocol):
+        cookies: _HTTPCookies
 
-    def __enter__(self) -> Self: ...
+        def __enter__(self) -> Self: ...
 
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None: ...
+        def __exit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc_value: BaseException | None,
+            traceback: TracebackType | None,
+        ) -> None: ...
 
-    def get(
-        self,
-        url: str,
-        *,
-        headers: Sequence[tuple[str, str]] | None,
-        follow_redirects: bool,
-        params: Sequence[tuple[str, str]] | None,
-    ) -> _HTTPResponse: ...
+        def get(
+            self,
+            url: str,
+            *,
+            headers: Sequence[tuple[str, str]] | None,
+            follow_redirects: bool,
+            params: Sequence[tuple[str, str]] | None,
+        ) -> _HTTPResponse: ...
 
-    def close(self) -> None:
-        raise NotImplementedError  # pragma: no cover
+        def close(self) -> None: ...
 
+    class _HTTPXClientFactory(Protocol):
+        def __call__(
+            self,
+            *,
+            transport: _HTTPTransport | None = None,
+            timeout: float,
+            verify: bool = True,
+        ) -> _HTTPXClient: ...
 
-class _HTTPXClientFactory(Protocol):
-    def __call__(
-        self,
-        *,
-        transport: object | None = None,
-        timeout: float,
-        verify: bool = True,
-    ) -> _HTTPXClient:
-        raise NotImplementedError  # pragma: no cover
+    class _HTTPXURLJoiner(Protocol):
+        def join(self, url: str) -> _HTTPXURLJoiner: ...
 
+        def __str__(self) -> str: ...
 
-class _HTTPXURLJoiner(Protocol):
-    def join(self, url: str) -> _HTTPXURLJoiner: ...
+    class _HTTPXURLFactory(Protocol):
+        def __call__(self, url: str) -> _HTTPXURLJoiner: ...
 
-    def __str__(self) -> str: ...
+    class _HTTPXResponseFactory(Protocol):
+        def __call__(
+            self,
+            status_code: int,
+            *,
+            headers: Sequence[tuple[bytes, bytes]],
+            content: bytes,
+            extensions: _Extensions,
+            request: _HTTPTransportRequest,
+        ) -> _HTTPResponse: ...
 
+    class _HTTPXModule(Protocol):
+        BaseTransport: type[_HTTPTransport]
+        Client: _HTTPXClientFactory
+        Response: _HTTPXResponseFactory
+        URL: _HTTPXURLFactory
 
-class _HTTPXURLFactory(Protocol):
-    def __call__(self, url: str) -> _HTTPXURLJoiner: ...
-
-
-class _HTTPXModule(Protocol):
-    Client: _HTTPXClientFactory
-    URL: _HTTPXURLFactory
-
-    def get(  # noqa: PLR0913
-        self,
-        url: str,
-        *,
-        headers: Sequence[tuple[str, str]] | None,
-        verify: bool,
-        follow_redirects: bool,
-        params: Sequence[tuple[str, str]] | None,
-        timeout: float,
-    ) -> _HTTPResponse: ...
+        def get(  # noqa: PLR0913
+            self,
+            url: str,
+            *,
+            headers: Sequence[tuple[str, str]] | None,
+            verify: bool,
+            follow_redirects: bool,
+            params: Sequence[tuple[str, str]] | None,
+            timeout: float,
+        ) -> _HTTPResponse: ...
 
 
 _HTTPBackendName = Literal["httpx", "httpx2"]
 _HTTPCoreBackendName = Literal["httpcore", "httpcore2"]
 
 
+_NetworkStreamT_co = TypeVar("_NetworkStreamT_co", bound="_NetworkStream", covariant=True)
+_NetworkStreamT = TypeVar("_NetworkStreamT", bound="_NetworkStream")
+
+
+if TYPE_CHECKING:
+
+    class _ClosableByteStream(Iterable[bytes], Protocol):
+        def close(self) -> None: ...
+
+    class _NetworkStream(Protocol):
+        def read(self, max_bytes: int, timeout: float | None = None) -> bytes: ...
+
+        def write(self, buffer: bytes, timeout: float | None = None) -> None: ...
+
+        def close(self) -> None: ...
+
+        def start_tls(
+            self,
+            ssl_context: ssl.SSLContext,
+            server_hostname: str | None = None,
+            timeout: float | None = None,
+        ) -> Self: ...
+
+    class _NetworkBackend(Protocol[_NetworkStreamT_co]):
+        def connect_tcp(
+            self,
+            host: str,
+            port: int,
+            timeout: float | None = None,
+            local_address: str | None = None,
+            socket_options: Iterable[_SocketOption] | None = None,
+        ) -> _NetworkStreamT_co: ...
+
+        def connect_unix_socket(
+            self,
+            path: str,
+            timeout: float | None = None,
+            socket_options: Iterable[_SocketOption] | None = None,
+        ) -> _NetworkStreamT_co: ...
+
+        def sleep(self, seconds: float) -> None: ...
+
+
+if TYPE_CHECKING:
+
+    class _HTTPCoreURL(Protocol):
+        scheme: bytes
+        host: bytes
+        port: int | None
+        target: bytes
+
+    class _HTTPCoreRequest(Protocol):
+        method: bytes
+        url: _HTTPCoreURL
+        headers: Sequence[tuple[bytes, bytes]]
+        stream: Iterable[bytes]
+        extensions: _Extensions
+
+    class _HTTPCoreResponse(Protocol):
+        status: int
+        headers: Sequence[tuple[bytes, bytes]]
+        stream: _ClosableByteStream
+        extensions: _Extensions
+
+    class _HTTPCoreURLFactory(Protocol):
+        def __call__(
+            self,
+            *,
+            scheme: bytes,
+            host: bytes,
+            port: int | None,
+            target: bytes,
+        ) -> _HTTPCoreURL: ...
+
+    class _HTTPCoreRequestFactory(Protocol):
+        def __call__(
+            self,
+            method: str,
+            url: _HTTPCoreURL,
+            *,
+            headers: Sequence[tuple[bytes, bytes]],
+            content: Iterable[bytes],
+            extensions: _Extensions,
+        ) -> _HTTPCoreRequest: ...
+
+    class _HTTPCoreConnectionPool(Protocol):
+        def handle_request(self, request: _HTTPCoreRequest) -> _HTTPCoreResponse: ...
+
+        def close(self) -> None: ...
+
+    class _HTTPCoreConnectionPoolFactory(Protocol):
+        def __call__(
+            self,
+            *,
+            ssl_context: ssl.SSLContext | None,
+            network_backend: _NetworkBackend[_NetworkStream],
+        ) -> _HTTPCoreConnectionPool: ...
+
+    class _NetworkBackendFactory(Protocol):
+        def __call__(self) -> _NetworkBackend[_NetworkStream]: ...
+
+    class _HTTPCoreModule(Protocol):
+        ConnectionPool: _HTTPCoreConnectionPoolFactory
+        Request: _HTTPCoreRequestFactory
+        SyncBackend: _NetworkBackendFactory
+        URL: _HTTPCoreURLFactory
+
+
 @dataclass(frozen=True, slots=True)
-class _HTTPStack:
+class _HTTPStack(Generic[_HTTPTransportT_co]):
     """One matched HTTP client/core pair selected for this process."""
 
     backend: _HTTPBackendName
     httpx: _HTTPXModule
-    transport_type: type[Any]
+    transport_type: _HTTPTransportFactory[_HTTPTransportT_co]
 
 
-class _ClosableByteStream(Iterable[bytes], Protocol):
-    def close(self) -> None: ...
-
-
-class _NetworkBackend(Protocol):
-    def connect_tcp(
-        self,
-        host: str,
-        port: int,
-        timeout: float | None = None,
-        local_address: str | None = None,
-        socket_options: Iterable[tuple[int, int, int | bytes]] | None = None,
-    ) -> object:
-        raise NotImplementedError  # pragma: no cover
-
-    def connect_unix_socket(
-        self,
-        path: str,
-        timeout: float | None = None,
-        socket_options: Iterable[tuple[int, int, int | bytes]] | None = None,
-    ) -> object:
-        raise NotImplementedError  # pragma: no cover
-
-    def sleep(self, seconds: float) -> None:
-        raise NotImplementedError  # pragma: no cover
-
-
-_HTTP_STACK: _HTTPStack | None = None
+_HTTP_STACK: _HTTPStack[_HTTPTransport] | None = None
 
 
 DEFAULT_HTTP_TIMEOUT = 30.0
@@ -331,7 +476,7 @@ def _normalize_dns_host(host: bytes | str | None) -> str | None:
         return None
 
 
-class _PinnedNetworkBackend:
+class _PinnedNetworkBackend(Generic[_NetworkStreamT]):
     """HTTP network backend that connects only to previously validated addresses.
 
     URL validation happens before the HTTP request, but DNS could otherwise be resolved again during the TCP
@@ -343,7 +488,7 @@ class _PinnedNetworkBackend:
         *,
         pinned_host: str,
         pinned_ips: tuple[IPv4Address | IPv6Address, ...],
-        backend: _NetworkBackend,
+        backend: _NetworkBackend[_NetworkStreamT],
     ) -> None:
         """Store the validated host, validated IPs, and wrapped backend.
 
@@ -360,8 +505,8 @@ class _PinnedNetworkBackend:
         port: int,
         timeout: float | None = None,
         local_address: str | None = None,
-        socket_options: Iterable[tuple[int, int, int | bytes]] | None = None,
-    ) -> object:
+        socket_options: Iterable[_SocketOption] | None = None,
+    ) -> _NetworkStreamT:
         """Open a TCP connection through the pinned addresses for the validated host.
 
         A host mismatch raises before any DNS fallback. That keeps redirects, IDNA edge cases, or transport
@@ -392,8 +537,8 @@ class _PinnedNetworkBackend:
         self,
         path: str,
         timeout: float | None = None,
-        socket_options: Iterable[tuple[int, int, int | bytes]] | None = None,
-    ) -> object:
+        socket_options: Iterable[_SocketOption] | None = None,
+    ) -> _NetworkStreamT:
         """Delegate Unix socket connections to the wrapped backend.
 
         DNS pinning only applies to TCP hostnames, but the HTTP core expects a complete network backend interface.
@@ -422,11 +567,13 @@ def _create_ssl_context(*, verify: bool) -> ssl.SSLContext | None:
     return context
 
 
-def _create_pinned_transport_type(httpx_module: _HTTPXModule, httpcore_module: Any) -> type[Any]:
+def _create_pinned_transport_type(
+    httpx_module: _HTTPXModule,
+    httpcore_module: _HTTPCoreModule,
+) -> _HTTPTransportFactory[_HTTPTransport]:
     """Create one transport class for a matched HTTP client/core pair."""
-    httpx_runtime = cast("Any", httpx_module)
 
-    class _PinnedHTTPTransport(httpx_runtime.BaseTransport):
+    class _PinnedHTTPTransport(httpx_module.BaseTransport):
         """Transport bound to a DNS-pinned HTTP connection pool."""
 
         __slots__ = ("_pool",)
@@ -442,14 +589,14 @@ def _create_pinned_transport_type(httpx_module: _HTTPXModule, httpcore_module: A
             network_backend = _PinnedNetworkBackend(
                 pinned_host=pinned_host,
                 pinned_ips=pinned_ips,
-                backend=cast("_NetworkBackend", httpcore_module.SyncBackend()),
+                backend=httpcore_module.SyncBackend(),
             )
             self._pool = httpcore_module.ConnectionPool(
                 ssl_context=_create_ssl_context(verify=verify),
                 network_backend=network_backend,
             )
 
-        def handle_request(self, request: Any) -> Any:
+        def handle_request(self, request: _HTTPTransportRequest) -> _HTTPResponse:
             """Send a client request through the matched core and eagerly consume its stream."""
             req = httpcore_module.Request(
                 method=request.method,
@@ -464,12 +611,12 @@ def _create_pinned_transport_type(httpx_module: _HTTPXModule, httpcore_module: A
                 extensions=dict(request.extensions),
             )
             resp = self._pool.handle_request(req)
-            stream = cast("_ClosableByteStream", resp.stream)
+            stream = resp.stream
             try:
                 content = b"".join(stream)
             finally:
                 stream.close()
-            return httpx_runtime.Response(
+            return httpx_module.Response(
                 status_code=resp.status,
                 headers=resp.headers,
                 content=content,
@@ -487,12 +634,12 @@ def _create_pinned_transport_type(httpx_module: _HTTPXModule, httpcore_module: A
 def _load_matched_http_stack(
     backend: _HTTPBackendName,
     core_backend: _HTTPCoreBackendName,
-) -> _HTTPStack:
+) -> _HTTPStack[_HTTPTransport]:
     """Import an already matched HTTP client/core pair."""
     from importlib import import_module  # noqa: PLC0415
 
     httpx_module = cast("_HTTPXModule", import_module(backend))
-    httpcore_module = import_module(core_backend)
+    httpcore_module = cast("_HTTPCoreModule", import_module(core_backend))
     return _HTTPStack(
         backend=backend,
         httpx=httpx_module,
@@ -500,7 +647,7 @@ def _load_matched_http_stack(
     )
 
 
-def _load_http_stack(backend: _HTTPBackendName) -> _HTTPStack:
+def _load_http_stack(backend: _HTTPBackendName) -> _HTTPStack[_HTTPTransport]:
     """Select one matched HTTP client/core pair without probing package metadata."""
     if backend == "httpx":
         core_backend: _HTTPCoreBackendName = "httpcore"
@@ -512,7 +659,7 @@ def _load_http_stack(backend: _HTTPBackendName) -> _HTTPStack:
     return _load_matched_http_stack(backend, core_backend)
 
 
-def _get_http_stack() -> _HTTPStack:
+def _get_http_stack() -> _HTTPStack[_HTTPTransport]:
     """Return the lazily selected stack, preferring explicitly installed HTTPX2."""
     global _HTTP_STACK  # noqa: PLW0603
 
@@ -544,12 +691,12 @@ def _get_httpx() -> _HTTPXModule:
 
 
 def _build_pinned_transport(
-    http_stack: _HTTPStack,
+    http_stack: _HTTPStack[_HTTPTransport],
     *,
     pinned_host: str,
     pinned_ips: tuple[IPv4Address | IPv6Address, ...],
     verify: bool,
-) -> object:
+) -> _HTTPTransport:
     """Build a transport whose TCP connections use the validated address set."""
     return http_stack.transport_type(pinned_host=pinned_host, pinned_ips=pinned_ips, verify=verify)
 
@@ -597,7 +744,7 @@ class _HTTPFetchSession:
 
     def get_response(  # noqa: PLR0913
         self,
-        http_stack: _HTTPStack,
+        http_stack: _HTTPStack[_HTTPTransport],
         url: str,
         *,
         headers: Sequence[tuple[str, str]] | None,
@@ -677,7 +824,7 @@ class _HTTPFetchSession:
 
 
 def _get_http_response(  # noqa: PLR0913
-    http_stack: _HTTPStack,
+    http_stack: _HTTPStack[_HTTPTransport],
     url: str,
     *,
     headers: Sequence[tuple[str, str]] | None,
