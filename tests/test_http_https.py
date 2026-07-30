@@ -97,6 +97,7 @@ def local_https_server(tmp_path: Path, monkeypatch: MonkeyPatch) -> Iterator[tup
     certificate.private_key_pem.write_to_path(private_key_path)
 
     tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    tls_context.minimum_version = ssl.TLSVersion.TLSv1_2
     tls_context.load_cert_chain(certificate_path, private_key_path)
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), _HttpsSchemaHandler)
@@ -137,6 +138,7 @@ def test_https_ignore_tls_fetches_real_schema(
     output_path.write_text(
         _get_pinned_https_body(f"{server_url}/pet.json", verify=False),
         encoding="utf-8",
+        newline="",
     )
 
     assert_https_generated_file(output_path, "pet_schema.txt")
@@ -188,7 +190,11 @@ def test_https_trusted_ca_verifies_and_generates_model(
     schema_url = f"{server_url}/pet.json"
     monkeypatch.setenv("SSL_CERT_FILE", str(ca_path))
     pinned_output_path = tmp_path / "pinned-pet.txt"
-    pinned_output_path.write_text(_get_pinned_https_body(schema_url, verify=True), encoding="utf-8")
+    pinned_output_path.write_text(
+        _get_pinned_https_body(schema_url, verify=True),
+        encoding="utf-8",
+        newline="",
+    )
     assert_https_generated_file(pinned_output_path, "pet_schema.txt")
 
     run_main_url_and_assert(

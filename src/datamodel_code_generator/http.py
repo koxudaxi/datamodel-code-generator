@@ -679,13 +679,12 @@ def _load_http_stack(backend: _HTTPBackendName) -> _HTTPStack[_HTTPTransport]:
     """Select one matched HTTP client/core pair without probing package metadata."""
     match backend:
         case "httpx":
-            core_backend: _HTTPCoreBackendName = "httpcore"
+            return _load_matched_http_stack(backend, "httpcore")
         case "httpx2":
-            core_backend = "httpcore2"
+            return _load_matched_http_stack(backend, "httpcore2")
         case _:
             msg = f"Unexpected HTTP backend: {backend!r}"
             raise AssertionError(msg)
-    return _load_matched_http_stack(backend, core_backend)
 
 
 def _get_or_load_http_stack(backend: _HTTPBackendName) -> _HTTPStack[_HTTPTransport]:
