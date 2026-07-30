@@ -67,51 +67,12 @@ class DataModelField(DataModelFieldBase):
     }
     _COMPARE_EXPRESSIONS: ClassVar[set[str]] = {"gt", "ge", "lt", "le"}
     _INTEGER_CONSTRAINTS: ClassVar[set[str]] = _COMPARE_EXPRESSIONS | {"multiple_of"}
-    _DATACLASS_ASSIGNMENT_KEYS: ClassVar[frozenset[str]] = frozenset({
-        "default_factory",
-        "init",
-        "init_var",
-        "kw_only",
-        "repr",
-    })
     constraints: Optional[Constraints] = None  # noqa: UP045
 
     @property
     def has_default_factory_in_field(self) -> bool:
         """Check if this field has a default_factory in Field() including computed ones."""
         return "default_factory" in self.extras or self.__dict__.get("_computed_default_factory") is not None
-
-    @property
-    def requires_dataclass_field_assignment(self) -> bool:
-        """Check whether Annotated metadata must also be visible to dataclasses."""
-        if (
-            self._has_forced_field_assignment
-            or not self._DATACLASS_ASSIGNMENT_KEYS.isdisjoint(self.extras)
-            or self.has_default_factory_in_field
-        ):
-            return True
-        return bool(
-            self.use_default_factory_for_optional_nested_models
-            and not self.required
-            and (self.default is None or self.default is UNDEFINED)
-            and self._get_default_factory_for_optional_nested_model()
-        )
-
-    @property
-    def dataclass_field(self) -> str | None:
-        """Render a Field() assignment that preserves Python dataclass defaults."""
-        if not (result := str(self)):
-            return None
-        if (
-            self.has_default_factory_in_field
-            or (self.required and not self.use_default_with_required)
-            or self.should_strip_default_none(keep_optional=True)
-        ):
-            return result
-        arguments = result.removeprefix("Field(").removesuffix(")")
-        separator = ", " if arguments else ""
-        default_argument = f"default={self.represented_default}" if self.use_default_kwarg else self.represented_default
-        return f"Field({default_argument}{separator}{arguments})"
 
     @property
     def method(self) -> str | None:
@@ -161,10 +122,6 @@ class DataModelField(DataModelFieldBase):
         if self.is_class_var:
             self.__dict__["_computed_default_factory"] = None
             return False
-        if self._has_forced_field_assignment:
-            self.__dict__["_computed_default_factory"] = None
-            return True
-
         has_field_metadata = (
             self.extras
             or self.alias is not None
@@ -323,8 +280,6 @@ class DataModelField(DataModelFieldBase):
         field_arguments = sorted(f"{k}={represent_python_value(v)}" for k, v in data.items() if v is not None)
 
         if not field_arguments and not default_factory:
-            if self._has_forced_field_assignment:
-                return "Field(...)"
             if self.nullable and self.required and not self.use_default_with_required:
                 return "Field(...)"  # Field() is for mypy
             return ""

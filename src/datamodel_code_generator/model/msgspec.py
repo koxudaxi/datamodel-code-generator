@@ -57,6 +57,18 @@ def has_field_assignment(field: DataModelFieldBase) -> bool:
     return field.use_default_with_required or not (field.required or field.should_strip_default_none())
 
 
+def get_field_default_info(field: DataModelFieldBase) -> tuple[bool, bool]:
+    """Return msgspec constructor-default semantics."""
+    if not has_field_assignment(field) or (field.required and not field.use_default_with_required):
+        return False, False
+    rendered_assignment = str(field)
+    if "default_factory=" in rendered_assignment:
+        return True, False
+    if rendered_assignment.startswith("field(") and "default=" not in rendered_assignment:
+        return False, False
+    return True, True
+
+
 DataModelFieldBaseT = TypeVar("DataModelFieldBaseT", bound=DataModelFieldBase)
 
 
@@ -102,6 +114,7 @@ class Struct(DataModel):
     BASE_CLASS_ALIAS: ClassVar[str] = "_Struct"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
     FIELD_ASSIGNMENT_CHECKER = staticmethod(has_field_assignment)
+    FIELD_DEFAULT_CLASSIFIER = staticmethod(get_field_default_info)
     FIELD_NAME_MODEL_TYPE: ClassVar[ModelType] = ModelType.MSGSPEC
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True

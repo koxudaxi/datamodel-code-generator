@@ -34,7 +34,6 @@ from datamodel_code_generator.model.type_alias import TypeAlias, TypeAliasTypeBa
 from datamodel_code_generator.parser.base import (
     _DEFERRED_INHERITED_CLASS_KEY,
     _DEFERRED_INHERITED_FIELD_KEY,
-    _DEFERRED_INHERITED_INIT_KEY,
     _DEFERRED_INHERITED_TYPE_KEY,
     _RAW_SCHEMA_DEFAULT_KEY,
     Child,
@@ -519,7 +518,7 @@ def test_dataclass_required_override_of_inherited_default_uses_exact_assignment(
         keyword_only=keyword_only,
     )
 
-    parser_fixture._Parser__fix_dataclass_field_ordering([child])
+    parser_fixture._Parser__fix_constructor_field_ordering([child])
 
     assert required_override.extras == {}
     assert str(required_override) == expected_assignment
@@ -530,15 +529,16 @@ def test_dataclass_required_override_of_inherited_default_uses_exact_assignment(
 def test_dataclass_inherited_init_cleanup_without_other_adjustments(parser_fixture: C) -> None:
     """Clearing inherited init metadata alone refreshes ordering and skips unnamed base fields."""
     base_reference = _reference("InitBase")
+    inherited_field = DataclassField(
+        name="value",
+        data_type=DataType(type="str"),
+        required=True,
+        extras={"init": False},
+    )
     DataclassModel(
         fields=[
             DataclassField(name=None, data_type=DataType(type="str"), required=True),
-            DataclassField(
-                name="value",
-                data_type=DataType(type="str"),
-                required=True,
-                extras={"init": False},
-            ),
+            inherited_field,
         ],
         reference=base_reference,
     )
@@ -548,7 +548,7 @@ def test_dataclass_inherited_init_cleanup_without_other_adjustments(parser_fixtu
         required=True,
         extras={"init": False},
     )
-    required_override.__dict__[_DEFERRED_INHERITED_INIT_KEY] = True
+    DataclassModel.prepare_required_inherited_field(required_override, inherited_field)
     unnamed_child = DataclassField(name=None, data_type=DataType(type="str"), required=True)
     child = DataclassModel(
         fields=[required_override, unnamed_child],
@@ -556,7 +556,7 @@ def test_dataclass_inherited_init_cleanup_without_other_adjustments(parser_fixtu
         reference=_reference("InitChild"),
     )
 
-    parser_fixture._Parser__fix_dataclass_field_ordering([child])
+    parser_fixture._Parser__fix_constructor_field_ordering([child])
 
     assert required_override.extras == {}
     assert not str(required_override)
@@ -586,7 +586,7 @@ def test_dataclass_metadata_assignment_without_default_stays_positional(parser_f
         reference=_reference("MetadataChild"),
     )
 
-    parser_fixture._Parser__fix_dataclass_field_ordering([child])
+    parser_fixture._Parser__fix_constructor_field_ordering([child])
 
     assert str(metadata_field) == "field(repr=False)"
     assert child_field.extras == {}

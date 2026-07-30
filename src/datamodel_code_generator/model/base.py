@@ -61,6 +61,7 @@ _MODULE_NAME_INVALID_CHAR_WITH_DOTS_PATTERN = re.compile(r"[^0-9a-zA-Z_.]")
 _MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS = 128
 _NESTED_MODEL_DEFAULT_FACTORY_ORDER_KEY = "_nested_model_default_factory_order"
 _NESTED_MODEL_DEFAULT_FACTORY_RECURSIVE_PATHS_KEY = "_nested_model_default_factory_recursive_paths"
+_REQUIRED_INHERITED_DEFAULT_FACTORY_KEY = "_required_inherited_default_factory"
 
 
 class _MissingCustomTemplateState:
@@ -915,7 +916,7 @@ class DataModelFieldBase(_BaseModel):
         """For backwards compatibility."""
         return None
 
-    def _force_field_assignment(self) -> None:
+    def force_field_assignment(self) -> None:
         """Render an explicit required-field assignment without changing its semantics."""
         self.__dict__["_forced_field_assignment"] = True
 
@@ -1246,6 +1247,22 @@ def _has_field_assignment(field: DataModelFieldBase) -> bool:
     )
 
 
+def _get_field_default_info(field: DataModelFieldBase) -> tuple[bool, bool]:
+    """Return neutral constructor-default semantics for output fields."""
+    if not _has_field_assignment(field) or (field.required and not field.use_default_with_required):
+        return False, False
+    if "default_factory" in field.extras:
+        return True, False
+    if field.default is UNDEFINED or (field.default is None and field.should_strip_default_none()):
+        return False, False
+    return True, True
+
+
+def _field_participates_in_constructor(_: DataModelFieldBase) -> bool:
+    """Return whether a field participates in its model constructor."""
+    return True
+
+
 class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     """Abstract base class for all data model types.
 
@@ -1259,13 +1276,19 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     IS_ROOT_MODEL: ClassVar[bool] = False
     SUPPORTS_GENERIC_BASE_CLASS: ClassVar[bool] = True
     FIELD_ASSIGNMENT_CHECKER: ClassVar[Callable[[DataModelFieldBase], bool]] = staticmethod(_has_field_assignment)
+    FIELD_DEFAULT_CLASSIFIER: ClassVar[Callable[[DataModelFieldBase], tuple[bool, bool]]] = staticmethod(
+        _get_field_default_info
+    )
+    FIELD_PARTICIPATES_IN_CONSTRUCTOR: ClassVar[Callable[[DataModelFieldBase], bool]] = staticmethod(
+        _field_participates_in_constructor
+    )
     SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = False
     # Kept opaque so this generic layer does not import reference-layer policy.
     FIELD_NAME_MODEL_TYPE: ClassVar[Any] = None
     USES_DATACLASS_ARGUMENTS: ClassVar[bool] = False
+    SUPPORTS_REQUIRED_INHERITED_FIELD_ASSIGNMENT: ClassVar[bool] = False
     REQUIRES_EXPLICIT_INHERITED_FACTORY_OVERRIDE: ClassVar[bool] = False
-    REQUIRED_FIELD_ASSIGNMENT_IS_DATACLASS_DEFAULT: ClassVar[bool] = False
-    FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT: ClassVar[bool] = False
+    REQUIRED_ASSIGNMENT_COUNTS_AS_CONSTRUCTOR_DEFAULT: ClassVar[bool] = False
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = False
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = False
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False
@@ -1314,6 +1337,30 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
 
     def enable_model_keyword_only(self) -> None:
         """Enable output-specific model-level keyword-only behavior when supported."""
+
+    @classmethod
+    def prepare_required_inherited_field(
+        cls,
+        field: DataModelFieldBase,
+        inherited_field: DataModelFieldBase,
+        *,
+        explicit_extras: Collection[str] = (),
+    ) -> None:
+        """Preserve output-specific inherited state until requiredness is final."""
+        if "default_factory" in inherited_field.extras and "default_factory" not in explicit_extras:
+            field.__dict__[_REQUIRED_INHERITED_DEFAULT_FACTORY_KEY] = True
+        cls.finalize_required_inherited_field(field)
+
+    @staticmethod
+    def finalize_required_inherited_field(field: DataModelFieldBase) -> None:
+        """Remove an inherited factory once the child field is known to be required."""
+        if field.required and field.__dict__.pop(_REQUIRED_INHERITED_DEFAULT_FACTORY_KEY, False):
+            field.extras.pop("default_factory", None)
+
+    @classmethod
+    def restore_required_inherited_field_state(cls, field: DataModelFieldBase) -> bool:  # noqa: ARG003
+        """Restore output-specific inherited state after requiredness is final."""
+        return False
 
     @classmethod
     def resolve_nested_constrained_model_type(

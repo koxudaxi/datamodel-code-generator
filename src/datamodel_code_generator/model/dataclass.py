@@ -24,7 +24,7 @@ from datamodel_code_generator.types import StrictTypes, chain_as_tuple
 
 if TYPE_CHECKING:
     from collections import defaultdict
-    from collections.abc import Sequence
+    from collections.abc import Collection, Sequence
     from pathlib import Path
 
     from datamodel_code_generator.enums import DataclassArguments
@@ -34,6 +34,26 @@ if TYPE_CHECKING:
 def has_field_assignment(field: DataModelFieldBase) -> bool:
     """Check if a dataclass field renders with an assignment or default value."""
     return _has_field_assignment(field)
+
+
+def get_field_default_info(field: DataModelFieldBase) -> tuple[bool, bool]:
+    """Return Python dataclass constructor-default semantics."""
+    if not has_field_assignment(field) or (field.required and not field.use_default_with_required):
+        return False, False
+    rendered_assignment = str(field)
+    if "default_factory=" in rendered_assignment:
+        return True, False
+    if rendered_assignment.startswith("field(") and "default=" not in rendered_assignment:
+        return False, False
+    return True, True
+
+
+def field_participates_in_constructor(field: DataModelFieldBase) -> bool:
+    """Return whether a Python dataclass field participates in __init__."""
+    return field.extras.get("init") is not False
+
+
+_REQUIRED_INHERITED_INIT_KEY = "_required_inherited_init"
 
 
 class _DataclassReuseMixin:
@@ -71,12 +91,38 @@ class DataClass(_DataclassReuseMixin, DataModel):
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "dataclass.jinja2"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_DATACLASS,)
+    FIELD_DEFAULT_CLASSIFIER = staticmethod(get_field_default_info)
+    FIELD_PARTICIPATES_IN_CONSTRUCTOR = staticmethod(field_participates_in_constructor)
     SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = True
     USES_DATACLASS_ARGUMENTS: ClassVar[bool] = True
-    FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT: ClassVar[bool] = True
+    SUPPORTS_REQUIRED_INHERITED_FIELD_ASSIGNMENT: ClassVar[bool] = True
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True
+
+    @classmethod
+    def prepare_required_inherited_field(
+        cls,
+        field: DataModelFieldBase,
+        inherited_field: DataModelFieldBase,
+        *,
+        explicit_extras: Collection[str] = (),
+    ) -> None:
+        """Preserve inherited init=False until requiredness is final."""
+        super().prepare_required_inherited_field(
+            field,
+            inherited_field,
+            explicit_extras=explicit_extras,
+        )
+        if inherited_field.extras.get("init") is False and "init" not in explicit_extras:
+            field.__dict__[_REQUIRED_INHERITED_INIT_KEY] = True
+
+    @classmethod
+    def restore_required_inherited_field_state(cls, field: DataModelFieldBase) -> bool:
+        """Restore a required field excluded from the inherited constructor."""
+        if not (field.required and field.__dict__.pop(_REQUIRED_INHERITED_INIT_KEY, False)):
+            return False
+        return field.extras.pop("init", None) is False
 
     def __init__(  # noqa: PLR0913
         self,

@@ -663,13 +663,13 @@ def test_pydantic_base_class_var_imports_do_not_require_field() -> None:
 
 def test_pydantic_forced_required_assignment_imports_field() -> None:
     """A required override rendered as Field(...) must contribute its only import."""
-    field = PydanticV2DataModelField(
+    field = PydanticDataclassField(
         name="name",
         data_type=DataType(type="str"),
         required=True,
     )
 
-    field._force_field_assignment()
+    field.force_field_assignment()
 
     assert str(field) == "Field(...)"
     assert IMPORT_FIELD in field.imports
@@ -727,7 +727,7 @@ def test_pydantic_annotated_dataclass_field_preserves_constructor_default(
     expected: str,
 ) -> None:
     """Annotated metadata must keep scalar and factory defaults on the dataclass RHS."""
-    field = PydanticV2DataModelField(
+    field = PydanticDataclassField(
         name="items",
         data_type=DataType(type="str"),
         default=default,
@@ -743,7 +743,7 @@ def test_pydantic_annotated_dataclass_field_preserves_constructor_default(
 
 def test_pydantic_annotated_dataclass_field_skips_empty_assignment() -> None:
     """A plain required Annotated field does not synthesize an empty RHS."""
-    field = PydanticV2DataModelField(
+    field = PydanticDataclassField(
         name="item",
         data_type=DataType(type="str"),
         required=True,

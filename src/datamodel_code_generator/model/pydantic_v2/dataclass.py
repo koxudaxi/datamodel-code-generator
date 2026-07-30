@@ -47,6 +47,16 @@ def _has_pydantic_dataclass_field_assignment(field: DataModelFieldBase) -> bool:
     return _has_field_assignment(field)
 
 
+def _get_pydantic_dataclass_field_default_info(field: DataModelFieldBase) -> tuple[bool, bool]:
+    """Return Pydantic dataclass constructor-default semantics."""
+    if not _has_pydantic_dataclass_field_assignment(field) or (field.required and not field.use_default_with_required):
+        return False, False
+    rendered_assignment = str(field)
+    if "default_factory=" in rendered_assignment:
+        return True, False
+    return True, True
+
+
 if TYPE_CHECKING:
     from collections import defaultdict
     from pathlib import Path
@@ -64,9 +74,11 @@ class DataClass(_DataclassReuseMixin, DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic_v2/dataclass.jinja2"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_PYDANTIC_DATACLASS,)
     FIELD_ASSIGNMENT_CHECKER = staticmethod(_has_pydantic_dataclass_field_assignment)
+    FIELD_DEFAULT_CLASSIFIER = staticmethod(_get_pydantic_dataclass_field_default_info)
     USES_DATACLASS_ARGUMENTS: ClassVar[bool] = True
+    SUPPORTS_REQUIRED_INHERITED_FIELD_ASSIGNMENT: ClassVar[bool] = True
     REQUIRES_EXPLICIT_INHERITED_FACTORY_OVERRIDE: ClassVar[bool] = True
-    REQUIRED_FIELD_ASSIGNMENT_IS_DATACLASS_DEFAULT: ClassVar[bool] = True
+    REQUIRED_ASSIGNMENT_COUNTS_AS_CONSTRUCTOR_DEFAULT: ClassVar[bool] = True
     REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK: ClassVar[bool] = True
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True
@@ -178,6 +190,57 @@ class DataClass(_DataclassReuseMixin, DataModel):
 
 class _PydanticDataclassField(DataModelFieldV2):
     """Adapt Annotated fields to the existing dataclass template contract."""
+
+    _DATACLASS_ASSIGNMENT_KEYS: ClassVar[frozenset[str]] = frozenset({
+        "default_factory",
+        "init",
+        "init_var",
+        "kw_only",
+        "repr",
+    })
+
+    @property
+    def requires_dataclass_field_assignment(self) -> bool:
+        """Check whether Annotated metadata must also be visible to dataclasses."""
+        if (
+            self._has_forced_field_assignment
+            or not self._DATACLASS_ASSIGNMENT_KEYS.isdisjoint(self.extras)
+            or self.has_default_factory_in_field
+        ):
+            return True
+        return bool(
+            self.use_default_factory_for_optional_nested_models
+            and not self.required
+            and (self.default is None or self.default is UNDEFINED)
+            and self._get_default_factory_for_optional_nested_model()
+        )
+
+    @property
+    def dataclass_field(self) -> str | None:
+        """Render a Field() assignment that preserves Python dataclass defaults."""
+        if not (result := str(self)):
+            return None
+        if (
+            self.has_default_factory_in_field
+            or (self.required and not self.use_default_with_required)
+            or self.should_strip_default_none(keep_optional=True)
+        ):
+            return result
+        arguments = result.removeprefix("Field(").removesuffix(")")
+        separator = ", " if arguments else ""
+        default_argument = f"default={self.represented_default}" if self.use_default_kwarg else self.represented_default
+        return f"Field({default_argument}{separator}{arguments})"
+
+    def _has_field_statement(self) -> bool:
+        """Include a required assignment forced by dataclass inheritance."""
+        if self._has_forced_field_assignment:
+            self.__dict__["_computed_default_factory"] = None
+            return True
+        return super()._has_field_statement()
+
+    def __str__(self) -> str:
+        """Render a forced required assignment for the dataclass constructor."""
+        return super().__str__() or ("Field(...)" if self._has_forced_field_assignment else "")
 
     @property
     def _requires_unannotated_dataclass_assignment(self) -> bool:

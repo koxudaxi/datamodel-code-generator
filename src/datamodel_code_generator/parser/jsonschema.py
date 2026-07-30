@@ -71,7 +71,6 @@ from datamodel_code_generator.parser._output_context import OutputModelContext
 from datamodel_code_generator.parser.base import (
     _DEFERRED_INHERITED_CLASS_KEY,
     _DEFERRED_INHERITED_FIELD_KEY,
-    _DEFERRED_INHERITED_INIT_KEY,
     _DEFERRED_INHERITED_TYPE_KEY,
     _RAW_SCHEMA_DEFAULT_KEY,
     _RAW_SCHEMA_DEFAULT_UNDEFINED,
@@ -207,7 +206,6 @@ _INHERITED_CONTAINER_TYPE_FIELDS: tuple[tuple[frozenset[str], frozenset[str]], .
     ),
 )
 _INHERITED_MATERIALIZED_TYPE_SHAPE_KEY = "_inherited_materialized_type_shape"
-_DEFERRED_INHERITED_DEFAULT_FACTORY_KEY = "_deferred_inherited_default_factory"
 _NO_INHERITED_SCHEMA_MERGE = object()
 
 _PYTHON_UNION_BASE_TYPES = frozenset({"Union", "Optional"})
@@ -2068,20 +2066,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if overriding_field is not None
             else ()
         )
-        if (
-            self.data_model_type.FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT
-            and inherited_field.extras.get("init") is False
-            and "init" not in explicit_extras
-        ):
-            field.__dict__[_DEFERRED_INHERITED_INIT_KEY] = True
-        if "default_factory" in inherited_field.extras and "default_factory" not in explicit_extras:
-            field.__dict__[_DEFERRED_INHERITED_DEFAULT_FACTORY_KEY] = True
-        self._finalize_required_inherited_field(field)
+        self.data_model_type.prepare_required_inherited_field(
+            field,
+            inherited_field,
+            explicit_extras=explicit_extras,
+        )
 
-    def _finalize_required_inherited_field(self, field: DataModelFieldBase) -> None:  # noqa: PLR6301
+    def _finalize_required_inherited_field(self, field: DataModelFieldBase) -> None:
         """Drop an inherited factory only after the child is known to be required."""
-        if field.required and field.__dict__.pop(_DEFERRED_INHERITED_DEFAULT_FACTORY_KEY, False):
-            field.extras.pop("default_factory", None)
+        self.data_model_type.finalize_required_inherited_field(field)
 
     def _get_raw_inherited_fields(
         self,

@@ -99,7 +99,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.model_metadata import GeneratedModelMetadata, ModelFieldMetadata, ModelMetadata
 ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
 MroT = TypeVar("MroT")
-_DataclassFieldAdjustment: TypeAlias = Literal["assignment", "keyword_only"]
+_ConstructorFieldAdjustment: TypeAlias = Literal["assignment", "keyword_only"]
 
 HashableComparable = _internal_utils.HashableComparable
 to_hashable = _internal_utils.to_hashable
@@ -114,7 +114,6 @@ _TOP_LEVEL_FUTURE_IMPORT_PATTERN: Final = re.compile(r"(?m)^from __future__ impo
 _TOP_LEVEL_RELATIVE_IMPORT_PATTERN: Final = re.compile(r"(?m)^from \.")
 _DEFERRED_INHERITED_CLASS_KEY: Final = "_deferred_inherited_class"
 _DEFERRED_INHERITED_FIELD_KEY: Final = "_deferred_inherited_field"
-_DEFERRED_INHERITED_INIT_KEY: Final = "_deferred_inherited_init"
 _DEFERRED_INHERITED_TYPE_KEY: Final = "_deferred_inherited_type"
 _RAW_SCHEMA_DEFAULT_KEY: Final = "_raw_schema_default"
 _RAW_SCHEMA_DEFAULT_UNDEFINED: Final = object()
@@ -375,22 +374,28 @@ class _KeepModelOrderComponents(NamedTuple):
     comp_of: ComponentOf
 
 
-class _DataclassInheritedInfo(NamedTuple):
+class _InheritedConstructorInfo(NamedTuple):
     required_assignment_names: frozenset[str]
     ordering_conflicts: frozenset[str]
 
 
-def _apply_dataclass_field_adjustments(
+class _ConstructorFieldPolicy(NamedTuple):
+    has_assignment: Callable[[DataModelFieldBase], bool]
+    classify_default: Callable[[DataModelFieldBase], tuple[bool, bool]]
+    participates: Callable[[DataModelFieldBase], bool]
+
+
+def _apply_constructor_field_adjustments(
     model: DataModel,
-    first_adjustment: tuple[DataModelFieldBase, _DataclassFieldAdjustment],
-    adjustments: Iterable[tuple[DataModelFieldBase, _DataclassFieldAdjustment]],
+    first_adjustment: tuple[DataModelFieldBase, _ConstructorFieldAdjustment],
+    adjustments: Iterable[tuple[DataModelFieldBase, _ConstructorFieldAdjustment]],
 ) -> None:
     """Apply exact required-field assignments and keyword-only ordering fixes."""
     enable_model_keyword_only = False
     for field, adjustment in chain((first_adjustment,), adjustments):
         match adjustment:
             case "assignment":
-                field._force_field_assignment()  # noqa: SLF001
+                field.force_field_assignment()
             case _:
                 assert adjustment == "keyword_only"
                 if model.REQUIRES_MODEL_LEVEL_KW_ONLY:
@@ -3496,68 +3501,60 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     model_field.nullable = False
                 _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
 
-    def __fix_dataclass_field_ordering(self, models: list[DataModel]) -> None:
-        """Fix field ordering for dataclasses with inheritance after defaults are set."""
+    def __fix_constructor_field_ordering(self, models: list[DataModel]) -> None:
+        """Fix constructor field ordering after inherited defaults are resolved."""
         for model in models:
-            supports_inherited_override = model.USES_DATACLASS_ARGUMENTS
-            cleared_inherited_init = False
-            if model.FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT:
-                for field in model.fields:
-                    if not (
-                        field.required
-                        and supports_inherited_override
-                        and field.__dict__.pop(_DEFERRED_INHERITED_INIT_KEY, False)
-                    ):
-                        continue
-                    if field.extras.get("init") is False:  # pragma: no branch
-                        field.extras.pop("init")
-                        cleared_inherited_init = True
+            restored_inherited_state = False
+            for field in model.fields:
+                restored_inherited_state = (
+                    model.restore_required_inherited_field_state(field) or restored_inherited_state
+                )
 
-            if (inherited := self.__get_dataclass_inherited_info(model)) is None:
-                if cleared_inherited_init:  # pragma: no cover - marker requires a generated base
+            if (inherited := self.__get_inherited_constructor_info(model)) is None:
+                if restored_inherited_state:  # pragma: no cover - marker requires a generated base
                     model.clear_imports_cache()
                 continue
-            field_has_assignment = Parser._get_field_assignment_checker(model)
-            field_adjustments: Iterator[tuple[DataModelFieldBase, _DataclassFieldAdjustment]] = (
+            field_policy = Parser._get_constructor_field_policy(model)
+            field_adjustments: Iterator[tuple[DataModelFieldBase, _ConstructorFieldAdjustment]] = (
                 (field, adjustment)
                 for field in model.fields
                 if (
-                    adjustment := self.__get_dataclass_field_adjustment(
+                    adjustment := self.__get_constructor_field_adjustment(
                         field,
                         inherited,
-                        field_has_assignment,
-                        supports_inherited_override=supports_inherited_override,
+                        field_policy,
+                        supports_inherited_override=model.SUPPORTS_REQUIRED_INHERITED_FIELD_ASSIGNMENT,
                     )
                 )
                 is not None
             )
-            first_adjustment: tuple[DataModelFieldBase, _DataclassFieldAdjustment] | None = next(
+            first_adjustment: tuple[DataModelFieldBase, _ConstructorFieldAdjustment] | None = next(
                 field_adjustments,
                 None,
             )
             if first_adjustment is None:
-                if cleared_inherited_init:
+                if restored_inherited_state:
                     model.clear_imports_cache()
-                    self.generation_store.set_fields(model, sorted(model.fields, key=field_has_assignment))
+                    self.generation_store.set_fields(model, sorted(model.fields, key=field_policy.has_assignment))
                 continue
 
-            _apply_dataclass_field_adjustments(
+            _apply_constructor_field_adjustments(
                 model,
                 first_adjustment,
                 field_adjustments,
             )
             model.clear_imports_cache()
-            self.generation_store.set_fields(model, sorted(model.fields, key=field_has_assignment))
+            self.generation_store.set_fields(model, sorted(model.fields, key=field_policy.has_assignment))
 
     @classmethod
-    def __get_dataclass_inherited_info(cls, model: DataModel) -> _DataclassInheritedInfo | None:
+    def __get_inherited_constructor_info(cls, model: DataModel) -> _InheritedConstructorInfo | None:
         """Return inherited value leaks and exact positional ordering conflicts."""
         if not model.SUPPORTS_KW_ONLY:
             return None
         if not model.base_classes:
             return None
 
-        field_has_assignment = cls._get_field_assignment_checker(model)
+        field_policy = cls._get_constructor_field_policy(model)
         inherited_models = _linearize_data_models([
             base.reference.source
             for base in model.base_classes
@@ -3566,7 +3563,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if not inherited_models:
             return None  # pragma: no cover
 
-        supports_inherited_override = model.USES_DATACLASS_ARGUMENTS
+        supports_inherited_override = model.SUPPORTS_REQUIRED_INHERITED_FIELD_ASSIGNMENT
         required_assignment_names: set[str] = set()
         effective_fields: dict[str, tuple[DataModelFieldBase, DataModel, bool | None]] = {}
         for inherited_model in reversed(inherited_models):
@@ -3575,10 +3572,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     continue
                 has_default: bool | None = None
                 if supports_inherited_override:
-                    has_default, has_value_default = cls.__get_dataclass_field_default_info(
-                        field,
-                        field_has_assignment,
-                    )
+                    has_default, has_value_default = field_policy.classify_default(field)
                     if has_value_default or (has_default and model.REQUIRES_EXPLICIT_INHERITED_FACTORY_OVERRIDE):
                         required_assignment_names.add(field_name)
                 effective_fields[field_name] = field, inherited_model, has_default
@@ -3586,99 +3580,86 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if field.name:
                 effective_fields[field.name] = field, model, None
 
-        ordering_conflicts = cls.__get_dataclass_ordering_conflicts(
+        ordering_conflicts = cls.__get_constructor_ordering_conflicts(
             model,
             effective_fields,
-            field_has_assignment,
+            field_policy,
             required_assignment_names,
         )
-        return _DataclassInheritedInfo(
+        return _InheritedConstructorInfo(
             frozenset(required_assignment_names),
             ordering_conflicts,
         )
 
     @classmethod
-    def __get_dataclass_ordering_conflicts(
+    def __get_constructor_ordering_conflicts(
         cls,
         model: DataModel,
         effective_fields: Mapping[str, tuple[DataModelFieldBase, DataModel, bool | None]],
-        field_has_assignment: Callable[[DataModelFieldBase], bool],
+        field_policy: _ConstructorFieldPolicy,
         required_assignment_names: set[str],
     ) -> frozenset[str]:
         """Return child positional fields that follow an effective positional default."""
-        seen_dataclass_default = False
+        seen_constructor_default = False
         seen_signature_default = False
         ordering_conflicts: set[str] = set()
         for field_name, (field, declaring_model, inherited_has_default) in effective_fields.items():
-            if model.FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT and field.extras.get("init") is False:
+            if not field_policy.participates(field):
                 continue
             kw_only = field.extras.get("kw_only")
             if kw_only is True or (kw_only is None and declaring_model.has_keyword_only_definition()):
                 continue
-            required_assignment_is_dataclass_default = (
-                model.REQUIRED_FIELD_ASSIGNMENT_IS_DATACLASS_DEFAULT
+            required_assignment_is_constructor_default = (
+                model.REQUIRED_ASSIGNMENT_COUNTS_AS_CONSTRUCTOR_DEFAULT
                 and field.required
                 and not field.use_default_with_required
-                and (field_name in required_assignment_names or field_has_assignment(field))
+                and (field_name in required_assignment_names or field_policy.has_assignment(field))
             )
             field_has_signature_default = (
                 False
-                if required_assignment_is_dataclass_default
+                if required_assignment_is_constructor_default
                 else (
-                    cls.__get_dataclass_field_default_info(field, field_has_assignment)[0]
-                    if inherited_has_default is None
-                    else inherited_has_default
+                    field_policy.classify_default(field)[0] if inherited_has_default is None else inherited_has_default
                 )
             )
-            field_has_dataclass_default = required_assignment_is_dataclass_default or field_has_signature_default
+            field_has_constructor_default = required_assignment_is_constructor_default or field_has_signature_default
             if declaring_model is model and (
-                (seen_dataclass_default and not field_has_dataclass_default)
+                (seen_constructor_default and not field_has_constructor_default)
                 or (seen_signature_default and not field_has_signature_default)
             ):
                 ordering_conflicts.add(field_name)
-            seen_dataclass_default = seen_dataclass_default or field_has_dataclass_default
+            seen_constructor_default = seen_constructor_default or field_has_constructor_default
             seen_signature_default = seen_signature_default or field_has_signature_default
         return frozenset(ordering_conflicts)
-
-    @staticmethod
-    def __get_dataclass_field_default_info(
-        field: DataModelFieldBase,
-        field_has_assignment: Callable[[DataModelFieldBase], bool],
-    ) -> tuple[bool, bool]:
-        """Return whether a field has any init default and whether it is a value default."""
-        if not field_has_assignment(field) or (field.required and not field.use_default_with_required):
-            return False, False
-        rendered_assignment = str(field)
-        if "default_factory=" in rendered_assignment:
-            return True, False
-        if rendered_assignment.startswith("Field(...)") or (
-            rendered_assignment.startswith("field(") and "default=" not in rendered_assignment
-        ):
-            return False, False
-        return True, True
 
     @staticmethod
     def _get_field_assignment_checker(model: DataModel) -> Callable[[DataModelFieldBase], bool]:
         return type(model).FIELD_ASSIGNMENT_CHECKER
 
-    def __get_dataclass_field_adjustment(  # noqa: PLR6301
+    @classmethod
+    def _get_constructor_field_policy(cls, model: DataModel) -> _ConstructorFieldPolicy:
+        """Collect constructor policies owned by the output model."""
+        model_type = type(model)
+        return _ConstructorFieldPolicy(
+            cls._get_field_assignment_checker(model),
+            model_type.FIELD_DEFAULT_CLASSIFIER,
+            model_type.FIELD_PARTICIPATES_IN_CONSTRUCTOR,
+        )
+
+    def __get_constructor_field_adjustment(  # noqa: PLR6301
         self,
         field: DataModelFieldBase,
-        inherited: _DataclassInheritedInfo,
-        field_has_assignment: Callable[[DataModelFieldBase], bool],
+        inherited: _InheritedConstructorInfo,
+        field_policy: _ConstructorFieldPolicy,
         *,
         supports_inherited_override: bool,
-    ) -> _DataclassFieldAdjustment | None:
+    ) -> _ConstructorFieldAdjustment | None:
         """Return the exact explicit assignment needed for a required child field."""
-        if (
-            field.parent
-            and field.parent.FIELD_INIT_FALSE_EXCLUDES_FROM_DATACLASS_INIT
-            and field.extras.get("init") is False
-        ):
+        if not field_policy.participates(field):
             return None
         if field.name in inherited.ordering_conflicts:
             return "keyword_only"
-        if field_has_assignment(field):
+        if field_policy.has_assignment(field):
             return None
         if field.required and supports_inherited_override and field.name in inherited.required_assignment_names:
             return "assignment"
@@ -4965,7 +4946,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.__change_field_name(models, can_retain_cache=can_retain_cache)
         self.__apply_discriminator_type(models, imports, can_retain_cache=can_retain_cache)
         self.__set_one_literal_on_default(models, can_retain_cache=can_retain_cache)
-        self.__fix_dataclass_field_ordering(models)
+        self.__fix_constructor_field_ordering(models)
         models = self.__remove_overridden_models(models)
         self.__apply_type_overrides(models)
         self.__update_type_aliases(
