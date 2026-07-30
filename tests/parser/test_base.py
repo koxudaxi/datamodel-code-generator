@@ -14,7 +14,7 @@ from pydantic import BaseModel as PydanticBaseModel
 import datamodel_code_generator._internal_utils as internal_utils
 from datamodel_code_generator import AllOfMergeMode
 from datamodel_code_generator.enums import CollapseRootModelsNameStrategy
-from datamodel_code_generator.imports import Imports
+from datamodel_code_generator.imports import Import, Imports
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 
 if TYPE_CHECKING:
@@ -24,6 +24,8 @@ if TYPE_CHECKING:
 
 from datamodel_code_generator.model.dataclass import DataClass as DataclassModel
 from datamodel_code_generator.model.dataclass import DataModelField as DataclassField
+from datamodel_code_generator.model.msgspec import DataModelField as MsgspecField
+from datamodel_code_generator.model.msgspec import Struct as MsgspecStruct
 from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField
 from datamodel_code_generator.model.pydantic_v2.base_model import Constraints
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticDataclassModel
@@ -40,6 +42,7 @@ from datamodel_code_generator.parser.base import (
     HashableComparable,
     Parser,
     T,
+    _apply_constructor_field_adjustments,
     _contains_model_reference,
     _copy_data_model_field,
     _copy_data_type,
@@ -110,6 +113,19 @@ def test_parser() -> None:
     assert c.base_class == "Base"
     # Test schema_features property of test stub
     assert c.schema_features.prefix_items is True
+
+
+def test_parser_iterates_mapping_source_without_serializing_it() -> None:
+    """Keep in-memory schema mappings structured at the parser boundary."""
+    raw_source = {"title": "Model"}
+    parser = C(
+        data_model_type=D,
+        data_model_root_type=B,
+        data_model_field_type=DataModelFieldBase,
+        source=raw_source,
+    )
+
+    assert next(parser.iter_source).raw_data is raw_source
 
 
 @pytest.mark.parametrize(
@@ -468,6 +484,36 @@ def test_pydantic_v2_data_model_field_compatibility_helper() -> None:
 
 
 @pytest.mark.parametrize(
+    ("alias", "expected"),
+    [
+        pytest.param(None, (None, None), id="none"),
+        pytest.param("external", ("external", None), id="single"),
+        pytest.param(["first", "second"], (None, ["first", "second"]), id="validation"),
+    ],
+)
+def test_parser_splits_field_alias_policy(
+    parser_fixture: C,
+    alias: str | list[str] | None,
+    expected: tuple[str | None, list[str] | None],
+) -> None:
+    """Share alias normalization across schema parser implementations."""
+    assert parser_fixture._split_field_alias(alias) == expected
+
+
+def test_parser_resolves_effective_default_policy(parser_fixture: C) -> None:
+    """Share required default handling across schema parser implementations."""
+    parser_fixture.apply_default_values_for_required_fields = True
+
+    assert parser_fixture._effective_default_state(
+        "value",
+        "default",
+        has_default=True,
+        required=True,
+        class_name="Model",
+    ) == ("default", True, True)
+
+
+@pytest.mark.parametrize(
     ("model_type", "field_type", "expected_assignment", "expected_new_extras", "keyword_only"),
     [
         pytest.param(DataclassModel, DataclassField, "field()", {}, False, id="stdlib"),
@@ -524,6 +570,31 @@ def test_dataclass_required_override_of_inherited_default_uses_exact_assignment(
     assert str(required_override) == expected_assignment
     assert unchanged_override.extras == {}
     assert new_required.extras == expected_new_extras
+
+
+def test_constructor_adjustment_promotes_msgspec_keyword_only_to_model() -> None:
+    """Backends that require model-level keyword-only state receive one adjustment."""
+    field = MsgspecField(name="value", data_type=DataType(type="str"), required=True)
+    model = MsgspecStruct(
+        fields=[field],
+        reference=_reference("Struct"),
+    )
+
+    _apply_constructor_field_adjustments(model, (field, "keyword_only"), ())
+
+    assert model.has_keyword_only_definition()
+
+
+def test_apply_type_overrides_fast_path_preserves_models(parser_fixture: C) -> None:
+    """An empty override policy leaves model fields and bases untouched."""
+    field = DataModelField(name="value", data_type=DataType(type="str"))
+    model = BaseModel(fields=[field], reference=_reference("Model"))
+    parser_fixture._type_override_imports = {"Other.value": Import(from_="custom", import_="Value")}
+    parser_fixture._model_type_override_imports = {}
+
+    parser_fixture._Parser__apply_type_overrides([model])
+
+    assert model.fields == [field]
 
 
 def test_dataclass_inherited_init_cleanup_without_other_adjustments(parser_fixture: C) -> None:

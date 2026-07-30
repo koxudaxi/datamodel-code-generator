@@ -206,6 +206,35 @@ def test_schema_validator_input_names_include_empty_datamodel_base_fields() -> N
     }
 
 
+def test_build_missing_required_field_uses_shared_alias_policy() -> None:
+    """Required-only schema fields use the common alias normalization."""
+    parser = JsonSchemaParser("")
+
+    field = parser._build_missing_required_field("missing", set(), [], "Model")
+
+    assert field.name == "missing"
+    assert field.required is True
+    assert field.alias is None
+    assert field.validation_aliases is None
+
+
+def test_object_field_merges_property_count_constraints() -> None:
+    """Dictionary fields preserve schema property-count constraints."""
+    parser = JsonSchemaParser("", field_constraints=True)
+
+    field = parser.get_object_field(
+        field_name="values",
+        field=JsonSchemaObject.model_validate({"type": "object", "minProperties": 1}),
+        required=False,
+        field_type=DataType(is_dict=True),
+        alias=None,
+        original_field_name="values",
+    )
+
+    assert field.constraints is not None
+    assert field.constraints.min_length == 1
+
+
 @pytest.mark.parametrize(
     "schema",
     [

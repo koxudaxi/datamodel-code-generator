@@ -1185,6 +1185,50 @@ def test_parse_all_parameters_strict_nullable() -> None:
     assert fields[1].nullable is False
 
 
+@pytest.mark.parametrize(
+    ("output_model_type", "validates_structured_default"),
+    [
+        pytest.param(DataModelType.PydanticV2BaseModel, True, id="pydantic-v2"),
+        pytest.param(DataModelType.PydanticV2Dataclass, True, id="pydantic-v2-dataclass"),
+        pytest.param(DataModelType.DataclassesDataclass, False, id="dataclass"),
+        pytest.param(DataModelType.TypingTypedDict, False, id="typed-dict"),
+        pytest.param(DataModelType.MsgspecStruct, False, id="msgspec"),
+    ],
+)
+def test_parameter_field_policy_is_output_owned(
+    output_model_type: DataModelType,
+    validates_structured_default: bool,
+) -> None:
+    """Keep content flags and structured-default policy in their output layers."""
+    data_model_types = get_data_model_types(output_model_type, target_python_version=PythonVersionMin)
+    parser = OpenAPIParser(
+        source=Path(DATA_PATH / "parameter_field_policy.yaml"),
+        data_model_type=data_model_types.data_model,
+        data_model_root_type=data_model_types.root_model,
+        data_model_field_type=data_model_types.field_model,
+        data_type_manager_type=data_model_types.data_type_manager,
+        dump_resolve_reference_action=data_model_types.dump_resolve_reference_action,
+        openapi_scopes=[OpenAPIScope.Paths, OpenAPIScope.Schemas, OpenAPIScope.Parameters],
+        use_operation_id_as_name=True,
+        use_frozen_field=True,
+        use_default_factory_for_optional_nested_models=True,
+    )
+
+    parser.parse(format_=False)
+    models = {model.class_name: model for model in parser.results}
+    parameter_fields = {field.name: field for field in models["ListItemsParametersQuery"].fields}
+    defaulted_field = models["Defaulted"].fields[0]
+
+    assert parameter_fields["schema_read_only"].read_only is True
+    assert parameter_fields["content_read_only"].read_only is True
+    assert parameter_fields["schema_write_only"].write_only is True
+    assert parameter_fields["content_write_only"].write_only is True
+    assert parameter_fields["schema_nested"].use_default_factory_for_optional_nested_models is True
+    assert parameter_fields["content_nested"].use_default_factory_for_optional_nested_models is True
+    assert parameter_fields["content_multi"].use_default_factory_for_optional_nested_models is True
+    assert (defaulted_field.extras.get("validate_default") is True) is validates_structured_default
+
+
 def test_openapi_parser_with_request_bodies_scope() -> None:
     """Test parsing OpenAPI with requestBodies scope generates models from components/requestBodies."""
     parser = OpenAPIParser(

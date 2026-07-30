@@ -19,11 +19,23 @@ from datamodel_code_generator.types import (
     get_optional_type,
     get_subscript_args,
     get_type_base_name,
+    is_data_model_field,
     normalize_integer_constraint,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+
+def test_is_data_model_field_uses_structural_contract() -> None:
+    """Recognize only parents exposing the writable data_type contract."""
+    from types import SimpleNamespace
+
+    data_type = DataType(type="str")
+
+    assert is_data_model_field(SimpleNamespace(data_type=data_type))
+    assert not is_data_model_field(SimpleNamespace(data_type=object()))
+    assert not is_data_model_field(data_type)
 
 
 @pytest.mark.parametrize(

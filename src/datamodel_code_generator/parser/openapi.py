@@ -855,42 +855,18 @@ class OpenAPIParser(JsonSchemaParser):
                     required=effective_required,
                     class_name=reference.name,
                 )
-                single_alias, validation_aliases = self._split_alias(alias)
                 fields.append(
-                    self.data_model_field_type(
-                        name=field_name,
-                        default=effective_default,
-                        data_type=data_type,
+                    self.get_object_field(
+                        field_name=field_name,
+                        field=object_schema,
                         required=effective_required,
-                        alias=single_alias,
-                        validation_aliases=validation_aliases,
-                        serialization_alias=self.get_serialization_alias(parameter_name, field_name, reference.name),
-                        constraints=object_schema.model_dump(exclude_none=True)
-                        if object_schema and self.is_constraints_field(object_schema)
-                        else None,
-                        nullable=object_schema.nullable
-                        if object_schema
-                        and (self.strict_nullable or self.use_missing_sentinel)
-                        and object_schema.nullable is not None
-                        else (
-                            False
-                            if object_schema and self.strict_nullable and (effective_has_default or effective_required)
-                            else None
-                        ),
-                        strip_default_none=self.strip_default_none,
-                        extras=self.get_field_extras(object_schema) if object_schema else {},
-                        use_annotated=self.use_annotated,
-                        use_serialize_as_any=self.use_serialize_as_any,
-                        use_field_description=self.use_field_description,
-                        use_field_description_example=self.use_field_description_example,
-                        use_inline_field_description=self.use_inline_field_description,
-                        use_default_kwarg=self.use_default_kwarg,
-                        original_name=parameter_name,
-                        has_default=effective_has_default,
-                        type_has_null=object_schema.type_has_null if object_schema else None,
-                        use_serialization_alias=self.use_serialization_alias,
+                        field_type=data_type,
+                        alias=alias,
+                        original_field_name=parameter_name,
+                        effective_default=effective_default,
+                        effective_has_default=effective_has_default,
                         use_default_with_required=use_default_with_required,
-                        **self._data_model_field_common_kwargs(),
+                        class_name=reference.name,
                     )
                 )
 

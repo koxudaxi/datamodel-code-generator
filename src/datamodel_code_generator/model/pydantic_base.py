@@ -213,6 +213,13 @@ class DataModelField(DataModelFieldBase):
         """
         return _nested_model_default_factory(self, BaseModelBase)
 
+    def enable_structured_default_validation(self) -> bool:
+        """Enable Pydantic validation for a structured default exactly once."""
+        if self.extras.get("validate_default") is True:
+            return False
+        self.extras["validate_default"] = True
+        return True
+
     def _process_data_in_str(self, data: dict[str, Any]) -> None:  # pragma: no cover
         if self.const:
             data["const"] = True
