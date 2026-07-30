@@ -31,6 +31,8 @@ from datamodel_code_generator.model.base import (
     _get_environment_with_absolute_path,
     _get_template_with_absolute_path,
     _get_template_with_custom_dir,
+    _get_unqualified_decorator_name,
+    _is_named_decorator,
     _missing_custom_template_state,
     _refresh_custom_template_paths,
     _remember_missing_custom_template_subdir,
@@ -88,6 +90,47 @@ class A(TemplateBase):
         return ""
 
 
+@pytest.mark.parametrize(
+    ("decorator", "expected"),
+    [
+        pytest.param("@deprecated", True, id="name"),
+        pytest.param("@deprecated('message')", True, id="call"),
+        pytest.param("@deprecated (message='reason')", True, id="keyword-call"),
+        pytest.param("@(deprecated)", True, id="parenthesized-name"),
+        pytest.param("@(deprecated)('message')", True, id="parenthesized-call"),
+        pytest.param("@((deprecated))('message')", True, id="nested-parenthesized-call"),
+        pytest.param("@ (deprecated)", True, id="spaced-parenthesized-name"),
+        pytest.param("@ deprecated", True, id="spaced-name"),
+        pytest.param("@deprecated_custom", False, id="prefixed-name"),
+        pytest.param("@deprecated_custom()", False, id="prefixed-call"),
+        pytest.param("@deprecated1", False, id="numeric-suffix-name"),
+        pytest.param("@deprecated1()", False, id="numeric-suffix-call"),
+        pytest.param("@(deprecated_custom)", False, id="parenthesized-prefixed-name"),
+        pytest.param("@(deprecated.factory)", False, id="parenthesized-attribute"),
+        pytest.param("@module.deprecated", False, id="qualified-name"),
+        pytest.param("@deprecated.factory()", False, id="attribute-call"),
+        pytest.param("@deprecated[str]", False, id="subscript"),
+        pytest.param("@deprecated()()", False, id="nested-call"),
+        pytest.param("@factory(deprecated)", False, id="nested-argument"),
+        pytest.param("deprecated", False, id="missing-marker"),
+        pytest.param("@deprecated(", False, id="invalid-expression"),
+    ],
+)
+def test_is_named_decorator_uses_exact_expression_name(decorator: str, *, expected: bool) -> None:
+    """Classify decorator syntax without prefix-based false positives."""
+    assert _is_named_decorator(decorator, "deprecated") is expected
+
+
+def test_get_unqualified_decorator_name_is_target_independent() -> None:
+    """Expose the parsed direct target for reuse by other decorator policies."""
+    assert _get_unqualified_decorator_name("@custom(option=True)") == "custom"
+
+
+def test_is_named_decorator_rejects_textually_equal_non_name_target() -> None:
+    """Require a Name node even when the source text matches the requested target."""
+    assert not _is_named_decorator("@1", "1")
+
+
 class B(DataModel):
     """Test helper class for DataModel testing with template path."""
 
@@ -99,6 +142,17 @@ class B(DataModel):
 
 class C(DataModel):
     """Test helper class for DataModel testing without template path."""
+
+
+def test_set_deprecated_decorator_ignores_missing_metadata() -> None:
+    """Leave decorators unchanged when the model is not deprecated."""
+    model = BaseModel(fields=[], decorators=["@custom"], reference=Reference(path="model", name="Model"))
+    additional_imports = tuple(model._additional_imports)
+
+    model._set_deprecated_decorator()
+
+    assert model.decorators == ["@custom"]
+    assert tuple(model._additional_imports) == additional_imports
 
 
 @dataclass

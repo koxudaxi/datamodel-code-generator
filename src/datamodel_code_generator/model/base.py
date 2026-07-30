@@ -276,6 +276,26 @@ def _copy_all_model_data(source: dict[str, Any], target: dict[str, Any]) -> None
         target[key] = deepcopy(value) if isinstance(value, (dict, list, set)) else value
 
 
+@lru_cache(maxsize=128)
+def _get_unqualified_decorator_name(decorator: str) -> str | None:
+    """Parse a decorator and return its direct, unqualified target name."""
+    if decorator[:1] != "@":
+        return None
+    try:
+        expression = ast.parse(decorator[1:].lstrip(), mode="eval").body
+    except SyntaxError:
+        return None
+    match expression:
+        case ast.Name(id=decorator_name) | ast.Call(func=ast.Name(id=decorator_name)):
+            return decorator_name
+    return None
+
+
+def _is_named_decorator(decorator: str, name: str) -> bool:
+    """Return whether a decorator expression targets an exact unqualified name."""
+    return _get_unqualified_decorator_name(decorator) == name
+
+
 ConstraintsBaseT = TypeVar("ConstraintsBaseT", bound="ConstraintsBase")
 DataModelFieldBaseT = TypeVar("DataModelFieldBaseT", bound="DataModelFieldBase")
 
@@ -1575,7 +1595,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         """Add a class-level deprecated decorator when schema metadata requires it."""
         if not self.extra_template_data.get("deprecated"):
             return
-        if not any(decorator.startswith("@deprecated") for decorator in self.decorators):
+        if not any(_is_named_decorator(decorator, "deprecated") for decorator in self.decorators):
             message = f"{self.class_name} is deprecated."
             self.decorators = [*self.decorators, f"@deprecated({message!r})"]
         self._additional_imports.append(Import.from_full_path("typing_extensions.deprecated"))
