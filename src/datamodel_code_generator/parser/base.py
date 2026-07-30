@@ -385,6 +385,31 @@ class _ConstructorFieldPolicy(NamedTuple):
     participates: Callable[[DataModelFieldBase], bool]
 
 
+@dataclass(frozen=True, slots=True)
+class _ReuseOptimizationContext:
+    """Parser-owned semantic constraints for model reuse optimizations."""
+
+    type_override_model_names: frozenset[str] = frozenset()
+
+    @classmethod
+    def from_type_overrides(cls, type_overrides: Mapping[str, str]) -> _ReuseOptimizationContext:
+        """Build reuse constraints without importing output-backend policy."""
+        if not type_overrides:
+            return cls()
+
+        return cls(frozenset(override_key.partition(".")[0] for override_key in type_overrides))
+
+    def allows_model(self, model: DataModel) -> bool:
+        """Return whether reuse can preserve all pending parser semantics."""
+        return model.class_name not in self.type_override_model_names
+
+    def eligible_models(self, models: Iterable[DataModel]) -> Iterable[DataModel]:
+        """Return models eligible for reuse without allocating on the fast path."""
+        if not self.type_override_model_names:
+            return models
+        return (model for model in models if self.allows_model(model))
+
+
 def _apply_constructor_field_adjustments(
     model: DataModel,
     first_adjustment: tuple[DataModelFieldBase, _ConstructorFieldAdjustment],
@@ -2170,6 +2195,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self._model_type_override_imports: dict[str, Import] = {
             key: import_ for key, import_ in self._type_override_imports.items() if "." not in key
         }
+        self._reuse_optimization_context = _ReuseOptimizationContext.from_type_overrides(self.type_overrides)
         self.read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = config.read_only_write_only_model_type
         self.use_frozen_field: bool = config.use_frozen_field
         self.use_serialization_alias: bool = config.use_serialization_alias
@@ -2388,29 +2414,45 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         idx = models.index(original)
         models[idx] = replacement
 
+    def _get_duplicate_root_reference(
+        self,
+        model: DataModel,
+        root_data_type: DataType,
+        models_set: set[DataModel],
+    ) -> Reference | None:
+        if not (root_reference := root_data_type.reference) or root_data_type.is_dict or root_data_type.is_list:
+            return None
+        if root_reference.source not in models_set:
+            return None
+        expected_name = self.model_resolver.get_class_name(model.reference.original_name, unique=False).name
+        if root_reference.name != expected_name:
+            return None
+        return root_reference
+
     def __delete_duplicate_models(self, models: list[DataModel]) -> None:  # noqa: PLR0912
         model_class_names: dict[str, DataModel] = {}
         model_to_duplicate_models: defaultdict[DataModel, list[DataModel]] = defaultdict(list)
         # Use set for O(1) membership checks and collect removals for batch processing
         models_set = set(models)
         models_to_remove: set[DataModel] = set()
+        reuse_constraint = (
+            self._reuse_optimization_context.allows_model
+            if self._reuse_optimization_context.type_override_model_names
+            else None
+        )
         for model in models:
             if model in models_to_remove:  # pragma: no cover
                 continue
+            reuse_allowed = reuse_constraint is None or reuse_constraint(model)
             if isinstance(model, self.data_model_root_type):
                 root_data_type = model.fields[0].data_type
 
                 # backward compatible
                 # Remove duplicated root model
-                if (
-                    root_data_type.reference
-                    and not root_data_type.is_dict
-                    and not root_data_type.is_list
-                    and root_data_type.reference.source in models_set
-                    and root_data_type.reference.name
-                    == self.model_resolver.get_class_name(model.reference.original_name, unique=False).name
+                if reuse_allowed and (
+                    root_reference := self._get_duplicate_root_reference(model, root_data_type, models_set)
                 ):
-                    self.generation_store.redirect_reference_users(model.reference, root_data_type.reference)
+                    self.generation_store.redirect_reference_users(model.reference, root_reference)
                     models_to_remove.add(model)
                     self.generation_store.detach_model_data_type_refs(model)
                     continue
@@ -2425,13 +2467,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         self.generation_store.reset_base_classes(child)
 
             class_name = model.duplicate_class_name or model.class_name
-            if class_name in model_class_names:
-                original_model = model_class_names[class_name]
-                if model.get_dedup_key(model.duplicate_class_name, use_default=False) == original_model.get_dedup_key(
-                    original_model.duplicate_class_name, use_default=False
-                ):
-                    model_to_duplicate_models[original_model].append(model)
-                    continue
+            if (
+                reuse_allowed
+                and (original_model := model_class_names.get(class_name)) is not None
+                and self._reuse_optimization_context.allows_model(original_model)
+                and model.get_dedup_key(model.duplicate_class_name, use_default=False)
+                == original_model.get_dedup_key(original_model.duplicate_class_name, use_default=False)
+            ):
+                model_to_duplicate_models[original_model].append(model)
+                continue
             model_class_names[class_name] = model
         for model, duplicate_models in model_to_duplicate_models.items():
             for duplicate_model in duplicate_models:
@@ -2453,10 +2497,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     raise RuntimeError(msg)
 
                 content_key_to_models: dict[tuple[Any, ...], list[DataModel]] = defaultdict(list)
-                for model in models:
-                    if model not in models_to_remove and not isinstance(model, self.data_model_root_type):
-                        model._dedup_key_cache.clear()  # noqa: SLF001
-                        content_key_to_models[model.get_dedup_key(None, use_default=True)].append(model)
+                for model in self._reuse_optimization_context.eligible_models(models):
+                    if model in models_to_remove or isinstance(model, self.data_model_root_type):
+                        continue
+                    model._dedup_key_cache.clear()  # noqa: SLF001
+                    content_key_to_models[model.get_dedup_key(None, use_default=True)].append(model)
 
                 if not (
                     duplicates := [
@@ -2940,7 +2985,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         duplicates = []
         reuse_candidates = (
             model
-            for model in models.copy()
+            for model in self._reuse_optimization_context.eligible_models(models.copy())
             if not (self.collapse_root_models and isinstance(model, self.data_model_root_type))
         )
         for cached_model, model in _iter_first_seen_duplicates(reuse_candidates, lambda item: item.get_dedup_key()):
@@ -2958,14 +3003,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         for duplicate in duplicates:
             models.remove(duplicate)
 
-    def __find_duplicate_models_across_modules(  # noqa: PLR6301
+    def __find_duplicate_models_across_modules(
         self,
         module_models: list[tuple[tuple[str, ...], list[DataModel]]],
     ) -> list[tuple[tuple[str, ...], DataModel, tuple[str, ...], DataModel]]:
         """Find duplicate models across all modules by comparing render output and imports."""
         all_models: list[tuple[tuple[str, ...], DataModel]] = []
         for module, models in module_models:
-            all_models.extend((module, model) for model in models)
+            all_models.extend((module, model) for model in self._reuse_optimization_context.eligible_models(models))
 
         duplicates: list[tuple[tuple[str, ...], DataModel, tuple[str, ...], DataModel]] = []
 

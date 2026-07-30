@@ -2051,6 +2051,50 @@ def test_main_reuse_model_collapse_with_root(output_file: Path) -> None:
     )
 
 
+def test_main_reuse_model_root_type_override_preserves_root_processing(output_file: Path) -> None:
+    """Keep non-reuse root processing active when a root model is overridden."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_model_collapse_with_root.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="reuse_model_collapse_with_root_type_override.py",
+        extra_args=[
+            "--reuse-model",
+            "--collapse-reuse-models",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--type-overrides",
+            '{"StringType": "datetime.date"}',
+            "--formatters",
+            "builtin",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_reuse_model_preserves_list_root(output_file: Path) -> None:
+    """Keep list RootModel processing active during reuse optimization."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_sequence_interface.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_sequence_interface.py",
+        extra_args=[
+            "--reuse-model",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-root-model-sequence-interface",
+            "--class-name",
+            "Pets",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
 def test_main_reuse_model_collapse_nested(output_file: Path) -> None:
     """Test --reuse-model --collapse-reuse-models with deeply nested identical structures."""
     run_main_and_assert(
@@ -10609,6 +10653,45 @@ def test_main_jsonschema_reuse_scope_tree_self_ref(output_dir: Path) -> None:
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_self_ref",
         input_file_type="jsonschema",
         extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+@pytest.mark.parametrize(
+    ("collapse_args", "expected_directory"),
+    [
+        pytest.param([], "reuse_type_overrides_tree", id="inherit"),
+        pytest.param(
+            ["--collapse-reuse-models"],
+            "reuse_type_overrides_tree_collapsed",
+            id="collapse",
+        ),
+    ],
+)
+def test_main_jsonschema_reuse_scope_tree_preserves_type_overrides(
+    collapse_args: list[str],
+    expected_directory: str,
+    output_dir: Path,
+) -> None:
+    """Keep scoped and model-level overrides outside tree reuse optimizations."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_type_overrides_tree",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / expected_directory,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--formatters",
+            "builtin",
+            "--reuse-model",
+            "--reuse-scope",
+            "tree",
+            *collapse_args,
+            "--type-overrides",
+            '{"Node.child": "datetime.date", "Replaced": "datetime.datetime"}',
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
     )
 
 
