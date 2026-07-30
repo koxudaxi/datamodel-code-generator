@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from datamodel_code_generator.imports import IMPORT_ANNOTATED
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model import dataclass as _dataclass_module
 from datamodel_code_generator.model.base import UNDEFINED, _has_field_assignment
@@ -175,10 +176,46 @@ class DataClass(_DataclassReuseMixin, DataModel):
         return super().render(class_name=class_name)
 
 
+class _PydanticDataclassField(DataModelFieldV2):
+    """Adapt Annotated fields to the existing dataclass template contract."""
+
+    @property
+    def _requires_unannotated_dataclass_assignment(self) -> bool:
+        return self.use_annotated and self.requires_dataclass_field_assignment
+
+    @property
+    def annotated(self) -> str | None:
+        """Keep assignments visible to legacy dataclass templates."""
+        if self._requires_unannotated_dataclass_assignment:
+            return None
+        return super().annotated
+
+    @property
+    def field(self) -> str | None:
+        """Render dataclass-visible metadata on the assignment when required."""
+        if self._requires_unannotated_dataclass_assignment:
+            return self.dataclass_field
+        return super().field
+
+    def _rendered_field_values(self) -> tuple[str | None, str | None]:
+        """Keep built-in rendering consistent with the public field properties."""
+        if self._requires_unannotated_dataclass_assignment:
+            return self.dataclass_field, None
+        return super()._rendered_field_values()
+
+    @property
+    def imports(self) -> tuple[Import, ...]:
+        """Drop Annotated when dataclass metadata moves to the assignment."""
+        imports = super().imports
+        if not self._requires_unannotated_dataclass_assignment:
+            return imports
+        return tuple(import_ for import_ in imports if import_ != IMPORT_ANNOTATED)
+
+
 if PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK:
     import keyword
 
-    class DataModelField(DataModelFieldV2):
+    class DataModelField(_PydanticDataclassField):
         """Field implementation for Pydantic v2 dataclass models.
 
         Inherits pydantic v2 Field() constraint handling from DataModelFieldV2.
@@ -207,7 +244,7 @@ if PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK:
 
 else:
 
-    class DataModelField(DataModelFieldV2):
+    class DataModelField(_PydanticDataclassField):
         """Field implementation for Pydantic v2 dataclass models.
 
         Inherits pydantic v2 Field() constraint handling from DataModelFieldV2.

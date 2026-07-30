@@ -3,72 +3,56 @@
 
 from __future__ import annotations
 
-from typing import Annotated
-
 from pydantic import AliasChoices, Field
 from pydantic.dataclasses import dataclass
 
 
 @dataclass
 class InitBase:
-    inheritedScalar: Annotated[str | None, Field(json_schema_extra={'init': False}, min_length=2)] = (
-        Field('inherited', json_schema_extra={'init': False}, min_length=2)
+    inheritedScalar: str | None = Field(
+        'inherited', json_schema_extra={'init': False}, min_length=2
     )
-    inheritedFactory: Annotated[list[str], Field(default_factory=list, json_schema_extra={'init': False})] = (
-        Field(default_factory=list, json_schema_extra={'init': False})
+    inheritedFactory: list[str] = Field(
+        default_factory=list, json_schema_extra={'init': False}
     )
-    inheritedMetadata: Annotated[str | None, Field(json_schema_extra={'init': False})] = (
-        Field(None, json_schema_extra={'init': False})
-    )
+    inheritedMetadata: str | None = Field(None, json_schema_extra={'init': False})
 
 
 @dataclass
 class RequiredOverrideChild(InitBase):
-    newRequired: Annotated[int, Field(kw_only=True)] = Field(kw_only=True)
-    inheritedScalar: Annotated[str, Field(json_schema_extra={'init': False}, min_length=2)] = (
-        Field(json_schema_extra={'init': False}, min_length=2)
-    )
-    inheritedFactory: Annotated[list[str], Field(json_schema_extra={'init': False})] = (
-        Field(json_schema_extra={'init': False})
-    )
-    inheritedMetadata: Annotated[str, Field(json_schema_extra={'init': False}, repr=False)] = (
-        Field(json_schema_extra={'init': False}, repr=False)
-    )
+    newRequired: int = Field(kw_only=True)
+    inheritedScalar: str = Field(json_schema_extra={'init': False}, min_length=2)
+    inheritedFactory: list[str] = Field(json_schema_extra={'init': False})
+    inheritedMetadata: str = Field(json_schema_extra={'init': False}, repr=False)
 
 
 @dataclass
 class ExplicitInitBase:
-    explicitInit: Annotated[str | None, Field(json_schema_extra={'init': False})] = (
-        Field('inherited', json_schema_extra={'init': False})
-    )
+    explicitInit: str | None = Field('inherited', json_schema_extra={'init': False})
 
 
 @dataclass
 class ExplicitInitChild(ExplicitInitBase):
-    newAfterExplicitInit: Annotated[int, Field(kw_only=True)] = Field(kw_only=True)
-    explicitInit: Annotated[str, Field(json_schema_extra={'init': False})] = (
-        Field(json_schema_extra={'init': False})
-    )
+    newAfterExplicitInit: int = Field(kw_only=True)
+    explicitInit: str = Field(json_schema_extra={'init': False})
 
 
 @dataclass
 class InheritedInitDefaultChild(InitBase):
-    newAfterInheritedInit: Annotated[int, Field(kw_only=True)] = Field(kw_only=True)
+    newAfterInheritedInit: int = Field(kw_only=True)
 
 
 @dataclass
 class RequiredAliasBase:
-    aliased_value: Annotated[str, Field(serialization_alias='aliased-value', validation_alias=AliasChoices('aliased-value'))] = (
-        Field(
-            serialization_alias='aliased-value',
-            validation_alias=AliasChoices('aliased-value'),
-        )
+    aliased_value: str = Field(
+        serialization_alias='aliased-value',
+        validation_alias=AliasChoices('aliased-value'),
     )
 
 
 @dataclass
 class RequiredAliasChild(RequiredAliasBase):
-    newAfterAlias: Annotated[int, Field(kw_only=True)] = Field(kw_only=True)
+    newAfterAlias: int = Field(kw_only=True)
 
 
 @dataclass
@@ -78,36 +62,30 @@ class RequiredMetadataBase:
 
 @dataclass
 class RequiredMetadataChild(RequiredMetadataBase):
-    newAfterMetadata: Annotated[int, Field(kw_only=True)] = Field(kw_only=True)
-    requiredMetadata: Annotated[str, Field(repr=False)] = Field(repr=False)
+    newAfterMetadata: int = Field(kw_only=True)
+    requiredMetadata: str = Field(repr=False)
 
 
 @dataclass
 class KeywordOverrideBase:
     retainedDefault: str | None = 'retained'
-    positionalOverride: Annotated[str | None, Field(kw_only=True)] = Field(
-        'inherited', kw_only=True
-    )
+    positionalOverride: str | None = Field('inherited', kw_only=True)
 
 
 @dataclass
 class KeywordOverrideChild(KeywordOverrideBase):
-    positionalOverride: Annotated[str, Field(kw_only=True)] = Field(kw_only=True)
+    positionalOverride: str = Field(kw_only=True)
 
 
 @dataclass
 class OrderingBase:
-    earlyFactory: Annotated[list[str], Field(default_factory=list)] = Field(
-        default_factory=list
-    )
+    earlyFactory: list[str] = Field(default_factory=list)
     priorDefault: str | None = 'inherited'
-    lateFactory: Annotated[list[str], Field(default_factory=list)] = Field(
-        default_factory=list
-    )
+    lateFactory: list[str] = Field(default_factory=list)
 
 
 @dataclass
 class OrderingChild(OrderingBase):
-    earlyFactory: Annotated[list[str], Field(...)] = Field(...)
-    lateFactory: Annotated[list[str], Field(kw_only=True)] = Field(kw_only=True)
-    newRequired: Annotated[int, Field(kw_only=True)] = Field(kw_only=True)
+    earlyFactory: list[str] = Field(...)
+    lateFactory: list[str] = Field(kw_only=True)
+    newRequired: int = Field(kw_only=True)

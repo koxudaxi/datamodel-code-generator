@@ -3716,6 +3716,17 @@ def test_main_openapi_allof_required_inherited_model_references(
             ("--use-annotated", "--field-constraints"),
             id="pydantic-v2-dataclass-annotated",
         ),
+        pytest.param(
+            DataModelType.PydanticV2Dataclass.value,
+            "pydantic_v2_dataclass_annotated",
+            (
+                "--use-annotated",
+                "--field-constraints",
+                "--custom-template-dir",
+                str(DATA_PATH / "templates_pydantic_v2_dataclass_legacy"),
+            ),
+            id="pydantic-v2-dataclass-annotated-legacy-template",
+        ),
     ],
 )
 def test_main_openapi_allof_required_inherited_dataclass_metadata(

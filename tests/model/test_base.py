@@ -753,6 +753,31 @@ def test_pydantic_annotated_dataclass_field_skips_empty_assignment() -> None:
     assert field.dataclass_field is None
 
 
+def test_pydantic_dataclass_annotated_assignment_uses_existing_template_contract() -> None:
+    """Dataclass-only metadata should use the legacy field/annotated template branches."""
+    assigned_field = PydanticDataclassField(
+        name="assigned",
+        data_type=DataType(type="str"),
+        required=True,
+        extras={"repr": False},
+        use_annotated=True,
+    )
+    annotated_field = PydanticDataclassField(
+        name="annotated",
+        data_type=DataType(type="str"),
+        required=True,
+        extras={"title": "Annotated"},
+        use_annotated=True,
+    )
+
+    assert assigned_field.annotated is None
+    assert assigned_field.field == "Field(repr=False)"
+    assert assigned_field._rendered_field_values() == ("Field(repr=False)", None)
+    assert IMPORT_ANNOTATED not in assigned_field.imports
+    assert annotated_field.annotated == "Annotated[str, Field(title='Annotated')]"
+    assert IMPORT_ANNOTATED in annotated_field.imports
+
+
 def test_pydantic_v2_leaf_field_imports_skip_discriminator_scan(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test leaf fields do not walk all nested data types for impossible discriminators."""
     field = PydanticV2DataModelField(
