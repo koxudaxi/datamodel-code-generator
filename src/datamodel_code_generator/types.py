@@ -391,7 +391,7 @@ def _is_python_type_annotation_node(node: ast.AST, *, allow_literal: bool) -> bo
         case ast.Constant(value=None):
             result = True
         case ast.Constant(value=value) if allow_literal:
-            result = value is None or value is Ellipsis or isinstance(value, (str, int, float, bool))
+            result = value is None or value is Ellipsis or isinstance(value, (str, bytes, int, float, bool))
         case ast.UnaryOp(op=ast.UAdd() | ast.USub(), operand=ast.Constant(value=value)) if allow_literal:
             result = isinstance(value, (int, float))
         case _:

@@ -19,7 +19,7 @@ from itertools import chain
 from math import gcd, lcm
 from pathlib import Path
 from string import digits
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional, Union, cast
 from urllib.parse import ParseResult, unquote, urlparse
 from warnings import warn
 
@@ -51,6 +51,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator._format_types import (
     DatetimeClassType,
 )
+from datamodel_code_generator._python_type_annotation import LiteralEnumMemberRef
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -333,19 +334,66 @@ def _qualified_python_type_import(qualified_name: str) -> Import:
     return _QUALIFIED_PYTHON_TYPE_IMPORT_ALIASES.get(qualified_name) or Import.from_full_path(qualified_name)
 
 
+class _QualifiedPythonTypeRef(NamedTuple):
+    """One shortened annotation name and the import that binds it."""
+
+    qualified_name: str
+    import_: Import
+    local_name: str
+
+
 class _QualifiedPythonTypeNameShortener(ast.NodeTransformer):
     def __init__(self) -> None:
-        self.qualified_names: list[str] = []
+        self.references: list[_QualifiedPythonTypeRef] = []
+        self._literal_depth = 0
+
+    def visit_Subscript(self, node: ast.Subscript) -> ast.AST:
+        """Restore an exact enum member from the input-model transport marker."""
+        try:
+            if (enum_member := LiteralEnumMemberRef.from_marker_ast(node)) is None:
+                if not self._is_literal_subscript(node):
+                    return self.generic_visit(node)
+                self._literal_depth += 1
+                try:
+                    return self.generic_visit(node)
+                finally:
+                    self._literal_depth -= 1
+        except ValueError as exc:
+            raise Error(str(exc)) from None
+        if not self._literal_depth:
+            msg = "Internal Literal enum member marker is only valid inside Literal"
+            raise Error(msg)
+        self.references.append(
+            _QualifiedPythonTypeRef(
+                qualified_name=enum_member.import_path,
+                import_=Import(import_=enum_member.module),
+                local_name=enum_member.import_path,
+            )
+        )
+        return ast.copy_location(enum_member.to_member_expression(), node)
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
         if (qualified_name := _get_full_attribute_name(node)) is None or "." not in qualified_name:
             return self.generic_visit(node)
-        self.qualified_names.append(qualified_name)
-        return ast.copy_location(ast.Name(id=qualified_name.rsplit(".", 1)[-1], ctx=ast.Load()), node)
+        import_ = _qualified_python_type_import(qualified_name)
+        local_name = import_.alias or import_.import_
+        self.references.append(_QualifiedPythonTypeRef(qualified_name, import_, local_name))
+        return ast.copy_location(ast.Name(id=local_name, ctx=ast.Load()), node)
+
+    @staticmethod
+    def _is_literal_subscript(node: ast.Subscript) -> bool:
+        match node.value:
+            case ast.Name(id="Literal"):
+                return True
+            case ast.Attribute() as value:
+                return _get_full_attribute_name(value) in {"typing.Literal", "typing_extensions.Literal"}
+        return False
 
 
 @lru_cache(maxsize=1024)
-def _shorten_qualified_python_type_annotation(type_str: str) -> tuple[str, tuple[str, ...], str | None]:
+def _shorten_qualified_python_type_annotation(
+    type_str: str,
+) -> tuple[str, tuple[_QualifiedPythonTypeRef, ...], str | None]:
     expression = _parse_python_type_annotation(type_str)
     if expression is None:
         return type_str, (), None
@@ -353,11 +401,11 @@ def _shorten_qualified_python_type_annotation(type_str: str) -> tuple[str, tuple
     root_qualified_name = _get_root_qualified_python_type_name(expression)
     shortener = _QualifiedPythonTypeNameShortener()
     shortened_expression = shortener.visit(expression)
-    if shortened_expression is None or not shortener.qualified_names:
+    if shortened_expression is None or not shortener.references:
         return type_str, (), root_qualified_name
     return (
         ast.unparse(ast.fix_missing_locations(shortened_expression)),
-        tuple(shortener.qualified_names),
+        tuple(shortener.references),
         root_qualified_name,
     )
 
@@ -3234,16 +3282,23 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         import_ = self._resolve_type_import(base_type)
 
         # Convert fully qualified names to short names when imports are added
-        type_str, qualified_names, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
+        type_str, qualified_references, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
         nested_imports: list[DataType] = []
         qualified_type_names: set[str] = set()
-        for qualified_name in qualified_names:
-            class_name = qualified_name.rsplit(".", 1)[-1]
-            qualified_type_names.add(class_name)
-            if qualified_name == root_qualified_name and class_name == base_type:
-                import_ = _qualified_python_type_import(qualified_name)
+        for qualified_reference in qualified_references:
+            qualified_type_names.add(qualified_reference.local_name)
+            if (
+                qualified_reference.qualified_name == root_qualified_name
+                and qualified_reference.local_name == base_type
+            ):
+                import_ = qualified_reference.import_
                 continue
-            nested_imports.append(self.data_type(import_=_qualified_python_type_import(qualified_name)))
+            nested_imports.append(
+                self.data_type(
+                    type=qualified_reference.local_name,
+                    import_=qualified_reference.import_,
+                )
+            )
         if base_type in qualified_type_names and root_qualified_name is None:
             import_ = None
 

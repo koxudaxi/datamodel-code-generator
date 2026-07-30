@@ -30,7 +30,20 @@ from collections.abc import (
 from dataclasses import is_dataclass
 from enum import Enum as PyEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, cast, get_args, get_origin, get_type_hints
+from typing import (
+    TYPE_CHECKING,
+    Annotated,
+    Any,
+    Concatenate,
+    ForwardRef,
+    Literal,
+    ParamSpec,
+    Union,
+    cast,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
 from pydantic import BaseModel
 
@@ -235,7 +248,7 @@ _TYPE_FAMILY_MSGSPEC = "msgspec"
 _TYPE_FAMILY_OTHER = "other"
 
 
-def _serialize_python_type_full(tp: type) -> str:  # noqa: PLR0911
+def _serialize_python_type_full(tp: object) -> str:  # noqa: PLR0911, PLR0912
     """Serialize ANY Python type to its string representation."""
     if tp is type(None):  # pragma: no cover
         return "None"
@@ -257,17 +270,22 @@ def _serialize_python_type_full(tp: type) -> str:  # noqa: PLR0911
             return f"{module}.{name}"
         return name
 
-    if _is_callable_origin(origin):
+    if origin is ABCCallable:
         return _serialize_callable(args)
 
     if origin is Union or (hasattr(types, "UnionType") and origin is types.UnionType):  # pragma: no cover
-        parts = [_serialize_python_type_full(arg) for arg in args]
-        return " | ".join(parts)
+        return " | ".join(_serialize_python_type_full(arg) for arg in args)
 
     if origin is Annotated:
         if args:
             return _serialize_python_type_full(args[0])
         return str(tp).replace("typing.", "")  # pragma: no cover
+
+    if origin is Literal:
+        values = ", ".join(
+            (_serialize_enum_literal_member(arg) if isinstance(arg, PyEnum) else repr(arg)) for arg in args
+        )
+        return f"Literal[{values}]"
 
     if origin is type:
         if args:
@@ -282,32 +300,36 @@ def _serialize_python_type_full(tp: type) -> str:  # noqa: PLR0911
     return origin_name  # pragma: no cover
 
 
-def _is_callable_origin(origin: type | None) -> bool:
-    """Check if origin is Callable."""
-    if origin is None:  # pragma: no cover
-        return False
-    if origin is ABCCallable:
-        return True
-    origin_str = str(origin)
-    return "Callable" in origin_str or "callable" in origin_str
+def _serialize_enum_literal_member(value: PyEnum) -> str:
+    """Serialize an enum member without losing its class qualification."""
+    from datamodel_code_generator._python_type_annotation import encode_literal_enum_member  # noqa: PLC0415
+
+    try:
+        return encode_literal_enum_member(value)
+    except ValueError as exc:
+        raise Error(str(exc)) from None
 
 
-def _serialize_callable(args: tuple[type, ...]) -> str:
+def _serialize_callable(args: tuple[object, ...]) -> str:
     """Serialize Callable type."""
     if not args:  # pragma: no cover
         return "Callable"
 
-    params = args[:-1]
-    ret = args[-1]
+    match args:
+        case (parameters, return_type) if parameters is ...:
+            return f"Callable[..., {_serialize_python_type_full(return_type)}]"
+        case ((list() | tuple()) as parameters, return_type):
+            params = ", ".join(_serialize_python_type_full(param) for param in parameters)
+            return f"Callable[[{params}], {_serialize_python_type_full(return_type)}]"
+        case (parameter_specification, return_type) if (
+            isinstance(parameter_specification, ParamSpec) or get_origin(parameter_specification) is Concatenate
+        ):
+            params = _serialize_python_type_full(parameter_specification)
+            return f"Callable[{params}, {_serialize_python_type_full(return_type)}]"
 
-    if len(params) == 1 and params[0] is ...:
-        return f"Callable[..., {_serialize_python_type_full(ret)}]"
-
-    if len(params) == 1 and isinstance(params[0], (list, tuple)):  # pragma: no cover
-        params = tuple(params[0])
-
-    params_str = ", ".join(_serialize_python_type_full(p) for p in params)
-    return f"Callable[[{params_str}], {_serialize_python_type_full(ret)}]"
+    *parameters, return_type = args
+    params = ", ".join(_serialize_python_type_full(param) for param in parameters)
+    return f"Callable[[{params}], {_serialize_python_type_full(return_type)}]"
 
 
 def _get_origin_name(origin: type) -> str:

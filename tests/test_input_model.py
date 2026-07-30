@@ -920,6 +920,54 @@ def test_input_model_custom_generic_type_import(tmp_path: Path) -> None:
     )
 
 
+def test_input_model_preserves_structured_generic_semantics(tmp_path: Path) -> None:
+    """Preserve exact generic origins, Callable shapes, and Literal values."""
+    output_path = tmp_path / "output.py"
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithStructuredGenericArguments",
+        output_path=output_path,
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "structured_generic_arguments.py",
+        extra_args=["--disable-timestamp"],
+    )
+
+    import ast
+    from typing import Literal, get_args, get_origin
+
+    from tests.data.python.input_model.literal_enum_first import Status as FirstStatus
+    from tests.data.python.input_model.literal_enum_second import Status as SecondStatus
+    from tests.data.python.input_model.pydantic_models import LiteralFlagValue, LiteralIntFlagValue
+
+    tree = ast.parse(output_path.read_text(encoding="utf-8"))
+    namespace: dict[str, object] = {}
+    import_nodes = tuple(node for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom)))
+    exec(compile(ast.Module(body=list(import_nodes), type_ignores=[]), str(output_path), "exec"), namespace)
+    model_node = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "ModelWithStructuredGenericArguments"
+    )
+    field_annotations = {
+        node.target.id: node.annotation
+        for node in model_node.body
+        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)
+    }
+    expected_literal_members = {
+        "same_named_enum_literal": (FirstStatus.ACTIVE, SecondStatus.INACTIVE),
+        "flag_literal": (LiteralFlagValue.READ,),
+        "named_composite_flag_literal": (LiteralFlagValue.READ_WRITE,),
+        "int_flag_literal": (LiteralIntFlagValue.READ,),
+        "named_composite_int_flag_literal": (LiteralIntFlagValue.READ_WRITE,),
+    }
+    for field_name, expected_members in expected_literal_members.items():
+        annotation = eval(
+            compile(ast.Expression(field_annotations[field_name]), str(output_path), "eval"),
+            namespace,
+        )
+        literal = get_args(annotation)[0]
+        assert get_origin(literal) is Literal
+        assert get_args(literal) == expected_members
+
+
 def test_input_model_default_put_dict_import(tmp_path: Path) -> None:
     """Test that DefaultPutDict generic type is properly imported from parser module."""
     run_input_model_and_assert(
@@ -1817,6 +1865,139 @@ def test_serialize_python_type_full_annotated() -> None:
     # Annotated with a custom type
     result = _serialize_python_type_full(Annotated[int, "some_metadata"])
     assert result == "int"
+
+
+def test_serialize_python_type_full_structured_callable_and_literal_arguments() -> None:
+    """Serialize every Callable parameter form and preserve literal values."""
+    from collections.abc import Callable
+    from typing import Concatenate, Literal, ParamSpec
+
+    from datamodel_code_generator.input_model import _serialize_callable, _serialize_python_type_full
+    from tests.data.python.input_model.pydantic_models import (
+        LiteralEnumContainer,
+        LiteralFlagValue,
+        LiteralIntFlagValue,
+        LiteralValueEnum,
+    )
+
+    P = ParamSpec("P")
+
+    assert _serialize_python_type_full(Callable[[int, str], bool]) == "Callable[[int, str], bool]"
+    assert _serialize_python_type_full(Callable[..., str]) == "Callable[..., str]"
+    assert _serialize_python_type_full(Callable[[], None]) == "Callable[[], None]"
+    assert _serialize_python_type_full(Callable[P, int]) == "Callable[tests.test_input_model.P, int]"
+    assert (
+        _serialize_python_type_full(Callable[Concatenate[str, P], int])
+        == "Callable[Concatenate[str, tests.test_input_model.P], int]"
+    )
+    assert _serialize_callable((int, bool)) == "Callable[[int], bool]"
+    assert _serialize_callable((int, str, bool)) == "Callable[[int, str], bool]"
+    assert (
+        _serialize_python_type_full(
+            Literal["typing.foo", "Callable", 0, True, None, b"bytes"]  # noqa: PYI061
+        )
+        == "Literal['typing.foo', 'Callable', 0, True, None, b'bytes']"
+    )
+    assert (
+        _serialize_python_type_full(Literal[LiteralValueEnum.VALUE])
+        == "Literal[__datamodel_code_generator_literal_enum_member__"
+        "['tests.data.python.input_model.pydantic_models', 'LiteralValueEnum', 'VALUE']]"
+    )
+    assert (
+        _serialize_python_type_full(Literal[LiteralFlagValue.READ])
+        == "Literal[__datamodel_code_generator_literal_enum_member__"
+        "['tests.data.python.input_model.pydantic_models', 'LiteralFlagValue', 'READ']]"
+    )
+    assert (
+        _serialize_python_type_full(Literal[LiteralFlagValue.READ_WRITE])
+        == "Literal[__datamodel_code_generator_literal_enum_member__"
+        "['tests.data.python.input_model.pydantic_models', 'LiteralFlagValue', 'READ_WRITE']]"
+    )
+    assert (
+        _serialize_python_type_full(Literal[LiteralIntFlagValue.READ])
+        == "Literal[__datamodel_code_generator_literal_enum_member__"
+        "['tests.data.python.input_model.pydantic_models', 'LiteralIntFlagValue', 'READ']]"
+    )
+    assert (
+        _serialize_python_type_full(Literal[LiteralIntFlagValue.READ_WRITE])
+        == "Literal[__datamodel_code_generator_literal_enum_member__"
+        "['tests.data.python.input_model.pydantic_models', 'LiteralIntFlagValue', 'READ_WRITE']]"
+    )
+    assert (
+        _serialize_python_type_full(Literal[LiteralEnumContainer.NestedValue.VALUE])
+        == "Literal[__datamodel_code_generator_literal_enum_member__"
+        "['tests.data.python.input_model.pydantic_models', 'LiteralEnumContainer.NestedValue', 'VALUE']]"
+    )
+    assert (
+        _serialize_python_type_full(Literal[LiteralValueEnum.ALIAS])
+        == "Literal[__datamodel_code_generator_literal_enum_member__"
+        "['tests.data.python.input_model.pydantic_models', 'LiteralValueEnum', 'VALUE']]"
+    )
+    assert _serialize_python_type_full(Literal[LiteralValueEnum.VALUE, LiteralEnumContainer.NestedValue.VALUE]) == (
+        "Literal[__datamodel_code_generator_literal_enum_member__"
+        "['tests.data.python.input_model.pydantic_models', 'LiteralValueEnum', 'VALUE'], "
+        "__datamodel_code_generator_literal_enum_member__"
+        "['tests.data.python.input_model.pydantic_models', 'LiteralEnumContainer.NestedValue', 'VALUE']]"
+    )
+
+
+def test_serialize_python_type_full_rejects_local_enum_literal() -> None:
+    """Local enum members cannot be reconstructed by generated module imports."""
+    from enum import Enum
+    from typing import Literal
+
+    from datamodel_code_generator.input_model import Error as InputModelError
+    from datamodel_code_generator.input_model import _serialize_python_type_full
+
+    class LocalValue(Enum):
+        VALUE = "value"
+
+    with pytest.raises(InputModelError, match="Literal enum member is not importable"):
+        _serialize_python_type_full(Literal[LocalValue.VALUE])
+
+
+def test_serialize_python_type_full_rejects_unbound_and_keyword_enum_literals() -> None:
+    """Enum marker encoding rejects identities that generated imports cannot express."""
+    from enum import Enum
+    from typing import Literal
+
+    from datamodel_code_generator.input_model import Error as InputModelError
+    from datamodel_code_generator.input_model import _serialize_python_type_full
+
+    UnboundValue = Enum("UnboundValue", {"VALUE": "value"}, module=__name__)
+    UnboundValue.__qualname__ = "MissingContainer.UnboundValue"
+    KeywordValue = Enum("KeywordValue", {"class": "value"}, module=__name__)
+    globals()["KeywordValue"] = KeywordValue
+    try:
+        with pytest.raises(InputModelError, match="Literal enum member is not importable"):
+            _serialize_python_type_full(Literal[UnboundValue.VALUE])
+        with pytest.raises(InputModelError, match="Literal enum member is not importable"):
+            _serialize_python_type_full(Literal[KeywordValue["class"]])
+    finally:
+        del globals()["KeywordValue"]
+
+
+@pytest.mark.parametrize(
+    ("is_int_flag", "value"),
+    [
+        pytest.param(False, 0, id="flag-zero"),
+        pytest.param(False, 5, id="flag-composite"),
+        pytest.param(True, 0, id="int-flag-zero"),
+        pytest.param(True, 5, id="int-flag-composite"),
+    ],
+)
+def test_serialize_python_type_full_rejects_unnamed_flag_literals(*, is_int_flag: bool, value: int) -> None:
+    """Zero and unnamed composite flags use the public serialization error."""
+    from typing import Literal
+
+    from datamodel_code_generator.input_model import Error as InputModelError
+    from datamodel_code_generator.input_model import _serialize_python_type_full
+    from tests.data.python.input_model.pydantic_models import LiteralFlagValue, LiteralIntFlagValue
+
+    flag_type = LiteralIntFlagValue if is_int_flag else LiteralFlagValue
+    flag = flag_type(value)
+    with pytest.raises(InputModelError, match="Literal enum member is not importable"):
+        _serialize_python_type_full(Literal[flag])
 
 
 def test_full_type_name_builtin_type() -> None:

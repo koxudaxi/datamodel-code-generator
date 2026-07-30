@@ -20,6 +20,7 @@ from datamodel_code_generator.types import (
     get_subscript_args,
     get_type_base_name,
     is_data_model_field,
+    is_python_type_annotation,
     normalize_integer_constraint,
 )
 
@@ -745,3 +746,8 @@ def test_get_subscript_args(type_str: str, expected: list[str]) -> None:
 def test_extract_qualified_names(type_str: str, expected: list[str]) -> None:
     """Test extract_qualified_names finds all fully qualified names."""
     assert extract_qualified_names(type_str) == expected
+
+
+def test_is_python_type_annotation_accepts_bytes_literal() -> None:
+    """Bytes are legal Literal values and must survive input-model transport."""
+    assert is_python_type_annotation("Literal[b'bytes']")

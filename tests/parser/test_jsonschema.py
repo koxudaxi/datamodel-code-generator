@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import gc
 import json
 import socket
@@ -2492,9 +2493,9 @@ def test_is_union_operator_python_type(x_python_type: str, expected: bool) -> No
 def test_shorten_qualified_python_type_annotation() -> None:
     """Test qualified Python type AST shortening preserves string literals."""
     x_python_type = "Callable[[foo.Bar, Literal['foo.Bar']], baz.Qux]"
-    type_str, qualified_names, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
+    type_str, references, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
 
-    assert qualified_names == ("foo.Bar", "baz.Qux")
+    assert tuple(reference.qualified_name for reference in references) == ("foo.Bar", "baz.Qux")
     assert root_qualified_name is None
     assert type_str == "Callable[[Bar, Literal['foo.Bar']], Qux]"
     assert _shorten_qualified_python_type_annotation("[") == ("[", (), None)
@@ -2504,9 +2505,9 @@ def test_shorten_qualified_python_type_annotation() -> None:
 def test_shorten_qualified_python_type_annotation_after_non_ascii_literal() -> None:
     """Test AST shortening handles non-ASCII text before qualified names."""
     x_python_type = "Callable[[Literal['あ'], foo.Bar], baz.Qux]"
-    type_str, qualified_names, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
+    type_str, references, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
 
-    assert qualified_names == ("foo.Bar", "baz.Qux")
+    assert tuple(reference.qualified_name for reference in references) == ("foo.Bar", "baz.Qux")
     assert root_qualified_name is None
     assert type_str == "Callable[[Literal['あ'], Bar], Qux]"
 
@@ -2514,11 +2515,135 @@ def test_shorten_qualified_python_type_annotation_after_non_ascii_literal() -> N
 def test_shorten_qualified_python_type_annotation_after_multiline_literal() -> None:
     """Test AST shortening handles multiline annotations."""
     x_python_type = "Callable[[\n    Literal['foo.Bar'],\n    foo.Bar,\n], baz.Qux]"
-    type_str, qualified_names, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
+    type_str, references, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
 
-    assert qualified_names == ("foo.Bar", "baz.Qux")
+    assert tuple(reference.qualified_name for reference in references) == ("foo.Bar", "baz.Qux")
     assert root_qualified_name is None
     assert type_str == "Callable[[Literal['foo.Bar'], Bar], Qux]"
+
+
+def test_shorten_qualified_python_type_annotation_enum_literal() -> None:
+    """Shorten an enum type while retaining its Literal member access."""
+    x_python_type = "Literal[__datamodel_code_generator_literal_enum_member__['example.enums', 'Status', 'ACTIVE']]"
+    ast.parse(x_python_type, mode="eval", feature_version=(3, 10))
+    type_str, references, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
+
+    assert tuple(reference.qualified_name for reference in references) == ("example.enums.Status",)
+    assert root_qualified_name is None
+    assert type_str == "Literal[example.enums.Status.ACTIVE]"
+    assert references[0].import_.import_ == "example.enums"
+    ast.parse(type_str, mode="eval")
+
+    type_str, references, root_qualified_name = _shorten_qualified_python_type_annotation(
+        "Literal[__datamodel_code_generator_literal_enum_member__['example.enums', 'Container.Status', 'ACTIVE']]"
+    )
+    assert tuple(reference.qualified_name for reference in references) == ("example.enums.Container",)
+    assert root_qualified_name is None
+    assert type_str == "Literal[example.enums.Container.Status.ACTIVE]"
+
+    type_str, references, root_qualified_name = _shorten_qualified_python_type_annotation(
+        "Literal[example.constants.ACTIVE]"
+    )
+    assert tuple(reference.qualified_name for reference in references) == ("example.constants.ACTIVE",)
+    assert root_qualified_name is None
+    assert type_str == "Literal[ACTIVE]"
+
+
+def test_shorten_qualified_python_type_annotation_avoids_enum_import_collisions() -> None:
+    """Use stable aliases when enum classes from different modules share a name."""
+    type_str, references, root_qualified_name = _shorten_qualified_python_type_annotation(
+        "Literal["
+        "__datamodel_code_generator_literal_enum_member__['first.enums', 'Status', 'ACTIVE'], "
+        "__datamodel_code_generator_literal_enum_member__['second.enums', 'Status', 'INACTIVE']"
+        "]"
+    )
+
+    assert root_qualified_name is None
+    assert tuple(reference.qualified_name for reference in references) == (
+        "first.enums.Status",
+        "second.enums.Status",
+    )
+    assert type_str == ("Literal[first.enums.Status.ACTIVE, second.enums.Status.INACTIVE]")
+    assert tuple(reference.import_.import_ for reference in references) == ("first.enums", "second.enums")
+    ast.parse(type_str, mode="eval")
+
+
+def test_shorten_qualified_python_type_annotation_enum_marker_in_qualified_literal() -> None:
+    """Recognize the reserved marker below a qualified typing.Literal node."""
+    type_str, references, root_qualified_name = _shorten_qualified_python_type_annotation(
+        "typing.Literal[__datamodel_code_generator_literal_enum_member__['example.enums', 'Status', 'ACTIVE']]"
+    )
+
+    assert root_qualified_name == "typing.Literal"
+    assert tuple(reference.qualified_name for reference in references) == (
+        "typing.Literal",
+        "example.enums.Status",
+    )
+    assert type_str == "Literal[example.enums.Status.ACTIVE]"
+
+
+@pytest.mark.parametrize(
+    ("marker", "match"),
+    [
+        pytest.param(
+            "Literal[__datamodel_code_generator_literal_enum_member__['example.enums', 'Status']]",
+            "Invalid internal Literal enum member marker",
+            id="shape",
+        ),
+        pytest.param(
+            "Literal[__datamodel_code_generator_literal_enum_member__['example.enums', 'Bad-Name', 'ACTIVE']]",
+            "Literal enum member is not importable",
+            id="identifier",
+        ),
+        pytest.param(
+            "Literal[__datamodel_code_generator_literal_enum_member__['', 'Status', 'ACTIVE']]",
+            "Literal enum member is not importable",
+            id="empty-module",
+        ),
+        pytest.param(
+            "Literal[__datamodel_code_generator_literal_enum_member__['bad-module', 'Status', 'ACTIVE']]",
+            "Literal enum member is not importable",
+            id="module-identifier",
+        ),
+        pytest.param(
+            "Literal[__datamodel_code_generator_literal_enum_member__['example.enums', '', 'ACTIVE']]",
+            "Literal enum member is not importable",
+            id="empty-qualname",
+        ),
+        pytest.param(
+            "Literal[__datamodel_code_generator_literal_enum_member__['example.enums', 'Status', '']]",
+            "Literal enum member is not importable",
+            id="member-identifier",
+        ),
+        pytest.param(
+            "Literal[__datamodel_code_generator_literal_enum_member__['class.enums', 'Status', 'ACTIVE']]",
+            "Literal enum member is not importable",
+            id="module-keyword",
+        ),
+        pytest.param(
+            "Literal[__datamodel_code_generator_literal_enum_member__['example.enums', 'class', 'ACTIVE']]",
+            "Literal enum member is not importable",
+            id="qualname-keyword",
+        ),
+        pytest.param(
+            "Literal[__datamodel_code_generator_literal_enum_member__['example.enums', 'Status', 'class']]",
+            "Literal enum member is not importable",
+            id="member-keyword",
+        ),
+        pytest.param(
+            "__datamodel_code_generator_literal_enum_member__['example.enums', 'Status', 'ACTIVE']",
+            "only valid inside Literal",
+            id="outside-literal",
+        ),
+    ],
+)
+def test_shorten_qualified_python_type_annotation_rejects_malformed_enum_marker(
+    marker: str,
+    match: str,
+) -> None:
+    """Reserved transport markers must never leak into generated annotations."""
+    with pytest.raises(Error, match=match):
+        _shorten_qualified_python_type_annotation(marker)
 
 
 def test_inherited_request_response_helpers_keep_unnamed_root_fields() -> None:

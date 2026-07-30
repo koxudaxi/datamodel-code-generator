@@ -2,21 +2,65 @@
 
 from __future__ import annotations
 
+import typing
 from collections import UserDict
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any, FrozenSet, Generic, Optional, Set, Type, TypeVar, Union
+from enum import Enum, Flag, IntFlag
+from typing import Any, Concatenate, FrozenSet, Generic, Literal, Optional, ParamSpec, Set, Type, TypeVar, Union
 
 from pydantic import BaseModel
+
+from tests.data.python.input_model.literal_enum_first import Status as FirstStatus
+from tests.data.python.input_model.literal_enum_second import Status as SecondStatus
 
 # Custom generic type for testing generic type import
 TK = TypeVar("TK")
 TV = TypeVar("TV")
+P = ParamSpec("P")
 
 
 class CustomGenericDict(UserDict[TK, TV], Generic[TK, TV]):
     """Custom generic dict for testing generic type import."""
 
     pass
+
+
+class NotCallableGeneric(Generic[TV]):
+    """Custom generic whose name must not determine Callable semantics."""
+
+
+class LiteralValueEnum(Enum):
+    """Enum member used as a legal Literal value."""
+
+    VALUE = "typing.enum"
+    ALIAS = "typing.enum"  # noqa: PIE796
+
+
+class LiteralFlagValue(Flag):
+    """Flag members used as legal and rejected Literal values."""
+
+    READ = 1
+    WRITE = 2
+    EXECUTE = 4
+    READ_WRITE = READ | WRITE
+
+
+class LiteralIntFlagValue(IntFlag):
+    """IntFlag members used as legal and rejected Literal values."""
+
+    READ = 1
+    WRITE = 2
+    EXECUTE = 4
+    READ_WRITE = READ | WRITE
+
+
+class LiteralEnumContainer:
+    """Container used to verify nested enum qualification."""
+
+    class NestedValue(Enum):
+        """Nested enum member used as a legal Literal value."""
+
+        VALUE = "typing.nested-enum"
 
 
 class User(BaseModel):
@@ -105,6 +149,31 @@ class ModelWithCustomGeneric(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
     custom_dict: CustomGenericDict[str, int]
     optional_custom_dict: CustomGenericDict[str, str] | None
+
+
+class ModelWithStructuredGenericArguments(BaseModel):
+    """Model with structured generic, callable, and literal arguments."""
+
+    model_config = {"arbitrary_types_allowed": True}
+    callable_like_name: NotCallableGeneric[int]
+    literal_arguments: NotCallableGeneric[
+        Literal["typing.foo", "Callable", 0, True, None, b"bytes"]  # noqa: PYI061
+    ]
+    enum_literal: NotCallableGeneric[Literal[LiteralValueEnum.VALUE]]
+    flag_literal: NotCallableGeneric[Literal[LiteralFlagValue.READ]]
+    named_composite_flag_literal: NotCallableGeneric[Literal[LiteralFlagValue.READ_WRITE]]
+    int_flag_literal: NotCallableGeneric[Literal[LiteralIntFlagValue.READ]]
+    named_composite_int_flag_literal: NotCallableGeneric[Literal[LiteralIntFlagValue.READ_WRITE]]
+    nested_enum_literal: NotCallableGeneric[Literal[LiteralEnumContainer.NestedValue.VALUE]]
+    mixed_enum_literal: NotCallableGeneric[Literal[LiteralValueEnum.VALUE, LiteralEnumContainer.NestedValue.VALUE]]
+    same_named_enum_literal: NotCallableGeneric[Literal[FirstStatus.ACTIVE, SecondStatus.INACTIVE]]
+    fixed_callable: NotCallableGeneric[Callable[[int, str], bool]]
+    typing_callable: NotCallableGeneric[typing.Callable[[bytes], float]]
+    variadic_callable: NotCallableGeneric[Callable[..., str]]
+    empty_callable: NotCallableGeneric[Callable[[], None]]
+    raw_callable: NotCallableGeneric[Callable]
+    parameter_specification: NotCallableGeneric[Callable[P, int]]
+    concatenated: NotCallableGeneric[Callable[Concatenate[str, P], int]]
 
 
 # Import DefaultPutDict for testing real-world generic type import

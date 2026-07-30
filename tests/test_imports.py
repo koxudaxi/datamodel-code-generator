@@ -221,6 +221,18 @@ def test_remove_dotted_import_keeps_bucket_when_other_dotted_imports_remain() ->
     assert imports.counter[None, "pathlib.Path"] == 1
 
 
+def test_remove_unused_dotted_import_uses_bound_package_name() -> None:
+    """A dotted import binds its top-level package rather than its final segment."""
+    imports = Imports()
+    imports.append(Import(from_=None, import_="package.submodule"))
+
+    imports.remove_unused({"package"})
+
+    assert str(imports) == "import package.submodule"
+    imports.remove_unused({"submodule"})
+    assert not str(imports)
+
+
 def test_remove_dotted_import_without_bucket_cleans_reference_path() -> None:
     """Defensive dotted import removal still clears counters and reference paths."""
     imports = Imports()

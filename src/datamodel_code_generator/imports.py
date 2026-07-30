@@ -165,8 +165,10 @@ class Imports(defaultdict[str | None, set[str]]):
         return f"__all__ = [{items}]"
 
     def get_effective_name(self, from_: str | None, import_: str) -> str:
-        """Get the effective name after alias resolution."""
-        return self.alias.get(from_, {}).get(import_, import_)
+        """Get the name bound by an import after alias resolution."""
+        if alias := self.alias.get(from_, {}).get(import_):
+            return alias
+        return import_.partition(".")[0] if from_ is None else import_
 
     def remove_unused(self, used_names: set[str]) -> None:
         """Remove imports not referenced in used_names.
