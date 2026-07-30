@@ -3833,6 +3833,23 @@ def test_main_openapi_allof_required_inherited_dataclass_metadata(
         expected_attribute_path=("inheritedScalar",),
         expected_attribute_value="fresh",
     )
+
+    literal_default_payload = {
+        "literalDefault": "fresh",
+        "afterLiteral": 1,
+    }
+    for required_field in literal_default_payload:
+        assert_generated_model_json_invalid(
+            output_file,
+            module_name=f"allof_required_dataclass_metadata_{expected_name}_literal_{required_field}",
+            model_name="LiteralDefaultChild",
+            invalid_json=json.dumps({
+                field_name: value
+                for field_name, value in literal_default_payload.items()
+                if field_name != required_field
+            }),
+            expected_error_type="missing",
+        )
     if additional_args:
         assert_generated_model_json_invalid(
             output_file,
@@ -3949,6 +3966,40 @@ def test_main_openapi_allof_required_inherited_dataclass_metadata(
             if model_type in {DataModelType.PydanticV2Dataclass, DataModelType.DataclassesDataclass}
             else None
         ),
+    )
+
+
+def test_main_openapi_allof_required_inherited_metadata_literal(output_file: Path) -> None:
+    """Do not interpret dataclass metadata text as a constructor default."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_required_inherited_metadata_literal.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="output_model_types/allof_required_inherited_metadata_literal_dataclasses_dataclass.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--formatters",
+            "builtin",
+            "--output-model-type",
+            DataModelType.DataclassesDataclass.value,
+            "--field-extra-keys",
+            "metadata",
+            "--strip-default-none",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_required_inherited_metadata_literal_dataclasses_dataclass",
+        model_name="MetadataLiteralChild",
+        valid_json='{"metadataOnly": null, "newRequired": 1}',
+        invalid_json="[]",
+        expected_error_type="dataclass_type",
+        expected_attribute_path=("mutableWithMetadata",),
+        expected_attribute_value=[],
+        expected_keyword_only_fields={"newRequired"},
     )
 
 

@@ -70,3 +70,12 @@ class OrderingChild(OrderingBase, kw_only=True):
     earlyFactory: list[str]
     lateFactory: list[str]
     newRequired: int
+
+
+class LiteralDefaultBase(Struct):
+    literalDefault: str | UnsetType = 'contains default_factory= marker'
+
+
+class LiteralDefaultChild(LiteralDefaultBase):
+    literalDefault: str
+    afterLiteral: int

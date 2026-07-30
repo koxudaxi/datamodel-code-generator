@@ -74,3 +74,12 @@ class OrderingChild(OrderingBase):
     earlyFactory: list[str]
     lateFactory: list[str]
     newRequired: int
+
+
+class LiteralDefaultBase(TypedDict):
+    literalDefault: NotRequired[str]
+
+
+class LiteralDefaultChild(LiteralDefaultBase):
+    literalDefault: str
+    afterLiteral: int

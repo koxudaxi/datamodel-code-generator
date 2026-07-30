@@ -49,12 +49,12 @@ def _has_pydantic_dataclass_field_assignment(field: DataModelFieldBase) -> bool:
 
 def _get_pydantic_dataclass_field_default_info(field: DataModelFieldBase) -> tuple[bool, bool]:
     """Return Pydantic dataclass constructor-default semantics."""
-    if not _has_pydantic_dataclass_field_assignment(field) or (field.required and not field.use_default_with_required):
-        return False, False
-    rendered_assignment = str(field)
-    if "default_factory=" in rendered_assignment:
-        return True, False
-    return True, True
+    return field._get_constructor_default_info()  # noqa: SLF001  # output-owned field policy hook
+
+
+def _pydantic_dataclass_field_participates_in_constructor(field: DataModelFieldBase) -> bool:
+    """Return whether a Pydantic dataclass field participates in __init__."""
+    return field.extras.get("x-is-classvar") is not True
 
 
 if TYPE_CHECKING:
@@ -75,6 +75,7 @@ class DataClass(_DataclassReuseMixin, DataModel):
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_PYDANTIC_DATACLASS,)
     FIELD_ASSIGNMENT_CHECKER = staticmethod(_has_pydantic_dataclass_field_assignment)
     FIELD_DEFAULT_CLASSIFIER = staticmethod(_get_pydantic_dataclass_field_default_info)
+    FIELD_PARTICIPATES_IN_CONSTRUCTOR = staticmethod(_pydantic_dataclass_field_participates_in_constructor)
     USES_DATACLASS_ARGUMENTS: ClassVar[bool] = True
     SUPPORTS_REQUIRED_INHERITED_FIELD_ASSIGNMENT: ClassVar[bool] = True
     REQUIRES_EXPLICIT_INHERITED_FACTORY_OVERRIDE: ClassVar[bool] = True
@@ -198,6 +199,17 @@ class _PydanticDataclassField(DataModelFieldV2):
         "kw_only",
         "repr",
     })
+
+    def _get_constructor_default_info(self) -> tuple[bool, bool]:
+        """Return constructor-default semantics from structured field state."""
+        if self.is_class_var:
+            self.__dict__["_computed_default_factory"] = None
+            return False, False
+        if not _has_pydantic_dataclass_field_assignment(self) or (self.required and not self.use_default_with_required):
+            return False, False
+        if self.__dict__.get("_computed_default_factory"):
+            return True, False
+        return True, True
 
     @property
     def requires_dataclass_field_assignment(self) -> bool:

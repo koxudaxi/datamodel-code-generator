@@ -38,14 +38,7 @@ def has_field_assignment(field: DataModelFieldBase) -> bool:
 
 def get_field_default_info(field: DataModelFieldBase) -> tuple[bool, bool]:
     """Return Python dataclass constructor-default semantics."""
-    if not has_field_assignment(field) or (field.required and not field.use_default_with_required):
-        return False, False
-    rendered_assignment = str(field)
-    if "default_factory=" in rendered_assignment:
-        return True, False
-    if rendered_assignment.startswith("field(") and "default=" not in rendered_assignment:
-        return False, False
-    return True, True
+    return field._get_constructor_default_info()  # noqa: SLF001  # output-owned field policy hook
 
 
 def field_participates_in_constructor(field: DataModelFieldBase) -> bool:
@@ -215,8 +208,8 @@ class DataModelField(DataModelFieldBase):
         """
         return _nested_model_default_factory(self, DataClass)
 
-    def __str__(self) -> str:
-        """Generate field() call or default value representation."""
+    def _get_field_data(self) -> dict[str, Any]:
+        """Return structured field() arguments before rendering."""
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._FIELD_KEYS}
 
         needs_nested_factory = (
@@ -245,17 +238,39 @@ class DataModelField(DataModelFieldBase):
                 }
             }
 
+        match data.get("default", UNDEFINED):
+            case list() | dict() | set() as default:
+                data.pop("default")
+                data["default_factory"] = (
+                    f"lambda: {represent_python_value(default)}" if default else type(default).__name__
+                )
+
+        return data
+
+    def _get_constructor_default_info(self) -> tuple[bool, bool]:
+        """Return constructor-default semantics from structured field data."""
+        if self.required and not self.use_default_with_required:
+            return False, False
+        data = self._get_field_data()
+        has_rendered_assignment = bool(data) or self._has_forced_field_assignment
+        if (not data and self._has_forced_field_assignment) or not (
+            (has_rendered_assignment and not self.use_annotated) or not self.should_strip_default_none()
+        ):
+            return False, False
+        if "default_factory" in data:
+            return True, False
+        if data and "default" not in data:
+            return False, False
+        return True, True
+
+    def __str__(self) -> str:
+        """Generate field() call or default value representation."""
+        data = self._get_field_data()
         if not data:
             return "field()" if self._has_forced_field_assignment else ""
 
         if len(data) == 1 and "default" in data:
-            default = data["default"]
-
-            if isinstance(default, (list, dict, set)):
-                if default:
-                    return f"field(default_factory=lambda: {represent_python_value(default)})"
-                return f"field(default_factory={type(default).__name__})"
-            return represent_python_value(default)
+            return represent_python_value(data["default"])
         kwargs = [f"{k}={v if k == 'default_factory' else represent_python_value(v)}" for k, v in data.items()]
         return f"field({', '.join(kwargs)})"
 

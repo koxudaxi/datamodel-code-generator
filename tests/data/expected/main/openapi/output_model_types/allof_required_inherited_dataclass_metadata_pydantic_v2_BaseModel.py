@@ -74,3 +74,12 @@ class OrderingChild(OrderingBase):
     earlyFactory: list[str]
     lateFactory: list[str]
     newRequired: int
+
+
+class LiteralDefaultBase(BaseModel):
+    literalDefault: str | None = 'contains default_factory= marker'
+
+
+class LiteralDefaultChild(LiteralDefaultBase):
+    literalDefault: str
+    afterLiteral: int

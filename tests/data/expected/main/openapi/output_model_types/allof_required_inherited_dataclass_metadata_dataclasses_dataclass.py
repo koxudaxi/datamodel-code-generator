@@ -81,3 +81,14 @@ class OrderingChild(OrderingBase):
     earlyFactory: list[str]
     lateFactory: list[str] = field(kw_only=True)
     newRequired: int = field(kw_only=True)
+
+
+@dataclass
+class LiteralDefaultBase:
+    literalDefault: str | None = 'contains default_factory= marker'
+
+
+@dataclass
+class LiteralDefaultChild(LiteralDefaultBase):
+    afterLiteral: int
+    literalDefault: str = field()

@@ -920,6 +920,10 @@ class DataModelFieldBase(_BaseModel):
         """Render an explicit required-field assignment without changing its semantics."""
         self.__dict__["_forced_field_assignment"] = True
 
+    def _get_constructor_default_info(self) -> tuple[bool, bool]:
+        """Return neutral constructor-default semantics for this field."""
+        return _get_field_default_info(self)
+
     @property
     def _has_forced_field_assignment(self) -> bool:
         """Return whether an explicit required-field assignment must be rendered."""

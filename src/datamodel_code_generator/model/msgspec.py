@@ -59,14 +59,7 @@ def has_field_assignment(field: DataModelFieldBase) -> bool:
 
 def get_field_default_info(field: DataModelFieldBase) -> tuple[bool, bool]:
     """Return msgspec constructor-default semantics."""
-    if not has_field_assignment(field) or (field.required and not field.use_default_with_required):
-        return False, False
-    rendered_assignment = str(field)
-    if "default_factory=" in rendered_assignment:
-        return True, False
-    if rendered_assignment.startswith("field(") and "default=" not in rendered_assignment:
-        return False, False
-    return True, True
+    return field._get_constructor_default_info()  # noqa: SLF001  # output-owned field policy hook
 
 
 DataModelFieldBaseT = TypeVar("DataModelFieldBaseT", bound=DataModelFieldBase)
@@ -433,8 +426,8 @@ class DataModelField(DataModelFieldBase):
             return None
         return result
 
-    def __str__(self) -> str:  # noqa: PLR0912
-        """Generate field() call or default value representation."""
+    def _get_field_data(self) -> dict[str, Any]:
+        """Return structured field() arguments before rendering."""
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._FIELD_KEYS}
         if self.alias is not None:
             data["name"] = self.alias
@@ -478,6 +471,22 @@ class DataModelField(DataModelFieldBase):
                 data["default_factory"] = nested_model_name
                 data.pop("default", None)
 
+        return data
+
+    def _get_constructor_default_info(self) -> tuple[bool, bool]:
+        """Return constructor-default semantics from structured field data."""
+        if not has_field_assignment(self) or (self.required and not self.use_default_with_required):
+            return False, False
+        data = self._get_field_data()
+        if "default_factory" in data:
+            return True, False
+        if data and "default" not in data:
+            return False, False
+        return True, True
+
+    def __str__(self) -> str:
+        """Generate field() call or default value representation."""
+        data = self._get_field_data()
         if not data:
             return ""
 

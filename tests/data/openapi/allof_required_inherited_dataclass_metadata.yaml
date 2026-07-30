@@ -161,3 +161,22 @@ components:
             lateFactory: {}
             newRequired:
               type: integer
+
+    LiteralDefaultBase:
+      type: object
+      properties:
+        literalDefault:
+          type: string
+          default: contains default_factory= marker
+
+    LiteralDefaultChild:
+      allOf:
+        - $ref: "#/components/schemas/LiteralDefaultBase"
+        - type: object
+          required:
+            - literalDefault
+            - afterLiteral
+          properties:
+            literalDefault: {}
+            afterLiteral:
+              type: integer
