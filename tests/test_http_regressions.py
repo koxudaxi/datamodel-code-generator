@@ -70,7 +70,7 @@ def test_http_stack_rejects_unknown_public_policy() -> None:
         _get_http_stack(cast("HTTPBackend", "invalid"))
 
 
-def test_get_body_validates_the_paired_core_before_fetching(mocker: "MockerFixture") -> None:
+def test_get_body_validates_the_paired_core_before_fetching(mocker: MockerFixture) -> None:
     """Report a missing paired core instead of fetching or falling back."""
     stack = _load_http_stack("httpx")
     missing_httpcore = ModuleNotFoundError("No module named 'httpcore'", name="httpcore")
