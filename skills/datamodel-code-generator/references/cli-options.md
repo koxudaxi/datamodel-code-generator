@@ -13,13 +13,14 @@ uv run python scripts/build_datamodel_codegen_skill_docs.py
 
 Input sources, output paths, and schema version handling.
 
+- `--http-backend`: Select the HTTP client backend. 'auto' (default) selects stable HTTPX when its client module is installed and only selects experimental HTTPX2 when that module is absent. 'httpx' and 'httpx2' require that exact backend. Explicit selections and paired dependency errors do not fall back. Choices: `auto`, `httpx`, `httpx2`.
 - `--input`: Input file/directory (default: stdin)
 - `--input-file-type`: Input file type (default: auto). Use 'jsonschema', 'openapi', 'asyncapi', 'graphql', 'mcp-tools', 'xmlschema', 'protobuf', or 'avro' for schema definitions. Use 'json', 'yaml', or 'csv' for raw sample data to infer a schema automatically. Choices: `auto`, `openapi`, `asyncapi`, `jsonschema`, `mcp-tools`, `xmlschema`, `protobuf`, `avro`, `json`, `yaml`, `dict`, `csv`, `graphql`.
 - `--external-ref-mapping`: Map external $ref file paths to Python import packages instead of generating duplicate classes. Accepts one or more mappings after a single flag. Format: "path/to/schema.yaml=mypackage.models". When a $ref points to a mapped file, an import statement is generated instead of a class definition.
 - `--output`: Output file (default: stdout)
 - `--emit-model-metadata`: Write a separate JSON map from source schema references to generated models and fields.
 - `--preset`: Apply an immutable built-in option preset. Preset names include the target Python version so generated syntax is pinned. Choices: `standard-py310-20260619`, `standard-py311-20260619`, `standard-py312-20260619`, `standard-py313-20260619`, `standard-py314-20260619`, `practical-py310-20260619`, `practical-py311-20260619`, `practical-py312-20260619`, `practical-py313-20260619`, `practical-py314-20260619`.
-- `--url`: Input file URL. `--input` is ignored when `--url` is used
+- `--url`: Input file URL. `--input` is ignored when `--url` is used. For HTTP(S), datamodel-code-generator[http] remains the stable HTTPX backend and is not deprecated, while datamodel-code-generator[httpx2] is experimental. The default --http-backend auto policy selects stable HTTPX when its client module is installed and selects HTTPX2 only when that module is absent. Select --http-backend httpx2 to require the experimental backend. Explicit selections and paired dependency errors do not fall back.
 - `--input-model`: Python import path or file path to a Pydantic v2 model or schema dict (e.g., 'mypackage.module:ClassName', './models.py:ClassName', or 'mypackage.schemas:SCHEMA_DICT'). Can be specified multiple times for related models with inheritance. For dict input, --input-file-type is required. Cannot be used with --input or --url.
 - `--input-model-ref-strategy`: Strategy for referenced types in --input-model. 'regenerate-all': Regenerate all types. 'reuse-foreign': Reuse types from different families (Enum, etc.), regenerate same-family. 'reuse-all': Reuse all referenced types via import. If not specified, defaults to regenerate-all behavior. Choices: `regenerate-all`, `reuse-foreign`, `reuse-all`.
 - `--encoding`: The encoding of input and output (default: utf-8)
@@ -223,7 +224,7 @@ General utility, HTTP, checking, and project integration options.
 - `--debug`: show debug message (require "debug". `$ pip install 'datamodel-code-generator[debug]'`)
 - `--disable-warnings`: disable warnings
 - `--list-deprecations`: List registered deprecations and scheduled breaking changes, then exit. Choices: `table`, `json`, `markdown`.
-- `--list-experimental`: List registered experimental features, then exit. Choices: `table`, `json`, `markdown`.
+- `--list-experimental`: List registered experimental features and their compatibility notes, then exit. Choices: `table`, `json`, `markdown`.
 - `--help` (alias: `-h`): show this help message and exit
 - `--no-color`: disable colorized output
 - `--output-format`: Format for command output (default: text). Use json for structured output when supported. Choices: `text`, `json`.

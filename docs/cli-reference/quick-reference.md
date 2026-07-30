@@ -19,6 +19,7 @@ datamodel-codegen [OPTIONS]
 | [`--emit-model-metadata`](base-options.md#emit-model-metadata) | Write a separate JSON map from source schema references to the final generated m... |
 | [`--encoding`](base-options.md#encoding) | Specify character encoding for input and output files. |
 | [`--external-ref-mapping`](base-options.md#external-ref-mapping) | Map external `$ref` files to Python packages. |
+| [`--http-backend`](base-options.md#http-backend) | Select the HTTP client backend for remote schemas. |
 | [`--input`](base-options.md#input) | Specify the input schema file path. |
 | [`--input-file-type`](base-options.md#input-file-type) | Specify the input file type for code generation. |
 | [`--input-model`](base-options.md#input-model) | Import a Python type or dict schema from a module or Python file. |
@@ -27,7 +28,7 @@ datamodel-codegen [OPTIONS]
 | [`--preset`](base-options.md#preset) | Apply an immutable built-in option preset. |
 | [`--schema-version`](base-options.md#schema-version) | Schema version to use for parsing. |
 | [`--schema-version-mode`](base-options.md#schema-version-mode) | Schema version validation mode. |
-| [`--url`](base-options.md#url) | Fetch schema from URL with custom HTTP headers. |
+| [`--url`](base-options.md#url) | Fetch a schema from a URL with custom HTTP headers. |
 
 ### 🔧 Typing Customization
 
@@ -209,7 +210,7 @@ datamodel-codegen [OPTIONS]
 | [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout) | Fail instead of concatenating multiple modules in text stdout. |
 | [`--generate-cli-command`](general-options.md#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
 | [`--generate-pyproject-config`](general-options.md#generate-pyproject-config) | Generate pyproject.toml configuration from CLI arguments. |
-| [`--http-headers`](general-options.md#http-headers) | Fetch schema from URL with custom HTTP headers. |
+| [`--http-headers`](general-options.md#http-headers) | Fetch a schema from a URL with custom HTTP headers. |
 | [`--http-ignore-tls`](general-options.md#http-ignore-tls) | Disable TLS certificate verification for HTTPS requests. |
 | [`--http-local-ref-path`](general-options.md#http-local-ref-path) | Resolve HTTP references from local schema files. |
 | [`--http-query-parameters`](general-options.md#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
@@ -307,7 +308,8 @@ All options sorted alphabetically:
 - [`--generate-schema-validators`](template-customization.md#generate-schema-validators) - Generate experimental Pydantic v2 model validators for JSON ...
 - [`--graphql-no-typename`](graphql-only-options.md#graphql-no-typename) - Exclude __typename field from generated GraphQL models.
 - [`--help`](utility-options.md#help) - Show help message and exit
-- [`--http-headers`](general-options.md#http-headers) - Fetch schema from URL with custom HTTP headers.
+- [`--http-backend`](base-options.md#http-backend) - Select the HTTP client backend for remote schemas.
+- [`--http-headers`](general-options.md#http-headers) - Fetch a schema from a URL with custom HTTP headers.
 - [`--http-ignore-tls`](general-options.md#http-ignore-tls) - Disable TLS certificate verification for HTTPS requests.
 - [`--http-local-ref-path`](general-options.md#http-local-ref-path) - Resolve HTTP references from local schema files.
 - [`--http-query-parameters`](general-options.md#http-query-parameters) - Add query parameters to HTTP requests for remote schemas.
@@ -375,7 +377,7 @@ All options sorted alphabetically:
 - [`--type-mappings`](typing-customization.md#type-mappings) - Override default type mappings for schema formats.
 - [`--type-overrides`](typing-customization.md#type-overrides) - Replace schema model types with custom Python types via JSON...
 - [`--union-mode`](model-customization.md#union-mode) - Union mode for combining anyOf/oneOf schemas (smart or left_...
-- [`--url`](base-options.md#url) - Fetch schema from URL with custom HTTP headers.
+- [`--url`](base-options.md#url) - Fetch a schema from a URL with custom HTTP headers.
 - [`--use-annotated`](typing-customization.md#use-annotated) - Use typing.Annotated for Field() with constraints.
 - [`--use-attribute-docstrings`](field-customization.md#use-attribute-docstrings) - Generate field descriptions as attribute docstrings instead ...
 - [`--use-closed-typed-dict`](typing-customization.md#use-closed-typed-dict) - Generate TypedDict with PEP 728 closed/extra_items (default:...

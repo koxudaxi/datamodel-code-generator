@@ -1,8 +1,14 @@
 """HTTP utilities for fetching remote schema files.
 
 Provides functions to fetch schema content from URLs and join URL references.
-HTTP(S) URLs require the 'http' extra: `pip install 'datamodel-code-generator[http]'`.
-file:// URLs are handled without additional dependencies.
+HTTP(S) operations require either the stable `datamodel-code-generator[http]` extra
+(`httpx` with `httpcore`) or the experimental `datamodel-code-generator[httpx2]`
+extra (`httpx2` with `httpcore2`). Backend selection is lazy and process-cached.
+The default policy selects stable HTTPX when its client module is installed and
+only tries experimental HTTPX2 when that module is absent. Explicit selections
+never fall back.
+Missing paired or internal dependencies are reported instead of being hidden.
+Joining file:// URLs uses a dependency-free local fast path.
 """
 
 from __future__ import annotations
@@ -10,141 +16,318 @@ from __future__ import annotations
 import contextlib
 import socket
 import ssl
+from _thread import allocate_lock  # noqa: PLC2701
 from collections import OrderedDict
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Sequence  # noqa: TC003  # Runtime public annotation introspection
+from dataclasses import dataclass, field
 from ipaddress import IPv4Address, IPv6Address, IPv6Network, ip_address
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Protocol, cast, overload
+from typing import TYPE_CHECKING, Generic, Literal, TypeVar, cast
 from urllib.parse import urlparse
 
 from typing_extensions import Self
 
 from datamodel_code_generator import SchemaFetchError
+from datamodel_code_generator.enums import HTTPBackend
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Mapping
     from types import TracebackType
+    from typing import Protocol, overload
 
-    import httpcore
-    import httpx
+    class _ResponseHeaders(Protocol):
+        @overload
+        def get(self, key: str) -> str | None: ...
 
+        @overload
+        def get(self, key: str, default: str) -> str: ...
 
-class _ResponseHeaders(Protocol):
-    @overload
-    def get(self, key: str) -> str | None: ...
-
-    @overload
-    def get(self, key: str, default: str) -> str: ...
-
-
-class _HTTPResponse(Protocol):
-    status_code: int
-    headers: _ResponseHeaders
-    text: str
+    class _HTTPResponse(Protocol):
+        status_code: int
+        headers: _ResponseHeaders
+        text: str
 
 
-class _HTTPCookies(Protocol):
-    def clear(self) -> None:
-        raise NotImplementedError  # pragma: no cover
+_HTTPTransportT_co = TypeVar("_HTTPTransportT_co", bound="_HTTPTransport", covariant=True)
 
 
-class _HTTPXClient(Protocol):
-    cookies: _HTTPCookies
+if TYPE_CHECKING:
 
-    def __enter__(self) -> Self: ...
+    class _HTTPTransportURL(Protocol):
+        @property
+        def raw_scheme(self) -> bytes: ...
 
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None: ...
+        @property
+        def raw_host(self) -> bytes: ...
 
-    def get(
-        self,
-        url: str,
-        *,
-        headers: Sequence[tuple[str, str]] | None,
-        follow_redirects: bool,
-        params: Sequence[tuple[str, str]] | None,
-    ) -> _HTTPResponse: ...
+        @property
+        def port(self) -> int | None: ...
 
-    def close(self) -> None:
-        raise NotImplementedError  # pragma: no cover
+        @property
+        def raw_path(self) -> bytes: ...
 
+    class _HTTPTransportHeaders(Protocol):
+        @property
+        def raw(self) -> Sequence[tuple[bytes, bytes]]: ...
 
-class _HTTPXClientFactory(Protocol):
-    def __call__(
-        self,
-        *,
-        transport: httpx.BaseTransport | None = None,
-        timeout: float,
-        verify: bool = True,
-    ) -> _HTTPXClient:
-        raise NotImplementedError  # pragma: no cover
+    # Extension payloads are dynamically typed upstream. Keep them opaque so values must be narrowed before use.
+    _Extensions = Mapping[str, object]
 
+    class _HTTPTransportRequest(Protocol):
+        @property
+        def method(self) -> str: ...
 
-class _HTTPXURLJoiner(Protocol):
-    def join(self, url: str) -> _HTTPXURLJoiner: ...
+        @property
+        def url(self) -> _HTTPTransportURL: ...
 
-    def __str__(self) -> str: ...
+        @property
+        def headers(self) -> _HTTPTransportHeaders: ...
 
+        @property
+        def stream(self) -> Iterable[bytes]: ...
 
-class _HTTPXURLFactory(Protocol):
-    def __call__(self, url: str) -> _HTTPXURLJoiner: ...
+        @property
+        def extensions(self) -> _Extensions: ...
 
+    class _HTTPTransport(Protocol):
+        def handle_request(self, request: _HTTPTransportRequest) -> _HTTPResponse: ...
 
-class _HTTPXModule(Protocol):
-    Client: _HTTPXClientFactory
-    URL: _HTTPXURLFactory
+        def close(self) -> None: ...
 
-    def get(  # noqa: PLR0913
-        self,
-        url: str,
-        *,
-        headers: Sequence[tuple[str, str]] | None,
-        verify: bool,
-        follow_redirects: bool,
-        params: Sequence[tuple[str, str]] | None,
-        timeout: float,
-    ) -> _HTTPResponse: ...
+    _SocketOption = tuple[int, int, int] | tuple[int, int, bytes | bytearray] | tuple[int, int, None, int]
+
+    class _HTTPTransportFactory(Protocol[_HTTPTransportT_co]):
+        def __call__(
+            self,
+            *,
+            pinned_host: str,
+            pinned_ips: tuple[IPv4Address | IPv6Address, ...],
+            verify: bool,
+        ) -> _HTTPTransportT_co: ...
 
 
-class _ClosableByteStream(Iterable[bytes], Protocol):
-    def close(self) -> None: ...
+if TYPE_CHECKING:
+
+    class _HTTPCookies(Protocol):
+        def clear(self) -> None: ...
+
+    class _HTTPXClient(Protocol):
+        cookies: _HTTPCookies
+
+        def __enter__(self) -> Self: ...
+
+        def __exit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc_value: BaseException | None,
+            traceback: TracebackType | None,
+        ) -> None: ...
+
+        def get(
+            self,
+            url: str,
+            *,
+            headers: Sequence[tuple[str, str]] | None,
+            follow_redirects: bool,
+            params: Sequence[tuple[str, str]] | None,
+        ) -> _HTTPResponse: ...
+
+        def close(self) -> None: ...
+
+    class _HTTPXClientFactory(Protocol):
+        def __call__(
+            self,
+            *,
+            transport: _HTTPTransport | None = None,
+            timeout: float,
+            verify: bool = True,
+        ) -> _HTTPXClient: ...
+
+    class _HTTPXURLJoiner(Protocol):
+        def join(self, url: str) -> _HTTPXURLJoiner: ...
+
+        def __str__(self) -> str: ...
+
+    class _HTTPXURLFactory(Protocol):
+        def __call__(self, url: str) -> _HTTPXURLJoiner: ...
+
+    class _HTTPXResponseFactory(Protocol):
+        def __call__(
+            self,
+            status_code: int,
+            *,
+            headers: Sequence[tuple[bytes, bytes]],
+            content: bytes,
+            extensions: _Extensions,
+            request: _HTTPTransportRequest,
+        ) -> _HTTPResponse: ...
+
+    class _HTTPXModule(Protocol):
+        BaseTransport: type[_HTTPTransport]
+        Client: _HTTPXClientFactory
+        Response: _HTTPXResponseFactory
+        URL: _HTTPXURLFactory
+
+        def get(  # noqa: PLR0913
+            self,
+            url: str,
+            *,
+            headers: Sequence[tuple[str, str]] | None,
+            verify: bool,
+            follow_redirects: bool,
+            params: Sequence[tuple[str, str]] | None,
+            timeout: float,
+        ) -> _HTTPResponse: ...
 
 
-class _NetworkBackend(Protocol):
-    def connect_tcp(
-        self,
-        host: str,
-        port: int,
-        timeout: float | None = None,
-        local_address: str | None = None,
-        socket_options: Iterable[tuple[int, int, int | bytes]] | None = None,
-    ) -> httpcore.NetworkStream: ...
-
-    def connect_unix_socket(
-        self,
-        path: str,
-        timeout: float | None = None,
-        socket_options: Iterable[tuple[int, int, int | bytes]] | None = None,
-    ) -> httpcore.NetworkStream: ...
-
-    def sleep(self, seconds: float) -> None: ...
+_HTTPBackendName = Literal["httpx", "httpx2"]
+_HTTPCoreBackendName = Literal["httpcore", "httpcore2"]
 
 
-def _get_httpx() -> _HTTPXModule:
-    """Lazily import httpx, raising a helpful error if not installed."""
-    try:
-        import httpx  # noqa: PLC0415
-    except ImportError as exc:  # pragma: no cover
-        msg = "Please run `$pip install 'datamodel-code-generator[http]`' to resolve HTTP(S) URL references"
-        raise Exception(msg) from exc  # noqa: TRY002
-    return cast("_HTTPXModule", httpx)
+_NetworkStreamT_co = TypeVar("_NetworkStreamT_co", bound="_NetworkStream", covariant=True)
+_NetworkStreamT = TypeVar("_NetworkStreamT", bound="_NetworkStream")
+
+
+if TYPE_CHECKING:
+
+    class _ClosableByteStream(Iterable[bytes], Protocol):
+        def close(self) -> None: ...
+
+    class _NetworkStream(Protocol):
+        def read(self, max_bytes: int, timeout: float | None = None) -> bytes: ...
+
+        def write(self, buffer: bytes, timeout: float | None = None) -> None: ...
+
+        def close(self) -> None: ...
+
+        def start_tls(
+            self,
+            ssl_context: ssl.SSLContext,
+            server_hostname: str | None = None,
+            timeout: float | None = None,
+        ) -> Self: ...
+
+    class _NetworkBackend(Protocol[_NetworkStreamT_co]):
+        def connect_tcp(
+            self,
+            host: str,
+            port: int,
+            timeout: float | None = None,
+            local_address: str | None = None,
+            socket_options: Iterable[_SocketOption] | None = None,
+        ) -> _NetworkStreamT_co: ...
+
+        def connect_unix_socket(
+            self,
+            path: str,
+            timeout: float | None = None,
+            socket_options: Iterable[_SocketOption] | None = None,
+        ) -> _NetworkStreamT_co: ...
+
+        def sleep(self, seconds: float) -> None: ...
+
+
+if TYPE_CHECKING:
+
+    class _HTTPCoreURL(Protocol):
+        scheme: bytes
+        host: bytes
+        port: int | None
+        target: bytes
+
+    class _HTTPCoreRequest(Protocol):
+        method: bytes
+        url: _HTTPCoreURL
+        headers: Sequence[tuple[bytes, bytes]]
+        stream: Iterable[bytes]
+        extensions: _Extensions
+
+    class _HTTPCoreResponse(Protocol):
+        status: int
+        headers: Sequence[tuple[bytes, bytes]]
+        stream: _ClosableByteStream
+        extensions: _Extensions
+
+    class _HTTPCoreURLFactory(Protocol):
+        def __call__(
+            self,
+            *,
+            scheme: bytes,
+            host: bytes,
+            port: int | None,
+            target: bytes,
+        ) -> _HTTPCoreURL: ...
+
+    class _HTTPCoreRequestFactory(Protocol):
+        def __call__(
+            self,
+            method: str,
+            url: _HTTPCoreURL,
+            *,
+            headers: Sequence[tuple[bytes, bytes]],
+            content: Iterable[bytes],
+            extensions: _Extensions,
+        ) -> _HTTPCoreRequest: ...
+
+    class _HTTPCoreConnectionPool(Protocol):
+        def handle_request(self, request: _HTTPCoreRequest) -> _HTTPCoreResponse: ...
+
+        def close(self) -> None: ...
+
+    class _HTTPCoreConnectionPoolFactory(Protocol):
+        def __call__(
+            self,
+            *,
+            ssl_context: ssl.SSLContext | None,
+            network_backend: _NetworkBackend[_NetworkStream],
+        ) -> _HTTPCoreConnectionPool: ...
+
+    class _NetworkBackendFactory(Protocol):
+        def __call__(self) -> _NetworkBackend[_NetworkStream]: ...
+
+    class _HTTPCoreModule(Protocol):
+        ConnectionPool: _HTTPCoreConnectionPoolFactory
+        Request: _HTTPCoreRequestFactory
+        SyncBackend: _NetworkBackendFactory
+        URL: _HTTPCoreURLFactory
+
+
+@dataclass(slots=True)
+class _HTTPStack(Generic[_HTTPTransportT_co]):
+    """One matched HTTP client/core pair selected for this process."""
+
+    backend: _HTTPBackendName
+    httpx: _HTTPXModule
+    core_backend: _HTTPCoreBackendName
+    _transport_type: _HTTPTransportFactory[_HTTPTransportT_co] | None = field(default=None, init=False, repr=False)
+
+    @property
+    def transport_type(self) -> _HTTPTransportFactory[_HTTPTransportT_co]:
+        """Return the process-cached transport factory after importing the paired core."""
+        if (transport_type := self._transport_type) is not None:
+            return transport_type
+
+        with _HTTP_CACHE_LOCK:
+            if (transport_type := self._transport_type) is None:  # pragma: no branch - False only after a cache race.
+                from importlib import import_module  # noqa: PLC0415
+
+                httpcore_module = cast("_HTTPCoreModule", import_module(self.core_backend))
+                transport_type = cast(
+                    "_HTTPTransportFactory[_HTTPTransportT_co]",
+                    _create_pinned_transport_type(self.httpx, httpcore_module),
+                )
+                self._transport_type = transport_type
+        return transport_type
+
+
+_HTTP_CACHE_LOCK = allocate_lock()
+_HTTP_STACKS: dict[_HTTPBackendName, _HTTPStack[_HTTPTransport]] = {}
+_AUTO_HTTP_STACK: _HTTPStack[_HTTPTransport] | None = None
 
 
 DEFAULT_HTTP_TIMEOUT = 30.0
 MAX_HTTP_REDIRECTS = 20
+_HTTP_BACKEND_PRIORITY: tuple[_HTTPBackendName, ...] = ("httpx", "httpx2")
 _HTTP_FETCH_CLIENT_CACHE_MAX_SIZE = 32
 _HTTP_FETCH_DNS_CACHE_MAX_SIZE = 128
 _HTTP_REDIRECT_STATUS_CODES = frozenset({301, 302, 303, 307, 308})
@@ -304,7 +487,7 @@ def _deduplicate_ips(ips: Iterable[IPv4Address | IPv6Address | None]) -> tuple[I
 def _normalize_dns_host(host: bytes | str | None) -> str | None:
     """Normalize a URL or transport host to the ASCII DNS name used for pinning.
 
-    httpcore connects with an ASCII DNS name, including IDNA encoding for Unicode hostnames. Using the same
+    The HTTP client core connects with an ASCII DNS name, including IDNA encoding for Unicode hostnames. Using the same
     comparison form prevents Unicode and punycode spelling differences from bypassing the pinned host check.
     """
     if host is None:
@@ -322,8 +505,8 @@ def _normalize_dns_host(host: bytes | str | None) -> str | None:
         return None
 
 
-class _PinnedNetworkBackend:
-    """httpcore network backend that connects only to previously validated addresses.
+class _PinnedNetworkBackend(Generic[_NetworkStreamT]):
+    """HTTP network backend that connects only to previously validated addresses.
 
     URL validation happens before the HTTP request, but DNS could otherwise be resolved again during the TCP
     connect. This backend closes that gap by refusing host changes and trying only the validated IP set.
@@ -334,11 +517,11 @@ class _PinnedNetworkBackend:
         *,
         pinned_host: str,
         pinned_ips: tuple[IPv4Address | IPv6Address, ...],
-        backend: _NetworkBackend,
+        backend: _NetworkBackend[_NetworkStreamT],
     ) -> None:
         """Store the validated host, validated IPs, and wrapped backend.
 
-        The host is normalized once so URL validation and httpcore's connection host are compared in the same
+        The host is normalized once so URL validation and the client's connection host are compared in the same
         ASCII DNS form.
         """
         self._pinned_host = _normalize_dns_host(pinned_host)
@@ -351,8 +534,8 @@ class _PinnedNetworkBackend:
         port: int,
         timeout: float | None = None,
         local_address: str | None = None,
-        socket_options: Iterable[tuple[int, int, int | bytes]] | None = None,
-    ) -> httpcore.NetworkStream:
+        socket_options: Iterable[_SocketOption] | None = None,
+    ) -> _NetworkStreamT:
         """Open a TCP connection through the pinned addresses for the validated host.
 
         A host mismatch raises before any DNS fallback. That keeps redirects, IDNA edge cases, or transport
@@ -383,18 +566,18 @@ class _PinnedNetworkBackend:
         self,
         path: str,
         timeout: float | None = None,
-        socket_options: Iterable[tuple[int, int, int | bytes]] | None = None,
-    ) -> httpcore.NetworkStream:
+        socket_options: Iterable[_SocketOption] | None = None,
+    ) -> _NetworkStreamT:
         """Delegate Unix socket connections to the wrapped backend.
 
-        DNS pinning only applies to TCP hostnames, but httpcore expects a complete network backend interface.
+        DNS pinning only applies to TCP hostnames, but the HTTP core expects a complete network backend interface.
         """
         return self._backend.connect_unix_socket(path, timeout=timeout, socket_options=socket_options)
 
     def sleep(self, seconds: float) -> None:
         """Delegate backend sleeps unchanged.
 
-        This preserves httpcore's backend contract while keeping the pinning logic scoped to TCP connects.
+        This preserves the HTTP core's backend contract while keeping the pinning logic scoped to TCP connects.
         """
         self._backend.sleep(seconds)
 
@@ -402,7 +585,7 @@ class _PinnedNetworkBackend:
 def _create_ssl_context(*, verify: bool) -> ssl.SSLContext | None:
     """Create the SSL context used by the pinned transport.
 
-    Returning `None` preserves httpcore's normal certificate verification. A custom context is needed only when
+    Returning `None` preserves the HTTP core's normal certificate verification. A custom context is needed only when
     the caller requested the existing `ignore_tls` behavior.
     """
     if verify:
@@ -413,52 +596,40 @@ def _create_ssl_context(*, verify: bool) -> ssl.SSLContext | None:
     return context
 
 
-def _build_pinned_transport(
-    *,
-    pinned_host: str,
-    pinned_ips: tuple[IPv4Address | IPv6Address, ...],
-    verify: bool,
-) -> httpx.BaseTransport:
-    """Build an httpx transport whose TCP connects use the pinned address set.
+def _create_pinned_transport_type(
+    httpx_module: _HTTPXModule,
+    httpcore_module: _HTTPCoreModule,
+) -> _HTTPTransportFactory[_HTTPTransport]:
+    """Create one transport class for a matched HTTP client/core pair."""
 
-    httpx does not expose a per-request resolved-IP hook, so this transport keeps normal request/response
-    handling while replacing the lower-level httpcore network backend used for connection creation.
-    """
-    import httpcore  # noqa: PLC0415
-    import httpx as httpx_runtime  # noqa: PLC0415
+    class _PinnedHTTPTransport(httpx_module.BaseTransport):
+        """Transport bound to a DNS-pinned HTTP connection pool."""
 
-    network_backend = cast(
-        "httpcore.NetworkBackend",
-        _PinnedNetworkBackend(
-            pinned_host=pinned_host,
-            pinned_ips=pinned_ips,
-            backend=cast("_NetworkBackend", httpcore.SyncBackend()),
-        ),
-    )
+        __slots__ = ("_pool",)
 
-    class _PinnedHTTPTransport(httpx_runtime.BaseTransport):
-        """Transport bound to a pinned httpcore connection pool."""
-
-        def __init__(self) -> None:
-            """Create the pool with the pinned backend.
-
-            Parser sessions cache this transport only for the matching validated host,
-            address set, TLS policy, and timeout.
-            """
-            self._pool = httpcore.ConnectionPool(
+        def __init__(
+            self,
+            *,
+            pinned_host: str,
+            pinned_ips: tuple[IPv4Address | IPv6Address, ...],
+            verify: bool,
+        ) -> None:
+            """Create a pool whose TCP connections use only validated addresses."""
+            network_backend = _PinnedNetworkBackend(
+                pinned_host=pinned_host,
+                pinned_ips=pinned_ips,
+                backend=httpcore_module.SyncBackend(),
+            )
+            self._pool = httpcore_module.ConnectionPool(
                 ssl_context=_create_ssl_context(verify=verify),
                 network_backend=network_backend,
             )
 
-        def handle_request(self, request: httpx.Request) -> httpx.Response:
-            """Send an httpx request through httpcore and return an httpx response.
-
-            The translation is needed because the pinning hook lives in httpcore. The response body is read
-            immediately so callers keep the same simple, text-based response contract.
-            """
-            req = httpcore.Request(
+        def handle_request(self, request: _HTTPTransportRequest) -> _HTTPResponse:
+            """Send a client request through the matched core and eagerly consume its stream."""
+            req = httpcore_module.Request(
                 method=request.method,
-                url=httpcore.URL(
+                url=httpcore_module.URL(
                     scheme=request.url.raw_scheme,
                     host=request.url.raw_host,
                     port=request.url.port,
@@ -469,12 +640,12 @@ def _build_pinned_transport(
                 extensions=dict(request.extensions),
             )
             resp = self._pool.handle_request(req)
-            stream = cast("_ClosableByteStream", resp.stream)
+            stream = resp.stream
             try:
                 content = b"".join(stream)
             finally:
                 stream.close()
-            return httpx_runtime.Response(
+            return httpx_module.Response(
                 status_code=resp.status,
                 headers=resp.headers,
                 content=content,
@@ -486,7 +657,109 @@ def _build_pinned_transport(
             """Close the pinned connection pool and release sockets."""
             self._pool.close()
 
-    return _PinnedHTTPTransport()
+    return _PinnedHTTPTransport
+
+
+def _load_matched_http_stack(
+    backend: _HTTPBackendName,
+    core_backend: _HTTPCoreBackendName,
+) -> _HTTPStack[_HTTPTransport]:
+    """Import the selected client while retaining its exact paired core name."""
+    from importlib import import_module  # noqa: PLC0415
+
+    httpx_module = cast("_HTTPXModule", import_module(backend))
+    return _HTTPStack(
+        backend=backend,
+        httpx=httpx_module,
+        core_backend=core_backend,
+    )
+
+
+def _load_http_stack(backend: _HTTPBackendName) -> _HTTPStack[_HTTPTransport]:
+    """Select one matched HTTP client/core pair without probing package metadata."""
+    match backend:
+        case "httpx":
+            return _load_matched_http_stack(backend, "httpcore")
+        case "httpx2":
+            return _load_matched_http_stack(backend, "httpcore2")
+        case _:
+            msg = f"Unexpected HTTP backend: {backend!r}"
+            raise AssertionError(msg)
+
+
+def _get_or_load_http_stack(backend: _HTTPBackendName) -> _HTTPStack[_HTTPTransport]:
+    """Return one backend-specific stack, importing its client at most once."""
+    if (stack := _HTTP_STACKS.get(backend)) is not None:
+        return stack
+    with _HTTP_CACHE_LOCK:
+        if (stack := _HTTP_STACKS.get(backend)) is None:  # pragma: no branch - False only after a cache race.
+            stack = _load_http_stack(backend)
+            _HTTP_STACKS[backend] = stack
+    return stack
+
+
+def _get_http_stack(http_backend: HTTPBackend = HTTPBackend.AUTO) -> _HTTPStack[_HTTPTransport]:
+    """Return the lazily selected stack for an automatic or explicit policy."""
+    global _AUTO_HTTP_STACK  # noqa: PLW0603
+
+    if http_backend is HTTPBackend.AUTO:
+        if (stack := _AUTO_HTTP_STACK) is not None:
+            return stack
+        for backend in _HTTP_BACKEND_PRIORITY:
+            try:
+                stack = _get_or_load_http_stack(backend)
+            except ModuleNotFoundError as exc:
+                match exc.name:
+                    case missing_backend if missing_backend == backend:
+                        continue
+                    case _:
+                        raise
+            _AUTO_HTTP_STACK = stack
+            return stack
+
+        msg = (
+            "Please run `$pip install 'datamodel-code-generator[http]'` to resolve HTTP(S) URL references, "
+            "or install the experimental `datamodel-code-generator[httpx2]` extra"
+        )
+        raise Exception(msg) from None  # noqa: TRY002
+
+    match http_backend:
+        case HTTPBackend.HTTPX:
+            backend: _HTTPBackendName = "httpx"
+            extra = "http"
+        case HTTPBackend.HTTPX2:
+            backend = "httpx2"
+            extra = "httpx2"
+        case _:
+            msg = f"Unexpected HTTP backend policy: {http_backend!r}"
+            raise AssertionError(msg)
+
+    try:
+        return _get_or_load_http_stack(backend)
+    except ModuleNotFoundError as exc:
+        if exc.name != backend:
+            raise
+        msg = (
+            f"The explicitly selected {backend} HTTP backend is not installed. "
+            f"Please run `$pip install 'datamodel-code-generator[{extra}]'`."
+        )
+        raise ModuleNotFoundError(msg, name=backend) from None
+
+
+def _get_httpx(http_backend: HTTPBackend = HTTPBackend.AUTO) -> _HTTPXModule:
+    """Return the selected HTTP client module for compatibility with internal callers."""
+    return _get_http_stack(http_backend).httpx
+
+
+def _build_pinned_transport(
+    http_stack: _HTTPStack[_HTTPTransport],
+    *,
+    pinned_host: str,
+    pinned_ips: tuple[IPv4Address | IPv6Address, ...],
+    verify: bool,
+) -> _HTTPTransport:
+    """Build a transport whose TCP connections use the validated address set."""
+    return http_stack.transport_type(pinned_host=pinned_host, pinned_ips=pinned_ips, verify=verify)
 
 
 class _HTTPFetchSession:
@@ -497,8 +770,10 @@ class _HTTPFetchSession:
     across distinct remote references without sharing network state globally.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, http_backend: HTTPBackend = HTTPBackend.AUTO) -> None:
         """Initialize empty size- and parser-lifetime-bounded caches."""
+        self._http_backend = http_backend
+        self.http_stack = _get_http_stack(http_backend)
         self._dns_cache: OrderedDict[str, tuple[IPv4Address | IPv6Address, ...]] = OrderedDict()
         self._clients: OrderedDict[
             tuple[str | None, tuple[IPv4Address | IPv6Address, ...], bool, float],
@@ -532,7 +807,7 @@ class _HTTPFetchSession:
 
     def get_response(  # noqa: PLR0913
         self,
-        httpx_module: _HTTPXModule,
+        http_stack: _HTTPStack[_HTTPTransport],
         url: str,
         *,
         headers: Sequence[tuple[str, str]] | None,
@@ -548,13 +823,14 @@ class _HTTPFetchSession:
         if (client := self._clients.get(key)) is None:
             if pinned_host is not None and pinned_ips:
                 transport = _build_pinned_transport(
+                    http_stack,
                     pinned_host=pinned_host,
                     pinned_ips=pinned_ips,
                     verify=verify,
                 )
-                client = httpx_module.Client(transport=transport, timeout=timeout)
+                client = http_stack.httpx.Client(transport=transport, timeout=timeout)
             else:
-                client = httpx_module.Client(timeout=timeout, verify=verify)
+                client = http_stack.httpx.Client(timeout=timeout, verify=verify)
             self._clients[key] = client
             if len(self._clients) > _HTTP_FETCH_CLIENT_CACHE_MAX_SIZE:
                 _, evicted_client = self._clients.popitem(last=False)
@@ -598,6 +874,7 @@ class _HTTPFetchSession:
             query_parameters,
             timeout,
             allow_private_network=allow_private_network,
+            http_backend=self._http_backend,
             session=self,
         )
 
@@ -611,7 +888,7 @@ class _HTTPFetchSession:
 
 
 def _get_http_response(  # noqa: PLR0913
-    httpx_module: _HTTPXModule,
+    http_stack: _HTTPStack[_HTTPTransport],
     url: str,
     *,
     headers: Sequence[tuple[str, str]] | None,
@@ -624,11 +901,11 @@ def _get_http_response(  # noqa: PLR0913
 ) -> _HTTPResponse:
     """Fetch a URL, using DNS pinning when validation produced public addresses.
 
-    The unpinned path preserves existing httpx behavior for trusted private-network opt-in and tests. The pinned
+    The unpinned path preserves the selected client's behavior for trusted private-network opt-in and tests. The pinned
     path ensures the host resolved during validation is the only host used by the actual TCP connect.
     """
     if pinned_host is None or not pinned_ips:
-        return httpx_module.get(
+        return http_stack.httpx.get(
             url,
             headers=headers,
             verify=verify,
@@ -637,8 +914,13 @@ def _get_http_response(  # noqa: PLR0913
             timeout=timeout,
         )
 
-    transport = _build_pinned_transport(pinned_host=pinned_host, pinned_ips=pinned_ips, verify=verify)
-    with httpx_module.Client(transport=transport, timeout=timeout) as client:
+    transport = _build_pinned_transport(
+        http_stack,
+        pinned_host=pinned_host,
+        pinned_ips=pinned_ips,
+        verify=verify,
+    )
+    with http_stack.httpx.Client(transport=transport, timeout=timeout) as client:
         return client.get(
             url,
             headers=headers,
@@ -800,6 +1082,7 @@ def get_body(  # noqa: PLR0913
     timeout: float = DEFAULT_HTTP_TIMEOUT,
     *,
     allow_private_network: bool = False,
+    http_backend: HTTPBackend = HTTPBackend.AUTO,
 ) -> str:
     """Fetch schema content from a URL with redirect validation and DNS pinning.
 
@@ -807,9 +1090,14 @@ def get_body(  # noqa: PLR0913
     pinned into the transport so a host cannot resolve to a safe address during validation and a private address
     during the actual connection.
 
-    Redirects are followed manually rather than by httpx so each hop can be revalidated and sensitive headers
+    Redirects are followed manually rather than by the HTTP client so each hop can be revalidated and sensitive headers
     can be narrowed before the next request. Once a redirect crosses origins, scoped credentials are removed
     from `current_headers` and are not restored on later hops.
+
+    The default ``HTTPBackend.AUTO`` policy uses stable `httpx`/`httpcore` when
+    available and only tries experimental `httpx2`/`httpcore2` when the stable
+    client module is absent. Explicit selections do not fall back. Client imports,
+    paired-core validation, and process caches stay lazy until HTTP work needs them.
     """
     return _get_body(
         url,
@@ -818,6 +1106,7 @@ def get_body(  # noqa: PLR0913
         query_parameters,
         timeout,
         allow_private_network=allow_private_network,
+        http_backend=http_backend,
     )
 
 
@@ -829,10 +1118,14 @@ def _get_body(  # noqa: PLR0913
     timeout: float,
     *,
     allow_private_network: bool,
+    http_backend: HTTPBackend,
     session: _HTTPFetchSession | None = None,
 ) -> str:
     """Fetch one schema body, optionally reusing parser-scoped network state."""
-    httpx_module = _get_httpx()
+    http_stack = session.http_stack if session is not None else _get_http_stack(http_backend)
+    # Joining URLs needs only the selected client. A fetch validates the exact paired
+    # core eagerly so a broken experimental installation never falls back to stable.
+    _ = http_stack.transport_type
     resolve_host = _get_ips_from_host
     get_response = _get_http_response
     if session is not None:
@@ -850,7 +1143,7 @@ def _get_body(  # noqa: PLR0913
         pinned_host, pinned_ips = validated_host if validated_host is not None else (None, ())
         try:
             response = get_response(
-                httpx_module,
+                http_stack,
                 current_url,
                 headers=current_headers,
                 verify=not ignore_tls,
@@ -863,7 +1156,7 @@ def _get_body(  # noqa: PLR0913
         except Exception as exc:
             msg = f"Failed to fetch {current_url}: {exc}"
             raise SchemaFetchError(msg) from exc
-        if (redirect_url := _get_redirect_url(httpx_module, current_url, response)) is None:
+        if (redirect_url := _get_redirect_url(http_stack.httpx, current_url, response)) is None:
             break
         current_headers = _get_redirect_headers(current_headers, current_url, redirect_url)
         current_url = redirect_url
@@ -884,11 +1177,18 @@ def _get_body(  # noqa: PLR0913
     return response.text
 
 
-def join_url(url: str, ref: str = ".") -> str:  # noqa: PLR0912
+def join_url(  # noqa: PLR0912
+    url: str,
+    ref: str = ".",
+    *,
+    http_backend: HTTPBackend = HTTPBackend.AUTO,
+) -> str:
     """Join a base URL with a relative reference.
 
-    File URLs need local handling because httpx URL joining is HTTP-oriented. HTTP(S) URLs are delegated to
-    httpx so normal web URL semantics stay consistent with the fetch path.
+    File URLs use a dependency-free local fast path because client URL joining is
+    HTTP-oriented. HTTP(S) URLs use the selected policy lazily. The default
+    ``HTTPBackend.AUTO`` policy prefers stable HTTPX, while explicit selections
+    require their exact backend without fallback.
     """
     if url.startswith("file://"):
         from urllib.parse import urlparse  # noqa: PLC0415
@@ -934,5 +1234,4 @@ def join_url(url: str, ref: str = ".") -> str:  # noqa: PLR0912
         if frag:
             joined += f"#{frag[0]}"
         return joined
-    httpx_module = _get_httpx()
-    return str(httpx_module.URL(url).join(ref))
+    return str(_get_http_stack(http_backend).httpx.URL(url).join(ref))

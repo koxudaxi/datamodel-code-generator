@@ -29,6 +29,7 @@ from datamodel_code_generator import (
     DataModelType,
     Error,
     GeneratedModules,
+    HTTPBackend,
     InputFileType,
     SchemaParseError,
     _generate_config_values,
@@ -904,6 +905,14 @@ def test_create_config_empty_pyproject_uses_single_validated_cli_config() -> Non
 
     assert config.input == (JSON_SCHEMA_DATA_PATH / "force_optional_required.json").resolve()
     assert config.field_constraints is True
+
+
+@pytest.mark.allow_direct_assert
+def test_create_config_http_backend_uses_auto_and_allows_explicit_overrides() -> None:
+    """HTTP backend policy is shared by defaults, pyproject, and CLI overrides."""
+    assert _create_config({}, {}).http_backend is HTTPBackend.AUTO
+    assert _create_config({"http_backend": "httpx2"}, {}).http_backend is HTTPBackend.HTTPX2
+    assert _create_config({"http_backend": "httpx2"}, {"http_backend": "httpx"}).http_backend is HTTPBackend.HTTPX
 
 
 @pytest.mark.allow_direct_assert

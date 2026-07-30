@@ -44,11 +44,14 @@ Use a directory as input, or use `$ref` to reference other files:
 datamodel-codegen --input schemas/ --output models/
 ```
 
-For schemas with cross-file `$ref`, ensure you have the HTTP extra for remote refs:
+For schemas with remote cross-file `$ref`, install an HTTP extra:
 
 ```bash
 pip install 'datamodel-code-generator[http]'
 ```
+
+See [HTTP backend selection](#http-backend-selection) for the stable and
+experimental choices.
 
 📎 Related: [#215](https://github.com/koxudaxi/datamodel-code-generator/issues/215)
 
@@ -250,12 +253,51 @@ Install the HTTP extra:
 pip install 'datamodel-code-generator[http]'
 ```
 
+The `http` extra is the stable choice. See
+[HTTP backend selection](#http-backend-selection) if you want to use the
+experimental HTTPX2 backend.
+
 For authenticated endpoints:
 
 ```bash
 datamodel-codegen --url https://api.example.com/schema.yaml \
     --http-headers "Authorization: Bearer TOKEN" \
     --output model.py
+```
+
+### 🔄 Which HTTP client backend is selected? {#http-backend-selection}
+
+The HTTP extras install separate, matched client and transport stacks:
+
+| Extra | Status | Client and transport |
+|-------|--------|----------------------|
+| `datamodel-code-generator[http]` | Stable, supported, and not deprecated | `httpx` + `httpcore` |
+| `datamodel-code-generator[httpx2]` | Experimental | `httpx2` + `httpcore2` |
+
+`datamodel-code-generator[all]` includes the stable `http` extra but
+intentionally does not include the experimental `httpx2` extra.
+
+Select the backend with `--http-backend {auto,httpx,httpx2}`, the corresponding
+`http_backend` pyproject setting, or `HTTPBackend` in the public API:
+
+1. `auto` is the default. It selects stable `httpx` when its client module is
+   installed, including when both pairs are installed.
+2. `auto` uses experimental `httpx2` + `httpcore2` only when the stable HTTPX
+   client itself is unavailable.
+3. `httpx` and `httpx2` require the selected pair. Explicit selections never
+   fall back to a different backend.
+4. A missing paired transport or another broken dependency in a selected stack
+   raises its import error instead of hiding an invalid environment.
+5. If `auto` finds neither client, the request fails with instructions to
+   install an HTTP extra.
+
+Selection and imports are lazy. Once `auto` selects a backend, it keeps that
+selection for the process. Restart the process to change an already selected
+backend after installing or removing an extra.
+
+```toml title="pyproject.toml"
+[tool.datamodel-codegen]
+http-backend = "httpx2"
 ```
 
 ### 🔒 SSL certificate errors

@@ -8,7 +8,7 @@ This documentation is auto-generated from test cases.
 
 | Category | Options | Description |
 |----------|---------|-------------|
-| 📁 [Base Options](base-options.md) | 12 | Input/output configuration |
+| 📁 [Base Options](base-options.md) | 13 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 30 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 27 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 44 | Model generation behavior |
@@ -144,6 +144,7 @@ These links are generated from CLI option metadata and summarize options that im
 ### H {#h}
 
 - [`--help`](utility-options.md#help)
+- [`--http-backend`](base-options.md#http-backend)
 - [`--http-headers`](general-options.md#http-headers)
 - [`--http-ignore-tls`](general-options.md#http-ignore-tls)
 - [`--http-local-ref-path`](general-options.md#http-local-ref-path)

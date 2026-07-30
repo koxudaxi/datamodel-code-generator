@@ -1664,24 +1664,27 @@ def test_custom_file_header(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--url", "--http-headers"],
-    option_description="""Fetch schema from URL with custom HTTP headers.
+    option_description="""Fetch a schema from a URL with custom HTTP headers.
 
 The `--url` flag specifies a remote URL to fetch the schema from instead of
-a local file. The `--http-headers` flag adds custom HTTP headers to the request,
-useful for authentication (e.g., Bearer tokens) or custom API requirements.
-Format: `HeaderName:HeaderValue`.""",
+a local file. The `--http-headers` flag adds request headers in
+`HeaderName:HeaderValue` format.""",
     input_schema="jsonschema/pet_simple.json",
-    cli_args=["--url", "https://api.example.com/schema.json", "--http-headers", "Authorization:Bearer token"],
+    cli_args=[
+        "--url",
+        "https://api.example.com/schema.json",
+        "--http-headers",
+        "Authorization:Bearer token",
+    ],
     golden_output="main_kr/url_with_headers/output.py",
 )
 @freeze_time("2019-07-26")
 def test_url_with_http_headers(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
-    """Fetch schema from URL with custom HTTP headers.
+    """Fetch a schema from a URL with custom HTTP headers.
 
     The `--url` flag specifies a remote URL to fetch the schema from instead of
-    a local file. The `--http-headers` flag adds custom HTTP headers to the request,
-    useful for authentication (e.g., Bearer tokens) or custom API requirements.
-    Format: `HeaderName:HeaderValue`.
+    a local file. The `--http-headers` flag adds request headers in
+    `HeaderName:HeaderValue` format.
     """
     mock_get = mock_httpx_get(
         MockHttpxResponse("https://api.example.com/schema.json", JSON_SCHEMA_DATA_PATH / "pet_simple.json")

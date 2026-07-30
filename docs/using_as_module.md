@@ -8,9 +8,40 @@ You can generate models with `datamodel_code_generator.generate` using parameter
 
 ### 📦 Installation
 
+The base package is sufficient when all inputs and references are local. To
+load an HTTP(S) input or resolve a remote `$ref`, install the stable HTTP extra:
+
 ```bash
 pip install 'datamodel-code-generator[http]'
 ```
+
+The `http` extra uses HTTPX and is supported and not deprecated. The
+experimental HTTPX2 backend is available separately:
+
+```bash
+pip install 'datamodel-code-generator[httpx2]'
+```
+
+The experimental extra is not included in `datamodel-code-generator[all]`.
+The default `HTTPBackend.AUTO` policy selects stable HTTPX when its client
+module is installed, including when both extras are installed, and selects
+HTTPX2 only when that module is absent. Require HTTPX2 with
+`--http-backend httpx2`, `http_backend = "httpx2"` under
+`[tool.datamodel-codegen]`, or the public API:
+
+```python
+from urllib.parse import urlparse
+
+from datamodel_code_generator import HTTPBackend, generate
+
+result = generate(
+    urlparse("https://example.com/schema.json"),
+    http_backend=HTTPBackend.HTTPX2,
+)
+```
+
+See [HTTP backend selection](faq.md#http-backend-selection) for the complete
+automatic and explicit selection rules.
 
 ### 📝 Getting Generated Code as String
 

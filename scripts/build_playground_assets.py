@@ -70,6 +70,7 @@ BROWSER_UNAVAILABLE_OPTIONS = {
     "input_model": "Python module imports are not available in the browser playground.",
     "allow_remote_refs": "Resolving remote $refs needs network access.",
     "http_headers": "HTTP requests are not available in the browser playground.",
+    "http_backend": "HTTP requests are not available in the browser playground.",
     "http_ignore_tls": "HTTP requests are not available in the browser playground.",
     "http_local_ref_path": "HTTP requests are not available in the browser playground.",
     "http_query_parameters": "HTTP requests are not available in the browser playground.",

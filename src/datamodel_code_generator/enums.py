@@ -131,6 +131,14 @@ class SchemaValidatorType(Enum):
     PydanticV2 = "pydantic-v2"
 
 
+class HTTPBackend(Enum):
+    """HTTP client backend selection policy."""
+
+    AUTO = "auto"
+    HTTPX = "httpx"
+    HTTPX2 = "httpx2"
+
+
 class NamingStrategy(Enum):
     """Strategy for generating unique model names when duplicates occur.
 
@@ -377,6 +385,7 @@ __all__ = [
     "DataclassArguments",
     "FieldTypeCollisionStrategy",
     "GraphQLScope",
+    "HTTPBackend",
     "InputFileType",
     "InputModelRefStrategy",
     "JsonSchemaVersion",
