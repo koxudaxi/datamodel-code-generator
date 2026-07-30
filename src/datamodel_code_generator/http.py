@@ -308,7 +308,7 @@ class _HTTPStack(Generic[_HTTPTransportT_co]):
             return transport_type
 
         with _HTTP_CACHE_LOCK:
-            if (transport_type := self._transport_type) is None:
+            if (transport_type := self._transport_type) is None:  # pragma: no branch - False only after a cache race.
                 from importlib import import_module  # noqa: PLC0415
 
                 httpcore_module = cast("_HTTPCoreModule", import_module(self.core_backend))
@@ -692,7 +692,7 @@ def _get_or_load_http_stack(backend: _HTTPBackendName) -> _HTTPStack[_HTTPTransp
     if (stack := _HTTP_STACKS.get(backend)) is not None:
         return stack
     with _HTTP_CACHE_LOCK:
-        if (stack := _HTTP_STACKS.get(backend)) is None:
+        if (stack := _HTTP_STACKS.get(backend)) is None:  # pragma: no branch - False only after a cache race.
             stack = _load_http_stack(backend)
             _HTTP_STACKS[backend] = stack
     return stack
