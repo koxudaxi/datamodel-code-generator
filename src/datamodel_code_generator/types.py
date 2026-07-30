@@ -107,7 +107,14 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Sequence
 
     from datamodel_code_generator.enums import StrictTypes
-    from datamodel_code_generator.model.base import DataModelFieldBase
+
+    class DataModelFieldBase(Protocol):
+        """Type-checking contract for a field that owns a DataType."""
+
+        data_type: DataType
+
+else:
+    DataModelFieldBase = Any
 
 
 class UnionIntFloat:
@@ -469,10 +476,8 @@ def get_optional_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT
 
 
 def is_data_model_field(obj: object) -> TypeIs[DataModelFieldBase]:
-    """Check if an object is a DataModelFieldBase instance."""
-    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: PLC0415
-
-    return isinstance(obj, DataModelFieldBase)
+    """Check if an object structurally owns a DataType."""
+    return isinstance(getattr(obj, "data_type", None), DataType)
 
 
 @runtime_checkable

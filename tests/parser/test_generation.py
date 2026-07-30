@@ -14,7 +14,11 @@ from inline_snapshot import snapshot
 from datamodel_code_generator.imports import IMPORT_DECIMAL, IMPORT_LIST, IMPORT_SET
 from datamodel_code_generator.model.base import BaseClassDataType, DataModel, DataModelFieldBase
 from datamodel_code_generator.model.dataclass import DataClass as StandardDataClass
+from datamodel_code_generator.model.msgspec import Constraints as MsgspecConstraints
+from datamodel_code_generator.model.msgspec import DataModelField as MsgspecDataModelField
+from datamodel_code_generator.model.msgspec import Struct as MsgspecStruct
 from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField, RootModel, RootModelTypeAlias
+from datamodel_code_generator.model.pydantic_v2.base_model import Constraints as PydanticConstraints
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticDataClass
 from datamodel_code_generator.model.pydantic_v2.version import (
     PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
@@ -1211,6 +1215,193 @@ def test_generation_store_reference_redirects_clear_each_owner_imports_cache_onc
     })
 
 
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        pytest.param("replace_field_type", id="field-type"),
+        pytest.param("replace_data_type_ref", id="reference"),
+        pytest.param("replace_nested_reference", id="nested-reference"),
+        pytest.param("set_nested_data_types", id="nested-types"),
+        pytest.param("redirect_reference_users", id="redirect"),
+    ],
+)
+@pytest.mark.parametrize("starts_self_referencing", [False, True])
+def test_generation_store_type_mutations_invalidate_semantic_and_render_caches(
+    mutation: str,
+    *,
+    starts_self_referencing: bool,
+) -> None:
+    """Every store type mutation must invalidate field semantics and model identity."""
+    model_reference = Reference(path="Node", original_name="Node", name="Node")
+    other_reference = Reference(path="Other", original_name="Other", name="Other")
+    old_reference, new_reference = (
+        (model_reference, other_reference) if starts_self_referencing else (other_reference, model_reference)
+    )
+    nested_data_type = DataType(reference=old_reference)
+    data_type = (
+        DataType(data_types=[nested_data_type])
+        if mutation in {"replace_nested_reference", "set_nested_data_types"}
+        else nested_data_type
+    )
+    if data_type is not nested_data_type:
+        nested_data_type.parent = data_type
+    field = DataModelField(name="value", data_type=data_type)
+    if mutation in {"replace_nested_reference", "set_nested_data_types"}:
+        nested_data_type.parent = field.data_type
+    model = BaseModel(fields=[field], reference=model_reference)
+    store = GenerationStore()
+    store.register_model(model)
+
+    assert field.self_reference() is starts_self_referencing
+    assert model.get_dedup_key()
+
+    match mutation:
+        case "replace_field_type":
+            store.replace_field_type(field, DataType(reference=new_reference))
+        case "replace_data_type_ref" | "replace_nested_reference":
+            store.replace_data_type_ref(nested_data_type, new_reference)
+        case "set_nested_data_types":
+            store.set_nested_data_types(data_type, [DataType(reference=new_reference)])
+        case "redirect_reference_users":
+            store.redirect_reference_users(old_reference, new_reference)
+        case _:  # pragma: no cover
+            pytest.fail(f"Unsupported mutation: {mutation}")
+
+    assert field.self_reference() is not starts_self_referencing
+    assert model._dedup_key_cache == {}
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        pytest.param("append_field", id="append"),
+        pytest.param("insert_field", id="insert"),
+        pytest.param("set_fields", id="set"),
+    ],
+)
+def test_generation_store_field_ownership_mutations_invalidate_self_reference_cache(mutation: str) -> None:
+    """Moving a cached field to another model must refresh its parent semantics."""
+    original_model = _base_model("Original")
+    field = DataModelField(name="value", data_type=DataType(reference=original_model.reference))
+    original_model.fields.append(field)
+    field.parent = original_model
+    destination_model = _base_model("Destination")
+    store = GenerationStore()
+    store.register_model(original_model)
+    store.register_model(destination_model)
+
+    assert field.self_reference()
+
+    match mutation:
+        case "append_field":
+            store.append_field(destination_model, field)
+        case "insert_field":
+            store.insert_field(destination_model, 0, field)
+        case "set_fields":
+            store.set_fields(destination_model, [field])
+        case _:  # pragma: no cover
+            pytest.fail(f"Unsupported mutation: {mutation}")
+
+    assert field.parent is destination_model
+    assert not field.self_reference()
+
+
+def test_generation_store_field_removal_invalidates_self_reference_cache() -> None:
+    """Detaching a cached field must clear parent-dependent semantics."""
+    model = _base_model("Model")
+    field = DataModelField(name="value", data_type=DataType(reference=model.reference))
+    model.fields.append(field)
+    field.parent = model
+    store = GenerationStore()
+    store.register_model(model)
+
+    assert field.self_reference()
+
+    store.remove_field(model, field)
+
+    assert field.parent is None
+    assert not field.self_reference()
+
+
+def test_generation_store_self_reference_invalidation_updates_pydantic_constraints() -> None:
+    """Pydantic constraints must follow the current, not cached, self-reference state."""
+    model_reference = Reference(path="Node", original_name="Node", name="Node")
+    other_reference = Reference(path="Other", original_name="Other", name="Other")
+    data_type = DataType(reference=other_reference)
+    field = DataModelField(
+        name="value",
+        data_type=data_type,
+        constraints=PydanticConstraints(pattern="x"),
+    )
+    model = BaseModel(fields=[field], reference=model_reference)
+    store = GenerationStore()
+    store.register_model(model)
+
+    assert str(field) == "Field(None, pattern='x')"
+
+    store.replace_data_type_ref(data_type, model_reference)
+
+    assert not str(field)
+
+
+def test_generation_store_self_reference_invalidation_updates_msgspec_metadata() -> None:
+    """Msgspec metadata and imports must follow the current self-reference state."""
+    model_reference = Reference(path="Node", original_name="Node", name="Node")
+    other_reference = Reference(path="Other", original_name="Other", name="Other")
+    data_type = DataType(reference=other_reference)
+    field = MsgspecDataModelField(
+        name="value",
+        data_type=data_type,
+        constraints=MsgspecConstraints(pattern="x"),
+        required=True,
+        use_annotated=True,
+    )
+    model = MsgspecStruct(fields=[field], reference=model_reference)
+    store = GenerationStore()
+    store.register_model(model)
+
+    assert field.annotated == "Annotated[Other, Meta(pattern='x')]"
+    assert field.imports
+
+    store.replace_data_type_ref(data_type, model_reference)
+
+    assert field.annotated is None
+    assert field.imports == ()
+
+
+def test_generation_store_redirects_unattached_reference_users() -> None:
+    """Unattached data types remain supported without a field or model cache owner."""
+    old_reference = Reference(path="Old", original_name="Old", name="Old")
+    new_reference = Reference(path="New", original_name="New", name="New")
+    data_type = DataType(reference=old_reference)
+    store = GenerationStore()
+
+    store.redirect_reference_users(old_reference, new_reference)
+
+    assert data_type.reference is new_reference
+
+
+def test_generation_store_render_cache_invalidation_supports_legacy_model_hook() -> None:
+    """External model implementations with only the legacy import hook remain compatible."""
+
+    class ImportsOnlyModel:
+        def __init__(self) -> None:
+            self.reference = Reference(path="Before", original_name="Before", name="Before")
+            self.class_name = "Before"
+            self.cache_cleared = False
+
+        def clear_imports_cache(self) -> None:
+            self.cache_cleared = True
+
+    model = ImportsOnlyModel()
+    store = GenerationStore()
+
+    store.update_model_reference(model, class_name="After")  # ty: ignore[invalid-argument-type]
+
+    assert model.class_name == "After"
+    assert model.cache_cleared
+
+
 def test_generation_store_model_reference_redirect_clears_only_affected_owner_imports_cache() -> None:
     """Scoped model reference redirects should invalidate only matching owner models."""
     target_model = _base_model("Target")
@@ -1252,6 +1443,121 @@ def test_generation_store_model_reference_redirect_clears_only_affected_owner_im
         "owner_references": ["NewTarget", "NewTarget"],
         "other_references": ["Target"],
     })
+
+
+def test_generation_store_reference_redirect_invalidates_base_class_owner_render_cache() -> None:
+    """Unscoped redirects must invalidate models that own parentless base class types."""
+    target_model = _base_model("Target")
+    owner_model = BaseModel(
+        fields=[],
+        base_classes=[target_model.reference],
+        reference=Reference(path="Owner", original_name="Owner", name="Owner"),
+    )
+    new_reference = Reference(path="NewTarget", original_name="NewTarget", name="NewTarget")
+    store = GenerationStore()
+    store.register_model(target_model)
+    store.register_model(owner_model)
+    original_key = owner_model.get_dedup_key()
+
+    store.redirect_reference_users(target_model.reference, new_reference)
+
+    assert owner_model.base_classes[0].reference is new_reference
+    assert owner_model._dedup_key_cache == {}
+    assert owner_model.get_dedup_key() != original_key
+
+
+def test_generation_store_model_reference_redirect_resolves_base_class_owner() -> None:
+    """Scoped redirects must resolve base class ownership from generation facts."""
+    target_model = _base_model("Target")
+    owner_model = BaseModel(
+        fields=[],
+        base_classes=[target_model.reference],
+        reference=Reference(path="Owner", original_name="Owner", name="Owner"),
+    )
+    other_model = BaseModel(
+        fields=[],
+        base_classes=[target_model.reference],
+        reference=Reference(path="Other", original_name="Other", name="Other"),
+    )
+    new_reference = Reference(path="NewTarget", original_name="NewTarget", name="NewTarget")
+    store = GenerationStore()
+    store.register_model(target_model)
+    store.register_model(owner_model)
+    store.register_model(other_model)
+    assert owner_model.get_dedup_key()
+    assert other_model.get_dedup_key()
+
+    store.redirect_model_reference_users(target_model, [owner_model], new_reference)
+
+    assert owner_model.base_classes[0].reference is new_reference
+    assert owner_model._dedup_key_cache == {}
+    assert other_model.base_classes[0].reference is target_model.reference
+    assert other_model._dedup_key_cache
+
+
+def test_generation_store_model_reference_redirect_invalidates_shared_base_class_owners() -> None:
+    """A shared base class occurrence must invalidate every owning model."""
+    target_model = _base_model("Target")
+    first_model = _base_model("First")
+    second_model = _base_model("Second")
+    third_model = _base_model("Third")
+    shared_base_class = BaseClassDataType(reference=target_model.reference)
+    new_reference = Reference(path="NewTarget", original_name="NewTarget", name="NewTarget")
+    store = GenerationStore()
+    store.register_model(target_model)
+    store.register_model(first_model)
+    store.register_model(second_model)
+    store.register_model(third_model)
+    store.set_base_classes(first_model, [shared_base_class])
+    store.set_base_classes(second_model, [shared_base_class])
+    store.set_base_classes(third_model, [shared_base_class])
+    assert first_model.get_dedup_key()
+    assert second_model.get_dedup_key()
+    assert third_model.get_dedup_key()
+
+    store.redirect_model_reference_users(target_model, [first_model], new_reference)
+
+    assert shared_base_class.reference is new_reference
+    assert first_model._dedup_key_cache == {}
+    assert second_model._dedup_key_cache == {}
+    assert third_model._dedup_key_cache == {}
+
+
+def test_generation_store_indexes_each_shared_base_class_owner_once() -> None:
+    """Repeated shared base occurrences must not duplicate the owning model id."""
+    first_model = _base_model("First")
+    second_model = _base_model("Second")
+    shared_base_class = BaseClassDataType(type="object")
+    store = GenerationStore()
+    store.register_model(first_model)
+    store.register_model(second_model)
+    store.set_base_classes(first_model, [shared_base_class])
+    store.set_base_classes(second_model, [shared_base_class, shared_base_class])
+
+    facts = store.current_facts()
+    owner_ids = facts.base_owner_model_ids_by_object[id(shared_base_class)]
+
+    assert isinstance(owner_ids, list)
+    assert [facts.model_facts[model_id].model for model_id in owner_ids] == [first_model, second_model]
+
+
+def test_generation_store_detach_model_refs_resolves_deferred_base_class_owner() -> None:
+    """Deferred mutations must resolve live base class ownership before facts exist."""
+    target_model = _base_model("Target")
+    owner_model = BaseModel(
+        fields=[],
+        base_classes=[target_model.reference],
+        reference=Reference(path="Owner", original_name="Owner", name="Owner"),
+    )
+    store = GenerationStore()
+    store.register_model(target_model)
+    store.register_model(owner_model)
+    assert owner_model.get_dedup_key()
+
+    store.detach_model_data_type_refs(owner_model)
+
+    assert owner_model.base_classes[0].reference is None
+    assert owner_model._dedup_key_cache == {}
 
 
 def test_generation_store_redirects_model_reference_users_by_owner() -> None:
