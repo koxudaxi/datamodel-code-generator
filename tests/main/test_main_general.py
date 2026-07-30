@@ -1870,6 +1870,40 @@ def test_type_overrides_scoped(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("collapse_args", "expected_file"),
+    [
+        pytest.param([], "reuse_type_overrides.py", id="inherit"),
+        pytest.param(["--collapse-reuse-models"], "reuse_type_overrides_collapsed.py", id="collapse"),
+    ],
+)
+def test_type_overrides_preserved_during_module_reuse(
+    collapse_args: list[str],
+    expected_file: str,
+    output_file: Path,
+) -> None:
+    """Keep scoped and model-level overrides outside module reuse optimizations."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_type_overrides.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--formatters",
+            "builtin",
+            "--reuse-model",
+            *collapse_args,
+            "--type-overrides",
+            '{"B.value": "datetime.date", "D": "datetime.datetime"}',
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
 @freeze_time(TIMESTAMP)
 def test_type_overrides_nested_types(output_file: Path) -> None:
     """Test --type-overrides with nested types like List[CustomType]."""
