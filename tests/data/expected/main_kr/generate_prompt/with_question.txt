@@ -16,6 +16,7 @@ How do I convert enums to Literal types?
 - `--emit-model-metadata`: Write a separate JSON map from source schema references to the final generated models...
 - `--encoding`: Specify character encoding for input and output files.
 - `--external-ref-mapping`: Map external `$ref` files to Python packages.
+- `--http-backend`: Select the HTTP client backend for remote schemas.
 - `--input`: Specify the input schema file path.
 - `--input-file-type`: Specify the input file type for code generation.
 - `--input-model`: Import a Python type or dict schema from a module or Python file.
@@ -24,7 +25,7 @@ How do I convert enums to Literal types?
 - `--preset`: Apply an immutable built-in option preset.
 - `--schema-version`: Schema version to use for parsing.
 - `--schema-version-mode`: Schema version validation mode.
-- `--url`: Fetch schema from URL with custom HTTP headers.
+- `--url`: Fetch a schema from a URL with custom HTTP headers.
 
 ### Typing Customization
 - `--allof-class-hierarchy`: Controls how allOf schemas are represented in the generated class hierarchy.
@@ -191,7 +192,7 @@ How do I convert enums to Literal types?
 - `--fail-on-multi-module-stdout`: Fail instead of concatenating multiple modules in text stdout.
 - `--generate-cli-command`: Generate CLI command from pyproject.toml configuration.
 - `--generate-pyproject-config`: Generate pyproject.toml configuration from CLI arguments.
-- `--http-headers`: Fetch schema from URL with custom HTTP headers.
+- `--http-headers`: Fetch a schema from a URL with custom HTTP headers.
 - `--http-ignore-tls`: Disable TLS certificate verification for HTTPS requests.
 - `--http-local-ref-path`: Resolve HTTP references from local schema files.
 - `--http-query-parameters`: Add query parameters to HTTP requests for remote schemas.
@@ -258,6 +259,13 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --formatters {builtin,black,isort,ruff-check,ruff-format} [{builtin,black,isort,ruff-check,ruff-format} ...]
                         Formatters for output (default: [black, isort]; use
                         builtin for dependency-free formatting)
+  --http-backend {auto,httpx,httpx2}
+                        Select the HTTP client backend. 'auto' (default)
+                        selects stable HTTPX when its client module is
+                        installed and only selects experimental HTTPX2 when
+                        that module is absent. 'httpx' and 'httpx2' require
+                        that exact backend. Explicit selections and paired
+                        dependency errors do not fall back.
   --http-headers HTTP_HEADER [HTTP_HEADER ...]
                         Set headers in HTTP requests to the remote host.
                         (example: "Authorization: Basic dXNlcjpwYXNz")
@@ -322,14 +330,12 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         used. For HTTP(S), datamodel-code-generator[http]
                         remains the stable HTTPX backend and is not
                         deprecated, while datamodel-code-generator[httpx2] is
-                        experimental. On the first HTTP(S) request, backend
-                        selection is lazy and then cached for the process:
-                        httpx2 + httpcore2 takes precedence over httpx +
-                        httpcore when both client/core pairs are installed.
-                        Fallback to httpx + httpcore occurs only when the top-
-                        level httpx2 client module itself is not installed; a
-                        missing or broken paired dependency is an error and
-                        does not trigger fallback.
+                        experimental. The default --http-backend auto policy
+                        selects stable HTTPX when its client module is
+                        installed and selects HTTPX2 only when that module is
+                        absent. Select --http-backend httpx2 to require the
+                        experimental backend. Explicit selections and paired
+                        dependency errors do not fall back.
 
 [36;1mTyping customization[0m:
   --allof-class-hierarchy {if-no-conflict,always}

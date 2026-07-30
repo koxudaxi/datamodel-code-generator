@@ -28,6 +28,7 @@ from datamodel_code_generator.enums import (
     DataclassArguments,
     DataModelType,
     FieldTypeCollisionStrategy,
+    HTTPBackend,
     InputFileType,
     InputModelRefStrategy,
     ModuleSplitMode,
@@ -171,6 +172,16 @@ base_options.add_argument(
     default=None,
 )
 base_options.add_argument(
+    "--http-backend",
+    choices=[backend.value for backend in HTTPBackend],
+    default=None,
+    help=(
+        "Select the HTTP client backend. 'auto' (default) selects stable HTTPX when its client module is installed "
+        "and only selects experimental HTTPX2 when that module is absent. 'httpx' and 'httpx2' require that exact "
+        "backend. Explicit selections and paired dependency errors do not fall back."
+    ),
+)
+base_options.add_argument(
     "--http-headers",
     nargs="+",
     metavar="HTTP_HEADER",
@@ -251,11 +262,10 @@ base_options.add_argument(
     help=(
         "Input file URL. `--input` is ignored when `--url` is used. "
         "For HTTP(S), datamodel-code-generator[http] remains the stable HTTPX backend and is not deprecated, while "
-        "datamodel-code-generator[httpx2] is experimental. On the first HTTP(S) request, backend selection is lazy "
-        "and then cached for the process: httpx2 + httpcore2 takes precedence over httpx + httpcore when both "
-        "client/core pairs are installed. Fallback to httpx + httpcore occurs only when the top-level httpx2 client "
-        "module itself is not installed; a missing or broken paired dependency is an error and does not trigger "
-        "fallback."
+        "datamodel-code-generator[httpx2] is experimental. The default --http-backend auto policy selects stable "
+        "HTTPX when its client module is installed and selects HTTPX2 only when that module is absent. Select "
+        "--http-backend httpx2 to require the experimental backend. Explicit selections and paired dependency "
+        "errors do not fall back."
     ),
 )
 base_options.add_argument(

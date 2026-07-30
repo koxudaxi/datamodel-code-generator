@@ -87,11 +87,12 @@ uv run --with datamodel-code-generator datamodel-codegen --help
 pip install 'datamodel-code-generator[http]'
 ```
 
-The `http` extra is supported and is not deprecated. To try the experimental
-HTTPX2 backend instead, install `datamodel-code-generator[httpx2]`. The
-experimental extra is not included in `datamodel-code-generator[all]`. See
+The `http` extra is supported and is not deprecated. To require the experimental
+HTTPX2 backend instead, install `datamodel-code-generator[httpx2]` and pass
+`--http-backend httpx2`. The experimental extra is not included in
+`datamodel-code-generator[all]`. See
 [HTTP backend selection](https://datamodel-code-generator.koxudaxi.dev/faq/#http-backend-selection)
-for precedence, fallback, and caching behavior.
+for automatic and explicit selection behavior.
 
 **With GraphQL support:**
 ```bash
@@ -313,7 +314,7 @@ datamodel-codegen --url https://example.com/api/openapi.yaml --output model.py
 ```
 
 The `http` extra is the stable, non-deprecated backend. For the experimental
-HTTPX2 alternative and the exact selection rules, see
+HTTPX2 alternative, pass `--http-backend httpx2`; see
 [HTTP backend selection](https://datamodel-code-generator.koxudaxi.dev/faq/#http-backend-selection).
 
 ### ⚙️ Use with pyproject.toml

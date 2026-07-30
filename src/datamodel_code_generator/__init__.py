@@ -45,6 +45,7 @@ from datamodel_code_generator.enums import (
     DataModelType,
     FieldTypeCollisionStrategy,
     GraphQLScope,
+    HTTPBackend,
     InputFileType,
     InputModelRefStrategy,
     JsonSchemaVersion,
@@ -1513,9 +1514,9 @@ def generate(
     JSON Schema, GraphQL, XML Schema, Protocol Buffers, Avro, and raw data formats
     (JSON, YAML, Dict, CSV) as input.
 
-    HTTP(S) URL inputs and references select their backend lazily on first use and cache it for the process. The
-    experimental `httpx2`/`httpcore2` pair is preferred, falling back to `httpx`/`httpcore` only when the `httpx2`
-    client module itself is absent. Missing paired or internal dependencies are reported instead. File URL reference
+    HTTP(S) URL inputs and references select their backend lazily on first use. The default ``HTTPBackend.AUTO``
+    policy selects stable `httpx` when its client module is installed and selects experimental `httpx2` only when
+    that module is absent. Explicit choices and paired dependency errors do not fall back. File URL reference
     joining uses a dependency-free local fast path.
 
     Args:
@@ -1637,6 +1638,7 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
                     config.http_query_parameters,
                     timeout,
                     allow_private_network=config.allow_private_network,
+                    http_backend=config.http_backend,
                 ),
             )
         case _:
@@ -2034,6 +2036,7 @@ __all__ = [
     "FieldTypeCollisionStrategy",
     "GeneratedModules",
     "GraphQLScope",
+    "HTTPBackend",
     "InputFileType",
     "InputModelRefStrategy",
     "InvalidClassNameError",

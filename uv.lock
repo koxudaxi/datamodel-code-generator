@@ -877,6 +877,7 @@ dev = [
     { name = "t-linter" },
     { name = "tdom", marker = "python_full_version >= '3.14'" },
     { name = "time-machine" },
+    { name = "trustme" },
     { name = "twine" },
     { name = "ty" },
     { name = "types-jinja2" },
@@ -930,6 +931,7 @@ test = [
     { name = "pytest-timeout" },
     { name = "pytest-xdist" },
     { name = "time-machine" },
+    { name = "trustme" },
     { name = "watchfiles" },
 ]
 type = [
@@ -948,6 +950,7 @@ type = [
     { name = "pytest-timeout" },
     { name = "pytest-xdist" },
     { name = "time-machine" },
+    { name = "trustme" },
     { name = "ty" },
     { name = "types-jinja2" },
     { name = "types-pyyaml" },
@@ -1023,6 +1026,7 @@ dev = [
     { name = "t-linter", specifier = ">=0.8" },
     { name = "tdom", marker = "python_full_version >= '3.14'", specifier = ">=0.1.16" },
     { name = "time-machine", specifier = ">=3.1" },
+    { name = "trustme", specifier = ">=1.2.1" },
     { name = "twine", specifier = ">=6.1" },
     { name = "ty", specifier = ">=0.0.8" },
     { name = "types-jinja2" },
@@ -1064,6 +1068,7 @@ test = [
     { name = "pytest-timeout", specifier = ">=2.4" },
     { name = "pytest-xdist", specifier = ">=3.3.1" },
     { name = "time-machine", specifier = ">=3.1" },
+    { name = "trustme", specifier = ">=1.2.1" },
     { name = "watchfiles", specifier = ">=1.1" },
 ]
 type = [
@@ -1082,6 +1087,7 @@ type = [
     { name = "pytest-timeout", specifier = ">=2.4" },
     { name = "pytest-xdist", specifier = ">=3.3.1" },
     { name = "time-machine", specifier = ">=3.1" },
+    { name = "trustme", specifier = ">=1.2.1" },
     { name = "ty", specifier = ">=0.0.8" },
     { name = "types-jinja2" },
     { name = "types-pyyaml" },
@@ -3283,6 +3289,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/12/64/da524626d3b9cc40c168a13da8335fe1c51be12c0a63685cc6db7308daae/tomli-2.4.1-cp314-cp314t-win_amd64.whl", hash = "sha256:2c1c351919aca02858f740c6d33adea0c5deea37f9ecca1cc1ef9e884a619d26", size = 121196, upload-time = "2026-03-25T20:22:01.169Z" },
     { url = "https://files.pythonhosted.org/packages/5a/cd/e80b62269fc78fc36c9af5a6b89c835baa8af28ff5ad28c7028d60860320/tomli-2.4.1-cp314-cp314t-win_arm64.whl", hash = "sha256:eab21f45c7f66c13f2a9e0e1535309cee140182a9cdae1e041d02e47291e8396", size = 100393, upload-time = "2026-03-25T20:22:02.137Z" },
     { url = "https://files.pythonhosted.org/packages/7b/61/cceae43728b7de99d9b847560c262873a1f6c98202171fd5ed62640b494b/tomli-2.4.1-py3-none-any.whl", hash = "sha256:0d85819802132122da43cb86656f8d1f8c6587d54ae7dcaf30e90533028b49fe", size = 14583, upload-time = "2026-03-25T20:22:03.012Z" },
+]
+
+[[package]]
+name = "trustme"
+version = "1.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "idna" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4b/c5/931476f4cf1cd9e736f32651005078061a50dc164a2569fb874e00eb2786/trustme-1.2.1.tar.gz", hash = "sha256:6528ba2bbc7f2db41f33825c8dd13e3e3eb9d334ba0f909713c8c3139f4ae47f", size = 26844, upload-time = "2025-01-02T01:55:32.632Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b5/f3/c34dbabf6da5eda56fe923226769d40e11806952cd7f46655dd06e10f018/trustme-1.2.1-py3-none-any.whl", hash = "sha256:d768e5fc57c86dfc5ec9365102e9b092541cd6954b35d8c1eea01a84f35a762a", size = 16530, upload-time = "2025-01-02T01:55:30.181Z" },
 ]
 
 [[package]]

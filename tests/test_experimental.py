@@ -50,13 +50,13 @@ def test_experimental_table_output_includes_registered_features() -> None:
     assert "Notes:" in output
     assert "datamodel-code-generator[http] remains the stable HTTPX backend and is not deprecated" in compact_output
     assert "datamodel-code-generator[httpx2] is experimental" in compact_output
-    assert "On the first HTTP(S) request, backend selection is lazy and then cached for the process" in compact_output
-    assert "httpx2 + httpcore2 takes precedence over httpx + httpcore" in compact_output
-    assert (
-        "Fallback to httpx + httpcore occurs only when the top-level httpx2 client module itself is not installed"
-        in compact_output
+    assert "The default HTTP backend policy is auto" in compact_output
+    assert "stable httpx is selected when its client module is installed, including when both pairs are installed" in (
+        compact_output
     )
-    assert "a missing or broken paired dependency is an error and does not trigger fallback" in compact_output
+    assert "experimental httpx2 is selected only when that module is absent" in compact_output
+    assert "HTTPBackend.HTTPX2 to require the experimental pair" in compact_output
+    assert "Explicit selections and paired dependency errors do not fall back" in compact_output
 
 
 def test_experimental_markdown_output_includes_details() -> None:

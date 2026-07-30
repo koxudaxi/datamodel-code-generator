@@ -23,9 +23,25 @@ pip install 'datamodel-code-generator[httpx2]'
 ```
 
 The experimental extra is not included in `datamodel-code-generator[all]`.
-When both HTTP extras are present, HTTPX2 takes precedence. See
-[HTTP backend selection](faq.md#http-backend-selection) for the complete
-fallback, dependency-error, and process-cache behavior.
+The default `HTTPBackend.AUTO` policy selects stable HTTPX when its client
+module is installed, including when both extras are installed, and selects
+HTTPX2 only when that module is absent. Require HTTPX2 with
+`--http-backend httpx2`, `http_backend = "httpx2"` under
+`[tool.datamodel-codegen]`, or the public API:
+
+```python
+from urllib.parse import urlparse
+
+from datamodel_code_generator import HTTPBackend, generate
+
+result = generate(
+    urlparse("https://example.com/schema.json"),
+    http_backend=HTTPBackend.HTTPX2,
+)
+```
+
+See [HTTP backend selection](faq.md#http-backend-selection) for the complete
+automatic and explicit selection rules.
 
 ### 📝 Getting Generated Code as String
 

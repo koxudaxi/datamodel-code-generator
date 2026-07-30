@@ -14,7 +14,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from datamodel_code_generator import SchemaFetchError
+from datamodel_code_generator import HTTPBackend, SchemaFetchError
 from datamodel_code_generator.http import (
     MAX_HTTP_REDIRECTS,
     _create_ssl_context,
@@ -510,18 +510,28 @@ def test_cli_fetches_external_schema_with_selected_backend(
     mocker.stopall()
     schema_url = f"{local_http_server}/pet.json"
 
+    selected_backend = os.environ.get("DATAMODEL_CODE_GENERATOR_TEST_HTTP_BACKEND", "auto")
+    extra_args = ["--allow-private-network", "--disable-timestamp"]
+    if selected_backend != "auto":
+        extra_args.extend(("--http-backend", selected_backend))
+
     run_main_url_and_assert(
         url=schema_url,
         output_path=tmp_path / "output.py",
         input_file_type="jsonschema",
         assert_func=assert_http_e2e_file,
         expected_file="backend.py",
-        extra_args=["--allow-private-network", "--disable-timestamp"],
+        extra_args=extra_args,
         transform=lambda output: output.replace(schema_url, "http://localhost/schema.json"),
     )
 
     if (expected_backend := os.environ.get("DATAMODEL_CODE_GENERATOR_EXPECTED_HTTP_BACKEND")) is not None:
-        assert _get_http_stack().backend == expected_backend
+        expected_auto_backend = os.environ.get(
+            "DATAMODEL_CODE_GENERATOR_EXPECTED_AUTO_HTTP_BACKEND",
+            expected_backend,
+        )
+        assert _get_http_stack().backend == expected_auto_backend
+        assert _get_http_stack(HTTPBackend(selected_backend)).backend == expected_backend
 
 
 def test_load_http_stack_rejects_unknown_backend() -> None:
@@ -530,28 +540,30 @@ def test_load_http_stack_rejects_unknown_backend() -> None:
         _load_http_stack("invalid")  # type: ignore[arg-type]
 
 
-def test_http_stack_falls_back_and_caches_when_httpx2_is_absent(mocker: MockerFixture) -> None:
-    """Use stable HTTPX only when the experimental top-level package is absent."""
-    missing_httpx2 = ModuleNotFoundError("No module named 'httpx2'", name="httpx2")
-    stable_stack = Mock()
+def test_auto_http_stack_falls_back_and_caches_when_httpx_is_absent(mocker: MockerFixture) -> None:
+    """Use experimental HTTPX2 only when the stable top-level package is absent."""
+    missing_httpx = ModuleNotFoundError("No module named 'httpx'", name="httpx")
+    experimental_stack = Mock()
     load_stack = mocker.patch(
         "datamodel_code_generator.http._load_http_stack",
-        side_effect=[missing_httpx2, stable_stack],
+        side_effect=[missing_httpx, experimental_stack],
     )
-    mocker.patch("datamodel_code_generator.http._HTTP_STACK", None)
+    mocker.patch("datamodel_code_generator.http._HTTP_STACKS", {})
+    mocker.patch("datamodel_code_generator.http._AUTO_HTTP_STACK", None)
 
-    assert _get_http_stack() is stable_stack
-    assert _get_http_stack() is stable_stack
-    assert [called.args for called in load_stack.call_args_list] == [("httpx2",), ("httpx",)]
+    assert _get_http_stack() is experimental_stack
+    assert _get_http_stack() is experimental_stack
+    assert [called.args for called in load_stack.call_args_list] == [("httpx",), ("httpx2",)]
 
 
 def test_http_stack_propagates_broken_backend_import(mocker: MockerFixture) -> None:
     """Do not hide a selected backend whose own dependency import is broken."""
-    missing_httpcore2 = ModuleNotFoundError("No module named 'httpcore2'", name="httpcore2")
-    mocker.patch("datamodel_code_generator.http._load_http_stack", side_effect=missing_httpcore2)
-    mocker.patch("datamodel_code_generator.http._HTTP_STACK", None)
+    missing_internal_dependency = ModuleNotFoundError("No module named 'sniffio'", name="sniffio")
+    mocker.patch("datamodel_code_generator.http._load_http_stack", side_effect=missing_internal_dependency)
+    mocker.patch("datamodel_code_generator.http._HTTP_STACKS", {})
+    mocker.patch("datamodel_code_generator.http._AUTO_HTTP_STACK", None)
 
-    with pytest.raises(ModuleNotFoundError, match="httpcore2"):
+    with pytest.raises(ModuleNotFoundError, match="sniffio"):
         _get_http_stack()
 
 
@@ -560,14 +572,27 @@ def test_http_stack_reports_both_install_options_when_no_backend_exists(mocker: 
     mocker.patch(
         "datamodel_code_generator.http._load_http_stack",
         side_effect=[
-            ModuleNotFoundError("No module named 'httpx2'", name="httpx2"),
             ModuleNotFoundError("No module named 'httpx'", name="httpx"),
+            ModuleNotFoundError("No module named 'httpx2'", name="httpx2"),
         ],
     )
-    mocker.patch("datamodel_code_generator.http._HTTP_STACK", None)
+    mocker.patch("datamodel_code_generator.http._HTTP_STACKS", {})
+    mocker.patch("datamodel_code_generator.http._AUTO_HTTP_STACK", None)
 
     with pytest.raises(Exception, match=r"datamodel-code-generator\[httpx2\]"):
         _get_http_stack()
+
+
+def test_explicit_http_stack_does_not_fall_back_when_selected_client_is_absent(mocker: MockerFixture) -> None:
+    """Report the selected extra without probing another backend."""
+    missing_httpx2 = ModuleNotFoundError("No module named 'httpx2'", name="httpx2")
+    load_stack = mocker.patch("datamodel_code_generator.http._load_http_stack", side_effect=missing_httpx2)
+    mocker.patch("datamodel_code_generator.http._HTTP_STACKS", {})
+
+    with pytest.raises(ModuleNotFoundError, match=r"datamodel-code-generator\[httpx2\]"):
+        _get_http_stack(HTTPBackend.HTTPX2)
+
+    load_stack.assert_called_once_with("httpx2")
 
 
 def test_http_fetch_session_reuses_successful_dns_result(mocker: MockerFixture) -> None:

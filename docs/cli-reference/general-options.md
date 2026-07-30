@@ -13,7 +13,7 @@
 | [`--fail-on-multi-module-stdout`](#fail-on-multi-module-stdout) | Fail instead of concatenating multiple modules in text stdou... |
 | [`--generate-cli-command`](#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
 | [`--generate-pyproject-config`](#generate-pyproject-config) | Generate pyproject.toml configuration from CLI arguments. |
-| [`--http-headers`](#http-headers) | Fetch schema from URL with custom HTTP headers. |
+| [`--http-headers`](#http-headers) | Fetch a schema from a URL with custom HTTP headers. |
 | [`--http-ignore-tls`](#http-ignore-tls) | Disable TLS certificate verification for HTTPS requests. |
 | [`--http-local-ref-path`](#http-local-ref-path) | Resolve HTTP references from local schema files. |
 | [`--http-query-parameters`](#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
@@ -1675,12 +1675,11 @@ a working CLI command into a reusable configuration file.
 
 ## `--http-headers` {#http-headers}
 
-Fetch schema from URL with custom HTTP headers.
+Fetch a schema from a URL with custom HTTP headers.
 
 The `--url` flag specifies a remote URL to fetch the schema from instead of
-a local file. The `--http-headers` flag adds custom HTTP headers to the request,
-useful for authentication (e.g., Bearer tokens) or custom API requirements.
-Format: `HeaderName:HeaderValue`.
+a local file. The `--http-headers` flag adds request headers in
+`HeaderName:HeaderValue` format.
 
 !!! tip "Usage"
 

@@ -246,20 +246,32 @@ jobs:
         retention-days: 3
 
   test-http-backends:
-    name: ${{ matrix.name }} on Ubuntu
+    name: >-
+      ${{ matrix.name }} on
+      ${{ matrix.os == 'windows-latest' && 'Windows' || (matrix.os == 'macos-latest' && 'macOS' || 'Ubuntu') }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - tox_env: httpx-e2e
-            name: HTTPX e2e
-          - tox_env: httpx2-e2e
-            name: HTTPX2 e2e
-          - tox_env: httpx-both-e2e
-            name: HTTPX + HTTPX2 e2e
-    runs-on: ubuntu-24.04
+            name: HTTPX HTTP(S) e2e
+            os: ubuntu-24.04
+            coverage: true
+          - tox_env: httpx2-min-e2e
+            name: HTTPX2 minimum HTTP(S) e2e
+            os: ubuntu-24.04
+            coverage: true
+          - tox_env: httpx2-max-nocov-e2e
+            name: HTTPX2 latest HTTP(S) e2e
+            os: windows-latest
+            coverage: false
+          - tox_env: httpx-both-nocov-e2e
+            name: HTTPX + HTTPX2 HTTP(S) e2e
+            os: macos-latest
+            coverage: false
+    runs-on: ${{ matrix.os }}
     env:
-      OS: ubuntu-24.04
+      OS: ${{ matrix.os }}
       TOX_ENV: ${{ matrix.tox_env }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -270,18 +282,21 @@ jobs:
       uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
         enable-cache: true
-        cache-suffix: "${{ matrix.tox_env }}"
+        cache-suffix: "${{ matrix.tox_env }}-${{ matrix.os }}"
     - name: Install tox
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
     - name: Setup HTTP backend e2e environment
       run: tox run -vv --notest --skip-missing-interpreters false -e "$TOX_ENV"
+      shell: bash
       env:
         UV_PYTHON_PREFERENCE: "only-managed"
     - name: Run HTTP backend e2e suite
       run: tox run --skip-uv-sync --skip-pkg-install -e "$TOX_ENV"
+      shell: bash
       env:
         UV_PYTHON_PREFERENCE: "only-managed"
     - name: Rename coverage report file
+      if: matrix.coverage == true
       run: |
         import os
 
@@ -291,10 +306,11 @@ jobs:
         )
       shell: python
     - name: Upload coverage data
+      if: matrix.coverage == true
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         include-hidden-files: true
-        name: .coverage.${{ matrix.tox_env }}-ubuntu-24.04
+        name: .coverage.${{ matrix.tox_env }}-${{ matrix.os }}
         path: ".tox/.coverage.*"
         retention-days: 3
 

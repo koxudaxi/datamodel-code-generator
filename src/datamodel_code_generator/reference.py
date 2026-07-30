@@ -34,7 +34,7 @@ from typing_extensions import TypeIs
 
 from datamodel_code_generator import Error, NamingStrategy
 from datamodel_code_generator._format_types import PythonVersion
-from datamodel_code_generator.enums import ClassNameAffixScope
+from datamodel_code_generator.enums import ClassNameAffixScope, HTTPBackend
 from datamodel_code_generator.util import camel_to_snake
 
 if TYPE_CHECKING:
@@ -584,6 +584,7 @@ class ModelResolver:  # noqa: PLR0904
         skip_affix_for_root: bool = False,  # noqa: FBT001, FBT002
         model_name_map: Mapping[str, str] | None = None,
         default_value_overrides: Mapping[str, Any] | None = None,
+        http_backend: HTTPBackend = HTTPBackend.AUTO,
     ) -> None:
         """Initialize model resolver with naming and resolution options."""
         self.references: dict[str, Reference] = {}
@@ -595,6 +596,7 @@ class ModelResolver:  # noqa: PLR0904
         self.exclude_names: set[str] = exclude_names or set()
         self.duplicate_name_suffix: str | None = duplicate_name_suffix
         self._base_url: str | None = base_url
+        self.http_backend = http_backend
         self.singular_name_suffix: str = (
             singular_name_suffix if isinstance(singular_name_suffix, str) else SINGULAR_NAME_SUFFIX
         )
@@ -918,8 +920,12 @@ class ModelResolver:  # noqa: PLR0904
 
             effective_base = self.base_url
             if self.root_id:
-                effective_base = self.root_id if is_url(self.root_id) else join_url(self.base_url, self.root_id)
-            joined_url = join_url(effective_base, ref)
+                effective_base = (
+                    self.root_id
+                    if is_url(self.root_id)
+                    else join_url(self.base_url, self.root_id, http_backend=self.http_backend)
+                )
+            joined_url = join_url(effective_base, ref, http_backend=self.http_backend)
             joined_url_without_fragment, _, fragment = joined_url.partition("#")
             return f"{joined_url_without_fragment}#{fragment}"
 

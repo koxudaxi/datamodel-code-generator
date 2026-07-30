@@ -138,7 +138,7 @@ datamodel-codegen --url https://example.com/api/openapi.yaml --output model.py
 ```
 
 The `http` extra is the stable, non-deprecated backend. For the experimental
-HTTPX2 alternative and the exact selection rules, see
+HTTPX2 alternative, pass `--http-backend httpx2`; see
 [HTTP backend selection](faq.md#http-backend-selection).
 
 ### ⚙️ Use with pyproject.toml

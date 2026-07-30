@@ -3,11 +3,12 @@
 Provides functions to fetch schema content from URLs and join URL references.
 HTTP(S) operations require either the stable `datamodel-code-generator[http]` extra
 (`httpx` with `httpcore`) or the experimental `datamodel-code-generator[httpx2]`
-extra (`httpx2` with `httpcore2`). The backend is selected lazily on the first
-HTTP(S) operation and cached for the process. The experimental pair is preferred;
-selection falls back to the stable pair only when the `httpx2` client module itself
-is absent. Missing paired or internal dependencies are reported instead of causing
-a fallback. Joining file:// URLs uses a dependency-free local fast path.
+extra (`httpx2` with `httpcore2`). Backend selection is lazy and process-cached.
+The default policy selects stable HTTPX when its client module is installed and
+only tries experimental HTTPX2 when that module is absent. Explicit selections
+never fall back.
+Missing paired or internal dependencies are reported instead of being hidden.
+Joining file:// URLs uses a dependency-free local fast path.
 """
 
 from __future__ import annotations
@@ -15,8 +16,10 @@ from __future__ import annotations
 import contextlib
 import socket
 import ssl
+from _thread import allocate_lock  # noqa: PLC2701
 from collections import OrderedDict
-from dataclasses import dataclass
+from collections.abc import Sequence  # noqa: TC003  # Runtime public annotation introspection
+from dataclasses import dataclass, field
 from ipaddress import IPv4Address, IPv6Address, IPv6Network, ip_address
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Generic, Literal, TypeVar, cast
@@ -25,9 +28,10 @@ from urllib.parse import urlparse
 from typing_extensions import Self
 
 from datamodel_code_generator import SchemaFetchError
+from datamodel_code_generator.enums import HTTPBackend
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Mapping
     from types import TracebackType
     from typing import Protocol, overload
 
@@ -288,21 +292,42 @@ if TYPE_CHECKING:
         URL: _HTTPCoreURLFactory
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class _HTTPStack(Generic[_HTTPTransportT_co]):
     """One matched HTTP client/core pair selected for this process."""
 
     backend: _HTTPBackendName
     httpx: _HTTPXModule
-    transport_type: _HTTPTransportFactory[_HTTPTransportT_co]
+    core_backend: _HTTPCoreBackendName
+    _transport_type: _HTTPTransportFactory[_HTTPTransportT_co] | None = field(default=None, init=False, repr=False)
+
+    @property
+    def transport_type(self) -> _HTTPTransportFactory[_HTTPTransportT_co]:
+        """Return the process-cached transport factory after importing the paired core."""
+        if (transport_type := self._transport_type) is not None:
+            return transport_type
+
+        with _HTTP_CACHE_LOCK:
+            if (transport_type := self._transport_type) is None:
+                from importlib import import_module  # noqa: PLC0415
+
+                httpcore_module = cast("_HTTPCoreModule", import_module(self.core_backend))
+                transport_type = cast(
+                    "_HTTPTransportFactory[_HTTPTransportT_co]",
+                    _create_pinned_transport_type(self.httpx, httpcore_module),
+                )
+                self._transport_type = transport_type
+        return transport_type
 
 
-_HTTP_STACK: _HTTPStack[_HTTPTransport] | None = None
+_HTTP_CACHE_LOCK = allocate_lock()
+_HTTP_STACKS: dict[_HTTPBackendName, _HTTPStack[_HTTPTransport]] = {}
+_AUTO_HTTP_STACK: _HTTPStack[_HTTPTransport] | None = None
 
 
 DEFAULT_HTTP_TIMEOUT = 30.0
 MAX_HTTP_REDIRECTS = 20
-_HTTP_BACKEND_PRIORITY: tuple[_HTTPBackendName, ...] = ("httpx2", "httpx")
+_HTTP_BACKEND_PRIORITY: tuple[_HTTPBackendName, ...] = ("httpx", "httpx2")
 _HTTP_FETCH_CLIENT_CACHE_MAX_SIZE = 32
 _HTTP_FETCH_DNS_CACHE_MAX_SIZE = 128
 _HTTP_REDIRECT_STATUS_CODES = frozenset({301, 302, 303, 307, 308})
@@ -639,59 +664,92 @@ def _load_matched_http_stack(
     backend: _HTTPBackendName,
     core_backend: _HTTPCoreBackendName,
 ) -> _HTTPStack[_HTTPTransport]:
-    """Import an already matched HTTP client/core pair."""
+    """Import the selected client while retaining its exact paired core name."""
     from importlib import import_module  # noqa: PLC0415
 
     httpx_module = cast("_HTTPXModule", import_module(backend))
-    httpcore_module = cast("_HTTPCoreModule", import_module(core_backend))
     return _HTTPStack(
         backend=backend,
         httpx=httpx_module,
-        transport_type=_create_pinned_transport_type(httpx_module, httpcore_module),
+        core_backend=core_backend,
     )
 
 
 def _load_http_stack(backend: _HTTPBackendName) -> _HTTPStack[_HTTPTransport]:
     """Select one matched HTTP client/core pair without probing package metadata."""
-    if backend == "httpx":
-        core_backend: _HTTPCoreBackendName = "httpcore"
-    elif backend == "httpx2":
-        core_backend = "httpcore2"
-    else:
-        msg = f"Unexpected HTTP backend: {backend!r}"
-        raise AssertionError(msg)
+    match backend:
+        case "httpx":
+            core_backend: _HTTPCoreBackendName = "httpcore"
+        case "httpx2":
+            core_backend = "httpcore2"
+        case _:
+            msg = f"Unexpected HTTP backend: {backend!r}"
+            raise AssertionError(msg)
     return _load_matched_http_stack(backend, core_backend)
 
 
-def _get_http_stack() -> _HTTPStack[_HTTPTransport]:
-    """Return the lazily selected stack, preferring explicitly installed HTTPX2."""
-    global _HTTP_STACK  # noqa: PLW0603
-
-    if (stack := _HTTP_STACK) is not None:
+def _get_or_load_http_stack(backend: _HTTPBackendName) -> _HTTPStack[_HTTPTransport]:
+    """Return one backend-specific stack, importing its client at most once."""
+    if (stack := _HTTP_STACKS.get(backend)) is not None:
         return stack
-
-    for backend in _HTTP_BACKEND_PRIORITY:
-        try:
+    with _HTTP_CACHE_LOCK:
+        if (stack := _HTTP_STACKS.get(backend)) is None:
             stack = _load_http_stack(backend)
-        except ModuleNotFoundError as exc:
-            match exc.name:
-                case missing_backend if missing_backend == backend:
-                    continue
-                case _:
-                    raise
-        _HTTP_STACK = stack
-        return stack
-
-    msg = (
-        "Please run `$pip install 'datamodel-code-generator[http]'` to resolve HTTP(S) URL references, "
-        "or install the experimental `datamodel-code-generator[httpx2]` extra"
-    )
-    raise Exception(msg) from None  # noqa: TRY002
+            _HTTP_STACKS[backend] = stack
+    return stack
 
 
-def _get_httpx() -> _HTTPXModule:
+def _get_http_stack(http_backend: HTTPBackend = HTTPBackend.AUTO) -> _HTTPStack[_HTTPTransport]:
+    """Return the lazily selected stack for an automatic or explicit policy."""
+    global _AUTO_HTTP_STACK  # noqa: PLW0603
+
+    if http_backend is HTTPBackend.AUTO:
+        if (stack := _AUTO_HTTP_STACK) is not None:
+            return stack
+        for backend in _HTTP_BACKEND_PRIORITY:
+            try:
+                stack = _get_or_load_http_stack(backend)
+            except ModuleNotFoundError as exc:
+                match exc.name:
+                    case missing_backend if missing_backend == backend:
+                        continue
+                    case _:
+                        raise
+            _AUTO_HTTP_STACK = stack
+            return stack
+
+        msg = (
+            "Please run `$pip install 'datamodel-code-generator[http]'` to resolve HTTP(S) URL references, "
+            "or install the experimental `datamodel-code-generator[httpx2]` extra"
+        )
+        raise Exception(msg) from None  # noqa: TRY002
+
+    match http_backend:
+        case HTTPBackend.HTTPX:
+            backend: _HTTPBackendName = "httpx"
+            extra = "http"
+        case HTTPBackend.HTTPX2:
+            backend = "httpx2"
+            extra = "httpx2"
+        case _:
+            msg = f"Unexpected HTTP backend policy: {http_backend!r}"
+            raise AssertionError(msg)
+
+    try:
+        return _get_or_load_http_stack(backend)
+    except ModuleNotFoundError as exc:
+        if exc.name != backend:
+            raise
+        msg = (
+            f"The explicitly selected {backend} HTTP backend is not installed. "
+            f"Please run `$pip install 'datamodel-code-generator[{extra}]'`."
+        )
+        raise ModuleNotFoundError(msg, name=backend) from None
+
+
+def _get_httpx(http_backend: HTTPBackend = HTTPBackend.AUTO) -> _HTTPXModule:
     """Return the selected HTTP client module for compatibility with internal callers."""
-    return _get_http_stack().httpx
+    return _get_http_stack(http_backend).httpx
 
 
 def _build_pinned_transport(
@@ -713,8 +771,10 @@ class _HTTPFetchSession:
     across distinct remote references without sharing network state globally.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, http_backend: HTTPBackend = HTTPBackend.AUTO) -> None:
         """Initialize empty size- and parser-lifetime-bounded caches."""
+        self._http_backend = http_backend
+        self.http_stack = _get_http_stack(http_backend)
         self._dns_cache: OrderedDict[str, tuple[IPv4Address | IPv6Address, ...]] = OrderedDict()
         self._clients: OrderedDict[
             tuple[str | None, tuple[IPv4Address | IPv6Address, ...], bool, float],
@@ -815,6 +875,7 @@ class _HTTPFetchSession:
             query_parameters,
             timeout,
             allow_private_network=allow_private_network,
+            http_backend=self._http_backend,
             session=self,
         )
 
@@ -1022,6 +1083,7 @@ def get_body(  # noqa: PLR0913
     timeout: float = DEFAULT_HTTP_TIMEOUT,
     *,
     allow_private_network: bool = False,
+    http_backend: HTTPBackend = HTTPBackend.AUTO,
 ) -> str:
     """Fetch schema content from a URL with redirect validation and DNS pinning.
 
@@ -1033,9 +1095,10 @@ def get_body(  # noqa: PLR0913
     can be narrowed before the next request. Once a redirect crosses origins, scoped credentials are removed
     from `current_headers` and are not restored on later hops.
 
-    The HTTP backend is selected lazily on the first HTTP(S) operation and cached for the process. The experimental
-    `httpx2`/`httpcore2` pair is preferred. Selection falls back to `httpx`/`httpcore` only when the `httpx2` client
-    module itself is absent; missing paired or internal dependencies are reported instead.
+    The default ``HTTPBackend.AUTO`` policy uses stable `httpx`/`httpcore` when
+    available and only tries experimental `httpx2`/`httpcore2` when the stable
+    client module is absent. Explicit selections do not fall back. Client imports,
+    paired-core validation, and process caches stay lazy until HTTP work needs them.
     """
     return _get_body(
         url,
@@ -1044,6 +1107,7 @@ def get_body(  # noqa: PLR0913
         query_parameters,
         timeout,
         allow_private_network=allow_private_network,
+        http_backend=http_backend,
     )
 
 
@@ -1055,10 +1119,14 @@ def _get_body(  # noqa: PLR0913
     timeout: float,
     *,
     allow_private_network: bool,
+    http_backend: HTTPBackend,
     session: _HTTPFetchSession | None = None,
 ) -> str:
     """Fetch one schema body, optionally reusing parser-scoped network state."""
-    http_stack = _get_http_stack()
+    http_stack = session.http_stack if session is not None else _get_http_stack(http_backend)
+    # Joining URLs needs only the selected client. A fetch validates the exact paired
+    # core eagerly so a broken experimental installation never falls back to stable.
+    _ = http_stack.transport_type
     resolve_host = _get_ips_from_host
     get_response = _get_http_response
     if session is not None:
@@ -1110,13 +1178,18 @@ def _get_body(  # noqa: PLR0913
     return response.text
 
 
-def join_url(url: str, ref: str = ".") -> str:  # noqa: PLR0912
+def join_url(  # noqa: PLR0912
+    url: str,
+    ref: str = ".",
+    *,
+    http_backend: HTTPBackend = HTTPBackend.AUTO,
+) -> str:
     """Join a base URL with a relative reference.
 
-    File URLs use a dependency-free local fast path because client URL joining is HTTP-oriented. HTTP(S) URLs are
-    delegated to the backend selected lazily on the first HTTP(S) operation and cached for the process. The experimental
-    `httpx2`/`httpcore2` pair is preferred. Selection falls back to `httpx`/`httpcore` only when the `httpx2` client
-    module itself is absent; missing paired or internal dependencies are reported instead.
+    File URLs use a dependency-free local fast path because client URL joining is
+    HTTP-oriented. HTTP(S) URLs use the selected policy lazily. The default
+    ``HTTPBackend.AUTO`` policy prefers stable HTTPX, while explicit selections
+    require their exact backend without fallback.
     """
     if url.startswith("file://"):
         from urllib.parse import urlparse  # noqa: PLC0415
@@ -1162,4 +1235,4 @@ def join_url(url: str, ref: str = ".") -> str:  # noqa: PLR0912
         if frag:
             joined += f"#{frag[0]}"
         return joined
-    return str(_get_http_stack().httpx.URL(url).join(ref))
+    return str(_get_http_stack(http_backend).httpx.URL(url).join(ref))

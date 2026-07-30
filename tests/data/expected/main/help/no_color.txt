@@ -48,6 +48,13 @@ Options:
   --formatters {builtin,black,isort,ruff-check,ruff-format} [{builtin,black,isort,ruff-check,ruff-format} ...]
                         Formatters for output (default: [black, isort]; use
                         builtin for dependency-free formatting)
+  --http-backend {auto,httpx,httpx2}
+                        Select the HTTP client backend. 'auto' (default)
+                        selects stable HTTPX when its client module is
+                        installed and only selects experimental HTTPX2 when
+                        that module is absent. 'httpx' and 'httpx2' require
+                        that exact backend. Explicit selections and paired
+                        dependency errors do not fall back.
   --http-headers HTTP_HEADER [HTTP_HEADER ...]
                         Set headers in HTTP requests to the remote host.
                         (example: "Authorization: Basic dXNlcjpwYXNz")
@@ -112,14 +119,12 @@ Options:
                         used. For HTTP(S), datamodel-code-generator[http]
                         remains the stable HTTPX backend and is not
                         deprecated, while datamodel-code-generator[httpx2] is
-                        experimental. On the first HTTP(S) request, backend
-                        selection is lazy and then cached for the process:
-                        httpx2 + httpcore2 takes precedence over httpx +
-                        httpcore when both client/core pairs are installed.
-                        Fallback to httpx + httpcore occurs only when the top-
-                        level httpx2 client module itself is not installed; a
-                        missing or broken paired dependency is an error and
-                        does not trigger fallback.
+                        experimental. The default --http-backend auto policy
+                        selects stable HTTPX when its client module is
+                        installed and selects HTTPX2 only when that module is
+                        absent. Select --http-backend httpx2 to require the
+                        experimental backend. Explicit selections and paired
+                        dependency errors do not fall back.
 
 Typing customization:
   --allof-class-hierarchy {if-no-conflict,always}

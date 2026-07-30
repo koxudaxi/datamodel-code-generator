@@ -39,7 +39,7 @@
     "id": "extra.httpx2",
     "kind": "extra",
     "message": "The HTTPX2-backed HTTP client is experimental and may change as compatibility is validated.",
-    "note": "datamodel-code-generator[http] remains the stable HTTPX backend and is not deprecated; datamodel-code-generator[httpx2] is experimental. On the first HTTP(S) request, backend selection is lazy and then cached for the process: httpx2 + httpcore2 takes precedence over httpx + httpcore when both client/core pairs are installed. Fallback to httpx + httpcore occurs only when the top-level httpx2 client module itself is not installed; a missing or broken paired dependency is an error and does not trigger fallback.",
+    "note": "datamodel-code-generator[http] remains the stable HTTPX backend and is not deprecated; datamodel-code-generator[httpx2] is experimental. The default HTTP backend policy is auto: stable httpx is selected when its client module is installed, including when both pairs are installed, and experimental httpx2 is selected only when that module is absent. Use --http-backend httpx2 or HTTPBackend.HTTPX2 to require the experimental pair. Explicit selections and paired dependency errors do not fall back.",
     "since_version": "0.71.1",
     "target": "datamodel-code-generator[httpx2]",
     "tracking_issue": null

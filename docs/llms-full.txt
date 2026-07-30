@@ -140,7 +140,7 @@ datamodel-codegen --url https://example.com/api/openapi.yaml --output model.py
 ```
 
 The `http` extra is the stable, non-deprecated backend. For the experimental
-HTTPX2 alternative and the exact selection rules, see
+HTTPX2 alternative, pass `--http-backend httpx2`; see
 [HTTP backend selection](faq.md#http-backend-selection).
 
 ### ⚙️ Use with pyproject.toml
@@ -7949,9 +7949,25 @@ pip install 'datamodel-code-generator[httpx2]'
 ```
 
 The experimental extra is not included in `datamodel-code-generator[all]`.
-When both HTTP extras are present, HTTPX2 takes precedence. See
-[HTTP backend selection](faq.md#http-backend-selection) for the complete
-fallback, dependency-error, and process-cache behavior.
+The default `HTTPBackend.AUTO` policy selects stable HTTPX when its client
+module is installed, including when both extras are installed, and selects
+HTTPX2 only when that module is absent. Require HTTPX2 with
+`--http-backend httpx2`, `http_backend = "httpx2"` under
+`[tool.datamodel-codegen]`, or the public API:
+
+```python
+from urllib.parse import urlparse
+
+from datamodel_code_generator import HTTPBackend, generate
+
+result = generate(
+    urlparse("https://example.com/schema.json"),
+    http_backend=HTTPBackend.HTTPX2,
+)
+```
+
+See [HTTP backend selection](faq.md#http-backend-selection) for the complete
+automatic and explicit selection rules.
 
 ### 📝 Getting Generated Code as String
 
@@ -8575,6 +8591,17 @@ Source: https://datamodel-code-generator.koxudaxi.dev/pyproject_toml/
 # ⚙️ pyproject.toml Configuration
 
 datamodel-code-generator can be configured using `pyproject.toml`. The tool automatically searches for `pyproject.toml` in the current directory and parent directories (stopping at the git repository root).
+
+HTTP client selection uses the same values as `--http-backend`. For example,
+the experimental HTTPX2 pair can be required explicitly:
+
+```toml
+[tool.datamodel-codegen]
+http-backend = "httpx2"
+```
+
+The default is `"auto"`, which prefers stable HTTPX. See
+[HTTP backend selection](faq.md#http-backend-selection).
 
 ## 🚀 Basic Usage
 
@@ -9560,7 +9587,7 @@ This documentation is auto-generated from test cases.
 
 | Category | Options | Description |
 |----------|---------|-------------|
-| 📁 [Base Options](base-options.md) | 12 | Input/output configuration |
+| 📁 [Base Options](base-options.md) | 13 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 30 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 27 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 44 | Model generation behavior |
@@ -9696,6 +9723,7 @@ These links are generated from CLI option metadata and summarize options that im
 ### H {#h}
 
 - [`--help`](utility-options.md#help)
+- [`--http-backend`](base-options.md#http-backend)
 - [`--http-headers`](general-options.md#http-headers)
 - [`--http-ignore-tls`](general-options.md#http-ignore-tls)
 - [`--http-local-ref-path`](general-options.md#http-local-ref-path)
@@ -9863,6 +9891,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options
 | [`--emit-model-metadata`](#emit-model-metadata) | Write a separate JSON map from source schema references to t... |
 | [`--encoding`](#encoding) | Specify character encoding for input and output files. |
 | [`--external-ref-mapping`](#external-ref-mapping) | Map external `$ref` files to Python packages. |
+| [`--http-backend`](#http-backend) | Select the HTTP client backend for remote schemas. |
 | [`--input`](#input) | Specify the input schema file path. |
 | [`--input-file-type`](#input-file-type) | Specify the input file type for code generation. |
 | [`--input-model`](#input-model) | Import a Python type or dict schema from a module or Python ... |
@@ -9871,7 +9900,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options
 | [`--preset`](#preset) | Apply an immutable built-in option preset. |
 | [`--schema-version`](#schema-version) | Schema version to use for parsing. |
 | [`--schema-version-mode`](#schema-version-mode) | Schema version validation mode. |
-| [`--url`](#url) | Fetch schema from URL with custom HTTP headers. |
+| [`--url`](#url) | Fetch a schema from a URL with custom HTTP headers. |
 
 ---
 
@@ -10141,6 +10170,65 @@ instead of generating duplicate classes from external schema files.
     class ErrorResponse(BaseModel):
         error: Error
         timestamp: AwareDatetime
+    ```
+
+---
+
+## `--http-backend` {#http-backend}
+
+Select the HTTP client backend for remote schemas.
+
+`--http-backend auto` selects stable HTTPX when its client module is installed
+and selects experimental HTTPX2 only when that module is absent. Explicit
+`httpx` or `httpx2` selections require that exact backend. Explicit selections
+and paired dependency errors do not fall back.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --http-backend auto # (1)!
+    ```
+
+    1. :material-arrow-left: `--http-backend` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Pet",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  http://localhost/schema.json
+
+    from __future__ import annotations
+
+    from pydantic import BaseModel
+
+
+    class Pet(BaseModel):
+        id: int | None = None
+        name: str | None = None
+        tag: str | None = None
     ```
 
 ---
@@ -10807,12 +10895,11 @@ The `--schema-version-mode` option controls how schema version validation is per
 
 ## `--url` {#url}
 
-Fetch schema from URL with custom HTTP headers.
+Fetch a schema from a URL with custom HTTP headers.
 
 The `--url` flag specifies a remote URL to fetch the schema from instead of
-a local file. The `--http-headers` flag adds custom HTTP headers to the request,
-useful for authentication (e.g., Bearer tokens) or custom API requirements.
-Format: `HeaderName:HeaderValue`.
+a local file. The `--http-headers` flag adds request headers in
+`HeaderName:HeaderValue` format.
 
 !!! tip "Usage"
 
@@ -34130,7 +34217,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/general-opti
 | [`--fail-on-multi-module-stdout`](#fail-on-multi-module-stdout) | Fail instead of concatenating multiple modules in text stdou... |
 | [`--generate-cli-command`](#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
 | [`--generate-pyproject-config`](#generate-pyproject-config) | Generate pyproject.toml configuration from CLI arguments. |
-| [`--http-headers`](#http-headers) | Fetch schema from URL with custom HTTP headers. |
+| [`--http-headers`](#http-headers) | Fetch a schema from a URL with custom HTTP headers. |
 | [`--http-ignore-tls`](#http-ignore-tls) | Disable TLS certificate verification for HTTPS requests. |
 | [`--http-local-ref-path`](#http-local-ref-path) | Resolve HTTP references from local schema files. |
 | [`--http-query-parameters`](#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
@@ -35792,12 +35879,11 @@ a working CLI command into a reusable configuration file.
 
 ## `--http-headers` {#http-headers}
 
-Fetch schema from URL with custom HTTP headers.
+Fetch a schema from a URL with custom HTTP headers.
 
 The `--url` flag specifies a remote URL to fetch the schema from instead of
-a local file. The `--http-headers` flag adds custom HTTP headers to the request,
-useful for authentication (e.g., Bearer tokens) or custom API requirements.
-Format: `HeaderName:HeaderValue`.
+a local file. The `--http-headers` flag adds request headers in
+`HeaderName:HeaderValue` format.
 
 !!! tip "Usage"
 
@@ -37210,6 +37296,7 @@ datamodel-codegen [OPTIONS]
 | [`--emit-model-metadata`](base-options.md#emit-model-metadata) | Write a separate JSON map from source schema references to the final generated m... |
 | [`--encoding`](base-options.md#encoding) | Specify character encoding for input and output files. |
 | [`--external-ref-mapping`](base-options.md#external-ref-mapping) | Map external `$ref` files to Python packages. |
+| [`--http-backend`](base-options.md#http-backend) | Select the HTTP client backend for remote schemas. |
 | [`--input`](base-options.md#input) | Specify the input schema file path. |
 | [`--input-file-type`](base-options.md#input-file-type) | Specify the input file type for code generation. |
 | [`--input-model`](base-options.md#input-model) | Import a Python type or dict schema from a module or Python file. |
@@ -37218,7 +37305,7 @@ datamodel-codegen [OPTIONS]
 | [`--preset`](base-options.md#preset) | Apply an immutable built-in option preset. |
 | [`--schema-version`](base-options.md#schema-version) | Schema version to use for parsing. |
 | [`--schema-version-mode`](base-options.md#schema-version-mode) | Schema version validation mode. |
-| [`--url`](base-options.md#url) | Fetch schema from URL with custom HTTP headers. |
+| [`--url`](base-options.md#url) | Fetch a schema from a URL with custom HTTP headers. |
 
 ### 🔧 Typing Customization
 
@@ -37400,7 +37487,7 @@ datamodel-codegen [OPTIONS]
 | [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout) | Fail instead of concatenating multiple modules in text stdout. |
 | [`--generate-cli-command`](general-options.md#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
 | [`--generate-pyproject-config`](general-options.md#generate-pyproject-config) | Generate pyproject.toml configuration from CLI arguments. |
-| [`--http-headers`](general-options.md#http-headers) | Fetch schema from URL with custom HTTP headers. |
+| [`--http-headers`](general-options.md#http-headers) | Fetch a schema from a URL with custom HTTP headers. |
 | [`--http-ignore-tls`](general-options.md#http-ignore-tls) | Disable TLS certificate verification for HTTPS requests. |
 | [`--http-local-ref-path`](general-options.md#http-local-ref-path) | Resolve HTTP references from local schema files. |
 | [`--http-query-parameters`](general-options.md#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
@@ -37498,7 +37585,8 @@ All options sorted alphabetically:
 - [`--generate-schema-validators`](template-customization.md#generate-schema-validators) - Generate experimental Pydantic v2 model validators for JSON ...
 - [`--graphql-no-typename`](graphql-only-options.md#graphql-no-typename) - Exclude __typename field from generated GraphQL models.
 - [`--help`](utility-options.md#help) - Show help message and exit
-- [`--http-headers`](general-options.md#http-headers) - Fetch schema from URL with custom HTTP headers.
+- [`--http-backend`](base-options.md#http-backend) - Select the HTTP client backend for remote schemas.
+- [`--http-headers`](general-options.md#http-headers) - Fetch a schema from a URL with custom HTTP headers.
 - [`--http-ignore-tls`](general-options.md#http-ignore-tls) - Disable TLS certificate verification for HTTPS requests.
 - [`--http-local-ref-path`](general-options.md#http-local-ref-path) - Resolve HTTP references from local schema files.
 - [`--http-query-parameters`](general-options.md#http-query-parameters) - Add query parameters to HTTP requests for remote schemas.
@@ -37566,7 +37654,7 @@ All options sorted alphabetically:
 - [`--type-mappings`](typing-customization.md#type-mappings) - Override default type mappings for schema formats.
 - [`--type-overrides`](typing-customization.md#type-overrides) - Replace schema model types with custom Python types via JSON...
 - [`--union-mode`](model-customization.md#union-mode) - Union mode for combining anyOf/oneOf schemas (smart or left_...
-- [`--url`](base-options.md#url) - Fetch schema from URL with custom HTTP headers.
+- [`--url`](base-options.md#url) - Fetch a schema from a URL with custom HTTP headers.
 - [`--use-annotated`](typing-customization.md#use-annotated) - Use typing.Annotated for Field() with constraints.
 - [`--use-attribute-docstrings`](field-customization.md#use-attribute-docstrings) - Generate field descriptions as attribute docstrings instead ...
 - [`--use-closed-typed-dict`](typing-customization.md#use-closed-typed-dict) - Generate TypedDict with PEP 728 closed/extra_items (default:...
@@ -38338,7 +38426,7 @@ The option replaces root model classes with type aliases where possible. Pydanti
 
 The HTTPX2-backed HTTP client is experimental and may change as compatibility is validated.
 
-datamodel-code-generator[http] remains the stable HTTPX backend and is not deprecated; datamodel-code-generator[httpx2] is experimental. On the first HTTP(S) request, backend selection is lazy and then cached for the process: httpx2 + httpcore2 takes precedence over httpx + httpcore when both client/core pairs are installed. Fallback to httpx + httpcore occurs only when the top-level httpx2 client module itself is not installed; a missing or broken paired dependency is an error and does not trigger fallback.
+datamodel-code-generator[http] remains the stable HTTPX backend and is not deprecated; datamodel-code-generator[httpx2] is experimental. The default HTTP backend policy is auto: stable httpx is selected when its client module is installed, including when both pairs are installed, and experimental httpx2 is selected only when that module is absent. Use --http-backend httpx2 or HTTPBackend.HTTPX2 to require the experimental pair. Explicit selections and paired dependency errors do not fall back.
 
 ### `formatter.builtin`
 
@@ -38683,22 +38771,28 @@ The HTTP extras install separate, matched client and transport stacks:
 `datamodel-code-generator[all]` includes the stable `http` extra but
 intentionally does not include the experimental `httpx2` extra.
 
-The backend is selected lazily on the first HTTP(S) use and the result is
-cached for the lifetime of the process:
+Select the backend with `--http-backend {auto,httpx,httpx2}`, the corresponding
+`http_backend` pyproject setting, or `HTTPBackend` in the public API:
 
-1. The experimental `httpx2` + `httpcore2` stack is preferred when it is
-   available, including when both extras are installed.
-2. Selection falls back to `httpx` + `httpcore` only when the `httpx2` client
-   module itself is not installed.
-3. A missing paired transport or another broken dependency in an installed
-   stack raises its import error. It does not silently fall back, because that
-   would hide an invalid environment.
-4. If neither client is installed, the request fails with instructions to
+1. `auto` is the default. It selects stable `httpx` when its client module is
+   installed, including when both pairs are installed.
+2. `auto` uses experimental `httpx2` + `httpcore2` only when the stable HTTPX
+   client itself is unavailable.
+3. `httpx` and `httpx2` require the selected pair. Explicit selections never
+   fall back to a different backend.
+4. A missing paired transport or another broken dependency in a selected stack
+   raises its import error instead of hiding an invalid environment.
+5. If `auto` finds neither client, the request fails with instructions to
    install an HTTP extra.
 
-Because selection is cached process-wide, installing or removing an extra
-while a process is running does not switch that process to another backend.
-Restart the process after changing the installed extras.
+Selection and imports are lazy. Once `auto` selects a backend, it keeps that
+selection for the process. Restart the process to change an already selected
+backend after installing or removing an extra.
+
+```toml title="pyproject.toml"
+[tool.datamodel-codegen]
+http-backend = "httpx2"
+```
 
 ### 🔒 SSL certificate errors
 
@@ -38924,16 +39018,16 @@ classDiagram
 
 | Config model | Field count | Purpose |
 | --- | ---: | --- |
-| `BaseGenerateConfig` | 142 | Shared generation options. |
-| `GenerateConfig` | 157 | Public `generate()` configuration. |
-| `ParserConfig` | 137 | Base parser dependency injection and parser options. |
-| `JSONSchemaParserConfig` | 139 | JSON Schema parser options. |
-| `OpenAPIParserConfig` | 145 | OpenAPI-specific parser options. |
-| `AsyncAPIParserConfig` | 146 | AsyncAPI-specific parser options. |
-| `XMLSchemaParserConfig` | 140 | XML Schema-specific parser options. |
-| `ProtobufParserConfig` | 140 | Protocol Buffers-specific parser options. |
-| `AvroParserConfig` | 139 | Avro-specific parser options. |
-| `GraphQLParserConfig` | 140 | GraphQL-specific parser options. |
+| `BaseGenerateConfig` | 143 | Shared generation options. |
+| `GenerateConfig` | 158 | Public `generate()` configuration. |
+| `ParserConfig` | 138 | Base parser dependency injection and parser options. |
+| `JSONSchemaParserConfig` | 140 | JSON Schema parser options. |
+| `OpenAPIParserConfig` | 146 | OpenAPI-specific parser options. |
+| `AsyncAPIParserConfig` | 147 | AsyncAPI-specific parser options. |
+| `XMLSchemaParserConfig` | 141 | XML Schema-specific parser options. |
+| `ProtobufParserConfig` | 141 | Protocol Buffers-specific parser options. |
+| `AvroParserConfig` | 140 | Avro-specific parser options. |
+| `GraphQLParserConfig` | 141 | GraphQL-specific parser options. |
 
 ### Formatter Names
 

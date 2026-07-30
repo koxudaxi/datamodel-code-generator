@@ -77,6 +77,9 @@ Formatter: TypeAlias = Literal['builtin', 'black', 'isort', 'ruff-check', 'ruff-
 GraphQLScope: TypeAlias = Literal['schema']
 
 
+HTTPBackend: TypeAlias = Literal['auto', 'httpx', 'httpx2']
+
+
 InputFileType: TypeAlias = Literal[
     'auto',
     'openapi',
@@ -219,6 +222,7 @@ class BaseGenerateConfig(TypedDict):
     allow_remote_refs: NotRequired[bool | None]
     strict_refs: NotRequired[bool]
     allow_private_network: NotRequired[bool]
+    http_backend: NotRequired[HTTPBackend]
     http_headers: NotRequired[Sequence[tuple[str, str]] | None]
     http_local_ref_path: NotRequired[str | None]
     http_ignore_tls: NotRequired[bool]

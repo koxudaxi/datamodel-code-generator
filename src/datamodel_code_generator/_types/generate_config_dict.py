@@ -25,6 +25,7 @@ if TYPE_CHECKING:
         DataModelType,
         FieldTypeCollisionStrategy,
         GraphQLScope,
+        HTTPBackend,
         InputFileType,
         ModuleSplitMode,
         NamingStrategy,
@@ -132,6 +133,7 @@ class BaseGenerateConfig(TypedDict):
     allow_remote_refs: NotRequired[bool | None]
     strict_refs: NotRequired[bool]
     allow_private_network: NotRequired[bool]
+    http_backend: NotRequired[HTTPBackend]
     http_headers: NotRequired[Sequence[tuple[str, str]] | None]
     http_local_ref_path: NotRequired[Path | None]
     http_ignore_tls: NotRequired[bool]

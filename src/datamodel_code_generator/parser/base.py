@@ -1732,6 +1732,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             class_name_affix_scope=config.class_name_affix_scope,
             skip_affix_for_root=config.class_name is not None,
             default_value_overrides=config.default_value_overrides,
+            http_backend=config.http_backend,
         )
         self.class_name: str | None = config.class_name
         self.allow_leading_underscore_class_name: bool = config.allow_leading_underscore_class_name
@@ -1739,6 +1740,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.allow_remote_refs: bool | None = config.allow_remote_refs
         self.strict_refs: bool = config.strict_refs
         self.allow_private_network: bool = config.allow_private_network
+        self.http_backend = config.http_backend
         self.http_headers: Sequence[tuple[str, str]] | None = config.http_headers
         self.http_local_ref_path: Path | None = config.http_local_ref_path
         self.http_query_parameters: Sequence[tuple[str, str]] | None = config.http_query_parameters
@@ -1953,7 +1955,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             from datamodel_code_generator.http import DEFAULT_HTTP_TIMEOUT, _HTTPFetchSession  # noqa: PLC0415
 
             if (session := self._http_fetch_session) is None:
-                self._http_fetch_session = session = _HTTPFetchSession()
+                self._http_fetch_session = session = _HTTPFetchSession(self.http_backend)
             timeout = self.http_timeout if self.http_timeout is not None else DEFAULT_HTTP_TIMEOUT
             return session.get_body(
                 remote_url,
