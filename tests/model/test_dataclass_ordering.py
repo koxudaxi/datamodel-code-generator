@@ -123,11 +123,17 @@ def test_constructor_default_classifiers_are_output_owned() -> None:
         required=False,
         default=UNDEFINED,
     )
+    msgspec_required = MsgspecDataModelField(
+        name="required",
+        data_type=DataType(type="str"),
+        required=True,
+    )
     assert DataModel.FIELD_DEFAULT_CLASSIFIER(required) == (False, False)
     assert DataModel.FIELD_DEFAULT_CLASSIFIER(factory) == (True, False)
     assert DataModel.FIELD_DEFAULT_CLASSIFIER(undefined) == (False, False)
     assert DataModel.FIELD_DEFAULT_CLASSIFIER(defaulted) == (True, True)
     assert MsgspecStruct.FIELD_DEFAULT_CLASSIFIER(metadata_only) == (False, False)
+    assert MsgspecStruct.FIELD_DEFAULT_CLASSIFIER(msgspec_required) == (False, False)
 
 
 @pytest.mark.allow_direct_assert
@@ -195,7 +201,6 @@ def test_constructor_default_classifiers_ignore_rendered_syntax_in_values_and_me
         extras={"x-is-classvar": True},
         required=False,
     )
-    pydantic_class_var.__dict__["_computed_default_factory"] = "StaleFactory"
 
     assert StandardDataClass.FIELD_DEFAULT_CLASSIFIER(dataclass_value) == (True, True)
     assert StandardDataClass.FIELD_DEFAULT_CLASSIFIER(dataclass_metadata) == (False, False)
@@ -204,8 +209,9 @@ def test_constructor_default_classifiers_ignore_rendered_syntax_in_values_and_me
     assert StandardDataClass.FIELD_DEFAULT_CLASSIFIER(dataclass_forced_assignment) == (False, False)
     assert PydanticDataClass.FIELD_DEFAULT_CLASSIFIER(pydantic_value) == (True, True)
     assert MsgspecStruct.FIELD_DEFAULT_CLASSIFIER(msgspec_value) == (True, True)
+    assert pydantic_class_var.field is None
     assert PydanticDataClass.FIELD_DEFAULT_CLASSIFIER(pydantic_class_var) == (False, False)
-    assert pydantic_class_var.__dict__["_computed_default_factory"] is None
+    assert pydantic_class_var.has_default_factory_in_field is False
 
 
 @pytest.mark.allow_direct_assert
@@ -261,6 +267,16 @@ def test_constructor_default_classifiers_ignore_rendered_syntax_in_values_and_me
                 required=False,
             ),
             id="msgspec-mutable-default",
+        ),
+        pytest.param(
+            MsgspecStruct,
+            MsgspecDataModelField(
+                name="msgspec_mutable_value_default",
+                data_type=DataType(type="list"),
+                default=["value"],
+                required=False,
+            ),
+            id="msgspec-mutable-value-default",
         ),
     ],
 )

@@ -5862,6 +5862,56 @@ def test_main_use_default_kwarg(output_file: Path) -> None:
 
 
 @pytest.mark.parametrize(
+    ("output_model_type", "expected_suffix", "extra_args"),
+    [
+        pytest.param(
+            "pydantic_v2.BaseModel",
+            "pydantic_v2_BaseModel",
+            [],
+            id="pydantic-base-model",
+        ),
+        pytest.param(
+            "pydantic_v2.dataclass",
+            "pydantic_v2_dataclass_annotated",
+            ["--use-annotated"],
+            id="pydantic-dataclass-annotated",
+        ),
+        pytest.param(
+            "msgspec.Struct",
+            "msgspec_Struct",
+            [],
+            id="msgspec",
+        ),
+    ],
+)
+def test_main_openapi_structured_field_render_plan(
+    output_file: Path,
+    output_model_type: str,
+    expected_suffix: str,
+    extra_args: list[str],
+) -> None:
+    """Render defaults and syntax-like user values without parsing generated fields."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "field_render_plan.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=f"output_model_types/field_render_plan_{expected_suffix}.py",
+        extra_args=[
+            "--output-model-type",
+            output_model_type,
+            "--use-default-kwarg",
+            "--use-default-factory-for-optional-nested-models",
+            "--field-extra-keys",
+            "x-render-marker",
+            "x-is-classvar",
+            *extra_args,
+        ],
+        force_exec_validation=True,
+    )
+
+
+@pytest.mark.parametrize(
     ("input_", "output"),
     [
         (
