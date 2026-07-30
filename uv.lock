@@ -815,6 +815,9 @@ graphql = [
 http = [
     { name = "httpx" },
 ]
+httpx2 = [
+    { name = "httpx2" },
+]
 protobuf = [
     { name = "grpcio-tools" },
 ]
@@ -874,6 +877,7 @@ dev = [
     { name = "t-linter" },
     { name = "tdom", marker = "python_full_version >= '3.14'" },
     { name = "time-machine" },
+    { name = "trustme" },
     { name = "twine" },
     { name = "ty" },
     { name = "types-jinja2" },
@@ -927,6 +931,7 @@ test = [
     { name = "pytest-timeout" },
     { name = "pytest-xdist" },
     { name = "time-machine" },
+    { name = "trustme" },
     { name = "watchfiles" },
 ]
 type = [
@@ -945,6 +950,7 @@ type = [
     { name = "pytest-timeout" },
     { name = "pytest-xdist" },
     { name = "time-machine" },
+    { name = "trustme" },
     { name = "ty" },
     { name = "types-jinja2" },
     { name = "types-pyyaml" },
@@ -964,6 +970,7 @@ requires-dist = [
     { name = "grpcio-tools", marker = "extra == 'protobuf'", specifier = ">=1.62,<2" },
     { name = "httpx", marker = "extra == 'all'", specifier = ">=0.24.1" },
     { name = "httpx", marker = "extra == 'http'", specifier = ">=0.24.1" },
+    { name = "httpx2", marker = "extra == 'httpx2'", specifier = ">=2,<3" },
     { name = "inflect", specifier = ">=4.1,<8" },
     { name = "isort", marker = "sys_platform != 'emscripten'", specifier = ">=4.3.21,<9" },
     { name = "jinja2", specifier = ">=2.10.1,<4" },
@@ -983,7 +990,7 @@ requires-dist = [
     { name = "watchfiles", marker = "extra == 'all'", specifier = ">=1.1" },
     { name = "watchfiles", marker = "extra == 'watch'", specifier = ">=1.1" },
 ]
-provides-extras = ["all", "debug", "graphql", "http", "protobuf", "ruff", "ryaml", "validation", "watch"]
+provides-extras = ["all", "debug", "graphql", "http", "httpx2", "protobuf", "ruff", "ryaml", "validation", "watch"]
 
 [package.metadata.requires-dev]
 benchmark = [
@@ -1019,6 +1026,7 @@ dev = [
     { name = "t-linter", specifier = ">=0.8" },
     { name = "tdom", marker = "python_full_version >= '3.14'", specifier = ">=0.1.16" },
     { name = "time-machine", specifier = ">=3.1" },
+    { name = "trustme", specifier = ">=1.2.1" },
     { name = "twine", specifier = ">=6.1" },
     { name = "ty", specifier = ">=0.0.8" },
     { name = "types-jinja2" },
@@ -1060,6 +1068,7 @@ test = [
     { name = "pytest-timeout", specifier = ">=2.4" },
     { name = "pytest-xdist", specifier = ">=3.3.1" },
     { name = "time-machine", specifier = ">=3.1" },
+    { name = "trustme", specifier = ">=1.2.1" },
     { name = "watchfiles", specifier = ">=1.1" },
 ]
 type = [
@@ -1078,6 +1087,7 @@ type = [
     { name = "pytest-timeout", specifier = ">=2.4" },
     { name = "pytest-xdist", specifier = ">=3.3.1" },
     { name = "time-machine", specifier = ">=3.1" },
+    { name = "trustme", specifier = ">=1.2.1" },
     { name = "ty", specifier = ">=0.0.8" },
     { name = "types-jinja2" },
     { name = "types-pyyaml" },
@@ -1457,6 +1467,19 @@ wheels = [
 ]
 
 [[package]]
+name = "httpcore2"
+version = "2.9.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "h11" },
+    { name = "truststore" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/39/a8/20ed1ed79cbc2ecdf5301c0968ab7c85547212e2a7bd126ddd2d986e206e/httpcore2-2.9.1.tar.gz", hash = "sha256:4d8acbf8b306f48c9d6046591fd5ba4037d1b1b1000d140fc2c3eab1e9a0c0e2", size = 67089, upload-time = "2026-07-24T09:21:03.867Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9f/fb/46c52b781975c335a2bcf1072c7bbc007cbdc8d674217f5ee1daba2c848b/httpcore2-2.9.1-py3-none-any.whl", hash = "sha256:6182472379e855fe4221246a2bb7ecede403bc61c6798062ae1787d051ccde26", size = 82809, upload-time = "2026-07-24T09:21:01.178Z" },
+]
+
+[[package]]
 name = "httpx"
 version = "0.28.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1469,6 +1492,22 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b1/df/48c586a5fe32a0f01324ee087459e112ebb7224f646c0b5023f5e79e9956/httpx-0.28.1.tar.gz", hash = "sha256:75e98c5f16b0f35b567856f597f06ff2270a374470a5c2392242528e3e3e42fc", size = 141406, upload-time = "2024-12-06T15:37:23.222Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl", hash = "sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad", size = 73517, upload-time = "2024-12-06T15:37:21.509Z" },
+]
+
+[[package]]
+name = "httpx2"
+version = "2.9.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "httpcore2" },
+    { name = "idna" },
+    { name = "truststore" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-blacklatest') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-blacklatest') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-blacklatest') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-blacklatest' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-isort5') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-isort6') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-isort7') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-isort8') or (extra == 'group-24-datamodel-code-generator-isort5' and extra == 'group-24-datamodel-code-generator-isort6') or (extra == 'group-24-datamodel-code-generator-isort5' and extra == 'group-24-datamodel-code-generator-isort7') or (extra == 'group-24-datamodel-code-generator-isort5' and extra == 'group-24-datamodel-code-generator-isort8') or (extra == 'group-24-datamodel-code-generator-isort6' and extra == 'group-24-datamodel-code-generator-isort7') or (extra == 'group-24-datamodel-code-generator-isort6' and extra == 'group-24-datamodel-code-generator-isort8') or (extra == 'group-24-datamodel-code-generator-isort7' and extra == 'group-24-datamodel-code-generator-isort8')" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/21/14/38128fbafd7e0ed41d874df6c9a653d47c2d111cfe59e2b4ac95161b4abd/httpx2-2.9.1.tar.gz", hash = "sha256:1932a768737e3666291582833da748cc4e563c337cf96706fccc04fa6e58764a", size = 95458, upload-time = "2026-07-24T09:21:04.972Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/13/b8/cfd91c4ab9134d386d48f0b6ac662ff3d4be6efdee59ee1c67ebc3c0487c/httpx2-2.9.1-py3-none-any.whl", hash = "sha256:1820fe14a9ab1107bfeff39259987429450b070ec0ff38cc87eb0d8c97fdc71a", size = 91191, upload-time = "2026-07-24T09:21:02.6Z" },
 ]
 
 [[package]]
@@ -1511,11 +1550,11 @@ wheels = [
 
 [[package]]
 name = "idna"
-version = "3.11"
+version = "3.18"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/6f/6d/0703ccc57f3a7233505399edb88de3cbd678da106337b9fcde432b65ed60/idna-3.11.tar.gz", hash = "sha256:795dafcc9c04ed0c1fb032c2aa73654d8e8c5023a7df64a53f39190ada629902", size = 194582, upload-time = "2025-10-12T14:55:20.501Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cd/63/9496c57188a2ee585e0f1db071d75089a11e98aa86eb99d9d7618fc1edce/idna-3.18.tar.gz", hash = "sha256:ffb385a7e039654cef1ab9ef32c6fafe283c0c0467bba1d9029738ce4a14a848", size = 196711, upload-time = "2026-06-02T14:34:07.794Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0e/61/66938bbb5fc52dbdf84594873d5b51fb1f7c7794e9c0f5bd885f30bc507b/idna-3.11-py3-none-any.whl", hash = "sha256:771a87f49d9defaf64091e6e6fe9c18d4833f140bd19464795bc32d966ca37ea", size = 71008, upload-time = "2025-10-12T14:55:18.883Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/5e/d4e9f1a599fb8e573b7b87160658329fbf28d19eac2718f51fc3def3aa5a/idna-3.18-py3-none-any.whl", hash = "sha256:7f952cbe720b688055e3f87de14f5c3e5fdaa8bc3928985c4077ca689de849a2", size = 65455, upload-time = "2026-06-02T14:34:06.319Z" },
 ]
 
 [[package]]
@@ -3250,6 +3289,28 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/12/64/da524626d3b9cc40c168a13da8335fe1c51be12c0a63685cc6db7308daae/tomli-2.4.1-cp314-cp314t-win_amd64.whl", hash = "sha256:2c1c351919aca02858f740c6d33adea0c5deea37f9ecca1cc1ef9e884a619d26", size = 121196, upload-time = "2026-03-25T20:22:01.169Z" },
     { url = "https://files.pythonhosted.org/packages/5a/cd/e80b62269fc78fc36c9af5a6b89c835baa8af28ff5ad28c7028d60860320/tomli-2.4.1-cp314-cp314t-win_arm64.whl", hash = "sha256:eab21f45c7f66c13f2a9e0e1535309cee140182a9cdae1e041d02e47291e8396", size = 100393, upload-time = "2026-03-25T20:22:02.137Z" },
     { url = "https://files.pythonhosted.org/packages/7b/61/cceae43728b7de99d9b847560c262873a1f6c98202171fd5ed62640b494b/tomli-2.4.1-py3-none-any.whl", hash = "sha256:0d85819802132122da43cb86656f8d1f8c6587d54ae7dcaf30e90533028b49fe", size = 14583, upload-time = "2026-03-25T20:22:03.012Z" },
+]
+
+[[package]]
+name = "trustme"
+version = "1.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "idna" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4b/c5/931476f4cf1cd9e736f32651005078061a50dc164a2569fb874e00eb2786/trustme-1.2.1.tar.gz", hash = "sha256:6528ba2bbc7f2db41f33825c8dd13e3e3eb9d334ba0f909713c8c3139f4ae47f", size = 26844, upload-time = "2025-01-02T01:55:32.632Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b5/f3/c34dbabf6da5eda56fe923226769d40e11806952cd7f46655dd06e10f018/trustme-1.2.1-py3-none-any.whl", hash = "sha256:d768e5fc57c86dfc5ec9365102e9b092541cd6954b35d8c1eea01a84f35a762a", size = 16530, upload-time = "2025-01-02T01:55:30.181Z" },
+]
+
+[[package]]
+name = "truststore"
+version = "0.10.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/53/a3/1585216310e344e8102c22482f6060c7a6ea0322b63e026372e6dcefcfd6/truststore-0.10.4.tar.gz", hash = "sha256:9d91bd436463ad5e4ee4aba766628dd6cd7010cf3e2461756b3303710eebc301", size = 26169, upload-time = "2025-08-12T18:49:02.73Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/19/97/56608b2249fe206a67cd573bc93cd9896e1efb9e98bce9c163bcdc704b88/truststore-0.10.4-py3-none-any.whl", hash = "sha256:adaeaecf1cbb5f4de3b1959b42d41f6fab57b2b1666adb59e89cb0b53361d981", size = 18660, upload-time = "2025-08-12T18:49:01.46Z" },
 ]
 
 [[package]]

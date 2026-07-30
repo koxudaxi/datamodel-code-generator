@@ -34,6 +34,7 @@ from datamodel_code_generator.enums import (
     DataclassArguments,
     DataModelType,
     FieldTypeCollisionStrategy,
+    HTTPBackend,
     InputFileType,
     ModuleSplitMode,
     NamingStrategy,
@@ -143,6 +144,7 @@ class BaseGenerateConfig(BaseModel):
     allow_remote_refs: bool | None = None
     strict_refs: bool = False
     allow_private_network: bool = False
+    http_backend: HTTPBackend = HTTPBackend.AUTO
     http_headers: Sequence[tuple[str, str]] | None = None
     http_local_ref_path: Path | None = None
     http_ignore_tls: bool = False

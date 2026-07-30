@@ -18,6 +18,7 @@ What other options should I use?
 - `--emit-model-metadata`: Write a separate JSON map from source schema references to the final generated models...
 - `--encoding`: Specify character encoding for input and output files.
 - `--external-ref-mapping`: Map external `$ref` files to Python packages.
+- `--http-backend`: Select the HTTP client backend for remote schemas.
 - `--input`: Specify the input schema file path.
 - `--input-file-type`: Specify the input file type for code generation.
 - `--input-model`: Import a Python type or dict schema from a module or Python file.
@@ -26,7 +27,7 @@ What other options should I use?
 - `--preset`: Apply an immutable built-in option preset.
 - `--schema-version`: Schema version to use for parsing.
 - `--schema-version-mode`: Schema version validation mode.
-- `--url`: Fetch schema from URL with custom HTTP headers.
+- `--url`: Fetch a schema from a URL with custom HTTP headers.
 
 ### Typing Customization
 - `--allof-class-hierarchy`: Controls how allOf schemas are represented in the generated class hierarchy.
@@ -193,7 +194,7 @@ What other options should I use?
 - `--fail-on-multi-module-stdout`: Fail instead of concatenating multiple modules in text stdout.
 - `--generate-cli-command`: Generate CLI command from pyproject.toml configuration.
 - `--generate-pyproject-config`: Generate pyproject.toml configuration from CLI arguments.
-- `--http-headers`: Fetch schema from URL with custom HTTP headers.
+- `--http-headers`: Fetch a schema from a URL with custom HTTP headers.
 - `--http-ignore-tls`: Disable TLS certificate verification for HTTPS requests.
 - `--http-local-ref-path`: Resolve HTTP references from local schema files.
 - `--http-query-parameters`: Add query parameters to HTTP requests for remote schemas.
@@ -260,6 +261,13 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --formatters {builtin,black,isort,ruff-check,ruff-format} [{builtin,black,isort,ruff-check,ruff-format} ...]
                         Formatters for output (default: [black, isort]; use
                         builtin for dependency-free formatting)
+  --http-backend {auto,httpx,httpx2}
+                        Select the HTTP client backend. 'auto' (default)
+                        selects stable HTTPX when its client module is
+                        installed and only selects experimental HTTPX2 when
+                        that module is absent. 'httpx' and 'httpx2' require
+                        that exact backend. Explicit selections and paired
+                        dependency errors do not fall back.
   --http-headers HTTP_HEADER [HTTP_HEADER ...]
                         Set headers in HTTP requests to the remote host.
                         (example: "Authorization: Basic dXNlcjpwYXNz")
@@ -321,7 +329,15 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --strict-refs         Treat unresolved local $ref JSON pointers as errors
                         instead of generating fallback Any models.
   --url URL             Input file URL. `--input` is ignored when `--url` is
-                        used
+                        used. For HTTP(S), datamodel-code-generator[http]
+                        remains the stable HTTPX backend and is not
+                        deprecated, while datamodel-code-generator[httpx2] is
+                        experimental. The default --http-backend auto policy
+                        selects stable HTTPX when its client module is
+                        installed and selects HTTPX2 only when that module is
+                        absent. Select --http-backend httpx2 to require the
+                        experimental backend. Explicit selections and paired
+                        dependency errors do not fall back.
 
 [36;1mTyping customization[0m:
   --allof-class-hierarchy {if-no-conflict,always}
@@ -825,7 +841,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         List registered deprecations and scheduled breaking
                         changes, then exit.
   --list-experimental [{table,json,markdown}]
-                        List registered experimental features, then exit.
+                        List registered experimental features and their
+                        compatibility notes, then exit.
   --no-color            disable colorized output
   --output-format {text,json}
                         Format for command output (default: text). Use json

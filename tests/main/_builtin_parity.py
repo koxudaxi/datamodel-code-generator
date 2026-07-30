@@ -11,7 +11,6 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-import httpx
 import pytest
 
 from datamodel_code_generator import generate
@@ -66,6 +65,14 @@ def _parity_mocked_callables_to_preserve() -> list[Any]:
     if prance is None:
         return []
     return [getattr(prance, "BaseParser", None)]
+
+
+def _http_get_is_mocked() -> bool:
+    """Return whether either lazily imported HTTP backend has a mocked get call."""
+    for module_name in ("httpx2", "httpx"):
+        if (module := sys.modules.get(module_name)) is not None and hasattr(getattr(module, "get", None), "mock_calls"):
+            return True
+    return False
 
 
 def _extract_cli_formatters(extra_args: Sequence[str] | None) -> list[str] | None:
@@ -183,7 +190,7 @@ def _assert_builtin_cli_formatter_parity(
         or not output_path.exists()
         or _uses_check_mode(extra_args)
         or not _uses_default_cli_formatters(extra_args)
-        or hasattr(httpx.get, "mock_calls")
+        or _http_get_is_mocked()
     ):
         return
 

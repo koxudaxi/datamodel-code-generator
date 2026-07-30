@@ -4,6 +4,17 @@
 
 datamodel-code-generator can be configured using `pyproject.toml`. The tool automatically searches for `pyproject.toml` in the current directory and parent directories (stopping at the git repository root).
 
+HTTP client selection uses the same values as `--http-backend`. For example,
+the experimental HTTPX2 pair can be required explicitly:
+
+```toml
+[tool.datamodel-codegen]
+http-backend = "httpx2"
+```
+
+The default is `"auto"`, which prefers stable HTTPX. See
+[HTTP backend selection](faq.md#http-backend-selection).
+
 ## 🚀 Basic Usage
 
 ```toml

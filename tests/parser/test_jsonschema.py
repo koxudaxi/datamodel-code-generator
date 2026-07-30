@@ -23,7 +23,7 @@ from datamodel_code_generator import (
     PythonVersion,
     ReadOnlyWriteOnlyModelType,
 )
-from datamodel_code_generator.http import _get_httpx
+from datamodel_code_generator.http import _get_http_stack, _get_httpx
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase, get_data_model_types
 from datamodel_code_generator.model.dataclass import DataClass
@@ -77,7 +77,7 @@ def _json_schema_object(data: dict[str, Any]) -> JsonSchemaObject:
 
 @pytest.fixture(autouse=True)
 def block_dns_by_default(mocker: MockerFixture) -> None:
-    """Keep tests that mock httpx.get independent from external DNS."""
+    """Keep tests that mock HTTP requests independent from external DNS."""
     mocker.patch("socket.getaddrinfo", side_effect=OSError)
 
 
@@ -762,7 +762,7 @@ def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:
     )
     parser.parse_ref(obj, ["Model"])
     mock_fetch.assert_called_once_with(
-        _get_httpx(),
+        _get_http_stack(),
         "https://example.com/person.schema.json",
         headers=None,
         verify=True,
@@ -800,7 +800,7 @@ class Pet(BaseModel):
     )
     parser.parse_ref(obj, [])
     mock_fetch.assert_called_once_with(
-        _get_httpx(),
+        _get_http_stack(),
         "https://example.org/schema.yaml",
         headers=None,
         verify=True,
@@ -846,7 +846,7 @@ class User(BaseModel):
     pets: List[User] = Field(default_factory=list)"""
     )
     mock_fetch.assert_called_once_with(
-        _get_httpx(),
+        _get_http_stack(),
         "https://example.org/schema.yaml",
         headers=None,
         verify=True,
@@ -890,7 +890,7 @@ class Pet(BaseModel):
     name: Optional[str] = Field(None, examples=['dog', 'cat'])"""
     )
     mock_fetch.assert_called_once_with(
-        _get_httpx(),
+        _get_http_stack(),
         "https://example.org/schema.json",
         headers=None,
         verify=True,
@@ -924,7 +924,7 @@ def test_json_schema_ref_url_from_local_http_path(tmp_path: Path, mocker: Mocker
     )
 
     parser = JsonSchemaParser("", allow_remote_refs=False, http_local_ref_path=schema_store)
-    mock_get = mocker.patch("httpx.get")
+    mock_get = mocker.patch.object(_get_httpx(), "get")
 
     parser.parse_raw_obj(
         "Model",
@@ -972,7 +972,7 @@ def test_json_schema_ref_url_from_local_http_path_with_extension(tmp_path: Path,
     )
 
     parser = JsonSchemaParser("", allow_remote_refs=False, http_local_ref_path=schema_store)
-    mock_get = mocker.patch("httpx.get")
+    mock_get = mocker.patch.object(_get_httpx(), "get")
 
     assert parser._get_ref_body_from_url("http://example.com/application/package/element/sub-element.json") == {
         "title": "SubElement",
