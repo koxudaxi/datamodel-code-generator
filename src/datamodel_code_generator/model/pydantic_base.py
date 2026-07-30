@@ -49,6 +49,7 @@ UnionIntFloat = _UnionIntFloat
 class DataModelField(DataModelFieldBase):
     """Field implementation for Pydantic models."""
 
+    SUPPORTS_FIELD_CONSTRAINTS: ClassVar[bool] = True
     _EXCLUDE_FIELD_KEYS: ClassVar[set[str]] = {
         "alias",
         "default",
@@ -121,7 +122,6 @@ class DataModelField(DataModelFieldBase):
         if self.is_class_var:
             self.__dict__["_computed_default_factory"] = None
             return False
-
         has_field_metadata = (
             self.extras
             or self.alias is not None
@@ -252,12 +252,14 @@ class DataModelField(DataModelFieldBase):
             elif isinstance(discriminator, dict):  # pragma: no cover
                 data["discriminator"] = discriminator["propertyName"]
 
-        if (self.required and not self.has_default) or (
-            self.default is not UNDEFINED and self.default is not None and "default_factory" not in data
+        has_default_factory = "default_factory" in data
+        configured_default_factory = data.pop("default_factory", None)
+        if (self.required and not self.use_default_with_required) or (
+            self.default is not UNDEFINED and self.default is not None and not has_default_factory
         ):
             default_factory = None
         else:
-            default_factory = data.pop("default_factory", None)
+            default_factory = configured_default_factory
 
         if (
             default_factory is None

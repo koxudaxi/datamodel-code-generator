@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import gc
 import json
 import socket
 import sys
+import weakref
 from collections import Counter
 from ipaddress import ip_address
 from pathlib import Path
@@ -14,20 +16,44 @@ import pydantic
 import pytest
 import yaml
 
-from datamodel_code_generator import AllOfMergeMode, Error, ReadOnlyWriteOnlyModelType
+from datamodel_code_generator import (
+    AllOfMergeMode,
+    DataModelType,
+    Error,
+    PythonVersion,
+    ReadOnlyWriteOnlyModelType,
+)
 from datamodel_code_generator.http import _get_http_stack, _get_httpx
 from datamodel_code_generator.imports import Import
-from datamodel_code_generator.model import DataModelFieldBase
+from datamodel_code_generator.model import DataModelFieldBase, get_data_model_types
 from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
+from datamodel_code_generator.model.runtime_validation import (
+    ConditionalRequiredRule,
+    PatternPropertiesRule,
+    SchemaRuntimeValidation,
+)
 from datamodel_code_generator.model.type_alias import TypeAlias
-from datamodel_code_generator.parser.base import Parser, Source, dump_templates
+from datamodel_code_generator.parser.base import (
+    _DEFERRED_INHERITED_CLASS_KEY,
+    _DEFERRED_INHERITED_TYPE_KEY,
+    _RAW_SCHEMA_DEFAULT_KEY,
+    _SOURCE_REFERENCE_PATH_KEY,
+    SPECIAL_PATH_FORMAT,
+    Parser,
+    Source,
+    _get_inherited_type_modifiers,
+    dump_templates,
+)
 from datamodel_code_generator.parser.jsonschema import (
+    _INHERITED_MATERIALIZED_TYPE_SHAPE_KEY,
     JsonSchemaObject,
     JsonSchemaParser,
     Types,
+    _get_json_value_type,
     _get_union_variant_name,
+    _get_unique_rw_model_variant_source_path,
     _is_union_operator_python_type,
     _is_union_python_type,
     _shorten_qualified_python_type_annotation,
@@ -36,7 +62,7 @@ from datamodel_code_generator.parser.jsonschema import (
     split_json_pointer,
 )
 from datamodel_code_generator.reference import SPECIAL_PATH_MARKER, Reference
-from datamodel_code_generator.types import DataType
+from datamodel_code_generator.types import ANY, DataType
 from tests.conftest import assert_output
 
 if TYPE_CHECKING:
@@ -2466,29 +2492,1088 @@ def test_shorten_qualified_python_type_annotation_after_multiline_literal() -> N
     assert type_str == "Callable[[Literal['foo.Bar'], Bar], Qux]"
 
 
-def test_merge_type_modifiers_preserves_container_flags() -> None:
-    """Test inherited field type replacement preserves all container modifiers."""
+def test_inherited_request_response_helpers_keep_unnamed_root_fields() -> None:
+    """Temporary root fields stay ordered while nameless override entries are ignored."""
     parser = JsonSchemaParser("")
-    new_type = DataType(type="str")
-    current_type = DataType(
-        is_optional=True,
-        is_dict=True,
-        is_list=True,
-        is_set=True,
-        is_frozen_set=True,
-        is_mapping=True,
-        is_sequence=True,
+    reference = Reference(path="#/$defs/MappingBase", name="MappingBase")
+    root_field = DataModelFieldBase(data_type=DataType(type="str"))
+    parser._inherited_schema_cache[reference.path] = JsonSchemaObject.model_validate({})
+    parser._raw_inherited_fields_cache[reference.path] = (root_field,)
+    parser._raw_inherited_own_names_cache[reference.path] = frozenset()
+
+    inherited_fields = parser._collect_inherited_fields_for_request_response([reference])
+
+    assert len(inherited_fields) == 1
+    assert inherited_fields[0].name is None
+    assert parser._merge_inherited_field_overrides(inherited_fields, [root_field]) == []
+
+
+@pytest.mark.parametrize("gc_initially_enabled", [True, False])
+def test_clear_inherited_field_caches_releases_deferred_list_wrapper_cycles(
+    *,
+    gc_initially_enabled: bool,
+) -> None:
+    """Temporary deferred container trees are released immediately without cyclic GC."""
+    gc_state_setters = (gc.disable, gc.enable)
+    restore_gc = gc_state_setters[gc.isenabled()]
+    gc_state_setters[gc_initially_enabled]()
+    parser = JsonSchemaParser("")
+    field = DataModelFieldBase(
+        name="items",
+        original_name="items",
+        data_type=DataType(
+            data_types=[
+                DataType(
+                    data_types=[DataType(type="str")],
+                    is_list=True,
+                )
+            ]
+        ),
+    )
+    modifiers = _get_inherited_type_modifiers(field.data_type)
+    assert modifiers.list_wrapper is not None
+    field.__dict__[_DEFERRED_INHERITED_TYPE_KEY] = modifiers
+    parser._raw_inherited_fields_cache["#/$defs/Cycle"] = (field,)
+    schema = JsonSchemaObject.model_validate({"type": "object"})
+    parser._inherited_schema_cache["#/$defs/Cycle"] = schema
+    parser._inherited_schema_ancestor_cache["#/$defs/Cycle"] = frozenset({"#/$defs/Base"})
+    parser._inherited_schema_linearization_cache["#/$defs/Cycle",] = (
+        "#/$defs/Cycle",
+        "#/$defs/Base",
+    )
+    parser._inherited_required_cache["#/$defs/Cycle",] = frozenset({"items"})
+    resolution = (schema, "#/$defs/Cycle", frozenset(), False)
+    parser._inherited_parent_property_cache[id(schema), "#/$defs/Cycle", frozenset(), False] = (schema, resolution)
+    tracked = [
+        field,
+        *field.data_type.all_data_types,
+        modifiers.list_wrapper,
+        *modifiers.list_wrapper.all_data_types,
+        schema,
+    ]
+    weak_references = [weakref.ref(value) for value in tracked]
+    gc.disable()
+    try:
+        parser._clear_inherited_field_caches()
+        assert not parser._raw_inherited_fields_cache
+        assert not parser._inherited_schema_cache
+        assert not parser._inherited_schema_ancestor_cache
+        assert not parser._inherited_schema_linearization_cache
+        assert not parser._inherited_required_cache
+        assert not parser._inherited_parent_property_cache
+        del field, modifiers, resolution, schema, tracked
+
+        assert all(reference() is None for reference in weak_references)
+    finally:
+        restore_gc()
+
+
+def test_inherited_parent_property_cache_is_context_scoped() -> None:
+    """Pure references reuse only identical recursive and relative-ref contexts."""
+    parser = JsonSchemaParser("")
+    parser.raw_obj = {
+        "$defs": {
+            "Target": {"type": "string"},
+        }
+    }
+    pure_ref = JsonSchemaObject.model_validate({"$ref": "#/$defs/Target"})
+
+    first = parser._resolve_inherited_parent_property(
+        pure_ref,
+        "#/$defs/Parent",
+    )
+    repeated = parser._resolve_inherited_parent_property(
+        JsonSchemaObject.model_validate({"$ref": "#/$defs/Target"}),
+        "#/$defs/Parent",
+    )
+    recursive = parser._resolve_inherited_parent_property(
+        pure_ref,
+        "#/$defs/Parent",
+        frozenset({"#/$defs/Target"}),
+    )
+    resolved_context = parser._resolve_inherited_parent_property(
+        pure_ref,
+        "#/$defs/Parent",
+        refs_resolved=True,
+    )
+    relative_ref = JsonSchemaObject.model_validate({
+        "$ref": "./types.json#/$defs/Target",
+    })
+    first_parent_ref = f"{DATA_PATH / 'first' / 'parent.json'}#/$defs/Parent"
+    second_parent_ref = f"{DATA_PATH / 'second' / 'parent.json'}#/$defs/Parent"
+    with parser._inherited_ref_context(first_parent_ref):
+        first_resolved_ref = parser.model_resolver.resolve_ref(relative_ref.ref)
+    with parser._inherited_ref_context(second_parent_ref):
+        second_resolved_ref = parser.model_resolver.resolve_ref(relative_ref.ref)
+    first_relative = parser._resolve_inherited_parent_property(
+        relative_ref,
+        first_parent_ref,
+        frozenset({first_resolved_ref}),
+    )
+    second_relative = parser._resolve_inherited_parent_property(
+        relative_ref,
+        second_parent_ref,
+        frozenset({second_resolved_ref}),
     )
 
-    parser._merge_type_modifiers(new_type, current_type)
+    assert repeated is first
+    assert recursive is not first
+    assert resolved_context is not first
+    assert first_relative is not second_relative
+    assert len(parser._inherited_parent_property_cache) == 5
+    assert all(
+        cached_source is pure_ref or cached_source is relative_ref
+        for cached_source, _ in parser._inherited_parent_property_cache.values()
+    )
 
-    assert new_type.is_optional
-    assert new_type.is_dict
-    assert new_type.is_list
-    assert new_type.is_set
-    assert new_type.is_frozen_set
-    assert new_type.is_mapping
-    assert new_type.is_sequence
+
+def test_inherited_parent_property_cache_bypasses_mutable_sibling_refs() -> None:
+    """Identity entries anchor inline schemas while changed sibling refs bypass stale values."""
+    parser = JsonSchemaParser("")
+    parser.raw_obj = {
+        "$defs": {
+            "Target": {"type": "string"},
+        }
+    }
+    pure_ref = JsonSchemaObject.model_validate({"$ref": "#/$defs/Target"})
+    first = parser._resolve_inherited_parent_property(
+        pure_ref,
+        "#/$defs/Parent",
+    )
+    sibling_ref = JsonSchemaObject.model_validate({
+        "$ref": "#/$defs/Target",
+        "minLength": 2,
+    })
+    sibling = parser._resolve_inherited_parent_property(
+        sibling_ref,
+        "#/$defs/Parent",
+    )
+    resolved_sibling = parser._resolve_inherited_parent_property(
+        sibling_ref,
+        "#/$defs/Parent",
+        refs_resolved=True,
+    )
+    inline_schema = JsonSchemaObject.model_validate({"type": "integer"})
+    inline = parser._resolve_inherited_parent_property(
+        inline_schema,
+        "#/$defs/Parent",
+    )
+    repeated_inline = parser._resolve_inherited_parent_property(
+        inline_schema,
+        "#/$defs/Parent",
+    )
+    inline_cache_key = (id(inline_schema), "#/$defs/Parent", frozenset(), False)
+    inline_schema.ref = "#/$defs/Target"
+    mutated_inline = parser._resolve_inherited_parent_property(
+        inline_schema,
+        "#/$defs/Parent",
+    )
+
+    assert sibling is not first
+    assert sibling[0].minLength == 2
+    assert resolved_sibling[0].minLength == 2
+    assert resolved_sibling[3]
+    assert repeated_inline is inline
+    assert mutated_inline is not inline
+    assert parser._inherited_parent_property_cache[inline_cache_key][0] is inline_schema
+    assert len(parser._inherited_parent_property_cache) == 2
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (True, "boolean"),
+        (1, "integer"),
+        ("value", "string"),
+        (1.5, "number"),
+        (["value"], "array"),
+        ({"value": 1}, "object"),
+        (None, "null"),
+        (object(), ""),
+    ],
+)
+def test_inherited_json_value_type_matrix(value: object, expected: str) -> None:
+    """Concrete enum and const values retain every JSON instance type."""
+    assert _get_json_value_type(value) == expected
+
+
+def test_inherited_schema_type_inference_matrix() -> None:
+    """Untyped structural, enum, const, and allOf parents expose their effective types."""
+    parser = JsonSchemaParser("")
+    inferred_types = {
+        "implicit_object": parser._get_inherited_schema_types(
+            JsonSchemaObject.model_validate({
+                "properties": {"value": {"type": "string"}},
+            }),
+            "#/$defs/ImplicitObject",
+        ),
+        "const": parser._get_inherited_schema_types(
+            JsonSchemaObject.model_validate({"const": True}),
+            "#/$defs/Const",
+        ),
+        "float_enum": parser._get_inherited_schema_types(
+            JsonSchemaObject.model_validate({"enum": [1.5]}),
+            "#/$defs/FloatEnum",
+        ),
+        "array_enum": parser._get_inherited_schema_types(
+            JsonSchemaObject.model_validate({"enum": [["value"]]}),
+            "#/$defs/ArrayEnum",
+        ),
+        "object_enum": parser._get_inherited_schema_types(
+            JsonSchemaObject.model_validate({"enum": [{"value": 1}]}),
+            "#/$defs/ObjectEnum",
+        ),
+        "null_enum": parser._get_inherited_schema_types(
+            JsonSchemaObject.model_validate({"enum": [None]}),
+            "#/$defs/NullEnum",
+        ),
+        "unsupported_enum": parser._get_inherited_schema_types(
+            JsonSchemaObject.model_validate({"enum": [object()]}),
+            "#/$defs/UnsupportedEnum",
+        ),
+        "all_of": parser._get_inherited_schema_types(
+            JsonSchemaObject.model_validate({
+                "allOf": [
+                    True,
+                    {},
+                    {"type": "string"},
+                    {"type": "string"},
+                ]
+            }),
+            "#/$defs/AllOf",
+        ),
+    }
+
+    assert inferred_types == {
+        "implicit_object": frozenset({"object"}),
+        "const": frozenset({"boolean"}),
+        "float_enum": frozenset({"number"}),
+        "array_enum": frozenset({"array"}),
+        "object_enum": frozenset({"object"}),
+        "null_enum": frozenset({"null"}),
+        "unsupported_enum": frozenset(),
+        "all_of": frozenset({"string"}),
+    }
+
+
+def test_inherited_nested_schema_merge_matrix() -> None:
+    """Boolean, positional, mapping, and scalar nested schemas use intersection semantics."""
+    parser = JsonSchemaParser("")
+
+    assert parser._is_list_with_any_item_type(
+        DataType(
+            is_list=True,
+            data_types=[
+                DataType(
+                    data_types=[
+                        DataType(
+                            is_list=True,
+                            data_types=[DataType(type=ANY)],
+                        )
+                    ]
+                )
+            ],
+        )
+    )
+    assert parser._is_list_with_any_item_type(
+        DataType(
+            data_types=[
+                DataType(
+                    is_list=True,
+                    data_types=[DataType(type=ANY)],
+                )
+            ]
+        )
+    )
+    assert not parser._is_list_with_any_item_type(
+        DataType(
+            is_list=True,
+            data_types=[
+                DataType(
+                    data_types=[DataType(type="str")],
+                )
+            ],
+        )
+    )
+    assert parser._merge_inherited_nested_schemas(False, {"type": "string"}) is False
+    assert parser._merge_inherited_nested_schemas({"type": "string"}, False) is False
+    assert parser._merge_inherited_nested_schemas(True, {"type": "string"}) == {"type": "string"}
+    assert parser._merge_inherited_nested_schemas({"type": "string"}, True) == {"type": "string"}
+    assert parser._merge_inherited_nested_schemas(
+        {"type": "string", "minLength": 1},
+        {"maxLength": 3},
+    ) == {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 3,
+    }
+    assert parser._merge_inherited_nested_schemas("parent", "child") == "child"
+    assert parser._merge_inherited_schema_keyword(
+        "prefixItems",
+        [{"type": "string"}],
+        [{"maxLength": 3}, {"minimum": 0}],
+        {"items": {"type": "integer"}},
+    ) == [
+        {"type": "string", "maxLength": 3},
+        {"type": "integer", "minimum": 0},
+    ]
+    assert parser._merge_property_schemas(
+        {"nested": {"type": "string"}},
+        {"nested": {"$ref": "#/$defs/Nested"}},
+    ) == {"nested": {"$ref": "#/$defs/Nested"}}
+    assert parser._merge_property_schemas(
+        {"nested": {"minimum": 1}},
+        {"nested": {"maximum": 2}},
+    ) == {"nested": {"minimum": 1, "maximum": 2}}
+
+
+def test_inherited_distributed_constraint_matrix() -> None:
+    """Container extension constraints are selected, retained, or dropped without leaking metadata."""
+    parser = JsonSchemaParser("")
+    extra_key = JsonSchemaObject.__extra_key__
+
+    assert (
+        parser._select_inherited_distributed_shape(
+            {extra_key: {"x-metadata": "keep"}},
+            frozenset({extra_key}),
+            frozenset({"array"}),
+        )
+        == {}
+    )
+    assert parser._remove_inherited_distributed_shape(
+        {
+            "minItems": 1,
+            extra_key: {
+                "contains": {"type": "string"},
+                "x-metadata": "keep",
+            },
+        },
+        frozenset({"minItems", extra_key}),
+    ) == {extra_key: {"x-metadata": "keep"}}
+    assert (
+        parser._drop_incompatible_inherited_constraints(
+            {"minLength": 1},
+            frozenset({"integer"}),
+        )
+        == {}
+    )
+    assert parser._drop_incompatible_inherited_constraints(
+        {
+            extra_key: {
+                "contains": {"type": "string"},
+                "x-metadata": "keep",
+            }
+        },
+        frozenset({"string"}),
+    ) == {extra_key: {"x-metadata": "keep"}}
+    assert (
+        parser._drop_incompatible_inherited_constraints(
+            {extra_key: {"contains": {"type": "string"}}},
+            frozenset(),
+        )
+        == {}
+    )
+    assert parser._drop_incompatible_inherited_constraints(
+        {
+            "minLength": 1,
+            "maxLength": 2,
+            extra_key: {
+                "contains": {"type": "string"},
+                "x-metadata": "keep",
+            },
+        },
+        frozenset({"integer"}),
+    ) == {extra_key: {"x-metadata": "keep"}}
+
+
+def test_inherited_constraint_composition_normalizes_nested_boolean_values() -> None:
+    """Nested list and mapping schemas retain booleans while flattening constraint-only branches."""
+    parser = JsonSchemaParser("")
+    source = JsonSchemaObject.model_validate({
+        "prefixItems": [
+            True,
+            {"allOf": [{"minLength": 2}]},
+        ],
+        "properties": {
+            "neutral": True,
+            "constrained": {"allOf": [{"maxLength": 4}]},
+        },
+    })
+
+    normalized = parser._normalize_inherited_constraint_compositions(source)
+
+    assert normalized is not source
+    assert normalized.model_dump(exclude_unset=True, by_alias=True) == {
+        "prefixItems": [
+            True,
+            {"minLength": 2},
+        ],
+        "properties": {
+            "neutral": True,
+            "constrained": {"maxLength": 4},
+        },
+    }
+    assert (
+        parser._get_flattenable_inherited_constraint_items(
+            "anyOf",
+            [{"type": "string"}],
+        )
+        is None
+    )
+
+
+def test_inherited_type_shape_branch_matrix() -> None:
+    """No-merge materialization handles booleans, null unions, scalars, and incompatible replacements."""
+    parser = JsonSchemaParser("", allof_merge_mode=AllOfMergeMode.NoMerge)
+
+    assert parser._is_inherited_type_narrowing(
+        frozenset({"string"}),
+        frozenset(),
+    )
+    assert not parser._is_partial_inherited_nested_value(
+        1,
+        JsonSchemaObject.model_validate({"type": "string"}),
+    )
+    assert (
+        parser._merge_inherited_type_shape_value(
+            False,
+            {"type": "string"},
+            "#/$defs/Parent",
+            frozenset(),
+        )
+        is False
+    )
+    assert (
+        parser._merge_inherited_type_shape_value(
+            {"type": "string"},
+            False,
+            "#/$defs/Parent",
+            frozenset(),
+        )
+        is False
+    )
+    assert parser._merge_inherited_type_shape_value(
+        {"type": "string"},
+        True,
+        "#/$defs/Parent",
+        frozenset(),
+    ) == {"type": "string"}
+    assert (
+        parser._merge_inherited_type_shape_value(
+            "parent",
+            "child",
+            "#/$defs/Parent",
+            frozenset(),
+        )
+        == "child"
+    )
+    assert parser._merge_inherited_union_branch(
+        {"type": ["string", "null"]},
+        {"minLength": 1},
+        frozenset({"minLength"}),
+        ("#/$defs/Parent", frozenset()),
+        excludes_null=True,
+    ) == {
+        "type": "string",
+        "minLength": 1,
+        "nullable": False,
+    }
+    assert parser._merge_inherited_type_shape_dict(
+        {"allOf": [{"type": "string"}]},
+        {"minLength": 1},
+        "#/$defs/Parent",
+        parent_refs_resolved=True,
+    ) == {
+        "type": "string",
+        "minLength": 1,
+    }
+    assert parser._merge_inherited_type_shape_dict(
+        {"enum": ["value"]},
+        {"minLength": 1},
+        "#/$defs/Parent",
+        parent_refs_resolved=True,
+    ) == {
+        "type": "string",
+        "minLength": 1,
+    }
+    assert parser._merge_inherited_type_shape_dict(
+        {"type": ["null"]},
+        {"nullable": False},
+        "#/$defs/Parent",
+        parent_refs_resolved=True,
+    ) == {
+        "type": ["null"],
+        "nullable": False,
+    }
+    inherited_union = {
+        "anyOf": [
+            {"type": "string"},
+            {"type": "integer"},
+        ]
+    }
+    assert (
+        parser._merge_inherited_type_shape_dict(
+            inherited_union,
+            {},
+            "#/$defs/Parent",
+            parent_refs_resolved=True,
+        )
+        == inherited_union
+    )
+    materialized = JsonSchemaObject.model_validate({
+        "properties": {
+            "typed": {"type": "string"},
+            "boolean": True,
+        }
+    })
+    parser._mark_inherited_materialized_type_shapes(materialized)
+    assert materialized.__dict__[_INHERITED_MATERIALIZED_TYPE_SHAPE_KEY]
+    assert materialized.properties is not None
+    typed_property = materialized.properties["typed"]
+    assert isinstance(typed_property, JsonSchemaObject)
+    assert typed_property.__dict__[_INHERITED_MATERIALIZED_TYPE_SHAPE_KEY]
+    assert materialized.properties["boolean"] is True
+    incompatible_child = JsonSchemaObject.model_validate({"type": "integer"})
+    assert (
+        parser._merge_no_merge_inherited_property(
+            JsonSchemaObject.model_validate({"type": "string"}),
+            incompatible_child,
+            "#/$defs/Parent",
+        )
+        is incompatible_child
+    )
+
+
+def test_inherited_deferred_and_boolean_sanitization_fallbacks() -> None:
+    """Deferred boolean properties and already-shaped schemas bypass destructive normalization."""
+    parser = JsonSchemaParser("", allof_merge_mode=AllOfMergeMode.NoMerge)
+    source = JsonSchemaObject.model_validate({
+        "type": "object",
+        "properties": {"value": True},
+    })
+
+    assert parser._get_deferred_inherited_parse_object(source, frozenset({"value"})) is source
+    assert (
+        parser._sanitize_untyped_boolean_inherited_property(
+            JsonSchemaObject.model_validate({
+                "anyOf": [{"type": "string"}],
+                "minLength": 1,
+            })
+        )
+        is None
+    )
+    assert (
+        parser._sanitize_untyped_boolean_inherited_property(
+            JsonSchemaObject.model_validate({"description": "metadata only"})
+        )
+        is None
+    )
+
+
+def test_inherited_field_type_uses_typed_grandparent_fallback() -> None:
+    """An untyped direct declaration falls back to the first typed ancestor."""
+    parser = JsonSchemaParser("")
+    parser.raw_obj = {
+        "$defs": {
+            "Grandparent": {
+                "type": "object",
+                "properties": {"value": {"type": "string"}},
+            },
+            "Parent": {
+                "allOf": [{"$ref": "#/$defs/Grandparent"}],
+                "type": "object",
+                "properties": {"value": {}},
+            },
+        }
+    }
+    parent = parser.model_resolver.add_ref("#/$defs/Parent", resolved=True)
+
+    inherited_type = parser._get_inherited_field_type("value", [parent])
+
+    assert inherited_type is not None
+    assert inherited_type.type == "str"
+
+
+def test_inherited_request_response_override_resolves_derived_default() -> None:
+    """Request/response field copies resolve mutable defaults in derived class scope."""
+    parser = JsonSchemaParser(
+        "",
+        allof_merge_mode=AllOfMergeMode.All,
+        default_value_overrides={"Derived.value": {"source": ["derived"]}},
+    )
+    inherited_field = DataModelFieldBase(
+        name="value",
+        original_name="value",
+        data_type=DataType(type="str"),
+        default="schema",
+        has_default=True,
+    )
+    inherited_field.__dict__[_RAW_SCHEMA_DEFAULT_KEY] = "schema"
+    child_field = DataModelFieldBase(
+        name="value",
+        original_name="value",
+        data_type=DataType(),
+    )
+    child_field.__dict__[_DEFERRED_INHERITED_TYPE_KEY] = child_field.data_type
+    child_field.__dict__[_DEFERRED_INHERITED_CLASS_KEY] = "Derived"
+
+    fields = parser._merge_inherited_field_overrides([inherited_field], [child_field])
+    fields[0].default["source"].append("copy")
+
+    assert fields[0].default == {"source": ["derived", "copy"]}
+    assert parser.model_resolver.default_value_overrides["Derived.value"] == {
+        "source": ["derived"],
+    }
+
+
+def test_inherited_partial_schema_shape_helpers() -> None:
+    """Partial allOf detection handles boolean, object, array, and composition shapes."""
+    parser = JsonSchemaParser("")
+    parent_object = JsonSchemaObject.model_validate({"type": "object"})
+    parent_array = JsonSchemaObject.model_validate({"type": "array", "items": {"type": "string"}})
+
+    assert not parser._is_unconstrained_inherited_schema(False)
+    assert not parser._is_unconstrained_inherited_schema({"minLength": 3})
+    assert parser._remove_unconstrained_compositions(
+        {"allOf": [{}, {"type": "string"}]},
+    ) == {"allOf": [{"type": "string"}]}
+    assert parser._remove_unconstrained_compositions({"oneOf": [{}]}) == {}
+    assert parser._remove_unconstrained_compositions({"allOf": [{}, True]}) == {}
+    assert parser._is_partial_inherited_property(
+        JsonSchemaObject.model_validate({"additionalProperties": True}),
+        parent_object,
+    )
+    assert parser._is_partial_inherited_property(
+        JsonSchemaObject.model_validate({"items": None}),
+        parent_array,
+    )
+    deferred_names = parser._get_deferred_inherited_property_names(
+        JsonSchemaObject.model_validate({
+            "properties": {
+                "boolean_parent": True,
+                "object_parent": True,
+                "false_parent": False,
+            }
+        }),
+        {
+            "boolean_parent": (True, "#/$defs/BooleanParent"),
+            "object_parent": (
+                JsonSchemaObject.model_validate({"type": "string"}),
+                "#/$defs/ObjectParent",
+            ),
+            "false_parent": (
+                JsonSchemaObject.model_validate({"type": "string"}),
+                "#/$defs/FalseParent",
+            ),
+        },
+    )
+
+    assert deferred_names == frozenset({"object_parent"})
+    assert parser._get_flattenable_inherited_constraint_items("allOf", [None]) is None
+
+
+@pytest.mark.parametrize(
+    ("schema", "expected"),
+    [
+        pytest.param(
+            {"allOf": [{"minLength": 3}]},
+            {"minLength": 3},
+            id="all-of-singleton",
+        ),
+        pytest.param(
+            {"anyOf": [{"minLength": 3}]},
+            {"minLength": 3},
+            id="any-of-singleton",
+        ),
+        pytest.param(
+            {"anyOf": [False, {"minLength": 3}]},
+            {"minLength": 3},
+            id="any-of-false-and-constraint",
+        ),
+        pytest.param(
+            {"oneOf": [False, {"minLength": 3}]},
+            {"minLength": 3},
+            id="one-of-false-and-constraint",
+        ),
+        pytest.param(
+            {"allOf": [{"allOf": [{"minLength": 3}]}]},
+            {"minLength": 3},
+            id="nested-all-of",
+        ),
+        pytest.param(
+            {"type": "array", "items": {"allOf": [True]}},
+            {"type": "array", "items": None},
+            id="array-neutral-item",
+        ),
+        pytest.param(
+            {"type": "object", "additionalProperties": {"allOf": [True]}},
+            {"type": "object", "additionalProperties": {}},
+            id="mapping-neutral-value",
+        ),
+        pytest.param(
+            {"type": "array", "items": {"allOf": [{"minLength": 3}]}},
+            {"type": "array", "items": {"minLength": 3}},
+            id="array-constrained-item",
+        ),
+        pytest.param(
+            {
+                "type": "array",
+                "items": {
+                    "type": "array",
+                    "items": {"allOf": [{"minLength": 3}]},
+                },
+            },
+            {
+                "type": "array",
+                "items": {
+                    "type": "array",
+                    "items": {"minLength": 3},
+                },
+            },
+            id="deep-array-constrained-item",
+        ),
+    ],
+)
+def test_normalize_inherited_constraint_compositions(
+    schema: dict[str, Any],
+    expected: dict[str, Any],
+) -> None:
+    """Constraint-only compositions are materialized without inventing a wrapper type."""
+    parser = JsonSchemaParser("")
+
+    normalized = parser._normalize_inherited_constraint_compositions(JsonSchemaObject.model_validate(schema))
+
+    assert normalized.model_dump(exclude_unset=True, by_alias=True) == expected
+
+
+@pytest.mark.parametrize(
+    "schema",
+    [
+        pytest.param(
+            {"anyOf": [{"minLength": 2}, {"maxLength": 5}]},
+            id="multi-any-of",
+        ),
+        pytest.param(
+            {"oneOf": [True, {"minLength": 3}]},
+            id="one-of-true-and-constraint",
+        ),
+        pytest.param(
+            {"allOf": [{"type": "string"}, {"minLength": 3}]},
+            id="typed-all-of",
+        ),
+        pytest.param(
+            {"allOf": [False, {"minLength": 3}]},
+            id="all-of-false-and-constraint",
+        ),
+        pytest.param(
+            {"type": "array", "items": {"allOf": [False, {"minLength": 3}]}},
+            id="nested-all-of-false-and-constraint",
+        ),
+    ],
+)
+def test_normalize_inherited_constraint_compositions_keeps_non_equivalent_shapes(
+    schema: dict[str, Any],
+) -> None:
+    """Composition branches are retained when flattening would change their meaning."""
+    parser = JsonSchemaParser("")
+    obj = JsonSchemaObject.model_validate(schema)
+
+    assert parser._normalize_inherited_constraint_compositions(obj) is obj
+
+
+def test_normalize_inherited_constraint_compositions_fast_path() -> None:
+    """Schemas without compositions avoid model serialization and validation."""
+    parser = JsonSchemaParser("")
+    obj = JsonSchemaObject.model_validate({"minLength": 3})
+
+    assert parser._normalize_inherited_constraint_compositions(obj) is obj
+
+
+@pytest.mark.parametrize(
+    ("child", "parent_ref", "expected"),
+    [
+        pytest.param({"type": "string", "minLength": 2}, "#/$defs/Scalar", True, id="scalar"),
+        pytest.param(
+            {"type": "array", "items": {"minLength": 2}},
+            "#/$defs/Array",
+            True,
+            id="array",
+        ),
+        pytest.param(
+            {"type": "object", "properties": {"name": {"minLength": 2}}},
+            "#/$defs/Object",
+            True,
+            id="object",
+        ),
+        pytest.param({"nullable": False, "minLength": 2}, "#/$defs/Scalar", True, id="nullable-false"),
+        pytest.param(
+            {"type": "object", "properties": {"id": {"type": "integer"}}},
+            "#/$defs/Scalar",
+            False,
+            id="incompatible",
+        ),
+        pytest.param({"type": "integer", "minimum": 1}, "#/$defs/Number", True, id="integer-narrows-number"),
+        pytest.param({"type": "number", "minimum": 1}, "#/$defs/Integer", False, id="number-widens-integer"),
+        pytest.param({"type": "integer", "minimum": 1}, "#/$defs/Union", True, id="type-list-narrowing"),
+    ],
+)
+def test_partial_inherited_nested_nullable_ref_type_compatibility(
+    child: dict[str, Any],
+    parent_ref: str,
+    *,
+    expected: bool,
+) -> None:
+    """Null exclusion keeps compatible ref types and rejects incompatible replacements."""
+    parser = JsonSchemaParser("")
+    parser.raw_obj = {
+        "$defs": {
+            "Scalar": {"type": "string", "nullable": True},
+            "Array": {"type": ["array", "null"], "items": {"type": "string"}},
+            "Number": {"type": "number"},
+            "Integer": {"type": "integer"},
+            "Union": {"type": ["string", "integer", "null"]},
+            "Object": {
+                "anyOf": [
+                    {
+                        "type": "object",
+                        "required": ["name"],
+                        "properties": {"name": {"type": "string"}},
+                    },
+                    {"type": "null"},
+                ]
+            },
+        }
+    }
+
+    assert (
+        parser._is_partial_inherited_nested_value(
+            child,
+            JsonSchemaObject.model_validate({"$ref": parent_ref}),
+            context=("#/$defs/Owner", frozenset(), False),
+        )
+        is expected
+    )
+
+
+def test_merge_property_schemas_and_parent_constraint_paths() -> None:
+    """Property merging preserves child precedence and handles boolean and no-merge parents."""
+    parser = JsonSchemaParser("")
+    assert parser._merge_property_schemas(
+        {"required": ["base"]},
+        {"required": ["child", "base"]},
+    ) == {"required": ["child", "base"]}
+
+    parser.raw_obj = {
+        "$defs": {
+            "Base": {
+                "type": "object",
+                "properties": {
+                    "boolean_parent": True,
+                    "text": {"type": "string", "minLength": 2},
+                },
+            }
+        }
+    }
+    base_reference = parser.model_resolver.add_ref("#/$defs/Base", resolved=True)
+    child = JsonSchemaObject.model_validate({
+        "type": "object",
+        "properties": {
+            "boolean_parent": {"type": "integer"},
+            "text": {"type": "string", "maxLength": 5},
+            "own": {"allOf": [{"minLength": 3}]},
+        },
+    })
+    merged = parser._merge_properties_with_parent_constraints(child, [base_reference])
+
+    assert merged.properties is not None
+    assert merged.properties["boolean_parent"] == JsonSchemaObject.model_validate({"type": "integer"})
+    assert merged.properties["own"] == JsonSchemaObject.model_validate({"allOf": [{"minLength": 3}]})
+
+    no_merge_parser = JsonSchemaParser("", allof_merge_mode=AllOfMergeMode.NoMerge)
+    no_merge_parser.raw_obj = parser.raw_obj
+    no_merge_reference = no_merge_parser.model_resolver.add_ref("#/$defs/Base", resolved=True)
+    no_merge_child = JsonSchemaObject.model_validate({
+        "type": "object",
+        "properties": {"text": {"type": "string", "maxLength": 5}},
+    })
+
+    assert (
+        no_merge_parser._merge_properties_with_parent_constraints(
+            no_merge_child,
+            [no_merge_reference],
+        )
+        is no_merge_child
+    )
+    no_merge_property = {"maxLength": 5}
+    copied_no_merge_property = no_merge_parser._merge_property_schemas(
+        {"type": "string", "minLength": 2},
+        no_merge_property,
+    )
+    assert copied_no_merge_property == no_merge_property
+    assert copied_no_merge_property is not no_merge_property
+
+
+def test_nested_inherited_constraint_detection() -> None:
+    """Nested container constraints are distinct from neutral partial schemas."""
+    parser = JsonSchemaParser("")
+
+    assert parser._has_inherited_constraints(
+        JsonSchemaObject.model_validate({
+            "type": "array",
+            "items": {
+                "type": "array",
+                "items": {"minLength": 3},
+            },
+        })
+    )
+    assert not parser._has_inherited_constraints(
+        JsonSchemaObject.model_validate({
+            "type": "array",
+            "items": {
+                "type": "array",
+                "items": {},
+            },
+        })
+    )
+
+
+def test_parse_nested_inline_inherited_schema_fields() -> None:
+    """Nested inline allOf declarations are parsed in their inherited owner scope."""
+    parser = JsonSchemaParser("")
+    reference = parser.model_resolver.add_ref("#/$defs/Derived", resolved=True)
+    schema = JsonSchemaObject.model_validate({
+        "allOf": [
+            {
+                "allOf": [
+                    {
+                        "type": "object",
+                        "properties": {"nested": {"type": "string"}},
+                    }
+                ]
+            }
+        ]
+    })
+
+    fields = parser._parse_inherited_schema_fields(reference, schema, [], [])
+
+    assert [field.original_name for field in fields] == ["nested"]
+
+
+def test_inherited_field_lookup_uses_generated_and_raw_types() -> None:
+    """Inherited lookup copies generated fields and builds raw property types."""
+    parser = JsonSchemaParser("")
+    generated_reference = Reference(path="#/$defs/Generated", name="Generated")
+    BaseModel(
+        reference=generated_reference,
+        fields=[
+            DataModelFieldBase(
+                name="generated",
+                original_name="generated",
+                data_type=DataType(type="str"),
+            )
+        ],
+    )
+    generated_type = parser._get_inherited_field_type("generated", [generated_reference])
+
+    parser.raw_obj = {
+        "$defs": {
+            "Raw": {
+                "type": "object",
+                "properties": {"raw": {"type": "integer"}},
+            }
+        }
+    }
+    raw_reference = parser.model_resolver.add_ref("#/$defs/Raw", resolved=True)
+    raw_type = parser._get_inherited_field_type("raw", [raw_reference])
+
+    assert generated_type is not None
+    assert generated_type.type == "str"
+    assert raw_type is not None
+    assert raw_type.type == "int"
+
+
+def test_inherited_field_map_replaces_only_deferred_generated_fields() -> None:
+    """Canonical raw lookup leaves resolved siblings untouched."""
+    parser = JsonSchemaParser("")
+    reference = Reference(path="#/$defs/Mixed", name="Mixed")
+    stable_field = DataModelFieldBase(
+        name="stable",
+        original_name="stable",
+        data_type=DataType(type="str"),
+    )
+    deferred_field = DataModelFieldBase(
+        name="pending",
+        original_name="pending",
+        data_type=DataType(),
+    )
+    deferred_field.__dict__[_DEFERRED_INHERITED_TYPE_KEY] = deferred_field.data_type
+    BaseModel(
+        reference=reference,
+        fields=[stable_field, deferred_field],
+    )
+    canonical_stable = DataModelFieldBase(
+        name="stable",
+        original_name="stable",
+        data_type=DataType(type="str"),
+    )
+    canonical_pending = DataModelFieldBase(
+        name="pending",
+        original_name="pending",
+        data_type=DataType(type="int"),
+    )
+    parser._inherited_schema_cache[reference.path] = JsonSchemaObject.model_validate({
+        "type": "object",
+        "properties": {
+            "stable": {"type": "string"},
+            "pending": {"type": "integer"},
+        },
+    })
+    parser._raw_inherited_fields_cache[reference.path] = (
+        canonical_stable,
+        canonical_pending,
+    )
+    parser._raw_inherited_own_names_cache[reference.path] = frozenset({
+        "stable",
+        "pending",
+    })
+
+    inherited_fields = parser._get_inherited_field_map([reference])
+
+    assert inherited_fields["stable"] is stable_field
+    assert inherited_fields["pending"].data_type.type == "int"
+
+
+def test_inherited_field_schema_cycle_and_mapping_fallbacks() -> None:
+    """Raw field lookup and mapping allOf detection terminate on neutral cycles."""
+    parser = JsonSchemaParser("")
+    parser.raw_obj = {
+        "$defs": {
+            "CycleA": {"allOf": [{"$ref": "#/$defs/CycleB"}]},
+            "CycleB": {"allOf": [{"$ref": "#/$defs/CycleA"}]},
+            "NestedA": {"allOf": [{"$ref": "#/$defs/NestedB"}]},
+            "NestedB": {
+                "type": "object",
+                "properties": {"target": {"type": "string"}},
+            },
+        }
+    }
+    cycle_reference = parser.model_resolver.add_ref("#/$defs/CycleA", resolved=True)
+    nested_reference = parser.model_resolver.add_ref("#/$defs/NestedA", resolved=True)
+
+    assert parser._get_inherited_field_schema("missing", [cycle_reference]) is None
+    assert parser._get_inherited_field_schema("target", [nested_reference]) == JsonSchemaObject.model_validate({
+        "type": "string"
+    })
+    assert (
+        parser._get_inherited_field_schema(
+            "target",
+            [nested_reference],
+            frozenset({"#/$defs/NestedB"}),
+        )
+        is None
+    )
+    assert parser._merge_all_of_mapping(JsonSchemaObject.model_validate({"allOf": [True]})) is None
+    assert parser._merge_all_of_mapping(JsonSchemaObject.model_validate({})) is None
 
 
 def test_resolve_type_import_from_defs() -> None:
@@ -2607,6 +3692,552 @@ def test_preload_property_refs_skips_external_ref_mapping(tmp_path: Path, mocker
     load_ref.assert_called_once_with("#/$defs/Local")
 
 
+def test_read_write_variant_facts_include_inherited_and_one_sided_fields() -> None:
+    """Request/response refs use both variants while all mode retains its compact model set."""
+    schema: dict[str, Any] = {
+        "$defs": {
+            "OnlyRead": {
+                "type": "object",
+                "properties": {"id": {"type": "integer", "readOnly": True}},
+            },
+            "OnlyWrite": {
+                "type": "object",
+                "properties": {"secret": {"type": "string", "writeOnly": True}},
+            },
+            "ReadDerived": {
+                "allOf": [{"$ref": "#/$defs/OnlyRead"}],
+                "properties": {"name": {"type": "string"}},
+            },
+            "WriteDerived": {
+                "allOf": [{"$ref": "#/$defs/OnlyWrite"}],
+                "properties": {"name": {"type": "string"}},
+            },
+        },
+    }
+    request_response_parser = JsonSchemaParser(
+        json.dumps(schema),
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.RequestResponse,
+    )
+    request_response_parser.raw_obj = schema
+
+    assert request_response_parser._get_ref_schema_rw_model_field_facts("#/$defs/OnlyRead") == (
+        True,
+        False,
+        False,
+        True,
+    )
+    assert request_response_parser._get_ref_schema_rw_model_field_facts("#/$defs/OnlyWrite") == (
+        False,
+        True,
+        True,
+        False,
+    )
+    assert request_response_parser._get_ref_schema_rw_model_field_facts("#/$defs/ReadDerived") == (
+        True,
+        False,
+        True,
+        True,
+    )
+    for ref_path in ("#/$defs/OnlyRead", "#/$defs/OnlyWrite", "#/$defs/ReadDerived", "#/$defs/WriteDerived"):
+        assert request_response_parser._ref_schema_generates_variant(ref_path, "Request")
+        assert request_response_parser._ref_schema_generates_variant(ref_path, "Response")
+
+    request_type = DataType(reference=request_response_parser.model_resolver.add_ref("#/$defs/OnlyRead"))
+    response_type = DataType(reference=request_response_parser.model_resolver.add_ref("#/$defs/OnlyRead"))
+    request_response_parser._update_data_type_ref_for_variant(request_type, "Request")
+    request_response_parser._update_data_type_ref_for_variant(response_type, "Response")
+    assert request_type.reference
+    assert request_type.reference.name == "OnlyReadRequest"
+    assert response_type.reference
+    assert response_type.reference.name == "OnlyReadResponse"
+
+    all_parser = JsonSchemaParser(
+        json.dumps(schema),
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.All,
+    )
+    all_parser.raw_obj = schema
+    assert not all_parser._ref_schema_generates_variant("#/$defs/OnlyRead", "Request")
+    assert not all_parser._ref_schema_generates_variant("#/$defs/OnlyRead", "Response")
+    assert not all_parser._ref_schema_generates_variant("#/$defs/OnlyWrite", "Request")
+    assert not all_parser._ref_schema_generates_variant("#/$defs/OnlyWrite", "Response")
+    assert all_parser._ref_schema_generates_variant("#/$defs/ReadDerived", "Request")
+    assert not all_parser._ref_schema_generates_variant("#/$defs/ReadDerived", "Response")
+    assert not all_parser._ref_schema_generates_variant("#/$defs/WriteDerived", "Request")
+    assert all_parser._ref_schema_generates_variant("#/$defs/WriteDerived", "Response")
+
+
+@pytest.mark.parametrize("node_count", [100, 200, 400])
+def test_request_response_negative_ring_caches_each_graph_node_once(node_count: int) -> None:
+    """A negative reference ring is traversed once and cached for both variants."""
+
+    class CountingJsonSchemaParser(JsonSchemaParser):
+        graph_node_calls: Counter[str]
+
+        def _get_rw_model_variant_graph_node(self, resolved_ref: str) -> tuple[bool, tuple[str, ...]]:
+            self.graph_node_calls[resolved_ref] += 1
+            return super()._get_rw_model_variant_graph_node(resolved_ref)
+
+    schema: dict[str, Any] = {
+        "$defs": {
+            f"Node{index}": {
+                "type": "object",
+                "properties": {
+                    "next": {
+                        "$ref": f"#/$defs/Node{(index + 1) % node_count}",
+                    },
+                },
+            }
+            for index in range(node_count)
+        },
+    }
+    parser = CountingJsonSchemaParser(
+        json.dumps(schema),
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.RequestResponse,
+    )
+    parser.raw_obj = schema
+    parser.graph_node_calls = Counter()
+
+    assert not parser._ref_schema_generates_variant("#/$defs/Node0", "Request")
+    assert parser.graph_node_calls == Counter({f"#/$defs/Node{index}": 1 for index in range(node_count)})
+    assert parser._rw_model_variant_requirement_cache == {
+        (f"#/$defs/Node{index}", suffix): False for index in range(node_count) for suffix in ("Request", "Response")
+    }
+
+    for index in range(node_count):
+        assert not parser._ref_schema_generates_variant(f"#/$defs/Node{index}", "Request")
+        assert not parser._ref_schema_generates_variant(f"#/$defs/Node{index}", "Response")
+
+    assert sum(parser.graph_node_calls.values()) == node_count
+
+
+def test_request_response_property_names_follows_only_type_contributing_refs() -> None:
+    """PropertyNames follows a bare ref but ignores constraints and nested non-key shapes."""
+    schema: dict[str, Any] = {
+        "$defs": {
+            "Child": {
+                "type": "object",
+                "properties": {"id": {"type": "integer", "readOnly": True}},
+            },
+            "Bare": {
+                "type": "object",
+                "propertyNames": {"$ref": "#/$defs/Child"},
+            },
+            "RefWithPattern": {
+                "type": "object",
+                "propertyNames": {
+                    "$ref": "#/$defs/Child",
+                    "pattern": "^x",
+                },
+            },
+            "NestedShape": {
+                "type": "object",
+                "propertyNames": {
+                    "type": "object",
+                    "properties": {"nested": {"$ref": "#/$defs/Child"}},
+                },
+            },
+        },
+    }
+    parser = JsonSchemaParser(
+        json.dumps(schema),
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.RequestResponse,
+    )
+    parser.raw_obj = schema
+
+    assert parser._get_ref_schema_rw_model_reference_facts("#/$defs/Bare") == (
+        False,
+        ("#/$defs/Child",),
+    )
+    assert parser._ref_schema_generates_variant("#/$defs/Bare", "Request")
+    for name in ("RefWithPattern", "NestedShape"):
+        assert parser._get_ref_schema_rw_model_reference_facts(f"#/$defs/{name}") == (False, ())
+        assert not parser._ref_schema_generates_variant(f"#/$defs/{name}", "Request")
+
+
+def test_request_response_variant_graph_handles_cached_internal_and_missing_refs() -> None:
+    """Variant reachability stops at cached negatives, internal variants, and missing schemas."""
+    schema: dict[str, Any] = {
+        "$defs": {
+            "Leaf": {"type": "object", "properties": {"value": {"type": "string"}}},
+            "Root": {
+                "type": "object",
+                "properties": {"leaf": {"$ref": "#/$defs/Leaf"}},
+            },
+            "Cached": {
+                "type": "object",
+                "properties": {"value": {"type": "string"}},
+            },
+        },
+    }
+    parser = JsonSchemaParser(
+        json.dumps(schema),
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.RequestResponse,
+    )
+    parser.raw_obj = schema
+    parser._rw_model_variant_requirement_cache["#/$defs/Leaf", "Request"] = False
+
+    assert not parser._request_response_ref_schema_generates_variant("#/$defs/Root")
+
+    internal_request_path = f"#/$defs/Leaf/{SPECIAL_PATH_FORMAT.format('read-write-request')}"
+    internal_response_path = f"#/$defs/Leaf/{SPECIAL_PATH_FORMAT.format('read-write-response')}"
+    assert not parser._ref_schema_generates_variant(internal_request_path, "Response")
+    assert not parser._request_response_ref_schema_generates_variant(internal_response_path)
+
+    cached_reference = parser.model_resolver.add_ref("#/$defs/Cached", resolved=True)
+    parser._request_response_fields[cached_reference.path] = ()
+    assert parser._get_raw_inherited_fields(cached_reference, frozenset()) == []
+    assert parser._raw_inherited_own_names_cache[cached_reference.path] == frozenset({"value"})
+
+    all_parser = JsonSchemaParser(
+        "",
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.All,
+    )
+    all_parser.raw_obj = None  # type: ignore[assignment]  # exercise an unresolved external document
+    assert not all_parser._ref_schema_generates_variant("#/$defs/Missing", "Request")
+
+
+def test_request_response_schema_graph_helper_edges(tmp_path: Path) -> None:
+    """Schema graph helpers cover tuple items, combined key schemas, and mapped leaves."""
+    parser = JsonSchemaParser("")
+    tuple_schema = JsonSchemaObject.model_validate({
+        "items": [{"type": "string"}, False],
+    })
+    children = list(parser._iter_rw_model_schema_children(tuple_schema, detect_inline_variant=True))
+
+    assert len(children) == 1
+    assert children[0][0].type == "string"
+    assert children[0][1] is True
+
+    property_names = JsonSchemaObject.model_validate({
+        "anyOf": [{"$ref": "#/$defs/First"}, {"$ref": "#/$defs/Second"}],
+    })
+    refs, combined = parser._get_rw_property_name_sources(
+        property_names=property_names,
+        defining_ref="#/$defs/Mapping",
+    )
+    assert refs == ()
+    assert [item.ref for item in combined] == ["#/$defs/First", "#/$defs/Second"]
+    assert parser._ref_schema_exists("")
+
+    external_schema = tmp_path / "external.json"
+    mapped_schema = {
+        "$defs": {
+            "MappedProperty": {
+                "type": "object",
+                "properties": {"value": {"$ref": f"{external_schema}#/$defs/External"}},
+            },
+            "MappedPropertyName": {
+                "type": "object",
+                "propertyNames": {"$ref": f"{external_schema}#/$defs/External"},
+            },
+        }
+    }
+    mapped_parser = JsonSchemaParser(
+        json.dumps(mapped_schema),
+        external_ref_mapping={str(external_schema): "external.models"},
+    )
+    mapped_parser.raw_obj = mapped_schema
+    assert (
+        mapped_parser._resolve_rw_model_reference(
+            f"{external_schema}#/$defs/External",
+            "#/$defs/Local",
+        )
+        is None
+    )
+    assert mapped_parser._get_ref_schema_rw_model_reference_facts("#/$defs/MappedProperty") == (False, ())
+    assert mapped_parser._get_ref_schema_rw_model_reference_facts("#/$defs/MappedPropertyName") == (False, ())
+
+    inline_properties = JsonSchemaObject.model_validate({
+        "properties": {"direct": {"type": "string"}},
+        "allOf": [
+            True,
+            {
+                "type": "object",
+                "properties": {"nested": {"type": "integer"}},
+            },
+        ],
+    })
+    assert parser._get_inline_property_names(inline_properties) == frozenset({"direct", "nested"})
+
+
+def test_request_response_variant_source_path_collision_fallbacks() -> None:
+    """Variant metadata paths remain unique for unrelated names and repeated source collisions."""
+    assert (
+        _get_unique_rw_model_variant_source_path(
+            "#/$defs/ChildRequest",
+            "ChildRequest",
+            "RenamedRequest",
+            collides_with_source=True,
+        )
+        == "#/$defs/RenamedRequest"
+    )
+
+    parser = JsonSchemaParser(
+        "",
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.RequestResponse,
+    )
+    parser.raw_obj = {
+        "$defs": {
+            "Child": {},
+            "ChildRequest": {},
+            "ChildRequest1": {},
+        },
+    }
+    base_reference = parser.model_resolver.add(
+        ["#", "$defs", "Child"],
+        "Child",
+        class_name=True,
+        loaded=True,
+    )
+
+    request_reference = parser._get_rw_model_variant_reference(base_reference, "Request")
+
+    assert request_reference.__dict__[_SOURCE_REFERENCE_PATH_KEY] == "#/$defs/ChildRequest11"
+
+
+def test_request_response_variant_affix_keeps_numeric_suffix_and_unique_source_path() -> None:
+    """Variant affixes precede collision indexes and never reuse a source schema path."""
+    parser = JsonSchemaParser(
+        "",
+        class_name_prefix="Api",
+        class_name_suffix="Model",
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.RequestResponse,
+    )
+    parser.raw_obj = {
+        "$defs": {
+            "ChildRequest": {"type": "string"},
+            "ChildResponse": {"type": "string"},
+        },
+    }
+    parser.model_resolver.add(["#", "$defs", "Other"], "Child", class_name=True, loaded=True)
+    base_reference = parser.model_resolver.add(
+        ["#", "$defs", "Child"],
+        "Child",
+        class_name=True,
+        loaded=True,
+    )
+
+    request_reference = parser._get_rw_model_variant_reference(base_reference, "Request")
+    response_reference = parser._get_rw_model_variant_reference(base_reference, "Response")
+
+    assert base_reference.name == "ApiChildModel1"
+    assert request_reference.name == "ApiChildRequestModel1"
+    assert response_reference.name == "ApiChildResponseModel1"
+    source_paths = {
+        request_reference.__dict__[_SOURCE_REFERENCE_PATH_KEY],
+        response_reference.__dict__[_SOURCE_REFERENCE_PATH_KEY],
+    }
+    assert len(source_paths | {"#/$defs/ChildRequest", "#/$defs/ChildResponse"}) == 4
+
+
+def test_request_response_typed_dict_additional_properties_metadata_uses_variants() -> None:
+    """TypedDict extra-item hints and dependency metadata point at matching variants."""
+    model_types = get_data_model_types(
+        DataModelType.TypingTypedDict,
+        target_python_version=PythonVersion.PY_312,
+    )
+    schema: dict[str, Any] = {
+        "$defs": {
+            "Child": {
+                "type": "object",
+                "properties": {"id": {"type": "integer", "readOnly": True}},
+            },
+            "Mapping": {
+                "type": "object",
+                "additionalProperties": {"$ref": "#/$defs/Child"},
+            },
+        },
+        "$ref": "#/$defs/Mapping",
+    }
+    parser = JsonSchemaParser(
+        json.dumps(schema),
+        data_model_type=model_types.data_model,
+        data_model_root_type=model_types.root_model,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=model_types.data_type_manager,
+        target_python_version=PythonVersion.PY_312,
+        use_closed_typed_dict=True,
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.RequestResponse,
+    )
+
+    parser.parse(format_=False)
+
+    models = {model.class_name: model for model in parser.results}
+    for suffix in ("Request", "Response"):
+        mapping = models[f"Mapping{suffix}"]
+        child = models[f"Child{suffix}"]
+        assert mapping.extra_template_data["additionalPropertiesType"] == f"Child{suffix}"
+        assert mapping.extra_template_data["additionalPropertiesReferenceClasses"] == {
+            child.reference.path,
+        }
+
+
+def test_request_response_runtime_validation_is_copied_filtered_and_retargeted() -> None:
+    """Runtime rules are independent per variant and use only matching fields and refs."""
+    schema: dict[str, Any] = {
+        "$defs": {
+            "Child": {
+                "type": "object",
+                "properties": {"id": {"type": "integer", "readOnly": True}},
+            },
+            "Container": {
+                "type": "object",
+                "properties": {
+                    "kind": {"type": "string"},
+                    "requestOnly": {"type": "string", "writeOnly": True},
+                    "responseOnly": {"type": "string", "readOnly": True},
+                },
+                "patternProperties": {"^child": {"$ref": "#/$defs/Child"}},
+                "additionalProperties": {"$ref": "#/$defs/Child"},
+                "oneOf": [
+                    {"required": ["requestOnly"]},
+                    {"required": ["responseOnly"]},
+                ],
+                "anyOf": [{"required": ["kind"]}],
+                "if": {
+                    "required": ["kind"],
+                    "properties": {"kind": {"const": "metric"}},
+                },
+                "then": {"required": ["requestOnly"]},
+                "else": {"required": ["responseOnly"]},
+            },
+        },
+        "$ref": "#/$defs/Container",
+    }
+    parser = JsonSchemaParser(
+        json.dumps(schema),
+        generate_schema_validators=True,
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.RequestResponse,
+    )
+
+    parser.parse(format_=False)
+
+    models = {model.class_name: model for model in parser.results}
+    source_runtime = parser.extra_template_data["#/$defs/Container"]["schema_runtime_validation"]
+    for suffix, included_name, excluded_name, expected_one_of, expected_then, expected_else in (
+        (
+            "Request",
+            "requestOnly",
+            "responseOnly",
+            ((("requestOnly",),), ()),
+            ((("requestOnly",),),),
+            ((),),
+        ),
+        (
+            "Response",
+            "responseOnly",
+            "requestOnly",
+            ((), (("responseOnly",),)),
+            ((),),
+            ((("responseOnly",),),),
+        ),
+    ):
+        model = models[f"Container{suffix}"]
+        child = models[f"Child{suffix}"]
+        runtime = model.extra_template_data["schema_runtime_validation"]
+        pattern_rule = runtime.pattern_properties[0]
+        pattern_type = pattern_rule.pattern_properties[0][1]
+        additional_type = pattern_rule.additional_property_type
+
+        assert runtime is not source_runtime
+        assert pattern_type is not source_runtime.pattern_properties[0].pattern_properties[0][1]
+        assert pattern_type.reference is child.reference
+        assert additional_type is not None
+        assert additional_type.reference is child.reference
+        assert included_name in pattern_rule.declared_properties
+        assert excluded_name not in pattern_rule.declared_properties
+
+        required_groups = {rule.keyword: rule.groups for rule in runtime.required_groups}
+        assert required_groups["anyOf"] == ((("kind",),),)
+        assert required_groups["oneOf"] == expected_one_of
+
+        conditional_rule = runtime.conditional_required[0]
+        assert conditional_rule.condition == ((("kind",), ("metric",)),)
+        assert conditional_rule.then_groups == expected_then
+        assert conditional_rule.else_groups == expected_else
+
+    assert {data_type.type_hint for data_type in source_runtime.data_types} == {"Child"}
+
+
+def test_request_response_runtime_validation_copy_handles_empty_optional_parts() -> None:
+    """Copy pattern rules without an additional type and discard fully filtered conditional rules."""
+    parser = JsonSchemaParser(
+        "",
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.RequestResponse,
+    )
+    field = DataModelFieldBase(
+        name="kept",
+        original_name="kept",
+        data_type=DataType(type="str"),
+    )
+    pattern_source_path = "#/PatternSource"
+    pattern_target_path = "#/PatternTarget"
+    parser.extra_template_data[pattern_source_path]["schema_runtime_validation"] = SchemaRuntimeValidation(
+        pattern_properties=[
+            PatternPropertiesRule(
+                declared_properties=("kept", "removed"),
+                pattern_properties=(("^x", DataType(type="str")),),
+            )
+        ]
+    )
+
+    parser._copy_schema_runtime_validation_for_variant(
+        pattern_source_path,
+        pattern_target_path,
+        [field],
+        "Request",
+    )
+
+    pattern_target = parser.extra_template_data[pattern_target_path]["schema_runtime_validation"]
+    assert pattern_target.pattern_properties[0].declared_properties == ("kept",)
+    assert pattern_target.pattern_properties[0].additional_property_type is None
+
+    conditional_source_path = "#/ConditionalSource"
+    conditional_target_path = "#/ConditionalTarget"
+    parser.extra_template_data[conditional_source_path]["schema_runtime_validation"] = SchemaRuntimeValidation(
+        conditional_required=[
+            ConditionalRequiredRule(
+                condition=((("removed",), ("value",)),),
+                then_groups=((("kept",),),),
+                else_groups=(),
+            )
+        ]
+    )
+
+    parser._copy_schema_runtime_validation_for_variant(
+        conditional_source_path,
+        conditional_target_path,
+        [field],
+        "Response",
+    )
+
+    assert "schema_runtime_validation" not in parser.extra_template_data[conditional_target_path]
+
+
+def test_all_mode_skips_empty_variant_model() -> None:
+    """Do not register an empty variant in all-model mode."""
+    parser = JsonSchemaParser(
+        "",
+        read_only_write_only_model_type=ReadOnlyWriteOnlyModelType.All,
+    )
+    reference = parser.model_resolver.add(
+        ["#", "$defs", "Empty"],
+        "Empty",
+        class_name=True,
+        loaded=True,
+    )
+
+    parser._create_variant_model(
+        reference,
+        "Request",
+        [],
+        JsonSchemaObject.model_validate({"type": "object"}),
+        BaseModel,
+    )
+
+    assert not parser.results
+
+
 def test_json_schema_object_x_property_names_dict() -> None:
     """Test OpenAPI x-propertyNames dict is normalized to propertyNames."""
     obj = JsonSchemaObject.model_validate({"x-propertyNames": {"type": "string", "pattern": "^x-"}})
@@ -2715,6 +4346,37 @@ def test_standard_schema_metadata_is_included_in_model_extras() -> None:
         ({"allOf": [True]}, "Any"),
         ({"enum": ["x"]}, "Literal['x']"),
         ({"allOf": [True, {"type": "string"}]}, "str"),
+        ({"allOf": [{"$ref": "#/$defs/A"}, {"$ref": "#/$defs/B"}]}, "A"),
+        (
+            {
+                "allOf": [
+                    {"type": "object"},
+                    {"type": "object", "properties": {"value": {"type": "string"}}},
+                ]
+            },
+            "Dict[str, Any]",
+        ),
+        (
+            {
+                "allOf": [
+                    {"type": "object", "additionalProperties": {"type": "string"}},
+                    {"type": "object", "additionalProperties": {"type": "integer"}},
+                ]
+            },
+            "Dict[str, str]",
+        ),
+        ({"allOf": [{"type": "object", "additionalProperties": {}}]}, "Dict[str, Any]"),
+        (
+            {
+                "allOf": [
+                    {"type": "object", "additionalProperties": {}},
+                    {"type": "object", "additionalProperties": {"type": "integer"}},
+                ]
+            },
+            "Dict[str, int]",
+        ),
+        ({"type": "array", "items": {"$ref": "#/$defs/Item"}}, "List[Item]"),
+        ({"type": ["string", "null"]}, "Optional[str]"),
         ({"type": "array", "prefixItems": [{"type": "string"}], "items": True}, "List[Union[str, Any]]"),
         ({"type": "array", "prefixItems": [{"type": "string"}, False], "items": {"type": "integer"}}, "List[str]"),
         ({"type": "array", "prefixItems": [{"type": "string"}]}, "List[str]"),

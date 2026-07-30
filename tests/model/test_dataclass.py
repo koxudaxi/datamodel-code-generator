@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from datamodel_code_generator.model.dataclass import DataModelField
+from datamodel_code_generator.model.dataclass import DataClass, DataModelField
+from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
 
 
@@ -33,6 +34,63 @@ def test_data_model_field_process_const_no_const() -> None:
     assert field.const == original_const
     assert field.nullable == original_nullable
     assert field.default == original_default
+
+
+@pytest.mark.parametrize(
+    ("extras", "strip_default_none", "expected"),
+    [
+        pytest.param({"repr": False}, False, "field(repr=False, default=None)", id="metadata"),
+        pytest.param({"kw_only": True}, False, "field(kw_only=True, default=None)", id="keyword-only"),
+        pytest.param({"repr": False}, True, "field(repr=False)", id="stripped-metadata"),
+        pytest.param({"init": False}, False, "field(init=False, default=None)", id="init-disabled"),
+        pytest.param({"init": False}, True, "field(init=False, default=None)", id="stripped-init-disabled"),
+    ],
+)
+def test_data_model_field_optional_none_preserves_field_semantics(
+    extras: dict[str, bool],
+    strip_default_none: bool,
+    expected: str,
+) -> None:
+    """Preserve optional defaults whenever field metadata bypasses the template default."""
+    field = DataModelField(
+        name="value",
+        data_type=DataType(type="str"),
+        default=None,
+        required=False,
+        strip_default_none=strip_default_none,
+        extras=extras,
+    )
+
+    assert str(field) == expected
+
+
+def test_data_model_field_init_false_preserves_default_factory() -> None:
+    """Do not add a competing None default when init-disabled fields use a factory."""
+    field = DataModelField(
+        name="value",
+        data_type=DataType(type="list"),
+        default=None,
+        required=False,
+        extras={"default_factory": "list", "init": False},
+    )
+
+    assert str(field) == "field(default_factory=list, init=False)"
+
+
+def test_data_model_field_init_false_prefers_computed_nested_default_factory() -> None:
+    """A computed nested factory must replace the otherwise necessary None default."""
+    nested_reference = Reference(path="Nested", original_name="Nested", name="Nested")
+    DataClass(reference=nested_reference, fields=[])
+    field = DataModelField(
+        name="value",
+        data_type=DataType(reference=nested_reference),
+        default=None,
+        required=False,
+        extras={"init": False},
+        use_default_factory_for_optional_nested_models=True,
+    )
+
+    assert str(field) == "field(init=False, default_factory=Nested)"
 
 
 @pytest.mark.parametrize(

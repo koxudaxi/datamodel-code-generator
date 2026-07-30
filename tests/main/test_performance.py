@@ -37,6 +37,98 @@ EXPECTED_STARTUP_MEASUREMENT_CASES = {
 }
 
 
+def _build_inherited_required_performance_schema(
+    *,
+    base_first: bool,
+    partial_override: bool,
+) -> dict[str, object]:
+    """Build a reusable OpenAPI stress case outside the measured generation call."""
+    field_names = [f"field_{index:02d}" for index in range(25)]
+    properties: dict[str, object] = {}
+    for index, field_name in enumerate(field_names):
+        match index % 5:
+            case 0:
+                field_schema: dict[str, object] = {"$ref": "#/components/schemas/PerfItem"}
+            case 1:
+                field_schema = {
+                    "type": "array",
+                    "items": {"$ref": "#/components/schemas/PerfItem"},
+                }
+            case 2:
+                field_schema = {
+                    "type": "object",
+                    "required": ["code"],
+                    "properties": {"code": {"type": "string", "minLength": 1}},
+                }
+            case 3:
+                field_schema = {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["code"],
+                        "properties": {"code": {"type": "string", "minLength": 1}},
+                    },
+                }
+            case _:
+                field_schema = {
+                    "anyOf": [
+                        {"$ref": "#/components/schemas/PerfItem"},
+                        {"type": "string"},
+                    ]
+                }
+        properties[field_name] = field_schema
+
+    base_schema = {
+        "type": "object",
+        "properties": properties,
+    }
+    derived_schemas: dict[str, object] = {}
+    for derived_index in range(80):
+        derived_schema: dict[str, object] = {
+            "allOf": [{"$ref": "#/components/schemas/PerfBase"}],
+            "required": field_names,
+        }
+        if partial_override:
+            derived_schema["properties"] = {
+                field_name: (
+                    {}
+                    if (derived_index + field_index) % 2 == 0
+                    else {"description": "Partial inherited performance annotation"}
+                )
+                for field_index, field_name in enumerate(field_names)
+            }
+        derived_schemas[f"PerfDerived{derived_index:02d}"] = derived_schema
+    item_schema = {
+        "type": "object",
+        "required": ["value"],
+        "properties": {"value": {"type": "string", "minLength": 1}},
+    }
+    schemas = (
+        {"PerfItem": item_schema, "PerfBase": base_schema, **derived_schemas}
+        if base_first
+        else {**derived_schemas, "PerfBase": base_schema, "PerfItem": item_schema}
+    )
+    return {
+        "openapi": "3.0.0",
+        "info": {"title": "Inherited required performance", "version": "1.0"},
+        "paths": {},
+        "components": {"schemas": schemas},
+    }
+
+
+@pytest.fixture(scope="module")
+def inherited_required_performance_schemas() -> dict[tuple[str, bool], dict[str, object]]:
+    """Build inherited schemas during fixture setup, outside CodSpeed's measured call."""
+    return {
+        (component_order, partial_override): _build_inherited_required_performance_schema(
+            base_first=component_order == "base-first",
+            partial_override=partial_override,
+        )
+        for component_order in ("base-first", "derived-first")
+        for partial_override in (False, True)
+    }
+
+
 def _run_python(args: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, *args],
@@ -45,6 +137,36 @@ def _run_python(args: list[str]) -> subprocess.CompletedProcess[str]:
         text=True,
         timeout=120,
     )
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+@pytest.mark.parametrize(
+    ("component_order", "partial_override"),
+    [
+        pytest.param("base-first", False, id="required-base-first"),
+        pytest.param("derived-first", False, id="required-derived-first"),
+        pytest.param("base-first", True, id="partial-base-first"),
+        pytest.param("derived-first", True, id="partial-derived-first"),
+    ],
+)
+def test_perf_inherited_required_fields(
+    component_order: str,
+    inherited_required_performance_schemas: dict[tuple[str, bool], dict[str, object]],
+    *,
+    partial_override: bool,
+) -> None:
+    """Guard direct/deferred required inheritance and partial override performance."""
+    result = generate(
+        inherited_required_performance_schemas[component_order, partial_override],
+        input_file_type=InputFileType.OpenAPI,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        formatters=[],
+        disable_timestamp=True,
+    )
+    assert isinstance(result, str)
+    assert "class PerfDerived79(PerfBase):" in result
+    assert "field_24: PerfItem" in result
 
 
 @pytest.mark.perf

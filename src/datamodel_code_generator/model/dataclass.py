@@ -24,7 +24,7 @@ from datamodel_code_generator.types import StrictTypes, chain_as_tuple
 
 if TYPE_CHECKING:
     from collections import defaultdict
-    from collections.abc import Sequence
+    from collections.abc import Collection, Sequence
     from pathlib import Path
 
     from datamodel_code_generator.enums import DataclassArguments
@@ -34,6 +34,19 @@ if TYPE_CHECKING:
 def has_field_assignment(field: DataModelFieldBase) -> bool:
     """Check if a dataclass field renders with an assignment or default value."""
     return _has_field_assignment(field)
+
+
+def get_field_default_info(field: DataModelFieldBase) -> tuple[bool, bool]:
+    """Return Python dataclass constructor-default semantics."""
+    return field._get_constructor_default_info()  # noqa: SLF001  # output-owned field policy hook
+
+
+def field_participates_in_constructor(field: DataModelFieldBase) -> bool:
+    """Return whether a Python dataclass field participates in __init__."""
+    return field.extras.get("init") is not False
+
+
+_REQUIRED_INHERITED_INIT_KEY = "_required_inherited_init"
 
 
 class _DataclassReuseMixin:
@@ -71,11 +84,38 @@ class DataClass(_DataclassReuseMixin, DataModel):
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "dataclass.jinja2"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_DATACLASS,)
+    FIELD_DEFAULT_CLASSIFIER = staticmethod(get_field_default_info)
+    FIELD_PARTICIPATES_IN_CONSTRUCTOR = staticmethod(field_participates_in_constructor)
     SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = True
     USES_DATACLASS_ARGUMENTS: ClassVar[bool] = True
+    SUPPORTS_REQUIRED_INHERITED_FIELD_ASSIGNMENT: ClassVar[bool] = True
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True
+
+    @classmethod
+    def prepare_required_inherited_field(
+        cls,
+        field: DataModelFieldBase,
+        inherited_field: DataModelFieldBase,
+        *,
+        explicit_extras: Collection[str] = (),
+    ) -> None:
+        """Preserve inherited init=False until requiredness is final."""
+        super().prepare_required_inherited_field(
+            field,
+            inherited_field,
+            explicit_extras=explicit_extras,
+        )
+        if inherited_field.extras.get("init") is False and "init" not in explicit_extras:
+            field.__dict__[_REQUIRED_INHERITED_INIT_KEY] = True
+
+    @classmethod
+    def restore_required_inherited_field_state(cls, field: DataModelFieldBase) -> bool:
+        """Restore a required field excluded from the inherited constructor."""
+        if not (field.required and field.__dict__.pop(_REQUIRED_INHERITED_INIT_KEY, False)):
+            return False
+        return field.extras.pop("init", None) is False
 
     def __init__(  # noqa: PLR0913
         self,
@@ -168,11 +208,23 @@ class DataModelField(DataModelFieldBase):
         """
         return _nested_model_default_factory(self, DataClass)
 
-    def __str__(self) -> str:
-        """Generate field() call or default value representation."""
+    def _get_field_data(self) -> dict[str, Any]:
+        """Return structured field() arguments before rendering."""
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._FIELD_KEYS}
 
-        if self.default != UNDEFINED and self.default is not None:
+        needs_nested_factory = (
+            self.use_default_factory_for_optional_nested_models
+            and not self.required
+            and (self.default is None or self.default is UNDEFINED)
+            and "default_factory" not in data
+        )
+        if needs_nested_factory and (nested_model_name := self._get_default_factory_for_nested_model()):
+            data["default_factory"] = nested_model_name
+
+        if self.default is None:
+            if data and "default_factory" not in data and (not self.strip_default_none or data.get("init") is False):
+                data["default"] = None
+        elif self.default != UNDEFINED and "default_factory" not in data:
             data["default"] = self.default
 
         if self.required and not self.use_default_with_required:
@@ -186,27 +238,39 @@ class DataModelField(DataModelFieldBase):
                 }
             }
 
-        if (
-            self.use_default_factory_for_optional_nested_models
-            and not self.required
-            and (self.default is None or self.default is UNDEFINED)
-            and "default_factory" not in data
-        ):
-            nested_model_name = self._get_default_factory_for_nested_model()
-            if nested_model_name:
-                data["default_factory"] = nested_model_name
+        match data.get("default", UNDEFINED):
+            case list() | dict() | set() as default:
+                data.pop("default")
+                data["default_factory"] = (
+                    f"lambda: {represent_python_value(default)}" if default else type(default).__name__
+                )
 
+        return data
+
+    def _get_constructor_default_info(self) -> tuple[bool, bool]:
+        """Return constructor-default semantics from structured field data."""
+        if self.required and not self.use_default_with_required:
+            return False, False
+        data = self._get_field_data()
+        has_rendered_assignment = bool(data) or self._has_forced_field_assignment
+        if (not data and self._has_forced_field_assignment) or not (
+            (has_rendered_assignment and not self.use_annotated) or not self.should_strip_default_none()
+        ):
+            return False, False
+        if "default_factory" in data:
+            return True, False
+        if data and "default" not in data:
+            return False, False
+        return True, True
+
+    def __str__(self) -> str:
+        """Generate field() call or default value representation."""
+        data = self._get_field_data()
         if not data:
-            return ""
+            return "field()" if self._has_forced_field_assignment else ""
 
         if len(data) == 1 and "default" in data:
-            default = data["default"]
-
-            if isinstance(default, (list, dict, set)):
-                if default:
-                    return f"field(default_factory=lambda: {represent_python_value(default)})"
-                return f"field(default_factory={type(default).__name__})"
-            return represent_python_value(default)
+            return represent_python_value(data["default"])
         kwargs = [f"{k}={v if k == 'default_factory' else represent_python_value(v)}" for k, v in data.items()]
         return f"field({', '.join(kwargs)})"
 

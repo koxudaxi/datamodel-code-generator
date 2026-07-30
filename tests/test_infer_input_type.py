@@ -114,6 +114,10 @@ def test_infer_input_type() -> None:  # noqa: PLR0912
             continue
         assert_infer_input_type(file, InputFileType.JsonSchema)
     for file in (DATA_PATH / "openapi").rglob("*"):
+        if "allof_no_merge_external_relative" in file.parts and file.name != "openapi.yaml":
+            continue
+        if "allof_required_inherited_external" in file.parts and file.name != "openapi.yaml":
+            continue
         if "all_of_with_relative_ref" in file.parts:
             continue
         if "reference_same_hierarchy_directory" in file.parts:
