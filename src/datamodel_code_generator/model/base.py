@@ -327,11 +327,15 @@ class ConstraintsBase(_BaseModel):
         )
 
 
-class DataModelFieldBase(_BaseModel):
+class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
     """Base class for model field representation and rendering."""
 
     _FIELD_IMPORTS_CACHE_MAX_SIZE: ClassVar[int] = 4096
     _field_imports_cache: ClassVar[dict[tuple[Any, ...], tuple[Import, ...]]] = {}
+    _SEMANTIC_CACHE_KEYS: ClassVar[tuple[str, ...]] = (
+        "_computed_default_factory",
+        "_self_reference_cache",
+    )
     SUPPORTS_FIELD_CONSTRAINTS: ClassVar[bool] = False
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = False
     ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = None
@@ -427,7 +431,7 @@ class DataModelFieldBase(_BaseModel):
     def self_reference(self) -> bool:
         """Check if field references its parent model.
 
-        Result is cached after first call since parent is stable at render time.
+        Result is cached until a GenerationStore-managed semantic mutation.
         Uses __dict__ for caching to avoid Pydantic-managed field assignment.
         """
         if "_self_reference_cache" in self.__dict__:
@@ -918,7 +922,19 @@ class DataModelFieldBase(_BaseModel):
 
     def force_field_assignment(self) -> None:
         """Render an explicit required-field assignment without changing its semantics."""
+        if self.__dict__.get("_forced_field_assignment") is True:
+            return
         self.__dict__["_forced_field_assignment"] = True
+        self._invalidate_parent_render_caches()
+
+    def _invalidate_parent_render_caches(self) -> None:
+        """Clear parent render caches through current or legacy model hooks."""
+        if (parent := self.parent) is None:
+            return
+        if invalidate_render_caches := getattr(parent, "invalidate_render_caches", None):
+            invalidate_render_caches()
+            return
+        parent.clear_imports_cache()
 
     def _get_constructor_default_info(self) -> tuple[bool, bool]:
         """Return neutral constructor-default semantics for this field."""
@@ -974,7 +990,17 @@ class DataModelFieldBase(_BaseModel):
             copied.data_type.data_types = [dt.model_copy() for dt in self.data_type.data_types]
         if self.data_type.dict_key:
             copied.data_type.dict_key = self.data_type.dict_key.model_copy()
+        copied.invalidate_semantic_caches()
         return copied
+
+    def invalidate_semantic_caches(self, *, invalidate_parent: bool = True) -> None:
+        """Clear field caches derived from mutable type and parent semantics."""
+        field_values = self.__dict__
+        for key in self._SEMANTIC_CACHE_KEYS:
+            field_values.pop(key, None)
+        if not invalidate_parent:
+            return
+        self._invalidate_parent_render_caches()
 
     def replace_data_type(self, new_data_type: DataType, *, clear_old_parent: bool = True) -> None:
         """Replace data_type and update parent relationships.
@@ -989,8 +1015,7 @@ class DataModelFieldBase(_BaseModel):
         else:
             self.data_type = new_data_type
             new_data_type.parent = self
-        if self.parent is not None:
-            self.parent.clear_imports_cache()
+        self.invalidate_semantic_caches()
 
 
 def _nested_model_default_factory(field: DataModelFieldBase, model_cls: type[DataModel]) -> str | None:
@@ -1459,6 +1484,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         self.description = description
         for field in self.fields:
             field.parent = self
+            field.invalidate_semantic_caches(invalidate_parent=False)
 
         self._additional_imports.extend(self.DEFAULT_IMPORTS)
         self.default: Any = default
@@ -1535,8 +1561,27 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     def replace_children_in_models(self, models: list[DataModel], new_ref: Reference) -> None:
         """Replace reference children if their parent model is in models list."""
         for child in self.reference.children[:]:
-            if isinstance(child, DataType) and get_most_of_parent(child) in models:
-                child.replace_reference(new_ref)
+            if not isinstance(child, DataType):
+                continue
+            owner_model = get_most_of_parent(child, DataModel)
+            if isinstance(owner_model, DataModel):
+                if owner_model not in models:
+                    continue
+                owner_models = (owner_model,)
+            else:
+                owner_models = tuple(
+                    model for model in models if any(base_class is child for base_class in model.base_classes)
+                )
+            if not owner_models:
+                continue
+            child.replace_reference(new_ref)
+            current: DataType | DataModelFieldBase = child
+            while isinstance(parent := current.parent, DataType):
+                current = parent
+            if isinstance(parent, DataModelFieldBase):
+                parent.invalidate_semantic_caches(invalidate_parent=False)
+            for owner_model in owner_models:
+                owner_model.invalidate_render_caches()
 
     def set_base_class(self) -> None:
         """Set up the base class(es) for this model."""
@@ -1549,7 +1594,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
 
         if not base_class_list:
             self.base_classes = []
-            self.clear_imports_cache()
+            self.invalidate_render_caches()
             return
 
         result = []
@@ -1558,7 +1603,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             self._additional_imports.append(base_class_import)
             result.append(BaseClassDataType.from_import(base_class_import))
         self.base_classes = result
-        self.clear_imports_cache()
+        self.invalidate_render_caches()
 
     @cached_property
     def template_file_path(self) -> Path:
@@ -1610,6 +1655,12 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         """Clear cached imports after import-affecting model, field, or data type mutations."""
         self.__dict__.pop(self._IMPORTS_CACHE_KEY, None)
 
+    def invalidate_render_caches(self) -> None:
+        """Clear cached imports and render-derived model identity."""
+        self.clear_imports_cache()
+        if dedup_key_cache := getattr(self, "_dedup_key_cache", None):
+            dedup_key_cache.clear()
+
     @property
     def reference_classes(self) -> frozenset[str]:
         """Get all referenced class paths used by this model."""
@@ -1650,7 +1701,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             self.reference.name = f"{self.reference.name.rsplit('.', 1)[0]}.{class_name}"
         else:
             self.reference.name = class_name
-        self.clear_imports_cache()
+        self.invalidate_render_caches()
 
     @property
     def duplicate_class_name(self) -> str:
@@ -1720,7 +1771,9 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         self.reference.path = new_path
         if "path" in self.__dict__:  # pragma: no branch
             del self.__dict__["path"]
-        self.clear_imports_cache()
+        for field in self.fields:
+            field.invalidate_semantic_caches(invalidate_parent=False)
+        self.invalidate_render_caches()
 
     def render(self, *, class_name: str | None = None) -> str:
         """Render the model to a string using the template."""

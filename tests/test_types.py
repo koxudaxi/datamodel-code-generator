@@ -19,6 +19,7 @@ from datamodel_code_generator.types import (
     get_optional_type,
     get_subscript_args,
     get_type_base_name,
+    is_data_model_field,
     normalize_integer_constraint,
 )
 
@@ -77,6 +78,23 @@ def test_get_optional_type_cache_clear_preserves_value() -> None:
 def test_chain_as_tuple_chains_multiple_iterables() -> None:
     """Test chain_as_tuple handles the general path for more than two iterables."""
     assert chain_as_tuple((1,), (2,), (3,)) == (1, 2, 3)
+
+
+def test_is_data_model_field_matches_structural_type_contract() -> None:
+    """The runtime predicate must accept exactly field-like DataType owners."""
+
+    class FieldLike:
+        data_type = DataType(type="str")
+
+    class InvalidFieldLike:
+        data_type = object()
+
+    candidate: object = FieldLike()
+
+    assert is_data_model_field(candidate)
+    assert candidate.data_type.type == "str"
+    assert not is_data_model_field(InvalidFieldLike())
+    assert not is_data_model_field(object())
 
 
 @pytest.mark.parametrize(

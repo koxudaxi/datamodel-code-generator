@@ -49,11 +49,16 @@ if TYPE_CHECKING:
     from datamodel_code_generator.model.base import BaseClassDataType, DataModel, DataModelFieldBase
     from datamodel_code_generator.types import DataType
 
+    OwnerModels: TypeAlias = DataModel | tuple[DataModel, ...] | None
+    CacheOwners: TypeAlias = tuple[DataModelFieldBase | None, OwnerModels]
+
 else:
     BaseClassDataType: TypeAlias = Any
     DataModel: TypeAlias = Any
     DataModelFieldBase: TypeAlias = Any
     DataType: TypeAlias = Any
+    OwnerModels: TypeAlias = Any
+    CacheOwners: TypeAlias = Any
 
 Reference: TypeAlias = Any
 ModelId: TypeAlias = int
@@ -99,13 +104,6 @@ def set_model_base_classes(
         generation_store.set_base_classes(model, base_classes)
 
 
-def _outermost_parent(value: object) -> object:
-    current = value
-    while (parent := getattr(current, "parent", None)) is not None:
-        current = parent
-    return current
-
-
 @dataclass(frozen=True, slots=True)
 class ModelFact:
     """A parsed model and the stable facts derived from its reference."""
@@ -139,6 +137,7 @@ class GenerationFacts:
     model_facts: dict[ModelId, ModelFact] = field(default_factory=dict)
     data_type_facts: dict[DataTypeId, DataTypeFact] = field(default_factory=dict)
     data_type_fact_by_object: dict[int, DataTypeFact] = field(default_factory=dict)
+    base_owner_model_ids_by_object: dict[int, ModelId | list[ModelId]] = field(default_factory=dict)
     model_by_path: dict[str, ModelId] = field(default_factory=dict)
     model_by_ref_id: dict[int, ModelId] = field(default_factory=dict)
     data_types_by_model: dict[ModelId, tuple[DataTypeId, ...]] = field(default_factory=dict)
@@ -325,6 +324,14 @@ class GenerationIndexBuilder:
                 )
 
             for base_class in model_fact.model.base_classes:
+                base_class_id = id(base_class)
+                match self._facts.base_owner_model_ids_by_object.get(base_class_id):
+                    case None:
+                        self._facts.base_owner_model_ids_by_object[base_class_id] = model_id
+                    case int() as existing_model_id if existing_model_id != model_id:
+                        self._facts.base_owner_model_ids_by_object[base_class_id] = [existing_model_id, model_id]
+                    case list() as existing_model_ids if model_id not in existing_model_ids:
+                        existing_model_ids.append(model_id)
                 self._record_data_type_tree(
                     base_class,
                     owner_model=model_id,
@@ -698,9 +705,9 @@ class GenerationStore:  # noqa: PLR0904
 
     def replace_data_type_ref(self, data_type: DataType, new_reference: Reference | None) -> None:
         """Set ``data_type.reference`` while preserving reverse reference links."""
-        owner_model = self._owner_model_for_data_type(data_type)
+        cache_owners = self._cache_owners_for_data_type(data_type)
         self._replace_data_type_reference(data_type, new_reference)
-        self._clear_imports_cache_for_model(owner_model)
+        self._invalidate_owner_caches(*cache_owners)
         self._invalidate_after_mutation()
 
     def detach_data_type_ref(self, data_type: DataType) -> None:
@@ -725,7 +732,7 @@ class GenerationStore:  # noqa: PLR0904
             model.set_reference_path(new_path)
         if new_file_path is not None:
             model.file_path = new_file_path
-        self._clear_imports_cache_for_model(model)
+        self._invalidate_render_caches_for_model(model)
         self._invalidate_after_mutation()
 
     def rename_model(
@@ -747,9 +754,7 @@ class GenerationStore:  # noqa: PLR0904
 
     def replace_field_type(self, field_: DataModelFieldBase, new_data_type: DataType) -> None:
         """Replace a field's data type and invalidate derived facts."""
-        owner_model = self._owner_model_for_field(field_)
         field_.replace_data_type(new_data_type)
-        self._clear_imports_cache_for_model(owner_model)
         self._invalidate_after_mutation()
 
     def replace_nested_data_type(
@@ -767,27 +772,29 @@ class GenerationStore:  # noqa: PLR0904
 
     def set_nested_data_types(self, data_type: DataType, nested_data_types: Iterable[DataType]) -> None:
         """Replace nested data types and invalidate derived facts."""
-        owner_model = self._owner_model_for_data_type(data_type)
+        cache_owners = self._cache_owners_for_data_type(data_type)
         for nested_data_type in data_type.data_types:
             nested_data_type.parent = None
         data_type.data_types = list(nested_data_types)
         for nested_data_type in data_type.data_types:
             nested_data_type.parent = data_type
-        self._clear_imports_cache_for_model(owner_model)
+        self._invalidate_owner_caches(*cache_owners)
         self._invalidate_after_mutation()
 
     def append_field(self, model: DataModel, field_: DataModelFieldBase) -> None:
         """Append a field to ``model`` and invalidate derived facts."""
         field_.parent = model
+        field_.invalidate_semantic_caches(invalidate_parent=False)
         model.fields.append(field_)
-        self._clear_imports_cache_for_model(model)
+        self._invalidate_render_caches_for_model(model)
         self._invalidate_after_mutation()
 
     def insert_field(self, model: DataModel, index: int, field_: DataModelFieldBase) -> None:
         """Insert a field into ``model`` and invalidate derived facts."""
         field_.parent = model
+        field_.invalidate_semantic_caches(invalidate_parent=False)
         model.fields.insert(index, field_)
-        self._clear_imports_cache_for_model(model)
+        self._invalidate_render_caches_for_model(model)
         self._invalidate_after_mutation()
 
     def remove_field(self, model: DataModel, field_: DataModelFieldBase) -> None:
@@ -795,7 +802,8 @@ class GenerationStore:  # noqa: PLR0904
         model.fields.remove(field_)
         if field_.parent is model:
             field_.parent = None
-        self._clear_imports_cache_for_model(model)
+            field_.invalidate_semantic_caches(invalidate_parent=False)
+        self._invalidate_render_caches_for_model(model)
         self._invalidate_after_mutation()
 
     def set_fields(self, model: DataModel, fields: Iterable[DataModelFieldBase]) -> None:
@@ -806,31 +814,31 @@ class GenerationStore:  # noqa: PLR0904
         for field_ in old_fields:
             if field_.parent is model and id(field_) not in new_field_ids:
                 field_.parent = None
+                field_.invalidate_semantic_caches(invalidate_parent=False)
         for field_ in model.fields:
             field_.parent = model
-        self._clear_imports_cache_for_model(model)
+            field_.invalidate_semantic_caches(invalidate_parent=False)
+        self._invalidate_render_caches_for_model(model)
         self._invalidate_after_mutation()
 
     def set_base_classes(self, model: DataModel, base_classes: Iterable[BaseClassDataType]) -> None:
         """Replace ``model`` base classes and invalidate derived facts."""
         model.base_classes = list(base_classes)
-        self._clear_imports_cache_for_model(model)
+        self._invalidate_render_caches_for_model(model)
         self._invalidate_after_mutation()
 
     def reset_base_classes(self, model: DataModel) -> None:
         """Reset ``model`` to its default base classes and invalidate derived facts."""
         model.set_base_class()
+        self._invalidate_render_caches_for_model(model)
         self._invalidate_after_mutation()
 
     def redirect_reference_users(self, old_reference: Reference, new_reference: Reference) -> None:
         """Redirect every user of ``old_reference`` to ``new_reference``."""
-        owner_models = [
-            self._owner_model_for_data_type(child)
-            for child in old_reference.children[:]
-            if hasattr(child, "replace_reference")
-        ]
+        children = [child for child in old_reference.children[:] if hasattr(child, "replace_reference")]
+        cache_owners = [self._cache_owners_for_data_type(child) for child in children]
         self._replace_reference_children(old_reference, new_reference)
-        self._clear_imports_cache_for_models(owner_models)
+        self._invalidate_owner_caches_many(cache_owners)
         self._invalidate_after_mutation()
 
     def redirect_model_reference_users(
@@ -841,12 +849,21 @@ class GenerationStore:  # noqa: PLR0904
     ) -> None:
         """Redirect ``model`` reference users owned by ``models`` to ``new_reference``."""
         model_ids = {id(candidate) for candidate in models}
-        owner_models = []
+        cache_owners = []
         for child in model.reference.children[:]:
-            if id(_outermost_parent(child)) in model_ids and hasattr(child, "replace_reference"):
-                owner_models.append(self._owner_model_for_data_type(child))
-                child.replace_reference(new_reference)  # ty: ignore[call-non-callable]
-        self._clear_imports_cache_for_models(owner_models)
+            if not hasattr(child, "replace_reference"):
+                continue
+            cache_owners_for_child = self._cache_owners_for_data_type(child)
+            owner_models = cache_owners_for_child[1]
+            if isinstance(owner_models, tuple):
+                matches_owner = any(id(owner_model) in model_ids for owner_model in owner_models)
+            else:
+                matches_owner = owner_models is not None and id(owner_models) in model_ids
+            if not matches_owner:
+                continue
+            cache_owners.append(cache_owners_for_child)
+            child.replace_reference(new_reference)  # ty: ignore[call-non-callable]
+        self._invalidate_owner_caches_many(cache_owners)
         self._invalidate_after_mutation()
 
     def collapse_root_data_type(self, data_type: DataType, inner_reference: Reference) -> None:
@@ -907,28 +924,72 @@ class GenerationStore:  # noqa: PLR0904
     def _invalidate_after_mutation(self) -> None:
         self._invalidate()
 
-    @staticmethod
-    def _owner_model_for_field(field_: DataModelFieldBase) -> DataModel | None:
-        owner_model = getattr(field_, "parent", None)
-        return owner_model if hasattr(owner_model, "clear_imports_cache") else None
+    def _cache_owners_for_data_type(self, data_type: object) -> CacheOwners:
+        current: Any = data_type
+        owner_field: DataModelFieldBase | None = None
+        while (parent := getattr(current, "parent", None)) is not None:
+            current = parent
+            if owner_field is None and hasattr(current, "invalidate_semantic_caches"):
+                owner_field = current
+        owner_model = current if hasattr(current, "clear_imports_cache") else None
+        if owner_model is not None:
+            return owner_field, owner_model  # ty: ignore[invalid-return-type]  # dynamic external model hooks
+        if not self.models:
+            return owner_field, None
+        if self._dirty and self._defer_refresh_depth:
+            return owner_field, tuple(
+                model for model in self.models if any(base_class is current for base_class in model.base_classes)
+            )
+        facts = self.current_facts()
+        match facts.base_owner_model_ids_by_object.get(id(current)):
+            case None:
+                owner_models = None
+            case int() as model_id:
+                owner_models = facts.model_facts[model_id].model
+            case model_ids:
+                owner_models = tuple(facts.model_facts[model_id].model for model_id in model_ids)
+        return owner_field, owner_models
+
+    def _invalidate_owner_caches(
+        self,
+        field_: DataModelFieldBase | None,
+        owner_models: OwnerModels,
+    ) -> None:
+        if field_ is not None:
+            field_.invalidate_semantic_caches(invalidate_parent=False)
+        if isinstance(owner_models, tuple):
+            for model in owner_models:
+                self._invalidate_render_caches_for_model(model)  # ty: ignore[invalid-argument-type]
+            return
+        self._invalidate_render_caches_for_model(owner_models)
+
+    def _invalidate_owner_caches_many(
+        self,
+        cache_owners: Iterable[CacheOwners],
+    ) -> None:
+        fields: dict[int, DataModelFieldBase] = {}
+        models: dict[int, DataModel] = {}
+        for field_, owner_models in cache_owners:
+            if field_ is not None:
+                fields[id(field_)] = field_
+            if isinstance(owner_models, tuple):
+                for model in owner_models:
+                    models[id(model)] = model  # ty: ignore[invalid-assignment]
+            elif owner_models is not None:
+                models[id(owner_models)] = owner_models
+        for field_ in fields.values():
+            field_.invalidate_semantic_caches(invalidate_parent=False)
+        for model in models.values():
+            self._invalidate_render_caches_for_model(model)
 
     @staticmethod
-    def _owner_model_for_data_type(data_type: object) -> Any:
-        owner_model: Any = _outermost_parent(data_type)
-        return owner_model if hasattr(owner_model, "clear_imports_cache") else None
-
-    @staticmethod
-    def _clear_imports_cache_for_model(model: DataModel | None) -> None:
-        if model is not None:
-            model.clear_imports_cache()
-
-    def _clear_imports_cache_for_models(self, models: Iterable[DataModel | None]) -> None:
-        seen: set[int] = set()
-        for model in models:
-            if model is None or id(model) in seen:
-                continue
-            seen.add(id(model))
-            self._clear_imports_cache_for_model(model)
+    def _invalidate_render_caches_for_model(model: DataModel | None) -> None:
+        if model is None:
+            return
+        if invalidate_render_caches := getattr(model, "invalidate_render_caches", None):
+            invalidate_render_caches()
+            return
+        model.clear_imports_cache()
 
     def __iter__(self) -> Iterator[DataModel]:
         return iter(self.models)

@@ -224,6 +224,21 @@ def test_data_model() -> None:
     assert data_model.render() == "@validate\n@dataclass\nclass test_model:\n    a: str"
 
 
+def test_data_model_custom_base_class_list() -> None:
+    """Preserve every explicitly configured custom base class."""
+    model = BaseModel(
+        fields=[],
+        reference=Reference(path="Model", original_name="Model", name="Model"),
+        custom_base_class=["package.First", "package.Second"],
+    )
+
+    assert model.base_class == "First, Second"
+    assert [(base.type, base.import_) for base in model.base_classes] == [
+        ("First", Import(from_="package", import_="First")),
+        ("Second", Import(from_="package", import_="Second")),
+    ]
+
+
 def test_data_model_relative_custom_template_without_adapter() -> None:
     """Load a relative custom template unchanged when the model has no adapter."""
 
@@ -357,6 +372,94 @@ def test_data_model_imports_cache_clears_after_field_type_replacement() -> None:
     field.replace_data_type(DataType.from_import(IMPORT_DECIMAL))
 
     assert IMPORT_DECIMAL in model.imports
+
+
+def test_data_model_render_identity_cache_clears_after_field_mutations() -> None:
+    """Field mutations must not retain a render-derived deduplication key."""
+    field = PydanticDataclassField(name="value", data_type=DataType(type="str"), required=True)
+    model = PydanticDataclassModel(
+        fields=[field],
+        reference=Reference(path="Model", original_name="Model", name="Model"),
+    )
+    original_key = model.get_dedup_key()
+
+    field.force_field_assignment()
+    field.force_field_assignment()
+
+    assert model.get_dedup_key() != original_key
+
+
+@pytest.mark.parametrize("reference_name", ["Before", "package.Before"])
+def test_data_model_render_identity_cache_clears_after_model_rename(reference_name: str) -> None:
+    """Model identity must be recomputed after a generated class name changes."""
+    model = BaseModel(
+        fields=[],
+        reference=Reference(path=reference_name, original_name=reference_name, name=reference_name),
+    )
+    original_key = model.get_dedup_key(None, use_default=False)
+
+    model.class_name = "After"
+
+    assert model.reference.name == ("package.After" if "." in reference_name else "After")
+    assert model.get_dedup_key(None, use_default=False) != original_key
+
+
+def test_data_model_parent_and_reference_path_changes_invalidate_field_semantics() -> None:
+    """Direct model ownership and path changes must refresh self-reference state."""
+    model_reference = Reference(path="Before", original_name="Before", name="Before")
+    other_reference = Reference(path="After", original_name="After", name="After")
+    field = PydanticV2DataModelField(name="value", data_type=DataType(reference=other_reference))
+    model = BaseModel(fields=[field], reference=model_reference)
+
+    assert not field.self_reference()
+
+    model.set_reference_path("After")
+
+    assert field.self_reference()
+
+    replacement_model = BaseModel(
+        fields=[field],
+        reference=Reference(path="Replacement", original_name="Replacement", name="Replacement"),
+    )
+
+    assert field.parent is replacement_model
+    assert not field.self_reference()
+
+
+def test_field_deep_copy_drops_transient_semantic_caches() -> None:
+    """Copied fields must recompute transient renderer and self-reference state."""
+    field = PydanticV2DataModelField(name="value", data_type=DataType(type="str"))
+    field.__dict__["_computed_default_factory"] = "list"
+    field.__dict__["_self_reference_cache"] = True
+
+    copied = field.copy_deep()
+
+    assert "_computed_default_factory" not in copied.__dict__
+    assert "_self_reference_cache" not in copied.__dict__
+
+
+def test_field_semantic_cache_invalidation_supports_legacy_parent_hook() -> None:
+    """External parent implementations with only the legacy import hook remain compatible."""
+
+    class ImportsOnlyParent:
+        def __init__(self) -> None:
+            self.cache_cleared = False
+
+        def clear_imports_cache(self) -> None:
+            self.cache_cleared = True
+
+    parent = ImportsOnlyParent()
+    field = DataModelFieldBase(name="value", data_type=DataType(type="str"))
+    field.parent = parent  # ty: ignore[invalid-assignment]
+
+    field.invalidate_semantic_caches()
+
+    assert parent.cache_cleared
+
+    parent.cache_cleared = False
+    field.force_field_assignment()
+
+    assert parent.cache_cleared
 
 
 def test_pydantic_v2_extra_type_hint_keeps_non_dict_hint() -> None:
@@ -1004,11 +1107,14 @@ def test_data_model_exception() -> None:
 def test_replace_children_in_models_updates_matching_owner_references() -> None:
     """Test replacing reference children for only the selected owner models."""
     old_reference = Reference(path="Old", original_name="Old", name="Old")
-    new_reference = Reference(path="New", original_name="New", name="New")
+    new_reference = Reference(path="Selected", original_name="Selected", name="Selected")
     target_model = BaseModel(fields=[], reference=old_reference)
-    selected_type = DataType(reference=old_reference)
+    selected_type = DataType(data_types=[DataType(reference=old_reference)])
+    selected_reference_type = selected_type.data_types[0]
+    selected_reference_type.parent = selected_type
+    selected_field = DataModelFieldBase(data_type=selected_type)
     selected_model = BaseModel(
-        fields=[DataModelFieldBase(data_type=selected_type)],
+        fields=[selected_field],
         reference=Reference(path="Selected", original_name="Selected", name="Selected"),
     )
     other_type = DataType(reference=old_reference)
@@ -1017,12 +1123,50 @@ def test_replace_children_in_models_updates_matching_owner_references() -> None:
         reference=Reference(path="Other", original_name="Other", name="Other"),
     )
 
+    assert not selected_field.self_reference()
+
     target_model.replace_children_in_models([selected_model], new_reference)
 
-    assert selected_type.reference is new_reference
+    assert selected_field.self_reference()
+    assert selected_reference_type.reference is new_reference
     assert other_type.reference is old_reference
-    assert [child is selected_type for child in old_reference.children] == [False]
-    assert [child is selected_type for child in new_reference.children] == [True]
+    assert [child is selected_reference_type for child in old_reference.children] == [False]
+    assert [child is selected_reference_type for child in new_reference.children] == [True]
+
+
+def test_replace_children_in_models_invalidates_direct_model_owner() -> None:
+    """A redirected base-class reference refreshes its owning model's render identity."""
+    old_reference = Reference(path="Old", original_name="Old", name="Old")
+    new_reference = Reference(path="New", original_name="New", name="New")
+    target_model = BaseModel(fields=[], reference=old_reference)
+    selected_model = BaseModel(
+        fields=[],
+        base_classes=[old_reference],
+        reference=Reference(path="Selected", original_name="Selected", name="Selected"),
+    )
+    base_class = selected_model.base_classes[0]
+    shared_owner_model = BaseModel(
+        fields=[],
+        reference=Reference(path="SharedOwner", original_name="SharedOwner", name="SharedOwner"),
+    )
+    shared_owner_model.base_classes = [base_class]
+    ignored_owner_model = BaseModel(
+        fields=[],
+        base_classes=[old_reference],
+        reference=Reference(path="IgnoredOwner", original_name="IgnoredOwner", name="IgnoredOwner"),
+    )
+    ignored_base_class = ignored_owner_model.base_classes[0]
+    original_key = selected_model.get_dedup_key()
+    shared_owner_key = shared_owner_model.get_dedup_key()
+    ignored_owner_key = ignored_owner_model.get_dedup_key()
+
+    target_model.replace_children_in_models([selected_model, shared_owner_model], new_reference)
+
+    assert base_class.reference is new_reference
+    assert ignored_base_class.reference is old_reference
+    assert selected_model.get_dedup_key() != original_key
+    assert shared_owner_model.get_dedup_key() != shared_owner_key
+    assert ignored_owner_model.get_dedup_key() == ignored_owner_key
 
 
 def test_data_field() -> None:
