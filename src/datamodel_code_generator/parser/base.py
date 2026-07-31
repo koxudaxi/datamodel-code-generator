@@ -84,7 +84,7 @@ from datamodel_code_generator.model.base import (
     linearize_data_models,
     sort_data_models_for_mro,
 )
-from datamodel_code_generator.model.enum import Enum, Member, evaluate_member_value
+from datamodel_code_generator.model.enum import Enum, EnumMemberValue, Member, escape_characters  # noqa: F401
 from datamodel_code_generator.model.imports import IMPORT_TYPED_DICT, IMPORT_TYPED_DICT_BACKPORT
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
@@ -612,18 +612,6 @@ SPECIAL_PATH_FORMAT: str = "#-datamodel-code-generator-#-{}-#-special-#"
 def get_special_path(keyword: str, path: list[str]) -> list[str]:
     """Create a special path marker for internal reference tracking."""
     return [*path, SPECIAL_PATH_FORMAT.format(keyword)]
-
-
-escape_characters = str.maketrans({
-    "\u0000": r"\x00",  # Null byte
-    "\\": r"\\",
-    "'": r"\'",
-    "\b": r"\b",
-    "\f": r"\f",
-    "\n": r"\n",
-    "\r": r"\r",
-    "\t": r"\t",
-})
 
 
 def dump_templates(templates: list[DataModel]) -> str:
@@ -1465,6 +1453,8 @@ def _get_discriminator_field_value(discriminator_field: DataModelFieldBase) -> D
     enum_source = discriminator_field.data_type.find_source(Enum)
     if enum_source and len(enum_source.fields) == 1:
         raw_default = enum_source.fields[0].default
+        if isinstance(raw_default, EnumMemberValue):
+            return raw_default.value
         if isinstance(raw_default, str):
             return raw_default.strip("'\"")
         return raw_default
@@ -2645,7 +2635,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if not member:
             return value
 
-        member_value = evaluate_member_value(member.field.default)
+        member_value = member.value
         if isinstance(member_value, (str, int, bool)):
             return member_value
         return value

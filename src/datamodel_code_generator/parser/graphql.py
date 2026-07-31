@@ -22,11 +22,10 @@ from datamodel_code_generator import (
     snooper_to_methods,
 )
 from datamodel_code_generator._format_types import DatetimeClassType
-from datamodel_code_generator.model.enum import SPECIALIZED_ENUM_TYPE_MATCH, Enum
+from datamodel_code_generator.model.enum import SPECIALIZED_ENUM_TYPE_MATCH, Enum, EnumMemberValue
 from datamodel_code_generator.parser.base import (
     DataType,
     Parser,
-    escape_characters,
 )
 from datamodel_code_generator.reference import ModelType, Reference
 from datamodel_code_generator.types import Types
@@ -261,7 +260,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
         exclude_field_names: set[str] = set()
 
         for value_name, value in enum_object.values.items():
-            default = f"'{value_name.translate(escape_characters)}'" if isinstance(value_name, str) else value_name
+            default = EnumMemberValue(value_name) if isinstance(value_name, str) else value_name
 
             field_name = self.model_resolver.get_valid_field_name(
                 value_name, excludes=exclude_field_names, model_type=ModelType.ENUM

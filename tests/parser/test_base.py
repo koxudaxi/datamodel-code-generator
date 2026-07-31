@@ -50,6 +50,7 @@ from datamodel_code_generator.parser.base import (
     _copy_resolved_inherited_field,
     _detach_deferred_inherited_field_parents,
     _find_field,
+    _get_discriminator_field_value,
     _get_enum_from_base,
     _get_inherited_type_modifiers,
     _get_pydantic_v2_root_model_type,
@@ -691,6 +692,30 @@ def test_get_enum_from_base_skips_models_without_inherited_enum_capability() -> 
     assert _get_enum_from_base(child_model, "kind") is None
 
 
+def test_discriminator_field_value_accepts_legacy_quoted_enum_default() -> None:
+    """Structured enum values retain the legacy raw-string compatibility boundary."""
+    from datamodel_code_generator.model.enum import Enum
+
+    enum_reference = _reference("Kind")
+    Enum(
+        fields=[
+            DataModelField(
+                name="LEGACY",
+                default="'legacy'",
+                data_type=DataType(type="str"),
+                required=True,
+            )
+        ],
+        reference=enum_reference,
+    )
+    discriminator_field = DataModelField(
+        name="kind",
+        data_type=DataType(reference=enum_reference),
+    )
+
+    assert _get_discriminator_field_value(discriminator_field) == "legacy"
+
+
 def _create_override_required_models(
     original_data_type: DataType,
     *,
@@ -1326,19 +1351,19 @@ def test_find_member_with_integer_enum() -> None:
         fields=[
             DataModelField(
                 name="VALUE_1000",
-                default="1000",
+                default=1000,
                 data_type=DataType(type="int"),
                 required=True,
             ),
             DataModelField(
                 name="VALUE_100",
-                default="100",
+                default=100,
                 data_type=DataType(type="int"),
                 required=True,
             ),
             DataModelField(
                 name="VALUE_0",
-                default="0",
+                default=0,
                 data_type=DataType(type="int"),
                 required=True,
             ),
@@ -1363,7 +1388,7 @@ def test_find_member_with_integer_enum() -> None:
 
 def test_find_member_with_string_enum() -> None:
     """Test find_member method with string enum values."""
-    from datamodel_code_generator.model.enum import Enum
+    from datamodel_code_generator.model.enum import Enum, EnumMemberValue
     from datamodel_code_generator.model.pydantic_v2.base_model import DataModelField
     from datamodel_code_generator.reference import Reference
     from datamodel_code_generator.types import DataType
@@ -1378,19 +1403,19 @@ def test_find_member_with_string_enum() -> None:
             ),
             DataModelField(
                 name="VALUE_A",
-                default="'value_a'",
+                default=EnumMemberValue("value_a"),
                 data_type=DataType(type="str"),
                 required=True,
             ),
             DataModelField(
                 name="VALUE_B",
-                default="'value_b'",
+                default=EnumMemberValue("value_b"),
                 data_type=DataType(type="str"),
                 required=True,
             ),
             DataModelField(
                 name="BARE",
-                default="bare value",
+                default=EnumMemberValue("bare value"),
                 data_type=DataType(type="str"),
                 required=True,
             ),
@@ -1404,6 +1429,9 @@ def test_find_member_with_string_enum() -> None:
     member = enum.find_member("value_a")
     assert member is not None
     assert member.field.name == "VALUE_A"
+    assert member.value == "value_a"
+    assert str(member.field.default) == "'value_a'"
+    assert repr(member.field.default) == "'value_a'"
 
     member = enum.find_member("value_b")
     assert member is not None
@@ -1415,7 +1443,7 @@ def test_find_member_with_string_enum() -> None:
 
 def test_find_member_with_mixed_enum() -> None:
     """Test find_member method with mixed type enum values."""
-    from datamodel_code_generator.model.enum import Enum
+    from datamodel_code_generator.model.enum import Enum, EnumMemberValue
     from datamodel_code_generator.model.pydantic_v2.base_model import DataModelField
     from datamodel_code_generator.reference import Reference
     from datamodel_code_generator.types import DataType
@@ -1425,13 +1453,13 @@ def test_find_member_with_mixed_enum() -> None:
         fields=[
             DataModelField(
                 name="INT_VALUE",
-                default="100",
+                default=100,
                 data_type=DataType(type="int"),
                 required=True,
             ),
             DataModelField(
                 name="STR_VALUE",
-                default="'value_a'",
+                default=EnumMemberValue("value_a"),
                 data_type=DataType(type="str"),
                 required=True,
             ),

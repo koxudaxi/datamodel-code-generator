@@ -75,6 +75,7 @@ from datamodel_code_generator.model.base import UNDEFINED, c3_merge, get_inherit
 from datamodel_code_generator.model.enum import (
     SPECIALIZED_ENUM_TYPE_MATCH,
     Enum,
+    EnumMemberValue,
     StrEnum,
 )
 from datamodel_code_generator.model.runtime_validation import (
@@ -100,7 +101,6 @@ from datamodel_code_generator.parser.base import (
     _copy_resolved_inherited_field,
     _detach_deferred_inherited_field_parents,
     _get_inherited_type_modifiers,
-    escape_characters,
     get_special_path,
     title_to_class_name,
 )
@@ -8352,7 +8352,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         for i, enum_part in enumerate(enum_times):
             if obj.type == "string" or isinstance(enum_part, str):
-                default = f"'{enum_part.translate(escape_characters)}'" if isinstance(enum_part, str) else enum_part
+                default = EnumMemberValue(enum_part) if isinstance(enum_part, str) else enum_part
                 field_name = enum_names[i] if enum_names and i < len(enum_names) and enum_names[i] else str(enum_part)
             else:
                 default = enum_part

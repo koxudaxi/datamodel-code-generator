@@ -15509,6 +15509,19 @@ def test_main_jsonschema_enum_member_typed_defaults(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_structured_enum_values(output_file: Path) -> None:
+    """Test enum defaults retain raw semantic values independently of rendered source."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "structured_enum_values.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--set-default-enum-member"],
+        assert_func=assert_file_content,
+        expected_file="structured_enum_values.py",
+        importable_module_name="generated_structured_enum_values",
+    )
+
+
 def test_main_typed_dict_functional_descriptions(output_file: Path) -> None:
     """Test functional TypedDict renders descriptions outside the fields dict."""
     run_main_and_assert(
