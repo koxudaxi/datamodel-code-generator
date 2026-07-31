@@ -19,6 +19,6 @@ class Item(BaseModel):
 
 
 class Container(BaseModel):
-    cache_clear_history = ['empty', 'cached', 'empty', 'empty', 'empty', 'empty', 'cached']
+    cache_clear_history = ['empty', 'cached', 'empty', 'empty', 'cached']
     statuses: Optional[Set[Status]] = None
     items: Optional[Set[Item]] = None

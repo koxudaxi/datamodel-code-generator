@@ -29,7 +29,10 @@ from datamodel_code_generator.model.base import (
     _get_template_with_custom_dir,
 )
 from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
-from datamodel_code_generator.model.pydantic_base import BaseModelBase
+from datamodel_code_generator.model.pydantic_base import (
+    BaseModelBase,
+    _PydanticFieldRenderPlan,
+)
 from datamodel_code_generator.model.pydantic_base import Constraints as _Constraints
 from datamodel_code_generator.model.pydantic_base import (
     DataModelField as _PydanticBaseDataModelField,
@@ -333,13 +336,7 @@ class DataModelField(_PydanticBaseDataModelField):
             return False
         if self.is_class_var or self.required or self.has_default or self.has_default_factory_in_field:
             return False
-        if self.default is not None and self.default is not UNDEFINED:
-            return False
-        uses_optional_nested_factory = (
-            self.use_default_factory_for_optional_nested_models
-            and self._get_default_factory_for_optional_nested_model()
-        )
-        return not uses_optional_nested_factory
+        return self.default is None or self.default is UNDEFINED
 
     @property
     def represented_default(self) -> str:
@@ -372,25 +369,24 @@ class DataModelField(_PydanticBaseDataModelField):
         if self._requires_null_default_field():
             return True
         if self.is_class_var:
-            self.__dict__["_computed_default_factory"] = None
             return False
         if self._alias_generator_name_from_parent() is None:
             return super()._has_field_statement()
         return self._has_processed_field_statement()
 
     def _has_processed_field_statement(self) -> bool:
-        """Return whether processed Field() data will render a Field() call."""
-        data, default_factory = self._get_field_data_and_default_factory()
-        if default_factory or any(v is not None for v in data.values()):
-            return True
-        return bool(self.nullable and self.required and not self.use_default_with_required)
+        """Return whether the processed render plan contains a Field() call."""
+        return bool(self._get_field_render_plan().rendered)
 
-    def __str__(self) -> str:
-        """Return Field(None) when stringification would omit an explicit null default."""
-        field = super().__str__()
-        if self._requires_null_default_field() and not field:
-            return "Field(None)"
-        return field
+    def _get_field_render_plan(self) -> _PydanticFieldRenderPlan:
+        """Include the explicit null default required by Pydantic v2."""
+        plan = super()._get_field_render_plan()
+        if plan.rendered or not self._requires_null_default_field():
+            return plan
+        return self._get_single_argument_field_render_plan(
+            "None",
+            assignment_argument="default=None" if self.use_default_kwarg else None,
+        )
 
     @property
     def type_hint(self) -> str:

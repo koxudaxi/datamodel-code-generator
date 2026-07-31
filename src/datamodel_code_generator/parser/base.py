@@ -76,6 +76,9 @@ from datamodel_code_generator.model.base import (
     DataModelFieldBase,
     _refresh_custom_template_paths,
     _set_nested_model_default_factory_order,
+    get_inherited_fields,
+    linearize_data_models,
+    sort_data_models_for_mro,
 )
 from datamodel_code_generator.model.enum import Enum, Member, evaluate_member_value
 from datamodel_code_generator.model.imports import IMPORT_TYPED_DICT, IMPORT_TYPED_DICT_BACKPORT
@@ -98,7 +101,6 @@ if TYPE_CHECKING:
     from datamodel_code_generator.http import _HTTPFetchSession
     from datamodel_code_generator.model_metadata import GeneratedModelMetadata, ModelFieldMetadata, ModelMetadata
 ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
-MroT = TypeVar("MroT")
 _ConstructorFieldAdjustment: TypeAlias = Literal["assignment", "keyword_only"]
 
 HashableComparable = _internal_utils.HashableComparable
@@ -426,7 +428,7 @@ def _apply_constructor_field_adjustments(
                 if model.REQUIRES_MODEL_LEVEL_KW_ONLY:
                     enable_model_keyword_only = True
                 else:
-                    field.extras["kw_only"] = True
+                    field.mark_as_keyword_only()
     if enable_model_keyword_only:
         model.enable_model_keyword_only()
 
@@ -935,7 +937,7 @@ def sort_base_classes_for_mro(
             is not None
         ]
         model_order = {
-            source_model.path: index for index, source_model in enumerate(_sort_data_models_for_mro(source_models))
+            source_model.path: index for index, source_model in enumerate(sort_data_models_for_mro(source_models))
         }
         sorted_base_classes = sorted(
             base_classes,
@@ -1079,108 +1081,9 @@ def _find_base_classes(model: DataModel) -> list[DataModel]:
     return [b.reference.source for b in model.base_classes if b.reference and isinstance(b.reference.source, DataModel)]
 
 
-def _model_ancestor_paths(model: DataModel) -> set[str]:
-    """Collect generated ancestors without assuming direct bases are already sorted."""
-    ancestors: set[str] = set()
-    to_visit = [
-        base_class.reference.source
-        for base_class in model.base_classes
-        if base_class.reference and isinstance(base_class.reference.source, DataModel)
-    ]
-    while to_visit:
-        parent = to_visit.pop()
-        if parent.path in ancestors:
-            continue
-        ancestors.add(parent.path)
-        to_visit.extend(
-            base_class.reference.source
-            for base_class in parent.base_classes
-            if base_class.reference and isinstance(base_class.reference.source, DataModel)
-        )
-    return ancestors
-
-
-def _sort_data_models_for_mro(models: list[DataModel]) -> list[DataModel]:
-    """Match the stable descendant-before-ancestor order used for rendered bases."""
-    if len(models) <= 1:
-        return models.copy()
-    ancestor_paths = {model.path: _model_ancestor_paths(model) for model in models}
-    return sorted(
-        models,
-        key=lambda model: sum(model.path in ancestors for ancestors in ancestor_paths.values()),
-    )
-
-
-def _c3_merge(sequences: list[list[MroT]], key: Callable[[MroT], str]) -> list[MroT]:
-    """Merge inheritance sequences using C3 with a deterministic cycle fallback."""
-    result: list[MroT] = []
-    while sequences := [sequence for sequence in sequences if sequence]:
-        tail_keys = {key(item) for sequence in sequences for item in sequence[1:]}
-        candidate = next(
-            (sequence[0] for sequence in sequences if key(sequence[0]) not in tail_keys),
-            sequences[0][0],
-        )
-        candidate_key = key(candidate)
-        result.append(candidate)
-        for sequence in sequences:
-            sequence[:] = [item for item in sequence if key(item) != candidate_key]
-    return result
-
-
-def _linearize_data_models(models: list[DataModel]) -> list[DataModel]:
-    """Return the effective C3 order for a list of direct generated bases."""
-    linearized_models: dict[str, list[DataModel]] = {}
-
-    def linearize(model: DataModel, active: frozenset[str] = frozenset()) -> list[DataModel]:
-        if cached := linearized_models.get(model.path):
-            return cached
-        if model.path in active:
-            return [model]
-        parents = _sort_data_models_for_mro([
-            base_class.reference.source
-            for base_class in model.base_classes
-            if base_class.reference and isinstance(base_class.reference.source, DataModel)
-        ])
-        result = [
-            model,
-            *_c3_merge(
-                [
-                    *[linearize(parent, active | {model.path}).copy() for parent in parents],
-                    parents.copy(),
-                ],
-                key=lambda item: item.path,
-            ),
-        ]
-        linearized_models[model.path] = result
-        return result
-
-    direct_models = _sort_data_models_for_mro(models)
-    return _c3_merge(
-        [
-            *[linearize(model).copy() for model in direct_models],
-            direct_models.copy(),
-        ],
-        key=lambda item: item.path,
-    )
-
-
-def _get_inherited_fields(models: list[DataModel]) -> dict[str, DataModelFieldBase]:
-    """Build one effective field lookup using generated models' C3 order."""
-    original_names: dict[str, DataModelFieldBase] = {}
-    generated_names: dict[str, DataModelFieldBase] = {}
-    for model in _linearize_data_models(models):
-        for field in model.fields:
-            if field.original_name is not None:
-                original_names.setdefault(field.original_name, field)
-            if field.name is not None:
-                generated_names.setdefault(field.name, field)
-    generated_names.update(original_names)
-    return generated_names
-
-
 def _find_field(field_name: str, models: list[DataModel]) -> DataModelFieldBase | None:
     """Find a field using generated models' C3 inheritance order."""
-    return _get_inherited_fields(models).get(field_name)
+    return get_inherited_fields(models).get(field_name)
 
 
 def _copy_data_type(data_type: DataType, *, register_references: bool = True) -> DataType:
@@ -2207,6 +2110,40 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     def _data_model_field_common_kwargs(self) -> dict[str, Any]:
         return self._data_model_field_common_kwargs_cache
 
+    def _split_field_alias(  # noqa: PLR6301
+        self,
+        alias: str | list[str] | None,
+    ) -> tuple[str | None, list[str] | None]:
+        """Split one output alias from multiple validation aliases."""
+        match alias:
+            case list() as validation_aliases:
+                return None, validation_aliases
+            case single_alias:
+                return single_alias, None
+        raise AssertionError  # pragma: no cover
+
+    def _effective_default_state(
+        self,
+        field_name: str,
+        default: Any,
+        *,
+        has_default: bool,
+        required: bool,
+        class_name: str | None,
+    ) -> tuple[Any, bool, bool]:
+        """Resolve an overridden default and its required-field constructor policy."""
+        effective_default, effective_has_default = self.model_resolver.resolve_default_value(
+            field_name,
+            default,
+            has_default,
+            class_name=class_name,
+        )
+        return (
+            effective_default,
+            effective_has_default,
+            required and self.apply_default_values_for_required_fields and effective_has_default,
+        )
+
     def _should_preserve_explicit_root_class_name(self, class_name: str) -> bool:
         if not self.allow_leading_underscore_class_name:
             return False
@@ -2863,12 +2800,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             imports,
                         )
                         # Handle multiple aliases (Pydantic v2 AliasChoices)
-                        single_alias: str | None = None
-                        validation_aliases: list[str] | None = None
-                        if isinstance(alias, list):
-                            validation_aliases = alias
-                        else:
-                            single_alias = alias
+                        single_alias, validation_aliases = self._split_field_alias(alias)
                         self.generation_store.append_field(
                             discriminator_model,
                             self.data_model_field_type(
@@ -3332,12 +3264,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     continue
                 if isinstance(model_field.default, Member):
                     continue
-                if can_retain_cache and model_field.extras.get("validate_default") is True:
-                    continue
                 if not _needs_validate_default(model_field.data_type):
                     continue
-                model_field.extras["validate_default"] = True
-                _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
+                if model_field.enable_structured_default_validation():
+                    _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
 
     def _apply_inherited_field_default(
         self,
@@ -3391,7 +3321,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         for model in chain((first_model,), pending_models):
             resolved_fields: list[DataModelFieldBase] = []
             reserved_names = {field.name for field in model.fields if field.name}
-            inherited_fields = _get_inherited_fields(_find_base_classes(model))
+            inherited_fields = get_inherited_fields(_find_base_classes(model))
             pending_fields = model.fields
             pending_fields.reverse()
             self.generation_store.set_fields(model, [])
@@ -3600,7 +3530,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             return None
 
         field_policy = cls._get_constructor_field_policy(model)
-        inherited_models = _linearize_data_models([
+        inherited_models = linearize_data_models([
             base.reference.source
             for base in model.base_classes
             if base.reference and isinstance(base.reference.source, DataModel)
@@ -3651,7 +3581,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         for field_name, (field, declaring_model, inherited_has_default) in effective_fields.items():
             if not field_policy.participates(field):
                 continue
-            kw_only = field.extras.get("kw_only")
+            kw_only = field.constructor_keyword_only
             if kw_only is True or (kw_only is None and declaring_model.has_keyword_only_definition()):
                 continue
             required_assignment_is_constructor_default = (
@@ -4187,7 +4117,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             for import_ in imports:
                 add(import_.alias or import_.import_.split(".")[-1])
             for field in model.fields:
-                if field.extras.get("is_classvar"):
+                if field.is_class_var:
                     continue
                 add(field.name)
                 add(field.alias)

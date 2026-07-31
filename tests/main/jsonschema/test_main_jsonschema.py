@@ -58,6 +58,8 @@ from tests.conftest import (
 )
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
+    BACKEND_GOLDEN_CASES,
+    BACKEND_GOLDEN_TARGET_ARGS,
     BLACK_PY313_SKIP,
     BLACK_PY314_SKIP,
     DATA_PATH,
@@ -5434,14 +5436,34 @@ def test_main_jsonschema_has_default_value(output_file: Path) -> None:
     )
 
 
-def test_main_jsonschema_boolean_property(output_file: Path) -> None:
-    """Test boolean property generation."""
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_name"),
+    [
+        *BACKEND_GOLDEN_CASES,
+        pytest.param(
+            DataModelType.PydanticV2Dataclass.value,
+            "pydantic_v2_dataclass",
+            id="pydantic-v2-dataclass",
+        ),
+    ],
+)
+def test_main_jsonschema_boolean_property(
+    output_model_type: str,
+    expected_name: str,
+    output_file: Path,
+) -> None:
+    """Route boolean property schemas through every backend's field policy."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "boolean_property.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file="boolean_property.py",
+        expected_file=f"boolean_property/{expected_name}.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--output-model-type",
+            output_model_type,
+        ],
     )
 
 
@@ -12125,6 +12147,7 @@ def test_main_use_frozen_field_typed_dict(target_python_version: str, expected_f
     [
         ("dataclasses.dataclass", "default_factory_nested_model_dataclass.py"),
         ("pydantic_v2.BaseModel", "default_factory_nested_model_pydantic_v2.py"),
+        ("pydantic_v2.dataclass", "default_factory_nested_model_pydantic_v2_dataclass.py"),
         ("msgspec.Struct", "default_factory_nested_model_msgspec.py"),
     ],
 )
@@ -15336,6 +15359,50 @@ def test_main_non_finite_container_defaults(
         expected_file=expected_file,
         importable_module_name=module_name,
     )
+
+
+def test_main_dataclass_nested_mapping_defaults_require_constructor_arguments(output_file: Path) -> None:
+    """Construct typed defaults only when every required dataclass argument is covered."""
+    module_name = "generated_dataclass_nested_mapping_defaults"
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dataclass_nested_mapping_defaults.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--use-default",
+            "--snake-case-field",
+        ],
+        assert_func=assert_file_content,
+        expected_file="dataclass_nested_mapping_defaults.py",
+        importable_module_name=module_name,
+    )
+    with _generated_model(output_file, module_name, "Model") as model:
+        instance = model()
+        actual = (
+            (type(instance.complete).__name__, getattr(instance.complete, "external_name", None)),
+            instance.partial,
+            instance.empty,
+            (type(instance.defaulted).__name__, getattr(instance.defaulted, "value", None)),
+            (type(instance.model_union).__name__, getattr(instance.model_union, "external_name", None)),
+            instance.mapping_union,
+            instance.nested_mapping,
+        )
+        expected = (
+            ("RequiredNested", "preset"),
+            {"optional_value": "preset"},
+            {},
+            ("DefaultedNested", "fallback"),
+            ("RequiredNested", "union"),
+            {"external-name": "mapping"},
+            {},
+        )
+        match actual:
+            case _ if actual == expected:
+                pass
+            case _:  # pragma: no cover
+                pytest.fail(f"Nested mapping defaults produced unexpected values: {actual!r}")
 
 
 def test_main_msgspec_decimal_constraints(output_file: Path) -> None:

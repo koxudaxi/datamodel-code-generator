@@ -39,15 +39,23 @@ from datamodel_code_generator.model.base import (
     comment_safe,
     escape_docstring,
     format_docstring,
+    get_effective_fields,
     get_module_path,
     get_template,
     inline_comment_safe,
     sanitize_module_name,
 )
 from datamodel_code_generator.model.dataclass import DataClass as DataclassModel
-from datamodel_code_generator.model.imports import IMPORT_MSGSPEC_META, IMPORT_MSGSPEC_UNSET, IMPORT_MSGSPEC_UNSETTYPE
+from datamodel_code_generator.model.imports import (
+    IMPORT_MSGSPEC_CONVERT,
+    IMPORT_MSGSPEC_FIELD,
+    IMPORT_MSGSPEC_META,
+    IMPORT_MSGSPEC_UNSET,
+    IMPORT_MSGSPEC_UNSETTYPE,
+)
 from datamodel_code_generator.model.msgspec import DataModelField as MsgspecDataModelField
 from datamodel_code_generator.model.msgspec import Struct as MsgspecStruct
+from datamodel_code_generator.model.msgspec import import_extender
 from datamodel_code_generator.model.pydantic_base import DataModelField as PydanticBaseDataModelField
 from datamodel_code_generator.model.pydantic_v2 import BaseModel
 from datamodel_code_generator.model.pydantic_v2 import DataModelField as PydanticV2DataModelField
@@ -99,6 +107,28 @@ class ReferenceSource:
 
     nullable: bool
     is_alias: bool = False
+
+
+def test_get_effective_fields_without_base_classes() -> None:
+    """Return only named fields directly when inheritance resolution is unnecessary."""
+    named_field = DataModelFieldBase(name="value", data_type=DataType(type="str"))
+    model = DataclassModel(
+        reference=Reference(path="Model", name="Model"),
+        fields=[
+            named_field,
+            DataModelFieldBase(name=None, data_type=DataType(type="str")),
+        ],
+    )
+
+    assert get_effective_fields(model) == (named_field,)
+
+    inherited_model = DataclassModel(
+        reference=Reference(path="InheritedModel", name="InheritedModel"),
+        fields=[],
+        base_classes=[model.reference],
+    )
+
+    assert get_effective_fields(inherited_model) == (named_field,)
 
 
 @pytest.mark.parametrize(
@@ -222,6 +252,21 @@ def test_data_model() -> None:
     assert data_model.decorators == ["@validate"]
     assert data_model.base_class == "Base"
     assert data_model.render() == "@validate\n@dataclass\nclass test_model:\n    a: str"
+
+
+def test_data_model_custom_base_class_list() -> None:
+    """Preserve every explicitly configured custom base class."""
+    model = BaseModel(
+        fields=[],
+        reference=Reference(path="Model", original_name="Model", name="Model"),
+        custom_base_class=["package.First", "package.Second"],
+    )
+
+    assert model.base_class == "First, Second"
+    assert [(base.type, base.import_) for base in model.base_classes] == [
+        ("First", Import(from_="package", import_="First")),
+        ("Second", Import(from_="package", import_="Second")),
+    ]
 
 
 def test_data_model_relative_custom_template_without_adapter() -> None:
@@ -357,6 +402,94 @@ def test_data_model_imports_cache_clears_after_field_type_replacement() -> None:
     field.replace_data_type(DataType.from_import(IMPORT_DECIMAL))
 
     assert IMPORT_DECIMAL in model.imports
+
+
+def test_data_model_render_identity_cache_clears_after_field_mutations() -> None:
+    """Field mutations must not retain a render-derived deduplication key."""
+    field = PydanticDataclassField(name="value", data_type=DataType(type="str"), required=True)
+    model = PydanticDataclassModel(
+        fields=[field],
+        reference=Reference(path="Model", original_name="Model", name="Model"),
+    )
+    original_key = model.get_dedup_key()
+
+    field.force_field_assignment()
+    field.force_field_assignment()
+
+    assert model.get_dedup_key() != original_key
+
+
+@pytest.mark.parametrize("reference_name", ["Before", "package.Before"])
+def test_data_model_render_identity_cache_clears_after_model_rename(reference_name: str) -> None:
+    """Model identity must be recomputed after a generated class name changes."""
+    model = BaseModel(
+        fields=[],
+        reference=Reference(path=reference_name, original_name=reference_name, name=reference_name),
+    )
+    original_key = model.get_dedup_key(None, use_default=False)
+
+    model.class_name = "After"
+
+    assert model.reference.name == ("package.After" if "." in reference_name else "After")
+    assert model.get_dedup_key(None, use_default=False) != original_key
+
+
+def test_data_model_parent_and_reference_path_changes_invalidate_field_semantics() -> None:
+    """Direct model ownership and path changes must refresh self-reference state."""
+    model_reference = Reference(path="Before", original_name="Before", name="Before")
+    other_reference = Reference(path="After", original_name="After", name="After")
+    field = PydanticV2DataModelField(name="value", data_type=DataType(reference=other_reference))
+    model = BaseModel(fields=[field], reference=model_reference)
+
+    assert not field.self_reference()
+
+    model.set_reference_path("After")
+
+    assert field.self_reference()
+
+    replacement_model = BaseModel(
+        fields=[field],
+        reference=Reference(path="Replacement", original_name="Replacement", name="Replacement"),
+    )
+
+    assert field.parent is replacement_model
+    assert not field.self_reference()
+
+
+def test_field_deep_copy_drops_transient_semantic_caches() -> None:
+    """Copied fields must recompute transient renderer and self-reference state."""
+    field = PydanticV2DataModelField(name="value", data_type=DataType(type="str"))
+    field.__dict__["_computed_default_factory"] = "list"
+    field.__dict__["_self_reference_cache"] = True
+
+    copied = field.copy_deep()
+
+    assert "_computed_default_factory" not in copied.__dict__
+    assert "_self_reference_cache" not in copied.__dict__
+
+
+def test_field_semantic_cache_invalidation_supports_legacy_parent_hook() -> None:
+    """External parent implementations with only the legacy import hook remain compatible."""
+
+    class ImportsOnlyParent:
+        def __init__(self) -> None:
+            self.cache_cleared = False
+
+        def clear_imports_cache(self) -> None:
+            self.cache_cleared = True
+
+    parent = ImportsOnlyParent()
+    field = DataModelFieldBase(name="value", data_type=DataType(type="str"))
+    field.parent = parent  # ty: ignore[invalid-assignment]
+
+    field.invalidate_semantic_caches()
+
+    assert parent.cache_cleared
+
+    parent.cache_cleared = False
+    field.force_field_assignment()
+
+    assert parent.cache_cleared
 
 
 def test_pydantic_v2_extra_type_hint_keeps_non_dict_hint() -> None:
@@ -531,8 +664,8 @@ def test_pydantic_v2_missing_sentinel_type_hint_fallbacks(monkeypatch: pytest.Mo
     assert field._type_hint_with_missing_sentinel("str") == "str"
 
 
-def test_rendered_pydantic_v2_field_reuses_field_string(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test built-in field proxy computes field and annotated values from one Field() string."""
+def test_rendered_pydantic_v2_field_uses_structured_values() -> None:
+    """Test the built-in proxy exposes both views of the structured render plan."""
     field = PydanticV2DataModelField(
         name="name",
         data_type=DataType(type="str"),
@@ -542,20 +675,326 @@ def test_rendered_pydantic_v2_field_reuses_field_string(monkeypatch: pytest.Monk
     )
     expected_field = field.field
     expected_annotated = field.annotated
-    calls = 0
-    original_str = PydanticV2DataModelField.__str__
-
-    def count_str(self: PydanticV2DataModelField) -> str:
-        nonlocal calls
-        calls += 1
-        return original_str(self)
-
-    monkeypatch.setattr(PydanticV2DataModelField, "__str__", count_str)
     rendered_field = _RenderedDataModelField(field, "")
 
     assert rendered_field.annotated == expected_annotated
     assert rendered_field.field == expected_field
-    assert calls == 1
+
+
+@pytest.mark.parametrize(
+    ("field_kwargs", "expected"),
+    [
+        pytest.param({"extras": {"title": "Field("}}, "title='Field('", id="title"),
+        pytest.param({"extras": {"description": "Field("}}, "description='Field('", id="description"),
+        pytest.param({"extras": {"examples": ["Field("]}}, "examples=['Field(']", id="examples"),
+        pytest.param(
+            {"extras": {"json_schema_extra": {"marker": "Field("}}},
+            "json_schema_extra={'marker': 'Field('}",
+            id="json-schema-extra",
+        ),
+        pytest.param({"alias": "Field("}, "alias='Field('", id="alias"),
+    ],
+)
+def test_pydantic_default_kwarg_preserves_field_syntax_in_user_metadata(
+    field_kwargs: dict[str, object],
+    expected: str,
+) -> None:
+    """Only the actual positional default is converted to a default keyword."""
+    field = PydanticV2DataModelField(
+        name="value",
+        data_type=DataType(type="str"),
+        default="value",
+        required=False,
+        has_default=True,
+        use_default_kwarg=True,
+        **field_kwargs,
+    )
+
+    assert str(field).startswith("Field('value', ")
+    assert field.field == f"Field(default='value', {expected})"
+
+
+@pytest.mark.parametrize(
+    ("default", "has_default", "required", "extra_values", "expected"),
+    [
+        pytest.param(
+            "value",
+            True,
+            False,
+            {},
+            "Field(default='value', title='Field(')",
+            id="default",
+        ),
+        pytest.param(
+            UNDEFINED,
+            True,
+            False,
+            {"default_factory": "list"},
+            "Field(default_factory=list, title='Field(')",
+            id="factory",
+        ),
+        pytest.param(
+            UNDEFINED,
+            False,
+            True,
+            {},
+            "Field(..., title='Field(')",
+            id="required",
+        ),
+    ],
+)
+def test_pydantic_field_render_plan_preserves_assignment_semantics(
+    default: object,
+    has_default: bool,
+    required: bool,
+    extra_values: dict[str, object],
+    expected: str,
+) -> None:
+    """Default, factory, and required assignments share one structured plan."""
+    field = PydanticV2DataModelField(
+        name="value",
+        data_type=DataType(type="str"),
+        default=default,
+        required=required,
+        has_default=has_default,
+        extras={"title": "Field(", **extra_values},
+        use_default_kwarg=True,
+    )
+
+    assert field.field == expected
+
+
+def test_pydantic_v2_field_render_plan_preserves_explicit_null_default() -> None:
+    """The v2-only Field(None) fallback keeps its distinct assignment form."""
+    field = PydanticV2DataModelField(
+        name="value",
+        data_type=DataType(type="None"),
+        default=None,
+        required=False,
+        has_default=True,
+        use_annotated=True,
+        use_default_kwarg=True,
+    )
+
+    assert str(field) == "Field(None)"
+    assert field.field == "Field(default=None)"
+    assert field.annotated == "Annotated[None, Field(None)]"
+
+
+def test_pydantic_field_render_plan_preserves_required_nullable_marker() -> None:
+    """A required nullable field uses the shared single-argument Field() plan."""
+    field = PydanticV2DataModelField(
+        name="value",
+        data_type=DataType(type="str"),
+        required=True,
+        nullable=True,
+    )
+
+    assert str(field) == "Field(...)"
+    assert field.field == "Field(...)"
+
+
+def test_pydantic_field_render_plan_preserves_string_discriminator() -> None:
+    """A string discriminator remains structured Field() metadata."""
+    field = PydanticBaseDataModelField(
+        name="value",
+        data_type=DataType(type="str"),
+        required=True,
+        extras={"discriminator": "kind"},
+    )
+
+    assert str(field) == "Field(..., discriminator='kind')"
+
+
+def test_pydantic_class_var_factory_state_is_access_order_independent() -> None:
+    """ClassVar field rendering stays stateless across compatibility accessors."""
+    field = PydanticV2DataModelField(
+        name="value",
+        data_type=DataType(type="str"),
+        required=False,
+        extras={"x-is-classvar": True, "default_factory": "list"},
+        use_annotated=True,
+    )
+
+    assert field.has_default_factory_in_field is False
+    assert field._get_field_data_and_default_factory() == ({}, None)
+    assert field._rendered_field_values() == (None, None)
+    assert field.field is None
+    assert field.has_default_factory_in_field is False
+
+
+def test_pydantic_base_field_string_uses_structured_render_plan() -> None:
+    """The shared Pydantic field class renders through the structured path."""
+    field = PydanticBaseDataModelField(
+        name="value",
+        data_type=DataType(type="str"),
+        default="value",
+        required=False,
+        has_default=True,
+        extras={"description": "Field("},
+    )
+
+    assert str(field) == "Field('value', description='Field(')"
+
+
+@pytest.mark.parametrize(
+    ("field_kwargs", "expected_field"),
+    [
+        pytest.param({"default": "lambda: convert"}, "'lambda: convert'", id="default"),
+        pytest.param(
+            {"default": "value", "alias": "lambda: convert"},
+            "field(name='lambda: convert', default='value')",
+            id="alias",
+        ),
+    ],
+)
+def test_msgspec_convert_import_ignores_user_string_false_positives(
+    field_kwargs: dict[str, object],
+    expected_field: str,
+) -> None:
+    """User values containing converter syntax do not create a converter import."""
+    field = MsgspecDataModelField(
+        name="value",
+        data_type=DataType(type="str"),
+        required=True,
+        has_default=True,
+        use_default_with_required=True,
+        **field_kwargs,
+    )
+
+    assert str(field) == expected_field
+    assert IMPORT_MSGSPEC_CONVERT not in field.imports
+
+
+def test_msgspec_struct_default_render_plan_requires_convert_import() -> None:
+    """A generated Struct conversion factory retains both syntax-owned imports."""
+    nested_reference = Reference(path="#/Nested", name="Nested")
+    MsgspecStruct(reference=nested_reference, fields=[])
+    field = MsgspecDataModelField(
+        name="nested",
+        data_type=DataType(reference=nested_reference),
+        default={"value": "Field("},
+        required=False,
+        has_default=True,
+    )
+
+    assert str(field) == "field(default_factory=lambda: convert({'value': 'Field('},  type=Nested))"
+    assert field._get_field_data() == {"default_factory": "lambda: convert({'value': 'Field('},  type=Nested)"}
+    assert IMPORT_MSGSPEC_FIELD in field.imports
+    assert IMPORT_MSGSPEC_CONVERT in field.imports
+
+
+def test_msgspec_empty_struct_default_uses_conversion_factory() -> None:
+    """An empty object for a Struct still creates the declared model."""
+    nested_reference = Reference(path="#/Nested", name="Nested")
+    MsgspecStruct(reference=nested_reference, fields=[])
+    field = MsgspecDataModelField(
+        name="nested",
+        data_type=DataType(reference=nested_reference),
+        default={},
+        required=False,
+        has_default=True,
+    )
+    MsgspecStruct(reference=Reference(path="#/Owner", name="Owner"), fields=[field])
+
+    assert str(field) == "field(default_factory=lambda: convert({},  type=Nested))"
+    assert IMPORT_MSGSPEC_FIELD in field.imports
+    assert IMPORT_MSGSPEC_CONVERT in field.imports
+    assert IMPORT_MSGSPEC_UNSET not in field.imports
+
+
+@pytest.mark.parametrize(
+    ("container_type", "default", "expected"),
+    [
+        pytest.param(
+            DataType(is_list=True),
+            [],
+            "field(default_factory=list)",
+            id="list",
+        ),
+        pytest.param(
+            DataType(is_dict=True),
+            {},
+            "field(default_factory=dict)",
+            id="dict",
+        ),
+        pytest.param(
+            DataType(is_set=True),
+            set(),
+            "field(default_factory=set)",
+            id="set",
+        ),
+    ],
+)
+def test_msgspec_empty_struct_container_defaults_use_builtin_factory(
+    container_type: DataType,
+    default: dict[object, object] | list[object] | set[object],
+    expected: str,
+) -> None:
+    """Empty Struct containers keep the allocation-only builtin factory."""
+    nested_reference = Reference(path="#/Nested", name="Nested")
+    MsgspecStruct(reference=nested_reference, fields=[])
+    container_type.data_types = [DataType(reference=nested_reference)]
+    field = MsgspecDataModelField(
+        name="nested",
+        data_type=DataType(data_types=[container_type]),
+        default=default,
+        required=False,
+        has_default=True,
+    )
+    MsgspecStruct(reference=Reference(path="#/Owner", name="Owner"), fields=[field])
+
+    assert str(field) == expected
+    assert IMPORT_MSGSPEC_FIELD in field.imports
+    assert IMPORT_MSGSPEC_CONVERT not in field.imports
+    assert IMPORT_MSGSPEC_UNSET not in field.imports
+
+
+def test_msgspec_optional_nested_factory_does_not_import_unused_unset() -> None:
+    """A rendered nested factory owns field syntax without an UNSET value."""
+    nested_reference = Reference(path="#/Nested", name="Nested")
+    MsgspecStruct(reference=nested_reference, fields=[])
+    field = MsgspecDataModelField(
+        name="nested",
+        data_type=DataType(reference=nested_reference),
+        default=None,
+        required=False,
+        use_default_factory_for_optional_nested_models=True,
+    )
+    MsgspecStruct(reference=Reference(path="#/Owner", name="Owner"), fields=[field])
+
+    assert str(field) == "field(default_factory=Nested)"
+    assert IMPORT_MSGSPEC_FIELD in field.imports
+    assert IMPORT_MSGSPEC_UNSET not in field.imports
+
+
+def test_msgspec_import_extender_preserves_generic_field_imports() -> None:
+    """The reusable import decorator leaves non-msgspec field imports unchanged."""
+
+    @import_extender
+    class GenericField(DataModelFieldBase):
+        pass
+
+    field = GenericField(
+        name="value",
+        data_type=DataType.from_import(IMPORT_DECIMAL),
+        required=True,
+    )
+
+    assert field.imports == (IMPORT_DECIMAL,)
+
+
+def test_msgspec_class_var_imports_ignore_instance_field_syntax() -> None:
+    """Class variables do not inherit imports from instance-field rendering."""
+    field = MsgspecDataModelField(
+        name="value",
+        data_type=DataType.from_import(IMPORT_DECIMAL),
+        default=None,
+        required=False,
+        extras={"is_classvar": True, "default_factory": "list"},
+    )
+
+    assert field.imports == ()
 
 
 def test_rendered_pydantic_v2_class_var_field_values_are_none() -> None:
@@ -572,6 +1011,34 @@ def test_rendered_pydantic_v2_class_var_field_values_are_none() -> None:
     assert field.field is None
     assert rendered_field.field is None
     assert rendered_field.annotated is None
+
+
+def test_field_semantic_policy_api() -> None:
+    """Expose parser-facing field semantics without backend extras knowledge."""
+    base_field = DataModelFieldBase(name="value", data_type=DataType(type="str"))
+    msgspec_field = MsgspecDataModelField(
+        name="constant",
+        data_type=DataType(type="str"),
+        extras={"is_classvar": True},
+    )
+    pydantic_field = PydanticV2DataModelField(
+        name="constant",
+        data_type=DataType(type="str"),
+        required=True,
+        extras={"x-is-classvar": True},
+    )
+
+    assert base_field.constructor_keyword_only is None
+    base_field.mark_as_keyword_only()
+    assert base_field.constructor_keyword_only is True
+    assert base_field.is_class_var is False
+    assert msgspec_field.is_class_var is True
+    assert pydantic_field.is_class_var is True
+    assert pydantic_field.type_hint == "ClassVar[str]"
+    assert base_field.enable_structured_default_validation() is False
+    assert pydantic_field.enable_structured_default_validation() is True
+    assert pydantic_field.enable_structured_default_validation() is False
+    assert pydantic_field.extras["validate_default"] is True
 
 
 def test_rendered_data_model_field_caches_delegated_attributes() -> None:
@@ -648,17 +1115,15 @@ def test_jinja_environment_auto_reload_only_for_custom_templates(tmp_path: Path)
 
 
 def test_pydantic_base_class_var_imports_do_not_require_field() -> None:
-    """Test common Pydantic ClassVar fields skip Field() and clear cached factories."""
+    """Test common Pydantic ClassVar fields skip Field() without render state."""
     field = PydanticBaseDataModelField(
         name="name",
         data_type=DataType(type="str"),
         required=True,
         extras={"x-is-classvar": True},
     )
-    field.__dict__["_computed_default_factory"] = "NestedModel"
-
     assert IMPORT_FIELD not in field.imports
-    assert field.__dict__["_computed_default_factory"] is None
+    assert field.field is None
 
 
 def test_pydantic_forced_required_assignment_imports_field() -> None:
@@ -741,6 +1206,109 @@ def test_pydantic_annotated_dataclass_field_preserves_constructor_default(
     assert field.dataclass_field == expected
 
 
+@pytest.mark.parametrize("use_default_kwarg", [False, True])
+def test_pydantic_annotated_dataclass_field_omits_undefined_default(*, use_default_kwarg: bool) -> None:
+    """Dataclass-only metadata must not turn the unresolved sentinel into Python source."""
+    field = PydanticDataclassField(
+        name="item",
+        data_type=DataType(type="str"),
+        default=UNDEFINED,
+        required=False,
+        has_default=False,
+        extras={"kw_only": True},
+        use_annotated=True,
+        use_default_kwarg=use_default_kwarg,
+    )
+
+    assert field.dataclass_field == "Field(kw_only=True)"
+    assert field.field == "Field(kw_only=True)"
+
+
+def test_pydantic_dataclass_optional_nested_model_uses_default_factory() -> None:
+    """The optional-nested-model flag recognizes Pydantic dataclass references."""
+    nested_reference = Reference(path="#/Nested", name="Nested")
+    PydanticDataclassModel(reference=nested_reference, fields=[])
+    field = PydanticDataclassField(
+        name="nested",
+        data_type=DataType(reference=nested_reference),
+        default=None,
+        required=False,
+        has_default=False,
+        use_annotated=True,
+        use_default_factory_for_optional_nested_models=True,
+    )
+
+    assert field.dataclass_field == "Field(default_factory=Nested)"
+    assert field.field == "Field(default_factory=Nested)"
+    assert field.has_default_factory_in_field is True
+    assert field._get_constructor_default_info() == (True, False)
+    assert field.dataclass_field == "Field(default_factory=Nested)"
+
+
+def test_pydantic_dataclass_render_computes_plan_once() -> None:
+    """Built-in dataclass rendering shares one local plan across policy and output."""
+    plan_calls = 0
+
+    class CountingField(PydanticDataclassField):
+        def _get_field_render_plan(self) -> Any:
+            nonlocal plan_calls
+            plan_calls += 1
+            return super()._get_field_render_plan()
+
+    field = CountingField(
+        name="value",
+        data_type=DataType(type="str"),
+        required=True,
+        extras={"repr": False},
+        use_annotated=True,
+    )
+
+    assert field._rendered_field_values() == ("Field(repr=False)", None)
+    assert plan_calls == 1
+
+
+def test_pydantic_missing_sentinel_checks_optional_factory_once() -> None:
+    """The missing-sentinel policy reuses the effective factory decision."""
+    factory_calls = 0
+
+    class CountingField(PydanticV2DataModelField):
+        def _get_default_factory_for_optional_nested_model(self) -> str | None:
+            nonlocal factory_calls
+            factory_calls += 1
+            return super()._get_default_factory_for_optional_nested_model()
+
+    field = CountingField(
+        name="value",
+        data_type=DataType(type="str"),
+        required=False,
+        use_missing_sentinel=True,
+        use_default_factory_for_optional_nested_models=True,
+    )
+
+    assert field.use_missing_sentinel_default is True
+    assert factory_calls == 1
+
+
+@pytest.mark.parametrize("use_annotated", [False, True])
+def test_pydantic_dataclass_field_rebuilds_from_structured_arguments(*, use_annotated: bool) -> None:
+    """Dataclass defaults are inserted without parsing Field-like user metadata."""
+    field = PydanticDataclassField(
+        name="value",
+        data_type=DataType(type="str"),
+        default="value",
+        required=False,
+        has_default=True,
+        extras={"title": "Field(", "examples": ["Field("], "kw_only": True},
+        use_annotated=use_annotated,
+        use_default_kwarg=True,
+    )
+
+    expected = "Field(default='value', examples=['Field('], kw_only=True, title='Field(')"
+    assert field.dataclass_field == expected
+    assert field.field == expected
+    assert field.annotated is None
+
+
 def test_pydantic_annotated_dataclass_field_skips_empty_assignment() -> None:
     """A plain required Annotated field does not synthesize an empty RHS."""
     field = PydanticDataclassField(
@@ -771,10 +1339,15 @@ def test_pydantic_dataclass_annotated_assignment_uses_existing_template_contract
     )
 
     assert assigned_field.annotated is None
+    assert assigned_field.requires_dataclass_field_assignment is True
     assert assigned_field.field == "Field(repr=False)"
     assert assigned_field._rendered_field_values() == ("Field(repr=False)", None)
     assert IMPORT_ANNOTATED not in assigned_field.imports
     assert annotated_field.annotated == "Annotated[str, Field(title='Annotated')]"
+    assert annotated_field._rendered_field_values() == (
+        "Field(title='Annotated')",
+        "Annotated[str, Field(title='Annotated')]",
+    )
     assert IMPORT_ANNOTATED in annotated_field.imports
 
 
@@ -1004,11 +1577,14 @@ def test_data_model_exception() -> None:
 def test_replace_children_in_models_updates_matching_owner_references() -> None:
     """Test replacing reference children for only the selected owner models."""
     old_reference = Reference(path="Old", original_name="Old", name="Old")
-    new_reference = Reference(path="New", original_name="New", name="New")
+    new_reference = Reference(path="Selected", original_name="Selected", name="Selected")
     target_model = BaseModel(fields=[], reference=old_reference)
-    selected_type = DataType(reference=old_reference)
+    selected_type = DataType(data_types=[DataType(reference=old_reference)])
+    selected_reference_type = selected_type.data_types[0]
+    selected_reference_type.parent = selected_type
+    selected_field = DataModelFieldBase(data_type=selected_type)
     selected_model = BaseModel(
-        fields=[DataModelFieldBase(data_type=selected_type)],
+        fields=[selected_field],
         reference=Reference(path="Selected", original_name="Selected", name="Selected"),
     )
     other_type = DataType(reference=old_reference)
@@ -1017,12 +1593,50 @@ def test_replace_children_in_models_updates_matching_owner_references() -> None:
         reference=Reference(path="Other", original_name="Other", name="Other"),
     )
 
+    assert not selected_field.self_reference()
+
     target_model.replace_children_in_models([selected_model], new_reference)
 
-    assert selected_type.reference is new_reference
+    assert selected_field.self_reference()
+    assert selected_reference_type.reference is new_reference
     assert other_type.reference is old_reference
-    assert [child is selected_type for child in old_reference.children] == [False]
-    assert [child is selected_type for child in new_reference.children] == [True]
+    assert [child is selected_reference_type for child in old_reference.children] == [False]
+    assert [child is selected_reference_type for child in new_reference.children] == [True]
+
+
+def test_replace_children_in_models_invalidates_direct_model_owner() -> None:
+    """A redirected base-class reference refreshes its owning model's render identity."""
+    old_reference = Reference(path="Old", original_name="Old", name="Old")
+    new_reference = Reference(path="New", original_name="New", name="New")
+    target_model = BaseModel(fields=[], reference=old_reference)
+    selected_model = BaseModel(
+        fields=[],
+        base_classes=[old_reference],
+        reference=Reference(path="Selected", original_name="Selected", name="Selected"),
+    )
+    base_class = selected_model.base_classes[0]
+    shared_owner_model = BaseModel(
+        fields=[],
+        reference=Reference(path="SharedOwner", original_name="SharedOwner", name="SharedOwner"),
+    )
+    shared_owner_model.base_classes = [base_class]
+    ignored_owner_model = BaseModel(
+        fields=[],
+        base_classes=[old_reference],
+        reference=Reference(path="IgnoredOwner", original_name="IgnoredOwner", name="IgnoredOwner"),
+    )
+    ignored_base_class = ignored_owner_model.base_classes[0]
+    original_key = selected_model.get_dedup_key()
+    shared_owner_key = shared_owner_model.get_dedup_key()
+    ignored_owner_key = ignored_owner_model.get_dedup_key()
+
+    target_model.replace_children_in_models([selected_model, shared_owner_model], new_reference)
+
+    assert base_class.reference is new_reference
+    assert ignored_base_class.reference is old_reference
+    assert selected_model.get_dedup_key() != original_key
+    assert shared_owner_model.get_dedup_key() != shared_owner_key
+    assert ignored_owner_model.get_dedup_key() == ignored_owner_key
 
 
 def test_data_field() -> None:

@@ -54,7 +54,7 @@ from datamodel_code_generator._format_types import (
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
-from datamodel_code_generator.model.base import UNDEFINED, sanitize_module_name
+from datamodel_code_generator.model.base import UNDEFINED, c3_merge, get_inherited_fields, sanitize_module_name
 from datamodel_code_generator.model.enum import (
     SPECIALIZED_ENUM_TYPE_MATCH,
     Enum,
@@ -78,12 +78,10 @@ from datamodel_code_generator.parser.base import (
     SPECIAL_PATH_FORMAT,
     Parser,
     Source,
-    _c3_merge,
     _copy_data_model_field,
     _copy_data_type,
     _copy_resolved_inherited_field,
     _detach_deferred_inherited_field_parents,
-    _get_inherited_fields,
     _get_inherited_type_modifiers,
     escape_characters,
     get_special_path,
@@ -2701,11 +2699,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 data_model_type_class,
             )
 
-    def get_object_field(  # noqa: PLR0913
+    def _build_neutral_object_field(  # noqa: PLR0913
         self,
         *,
         field_name: str | None,
-        field: JsonSchemaObject,
         required: bool,
         field_type: DataType,
         alias: str | list[str] | None,
@@ -2715,10 +2712,73 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         use_default_with_required: bool = False,
         class_name: str | None = None,
     ) -> DataModelFieldBase:
-        """Create a data model field from a JSON Schema object field."""
+        """Build a field without schema-owned constraints or metadata."""
+        single_alias, validation_aliases = self._split_field_alias(alias)
+        serialization_alias = (
+            self.get_serialization_alias(original_field_name, field_name, class_name)
+            if original_field_name is not None and field_name is not None
+            else None
+        )
+        return self.data_model_field_type(
+            name=field_name,
+            default=effective_default,
+            data_type=field_type,
+            required=required,
+            alias=single_alias,
+            validation_aliases=validation_aliases,
+            serialization_alias=serialization_alias,
+            strip_default_none=self.strip_default_none,
+            use_annotated=self.use_annotated,
+            use_serialize_as_any=self.use_serialize_as_any,
+            use_field_description=self.use_field_description,
+            use_field_description_example=self.use_field_description_example,
+            use_inline_field_description=self.use_inline_field_description,
+            use_default_kwarg=self.use_default_kwarg,
+            original_name=original_field_name,
+            has_default=effective_has_default is True,
+            use_frozen_field=self.use_frozen_field,
+            use_serialization_alias=self.use_serialization_alias,
+            use_default_factory_for_optional_nested_models=self.use_default_factory_for_optional_nested_models,
+            use_default_with_required=use_default_with_required,
+            **self._data_model_field_common_kwargs(),
+        )
+
+    def get_object_field(  # noqa: PLR0913
+        self,
+        *,
+        field_name: str | None,
+        field: JsonSchemaObject | None,
+        required: bool,
+        field_type: DataType,
+        alias: str | list[str] | None,
+        original_field_name: str | None,
+        effective_default: Any = None,
+        effective_has_default: bool | None = None,
+        use_default_with_required: bool = False,
+        class_name: str | None = None,
+    ) -> DataModelFieldBase:
+        """Build an output field using the shared JSON Schema field policy."""
+        if field is None:
+            return self._build_neutral_object_field(
+                field_name=field_name,
+                required=required,
+                field_type=field_type,
+                alias=alias,
+                original_field_name=original_field_name,
+                effective_default=effective_default,
+                effective_has_default=effective_has_default,
+                use_default_with_required=use_default_with_required,
+                class_name=class_name,
+            )
+
+        single_alias, validation_aliases = self._split_field_alias(alias)
+        serialization_alias = (
+            self.get_serialization_alias(original_field_name, field_name, class_name)
+            if original_field_name is not None and field_name is not None
+            else None
+        )
         default_value = effective_default if effective_has_default is not None else field.default
         has_default = effective_has_default if effective_has_default is not None else field.has_default
-
         constraints = self._get_constraint_values(field) if self.is_constraints_field(field) else None
         consumed = self.data_type_manager.CONSTRAINED_TYPE_CONSUMED_KEYS
         if constraints is not None and field_type.type in consumed:
@@ -2726,22 +2786,23 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 constraints.pop(key, None)
         if constraints is not None and self.field_constraints and field.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
-        if field_type.is_dict or field_type.is_mapping:
-            property_count_constraints = self._get_property_count_constraints(field)
-            if property_count_constraints:
-                constraints = constraints or {}
-                constraints.update(property_count_constraints)
-        array_items_constraints = self._get_array_items_constraints(field)
-        if array_items_constraints:
+        if (field_type.is_dict or field_type.is_mapping) and (
+            property_count_constraints := self._get_property_count_constraints(field)
+        ):
+            constraints = constraints or {}
+            constraints.update(property_count_constraints)
+        if array_items_constraints := self._get_array_items_constraints(field):
             constraints = constraints or {}
             constraints.update(array_items_constraints)
         self._suppress_array_length_constraints(constraints, field)
-        single_alias, validation_aliases = self._split_alias(alias)
-        serialization_alias = (
-            self.get_serialization_alias(original_field_name, field_name, class_name)
-            if original_field_name is not None and field_name is not None
-            else None
+        nullable = (
+            field.nullable
+            if (self.strict_nullable or self.use_missing_sentinel) and field.nullable is not None
+            else (False if self.strict_nullable and (has_default or required) else None)
         )
+        extras = self.get_field_extras(field)
+        read_only = self._resolve_field_flag(field, "readOnly")
+        write_only = self._resolve_field_flag(field, "writeOnly")
         model_field = self.data_model_field_type(
             name=field_name,
             default=default_value,
@@ -2751,11 +2812,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             validation_aliases=validation_aliases,
             serialization_alias=serialization_alias,
             constraints=constraints,
-            nullable=field.nullable
-            if (self.strict_nullable or self.use_missing_sentinel) and field.nullable is not None
-            else (False if self.strict_nullable and (has_default or required) else None),
+            nullable=nullable,
             strip_default_none=self.strip_default_none,
-            extras=self.get_field_extras(field),
+            extras=extras,
             use_annotated=self.use_annotated,
             use_serialize_as_any=self.use_serialize_as_any,
             use_field_description=self.use_field_description,
@@ -2765,8 +2824,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             original_name=original_field_name,
             has_default=has_default,
             type_has_null=field.type_has_null,
-            read_only=self._resolve_field_flag(field, "readOnly"),
-            write_only=self._resolve_field_flag(field, "writeOnly"),
+            read_only=read_only,
+            write_only=write_only,
             use_frozen_field=self.use_frozen_field,
             use_serialization_alias=self.use_serialization_alias,
             use_default_factory_for_optional_nested_models=self.use_default_factory_for_optional_nested_models,
@@ -5305,7 +5364,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
             result = [
                 ref,
-                *_c3_merge(
+                *c3_merge(
                     [
                         *[linearize(parent, active | {ref}).copy() for parent in parents],
                         parents.copy(),
@@ -5317,7 +5376,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return result
 
         result = tuple(
-            _c3_merge(
+            c3_merge(
                 [
                     *[linearize(ref).copy() for ref in direct_refs],
                     list(direct_refs),
@@ -5598,33 +5657,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return None
 
-    def _split_alias(self, alias: str | list[str] | None) -> tuple[str | None, list[str] | None]:  # noqa: PLR6301
-        """Split a resolver alias result into single and validation aliases."""
-        if isinstance(alias, list):
-            return None, alias
-        return alias, None
-
-    def _effective_default_state(
-        self,
-        field_name: str,
-        default: Any,
-        *,
-        has_default: bool,
-        required: bool,
-        class_name: str | None,
-    ) -> tuple[Any, bool, bool]:
-        effective_default, effective_has_default = self.model_resolver.resolve_default_value(
-            field_name,
-            default,
-            has_default,
-            class_name=class_name,
-        )
-        return (
-            effective_default,
-            effective_has_default,
-            required and self.apply_default_values_for_required_fields and effective_has_default,
-        )
-
     def _get_generated_base_models(self, base_classes: list[Reference]) -> list[DataModel]:
         """Resolve generated direct bases without traversing their fields."""
         data_models: list[DataModel] = []
@@ -5638,7 +5670,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _get_inherited_field_map(self, base_classes: list[Reference]) -> dict[str, DataModelFieldBase]:
         """Build the effective generated field map once for a set of direct bases."""
-        inherited_fields = _get_inherited_fields(self._get_generated_base_models(base_classes))
+        inherited_fields = get_inherited_fields(self._get_generated_base_models(base_classes))
         deferred_names = {
             name
             for name, field in inherited_fields.items()
@@ -5727,7 +5759,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         inherited_field = self._get_inherited_field(required_field_name, base_classes, inherited_fields)
         if inherited_field is not None and inherited_field.name and inherited_field.name not in excludes:
             field_name = inherited_field.name
-        single_alias, validation_aliases = self._split_alias(alias)
+        single_alias, validation_aliases = self._split_field_alias(alias)
         serialization_alias = self.get_serialization_alias(required_field_name, field_name, class_name)
 
         if inherited_field is not None:
@@ -7033,13 +7065,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             exclude_field_names.add(field_name)
 
             if isinstance(field, bool):
-                single_alias, validation_aliases = self._split_alias(alias)
+                single_alias, validation_aliases = self._split_field_alias(alias)
                 fields.append(
                     self.data_model_field_type(
                         name=field_name,
-                        data_type=self.data_type_manager.get_data_type(
-                            Types.any,
-                        ),
+                        data_type=self.data_type_manager.get_data_type(Types.any),
                         required=False if self.force_optional_for_required_fields else original_field_name in requires,
                         alias=single_alias,
                         validation_aliases=validation_aliases,

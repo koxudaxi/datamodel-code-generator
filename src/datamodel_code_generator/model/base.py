@@ -62,6 +62,7 @@ _MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS = 128
 _NESTED_MODEL_DEFAULT_FACTORY_ORDER_KEY = "_nested_model_default_factory_order"
 _NESTED_MODEL_DEFAULT_FACTORY_RECURSIVE_PATHS_KEY = "_nested_model_default_factory_recursive_paths"
 _REQUIRED_INHERITED_DEFAULT_FACTORY_KEY = "_required_inherited_default_factory"
+MroT = TypeVar("MroT")
 
 
 class _MissingCustomTemplateState:
@@ -327,11 +328,15 @@ class ConstraintsBase(_BaseModel):
         )
 
 
-class DataModelFieldBase(_BaseModel):
+class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
     """Base class for model field representation and rendering."""
 
     _FIELD_IMPORTS_CACHE_MAX_SIZE: ClassVar[int] = 4096
     _field_imports_cache: ClassVar[dict[tuple[Any, ...], tuple[Import, ...]]] = {}
+    _SEMANTIC_CACHE_KEYS: ClassVar[tuple[str, ...]] = (
+        "_computed_default_factory",
+        "_self_reference_cache",
+    )
     SUPPORTS_FIELD_CONSTRAINTS: ClassVar[bool] = False
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = False
     ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = None
@@ -427,7 +432,7 @@ class DataModelFieldBase(_BaseModel):
     def self_reference(self) -> bool:
         """Check if field references its parent model.
 
-        Result is cached after first call since parent is stable at render time.
+        Result is cached until a GenerationStore-managed semantic mutation.
         Uses __dict__ for caching to avoid Pydantic-managed field assignment.
         """
         if "_self_reference_cache" in self.__dict__:
@@ -918,7 +923,41 @@ class DataModelFieldBase(_BaseModel):
 
     def force_field_assignment(self) -> None:
         """Render an explicit required-field assignment without changing its semantics."""
+        if self.__dict__.get("_forced_field_assignment") is True:
+            return
         self.__dict__["_forced_field_assignment"] = True
+        self._invalidate_parent_render_caches()
+
+    def _invalidate_parent_render_caches(self) -> None:
+        """Clear parent render caches through current or legacy model hooks."""
+        if (parent := self.parent) is None:
+            return
+        if invalidate_render_caches := getattr(parent, "invalidate_render_caches", None):
+            invalidate_render_caches()
+            return
+        parent.clear_imports_cache()
+
+    def mark_as_keyword_only(self) -> None:
+        """Exclude this field from positional constructor ordering."""
+        self.extras["kw_only"] = True
+
+    @property
+    def constructor_keyword_only(self) -> bool | None:
+        """Return the field-level keyword-only policy, if explicitly configured."""
+        return self.extras.get("kw_only")
+
+    @property
+    def is_class_var(self) -> bool:
+        """Return whether this output field is a class variable."""
+        return self.extras.get("is_classvar") is True
+
+    def enable_structured_default_validation(self) -> bool:  # noqa: PLR6301
+        """Enable output-specific validation for a structured default.
+
+        The neutral field policy intentionally does nothing. Output backends that
+        require validation at construction time can override this hook.
+        """
+        return False
 
     def _get_constructor_default_info(self) -> tuple[bool, bool]:
         """Return neutral constructor-default semantics for this field."""
@@ -974,7 +1013,17 @@ class DataModelFieldBase(_BaseModel):
             copied.data_type.data_types = [dt.model_copy() for dt in self.data_type.data_types]
         if self.data_type.dict_key:
             copied.data_type.dict_key = self.data_type.dict_key.model_copy()
+        copied.invalidate_semantic_caches()
         return copied
+
+    def invalidate_semantic_caches(self, *, invalidate_parent: bool = True) -> None:
+        """Clear field caches derived from mutable type and parent semantics."""
+        field_values = self.__dict__
+        for key in self._SEMANTIC_CACHE_KEYS:
+            field_values.pop(key, None)
+        if not invalidate_parent:
+            return
+        self._invalidate_parent_render_caches()
 
     def replace_data_type(self, new_data_type: DataType, *, clear_old_parent: bool = True) -> None:
         """Replace data_type and update parent relationships.
@@ -989,8 +1038,7 @@ class DataModelFieldBase(_BaseModel):
         else:
             self.data_type = new_data_type
             new_data_type.parent = self
-        if self.parent is not None:
-            self.parent.clear_imports_cache()
+        self.invalidate_semantic_caches()
 
 
 def _nested_model_default_factory(field: DataModelFieldBase, model_cls: type[DataModel]) -> str | None:
@@ -1459,6 +1507,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         self.description = description
         for field in self.fields:
             field.parent = self
+            field.invalidate_semantic_caches(invalidate_parent=False)
 
         self._additional_imports.extend(self.DEFAULT_IMPORTS)
         self.default: Any = default
@@ -1535,8 +1584,27 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     def replace_children_in_models(self, models: list[DataModel], new_ref: Reference) -> None:
         """Replace reference children if their parent model is in models list."""
         for child in self.reference.children[:]:
-            if isinstance(child, DataType) and get_most_of_parent(child) in models:
-                child.replace_reference(new_ref)
+            if not isinstance(child, DataType):
+                continue
+            owner_model = get_most_of_parent(child, DataModel)
+            if isinstance(owner_model, DataModel):
+                if owner_model not in models:
+                    continue
+                owner_models = (owner_model,)
+            else:
+                owner_models = tuple(
+                    model for model in models if any(base_class is child for base_class in model.base_classes)
+                )
+            if not owner_models:
+                continue
+            child.replace_reference(new_ref)
+            current: DataType | DataModelFieldBase = child
+            while isinstance(parent := current.parent, DataType):
+                current = parent
+            if isinstance(parent, DataModelFieldBase):
+                parent.invalidate_semantic_caches(invalidate_parent=False)
+            for owner_model in owner_models:
+                owner_model.invalidate_render_caches()
 
     def set_base_class(self) -> None:
         """Set up the base class(es) for this model."""
@@ -1549,7 +1617,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
 
         if not base_class_list:
             self.base_classes = []
-            self.clear_imports_cache()
+            self.invalidate_render_caches()
             return
 
         result = []
@@ -1558,7 +1626,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             self._additional_imports.append(base_class_import)
             result.append(BaseClassDataType.from_import(base_class_import))
         self.base_classes = result
-        self.clear_imports_cache()
+        self.invalidate_render_caches()
 
     @cached_property
     def template_file_path(self) -> Path:
@@ -1610,6 +1678,12 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         """Clear cached imports after import-affecting model, field, or data type mutations."""
         self.__dict__.pop(self._IMPORTS_CACHE_KEY, None)
 
+    def invalidate_render_caches(self) -> None:
+        """Clear cached imports and render-derived model identity."""
+        self.clear_imports_cache()
+        if dedup_key_cache := getattr(self, "_dedup_key_cache", None):
+            dedup_key_cache.clear()
+
     @property
     def reference_classes(self) -> frozenset[str]:
         """Get all referenced class paths used by this model."""
@@ -1650,7 +1724,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             self.reference.name = f"{self.reference.name.rsplit('.', 1)[0]}.{class_name}"
         else:
             self.reference.name = class_name
-        self.clear_imports_cache()
+        self.invalidate_render_caches()
 
     @property
     def duplicate_class_name(self) -> str:
@@ -1720,7 +1794,9 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         self.reference.path = new_path
         if "path" in self.__dict__:  # pragma: no branch
             del self.__dict__["path"]
-        self.clear_imports_cache()
+        for field in self.fields:
+            field.invalidate_semantic_caches(invalidate_parent=False)
+        self.invalidate_render_caches()
 
     def render(self, *, class_name: str | None = None) -> str:
         """Render the model to a string using the template."""
@@ -1767,6 +1843,121 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             _RenderedDataModelField(field, self._format_docstring(field.docstring, self.FIELD_DOCSTRING_INDENT))
             for field in self.fields
         ]
+
+
+def _model_ancestor_paths(model: DataModel) -> set[str]:
+    """Collect generated ancestors without assuming direct bases are already sorted."""
+    ancestors: set[str] = set()
+    to_visit = [
+        base_class.reference.source
+        for base_class in model.base_classes
+        if base_class.reference and isinstance(base_class.reference.source, DataModel)
+    ]
+    while to_visit:
+        parent = to_visit.pop()
+        if parent.path in ancestors:
+            continue
+        ancestors.add(parent.path)
+        to_visit.extend(
+            base_class.reference.source
+            for base_class in parent.base_classes
+            if base_class.reference and isinstance(base_class.reference.source, DataModel)
+        )
+    return ancestors
+
+
+def sort_data_models_for_mro(models: list[DataModel]) -> list[DataModel]:
+    """Match the stable descendant-before-ancestor order used for rendered bases."""
+    if len(models) <= 1:
+        return models.copy()
+    ancestor_paths = {model.path: _model_ancestor_paths(model) for model in models}
+    return sorted(
+        models,
+        key=lambda model: sum(model.path in ancestors for ancestors in ancestor_paths.values()),
+    )
+
+
+def c3_merge(sequences: list[list[MroT]], key: Callable[[MroT], str]) -> list[MroT]:
+    """Merge inheritance sequences using C3 with a deterministic cycle fallback."""
+    result: list[MroT] = []
+    while sequences := [sequence for sequence in sequences if sequence]:
+        tail_keys = {key(item) for sequence in sequences for item in sequence[1:]}
+        candidate = next(
+            (sequence[0] for sequence in sequences if key(sequence[0]) not in tail_keys),
+            sequences[0][0],
+        )
+        candidate_key = key(candidate)
+        result.append(candidate)
+        for sequence in sequences:
+            sequence[:] = [item for item in sequence if key(item) != candidate_key]
+    return result
+
+
+def linearize_data_models(models: list[DataModel]) -> list[DataModel]:
+    """Return the effective C3 order for direct generated models."""
+    if len(models) == 1 and not models[0].base_classes:
+        return models.copy()
+
+    linearized_models: dict[str, list[DataModel]] = {}
+
+    def linearize(model: DataModel, active: frozenset[str] = frozenset()) -> list[DataModel]:
+        if cached := linearized_models.get(model.path):
+            return cached
+        if model.path in active:
+            return [model]
+        parents = sort_data_models_for_mro([
+            base_class.reference.source
+            for base_class in model.base_classes
+            if base_class.reference and isinstance(base_class.reference.source, DataModel)
+        ])
+        result = [
+            model,
+            *c3_merge(
+                [
+                    *[linearize(parent, active | {model.path}).copy() for parent in parents],
+                    parents.copy(),
+                ],
+                key=lambda item: item.path,
+            ),
+        ]
+        linearized_models[model.path] = result
+        return result
+
+    direct_models = sort_data_models_for_mro(models)
+    return c3_merge(
+        [
+            *[linearize(model).copy() for model in direct_models],
+            direct_models.copy(),
+        ],
+        key=lambda item: item.path,
+    )
+
+
+def get_effective_fields(model: DataModel) -> tuple[DataModelFieldBase, ...]:
+    """Return constructor-visible fields after C3 inheritance and overrides."""
+    if not model.base_classes:
+        return tuple(field for field in model.fields if field.name is not None)
+
+    effective_fields: dict[str, DataModelFieldBase] = {}
+    for inherited_model in reversed(linearize_data_models([model])):
+        for field in inherited_model.fields:
+            if field.name is not None:
+                effective_fields[field.name] = field
+    return tuple(effective_fields.values())
+
+
+def get_inherited_fields(models: list[DataModel]) -> dict[str, DataModelFieldBase]:
+    """Build one effective field lookup with exact original names taking priority."""
+    original_names: dict[str, DataModelFieldBase] = {}
+    generated_names: dict[str, DataModelFieldBase] = {}
+    for model in linearize_data_models(models):
+        for field in model.fields:
+            if field.original_name is not None:
+                original_names.setdefault(field.original_name, field)
+            if field.name is not None:
+                generated_names.setdefault(field.name, field)
+    generated_names.update(original_names)
+    return generated_names
 
 
 def _model_rebuild_namespace(*classes: type[Any]) -> dict[str, Any]:

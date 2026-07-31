@@ -8,7 +8,7 @@ from __future__ import annotations
 from abc import ABC
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Optional
 
 from pydantic import Field as _Field
 
@@ -46,6 +46,15 @@ PatternConstraints = _PatternConstraints
 UnionIntFloat = _UnionIntFloat
 
 
+class _PydanticFieldRenderPlan(NamedTuple):
+    """Structured Field() output shared by render and compatibility properties."""
+
+    rendered: str
+    assignment: str | None
+    arguments: tuple[str, ...]
+    default_factory: Any
+
+
 class DataModelField(DataModelFieldBase):
     """Field implementation for Pydantic models."""
 
@@ -71,8 +80,8 @@ class DataModelField(DataModelFieldBase):
 
     @property
     def has_default_factory_in_field(self) -> bool:
-        """Check if this field has a default_factory in Field() including computed ones."""
-        return "default_factory" in self.extras or self.__dict__.get("_computed_default_factory") is not None
+        """Check the current structured field state for an effective default factory."""
+        return self._get_effective_default_factory() is not None
 
     @property
     def method(self) -> str | None:
@@ -88,39 +97,26 @@ class DataModelField(DataModelFieldBase):
     @property
     def field(self) -> str | None:
         """For backwards compatibility."""
-        if self.is_class_var:
-            return None
-        result = str(self)
-        return self._field_from_rendered(result)
-
-    def _field_from_rendered(self, result: str) -> str | None:
-        if (
-            self.use_default_kwarg
-            and not result.startswith("Field(...")
-            and not result.startswith("Field(default_factory=")
-        ):
-            # Use `default=` for fields that have a default value so that type
-            # checkers using @dataclass_transform can infer the field as
-            # optional in __init__.
-            result = result.replace("Field(", "Field(default=")
-        if not result:
-            return None
-        return result
+        return self._get_field_render_plan().assignment
 
     def _rendered_field_values(self) -> tuple[str | None, str | None]:
-        """Render field and annotated values from one Field() string for built-in templates."""
+        """Render field and annotated values from one structured plan."""
+        return self._rendered_field_values_from_plan(self._get_field_render_plan())
+
+    def _rendered_field_values_from_plan(
+        self,
+        plan: _PydanticFieldRenderPlan,
+    ) -> tuple[str | None, str | None]:
+        """Render compatibility values from an already computed plan."""
         if self.is_class_var:
             return None, None
-        result = str(self)
-        field = self._field_from_rendered(result)
-        if not self.use_annotated or not result:
-            return field, None
-        return field, f"Annotated[{self.type_hint}, {result}]"
+        if not self.use_annotated or not plan.rendered:
+            return plan.assignment, None
+        return plan.assignment, f"Annotated[{self.type_hint}, {plan.rendered}]"
 
     def _has_field_statement(self) -> bool:
         """Return whether rendering this field will require a Field() call."""
         if self.is_class_var:
-            self.__dict__["_computed_default_factory"] = None
             return False
         has_field_metadata = (
             self.extras
@@ -139,14 +135,8 @@ class DataModelField(DataModelFieldBase):
             and (self.default is None or self.default is UNDEFINED)
         )
         if not has_field_metadata and not needs_required_nullable_field and not needs_optional_nested_factory:
-            self.__dict__["_computed_default_factory"] = None
             return False
-
-        data, default_factory = self._get_field_data_and_default_factory()
-
-        if default_factory or any(v is not None for v in data.values()):
-            return True
-        return bool(self.nullable and self.required and not self.use_default_with_required)
+        return bool(self._get_field_render_plan().rendered)
 
     def _has_numeric_data_type(self, type_name: str, strict_import_part: str) -> bool:
         """Return whether any field data type is the given builtin or strict numeric type."""
@@ -213,6 +203,13 @@ class DataModelField(DataModelFieldBase):
         """
         return _nested_model_default_factory(self, BaseModelBase)
 
+    def enable_structured_default_validation(self) -> bool:
+        """Enable Pydantic validation for a structured default exactly once."""
+        if self.extras.get("validate_default") is True:
+            return False
+        self.extras["validate_default"] = True
+        return True
+
     def _process_data_in_str(self, data: dict[str, Any]) -> None:  # pragma: no cover
         if self.const:
             data["const"] = True
@@ -223,37 +220,15 @@ class DataModelField(DataModelFieldBase):
     def _process_annotated_field_arguments(self, field_arguments: list[str]) -> list[str]:  # noqa: PLR6301
         return field_arguments
 
-    def _get_field_data_and_default_factory(self) -> tuple[dict[str, Any], Any]:
-        """Build Field() keyword data and the effective default_factory."""
-        data: dict[str, Any] = {k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS}
-        if self.alias is not None:
-            data["alias"] = self.alias
-        has_type_constraints = self.data_type.kwargs is not None and len(self.data_type.kwargs) > 0
-        if (
-            self.constraints is not None
-            and not self.self_reference()
-            and not (self.data_type.strict and has_type_constraints)
-        ):
-            if self._has_anyurl_outside_container():
-                constraint_data: dict[str, Any] = {}
-            else:
-                constraint_data = self._get_normalized_constraint_data()
-            data = {**data, **constraint_data}
-
-        if self.use_field_description:
-            data.pop("description", None)  # Description is part of field docstring
-
-        self._process_data_in_str(data)
-
-        discriminator = data.pop("discriminator", None)
-        if discriminator:
-            if isinstance(discriminator, str):
-                data["discriminator"] = discriminator
-            elif isinstance(discriminator, dict):  # pragma: no cover
-                data["discriminator"] = discriminator["propertyName"]
-
-        has_default_factory = "default_factory" in data
-        configured_default_factory = data.pop("default_factory", None)
+    def _get_effective_default_factory(self, configured_default_factory: Any = UNDEFINED) -> Any:
+        """Return the current effective factory without depending on a previous render."""
+        if self.is_class_var:
+            return None
+        if configured_default_factory is UNDEFINED:
+            has_default_factory = "default_factory" in self.extras
+            configured_default_factory = self.extras.get("default_factory")
+        else:
+            has_default_factory = True
         if (self.required and not self.use_default_with_required) or (
             self.default is not UNDEFINED and self.default is not None and not has_default_factory
         ):
@@ -269,24 +244,89 @@ class DataModelField(DataModelFieldBase):
         ):
             default_factory = self._get_default_factory_for_optional_nested_model()
 
-        self.__dict__["_computed_default_factory"] = default_factory
+        return default_factory
+
+    def _get_field_data_and_default_factory(self) -> tuple[dict[str, Any], Any]:
+        """Build Field() keyword data and the effective default_factory."""
+        if self.is_class_var:
+            return {}, None
+
+        data: dict[str, Any] = {k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS}
+        if self.alias is not None:
+            data["alias"] = self.alias
+        has_type_constraints = self.data_type.kwargs is not None and len(self.data_type.kwargs) > 0
+        if (
+            self.constraints is not None
+            and not self.self_reference()
+            and not (self.data_type.strict and has_type_constraints)
+        ):
+            constraint_data = {} if self._has_anyurl_outside_container() else self._get_normalized_constraint_data()
+            data = {**data, **constraint_data}
+
+        if self.use_field_description:
+            data.pop("description", None)  # Description is part of field docstring
+
+        self._process_data_in_str(data)
+
+        match data.pop("discriminator", None):
+            case str() as discriminator:
+                data["discriminator"] = discriminator
+            case dict() as discriminator:  # pragma: no cover
+                data["discriminator"] = discriminator["propertyName"]
+
+        configured_default_factory = data.pop("default_factory", UNDEFINED)
+        default_factory = self._get_effective_default_factory(configured_default_factory)
 
         return data, default_factory
 
-    def __str__(self) -> str:
-        """Return Field() call with all constraints and metadata."""
-        data, default_factory = self._get_field_data_and_default_factory()
+    @staticmethod
+    def _render_field_call(arguments: tuple[str, ...]) -> str:
+        return f"Field({', '.join(arguments)})"
 
+    def _get_single_argument_field_render_plan(
+        self,
+        argument: str,
+        *,
+        assignment_argument: str | None = None,
+    ) -> _PydanticFieldRenderPlan:
+        """Build a Field() plan whose rendered and assignment views have one argument."""
+        arguments = (argument,)
+        rendered = self._render_field_call(arguments)
+        return _PydanticFieldRenderPlan(
+            rendered=rendered,
+            assignment=(rendered if assignment_argument is None else self._render_field_call((assignment_argument,))),
+            arguments=arguments,
+            default_factory=None,
+        )
+
+    def _get_field_render_plan(self) -> _PydanticFieldRenderPlan:
+        """Build all Field() views from structured arguments in one pass."""
+        if self.is_class_var:
+            rendered = "" if self.default is UNDEFINED else represent_python_value(self.default)
+            return _PydanticFieldRenderPlan(
+                rendered=rendered,
+                assignment=None,
+                arguments=(),
+                default_factory=None,
+            )
+
+        data, default_factory = self._get_field_data_and_default_factory()
         field_arguments = sorted(f"{k}={represent_python_value(v)}" for k, v in data.items() if v is not None)
 
         if not field_arguments and not default_factory:
             if self.nullable and self.required and not self.use_default_with_required:
-                return "Field(...)"  # Field() is for mypy
-            return ""
+                return self._get_single_argument_field_render_plan("...")
+            return _PydanticFieldRenderPlan(
+                rendered="",
+                assignment=None,
+                arguments=(),
+                default_factory=None,
+            )
 
         if default_factory:
             field_arguments = [f"default_factory={default_factory}", *field_arguments]
 
+        has_default_argument = False
         if self.use_annotated:
             field_arguments = self._process_annotated_field_arguments(field_arguments)
         elif (
@@ -303,12 +343,24 @@ class DataModelField(DataModelFieldBase):
         ):
             field_arguments = [default_repr, *field_arguments]
 
-        if self.is_class_var:
-            if self.default is UNDEFINED:  # pragma: no cover
-                return ""
-            return represent_python_value(self.default)
+            has_default_argument = True
 
-        return f"Field({', '.join(field_arguments)})"
+        arguments = tuple(field_arguments)
+        rendered_arguments = ", ".join(arguments)
+        rendered = f"Field({rendered_arguments})"
+        assignment = (
+            f"Field(default={rendered_arguments})" if self.use_default_kwarg and has_default_argument else rendered
+        )
+        return _PydanticFieldRenderPlan(
+            rendered=rendered,
+            assignment=assignment,
+            arguments=arguments,
+            default_factory=default_factory,
+        )
+
+    def __str__(self) -> str:
+        """Return Field() call with all constraints and metadata."""
+        return self._get_field_render_plan().rendered
 
     @property
     def is_class_var(self) -> bool:

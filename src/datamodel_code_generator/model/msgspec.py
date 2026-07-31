@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from functools import wraps
 from math import isfinite
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Optional, TypeVar
 
 from datamodel_code_generator.imports import IMPORT_OPTIONAL, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
@@ -44,6 +44,15 @@ UNSET = _UNSET()
 _ANNOTATED_CONSTRAINTS_CONTEXT: object = object()
 
 
+class _MsgspecFieldRenderPlan(NamedTuple):
+    """Structured msgspec field output and its syntax-owned imports."""
+
+    rendered: str
+    needs_field_import: bool
+    needs_convert_import: bool
+    needs_unset_import: bool
+
+
 if TYPE_CHECKING:
     from collections import defaultdict
     from pathlib import Path
@@ -71,24 +80,19 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
 
     @wraps(original_imports.fget)
     def new_imports(self: DataModelFieldBaseT) -> tuple[Import, ...]:
-        if self.extras.get("is_classvar"):
+        if self.is_class_var:
             return ()
         extra_imports = []
-        field = self.field
-        # TODO: Improve field detection
-        if field and field.startswith("field("):
-            extra_imports.append(IMPORT_MSGSPEC_FIELD)
-        if field and "lambda: convert" in field:
-            extra_imports.append(IMPORT_MSGSPEC_CONVERT)
-        if isinstance(self, DataModelField) and self.needs_meta_import:
-            extra_imports.append(IMPORT_MSGSPEC_META)
-        if (
-            isinstance(self, DataModelField)
-            and self._not_required
-            and not self.nullable
-            and (self.default is None or self.default is UNDEFINED)
-        ):
-            extra_imports.append(IMPORT_MSGSPEC_UNSET)
+        if isinstance(self, DataModelField):
+            plan = self._get_field_render_plan()
+            if plan.needs_field_import:
+                extra_imports.append(IMPORT_MSGSPEC_FIELD)
+            if plan.needs_convert_import:
+                extra_imports.append(IMPORT_MSGSPEC_CONVERT)
+            if self.needs_meta_import:
+                extra_imports.append(IMPORT_MSGSPEC_META)
+            if plan.needs_unset_import:
+                extra_imports.append(IMPORT_MSGSPEC_UNSET)
         imports = original_imports.fget(self)
         if isinstance(self, DataModelField) and self._not_required and not self.nullable and self.data_type.is_optional:
             imports = tuple(import_ for import_ in imports if import_ != IMPORT_OPTIONAL)
@@ -421,14 +425,12 @@ class DataModelField(DataModelFieldBase):
     @property
     def field(self) -> str | None:
         """For backwards compatibility."""
-        result = str(self)
-        if not result:
-            return None
-        return result
+        return self._get_field_render_plan().rendered or None
 
-    def _get_field_data(self) -> dict[str, Any]:
-        """Return structured field() arguments before rendering."""
+    def _get_field_data_and_import_requirements(self) -> tuple[dict[str, Any], bool]:
+        """Return structured field() arguments and whether msgspec.convert produced a factory."""
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._FIELD_KEYS}
+        needs_convert_import = False
         if self.alias is not None:
             data["name"] = self.alias
 
@@ -447,11 +449,15 @@ class DataModelField(DataModelFieldBase):
                     "default_factory",
                 }
             }
-        elif self.default and "default_factory" not in data:
-            default_factory = self._get_default_as_struct_model()
-            if default_factory is not None:
-                data.pop("default")
-                data["default_factory"] = default_factory
+        elif (
+            self.default is not UNDEFINED
+            and self.default is not None
+            and "default_factory" not in data
+            and (default_factory := self._get_default_as_struct_model()) is not None
+        ):
+            data.pop("default")
+            data["default_factory"] = default_factory
+            needs_convert_import = True
 
         if "default" in data and isinstance(data["default"], (list, dict, set)) and "default_factory" not in data:
             default_value = data.pop("default")
@@ -471,30 +477,54 @@ class DataModelField(DataModelFieldBase):
                 data["default_factory"] = nested_model_name
                 data.pop("default", None)
 
-        return data
+        return data, needs_convert_import
+
+    def _get_field_data(self) -> dict[str, Any]:
+        """Return structured field() arguments before rendering."""
+        return self._get_field_data_and_import_requirements()[0]
 
     def _get_constructor_default_info(self) -> tuple[bool, bool]:
         """Return constructor-default semantics from structured field data."""
         if not has_field_assignment(self) or (self.required and not self.use_default_with_required):
             return False, False
-        data = self._get_field_data()
+        data, _ = self._get_field_data_and_import_requirements()
         if "default_factory" in data:
             return True, False
         if data and "default" not in data:
             return False, False
         return True, True
 
-    def __str__(self) -> str:
-        """Generate field() call or default value representation."""
-        data = self._get_field_data()
+    def _get_field_render_plan(self) -> _MsgspecFieldRenderPlan:
+        """Build the msgspec field output and imports without parsing rendered Python."""
+        data, needs_convert_import = self._get_field_data_and_import_requirements()
+        needs_unset_import = data.get("default") is UNSET
         if not data:
-            return ""
+            return _MsgspecFieldRenderPlan(
+                rendered="",
+                needs_field_import=False,
+                needs_convert_import=needs_convert_import,
+                needs_unset_import=needs_unset_import,
+            )
 
         if len(data) == 1 and "default" in data:
-            return represent_python_value(data["default"])
+            return _MsgspecFieldRenderPlan(
+                rendered=represent_python_value(data["default"]),
+                needs_field_import=False,
+                needs_convert_import=needs_convert_import,
+                needs_unset_import=needs_unset_import,
+            )
 
         kwargs = [f"{k}={v if k == 'default_factory' else represent_python_value(v)}" for k, v in data.items()]
-        return f"field({', '.join(kwargs)})"
+        return _MsgspecFieldRenderPlan(
+            rendered=f"field({', '.join(kwargs)})",
+            needs_field_import=True,
+            needs_convert_import=needs_convert_import,
+            needs_unset_import=needs_unset_import,
+        )
+
+    def __str__(self) -> str:
+        """Generate field() call or default value representation."""
+        return self._get_field_render_plan().rendered
 
     @property
     def type_hint(self) -> str:
@@ -597,6 +627,9 @@ class DataModelField(DataModelFieldBase):
 
     def _get_default_as_struct_model(self) -> str | None:
         """Convert default value to Struct model using msgspec convert."""
+        if self._uses_empty_builtin_container_factory():
+            return None
+
         for data_type in self.data_type.data_types or (self.data_type,):
             # TODO: Check nested data_types
             if data_type.is_dict:
@@ -624,6 +657,25 @@ class DataModelField(DataModelFieldBase):
                     f"type={data_type.alias or data_type.reference.source.class_name})"
                 )
         return None
+
+    def _uses_empty_builtin_container_factory(self) -> bool:
+        """Return whether an empty collection can use its zero-cost builtin factory."""
+        if self.default:
+            return False
+
+        match self.default:
+            case list():
+                container_attribute = "is_list"
+            case dict():
+                container_attribute = "is_dict"
+            case set():
+                container_attribute = "is_set"
+            case _:
+                return False
+
+        if getattr(self.data_type, container_attribute):
+            return True
+        return any(getattr(data_type, container_attribute) for data_type in self.data_type.data_types)
 
     def _get_default_factory_for_optional_nested_model(self) -> str | None:
         """Get default_factory for optional nested Struct model fields.

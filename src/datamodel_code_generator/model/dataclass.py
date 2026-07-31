@@ -15,12 +15,17 @@ from datamodel_code_generator._format_types import (
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model._constraints import Constraints  # noqa: TC001 # needed for pydantic
-from datamodel_code_generator.model.base import UNDEFINED, _has_field_assignment, _nested_model_default_factory
+from datamodel_code_generator.model.base import (
+    UNDEFINED,
+    _has_field_assignment,
+    _nested_model_default_factory,
+    get_effective_fields,
+)
 from datamodel_code_generator.model.imports import IMPORT_DATACLASS, IMPORT_FIELD
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
 from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import StrictTypes, chain_as_tuple
+from datamodel_code_generator.types import DataType, StrictTypes, chain_as_tuple
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -44,6 +49,96 @@ def get_field_default_info(field: DataModelFieldBase) -> tuple[bool, bool]:
 def field_participates_in_constructor(field: DataModelFieldBase) -> bool:
     """Return whether a Python dataclass field participates in __init__."""
     return field.extras.get("init") is not False
+
+
+def _has_constructor_default(field: DataModelFieldBase) -> bool:
+    """Classify a constructor default without recursively rendering structured values."""
+    if field.required and not field.use_default_with_required:
+        return False
+    if field.default is not UNDEFINED and field.default is not None:
+        return True
+    return get_field_default_info(field)[0]
+
+
+def _nested_dataclass_sources(data_type: DataType) -> tuple[DataClass, ...]:
+    """Return dataclass models referenced by one non-mapping annotation branch."""
+    sources: list[DataClass] = []
+    for nested_data_type in data_type.data_types or (data_type,):
+        if (
+            nested_data_type.reference
+            and isinstance(source := nested_data_type.reference.source, DataClass)
+            and all(source is not existing_source for existing_source in sources)
+        ):
+            sources.append(source)
+    return tuple(sources)
+
+
+def _has_recursive_nested_mapping_default(
+    model: DataClass,
+    active_paths: frozenset[str] = frozenset(),
+) -> bool:
+    """Return whether materializing model defaults would recurse through mapping factories."""
+    if model.path in active_paths:
+        return True
+    active_paths |= {model.path}
+    effective_fields = model.fields if not model.base_classes else get_effective_fields(model)
+    for field in effective_fields:
+        if not field_participates_in_constructor(field) or not isinstance(field.default, dict):
+            continue
+        data_types = field.data_type.data_types or (field.data_type,)
+        if (
+            field.data_type.is_dict
+            or field.data_type.is_mapping
+            or any(data_type.is_dict or data_type.is_mapping for data_type in data_types)
+        ):
+            continue
+        if any(
+            _has_recursive_nested_mapping_default(source, active_paths)
+            for source in _nested_dataclass_sources(field.data_type)
+        ):
+            return True
+    return False
+
+
+def _build_nested_dataclass_default_factory(data_type: DataType, default: dict[Any, Any]) -> str | None:
+    """Build one valid dataclass constructor factory candidate."""
+    if not (data_type.reference and isinstance(source := data_type.reference.source, DataClass)):
+        return None
+    effective_fields = source.fields if not source.base_classes else get_effective_fields(source)
+    field_names: dict[str, str] = {}
+    original_names: dict[str, str] | None = None
+    required_names: set[str] = set()
+    has_nested_mapping_default = False
+    for model_field in effective_fields:
+        if model_field.name is None or not field_participates_in_constructor(model_field):
+            continue
+        field_names[model_field.name] = model_field.name
+        if model_field.original_name is not None:
+            if original_names is None:
+                original_names = {}
+            original_names[model_field.original_name] = model_field.name
+        if not _has_constructor_default(model_field):
+            required_names.add(model_field.name)
+        has_nested_mapping_default = has_nested_mapping_default or (
+            isinstance(model_field.default, dict) and bool(_nested_dataclass_sources(model_field.data_type))
+        )
+    arguments: list[str] = []
+    used_field_names: set[str] | None = set() if len(default) > 1 else None
+    for name, value in default.items():
+        field_name = original_names.get(name) if original_names is not None else None
+        if field_name is None and (field_name := field_names.get(name)) is None:
+            return None
+        if used_field_names is not None:
+            if field_name in used_field_names:
+                return None
+            used_field_names.add(field_name)
+        required_names.discard(field_name)
+        arguments.append(f"{field_name}={represent_python_value(value)}")
+    if required_names:
+        return None
+    if has_nested_mapping_default and _has_recursive_nested_mapping_default(source):
+        return None
+    return f"lambda: {data_type.alias or source.class_name}({', '.join(arguments)})"
 
 
 _REQUIRED_INHERITED_INIT_KEY = "_required_inherited_init"
@@ -208,6 +303,24 @@ class DataModelField(DataModelFieldBase):
         """
         return _nested_model_default_factory(self, DataClass)
 
+    def _get_default_factory_for_nested_value(self, default: dict[Any, Any]) -> str | None:
+        """Render a mapping default as a nested dataclass constructor."""
+        if self.data_type.is_dict or self.data_type.is_mapping:
+            return None
+
+        data_types = self.data_type.data_types or (self.data_type,)
+        if any(data_type.is_dict or data_type.is_mapping for data_type in data_types):
+            return None
+
+        default_factory: str | None = None
+        for data_type in data_types:
+            if (factory := _build_nested_dataclass_default_factory(data_type, default)) is None:
+                continue
+            if default_factory is not None:
+                return None
+            default_factory = factory
+        return default_factory
+
     def _get_field_data(self) -> dict[str, Any]:
         """Return structured field() arguments before rendering."""
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._FIELD_KEYS}
@@ -239,6 +352,9 @@ class DataModelField(DataModelFieldBase):
             }
 
         match data.get("default", UNDEFINED):
+            case dict() as default if nested_factory := self._get_default_factory_for_nested_value(default):
+                data.pop("default")
+                data["default_factory"] = nested_factory
             case list() | dict() | set() as default:
                 data.pop("default")
                 data["default_factory"] = (
