@@ -54,7 +54,7 @@ def _get_pydantic_dataclass_field_default_info(field: DataModelFieldBase) -> tup
 
 def _pydantic_dataclass_field_participates_in_constructor(field: DataModelFieldBase) -> bool:
     """Return whether a Pydantic dataclass field participates in __init__."""
-    return field.extras.get("x-is-classvar") is not True
+    return not field.is_class_var
 
 
 if TYPE_CHECKING:
@@ -200,6 +200,10 @@ class _PydanticDataclassField(DataModelFieldV2):
         "kw_only",
         "repr",
     })
+
+    def _get_default_factory_for_optional_nested_model(self) -> str | None:
+        """Return a factory only for nested Pydantic dataclass models."""
+        return _nested_model_default_factory(self, DataClass)
 
     def _get_constructor_default_info(self) -> tuple[bool, bool]:
         """Return constructor-default semantics from structured field state."""

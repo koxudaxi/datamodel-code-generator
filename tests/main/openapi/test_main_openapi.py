@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import inspect
 import json
 import pickle
 import platform
@@ -67,6 +68,7 @@ from tests.main.conftest import (
     MSGSPEC_LEGACY_BLACK_SKIP,
     OPEN_API_DATA_PATH,
     TIMESTAMP,
+    _generated_model,
     assert_generated_model_json_invalid,
     assert_generated_model_json_validation,
     run_generate_file_and_assert,
@@ -6205,6 +6207,89 @@ def test_main_openapi_use_operation_id_as_name(output_file: Path) -> None:
         expected_file="use_operation_id_as_name.py",
         extra_args=["--use-operation-id-as-name", "--openapi-scopes", "paths", "schemas", "parameters"],
     )
+
+
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_name"),
+    [
+        *BACKEND_GOLDEN_CASES,
+        pytest.param(
+            DataModelType.PydanticV2Dataclass.value,
+            "pydantic_v2_dataclass",
+            id="pydantic-v2-dataclass",
+        ),
+    ],
+)
+@pytest.mark.benchmark
+def test_main_openapi_parameter_field_policy(
+    output_model_type: str,
+    expected_name: str,
+    output_file: Path,
+) -> None:
+    """Apply schema field policy uniformly to schema and content parameters."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "parameter_field_policy.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=f"parameter_field_policy/{expected_name}.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--output-model-type",
+            output_model_type,
+            "--use-operation-id-as-name",
+            "--openapi-scopes",
+            "paths",
+            "schemas",
+            "parameters",
+            "--use-default-factory-for-optional-nested-models",
+            "--use-frozen-field",
+        ],
+    )
+    if output_model_type == DataModelType.DataclassesDataclass.value:
+        with _generated_model(
+            output_file,
+            "parameter_field_policy_dataclasses_dataclass",
+            "Defaulted",
+        ) as model:
+            nested = model().nested
+            if type(nested).__name__ != "Nested" or nested.value != "preset":  # pragma: no cover
+                pytest.fail(f"Nested mapping default produced an unexpected value: {nested!r}")
+        return
+
+    if output_model_type != DataModelType.PydanticV2Dataclass.value:
+        return
+
+    with _generated_model(
+        output_file,
+        "parameter_field_policy_pydantic_v2_dataclass",
+        "ListItemsParametersQuery",
+    ) as model:
+        signature = inspect.signature(model)
+        expected_parameters = (
+            "schema_nested",
+            "content_nested",
+            "schema_read_only",
+            "content_read_only",
+            "schema_write_only",
+            "content_write_only",
+            "content_array",
+            "content_multi",
+        )
+        if tuple(signature.parameters) != expected_parameters:  # pragma: no cover
+            pytest.fail(f"Unexpected constructor parameter order: {tuple(signature.parameters)!r}")
+        if any(
+            parameter.kind is not inspect.Parameter.POSITIONAL_OR_KEYWORD for parameter in signature.parameters.values()
+        ):  # pragma: no cover
+            pytest.fail(f"Unexpected keyword-only constructor parameter: {signature!s}")
+
+        instance = model()
+        nested_types = tuple(
+            type(getattr(instance, field_name)).__name__
+            for field_name in ("schema_nested", "content_nested", "content_multi")
+        )
+        if nested_types != ("Nested", "ContentNested", "ContentMulti"):  # pragma: no cover
+            pytest.fail(f"Nested default factories produced unexpected values: {nested_types!r}")
 
 
 def test_main_openapi_use_operation_id_as_name_not_found_operation_id(

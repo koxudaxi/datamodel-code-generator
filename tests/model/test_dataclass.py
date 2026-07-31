@@ -93,6 +93,288 @@ def test_data_model_field_init_false_prefers_computed_nested_default_factory() -
     assert str(field) == "field(init=False, default_factory=Nested)"
 
 
+def test_data_model_field_renders_nested_mapping_default_as_constructor() -> None:
+    """Build typed nested defaults while preserving renamed constructor fields."""
+    nested_reference = Reference(path="Nested", original_name="Nested", name="Nested")
+    DataClass(
+        reference=nested_reference,
+        fields=[
+            DataModelField(
+                name="renamed",
+                original_name="external-name",
+                data_type=DataType(type="str"),
+            ),
+        ],
+    )
+    field = DataModelField(
+        name="nested",
+        data_type=DataType(reference=nested_reference),
+        default={"external-name": "preset"},
+    )
+
+    assert str(field) == "field(default_factory=lambda: Nested(renamed='preset'))"
+
+    field.default = {"unknown": "preset"}
+
+    assert str(field) == "field(default_factory=lambda: {'unknown': 'preset'})"
+
+    mapping_union_field = DataModelField(
+        name="mapping",
+        data_type=DataType(data_types=[DataType(is_dict=True), DataType(reference=nested_reference)]),
+        default={"external-name": "preset"},
+    )
+
+    assert str(mapping_union_field) == "field(default_factory=lambda: {'external-name': 'preset'})"
+
+
+def test_data_model_field_nested_constructor_requires_all_signature_arguments() -> None:
+    """Only build nested dataclasses whose constructor arguments are satisfied."""
+    leaf_reference = Reference(path="Leaf", original_name="Leaf", name="Leaf")
+    DataClass(reference=leaf_reference, fields=[])
+    nested_reference = Reference(path="Nested", original_name="Nested", name="Nested")
+    DataClass(
+        reference=nested_reference,
+        fields=[
+            DataModelField(
+                name="required_value",
+                data_type=DataType(type="str"),
+                required=True,
+            ),
+            DataModelField(
+                name="defaulted_value",
+                data_type=DataType(type="str"),
+                default="fallback",
+                required=True,
+                has_default=True,
+                use_default_with_required=True,
+            ),
+            DataModelField(
+                name="not_initialized",
+                data_type=DataType(type="str"),
+                required=True,
+                extras={"init": False},
+            ),
+            DataModelField(
+                name="stripped_none",
+                data_type=DataType(type="str"),
+                default=None,
+                strip_default_none=True,
+            ),
+            DataModelField(
+                name="factory_value",
+                data_type=DataType(type="list"),
+                extras={"default_factory": "list"},
+            ),
+            DataModelField(
+                name="child",
+                data_type=DataType(reference=leaf_reference),
+                default={},
+            ),
+        ],
+    )
+    field = DataModelField(
+        name="nested",
+        data_type=DataType(reference=nested_reference),
+        default={"required_value": "preset", "stripped_none": None},
+    )
+
+    assert str(field) == "field(default_factory=lambda: Nested(required_value='preset', stripped_none=None))"
+
+    field.default = {}
+    assert str(field) == "field(default_factory=dict)"
+
+    field.default = {
+        "required_value": "preset",
+        "stripped_none": None,
+        "not_initialized": "invalid",
+    }
+    assert str(field) == (
+        "field(default_factory=lambda: "
+        "{'required_value': 'preset', 'stripped_none': None, 'not_initialized': 'invalid'})"
+    )
+
+
+def test_data_model_field_nested_constructor_uses_effective_inherited_fields() -> None:
+    """Inherited required fields and child overrides share the C3 field policy."""
+    base_reference = Reference(path="Base", original_name="Base", name="Base")
+    DataClass(
+        reference=base_reference,
+        fields=[
+            DataModelField(
+                name="inherited",
+                data_type=DataType(type="str"),
+                required=True,
+            ),
+        ],
+    )
+    child_reference = Reference(path="Child", original_name="Child", name="Child")
+    DataClass(reference=child_reference, fields=[], base_classes=[base_reference])
+    field = DataModelField(
+        name="nested",
+        data_type=DataType(reference=child_reference),
+        default={},
+    )
+
+    assert str(field) == "field(default_factory=dict)"
+
+    overridden_reference = Reference(path="Overridden", original_name="Overridden", name="Overridden")
+    DataClass(
+        reference=overridden_reference,
+        fields=[
+            DataModelField(
+                name="inherited",
+                data_type=DataType(type="str"),
+                default="fallback",
+            ),
+        ],
+        base_classes=[base_reference],
+    )
+    field.data_type = DataType(reference=overridden_reference)
+
+    assert str(field) == "field(default_factory=lambda: Overridden())"
+
+
+def test_data_model_field_nested_constructor_handles_name_collisions_and_ambiguity() -> None:
+    """Original names win collisions, while multiple matching models keep raw mappings."""
+    first_reference = Reference(path="First", original_name="First", name="First")
+    DataClass(
+        reference=first_reference,
+        fields=[
+            DataModelField(
+                name="generated",
+                original_name="wire",
+                data_type=DataType(type="str"),
+                required=True,
+            ),
+            DataModelField(
+                name="wire",
+                original_name="other",
+                data_type=DataType(type="str"),
+                default="fallback",
+            ),
+        ],
+    )
+    field = DataModelField(
+        name="nested",
+        data_type=DataType(reference=first_reference),
+        default={"wire": "preset"},
+    )
+
+    assert str(field) == "field(default_factory=lambda: First(generated='preset'))"
+
+    field.default = {"generated": "current", "wire": "original"}
+
+    assert str(field) == "field(default_factory=lambda: {'generated': 'current', 'wire': 'original'})"
+
+    second_reference = Reference(path="Second", original_name="Second", name="Second")
+    DataClass(
+        reference=second_reference,
+        fields=[
+            DataModelField(
+                name="wire",
+                data_type=DataType(type="str"),
+                required=True,
+            ),
+        ],
+    )
+    field.data_type = DataType(
+        data_types=[
+            DataType(reference=first_reference),
+            DataType(reference=second_reference),
+        ],
+    )
+    field.default = {"wire": "preset"}
+
+    assert str(field) == "field(default_factory=lambda: {'wire': 'preset'})"
+
+
+def test_data_model_field_nested_constructor_rejects_recursive_mapping_factories() -> None:
+    """Self- and mutually recursive defaults must not generate recursive factories."""
+    node_reference = Reference(path="Node", original_name="Node", name="Node")
+    DataClass(
+        reference=node_reference,
+        fields=[
+            DataModelField(
+                name="metadata",
+                data_type=DataType(is_dict=True),
+                default={},
+            ),
+            DataModelField(
+                name="child",
+                data_type=DataType(reference=node_reference),
+                default={},
+            ),
+        ],
+    )
+    field = DataModelField(
+        name="node",
+        data_type=DataType(reference=node_reference),
+        default={},
+    )
+
+    assert str(field) == "field(default_factory=dict)"
+
+    left_reference = Reference(path="Left", original_name="Left", name="Left")
+    right_reference = Reference(path="Right", original_name="Right", name="Right")
+    DataClass(
+        reference=left_reference,
+        fields=[
+            DataModelField(
+                name="right",
+                data_type=DataType(reference=right_reference),
+                default={},
+            ),
+        ],
+    )
+    DataClass(
+        reference=right_reference,
+        fields=[
+            DataModelField(
+                name="left",
+                data_type=DataType(reference=left_reference),
+                default={},
+            ),
+        ],
+    )
+    field.data_type = DataType(reference=left_reference)
+
+    assert str(field) == "field(default_factory=dict)"
+
+
+@pytest.mark.parametrize(
+    ("data_type", "default", "expected"),
+    [
+        pytest.param(
+            DataType(is_dict=True),
+            {"value": "preset"},
+            "field(default_factory=lambda: {'value': 'preset'})",
+            id="mapping",
+        ),
+        pytest.param(
+            DataType(data_types=[DataType(is_mapping=True), DataType(type="str")]),
+            {"value": "preset"},
+            "field(default_factory=lambda: {'value': 'preset'})",
+            id="mapping-union",
+        ),
+        pytest.param(
+            DataType(type="str"),
+            {"unknown": "preset"},
+            "field(default_factory=lambda: {'unknown': 'preset'})",
+            id="non-model",
+        ),
+    ],
+)
+def test_data_model_field_preserves_plain_mapping_default(
+    data_type: DataType,
+    default: dict[str, str],
+    expected: str,
+) -> None:
+    """Keep mapping factories when no nested dataclass constructor applies."""
+    field = DataModelField(name="value", data_type=data_type, default=default)
+
+    assert str(field) == expected
+
+
 @pytest.mark.parametrize(
     ("const", "default", "type_"),
     [

@@ -39,6 +39,7 @@ from datamodel_code_generator.model.base import (
     comment_safe,
     escape_docstring,
     format_docstring,
+    get_effective_fields,
     get_module_path,
     get_template,
     inline_comment_safe,
@@ -106,6 +107,28 @@ class ReferenceSource:
 
     nullable: bool
     is_alias: bool = False
+
+
+def test_get_effective_fields_without_base_classes() -> None:
+    """Return only named fields directly when inheritance resolution is unnecessary."""
+    named_field = DataModelFieldBase(name="value", data_type=DataType(type="str"))
+    model = DataclassModel(
+        reference=Reference(path="Model", name="Model"),
+        fields=[
+            named_field,
+            DataModelFieldBase(name=None, data_type=DataType(type="str")),
+        ],
+    )
+
+    assert get_effective_fields(model) == (named_field,)
+
+    inherited_model = DataclassModel(
+        reference=Reference(path="InheritedModel", name="InheritedModel"),
+        fields=[],
+        base_classes=[model.reference],
+    )
+
+    assert get_effective_fields(inherited_model) == (named_field,)
 
 
 @pytest.mark.parametrize(
@@ -988,6 +1011,34 @@ def test_rendered_pydantic_v2_class_var_field_values_are_none() -> None:
     assert field.field is None
     assert rendered_field.field is None
     assert rendered_field.annotated is None
+
+
+def test_field_semantic_policy_api() -> None:
+    """Expose parser-facing field semantics without backend extras knowledge."""
+    base_field = DataModelFieldBase(name="value", data_type=DataType(type="str"))
+    msgspec_field = MsgspecDataModelField(
+        name="constant",
+        data_type=DataType(type="str"),
+        extras={"is_classvar": True},
+    )
+    pydantic_field = PydanticV2DataModelField(
+        name="constant",
+        data_type=DataType(type="str"),
+        required=True,
+        extras={"x-is-classvar": True},
+    )
+
+    assert base_field.constructor_keyword_only is None
+    base_field.mark_as_keyword_only()
+    assert base_field.constructor_keyword_only is True
+    assert base_field.is_class_var is False
+    assert msgspec_field.is_class_var is True
+    assert pydantic_field.is_class_var is True
+    assert pydantic_field.type_hint == "ClassVar[str]"
+    assert base_field.enable_structured_default_validation() is False
+    assert pydantic_field.enable_structured_default_validation() is True
+    assert pydantic_field.enable_structured_default_validation() is False
+    assert pydantic_field.extras["validate_default"] is True
 
 
 def test_rendered_data_model_field_caches_delegated_attributes() -> None:

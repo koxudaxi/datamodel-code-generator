@@ -80,7 +80,7 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
 
     @wraps(original_imports.fget)
     def new_imports(self: DataModelFieldBaseT) -> tuple[Import, ...]:
-        if self.extras.get("is_classvar"):
+        if self.is_class_var:
             return ()
         extra_imports = []
         if isinstance(self, DataModelField):
