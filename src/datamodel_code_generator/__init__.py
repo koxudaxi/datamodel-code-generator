@@ -762,39 +762,60 @@ def get_first_file(path: Path) -> Path:  # pragma: no cover
     raise FileNotFoundError(msg)
 
 
-def _find_future_import_insertion_point(header: str) -> int:
-    """Find position in header where __future__ import should be inserted."""
-    import ast  # noqa: PLC0415
-
-    try:
-        tree = ast.parse(header)
-    except SyntaxError:
-        return 0
+def _find_future_import_insertion_point(header: str) -> int:  # noqa: PLR0912
+    """Find the future-import position without parsing target-version syntax."""
+    import tokenize  # noqa: PLC0415
 
     lines = header.splitlines(keepends=True)
 
     def line_end_pos(line_num: int) -> int:
         return sum(len(lines[i]) for i in range(line_num))
 
-    if not tree.body:
-        return len(header)
+    def is_docstring_token(token: tokenize.TokenInfo) -> bool:
+        quote_index = min((index for quote in "\"'" if (index := token.string.find(quote)) >= 0), default=0)
+        return token.string[:quote_index].lower() in {"", "r", "u"}
 
-    first_stmt = tree.body[0]
-    is_docstring = isinstance(first_stmt, ast.Expr) and (
-        (isinstance(first_stmt.value, ast.Constant) and isinstance(first_stmt.value.value, str))
-        or isinstance(first_stmt.value, ast.JoinedStr)
-    )
-    if is_docstring:
-        end_line = first_stmt.end_lineno or len(lines)
-        pos = line_end_pos(end_line)
-        while end_line < len(lines) and not lines[end_line].strip():
-            pos += len(lines[end_line])
-            end_line += 1
-        return pos
+    source_lines = iter(lines)
+    statement_start_line: int | None = None
+    statement_end_line = 0
+    parenthesis_depth = 0
+    has_docstring = False
+    try:
+        for token in tokenize.generate_tokens(lambda: next(source_lines, "")):  # pragma: no branch
+            match token.type:
+                case tokenize.COMMENT | tokenize.ENCODING | tokenize.NL:
+                    continue
+                case tokenize.STRING:
+                    statement_start_line = statement_start_line or token.start[0]
+                    if not is_docstring_token(token):
+                        return line_end_pos(statement_start_line - 1)
+                    has_docstring = True
+                    statement_end_line = token.end[0]
+                case tokenize.OP if token.string == "(":
+                    statement_start_line = statement_start_line or token.start[0]
+                    parenthesis_depth += 1
+                case tokenize.OP if token.string == ")" and parenthesis_depth:
+                    parenthesis_depth -= 1
+                    statement_end_line = token.end[0]
+                case tokenize.NEWLINE | tokenize.ENDMARKER:
+                    if statement_start_line is None:
+                        if token.type == tokenize.ENDMARKER:
+                            return len(header)
+                        continue  # pragma: no cover  # Blank physical lines tokenize as NL.
+                    if has_docstring and not parenthesis_depth:
+                        statement_end_line = max(statement_end_line, token.start[0])
+                        break
+                    return line_end_pos(statement_start_line - 1)
+                case _:
+                    statement_start_line = statement_start_line or token.start[0]
+                    return line_end_pos(statement_start_line - 1)
+    except (IndentationError, tokenize.TokenError):
+        return 0
 
-    pos = 0
-    for i in range(first_stmt.lineno - 1):
-        pos += len(lines[i])
+    pos = line_end_pos(statement_end_line)
+    while statement_end_line < len(lines) and not lines[statement_end_line].strip():
+        pos += len(lines[statement_end_line])
+        statement_end_line += 1
     return pos
 
 
@@ -843,8 +864,6 @@ def _extract_leading_future_imports(body: str, future_imports: str) -> tuple[str
         and (line_end := body.find("\n", future_start)) >= 0
     ):
         if (leading_line := body[future_start:line_end].lstrip()) and not leading_line.startswith("#"):
-            if not leading_line.lstrip("rubfRUBF").startswith(("'", '"')):
-                break
             future_start = _find_future_import_insertion_point(body)
             break
         future_start = line_end + 1
@@ -888,9 +907,11 @@ def _build_module_content(
     header_before = header[:insertion_point].rstrip()
     header_after = header[insertion_point:].strip()
     if header_after:
-        content = header_before + "\n" + extracted_future + "\n\n" + header_after
+        prefix = f"{header_before}\n" if header_before else ""
+        content = prefix + extracted_future + "\n\n" + header_after
     else:
-        content = header_before + "\n\n" + extracted_future
+        prefix = f"{header_before}\n\n" if header_before else ""
+        content = prefix + extracted_future
 
     return f"{content}\n\n{body_without_future.rstrip()}"
 

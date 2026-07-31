@@ -3935,6 +3935,22 @@ def test_generate_custom_file_header_prepend_after_formatter_docstring() -> None
     )
 
 
+def test_generate_custom_file_header_prepend_after_formatter_parenthesized_docstring() -> None:
+    """Extract future imports after a parenthesized formatter docstring."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        formatters=[],
+        custom_formatters=["tests.data.python.custom_formatters.add_parenthesized_docstring"],
+        custom_file_header='"""Module docstring."""\n\nimport sys',
+        custom_file_header_mode=CustomFileHeaderMode.Prepend,
+        disable_timestamp=True,
+        expected_file=(
+            EXPECTED_MAIN_PATH / "generate_custom_file_header_prepend_after_formatter_parenthesized_docstring.py"
+        ),
+    )
+
+
 def test_custom_file_header_prepend_preserves_future_import_text(output_file: Path) -> None:
     """Preserve future-import text inside generated schema descriptions."""
     run_main_and_assert(
@@ -3963,6 +3979,42 @@ def test_generate_returns_string_with_custom_file_header_and_code() -> None:
         input_file_type=InputFileType.JsonSchema,
         custom_file_header=custom_header,
         expected_file=EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header_and_code.py",
+    )
+
+
+def test_generate_custom_file_header_with_newer_target_syntax() -> None:
+    """Place future imports without parsing syntax from the target runtime."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        custom_file_header_path=DATA_PATH / "custom_file_header_with_newer_target_syntax.txt",
+        target_python_version=PythonVersion.PY_312,
+        formatters=[],
+        expected_file=EXPECTED_MAIN_PATH / "generate_custom_file_header_with_newer_target_syntax.py",
+    )
+
+
+def test_generate_custom_file_header_does_not_treat_fstring_as_docstring() -> None:
+    """Place future imports before an f-string expression."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        custom_file_header_path=DATA_PATH / "custom_file_header_with_fstring.txt",
+        target_python_version=PythonVersion.PY_312,
+        formatters=[],
+        expected_file=EXPECTED_MAIN_PATH / "generate_custom_file_header_with_fstring.py",
+    )
+
+
+def test_generate_custom_file_header_with_parenthesized_docstring() -> None:
+    """Place future imports after a parenthesized, concatenated docstring."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        custom_file_header_path=DATA_PATH / "custom_file_header_with_parenthesized_docstring.txt",
+        target_python_version=PythonVersion.PY_312,
+        formatters=[],
+        expected_file=EXPECTED_MAIN_PATH / "generate_custom_file_header_with_parenthesized_docstring.py",
     )
 
 

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from datamodel_code_generator import _find_future_import_insertion_point
 from datamodel_code_generator.imports import Import, Imports
 
 if TYPE_CHECKING:
@@ -106,6 +107,19 @@ def test_extract_future_only_future_imports() -> None:
 
     assert str(future) == "from __future__ import annotations"
     assert not str(imports)
+
+
+@pytest.mark.parametrize(
+    ("header", "expected"),
+    [
+        ("\n", 1),
+        ("()\n", 0),
+        ("'''unterminated", 0),
+    ],
+)
+def test_future_import_insertion_point_handles_tokenizer_boundaries(header: str, expected: int) -> None:
+    """Blank, expression, and malformed headers have deterministic insertion points."""
+    assert _find_future_import_insertion_point(header) == expected
 
 
 def test_extract_future_with_alias() -> None:
