@@ -84,7 +84,14 @@ from datamodel_code_generator.model.base import (
     linearize_data_models,
     sort_data_models_for_mro,
 )
-from datamodel_code_generator.model.enum import Enum, EnumMemberValue, Member, escape_characters  # noqa: F401
+from datamodel_code_generator.model.enum import (
+    Enum,
+    EnumMemberValue,
+    Member,
+)
+from datamodel_code_generator.model.enum import (
+    escape_characters as _enum_escape_characters,
+)
 from datamodel_code_generator.model.imports import IMPORT_TYPED_DICT, IMPORT_TYPED_DICT_BACKPORT
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
@@ -104,6 +111,10 @@ if TYPE_CHECKING:
     from datamodel_code_generator.format import CodeFormatter
     from datamodel_code_generator.http import _HTTPFetchSession
     from datamodel_code_generator.model_metadata import GeneratedModelMetadata, ModelFieldMetadata, ModelMetadata
+
+# Keep the existing parser.base export while sharing the enum renderer's table.
+escape_characters = _enum_escape_characters
+
 ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
 _ConstructorFieldAdjustment: TypeAlias = Literal["assignment", "keyword_only"]
 
