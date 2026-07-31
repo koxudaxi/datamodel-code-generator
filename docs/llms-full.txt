@@ -4782,14 +4782,12 @@ datamodel-codegen --input schema.json --output-model-type msgspec.Struct --outpu
 ```
 
 ```python
-from msgspec import Struct, field
-from typing import Union, UnsetType
-from msgspec import UNSET
+from msgspec import Struct, UNSET, UnsetType
 
 class Pet(Struct):
     id: int
     name: str
-    tag: Union[str, UnsetType] = UNSET
+    tag: str | UnsetType = UNSET
 ```
 
 ### When to use
