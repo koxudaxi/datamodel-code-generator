@@ -201,10 +201,6 @@ class _PydanticDataclassField(DataModelFieldV2):
         "repr",
     })
 
-    def _get_default_factory_for_optional_nested_model(self) -> str | None:
-        """Return a factory only for nested Pydantic dataclass models."""
-        return _nested_model_default_factory(self, DataClass)
-
     def _get_constructor_default_info(self) -> tuple[bool, bool]:
         """Return constructor-default semantics from structured field state."""
         if self.is_class_var:
