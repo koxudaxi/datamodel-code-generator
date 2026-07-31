@@ -10,10 +10,13 @@ from collections.abc import Callable as ABCCallable
 from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
-from typing import Annotated, Concatenate, Literal, NamedTuple, ParamSpec, Union, get_args, get_origin
+from typing import TYPE_CHECKING, Annotated, Concatenate, Literal, NamedTuple, ParamSpec, Union, get_args, get_origin
 from weakref import ReferenceType, ref
 
 from typing_extensions import Self
+
+if TYPE_CHECKING:
+    from datamodel_code_generator.imports import Import
 
 PYTHON_LITERAL_ENUM_MEMBER_MARKER = "__datamodel_code_generator_literal_enum_member__"
 _MISSING_ATTRIBUTE = object()
@@ -74,6 +77,13 @@ class PythonTypeUnion(PythonTypeExpr):
 @dataclass(frozen=True, slots=True)
 class PythonTypeParameterList(PythonTypeExpr):
     """The bracketed positional parameter list inside ``Callable``."""
+
+    items: tuple[PythonTypeExpr, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PythonTypeTuple(PythonTypeExpr):
+    """An explicit tuple expression nested inside an annotation argument."""
 
     items: tuple[PythonTypeExpr, ...]
 
@@ -206,20 +216,28 @@ class LiteralEnumMemberRef(NamedTuple):
         qualname = ".".join(self.qualname_parts)
         return f"{PYTHON_LITERAL_ENUM_MEMBER_MARKER}[{self.module!r}, {qualname!r}, {self.member!r}]"
 
-    def to_member_expression(self) -> ast.expr:
-        """Build the exact nested enum member access expression."""
-        module_root, *module_attrs = self.module.split(".")
-        expression: ast.expr = ast.Name(id=module_root, ctx=ast.Load())
-        for attr in (*module_attrs, *self.qualname_parts, self.member):
-            expression = ast.Attribute(value=expression, attr=attr, ctx=ast.Load())
-        return expression
-
 
 @dataclass(frozen=True, slots=True)
 class PythonTypeEnumMember(PythonTypeExpr):
     """An enum member encoded with the existing internal marker spelling."""
 
     reference: LiteralEnumMemberRef
+
+
+@dataclass(frozen=True, slots=True)
+class PythonTypeEnumMemberAccess(PythonTypeExpr):
+    """A decoded enum member access with its importable identity intact."""
+
+    reference: LiteralEnumMemberRef
+
+
+@dataclass(frozen=True, slots=True)
+class BoundPythonTypeAnnotation:
+    """A rendered annotation paired with the imports that bind its names."""
+
+    expression: PythonTypeExpr
+    rendered: str
+    imports: tuple[Import, ...]
 
 
 def render_python_type_expr(expression: PythonTypeExpr) -> str:
@@ -237,19 +255,225 @@ def _render_python_type_expr_uncached(expression: PythonTypeExpr) -> str:  # noq
             rendered_arguments = ", ".join(
                 _render_python_type_expr_uncached(argument) for argument in expression.arguments
             )
-            return f"{_render_python_type_expr_uncached(expression.base)}[{rendered_arguments}]"
+            rendered_base = _render_python_type_expr_uncached(expression.base)
+            if isinstance(expression.base, PythonTypeUnion):
+                rendered_base = f"({rendered_base})"
+            return f"{rendered_base}[{rendered_arguments}]"
         case PythonTypeUnion():
             return " | ".join(_render_python_type_expr_uncached(item) for item in expression.items)
         case PythonTypeParameterList():
             return f"[{', '.join(_render_python_type_expr_uncached(item) for item in expression.items)}]"
+        case PythonTypeTuple():
+            rendered_items = ", ".join(_render_python_type_expr_uncached(item) for item in expression.items)
+            return f"({rendered_items}{',' if len(expression.items) == 1 else ''})"
         case PythonTypeLiteralValue():
             return repr(expression.value)
         case PythonTypeEllipsis():
             return "..."
         case PythonTypeEnumMember():
             return expression.reference.to_marker_text()
+        case PythonTypeEnumMemberAccess():
+            qualname = ".".join(expression.reference.qualname_parts)
+            return f"{expression.reference.module}.{qualname}.{expression.reference.member}"
     msg = f"Unsupported Python type expression: {type(expression).__name__}"
     raise TypeError(msg)
+
+
+def _qualified_name_parts(node: ast.expr) -> tuple[str, ...] | None:
+    parts: list[str] = []
+    current = node
+    while isinstance(current, ast.Attribute):
+        parts.append(current.attr)
+        current = current.value
+    if not isinstance(current, ast.Name):
+        return None
+    parts.append(current.id)
+    return tuple(reversed(parts))
+
+
+def _is_literal_ast_base(node: ast.expr) -> bool:
+    parts = _qualified_name_parts(node)
+    return parts == ("Literal",) or parts in {("typing", "Literal"), ("typing_extensions", "Literal")}
+
+
+class _InvalidPythonTypeAnnotationError(ValueError):
+    pass
+
+
+def _python_type_expr_from_ast(  # noqa: PLR0911, PLR0912
+    node: ast.expr,
+    *,
+    allow_literal: bool,
+    literal_depth: int = 0,
+) -> PythonTypeExpr:
+    match node:
+        case ast.Name(id=name):
+            return _python_type_name(name)
+        case ast.Attribute():
+            if (parts := _qualified_name_parts(node)) is not None:
+                return PythonTypeQualifiedName(parts)
+        case ast.Subscript(value=value, slice=slice_node):
+            if (enum_member := LiteralEnumMemberRef.from_marker_ast(node)) is not None:
+                if not literal_depth:
+                    msg = "Internal Literal enum member marker is only valid inside Literal"
+                    raise ValueError(msg)
+                return PythonTypeEnumMember(enum_member)
+
+            base = _python_type_expr_from_ast(value, allow_literal=False, literal_depth=literal_depth)
+            child_literal_depth = literal_depth + int(_is_literal_ast_base(value))
+            if isinstance(slice_node, ast.Tuple):
+                arguments = tuple(
+                    _python_type_expr_from_ast(item, allow_literal=True, literal_depth=child_literal_depth)
+                    for item in slice_node.elts
+                )
+            else:
+                arguments = (
+                    _python_type_expr_from_ast(
+                        slice_node,
+                        allow_literal=True,
+                        literal_depth=child_literal_depth,
+                    ),
+                )
+            return PythonTypeSubscript(base, arguments)
+        case ast.List(elts=items) if allow_literal:
+            return PythonTypeParameterList(
+                tuple(
+                    _python_type_expr_from_ast(item, allow_literal=True, literal_depth=literal_depth) for item in items
+                )
+            )
+        case ast.Tuple(elts=items) if allow_literal:
+            return PythonTypeTuple(
+                tuple(
+                    _python_type_expr_from_ast(item, allow_literal=True, literal_depth=literal_depth) for item in items
+                )
+            )
+        case ast.BinOp(left=left, op=ast.BitOr(), right=right):
+            left_expression = _python_type_expr_from_ast(left, allow_literal=False, literal_depth=literal_depth)
+            right_expression = _python_type_expr_from_ast(right, allow_literal=False, literal_depth=literal_depth)
+            left_items = left_expression.items if isinstance(left_expression, PythonTypeUnion) else (left_expression,)
+            right_items = (
+                right_expression.items if isinstance(right_expression, PythonTypeUnion) else (right_expression,)
+            )
+            return PythonTypeUnion((*left_items, *right_items))
+        case ast.Constant(value=None):
+            return _python_type_name("None")
+        case ast.Constant(value=value) if allow_literal and value is Ellipsis:
+            return PythonTypeEllipsis()
+        case ast.Constant(value=value) if allow_literal and isinstance(value, (str, bytes, int, float, bool)):
+            return PythonTypeLiteralValue(value)
+        case ast.UnaryOp(op=ast.UAdd() | ast.USub() as operator, operand=ast.Constant(value=value)) if (
+            allow_literal and isinstance(value, (int, float))
+        ):
+            return PythonTypeLiteralValue(+value if isinstance(operator, ast.UAdd) else -value)
+    raise _InvalidPythonTypeAnnotationError
+
+
+@lru_cache(maxsize=1024)
+def parse_python_type_annotation(type_str: str) -> PythonTypeExpr | None:
+    """Parse the supported annotation grammar once at its raw text boundary."""
+    try:
+        node = ast.parse(type_str, mode="eval", feature_version=(3, 10)).body
+        return _python_type_expr_from_ast(node, allow_literal=False)
+    except (SyntaxError, _InvalidPythonTypeAnnotationError):
+        return None
+
+
+def python_type_expr_base_name(expression: PythonTypeExpr) -> str:
+    """Return the terminal base name of an annotation expression."""
+    if isinstance(expression, PythonTypeSubscript):
+        return python_type_expr_base_name(expression.base)
+    if isinstance(expression, PythonTypeName):
+        return expression.value
+    if isinstance(expression, PythonTypeQualifiedName):
+        return expression.parts[-1]
+    return ""
+
+
+def python_type_expr_arguments(expression: PythonTypeExpr) -> tuple[PythonTypeExpr, ...]:
+    """Return top-level generic or union arguments without reparsing text."""
+    if isinstance(expression, (PythonTypeSubscript, PythonTypeUnion)):
+        return expression.arguments if isinstance(expression, PythonTypeSubscript) else expression.items
+    return ()
+
+
+def is_union_python_type_expr(expression: PythonTypeExpr) -> bool:
+    """Return whether an expression is a union operator, Union, or Optional."""
+    return isinstance(expression, PythonTypeUnion) or (
+        isinstance(expression, PythonTypeSubscript) and python_type_expr_base_name(expression) in {"Union", "Optional"}
+    )
+
+
+def iter_python_type_expr_names(expression: PythonTypeExpr) -> tuple[str, ...]:
+    """Return semantic type names in stable traversal order."""
+    names: list[str] = []
+
+    def visit(item: PythonTypeExpr) -> None:
+        match item:
+            case PythonTypeName():
+                names.append(item.value)
+                return
+            case PythonTypeQualifiedName():
+                names.append(item.parts[-1])
+                return
+            case PythonTypeSubscript():
+                visit(item.base)
+                for argument in item.arguments:
+                    visit(argument)
+                return
+            case PythonTypeUnion() | PythonTypeParameterList() | PythonTypeTuple():
+                for child in item.items:
+                    visit(child)
+
+    visit(expression)
+    return tuple(names)
+
+
+def iter_python_type_expr_qualified_names(expression: PythonTypeExpr) -> tuple[str, ...]:
+    """Return dotted names in stable traversal order."""
+    names: list[str] = []
+
+    def visit(item: PythonTypeExpr) -> None:
+        match item:
+            case PythonTypeQualifiedName():
+                names.append(".".join(item.parts))
+                return
+            case PythonTypeEnumMemberAccess():
+                qualname = ".".join(item.reference.qualname_parts)
+                names.append(f"{item.reference.module}.{qualname}.{item.reference.member}")
+                return
+            case PythonTypeSubscript():
+                visit(item.base)
+                for argument in item.arguments:
+                    visit(argument)
+                return
+            case PythonTypeUnion() | PythonTypeParameterList() | PythonTypeTuple():
+                for child in item.items:
+                    visit(child)
+
+    visit(expression)
+    return tuple(names)
+
+
+def map_python_type_expr(
+    expression: PythonTypeExpr,
+    transform_leaf: ABCCallable[[PythonTypeExpr], PythonTypeExpr],
+) -> PythonTypeExpr:
+    """Transform semantic leaves while preserving the expression structure."""
+    match expression:
+        case PythonTypeSubscript():
+            return PythonTypeSubscript(
+                map_python_type_expr(expression.base, transform_leaf),
+                tuple(map_python_type_expr(argument, transform_leaf) for argument in expression.arguments),
+            )
+        case PythonTypeUnion():
+            return PythonTypeUnion(tuple(map_python_type_expr(item, transform_leaf) for item in expression.items))
+        case PythonTypeParameterList():
+            return PythonTypeParameterList(
+                tuple(map_python_type_expr(item, transform_leaf) for item in expression.items)
+            )
+        case PythonTypeTuple():
+            return PythonTypeTuple(tuple(map_python_type_expr(item, transform_leaf) for item in expression.items))
+    return transform_leaf(expression)
 
 
 def _is_union_origin(origin: object) -> bool:

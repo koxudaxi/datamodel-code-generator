@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 import pytest
 
+from datamodel_code_generator._python_type_annotation import BoundPythonTypeAnnotation, PythonTypeName
+from datamodel_code_generator.imports import Import
 from datamodel_code_generator.parser._math_imports import add_math_imports_for_non_finite_literals
 from datamodel_code_generator.python_literal import PythonCode, represent_python_value
 from datamodel_code_generator.reference import Reference
@@ -389,6 +391,23 @@ def test_datatype_deepcopy_with_none_memo() -> None:
     assert copied is not data_type
 
 
+def test_datatype_deepcopy_shares_immutable_python_annotation() -> None:
+    """Deep copies retain one immutable annotation and import tuple."""
+    from copy import deepcopy
+
+    annotation = BoundPythonTypeAnnotation(
+        expression=PythonTypeName("Path"),
+        rendered="Path",
+        imports=(Import.from_full_path("pathlib.Path"),),
+    )
+    data_type = DataType(type="Path", python_annotation=annotation)
+
+    copied = deepcopy(data_type)
+
+    assert copied is not data_type
+    assert copied.python_annotation is annotation
+
+
 def test_datatype_type_hint_container_precedence_matches_base_type_hint() -> None:
     """Pin asymmetric container precedence for type_hint and base_type_hint."""
     from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
@@ -707,6 +726,16 @@ def test_get_type_base_name(type_str: str, expected: str) -> None:
 def test_get_subscript_args(type_str: str, expected: list[str]) -> None:
     """Test get_subscript_args extracts type arguments correctly."""
     assert get_subscript_args(type_str) == expected
+
+
+def test_python_type_helpers_reject_malformed_internal_marker() -> None:
+    """Compatibility helpers fail closed when a reserved marker is malformed."""
+    marker = "Literal[__datamodel_code_generator_literal_enum_member__['module', 'Type']]"
+
+    assert get_type_base_name(marker) == "Literal"
+    assert get_subscript_args(marker) == []
+    assert extract_qualified_names(marker) == []
+    assert is_python_type_annotation(marker) is False
 
 
 @pytest.mark.parametrize(

@@ -24,6 +24,10 @@ from typing_extensions import Self
 
 from datamodel_code_generator import cached_path_exists
 from datamodel_code_generator._internal_utils import get_most_of_parent, to_hashable
+from datamodel_code_generator._python_type_annotation import (
+    iter_python_type_expr_names,
+    parse_python_type_annotation,
+)
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
     IMPORT_ANY,
@@ -137,10 +141,19 @@ def _annotation_typing_import_names(annotation: str) -> frozenset[str]:
         return frozenset()
 
     try:
-        tree = ast.parse(annotation, mode="eval")
+        expression = parse_python_type_annotation(annotation)
+    except ValueError:
+        return frozenset()
+    if expression:
+        return frozenset(name for name in iter_python_type_expr_names(expression) if name in _TYPING_IMPORT_NAMES)
+
+    # Legacy DataType subclasses can still supply already-rendered expressions
+    # such as ``Annotated[str, Field()]``. This is a textual boundary, so AST is
+    # the appropriate compatibility fallback until those producers carry IR.
+    try:
+        tree = ast.parse(annotation, mode="eval", feature_version=(3, 10))
     except SyntaxError:
         return frozenset()
-
     return frozenset(
         node.id for node in ast.walk(tree) if isinstance(node, ast.Name) and node.id in _TYPING_IMPORT_NAMES
     )
@@ -652,7 +665,12 @@ class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
 
     @staticmethod
     def _has_explicit_typing_import_requirements(data_type: DataType) -> bool:
-        for annotation in (data_type.alias, data_type.type):
+        if data_type.python_annotation and any(
+            name in _TYPING_IMPORT_NAMES for name in iter_python_type_expr_names(data_type.python_annotation.expression)
+        ):
+            return True
+        annotations = (data_type.alias,) if data_type.python_annotation else (data_type.alias, data_type.type)
+        for annotation in annotations:
             if annotation and (names := _annotation_typing_import_names(annotation)):
                 return bool(names)
         return False
@@ -711,7 +729,11 @@ class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
     @staticmethod
     def _explicit_typing_import_requirements(data_type: DataType) -> _TypingImportRequirements:
         requirements = _TypingImportRequirements()
-        for annotation in (data_type.alias, data_type.type):
+        if data_type.python_annotation:
+            for name in iter_python_type_expr_names(data_type.python_annotation.expression):
+                requirements = requirements.with_import_name(name)
+        annotations = (data_type.alias,) if data_type.python_annotation else (data_type.alias, data_type.type)
+        for annotation in annotations:
             if not annotation:
                 continue
             for name in _annotation_typing_import_names(annotation):
@@ -792,6 +814,7 @@ class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
             data_type.__class__,
             data_type.alias,
             data_type.type,
+            data_type.python_annotation,
             self._import_key(data_type.import_),
             data_type.reference.path if data_type.reference else None,
             self._reference_source_import_key(data_type.reference),
@@ -824,6 +847,7 @@ class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
         data_type = data_type or self.data_type
         return not (
             data_type.import_
+            or data_type.python_annotation
             or data_type.kwargs
             or data_type.is_optional
             or data_type.is_dict

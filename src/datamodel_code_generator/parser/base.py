@@ -56,6 +56,10 @@ from datamodel_code_generator import (
     _read_parser_source_data_from_path,
 )
 from datamodel_code_generator._format_types import Formatter, PythonVersion
+from datamodel_code_generator._python_type_annotation import (
+    iter_python_type_expr_names,
+    iter_python_type_expr_qualified_names,
+)
 from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
@@ -4104,7 +4108,16 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             names.add(name.split(".")[0])
 
         def collect_data_type_names(data_type: DataType) -> None:
-            add(data_type.alias or data_type.type)
+            if data_type.alias:
+                add(data_type.alias)
+            elif data_type.python_annotation:
+                expression = data_type.python_annotation.expression
+                for name in iter_python_type_expr_names(expression):
+                    add(name)
+                for qualified_name in iter_python_type_expr_qualified_names(expression):
+                    add(qualified_name)
+            else:
+                add(data_type.type)
             if data_type.reference:
                 add(data_type.reference.short_name)
 

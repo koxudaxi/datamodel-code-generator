@@ -13,8 +13,11 @@ import pytest
 
 from datamodel_code_generator._python_type_annotation import (
     PYTHON_LITERAL_ENUM_MEMBER_MARKER,
+    LiteralEnumMemberRef,
     PythonTypeEllipsis,
+    PythonTypeEnumMemberAccess,
     PythonTypeExpr,
+    PythonTypeLiteralValue,
     PythonTypeName,
     PythonTypeParameterList,
     PythonTypeQualifiedName,
@@ -24,7 +27,14 @@ from datamodel_code_generator._python_type_annotation import (
     _runtime_origin_expr,
     _runtime_simple_expr,
     encode_literal_enum_member,
+    is_union_python_type_expr,
+    iter_python_type_expr_names,
+    iter_python_type_expr_qualified_names,
+    map_python_type_expr,
+    parse_python_type_annotation,
     python_callable_expr_from_runtime_args,
+    python_type_expr_arguments,
+    python_type_expr_base_name,
     python_type_expr_from_runtime,
     python_type_expr_from_runtime_full_name,
     render_python_type_expr,
@@ -192,6 +202,14 @@ def test_runtime_type_expr_handles_callable_base_and_ellipsis() -> None:
     assert python_type_expr_from_runtime(...) == PythonTypeEllipsis()
 
 
+@pytest.mark.allow_direct_assert
+def test_enum_member_access_exposes_its_bound_qualified_name() -> None:
+    """Import pruning can retain the root module bound by an enum access."""
+    expression = PythonTypeEnumMemberAccess(LiteralEnumMemberRef.from_enum(Status.ACTIVE))
+
+    assert iter_python_type_expr_qualified_names(expression) == ("tests.test_python_type_annotation.Status.ACTIVE",)
+
+
 def test_render_python_type_expr_rejects_unknown_node() -> None:
     """The renderer fails closed when a new node has no explicit spelling policy."""
 
@@ -200,3 +218,71 @@ def test_render_python_type_expr_rejects_unknown_node() -> None:
 
     with pytest.raises(TypeError, match="Unsupported Python type expression: UnsupportedExpr"):
         render_python_type_expr(UnsupportedExpr())
+
+
+@pytest.mark.allow_direct_assert
+def test_parse_python_type_annotation_builds_semantic_structure() -> None:
+    """The raw text boundary produces reusable semantic nodes, not source fragments."""
+    expression = parse_python_type_annotation("Callable[[foo.Bar, ...], Literal['value', -1]] | None")
+
+    assert expression == PythonTypeUnion((
+        PythonTypeSubscript(
+            PythonTypeName("Callable"),
+            (
+                PythonTypeParameterList((PythonTypeQualifiedName(("foo", "Bar")), PythonTypeEllipsis())),
+                PythonTypeSubscript(
+                    PythonTypeName("Literal"),
+                    (PythonTypeLiteralValue("value"), PythonTypeLiteralValue(-1)),
+                ),
+            ),
+        ),
+        PythonTypeName("None"),
+    ))
+    assert render_python_type_expr(expression) == "Callable[[foo.Bar, ...], Literal['value', -1]] | None"
+    assert not python_type_expr_base_name(expression)
+    assert tuple(map(python_type_expr_base_name, python_type_expr_arguments(expression))) == ("Callable", "None")
+    assert is_union_python_type_expr(expression)
+    assert iter_python_type_expr_names(expression) == ("Callable", "Bar", "Literal", "None")
+    assert iter_python_type_expr_qualified_names(expression) == ("foo.Bar",)
+
+
+@pytest.mark.parametrize(
+    "annotation",
+    [
+        "[",
+        "factory()",
+        "list[{1: 2}]",
+        "Literal[object()]",
+        "lambda: str",
+    ],
+)
+@pytest.mark.allow_direct_assert
+def test_parse_python_type_annotation_rejects_unsupported_syntax(annotation: str) -> None:
+    """The boundary parser fails closed for executable or unsupported expressions."""
+    assert parse_python_type_annotation(annotation) is None
+
+
+@pytest.mark.allow_direct_assert
+def test_map_python_type_expr_transforms_all_structural_leaves() -> None:
+    """One traversal primitive keeps binding and compatibility helpers DRY."""
+    expression = parse_python_type_annotation("Callable[[(int, str)], str]")
+    assert expression is not None
+
+    transformed = map_python_type_expr(
+        expression,
+        lambda item: PythonTypeName(item.value.upper()) if isinstance(item, PythonTypeName) else item,
+    )
+
+    assert render_python_type_expr(transformed) == "CALLABLE[[(INT, STR)], STR]"
+
+
+@pytest.mark.allow_direct_assert
+def test_render_python_type_expr_parenthesizes_union_subscript_base() -> None:
+    """Nested union bases retain the precedence expressed by the IR tree."""
+    expression = PythonTypeSubscript(
+        PythonTypeUnion((PythonTypeName("First"), PythonTypeName("Second"))),
+        (PythonTypeName("Item"),),
+    )
+
+    assert render_python_type_expr(expression) == "(First | Second)[Item]"
+    assert python_type_expr_arguments(PythonTypeName("Item")) == ()

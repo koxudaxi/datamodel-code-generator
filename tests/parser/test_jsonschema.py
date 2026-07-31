@@ -2469,6 +2469,7 @@ def test_get_python_type_flags(x_python_type: str, expected: dict[str, bool]) ->
         ("str|int", True),
         ("list[str]", False),
         ("[", False),
+        ("Literal[__datamodel_code_generator_literal_enum_member__['module', 'Type']]", False),
     ],
 )
 def test_is_union_python_type(x_python_type: str, expected: bool) -> None:
@@ -2483,6 +2484,7 @@ def test_is_union_python_type(x_python_type: str, expected: bool) -> None:
         ("str|int", True),
         ("None|Set[int]", True),
         ("Literal[' | ']", False),
+        ("Literal[__datamodel_code_generator_literal_enum_member__['module', 'Type']]", False),
     ],
 )
 def test_is_union_operator_python_type(x_python_type: str, expected: bool) -> None:
@@ -2491,7 +2493,7 @@ def test_is_union_operator_python_type(x_python_type: str, expected: bool) -> No
 
 
 def test_shorten_qualified_python_type_annotation() -> None:
-    """Test qualified Python type AST shortening preserves string literals."""
+    """Test structured qualified-name shortening preserves string literals."""
     x_python_type = "Callable[[foo.Bar, Literal['foo.Bar']], baz.Qux]"
     type_str, references, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
 
@@ -2500,10 +2502,15 @@ def test_shorten_qualified_python_type_annotation() -> None:
     assert type_str == "Callable[[Bar, Literal['foo.Bar']], Qux]"
     assert _shorten_qualified_python_type_annotation("[") == ("[", (), None)
     assert _shorten_qualified_python_type_annotation("foo().bar") == ("foo().bar", (), None)
+    assert _shorten_qualified_python_type_annotation("list[str]") == ("list[str]", (), None)
+    type_str, references, root_qualified_name = _shorten_qualified_python_type_annotation("foo.Bar")
+    assert type_str == "Bar"
+    assert tuple(reference.qualified_name for reference in references) == ("foo.Bar",)
+    assert root_qualified_name == "foo.Bar"
 
 
 def test_shorten_qualified_python_type_annotation_after_non_ascii_literal() -> None:
-    """Test AST shortening handles non-ASCII text before qualified names."""
+    """Test structured shortening handles non-ASCII text before qualified names."""
     x_python_type = "Callable[[Literal['あ'], foo.Bar], baz.Qux]"
     type_str, references, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
 
@@ -2513,13 +2520,72 @@ def test_shorten_qualified_python_type_annotation_after_non_ascii_literal() -> N
 
 
 def test_shorten_qualified_python_type_annotation_after_multiline_literal() -> None:
-    """Test AST shortening handles multiline annotations."""
+    """Test structured shortening handles multiline annotations."""
     x_python_type = "Callable[[\n    Literal['foo.Bar'],\n    foo.Bar,\n], baz.Qux]"
     type_str, references, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
 
     assert tuple(reference.qualified_name for reference in references) == ("foo.Bar", "baz.Qux")
     assert root_qualified_name is None
     assert type_str == "Callable[[Literal['foo.Bar'], Bar], Qux]"
+
+
+def test_python_type_override_binds_imports_without_fake_union_children() -> None:
+    """Import metadata must not masquerade as nested union members."""
+    parser = JsonSchemaParser("")
+    obj = JsonSchemaObject.model_validate({
+        "type": "string",
+        "x-python-type": "Callable[[foo.Bar, foo.Bar, Literal['foo.Bar']], baz.Qux]",
+    })
+
+    data_type = parser._get_python_type_override(obj)
+
+    assert data_type is not None
+    assert data_type.type == "Callable[[Bar, Bar, Literal['foo.Bar']], Qux]"
+    assert data_type.data_types == []
+    assert data_type.is_union is False
+    assert data_type.import_ is None
+    assert data_type.python_annotation is not None
+    assert data_type.python_annotation.imports == (
+        Import.from_full_path("collections.abc.Callable"),
+        Import.from_full_path("foo.Bar"),
+        Import.from_full_path("typing.Literal"),
+        Import.from_full_path("baz.Qux"),
+    )
+    assert tuple(data_type.imports) == data_type.python_annotation.imports
+    assert "python_annotation" not in data_type.model_dump()
+
+
+def test_python_type_override_binds_enum_member_marker() -> None:
+    """Enum marker identity remains structured while its module import is bound."""
+    parser = JsonSchemaParser("")
+    obj = JsonSchemaObject.model_validate({
+        "type": "string",
+        "x-python-type": (
+            "Literal[__datamodel_code_generator_literal_enum_member__['example.enums', 'Status', 'ACTIVE']]"
+        ),
+    })
+
+    data_type = parser._get_python_type_override(obj)
+
+    assert data_type is not None
+    assert data_type.type == "Literal[example.enums.Status.ACTIVE]"
+    assert data_type.python_annotation is not None
+    assert data_type.python_annotation.imports == (
+        Import.from_full_path("typing.Literal"),
+        Import(import_="example.enums"),
+    )
+
+
+def test_python_type_override_rejects_malformed_enum_member_marker() -> None:
+    """Malformed reserved markers fail before any annotation or import is emitted."""
+    parser = JsonSchemaParser("")
+    obj = JsonSchemaObject.model_validate({
+        "type": "string",
+        "x-python-type": "Literal[__datamodel_code_generator_literal_enum_member__['module', 'Type']]",
+    })
+
+    with pytest.raises(Error, match="Invalid internal Literal enum member marker"):
+        parser._get_python_type_override(obj)
 
 
 def test_shorten_qualified_python_type_annotation_enum_literal() -> None:

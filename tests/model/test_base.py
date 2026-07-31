@@ -10,6 +10,11 @@ from unittest.mock import Mock
 
 import pytest
 
+from datamodel_code_generator._python_type_annotation import (
+    BoundPythonTypeAnnotation,
+    PythonTypeName,
+    PythonTypeSubscript,
+)
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
     IMPORT_ANY,
@@ -2001,6 +2006,7 @@ def test_field_import_fallback_collects_annotated_import() -> None:
         ("Optional[str]", (IMPORT_OPTIONAL,)),
         ("Union[str, int]", (IMPORT_UNION,)),
         ("Annotated[str, Field()]", (IMPORT_ANNOTATED,)),
+        ("Annotated[", ()),
     ],
 )
 def test_field_import_fallback_collects_explicit_typing_names(
@@ -2011,6 +2017,26 @@ def test_field_import_fallback_collects_explicit_typing_names(
     field = DataModelFieldBase(name="a", data_type=DataType(type=type_name), required=True)
 
     assert field.imports == expected_imports
+
+
+def test_field_imports_use_bound_python_annotation_requirements() -> None:
+    """Bound annotations expose typing requirements and imports without text parsing."""
+    expression = PythonTypeSubscript(PythonTypeName("Optional"), (PythonTypeName("str"),))
+    annotation = BoundPythonTypeAnnotation(expression, "Optional[str]", (IMPORT_OPTIONAL,))
+    field = DataModelFieldBase(
+        name="a",
+        data_type=DataType(type=annotation.rendered, python_annotation=annotation),
+        required=True,
+    )
+
+    assert field.imports == (IMPORT_OPTIONAL,)
+
+
+def test_annotation_typing_import_names_rejects_malformed_marker() -> None:
+    """Malformed transport markers cannot contribute guessed imports."""
+    marker = "Literal[__datamodel_code_generator_literal_enum_member__['module', 'Type']]"
+
+    assert _annotation_typing_import_names(marker) == frozenset()
 
 
 def test_field_import_fallback_uses_structured_union_requirements(monkeypatch: pytest.MonkeyPatch) -> None:

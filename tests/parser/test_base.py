@@ -13,6 +13,7 @@ from pydantic import BaseModel as PydanticBaseModel
 
 import datamodel_code_generator._internal_utils as internal_utils
 from datamodel_code_generator import AllOfMergeMode
+from datamodel_code_generator._python_type_annotation import BoundPythonTypeAnnotation, PythonTypeName
 from datamodel_code_generator.enums import CollapseRootModelsNameStrategy
 from datamodel_code_generator.imports import Import, Imports
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -929,6 +930,11 @@ def test_copy_data_type_preserves_reference_graph_and_isolates_mutable_state() -
         enum_member_literals=[("ValueModel", "value")],
     )
     original_key_type = SpecializedDataType(reference=key_reference)
+    python_annotation = BoundPythonTypeAnnotation(
+        expression=PythonTypeName("Path"),
+        rendered="Path",
+        imports=(Import.from_full_path("pathlib.Path"),),
+    )
     original_data_type = SpecializedDataType(
         data_types=[original_value_type],
         is_dict=True,
@@ -936,6 +942,7 @@ def test_copy_data_type_preserves_reference_graph_and_isolates_mutable_state() -
         kwargs={"constraints": {"minimum": 1}},
         literals=["root"],
         enum_member_literals=[("Root", "root")],
+        python_annotation=python_annotation,
     )
 
     copied_data_type = _copy_data_type(original_data_type)
@@ -952,6 +959,7 @@ def test_copy_data_type_preserves_reference_graph_and_isolates_mutable_state() -
     assert copied_value_type.reference is value_reference
     assert copied_key_type.reference is key_reference
     assert copied_value_type.is_optional is True
+    assert copied_data_type.python_annotation is python_annotation
     assert sum(child is copied_value_type for child in value_reference.children) == 1
     assert sum(child is copied_key_type for child in key_reference.children) == 1
 
@@ -964,6 +972,25 @@ def test_copy_data_type_preserves_reference_graph_and_isolates_mutable_state() -
     assert original_data_type.literals == ["root"]
     assert original_data_type.enum_member_literals == [("Root", "root")]
     assert original_value_type.kwargs == {"metadata": ["original"]}
+
+
+def test_collect_used_names_prefers_rendered_data_type_alias() -> None:
+    """Import pruning follows the alias that type_hint renders."""
+    field = SimpleNamespace(
+        is_class_var=False,
+        name="value",
+        alias=None,
+        data_type=DataType(type="Original", alias="RenderedAlias"),
+    )
+    model = SimpleNamespace(
+        class_name="Model",
+        duplicate_class_name=None,
+        base_classes=(),
+        imports=(),
+        fields=(field,),
+    )
+
+    assert Parser._collect_used_names_from_models([model]) == {"Model", "value", "RenderedAlias"}  # ty: ignore[invalid-argument-type]
 
 
 def test_copy_data_model_field_isolates_aliases_and_mutable_default() -> None:

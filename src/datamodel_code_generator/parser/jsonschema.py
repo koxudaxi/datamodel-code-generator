@@ -6,20 +6,20 @@ Python data models. Supports draft-04 through draft-2020-12 schemas.
 
 from __future__ import annotations
 
-import ast
 import enum as _enum
 import importlib
 import json
 import re
 from collections import defaultdict
 from contextlib import contextmanager, suppress
+from dataclasses import dataclass
 from fractions import Fraction
 from functools import cached_property, lru_cache
 from itertools import chain
 from math import gcd, lcm
 from pathlib import Path
 from string import digits
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union, cast
 from urllib.parse import ParseResult, unquote, urlparse
 from warnings import warn
 
@@ -51,7 +51,23 @@ from datamodel_code_generator import (
 from datamodel_code_generator._format_types import (
     DatetimeClassType,
 )
-from datamodel_code_generator._python_type_annotation import LiteralEnumMemberRef
+from datamodel_code_generator._python_type_annotation import (
+    BoundPythonTypeAnnotation,
+    PythonTypeEnumMember,
+    PythonTypeEnumMemberAccess,
+    PythonTypeExpr,
+    PythonTypeName,
+    PythonTypeQualifiedName,
+    PythonTypeSubscript,
+    PythonTypeUnion,
+    is_union_python_type_expr,
+    iter_python_type_expr_names,
+    map_python_type_expr,
+    parse_python_type_annotation,
+    python_type_expr_arguments,
+    python_type_expr_base_name,
+    render_python_type_expr,
+)
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -102,9 +118,6 @@ from datamodel_code_generator.types import (
     EmptyDataType,
     Types,
     UnionIntFloat,
-    get_subscript_args,
-    get_type_base_name,
-    is_python_type_annotation,
 )
 from datamodel_code_generator.util import BaseModel, get_yaml_parse_errors
 
@@ -208,6 +221,22 @@ _INHERITED_MATERIALIZED_TYPE_SHAPE_KEY = "_inherited_materialized_type_shape"
 _NO_INHERITED_SCHEMA_MERGE = object()
 
 _PYTHON_UNION_BASE_TYPES = frozenset({"Union", "Optional"})
+_PYTHON_BUILTIN_TYPE_NAMES = frozenset({
+    "None",
+    "bool",
+    "bytes",
+    "complex",
+    "dict",
+    "float",
+    "frozenset",
+    "int",
+    "list",
+    "object",
+    "set",
+    "str",
+    "tuple",
+    "type",
+})
 _QUALIFIED_PYTHON_TYPE_IMPORT_ALIASES = {
     "pydantic.main.BaseModel": Import.from_full_path("pydantic.BaseModel"),
 }
@@ -276,57 +305,29 @@ def _get_json_value_type(value: object) -> str:
     return value_type
 
 
-def _parse_python_type_annotation(type_str: str) -> ast.expr | None:
-    try:
-        return ast.parse(type_str, mode="eval").body
-    except SyntaxError:  # pragma: no cover
-        return None
-
-
 @lru_cache(maxsize=1024)
 def _is_union_python_type(type_str: str) -> bool:
-    match _parse_python_type_annotation(type_str):
-        case ast.Subscript(value=ast.Name(id=name) | ast.Attribute(attr=name)) if name in _PYTHON_UNION_BASE_TYPES:
-            return True
-        case ast.BinOp(op=ast.BitOr()):
-            return True
-        case _:
-            return False
-    return False  # pragma: no cover
+    try:
+        expression = parse_python_type_annotation(type_str)
+    except ValueError:
+        return False
+    return expression is not None and is_union_python_type_expr(expression)
 
 
 @lru_cache(maxsize=1024)
 def _is_union_operator_python_type(type_str: str) -> bool:
-    match _parse_python_type_annotation(type_str):
-        case ast.BinOp(op=ast.BitOr()):
-            return True
-        case _:
-            return False
-    return False  # pragma: no cover
+    try:
+        expression = parse_python_type_annotation(type_str)
+    except ValueError:
+        return False
+    return isinstance(expression, PythonTypeUnion)
 
 
-def _get_full_attribute_name(node: ast.AST) -> str | None:
-    parts: list[str] = []
-    current = node
-    while isinstance(current, ast.Attribute):
-        parts.append(current.attr)
-        current = current.value
-    if isinstance(current, ast.Name):
-        parts.append(current.id)
-        return ".".join(reversed(parts))
-    return None
-
-
-def _get_root_qualified_python_type_name(expression: ast.expr) -> str | None:
-    match expression:
-        case ast.Subscript(value=value):
-            name = _get_full_attribute_name(value)
-        case ast.Attribute():
-            name = _get_full_attribute_name(expression)
-        case _:
-            return None
-    if name is not None and "." in name:
-        return name
+def _get_root_qualified_python_type_name(expression: PythonTypeExpr) -> str | None:
+    if isinstance(expression, PythonTypeSubscript) and isinstance(expression.base, PythonTypeQualifiedName):
+        return ".".join(expression.base.parts)
+    if isinstance(expression, PythonTypeQualifiedName):
+        return ".".join(expression.parts)
     return None
 
 
@@ -334,7 +335,8 @@ def _qualified_python_type_import(qualified_name: str) -> Import:
     return _QUALIFIED_PYTHON_TYPE_IMPORT_ALIASES.get(qualified_name) or Import.from_full_path(qualified_name)
 
 
-class _QualifiedPythonTypeRef(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class _QualifiedPythonTypeRef:
     """One shortened annotation name and the import that binds it."""
 
     qualified_name: str
@@ -342,72 +344,49 @@ class _QualifiedPythonTypeRef(NamedTuple):
     local_name: str
 
 
-class _QualifiedPythonTypeNameShortener(ast.NodeTransformer):
-    def __init__(self) -> None:
-        self.references: list[_QualifiedPythonTypeRef] = []
-        self._literal_depth = 0
+def _shorten_qualified_python_type_expr(
+    expression: PythonTypeExpr,
+) -> tuple[PythonTypeExpr, tuple[_QualifiedPythonTypeRef, ...]]:
+    references: list[_QualifiedPythonTypeRef] = []
 
-    def visit_Subscript(self, node: ast.Subscript) -> ast.AST:
-        """Restore an exact enum member from the input-model transport marker."""
-        try:
-            if (enum_member := LiteralEnumMemberRef.from_marker_ast(node)) is None:
-                if not self._is_literal_subscript(node):
-                    return self.generic_visit(node)
-                self._literal_depth += 1
-                try:
-                    return self.generic_visit(node)
-                finally:
-                    self._literal_depth -= 1
-        except ValueError as exc:
-            raise Error(str(exc)) from None
-        if not self._literal_depth:
-            msg = "Internal Literal enum member marker is only valid inside Literal"
-            raise Error(msg)
-        self.references.append(
-            _QualifiedPythonTypeRef(
-                qualified_name=enum_member.import_path,
-                import_=Import(import_=enum_member.module),
-                local_name=enum_member.import_path,
-            )
-        )
-        return ast.copy_location(enum_member.to_member_expression(), node)
+    def shorten_leaf(item: PythonTypeExpr) -> PythonTypeExpr:
+        match item:
+            case PythonTypeQualifiedName():
+                qualified_name = ".".join(item.parts)
+                import_ = _qualified_python_type_import(qualified_name)
+                local_name = import_.alias or import_.import_
+                references.append(_QualifiedPythonTypeRef(qualified_name, import_, local_name))
+                return PythonTypeName(local_name)
+            case PythonTypeEnumMember():
+                references.append(
+                    _QualifiedPythonTypeRef(
+                        qualified_name=item.reference.import_path,
+                        import_=Import(import_=item.reference.module),
+                        local_name=item.reference.import_path,
+                    )
+                )
+                return PythonTypeEnumMemberAccess(item.reference)
+        return item
 
-    def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
-        if (qualified_name := _get_full_attribute_name(node)) is None or "." not in qualified_name:
-            return self.generic_visit(node)
-        import_ = _qualified_python_type_import(qualified_name)
-        local_name = import_.alias or import_.import_
-        self.references.append(_QualifiedPythonTypeRef(qualified_name, import_, local_name))
-        return ast.copy_location(ast.Name(id=local_name, ctx=ast.Load()), node)
-
-    @staticmethod
-    def _is_literal_subscript(node: ast.Subscript) -> bool:
-        match node.value:
-            case ast.Name(id="Literal"):
-                return True
-            case ast.Attribute() as value:
-                return _get_full_attribute_name(value) in {"typing.Literal", "typing_extensions.Literal"}
-        return False
+    return map_python_type_expr(expression, shorten_leaf), tuple(references)
 
 
 @lru_cache(maxsize=1024)
 def _shorten_qualified_python_type_annotation(
     type_str: str,
 ) -> tuple[str, tuple[_QualifiedPythonTypeRef, ...], str | None]:
-    expression = _parse_python_type_annotation(type_str)
+    try:
+        expression = parse_python_type_annotation(type_str)
+    except ValueError as exc:
+        raise Error(str(exc)) from None
     if expression is None:
         return type_str, (), None
 
     root_qualified_name = _get_root_qualified_python_type_name(expression)
-    shortener = _QualifiedPythonTypeNameShortener()
-    shortened_expression = shortener.visit(expression)
-    if shortened_expression is None or not shortener.references:
+    shortened_expression, references = _shorten_qualified_python_type_expr(expression)
+    if not references:
         return type_str, (), root_qualified_name
-    return (
-        ast.unparse(ast.fix_missing_locations(shortened_expression)),
-        tuple(shortener.references),
-        root_qualified_name,
-    )
+    return render_python_type_expr(shortened_expression), references, root_qualified_name
 
 
 _STRING_CONSTRAINT_KEYS: tuple[JsonSchemaConstraintKey, ...] = (
@@ -3159,7 +3138,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         Note: This is an instance method (not static) due to the snooper_to_methods
         class decorator which does not preserve staticmethod descriptors.
         """
-        if (x_python_type := self._get_x_python_type(obj)) is None:
+        if (python_annotation := self._get_x_python_annotation(obj)) is None:
             return {}
 
         type_to_flag: dict[str, dict[str, bool]] = {
@@ -3175,56 +3154,51 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             "MutableSet": {"is_set": True},
         }
 
-        base_type = get_type_base_name(x_python_type)
+        base_type = python_type_expr_base_name(python_annotation)
         if base_type in type_to_flag:
             return type_to_flag[base_type]
 
-        if _is_union_python_type(x_python_type):
-            for arg in get_subscript_args(x_python_type):
-                arg_base = get_type_base_name(arg)
+        if is_union_python_type_expr(python_annotation):
+            for argument in python_type_expr_arguments(python_annotation):
+                arg_base = python_type_expr_base_name(argument)
                 if arg_base in type_to_flag:
                     return type_to_flag[arg_base]
 
         return {}
 
-    def _get_python_type_base(self, python_type: str) -> str:  # noqa: PLR6301
-        """Extract base type from a Python type annotation string."""
-        return get_type_base_name(python_type)
-
-    def _is_compatible_python_type(self, schema_type: str | None, python_type: str) -> bool:
+    def _is_compatible_python_type(self, schema_type: str | None, python_type: PythonTypeExpr) -> bool:
         """Check if x-python-type is compatible with the JSON Schema type."""
-        base_type = self._get_python_type_base(python_type)
+        base_type = python_type_expr_base_name(python_type)
         if base_type in self.PYTHON_TYPE_OVERRIDE_ALWAYS:
             return False
-        all_type_names = self._extract_all_type_names(python_type)
-        if any(t in self.PYTHON_TYPE_OVERRIDE_ALWAYS for t in all_type_names):
+        if any(name in self.PYTHON_TYPE_OVERRIDE_ALWAYS for name in iter_python_type_expr_names(python_type)):
             return False
         if schema_type is None:
-            return not _is_union_python_type(python_type)
+            return not is_union_python_type_expr(python_type)
         if base_type in _PYTHON_UNION_BASE_TYPES:  # pragma: no cover
             return True
         compatible = self.COMPATIBLE_PYTHON_TYPES.get(schema_type, frozenset())
         return base_type in compatible
 
-    def _extract_all_type_names(self, type_str: str) -> list[str]:  # noqa: PLR6301
-        """Extract all type names from a type annotation string using AST parsing."""
-        import ast  # noqa: PLC0415
-
+    def _get_x_python_annotation(self, obj: JsonSchemaObject) -> PythonTypeExpr | None:
+        """Return the parsed semantic value of a validated x-python-type."""
+        if (x_python_type := self._get_x_python_type(obj)) is None:
+            return None
         try:
-            tree = ast.parse(type_str, mode="eval")
-            return [node.id for node in ast.walk(tree) if isinstance(node, ast.Name)]
-        except SyntaxError:  # pragma: no cover
-            # Fallback to regex for non-standard type strings
-            pattern = r"(?<![.\w])([A-Za-z_]\w*)"
-            return re.findall(pattern, type_str)
+            return parse_python_type_annotation(x_python_type)
+        except ValueError as exc:  # pragma: no cover
+            raise Error(str(exc)) from None
 
     def _get_x_python_type(self, obj: JsonSchemaObject) -> str | None:  # noqa: PLR6301
         """Return a validated x-python-type value."""
         x_python_type = obj.extras.get("x-python-type")
         if not x_python_type or not isinstance(x_python_type, str):
             return None
-        if is_python_type_annotation(x_python_type):
-            return x_python_type
+        try:
+            if parse_python_type_annotation(x_python_type) is not None:
+                return x_python_type
+        except ValueError as exc:
+            raise Error(str(exc)) from None
         msg = "x-python-type must be a valid Python type annotation"
         raise Error(msg)
 
@@ -3265,54 +3239,52 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return Import.from_full_path(full_path)
         except Error:
             raise
-        except Exception:  # noqa: BLE001, S110
-            pass
+        except Exception:  # noqa: BLE001
+            return None
         return None
+
+    def _bind_python_type_annotation(self, expression: PythonTypeExpr) -> BoundPythonTypeAnnotation:
+        """Bind semantic annotation names to an ordered, immutable import set."""
+        imports: dict[Import, None] = {}
+
+        def bind_leaf(item: PythonTypeExpr) -> PythonTypeExpr:
+            match item:
+                case PythonTypeQualifiedName():
+                    import_ = _qualified_python_type_import(".".join(item.parts))
+                    imports.setdefault(import_, None)
+                    return PythonTypeName(import_.alias or import_.import_)
+                case PythonTypeEnumMember():
+                    imports.setdefault(Import(import_=item.reference.module), None)
+                    return PythonTypeEnumMemberAccess(item.reference)
+                case PythonTypeName() if item.value not in _PYTHON_BUILTIN_TYPE_NAMES:
+                    if import_ := (
+                        self._resolve_type_import(item.value) or self._resolve_type_import_from_defs(item.value)
+                    ):
+                        imports.setdefault(import_, None)
+                    return item
+            return item
+
+        bound_expression = map_python_type_expr(expression, bind_leaf)
+        return BoundPythonTypeAnnotation(
+            expression=bound_expression,
+            rendered=render_python_type_expr(bound_expression),
+            imports=tuple(imports),
+        )
 
     def _get_python_type_override(self, obj: JsonSchemaObject) -> DataType | None:
         """Get DataType from x-python-type if it's incompatible with schema type."""
-        if (x_python_type := self._get_x_python_type(obj)) is None:
+        if (python_annotation := self._get_x_python_annotation(obj)) is None:
             return None
 
         schema_type = obj.type if isinstance(obj.type, str) else None
-        if self._is_compatible_python_type(schema_type, x_python_type):
+        if self._is_compatible_python_type(schema_type, python_annotation):
             return None
 
-        base_type = self._get_python_type_base(x_python_type)
-        import_ = self._resolve_type_import(base_type)
-
-        # Convert fully qualified names to short names when imports are added
-        type_str, qualified_references, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
-        nested_imports: list[DataType] = []
-        qualified_type_names: set[str] = set()
-        for qualified_reference in qualified_references:
-            qualified_type_names.add(qualified_reference.local_name)
-            if (
-                qualified_reference.qualified_name == root_qualified_name
-                and qualified_reference.local_name == base_type
-            ):
-                import_ = qualified_reference.import_
-                continue
-            nested_imports.append(
-                self.data_type(
-                    type=qualified_reference.local_name,
-                    import_=qualified_reference.import_,
-                )
-            )
-        if base_type in qualified_type_names and root_qualified_name is None:
-            import_ = None
-
-        # Collect imports for all nested types (e.g., Iterable inside Callable[[Iterable[str]], str])
-        for type_name in self._extract_all_type_names(type_str):
-            if type_name != base_type and type_name not in qualified_type_names:
-                nested_import = self._resolve_type_import(type_name) or self._resolve_type_import_from_defs(type_name)
-                if nested_import:
-                    nested_imports.append(self.data_type(import_=nested_import))
-
-        result = self.data_type(type=type_str, import_=import_)
-        if nested_imports:
-            result.data_types.extend(nested_imports)
-        return result
+        bound_annotation = self._bind_python_type_annotation(python_annotation)
+        return self.data_type(
+            type=bound_annotation.rendered,
+            python_annotation=bound_annotation,
+        )
 
     def _apply_title_as_name(self, name: str, obj: JsonSchemaObject) -> str:
         """Apply title as name if use_title_as_name is enabled."""
