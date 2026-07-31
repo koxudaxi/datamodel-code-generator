@@ -128,7 +128,7 @@ def test_is_named_decorator_uses_exact_expression_name(decorator: str, *, expect
 
 def test_get_unqualified_decorator_name_is_target_independent() -> None:
     """Expose the parsed direct target for reuse by other decorator policies."""
-    assert _get_unqualified_decorator_name("@custom(option=True)") == "custom"
+    assert _get_unqualified_decorator_name("@custom(option=t'{value}')") == "custom"
 
 
 def test_is_named_decorator_rejects_textually_equal_non_name_target() -> None:

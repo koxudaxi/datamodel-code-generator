@@ -24,6 +24,7 @@ from typing_extensions import Self
 
 from datamodel_code_generator import cached_path_exists
 from datamodel_code_generator._internal_utils import get_most_of_parent, to_hashable
+from datamodel_code_generator._python_decorator import parse_python_decorator
 from datamodel_code_generator._python_type_annotation import (
     iter_python_type_expr_names,
     parse_python_type_annotation,
@@ -291,17 +292,8 @@ def _copy_all_model_data(source: dict[str, Any], target: dict[str, Any]) -> None
 
 @lru_cache(maxsize=128)
 def _get_unqualified_decorator_name(decorator: str) -> str | None:
-    """Parse a decorator and return its direct, unqualified target name."""
-    if decorator[:1] != "@":
-        return None
-    try:
-        expression = ast.parse(decorator[1:].lstrip(), mode="eval").body
-    except SyntaxError:
-        return None
-    match expression:
-        case ast.Name(id=decorator_name) | ast.Call(func=ast.Name(id=decorator_name)):
-            return decorator_name
-    return None
+    """Return the target-version-independent direct decorator name."""
+    return parse_python_decorator(decorator).unqualified_target
 
 
 def _is_named_decorator(decorator: str, name: str) -> bool:

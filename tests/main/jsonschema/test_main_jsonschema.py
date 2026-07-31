@@ -7864,6 +7864,20 @@ def test_main_deprecated_model_distinguishes_prefixed_decorator(
     )
 
 
+def test_main_deprecated_model_matches_newer_target_decorator_syntax() -> None:
+    """Match a direct decorator without parsing newer target-version expressions on the host."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "deprecated_dataclass.json",
+        expected_file=EXPECTED_JSON_SCHEMA_PATH / "deprecated_dataclass_with_newer_decorator_syntax.py",
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.DataclassesDataclass,
+        target_python_version=PythonVersion.PY_314,
+        class_decorators=["@deprecated(t'LegacyUser is deprecated.')"],
+        disable_timestamp=True,
+        formatters=[],
+    )
+
+
 @pytest.mark.skipif(
     not is_supported_in_black(PythonVersion.PY_312),
     reason="Black does not support Python 3.12",
