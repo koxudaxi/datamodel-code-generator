@@ -7,9 +7,6 @@ import sys
 import types
 from collections import ChainMap, Counter, OrderedDict, defaultdict, deque
 from collections.abc import (
-    Callable as ABCCallable,
-)
-from collections.abc import (
     Mapping as ABCMapping,
 )
 from collections.abc import (
@@ -34,10 +31,6 @@ from typing import (
     TYPE_CHECKING,
     Annotated,
     Any,
-    Concatenate,
-    ForwardRef,
-    Literal,
-    ParamSpec,
     Union,
     cast,
     get_args,
@@ -48,6 +41,16 @@ from typing import (
 from pydantic import BaseModel
 
 from datamodel_code_generator._process_state import PROCESS_STATE_LOCK
+from datamodel_code_generator._python_type_annotation import (
+    PythonTypeExpr,
+    PythonTypeName,
+    PythonTypeSubscript,
+    PythonTypeUnion,
+    python_callable_expr_from_runtime_args,
+    python_type_expr_from_runtime_full_name,
+    render_python_type_expr,
+    render_runtime_python_type,
+)
 from datamodel_code_generator.enums import InputModelRefStrategy
 
 if TYPE_CHECKING:
@@ -248,104 +251,20 @@ _TYPE_FAMILY_MSGSPEC = "msgspec"
 _TYPE_FAMILY_OTHER = "other"
 
 
-def _serialize_python_type_full(tp: object) -> str:  # noqa: PLR0911, PLR0912
+def _serialize_python_type_full(tp: object) -> str:
     """Serialize ANY Python type to its string representation."""
-    if tp is type(None):  # pragma: no cover
-        return "None"
-
-    if tp is ...:  # pragma: no cover
-        return "..."
-
-    origin = get_origin(tp)
-    args = get_args(tp)
-
-    if origin is None:
-        module = getattr(tp, "__module__", "")
-        name = getattr(tp, "__name__", None) or getattr(tp, "__qualname__", None)
-
-        if name is None:
-            return str(tp).replace("typing.", "")
-
-        if module and module not in {"builtins", "typing", "collections.abc"}:
-            return f"{module}.{name}"
-        return name
-
-    if origin is ABCCallable:
-        return _serialize_callable(args)
-
-    if origin is Union or (hasattr(types, "UnionType") and origin is types.UnionType):  # pragma: no cover
-        return " | ".join(_serialize_python_type_full(arg) for arg in args)
-
-    if origin is Annotated:
-        if args:
-            return _serialize_python_type_full(args[0])
-        return str(tp).replace("typing.", "")  # pragma: no cover
-
-    if origin is Literal:
-        values = ", ".join(
-            (_serialize_enum_literal_member(arg) if isinstance(arg, PyEnum) else repr(arg)) for arg in args
-        )
-        return f"Literal[{values}]"
-
-    if origin is type:
-        if args:
-            return f"Type[{_serialize_python_type_full(args[0])}]"
-        return "Type"  # pragma: no cover
-
-    origin_name = _get_origin_name(origin)
-    if args:
-        args_str = ", ".join(_serialize_python_type_full(arg) for arg in args)
-        return f"{origin_name}[{args_str}]"
-
-    return origin_name  # pragma: no cover
-
-
-def _serialize_enum_literal_member(value: PyEnum) -> str:
-    """Serialize an enum member without losing its class qualification."""
-    from datamodel_code_generator._python_type_annotation import encode_literal_enum_member  # noqa: PLC0415
-
     try:
-        return encode_literal_enum_member(value)
+        return render_runtime_python_type(tp)
     except ValueError as exc:
         raise Error(str(exc)) from None
 
 
 def _serialize_callable(args: tuple[object, ...]) -> str:
     """Serialize Callable type."""
-    if not args:  # pragma: no cover
-        return "Callable"
-
-    match args:
-        case (parameters, return_type) if parameters is ...:
-            return f"Callable[..., {_serialize_python_type_full(return_type)}]"
-        case ((list() | tuple()) as parameters, return_type):
-            params = ", ".join(_serialize_python_type_full(param) for param in parameters)
-            return f"Callable[[{params}], {_serialize_python_type_full(return_type)}]"
-        case (parameter_specification, return_type) if (
-            isinstance(parameter_specification, ParamSpec) or get_origin(parameter_specification) is Concatenate
-        ):
-            params = _serialize_python_type_full(parameter_specification)
-            return f"Callable[{params}, {_serialize_python_type_full(return_type)}]"
-
-    *parameters, return_type = args
-    params = ", ".join(_serialize_python_type_full(param) for param in parameters)
-    return f"Callable[[{params}], {_serialize_python_type_full(return_type)}]"
-
-
-def _get_origin_name(origin: type) -> str:
-    """Get the fully qualified name of a generic origin."""
-    name = getattr(origin, "__qualname__", None) or getattr(origin, "__name__", None)
-    if name:
-        module = getattr(origin, "__module__", "")
-        if module and module not in {"builtins", "typing", "collections.abc"}:
-            return f"{module}.{name}"
-        return name
-
-    origin_str = str(origin)  # pragma: no cover
-    if "typing." in origin_str:  # pragma: no cover
-        return origin_str.replace("typing.", "")
-
-    return origin_str  # pragma: no cover
+    try:
+        return render_python_type_expr(python_callable_expr_from_runtime_args(args))
+    except ValueError as exc:
+        raise Error(str(exc)) from None
 
 
 def _get_input_model_json_schema_class() -> type:
@@ -477,8 +396,14 @@ def _get_preserved_type_origins() -> dict[type, str]:
     return _PRESERVED_TYPE_ORIGINS
 
 
-def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
+def _serialize_python_type(tp: type) -> str | None:
     """Serialize Python type to a string for x-python-type field."""
+    expression = _preserved_python_type_expr(tp)
+    return render_python_type_expr(expression) if expression is not None else None
+
+
+def _preserved_python_type_expr(tp: type) -> PythonTypeExpr | None:  # noqa: PLR0911
+    """Build an expression only when JSON Schema loses relevant type structure."""
     origin: type | None = get_origin(tp)
     args = get_args(tp)
     preserved_origins = _get_preserved_type_origins()
@@ -486,14 +411,19 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
     is_union = origin is Union or (hasattr(types, "UnionType") and origin is types.UnionType)
     if is_union:
         if args:
-            nested = [_serialize_python_type(a) for a in args]
-            if any(n is not None for n in nested):
-                return " | ".join(n or _full_type_name(a) for n, a in zip(nested, args, strict=False))
+            nested = tuple(_preserved_python_type_expr(argument) for argument in args)
+            if any(expression is not None for expression in nested):
+                return PythonTypeUnion(
+                    tuple(
+                        expression or python_type_expr_from_runtime_full_name(argument)
+                        for expression, argument in zip(nested, args, strict=False)
+                    )
+                )
         return None  # pragma: no cover
 
     if origin is Annotated:
         if args:
-            return _serialize_python_type(args[0]) or _full_type_name(args[0])
+            return _preserved_python_type_expr(args[0]) or python_type_expr_from_runtime_full_name(args[0])
         return None  # pragma: no cover
 
     type_name: str | None = None
@@ -503,16 +433,25 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
             type_name = _simple_type_name(origin)
     if type_name is not None:
         if args:
-            args_str = ", ".join(_serialize_python_type(a) or _full_type_name(a) for a in args)
-            return f"{type_name}[{args_str}]"
-        return type_name  # pragma: no cover
+            return PythonTypeSubscript(
+                PythonTypeName(type_name),
+                tuple(
+                    _preserved_python_type_expr(argument) or python_type_expr_from_runtime_full_name(argument)
+                    for argument in args
+                ),
+            )
+        return PythonTypeName(type_name)  # pragma: no cover
 
     if args:
-        nested = [_serialize_python_type(a) for a in args]
-        if any(n is not None for n in nested):
-            origin_name = _simple_type_name(origin or tp)
-            args_str = ", ".join(n or _full_type_name(a) for n, a in zip(nested, args, strict=False))
-            return f"{origin_name}[{args_str}]"
+        nested = tuple(_preserved_python_type_expr(argument) for argument in args)
+        if any(expression is not None for expression in nested):
+            return PythonTypeSubscript(
+                PythonTypeName(_simple_type_name(origin or tp)),
+                tuple(
+                    expression or python_type_expr_from_runtime_full_name(argument)
+                    for expression, argument in zip(nested, args, strict=False)
+                ),
+            )
 
     return None
 
@@ -528,50 +467,13 @@ def _simple_type_name(tp: type) -> str:
     return str(tp).replace("typing.", "")  # pragma: no cover
 
 
-def _full_type_name(tp: type) -> str:  # noqa: PLR0911
+def _full_type_name(tp: type) -> str:
     """Get a full qualified name representation of a type for type arguments.
 
     For generic types, keeps outer type as short name but FQN-izes the type arguments.
     For non-generic types, returns FQN for non-builtin types.
     """
-    if tp is type(None):
-        return "None"
-
-    if isinstance(tp, str):
-        return tp
-    if isinstance(tp, ForwardRef):
-        return tp.__forward_arg__
-
-    origin = get_origin(tp)
-    if origin is not None:
-        # Handle Union types (both typing.Union and types.UnionType) with | syntax
-        is_union = origin is Union or (hasattr(types, "UnionType") and origin is types.UnionType)
-        if is_union:
-            args = get_args(tp)
-            if args:
-                return " | ".join(_full_type_name(a) for a in args)
-            return str(tp)  # pragma: no cover
-
-        origin_name = _simple_type_name(origin)
-        args = get_args(tp)
-        if args:
-            args_str = ", ".join(_full_type_name(a) for a in args)
-            return f"{origin_name}[{args_str}]"
-        return origin_name
-
-    module = getattr(tp, "__module__", None)
-    name = getattr(tp, "__name__", None)
-
-    if module == "typing":
-        if name:
-            return name
-        return str(tp).replace("typing.", "")  # pragma: no cover
-
-    if module and name and module not in {"builtins", "collections.abc"}:
-        return f"{module}.{name}"
-    if name:
-        return name
-    return str(tp).replace("typing.", "")  # pragma: no cover
+    return render_runtime_python_type(tp, full_name=True)
 
 
 def _collect_nested_models(model: type, visited: set[type] | None = None) -> dict[str, type]:

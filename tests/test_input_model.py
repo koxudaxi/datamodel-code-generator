@@ -1947,13 +1947,15 @@ def test_serialize_python_type_full_rejects_local_enum_literal() -> None:
     from typing import Literal
 
     from datamodel_code_generator.input_model import Error as InputModelError
-    from datamodel_code_generator.input_model import _serialize_python_type_full
+    from datamodel_code_generator.input_model import _serialize_callable, _serialize_python_type_full
 
     class LocalValue(Enum):
         VALUE = "value"
 
     with pytest.raises(InputModelError, match="Literal enum member is not importable"):
         _serialize_python_type_full(Literal[LocalValue.VALUE])
+    with pytest.raises(InputModelError, match="Literal enum member is not importable"):
+        _serialize_callable((Literal[LocalValue.VALUE], bool))
 
 
 def test_serialize_python_type_full_rejects_unbound_and_keyword_enum_literals() -> None:
