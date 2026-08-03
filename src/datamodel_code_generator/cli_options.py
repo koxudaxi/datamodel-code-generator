@@ -629,6 +629,10 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
         topic=OptionTopic.TYPING_CUSTOMIZATION,
         group=OptionGroup.COLLECTION_TYPES,
     ),
+    "--use-total-false-for-typed-dict": CLIOptionMeta(
+        name="--use-total-false-for-typed-dict",
+        category=OptionCategory.TYPING,
+    ),
     "--use-closed-typed-dict": CLIOptionMeta(name="--use-closed-typed-dict", category=OptionCategory.TYPING),
     "--no-use-closed-typed-dict": CLIOptionMeta(name="--no-use-closed-typed-dict", category=OptionCategory.TYPING),
     "--type-mappings": CLIOptionMeta(

@@ -9,7 +9,7 @@ This documentation is auto-generated from test cases.
 | Category | Options | Description |
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 13 | Input/output configuration |
-| 🔧 [Typing Customization](typing-customization.md) | 30 | Type annotation and import behavior |
+| 🔧 [Typing Customization](typing-customization.md) | 31 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 27 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 44 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 27 | Output formatting and custom rendering |
@@ -281,6 +281,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--use-status-code-in-response-name`](openapi-only-options.md#use-status-code-in-response-name)
 - [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 - [`--use-title-as-name`](field-customization.md#use-title-as-name)
+- [`--use-total-false-for-typed-dict`](typing-customization.md#use-total-false-for-typed-dict)
 - [`--use-tuple-for-fixed-items`](typing-customization.md#use-tuple-for-fixed-items)
 - [`--use-type-alias`](typing-customization.md#use-type-alias)
 - [`--use-type-checking-imports`](template-customization.md#use-type-checking-imports)

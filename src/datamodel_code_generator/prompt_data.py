@@ -167,6 +167,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--use-status-code-in-response-name": "Include HTTP status code in response model names.",
     "--use-subclass-enum": "Generate typed Enum subclasses for enums with specific field types.",
     "--use-title-as-name": "Use schema title as the generated class name.",
+    "--use-total-false-for-typed-dict": "Generate TypedDict declarations with `total=False`.",
     "--use-tuple-for-fixed-items": "Generate tuple types for arrays with items array syntax.",
     "--use-type-alias": "Use TypeAlias instead of root models for type definitions (experimental).",
     "--use-type-checking-imports": "Allow Ruff to move typing-only imports into TYPE_CHECKING blocks.",

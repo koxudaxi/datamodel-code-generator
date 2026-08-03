@@ -763,6 +763,12 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-total-false-for-typed-dict",
+    help="Generate TypedDict with total=False and mark required fields with Required",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--use-closed-typed-dict",
     help="Generate TypedDict with PEP 728 closed=True/extra_items for additionalProperties constraints. "
     "Use --no-use-closed-typed-dict for type checkers that don't yet support PEP 728 (e.g., mypy).",

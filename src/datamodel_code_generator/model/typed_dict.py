@@ -15,10 +15,12 @@ from datamodel_code_generator.model.imports import (
     IMPORT_NOT_REQUIRED_BACKPORT,
     IMPORT_READ_ONLY,
     IMPORT_READ_ONLY_BACKPORT,
+    IMPORT_REQUIRED,
+    IMPORT_REQUIRED_BACKPORT,
     IMPORT_TYPED_DICT,
     IMPORT_TYPED_DICT_BACKPORT,
 )
-from datamodel_code_generator.types import NOT_REQUIRED_PREFIX, READ_ONLY_PREFIX
+from datamodel_code_generator.types import NOT_REQUIRED_PREFIX, READ_ONLY_PREFIX, REQUIRED_PREFIX
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -57,6 +59,7 @@ class TypedDict(DataModel):
     BASE_CLASS: ClassVar[str] = "typing.TypedDict"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPED_DICT,)
     REQUIRES_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES: ClassVar[bool] = True
+    SUPPORTS_TYPED_DICT_TOTAL_FALSE: ClassVar[bool] = True
 
     def __init__(  # noqa: PLR0913
         self,
@@ -93,10 +96,11 @@ class TypedDict(DataModel):
             keyword_only=keyword_only,
             treat_dot_as_module=treat_dot_as_module,
         )
-        self._setup_closed_extra_items()
+        self.use_total_false_for_typed_dict = bool(self.extra_template_data.get("use_total_false_for_typed_dict"))
+        self._setup_typed_dict_kwargs()
 
-    def _setup_closed_extra_items(self) -> None:
-        """Set up closed and extra_items kwargs based on additionalProperties.
+    def _setup_typed_dict_kwargs(self) -> None:
+        """Set up total, closed, and extra_items keyword arguments.
 
         For PEP 728 TypedDict support:
         - additionalProperties: false -> closed=True
@@ -110,7 +114,7 @@ class TypedDict(DataModel):
         additional_props_type = self.extra_template_data.get("additionalPropertiesType")
         is_base_class = self.extra_template_data.get("is_base_class", False)
 
-        typed_dict_kwargs: dict[str, str] = {}
+        typed_dict_kwargs: dict[str, str] = {"total": "False"} if self.use_total_false_for_typed_dict else {}
 
         if additional_props is False and not is_base_class:
             typed_dict_kwargs["closed"] = "True"
@@ -126,14 +130,22 @@ class TypedDict(DataModel):
             self.extra_template_data["typed_dict_kwargs_suffix"] = f", {kwargs_str}"
 
     @property
-    def _has_typed_dict_kwargs(self) -> bool:
+    def _has_pep728_kwargs(self) -> bool:
         """Check if this TypedDict has closed or extra_items kwargs."""
-        return bool(self.extra_template_data.get("typed_dict_kwargs"))
+        typed_dict_kwargs = self.extra_template_data.get("typed_dict_kwargs", {})
+        return "closed" in typed_dict_kwargs or "extra_items" in typed_dict_kwargs
 
     @property
     def _use_typeddict_backport(self) -> bool:
         """Check if this TypedDict needs typing_extensions.TypedDict for closed/extra_items."""
         return bool(self.extra_template_data.get("use_typeddict_backport"))
+
+    @property
+    def _requires_typeddict_backport(self) -> bool:
+        """Check if this TypedDict needs typing_extensions.TypedDict."""
+        if self.extra_template_data.get("use_total_false_typeddict_backport"):
+            return True
+        return self._use_typeddict_backport and self._has_pep728_kwargs
 
     @property
     def base_class(self) -> str:
@@ -148,14 +160,24 @@ class TypedDict(DataModel):
 
     @property
     def imports(self) -> tuple[Import, ...]:
-        """Get imports, using backport TypedDict when closed/extra_items are used on Python < 3.13."""
-        base_imports = list(super().imports)
+        """Get imports, using the TypedDict backport when required by the target version."""
+        base_imports = super().imports
+        if not self._requires_typeddict_backport:
+            return base_imports
+        return (*(i for i in base_imports if i != IMPORT_TYPED_DICT), IMPORT_TYPED_DICT_BACKPORT)
 
-        if self._use_typeddict_backport and self._has_typed_dict_kwargs:
-            base_imports = [i for i in base_imports if i != IMPORT_TYPED_DICT]
-            base_imports.append(IMPORT_TYPED_DICT_BACKPORT)
+    def create_reuse_model(self, base_ref: Reference) -> TypedDict:
+        """Create a reuse model while preserving total=False behavior."""
+        reuse_model = super().create_reuse_model(base_ref)
+        if not self.use_total_false_for_typed_dict:
+            return reuse_model
 
-        return tuple(base_imports)
+        reuse_model.use_total_false_for_typed_dict = True
+        reuse_model.extra_template_data["use_total_false_for_typed_dict"] = True
+        if self.extra_template_data.get("use_total_false_typeddict_backport"):
+            reuse_model.extra_template_data["use_total_false_typeddict_backport"] = True
+        TypedDict._setup_typed_dict_kwargs(reuse_model)
+        return reuse_model
 
     @property
     def is_functional_syntax(self) -> bool:
@@ -197,6 +219,7 @@ class DataModelField(DataModelFieldBase):
     """
 
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_NOT_REQUIRED,)
+    DEFAULT_REQUIRED_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_REQUIRED,)
     DEFAULT_READ_ONLY_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_READ_ONLY,)
 
     def process_const(self) -> None:
@@ -211,18 +234,32 @@ class DataModelField(DataModelFieldBase):
 
     @property
     def type_hint(self) -> str:
-        """Get type hint with ReadOnly and/or NotRequired wrapper if needed."""
+        """Get type hint with ReadOnly and/or key-requiredness wrapper if needed."""
         type_hint = super().type_hint
-        # Apply ReadOnly first (inner), then NotRequired (outer)
+        # Apply ReadOnly first (inner), then Required/NotRequired (outer)
         if self._read_only:
             type_hint = f"{READ_ONLY_PREFIX}{type_hint}]"
-        if self._not_required:
-            type_hint = f"{NOT_REQUIRED_PREFIX}{type_hint}]"
+        if requiredness := self._requiredness:
+            type_hint = f"{requiredness}{type_hint}]"
         return type_hint
 
     @property
-    def _not_required(self) -> bool:
-        """Check if field should be marked as NotRequired."""
+    def _requiredness(self) -> str:
+        """Get the TypedDict key-requiredness qualifier prefix."""
+        if not isinstance((parent := self.parent), TypedDict):
+            return ""
+        match (parent.use_total_false_for_typed_dict, self.required):
+            case (True, True):
+                requiredness = REQUIRED_PREFIX
+            case (False, False):
+                requiredness = NOT_REQUIRED_PREFIX
+            case _:
+                requiredness = ""
+        return requiredness
+
+    @property
+    def _is_optional_typed_dict_key(self) -> bool:
+        """Check if this field is an optional TypedDict key."""
         return not self.required and isinstance(self.parent, TypedDict)
 
     @property
@@ -233,15 +270,27 @@ class DataModelField(DataModelFieldBase):
     @property
     def fall_back_to_nullable(self) -> bool:
         """Check if field should fall back to nullable."""
-        return not self._not_required
+        return not self._is_optional_typed_dict_key
 
     @property
     def imports(self) -> tuple[Import, ...]:
-        """Get imports including NotRequired and ReadOnly if needed."""
+        """Get imports including key-requiredness and ReadOnly qualifiers."""
+        base_imports = super().imports
+        read_only_imports = self.DEFAULT_READ_ONLY_IMPORTS if self._read_only else ()
+        if not (requiredness := self._requiredness) and not read_only_imports:
+            return base_imports
+
+        match requiredness:
+            case requiredness if requiredness == REQUIRED_PREFIX:
+                requiredness_imports = self.DEFAULT_REQUIRED_IMPORTS
+            case requiredness if requiredness == NOT_REQUIRED_PREFIX:
+                requiredness_imports = self.DEFAULT_IMPORTS
+            case _:
+                requiredness_imports = ()
         return (
-            *super().imports,
-            *(self.DEFAULT_IMPORTS if self._not_required else ()),
-            *(self.DEFAULT_READ_ONLY_IMPORTS if self._read_only else ()),
+            *base_imports,
+            *requiredness_imports,
+            *read_only_imports,
         )
 
 
@@ -261,6 +310,7 @@ class DataModelFieldBackport(DataModelField):
     """
 
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_NOT_REQUIRED_BACKPORT,)
+    DEFAULT_REQUIRED_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_REQUIRED_BACKPORT,)
     DEFAULT_READ_ONLY_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_READ_ONLY_BACKPORT,)
 
 
