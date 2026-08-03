@@ -149,6 +149,7 @@ def test_parse_python_type_annotation_accepts_supported_grammar(annotation: str)
         "",
         "list[",
         "list]",
+        "tuple[*Ts",
         "'Model'",
         "...",
         "foo()",
