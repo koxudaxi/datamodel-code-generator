@@ -221,6 +221,18 @@ def test_remove_dotted_import_keeps_bucket_when_other_dotted_imports_remain() ->
     assert imports.counter[None, "pathlib.Path"] == 1
 
 
+def test_remove_unused_dotted_import_uses_bound_package_name() -> None:
+    """A dotted import binds its top-level package rather than its final segment."""
+    imports = Imports()
+    imports.append(Import(from_=None, import_="package.submodule"))
+
+    imports.remove_unused({"package"})
+
+    assert str(imports) == "import package.submodule"
+    imports.remove_unused({"submodule"})
+    assert not str(imports)
+
+
 def test_remove_dotted_import_without_bucket_cleans_reference_path() -> None:
     """Defensive dotted import removal still clears counters and reference paths."""
     imports = Imports()
@@ -267,6 +279,83 @@ def test_plain_from_none_alias_cleanup_after_remove_and_remove_unused() -> None:
     imports.append(Import(from_=None, import_="datetime"))
 
     assert str(imports) == "import datetime"
+
+
+def test_dotted_direct_import_alias_lifecycle() -> None:
+    """Dotted direct imports retain aliases through use tracking and removal."""
+    imports = Imports()
+    aliased_import = Import(import_="pkg.models", alias="pkg_1", reference_path="/pkg/models")
+    imports.append(aliased_import)
+
+    assert str(imports) == "import pkg.models as pkg_1"
+    assert imports.get_effective_name(None, "pkg.models") == "pkg_1"
+    imports.remove_unused({"pkg_1"})
+    assert str(imports) == "import pkg.models as pkg_1"
+
+    imports.remove(aliased_import)
+
+    assert not str(imports)
+    assert None not in imports.alias
+    assert (None, "pkg.models") not in imports.counter
+    assert "/pkg/models" not in imports.reference_paths
+
+
+@pytest.mark.parametrize(
+    ("aliased_import", "plain_import", "expected"),
+    [
+        (
+            Import(import_="pkg.models", alias="pkg_1"),
+            Import(import_="pkg.models"),
+            "import pkg.models",
+        ),
+        (
+            Import(from_="foo", import_="Bar", alias="Bar_1"),
+            Import(from_="foo", import_="Bar"),
+            "from foo import Bar",
+        ),
+    ],
+)
+def test_last_unaliased_remove_clears_existing_alias(
+    aliased_import: Import,
+    plain_import: Import,
+    expected: str,
+) -> None:
+    """Alias state belongs to the identity and expires with its final reference."""
+    imports = Imports()
+    imports.append([aliased_import, plain_import])
+
+    imports.remove(aliased_import)
+    imports.remove(plain_import)
+    imports.append(plain_import)
+
+    assert str(imports) == expected
+
+
+def test_dump_all_uses_names_actually_bound_by_dotted_imports() -> None:
+    """Exports use the package root unless a direct dotted import has an alias."""
+    imports = Imports()
+    imports.append([
+        Import(import_="pkg.models"),
+        Import(import_="other.models", alias="models_alias"),
+        Import(from_="foo", import_="Bar"),
+    ])
+    imports.add_export("Local")
+
+    assert imports.dump_all() == '__all__ = ["Bar", "Local", "models_alias", "pkg"]'
+
+
+def test_apply_alias_is_identity_scoped() -> None:
+    """Module-local aliasing updates only an exact tracked identity."""
+    imports = Imports()
+    imports.apply_alias(Import(from_="missing", import_="Thing", alias="Thing_1"))
+    imports.append([
+        Import(from_="foo", import_="Bar"),
+        Import(from_="other", import_="Value"),
+    ])
+    imports.apply_alias(Import(from_="foo", import_="Bar"))
+    imports.apply_alias(Import(from_="foo", import_="Bar", alias="Bar_1"))
+
+    assert str(imports) == "from foo import Bar as Bar_1\nfrom other import Value"
 
 
 def test_extract_future_moves_reference_paths() -> None:

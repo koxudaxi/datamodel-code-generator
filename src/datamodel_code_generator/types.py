@@ -27,7 +27,16 @@ from typing import (
     runtime_checkable,
 )
 
-from pydantic import ConfigDict, Field, GetCoreSchemaHandler, StrictBool, StrictInt, StrictStr, create_model
+from pydantic import (
+    ConfigDict,
+    Field,
+    GetCoreSchemaHandler,
+    StrictBool,
+    StrictInt,
+    StrictStr,
+    create_model,
+    field_validator,
+)
 from pydantic_core import core_schema
 from typing_extensions import TypeIs
 
@@ -108,6 +117,7 @@ if TYPE_CHECKING:
     import builtins
     from collections.abc import Callable, Iterable, Iterator, Sequence
 
+    from datamodel_code_generator._python_type_binding import BoundPythonType
     from datamodel_code_generator.enums import StrictTypes
 
     class DataModelFieldBase(Protocol):
@@ -115,8 +125,14 @@ if TYPE_CHECKING:
 
         data_type: DataType
 
+    _BoundPythonTypeField = BoundPythonType
+
 else:
     DataModelFieldBase = Any
+    # Keep the optional structured annotation feature off the normal import
+    # path. DataType validates every non-None construction input against the exact
+    # runtime class below, so this lazy Pydantic field alias is not an unchecked escape.
+    _BoundPythonTypeField = Any
 
 
 class UnionIntFloat:
@@ -441,6 +457,7 @@ class DataType(_BaseModel):
     is_func: bool = False
     kwargs: Optional[dict[str, Any]] = None  # noqa: UP045
     import_: Optional[Import] = None  # noqa: UP045
+    python_type: _BoundPythonTypeField | None = Field(default=None, exclude=True, repr=False)
     python_version: PythonVersion = PythonVersionMin
     is_optional: bool = False
     is_dict: bool = False
@@ -459,6 +476,20 @@ class DataType(_BaseModel):
     preserve_union_member_order: bool = False
     alias: Optional[str] = None  # noqa: UP045
     parent: Union[DataModelFieldBase, DataType, None] = None  # noqa: UP007
+
+    @field_validator("python_type")
+    @classmethod
+    def _validate_python_type(cls, value: object | None) -> object | None:
+        """Enforce the semantic binding type only when the feature is used."""
+        if value is None:
+            return None
+        from datamodel_code_generator._python_type_binding import BoundPythonType  # noqa: PLC0415
+
+        if isinstance(value, BoundPythonType):
+            return value
+        msg = "python_type must be a BoundPythonType"
+        raise ValueError(msg)
+
     children: list[DataType] = Field(default_factory=list)
     strict: bool = False
     dict_key: Optional[DataType] = None  # noqa: UP045
@@ -672,6 +703,8 @@ class DataType(_BaseModel):
         # Add base import if exists
         if self.import_:
             yield self.import_
+        if self.python_type:
+            yield from self.python_type.imports
         if self.kwargs and self.import_ != IMPORT_DECIMAL and _contains_decimal(self.kwargs):
             yield IMPORT_DECIMAL
 

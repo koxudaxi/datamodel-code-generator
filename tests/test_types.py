@@ -38,6 +38,19 @@ def test_is_data_model_field_uses_structural_contract() -> None:
     assert not is_data_model_field(data_type)
 
 
+def test_data_type_rejects_non_binding_python_type_context() -> None:
+    """Parser/model objects cannot cross the structured annotation boundary."""
+    with pytest.raises(ValueError, match="python_type must be a BoundPythonType"):
+        DataType(type="str", python_type=object())
+
+
+def test_data_type_accepts_explicit_empty_python_type_context() -> None:
+    """An explicitly empty binding context keeps the ordinary fast path."""
+    data_type = DataType(type="str", python_type=None)
+
+    assert data_type.python_type is None
+
+
 @pytest.mark.parametrize(
     ("input_", "use_union_operator", "expected"),
     [
