@@ -762,69 +762,103 @@ def get_first_file(path: Path) -> Path:  # pragma: no cover
     raise FileNotFoundError(msg)
 
 
-def _find_future_import_insertion_point(header: str) -> int:  # noqa: PLR0911, PLR0912
-    """Find the future-import position without parsing target-version syntax."""
+def _find_future_import_insertion_point(header: str) -> int:  # noqa: PLR0911, PLR0912, PLR0915
+    """Find the future-import position without crossing into target-version syntax.
+
+    ``generate_tokens`` uses the running Python tokenizer; it is not a parser for
+    the requested target Python version. Scan only the leading header boundary
+    and never consume later statements, which may use newer target-only syntax.
+    """
+    import io  # noqa: PLC0415
     import tokenize  # noqa: PLC0415
 
-    lines = header.splitlines(keepends=True)
+    line_end_positions = [0]
 
     def line_end_pos(line_num: int) -> int:
-        return sum(len(lines[i]) for i in range(line_num))
+        return line_end_positions[line_num]
 
     def is_docstring_token(token: tokenize.TokenInfo) -> bool:
         quote_index = min((index for quote in "\"'" if (index := token.string.find(quote)) >= 0), default=0)
         return token.string[:quote_index].lower() in {"", "r", "u"}
 
-    source_lines = iter(lines)
     statement_start_line: int | None = None
     statement_end_line = 0
     parenthesis_depth = 0
     has_docstring = False
     trailing_semicolon_end: tuple[int, int] | None = None
-    try:
-        for token in tokenize.generate_tokens(lambda: next(source_lines, "")):  # pragma: no branch
-            match token.type:
-                case tokenize.COMMENT | tokenize.NL:
-                    continue
-                case _ if trailing_semicolon_end and token.type not in {tokenize.NEWLINE, tokenize.ENDMARKER}:
-                    semicolon_line, semicolon_column = trailing_semicolon_end
-                    if token.start[0] == semicolon_line:
-                        return line_end_pos(semicolon_line - 1) + semicolon_column
-                    return 0
-                case tokenize.STRING:
-                    statement_start_line = statement_start_line or token.start[0]
-                    if not is_docstring_token(token):
+    with io.StringIO(header, newline="") as source:
+
+        def readline() -> str:
+            line = source.readline()
+            if not line:
+                return ""
+            line_end_positions.append(line_end_positions[-1] + len(line))
+            if line.endswith("\r\n"):
+                return f"{line[:-2]}\n"
+            if line.endswith("\r"):
+                return f"{line[:-1]}\n"
+            return line
+
+        try:
+            for token in tokenize.generate_tokens(readline):  # pragma: no branch
+                match token.type:
+                    case tokenize.COMMENT | tokenize.NL:
+                        continue
+                    case _ if trailing_semicolon_end and token.type not in {tokenize.NEWLINE, tokenize.ENDMARKER}:
+                        semicolon_line, semicolon_column = trailing_semicolon_end
+                        if token.start[0] == semicolon_line:
+                            return line_end_pos(semicolon_line - 1) + semicolon_column
+                        return 0
+                    case tokenize.STRING:
+                        statement_start_line = statement_start_line or token.start[0]
+                        if not is_docstring_token(token):
+                            return line_end_pos(statement_start_line - 1)
+                        has_docstring = True
+                        statement_end_line = token.end[0]
+                    case tokenize.OP if token.string == "(":
+                        statement_start_line = statement_start_line or token.start[0]
+                        if has_docstring:
+                            return line_end_pos(statement_start_line - 1)
+                        parenthesis_depth += 1
+                    case tokenize.OP if token.string == ")" and parenthesis_depth:
+                        parenthesis_depth -= 1
+                        statement_end_line = token.end[0]
+                    case tokenize.OP if token.string == ";" and has_docstring and not parenthesis_depth:
+                        trailing_semicolon_end = token.end
+                        statement_end_line = token.end[0]
+                    case tokenize.NEWLINE | tokenize.ENDMARKER:
+                        if statement_start_line is None:
+                            if token.type == tokenize.ENDMARKER:
+                                return len(header)
+                            continue  # pragma: no cover  # Blank physical lines tokenize as NL.
+                        if has_docstring and not parenthesis_depth:
+                            statement_end_line = max(statement_end_line, token.start[0])
+                            # This is the header boundary. Do not request another token:
+                            # later statements may use syntax only the target runtime accepts.
+                            break
                         return line_end_pos(statement_start_line - 1)
-                    has_docstring = True
-                    statement_end_line = token.end[0]
-                case tokenize.OP if token.string == "(":
-                    statement_start_line = statement_start_line or token.start[0]
-                    parenthesis_depth += 1
-                case tokenize.OP if token.string == ")" and parenthesis_depth:
-                    parenthesis_depth -= 1
-                    statement_end_line = token.end[0]
-                case tokenize.OP if token.string == ";" and has_docstring and not parenthesis_depth:
-                    trailing_semicolon_end = token.end
-                    statement_end_line = token.end[0]
-                case tokenize.NEWLINE | tokenize.ENDMARKER:
-                    if statement_start_line is None:
-                        if token.type == tokenize.ENDMARKER:
-                            return len(header)
-                        continue  # pragma: no cover  # Blank physical lines tokenize as NL.
-                    if has_docstring and not parenthesis_depth:
-                        statement_end_line = max(statement_end_line, token.start[0])
-                        break
-                    return line_end_pos(statement_start_line - 1)
-                case _:
-                    statement_start_line = statement_start_line or token.start[0]
-                    return line_end_pos(statement_start_line - 1)
-    except (IndentationError, tokenize.TokenError):
-        return 0
+                    case _:
+                        statement_start_line = statement_start_line or token.start[0]
+                        return line_end_pos(statement_start_line - 1)
+        except (IndentationError, tokenize.TokenError):
+            return 0
 
     pos = line_end_pos(statement_end_line)
-    while statement_end_line < len(lines) and not lines[statement_end_line].strip():
-        pos += len(lines[statement_end_line])
-        statement_end_line += 1
+    while pos < len(header):
+        cr_index = header.find("\r", pos)
+        lf_index = header.find("\n", pos)
+        if cr_index < 0:
+            line_break = lf_index
+        elif lf_index < 0:
+            line_break = cr_index
+        else:
+            line_break = min(cr_index, lf_index)
+        content_end = len(header) if line_break < 0 else line_break
+        if header[pos:content_end].strip():
+            break
+        if line_break < 0:
+            return len(header)
+        pos = line_break + (2 if header.startswith("\r\n", line_break) else 1)
     return pos
 
 
