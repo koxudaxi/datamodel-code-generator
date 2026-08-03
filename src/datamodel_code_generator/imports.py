@@ -153,7 +153,11 @@ class Imports(defaultdict[str | None, set[str]]):
                     del self.alias[source_module]
 
         for reference_path, import_ in self.reference_paths.items():
-            if (module := import_overrides.get(import_.import_)) is not None and import_.from_ != module:
+            if (
+                not import_.is_future
+                and (module := import_overrides.get(import_.import_)) is not None
+                and import_.from_ != module
+            ):
                 self.reference_paths[reference_path] = Import(
                     import_=import_.import_,
                     from_=module,

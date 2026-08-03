@@ -1771,8 +1771,9 @@ def test_dataclass_arguments_invalid(json_str: str, match: str) -> None:
     options=["--import-overrides"],
     option_description="""Override modules for generated imports by symbol name.
 
-The mapping applies to imports in generated output regardless of their original module. This is useful
-for routing typing helpers through a project compatibility module across Python target versions.
+The mapping applies to imports in generated output regardless of their original module, except for
+`__future__` imports. This is useful for routing typing helpers through a project compatibility module
+across Python target versions.
 """,
     input_schema="jsonschema/datetime.json",
     cli_args=[

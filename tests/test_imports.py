@@ -212,6 +212,24 @@ def test_remap_modules_rejects_conflicting_aliases_without_mutation() -> None:
     assert imports.alias == original_aliases
 
 
+def test_remap_modules_preserves_future_reference_paths() -> None:
+    """Keep future imports and their reference metadata outside override handling."""
+    imports = Imports()
+    future_import = Import(
+        from_="__future__",
+        import_="annotations",
+        reference_path="/future/annotations",
+    )
+    imports.append(future_import)
+
+    imports.remap_modules({"annotations": "custom.future"})
+    future_imports = imports.extract_future()
+
+    assert str(future_imports) == "from __future__ import annotations"
+    assert future_imports.reference_paths == {"/future/annotations": future_import}
+    assert not imports.reference_paths
+
+
 def test_remove_dotted_import_decrements_counter_and_cleans_reference_paths() -> None:
     """Dotted imports keep their public counters and reference paths consistent."""
     imports = Imports()
