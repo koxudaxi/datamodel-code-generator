@@ -750,6 +750,9 @@ class SchemaFetchError(Error):
     """Raised when fetching a remote schema fails (HTTP error, unexpected content type)."""
 
 
+_COMMENT_ONLY_HEADER_FAST_PATH_LIMIT = 4096
+
+
 def get_first_file(path: Path) -> Path:  # pragma: no cover
     """Find and return the first file in a path (file or directory)."""
     if path.is_file():
@@ -762,39 +765,124 @@ def get_first_file(path: Path) -> Path:  # pragma: no cover
     raise FileNotFoundError(msg)
 
 
-def _find_future_import_insertion_point(header: str) -> int:
-    """Find position in header where __future__ import should be inserted."""
-    import ast  # noqa: PLC0415
+def _find_future_import_insertion_point(header: str) -> int:  # noqa: PLR0911, PLR0912, PLR0915
+    """Find the future-import position without crossing into target-version syntax.
 
-    try:
-        tree = ast.parse(header)
-    except SyntaxError:
-        return 0
+    ``generate_tokens`` uses the running Python tokenizer; it is not a parser for
+    the requested target Python version. Scan only the leading header boundary
+    and never consume later statements, which may use newer target-only syntax.
 
-    lines = header.splitlines(keepends=True)
+    The bounded fast path recognizes only physical blank and comment lines. It
+    must stay target-syntax agnostic; all statement-shaped input belongs to the
+    conservative tokenizer path below.
+    """
+    header_size = len(header)
+    if header_size <= _COMMENT_ONLY_HEADER_FAST_PATH_LIMIT:
+        first_content = 0
+        while first_content < header_size and header[first_content] in " \t\f\r\n":
+            first_content += 1
+        if first_content == header_size:
+            return header_size
+        # Keep the speculative scan bounded: a comment-prefixed code header
+        # must not pay an unbounded second pass before runtime tokenization.
+        # Do not use splitlines(): its extra Unicode boundaries are not the
+        # physical CR/LF boundaries normalized by the tokenizer adapter.
+        if header[first_content] == "#" and all(
+            not (content := line.lstrip(" \t\f")) or content.startswith("#")
+            for line in header.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+        ):
+            return header_size
+
+    import io  # noqa: PLC0415
+    import tokenize  # noqa: PLC0415
+
+    line_end_positions = [0]
 
     def line_end_pos(line_num: int) -> int:
-        return sum(len(lines[i]) for i in range(line_num))
+        return line_end_positions[line_num]
 
-    if not tree.body:
-        return len(header)
+    def is_docstring_token(token: tokenize.TokenInfo) -> bool:
+        quote_index = min((index for quote in "\"'" if (index := token.string.find(quote)) >= 0), default=0)
+        return token.string[:quote_index].lower() in {"", "r", "u"}
 
-    first_stmt = tree.body[0]
-    is_docstring = isinstance(first_stmt, ast.Expr) and (
-        (isinstance(first_stmt.value, ast.Constant) and isinstance(first_stmt.value.value, str))
-        or isinstance(first_stmt.value, ast.JoinedStr)
-    )
-    if is_docstring:
-        end_line = first_stmt.end_lineno or len(lines)
-        pos = line_end_pos(end_line)
-        while end_line < len(lines) and not lines[end_line].strip():
-            pos += len(lines[end_line])
-            end_line += 1
-        return pos
+    statement_start_line: int | None = None
+    statement_end_line = 0
+    parenthesis_depth = 0
+    has_docstring = False
+    trailing_semicolon_end: tuple[int, int] | None = None
+    with io.StringIO(header, newline="") as source:
 
-    pos = 0
-    for i in range(first_stmt.lineno - 1):
-        pos += len(lines[i])
+        def readline() -> str:
+            line = source.readline()
+            if not line:
+                return ""
+            line_end_positions.append(line_end_positions[-1] + len(line))
+            if line.endswith("\r\n"):
+                return f"{line[:-2]}\n"
+            if line.endswith("\r"):
+                return f"{line[:-1]}\n"
+            return line
+
+        try:
+            for token in tokenize.generate_tokens(readline):  # pragma: no branch
+                match token.type:
+                    case tokenize.COMMENT | tokenize.NL:
+                        continue
+                    case _ if trailing_semicolon_end and token.type not in {tokenize.NEWLINE, tokenize.ENDMARKER}:
+                        semicolon_line, semicolon_column = trailing_semicolon_end
+                        if token.start[0] == semicolon_line:
+                            return line_end_pos(semicolon_line - 1) + semicolon_column
+                        return 0
+                    case tokenize.STRING:
+                        statement_start_line = statement_start_line or token.start[0]
+                        if not is_docstring_token(token):
+                            return line_end_pos(statement_start_line - 1)
+                        has_docstring = True
+                        statement_end_line = token.end[0]
+                    case tokenize.OP if token.string == "(":
+                        statement_start_line = statement_start_line or token.start[0]
+                        if has_docstring:
+                            return line_end_pos(statement_start_line - 1)
+                        parenthesis_depth += 1
+                    case tokenize.OP if token.string == ")" and parenthesis_depth:
+                        parenthesis_depth -= 1
+                        statement_end_line = token.end[0]
+                    case tokenize.OP if token.string == ";" and has_docstring and not parenthesis_depth:
+                        trailing_semicolon_end = token.end
+                        statement_end_line = token.end[0]
+                    case tokenize.NEWLINE | tokenize.ENDMARKER:
+                        if statement_start_line is None:
+                            if token.type == tokenize.ENDMARKER:
+                                return len(header)
+                            continue  # pragma: no cover  # Blank physical lines tokenize as NL.
+                        if has_docstring and not parenthesis_depth:
+                            statement_end_line = max(statement_end_line, token.start[0])
+                            # This is the header boundary. Do not request another token:
+                            # later statements may use syntax only the target runtime accepts.
+                            break
+                        return line_end_pos(statement_start_line - 1)
+                    case _:
+                        statement_start_line = statement_start_line or token.start[0]
+                        return line_end_pos(statement_start_line - 1)
+        except (SyntaxError, tokenize.TokenError):
+            return 0
+
+    pos = line_end_pos(statement_end_line)
+    while pos < len(header):
+        cr_index = header.find("\r", pos)
+        lf_index = header.find("\n", pos)
+        if cr_index < 0:
+            line_break = lf_index
+        elif lf_index < 0:
+            line_break = cr_index
+        else:
+            line_break = min(cr_index, lf_index)
+        content_end = len(header) if line_break < 0 else line_break
+        if header[pos:content_end].strip():
+            break
+        if line_break < 0:
+            return len(header)
+        pos = line_break + (2 if header.startswith("\r\n", line_break) else 1)
     return pos
 
 
@@ -843,8 +931,6 @@ def _extract_leading_future_imports(body: str, future_imports: str) -> tuple[str
         and (line_end := body.find("\n", future_start)) >= 0
     ):
         if (leading_line := body[future_start:line_end].lstrip()) and not leading_line.startswith("#"):
-            if not leading_line.lstrip("rubfRUBF").startswith(("'", '"')):
-                break
             future_start = _find_future_import_insertion_point(body)
             break
         future_start = line_end + 1
@@ -888,9 +974,11 @@ def _build_module_content(
     header_before = header[:insertion_point].rstrip()
     header_after = header[insertion_point:].strip()
     if header_after:
-        content = header_before + "\n" + extracted_future + "\n\n" + header_after
+        prefix = f"{header_before}\n" if header_before else ""
+        content = prefix + extracted_future + "\n\n" + header_after
     else:
-        content = header_before + "\n\n" + extracted_future
+        prefix = f"{header_before}\n\n" if header_before else ""
+        content = prefix + extracted_future
 
     return f"{content}\n\n{body_without_future.rstrip()}"
 

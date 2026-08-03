@@ -7,6 +7,7 @@ import inspect
 import json
 import platform
 import sys
+import tokenize
 import warnings
 from argparse import ArgumentTypeError, BooleanOptionalAction, Namespace
 from collections import defaultdict
@@ -23,6 +24,7 @@ from packaging import version
 
 import datamodel_code_generator
 from datamodel_code_generator import (
+    _COMMENT_ONLY_HEADER_FAST_PATH_LIMIT,
     AllExportsScope,
     CustomFileHeaderMode,
     DanglingRefWarning,
@@ -32,6 +34,7 @@ from datamodel_code_generator import (
     HTTPBackend,
     InputFileType,
     SchemaParseError,
+    _find_future_import_insertion_point,
     _generate_config_values,
     _get_internal_parser_config_model,
     chdir,
@@ -3935,6 +3938,95 @@ def test_generate_custom_file_header_prepend_after_formatter_docstring() -> None
     )
 
 
+def test_generate_custom_file_header_prepend_after_formatter_parenthesized_docstring() -> None:
+    """Extract future imports after a parenthesized formatter docstring."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        formatters=[],
+        custom_formatters=["tests.data.python.custom_formatters.add_parenthesized_docstring"],
+        custom_file_header='"""Module docstring."""\n\nimport sys',
+        custom_file_header_mode=CustomFileHeaderMode.Prepend,
+        disable_timestamp=True,
+        expected_file=(
+            EXPECTED_MAIN_PATH / "generate_custom_file_header_prepend_after_formatter_parenthesized_docstring.py"
+        ),
+    )
+
+
+@pytest.mark.allow_direct_assert
+@pytest.mark.parametrize(
+    ("header", "expected"),
+    [
+        pytest.param("\n", 1, id="blank"),
+        pytest.param("# comment\r\n", len("# comment\r\n"), id="comment-crlf"),
+        pytest.param(
+            "#!/usr/bin/env python\n# coding: utf-8\n",
+            len("#!/usr/bin/env python\n# coding: utf-8\n"),
+            id="shebang-encoding",
+        ),
+        pytest.param(
+            ' \t\f# comment with """quotes""";\r\n# lf with \'quotes\';\n# cr with semicolon;\r\f# no newline',
+            len(' \t\f# comment with """quotes""";\r\n# lf with \'quotes\';\n# cr with semicolon;\r\f# no newline'),
+            id="comment-fast-path-mixed-newlines",
+        ),
+        pytest.param(
+            "#" + "x" * (_COMMENT_ONLY_HEADER_FAST_PATH_LIMIT - 1),
+            _COMMENT_ONLY_HEADER_FAST_PATH_LIMIT,
+            id="comment-fast-path-limit",
+        ),
+        pytest.param(
+            "#" + "x" * _COMMENT_ONLY_HEADER_FAST_PATH_LIMIT,
+            _COMMENT_ONLY_HEADER_FAST_PATH_LIMIT + 1,
+            id="comment-over-fast-path-limit",
+        ),
+        pytest.param("# comment\r\nimport os\r\n", len("# comment\r\n"), id="comment-prefixed-statement"),
+        pytest.param("r'''doc'''\r\n\r\nimport os\r\n", len("r'''doc'''\r\n\r\n"), id="raw-docstring-crlf"),
+        pytest.param('"""doc"""\r\rimport os\r', len('"""doc"""\r\r'), id="docstring-cr"),
+        pytest.param('\f"""doc"""\n\nimport os\n', len('\f"""doc"""\n\n'), id="docstring-form-feed"),
+        pytest.param('"""doc"""\n  ', len('"""doc"""\n  '), id="docstring-trailing-blank-no-newline"),
+        pytest.param("u'doc'\n\nimport os\n", len("u'doc'\n\n"), id="unicode-docstring"),
+        pytest.param('"""doc""";\nimport os\n', len('"""doc""";\n'), id="semicolon-docstring"),
+        pytest.param(
+            '("""doc"""); # comment\nimport os\n',
+            len('("""doc"""); # comment\n'),
+            id="parenthesized-semicolon-docstring",
+        ),
+        pytest.param('"""doc"""; import os\n', len('"""doc""";'), id="semicolon-second-statement"),
+        pytest.param(
+            '"""doc"""; ' + "\\" + "\nimport os\n",
+            0,
+            id="semicolon-line-continuation",
+        ),
+        pytest.param("b'doc'\n", 0, id="bytes-expression"),
+        pytest.param("f'doc'\n", 0, id="f-string-expression"),
+        pytest.param('"doc"()\n', 0, id="string-postfix-call"),
+        pytest.param('("doc")()\n', 0, id="parenthesized-string-postfix-call"),
+        pytest.param("()\n", 0, id="expression"),
+        pytest.param("import os\n", 0, id="statement"),
+        pytest.param("(\n", 0, id="unclosed-opening-group"),
+        pytest.param("'''unterminated", 0, id="malformed"),
+    ],
+)
+def test_future_import_insertion_point_handles_tokenizer_boundaries(header: str, expected: int) -> None:
+    """Blank, expression, and malformed headers have deterministic insertion points."""
+    assert _find_future_import_insertion_point(header) == expected
+
+
+@pytest.mark.allow_direct_assert
+def test_future_import_insertion_point_handles_runtime_tokenizer_syntax_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Treat runtime-specific tokenizer SyntaxError as malformed external input."""
+
+    def raise_syntax_error(_readline: Any) -> Any:
+        raise SyntaxError
+
+    monkeypatch.setattr(tokenize, "generate_tokens", raise_syntax_error)
+
+    assert _find_future_import_insertion_point("(") == 0
+
+
 def test_custom_file_header_prepend_preserves_future_import_text(output_file: Path) -> None:
     """Preserve future-import text inside generated schema descriptions."""
     run_main_and_assert(
@@ -3963,6 +4055,75 @@ def test_generate_returns_string_with_custom_file_header_and_code() -> None:
         input_file_type=InputFileType.JsonSchema,
         custom_file_header=custom_header,
         expected_file=EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header_and_code.py",
+    )
+
+
+def test_generate_custom_file_header_preserves_runtime_target_tokenizer_boundary() -> None:
+    """Keep 3.10/3.12/3.14 runtime tokenizers behind the target-syntax boundary."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        custom_file_header_path=DATA_PATH / "custom_file_header_with_newer_target_syntax.txt",
+        target_python_version=PythonVersion.PY_312,
+        formatters=[],
+        expected_file=EXPECTED_MAIN_PATH / "generate_custom_file_header_with_newer_target_syntax.py",
+    )
+
+
+def test_generate_custom_file_header_does_not_treat_fstring_as_docstring() -> None:
+    """Place future imports before an f-string expression."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        custom_file_header_path=DATA_PATH / "custom_file_header_with_fstring.txt",
+        target_python_version=PythonVersion.PY_312,
+        formatters=[],
+        expected_file=EXPECTED_MAIN_PATH / "generate_custom_file_header_with_fstring.py",
+    )
+
+
+def test_generate_custom_file_header_does_not_treat_postfix_call_as_docstring() -> None:
+    """Place future imports before a call on a parenthesized string expression."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        custom_file_header_path=DATA_PATH / "custom_file_header_with_postfix_call.txt",
+        formatters=[],
+        expected_file=EXPECTED_MAIN_PATH / "generate_custom_file_header_with_postfix_call.py",
+    )
+
+
+def test_generate_custom_file_header_with_form_feed() -> None:
+    """Preserve a docstring preceded by form-feed whitespace."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        custom_file_header_path=DATA_PATH / "custom_file_header_with_form_feed.txt",
+        formatters=[],
+        expected_file=EXPECTED_MAIN_PATH / "generate_custom_file_header_with_form_feed.py",
+    )
+
+
+def test_generate_custom_file_header_comments_only_fast_path() -> None:
+    """Preserve comment contents while placing future imports without tokenization."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        custom_file_header_path=DATA_PATH / "custom_file_header_fast_path.txt",
+        formatters=[],
+        expected_file=EXPECTED_MAIN_PATH / "generate_custom_file_header_comments_only.py",
+    )
+
+
+def test_generate_custom_file_header_with_parenthesized_docstring() -> None:
+    """Place future imports after a parenthesized, concatenated docstring."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        custom_file_header_path=DATA_PATH / "custom_file_header_with_parenthesized_docstring.txt",
+        target_python_version=PythonVersion.PY_312,
+        formatters=[],
+        expected_file=EXPECTED_MAIN_PATH / "generate_custom_file_header_with_parenthesized_docstring.py",
     )
 
 
