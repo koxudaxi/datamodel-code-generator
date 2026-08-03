@@ -3952,6 +3952,7 @@ def test_generate_custom_file_header_prepend_after_formatter_parenthesized_docst
     )
 
 
+@pytest.mark.allow_direct_assert
 @pytest.mark.parametrize(
     ("header", "expected"),
     [
