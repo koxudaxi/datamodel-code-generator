@@ -24,6 +24,7 @@ from packaging import version
 
 import datamodel_code_generator
 from datamodel_code_generator import (
+    _COMMENT_ONLY_HEADER_FAST_PATH_LIMIT,
     AllExportsScope,
     CustomFileHeaderMode,
     DanglingRefWarning,
@@ -3964,6 +3965,22 @@ def test_generate_custom_file_header_prepend_after_formatter_parenthesized_docst
             len("#!/usr/bin/env python\n# coding: utf-8\n"),
             id="shebang-encoding",
         ),
+        pytest.param(
+            ' \t\f# comment with """quotes""";\r\n# lf with \'quotes\';\n# cr with semicolon;\r\f# no newline',
+            len(' \t\f# comment with """quotes""";\r\n# lf with \'quotes\';\n# cr with semicolon;\r\f# no newline'),
+            id="comment-fast-path-mixed-newlines",
+        ),
+        pytest.param(
+            "#" + "x" * (_COMMENT_ONLY_HEADER_FAST_PATH_LIMIT - 1),
+            _COMMENT_ONLY_HEADER_FAST_PATH_LIMIT,
+            id="comment-fast-path-limit",
+        ),
+        pytest.param(
+            "#" + "x" * _COMMENT_ONLY_HEADER_FAST_PATH_LIMIT,
+            _COMMENT_ONLY_HEADER_FAST_PATH_LIMIT + 1,
+            id="comment-over-fast-path-limit",
+        ),
+        pytest.param("# comment\r\nimport os\r\n", len("# comment\r\n"), id="comment-prefixed-statement"),
         pytest.param("r'''doc'''\r\n\r\nimport os\r\n", len("r'''doc'''\r\n\r\n"), id="raw-docstring-crlf"),
         pytest.param('"""doc"""\r\rimport os\r', len('"""doc"""\r\r'), id="docstring-cr"),
         pytest.param('\f"""doc"""\n\nimport os\n', len('\f"""doc"""\n\n'), id="docstring-form-feed"),
@@ -4084,6 +4101,17 @@ def test_generate_custom_file_header_with_form_feed() -> None:
         custom_file_header_path=DATA_PATH / "custom_file_header_with_form_feed.txt",
         formatters=[],
         expected_file=EXPECTED_MAIN_PATH / "generate_custom_file_header_with_form_feed.py",
+    )
+
+
+def test_generate_custom_file_header_comments_only_fast_path() -> None:
+    """Preserve comment contents while placing future imports without tokenization."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=InputFileType.JsonSchema,
+        custom_file_header_path=DATA_PATH / "custom_file_header_fast_path.txt",
+        formatters=[],
+        expected_file=EXPECTED_MAIN_PATH / "generate_custom_file_header_comments_only.py",
     )
 
 

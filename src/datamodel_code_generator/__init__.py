@@ -750,6 +750,9 @@ class SchemaFetchError(Error):
     """Raised when fetching a remote schema fails (HTTP error, unexpected content type)."""
 
 
+_COMMENT_ONLY_HEADER_FAST_PATH_LIMIT = 4096
+
+
 def get_first_file(path: Path) -> Path:  # pragma: no cover
     """Find and return the first file in a path (file or directory)."""
     if path.is_file():
@@ -768,7 +771,28 @@ def _find_future_import_insertion_point(header: str) -> int:  # noqa: PLR0911, P
     ``generate_tokens`` uses the running Python tokenizer; it is not a parser for
     the requested target Python version. Scan only the leading header boundary
     and never consume later statements, which may use newer target-only syntax.
+
+    The bounded fast path recognizes only physical blank and comment lines. It
+    must stay target-syntax agnostic; all statement-shaped input belongs to the
+    conservative tokenizer path below.
     """
+    header_size = len(header)
+    if header_size <= _COMMENT_ONLY_HEADER_FAST_PATH_LIMIT:
+        first_content = 0
+        while first_content < header_size and header[first_content] in " \t\f\r\n":
+            first_content += 1
+        if first_content == header_size:
+            return header_size
+        # Keep the speculative scan bounded: a comment-prefixed code header
+        # must not pay an unbounded second pass before runtime tokenization.
+        # Do not use splitlines(): its extra Unicode boundaries are not the
+        # physical CR/LF boundaries normalized by the tokenizer adapter.
+        if header[first_content] == "#" and all(
+            not (content := line.lstrip(" \t\f")) or content.startswith("#")
+            for line in header.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+        ):
+            return header_size
+
     import io  # noqa: PLC0415
     import tokenize  # noqa: PLC0415
 
