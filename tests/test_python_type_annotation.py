@@ -195,10 +195,14 @@ def test_parse_python_type_annotation_handles_external_parser_errors(
     error: Exception,
 ) -> None:
     """Resource and Unicode parser failures are invalid input at the external boundary."""
-    from datamodel_code_generator import _python_type_annotation
+    from datamodel_code_generator import _python_type_annotation_codec
 
     parse_python_type_annotation.cache_clear()
-    monkeypatch.setattr(_python_type_annotation.ast, "parse", lambda *_args, **_kwargs: (_ for _ in ()).throw(error))
+    monkeypatch.setattr(
+        _python_type_annotation_codec.ast,
+        "parse",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(error),
+    )
 
     assert parse_python_type_annotation("External") is None
     parse_python_type_annotation.cache_clear()

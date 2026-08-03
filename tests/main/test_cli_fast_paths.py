@@ -213,6 +213,10 @@ def _run_no_formatter_generation_probe() -> dict[str, Any]:
             print(json.dumps({
                 "generated": generated,
                 "imported_format": "datamodel_code_generator.format" in sys.modules,
+                "imported_python_type_codec": (
+                    "datamodel_code_generator._python_type_annotation_codec" in sys.modules
+                ),
+                "imported_python_type_ir": "datamodel_code_generator._python_type_annotation" in sys.modules,
             }, indent=2, sort_keys=True))
             """
         )

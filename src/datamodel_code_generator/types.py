@@ -37,13 +37,6 @@ from datamodel_code_generator._format_types import (
     PythonVersion,
     PythonVersionMin,
 )
-from datamodel_code_generator._python_type_annotation import (
-    iter_python_type_expr_qualified_names,
-    parse_python_type_annotation,
-    python_type_expr_arguments,
-    python_type_expr_base_name,
-    render_python_type_expr,
-)
 from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
     IMPORT_ABC_SEQUENCE,
@@ -268,6 +261,13 @@ def get_type_base_name(type_str: str) -> str:
         "foo.bar.Baz" -> "Baz"
         "Optional[int]" -> "Optional"
     """
+    # Python annotation parsing is an opt-in external-schema boundary. Keep its
+    # IR and runtime codec out of ordinary generation that never supplies one.
+    from datamodel_code_generator._python_type_annotation import (  # noqa: PLC0415
+        parse_python_type_annotation,
+        python_type_expr_base_name,
+    )
+
     fallback = type_str.split("[", maxsplit=1)[0].rsplit(".", 1)[-1].strip()
     if (expression := parse_python_type_annotation(type_str)) is None:
         return fallback
@@ -284,6 +284,12 @@ def get_subscript_args(type_str: str) -> list[str]:
         "str | int | None" -> ["str", "int", "None"]
         "str" -> []
     """
+    from datamodel_code_generator._python_type_annotation import (  # noqa: PLC0415
+        parse_python_type_annotation,
+        python_type_expr_arguments,
+        render_python_type_expr,
+    )
+
     if (expression := parse_python_type_annotation(type_str)) is None:
         return []
     return [render_python_type_expr(argument) for argument in python_type_expr_arguments(expression)]
@@ -299,6 +305,11 @@ def extract_qualified_names(type_str: str) -> list[str]:
         "Dict[a.B, c.D]" -> ["a.B", "c.D"]
         "str" -> []
     """
+    from datamodel_code_generator._python_type_annotation import (  # noqa: PLC0415
+        iter_python_type_expr_qualified_names,
+        parse_python_type_annotation,
+    )
+
     expression = parse_python_type_annotation(type_str)
     return list(iter_python_type_expr_qualified_names(expression)) if expression is not None else []
 
@@ -306,6 +317,8 @@ def extract_qualified_names(type_str: str) -> list[str]:
 @lru_cache(maxsize=1024)
 def is_python_type_annotation(type_str: str) -> bool:
     """Return whether a string is a Python type annotation expression."""
+    from datamodel_code_generator._python_type_annotation import parse_python_type_annotation  # noqa: PLC0415
+
     return parse_python_type_annotation(type_str) is not None
 
 
