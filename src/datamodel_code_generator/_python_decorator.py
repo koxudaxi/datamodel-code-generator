@@ -119,11 +119,7 @@ def _parse_direct_target(
     while index < len(tokens) and tokens[index].string == "(":
         wrapper_depth += 1
         index += 1
-    if (
-        index >= len(tokens)
-        or tokens[index].type != token.NAME
-        or keyword.iskeyword(name := tokens[index].string)
-    ):
+    if index >= len(tokens) or tokens[index].type != token.NAME or keyword.iskeyword(name := tokens[index].string):
         return None
     index += 1
     has_call = False
