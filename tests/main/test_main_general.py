@@ -1802,7 +1802,9 @@ def test_import_overrides(output_file: Path) -> None:
             "--import-overrides",
             '{"TypedDict": "my_project.typing_compat", "NotRequired": "my_project.typing_compat"}',
         ],
+        skip_code_validation=True,
     )
+    validate_generated_code(output_file.read_text(encoding="utf-8"), str(output_file))
 
 
 @freeze_time(TIMESTAMP)
