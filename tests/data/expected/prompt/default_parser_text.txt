@@ -52,6 +52,7 @@
 - `--use-specialized-enum`: Generate StrEnum/IntEnum for string/integer enums (Python 3.11+).
 - `--use-standard-collections`: Use built-in dict/list instead of typing.Dict/List.
 - `--use-standard-primitive-types`: Use Python standard library types for string formats instead of str.
+- `--use-total-false-for-typed-dict`: Generate TypedDict declarations with `total=False`.
 - `--use-tuple-for-fixed-items`: Generate tuple types for arrays with items array syntax.
 - `--use-type-alias`: Use TypeAlias instead of root models for type definitions (experimental).
 - `--use-union-operator`: Use | operator for Union types (PEP 604).

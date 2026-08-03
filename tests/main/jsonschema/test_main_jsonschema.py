@@ -8475,6 +8475,99 @@ def test_main_typed_dict_mixed_closed_no_duplicate_imports(output_file: Path) ->
     )
 
 
+@pytest.mark.parametrize(
+    ("target_python_version", "expected_file"),
+    [
+        ("3.10", "use_total_false_for_typed_dict_py310.py"),
+        ("3.11", "use_total_false_for_typed_dict_py311.py"),
+    ],
+)
+@pytest.mark.cli_doc(
+    options=["--use-total-false-for-typed-dict"],
+    option_description="""Generate TypedDict declarations with `total=False`.
+
+Optional fields are left unwrapped, while required fields are marked with
+`Required[...]`. This can substantially reduce generated code when most fields
+are optional.""",
+    input_schema="jsonschema/use_total_false_for_typed_dict.json",
+    cli_args=[
+        "--output-model-type",
+        "typing.TypedDict",
+        "--use-total-false-for-typed-dict",
+        "--use-frozen-field",
+    ],
+    version_outputs={
+        "3.10": "main/jsonschema/use_total_false_for_typed_dict_py310.py",
+        "3.11": "main/jsonschema/use_total_false_for_typed_dict_py311.py",
+    },
+)
+def test_main_use_total_false_for_typed_dict(
+    target_python_version: str,
+    expected_file: str,
+    output_file: Path,
+) -> None:
+    """Generate total=False TypedDicts for class, functional, and PEP 728 syntax."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_total_false_for_typed_dict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--use-total-false-for-typed-dict",
+            "--use-frozen-field",
+            "--target-python-version",
+            target_python_version,
+        ],
+    )
+
+
+def test_main_use_total_false_for_typed_dict_ignores_other_outputs(output_file: Path) -> None:
+    """Leave non-TypedDict output unchanged when the option is supplied."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="general.py",
+        extra_args=["--use-total-false-for-typed-dict"],
+    )
+
+
+@pytest.mark.parametrize(
+    ("target_python_version", "total_false_args", "expected_file"),
+    [
+        ("3.11", [], "use_total_false_for_typed_dict_reuse_legacy.py"),
+        ("3.10", ["--use-total-false-for-typed-dict"], "use_total_false_for_typed_dict_reuse_py310.py"),
+        ("3.11", ["--use-total-false-for-typed-dict"], "use_total_false_for_typed_dict_reuse_py311.py"),
+    ],
+)
+def test_main_use_total_false_for_typed_dict_reuse_model(
+    target_python_version: str,
+    total_false_args: list[str],
+    expected_file: str,
+    output_file: Path,
+) -> None:
+    """Preserve total=False on empty TypedDict subclasses without changing legacy output."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_model_inline_definitions.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--reuse-model",
+            "--target-python-version",
+            target_python_version,
+            *total_false_args,
+        ],
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--no-use-closed-typed-dict"],
     option_description="""Disable PEP 728 TypedDict closed/extra_items generation.

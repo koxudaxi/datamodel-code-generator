@@ -1920,6 +1920,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.use_operation_id_as_name: bool = config.use_operation_id_as_name
         self.use_unique_items_as_set: bool = config.use_unique_items_as_set
         self.use_tuple_for_fixed_items: bool = config.use_tuple_for_fixed_items
+        self.use_total_false_for_typed_dict: bool = config.use_total_false_for_typed_dict
         self.use_closed_typed_dict: bool = config.use_closed_typed_dict
         self.allof_merge_mode: AllOfMergeMode = config.allof_merge_mode
         self.allof_class_hierarchy: AllOfClassHierarchy = config.allof_class_hierarchy
@@ -1945,6 +1946,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.validators = config.validators
         self.generate_schema_validators: bool = config.generate_schema_validators
         self._set_typed_extra_annotation_mode(use_deferred_annotations=True)
+
+        if self.use_total_false_for_typed_dict and self.data_model_type.SUPPORTS_TYPED_DICT_TOTAL_FALSE:
+            typed_dict_data = self.extra_template_data[ALL_MODEL]
+            typed_dict_data["use_total_false_for_typed_dict"] = True
+            if not self.target_python_version.has_typed_dict_non_required:
+                typed_dict_data["use_total_false_typeddict_backport"] = True
 
         if self.validators:
             for model_name, model_config in self.validators.items():

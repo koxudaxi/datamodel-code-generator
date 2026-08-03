@@ -88,6 +88,9 @@ STANDARD_TUPLE = "tuple"
 STANDARD_FROZEN_SET = "frozenset"
 STR = "str"
 
+REQUIRED = "Required"
+REQUIRED_PREFIX = f"{REQUIRED}["
+
 NOT_REQUIRED = "NotRequired"
 NOT_REQUIRED_PREFIX = f"{NOT_REQUIRED}["
 

@@ -9586,7 +9586,7 @@ This documentation is auto-generated from test cases.
 | Category | Options | Description |
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 13 | Input/output configuration |
-| 🔧 [Typing Customization](typing-customization.md) | 30 | Type annotation and import behavior |
+| 🔧 [Typing Customization](typing-customization.md) | 31 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 27 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 44 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 27 | Output formatting and custom rendering |
@@ -9858,6 +9858,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--use-status-code-in-response-name`](openapi-only-options.md#use-status-code-in-response-name)
 - [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 - [`--use-title-as-name`](field-customization.md#use-title-as-name)
+- [`--use-total-false-for-typed-dict`](typing-customization.md#use-total-false-for-typed-dict)
 - [`--use-tuple-for-fixed-items`](typing-customization.md#use-tuple-for-fixed-items)
 - [`--use-type-alias`](typing-customization.md#use-type-alias)
 - [`--use-type-checking-imports`](template-customization.md#use-type-checking-imports)
@@ -21989,6 +21990,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/typing-custo
 | [`--use-specialized-enum`](#use-specialized-enum) | Generate StrEnum/IntEnum for string/integer enums (Python 3.... |
 | [`--use-standard-collections`](#use-standard-collections) | Use built-in dict/list instead of typing.Dict/List. |
 | [`--use-standard-primitive-types`](#use-standard-primitive-types) | Use Python standard library types for string formats instead... |
+| [`--use-total-false-for-typed-dict`](#use-total-false-for-typed-dict) | Generate TypedDict declarations with `total=False`. |
 | [`--use-tuple-for-fixed-items`](#use-tuple-for-fixed-items) | Generate tuple types for arrays with items array syntax. |
 | [`--use-type-alias`](#use-type-alias) | Use TypeAlias instead of root models for type definitions (e... |
 | [`--use-union-operator`](#use-union-operator) | Use | operator for Union types (PEP 604). |
@@ -26382,6 +26384,254 @@ output types. Pydantic already uses these types by default.
         ip_address: IPv4Address | None = None
         config_path: Path | None = None
     ```
+
+---
+
+## `--use-total-false-for-typed-dict` {#use-total-false-for-typed-dict}
+
+Generate TypedDict declarations with `total=False`.
+
+Optional fields are left unwrapped, while required fields are marked with
+`Required[...]`. This can substantially reduce generated code when most fields
+are optional.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --output-model-type typing.TypedDict --use-total-false-for-typed-dict --use-frozen-field # (1)!
+    ```
+
+    1. :material-arrow-left: `--use-total-false-for-typed-dict` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$defs": {
+        "ClassModel": {
+          "type": "object",
+          "properties": {
+            "required_value": {
+              "type": "string"
+            },
+            "optional_value": {
+              "type": "integer"
+            },
+            "required_read_only": {
+              "type": "boolean",
+              "readOnly": true
+            },
+            "optional_read_only": {
+              "type": "number",
+              "readOnly": true
+            }
+          },
+          "required": [
+            "required_value",
+            "required_read_only"
+          ]
+        },
+        "BaseModel": {
+          "type": "object",
+          "properties": {
+            "base_required": {
+              "type": "string"
+            },
+            "base_optional": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "base_required"
+          ]
+        },
+        "FunctionalModel": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/BaseModel"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "invalid-key": {
+                  "type": "string"
+                },
+                "child_optional": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "invalid-key"
+              ]
+            }
+          ]
+        },
+        "ClosedModel": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "closed_required": {
+              "type": "string"
+            },
+            "closed_optional": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "closed_required"
+          ]
+        },
+        "ExtraItemsModel": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "properties": {
+            "extra_required": {
+              "type": "string"
+            },
+            "extra_optional": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "extra_required"
+          ]
+        }
+      },
+      "type": "object",
+      "properties": {
+        "class_model": {
+          "$ref": "#/$defs/ClassModel"
+        },
+        "functional_model": {
+          "$ref": "#/$defs/FunctionalModel"
+        },
+        "closed_model": {
+          "$ref": "#/$defs/ClosedModel"
+        },
+        "extra_items_model": {
+          "$ref": "#/$defs/ExtraItemsModel"
+        }
+      },
+      "required": [
+        "class_model"
+      ]
+    }
+    ```
+
+    **Output:**
+
+    === "Python 3.10"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  use_total_false_for_typed_dict.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+
+        from __future__ import annotations
+
+        from typing_extensions import ReadOnly, Required, TypedDict
+
+
+        class ClassModel(TypedDict, total=False):
+            required_value: Required[str]
+            optional_value: int
+            required_read_only: Required[ReadOnly[bool]]
+            optional_read_only: ReadOnly[float]
+
+
+        class BaseModel(TypedDict, total=False):
+            base_required: Required[str]
+            base_optional: int
+
+
+        FunctionalModel = TypedDict(
+            'FunctionalModel',
+            {
+                'base_required': Required[str],
+                'base_optional': int,
+                'invalid-key': Required[str],
+                'child_optional': bool,
+            },
+            total=False,
+        )
+
+
+        class ClosedModel(TypedDict, total=False, closed=True):
+            closed_required: Required[str]
+            closed_optional: int
+
+
+        class ExtraItemsModel(TypedDict, total=False, extra_items=int):
+            extra_required: Required[str]
+            extra_optional: bool
+
+
+        class Model(TypedDict, total=False):
+            class_model: Required[ClassModel]
+            functional_model: FunctionalModel
+            closed_model: ClosedModel
+            extra_items_model: ExtraItemsModel
+        ```
+
+    === "Python 3.11"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  use_total_false_for_typed_dict.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+
+        from __future__ import annotations
+
+        from typing import Required
+
+        from typing_extensions import ReadOnly, TypedDict
+
+
+        class ClassModel(TypedDict, total=False):
+            required_value: Required[str]
+            optional_value: int
+            required_read_only: Required[ReadOnly[bool]]
+            optional_read_only: ReadOnly[float]
+
+
+        class BaseModel(TypedDict, total=False):
+            base_required: Required[str]
+            base_optional: int
+
+
+        FunctionalModel = TypedDict(
+            'FunctionalModel',
+            {
+                'base_required': Required[str],
+                'base_optional': int,
+                'invalid-key': Required[str],
+                'child_optional': bool,
+            },
+            total=False,
+        )
+
+
+        class ClosedModel(TypedDict, total=False, closed=True):
+            closed_required: Required[str]
+            closed_optional: int
+
+
+        class ExtraItemsModel(TypedDict, total=False, extra_items=int):
+            extra_required: Required[str]
+            extra_optional: bool
+
+
+        class Model(TypedDict, total=False):
+            class_model: Required[ClassModel]
+            functional_model: FunctionalModel
+            closed_model: ClosedModel
+            extra_items_model: ExtraItemsModel
+        ```
 
 ---
 
@@ -37335,6 +37585,7 @@ datamodel-codegen [OPTIONS]
 | [`--use-specialized-enum`](typing-customization.md#use-specialized-enum) | Generate StrEnum/IntEnum for string/integer enums (Python 3.11+). |
 | [`--use-standard-collections`](typing-customization.md#use-standard-collections) | Use built-in dict/list instead of typing.Dict/List. |
 | [`--use-standard-primitive-types`](typing-customization.md#use-standard-primitive-types) | Use Python standard library types for string formats instead of str. |
+| [`--use-total-false-for-typed-dict`](typing-customization.md#use-total-false-for-typed-dict) | Generate TypedDict declarations with `total=False`. |
 | [`--use-tuple-for-fixed-items`](typing-customization.md#use-tuple-for-fixed-items) | Generate tuple types for arrays with items array syntax. |
 | [`--use-type-alias`](typing-customization.md#use-type-alias) | Use TypeAlias instead of root models for type definitions (experimental). |
 | [`--use-union-operator`](typing-customization.md#use-union-operator) | Use | operator for Union types (PEP 604). |
@@ -37687,6 +37938,7 @@ All options sorted alphabetically:
 - [`--use-status-code-in-response-name`](openapi-only-options.md#use-status-code-in-response-name) - Include HTTP status code in response model names.
 - [`--use-subclass-enum`](model-customization.md#use-subclass-enum) - Generate typed Enum subclasses for enums with specific field...
 - [`--use-title-as-name`](field-customization.md#use-title-as-name) - Use schema title as the generated class name.
+- [`--use-total-false-for-typed-dict`](typing-customization.md#use-total-false-for-typed-dict) - Generate TypedDict declarations with `total=False`.
 - [`--use-tuple-for-fixed-items`](typing-customization.md#use-tuple-for-fixed-items) - Generate tuple types for arrays with items array syntax.
 - [`--use-type-alias`](typing-customization.md#use-type-alias) - Use TypeAlias instead of root models for type definitions (e...
 - [`--use-type-checking-imports`](template-customization.md#use-type-checking-imports) - Allow Ruff to move typing-only imports into TYPE_CHECKING bl...
@@ -39016,16 +39268,16 @@ classDiagram
 
 | Config model | Field count | Purpose |
 | --- | ---: | --- |
-| `BaseGenerateConfig` | 143 | Shared generation options. |
-| `GenerateConfig` | 158 | Public `generate()` configuration. |
-| `ParserConfig` | 138 | Base parser dependency injection and parser options. |
-| `JSONSchemaParserConfig` | 140 | JSON Schema parser options. |
-| `OpenAPIParserConfig` | 146 | OpenAPI-specific parser options. |
-| `AsyncAPIParserConfig` | 147 | AsyncAPI-specific parser options. |
-| `XMLSchemaParserConfig` | 141 | XML Schema-specific parser options. |
-| `ProtobufParserConfig` | 141 | Protocol Buffers-specific parser options. |
-| `AvroParserConfig` | 140 | Avro-specific parser options. |
-| `GraphQLParserConfig` | 141 | GraphQL-specific parser options. |
+| `BaseGenerateConfig` | 144 | Shared generation options. |
+| `GenerateConfig` | 159 | Public `generate()` configuration. |
+| `ParserConfig` | 139 | Base parser dependency injection and parser options. |
+| `JSONSchemaParserConfig` | 141 | JSON Schema parser options. |
+| `OpenAPIParserConfig` | 147 | OpenAPI-specific parser options. |
+| `AsyncAPIParserConfig` | 148 | AsyncAPI-specific parser options. |
+| `XMLSchemaParserConfig` | 142 | XML Schema-specific parser options. |
+| `ProtobufParserConfig` | 142 | Protocol Buffers-specific parser options. |
+| `AvroParserConfig` | 141 | Avro-specific parser options. |
+| `GraphQLParserConfig` | 142 | GraphQL-specific parser options. |
 
 ### Formatter Names
 

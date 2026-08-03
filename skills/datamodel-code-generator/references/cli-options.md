@@ -54,6 +54,7 @@ Type annotation, import, and primitive type behavior.
 - `--no-use-union-operator`: Use | operator for Union type (PEP 604). Default: enabled
 - `--use-unique-items-as-set`: define field type as `set` when the field attribute has `uniqueItems`
 - `--use-tuple-for-fixed-items`: Generate tuple types for arrays with items array syntax when minItems equals maxItems equals items length
+- `--use-total-false-for-typed-dict`: Generate TypedDict with total=False and mark required fields with Required
 - `--use-closed-typed-dict`: Generate TypedDict with PEP 728 closed=True/extra_items for additionalProperties constraints. Use --no-use-closed-typed-dict for type checkers that don't yet support PEP 728 (e.g., mypy).
 - `--no-use-closed-typed-dict`: Generate TypedDict with PEP 728 closed=True/extra_items for additionalProperties constraints. Use --no-use-closed-typed-dict for type checkers that don't yet support PEP 728 (e.g., mypy).
 - `--allof-merge-mode`: Mode for field merging in allOf schemas. 'constraints': merge only constraints (minItems, maxItems, pattern, etc.) from parent (default). 'all': merge constraints plus annotations (default, examples) from parent. 'none': do not merge any fields from parent properties. Choices: `constraints`, `all`, `none`.

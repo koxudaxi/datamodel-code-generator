@@ -327,17 +327,28 @@ def test_perf_large_models_dataclass(tmp_path: Path) -> None:
 
 
 @pytest.mark.perf
-def test_perf_large_models_typed_dict(tmp_path: Path) -> None:
-    """Performance test: Generate 500 TypedDict models."""
+@pytest.mark.benchmark
+@pytest.mark.parametrize(
+    "use_total_false_for_typed_dict",
+    [
+        pytest.param(False, id="legacy-requiredness"),
+        pytest.param(True, id="total-false-requiredness"),
+    ],
+)
+def test_perf_large_models_typed_dict(tmp_path: Path, *, use_total_false_for_typed_dict: bool) -> None:
+    """Performance test: Generate 500 TypedDict models with both requiredness strategies."""
     output_file = tmp_path / "output.py"
     generate(
         input_=PERFORMANCE_DATA_PATH / "large_models.json",
         input_file_type=InputFileType.JsonSchema,
         output=output_file,
         output_model_type=DataModelType.TypingTypedDict,
+        use_total_false_for_typed_dict=use_total_false_for_typed_dict,
+        formatters=[],
     )
     content = output_file.read_text()
     assert content.count("class Model") >= 500
+    assert ("total=False" in content) is use_total_false_for_typed_dict
 
 
 @pytest.mark.perf

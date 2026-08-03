@@ -223,6 +223,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         dict). Default: enabled
   --use-subclass-enum   Define generic Enum class as subclass with field type
                         when enum has type (int, float, bytes, str)
+  --use-total-false-for-typed-dict
+                        Generate TypedDict with total=False and mark required
+                        fields with Required
   --use-tuple-for-fixed-items
                         Generate tuple types for arrays with items array
                         syntax when minItems equals maxItems equals items
