@@ -9586,7 +9586,7 @@ This documentation is auto-generated from test cases.
 | Category | Options | Description |
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 13 | Input/output configuration |
-| 🔧 [Typing Customization](typing-customization.md) | 31 | Type annotation and import behavior |
+| 🔧 [Typing Customization](typing-customization.md) | 32 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 27 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 44 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 27 | Output formatting and custom rendering |
@@ -39337,16 +39337,16 @@ classDiagram
 
 | Config model | Field count | Purpose |
 | --- | ---: | --- |
-| `BaseGenerateConfig` | 144 | Shared generation options. |
-| `GenerateConfig` | 159 | Public `generate()` configuration. |
-| `ParserConfig` | 139 | Base parser dependency injection and parser options. |
-| `JSONSchemaParserConfig` | 141 | JSON Schema parser options. |
-| `OpenAPIParserConfig` | 147 | OpenAPI-specific parser options. |
-| `AsyncAPIParserConfig` | 148 | AsyncAPI-specific parser options. |
-| `XMLSchemaParserConfig` | 142 | XML Schema-specific parser options. |
-| `ProtobufParserConfig` | 142 | Protocol Buffers-specific parser options. |
-| `AvroParserConfig` | 141 | Avro-specific parser options. |
-| `GraphQLParserConfig` | 142 | GraphQL-specific parser options. |
+| `BaseGenerateConfig` | 145 | Shared generation options. |
+| `GenerateConfig` | 160 | Public `generate()` configuration. |
+| `ParserConfig` | 140 | Base parser dependency injection and parser options. |
+| `JSONSchemaParserConfig` | 142 | JSON Schema parser options. |
+| `OpenAPIParserConfig` | 148 | OpenAPI-specific parser options. |
+| `AsyncAPIParserConfig` | 149 | AsyncAPI-specific parser options. |
+| `XMLSchemaParserConfig` | 143 | XML Schema-specific parser options. |
+| `ProtobufParserConfig` | 143 | Protocol Buffers-specific parser options. |
+| `AvroParserConfig` | 142 | Avro-specific parser options. |
+| `GraphQLParserConfig` | 143 | GraphQL-specific parser options. |
 
 ### Formatter Names
 
