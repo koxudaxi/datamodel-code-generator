@@ -5,6 +5,88 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.72.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.72.0) - 2026-08-03
+
+## Breaking Changes
+
+
+### Code Generation Changes
+* msgspec empty object default on nested Struct now builds the model - An empty object (`{}`) default whose type is a nested `Struct` reference now renders a conversion factory instead of a plain `dict` factory, changing the runtime default from an empty dict to an actual model instance. No CLI flag is required to trigger this. Regenerating existing schemas that have empty-object defaults for nested Struct fields will produce different output and different default values (#3668)
+```python
+# Before
+nested: Nested | UnsetType = field(default_factory=dict)
+
+# After
+nested: Nested | UnsetType = field(
+    default_factory=lambda: convert({}, type=Nested)
+)
+```
+* Pydantic v2 dataclass optional nested-model default factory - Under `--use-default-factory-for-optional-nested-models`, optional nested Pydantic dataclass fields now emit `Field(default_factory=<Nested>)` where they previously did not, because the field now resolves Pydantic dataclass references. Output for these fields changes on regeneration when that flag is enabled (#3668)
+```python
+# After (with --use-default-factory-for-optional-nested-models)
+nested: Nested | None = Field(default_factory=Nested)
+```
+* Nested mapping defaults now render as typed constructors - Fields whose type is a generated model (dataclass, msgspec Struct, pydantic dataclass/BaseModel) and whose default is an object/mapping are now emitted as a nested-model constructor default factory instead of a raw dict literal. This changes both the generated source and the runtime default value (a real model instance instead of a `dict`), so regenerating existing schemas can produce different output. The constructor form is only used when every required argument of the nested model is satisfied and the mapping is not recursive; otherwise the previous dict-literal default is preserved. (#3669)
+```python
+# Before
+@dataclass
+class Model:
+    inner: Inner | None = field(default_factory=lambda: {'v': float('inf')})
+
+# After
+@dataclass
+class Model:
+    inner: Inner | None = field(default_factory=lambda: Inner(v=float('inf')))
+```
+* Deprecated decorator detection now requires an exact name match - The check that decides whether a `@deprecated` class decorator is already present changed from a text prefix match (`decorator.startswith("@deprecated")`) to an exact unqualified-name match (`is_named_python_decorator(decorator, "deprecated")`). If a schema marks a class as deprecated and you also apply a custom class decorator that merely shares the `deprecated` prefix (e.g. `@deprecated_custom`), the generator previously treated it as the deprecated decorator and skipped emitting one; it now recognizes them as distinct and adds the real `@deprecated('... is deprecated.')` decorator along with the `typing_extensions.deprecated` import. Generated output for these cases changes accordingly. Idempotency for the standard `@deprecated('...')` decorator is unchanged. (#3685)
+```python
+# Input: deprecated class + custom decorator "@deprecated_custom"
+
+# Before
+@deprecated_custom
+@dataclass
+class LegacyUser:
+    ...
+
+# After
+@deprecated_custom
+@deprecated('LegacyUser is deprecated.')
+@dataclass
+class LegacyUser:
+    ...
+```
+
+## What's Changed
+* Update CHANGELOG for 0.71.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3653
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3654
+* Fix parsed source cache scopes by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3655
+* Simplify XML text loading by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3656
+* Isolate cached parsed source values by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3657
+* Bump pymdown-extensions from 10.21.3 to 11.0 by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3660
+* [pre-commit.ci] pre-commit autoupdate by @pre-commit-ci[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3659
+* Bump urllib3 from 2.6.3 to 2.7.0 by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3661
+* Add experimental HTTPX2 backend by @supervirus in https://github.com/koxudaxi/datamodel-code-generator/pull/3662
+* Bump the github-actions group with 4 updates by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3665
+* Preserve inherited required field types by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3664
+* Preserve type overrides during model reuse by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3667
+* Invalidate semantic model caches by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3666
+* Structure generated field rendering by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3668
+* Unify schema field construction by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3669
+* Remove duplicate Pydantic dataclass factory method by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3673
+* DOCS ONLY: Update output-model-types.md by @UwU-Parker in https://github.com/koxudaxi/datamodel-code-generator/pull/3672
+* Preserve structured enum members by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3683
+* Place future imports safely by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3684
+* Match decorator targets exactly by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3685
+* Structure Python type expressions by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3686
+* [pre-commit.ci] pre-commit autoupdate by @pre-commit-ci[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3687
+
+## New Contributors
+* @UwU-Parker made their first contribution in https://github.com/koxudaxi/datamodel-code-generator/pull/3672
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.71.0...0.72.0
+
+---
+
 ## [0.71.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.71.0) - 2026-07-24
 
 ## Breaking Changes
