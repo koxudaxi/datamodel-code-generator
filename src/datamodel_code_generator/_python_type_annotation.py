@@ -249,8 +249,8 @@ def _legacy_starred_parse_text(type_str: str) -> tuple[str, str] | None:
     grammar; this compatibility pass recognizes only delimiter depth and a
     prefix ``*`` in the annotation subset shared by supported runtimes.
     """
-    import tokenize
-    from io import StringIO
+    import tokenize  # noqa: PLC0415  # Avoid tokenizer cost outside the Python 3.10 variadic fallback.
+    from io import StringIO  # noqa: PLC0415
 
     try:
         tokens = list(tokenize.generate_tokens(StringIO(type_str).readline))
