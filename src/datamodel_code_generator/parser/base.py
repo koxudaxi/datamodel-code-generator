@@ -1704,39 +1704,6 @@ def _format_body_safe(body: str, code_formatter: CodeFormatter) -> str:
         return body
 
 
-def _apply_import_overrides(imports: tuple[Import, ...], import_overrides: Mapping[str, Import]) -> tuple[Import, ...]:
-    """Replace generated import modules while preserving import metadata."""
-
-    def apply(import_: Import) -> Import:
-        if (override := import_overrides.get(import_.import_)) is None:
-            return import_
-        if import_.alias is None and import_.reference_path is None:
-            return override
-        return Import(
-            import_=import_.import_,
-            from_=override.from_,
-            alias=import_.alias,
-            reference_path=import_.reference_path,
-        )
-
-    return tuple(map(apply, imports))
-
-
-def _collect_model_imports(
-    contexts: list[ModuleContext], import_overrides: Mapping[str, Import] | None
-) -> dict[DataModel, tuple[Import, ...]]:
-    """Collect final model imports and apply configured module overrides."""
-    raw_model_imports = {model: model.imports for ctx in contexts for model in ctx.models}
-    match import_overrides:
-        case None:
-            return raw_model_imports
-        case overrides:
-            for ctx in contexts:
-                for model in ctx.models:
-                    ctx.imports.remove(raw_model_imports[model])
-    return {model: _apply_import_overrides(imports, overrides) for model, imports in raw_model_imports.items()}
-
-
 class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     """Abstract base class for schema parsers.
 
@@ -2120,11 +2087,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.formatters: list[Formatter] | None = config.formatters
         self.builtin_format_line_length: int | None = config.builtin_format_line_length
         self.defer_formatting: bool = config.defer_formatting
-        self._import_overrides: dict[str, Import] | None = (
-            {symbol: Import(import_=symbol, from_=module) for symbol, module in config.import_overrides.items()}
-            if config.import_overrides
-            else None
-        )
+        self._import_overrides: dict[str, str] | None = config.import_overrides or None
         self.type_mappings: dict[tuple[str, str], str] = Parser._parse_type_mappings(config.type_mappings)
         self.type_overrides: dict[str, str] = config.type_overrides or {}
         self._type_override_imports: dict[str, Import] = {
@@ -4983,7 +4946,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         all_models = [model for ctx in contexts for model in ctx.models]
         self.__mark_set_item_models_hashable(all_models)
         self.__apply_generic_base_class(contexts)
-        model_imports = _collect_model_imports(contexts, self._import_overrides)
+        model_imports = {model: model.imports for ctx in contexts for model in ctx.models}
 
         for ctx in contexts:
             for model in ctx.models:
@@ -5020,6 +4983,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     configured_types_are_builtin=self._configured_generation_types_are_builtin,
                 ),
             )
+
+        match self._import_overrides:
+            case None:
+                return
+            case overrides:
+                for ctx in contexts:
+                    ctx.imports.remap_modules(overrides)
+        return
 
     def _set_nested_model_default_factory_metadata(
         self,

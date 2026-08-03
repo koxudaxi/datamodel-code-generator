@@ -5937,6 +5937,24 @@ def test_main_openapi_discriminator(input_: str, output: str, output_file: Path)
     )
 
 
+def test_main_openapi_discriminator_import_override_removes_original(output_file: Path) -> None:
+    """Remove original discriminator imports after applying a module override."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "import_override.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.dataclass",
+            "--import-overrides",
+            '{"Field": "pydantic.v1"}',
+        ],
+        force_exec_validation=True,
+    )
+
+
 @freeze_time("2023-07-27")
 @pytest.mark.parametrize(
     ("kind", "option", "output_model", "expected"),
