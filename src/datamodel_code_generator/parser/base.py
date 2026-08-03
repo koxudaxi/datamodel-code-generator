@@ -1704,6 +1704,16 @@ def _format_body_safe(body: str, code_formatter: CodeFormatter) -> str:
         return body
 
 
+def _remap_imports(imports: Imports, overrides: Mapping[str, str]) -> None:
+    """Convert import override conflicts to a user-facing generator error."""
+    if not imports.counter:
+        return
+    try:
+        imports.remap_modules(overrides)
+    except ValueError as e:
+        raise Error(str(e)) from e
+
+
 class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     """Abstract base class for schema parsers.
 
@@ -4988,8 +4998,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             case None:
                 return
             case overrides:
+                _remap_imports(self.imports, overrides)
                 for ctx in contexts:
-                    ctx.imports.remap_modules(overrides)
+                    _remap_imports(ctx.imports, overrides)
         return
 
     def _set_nested_model_default_factory_metadata(

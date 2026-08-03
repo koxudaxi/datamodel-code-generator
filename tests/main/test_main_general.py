@@ -1771,7 +1771,7 @@ def test_dataclass_arguments_invalid(json_str: str, match: str) -> None:
     options=["--import-overrides"],
     option_description="""Override modules for generated imports by symbol name.
 
-The mapping applies to generated model imports regardless of their original module. This is useful
+The mapping applies to imports in generated output regardless of their original module. This is useful
 for routing typing helpers through a project compatibility module across Python target versions.
 """,
     input_schema="jsonschema/datetime.json",
@@ -1838,6 +1838,24 @@ def test_import_overrides_preserve_alias(output_file: Path) -> None:
             "--allow-population-by-field-name",
             "--import-overrides",
             str(DATA_PATH / "config" / "import_overrides.json"),
+        ],
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_import_overrides_apply_to_additional_imports(output_file: Path) -> None:
+    """Override explicitly included imports without rewriting future imports."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="import_overrides_additional_import.py",
+        extra_args=[
+            "--additional-imports",
+            "typing_extensions.TypeAlias",
+            "--import-overrides",
+            '{"TypeAlias": "typing", "annotations": "custom.future"}',
         ],
     )
 

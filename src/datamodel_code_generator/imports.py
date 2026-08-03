@@ -119,7 +119,9 @@ class Imports(defaultdict[str | None, set[str]]):
         remapped_keys = {
             source_key: (module, source_key[1])
             for source_key in self.counter
-            if (module := import_overrides.get(source_key[1])) is not None and source_key[0] != module
+            if source_key[0] != "__future__"
+            and (module := import_overrides.get(source_key[1])) is not None
+            and source_key[0] != module
         }
         effective_names = {
             target_key: self.alias.get(target_key[0], {}).get(target_key[1], target_key[1])
