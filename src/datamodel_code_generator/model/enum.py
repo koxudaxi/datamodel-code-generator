@@ -5,7 +5,7 @@ Provides Enum, StrEnum, and specialized enum classes for code generation.
 
 from __future__ import annotations
 
-import ast
+from dataclasses import dataclass
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
@@ -26,21 +26,53 @@ _FLOAT: str = "float"
 _BYTES: str = "bytes"
 _STR: str = "str"
 
+escape_characters = str.maketrans({
+    "\u0000": r"\x00",  # Null byte
+    "\\": r"\\",
+    "'": r"\'",
+    "\b": r"\b",
+    "\f": r"\f",
+    "\n": r"\n",
+    "\r": r"\r",
+    "\t": r"\t",
+})
+
+
+@dataclass(frozen=True, slots=True)
+class EnumMemberValue:
+    """A raw string enum value that renders as its Python source literal."""
+
+    value: str
+
+    def __str__(self) -> str:
+        """Render the value using the historical single-quoted source form."""
+        return f"'{self.value.translate(escape_characters)}'"
+
+    def __repr__(self) -> str:
+        """Render the value as Python source when used by generic literal renderers."""
+        return str(self)
+
 
 @lru_cache(maxsize=4096)
-def _evaluate_string_member_value(default: str) -> Any:
-    """Parse a member default rendered as a Python literal, returning it unchanged when not a literal."""
+def _get_legacy_raw_enum_member_value(default: str) -> Any:
+    """Decode a rendered default supplied by a third-party parser subclass."""
+    from ast import literal_eval  # noqa: PLC0415
+
     try:
-        return ast.literal_eval(default)
+        return literal_eval(default)
     except (SyntaxError, ValueError):
         return default
 
 
-def evaluate_member_value(default: Any) -> Any:
-    """Return the runtime value of a member default rendered as a Python literal."""
-    if not isinstance(default, str):
-        return default
-    return _evaluate_string_member_value(default)
+def get_raw_enum_member_value(default: Any) -> Any:
+    """Return one semantic value from structured or legacy rendered defaults."""
+    match default:
+        case EnumMemberValue(value=value):
+            return value
+        case str():
+            return _get_legacy_raw_enum_member_value(default)
+        case _:
+            return default
 
 
 def _json_value_equal(member_value: Any, value: Any) -> bool:
@@ -132,7 +164,7 @@ class Enum(DataModel):
         for field in self.fields:
             if field.default is None:
                 continue
-            member_value = evaluate_member_value(field.default)
+            member_value = get_raw_enum_member_value(field.default)
             if _json_value_equal(member_value, value):
                 return self.get_member(field)
             if (
@@ -187,3 +219,8 @@ class Member:
     def __repr__(self) -> str:
         """Return string representation of enum member."""
         return f"{self.alias or self.enum.class_name}.{self.field.name}"
+
+    @property
+    def value(self) -> Any:
+        """Return the raw semantic value represented by this enum member."""
+        return get_raw_enum_member_value(self.field.default)

@@ -1,0 +1,16 @@
+{
+    "type": "object",
+    "properties": {
+        "numeric_text": {"allOf": [{"$ref": "#/$defs/NumericText"}], "default": "1"},
+        "boolean_text": {"allOf": [{"$ref": "#/$defs/BooleanText"}], "default": "True"},
+        "escaped_text": {
+            "allOf": [{"$ref": "#/$defs/EscapedText"}],
+            "default": "line\n'\\end"
+        }
+    },
+    "$defs": {
+        "NumericText": {"enum": [1, "1"]},
+        "BooleanText": {"enum": [true, "True"]},
+        "EscapedText": {"type": "string", "enum": ["line\n'\\end", "other"]}
+    }
+}

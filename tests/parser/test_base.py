@@ -49,6 +49,7 @@ from datamodel_code_generator.parser.base import (
     _copy_resolved_inherited_field,
     _detach_deferred_inherited_field_parents,
     _find_field,
+    _get_discriminator_field_value,
     _get_enum_from_base,
     _get_inherited_type_modifiers,
     _get_pydantic_v2_root_model_type,
@@ -1336,7 +1337,7 @@ def test_find_member_with_integer_enum() -> None:
 
 def test_find_member_with_string_enum() -> None:
     """Test find_member method with string enum values."""
-    from datamodel_code_generator.model.enum import Enum
+    from datamodel_code_generator.model.enum import Enum, EnumMemberValue
     from datamodel_code_generator.model.pydantic_v2.base_model import DataModelField
     from datamodel_code_generator.reference import Reference
     from datamodel_code_generator.types import DataType
@@ -1351,19 +1352,19 @@ def test_find_member_with_string_enum() -> None:
             ),
             DataModelField(
                 name="VALUE_A",
-                default="'value_a'",
+                default=EnumMemberValue("value_a"),
                 data_type=DataType(type="str"),
                 required=True,
             ),
             DataModelField(
                 name="VALUE_B",
-                default="'value_b'",
+                default=EnumMemberValue("value_b"),
                 data_type=DataType(type="str"),
                 required=True,
             ),
             DataModelField(
                 name="BARE",
-                default="bare value",
+                default=EnumMemberValue("bare value"),
                 data_type=DataType(type="str"),
                 required=True,
             ),
@@ -1377,6 +1378,9 @@ def test_find_member_with_string_enum() -> None:
     member = enum.find_member("value_a")
     assert member is not None
     assert member.field.name == "VALUE_A"
+    assert member.value == "value_a"
+    assert str(member.field.default) == "'value_a'"
+    assert repr(member.field.default) == "'value_a'"
 
     member = enum.find_member("value_b")
     assert member is not None
@@ -1388,7 +1392,7 @@ def test_find_member_with_string_enum() -> None:
 
 def test_find_member_with_mixed_enum() -> None:
     """Test find_member method with mixed type enum values."""
-    from datamodel_code_generator.model.enum import Enum
+    from datamodel_code_generator.model.enum import Enum, EnumMemberValue
     from datamodel_code_generator.model.pydantic_v2.base_model import DataModelField
     from datamodel_code_generator.reference import Reference
     from datamodel_code_generator.types import DataType
@@ -1404,7 +1408,7 @@ def test_find_member_with_mixed_enum() -> None:
             ),
             DataModelField(
                 name="STR_VALUE",
-                default="'value_a'",
+                default=EnumMemberValue("value_a"),
                 data_type=DataType(type="str"),
                 required=True,
             ),
@@ -1427,6 +1431,67 @@ def test_find_member_with_mixed_enum() -> None:
     assert enum.find_member("'value_a'") is None
 
 
+def test_discriminator_field_value_preserves_structured_string_quotes() -> None:
+    """Treat quote characters in structured enum values as semantic data."""
+    from datamodel_code_generator.model.enum import Enum, EnumMemberValue
+    from datamodel_code_generator.model.pydantic_v2.base_model import DataModelField
+    from datamodel_code_generator.reference import Reference
+    from datamodel_code_generator.types import DataType
+
+    enum_reference = Reference(path="kind", name="Kind")
+    Enum(
+        fields=[
+            DataModelField(
+                name="QUOTED",
+                default=EnumMemberValue("'quoted'"),
+                data_type=DataType(type="str"),
+                required=True,
+            )
+        ],
+        reference=enum_reference,
+    )
+    discriminator_field = DataModelField(
+        name="kind",
+        data_type=DataType(reference=enum_reference),
+    )
+
+    assert _get_discriminator_field_value(discriminator_field) == "'quoted'"
+
+
+@pytest.mark.parametrize(
+    ("default", "expected"),
+    [
+        ("'legacy'", "legacy"),
+        ("bare legacy value", "bare legacy value"),
+    ],
+)
+def test_discriminator_field_value_accepts_legacy_enum_default(default: str, expected: str) -> None:
+    """Keep rendered defaults from third-party parser subclasses compatible."""
+    from datamodel_code_generator.model.enum import Enum
+    from datamodel_code_generator.model.pydantic_v2.base_model import DataModelField
+    from datamodel_code_generator.reference import Reference
+    from datamodel_code_generator.types import DataType
+
+    enum_reference = Reference(path="kind", name="Kind")
+    Enum(
+        fields=[
+            DataModelField(
+                name="LEGACY",
+                default=default,
+                data_type=DataType(type="str"),
+                required=True,
+            )
+        ],
+        reference=enum_reference,
+    )
+    discriminator_field = DataModelField(
+        name="kind",
+        data_type=DataType(reference=enum_reference),
+    )
+
+    assert _get_discriminator_field_value(discriminator_field) == expected
+
+
 @pytest.mark.parametrize(
     ("input_str", "expected"),
     [
@@ -1443,6 +1508,13 @@ def test_find_member_with_mixed_enum() -> None:
 def test_character_escaping(input_str: str, expected: str) -> None:
     """Test character escaping in strings."""
     assert input_str.translate(escape_characters) == expected
+
+
+def test_parser_escape_characters_is_enum_compatibility_alias() -> None:
+    """Keep the historical parser export bound to the canonical enum table."""
+    from datamodel_code_generator.model.enum import escape_characters as enum_escape_characters
+
+    assert escape_characters is enum_escape_characters
 
 
 @pytest.mark.parametrize("flag", [True, False])
@@ -1735,7 +1807,7 @@ def test_needs_validate_default_for_optional_single_model_union() -> None:
 
 def test_get_enum_discriminator_literal_with_escaped_value() -> None:
     """Test discriminator literals use the runtime enum value, not its escaped source."""
-    from datamodel_code_generator.model.enum import Enum
+    from datamodel_code_generator.model.enum import Enum, EnumMemberValue
     from datamodel_code_generator.model.pydantic_v2.base_model import DataModelField
     from datamodel_code_generator.parser.base import Parser
     from datamodel_code_generator.reference import Reference
@@ -1746,7 +1818,7 @@ def test_get_enum_discriminator_literal_with_escaped_value() -> None:
         fields=[
             DataModelField(
                 name="DON_T",
-                default="'don\\'t'",
+                default=EnumMemberValue("don't"),
                 data_type=DataType(type="str"),
                 required=True,
             ),
