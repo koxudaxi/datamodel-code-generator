@@ -220,10 +220,10 @@ def render_python_type_expr(expression: PythonTypeExpr) -> str:  # noqa: PLR0911
 
 
 if TYPE_CHECKING:
-
-    def parse_python_type_annotation(type_str: str) -> PythonTypeExpr | None:
-        """Type-checking signature for the runtime-lazy compatibility API."""
-        ...
+    # Declare the lazy attribute without a function body. A TYPE_CHECKING-only
+    # stub looks like a real procedure to whole-program analyzers and can make
+    # them infer that every runtime call returns None.
+    parse_python_type_annotation: Callable[[str], PythonTypeExpr | None]
 
 
 def __getattr__(name: str) -> object:
