@@ -67,12 +67,11 @@ def _get_legacy_raw_enum_member_value(default: str) -> Any:
 def get_raw_enum_member_value(default: Any) -> Any:
     """Return one semantic value from structured or legacy rendered defaults."""
     match default:
-        case EnumMemberValue(value=value):
-            return value
+        case EnumMemberValue():
+            return default.value
         case str():
             return _get_legacy_raw_enum_member_value(default)
-        case _:
-            return default
+    return default
 
 
 def _json_value_equal(member_value: Any, value: Any) -> bool:
