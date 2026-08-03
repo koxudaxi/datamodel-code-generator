@@ -839,6 +839,16 @@ def test_input_model_recursive_model_types(tmp_path: Path) -> None:
     )
 
 
+def test_input_model_structured_runtime_annotations(tmp_path: Path) -> None:
+    """Preserve runtime Callable structure through external fixtures."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.structured_annotations:StructuredAnnotations",
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "structured_annotations.py",
+        extra_args=["--disable-timestamp"],
+    )
+
+
 @pytest.mark.parametrize(
     "test_id",
     [
@@ -1817,6 +1827,23 @@ def test_serialize_python_type_full_annotated() -> None:
     # Annotated with a custom type
     result = _serialize_python_type_full(Annotated[int, "some_metadata"])
     assert result == "int"
+
+
+def test_serialize_python_type_full_wraps_invalid_runtime_type(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Translate runtime-IR validation failures at the input-model boundary."""
+    from datamodel_code_generator import input_model as input_model_module
+
+    def raise_invalid_runtime_type(_tp: object, *, full_name: bool = False) -> None:
+        del full_name
+        msg = "invalid runtime type"
+        raise ValueError(msg)
+
+    monkeypatch.setattr(input_model_module, "_runtime_python_type_expr", raise_invalid_runtime_type)
+
+    with pytest.raises(input_model_module.Error, match="invalid runtime type"):
+        input_model_module._serialize_python_type_full(object())
 
 
 def test_full_type_name_builtin_type() -> None:
