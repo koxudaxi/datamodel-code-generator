@@ -7823,6 +7823,61 @@ def test_main_pydantic_v2_dataclass_deprecated_model_with_other_decorator(output
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_file"),
+    [
+        pytest.param(
+            "dataclasses.dataclass",
+            "deprecated_dataclass_with_prefixed_decorator.py",
+            id="stdlib",
+        ),
+        pytest.param(
+            "pydantic_v2.dataclass",
+            "deprecated_pydantic_v2_dataclass_with_prefixed_decorator.py",
+            id="pydantic-v2",
+        ),
+    ],
+)
+def test_main_deprecated_model_distinguishes_prefixed_decorator(
+    output_file: Path,
+    output_model_type: str,
+    expected_file: str,
+) -> None:
+    """Add the exact deprecated decorator when another name shares its prefix."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "deprecated_dataclass.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--output-model-type",
+            output_model_type,
+            "--class-decorators",
+            "@deprecated_custom",
+            "--additional-imports",
+            "some_module.deprecated_custom",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+    )
+
+
+def test_main_deprecated_model_matches_newer_target_decorator_syntax() -> None:
+    """Match a direct decorator without parsing newer target-version expressions on the host."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "deprecated_dataclass.json",
+        expected_file=EXPECTED_JSON_SCHEMA_PATH / "deprecated_dataclass_with_newer_decorator_syntax.py",
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.DataclassesDataclass,
+        target_python_version=PythonVersion.PY_314,
+        class_decorators=["@deprecated(t'LegacyUser is deprecated.')"],
+        disable_timestamp=True,
+        formatters=[],
+    )
+
+
 @pytest.mark.skipif(
     not is_supported_in_black(PythonVersion.PY_312),
     reason="Black does not support Python 3.12",
