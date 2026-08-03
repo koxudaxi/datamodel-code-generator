@@ -4762,6 +4762,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         source_data = (
             getattr(self, "raw_obj", None),
             sorted(getattr(self, "remote_object_cache", {}).items()),
+            sorted((getattr(self, "_python_type_expressions", None) or {}).items()),
         )
         # Parsed YAML may contain mixed or non-JSON scalar mapping keys. Pickle preserves
         # their types and streams directly into the digest; unsupported extension objects

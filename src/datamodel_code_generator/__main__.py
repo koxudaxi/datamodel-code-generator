@@ -1148,7 +1148,7 @@ def _write_generated_result(
 
 def run_generate_from_config(  # noqa: PLR0913, PLR0917
     config: Config,
-    input_: Path | str | ParseResult,
+    input_: Path | str | ParseResult | Mapping[str, Any],
     output: Path | None,
     extra_template_data: defaultdict[str, dict[str, Any]] | None,
     aliases: Mapping[str, str | list[str]] | None,
@@ -1493,13 +1493,15 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         return exit_code
 
     try:
-        input_: Path | str | ParseResult
+        input_: Path | str | ParseResult | Mapping[str, Any]
         if config.input_model:
             from datamodel_code_generator.input_model import Error as InputModelError  # noqa: PLC0415
-            from datamodel_code_generator.input_model import load_model_schema  # noqa: PLC0415
+            from datamodel_code_generator.input_model import (  # noqa: PLC0415
+                _load_model_schema_with_python_type_expressions,
+            )
 
             try:
-                schema = load_model_schema(
+                input_ = _load_model_schema_with_python_type_expressions(
                     config.input_model,
                     config.input_file_type,
                     config.input_model_ref_strategy,
@@ -1507,7 +1509,6 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
                 )
             except InputModelError as e:
                 raise Error(str(e)) from e
-            input_ = json.dumps(schema)
             if config.input_file_type == InputFileType.Auto:
                 config.input_file_type = InputFileType.JsonSchema
         else:
