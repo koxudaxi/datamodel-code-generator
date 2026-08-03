@@ -2190,6 +2190,19 @@ def test_parse_enum_empty_enum_not_nullable() -> None:
     assert result.type == "None"
 
 
+def test_parse_enum_preserves_explicit_null_member() -> None:
+    """Keep a native JSON null member distinct from an unset field default."""
+    from datamodel_code_generator.model.enum import NULL_ENUM_MEMBER_VALUE, Enum
+
+    parser = JsonSchemaParser("")
+    parser.parse_enum("Mixed", JsonSchemaObject.model_validate({"enum": [None, "None"]}), ["Mixed"])
+
+    enum = next(model for model in parser.results if isinstance(model, Enum))
+    assert enum.fields[0].default is NULL_ENUM_MEMBER_VALUE
+    assert enum.find_member(None).field is enum.fields[0]  # ty: ignore[union-attr]
+    assert enum.find_member("None").field is enum.fields[1]  # ty: ignore[union-attr]
+
+
 @pytest.mark.parametrize(
     ("schema", "expected"),
     [

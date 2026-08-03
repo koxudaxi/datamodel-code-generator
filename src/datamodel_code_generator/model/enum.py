@@ -39,8 +39,15 @@ escape_characters = str.maketrans({
 })
 
 
+class _StructuredEnumMemberValue:
+    """Common identity for enum values preserved independently of source text."""
+
+    __slots__ = ()
+    value: Any
+
+
 @dataclass(frozen=True, slots=True)
-class EnumMemberValue:
+class EnumMemberValue(_StructuredEnumMemberValue):
     """A raw string enum value that renders as its Python source literal."""
 
     value: str
@@ -52,6 +59,24 @@ class EnumMemberValue:
     def __repr__(self) -> str:
         """Render the value as Python source when used by generic literal renderers."""
         return str(self)
+
+
+class _NullEnumMemberValue(_StructuredEnumMemberValue):
+    """A unique structured marker for an explicit JSON null enum member."""
+
+    __slots__ = ()
+    value: ClassVar[None] = None
+
+    def __str__(self) -> str:
+        """Render JSON null as its Python source equivalent."""
+        return "None"
+
+    def __repr__(self) -> str:
+        """Render the marker as Python source in generic literal renderers."""
+        return "None"
+
+
+NULL_ENUM_MEMBER_VALUE = _NullEnumMemberValue()
 
 
 @lru_cache(maxsize=4096)
@@ -68,7 +93,7 @@ def _get_legacy_raw_enum_member_value(default: str) -> Any:
 def get_raw_enum_member_value(default: Any) -> Any:
     """Return one semantic value from structured or legacy rendered defaults."""
     match default:
-        case EnumMemberValue():
+        case _StructuredEnumMemberValue():
             return default.value
         case str():
             return _get_legacy_raw_enum_member_value(default)

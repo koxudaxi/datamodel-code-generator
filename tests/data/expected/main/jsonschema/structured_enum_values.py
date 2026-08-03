@@ -24,7 +24,13 @@ class EscapedText(Enum):
     other = 'other'
 
 
+class NullText(Enum):
+    NoneType_None = None
+    None_ = 'None'
+
+
 class Model(BaseModel):
     numeric_text: NumericText | None = NumericText.field_1
     boolean_text: BooleanText | None = BooleanText.True_
     escaped_text: EscapedText | None = EscapedText.line___end
+    null_text: NullText | None = NullText.None_

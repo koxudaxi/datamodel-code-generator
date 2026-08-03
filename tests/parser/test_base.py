@@ -1433,16 +1433,20 @@ def test_find_member_with_mixed_enum() -> None:
 
 def test_find_member_indexes_preserve_json_semantics_and_invalidate() -> None:
     """Cache member lookup without changing order, coercion, or mutable-field behavior."""
-    from datamodel_code_generator.model.enum import Enum, EnumMemberValue
+    from datamodel_code_generator.model.enum import NULL_ENUM_MEMBER_VALUE, Enum, EnumMemberValue
     from datamodel_code_generator.model.pydantic_v2.base_model import DataModelField
     from datamodel_code_generator.reference import Reference
     from datamodel_code_generator.types import DataType
 
     fields = [
-        DataModelField(name="NONE", default=None, data_type=DataType(type="None"), required=True),
+        DataModelField(name="NO_DEFAULT", default=None, data_type=DataType(type="None"), required=True),
+        DataModelField(name="NULL", default=NULL_ENUM_MEMBER_VALUE, data_type=DataType(type="None"), required=True),
         DataModelField(name="BOOL", default=True, data_type=DataType(type="bool"), required=True),
         DataModelField(name="INT", default=1, data_type=DataType(type="int"), required=True),
         DataModelField(name="STR", default=EnumMemberValue("1"), data_type=DataType(type="str"), required=True),
+        DataModelField(
+            name="NULL_TEXT", default=EnumMemberValue("None"), data_type=DataType(type="str"), required=True
+        ),
         DataModelField(name="LIST", default=[1], data_type=DataType(type="list"), required=True),
     ]
     enum = Enum(fields=fields, reference=Reference(path="mixed", name="Mixed"))
@@ -1452,6 +1456,13 @@ def test_find_member_indexes_preserve_json_semantics_and_invalidate() -> None:
     assert enum.find_member(True).field.name == "BOOL"  # ty: ignore[union-attr]
     assert "_member_index" in enum.__dict__
     assert "_coerced_member_index" not in enum.__dict__
+    null_member = enum.find_member(None)
+    assert null_member.field.name == "NULL"  # ty: ignore[union-attr]
+    assert null_member.value is None  # ty: ignore[union-attr]
+    assert str(null_member.field.default) == "None"  # ty: ignore[union-attr]
+    assert repr(null_member.field.default) == "None"  # ty: ignore[union-attr]
+    assert enum.find_member("None").field.name == "NULL_TEXT"  # ty: ignore[union-attr]
+    assert enum.find_member("None", coerce_strings=True).field.name == "NULL"  # ty: ignore[union-attr]
     assert enum.find_member(1.0).field.name == "INT"  # ty: ignore[union-attr]
     assert enum.find_member("1").field.name == "STR"  # ty: ignore[union-attr]
     assert enum.find_member("1", coerce_strings=True).field.name == "INT"  # ty: ignore[union-attr]
@@ -1459,8 +1470,16 @@ def test_find_member_indexes_preserve_json_semantics_and_invalidate() -> None:
     assert enum.find_member([2]) is None
     assert "_coerced_member_index" in enum.__dict__
 
-    fields[3].default = EnumMemberValue("updated")
-    fields[3].invalidate_semantic_caches()
+    fields[1].default = EnumMemberValue("updated_null")
+    fields[1].invalidate_semantic_caches()
+
+    assert "_member_index" not in enum.__dict__
+    assert "_coerced_member_index" not in enum.__dict__
+    assert enum.find_member(None) is None
+    assert enum.find_member("updated_null").field.name == "NULL"  # ty: ignore[union-attr]
+
+    fields[4].default = EnumMemberValue("updated")
+    fields[4].invalidate_semantic_caches()
 
     assert "_member_index" not in enum.__dict__
     assert "_coerced_member_index" not in enum.__dict__

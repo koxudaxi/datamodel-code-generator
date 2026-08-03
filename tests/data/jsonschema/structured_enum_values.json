@@ -6,11 +6,13 @@
         "escaped_text": {
             "allOf": [{"$ref": "#/$defs/EscapedText"}],
             "default": "line\n'\\end"
-        }
+        },
+        "null_text": {"allOf": [{"$ref": "#/$defs/NullText"}], "default": "None"}
     },
     "$defs": {
         "NumericText": {"enum": [1, "1"]},
         "BooleanText": {"enum": [true, "True"]},
-        "EscapedText": {"type": "string", "enum": ["line\n'\\end", "other"]}
+        "EscapedText": {"type": "string", "enum": ["line\n'\\end", "other"]},
+        "NullText": {"enum": [null, "None"]}
     }
 }
