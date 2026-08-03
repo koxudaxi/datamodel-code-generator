@@ -295,6 +295,7 @@ ini_options.assert_helper_direct_assert_exempt_files = [
   "test_imports.py",
   "test_infer_input_type.py",
   "test_input_model.py",
+  "test_python_type_annotation.py",
   "test_reference.py",
   "test_resolver.py",
   "test_types.py",

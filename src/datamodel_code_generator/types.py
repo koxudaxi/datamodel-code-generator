@@ -7,7 +7,6 @@ utilities for handling unions, optionals, and type hints.
 
 from __future__ import annotations
 
-import ast
 import re
 from abc import ABC, abstractmethod
 from copy import deepcopy
@@ -37,6 +36,13 @@ from datamodel_code_generator._format_types import (
     DatetimeClassType,
     PythonVersion,
     PythonVersionMin,
+)
+from datamodel_code_generator._python_type_annotation import (
+    iter_python_type_expr_qualified_names,
+    parse_python_type_annotation,
+    python_type_expr_arguments,
+    python_type_expr_base_name,
+    render_python_type_expr,
 )
 from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
@@ -255,31 +261,20 @@ def chain_as_tuple(*iterables: Iterable[T]) -> tuple[T, ...]:
 
 
 def get_type_base_name(type_str: str) -> str:
-    """Extract base type name from a type annotation string using AST.
+    """Extract the base name from a supported Python type annotation.
 
     Examples:
         "List[str]" -> "List"
         "foo.bar.Baz" -> "Baz"
         "Optional[int]" -> "Optional"
     """
-    try:
-        tree = ast.parse(type_str, mode="eval")
-    except SyntaxError:
-        return type_str.split("[", maxsplit=1)[0].rsplit(".", 1)[-1].strip()
-
-    body = tree.body
-    if isinstance(body, ast.Subscript):
-        body = body.value
-
-    if isinstance(body, ast.Attribute):
-        return body.attr
-    if isinstance(body, ast.Name):
-        return body.id
-    return type_str.split("[", maxsplit=1)[0].rsplit(".", 1)[-1].strip()
+    fallback = type_str.split("[", maxsplit=1)[0].rsplit(".", 1)[-1].strip()
+    expression = parse_python_type_annotation(type_str)
+    return python_type_expr_base_name(expression) if expression is not None else fallback
 
 
 def get_subscript_args(type_str: str) -> list[str]:
-    """Extract type arguments from a subscripted type using AST.
+    """Extract top-level arguments from a supported Python type annotation.
 
     Examples:
         "List[str]" -> ["str"]
@@ -288,37 +283,13 @@ def get_subscript_args(type_str: str) -> list[str]:
         "str | int | None" -> ["str", "int", "None"]
         "str" -> []
     """
-    try:
-        tree = ast.parse(type_str, mode="eval")
-    except SyntaxError:
+    if (expression := parse_python_type_annotation(type_str)) is None:
         return []
-
-    body = tree.body
-
-    if isinstance(body, ast.BinOp) and isinstance(body.op, ast.BitOr):
-        args: list[str] = []
-
-        def collect_union_args(node: ast.expr) -> None:
-            if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
-                collect_union_args(node.left)
-                collect_union_args(node.right)
-            else:
-                args.append(ast.unparse(node))
-
-        collect_union_args(body)
-        return args
-
-    if isinstance(body, ast.Subscript):
-        slice_node = body.slice
-        if isinstance(slice_node, ast.Tuple):
-            return [ast.unparse(elt) for elt in slice_node.elts]
-        return [ast.unparse(slice_node)]
-
-    return []
+    return [render_python_type_expr(argument) for argument in python_type_expr_arguments(expression)]
 
 
 def extract_qualified_names(type_str: str) -> list[str]:
-    """Extract all fully qualified names from a type annotation string using AST.
+    """Extract all fully qualified names from a supported type annotation.
 
     Finds patterns like 'module.path.ClassName' where the name contains dots.
 
@@ -327,76 +298,14 @@ def extract_qualified_names(type_str: str) -> list[str]:
         "Dict[a.B, c.D]" -> ["a.B", "c.D"]
         "str" -> []
     """
-    try:
-        tree = ast.parse(type_str, mode="eval")
-    except SyntaxError:
-        return []
-
-    qualified_names: list[str] = []
-    visited: set[int] = set()
-
-    def get_full_name(node: ast.expr) -> str | None:
-        parts: list[str] = []
-        current: ast.expr = node
-        while isinstance(current, ast.Attribute):
-            visited.add(id(current))
-            parts.append(current.attr)
-            current = current.value
-        if isinstance(current, ast.Name):
-            parts.append(current.id)
-            return ".".join(reversed(parts))
-        return None
-
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Attribute) and id(node) not in visited:
-            name = get_full_name(node)
-            if name and "." in name:
-                qualified_names.append(name)
-
-    return qualified_names
+    expression = parse_python_type_annotation(type_str)
+    return list(iter_python_type_expr_qualified_names(expression)) if expression is not None else []
 
 
 @lru_cache(maxsize=1024)
 def is_python_type_annotation(type_str: str) -> bool:
     """Return whether a string is a Python type annotation expression."""
-    try:
-        tree = ast.parse(type_str, mode="eval")
-    except SyntaxError:
-        return False
-
-    return _is_python_type_annotation_node(tree.body, allow_literal=False)
-
-
-def _is_python_type_annotation_node(node: ast.AST, *, allow_literal: bool) -> bool:
-    match node:
-        case ast.Name():
-            result = True
-        case ast.Attribute(value=value):
-            result = isinstance(value, (ast.Name, ast.Attribute)) and _is_python_type_annotation_node(
-                value,
-                allow_literal=False,
-            )
-        case ast.Subscript(value=value, slice=slice_node):
-            result = _is_python_type_annotation_node(
-                value,
-                allow_literal=False,
-            ) and _is_python_type_annotation_node(slice_node, allow_literal=True)
-        case ast.Tuple(elts=elts) | ast.List(elts=elts):
-            result = all(_is_python_type_annotation_node(elt, allow_literal=True) for elt in elts)
-        case ast.BinOp(left=left, op=ast.BitOr(), right=right):
-            result = _is_python_type_annotation_node(left, allow_literal=False) and _is_python_type_annotation_node(
-                right,
-                allow_literal=False,
-            )
-        case ast.Constant(value=None):
-            result = True
-        case ast.Constant(value=value) if allow_literal:
-            result = value is None or value is Ellipsis or isinstance(value, (str, int, float, bool))
-        case ast.UnaryOp(op=ast.UAdd() | ast.USub(), operand=ast.Constant(value=value)) if allow_literal:
-            result = isinstance(value, (int, float))
-        case _:
-            result = False
-    return result
+    return parse_python_type_annotation(type_str) is not None
 
 
 def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # noqa: PLR0912

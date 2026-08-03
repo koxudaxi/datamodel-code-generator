@@ -692,12 +692,16 @@ def test_get_type_base_name(type_str: str, expected: str) -> None:
         ("str | int", ["str", "int"]),
         ("str | int | None", ["str", "int", "None"]),
         ("List[str] | None", ["List[str]", "None"]),
+        ("tuple[()] | None", ["tuple[()]", "None"]),
         # Complex nested types
         ("Dict[str, List[int]]", ["str", "List[int]"]),
         ("Union[List[str], Dict[str, int]]", ["List[str]", "Dict[str, int]"]),
         # Qualified names in arguments
         ("type[foo.bar.Baz]", ["foo.bar.Baz"]),
         ("Dict[a.B, c.D]", ["a.B", "c.D"]),
+        # Variadics and canonicalized non-finite numeric literals
+        ("tuple[*Ts]", ["*Ts"]),
+        ("Literal[1e309, -1e309]", ["1e309", "-1e309"]),
         # Invalid syntax
         ("List[", []),
         ("[invalid", []),
