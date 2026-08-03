@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from datamodel_code_generator._python_type_annotation import (
+    PythonTypeBoundName,
     PythonTypeEllipsis,
     PythonTypeExpr,
     PythonTypeLiteralValue,
@@ -22,13 +23,21 @@ from datamodel_code_generator._python_type_annotation import (
     PythonTypeSubscript,
     PythonTypeTuple,
     PythonTypeUnion,
+    iter_python_type_expr_names,
     iter_python_type_expr_qualified_names,
     parse_python_type_annotation,
     python_type_expr_arguments,
     python_type_expr_base_name,
+    python_type_name,
     render_python_type_expr,
     rewrite_python_type_expr,
 )
+from datamodel_code_generator._python_type_binding import (
+    BoundPythonType,
+    alias_bound_python_type,
+    python_type_import_name,
+)
+from datamodel_code_generator.imports import Import, Imports
 from datamodel_code_generator.types import is_python_type_annotation
 
 if TYPE_CHECKING:
@@ -55,6 +64,8 @@ def test_python_type_expr_is_frozen_slotted_and_shared_by_deepcopy() -> None:
         lambda: PythonTypeQualifiedName(("foo", "class")),
         lambda: PythonTypeRuntimeSymbol("bad-module", ("Model",)),
         lambda: PythonTypeRuntimeSymbol("models", ("Outer", "<locals>")),
+        lambda: PythonTypeBoundName("bad-name", "foo", "Bar"),
+        lambda: PythonTypeBoundName("Bar", "foo", ""),
         lambda: PythonTypeLiteralValue(object()),
         lambda: PythonTypeLiteralValue(nan),
     ],
@@ -70,6 +81,75 @@ def test_python_type_expr_accepts_none_and_unqualified_runtime_symbols() -> None
     assert PythonTypeName("None").value == "None"
     assert render_python_type_expr(PythonTypeLiteralValue(None)) == "None"
     assert render_python_type_expr(PythonTypeRuntimeSymbol("", ("Model",))) == "Model"
+
+
+def test_runtime_symbol_alias_preserves_dotted_import_identity() -> None:
+    """A direct dotted import and its runtime symbol receive the same alias."""
+    import_ = Import(import_="pkg.models")
+    aliased_import = Import(import_="pkg.models", alias="pkg_1")
+    bound_type = BoundPythonType(
+        PythonTypeTuple((
+            PythonTypeRuntimeSymbol("pkg.models", ("Outer", "Inner")),
+            PythonTypeRuntimeSymbol("other", ("Model",)),
+        )),
+        (import_,),
+    )
+
+    aliased_type = alias_bound_python_type(bound_type, {(None, "pkg.models"): aliased_import})
+    imports = Imports()
+    imports.append(aliased_type.imports)
+
+    assert aliased_type.expression == PythonTypeTuple((
+        PythonTypeRuntimeSymbol("pkg_1", ("Outer", "Inner")),
+        PythonTypeRuntimeSymbol("other", ("Model",)),
+    ))
+    assert render_python_type_expr(aliased_type.expression) == "(pkg_1.Outer.Inner, other.Model)"
+    assert str(imports) == "import pkg.models as pkg_1"
+
+
+def test_bound_name_alias_preserves_unbound_same_spelling_leaf() -> None:
+    """Only the leaf carrying the matching import identity is renamed."""
+    import_ = Import(from_="foo", import_="Bar")
+    aliased_import = Import(from_="foo", import_="Bar", alias="Bar_1")
+    bound_type = BoundPythonType(
+        PythonTypeSubscript(
+            PythonTypeName("tuple"),
+            (PythonTypeBoundName("Bar", "foo", "Bar"), PythonTypeName("Bar")),
+        ),
+        (import_,),
+    )
+
+    aliased_type = alias_bound_python_type(bound_type, {("foo", "Bar"): aliased_import})
+
+    assert render_python_type_expr(aliased_type.expression) == "tuple[Bar_1, Bar]"
+    assert aliased_type.imports == (aliased_import,)
+
+
+def test_bound_type_alias_noop_shares_immutable_binding() -> None:
+    """A no-op alias pass returns the existing immutable binding."""
+    bound_type = BoundPythonType(PythonTypeName("str"), ())
+
+    assert alias_bound_python_type(bound_type, {}) is bound_type
+
+
+def test_bound_type_alias_keeps_unmodified_imports_and_reports_bound_names() -> None:
+    """A partial alias rewrite retains imports without matching identities."""
+    first_import = Import(from_="first", import_="Thing")
+    second_import = Import(from_="second", import_="Other")
+    bound_type = BoundPythonType(
+        PythonTypeTuple((
+            PythonTypeBoundName("Thing", "first", "Thing"),
+            PythonTypeBoundName("Other", "second", "Other"),
+        )),
+        (first_import, second_import),
+    )
+    aliased_import = Import(from_="first", import_="Thing", alias="Thing_1")
+
+    aliased = alias_bound_python_type(bound_type, {("first", "Thing"): aliased_import})
+
+    assert aliased.imports == (aliased_import, second_import)
+    assert python_type_import_name(aliased_import) == "Thing_1"
+    assert python_type_import_name(Import(import_="pkg.models")) == "pkg"
 
 
 @pytest.mark.parametrize(
@@ -227,6 +307,7 @@ def test_parse_python_type_annotation_interns_common_names() -> None:
     assert isinstance(nested, PythonTypeSubscript)
     assert expression.base is nested.base
     assert expression.base is parse_python_type_annotation("list")
+    assert expression.base is python_type_name("list")
 
 
 def test_parse_python_type_annotation_uses_bounded_cache() -> None:
@@ -349,6 +430,7 @@ def test_iter_python_type_expr_qualified_names_uses_stable_structure_order() -> 
         "pkg.models.Outer.Inner",
         "baz.Qux",
     ]
+    assert list(iter_python_type_expr_names(expression)) == ["Callable", "Ts", "Bar", "Inner", "Qux"]
 
 
 def test_rewrite_python_type_expr_shares_unchanged_tree() -> None:

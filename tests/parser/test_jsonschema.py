@@ -8,6 +8,7 @@ import socket
 import sys
 import weakref
 from collections import Counter
+from copy import deepcopy
 from ipaddress import ip_address
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, Union
@@ -23,6 +24,7 @@ from datamodel_code_generator import (
     PythonVersion,
     ReadOnlyWriteOnlyModelType,
 )
+from datamodel_code_generator._python_type_annotation import PythonTypeRuntimeSymbol
 from datamodel_code_generator.http import _get_http_stack, _get_httpx
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase, get_data_model_types
@@ -54,9 +56,6 @@ from datamodel_code_generator.parser.jsonschema import (
     _get_json_value_type,
     _get_union_variant_name,
     _get_unique_rw_model_variant_source_path,
-    _is_union_operator_python_type,
-    _is_union_python_type,
-    _shorten_qualified_python_type_annotation,
     _validate_schema_python_import_path,
     get_model_by_path,
     split_json_pointer,
@@ -2472,66 +2471,47 @@ def test_get_python_type_flags(x_python_type: str, expected: dict[str, bool]) ->
     assert result == expected
 
 
-@pytest.mark.parametrize(
-    ("x_python_type", "expected"),
-    [
-        ("Union[str, int]", True),
-        ("typing.Optional[str]", True),
-        ("str | int", True),
-        ("str|int", True),
-        ("list[str]", False),
-        ("[", False),
-    ],
-)
-def test_is_union_python_type(x_python_type: str, expected: bool) -> None:
-    """Test union type detection uses parsed annotations."""
-    assert _is_union_python_type(x_python_type) is expected
+def test_bind_python_type_carries_shared_structure_and_ordered_imports() -> None:
+    """One parsed expression drives rendering, imports, and copied DataTypes."""
+    parser = JsonSchemaParser("")
+    obj = JsonSchemaObject.model_validate({
+        "type": "string",
+        "x-python-type": "Optional[Callable[[foo.Bar, foo.Bar, Literal['foo.Bar']], baz.Qux]]",
+    })
+
+    data_type = parser._get_python_type_override(obj)
+
+    assert data_type is not None
+    assert data_type.type == "Optional[Callable[[Bar, Bar, Literal['foo.Bar']], Qux]]"
+    assert data_type.python_type is not None
+    assert not hasattr(data_type.python_type, "rendered")
+    assert tuple(data_type.python_type.imports) == (
+        Import.from_full_path("typing.Optional"),
+        Import.from_full_path("collections.abc.Callable"),
+        Import.from_full_path("foo.Bar"),
+        Import.from_full_path("typing.Literal"),
+        Import.from_full_path("baz.Qux"),
+    )
+    assert deepcopy(data_type).python_type is data_type.python_type
+    assert DataModelFieldBase._has_explicit_typing_import_requirements(data_type)
+
+    aliased_type = DataType(type=data_type.type, alias="alias.Model", python_type=data_type.python_type)
+    model = BaseModel(
+        reference=Reference(path="structured", name="Structured"),
+        fields=[
+            DataModelFieldBase(name="value", data_type=data_type),
+            DataModelFieldBase(name="aliased", data_type=aliased_type),
+        ],
+    )
+    assert {"Callable", "Bar", "Literal", "Qux", "alias"} <= Parser._collect_used_names_from_models([model])
 
 
-@pytest.mark.parametrize(
-    ("x_python_type", "expected"),
-    [
-        ("str | int", True),
-        ("str|int", True),
-        ("None|Set[int]", True),
-        ("Literal[' | ']", False),
-    ],
-)
-def test_is_union_operator_python_type(x_python_type: str, expected: bool) -> None:
-    """Test union operator detection ignores non-operator annotation text."""
-    assert _is_union_operator_python_type(x_python_type) is expected
+def test_bind_python_type_preserves_direct_runtime_symbol_identity() -> None:
+    """Runtime symbols bind their exact dotted module without a text round trip."""
+    bound_type = JsonSchemaParser("")._bind_python_type(PythonTypeRuntimeSymbol("pkg.models", ("Outer", "Inner")))
 
-
-def test_shorten_qualified_python_type_annotation() -> None:
-    """Test qualified Python type AST shortening preserves string literals."""
-    x_python_type = "Callable[[foo.Bar, Literal['foo.Bar']], baz.Qux]"
-    type_str, qualified_names, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
-
-    assert qualified_names == ("foo.Bar", "baz.Qux")
-    assert root_qualified_name is None
-    assert type_str == "Callable[[Bar, Literal['foo.Bar']], Qux]"
-    assert _shorten_qualified_python_type_annotation("[") == ("[", (), None)
-    assert _shorten_qualified_python_type_annotation("foo().bar") == ("foo().bar", (), None)
-
-
-def test_shorten_qualified_python_type_annotation_after_non_ascii_literal() -> None:
-    """Test AST shortening handles non-ASCII text before qualified names."""
-    x_python_type = "Callable[[Literal['あ'], foo.Bar], baz.Qux]"
-    type_str, qualified_names, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
-
-    assert qualified_names == ("foo.Bar", "baz.Qux")
-    assert root_qualified_name is None
-    assert type_str == "Callable[[Literal['あ'], Bar], Qux]"
-
-
-def test_shorten_qualified_python_type_annotation_after_multiline_literal() -> None:
-    """Test AST shortening handles multiline annotations."""
-    x_python_type = "Callable[[\n    Literal['foo.Bar'],\n    foo.Bar,\n], baz.Qux]"
-    type_str, qualified_names, root_qualified_name = _shorten_qualified_python_type_annotation(x_python_type)
-
-    assert qualified_names == ("foo.Bar", "baz.Qux")
-    assert root_qualified_name is None
-    assert type_str == "Callable[[Literal['foo.Bar'], Bar], Qux]"
+    assert bound_type.expression == PythonTypeRuntimeSymbol("pkg.models", ("Outer", "Inner"))
+    assert bound_type.imports == (Import(import_="pkg.models"),)
 
 
 def test_inherited_request_response_helpers_keep_unnamed_root_fields() -> None:
