@@ -7864,8 +7864,8 @@ def test_main_deprecated_model_distinguishes_prefixed_decorator(
     )
 
 
-def test_main_deprecated_model_matches_newer_target_decorator_syntax() -> None:
-    """Match a direct decorator without parsing newer target-version expressions on the host."""
+def test_main_deprecated_model_keeps_target_syntax_opaque_across_runtimes() -> None:
+    """Keep one target-only fixture opaque on Python 3.10, 3.12, and 3.14 runtimes."""
     run_generate_and_assert(
         input_=JSON_SCHEMA_DATA_PATH / "deprecated_dataclass.json",
         expected_file=EXPECTED_JSON_SCHEMA_PATH / "deprecated_dataclass_with_newer_decorator_syntax.py",

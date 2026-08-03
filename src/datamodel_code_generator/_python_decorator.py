@@ -7,10 +7,24 @@ import token
 import tokenize
 from functools import lru_cache
 from io import StringIO
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 _OPEN_TO_CLOSE = {"(": ")", "[": "]", "{": "}"}
 _CLOSE_TOKENS = frozenset(_OPEN_TO_CLOSE.values())
 _INVALID_TOKEN_TYPES = frozenset({token.INDENT, token.DEDENT, token.ERRORTOKEN})
+_OPAQUE_STRING_START_TYPES = frozenset(
+    token_type for token_type, name in token.tok_name.items() if name in {"FSTRING_START", "TSTRING_START"}
+)
+_OPAQUE_STRING_END_TYPES = frozenset(
+    token_type for token_type, name in token.tok_name.items() if name in {"FSTRING_END", "TSTRING_END"}
+)
+_COMPONENT_EMPTY = 0
+_COMPONENT_HAS_CONTENT = 1
+_COMPONENT_AFTER_COMMA = 2
+_COMPONENT_AFTER_EQUALS = 3
 
 
 def _is_parenthesized_name(body: str, name: str) -> bool:
@@ -42,14 +56,38 @@ def _is_parenthesized_name(body: str, name: str) -> bool:
     return not body[index:].strip()
 
 
+def _tokenize_opaque_strings(source: str) -> Iterator[tokenize.TokenInfo]:
+    """Expose only the decorator shape visible outside string expressions.
+
+    ``tokenize.generate_tokens()`` uses the running Python's tokenizer; it is
+    not a parser for the configured target Python syntax. Formatted and
+    template string interiors must therefore remain opaque so target-newer
+    expressions cannot make decorator matching depend on the runtime version.
+    """
+    opaque_string_depth = 0
+    for item in tokenize.generate_tokens(StringIO(source).readline):
+        # START is the expression boundary. Do not expose enclosed tokens to
+        # outer-shape validation: interpreting them would apply runtime token
+        # structure to target-only syntax and reintroduce version dependence.
+        if item.type in _OPAQUE_STRING_START_TYPES:
+            if not opaque_string_depth:
+                yield item
+            opaque_string_depth += 1
+        elif opaque_string_depth:
+            if item.type in _OPAQUE_STRING_END_TYPES:
+                opaque_string_depth -= 1
+        else:
+            yield item
+
+
 def _significant_tokens(source: str) -> tuple[tokenize.TokenInfo, ...] | None:
-    """Tokenize one logical expression while retaining bracket correctness."""
+    """Tokenize one logical outer decorator shape with balanced brackets."""
     result: list[tokenize.TokenInfo] = []
     brackets: list[str] = []
     logical_line_ended = False
 
     try:
-        token_iterator = tokenize.generate_tokens(StringIO(source).readline)
+        token_iterator = _tokenize_opaque_strings(source)
         while (item := next(token_iterator)).type != token.ENDMARKER:
             if logical_line_ended or item.type in _INVALID_TOKEN_TYPES:
                 return None
@@ -80,32 +118,32 @@ def _consume_group(tokens: tuple[tokenize.TokenInfo, ...], index: int) -> int | 
     # Each frame stores the state of the current comma-delimited component:
     # 0 is empty, 1 has content, 2 follows a comma, and 3 follows '='. Bracket
     # pairing was already validated while tokenizing.
-    stack = [0]
+    stack = [_COMPONENT_EMPTY]
     token_index = index + 1
     while stack:
         current = tokens[token_index]
         if current.type != token.OP:
-            stack[-1] = 1
+            stack[-1] = _COMPONENT_HAS_CONTENT
         else:
             value = current.string
             if value in _OPEN_TO_CLOSE:
-                stack[-1] = 1
-                stack.append(0)
+                stack[-1] = _COMPONENT_HAS_CONTENT
+                stack.append(_COMPONENT_EMPTY)
             elif value in _CLOSE_TOKENS:
-                if stack.pop() == 3:
+                if stack.pop() == _COMPONENT_AFTER_EQUALS:
                     return None
             elif value == ",":
-                if stack[-1] != 1:
+                if stack[-1] != _COMPONENT_HAS_CONTENT:
                     return None
-                stack[-1] = 2
+                stack[-1] = _COMPONENT_AFTER_COMMA
             elif value == "=":
-                if stack[-1] != 1:
+                if stack[-1] != _COMPONENT_HAS_CONTENT:
                     return None
-                stack[-1] = 3
+                stack[-1] = _COMPONENT_AFTER_EQUALS
             elif value == ";":
                 return None
             else:
-                stack[-1] = 1
+                stack[-1] = _COMPONENT_HAS_CONTENT
         token_index += 1
     return token_index
 
@@ -140,7 +178,7 @@ def _parse_direct_target(
 
 @lru_cache(maxsize=128)
 def is_named_python_decorator(decorator: str, name: str) -> bool:
-    """Return whether a decorator directly targets an exact unqualified name."""
+    """Match an exact unqualified target without parsing target expressions."""
     if decorator[:1] != "@" or not name.isidentifier() or keyword.iskeyword(name):
         return False
 

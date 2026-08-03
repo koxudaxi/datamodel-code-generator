@@ -17,7 +17,20 @@ from datamodel_code_generator._python_decorator import is_named_python_decorator
         pytest.param("@deprecated", "deprecated", True, id="name"),
         pytest.param("@deprecated('message')", "deprecated", True, id="call"),
         pytest.param("@deprecated (message='reason')", "deprecated", True, id="keyword-call"),
+        pytest.param("@deprecated(f'{reason=}')", "deprecated", True, id="f-string-debug-expression"),
         pytest.param("@deprecated(t'{reason}')", "deprecated", True, id="future-template-string"),
+        pytest.param(
+            "@deprecated(t'{reason=}')",
+            "deprecated",
+            True,
+            id="future-template-string-debug-expression",
+        ),
+        pytest.param(
+            """@deprecated(f"{f'{reason=}'}")""",
+            "deprecated",
+            True,
+            id="nested-f-string-debug-expression",
+        ),
         pytest.param(
             "@deprecated(\n    # Kept opaque for a newer target grammar.\n    t'{reason}',\n)",
             "deprecated",
@@ -54,6 +67,24 @@ from datamodel_code_generator._python_decorator import is_named_python_decorator
         pytest.param("@deprecated(=reason)", "deprecated", False, id="leading-keyword-equals"),
         pytest.param("@deprecated(reason=)", "deprecated", False, id="missing-keyword-value"),
         pytest.param("@deprecated('message'; reason=True)", "deprecated", False, id="argument-semicolon"),
+        pytest.param(
+            "@deprecated(t'{reason=}',, reason=True)",
+            "deprecated",
+            False,
+            id="repeated-comma-after-future-string",
+        ),
+        pytest.param(
+            "@deprecated(f'{reason=}'; reason=True)",
+            "deprecated",
+            False,
+            id="semicolon-after-f-string",
+        ),
+        pytest.param(
+            "@deprecated(reason=f'{reason=}', missing=)",
+            "deprecated",
+            False,
+            id="missing-keyword-value-after-f-string",
+        ),
         pytest.param("@deprecated((,))", "deprecated", False, id="nested-leading-comma"),
         pytest.param("@deprecated(\ud800)", "deprecated", False, id="surrogate-tokenizer-failure"),
         pytest.param("@(1)", "deprecated", False, id="parenthesized-non-name"),
@@ -68,6 +99,7 @@ def test_is_named_python_decorator(decorator: str, name: str, *, expected: bool)
     assert is_named_python_decorator(decorator, name) is expected
 
 
+@pytest.mark.allow_direct_assert
 def test_is_named_python_decorator_handles_deep_parenthesized_target() -> None:
     """Avoid parser and tokenizer recursion limits for a deeply wrapped target."""
     wrapper_count = 2_000
@@ -76,6 +108,7 @@ def test_is_named_python_decorator_handles_deep_parenthesized_target() -> None:
     assert is_named_python_decorator(decorator, "deprecated") is True
 
 
+@pytest.mark.allow_direct_assert
 def test_model_base_import_keeps_python_decorator_helper_lazy() -> None:
     """Import the decorator matcher only when deprecated metadata is rendered."""
     result = subprocess.run(
