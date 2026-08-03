@@ -60,6 +60,7 @@ Type annotation, import, and primitive type behavior.
 - `--allof-merge-mode`: Mode for field merging in allOf schemas. 'constraints': merge only constraints (minItems, maxItems, pattern, etc.) from parent (default). 'all': merge constraints plus annotations (default, examples) from parent. 'none': do not merge any fields from parent properties. Choices: `constraints`, `all`, `none`.
 - `--allof-class-hierarchy`: How to map allOf references to class hierarchies. 'if-no-conflict': only create subclasses when parent class has no conflicting property definition. 'always': always create subclasses. Choices: `if-no-conflict`, `always`.
 - `--use-type-alias`: Use TypeAlias instead of root models (experimental)
+- `--use-type-alias-type`: Use TypeAliasType for type aliases on Python 3.10 and 3.11 (implies --use-type-alias; experimental)
 - `--use-root-model-type-alias`: Use type alias format for RootModel (e.g., Foo = RootModel[Bar]) instead of class inheritance (Pydantic v2 only)
 - `--disable-future-imports`: Disable __future__ imports
 - `--import-overrides`: Override modules for generated imports by symbol name. Format: JSON object mapping symbols to module paths. Example: '{"TypedDict": "my_project.typing_compat", "NotRequired": "my_project.typing_compat"}'.

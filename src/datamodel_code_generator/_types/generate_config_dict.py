@@ -152,6 +152,7 @@ class BaseGenerateConfig(TypedDict):
     skip_root_model: NotRequired[bool]
     use_root_model_sequence_interface: NotRequired[bool]
     use_type_alias: NotRequired[bool]
+    use_type_alias_type: NotRequired[bool]
     use_root_model_type_alias: NotRequired[bool]
     special_field_name_prefix: NotRequired[str | None]
     remove_special_field_name_prefix: NotRequired[bool]

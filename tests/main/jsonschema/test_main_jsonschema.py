@@ -10073,6 +10073,137 @@ def test_main_jsonschema_type_alias_py312(output_file: Path) -> None:
 
 
 @pytest.mark.cli_doc(
+    options=["--use-type-alias-type"],
+    option_description="""Use runtime TypeAliasType objects for aliases before Python 3.12 (experimental).
+
+The `--use-type-alias-type` flag implies `--use-type-alias` and forces
+`TypeAliasType` for every output model type on Python 3.10-3.11. Python 3.12+
+continues to use native `type` statements.""",
+    input_schema="jsonschema/type_alias.json",
+    cli_args=[
+        "--output-model-type",
+        "typing.TypedDict",
+        "--use-type-alias-type",
+        "--target-python-version",
+        "3.10",
+    ],
+    version_outputs={
+        "3.10": "jsonschema/type_alias_type_typeddict.py",
+        "3.12": "jsonschema/type_alias_type_typeddict_py312.py",
+    },
+    primary=True,
+)
+@pytest.mark.parametrize(
+    ("output_model", "expected_file"),
+    [
+        ("typing.TypedDict", "type_alias_type_typeddict.py"),
+        ("dataclasses.dataclass", "type_alias_type_dataclass.py"),
+        ("msgspec.Struct", "type_alias_type_msgspec.py"),
+    ],
+)
+def test_main_jsonschema_type_alias_type_non_pydantic(
+    output_file: Path,
+    output_model: str,
+    expected_file: str,
+) -> None:
+    """Force TypeAliasType for Python 3.10 non-Pydantic output."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--use-type-alias-type",
+            "--target-python-version",
+            "3.10",
+            "--output-model-type",
+            output_model,
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_type_typeddict_py312(output_file: Path) -> None:
+    """Keep native type statements for Python 3.12 TypedDict output."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="type_alias_type_typeddict_py312.py",
+        extra_args=[
+            "--use-type-alias-type",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "typing.TypedDict",
+        ],
+    )
+
+
+@pytest.mark.parametrize(
+    ("input_name", "expected_file"),
+    [
+        ("type_alias_forward_ref.json", "type_alias_type_forward_ref.py"),
+        ("type_alias_cycle.json", "type_alias_type_cycle.py"),
+    ],
+)
+def test_main_jsonschema_type_alias_type_executes_forward_references(
+    output_file: Path,
+    input_name: str,
+    expected_file: str,
+) -> None:
+    """Generate executable runtime aliases for forward and cyclic references."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / input_name,
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--use-type-alias-type",
+            "--target-python-version",
+            "3.10",
+            "--output-model-type",
+            "typing.TypedDict",
+            "--keep-model-order",
+            "--disable-future-imports",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_type_alias_type_recursive_exports(output_dir: Path) -> None:
+    """Export runtime aliases without leaking their helper into package exports."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_type_module",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "type_alias_type_module",
+        extra_args=[
+            "--use-type-alias-type",
+            "--target-python-version",
+            "3.10",
+            "--output-model-type",
+            "typing.TypedDict",
+            "--all-exports-scope",
+            "recursive",
+            "--disable-future-imports",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+        importable_module_name="generated_type_alias_type_module",
+        importable_module_file="__init__.py",
+        importable_module_attribute="Names",
+    )
+
+
+@pytest.mark.cli_doc(
     options=["--use-field-description"],
     option_description="""Include schema descriptions as Field docstrings.
 

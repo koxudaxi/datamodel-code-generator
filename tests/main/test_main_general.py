@@ -889,9 +889,12 @@ def test_cli_pyproject_ignores_generate_only_options(output_file: Path, tmp_path
 def test_prepare_cli_config_args_applies_derived_flags() -> None:
     """CLI-only implied flags are applied before the single validation path."""
     prepared_args = _prepare_cli_config_args({"output_model_type": DataModelType.MsgspecStruct.value})
+    alias_args = _prepare_cli_config_args({"use_type_alias_type": True})
 
     assert prepared_args["use_annotated"] is True
     assert prepared_args["field_constraints"] is True
+    assert alias_args == {"use_type_alias_type": True, "use_type_alias": True}
+    assert GenerateConfig(use_type_alias_type=True).use_type_alias is True
     assert _prepare_cli_config_args({}) == {}
 
 

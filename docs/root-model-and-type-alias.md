@@ -1,3 +1,5 @@
+<!-- related-cli-options: --use-type-alias, --use-type-alias-type, --target-python-version -->
+
 # 📦 Root Models and Type Aliases
 
 When a schema defines a simple type (not an object with properties), `datamodel-code-generator` creates a root model. If you don't want to introduce a new level of attribute access (`.root`) or want to use generated types as plain Python types in non-Pydantic code, you can use the `--use-type-alias` flag to generate type aliases instead of root models.
@@ -20,10 +22,16 @@ The type of type alias generated depends on the output model type and target Pyt
 | **dataclasses** | `type` statement | `TypeAlias` |
 | **msgspec** | `type` statement | `TypeAlias` |
 
+Use `--use-type-alias-type` to force `TypeAliasType` for TypedDict,
+dataclass, and msgspec output targeting Python 3.10 or 3.11. This option
+implies `--use-type-alias`, so the two flags do not need to be combined.
+Python 3.12 and newer still use the native `type` statement.
+
 ### 🤔 Why the difference?
 
 - **Pydantic v2** requires `TypeAliasType` because it cannot properly handle `TypeAlias` annotations
 - **Other output types** (TypedDict, dataclasses, msgspec) use `TypeAlias` for better compatibility with libraries that may not expect `TypeAliasType` objects
+- **`--use-type-alias-type`** opts into runtime `TypeAliasType` objects for those output types on Python 3.10-3.11
 - **Python 3.12+** uses the native `type` statement for all output types
 
 ## 📝 Example
@@ -129,4 +137,5 @@ class User(BaseModel):
 ## 📖 See Also
 
 - 🖥️ [CLI Reference: `--use-type-alias`](cli-reference/typing-customization.md#use-type-alias) - Detailed CLI option documentation
+- 🖥️ [CLI Reference: `--use-type-alias-type`](cli-reference/typing-customization.md#use-type-alias-type) - Force runtime type alias objects before Python 3.12
 - 🎯 [CLI Reference: `--target-python-version`](cli-reference/model-customization.md#target-python-version) - Control Python version-specific syntax

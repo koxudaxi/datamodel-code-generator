@@ -56,6 +56,7 @@
 - `--use-total-false-for-typed-dict`: Generate TypedDict declarations with `total=False`.
 - `--use-tuple-for-fixed-items`: Generate tuple types for arrays with items array syntax.
 - `--use-type-alias`: Use TypeAlias instead of root models for type definitions (experimental).
+- `--use-type-alias-type`: Use runtime TypeAliasType objects for aliases before Python 3.12 (experimental).
 - `--use-union-operator`: Use | operator for Union types (PEP 604).
 - `--use-unique-items-as-set`: Generate set types for arrays with uniqueItems constraint.
 
@@ -445,6 +446,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         syntax when minItems equals maxItems equals items
                         length
   --use-type-alias      Use TypeAlias instead of root models (experimental)
+  --use-type-alias-type
+                        Use TypeAliasType for type aliases on Python 3.10 and
+                        3.11 (implies --use-type-alias; experimental)
   --use-union-operator, --no-use-union-operator
                         Use | operator for Union type (PEP 604). Default:
                         enabled
