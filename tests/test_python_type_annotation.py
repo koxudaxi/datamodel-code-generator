@@ -208,6 +208,11 @@ def test_parse_python_type_annotation_handles_real_unicode_error() -> None:
     assert parse_python_type_annotation("Model\ud800") is None
 
 
+def test_parse_python_type_annotation_handles_null_byte() -> None:
+    """A raw null byte is invalid input rather than a leaked AST ValueError."""
+    assert parse_python_type_annotation("Model\x00") is None
+
+
 def test_parse_python_type_annotation_interns_common_names() -> None:
     """Frequently repeated names share fixed process-owned leaf nodes."""
     expression = parse_python_type_annotation("list[list[str]]")

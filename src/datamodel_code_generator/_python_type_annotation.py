@@ -399,7 +399,7 @@ def parse_python_type_annotation(type_str: str) -> PythonTypeExpr | None:
     try:
         node = _parse_python_type_annotation_ast(type_str)
         return _python_type_expr_from_ast(node, allow_literal=False)
-    except (SyntaxError, UnicodeError, RecursionError, _InvalidPythonTypeAnnotationError):
+    except (SyntaxError, UnicodeError, ValueError, RecursionError, _InvalidPythonTypeAnnotationError):
         return None
 
 
