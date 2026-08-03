@@ -77,6 +77,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--http-timeout": "Set timeout for HTTP requests to remote hosts.",
     "--ignore-enum-constraints": "Ignore enum constraints and use base string type instead of Enum classes.",
     "--ignore-pyproject": "Ignore pyproject.toml configuration file.",
+    "--import-overrides": "Override modules for generated imports by symbol name.",
     "--include-path-parameters": "Include OpenAPI path parameters in generated parameter models.",
     "--infer-union-variant-names": "Infer names for inline oneOf/anyOf object variants from literal fields.",
     "--input": "Specify the input schema file path.",

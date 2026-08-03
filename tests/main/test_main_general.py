@@ -1768,6 +1768,79 @@ def test_dataclass_arguments_invalid(json_str: str, match: str) -> None:
 
 
 @pytest.mark.cli_doc(
+    options=["--import-overrides"],
+    option_description="""Override modules for generated imports by symbol name.
+
+The mapping applies to generated model imports regardless of their original module. This is useful
+for routing typing helpers through a project compatibility module across Python target versions.
+""",
+    input_schema="jsonschema/datetime.json",
+    cli_args=[
+        "--output-model-type",
+        "typing.TypedDict",
+        "--target-python-version",
+        "3.10",
+        "--import-overrides",
+        '{"TypedDict": "my_project.typing_compat", "NotRequired": "my_project.typing_compat"}',
+    ],
+    golden_output="main/import_overrides.py",
+    primary=True,
+)
+@freeze_time(TIMESTAMP)
+def test_import_overrides(output_file: Path) -> None:
+    """Route generated typing imports through a compatibility module."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "datetime.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.10",
+            "--import-overrides",
+            '{"TypedDict": "my_project.typing_compat", "NotRequired": "my_project.typing_compat"}',
+        ],
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_generate_import_overrides(output_file: Path) -> None:
+    """Route generated imports through the public generate API."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "datetime.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="import_overrides.py",
+        output_model_type=DataModelType.TypingTypedDict,
+        target_python_version=PythonVersion.PY_310,
+        import_overrides={
+            "NotRequired": "my_project.typing_compat",
+            "TypedDict": "my_project.typing_compat",
+        },
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_import_overrides_preserve_alias(output_file: Path) -> None:
+    """Preserve generated import aliases while replacing their modules."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--use-generic-base-class",
+            "--allow-population-by-field-name",
+            "--import-overrides",
+            str(DATA_PATH / "config" / "import_overrides.json"),
+        ],
+    )
+
+
+@pytest.mark.cli_doc(
     options=["--type-overrides"],
     option_description="""Replace schema model types with custom Python types via JSON mapping.
 

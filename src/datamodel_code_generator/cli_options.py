@@ -635,6 +635,12 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     ),
     "--use-closed-typed-dict": CLIOptionMeta(name="--use-closed-typed-dict", category=OptionCategory.TYPING),
     "--no-use-closed-typed-dict": CLIOptionMeta(name="--no-use-closed-typed-dict", category=OptionCategory.TYPING),
+    "--import-overrides": CLIOptionMeta(
+        name="--import-overrides",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.IMPORTS,
+    ),
     "--type-mappings": CLIOptionMeta(
         name="--type-mappings",
         category=OptionCategory.TYPING,

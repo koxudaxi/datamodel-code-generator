@@ -812,6 +812,14 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--import-overrides",
+    help="Override modules for generated imports by symbol name. "
+    "Format: JSON object mapping symbols to module paths. "
+    'Example: \'{"TypedDict": "my_project.typing_compat", "NotRequired": "my_project.typing_compat"}\'.',
+    type=str,
+    default=None,
+)
+typing_options.add_argument(
     "--type-mappings",
     help="Override default type mappings. "
     'Format: "type+format=target" (e.g., "string+binary=string" to map binary format to string type) '

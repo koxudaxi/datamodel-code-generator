@@ -26,6 +26,7 @@ JsonConfigFieldName: TypeAlias = Literal[
     "duplicate_name_suffix",
     "enum_field_as_literal_map",
     "extra_template_data",
+    "import_overrides",
     "model_name_map",
     "serialization_aliases",
     "type_overrides",
@@ -39,6 +40,7 @@ JsonConfigOptionName: TypeAlias = Literal[
     "--duplicate-name-suffix",
     "--enum-field-as-literal-map",
     "--extra-template-data",
+    "--import-overrides",
     "--model-name-map",
     "--serialization-aliases",
     "--type-overrides",
@@ -112,6 +114,7 @@ class JsonConfigSchemasPayload(BaseModel):
         default=None, alias="enum-field-as-literal-map"
     )
     extra_template_data: ExtraTemplateDataConfig | None = Field(default=None, alias="extra-template-data")
+    import_overrides: StringMappingConfig | None = Field(default=None, alias="import-overrides")
     model_name_map: StringMappingConfig | None = Field(default=None, alias="model-name-map")
     serialization_aliases: StringMappingConfig | None = Field(default=None, alias="serialization-aliases")
     type_overrides: StringMappingConfig | None = Field(default=None, alias="type-overrides")
@@ -283,6 +286,7 @@ class JsonConfigSpecs:
             as_defaultdict=True,
             load_error_name="extra template data",
         ),
+        "import_overrides": JsonConfigSpec("--import-overrides", StringMappingConfig),
         "model_name_map": JsonConfigSpec("--model-name-map", StringMappingConfig),
         "serialization_aliases": JsonConfigSpec(
             "--serialization-aliases",

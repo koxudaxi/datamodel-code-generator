@@ -257,6 +257,7 @@ class ParserConfig(BaseModel):
     naming_strategy: NamingStrategy | None = None
     duplicate_name_suffix: dict[str, str] | None = None
     dataclass_arguments: DataclassArguments | None = None
+    import_overrides: dict[str, str] | None = None
     type_mappings: list[str] | None = None
     type_overrides: dict[str, str] | None = None
     read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None
