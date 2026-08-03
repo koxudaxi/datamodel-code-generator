@@ -108,7 +108,7 @@ def _significant_tokens(source: str) -> tuple[tokenize.TokenInfo, ...] | None:
                 brackets.append(closing)
             elif item.string in _CLOSE_TOKENS and (not brackets or item.string != brackets.pop()):
                 return None
-    except (IndentationError, tokenize.TokenError, UnicodeError):
+    except (SyntaxError, tokenize.TokenError, UnicodeError):
         return None
     return tuple(result)
 

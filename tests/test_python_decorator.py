@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import tokenize
 
 import pytest
 
@@ -59,6 +60,7 @@ from datamodel_code_generator._python_decorator import is_named_python_decorator
         pytest.param("@factory(deprecated)", "deprecated", False, id="nested-argument"),
         pytest.param("deprecated", "deprecated", False, id="missing-marker"),
         pytest.param("@deprecated(", "deprecated", False, id="unclosed-call"),
+        pytest.param('@deprecated(f"{', "deprecated", False, id="unterminated-f-string"),
         pytest.param("@deprecated(]", "deprecated", False, id="mismatched-call"),
         pytest.param("@deprecated # comment\n()", "deprecated", False, id="call-after-comment"),
         pytest.param("@deprecated\n()", "deprecated", False, id="call-after-logical-line"),
@@ -106,6 +108,21 @@ def test_is_named_python_decorator_handles_deep_parenthesized_target() -> None:
     decorator = f"@{'(' * wrapper_count}deprecated{')' * wrapper_count}"
 
     assert is_named_python_decorator(decorator, "deprecated") is True
+
+
+@pytest.mark.allow_direct_assert
+def test_is_named_python_decorator_handles_runtime_tokenizer_syntax_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject runtime-specific tokenizer SyntaxError at the external boundary."""
+
+    def raise_syntax_error(_readline: object) -> None:
+        raise SyntaxError
+
+    is_named_python_decorator.cache_clear()
+    monkeypatch.setattr(tokenize, "generate_tokens", raise_syntax_error)
+
+    assert is_named_python_decorator("@deprecated(syntax_error_probe", "deprecated") is False
 
 
 @pytest.mark.allow_direct_assert
