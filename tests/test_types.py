@@ -664,6 +664,8 @@ def test_datatype_deepcopy_memo_cache_hit() -> None:
         # Subscripted with qualified names
         ("type[foo.bar.Baz]", "type"),
         ("List[foo.Bar]", "List"),
+        # Preserve the legacy first-generic fallback for a union root
+        ("my.custom.Iterable[str] | None", "Iterable"),
         # Invalid syntax (fallback to string parsing)
         ("List[", "List"),
         ("[invalid", ""),  # splits on "[" giving empty string

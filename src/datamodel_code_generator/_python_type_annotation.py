@@ -329,7 +329,9 @@ def _parse_python_type_annotation_ast(type_str: str) -> ast.expr:
         # defines the version-independent annotation subset we accept.
         return ast.parse(type_str, mode="eval", feature_version=(3, 10)).body
     except SyntaxError:
-        if (legacy_parse := _legacy_starred_parse_text(type_str)) is None:
+        # Most failures are ordinary invalid input. Avoid importing and running
+        # the runtime tokenizer unless the only fallback we support can apply.
+        if "*" not in type_str or (legacy_parse := _legacy_starred_parse_text(type_str)) is None:
             raise
         rewritten, sentinel = legacy_parse
         expression = ast.parse(rewritten, mode="eval", feature_version=(3, 10)).body

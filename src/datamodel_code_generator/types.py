@@ -269,8 +269,9 @@ def get_type_base_name(type_str: str) -> str:
         "Optional[int]" -> "Optional"
     """
     fallback = type_str.split("[", maxsplit=1)[0].rsplit(".", 1)[-1].strip()
-    expression = parse_python_type_annotation(type_str)
-    return python_type_expr_base_name(expression) if expression is not None else fallback
+    if (expression := parse_python_type_annotation(type_str)) is None:
+        return fallback
+    return python_type_expr_base_name(expression) or fallback
 
 
 def get_subscript_args(type_str: str) -> list[str]:
