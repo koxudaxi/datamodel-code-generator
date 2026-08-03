@@ -5,8 +5,8 @@ Provides Enum, StrEnum, and specialized enum classes for code generation.
 
 from __future__ import annotations
 
-import ast
-from functools import lru_cache
+from dataclasses import dataclass
+from functools import cached_property, lru_cache
 from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, IMPORT_INT_ENUM, IMPORT_STR_ENUM, Import
@@ -25,31 +25,92 @@ _INT: str = "int"
 _FLOAT: str = "float"
 _BYTES: str = "bytes"
 _STR: str = "str"
+_JSON_NUMBER_KEY = object()
+
+escape_characters = str.maketrans({
+    "\u0000": r"\x00",  # Null byte
+    "\\": r"\\",
+    "'": r"\'",
+    "\b": r"\b",
+    "\f": r"\f",
+    "\n": r"\n",
+    "\r": r"\r",
+    "\t": r"\t",
+})
+
+
+class _StructuredEnumMemberValue:
+    """Common identity for enum values preserved independently of source text."""
+
+    __slots__ = ()
+    value: Any
+
+
+@dataclass(frozen=True, slots=True)
+class EnumMemberValue(_StructuredEnumMemberValue):
+    """A raw string enum value that renders as its Python source literal."""
+
+    value: str
+
+    def __str__(self) -> str:
+        """Render the value using the historical single-quoted source form."""
+        return f"'{self.value.translate(escape_characters)}'"
+
+    def __repr__(self) -> str:
+        """Render the value as Python source when used by generic literal renderers."""
+        return str(self)
+
+
+class _NullEnumMemberValue(_StructuredEnumMemberValue):
+    """A unique structured marker for an explicit JSON null enum member."""
+
+    __slots__ = ()
+    value: ClassVar[None] = None
+
+    def __str__(self) -> str:
+        """Render JSON null as its Python source equivalent."""
+        return "None"
+
+    def __repr__(self) -> str:
+        """Render the marker as Python source in generic literal renderers."""
+        return "None"
+
+
+NULL_ENUM_MEMBER_VALUE = _NullEnumMemberValue()
 
 
 @lru_cache(maxsize=4096)
-def _evaluate_string_member_value(default: str) -> Any:
-    """Parse a member default rendered as a Python literal, returning it unchanged when not a literal."""
+def _get_legacy_raw_enum_member_value(default: str) -> Any:
+    """Decode a rendered default supplied by a third-party parser subclass."""
+    from ast import literal_eval  # noqa: PLC0415
+
     try:
-        return ast.literal_eval(default)
+        return literal_eval(default)
     except (SyntaxError, ValueError):
         return default
 
 
-def evaluate_member_value(default: Any) -> Any:
-    """Return the runtime value of a member default rendered as a Python literal."""
-    if not isinstance(default, str):
-        return default
-    return _evaluate_string_member_value(default)
+def get_raw_enum_member_value(default: Any) -> Any:
+    """Return one semantic value from structured or legacy rendered defaults."""
+    match default:
+        case _StructuredEnumMemberValue():
+            return default.value
+        case str():
+            return _get_legacy_raw_enum_member_value(default)
+    return default
 
 
-def _json_value_equal(member_value: Any, value: Any) -> bool:
-    """Compare values with JSON semantics: numbers compare across int/float, bool and str only to themselves."""
-    if isinstance(member_value, bool) or isinstance(value, bool):
-        return type(member_value) is type(value) and member_value == value
-    if isinstance(member_value, (int, float)) and isinstance(value, (int, float)):
-        return member_value == value
-    return type(member_value) is type(value) and member_value == value
+def _json_value_key(value: Any) -> tuple[object, Any] | None:
+    """Build a hash key with the same bool/number/type distinctions as JSON comparison."""
+    if isinstance(value, bool):
+        return bool, value
+    if isinstance(value, (int, float)):
+        return _JSON_NUMBER_KEY, value
+    try:
+        hash(value)
+    except TypeError:
+        return None
+    return type(value), value
 
 
 SUBCLASS_BASE_CLASSES: dict[Types, str] = {
@@ -123,26 +184,53 @@ class Enum(DataModel):
         """Create a Member instance for the given field."""
         return Member(self, field)
 
+    @cached_property
+    def _member_index(self) -> dict[tuple[object, Any], DataModelFieldBase]:
+        """Build the exact-value index only when member lookup is used."""
+        exact: dict[tuple[object, Any], DataModelFieldBase] = {}
+        for field in self.fields:
+            if field.default is None:
+                continue
+            member_value = get_raw_enum_member_value(field.default)
+            if (key := _json_value_key(member_value)) is not None:
+                exact.setdefault(key, field)
+        return exact
+
+    @cached_property
+    def _coerced_member_index(self) -> dict[str, DataModelFieldBase]:
+        """Build the string-coercing index only for discriminator-style lookup."""
+        coerced: dict[str, DataModelFieldBase] = {}
+        for field in self.fields:
+            if field.default is None:
+                continue
+            member_value = get_raw_enum_member_value(field.default)
+            coerced.setdefault(member_value if isinstance(member_value, str) else str(member_value), field)
+        return coerced
+
     def find_member(self, value: Any, *, coerce_strings: bool = False) -> Member | None:
         """Find the enum member whose value equals the given schema value.
 
         coerce_strings lets a string value match a non-string member with the same
         string representation, as required for OpenAPI discriminator mapping keys.
         """
+        if coerce_strings and isinstance(value, str):
+            return self.get_member(field) if (field := self._coerced_member_index.get(value)) is not None else None
+        if (key := _json_value_key(value)) is not None:
+            return self.get_member(field) if (field := self._member_index.get(key)) is not None else None
+
         for field in self.fields:
             if field.default is None:
                 continue
-            member_value = evaluate_member_value(field.default)
-            if _json_value_equal(member_value, value):
-                return self.get_member(field)
-            if (
-                coerce_strings
-                and isinstance(value, str)
-                and not isinstance(member_value, str)
-                and str(member_value) == value
-            ):
+            member_value = get_raw_enum_member_value(field.default)
+            if type(member_value) is type(value) and member_value == value:
                 return self.get_member(field)
         return None
+
+    def invalidate_render_caches(self) -> None:
+        """Clear rendering state and the member index after field mutations."""
+        super().invalidate_render_caches()
+        self.__dict__.pop("_member_index", None)
+        self.__dict__.pop("_coerced_member_index", None)
 
     @property
     def imports(self) -> tuple[Import, ...]:
@@ -187,3 +275,8 @@ class Member:
     def __repr__(self) -> str:
         """Return string representation of enum member."""
         return f"{self.alias or self.enum.class_name}.{self.field.name}"
+
+    @property
+    def value(self) -> Any:
+        """Return the raw semantic value represented by this enum member."""
+        return get_raw_enum_member_value(self.field.default)

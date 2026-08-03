@@ -80,7 +80,8 @@ from datamodel_code_generator.model.base import (
     linearize_data_models,
     sort_data_models_for_mro,
 )
-from datamodel_code_generator.model.enum import Enum, Member, evaluate_member_value
+from datamodel_code_generator.model.enum import Enum, Member, get_raw_enum_member_value
+from datamodel_code_generator.model.enum import escape_characters as _enum_escape_characters
 from datamodel_code_generator.model.imports import IMPORT_TYPED_DICT, IMPORT_TYPED_DICT_BACKPORT
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
@@ -100,6 +101,10 @@ if TYPE_CHECKING:
     from datamodel_code_generator.format import CodeFormatter
     from datamodel_code_generator.http import _HTTPFetchSession
     from datamodel_code_generator.model_metadata import GeneratedModelMetadata, ModelFieldMetadata, ModelMetadata
+
+# Preserve the existing parser.base export while sharing one canonical escape table.
+escape_characters = _enum_escape_characters
+
 ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
 _ConstructorFieldAdjustment: TypeAlias = Literal["assignment", "keyword_only"]
 
@@ -608,18 +613,6 @@ SPECIAL_PATH_FORMAT: str = "#-datamodel-code-generator-#-{}-#-special-#"
 def get_special_path(keyword: str, path: list[str]) -> list[str]:
     """Create a special path marker for internal reference tracking."""
     return [*path, SPECIAL_PATH_FORMAT.format(keyword)]
-
-
-escape_characters = str.maketrans({
-    "\u0000": r"\x00",  # Null byte
-    "\\": r"\\",
-    "'": r"\'",
-    "\b": r"\b",
-    "\f": r"\f",
-    "\n": r"\n",
-    "\r": r"\r",
-    "\t": r"\t",
-})
 
 
 def dump_templates(templates: list[DataModel]) -> str:
@@ -1460,10 +1453,7 @@ def _get_discriminator_field_value(discriminator_field: DataModelFieldBase) -> D
 
     enum_source = discriminator_field.data_type.find_source(Enum)
     if enum_source and len(enum_source.fields) == 1:
-        raw_default = enum_source.fields[0].default
-        if isinstance(raw_default, str):
-            return raw_default.strip("'\"")
-        return raw_default
+        return get_raw_enum_member_value(enum_source.fields[0].default)
     return None
 
 
@@ -2641,7 +2631,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if not member:
             return value
 
-        member_value = evaluate_member_value(member.field.default)
+        member_value = member.value
         if isinstance(member_value, (str, int, bool)):
             return member_value
         return value

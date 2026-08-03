@@ -15457,6 +15457,25 @@ def test_main_jsonschema_enum_member_typed_defaults(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "custom_template_dir",
+    [
+        pytest.param(None, id="builtin-template"),
+        pytest.param(DATA_PATH / "templates_extensions", id="existing-custom-enum-template"),
+    ],
+)
+def test_generate_jsonschema_structured_enum_values(custom_template_dir: Path | None) -> None:
+    """Keep raw enum values distinct from rendered source through the generate API."""
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "structured_enum_values.json",
+        expected_file=EXPECTED_JSON_SCHEMA_PATH / "structured_enum_values.py",
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        set_default_enum_member=True,
+        custom_template_dir=custom_template_dir,
+    )
+
+
 def test_main_typed_dict_functional_descriptions(output_file: Path) -> None:
     """Test functional TypedDict renders descriptions outside the fields dict."""
     run_main_and_assert(

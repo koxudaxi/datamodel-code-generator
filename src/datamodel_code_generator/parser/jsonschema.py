@@ -56,8 +56,10 @@ from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED, c3_merge, get_inherited_fields, sanitize_module_name
 from datamodel_code_generator.model.enum import (
+    NULL_ENUM_MEMBER_VALUE,
     SPECIALIZED_ENUM_TYPE_MATCH,
     Enum,
+    EnumMemberValue,
     StrEnum,
 )
 from datamodel_code_generator.model.runtime_validation import (
@@ -83,7 +85,6 @@ from datamodel_code_generator.parser.base import (
     _copy_resolved_inherited_field,
     _detach_deferred_inherited_field_parents,
     _get_inherited_type_modifiers,
-    escape_characters,
     get_special_path,
     title_to_class_name,
 )
@@ -8324,18 +8325,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         enum_descriptions = obj.x_enum_descriptions
 
         for i, enum_part in enumerate(enum_times):
+            match enum_part:
+                case str():
+                    default = EnumMemberValue(enum_part)
+                case None:
+                    default = NULL_ENUM_MEMBER_VALUE
+                case _:
+                    default = enum_part
             if obj.type == "string" or isinstance(enum_part, str):
-                default = f"'{enum_part.translate(escape_characters)}'" if isinstance(enum_part, str) else enum_part
                 field_name = enum_names[i] if enum_names and i < len(enum_names) and enum_names[i] else str(enum_part)
+            elif enum_names and i < len(enum_names) and enum_names[i]:
+                field_name = enum_names[i]
+            elif isinstance(enum_part, dict):
+                field_name = self._get_field_name_from_dict_enum(enum_part, i)
             else:
-                default = enum_part
-                if enum_names and i < len(enum_names) and enum_names[i]:
-                    field_name = enum_names[i]
-                elif isinstance(enum_part, dict):
-                    field_name = self._get_field_name_from_dict_enum(enum_part, i)
-                else:
-                    prefix = obj.type if isinstance(obj.type, str) else type(enum_part).__name__
-                    field_name = f"{prefix}_{enum_part}"
+                prefix = obj.type if isinstance(obj.type, str) else type(enum_part).__name__
+                field_name = f"{prefix}_{enum_part}"
             field_name = self.model_resolver.get_valid_field_name(
                 field_name, excludes=exclude_field_names, model_type=ModelType.ENUM
             )
