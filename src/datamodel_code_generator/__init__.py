@@ -840,7 +840,7 @@ def _find_future_import_insertion_point(header: str) -> int:  # noqa: PLR0911, P
                     case _:
                         statement_start_line = statement_start_line or token.start[0]
                         return line_end_pos(statement_start_line - 1)
-        except (IndentationError, tokenize.TokenError):
+        except (SyntaxError, tokenize.TokenError):
             return 0
 
     pos = line_end_pos(statement_end_line)

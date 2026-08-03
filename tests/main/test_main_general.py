@@ -7,6 +7,7 @@ import inspect
 import json
 import platform
 import sys
+import tokenize
 import warnings
 from argparse import ArgumentTypeError, BooleanOptionalAction, Namespace
 from collections import defaultdict
@@ -3986,12 +3987,27 @@ def test_generate_custom_file_header_prepend_after_formatter_parenthesized_docst
         pytest.param('("doc")()\n', 0, id="parenthesized-string-postfix-call"),
         pytest.param("()\n", 0, id="expression"),
         pytest.param("import os\n", 0, id="statement"),
+        pytest.param("(\n", 0, id="unclosed-opening-group"),
         pytest.param("'''unterminated", 0, id="malformed"),
     ],
 )
 def test_future_import_insertion_point_handles_tokenizer_boundaries(header: str, expected: int) -> None:
     """Blank, expression, and malformed headers have deterministic insertion points."""
     assert _find_future_import_insertion_point(header) == expected
+
+
+@pytest.mark.allow_direct_assert
+def test_future_import_insertion_point_handles_runtime_tokenizer_syntax_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Treat runtime-specific tokenizer SyntaxError as malformed external input."""
+
+    def raise_syntax_error(_readline: Any) -> Any:
+        raise SyntaxError
+
+    monkeypatch.setattr(tokenize, "generate_tokens", raise_syntax_error)
+
+    assert _find_future_import_insertion_point("(") == 0
 
 
 def test_custom_file_header_prepend_preserves_future_import_text(output_file: Path) -> None:
