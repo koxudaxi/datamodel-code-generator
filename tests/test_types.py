@@ -664,6 +664,8 @@ def test_datatype_deepcopy_memo_cache_hit() -> None:
         # Subscripted with qualified names
         ("type[foo.bar.Baz]", "type"),
         ("List[foo.Bar]", "List"),
+        # Preserve the legacy first-generic fallback for a union root
+        ("my.custom.Iterable[str] | None", "Iterable"),
         # Invalid syntax (fallback to string parsing)
         ("List[", "List"),
         ("[invalid", ""),  # splits on "[" giving empty string
@@ -692,12 +694,16 @@ def test_get_type_base_name(type_str: str, expected: str) -> None:
         ("str | int", ["str", "int"]),
         ("str | int | None", ["str", "int", "None"]),
         ("List[str] | None", ["List[str]", "None"]),
+        ("tuple[()] | None", ["tuple[()]", "None"]),
         # Complex nested types
         ("Dict[str, List[int]]", ["str", "List[int]"]),
         ("Union[List[str], Dict[str, int]]", ["List[str]", "Dict[str, int]"]),
         # Qualified names in arguments
         ("type[foo.bar.Baz]", ["foo.bar.Baz"]),
         ("Dict[a.B, c.D]", ["a.B", "c.D"]),
+        # Variadics and canonicalized non-finite numeric literals
+        ("tuple[*Ts]", ["*Ts"]),
+        ("Literal[1e309, -1e309]", ["1e309", "-1e309"]),
         # Invalid syntax
         ("List[", []),
         ("[invalid", []),
