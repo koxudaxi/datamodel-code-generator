@@ -10,8 +10,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
-    from datamodel_code_generator._python_type_annotation_codec import parse_python_type_annotation
-
 
 class PythonTypeExpr:
     """Base class for immutable semantic Python type expressions."""
@@ -219,6 +217,13 @@ def render_python_type_expr(expression: PythonTypeExpr) -> str:  # noqa: PLR0911
             return "..."
     msg = f"Unsupported Python type expression: {type(expression).__name__}"
     raise TypeError(msg)
+
+
+if TYPE_CHECKING:
+
+    def parse_python_type_annotation(type_str: str) -> PythonTypeExpr | None:
+        """Type-checking signature for the runtime-lazy compatibility API."""
+        ...
 
 
 def __getattr__(name: str) -> object:

@@ -223,6 +223,32 @@ def _run_no_formatter_generation_probe() -> dict[str, Any]:
     )
 
 
+def _run_python_type_codec_import_order_probe() -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            """
+            import json
+
+            from datamodel_code_generator._python_type_annotation_codec import (
+                parse_python_type_annotation as codec_parse,
+            )
+            from datamodel_code_generator._python_type_annotation import (
+                parse_python_type_annotation as public_parse,
+                render_python_type_expr,
+            )
+
+            first = codec_parse("tuple[str, int]")
+            second = public_parse("tuple[str, int]")
+            print(json.dumps({
+                "same_expression": first is second,
+                "same_parser": codec_parse is public_parse,
+                "value": render_python_type_expr(first),
+            }, indent=2, sort_keys=True))
+            """
+        )
+    )
+
+
 def _run_invalid_args_probe() -> dict[str, Any]:
     return _run_probe(
         textwrap.dedent(
@@ -431,6 +457,16 @@ def test_empty_formatters_skip_formatter_runtime() -> None:
     assert_output(
         f"{json.dumps(result, indent=2, sort_keys=True)}\n",
         ROOT / "tests/data/expected/main/cli_fast_paths/empty_formatters.txt",
+    )
+
+
+def test_python_type_codec_supports_codec_first_import() -> None:
+    """The lazy public API remains valid when the raw codec is imported first."""
+    result = _run_python_type_codec_import_order_probe()
+
+    assert_output(
+        f"{json.dumps(result, indent=2, sort_keys=True)}\n",
+        ROOT / "tests/data/expected/main/cli_fast_paths/python_type_codec_import_order.txt",
     )
 
 
