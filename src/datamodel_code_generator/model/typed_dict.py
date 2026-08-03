@@ -250,11 +250,12 @@ class DataModelField(DataModelFieldBase):
             return ""
         match (parent.use_total_false_for_typed_dict, self.required):
             case (True, True):
-                return REQUIRED_PREFIX
+                requiredness = REQUIRED_PREFIX
             case (False, False):
-                return NOT_REQUIRED_PREFIX
+                requiredness = NOT_REQUIRED_PREFIX
             case _:
-                return ""
+                requiredness = ""
+        return requiredness
 
     @property
     def _is_optional_typed_dict_key(self) -> bool:
