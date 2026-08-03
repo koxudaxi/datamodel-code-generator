@@ -1734,7 +1734,7 @@ def _collect_model_imports(
             for ctx in contexts:
                 for model in ctx.models:
                     ctx.imports.remove(raw_model_imports[model])
-            return {model: _apply_import_overrides(imports, overrides) for model, imports in raw_model_imports.items()}
+    return {model: _apply_import_overrides(imports, overrides) for model, imports in raw_model_imports.items()}
 
 
 class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
