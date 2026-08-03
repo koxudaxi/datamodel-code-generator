@@ -397,7 +397,14 @@ def _python_type_expr_from_ast(  # noqa: PLR0911, PLR0912
 
 @lru_cache(maxsize=1024)
 def parse_python_type_annotation(type_str: str) -> PythonTypeExpr | None:
-    """Parse the supported Python annotation grammar at a raw-text boundary."""
+    """Parse external annotation text into the supported semantic structure.
+
+    Call this only where raw text enters code generation. Internal stages must
+    carry ``PythonTypeExpr`` instead of rendering and reparsing it. The running
+    AST/tokenizer is an input codec, never authority for target-version syntax;
+    the strict node conversion below defines the accepted cross-version subset.
+    The bounded cache keeps repeated external annotations off the parsing path.
+    """
     try:
         node = _parse_python_type_annotation_ast(type_str)
         return _python_type_expr_from_ast(node, allow_literal=False)
