@@ -2534,15 +2534,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                 target_full_name = _get_data_type_target_full_name(data_type, reference, model_path_to_module_name)
 
+                is_ancestor = is_ancestor_package_reference(current_module_name, target_full_name)
                 if isinstance(data_type, BaseClassDataType):
                     left, right = relative(current_module_name, target_full_name)
-                    is_ancestor = is_ancestor_package_reference(current_module_name, target_full_name)
                     from_ = left if is_ancestor else (f"{left}{right}" if left.endswith(".") else f"{left}.{right}")
                     import_ = reference.short_name
                     full_path = from_, import_
                 else:
                     from_, import_ = full_path = relative(current_module_name, target_full_name)
-                    if imports.use_exact:
+                    if imports.use_exact and not is_ancestor:
                         from_, import_ = full_path = exact_import(from_, import_, reference.short_name)
                     import_ = import_.replace("-", "_")
                     current_module_path = tuple(current_module_name.split(".")) if current_module_name else ()
