@@ -35,12 +35,13 @@ class DataModelSet(NamedTuple):
     known_third_party: list[str] | None = None
 
 
-def get_data_model_types(  # noqa: PLR0912
+def get_data_model_types(  # noqa: PLR0912, PLR0913, PLR0917
     data_model_type: DataModelType,
     target_python_version: PythonVersion = DEFAULT_TARGET_PYTHON_VERSION,
     use_type_alias: bool = False,  # noqa: FBT001, FBT002
     use_root_model_type_alias: bool = False,  # noqa: FBT001, FBT002
     include_graphql_models: bool = True,  # noqa: FBT001, FBT002
+    use_type_alias_type: bool = False,  # noqa: FBT001, FBT002
 ) -> DataModelSet:
     """Get the appropriate model types for the given output format and Python version."""
     from datamodel_code_generator import DataModelType  # noqa: PLC0415
@@ -52,7 +53,7 @@ def get_data_model_types(  # noqa: PLR0912
 
         if target_python_version.has_type_statement:
             return type_alias.TypeStatement, scalar.DataTypeScalarTypeStatement, union.DataTypeUnionTypeStatement
-        if data_model_type in pydantic_v2_models:
+        if use_type_alias_type or data_model_type in pydantic_v2_models:
             return type_alias.TypeAliasTypeBackport, scalar.DataTypeScalarTypeBackport, union.DataTypeUnionTypeBackport
         return type_alias.TypeAlias, scalar.DataTypeScalar, union.DataTypeUnion
 
@@ -60,12 +61,16 @@ def get_data_model_types(  # noqa: PLR0912
         case DataModelType.PydanticV2BaseModel:
             from . import pydantic_v2  # noqa: PLC0415
 
-            if include_graphql_models or use_type_alias or use_root_model_type_alias:
+            if (
+                (uses_alias := use_type_alias or use_type_alias_type)
+                or include_graphql_models
+                or use_root_model_type_alias
+            ):
                 type_alias_class, scalar_class, union_class = get_auxiliary_model_types()
             else:
                 scalar_class = union_class = pydantic_v2.RootModel
 
-            if use_type_alias:
+            if uses_alias:
                 root_model_class: type[DataModel] = type_alias_class
             elif use_root_model_type_alias:
                 root_model_class = pydantic_v2.RootModelTypeAlias

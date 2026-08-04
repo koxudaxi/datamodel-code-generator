@@ -532,6 +532,13 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
         topic=OptionTopic.TYPING_CUSTOMIZATION,
         group=OptionGroup.TYPE_ALIAS,
     ),
+    "--use-type-alias-type": CLIOptionMeta(
+        name="--use-type-alias-type",
+        category=OptionCategory.TYPING,
+        topic=OptionTopic.TYPING_CUSTOMIZATION,
+        group=OptionGroup.TYPE_ALIAS,
+        implies=(CLIOptionRelation(option="--use-type-alias", value=True),),
+    ),
     "--use-root-model-type-alias": CLIOptionMeta(
         name="--use-root-model-type-alias",
         category=OptionCategory.TYPING,

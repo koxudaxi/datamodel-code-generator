@@ -666,6 +666,9 @@ def _prepare_cli_config_args(set_args: Mapping[str, _RawConfigValue]) -> dict[st
     if prepared_args.get("use_annotated"):
         prepared_args["field_constraints"] = True
 
+    if prepared_args.get("use_type_alias_type"):
+        prepared_args["use_type_alias"] = True
+
     return prepared_args
 
 

@@ -6390,6 +6390,10 @@ Some IDEs don't fully understand `from __future__ import annotations`.
 
 Source: https://datamodel-code-generator.koxudaxi.dev/root-model-and-type-alias/
 
+<!-- related-cli-options: --use-type-alias, --use-type-alias-type, --target-python-version -->
+
+# 📦 Root Models and Type Aliases
+
 When a schema defines a simple type (not an object with properties), `datamodel-code-generator` creates a root model. If you don't want to introduce a new level of attribute access (`.root`) or want to use generated types as plain Python types in non-Pydantic code, you can use the `--use-type-alias` flag to generate type aliases instead of root models.
 
 ## ⚠️ Notes and Limitations
@@ -6410,10 +6414,16 @@ The type of type alias generated depends on the output model type and target Pyt
 | **dataclasses** | `type` statement | `TypeAlias` |
 | **msgspec** | `type` statement | `TypeAlias` |
 
+Use `--use-type-alias-type` to force `TypeAliasType` for TypedDict,
+dataclass, and msgspec output targeting Python 3.10 or 3.11. This option
+implies `--use-type-alias`, so the two flags do not need to be combined.
+Python 3.12 and newer still use the native `type` statement.
+
 ### 🤔 Why the difference?
 
 - **Pydantic v2** requires `TypeAliasType` because it cannot properly handle `TypeAlias` annotations
 - **Other output types** (TypedDict, dataclasses, msgspec) use `TypeAlias` for better compatibility with libraries that may not expect `TypeAliasType` objects
+- **`--use-type-alias-type`** opts into runtime `TypeAliasType` objects for those output types on Python 3.10-3.11
 - **Python 3.12+** uses the native `type` statement for all output types
 
 ## 📝 Example
@@ -6519,6 +6529,7 @@ class User(BaseModel):
 ## 📖 See Also
 
 - 🖥️ [CLI Reference: `--use-type-alias`](cli-reference/typing-customization.md#use-type-alias) - Detailed CLI option documentation
+- 🖥️ [CLI Reference: `--use-type-alias-type`](cli-reference/typing-customization.md#use-type-alias-type) - Force runtime type alias objects before Python 3.12
 - 🎯 [CLI Reference: `--target-python-version`](cli-reference/model-customization.md#target-python-version) - Control Python version-specific syntax
 
 ---
@@ -9586,7 +9597,7 @@ This documentation is auto-generated from test cases.
 | Category | Options | Description |
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 13 | Input/output configuration |
-| 🔧 [Typing Customization](typing-customization.md) | 32 | Type annotation and import behavior |
+| 🔧 [Typing Customization](typing-customization.md) | 33 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 27 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 44 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 27 | Output formatting and custom rendering |
@@ -9603,7 +9614,7 @@ Use these pages when you know the workflow area but not the exact option name.
 |-------|---------|--------|
 | [Model Customization](topics/model-customization.md) | 23 | Model Naming, Model Reuse, Model Shape, Root Model |
 | [Template Customization](topics/template-customization.md) | 21 | Custom Templates, Generated Output, Imports, Output Formatting |
-| [Typing Customization](topics/typing-customization.md) | 21 | Imports, Collection Types, Type Alias, Type Mapping, Type Syntax |
+| [Typing Customization](topics/typing-customization.md) | 22 | Imports, Collection Types, Type Alias, Type Mapping, Type Syntax |
 | [OpenAPI](topics/openapi.md) | 7 | OpenAPI Naming, OpenAPI Paths, OpenAPI Scopes, Read Only Write Only |
 
 ## 🔗 Option Relationships
@@ -9614,6 +9625,7 @@ These links are generated from CLI option metadata and summarize options that im
 |--------|------|-----------|--------|------|
 | [`--use-annotated`](typing-customization.md#use-annotated) | Implies | Always | [`--field-constraints`](field-customization.md#field-constraints) enabled | - |
 | [`--use-specialized-enum`](typing-customization.md#use-specialized-enum) | Requires | Always | [`--target-python-version`](model-customization.md#target-python-version) = `3.11+` | `--use-specialized-enum` requires `--target-python-version` 3.11 or higher. |
+| [`--use-type-alias-type`](typing-customization.md#use-type-alias-type) | Implies | Always | [`--use-type-alias`](typing-customization.md#use-type-alias) enabled | - |
 | [`--original-field-name-delimiter`](field-customization.md#original-field-name-delimiter) | Requires | Always | [`--snake-case-field`](field-customization.md#snake-case-field) enabled | `--original-field-name-delimiter` can not be used without `--snake-case-field`. |
 | [`--allow-extra-fields`](model-customization.md#allow-extra-fields) | Implies | Always | [`--extra-fields`](field-customization.md#extra-fields) = `allow` | - |
 | [`--collapse-root-models-name-strategy`](model-customization.md#collapse-root-models-name-strategy) | Requires | Always | [`--collapse-root-models`](model-customization.md#collapse-root-models) enabled | `--collapse-root-models-name-strategy` requires `--collapse-root-models`. |
@@ -9862,6 +9874,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--use-total-false-for-typed-dict`](typing-customization.md#use-total-false-for-typed-dict)
 - [`--use-tuple-for-fixed-items`](typing-customization.md#use-tuple-for-fixed-items)
 - [`--use-type-alias`](typing-customization.md#use-type-alias)
+- [`--use-type-alias-type`](typing-customization.md#use-type-alias-type)
 - [`--use-type-checking-imports`](template-customization.md#use-type-checking-imports)
 - [`--use-union-operator`](typing-customization.md#use-union-operator)
 - [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set)
@@ -16353,7 +16366,7 @@ The `--target-python-version` flag controls Python version-specific syntax:
 
 This affects import statements and type annotation syntax in generated code.
 
-**See also:** [CI/CD Integration](../ci-cd.md), [Output Model Types](../output-model-types.md), [Python Version Compatibility](../python-version-compatibility.md)
+**See also:** [CI/CD Integration](../ci-cd.md), [Output Model Types](../output-model-types.md), [Python Version Compatibility](../python-version-compatibility.md), [Root Models and Type Aliases](../root-model-and-type-alias.md)
 
 !!! tip "Usage"
 
@@ -21995,6 +22008,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/typing-custo
 | [`--use-total-false-for-typed-dict`](#use-total-false-for-typed-dict) | Generate TypedDict declarations with `total=False`. |
 | [`--use-tuple-for-fixed-items`](#use-tuple-for-fixed-items) | Generate tuple types for arrays with items array syntax. |
 | [`--use-type-alias`](#use-type-alias) | Use TypeAlias instead of root models for type definitions (e... |
+| [`--use-type-alias-type`](#use-type-alias-type) | Use runtime TypeAliasType objects for aliases before Python ... |
 | [`--use-union-operator`](#use-union-operator) | Use | operator for Union types (PEP 604). |
 | [`--use-unique-items-as-set`](#use-unique-items-as-set) | Generate set types for arrays with uniqueItems constraint. |
 
@@ -26766,7 +26780,7 @@ syntax. This feature is experimental.
 
 **Related:** [`--target-python-version`](model-customization.md#target-python-version)
 
-**See also:** [Model Reuse and Deduplication](../model-reuse.md)
+**See also:** [Model Reuse and Deduplication](../model-reuse.md), [Root Models and Type Aliases](../root-model-and-type-alias.md)
 
 !!! tip "Usage"
 
@@ -26951,6 +26965,142 @@ syntax. This feature is experimental.
             typename__: Literal['ModelWithTypeAliasField'] | None = Field(
                 'ModelWithTypeAliasField', alias='__typename'
             )
+        ```
+
+---
+
+## `--use-type-alias-type` {#use-type-alias-type}
+
+Use runtime TypeAliasType objects for aliases before Python 3.12 (experimental).
+
+The `--use-type-alias-type` flag implies `--use-type-alias` and forces
+`TypeAliasType` for every output model type on Python 3.10-3.11. Python 3.12+
+continues to use native `type` statements.
+
+**See also:** [Root Models and Type Aliases](../root-model-and-type-alias.md)
+
+**Option relationships:**
+
+- **Implies:** [`--use-type-alias`](typing-customization.md#use-type-alias) enabled
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --output-model-type typing.TypedDict --use-type-alias-type --target-python-version 3.10 # (1)!
+    ```
+
+    1. :material-arrow-left: `--use-type-alias-type` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "definitions": {
+        "SimpleString": {
+          "type": "string"
+        },
+        "UnionType": {
+          "anyOf": [
+            {"type": "string"},
+            {"type": "integer"}
+          ]
+        },
+        "ArrayType": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "AnnotatedType": {
+          "title": "MyAnnotatedType",
+          "description": "An annotated union type",
+          "anyOf": [
+            {"type": "string"},
+            {"type": "boolean"}
+          ]
+        },
+        "ModelWithTypeAliasField": {
+          "type": "object",
+          "properties": {
+            "simple_field": {"$ref": "#/definitions/SimpleString"},
+            "union_field": {"$ref": "#/definitions/UnionType"},
+            "array_field": {"$ref": "#/definitions/ArrayType"},
+            "annotated_field": {"$ref": "#/definitions/AnnotatedType"}
+          }
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    === "Python 3.10"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  type_alias.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+
+        from __future__ import annotations
+
+        from typing import Any, TypedDict
+
+        from typing_extensions import NotRequired, TypeAliasType
+
+        Model = TypeAliasType("Model", Any)
+
+
+        SimpleString = TypeAliasType("SimpleString", str)
+
+
+        UnionType = TypeAliasType("UnionType", str | int)
+
+
+        ArrayType = TypeAliasType("ArrayType", list[str])
+
+
+        AnnotatedType = TypeAliasType("AnnotatedType", str | bool)
+
+
+        class ModelWithTypeAliasField(TypedDict):
+            simple_field: NotRequired[SimpleString]
+            union_field: NotRequired[UnionType]
+            array_field: NotRequired[ArrayType]
+            annotated_field: NotRequired[AnnotatedType]
+        ```
+
+    === "Python 3.12"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  type_alias.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+
+        from __future__ import annotations
+
+        from typing import Any, NotRequired, TypedDict
+
+        type Model = Any
+
+
+        type SimpleString = str
+
+
+        type UnionType = str | int
+
+
+        type ArrayType = list[str]
+
+
+        type AnnotatedType = str | bool
+
+
+        class ModelWithTypeAliasField(TypedDict):
+            simple_field: NotRequired[SimpleString]
+            union_field: NotRequired[UnionType]
+            array_field: NotRequired[ArrayType]
+            annotated_field: NotRequired[AnnotatedType]
         ```
 
 ---
@@ -37473,7 +37623,7 @@ Options are grouped from shared CLI metadata and link back to their generated re
 |-------|---------|-------------|
 | [Imports](#imports) | 2 | Generated imports and type-checking import behavior. |
 | [Collection Types](#collection-types) | 5 | Collection and tuple/set generation. |
-| [Type Alias](#type-alias) | 2 | TypeAlias and root-model alias output. |
+| [Type Alias](#type-alias) | 3 | TypeAlias and root-model alias output. |
 | [Type Mapping](#type-mapping) | 9 | Scalar, date/time, and custom type mapping. |
 | [Type Syntax](#type-syntax) | 3 | Modern annotation syntax and Annotated usage. |
 
@@ -37506,6 +37656,7 @@ TypeAlias and root-model alias output.
 |--------|-------------|
 | [`--use-root-model-type-alias`](../typing-customization.md#use-root-model-type-alias) | Generate RootModel as type alias format for better mypy support. |
 | [`--use-type-alias`](../typing-customization.md#use-type-alias) | Use TypeAlias instead of root models for type definitions (experimental). |
+| [`--use-type-alias-type`](../typing-customization.md#use-type-alias-type) | Use runtime TypeAliasType objects for aliases before Python 3.12 (experimental). |
 
 ## Type Mapping {#type-mapping}
 
@@ -37657,6 +37808,7 @@ datamodel-codegen [OPTIONS]
 | [`--use-total-false-for-typed-dict`](typing-customization.md#use-total-false-for-typed-dict) | Generate TypedDict declarations with `total=False`. |
 | [`--use-tuple-for-fixed-items`](typing-customization.md#use-tuple-for-fixed-items) | Generate tuple types for arrays with items array syntax. |
 | [`--use-type-alias`](typing-customization.md#use-type-alias) | Use TypeAlias instead of root models for type definitions (experimental). |
+| [`--use-type-alias-type`](typing-customization.md#use-type-alias-type) | Use runtime TypeAliasType objects for aliases before Python 3.12 (experimental). |
 | [`--use-union-operator`](typing-customization.md#use-union-operator) | Use | operator for Union types (PEP 604). |
 | [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set) | Generate set types for arrays with uniqueItems constraint. |
 
@@ -38011,6 +38163,7 @@ All options sorted alphabetically:
 - [`--use-total-false-for-typed-dict`](typing-customization.md#use-total-false-for-typed-dict) - Generate TypedDict declarations with `total=False`.
 - [`--use-tuple-for-fixed-items`](typing-customization.md#use-tuple-for-fixed-items) - Generate tuple types for arrays with items array syntax.
 - [`--use-type-alias`](typing-customization.md#use-type-alias) - Use TypeAlias instead of root models for type definitions (e...
+- [`--use-type-alias-type`](typing-customization.md#use-type-alias-type) - Use runtime TypeAliasType objects for aliases before Python ...
 - [`--use-type-checking-imports`](template-customization.md#use-type-checking-imports) - Allow Ruff to move typing-only imports into TYPE_CHECKING bl...
 - [`--use-union-operator`](typing-customization.md#use-union-operator) - Use | operator for Union types (PEP 604).
 - [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set) - Generate set types for arrays with uniqueItems constraint.
@@ -38688,6 +38841,7 @@ This page lists features that are available but still experimental.
 | `cli-option.schema-validator-type` | cli-option | `--schema-validator-type` | 0.66.1 | - |
 | `cli-option.use-missing-sentinel` | cli-option | `--use-missing-sentinel` | 0.66.1 | - |
 | `cli-option.use-type-alias` | cli-option | `--use-type-alias` | 0.36.0 | - |
+| `cli-option.use-type-alias-type` | cli-option | `--use-type-alias-type` | 0.71.1 | - |
 | `extra.httpx2` | extra | `datamodel-code-generator[httpx2]` | 0.71.1 | - |
 | `formatter.builtin` | formatter | `--formatters builtin` | 0.59.0 | - |
 | `input-format.asyncapi` | input-format | `--input-file-type asyncapi` | 0.59.0 | - |
@@ -38737,6 +38891,16 @@ The option requires Pydantic v2 BaseModel output and a target Pydantic version t
 Type alias output is experimental and may change as Python typing support evolves.
 
 The option replaces root model classes with type aliases where possible. Pydantic v2 output may use TypeAliasType or Python 3.12 type statements depending on the target Python version.
+
+### `cli-option.use-type-alias-type`
+
+- **Kind:** cli-option
+- **Target:** `--use-type-alias-type`
+- **Since:** 0.71.1
+
+Runtime TypeAliasType output is experimental and may change as Python typing support evolves.
+
+The option implies --use-type-alias and selects TypeAliasType for Python 3.10 and 3.11. Python 3.12 and newer continue to use native type statements.
 
 ### `extra.httpx2`
 
@@ -39338,8 +39502,8 @@ classDiagram
 
 | Config model | Field count | Purpose |
 | --- | ---: | --- |
-| `BaseGenerateConfig` | 145 | Shared generation options. |
-| `GenerateConfig` | 160 | Public `generate()` configuration. |
+| `BaseGenerateConfig` | 146 | Shared generation options. |
+| `GenerateConfig` | 161 | Public `generate()` configuration. |
 | `ParserConfig` | 140 | Base parser dependency injection and parser options. |
 | `JSONSchemaParserConfig` | 142 | JSON Schema parser options. |
 | `OpenAPIParserConfig` | 148 | OpenAPI-specific parser options. |

@@ -1303,6 +1303,7 @@ def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
         config.output_model_type,
         config.target_python_version,
         use_type_alias=config.use_type_alias,
+        use_type_alias_type=config.use_type_alias_type,
         use_root_model_type_alias=config.use_root_model_type_alias,
         include_graphql_models=input_file_type == InputFileType.GraphQL,
     )

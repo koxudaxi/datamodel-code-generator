@@ -171,6 +171,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--use-total-false-for-typed-dict": "Generate TypedDict declarations with `total=False`.",
     "--use-tuple-for-fixed-items": "Generate tuple types for arrays with items array syntax.",
     "--use-type-alias": "Use TypeAlias instead of root models for type definitions (experimental).",
+    "--use-type-alias-type": "Use runtime TypeAliasType objects for aliases before Python 3.12 (experimental).",
     "--use-type-checking-imports": "Allow Ruff to move typing-only imports into TYPE_CHECKING blocks.",
     "--use-union-operator": "Use | operator for Union types (PEP 604).",
     "--use-unique-items-as-set": "Generate set types for arrays with uniqueItems constraint.",

@@ -10,6 +10,7 @@ This page lists features that are available but still experimental.
 | `cli-option.schema-validator-type` | cli-option | `--schema-validator-type` | 0.66.1 | - |
 | `cli-option.use-missing-sentinel` | cli-option | `--use-missing-sentinel` | 0.66.1 | - |
 | `cli-option.use-type-alias` | cli-option | `--use-type-alias` | 0.36.0 | - |
+| `cli-option.use-type-alias-type` | cli-option | `--use-type-alias-type` | 0.71.1 | - |
 | `extra.httpx2` | extra | `datamodel-code-generator[httpx2]` | 0.71.1 | - |
 | `formatter.builtin` | formatter | `--formatters builtin` | 0.59.0 | - |
 | `input-format.asyncapi` | input-format | `--input-file-type asyncapi` | 0.59.0 | - |
@@ -59,6 +60,16 @@ The option requires Pydantic v2 BaseModel output and a target Pydantic version t
 Type alias output is experimental and may change as Python typing support evolves.
 
 The option replaces root model classes with type aliases where possible. Pydantic v2 output may use TypeAliasType or Python 3.12 type statements depending on the target Python version.
+
+### `cli-option.use-type-alias-type`
+
+- **Kind:** cli-option
+- **Target:** `--use-type-alias-type`
+- **Since:** 0.71.1
+
+Runtime TypeAliasType output is experimental and may change as Python typing support evolves.
+
+The option implies --use-type-alias and selects TypeAliasType for Python 3.10 and 3.11. Python 3.12 and newer continue to use native type statements.
 
 ### `extra.httpx2`
 

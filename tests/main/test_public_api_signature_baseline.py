@@ -369,6 +369,7 @@ def _baseline_generate(
     skip_root_model: bool = False,
     use_root_model_sequence_interface: bool = False,
     use_type_alias: bool = False,
+    use_type_alias_type: bool = False,
     use_root_model_type_alias: bool = False,
     special_field_name_prefix: str | None = None,
     remove_special_field_name_prefix: bool = False,

@@ -163,6 +163,7 @@ class BaseGenerateConfig(BaseModel):
     skip_root_model: bool = False
     use_root_model_sequence_interface: bool = False
     use_type_alias: bool = False
+    use_type_alias_type: bool = False
     use_root_model_type_alias: bool = False
     special_field_name_prefix: str | None = None
     remove_special_field_name_prefix: bool = False
@@ -216,6 +217,13 @@ class BaseGenerateConfig(BaseModel):
             self.schema_validator_type = SchemaValidatorType.PydanticV2
         if self.schema_validator_type is not None:
             self.generate_schema_validators = True
+        return self
+
+    @model_validator(mode="after")
+    def normalize_use_type_alias_type(self) -> Self:
+        """Enable type aliases when their implementation is explicitly selected."""
+        if self.use_type_alias_type:
+            self.use_type_alias = True
         return self
 
 

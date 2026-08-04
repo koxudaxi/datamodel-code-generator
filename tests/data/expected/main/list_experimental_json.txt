@@ -36,6 +36,15 @@
     "tracking_issue": null
   },
   {
+    "id": "cli-option.use-type-alias-type",
+    "kind": "cli-option",
+    "message": "Runtime TypeAliasType output is experimental and may change as Python typing support evolves.",
+    "note": "The option implies --use-type-alias and selects TypeAliasType for Python 3.10 and 3.11. Python 3.12 and newer continue to use native type statements.",
+    "since_version": "0.71.1",
+    "target": "--use-type-alias-type",
+    "tracking_issue": null
+  },
+  {
     "id": "extra.httpx2",
     "kind": "extra",
     "message": "The HTTPX2-backed HTTP client is experimental and may change as compatibility is validated.",
