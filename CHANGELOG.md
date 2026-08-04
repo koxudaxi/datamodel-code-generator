@@ -5,6 +5,27 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.72.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.72.1) - 2026-08-04
+
+## What's Changed
+* Add TypedDict total=False option by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3689
+* Update CHANGELOG for 0.72.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3690
+* Support import overrides by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3691
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3692
+* Resolve Python type imports by target by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3694
+* Support TypeAliasType for non-Pydantic output by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3688
+* Bind Python type imports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3696
+* Structure input model runtime types by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3693
+* Fix --use-exact-imports for dotted ancestor package case by @bokshitsky in https://github.com/koxudaxi/datamodel-code-generator/pull/3697
+* Embed package version at build time by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3699
+
+## New Contributors
+* @bokshitsky made their first contribution in https://github.com/koxudaxi/datamodel-code-generator/pull/3697
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.72.0...0.72.1
+
+---
+
 ## [0.72.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.72.0) - 2026-08-03
 
 ## Breaking Changes
