@@ -1309,6 +1309,27 @@ def test_no_additional_imports() -> None:
     assert len(new_parser.imports) == 0
 
 
+def test_collect_used_names_retains_qualified_python_type_module() -> None:
+    """Keep the module portion of qualified semantic annotations in use."""
+    from datamodel_code_generator._python_type_annotation import PythonTypeQualifiedName
+    from datamodel_code_generator._python_type_binding import BoundPythonType
+
+    model = BaseModel(
+        fields=[
+            DataModelField(
+                name="value",
+                data_type=DataType(
+                    type="external.Model",
+                    python_type=BoundPythonType(PythonTypeQualifiedName(("external", "Model")), ()),
+                ),
+            )
+        ],
+        reference=_reference("Model"),
+    )
+
+    assert Parser._collect_used_names_from_models([model]) == {"BaseModel", "Model", "Optional", "external", "value"}
+
+
 @pytest.mark.parametrize(
     ("input_data", "expected"),
     [

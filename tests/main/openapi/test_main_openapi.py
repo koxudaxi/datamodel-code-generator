@@ -1417,6 +1417,7 @@ def test_main_invalid_dotted_unsafe_retry_preserves_legacy(
                 asyncapi_version=mocker.ANY,
                 xmlschema_version=mocker.ANY,
                 protobuf_version=mocker.ANY,
+                python_type_expressions=mocker.ANY,
             )
             expected_calls = [expected_call, expected_call]
         case "source_mismatch":

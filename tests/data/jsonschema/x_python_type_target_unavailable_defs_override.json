@@ -1,0 +1,20 @@
+{
+  "$defs": {
+    "StrEnum": {
+      "type": "string",
+      "x-python-import": {
+        "module": "tests.data.python.x_python_type_symbols",
+        "name": "StrEnum"
+      }
+    }
+  },
+  "title": "TargetUnavailableDefsOverride",
+  "type": "object",
+  "properties": {
+    "value": {
+      "type": "string",
+      "x-python-type": "StrEnum"
+    }
+  },
+  "required": ["value"]
+}

@@ -630,6 +630,74 @@ def iter_models_field_data_types(
                 yield model, field, data_type
 
 
+_PythonTypeImportKey: TypeAlias = tuple[str | None, str]
+
+
+def _ordinary_field_shadow_aliases(
+    models: list[DataModel],
+    all_model_field_names: set[str],
+) -> tuple[dict[_PythonTypeImportKey, Import], bool]:
+    """Run the original narrow scan and report whether structured work exists."""
+    aliases: dict[_PythonTypeImportKey, Import] = {}
+    has_python_type = False
+    for _, _model_field, data_type in iter_models_field_data_types(models):
+        if data_type.python_type:
+            has_python_type = True
+        if data_type.import_ and data_type.type in all_model_field_names:
+            key = (data_type.import_.from_, data_type.import_.import_)
+            aliases.setdefault(
+                key,
+                Import(
+                    from_=data_type.import_.from_,
+                    import_=data_type.import_.import_,
+                    alias=f"{data_type.type}_aliased",
+                    reference_path=data_type.import_.reference_path,
+                ),
+            )
+    return aliases, has_python_type
+
+
+def _apply_python_type_import_aliases(
+    models: list[DataModel],
+    aliased_imports: dict[_PythonTypeImportKey, Import],
+    *,
+    can_retain_cache: bool,
+) -> None:
+    """Rewrite every identity-carrying consumer of the selected imports."""
+    alias_bound_python_type = render_python_type_expr = None
+    for model, _model_field, data_type in iter_models_field_data_types(models):
+        if (
+            data_type.import_
+            and (aliased_import := aliased_imports.get((data_type.import_.from_, data_type.import_.import_)))
+            is not None
+        ):
+            data_type.type = aliased_import.alias
+            data_type.import_ = aliased_import
+            _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
+        if data_type.python_type:
+            if alias_bound_python_type is None:
+                # Structured annotation support is opt-in. Keep both the IR and
+                # its renderer out of the ordinary generation import fast path.
+                from datamodel_code_generator._python_type_annotation import (  # noqa: PLC0415
+                    render_python_type_expr,
+                )
+                from datamodel_code_generator._python_type_binding import (  # noqa: PLC0415
+                    alias_bound_python_type,
+                )
+
+            bound_type = alias_bound_python_type(data_type.python_type, aliased_imports)
+            if bound_type is not data_type.python_type:
+                data_type.python_type = bound_type
+                data_type.type = render_python_type_expr(bound_type.expression)
+                _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
+
+    for model in models:
+        if _alias_base_class_imports(model, aliased_imports):
+            _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
+    if not can_retain_cache:
+        _clear_model_imports_cache(models)
+
+
 def _unwrap_type_alias(data_type: DataType) -> DataType:
     """Follow type alias references to the underlying data type."""
     current = data_type
@@ -1843,6 +1911,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             config = self._create_default_config(options)  # ty: ignore[invalid-argument-type]
 
         self.config = config
+        self._has_bound_python_types = False
 
         self.keyword_only = config.keyword_only
         self.target_pydantic_version = config.target_pydantic_version
@@ -3876,42 +3945,39 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 ).name,
             )
 
-    def __alias_shadowed_imports(  # noqa: PLR6301
+    def __alias_shadowed_imports(
         self,
         models: list[DataModel],
         all_model_field_names: set[str],
         *,
         can_retain_cache: bool,
+        module_imports: Imports | None = None,
     ) -> None:
-        aliased_imports: dict[tuple[str | None, str], Import] = {}
-        for _, _model_field, data_type in iter_models_field_data_types(models):
-            if data_type and data_type.import_ and data_type.type in all_model_field_names:
-                key = (data_type.import_.from_, data_type.import_.import_)
-                if key not in aliased_imports:
-                    aliased_imports[key] = Import(
-                        from_=data_type.import_.from_,
-                        import_=data_type.import_.import_,
-                        alias=data_type.type + "_aliased",
-                        reference_path=data_type.import_.reference_path,
-                    )
+        ordinary_aliases, has_python_type = _ordinary_field_shadow_aliases(models, all_model_field_names)
+        if not has_python_type:
+            if ordinary_aliases:
+                _apply_python_type_import_aliases(models, ordinary_aliases, can_retain_cache=can_retain_cache)
+            return
+        self._has_bound_python_types = True
+        # Keep structured annotation machinery lazy: ordinary schemas must not
+        # pay its import, allocation, or module-scan cost.
+        from datamodel_code_generator.parser._python_type_imports import (  # noqa: PLC0415
+            resolve_python_type_import_aliases,
+        )
 
+        data_types = (data_type for _, _, data_type in iter_models_field_data_types(models))
+        aliased_imports = resolve_python_type_import_aliases(
+            data_types,
+            models,
+            all_model_field_names,
+            (self.imports,) if module_imports is None else (self.imports, module_imports),
+        )
         if not aliased_imports:
             return
-
-        for model, _model_field, data_type in iter_models_field_data_types(models):
-            if data_type and data_type.import_:
-                key = (data_type.import_.from_, data_type.import_.import_)
-                if key in aliased_imports:
-                    aliased_import = aliased_imports[key]
-                    data_type.type = aliased_import.alias
-                    data_type.import_ = aliased_import
-                    _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
-
-        for model in models:
-            if _alias_base_class_imports(model, aliased_imports):
-                _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
-        if not can_retain_cache:
-            _clear_model_imports_cache(models)
+        _apply_python_type_import_aliases(models, aliased_imports, can_retain_cache=can_retain_cache)
+        if module_imports is not None:
+            for aliased_import in aliased_imports.values():
+                module_imports.apply_alias(aliased_import)
 
     def __apply_generic_base_class(  # noqa: PLR0912, PLR0914, PLR0915
         self,
@@ -4140,7 +4206,21 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             names.add(name.split(".")[0])
 
         def collect_data_type_names(data_type: DataType) -> None:
-            add(data_type.alias or data_type.type)
+            if data_type.alias:
+                add(data_type.alias)
+            elif data_type.python_type:
+                from datamodel_code_generator._python_type_annotation import (  # noqa: PLC0415
+                    iter_python_type_expr_names,
+                    iter_python_type_expr_qualified_names,
+                )
+
+                expression = data_type.python_type.expression
+                for name in iter_python_type_expr_names(expression):
+                    add(name)
+                for qualified_name in iter_python_type_expr_qualified_names(expression):
+                    add(qualified_name)
+            else:
+                add(data_type.type)
             if data_type.reference:
                 add(data_type.reference.short_name)
 
@@ -4721,6 +4801,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         source_data = (
             getattr(self, "raw_obj", None),
             sorted(getattr(self, "remote_object_cache", {}).items()),
+            sorted((getattr(self, "_python_type_expressions", None) or {}).items()),
         )
         # Parsed YAML may contain mixed or non-JSON scalar mapping keys. Pickle preserves
         # their types and streams directly into the digest; unsupported extension objects
@@ -4972,6 +5053,22 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         return ModuleContext(module, module_, models, is_init, imports, scoped_model_resolver)
 
+    def _finalize_bound_python_type_imports(self, contexts: list[ModuleContext]) -> None:
+        """Resolve aliases introduced after generic base classes are applied."""
+        if not self._has_bound_python_types:
+            return
+        for ctx in contexts:
+            all_module_fields = {field.name for model in ctx.models for field in model.fields if field.name is not None}
+            self.__alias_shadowed_imports(
+                ctx.models,
+                all_module_fields,
+                can_retain_cache=_can_retain_model_imports_cache(
+                    ctx.models,
+                    configured_types_are_builtin=self._configured_generation_types_are_builtin,
+                ),
+                module_imports=ctx.imports,
+            )
+
     def _finalize_modules(
         self,
         contexts: list[ModuleContext],
@@ -4983,6 +5080,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         all_models = [model for ctx in contexts for model in ctx.models]
         self.__mark_set_item_models_hashable(all_models)
         self.__apply_generic_base_class(contexts)
+        self._finalize_bound_python_type_imports(contexts)
         model_imports = {model: model.imports for ctx in contexts for model in ctx.models}
 
         for ctx in contexts:

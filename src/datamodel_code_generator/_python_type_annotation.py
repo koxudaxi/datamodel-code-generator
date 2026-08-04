@@ -68,6 +68,20 @@ class PythonTypeRuntimeSymbol(PythonTypeExpr):
 
 
 @dataclass(frozen=True, slots=True)
+class PythonTypeBoundName(PythonTypeExpr):
+    """A rendered name tied to the exact import that introduced it."""
+
+    value: str
+    import_from: str | None
+    import_name: str
+
+    def __post_init__(self) -> None:
+        if not _is_python_identifier(self.value) or not self.import_name:
+            msg = f"Invalid bound Python type name: {self.value!r}, {self.import_from!r}, {self.import_name!r}"
+            raise ValueError(msg)
+
+
+@dataclass(frozen=True, slots=True)
 class PythonTypeOpaqueText(PythonTypeExpr):
     """Text retained only for a future runtime or forward-reference boundary."""
 
@@ -183,10 +197,15 @@ def _python_type_name(value: str) -> PythonTypeName:
     return _COMMON_TYPE_NAMES.get(value) or PythonTypeName(value)
 
 
+def python_type_name(value: str) -> PythonTypeName:
+    """Return a shared semantic node for common unqualified names."""
+    return _python_type_name(value)
+
+
 def render_python_type_expr(expression: PythonTypeExpr) -> str:  # noqa: PLR0911
     """Render an expression with stable formatting and no AST round trip."""
     match expression:
-        case PythonTypeName() | PythonTypeOpaqueText():
+        case PythonTypeName() | PythonTypeBoundName() | PythonTypeOpaqueText():
             return expression.value
         case PythonTypeQualifiedName():
             return ".".join(expression.parts)
@@ -241,11 +260,38 @@ def __getattr__(name: str) -> object:
     return parse_python_type_annotation
 
 
+def is_union_python_type_expr(expression: PythonTypeExpr) -> bool:
+    """Return whether an expression is ``|``, ``Union``, or ``Optional``."""
+    return isinstance(expression, PythonTypeUnion) or (
+        isinstance(expression, PythonTypeSubscript) and python_type_expr_base_name(expression) in {"Union", "Optional"}
+    )
+
+
+def iter_python_type_expr_names(expression: PythonTypeExpr) -> Iterator[str]:
+    """Yield semantic leaf names in stable structure order."""
+    match expression:
+        case PythonTypeName() | PythonTypeBoundName():
+            yield expression.value
+        case PythonTypeQualifiedName():
+            yield expression.parts[-1]
+        case PythonTypeRuntimeSymbol():
+            yield expression.qualname_parts[-1]
+        case PythonTypeSubscript():
+            yield from iter_python_type_expr_names(expression.base)
+            for argument in expression.arguments:
+                yield from iter_python_type_expr_names(argument)
+        case PythonTypeStarred():
+            yield from iter_python_type_expr_names(expression.value)
+        case PythonTypeUnion() | PythonTypeParameterList() | PythonTypeTuple():
+            for item in expression.items:
+                yield from iter_python_type_expr_names(item)
+
+
 def python_type_expr_base_name(expression: PythonTypeExpr) -> str:
     """Return the terminal base name of an annotation expression."""
     if isinstance(expression, PythonTypeSubscript):
         return python_type_expr_base_name(expression.base)
-    if isinstance(expression, PythonTypeName):
+    if isinstance(expression, PythonTypeName | PythonTypeBoundName):
         return expression.value
     if isinstance(expression, PythonTypeQualifiedName):
         return expression.parts[-1]
@@ -318,6 +364,7 @@ def rewrite_python_type_expr(  # noqa: PLR0911
 
 
 __all__ = [
+    "PythonTypeBoundName",
     "PythonTypeEllipsis",
     "PythonTypeExpr",
     "PythonTypeLiteralValue",
@@ -330,10 +377,13 @@ __all__ = [
     "PythonTypeSubscript",
     "PythonTypeTuple",
     "PythonTypeUnion",
+    "is_union_python_type_expr",
+    "iter_python_type_expr_names",
     "iter_python_type_expr_qualified_names",
     "parse_python_type_annotation",
     "python_type_expr_arguments",
     "python_type_expr_base_name",
+    "python_type_name",
     "render_python_type_expr",
     "rewrite_python_type_expr",
 ]
