@@ -8747,6 +8747,57 @@ def test_main_openapi_dot_notation_deep_inheritance(output_dir: Path) -> None:
     )
 
 
+def test_main_openapi_dot_notation_root_package_inheritance(output_dir: Path) -> None:
+    """Test dot notation with inheritance from a model declared in the root package.
+
+    The root package is an ancestor of every nested module, so the base class must be
+    imported as ``from ... import Animal`` rather than ``from ...Animal import Animal``.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "dot_notation_root_package_inheritance.yaml",
+        output_path=output_dir,
+        expected_directory=EXPECTED_OPENAPI_PATH / "dot_notation_root_package_inheritance",
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp"],
+        force_exec_validation=True,
+        runtime_validation_module="v0.mammal.canine",
+        runtime_validation_model_name="Puppy",
+        runtime_validation_data={"species": "dog", "age_weeks": 8},
+    )
+
+
+def test_main_openapi_exact_imports_ancestor_package(output_dir: Path) -> None:
+    """Test --use-exact-imports on fields typed by a model in an ancestor package.
+
+    A model whose module path is a prefix of the current one lives in that package's
+    ``__init__.py``, so it must stay ``from .. import Animal``. Turning it into
+    ``from ..Animal import Animal`` points at a module that does not exist.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "exact_imports_ancestor_package.yaml",
+        output_path=output_dir,
+        expected_directory=EXPECTED_OPENAPI_PATH / "exact_imports_ancestor_package",
+        input_file_type="openapi",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+            "--use-exact-imports",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+        runtime_validation_module="v0.mammal.canine",
+        runtime_validation_model_name="Puppy",
+        runtime_validation_data={
+            "animal": {"species": "dog"},
+            "parent": {"animal": {"species": "dog"}, "tag": {"label": "pet"}},
+            "friend": {"wingspan": 120},
+            "tag": {"label": "pet"},
+        },
+    )
+
+
 def test_main_openapi_strict_types_field_constraints_pydantic_v2(output_file: Path) -> None:
     """Test strict types with field constraints for pydantic v2 (issue #1884)."""
     run_main_and_assert(

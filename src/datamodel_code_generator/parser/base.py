@@ -1014,6 +1014,7 @@ def is_ancestor_package_reference(current_module: str, reference: str) -> bool:
         - current="v0.mammal.canine", ref="v0.Animal" -> True (grandparent)
         - current="v0.animal", ref="v0.animal.Dog" -> False (same or child)
         - current="pets", ref="Animal" -> True (root package is immediate parent)
+        - current="v0.mammal.canine", ref="Animal" -> True (root package is an ancestor)
     """
     current_path = current_module.split(".") if current_module else []
     *reference_path, _ = reference.split(".")
@@ -1026,13 +1027,10 @@ def is_ancestor_package_reference(current_module: str, reference: str) -> bool:
     if current_path[:-1] == reference_path:
         return True
 
-    # Case 2: Deeper ancestor package (reference_path must be non-empty proper prefix)
+    # Case 2: Deeper ancestor package (reference_path must be a proper prefix)
     # e.g., current="v0.mammal.canine", ref="v0.Animal" -> ["v0"] is prefix of ["v0","mammal","canine"]
-    return (
-        len(reference_path) > 0
-        and len(reference_path) < len(current_path)
-        and current_path[: len(reference_path)] == reference_path
-    )
+    # An empty reference_path is the root package, which is an ancestor of every nested module.
+    return len(reference_path) < len(current_path) and current_path[: len(reference_path)] == reference_path
 
 
 def exact_import(from_: str, import_: str, short_name: str) -> tuple[str, str]:
