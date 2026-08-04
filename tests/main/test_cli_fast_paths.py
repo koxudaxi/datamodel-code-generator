@@ -38,11 +38,43 @@ def _run_probe(script: str) -> dict[str, Any]:
     return json.loads(result.stdout)
 
 
-def _run_module_schema_fast_path_in_process(schema_options: list[str]) -> dict[str, Any]:
+def _run_module_version_fast_path(version_option: str) -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            f"""
+            import contextlib
+            import io
+            import json
+            import runpy
+            import sys
+
+            sys.argv = ["datamodel-codegen", {version_option!r}]
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                try:
+                    runpy.run_module("datamodel_code_generator.__main__", run_name="__main__", alter_sys=True)
+                except SystemExit as exc:
+                    code = exc.code
+                else:
+                    code = None
+
+            from datamodel_code_generator._version import __version__
+
+            print(json.dumps({{
+                "code": code,
+                "imported_metadata": "importlib.metadata" in sys.modules,
+                "stdout_matches_embedded": stdout.getvalue() == "datamodel-codegen " + __version__ + "\\n",
+            }}, indent=2, sort_keys=True))
+            """
+        )
+    )
+
+
+def _run_module_fast_path_in_process(args: list[str]) -> dict[str, Any]:
     module_name = "datamodel_code_generator.__main__"
     previous_module = sys.modules.pop(module_name, MISSING)
     original_argv = sys.argv[:]
-    sys.argv = ["datamodel-codegen", *schema_options]
+    sys.argv = ["datamodel-codegen", *args]
     stdout = io.StringIO()
     try:
         with contextlib.redirect_stdout(stdout):
@@ -58,6 +90,21 @@ def _run_module_schema_fast_path_in_process(schema_options: list[str]) -> dict[s
         if isinstance(previous_module, ModuleType):  # pragma: no branch
             sys.modules[module_name] = previous_module
     return {"code": code, "stdout": stdout.getvalue()}
+
+
+def _run_module_schema_fast_path_in_process(schema_options: list[str]) -> dict[str, Any]:
+    return _run_module_fast_path_in_process(schema_options)
+
+
+def _run_module_version_fast_path_in_process(version_option: str) -> dict[str, Any]:
+    result = _run_module_fast_path_in_process([version_option])
+
+    from datamodel_code_generator import get_version
+
+    return {
+        "code": result["code"],
+        "stdout_matches_embedded": result["stdout"] == f"datamodel-codegen {get_version()}\n",
+    }
 
 
 def _run_module_schema_fast_path(schema_options: list[str]) -> dict[str, Any]:
@@ -422,6 +469,20 @@ def test_help_fast_path_skips_json_config_and_formatter_imports() -> None:
     assert fast_path["imported_json_config"] is False
     assert fast_path["imported_pydantic"] is False
     assert fast_path["imported_validators"] is False
+
+
+@pytest.mark.parametrize("version_option", ["--version", "-V"])
+def test_version_fast_path_uses_embedded_version(version_option: str) -> None:
+    """Read the build version without importing distribution metadata."""
+    output = {
+        "in_process": _run_module_version_fast_path_in_process(version_option),
+        "subprocess": _run_module_version_fast_path(version_option),
+    }
+
+    assert_output(
+        f"{json.dumps(output, indent=2, sort_keys=True)}\n",
+        ROOT / "tests/data/expected/main/cli_fast_paths/version_fast_path.txt",
+    )
 
 
 @pytest.mark.allow_direct_assert
