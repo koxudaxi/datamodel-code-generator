@@ -36,6 +36,7 @@ What other options should I use?
 - `--enum-field-as-literal`: Convert all enum fields to Literal types instead of Enum classes.
 - `--enum-field-as-literal-map`: Override enum/literal generation per-field via JSON mapping.
 - `--ignore-enum-constraints`: Ignore enum constraints and use base string type instead of Enum classes.
+- `--import-overrides`: Override modules for generated imports by symbol name.
 - `--no-use-annotated`
 - `--no-use-closed-typed-dict`: Disable PEP 728 TypedDict closed/extra_items generation.
 - `--no-use-specialized-enum`: Disable specialized Enum classes for Python 3.11+ code generation.
@@ -377,6 +378,11 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --ignore-enum-constraints
                         Ignore enum constraints and use the base type (e.g.,
                         str, int) instead of generating Enum classes
+  --import-overrides IMPORT_OVERRIDES
+                        Override modules for generated imports by symbol name.
+                        Format: JSON object mapping symbols to module paths.
+                        Example: '{"TypedDict": "my_project.typing_compat",
+                        "NotRequired": "my_project.typing_compat"}'.
   --set-default-enum-member
                         Set enum members as default values for enum field
   --strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]

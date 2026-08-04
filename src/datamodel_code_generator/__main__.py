@@ -341,6 +341,7 @@ def _get_config_class() -> type[Config]:
             "model_name_map",
             "enum_field_as_literal_map",
             "duplicate_name_suffix",
+            "import_overrides",
             "type_overrides",
             mode="before",
         )

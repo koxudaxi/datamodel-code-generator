@@ -231,6 +231,17 @@
       ],
       "default": null
     },
+    "import-overrides": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/StringMappingConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "model-name-map": {
       "anyOf": [
         {

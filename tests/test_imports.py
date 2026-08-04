@@ -166,6 +166,70 @@ def test_remove_cleans_up_reference_paths() -> None:
     assert "/test/path" not in imports.reference_paths
 
 
+def test_remap_modules_preserves_aliases_and_reference_paths() -> None:
+    """Keep import bookkeeping consistent when remapping one of two referenced aliases."""
+    imports = Imports()
+    model_import = Import(from_="source", import_="Model", alias="Model_1", reference_path="/model")
+    other_import = Import(from_="source", import_="Other", alias="Other_1", reference_path="/other")
+    imports.append([model_import, other_import])
+
+    imports.remap_modules({"Model": "target"})
+
+    assert str(imports) == "from source import Other as Other_1\nfrom target import Model as Model_1"
+    assert imports.counter == {("source", "Other"): 1, ("target", "Model"): 1}
+    assert imports.alias == {"source": {"Other": "Other_1"}, "target": {"Model": "Model_1"}}
+    assert imports.reference_paths == {
+        "/model": Import(from_="target", import_="Model", alias="Model_1", reference_path="/model"),
+        "/other": other_import,
+    }
+
+    imports.remove_referenced_imports("/model")
+
+    assert str(imports) == "from source import Other as Other_1"
+    assert ("target", "Model") not in imports.counter
+    assert "/model" not in imports.reference_paths
+
+
+def test_remap_modules_rejects_conflicting_aliases_without_mutation() -> None:
+    """Reject overrides that would collapse distinct effective names."""
+    imports = Imports()
+    imports.append([
+        Import(from_="source_a", import_="Model", alias="Model_1"),
+        Import(from_="source_b", import_="Model", alias="Model_2"),
+    ])
+    original = str(imports)
+    original_counter = imports.counter.copy()
+    original_aliases = {module: aliases.copy() for module, aliases in imports.alias.items()}
+
+    with pytest.raises(
+        ValueError,
+        match="Import override for 'Model' produces conflicting names: 'Model_1' and 'Model_2'",
+    ):
+        imports.remap_modules({"Model": "target"})
+
+    assert str(imports) == original
+    assert imports.counter == original_counter
+    assert imports.alias == original_aliases
+
+
+def test_remap_modules_preserves_future_reference_paths() -> None:
+    """Keep future imports and their reference metadata outside override handling."""
+    imports = Imports()
+    future_import = Import(
+        from_="__future__",
+        import_="annotations",
+        reference_path="/future/annotations",
+    )
+    imports.append(future_import)
+
+    imports.remap_modules({"annotations": "custom.future"})
+    future_imports = imports.extract_future()
+
+    assert str(future_imports) == "from __future__ import annotations"
+    assert future_imports.reference_paths == {"/future/annotations": future_import}
+    assert not imports.reference_paths
+
+
 def test_remove_dotted_import_decrements_counter_and_cleans_reference_paths() -> None:
     """Dotted imports keep their public counters and reference paths consistent."""
     imports = Imports()

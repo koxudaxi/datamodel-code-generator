@@ -8,7 +8,7 @@ Options are grouped from shared CLI metadata and link back to their generated re
 
 | Group | Options | Description |
 |-------|---------|-------------|
-| [Imports](#imports) | 1 | Generated imports and type-checking import behavior. |
+| [Imports](#imports) | 2 | Generated imports and type-checking import behavior. |
 | [Collection Types](#collection-types) | 5 | Collection and tuple/set generation. |
 | [Type Alias](#type-alias) | 2 | TypeAlias and root-model alias output. |
 | [Type Mapping](#type-mapping) | 9 | Scalar, date/time, and custom type mapping. |
@@ -21,6 +21,7 @@ Generated imports and type-checking import behavior.
 | Option | Description |
 |--------|-------------|
 | [`--disable-future-imports`](../typing-customization.md#disable-future-imports) | Prevent automatic addition of __future__ imports in generated code. |
+| [`--import-overrides`](../typing-customization.md#import-overrides) | Override modules for generated imports by symbol name. |
 
 ## Collection Types {#collection-types}
 

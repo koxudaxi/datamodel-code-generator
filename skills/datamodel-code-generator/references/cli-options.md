@@ -62,6 +62,7 @@ Type annotation, import, and primitive type behavior.
 - `--use-type-alias`: Use TypeAlias instead of root models (experimental)
 - `--use-root-model-type-alias`: Use type alias format for RootModel (e.g., Foo = RootModel[Bar]) instead of class inheritance (Pydantic v2 only)
 - `--disable-future-imports`: Disable __future__ imports
+- `--import-overrides`: Override modules for generated imports by symbol name. Format: JSON object mapping symbols to module paths. Example: '{"TypedDict": "my_project.typing_compat", "NotRequired": "my_project.typing_compat"}'.
 - `--type-mappings`: Override default type mappings. Format: "type+format=target" (e.g., "string+binary=string" to map binary format to string type) or "format=target" (e.g., "binary=string"). Can be specified multiple times.
 - `--type-overrides`: Replace schema model types with custom Python types. Format: JSON object mapping model names to Python import paths. Model-level: '{"CustomType": "my_app.types.MyType"}' replaces all references. Scoped: '{"User.field": "my_app.Type"}' replaces specific field only.
 

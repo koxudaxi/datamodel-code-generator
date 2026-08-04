@@ -2209,6 +2209,48 @@ def test_main_require_referenced_field(tmp_path: Path) -> None:
     )
 
 
+def test_main_require_referenced_field_import_override(tmp_path: Path) -> None:
+    """Preserve aliases when overriding referenced model imports."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "require_referenced_field/",
+        output_path=tmp_path,
+        output_to_expected=[
+            ("referenced.py", "require_referenced_field/referenced.py"),
+            ("required.py", "require_referenced_field_import_override/required.py"),
+        ],
+        assert_func=assert_file_content,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-datetime-class",
+            "datetime",
+            "--import-overrides",
+            '{"Model": "my_project.models"}',
+        ],
+    )
+
+
+def test_main_import_overrides_conflicting_aliases(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Report conflicting overridden aliases without a traceback."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "import_override_conflicting_aliases/",
+        output_path=tmp_path / "output",
+        input_file_type="jsonschema",
+        extra_args=[
+            "--use-exact-imports",
+            "--import-overrides",
+            '{"Model": "my_project.models"}',
+        ],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr="Import override for 'Model' produces conflicting names: 'Model_1' and 'Model_2'\n",
+        output_should_not_exist=True,
+        skip_code_validation=True,
+    )
+
+
 def test_main_require_referenced_field_naive_datetime(tmp_path: Path) -> None:
     """Test required referenced field with naive datetime."""
     run_main_and_assert(

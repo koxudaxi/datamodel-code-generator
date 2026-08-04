@@ -1704,6 +1704,16 @@ def _format_body_safe(body: str, code_formatter: CodeFormatter) -> str:
         return body
 
 
+def _remap_imports(imports: Imports, overrides: Mapping[str, str]) -> None:
+    """Convert import override conflicts to a user-facing generator error."""
+    if not imports.counter:
+        return
+    try:
+        imports.remap_modules(overrides)
+    except ValueError as e:
+        raise Error(str(e)) from e
+
+
 class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     """Abstract base class for schema parsers.
 
@@ -2087,6 +2097,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.formatters: list[Formatter] | None = config.formatters
         self.builtin_format_line_length: int | None = config.builtin_format_line_length
         self.defer_formatting: bool = config.defer_formatting
+        self._import_overrides: dict[str, str] | None = config.import_overrides or None
         self.type_mappings: dict[tuple[str, str], str] = Parser._parse_type_mappings(config.type_mappings)
         self.type_overrides: dict[str, str] = config.type_overrides or {}
         self._type_override_imports: dict[str, Import] = {
@@ -2490,7 +2501,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 model.class_name = duplicate_name
                 model_names[duplicate_name] = model
 
-    def __change_from_import(  # noqa: PLR0912, PLR0913, PLR0914
+    def __change_from_import(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         self,
         models: list[DataModel],
         imports: Imports,
@@ -2579,6 +2590,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 model.clear_imports_cache()
                 after_import = model.imports
                 if before_import != after_import:
+                    imports.remove(before_import)
                     imports.append(after_import)
 
     @classmethod
@@ -4981,6 +4993,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     configured_types_are_builtin=self._configured_generation_types_are_builtin,
                 ),
             )
+
+        match self._import_overrides:
+            case None:
+                return
+            case overrides:
+                _remap_imports(self.imports, overrides)
+                for ctx in contexts:
+                    _remap_imports(ctx.imports, overrides)
+        return
 
     def _set_nested_model_default_factory_metadata(
         self,

@@ -30,6 +30,7 @@
 - `--enum-field-as-literal`: Convert all enum fields to Literal types instead of Enum classes.
 - `--enum-field-as-literal-map`: Override enum/literal generation per-field via JSON mapping.
 - `--ignore-enum-constraints`: Ignore enum constraints and use base string type instead of Enum classes.
+- `--import-overrides`: Override modules for generated imports by symbol name.
 - `--no-use-annotated`
 - `--no-use-closed-typed-dict`: Disable PEP 728 TypedDict closed/extra_items generation.
 - `--no-use-specialized-enum`: Disable specialized Enum classes for Python 3.11+ code generation.

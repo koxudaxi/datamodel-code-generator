@@ -56,6 +56,7 @@ from datamodel_code_generator.parser.base import (
     _is_pydantic_v2_data_model_field,
     _merge_data_type_modifiers,
     _needs_validate_default,
+    _remap_imports,
     _unwrap_type_alias,
     add_model_path_to_list,
     escape_characters,
@@ -97,6 +98,15 @@ class C(Parser):
 
     def parse_raw(self, name: str, raw: dict[str, Any]) -> None:
         """Parse raw data into models."""
+
+
+def test_remap_imports_empty_fastpath() -> None:
+    """Skip remapping work when no imports were collected."""
+    imports = Imports()
+
+    _remap_imports(imports, {"Model": "target"})
+
+    assert not imports.counter
 
 
 def test_parser() -> None:

@@ -196,6 +196,7 @@ class BaseGenerateConfig(BaseModel):
     duplicate_name_suffix: dict[str, str] | None = None
     dataclass_arguments: DataclassArguments | None = None
     disable_future_imports: bool = False
+    import_overrides: dict[str, str] | None = None
     type_mappings: list[str] | None = None
     type_overrides: dict[str, str] | None = None
     read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None

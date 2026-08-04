@@ -163,6 +163,11 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --ignore-enum-constraints
                         Ignore enum constraints and use the base type (e.g.,
                         str, int) instead of generating Enum classes
+  --import-overrides IMPORT_OVERRIDES
+                        Override modules for generated imports by symbol name.
+                        Format: JSON object mapping symbols to module paths.
+                        Example: '{"TypedDict": "my_project.typing_compat",
+                        "NotRequired": "my_project.typing_compat"}'.
   --set-default-enum-member
                         Set enum members as default values for enum field
   --strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]

@@ -185,6 +185,7 @@ class BaseGenerateConfig(TypedDict):
     duplicate_name_suffix: NotRequired[dict[str, str] | None]
     dataclass_arguments: NotRequired[DataclassArguments | None]
     disable_future_imports: NotRequired[bool]
+    import_overrides: NotRequired[dict[str, str] | None]
     type_mappings: NotRequired[list[str] | None]
     type_overrides: NotRequired[dict[str, str] | None]
     read_only_write_only_model_type: NotRequired[ReadOnlyWriteOnlyModelType | None]
