@@ -1274,7 +1274,7 @@ def _uses_pydantic_v2_schema_validator(config: GenerateConfig) -> bool:
     raise Error(msg)  # pragma: no cover
 
 
-def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
+def _prepare_parser_common_options(  # noqa: PLR0912, PLR0913, PLR0917
     input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     input_text: str | None,
     input_file_type: InputFileType,
@@ -1285,7 +1285,7 @@ def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
     *,
     skip_root_model: bool,
     remote_text_cache: DefaultPutDict[str, str],
-) -> tuple[Any, Any, bool, ParserConfigDict]:
+) -> tuple[Any, Any, bool, ParserConfigDict, Mapping[str, Any] | None]:
     if config.union_mode is not None:
         if config.output_model_type == DataModelType.PydanticV2BaseModel:
             default_field_extras = {"union_mode": config.union_mode}
@@ -1308,10 +1308,17 @@ def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
         include_graphql_models=input_file_type == InputFileType.GraphQL,
     )
 
+    python_type_expressions: Mapping[str, Any] | None = None
     if source_override is not None:
         source = dict(source_override)
     elif isinstance(input_, Mapping) and input_file_type not in RAW_DATA_TYPES:
-        source = dict(input_)
+        from datamodel_code_generator._input_model_transport import LoadedInputModelSchema  # noqa: PLC0415
+
+        if isinstance(input_, LoadedInputModelSchema):
+            source = dict(input_.schema)
+            python_type_expressions = input_.python_type_expressions
+        else:
+            source = dict(input_)
     else:
         source = input_text or input_
         assert not isinstance(source, Mapping)
@@ -1364,7 +1371,7 @@ def _prepare_parser_common_options(  # noqa: PLR0913, PLR0917
         "skip_root_model": skip_root_model,
         "use_root_model_sequence_interface": config.use_root_model_sequence_interface,
     }
-    return data_model_types, source, defer_formatting, additional_options
+    return data_model_types, source, defer_formatting, additional_options, python_type_expressions
 
 
 def _build_parser(  # noqa: PLR0911, PLR0913
@@ -1379,6 +1386,7 @@ def _build_parser(  # noqa: PLR0911, PLR0913
     asyncapi_version: AsyncAPIVersion | None,
     xmlschema_version: XMLSchemaVersion | None,
     protobuf_version: ProtobufVersion | None,
+    python_type_expressions: Mapping[str, Any] | None = None,
 ) -> Any:
     match input_file_type:
         case InputFileType.OpenAPI:
@@ -1444,6 +1452,12 @@ def _build_parser(  # noqa: PLR0911, PLR0913
                 **additional_options,
             }
             parser_config = _create_parser_config(config, jsonschema_additional_options)
+            if python_type_expressions is not None:
+                return JsonSchemaParser._from_python_type_expressions(  # noqa: SLF001
+                    source=source,
+                    python_type_expressions=python_type_expressions,
+                    config=parser_config,
+                )
             return JsonSchemaParser(source=source, config=parser_config)
     msg = f"Unsupported input file type: {input_file_type}"
     raise Error(msg)
@@ -1813,16 +1827,18 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
     if isinstance(input_, ParseResult) and input_file_type not in RAW_DATA_TYPES:
         input_text = None
 
-    data_model_types, source, defer_formatting, additional_options = _prepare_parser_common_options(
-        input_,
-        input_text,
-        input_file_type,
-        source_override,
-        config,
-        extra_template_data,
-        dataclass_arguments,
-        skip_root_model=skip_root_model,
-        remote_text_cache=remote_text_cache,
+    data_model_types, source, defer_formatting, additional_options, python_type_expressions = (
+        _prepare_parser_common_options(
+            input_,
+            input_text,
+            input_file_type,
+            source_override,
+            config,
+            extra_template_data,
+            dataclass_arguments,
+            skip_root_model=skip_root_model,
+            remote_text_cache=remote_text_cache,
+        )
     )
     if additional_options["base_path"] is None and not isinstance(source, Path):
         additional_options["base_path"] = caller_cwd
@@ -1831,12 +1847,14 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
         _resolve_schema_versions(input_file_type, config.schema_version)
     )
 
-    def build_parser(
+    def build_parser(  # noqa: PLR0913
         active_config: GenerateConfig,
         parser_source: Any,
         parser_options: ParserConfigDict,
         active_data_model_types: Any,
+        *,
         reference_cache: Any | None = None,
+        active_python_type_expressions: Mapping[str, Any] | None = None,
     ) -> Any:
         """Build one fresh parser using the caller's reference-resolution base."""
         with _warn_on_input_string_path_failure(input_):
@@ -1851,6 +1869,7 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
                 asyncapi_version=asyncapi_version,
                 xmlschema_version=xmlschema_version,
                 protobuf_version=protobuf_version,
+                python_type_expressions=active_python_type_expressions,
             )
         if reference_cache is not None and hasattr(active_parser, "remote_object_cache"):
             active_parser.remote_object_cache = reference_cache
@@ -1884,7 +1903,13 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
         config.settings_path if use_output_cwd else _settings_path_from(output_context_path, config.settings_path)
     )
     emit_settings_path = _settings_path_from(caller_cwd, config.settings_path)
-    parser = build_parser(config, source, additional_options, data_model_types)
+    parser = build_parser(
+        config,
+        source,
+        additional_options,
+        data_model_types,
+        active_python_type_expressions=python_type_expressions,
+    )
     with chdir(config.output if use_output_cwd else None):
         results = parse_with_disposal(parser, config)
         model_metadata = parser.model_metadata
@@ -1921,18 +1946,22 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
             retry_options: ParserConfigDict | None = None
             with contextlib.suppress(Exception), warnings.catch_warnings():
                 warnings.simplefilter("ignore", DanglingRefWarning)
-                retry_data_model_types, retry_source, retry_defer_formatting, retry_options = (
-                    _prepare_parser_common_options(
-                        input_,
-                        input_text,
-                        input_file_type,
-                        source_override,
-                        retry_config,
-                        extra_template_data,
-                        dataclass_arguments,
-                        skip_root_model=skip_root_model,
-                        remote_text_cache=retry_remote_text_cache,
-                    )
+                (
+                    retry_data_model_types,
+                    retry_source,
+                    retry_defer_formatting,
+                    retry_options,
+                    retry_python_type_expressions,
+                ) = _prepare_parser_common_options(
+                    input_,
+                    input_text,
+                    input_file_type,
+                    source_override,
+                    retry_config,
+                    extra_template_data,
+                    dataclass_arguments,
+                    skip_root_model=skip_root_model,
+                    remote_text_cache=retry_remote_text_cache,
                 )
                 retry_options["base_path"] = retry_base_path
                 retry_parser = build_parser(
@@ -1940,7 +1969,8 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
                     retry_source,
                     retry_options,
                     retry_data_model_types,
-                    retry_reference_cache,
+                    reference_cache=retry_reference_cache,
+                    active_python_type_expressions=retry_python_type_expressions,
                 )
                 retry_results = parse_with_disposal(retry_parser, retry_config)
                 retry_parse = retry_parser, retry_results

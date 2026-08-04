@@ -72,6 +72,9 @@ def test_runtime_type_cache_uses_identity_without_retaining_classes() -> None:
     second_expression = python_type_expr_from_runtime(Second)
     assert python_type_expr_from_runtime(First) is first_expression
 
+    # The cache must ignore user-defined equality and hash collisions.
+    assert First == Second
+    assert hash(First) == hash(Second)
     assert first_expression != second_expression
     assert render_python_type_expr(first_expression).endswith(".First")
     assert render_python_type_expr(second_expression).endswith(".Second")

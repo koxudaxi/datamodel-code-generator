@@ -20,3 +20,32 @@ class StructuredAnnotations(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     handler: Wrapper[Callable[[int, str], bool]]
+
+
+class StructuredBase(BaseModel):
+    """Base model whose field is transported into a generated $defs entry."""
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    callback: Wrapper[Callable[[str], int]]
+
+
+class StructuredChild(StructuredBase):
+    """Child model combining inherited and array-nested runtime expressions."""
+
+    handlers: list[Wrapper[Callable[[int], bool]]]
+
+
+class RuntimeNamespace:
+    """Namespace proving that a nested runtime class is not an import module."""
+
+    class Nested:
+        """Arbitrary nested runtime type."""
+
+
+class NestedRuntimeAnnotations(BaseModel):
+    """Model whose annotation must retain its runtime module and qualname."""
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    value: RuntimeNamespace.Nested
