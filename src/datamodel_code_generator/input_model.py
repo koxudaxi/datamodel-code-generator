@@ -7,9 +7,6 @@ import sys
 import types
 from collections import ChainMap, Counter, OrderedDict, defaultdict, deque
 from collections.abc import (
-    Callable as ABCCallable,
-)
-from collections.abc import (
     Mapping as ABCMapping,
 )
 from collections.abc import (
@@ -30,11 +27,25 @@ from collections.abc import (
 from dataclasses import is_dataclass
 from enum import Enum as PyEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, cast, get_args, get_origin, get_type_hints
+from typing import TYPE_CHECKING, Annotated, Any, Union, cast, get_args, get_origin, get_type_hints
 
 from pydantic import BaseModel
 
+from datamodel_code_generator._input_model_transport import (
+    LoadedInputModelSchema,
+    PythonTypeExpressionCollector,
+)
 from datamodel_code_generator._process_state import PROCESS_STATE_LOCK
+from datamodel_code_generator._python_type_annotation import (
+    PythonTypeExpr,
+    PythonTypeName,
+    PythonTypeQualifiedName,
+    PythonTypeRuntimeSymbol,
+    PythonTypeSubscript,
+    PythonTypeUnion,
+    render_python_type_expr,
+    rewrite_python_type_expr,
+)
 from datamodel_code_generator.enums import InputModelRefStrategy
 
 if TYPE_CHECKING:
@@ -101,13 +112,20 @@ def _load_model_schema_isolated(
     input_file_type: InputFileType,
     ref_strategy: InputModelRefStrategy | None,
     output_model_type: DataModelType | None,
+    expression_collector: PythonTypeExpressionCollector | None = None,
 ) -> dict[str, object]:
     """Load a schema while restoring cwd-local import state afterwards."""
     with PROCESS_STATE_LOCK:
         cwd_entry = str(Path.cwd())
         added_path = cwd_entry not in sys.path
         if not added_path:
-            return _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
+            return _load_model_schema(
+                input_models,
+                input_file_type,
+                ref_strategy,
+                output_model_type,
+                expression_collector,
+            )
 
         directory = Path(cwd_entry).resolve()
         environment_directory = Path(sys.prefix).resolve()
@@ -115,7 +133,13 @@ def _load_model_schema_isolated(
         baseline_modules = sys.modules.copy()
         sys.path.insert(0, cwd_entry)
         try:
-            return _load_model_schema(input_models, input_file_type, ref_strategy, output_model_type)
+            return _load_model_schema(
+                input_models,
+                input_file_type,
+                ref_strategy,
+                output_model_type,
+                expression_collector,
+            )
         finally:
             current_modules = sys.modules.copy()
             local_module_names = sorted(
@@ -235,95 +259,51 @@ _TYPE_FAMILY_MSGSPEC = "msgspec"
 _TYPE_FAMILY_OTHER = "other"
 
 
-def _serialize_python_type_full(tp: type) -> str:  # noqa: PLR0911
+def _runtime_python_type_expr(tp: object, *, full_name: bool = False) -> PythonTypeExpr:
+    """Bind a live type lazily so normal code-generation imports stay lightweight."""
+    from datamodel_code_generator._python_type_runtime import (  # noqa: PLC0415
+        python_type_expr_from_runtime,
+        python_type_expr_from_runtime_full_name,
+    )
+
+    return python_type_expr_from_runtime_full_name(tp) if full_name else python_type_expr_from_runtime(tp)
+
+
+def _transport_python_type_expr(
+    expression: PythonTypeExpr,
+    expression_collector: PythonTypeExpressionCollector | None,
+) -> str:
+    """Keep the public text contract while tokenizing the private parser path."""
+    if expression_collector is not None:
+
+        def bind_runtime_symbol_to_syntax(item: PythonTypeExpr) -> PythonTypeExpr:
+            match item:
+                case PythonTypeRuntimeSymbol() as runtime_symbol:
+                    module = runtime_symbol.module
+                    parts = runtime_symbol.qualname_parts
+                    if len(parts) != 1:
+                        return item if module else PythonTypeQualifiedName(parts)
+                    if module:
+                        # A top-level runtime symbol has the same import semantics as
+                        # its historical dotted text. Nested qualnames must retain
+                        # runtime provenance: their outer classes are not modules.
+                        return PythonTypeQualifiedName((*module.split("."), parts[0]))
+                    return PythonTypeName(parts[0])
+            return item
+
+        return expression_collector.add(rewrite_python_type_expr(expression, bind_runtime_symbol_to_syntax))
+    return render_python_type_expr(expression)
+
+
+def _serialize_python_type_full(
+    tp: object,
+    expression_collector: PythonTypeExpressionCollector | None = None,
+) -> str:
     """Serialize ANY Python type to its string representation."""
-    if tp is type(None):  # pragma: no cover
-        return "None"
-
-    if tp is ...:  # pragma: no cover
-        return "..."
-
-    origin = get_origin(tp)
-    args = get_args(tp)
-
-    if origin is None:
-        module = getattr(tp, "__module__", "")
-        name = getattr(tp, "__name__", None) or getattr(tp, "__qualname__", None)
-
-        if name is None:
-            return str(tp).replace("typing.", "")
-
-        if module and module not in {"builtins", "typing", "collections.abc"}:
-            return f"{module}.{name}"
-        return name
-
-    if _is_callable_origin(origin):
-        return _serialize_callable(args)
-
-    if origin is Union or (hasattr(types, "UnionType") and origin is types.UnionType):  # pragma: no cover
-        parts = [_serialize_python_type_full(arg) for arg in args]
-        return " | ".join(parts)
-
-    if origin is Annotated:
-        if args:
-            return _serialize_python_type_full(args[0])
-        return str(tp).replace("typing.", "")  # pragma: no cover
-
-    if origin is type:
-        if args:
-            return f"Type[{_serialize_python_type_full(args[0])}]"
-        return "Type"  # pragma: no cover
-
-    origin_name = _get_origin_name(origin)
-    if args:
-        args_str = ", ".join(_serialize_python_type_full(arg) for arg in args)
-        return f"{origin_name}[{args_str}]"
-
-    return origin_name  # pragma: no cover
-
-
-def _is_callable_origin(origin: type | None) -> bool:
-    """Check if origin is Callable."""
-    if origin is None:  # pragma: no cover
-        return False
-    if origin is ABCCallable:
-        return True
-    origin_str = str(origin)
-    return "Callable" in origin_str or "callable" in origin_str
-
-
-def _serialize_callable(args: tuple[type, ...]) -> str:
-    """Serialize Callable type."""
-    if not args:  # pragma: no cover
-        return "Callable"
-
-    params = args[:-1]
-    ret = args[-1]
-
-    if len(params) == 1 and params[0] is ...:
-        return f"Callable[..., {_serialize_python_type_full(ret)}]"
-
-    if len(params) == 1 and isinstance(params[0], (list, tuple)):  # pragma: no cover
-        params = tuple(params[0])
-
-    params_str = ", ".join(_serialize_python_type_full(p) for p in params)
-    return f"Callable[[{params_str}], {_serialize_python_type_full(ret)}]"
-
-
-def _get_origin_name(origin: type) -> str:
-    """Get the fully qualified name of a generic origin."""
-    name = getattr(origin, "__qualname__", None) or getattr(origin, "__name__", None)
-    if name:
-        module = getattr(origin, "__module__", "")
-        if module and module not in {"builtins", "typing", "collections.abc"}:
-            return f"{module}.{name}"
-        return name
-
-    origin_str = str(origin)  # pragma: no cover
-    if "typing." in origin_str:  # pragma: no cover
-        return origin_str.replace("typing.", "")
-
-    return origin_str  # pragma: no cover
+    try:
+        return _transport_python_type_expr(_runtime_python_type_expr(tp), expression_collector)
+    except ValueError as exc:
+        raise Error(str(exc)) from None
 
 
 def _get_input_model_json_schema_class() -> type:
@@ -363,26 +343,34 @@ def _is_type_origin(annotation: type) -> bool:
     return origin is type
 
 
-def _process_unserializable_property(prop: dict[str, Any], annotation: type) -> None:
+def _process_unserializable_property(
+    prop: dict[str, Any],
+    annotation: type,
+    expression_collector: PythonTypeExpressionCollector | None = None,
+) -> None:
     """Process a single property, handling anyOf/oneOf/items structures."""
     if "anyOf" in prop:
         for item in prop["anyOf"]:
             if item.get(_UNSERIALIZABLE_MARKER):
-                _set_python_type_for_unserializable(item, annotation)
+                _set_python_type_for_unserializable(item, annotation, expression_collector)
     elif "oneOf" in prop:  # pragma: no cover
         for item in prop["oneOf"]:
             if item.get(_UNSERIALIZABLE_MARKER):
-                _set_python_type_for_unserializable(item, annotation)
+                _set_python_type_for_unserializable(item, annotation, expression_collector)
     elif prop.get(_UNSERIALIZABLE_MARKER):
-        _set_python_type_for_unserializable(prop, annotation)
+        _set_python_type_for_unserializable(prop, annotation, expression_collector)
     elif "items" in prop and prop["items"].get(_UNSERIALIZABLE_MARKER):
-        prop["x-python-type"] = _serialize_python_type_full(annotation)
+        prop["x-python-type"] = _serialize_python_type_full(annotation, expression_collector)
         prop["items"].pop(_UNSERIALIZABLE_MARKER, None)
     elif _is_type_origin(annotation):
-        prop["x-python-type"] = _serialize_python_type_full(annotation)
+        prop["x-python-type"] = _serialize_python_type_full(annotation, expression_collector)
 
 
-def _set_python_type_for_unserializable(item: dict[str, Any], annotation: type) -> None:
+def _set_python_type_for_unserializable(
+    item: dict[str, Any],
+    annotation: type,
+    expression_collector: PythonTypeExpressionCollector | None = None,
+) -> None:
     """Set x-python-type and clean up markers."""
     origin = get_origin(annotation)
     actual_type = annotation
@@ -393,7 +381,7 @@ def _set_python_type_for_unserializable(item: dict[str, Any], annotation: type) 
                 actual_type = arg
                 break
 
-    item["x-python-type"] = _serialize_python_type_full(actual_type)
+    item["x-python-type"] = _serialize_python_type_full(actual_type, expression_collector)
     item.pop(_UNSERIALIZABLE_MARKER, None)
 
 
@@ -401,6 +389,7 @@ def _add_python_type_for_unserializable(
     schema: dict[str, Any],
     model: type,
     visited_defs: set[str] | None = None,
+    expression_collector: PythonTypeExpressionCollector | None = None,
 ) -> dict[str, Any]:
     """Add x-python-type to ALL fields marked as unserializable."""
     if visited_defs is None:
@@ -411,7 +400,7 @@ def _add_python_type_for_unserializable(
         for field_name, prop in schema["properties"].items():
             if field_name in model_fields:  # pragma: no branch
                 annotation = model_fields[field_name].annotation
-                _process_unserializable_property(prop, annotation)
+                _process_unserializable_property(prop, annotation, expression_collector)
 
     if "$defs" in schema:
         nested_models = _collect_nested_models(model)
@@ -423,7 +412,12 @@ def _add_python_type_for_unserializable(
                 continue
             visited_defs.add(def_name)
             if def_name in nested_models:  # pragma: no branch
-                _add_python_type_for_unserializable(def_schema, nested_models[def_name], visited_defs)
+                _add_python_type_for_unserializable(
+                    def_schema,
+                    nested_models[def_name],
+                    visited_defs,
+                    expression_collector,
+                )
 
     return schema
 
@@ -455,8 +449,17 @@ def _get_preserved_type_origins() -> dict[type, str]:
     return _PRESERVED_TYPE_ORIGINS
 
 
-def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
+def _serialize_python_type(
+    tp: type,
+    expression_collector: PythonTypeExpressionCollector | None = None,
+) -> str | None:
     """Serialize Python type to a string for x-python-type field."""
+    expression = _preserved_python_type_expr(tp)
+    return _transport_python_type_expr(expression, expression_collector) if expression is not None else None
+
+
+def _preserved_python_type_expr(tp: type) -> PythonTypeExpr | None:  # noqa: PLR0911
+    """Build IR only when JSON Schema loses relevant runtime type structure."""
     origin: type | None = get_origin(tp)
     args = get_args(tp)
     preserved_origins = _get_preserved_type_origins()
@@ -464,14 +467,19 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
     is_union = origin is Union or (hasattr(types, "UnionType") and origin is types.UnionType)
     if is_union:
         if args:
-            nested = [_serialize_python_type(a) for a in args]
-            if any(n is not None for n in nested):
-                return " | ".join(n or _full_type_name(a) for n, a in zip(nested, args, strict=False))
+            nested = tuple(_preserved_python_type_expr(argument) for argument in args)
+            if any(expression is not None for expression in nested):
+                return PythonTypeUnion(
+                    tuple(
+                        expression or _runtime_python_type_expr(argument, full_name=True)
+                        for expression, argument in zip(nested, args, strict=True)
+                    )
+                )
         return None  # pragma: no cover
 
     if origin is Annotated:
         if args:
-            return _serialize_python_type(args[0]) or _full_type_name(args[0])
+            return _preserved_python_type_expr(args[0]) or _runtime_python_type_expr(args[0], full_name=True)
         return None  # pragma: no cover
 
     type_name: str | None = None
@@ -481,16 +489,25 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
             type_name = _simple_type_name(origin)
     if type_name is not None:
         if args:
-            args_str = ", ".join(_serialize_python_type(a) or _full_type_name(a) for a in args)
-            return f"{type_name}[{args_str}]"
-        return type_name  # pragma: no cover
+            return PythonTypeSubscript(
+                PythonTypeName(type_name),
+                tuple(
+                    _preserved_python_type_expr(argument) or _runtime_python_type_expr(argument, full_name=True)
+                    for argument in args
+                ),
+            )
+        return PythonTypeName(type_name)  # pragma: no cover
 
     if args:
-        nested = [_serialize_python_type(a) for a in args]
-        if any(n is not None for n in nested):
-            origin_name = _simple_type_name(origin or tp)
-            args_str = ", ".join(n or _full_type_name(a) for n, a in zip(nested, args, strict=False))
-            return f"{origin_name}[{args_str}]"
+        nested = tuple(_preserved_python_type_expr(argument) for argument in args)
+        if any(expression is not None for expression in nested):
+            return PythonTypeSubscript(
+                PythonTypeName(_simple_type_name(origin or tp)),
+                tuple(
+                    expression or _runtime_python_type_expr(argument, full_name=True)
+                    for expression, argument in zip(nested, args, strict=True)
+                ),
+            )
 
     return None
 
@@ -506,50 +523,13 @@ def _simple_type_name(tp: type) -> str:
     return str(tp).replace("typing.", "")  # pragma: no cover
 
 
-def _full_type_name(tp: type) -> str:  # noqa: PLR0911
+def _full_type_name(tp: type) -> str:
     """Get a full qualified name representation of a type for type arguments.
 
     For generic types, keeps outer type as short name but FQN-izes the type arguments.
     For non-generic types, returns FQN for non-builtin types.
     """
-    if tp is type(None):
-        return "None"
-
-    if isinstance(tp, str):
-        return tp
-    if isinstance(tp, ForwardRef):
-        return tp.__forward_arg__
-
-    origin = get_origin(tp)
-    if origin is not None:
-        # Handle Union types (both typing.Union and types.UnionType) with | syntax
-        is_union = origin is Union or (hasattr(types, "UnionType") and origin is types.UnionType)
-        if is_union:
-            args = get_args(tp)
-            if args:
-                return " | ".join(_full_type_name(a) for a in args)
-            return str(tp)  # pragma: no cover
-
-        origin_name = _simple_type_name(origin)
-        args = get_args(tp)
-        if args:
-            args_str = ", ".join(_full_type_name(a) for a in args)
-            return f"{origin_name}[{args_str}]"
-        return origin_name
-
-    module = getattr(tp, "__module__", None)
-    name = getattr(tp, "__name__", None)
-
-    if module == "typing":
-        if name:
-            return name
-        return str(tp).replace("typing.", "")  # pragma: no cover
-
-    if module and name and module not in {"builtins", "collections.abc"}:
-        return f"{module}.{name}"
-    if name:
-        return name
-    return str(tp).replace("typing.", "")  # pragma: no cover
+    return render_python_type_expr(_runtime_python_type_expr(tp, full_name=True))
 
 
 def _collect_nested_models(model: type, visited: set[type] | None = None) -> dict[str, type]:
@@ -605,21 +585,26 @@ def _get_type_hints_safe(obj: type) -> dict[str, Any]:
 def _add_python_type_to_properties(
     properties: dict[str, Any],
     model_fields: dict[str, Any],
+    expression_collector: PythonTypeExpressionCollector | None = None,
 ) -> None:
     """Add x-python-type to properties dict for given model fields."""
     for field_name, field_info in model_fields.items():
         if field_name not in properties:  # pragma: no cover
             continue
-        serialized = _serialize_python_type(field_info.annotation)
+        serialized = _serialize_python_type(field_info.annotation, expression_collector)
         if serialized:
             properties[field_name]["x-python-type"] = serialized
 
 
-def _add_python_type_info(schema: dict[str, Any], model: type) -> dict[str, Any]:
+def _add_python_type_info(
+    schema: dict[str, Any],
+    model: type,
+    expression_collector: PythonTypeExpressionCollector | None = None,
+) -> dict[str, Any]:
     """Add x-python-type information to JSON Schema for types lost during conversion."""
     model_fields = getattr(model, "model_fields", None)
     if model_fields and "properties" in schema:
-        _add_python_type_to_properties(schema["properties"], model_fields)
+        _add_python_type_to_properties(schema["properties"], model_fields, expression_collector)
 
     if "$defs" in schema:
         nested_models = _collect_nested_models(model)
@@ -632,18 +617,22 @@ def _add_python_type_info(schema: dict[str, Any], model: type) -> dict[str, Any]
             nested_model = nested_models[def_name]
             nested_fields = getattr(nested_model, "model_fields", None)
             if nested_fields:
-                _add_python_type_to_properties(def_schema["properties"], nested_fields)
+                _add_python_type_to_properties(def_schema["properties"], nested_fields, expression_collector)
 
     return schema
 
 
-def _add_python_type_info_generic(schema: dict[str, Any], obj: type) -> dict[str, Any]:
+def _add_python_type_info_generic(
+    schema: dict[str, Any],
+    obj: type,
+    expression_collector: PythonTypeExpressionCollector | None = None,
+) -> dict[str, Any]:
     """Add x-python-type information using get_type_hints (for dataclass/TypedDict)."""
     type_hints = _get_type_hints_safe(obj)
     if type_hints and "properties" in schema:  # pragma: no branch
         for field_name, field_type in type_hints.items():
             if field_name in schema["properties"]:  # pragma: no branch
-                serialized = _serialize_python_type(field_type)
+                serialized = _serialize_python_type(field_type, expression_collector)
                 if serialized:
                     schema["properties"][field_name]["x-python-type"] = serialized
 
@@ -784,6 +773,7 @@ def _transform_single_model_to_inheritance(
     model_class: type,
     schema_generator: type,
     processed_parents: dict[str, dict[str, object]] | None = None,
+    expression_collector: PythonTypeExpressionCollector | None = None,
 ) -> dict[str, object]:
     """Transform a single model's schema to use allOf inheritance structure."""
     if processed_parents is None:
@@ -803,10 +793,18 @@ def _transform_single_model_to_inheritance(
     if parent_name not in processed_parents:
         _try_rebuild_model(parent)
         parent_schema = parent.model_json_schema(schema_generator=schema_generator)
-        parent_schema = _add_python_type_for_unserializable(parent_schema, parent)
-        parent_schema = _add_python_type_info(parent_schema, parent)
+        parent_schema = _add_python_type_for_unserializable(
+            parent_schema,
+            parent,
+            expression_collector=expression_collector,
+        )
+        parent_schema = _add_python_type_info(parent_schema, parent, expression_collector)
         parent_schema = _transform_single_model_to_inheritance(
-            parent_schema, parent, schema_generator, processed_parents
+            parent_schema,
+            parent,
+            schema_generator,
+            processed_parents,
+            expression_collector,
         )
         processed_parents[parent_name] = parent_schema
     parent_schema = processed_parents[parent_name]
@@ -861,11 +859,30 @@ def load_model_schema(
     return _load_model_schema_isolated(input_models, input_file_type, ref_strategy, output_model_type)
 
 
+def _load_model_schema_with_python_type_expressions(
+    input_models: list[str],
+    input_file_type: InputFileType,
+    ref_strategy: InputModelRefStrategy | None = None,
+    output_model_type: DataModelType | None = None,
+) -> LoadedInputModelSchema:
+    """Load the CLI-only schema transport without rendering runtime expressions."""
+    expression_collector = PythonTypeExpressionCollector()
+    schema = _load_model_schema_isolated(
+        input_models,
+        input_file_type,
+        ref_strategy,
+        output_model_type,
+        expression_collector,
+    )
+    return expression_collector.loaded_schema(schema)
+
+
 def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
     input_models: list[str],
     input_file_type: InputFileType,
     ref_strategy: InputModelRefStrategy | None,
     output_model_type: DataModelType | None,
+    expression_collector: PythonTypeExpressionCollector | None = None,
 ) -> dict[str, object]:
     from datamodel_code_generator import (  # noqa: PLC0415
         DataModelType,
@@ -876,7 +893,13 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
         output_model_type = DataModelType.PydanticV2BaseModel
 
     if len(input_models) == 1:
-        return _load_single_model_schema(input_models[0], input_file_type, ref_strategy, output_model_type)
+        return _load_single_model_schema(
+            input_models[0],
+            input_file_type,
+            ref_strategy,
+            output_model_type,
+            expression_collector,
+        )
 
     model_classes: list[type] = []
     loaded_modules: dict[str, types.ModuleType] = {}
@@ -924,10 +947,20 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
             _try_rebuild_model(model_class)
 
             schema = model_class.model_json_schema(schema_generator=schema_generator)  # ty: ignore[unresolved-attribute]
-            schema = _add_python_type_for_unserializable(schema, model_class)
-            schema = _add_python_type_info(schema, model_class)
+            schema = _add_python_type_for_unserializable(
+                schema,
+                model_class,
+                expression_collector=expression_collector,
+            )
+            schema = _add_python_type_info(schema, model_class, expression_collector)
 
-            schema = _transform_single_model_to_inheritance(schema, model_class, schema_generator, processed_parents)
+            schema = _transform_single_model_to_inheritance(
+                schema,
+                model_class,
+                schema_generator,
+                processed_parents,
+                expression_collector,
+            )
 
             if "$defs" in schema:
                 schema_defs = cast("dict[str, object]", schema["$defs"])
@@ -962,6 +995,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
     input_file_type: InputFileType,
     ref_strategy: InputModelRefStrategy | None,
     output_model_type: DataModelType,
+    expression_collector: PythonTypeExpressionCollector | None = None,
 ) -> dict[str, object]:
     """Load schema from a Python import path.
 
@@ -994,7 +1028,14 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
             if input_file_type == InputFileType.Auto:
                 msg = "--input-file-type is required when --input-model points to a dict"
                 raise Error(msg)
-            return obj
+            if expression_collector is None:
+                return obj
+            # Dict schemas contain no runtime IR. Preserve the former CLI JSON
+            # round trip exactly: it both isolates module state and performs
+            # JSON key coercion/validation before parser construction.
+            import json  # noqa: PLC0415
+
+            return cast("dict[str, object]", json.loads(json.dumps(obj)))
 
         if isinstance(obj, type) and issubclass(obj, BaseModel):
             if input_file_type not in {InputFileType.Auto, InputFileType.JsonSchema}:
@@ -1007,10 +1048,19 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
             _try_rebuild_model(obj)
             schema_generator = _get_input_model_json_schema_class()
             schema = obj.model_json_schema(schema_generator=schema_generator)
-            schema = _add_python_type_for_unserializable(schema, obj)
-            schema = _add_python_type_info(schema, obj)
+            schema = _add_python_type_for_unserializable(
+                schema,
+                obj,
+                expression_collector=expression_collector,
+            )
+            schema = _add_python_type_info(schema, obj, expression_collector)
 
-            schema = _transform_single_model_to_inheritance(schema, obj, schema_generator)
+            schema = _transform_single_model_to_inheritance(
+                schema,
+                obj,
+                schema_generator,
+                expression_collector=expression_collector,
+            )
 
             if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
                 nested_models = _collect_nested_models(obj)
@@ -1034,7 +1084,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
             from pydantic import TypeAdapter  # noqa: PLC0415
 
             schema = TypeAdapter(obj).json_schema()
-            schema = _add_python_type_info_generic(schema, cast("type", obj))
+            schema = _add_python_type_info_generic(schema, cast("type", obj), expression_collector)
 
             if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
                 obj_type = cast("type", obj)

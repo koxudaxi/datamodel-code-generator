@@ -104,7 +104,7 @@ from datamodel_code_generator.types import (
 from datamodel_code_generator.util import BaseModel, get_yaml_parse_errors
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
+    from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Sequence
 
     from typing_extensions import TypeIs
 
@@ -1048,6 +1048,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             options["target_datetime_class"] = DatetimeClassType.Awaredatetime
         super().__init__(source=source, config=config, **options)
 
+        self._python_type_expressions: Mapping[str, PythonTypeExpr] | None = None
         self.remote_object_cache: DefaultPutDict[str, dict[str, YamlValue]] = DefaultPutDict()
         self.raw_obj: dict[str, YamlValue] = {}
         self._root_id: Optional[str] = None  # noqa: UP045
@@ -1110,10 +1111,37 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         else:
             self.get_field_extra_key = lambda key: key
 
+    @classmethod
+    def _from_python_type_expressions(
+        cls,
+        source: dict[str, YamlValue],
+        python_type_expressions: Mapping[str, PythonTypeExpr],
+        *,
+        config: JSONSchemaParserConfig,
+    ) -> JsonSchemaParser:
+        """Construct one parser with its private input-model expression table."""
+        # Parser accepts in-memory dict sources; this private factory is the only
+        # path that bypasses JsonSchemaParser's public file/URL source contract.
+        parser = cls(source=cast("str | Path | list[Path] | ParseResult", source), config=config)
+        parser._python_type_expressions = python_type_expressions
+        return parser
+
+    def _externalize_schema_extra(self, key: str, value: Any) -> Any:
+        """Prevent private transport tokens from reaching fields or templates."""
+        if key != "x-python-type":
+            return value
+        from datamodel_code_generator._input_model_transport import (  # noqa: PLC0415
+            externalize_python_type_token,
+        )
+
+        return externalize_python_type_token(value, self._python_type_expressions)
+
     def get_field_extras(self, obj: JsonSchemaObject) -> dict[str, Any]:
         """Extract extra field metadata from a JSON Schema object."""
         extras = {
-            self.get_field_extra_key(k.removeprefix("x-") if k in self.field_extra_keys_without_x_prefix else k): v
+            self.get_field_extra_key(
+                k.removeprefix("x-") if k in self.field_extra_keys_without_x_prefix else k
+            ): self._externalize_schema_extra(k, v)
             for k, v in obj.extras.items()
             if self.field_include_all_keys or k in self.field_keys
         }
@@ -2933,7 +2961,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def set_schema_extensions(self, path: str, obj: JsonSchemaObject) -> None:
         """Set schema extensions (x-* fields) in extra template data."""
-        extensions = {k: v for k, v in obj.extras.items() if k.startswith("x-")}
+        extensions = {k: self._externalize_schema_extra(k, v) for k, v in obj.extras.items() if k.startswith("x-")}
         if extensions:
             self.extra_template_data[path]["extensions"] = extensions
 
@@ -2941,14 +2969,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             self.extra_template_data[path]["is_base_class"] = True
 
         # Process model-level metadata and model_extra_keys for json_schema_extra in ConfigDict
-        model_extras: dict[str, Any] = {k: v for k, v in obj.extras.items() if k in DEFAULT_MODEL_EXTRA_KEYS}
+        model_extras: dict[str, Any] = {
+            k: self._externalize_schema_extra(k, v) for k, v in obj.extras.items() if k in DEFAULT_MODEL_EXTRA_KEYS
+        }
         if self.model_extra_keys or self.model_extra_keys_without_x_prefix:
             for k, v in obj.extras.items():
                 if self.model_extra_keys and k in self.model_extra_keys:
-                    model_extras[k] = v
+                    model_extras[k] = self._externalize_schema_extra(k, v)
                 elif self.model_extra_keys_without_x_prefix and k in self.model_extra_keys_without_x_prefix:
                     # Strip the x- prefix
-                    model_extras[k.lstrip("x-")] = v
+                    model_extras[k.lstrip("x-")] = self._externalize_schema_extra(k, v)
         if model_extras:
             self.extra_template_data[path]["model_extras"] = model_extras
 
@@ -3015,11 +3045,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         compatible = self.COMPATIBLE_PYTHON_TYPES.get(schema_type, frozenset())
         return base_type in compatible
 
-    def _get_x_python_type(self, obj: JsonSchemaObject) -> PythonTypeExpr | None:  # noqa: PLR6301
-        """Parse/cache x-python-type only at its raw JSON Schema boundary."""
+    def _get_x_python_type(self, obj: JsonSchemaObject) -> PythonTypeExpr | None:
+        """Resolve internal IR or parse external text at the schema boundary."""
         x_python_type = obj.extras.get("x-python-type")
         if not x_python_type or not isinstance(x_python_type, str):
             return None
+        if (
+            self._python_type_expressions is not None
+            and (expression := self._python_type_expressions.get(x_python_type)) is not None
+        ):
+            return expression
+
+        from datamodel_code_generator._input_model_transport import is_python_type_token  # noqa: PLC0415
+
+        if is_python_type_token(x_python_type):
+            msg = "Internal x-python-type context is unavailable"
+            raise Error(msg)
 
         # This is an external-text boundary. Keep the runtime AST/token codec
         # unloaded for schemas that do not opt in to x-python-type.
@@ -7461,18 +7502,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return self.data_type(data_types=data_types)
 
-    def _parse_property_name_key_schema(  # noqa: PLR0911
+    def _parse_property_name_key_schema(  # noqa: PLR0911, PLR0912
         self,
         property_names: JsonSchemaObject | bool,  # noqa: FBT001
     ) -> DataType:
         if isinstance(property_names, bool):
             return self.data_type_manager.get_data_type(Types.string)
-        if property_names.extras.get("x-python-type") == "int":
-            return self.data_type_manager.get_data_type(Types.integer)
-        if property_names.extras.get("x-python-type") == "bool":
-            return self.data_type_manager.get_data_type(Types.boolean)
-        if property_names.extras.get("x-python-type") == "str":
-            return self.data_type_manager.get_data_type(Types.string)
+        if (python_type := self._get_x_python_type(property_names)) is not None:
+            from datamodel_code_generator._python_type_annotation import (  # noqa: PLC0415
+                python_type_expr_base_name,
+            )
+
+            match python_type_expr_base_name(python_type):
+                case "int":
+                    return self.data_type_manager.get_data_type(Types.integer)
+                case "bool":
+                    return self.data_type_manager.get_data_type(Types.boolean)
+                case "str":
+                    return self.data_type_manager.get_data_type(Types.string)
         if property_names.ref:
             return self.get_ref_data_type(property_names.ref)
         if property_names.enum:

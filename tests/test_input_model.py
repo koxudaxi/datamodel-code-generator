@@ -17,7 +17,7 @@ import pytest
 from datamodel_code_generator import __main__ as main_module
 from datamodel_code_generator import arguments
 from datamodel_code_generator.__main__ import Exit
-from tests.conftest import assert_output, freeze_time
+from tests.conftest import assert_inputs_not_mutated, assert_output, freeze_time
 from tests.main.conftest import run_main_with_args
 
 if TYPE_CHECKING:
@@ -185,12 +185,15 @@ def test_input_model_pydantic_non_jsonschema_error(
 
 def test_input_model_dict_with_jsonschema(tmp_path: Path) -> None:
     """Test dict input with --input-file-type jsonschema."""
-    run_input_model_and_assert(
-        input_model="tests.data.python.input_model.dict_schemas:USER_SCHEMA",
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "dict_with_jsonschema.py",
-        extra_args=["--input-file-type", "jsonschema"],
-    )
+    from tests.data.python.input_model.dict_schemas import USER_SCHEMA
+
+    with assert_inputs_not_mutated({"USER_SCHEMA": USER_SCHEMA}):
+        run_input_model_and_assert(
+            input_model="tests.data.python.input_model.dict_schemas:USER_SCHEMA",
+            output_path=tmp_path / "output.py",
+            expected_file=EXPECTED_INPUT_MODEL_PATH / "dict_with_jsonschema.py",
+            extra_args=["--input-file-type", "jsonschema"],
+        )
 
 
 def test_input_model_dict_without_type_error(
@@ -213,6 +216,32 @@ def test_input_model_dict_openapi(tmp_path: Path) -> None:
         output_path=tmp_path / "output.py",
         expected_file=EXPECTED_INPUT_MODEL_PATH / "dict_openapi.py",
         extra_args=["--input-file-type", "openapi"],
+    )
+
+
+def test_input_model_dict_preserves_json_round_trip(tmp_path: Path) -> None:
+    """Keep the historical JSON key coercion for module-owned dict schemas."""
+    from tests.data.python.input_model.dict_schemas import JSON_COERCIBLE_SCHEMA
+
+    with assert_inputs_not_mutated({"JSON_COERCIBLE_SCHEMA": JSON_COERCIBLE_SCHEMA}):
+        run_input_model_and_assert(
+            input_model="tests.data.python.input_model.dict_schemas:JSON_COERCIBLE_SCHEMA",
+            output_path=tmp_path / "output.py",
+            expected_file=EXPECTED_INPUT_MODEL_PATH / "dict_json_coercible.py",
+            extra_args=["--input-file-type", "jsonschema", "--disable-timestamp"],
+        )
+
+
+def test_input_model_dict_rejects_non_json_value(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject values that the former CLI JSON boundary could not serialize."""
+    run_input_model_error_and_assert(
+        input_model="tests.data.python.input_model.dict_schemas:NON_JSON_SCHEMA",
+        extra_args=["--input-file-type", "jsonschema", "--output", str(tmp_path / "output.py")],
+        capsys=capsys,
+        expected_stderr_contains="Object of type set is not JSON serializable",
     )
 
 
@@ -836,6 +865,36 @@ def test_input_model_recursive_model_types(tmp_path: Path) -> None:
         input_model="tests.data.python.input_model.pydantic_models:RecursiveNode",
         output_path=tmp_path / "output.py",
         expected_file=EXPECTED_INPUT_MODEL_PATH / "recursive_model_types.py",
+    )
+
+
+def test_input_model_structured_runtime_annotations(tmp_path: Path) -> None:
+    """Preserve runtime Callable structure through external fixtures."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.structured_annotations:StructuredAnnotations",
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "structured_annotations.py",
+        extra_args=["--disable-timestamp"],
+    )
+
+
+def test_input_model_transport_preserves_inheritance(tmp_path: Path) -> None:
+    """Transport inherited and array-nested runtime expressions without reparsing."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.structured_annotations:StructuredChild",
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "structured_inheritance.py",
+        extra_args=["--disable-timestamp"],
+    )
+
+
+def test_input_model_transport_preserves_nested_runtime_identity(tmp_path: Path) -> None:
+    """Import the runtime module without treating an outer class as a module."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.structured_annotations:NestedRuntimeAnnotations",
+        output_path=tmp_path / "output.py",
+        expected_file=EXPECTED_INPUT_MODEL_PATH / "nested_runtime_annotations.py",
+        extra_args=["--formatters", "builtin", "--disable-timestamp"],
     )
 
 
@@ -1817,6 +1876,23 @@ def test_serialize_python_type_full_annotated() -> None:
     # Annotated with a custom type
     result = _serialize_python_type_full(Annotated[int, "some_metadata"])
     assert result == "int"
+
+
+def test_serialize_python_type_full_wraps_invalid_runtime_type(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Translate runtime-IR validation failures at the input-model boundary."""
+    from datamodel_code_generator import input_model as input_model_module
+
+    def raise_invalid_runtime_type(_tp: object, *, full_name: bool = False) -> None:
+        del full_name
+        msg = "invalid runtime type"
+        raise ValueError(msg)
+
+    monkeypatch.setattr(input_model_module, "_runtime_python_type_expr", raise_invalid_runtime_type)
+
+    with pytest.raises(input_model_module.Error, match="invalid runtime type"):
+        input_model_module._serialize_python_type_full(object())
 
 
 def test_full_type_name_builtin_type() -> None:
