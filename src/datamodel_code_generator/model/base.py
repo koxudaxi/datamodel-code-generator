@@ -632,7 +632,17 @@ class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
 
     @staticmethod
     def _has_explicit_typing_import_requirements(data_type: DataType) -> bool:
-        for annotation in (data_type.alias, data_type.type):
+        if data_type.python_type:
+            from datamodel_code_generator._python_type_annotation import (  # noqa: PLC0415
+                iter_python_type_expr_names,
+            )
+
+            if any(
+                name in _TYPING_IMPORT_NAMES for name in iter_python_type_expr_names(data_type.python_type.expression)
+            ):
+                return True
+        annotations = (data_type.alias,) if data_type.python_type else (data_type.alias, data_type.type)
+        for annotation in annotations:
             if annotation and (names := _annotation_typing_import_names(annotation)):
                 return bool(names)
         return False
@@ -691,7 +701,15 @@ class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
     @staticmethod
     def _explicit_typing_import_requirements(data_type: DataType) -> _TypingImportRequirements:
         requirements = _TypingImportRequirements()
-        for annotation in (data_type.alias, data_type.type):
+        if data_type.python_type:
+            from datamodel_code_generator._python_type_annotation import (  # noqa: PLC0415
+                iter_python_type_expr_names,
+            )
+
+            for name in iter_python_type_expr_names(data_type.python_type.expression):
+                requirements = requirements.with_import_name(name)
+        annotations = (data_type.alias,) if data_type.python_type else (data_type.alias, data_type.type)
+        for annotation in annotations:
             if not annotation:
                 continue
             for name in _annotation_typing_import_names(annotation):
@@ -772,6 +790,7 @@ class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
             data_type.__class__,
             data_type.alias,
             data_type.type,
+            data_type.python_type,
             self._import_key(data_type.import_),
             data_type.reference.path if data_type.reference else None,
             self._reference_source_import_key(data_type.reference),
@@ -804,6 +823,7 @@ class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
         data_type = data_type or self.data_type
         return not (
             data_type.import_
+            or data_type.python_type
             or data_type.kwargs
             or data_type.is_optional
             or data_type.is_dict

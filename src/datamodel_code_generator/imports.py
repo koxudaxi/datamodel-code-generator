@@ -88,7 +88,7 @@ class Imports(defaultdict[str | None, set[str]]):
                 key = self._storage_key(import_)
                 self[key[0]].add(key[1])
                 self.counter[key] += 1
-                if "." not in import_.import_ and import_.alias:
+                if import_.alias:
                     self.alias[key[0]][key[1]] = import_.alias
 
     def remove(self, imports: Import | Iterable[Import]) -> None:
@@ -96,18 +96,17 @@ class Imports(defaultdict[str | None, set[str]]):
         if isinstance(imports, Import):
             imports = [imports]
         for import_ in imports:
-            is_dotted_import = "." in import_.import_
             key = self._storage_key(import_)
             if self.counter.get(key, 0) <= 0:
                 continue
             self.counter[key] -= 1
             if self.counter[key] == 0:
                 del self.counter[key]
-                if not is_dotted_import or (key[0] in self and key[1] in self[key[0]]):
+                if key[0] in self and key[1] in self[key[0]]:
                     self[key[0]].remove(key[1])
                     if not self[key[0]]:
                         del self[key[0]]
-                if not is_dotted_import and import_.alias and key[0] in self.alias and key[1] in self.alias[key[0]]:
+                if key[0] in self.alias and key[1] in self.alias[key[0]]:
                     del self.alias[key[0]][key[1]]
                     if not self.alias[key[0]]:
                         del self.alias[key[0]]
@@ -207,7 +206,7 @@ class Imports(defaultdict[str | None, set[str]]):
         """
         name_set: set[str] = (self._exports or set()).copy()
         for from_, imports in self.items():
-            name_set.update(self.alias.get(from_, {}).get(import_) or import_ for import_ in imports)
+            name_set.update(self.get_effective_name(from_, import_) for import_ in imports)
         name_list = sorted(name_set)
         if multiline:
             items = ",\n    ".join(f'"{name}"' for name in name_list)
@@ -216,8 +215,17 @@ class Imports(defaultdict[str | None, set[str]]):
         return f"__all__ = [{items}]"
 
     def get_effective_name(self, from_: str | None, import_: str) -> str:
-        """Get the effective name after alias resolution."""
-        return self.alias.get(from_, {}).get(import_, import_)
+        """Get the name actually bound by an import after alias resolution."""
+        if alias := self.alias.get(from_, {}).get(import_):
+            return alias
+        return import_.partition(".")[0] if from_ is None else import_
+
+    def apply_alias(self, import_: Import) -> None:
+        """Apply an alias to an exact import identity already in this aggregate."""
+        key = self._storage_key(import_)
+        if not import_.alias or not self.counter.get(key):
+            return
+        self.alias[key[0]][key[1]] = import_.alias
 
     def remove_unused(self, used_names: set[str]) -> None:
         """Remove imports not referenced in used_names.
