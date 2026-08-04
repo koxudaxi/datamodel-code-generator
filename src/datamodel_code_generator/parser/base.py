@@ -1082,6 +1082,7 @@ def is_ancestor_package_reference(current_module: str, reference: str) -> bool:
         - current="v0.mammal.canine", ref="v0.Animal" -> True (grandparent)
         - current="v0.animal", ref="v0.animal.Dog" -> False (same or child)
         - current="pets", ref="Animal" -> True (root package is immediate parent)
+        - current="v0.mammal.canine", ref="Animal" -> True (root package is an ancestor)
     """
     current_path = current_module.split(".") if current_module else []
     *reference_path, _ = reference.split(".")
@@ -1094,13 +1095,10 @@ def is_ancestor_package_reference(current_module: str, reference: str) -> bool:
     if current_path[:-1] == reference_path:
         return True
 
-    # Case 2: Deeper ancestor package (reference_path must be non-empty proper prefix)
+    # Case 2: Deeper ancestor package (reference_path must be a proper prefix)
     # e.g., current="v0.mammal.canine", ref="v0.Animal" -> ["v0"] is prefix of ["v0","mammal","canine"]
-    return (
-        len(reference_path) > 0
-        and len(reference_path) < len(current_path)
-        and current_path[: len(reference_path)] == reference_path
-    )
+    # An empty reference_path is the root package, which is an ancestor of every nested module.
+    return len(reference_path) < len(current_path) and current_path[: len(reference_path)] == reference_path
 
 
 def exact_import(from_: str, import_: str, short_name: str) -> tuple[str, str]:
@@ -1111,6 +1109,19 @@ def exact_import(from_: str, import_: str, short_name: str) -> tuple[str, str]:
         # when our imported module has the same parent
         return f"{from_}{import_}", short_name
     return f"{from_}.{import_}", short_name
+
+
+def _resolve_exact_import(
+    current_module: str,
+    target_full_name: str,
+    from_: str,
+    import_: str,
+    short_name: str,
+) -> tuple[str, str]:
+    """Keep package imports intact while resolving exact module imports."""
+    if is_ancestor_package_reference(current_module, target_full_name):
+        return from_, import_
+    return exact_import(from_, import_, short_name)
 
 
 def get_module_directory(module: tuple[str, ...]) -> tuple[str, ...]:
@@ -1720,12 +1731,19 @@ def _register_data_type_import(
             pass
 
     model_path_to_module_name = model_path_to_module_name or {}
+    current_module_name = _get_model_module_name(model, model_path_to_module_name)
     from_, import_ = full_path = relative(
-        _get_model_module_name(model, model_path_to_module_name),
-        _get_data_type_target_full_name(data_type, reference, model_path_to_module_name),
+        current_module_name,
+        target_full_name := _get_data_type_target_full_name(data_type, reference, model_path_to_module_name),
     )
     if imports.use_exact:
-        from_, import_ = full_path = exact_import(from_, import_, reference.short_name)
+        from_, import_ = full_path = _resolve_exact_import(
+            current_module_name,
+            target_full_name,
+            from_,
+            import_,
+            reference.short_name,
+        )
     if not (from_ and import_):
         return
 
@@ -2570,7 +2588,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 model.class_name = duplicate_name
                 model_names[duplicate_name] = model
 
-    def __change_from_import(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
+    def __change_from_import(  # noqa: PLR0912, PLR0913, PLR0914
         self,
         models: list[DataModel],
         imports: Imports,
@@ -2605,14 +2623,23 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                 if isinstance(data_type, BaseClassDataType):
                     left, right = relative(current_module_name, target_full_name)
-                    is_ancestor = is_ancestor_package_reference(current_module_name, target_full_name)
-                    from_ = left if is_ancestor else (f"{left}{right}" if left.endswith(".") else f"{left}.{right}")
+                    from_ = (
+                        left
+                        if is_ancestor_package_reference(current_module_name, target_full_name)
+                        else (f"{left}{right}" if left.endswith(".") else f"{left}.{right}")
+                    )
                     import_ = reference.short_name
                     full_path = from_, import_
                 else:
                     from_, import_ = full_path = relative(current_module_name, target_full_name)
                     if imports.use_exact:
-                        from_, import_ = full_path = exact_import(from_, import_, reference.short_name)
+                        from_, import_ = full_path = _resolve_exact_import(
+                            current_module_name,
+                            target_full_name,
+                            from_,
+                            import_,
+                            reference.short_name,
+                        )
                     import_ = import_.replace("-", "_")
                     current_module_path = tuple(current_module_name.split(".")) if current_module_name else ()
                     if (  # pragma: no cover
