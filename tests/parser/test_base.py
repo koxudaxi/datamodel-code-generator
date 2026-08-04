@@ -468,19 +468,22 @@ def test_is_ancestor_package_reference(current_module: str, reference: str, *, e
 
 
 @pytest.mark.parametrize(
-    ("current_module", "reference"),
+    ("current_module", "reference", "expected"),
     [
-        ("a", "Foo"),
-        ("a.b", "Foo"),
-        ("a.b.c", "Foo"),
-        ("a.b", "a.Foo"),
-        ("a.b.c", "a.Foo"),
+        ("a", "Foo", (".", "Foo")),
+        ("a.b", "Foo", ("..", "Foo")),
+        ("a.b.c", "Foo", ("...", "Foo")),
+        ("a.b", "a.Foo", (".", "Foo")),
+        ("a.b.c", "a.Foo", ("..", "Foo")),
     ],
 )
-def test_relative_returns_class_name_for_ancestor_package(current_module: str, reference: str) -> None:
+def test_relative_returns_class_name_for_ancestor_package(
+    current_module: str,
+    reference: str,
+    expected: tuple[str, str],
+) -> None:
     """``relative`` yields the class name, not a module, for ancestor package references."""
-    _, name = relative(current_module, reference)
-    assert name == reference.rsplit(".", 1)[-1]
+    assert relative(current_module, reference) == expected
     assert is_ancestor_package_reference(current_module, reference)
 
 

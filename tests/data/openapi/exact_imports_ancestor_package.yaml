@@ -31,6 +31,10 @@ components:
           $ref: '#/components/schemas/v0.Animal'
         tag:
           $ref: '#/components/schemas/Tag'
+    v0.mammal.Tags:
+      type: array
+      items:
+        $ref: '#/components/schemas/Tag'
     v0.mammal.canine.Puppy:
       type: object
       description: Model in a leaf module referencing ancestor packages and a sibling module
@@ -43,3 +47,5 @@ components:
           $ref: '#/components/schemas/v0.bird.Owl'
         tag:
           $ref: '#/components/schemas/Tag'
+        tags:
+          $ref: '#/components/schemas/v0.mammal.Tags'

@@ -16,3 +16,4 @@ class Puppy(BaseModel):
     parent: Dog | None = None
     friend: Owl | None = None
     tag: Tag | None = None
+    tags: list[Tag] | None = None

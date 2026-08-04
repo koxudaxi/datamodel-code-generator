@@ -8784,6 +8784,7 @@ def test_main_openapi_exact_imports_ancestor_package(output_dir: Path) -> None:
             "--target-python-version",
             "3.10",
             "--use-exact-imports",
+            "--collapse-root-models",
             "--disable-timestamp",
         ],
         force_exec_validation=True,
@@ -8794,6 +8795,7 @@ def test_main_openapi_exact_imports_ancestor_package(output_dir: Path) -> None:
             "parent": {"animal": {"species": "dog"}, "tag": {"label": "pet"}},
             "friend": {"wingspan": 120},
             "tag": {"label": "pet"},
+            "tags": [{"label": "friend"}],
         },
     )
 
