@@ -4,19 +4,19 @@ from __future__ import annotations
 
 import sys
 
-# Fast path for --version (avoid importing heavy modules)
-if len(sys.argv) == 2 and sys.argv[1] in {"--version", "-V"}:  # pragma: no cover  # noqa: PLR2004
-    from importlib.metadata import version
+match sys.argv:
+    # Fast path for --version (avoid importing heavy modules)
+    case [_, "--version" | "-V"]:
+        from datamodel_code_generator import get_version
 
-    sys.stdout.write(f"datamodel-codegen {version('datamodel-code-generator')}\n")
-    sys.exit(0)
+        sys.stdout.write(f"datamodel-codegen {get_version()}\n")
+        sys.exit(0)
+    # Fast path for --help (avoid importing heavy modules)
+    case [_, "--help" | "-h"]:  # pragma: no cover
+        from datamodel_code_generator.arguments import arg_parser
 
-# Fast path for --help (avoid importing heavy modules)
-if len(sys.argv) == 2 and sys.argv[1] in {"--help", "-h"}:  # pragma: no cover  # noqa: PLR2004
-    from datamodel_code_generator.arguments import arg_parser
-
-    arg_parser.print_help()
-    sys.exit(0)
+        arg_parser.print_help()
+        sys.exit(0)
 
 match sys.argv:
     case [_, "--output-format-json-schema", schema_output_name] if schema_output_name in {

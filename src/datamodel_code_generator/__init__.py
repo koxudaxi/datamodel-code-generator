@@ -424,12 +424,10 @@ def cached_path_exists(path: Path) -> bool:
 
 
 def get_version() -> str:
-    """Return the installed package version."""
-    package = "datamodel-code-generator"
+    """Return the version embedded by the build backend."""
+    from datamodel_code_generator._version import __version__  # noqa: PLC0415
 
-    from importlib.metadata import version  # noqa: PLC0415
-
-    return version(package)
+    return __version__
 
 
 def enable_debug_message() -> None:  # pragma: no cover
