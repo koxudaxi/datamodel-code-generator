@@ -1,0 +1,71 @@
+# Mirrored from .gitignore
+.tox/
+.*_cache
+__pycache__
+src/datamodel_code_generator/_version.py
+coverage.xml
+.coverage
+.idea/
+.vscode/
+site/
+tests/cli_doc/.cli_doc_collection.json
+docs/assets/playground/generated/
+
+# Docker-specific
+# Git history and metadata
+.git/
+.gitignore
+
+# Environment files — never bake secrets into the image
+.env
+.env.*
+!.env.example
+
+# Documentation
+*.md
+docs/
+LICENSE
+CHANGELOG*
+
+# CI/CD configuration
+.github/
+.gitlab/
+
+# Docker tooling
+docker-compose.yml
+docker-compose*.yml
+.dockerignore
+
+# Development tooling
+Makefile
+.editorconfig
+
+# Test suites and coverage
+tests/
+test/
+spec/
+__tests__/
+coverage/
+.pytest_cache/
+.nyc_output/
+
+# Language runtime caches
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+vendor/
+
+# Build artefacts
+dist/
+build/
+target/
+out/
+
+# IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*.log
