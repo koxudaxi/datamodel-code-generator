@@ -1393,6 +1393,10 @@ class ModelResolver:  # noqa: PLR0904
         """Get a valid field name for the specified model type."""
         return self.field_name_resolvers[model_type].get_valid_name(name, excludes)
 
+    def _get_unique_field_name(self, name: str) -> str:
+        """Return a unique class field name without creating a Reference."""
+        return self._get_unique_name(self.get_valid_field_name(name, model_type=ModelType.CLASS))
+
     def get_valid_field_name_and_alias(
         self,
         field_name: str,
