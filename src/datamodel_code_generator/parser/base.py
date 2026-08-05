@@ -3554,7 +3554,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     all_class_names.add(new_class_name)
                 elif not rename_type:
                     resolver._reset_for_reuse(reference_type_names)  # noqa: SLF001
-                    new_filed_name = resolver.add(["field"], cast("str", filed_name)).name
+                    new_filed_name = resolver._get_unique_field_name(cast("str", filed_name))  # noqa: SLF001
                     if filed_name != new_filed_name:
                         field.alias = filed_name
                         field.name = new_filed_name
