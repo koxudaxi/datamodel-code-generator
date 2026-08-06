@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - Dockerfile
+      - .dockerignore
       - .github/actions/smoke-docker-image/action.yml
       - .github/workflows/docker.yaml
       - .github/workflows/publish.yaml
@@ -13,6 +14,7 @@ on:
     branches: [main]
     paths:
       - Dockerfile
+      - .dockerignore
       - .github/actions/smoke-docker-image/action.yml
       - .github/workflows/docker.yaml
       - .github/workflows/publish.yaml
