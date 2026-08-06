@@ -113,7 +113,7 @@ def _is_sha256(value: object) -> TypeGuard[str]:
 def _validate_persisted_display_url(url: str) -> None:
     """Reject malformed display URLs before lock verification can proceed."""
     parsed, _ = _split_remote_url(url, persisted=True)
-    has_sensitive_url_parts = any((parsed.query, parsed.fragment, parsed.username, parsed.password))
+    has_sensitive_url_parts = any((parsed.path, parsed.query, parsed.fragment, parsed.username, parsed.password))
     if parsed.scheme not in {"http", "https"} or has_sensitive_url_parts:
         msg = "Invalid remote lock resource URL"
         raise RemoteLockError(msg)

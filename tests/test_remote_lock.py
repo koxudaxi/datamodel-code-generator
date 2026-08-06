@@ -717,6 +717,7 @@ def test_remote_lock_rejects_invalid_request_scheme_host_and_port(tmp_path: Path
     [
         "ftp://schemas.example",
         "https:///schema.json",
+        "https://schemas.example/schema.json",
         "https://schemas.example:bad",
         "https://schemas.example:65536",
     ],
