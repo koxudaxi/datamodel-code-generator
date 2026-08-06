@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from datamodel_code_generator import _publication as publication_module
 from datamodel_code_generator import remote_lock
 from datamodel_code_generator.remote_lock import RemoteLockError, RemoteReferenceLock
 
@@ -250,7 +251,7 @@ def test_remote_lock_cleans_up_after_atomic_write_failures(tmp_path: Path, monke
         message = "full"
         raise OSError(message)
 
-    monkeypatch.setattr(remote_lock.tempfile, "NamedTemporaryFile", raise_os_error)
+    monkeypatch.setattr(publication_module.StagingDirectory, "create_file", raise_os_error)
     with pytest.raises(RemoteLockError, match="Unable to update remote lock"):
         updater.commit()
     assert not lockfile.exists()
@@ -258,8 +259,7 @@ def test_remote_lock_cleans_up_after_atomic_write_failures(tmp_path: Path, monke
     updater = RemoteReferenceLock.open(lockfile, update=True, locked=False)
     updater.record_response("https://schemas.example/schema.json", None, None, b"schema")
     monkeypatch.undo()
-    monkeypatch.setattr(remote_lock.Path, "replace", raise_os_error)
-    monkeypatch.setattr(remote_lock.Path, "unlink", raise_os_error)
+    monkeypatch.setattr(publication_module.os, "replace", raise_os_error)
     with pytest.raises(RemoteLockError, match="Unable to update remote lock"):
         updater.commit()
 
@@ -281,28 +281,7 @@ def test_remote_lock_atomic_failures_remove_temps_and_allow_retry(
         raise OSError(message)
 
     if failure == "write":
-        original_named_temporary_file = remote_lock.tempfile.NamedTemporaryFile
-
-        class FailingTemporaryFile:
-            def __init__(self, temporary_file: object) -> None:
-                self._temporary_file = temporary_file
-                self.name = temporary_file.name  # type: ignore[attr-defined]
-
-            def __enter__(self) -> FailingTemporaryFile:  # noqa: PYI034
-                self._temporary_file.__enter__()  # type: ignore[attr-defined]
-                return self
-
-            def __exit__(self, *args: object) -> None:
-                self._temporary_file.__exit__(*args)  # type: ignore[attr-defined]
-
-            def write(self, _content: str) -> None:
-                raise_os_error()
-
-        monkeypatch.setattr(
-            remote_lock.tempfile,
-            "NamedTemporaryFile",
-            lambda **kwargs: FailingTemporaryFile(original_named_temporary_file(**kwargs)),
-        )
+        monkeypatch.setattr(RemoteReferenceLock, "_write_staged_content", raise_os_error)
     else:
         monkeypatch.setattr(remote_lock.os, "fsync", raise_os_error)
 

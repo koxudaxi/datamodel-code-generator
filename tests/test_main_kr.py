@@ -17,8 +17,9 @@ import pydantic
 import pytest
 from packaging import version
 
+import datamodel_code_generator.__main__ as main_module
+import datamodel_code_generator._publication as publication_module
 from datamodel_code_generator import MIN_VERSION, Error, chdir, inferred_message
-from datamodel_code_generator import __main__ as main_module
 from datamodel_code_generator.__main__ import (
     Exit,
     JobPlan,
@@ -2555,7 +2556,7 @@ def test_backup_existing_target_retries_collisions_without_overwriting(
     os.utime(target, ns=(timestamp_ns, timestamp_ns))
     colliding_backup.write_text("unrelated\n", encoding="utf-8")
     candidate_names = iter((colliding_backup.name, expected_backup.name))
-    monkeypatch.setattr(main_module, "_backup_name", lambda _target_name: next(candidate_names))
+    monkeypatch.setattr(publication_module, "_backup_name", lambda _target_name: next(candidate_names))
 
     if copy_backup:
         monkeypatch.setattr(
@@ -2591,7 +2592,7 @@ def test_backup_existing_symlink_retries_collision_without_overwriting(
         pytest.skip("this platform cannot create symlinks")
     colliding_backup.write_text("unrelated\n", encoding="utf-8")
     candidate_names = iter((colliding_backup.name, expected_backup.name))
-    monkeypatch.setattr(main_module, "_backup_name", lambda _target_name: next(candidate_names))
+    monkeypatch.setattr(publication_module, "_backup_name", lambda _target_name: next(candidate_names))
 
     backup = _backup_existing_target(target)
 
@@ -2659,13 +2660,13 @@ def test_pyproject_jobs_post_publish_check_does_not_recreate_missing_parent(
     target_parent.mkdir()
     staged_file.write_text("generated\n", encoding="utf-8")
     target.write_text("stale\n", encoding="utf-8")
-    original_matches = main_module._directory_fd_matches_path
+    original_matches = publication_module._directory_fd_matches_path
 
     def detach_before_postcheck(directory_fd: int, path: Path) -> bool:
         path.rename(detached_parent)
         return original_matches(directory_fd, path)
 
-    monkeypatch.setattr(main_module, "_directory_fd_matches_path", detach_before_postcheck)
+    monkeypatch.setattr(publication_module, "_directory_fd_matches_path", detach_before_postcheck)
 
     with pytest.raises(OSError, match="destination changed during publication"):
         _publish_staged_files([(staged_file, target)])
@@ -2690,7 +2691,9 @@ def test_pyproject_jobs_rollback_helpers_report_unrecoverable_paths(
 
     backup = tmp_path / "backup.py"
     backup.write_text("stale\n", encoding="utf-8")
-    monkeypatch.setattr(main_module, "_restore_backup", lambda *_args: (_ for _ in ()).throw(OSError("restore failed")))
+    monkeypatch.setattr(
+        publication_module, "_restore_backup", lambda *_args: (_ for _ in ()).throw(OSError("restore failed"))
+    )
     assert _rollback_published_file(_PublishedFile(target, backup)) == [target, backup]
 
     nonempty_directory = tmp_path / "generated"
@@ -2705,7 +2708,7 @@ def test_pyproject_jobs_parent_and_rollback_helpers_handle_races(
 ) -> None:
     """Keep transaction journals accurate when competing filesystem changes win a race."""
     created_directories: list[Path] = []
-    monkeypatch.setattr(main_module, "_create_directory", lambda _directory: False)
+    monkeypatch.setattr(publication_module, "_create_directory", lambda _directory: False)
     _create_target_parent(tmp_path / "generated" / "model.py", created_directories)
     assert created_directories == []
 
@@ -2776,7 +2779,7 @@ def test_pyproject_jobs_publish_reports_failed_rollback(tmp_path: Path, monkeypa
     monkeypatch.setattr(main_module, "_replace_source", fail_publication)
     fail_publication(target, target, None)
     monkeypatch.setattr(
-        main_module,
+        publication_module,
         "_restore_backup_at",
         lambda *_args: (_ for _ in ()).throw(OSError("rollback failed")),
     )

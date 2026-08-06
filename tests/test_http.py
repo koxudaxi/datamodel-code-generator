@@ -1367,7 +1367,7 @@ def test_cli_preserves_existing_lock_when_atomic_update_fails(
         b'{"title":"ChangedPet","type":"object"}',
     )
     try:
-        mocker.patch("datamodel_code_generator.__main__._publish_staged_files_at", side_effect=OSError("full"))
+        mocker.patch("datamodel_code_generator._publication._publish_staged_files_at", side_effect=OSError("full"))
         run_main_with_args(
             common_args,
             expected_exit=Exit.ERROR,
@@ -1670,8 +1670,9 @@ def test_cli_does_not_write_through_a_lock_parent_symlink_swap(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Lock staging remains in its pre-generation transaction directory after a path swap."""
+    """Lock staging rejects an attacker-owned name and stays bound after a parent swap."""
     from datamodel_code_generator import __main__ as main_module
+    from datamodel_code_generator import _publication as publication_module
 
     mocker.stopall()
     lock_parent = tmp_path / "locks"
@@ -1679,6 +1680,8 @@ def test_cli_does_not_write_through_a_lock_parent_symlink_swap(
     outside = tmp_path / "outside"
     lock_parent.mkdir()
     outside.mkdir()
+    attacker_staging = lock_parent / ".datamodel-codegen-lock-attacker"
+    attacker_staging.symlink_to(outside, target_is_directory=True)
     original_generate = main_module.run_generate_from_config
 
     def swap_lock_parent(*args: object, **kwargs: object) -> object:
@@ -1687,6 +1690,15 @@ def test_cli_does_not_write_through_a_lock_parent_symlink_swap(
         return original_generate(*args, **kwargs)
 
     mocker.patch("datamodel_code_generator.__main__.run_generate_from_config", side_effect=swap_lock_parent)
+    mocker.patch.object(
+        publication_module,
+        "_private_name",
+        side_effect=(
+            ".datamodel-codegen-lock-attacker",
+            ".datamodel-codegen-lock-owned",
+            ".remote.lock-owned",
+        ),
+    )
     try:
         run_main_with_args(
             [
@@ -1707,6 +1719,8 @@ def test_cli_does_not_write_through_a_lock_parent_symlink_swap(
             expected_stderr_contains="could not publish batch output",
         )
         assert not (outside / "remote.lock").exists()
+        assert (moved_parent / attacker_staging.name).is_symlink()
+        assert not (moved_parent / ".datamodel-codegen-lock-owned").exists()
     finally:
         if lock_parent.is_symlink():
             lock_parent.unlink()
@@ -1751,7 +1765,7 @@ def test_cli_rolls_back_stdout_metadata_and_lock_when_publication_fails(
         b'{"title":"ChangedPet","type":"object"}',
     )
     try:
-        mocker.patch("datamodel_code_generator.__main__._publish_staged_files_at", side_effect=OSError("full"))
+        mocker.patch("datamodel_code_generator._publication._publish_staged_files_at", side_effect=OSError("full"))
         run_main_with_args(
             common_args,
             expected_exit=Exit.ERROR,

@@ -423,6 +423,11 @@ class WatchDependencies(_Weakrefable):
         with self._lock:
             self._verified_remote_locks = intent.copy()
 
+    def merge_remote_lock_intent(self, intent: set[Path]) -> None:
+        """Retain lock paths verified by a failed candidate for fail-closed recovery."""
+        with self._lock:
+            self._verified_remote_locks.update(intent)
+
     def add_file(self, path: Path | None) -> None:
         """Add one static local file dependency."""
         if path is None:

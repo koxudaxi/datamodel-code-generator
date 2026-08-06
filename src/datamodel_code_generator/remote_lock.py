@@ -22,6 +22,8 @@ from urllib.parse import SplitResult, urlsplit, urlunsplit
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from datamodel_code_generator._publication import StagedFile, StagingDirectory
+
 
 _LOCK_VERSION = 1
 _SHA256_PREFIX = "sha256:"
@@ -173,6 +175,8 @@ class RemoteReferenceLock:
     _seen: dict[str, RemoteLockEntry] = field(default_factory=dict)
     _committed: bool = False
     _staged_path: Path | None = None
+    _staged_source: StagedFile | None = None
+    _staging_directory: StagingDirectory | None = None
 
     @classmethod
     def open(cls, path: Path, *, update: bool, locked: bool) -> RemoteReferenceLock:
@@ -237,7 +241,7 @@ class RemoteReferenceLock:
             lock_file.write("\n  ]")
         lock_file.write(f',\n  "version": {_LOCK_VERSION}\n}}\n')
 
-    def stage(self, staging_directory: Path | None = None) -> Path | None:
+    def stage(self, staging_directory: StagingDirectory | Path | None = None) -> StagedFile | Path | None:
         """Write the updated lock into a pre-existing private staging directory.
 
         The caller owns publication so batch output, metadata, and every lock
@@ -246,9 +250,33 @@ class RemoteReferenceLock:
         """
         if self._committed or not self.update:
             return None
+        if self._staged_source is not None:
+            return self._staged_source
         if self._staged_path is not None:
             return self._staged_path
         try:
+            if staging_directory is not None and not isinstance(staging_directory, Path):
+                from datamodel_code_generator._publication import StagedFile  # noqa: PLC0415
+
+                file_fd, name = staging_directory.create_file(prefix=f".{self.path.name}.")
+                try:
+                    with os.fdopen(file_fd, "w", encoding="utf-8") as temporary_file:
+                        self._write_staged_content(temporary_file)
+                        temporary_file.flush()
+                        os.fsync(temporary_file.fileno())
+                except BaseException:
+                    staging_directory.discard_file(name)
+                    raise
+                staged_path = staging_directory.path / name if staging_directory.directory_fd is None else None
+                self._staged_source = StagedFile(
+                    staged_path,
+                    self.path,
+                    self.path,
+                    source_directory_fd=staging_directory.directory_fd,
+                    source_name=name if staging_directory.directory_fd is not None else None,
+                )
+                self._staging_directory = staging_directory
+                return self._staged_source
             with contextlib.ExitStack() as cleanup:
                 temporary_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
                     mode="w",
@@ -274,6 +302,11 @@ class RemoteReferenceLock:
 
     def discard_stage(self) -> None:
         """Remove a staged but unpublished update after a failed transaction."""
+        if self._staged_source is not None and self._staging_directory is not None:
+            source_name = self._staged_source.source_name or cast("Path", self._staged_source.staged_file).name
+            self._staging_directory.discard_file(source_name)
+            self._staged_source = None
+            self._staging_directory = None
         if self._staged_path is not None:
             _remove_temporary_file(self._staged_path)
             self._staged_path = None
@@ -282,15 +315,42 @@ class RemoteReferenceLock:
         """Mark the collector committed only after its transaction publishes."""
         self._committed = True
         self._staged_path = None
+        self._staged_source = None
+        self._staging_directory = None
 
     def commit(self) -> None:
         """Atomically persist a successful explicit update at most once."""
-        if (staged_path := self.stage()) is None:
+        if self._committed or not self.update:
             return
+        from datamodel_code_generator._publication import (  # noqa: PLC0415
+            StagedFile,
+            StagingDirectory,
+            close_anchor,
+            publication_anchor,
+            publish_staged_files,
+        )
+
+        anchor = None
+        staging_directory = None
         try:
-            staged_path.replace(self.path)
+            anchor = publication_anchor(self.path.parent)
+            staging_directory = StagingDirectory.create(anchor, prefix=".datamodel-codegen-lock-")
+            staged_source = self.stage(staging_directory)
+            if staged_source is None:  # pragma: no cover - update mode always stages once
+                return
+            if isinstance(staged_source, Path):  # pragma: no cover - descriptor staging returns StagedFile
+                staged_source = StagedFile(staged_source, self.path, self.path)
+            publish_staged_files((staged_source._replace(anchor=anchor),))
         except OSError as exc:
             self.discard_stage()
             msg = f"Unable to update remote lock {self.path}: {exc}"
             raise RemoteLockError(msg) from exc
-        self.mark_committed()
+        else:
+            self.mark_committed()
+        finally:
+            if staging_directory is not None:
+                with contextlib.suppress(OSError):
+                    staging_directory.cleanup()
+            if anchor is not None:
+                with contextlib.suppress(OSError):
+                    close_anchor(anchor)
