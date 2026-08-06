@@ -115,6 +115,7 @@ def _watch_changes(
     poll_delay_ms = max(1, min(300, int(context.config.watch_delay * 1000)))
     if force_polling:
         context.dependencies.enable_polling_fingerprints()
+    pending_polling_fallback = False
     try:
         for changes in context.watchfiles.watch(
             *watch_roots,
@@ -127,8 +128,16 @@ def _watch_changes(
             watch_filter=_watch_filter(context.dependencies, accept_directory_events=force_polling),
             yield_on_timeout=force_polling,
         ):
-            if not changes and not context.dependencies.polling_dependencies_changed():
-                continue
+            if not changes:
+                if not context.dependencies.polling_dependencies_changed():
+                    pending_polling_fallback = False
+                    continue
+                if not pending_polling_fallback:
+                    pending_polling_fallback = True
+                    continue
+                pending_polling_fallback = False
+            else:
+                pending_polling_fallback = False
             if (
                 changes
                 and force_polling

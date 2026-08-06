@@ -1794,7 +1794,7 @@ def test_watch_dependencies_ignore_unreadable_or_unrelated_polling_directories(
 def test_watch_polling_filters_unchanged_timeouts_and_late_directory_events(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Only a fingerprint-changing timeout reaches the regeneration hand-off."""
+    """A second fingerprint-changing timeout reaches the regeneration hand-off."""
     from datamodel_code_generator import watch as watch_module
     from datamodel_code_generator.__main__ import Config
     from datamodel_code_generator.watch_dependencies import WatchDependencies
@@ -1814,6 +1814,7 @@ def test_watch_polling_filters_unchanged_timeouts_and_late_directory_events(
             yield set()
             yield {(None, str(tmp_path))}
             replacement.replace(input_file)
+            yield set()
             yield set()
 
     monkeypatch.setattr(watch_module.sys, "platform", "darwin")
