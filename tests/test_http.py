@@ -1613,7 +1613,10 @@ def test_cli_diff_locks_old_and_new_remote_closures_without_committing_on_differ
             b'{"title":"Changed","type":"object","properties":{"age":{"type":"integer"}}}',
         )
         run_main_with_args([*common_args, "--update-lock"], expected_exit=Exit.DIFF, capsys=capsys)
-        assert_output(capsys.readouterr().out, HTTP_E2E_DATA_PATH / "expected/http/remote_lock_diff_changed.txt")
+        assert_output(
+            capsys.readouterr().out.replace(" \n", "\n"),
+            HTTP_E2E_DATA_PATH / "expected/http/remote_lock_diff_changed.txt",
+        )
         assert_http_e2e_file(lockfile, "remote_lock_diff_union.txt", transform=normalize_lockfile)
         run_main_with_args(
             [*common_args, "--locked"],
