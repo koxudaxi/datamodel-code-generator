@@ -856,6 +856,59 @@ def test_cli_locks_local_http_reference_mirrors(
     )
 
 
+@pytest.mark.parametrize(
+    ("mirror_content", "expected_error"),
+    [
+        (b"\xff", "UnicodeDecodeError"),
+        (b"[]", "TypeError: Expected dict, got list"),
+    ],
+)
+def test_cli_reports_invalid_locked_local_http_mirror_content(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    mirror_content: bytes,
+    expected_error: str,
+) -> None:
+    """Local mirror decode and root-shape failures use clean source-aware diagnostics."""
+    root_path = tmp_path / "root.json"
+    root_path.write_text(
+        json.dumps({
+            "title": "Root",
+            "type": "object",
+            "properties": {"child": {"$ref": "https://registry.example/child.json"}},
+        }),
+        encoding="utf-8",
+    )
+    mirror_path = tmp_path / "schemas" / "registry.example" / "child.json"
+    mirror_path.parent.mkdir(parents=True)
+    mirror_path.write_bytes(mirror_content)
+    output_path = tmp_path / "output.py"
+    lockfile = tmp_path / "remote.lock"
+
+    run_main_with_args(
+        [
+            "--input",
+            str(root_path),
+            "--output",
+            str(output_path),
+            "--input-file-type",
+            "jsonschema",
+            "--http-local-ref-path",
+            str(tmp_path / "schemas"),
+            "--update-lock",
+            "--lockfile",
+            str(lockfile),
+        ],
+        expected_exit=Exit.ERROR,
+    )
+    stderr = capsys.readouterr().err
+    assert f"Invalid file format for jsonschema at {mirror_path}" in stderr
+    assert expected_error in stderr
+    assert "Traceback" not in stderr
+    assert not output_path.exists()
+    assert not lockfile.exists()
+
+
 @pytest.mark.skipif(os.name == "nt", reason="the shared local mirror uses symlinks")
 def test_cli_locks_each_remote_identity_that_uses_the_same_local_mirror(
     tmp_path: Path,

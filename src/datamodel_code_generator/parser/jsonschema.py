@@ -8715,7 +8715,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._remote_response_observer(ref, self.http_headers, self.http_query_parameters, data)
         try:
             result = _load_parser_source_data_from_path_bytes(path, data, self.encoding)
-        except (json.JSONDecodeError, *get_yaml_parse_errors()) as exc:
+        except (UnicodeDecodeError, json.JSONDecodeError, TypeError, *get_yaml_parse_errors()) as exc:
             raise InvalidFileFormatError(exc, self._input_file_type, source=path) from exc
         if isinstance(result, dict):
             return result
