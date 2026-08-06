@@ -74,6 +74,7 @@ def test_output_capabilities_for_standard_generation_types(
     ) = expected_capabilities
 
     assert context.supports_annotated_constraints is supports_annotated_constraints
+    assert context.supports_internal_annotated_constraints is supports_annotated_constraints
     assert context.supports_boolean_literals is supports_boolean_literals
     assert context.requires_tagged_union_discriminator is requires_tagged_union_discriminator
     assert context.requires_additional_properties_reference_classes is requires_additional_properties_reference_classes
@@ -124,6 +125,7 @@ def test_pydantic_root_model_variants_preserve_annotated_constraint_capability(
     )
 
     assert context.supports_annotated_constraints is True
+    assert context.supports_internal_annotated_constraints is True
     assert context.resolve_nested_constrained_model_type() is TypeAliasTypeBackport
 
 
@@ -156,6 +158,7 @@ def test_annotated_constraint_capability_requires_both_gates(
     )
 
     assert context.supports_annotated_constraints is False
+    assert context.supports_internal_annotated_constraints is configured_types_are_builtin
     assert context.supports_boolean_literals is True
     assert context.requires_tagged_union_discriminator is False
     assert context.requires_additional_properties_reference_classes is False
@@ -218,6 +221,7 @@ def test_mixed_builtin_generation_contexts_fail_closed_for_annotated_constraints
     expected_capabilities = _OUTPUT_CAPABILITIES[data_model_target]
 
     assert context.supports_annotated_constraints is False
+    assert context.supports_internal_annotated_constraints is False
     assert context.supports_boolean_literals is expected_capabilities[1]
     assert context.requires_tagged_union_discriminator is expected_capabilities[2]
     assert context.requires_additional_properties_reference_classes is expected_capabilities[3]
@@ -351,6 +355,7 @@ def test_custom_generation_type_subclasses_fail_closed_for_annotated_constraints
 
     assert parser._configured_generation_types_are_builtin is False
     assert parser._output_model_context.supports_annotated_constraints is False
+    assert parser._output_model_context.supports_internal_annotated_constraints is False
     assert parser._output_model_context.supports_boolean_literals is True
     assert parser._output_model_context.requires_tagged_union_discriminator is False
     assert parser._output_model_context.requires_additional_properties_reference_classes is False

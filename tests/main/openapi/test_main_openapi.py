@@ -97,6 +97,39 @@ def test_main(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_array_type_union_constraints(output_file: Path) -> None:
+    """Keep OpenAPI array and string constraints on their matching union branches."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "array_type_union_constraints.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="array_type_union_constraints.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+            "--use-standard-collections",
+            "--use-union-operator",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+    for valid_json, invalid_json, expected_error_type in (
+        ('{"value":"ok"}', '{"value":"x"}', "string_too_short"),
+        ('{"value":["ok"]}', '{"value":[]}', "string_type"),
+    ):
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="openapi_array_type_union_constraints",
+            model_name="Payload",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type=expected_error_type,
+        )
+
+
 def test_main_inflect_import_without_typeguard_leak(output_file: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """OpenAPI generation should keep expected output when inflect starts cold."""
     monkeypatch.delitem(sys.modules, "inflect", raising=False)

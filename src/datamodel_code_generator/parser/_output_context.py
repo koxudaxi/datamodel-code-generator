@@ -21,6 +21,7 @@ class OutputModelContext:
         "requires_tagged_union_discriminator",
         "supports_annotated_constraints",
         "supports_boolean_literals",
+        "supports_internal_annotated_constraints",
     )
 
     def __init__(  # noqa: PLR0913
@@ -29,6 +30,7 @@ class OutputModelContext:
         data_model_type: type[DataModel],
         data_model_root_type: type[DataModel],
         supports_annotated_constraints: bool,
+        supports_internal_annotated_constraints: bool,
         supports_boolean_literals: bool,
         requires_tagged_union_discriminator: bool,
         requires_additional_properties_reference_classes: bool,
@@ -36,6 +38,7 @@ class OutputModelContext:
         self._data_model_type = data_model_type
         self._data_model_root_type = data_model_root_type
         self.supports_annotated_constraints = supports_annotated_constraints
+        self.supports_internal_annotated_constraints = supports_internal_annotated_constraints
         self.supports_boolean_literals = supports_boolean_literals
         self.requires_tagged_union_discriminator = requires_tagged_union_discriminator
         self.requires_additional_properties_reference_classes = requires_additional_properties_reference_classes
@@ -54,9 +57,8 @@ class OutputModelContext:
         """Resolve compatible capabilities without depending on an output backend."""
         context = data_model_type.ANNOTATED_CONSTRAINTS_CONTEXT
         root_context = data_model_root_type.ANNOTATED_CONSTRAINTS_CONTEXT
-        supports_annotated_constraints = (
-            use_annotated
-            and configured_types_are_builtin
+        supports_internal_annotated_constraints = (
+            configured_types_are_builtin
             and context is not None
             and data_model_type.SUPPORTS_ANNOTATED_CONSTRAINTS
             and data_model_root_type.SUPPORTS_ANNOTATED_CONSTRAINTS
@@ -69,7 +71,8 @@ class OutputModelContext:
         return cls(
             data_model_type=data_model_type,
             data_model_root_type=data_model_root_type,
-            supports_annotated_constraints=supports_annotated_constraints,
+            supports_annotated_constraints=use_annotated and supports_internal_annotated_constraints,
+            supports_internal_annotated_constraints=supports_internal_annotated_constraints,
             supports_boolean_literals=data_model_type.SUPPORTS_BOOLEAN_LITERAL,
             requires_tagged_union_discriminator=data_model_type.REQUIRES_TAGGED_UNION_DISCRIMINATOR,
             requires_additional_properties_reference_classes=(
