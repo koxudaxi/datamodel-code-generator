@@ -875,6 +875,7 @@ class _HTTPFetchSession:
         timeout: float = DEFAULT_HTTP_TIMEOUT,
         *,
         allow_private_network: bool = False,
+        encoding: str = "utf-8",
     ) -> str:
         """Fetch one URL while reusing this parser run's validated resources."""
         return _get_body(
@@ -887,6 +888,7 @@ class _HTTPFetchSession:
             http_backend=self._http_backend,
             session=self,
             response_observer=self._response_observer,
+            encoding=encoding,
         )
 
     def close(self) -> None:
@@ -1096,6 +1098,7 @@ def get_body(  # noqa: PLR0913
     http_backend: HTTPBackend = HTTPBackend.AUTO,
     response_observer: Callable[[str, Sequence[tuple[str, str]] | None, Sequence[tuple[str, str]] | None, bytes], None]
     | None = None,
+    encoding: str = "utf-8",
 ) -> str:
     """Fetch schema content from a URL with redirect validation and DNS pinning.
 
@@ -1121,10 +1124,11 @@ def get_body(  # noqa: PLR0913
         allow_private_network=allow_private_network,
         http_backend=http_backend,
         response_observer=response_observer,
+        encoding=encoding,
     )
 
 
-def _get_body(  # noqa: PLR0913
+def _get_body(  # noqa: PLR0913, PLR0914
     url: str,
     headers: Sequence[tuple[str, str]] | None,
     ignore_tls: bool,  # noqa: FBT001
@@ -1136,6 +1140,7 @@ def _get_body(  # noqa: PLR0913
     session: _HTTPFetchSession | None = None,
     response_observer: Callable[[str, Sequence[tuple[str, str]] | None, Sequence[tuple[str, str]] | None, bytes], None]
     | None = None,
+    encoding: str = "utf-8",
 ) -> str:
     """Fetch one schema body, optionally reusing parser-scoped network state."""
     http_stack = session.http_stack if session is not None else _get_http_stack(http_backend)
@@ -1148,6 +1153,8 @@ def _get_body(  # noqa: PLR0913
         resolve_host = session.get_ips_from_host
         get_response = session.get_response
 
+    original_url = url
+    original_headers = headers
     current_url = url
     current_headers = headers
     for redirect_count in range(MAX_HTTP_REDIRECTS + 1):
@@ -1173,8 +1180,6 @@ def _get_body(  # noqa: PLR0913
         except Exception as exc:
             msg = f"Failed to fetch {current_url}: {exc}"
             raise SchemaFetchError(msg) from exc
-        if response_observer is not None:
-            response_observer(current_url, current_headers, request_query_parameters, response.content)
         if (redirect_url := _get_redirect_url(http_stack.httpx, current_url, response)) is None:
             break
         current_headers = _get_redirect_headers(current_headers, current_url, redirect_url)
@@ -1193,7 +1198,16 @@ def _get_body(  # noqa: PLR0913
             f"(Content-Type: {content_type}). Expected JSON or YAML schema content."
         )
         raise SchemaFetchError(msg)
-    return response.text
+    # Decode the raw entity explicitly. HTTP client charset heuristics must not
+    # change how the same locked bytes are interpreted between runs.
+    body = response.content
+    text = body.decode(encoding)
+    if response_observer is not None:
+        # Redirects are transport details. The lock identity remains the
+        # caller's original logical request while the digest covers only the
+        # final successful entity body.
+        response_observer(original_url, original_headers, query_parameters, body)
+    return text
 
 
 def join_url(  # noqa: PLR0912

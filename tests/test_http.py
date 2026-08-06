@@ -185,7 +185,7 @@ def test_get_body_succeeds_with_json_response(mocker: MockerFixture) -> None:
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.headers = {"content-type": "application/json"}
-    mock_response.text = '{"type": "object"}'
+    mock_response.content = b'{"type": "object"}'
     mocker.patch.object(_get_httpx(), "get", return_value=mock_response)
 
     result = get_body("https://example.com/schema.json", allow_private_network=True)
@@ -197,7 +197,7 @@ def test_get_body_succeeds_without_content_type(mocker: MockerFixture) -> None:
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.headers = {}
-    mock_response.text = '{"type": "object"}'
+    mock_response.content = b'{"type": "object"}'
     mocker.patch.object(_get_httpx(), "get", return_value=mock_response)
 
     result = get_body("https://example.com/schema.json", allow_private_network=True)
@@ -314,7 +314,7 @@ def test_get_body_handles_legacy_ipv4_literal_boundaries(mocker: MockerFixture, 
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.headers = {"content-type": "application/json"}
-    mock_response.text = '{"type": "object"}'
+    mock_response.content = b'{"type": "object"}'
     mock_get = mocker.patch.object(_get_httpx(), "get", return_value=mock_response)
 
     if url == "http://127.0.1/schema.json":
@@ -332,7 +332,7 @@ def test_get_body_allows_unsafe_url_host_with_explicit_opt_in(mocker: MockerFixt
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.headers = {"content-type": "application/json"}
-    mock_response.text = '{"type": "object"}'
+    mock_response.content = b'{"type": "object"}'
     mock_get = mocker.patch.object(_get_httpx(), "get", return_value=mock_response)
 
     result = get_body("http://127.0.0.1/schema.json", allow_private_network=True)
@@ -401,7 +401,7 @@ def test_get_body_ignores_malformed_addrinfo_records(mocker: MockerFixture) -> N
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.headers = {"content-type": "application/json"}
-    mock_response.text = '{"type": "object"}'
+    mock_response.content = b'{"type": "object"}'
     mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response", return_value=mock_response)
 
     result = get_body("https://metadata.example.com/schema.json")
@@ -420,7 +420,7 @@ def test_get_body_pins_validated_dns_resolution(mocker: MockerFixture) -> None:
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.headers = {"content-type": "application/json"}
-    mock_response.text = '{"type": "object"}'
+    mock_response.content = b'{"type": "object"}'
     mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response", return_value=mock_response)
 
     result = get_body("https://metadata.example.com/schema.json")
@@ -451,7 +451,7 @@ def test_get_body_pins_idn_hostname_as_canonical_dns_name(
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.headers = {"content-type": "application/json"}
-    mock_response.text = '{"type": "object"}'
+    mock_response.content = b'{"type": "object"}'
     mock_fetch = mocker.patch("datamodel_code_generator.http._get_http_response", return_value=mock_response)
 
     result = get_body(url)
@@ -592,7 +592,10 @@ def test_cli_updates_and_verifies_remote_lock_for_root_and_nested_refs(
         lock_content = lockfile.read_text(encoding="utf-8")
         lock_data = json.loads(lock_content)
         assert lock_data["version"] == 1
-        assert sorted(resource["url"] for resource in lock_data["resources"]) == [child_url, root_url]
+        assert sorted(resource["url"] for resource in lock_data["resources"]) == [
+            local_http_server,
+            local_http_server,
+        ]
         assert "Authorization" not in lock_content
         assert "Bearer lock-secret" not in lock_content
         assert "?" not in lock_content
@@ -661,12 +664,14 @@ def test_cli_locked_remote_lock_rejects_changed_real_response(
         _SchemaHandler.routes["/pet.json"] = original_response
 
 
-def test_cli_locks_every_real_redirect_response(
+def test_cli_locks_final_real_redirect_response_under_the_original_request(
     mocker: MockerFixture,
     local_http_server: str,
     tmp_path: Path,
 ) -> None:
-    """Persist both redirect and final response bytes, then verify both on rerun."""
+    """Persist only the final body, under the logical request that redirected."""
+    from datamodel_code_generator.remote_lock import _request_sha256, _sha256
+
     mocker.stopall()
     redirect_url = f"{local_http_server}/redirect.json"
     final_url = f"{local_http_server}/final.json"
@@ -690,7 +695,9 @@ def test_cli_locks_every_real_redirect_response(
             transform=lambda output: output.replace(redirect_url, "http://localhost/schema.json"),
         )
         lock_data = json.loads(lockfile.read_text(encoding="utf-8"))
-        assert {resource["url"] for resource in lock_data["resources"]} == {redirect_url, final_url}
+        assert [resource["url"] for resource in lock_data["resources"]] == [local_http_server]
+        assert lock_data["resources"][0]["body_sha256"] == _sha256(_SchemaHandler.routes["/pet.json"][2])
+        assert lock_data["resources"][0]["request_sha256"] == _request_sha256(redirect_url, None, None)
 
         run_main_url_and_assert(
             url=redirect_url,
@@ -704,6 +711,22 @@ def test_cli_locks_every_real_redirect_response(
     finally:
         del _SchemaHandler.routes["/redirect.json"]
         del _SchemaHandler.routes["/final.json"]
+
+
+def test_get_body_uses_configured_encoding_despite_response_charset(
+    mocker: MockerFixture,
+    local_http_server: str,
+) -> None:
+    """Decode exactly the locked bytes using the requested encoding, not HTTPX heuristics."""
+    mocker.stopall()
+    path = "/latin-1.json"
+    _SchemaHandler.routes[path] = (200, {"content-type": "application/json; charset=utf-8"}, b'{"title":"caf\xe9"}')
+
+    try:
+        body = get_body(f"{local_http_server}{path}", allow_private_network=True, encoding="latin-1")
+        assert body == '{"title":"caf\xe9"}'
+    finally:
+        del _SchemaHandler.routes[path]
 
 
 def test_cli_locks_local_http_reference_mirrors(
@@ -744,7 +767,7 @@ def test_cli_locks_local_http_reference_mirrors(
     run_main_with_args([*common_args, "--update-lock"])
     assert_http_e2e_file(output_path, "remote_lock_nested.py")
     lock_content = lockfile.read_text(encoding="utf-8")
-    assert "https://registry.example/child.json" in lock_content
+    assert '"url": "https://registry.example"' in lock_content
 
     mirror_path.write_text(
         '{"title":"Child","type":"object","properties":{"age":{"type":"integer"}}}', encoding="utf-8"
@@ -755,6 +778,105 @@ def test_cli_locks_local_http_reference_mirrors(
         capsys=capsys,
         expected_stderr_contains="content does not match lock",
     )
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the shared local mirror uses symlinks")
+def test_cli_locks_each_remote_identity_that_uses_the_same_local_mirror(
+    tmp_path: Path,
+) -> None:
+    """A mirror cache entry cannot hide a second remote identity from lock verification."""
+    root_path = tmp_path / "root.json"
+    root_path.write_text(
+        json.dumps({
+            "title": "Root",
+            "type": "object",
+            "properties": {
+                "first": {"$ref": "https://first.example/shared.json"},
+                "second": {"$ref": "https://second.example/shared.json"},
+            },
+        }),
+        encoding="utf-8",
+    )
+    mirror_root = tmp_path / "schemas"
+    shared_path = mirror_root / "shared.json"
+    shared_path.parent.mkdir()
+    shared_path.write_text('{"title":"Shared","type":"object"}', encoding="utf-8")
+    for host in ("first.example", "second.example"):
+        host_path = mirror_root / host
+        host_path.mkdir()
+        (host_path / "shared.json").symlink_to(shared_path)
+
+    lockfile = tmp_path / "remote.lock"
+    common_args = [
+        "--input",
+        str(root_path),
+        "--output",
+        str(tmp_path / "output.py"),
+        "--input-file-type",
+        "jsonschema",
+        "--http-local-ref-path",
+        str(mirror_root),
+        "--disable-timestamp",
+        "--lockfile",
+        str(lockfile),
+    ]
+    run_main_with_args([*common_args, "--update-lock"])
+
+    resources = json.loads(lockfile.read_text(encoding="utf-8"))["resources"]
+    assert len(resources) == 2
+    assert {resource["url"] for resource in resources} == {"https://first.example", "https://second.example"}
+
+    run_main_with_args([*common_args, "--locked"])
+
+
+def test_cli_verifies_an_http_lock_through_an_equivalent_local_mirror(
+    mocker: MockerFixture,
+    local_http_server: str,
+    tmp_path: Path,
+) -> None:
+    """An HTTP-created lock remains portable when the same URL is read from a mirror."""
+    mocker.stopall()
+    path = "/portable-child.json"
+    child_url = f"{local_http_server}{path}"
+    child_body = b'{"title":"Child","type":"object"}'
+    _SchemaHandler.routes[path] = (200, {"content-type": "application/json"}, child_body)
+    root_path = tmp_path / "root.json"
+    root_path.write_text(
+        json.dumps({
+            "title": "Root",
+            "type": "object",
+            "properties": {"child": {"$ref": child_url}},
+        }),
+        encoding="utf-8",
+    )
+    lockfile = tmp_path / "remote.lock"
+    common_args = [
+        "--input",
+        str(root_path),
+        "--output",
+        str(tmp_path / "output.py"),
+        "--input-file-type",
+        "jsonschema",
+        "--allow-remote-refs",
+        "--allow-private-network",
+        "--disable-timestamp",
+        "--lockfile",
+        str(lockfile),
+    ]
+
+    try:
+        run_main_with_args([*common_args, "--update-lock"])
+        mirror_path = tmp_path / "schemas" / local_http_server.removeprefix("http://") / path.removeprefix("/")
+        mirror_path.parent.mkdir(parents=True)
+        mirror_path.write_bytes(child_body)
+        run_main_with_args([
+            *common_args,
+            "--http-local-ref-path",
+            str(tmp_path / "schemas"),
+            "--locked",
+        ])
+    finally:
+        del _SchemaHandler.routes[path]
 
 
 def test_cli_uses_default_lockfile_beside_project_pyproject(
@@ -807,8 +929,116 @@ def test_cli_uses_default_lockfile_beside_project_pyproject(
         _SchemaHandler.routes["/pet.json"] = original_response
 
 
+def test_cli_selected_lockfile_verifies_only_when_it_exists_and_update_creates_it(
+    mocker: MockerFixture,
+    local_http_server: str,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Selecting a missing lock is a no-lock run; an existing one verifies automatically."""
+    mocker.stopall()
+    path = "/selected-lock.json"
+    url = f"{local_http_server}{path}"
+    lockfile = tmp_path / "selected.lock"
+    output = tmp_path / "output.py"
+    original_body = b'{"title":"Selected","type":"object"}'
+    _SchemaHandler.routes[path] = (200, {"content-type": "application/json"}, original_body)
+    common_args = [
+        "--url",
+        url,
+        "--output",
+        str(output),
+        "--input-file-type",
+        "jsonschema",
+        "--allow-private-network",
+        "--disable-timestamp",
+        "--lockfile",
+        str(lockfile),
+    ]
+
+    try:
+        run_main_with_args(common_args)
+        assert not lockfile.exists()
+
+        run_main_with_args([*common_args, "--update-lock"])
+        recorded_lock = lockfile.read_text(encoding="utf-8")
+        run_main_with_args(common_args)
+        assert lockfile.read_text(encoding="utf-8") == recorded_lock
+
+        _SchemaHandler.routes[path] = (
+            200,
+            {"content-type": "application/json"},
+            b'{"title":"Changed","type":"object"}',
+        )
+        run_main_with_args(
+            common_args,
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="content does not match lock",
+        )
+
+        missing_locked = tmp_path / "missing.lock"
+        run_main_with_args(
+            [*common_args, "--locked", "--lockfile", str(missing_locked)],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="Remote lock file not found",
+        )
+    finally:
+        del _SchemaHandler.routes[path]
+
+
+def test_cli_lock_flags_override_pyproject_lock_mode(
+    mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    local_http_server: str,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Each explicit CLI lock mode replaces the opposite pyproject default."""
+    mocker.stopall()
+    project = tmp_path / "project"
+    project.mkdir()
+    monkeypatch.chdir(project)
+    path = "/lock-precedence.json"
+    url = f"{local_http_server}{path}"
+    lockfile = project / "datamodel-codegen.lock"
+    _SchemaHandler.routes[path] = (200, {"content-type": "application/json"}, b'{"title":"First","type":"object"}')
+    common_args = [
+        "--url",
+        url,
+        "--output",
+        str(project / "output.py"),
+        "--input-file-type",
+        "jsonschema",
+        "--allow-private-network",
+        "--disable-timestamp",
+    ]
+
+    try:
+        (project / "pyproject.toml").write_text("[tool.datamodel-codegen]\nupdate-lock = true\n", encoding="utf-8")
+        run_main_with_args(common_args)
+        original_lock = lockfile.read_text(encoding="utf-8")
+
+        _SchemaHandler.routes[path] = (200, {"content-type": "application/json"}, b'{"title":"Second","type":"object"}')
+        run_main_with_args(
+            [*common_args, "--locked"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="content does not match lock",
+        )
+        assert lockfile.read_text(encoding="utf-8") == original_lock
+
+        (project / "pyproject.toml").write_text("[tool.datamodel-codegen]\nlocked = true\n", encoding="utf-8")
+        run_main_with_args([*common_args, "--update-lock"])
+        assert lockfile.read_text(encoding="utf-8") != original_lock
+    finally:
+        del _SchemaHandler.routes[path]
+
+
 def test_generate_reuses_remote_lock_config_without_retaining_a_collector(
     mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
     local_http_server: str,
     tmp_path: Path,
 ) -> None:
@@ -816,8 +1046,9 @@ def test_generate_reuses_remote_lock_config_without_retaining_a_collector(
     from datamodel_code_generator.remote_lock import RemoteLockError
 
     mocker.stopall()
+    monkeypatch.chdir(tmp_path)
     schema_url = f"{local_http_server}/pet.json"
-    lockfile = tmp_path / "remote.lock"
+    lockfile = Path("remote.lock")
     config = GenerateConfig(
         allow_private_network=True,
         disable_timestamp=True,
@@ -1491,7 +1722,7 @@ def test_get_body_allows_redirect_to_unsafe_url_with_explicit_opt_in(mocker: Moc
     success_response = Mock()
     success_response.status_code = 200
     success_response.headers = {"content-type": "application/json"}
-    success_response.text = '{"type": "object"}'
+    success_response.content = b'{"type": "object"}'
     mock_get = mocker.patch.object(_get_httpx(), "get", side_effect=[redirect_response, success_response])
 
     result = get_body("https://example.com/schema.json", allow_private_network=True)
@@ -1515,7 +1746,7 @@ def test_get_body_follows_relative_redirect(mocker: MockerFixture) -> None:
     success_response = Mock()
     success_response.status_code = 200
     success_response.headers = {"content-type": "application/json"}
-    success_response.text = '{"type": "object"}'
+    success_response.content = b'{"type": "object"}'
     mock_fetch = mocker.patch(
         "datamodel_code_generator.http._get_http_response",
         side_effect=[redirect_response, success_response],
@@ -1632,7 +1863,7 @@ def test_get_body_drops_sensitive_headers_on_cross_origin_redirect(mocker: Mocke
     success_response = Mock()
     success_response.status_code = 200
     success_response.headers = {"content-type": "application/json"}
-    success_response.text = '{"type": "object"}'
+    success_response.content = b'{"type": "object"}'
     mock_get = mocker.patch.object(_get_httpx(), "get", side_effect=[redirect_response, success_response])
 
     result = get_body(
@@ -1670,7 +1901,7 @@ def test_get_body_does_not_restore_sensitive_headers_after_cross_origin_redirect
     success_response = Mock()
     success_response.status_code = 200
     success_response.headers = {"content-type": "application/json"}
-    success_response.text = '{"type": "object"}'
+    success_response.content = b'{"type": "object"}'
     mock_get = mocker.patch.object(
         _get_httpx(),
         "get",
@@ -1697,7 +1928,7 @@ def test_get_body_keeps_headers_on_same_origin_redirect(mocker: MockerFixture) -
     success_response = Mock()
     success_response.status_code = 200
     success_response.headers = {"content-type": "application/json"}
-    success_response.text = '{"type": "object"}'
+    success_response.content = b'{"type": "object"}'
     headers = [("Authorization", "Bearer token")]
     mock_get = mocker.patch.object(_get_httpx(), "get", side_effect=[redirect_response, success_response])
 

@@ -591,26 +591,42 @@ def _normalized_absolute_path(path: Path, *, resolve_aliases: bool = False) -> P
     return Path(os.path.abspath(expanded_path))  # noqa: PTH100
 
 
-def _validate_generation_path_conflicts(
+def _validate_generation_path_conflicts(  # noqa: PLR0912
     input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     output: Path | None,
     model_metadata: Path | None,
+    lockfile: Path | None = None,
 ) -> None:
-    if output is None and model_metadata is None:
+    if output is None and model_metadata is None and lockfile is None:
         return
 
-    absolute_output: Path | None = None
-    absolute_metadata: Path | None = None
-    if output is not None and model_metadata is not None:
-        absolute_output = _normalized_absolute_path(output)
-        if absolute_output == (absolute_metadata := _normalized_absolute_path(model_metadata)):
-            msg = f"Output and model metadata paths must be different: {absolute_output}"
-            raise Error(msg)
-        if _normalized_absolute_path(output, resolve_aliases=True) == _normalized_absolute_path(
-            model_metadata, resolve_aliases=True
-        ) or (absolute_output.exists() and absolute_metadata.exists() and absolute_output.samefile(absolute_metadata)):
-            msg = f"Output and model metadata paths must be different: {absolute_output}"
-            raise Error(msg)
+    targets = [
+        (label, path, _normalized_absolute_path(path))
+        for label, path in (
+            ("Output", output),
+            ("Model metadata", model_metadata),
+            ("Remote lock", lockfile),
+        )
+        if path is not None
+    ]
+
+    for target_index, (label, path, absolute_path) in enumerate(targets):
+        for other_label, other_path, other_absolute_path in targets[target_index + 1 :]:
+            same_path = absolute_path == other_absolute_path
+            if not same_path:
+                resolved_path = _normalized_absolute_path(path, resolve_aliases=True)
+                resolved_other_path = _normalized_absolute_path(other_path, resolve_aliases=True)
+                same_path = resolved_path == resolved_other_path or (
+                    absolute_path.exists()
+                    and other_absolute_path.exists()
+                    and absolute_path.samefile(other_absolute_path)
+                )
+            if same_path:
+                if (label, other_label) == ("Output", "Model metadata"):
+                    msg = f"Output and model metadata paths must be different: {absolute_path}"
+                else:
+                    msg = f"{label} and {other_label} paths must be different: {absolute_path}"
+                raise Error(msg)
 
     match input_:
         case Path() as input_path:
@@ -620,19 +636,12 @@ def _validate_generation_path_conflicts(
         case _:
             return
 
-    targets = tuple(
-        (label, target := absolute or _normalized_absolute_path(path), target.exists())
-        for label, path, absolute in (
-            ("Output", output, absolute_output),
-            ("Model metadata", model_metadata, absolute_metadata),
-        )
-        if path is not None
-    )
     for input_path in input_paths:
         absolute_input = _normalized_absolute_path(input_path)
         if input_path.is_dir():
             continue
-        for label, target, target_exists in targets:
+        for label, _, target in targets:
+            target_exists = target.exists()
             if target == absolute_input and input_path.exists():
                 msg = f"{label} path must not overwrite an input path: {target}"
                 raise Error(msg)
@@ -1730,24 +1739,36 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
                     path if path.is_absolute() else (caller_cwd / path.expanduser()).resolve() for path in input_paths
                 ]
 
-    _validate_generation_path_conflicts(input_, config.output, config.emit_model_metadata)
-
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     remote_lock = config.remote_lock
     owned_remote_lock: RemoteReferenceLock | None = None
-    if not config.remote_lock_resolved:
+    if config.remote_lock_resolved:
+        _validate_generation_path_conflicts(
+            input_,
+            config.output,
+            config.emit_model_metadata,
+            getattr(remote_lock, "path", None),
+        )
+    else:
         config = config.model_copy()
         default_lockfile = caller_cwd / "datamodel-codegen.lock"
-        if config.lockfile is not None or config.update_lock or config.locked or default_lockfile.is_file():
+        lockfile = config.lockfile or default_lockfile
+        if not lockfile.is_absolute():
+            lockfile = (caller_cwd / lockfile).resolve()
+        use_remote_lock = config.update_lock or config.locked or lockfile.is_file()
+        _validate_generation_path_conflicts(
+            input_,
+            config.output,
+            config.emit_model_metadata,
+            lockfile if use_remote_lock else None,
+        )
+        if use_remote_lock:
             from datamodel_code_generator.remote_lock import RemoteReferenceLock  # noqa: PLC0415
 
-            lockfile = config.lockfile or default_lockfile
-            if not lockfile.is_absolute():
-                lockfile = (caller_cwd / lockfile).resolve()
             owned_remote_lock = RemoteReferenceLock.open(
                 lockfile,
                 update=config.update_lock,
-                locked=config.locked or (config.lockfile is not None and not config.update_lock),
+                locked=config.locked,
             )
             remote_lock = owned_remote_lock
         config.resolve_remote_lock(remote_lock)
@@ -1770,6 +1791,7 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
                     allow_private_network=config.allow_private_network,
                     http_backend=config.http_backend,
                     response_observer=response_observer,
+                    encoding=config.encoding,
                 ),
             )
         case _:

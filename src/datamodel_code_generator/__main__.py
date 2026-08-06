@@ -646,6 +646,14 @@ def _get_config_class() -> type[Config]:
                     setattr(self, field_name, None)
 
             parsed_args = Config.model_validate(set_args)
+            # These switches are mutually exclusive at the command line, but a
+            # pyproject value has already been applied to ``self``. An explicit
+            # CLI mode must replace (rather than combine with) that lower
+            # precedence mode.
+            if "update_lock" in set_args:
+                self.locked = False
+            elif "locked" in set_args:
+                self.update_lock = False
             for field_name in set_args:
                 setattr(self, field_name, getattr(parsed_args, field_name))
 
@@ -2970,6 +2978,33 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         )
         return Exit.ERROR
 
+    remote_lock: Any | None = None
+    default_lockfile = (pyproject_path.parent if pyproject_path is not None else Path.cwd()) / "datamodel-codegen.lock"
+    lockfile = config.lockfile or default_lockfile
+    use_remote_lock = config.update_lock or config.locked or lockfile.is_file()
+    try:
+        _validate_generation_path_conflicts(
+            config.input or config.url or {},
+            config.output,
+            config.emit_model_metadata,
+            lockfile if use_remote_lock else None,
+        )
+    except Error as e:
+        print(str(e), file=sys.stderr)  # noqa: T201
+        return Exit.ERROR
+    if use_remote_lock:
+        from datamodel_code_generator.remote_lock import RemoteLockError, RemoteReferenceLock  # noqa: PLC0415
+
+        try:
+            remote_lock = RemoteReferenceLock.open(
+                lockfile,
+                update=config.update_lock,
+                locked=config.locked,
+            )
+        except RemoteLockError as e:
+            print(str(e), file=sys.stderr)  # noqa: T201
+            return Exit.ERROR
+    config.resolve_remote_lock(remote_lock)
     uses_black_formatter = config.formatters is None or Formatter.BLACK in config.formatters
     if uses_black_formatter and not is_supported_in_black(config.target_python_version):  # pragma: no cover
         print(  # noqa: T201
@@ -3119,7 +3154,12 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
             input_ = config.url or config.input or sys.stdin.read()
 
         if writes_json_output_file:
-            _validate_generation_path_conflicts(input_, config.output, config.emit_model_metadata)
+            _validate_generation_path_conflicts(
+                input_,
+                config.output,
+                config.emit_model_metadata,
+                lockfile if use_remote_lock else None,
+            )
 
         if compare_output is not None:
             comparison_context = GenerationRunContext(

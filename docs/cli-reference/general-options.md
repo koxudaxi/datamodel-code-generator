@@ -2104,10 +2104,11 @@ testing without project configuration.
 Pin remote schema bytes in a project lock file.
 
 Use `--update-lock` to create or refresh `datamodel-codegen.lock` after a
-successful generation. An existing default lock is verified automatically;
-use `--locked` to require a lock explicitly. `--lockfile` selects a different
-path. The lock stores request identities and SHA-256 body digests, never
-response bodies or request credentials.
+successful generation. An existing selected lock is verified automatically.
+`--lockfile` only selects its path: a missing selected lock is ignored unless
+`--locked` requires it, while `--update-lock` creates it. The lock stores
+opaque SHA-256 request-identity digests and SHA-256 body digests, never
+response bodies or request values directly.
 
 **Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--url`](base-options.md#url)
 
@@ -2171,10 +2172,11 @@ response bodies or request credentials.
 Pin remote schema bytes in a project lock file.
 
 Use `--update-lock` to create or refresh `datamodel-codegen.lock` after a
-successful generation. An existing default lock is verified automatically;
-use `--locked` to require a lock explicitly. `--lockfile` selects a different
-path. The lock stores request identities and SHA-256 body digests, never
-response bodies or request credentials.
+successful generation. An existing selected lock is verified automatically.
+`--lockfile` only selects its path: a missing selected lock is ignored unless
+`--locked` requires it, while `--update-lock` creates it. The lock stores
+opaque SHA-256 request-identity digests and SHA-256 body digests, never
+response bodies or request values directly.
 
 **Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--url`](base-options.md#url)
 
@@ -2458,10 +2460,11 @@ generation instead. Existing empty schemas remain valid references.
 Pin remote schema bytes in a project lock file.
 
 Use `--update-lock` to create or refresh `datamodel-codegen.lock` after a
-successful generation. An existing default lock is verified automatically;
-use `--locked` to require a lock explicitly. `--lockfile` selects a different
-path. The lock stores request identities and SHA-256 body digests, never
-response bodies or request credentials.
+successful generation. An existing selected lock is verified automatically.
+`--lockfile` only selects its path: a missing selected lock is ignored unless
+`--locked` requires it, while `--update-lock` creates it. The lock stores
+opaque SHA-256 request-identity digests and SHA-256 body digests, never
+response bodies or request values directly.
 
 **Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--url`](base-options.md#url)
 

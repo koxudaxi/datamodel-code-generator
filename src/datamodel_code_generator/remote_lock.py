@@ -1,8 +1,10 @@
 """Integrity locks for remote schema resources.
 
-The lock deliberately records identities and SHA-256 digests only.  Request
-credentials, query values, local mirror paths, and response bodies never leave
-the generation process.
+The lock deliberately records safe display origins and SHA-256 digests only.
+``request_sha256`` is an opaque digest of the complete request material,
+including credentials and query values when configured; those values are never
+persisted directly. Local mirror paths and response bodies never leave the
+generation process either.
 """
 
 from __future__ import annotations
@@ -43,8 +45,17 @@ def _sha256(value: bytes) -> str:
 
 
 def _display_url(url: str) -> str:
-    """Return a URL suitable for a committed lock without secret-bearing parts."""
-    parsed = urlsplit(url)
+    """Return a safe origin suitable for a committed lock.
+
+    URL paths are deliberately omitted as deployments frequently put access
+    tokens in a path segment. The request digest remains the identity; this
+    field is only safe diagnostic context.
+    """
+    try:
+        parsed = urlsplit(url)
+    except ValueError as exc:
+        msg = f"Invalid remote lock URL: {url!r}"
+        raise RemoteLockError(msg) from exc
     hostname = parsed.hostname or ""
     try:
         port = parsed.port
@@ -53,7 +64,7 @@ def _display_url(url: str) -> str:
     if ":" in hostname and not hostname.startswith("["):
         hostname = f"[{hostname}]"
     netloc = hostname if port is None else f"{hostname}:{port}"
-    return urlunsplit((parsed.scheme, netloc, parsed.path, "", ""))
+    return urlunsplit((parsed.scheme.lower(), netloc, "", "", ""))
 
 
 def _request_sha256(
@@ -62,7 +73,11 @@ def _request_sha256(
     query_parameters: Sequence[tuple[str, str]] | None,
 ) -> str:
     """Hash canonical request material without retaining its secret values."""
-    parsed = urlsplit(url)
+    try:
+        parsed = urlsplit(url)
+    except ValueError as exc:
+        msg = f"Invalid remote lock URL: {url!r}"
+        raise RemoteLockError(msg) from exc
     canonical = {
         "headers": sorted((name.lower(), value) for name, value in headers or ()),
         "query_parameters": list(query_parameters or ()),
@@ -73,7 +88,27 @@ def _request_sha256(
 
 
 def _is_sha256(value: object) -> TypeGuard[str]:
-    return isinstance(value, str) and value.startswith(_SHA256_PREFIX) and len(value) == len(_SHA256_PREFIX) + 64
+    if not isinstance(value, str) or not value.startswith(_SHA256_PREFIX) or len(value) != len(_SHA256_PREFIX) + 64:
+        return False
+    try:
+        bytes.fromhex(value.removeprefix(_SHA256_PREFIX))
+    except ValueError:
+        return False
+    return True
+
+
+def _validate_persisted_display_url(url: str) -> None:
+    """Reject malformed display URLs before lock verification can proceed."""
+    try:
+        parsed = urlsplit(url)
+        _ = parsed.port
+    except ValueError as exc:
+        msg = "Invalid remote lock resource URL"
+        raise RemoteLockError(msg) from exc
+    has_sensitive_url_parts = any((parsed.query, parsed.fragment, parsed.username, parsed.password))
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname or has_sensitive_url_parts:
+        msg = "Invalid remote lock resource URL"
+        raise RemoteLockError(msg)
 
 
 def _entry_from_data(value: object) -> RemoteLockEntry:
@@ -87,17 +122,14 @@ def _entry_from_data(value: object) -> RemoteLockEntry:
     if not _is_sha256(request_sha256) or not _is_sha256(body_sha256) or not isinstance(url, str):
         msg = "Invalid remote lock resource"
         raise RemoteLockError(msg)
-    parsed = urlsplit(url)
-    if parsed.query or parsed.fragment or parsed.username or parsed.password:
-        msg = "Invalid remote lock resource URL"
-        raise RemoteLockError(msg)
+    _validate_persisted_display_url(url)
     return RemoteLockEntry(request_sha256=request_sha256, url=url, body_sha256=body_sha256)
 
 
 def _read_entries(path: Path) -> dict[str, RemoteLockEntry]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         msg = f"Unable to read remote lock {path}: {exc}"
         raise RemoteLockError(msg) from exc
     if not isinstance(data, dict) or data.get("version") != _LOCK_VERSION:
@@ -160,6 +192,11 @@ class RemoteReferenceLock:
             url=_display_url(url),
             body_sha256=_sha256(body),
         )
+        if (seen_entry := self._seen.get(request_sha256)) is not None:
+            if seen_entry.body_sha256 != entry.body_sha256:
+                msg = f"Remote resource returned different content in one generation: {entry.url}"
+                raise RemoteLockError(msg)
+            return
         if (locked_entry := self._entries.get(request_sha256)) is None:
             if self.update:
                 self._entries[request_sha256] = entry
@@ -181,28 +218,31 @@ class RemoteReferenceLock:
         """Atomically persist a successful explicit update at most once."""
         if self._committed or not self.update:
             return
-        self._committed = True
         payload = {
             "resources": [asdict(entry) for _, entry in sorted(self._seen.items())],
             "version": _LOCK_VERSION,
         }
         content = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-        with contextlib.ExitStack() as cleanup:
-            try:
+        try:
+            with contextlib.ExitStack() as cleanup:
                 self.path.parent.mkdir(parents=True, exist_ok=True)
-                with tempfile.NamedTemporaryFile(
+                temporary_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
                     mode="w",
                     encoding="utf-8",
                     dir=self.path.parent,
                     prefix=f".{self.path.name}.",
                     delete=False,
-                ) as temporary_file:
+                )
+                temporary_path = Path(temporary_file.name)
+                # Register cleanup immediately after allocation: write(), flush(),
+                # fsync(), and close() can all fail before replacement.
+                cleanup.callback(_remove_temporary_file, temporary_path)
+                with temporary_file:
                     temporary_file.write(content)
                     temporary_file.flush()
                     os.fsync(temporary_file.fileno())
-                    temporary_path = Path(temporary_file.name)
-                cleanup.callback(_remove_temporary_file, temporary_path)
                 temporary_path.replace(self.path)
-            except OSError as exc:
-                msg = f"Unable to update remote lock {self.path}: {exc}"
-                raise RemoteLockError(msg) from exc
+                self._committed = True
+        except OSError as exc:
+            msg = f"Unable to update remote lock {self.path}: {exc}"
+            raise RemoteLockError(msg) from exc

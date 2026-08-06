@@ -310,10 +310,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         defaults to regenerate-all behavior.
   --locked              Require and validate the remote reference integrity
                         lock.
-  --lockfile LOCKFILE   Remote reference integrity lock file. Defaults to
-                        datamodel-codegen.lock beside the discovered
-                        datamodel-codegen pyproject.toml, or in the current
-                        directory.
+  --lockfile LOCKFILE   Select the remote reference integrity lock file. An
+                        existing selected lock is verified automatically; a
+                        missing selected lock is ignored unless --locked is
+                        used. --update-lock creates or refreshes it.
   --output OUTPUT       Output file (default: stdout)
   --output-model-type {pydantic_v2.BaseModel,pydantic_v2.dataclass,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
                         Output model type (default: pydantic_v2.BaseModel)

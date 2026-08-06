@@ -262,6 +262,53 @@ def test_output_and_model_metadata_paths_must_differ(
     )
 
 
+@pytest.mark.parametrize("target", ["input", "output", "metadata"])
+def test_lockfile_path_conflicts_are_rejected_before_writing(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    target: str,
+) -> None:
+    """The CLI refuses a lock path that aliases any generated or source artifact."""
+    source = tmp_path / "schema.json"
+    source.write_text('{"title":"Schema","type":"object"}', encoding="utf-8")
+    lockfile = source if target == "input" else tmp_path / "remote.lock"
+    output = lockfile if target == "output" else tmp_path / "output.py"
+    extra_args = ["--update-lock", "--lockfile", str(lockfile)]
+    if target == "metadata":
+        extra_args.extend(["--emit-model-metadata", str(lockfile)])
+
+    run_main_and_assert(
+        input_path=source,
+        output_path=output,
+        input_file_type="jsonschema",
+        extra_args=extra_args,
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Remote lock",
+        output_should_not_exist=target != "input",
+    )
+    assert source.read_text(encoding="utf-8") == '{"title":"Schema","type":"object"}'
+    assert not (tmp_path / "remote.lock").exists()
+
+
+def test_public_api_rejects_lockfile_output_conflicts_before_writing(tmp_path: Path) -> None:
+    """Public generation shares the CLI's lockfile preflight protection."""
+    source = tmp_path / "schema.json"
+    source.write_text('{"title":"Schema","type":"object"}', encoding="utf-8")
+    lockfile = tmp_path / "remote.lock"
+
+    with pytest.raises(Error, match="Output and Remote lock paths must be different"):
+        generate(
+            source,
+            input_file_type=InputFileType.JsonSchema,
+            output=lockfile,
+            lockfile=lockfile,
+            update_lock=True,
+        )
+
+    assert not lockfile.exists()
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")
 def test_generate_output_and_model_metadata_symlinks_must_differ(tmp_path: Path) -> None:
     """Reject public API artifact paths that alias the same existing file."""

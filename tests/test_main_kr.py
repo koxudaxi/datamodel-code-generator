@@ -4120,10 +4120,11 @@ def test_http_timeout(mock_httpx_get: HttpxGetMockFactory, output_file: Path) ->
     option_description="""Pin remote schema bytes in a project lock file.
 
 Use `--update-lock` to create or refresh `datamodel-codegen.lock` after a
-successful generation. An existing default lock is verified automatically;
-use `--locked` to require a lock explicitly. `--lockfile` selects a different
-path. The lock stores request identities and SHA-256 body digests, never
-response bodies or request credentials.""",
+successful generation. An existing selected lock is verified automatically.
+`--lockfile` only selects its path: a missing selected lock is ignored unless
+`--locked` requires it, while `--update-lock` creates it. The lock stores
+opaque SHA-256 request-identity digests and SHA-256 body digests, never
+response bodies or request values directly.""",
     input_schema="jsonschema/pet_simple.json",
     cli_args=[
         "--url",

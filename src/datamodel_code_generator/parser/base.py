@@ -2420,6 +2420,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 self.http_query_parameters,
                 timeout,
                 allow_private_network=self.allow_private_network,
+                encoding=self.encoding,
             )
 
         return self.remote_text_cache.get_or_put(
