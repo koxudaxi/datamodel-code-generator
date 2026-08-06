@@ -7874,8 +7874,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         match obj.type:
             case list() as type_list if "array" in type_list:
                 return tuple(type_ for type_ in type_list if type_ not in {"array", "null"})
-            case _:
-                return ()
+        return ()
 
     def _add_array_union_non_array_types(
         self,
