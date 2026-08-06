@@ -37,9 +37,9 @@ def _watch_filter(
     return includes_dependency
 
 
-def _force_polling(watch_roots: tuple[Path, ...]) -> bool:
-    """Avoid the macOS native backend's multi-root atomic-replace blind spot."""
-    return sys.platform == "darwin" and len(watch_roots) > 1
+def _force_polling() -> bool:
+    """Avoid the macOS native backend's atomic-replace blind spot."""
+    return sys.platform == "darwin"
 
 
 def _regenerate(regenerate: Callable[[], Exit]) -> None:
@@ -111,17 +111,31 @@ def _watch_changes(
     state: _WatcherState,
 ) -> None:
     """Publish filesystem changes from the persistent background watch stream."""
-    force_polling = _force_polling(watch_roots)
+    force_polling = _force_polling()
+    poll_delay_ms = max(1, min(300, int(context.config.watch_delay * 1000)))
+    if force_polling:
+        context.dependencies.enable_polling_fingerprints()
     try:
         for changes in context.watchfiles.watch(
             *watch_roots,
             debounce=int(context.config.watch_delay * 1000),
             force_polling=force_polling,
-            poll_delay_ms=max(1, min(300, int(context.config.watch_delay * 1000))),
+            poll_delay_ms=poll_delay_ms,
             recursive=True,
+            rust_timeout=poll_delay_ms if force_polling else 5000,
             stop_event=stop_event,
             watch_filter=_watch_filter(context.dependencies, accept_directory_events=force_polling),
+            yield_on_timeout=force_polling,
         ):
+            if not changes and not context.dependencies.polling_dependencies_changed():
+                continue
+            if (
+                changes
+                and force_polling
+                and all(Path(path).is_dir() for _change, path in changes)
+                and not context.dependencies.polling_dependencies_changed()
+            ):
+                continue
             with condition:
                 state.add_changes(changes)
                 condition.notify()
@@ -170,6 +184,8 @@ def _watch_once(
                 return True
 
         while (changes := _wait_for_changes(condition, state)) is not None:
+            if not changes and not context.dependencies.polling_dependencies_changed():
+                continue
             _regenerate_after_change(changes, context.regenerate)
             if context.dependencies.watch_roots() != watch_roots:
                 return True

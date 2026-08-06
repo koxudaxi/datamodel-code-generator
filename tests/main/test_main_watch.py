@@ -13,7 +13,7 @@ from importlib import import_module
 from importlib.util import find_spec
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
-from typing import TYPE_CHECKING, TextIO
+from typing import TYPE_CHECKING, NoReturn, TextIO
 
 import pytest
 
@@ -250,7 +250,13 @@ def _record_failed_dependency(dependencies: WatchDependencies, path: Path) -> No
 
     with dependencies.generation():
         record_local_dependency(path)
-        raise RuntimeError(WATCH_GENERATION_ERROR)
+        _raise_watch_generation_error()
+
+
+def _raise_watch_generation_error() -> NoReturn:
+    """Raise the shared watch-generation error from a non-assert helper."""
+    message = WATCH_GENERATION_ERROR
+    raise RuntimeError(message)
 
 
 def _start_watch_cli_until_ready(
@@ -304,6 +310,10 @@ def test_watch_cli_command_skips_coverage_for_nocov_env(tmp_path: Path, monkeypa
 
 
 @pytest.mark.allow_direct_assert
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="CTRL_BREAK_EVENT does not flush coverage.py parallel data before the helper exits the subprocess",
+)
 def test_watch_cli_resolves_relative_coverage_file_for_other_working_directory(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -690,19 +700,16 @@ def test_get_watchfiles_success() -> None:
 
 @pytest.mark.allow_direct_assert
 @pytest.mark.parametrize(
-    ("platform", "root_count", "expected"),
-    [("darwin", 1, False), ("darwin", 2, True), ("linux", 2, False)],
+    ("platform", "expected"),
+    [("darwin", True), ("linux", False)],
 )
-def test_watch_force_polling_policy(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, platform: str, root_count: int, expected: bool
-) -> None:
-    """Only macOS multi-root watches opt into polling."""
+def test_watch_force_polling_policy(monkeypatch: pytest.MonkeyPatch, platform: str, expected: bool) -> None:
+    """On macOS, watches use polling so atomic replacement cannot be missed."""
     from datamodel_code_generator.watch import _force_polling
 
     monkeypatch.setattr("datamodel_code_generator.watch.sys.platform", platform)
-    watch_roots = tuple(tmp_path / str(index) for index in range(root_count))
 
-    assert _force_polling(watch_roots) is expected
+    assert _force_polling() is expected
 
 
 @pytest.mark.cli_doc(
@@ -1047,6 +1054,37 @@ def test_watch_and_regenerate_handles_exhausted_watcher(mocker: pytest.MockerFix
 
 
 @pytest.mark.allow_direct_assert
+def test_watch_once_discards_a_stale_polling_timeout(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A timeout queued before regeneration cannot cause a redundant full rebuild afterward."""
+    from datamodel_code_generator import watch as watch_module
+    from datamodel_code_generator.__main__ import Config
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    config = Config(input=input_file)
+    dependencies = WatchDependencies()
+    dependencies.configure(config, config_values={})
+
+    def publish_stale_timeout(
+        _context: object,
+        _watch_roots: object,
+        _stop_event: object,
+        condition: threading.Condition,
+        state: watch_module._WatcherState,
+    ) -> None:
+        with condition:
+            state.add_changes(set())
+            state.exhausted = True
+            condition.notify()
+
+    monkeypatch.setattr(watch_module, "_watch_changes", publish_stale_timeout)
+    context = watch_module._WatchContext(SimpleNamespace(), config, dependencies, lambda: Exit.OK)
+
+    assert not watch_module._watch_once(context, dependencies.watch_roots(), catch_up=False)
+
+
+@pytest.mark.allow_direct_assert
 def test_watch_dependency_paths_are_limited_to_generation_inputs(tmp_path: Path) -> None:
     """Dependency collection retains paths, not parsed source content or output files."""
     from datamodel_code_generator.__main__ import Config
@@ -1201,70 +1239,74 @@ def test_watch_formatter_package_reload_is_transactional(tmp_path: Path, monkeyp
         shutil.copyfile(fixture_directory / filename, package_directory / filename)
     monkeypatch.syspath_prepend(str(formatter_directory))
     package_name = package_directory.name
-    dependencies = WatchDependencies()
-    with dependencies.generation():
-        formatter = CodeFormatter(
-            PythonVersionMin,
-            custom_formatters=[package_name],
-            formatters=[Formatter.BUILTIN],
+    try:
+        dependencies = WatchDependencies()
+        with dependencies.generation():
+            CodeFormatter(
+                PythonVersionMin,
+                custom_formatters=[package_name],
+                formatters=[Formatter.BUILTIN],
+            )
+        old_package = sys.modules[package_name]
+        old_child_a = sys.modules[f"{package_name}.child_a"]
+        old_child_b = sys.modules[f"{package_name}.child_b"]
+        old_formatter_class = old_child_a.CodeFormatter
+        original_modules = {
+            loaded_name: loaded_module
+            for loaded_name, loaded_module in sys.modules.copy().items()
+            if loaded_name == package_name or loaded_name.startswith(f"{package_name}.")
+        }
+        original_namespaces = {
+            old_package: old_package.__dict__.copy(),
+            old_child_a: old_child_a.__dict__.copy(),
+            old_child_b: old_child_b.__dict__.copy(),
+        }
+
+        shutil.copyfile(fixture_directory / "child_a_changed.py", package_directory / "child_a.py")
+        shutil.copyfile(fixture_directory / "child_b_syntax_error.txt", package_directory / "child_b.py")
+        with pytest.raises(SyntaxError), dependencies.generation():
+            CodeFormatter(PythonVersionMin, custom_formatters=[package_name], formatters=[Formatter.BUILTIN])
+        assert sys.modules[package_name] is old_package
+        assert sys.modules[f"{package_name}.child_a"] is old_child_a
+        assert sys.modules[f"{package_name}.child_b"] is old_child_b
+        assert old_child_a.CodeFormatter is old_formatter_class
+        assert old_child_b.REVISION == "initial"
+        assert {
+            loaded_name: loaded_module
+            for loaded_name, loaded_module in sys.modules.copy().items()
+            if loaded_name == package_name or loaded_name.startswith(f"{package_name}.")
+        } == original_modules
+        assert all(module.__dict__ == namespace for module, namespace in original_namespaces.items())
+
+        shutil.copyfile(fixture_directory / "child_b_runtime_error.py", package_directory / "child_b.py")
+        with pytest.raises(RuntimeError, match="formatter child failed"), dependencies.generation():
+            CodeFormatter(PythonVersionMin, custom_formatters=[package_name], formatters=[Formatter.BUILTIN])
+        assert sys.modules[package_name] is old_package
+        assert sys.modules[f"{package_name}.child_a"] is old_child_a
+        assert sys.modules[f"{package_name}.child_b"] is old_child_b
+        assert old_child_a.CodeFormatter is old_formatter_class
+        assert old_child_b.REVISION == "initial"
+        assert {
+            loaded_name: loaded_module
+            for loaded_name, loaded_module in sys.modules.copy().items()
+            if loaded_name == package_name or loaded_name.startswith(f"{package_name}.")
+        } == original_modules
+        assert all(module.__dict__ == namespace for module, namespace in original_namespaces.items())
+
+        shutil.copyfile(fixture_directory / "child_b.py", package_directory / "child_b.py")
+        with dependencies.generation():
+            formatter = CodeFormatter(
+                PythonVersionMin,
+                custom_formatters=[package_name],
+                formatters=[Formatter.BUILTIN],
+            )
+        assert_output(
+            formatter.format_code("value=1\n"), EXPECTED_MAIN_PATH / "watch_transactional_formatter_changed.txt"
         )
-    old_package = sys.modules[package_name]
-    old_child_a = sys.modules[f"{package_name}.child_a"]
-    old_child_b = sys.modules[f"{package_name}.child_b"]
-    old_formatter_class = old_child_a.CodeFormatter
-    original_modules = {
-        loaded_name: loaded_module
-        for loaded_name, loaded_module in sys.modules.copy().items()
-        if loaded_name == package_name or loaded_name.startswith(f"{package_name}.")
-    }
-    original_namespaces = {
-        old_package: old_package.__dict__.copy(),
-        old_child_a: old_child_a.__dict__.copy(),
-        old_child_b: old_child_b.__dict__.copy(),
-    }
-
-    shutil.copyfile(fixture_directory / "child_a_changed.py", package_directory / "child_a.py")
-    shutil.copyfile(fixture_directory / "child_b_syntax_error.txt", package_directory / "child_b.py")
-    with pytest.raises(SyntaxError), dependencies.generation():
-        CodeFormatter(PythonVersionMin, custom_formatters=[package_name], formatters=[Formatter.BUILTIN])
-    assert sys.modules[package_name] is old_package
-    assert sys.modules[f"{package_name}.child_a"] is old_child_a
-    assert sys.modules[f"{package_name}.child_b"] is old_child_b
-    assert old_child_a.CodeFormatter is old_formatter_class
-    assert old_child_b.REVISION == "initial"
-    assert {
-        loaded_name: loaded_module
-        for loaded_name, loaded_module in sys.modules.copy().items()
-        if loaded_name == package_name or loaded_name.startswith(f"{package_name}.")
-    } == original_modules
-    assert all(module.__dict__ == namespace for module, namespace in original_namespaces.items())
-
-    shutil.copyfile(fixture_directory / "child_b_runtime_error.py", package_directory / "child_b.py")
-    with pytest.raises(RuntimeError, match="formatter child failed"), dependencies.generation():
-        CodeFormatter(PythonVersionMin, custom_formatters=[package_name], formatters=[Formatter.BUILTIN])
-    assert sys.modules[package_name] is old_package
-    assert sys.modules[f"{package_name}.child_a"] is old_child_a
-    assert sys.modules[f"{package_name}.child_b"] is old_child_b
-    assert old_child_a.CodeFormatter is old_formatter_class
-    assert old_child_b.REVISION == "initial"
-    assert {
-        loaded_name: loaded_module
-        for loaded_name, loaded_module in sys.modules.copy().items()
-        if loaded_name == package_name or loaded_name.startswith(f"{package_name}.")
-    } == original_modules
-    assert all(module.__dict__ == namespace for module, namespace in original_namespaces.items())
-
-    shutil.copyfile(fixture_directory / "child_b.py", package_directory / "child_b.py")
-    with dependencies.generation():
-        formatter = CodeFormatter(
-            PythonVersionMin,
-            custom_formatters=[package_name],
-            formatters=[Formatter.BUILTIN],
-        )
-    assert_output(formatter.format_code("value=1\n"), EXPECTED_MAIN_PATH / "watch_transactional_formatter_changed.txt")
-    for loaded_name in tuple(sys.modules.copy()):
-        if loaded_name == package_name or loaded_name.startswith(f"{package_name}."):
-            sys.modules.pop(loaded_name, None)
+    finally:
+        for loaded_name in tuple(sys.modules.copy()):
+            if loaded_name == package_name or loaded_name.startswith(f"{package_name}."):
+                sys.modules.pop(loaded_name, None)
 
 
 @pytest.mark.allow_direct_assert
@@ -1366,6 +1408,23 @@ def test_watch_formatter_package_drops_unimported_invalid_children(
         for loaded_name in tuple(sys.modules.copy()):
             if loaded_name == package_name or loaded_name.startswith(f"{package_name}."):
                 sys.modules.pop(loaded_name, None)
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_dependency_state_uses_weakrefable_slots() -> None:
+    """Watch state remains slotted while allowing lifecycle weak references."""
+    import weakref
+
+    from datamodel_code_generator.watch_dependencies import WatchDependencies, collector_identity
+
+    dependencies = WatchDependencies()
+    with dependencies.generation():
+        collector = collector_identity()
+        assert collector is not None
+        assert not hasattr(collector, "__dict__")
+        assert weakref.ref(collector)() is collector
+    assert not hasattr(dependencies, "__dict__")
+    assert weakref.ref(dependencies)() is dependencies
 
 
 @pytest.mark.allow_direct_assert
@@ -1635,6 +1694,25 @@ def test_watch_dependencies_do_not_watch_the_filesystem_root_for_system_symlink_
 
 
 @pytest.mark.allow_direct_assert
+def test_watch_dependencies_exclude_an_unavailable_filesystem_root(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A missing filesystem root ends ancestor lookup without adding a watch root."""
+    from datamodel_code_generator.watch_dependencies import WatchDependencies, _nearest_existing_directory
+
+    root = Path(Path.cwd().anchor)
+    original_is_dir = Path.is_dir
+
+    def is_unavailable(path: Path) -> bool:
+        return False if path == root else original_is_dir(path)
+
+    monkeypatch.setattr(Path, "is_dir", is_unavailable)
+    dependencies = WatchDependencies()
+    dependencies.add_file(root / "unavailable" / "schema.json")
+
+    assert _nearest_existing_directory(root) == root
+    assert not dependencies.watch_roots()
+
+
+@pytest.mark.allow_direct_assert
 def test_watch_dependencies_collapse_nested_watch_roots(tmp_path: Path) -> None:
     """A parent root recursively covers its nested dependency roots."""
     from datamodel_code_generator.watch_dependencies import WatchDependencies
@@ -1664,6 +1742,94 @@ def test_watch_dependencies_accepts_external_parent_events_only_while_polling(tm
 
 
 @pytest.mark.allow_direct_assert
+def test_watch_dependencies_ignore_unreadable_or_unrelated_polling_directories(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Polling ignores a directory it cannot inspect and one without dependencies."""
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    input_file = tmp_path / "schema.json"
+    unrelated_directory = tmp_path / "unrelated"
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    unrelated_directory.mkdir()
+    dependencies = WatchDependencies()
+    dependencies.add_file(input_file)
+    original_is_dir = Path.is_dir
+    error_message = "unreadable"
+
+    def raise_directory_error(path: Path) -> bool:
+        if path == tmp_path:
+            raise OSError(error_message)
+        return original_is_dir(path)
+
+    monkeypatch.setattr(Path, "is_dir", raise_directory_error)
+
+    assert not dependencies.accepts_event(tmp_path, accept_directory_events=True)
+    assert not dependencies.accepts_event(unrelated_directory, accept_directory_events=True)
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_polling_filters_unchanged_timeouts_and_late_directory_events(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Only a fingerprint-changing timeout reaches the regeneration hand-off."""
+    from datamodel_code_generator import watch as watch_module
+    from datamodel_code_generator.__main__ import Config
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    input_file = tmp_path / "schema.json"
+    output_file = tmp_path / "output.py"
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    config = Config(input=input_file, output=output_file, watch_delay=0.05)
+    dependencies = WatchDependencies()
+    dependencies.configure(config, config_values={})
+    replacement = tmp_path / "replacement.json"
+    replacement.write_text(WATCH_SCHEMA_CHANGED, encoding="utf-8")
+
+    class PollingEvents:
+        @staticmethod
+        def watch(*_paths: object, **_kwargs: object) -> object:
+            yield set()
+            yield {(None, str(tmp_path))}
+            replacement.replace(input_file)
+            yield set()
+
+    monkeypatch.setattr(watch_module.sys, "platform", "darwin")
+    condition = threading.Condition()
+    state = watch_module._WatcherState(set())
+    watch_module._watch_changes(
+        watch_module._WatchContext(PollingEvents(), config, dependencies, lambda: Exit.OK),
+        dependencies.watch_roots(),
+        threading.Event(),
+        condition,
+        state,
+    )
+
+    assert state.has_pending_changes
+    assert not state.pending_change_sample
+    assert state.exhausted
+    with dependencies.generation():
+        pass
+
+    class NativeEvents:
+        @staticmethod
+        def watch(*_paths: object, **_kwargs: object) -> object:
+            yield set()
+
+    monkeypatch.setattr(watch_module.sys, "platform", "linux")
+    native_state = watch_module._WatcherState(set())
+    watch_module._watch_changes(
+        watch_module._WatchContext(NativeEvents(), config, dependencies, lambda: Exit.OK),
+        dependencies.watch_roots(),
+        threading.Event(),
+        threading.Condition(),
+        native_state,
+    )
+    assert not native_state.has_pending_changes
+    assert native_state.exhausted
+
+
+@pytest.mark.allow_direct_assert
 def test_watch_dependencies_rejects_polling_directory_events_containing_output(tmp_path: Path) -> None:
     """Output-parent polling events cannot trigger a regeneration loop."""
     from datamodel_code_generator.__main__ import Config
@@ -1677,6 +1843,38 @@ def test_watch_dependencies_rejects_polling_directory_events_containing_output(t
     dependencies = WatchDependencies()
     dependencies.configure(Config(input=input_file, output=output_file), config_values={})
 
+    assert not dependencies.accepts_event(project_directory, accept_directory_events=True)
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_dependencies_accepts_polling_parent_events_for_changed_inputs(tmp_path: Path) -> None:
+    """A polling parent event is kept when an atomic input replacement changed its fingerprint."""
+    from datamodel_code_generator.__main__ import Config
+    from datamodel_code_generator.watch_dependencies import WatchDependencies, _path_fingerprint
+
+    project_directory = tmp_path / "project"
+    project_directory.mkdir()
+    input_file = project_directory / "schema.json"
+    output_file = project_directory / "output.py"
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    dependencies = WatchDependencies()
+    dependencies.configure(Config(input=input_file, output=output_file), config_values={})
+    dependencies.enable_polling_fingerprints()
+    dependencies.enable_polling_fingerprints()
+
+    assert _path_fingerprint(tmp_path / "missing.json") == (-1, -1, -1)
+    assert not dependencies.polling_dependencies_changed()
+    assert not dependencies.accepts_event(project_directory, accept_directory_events=True)
+    replacement = project_directory / "schema-replacement.json"
+    replacement.write_text(WATCH_SCHEMA_CHANGED, encoding="utf-8")
+    replacement.replace(input_file)
+    assert dependencies.polling_dependencies_changed()
+    assert dependencies.accepts_event(project_directory, accept_directory_events=True)
+
+    with dependencies.generation():
+        pass
+    output_file.touch()
+    assert not dependencies.polling_dependencies_changed()
     assert not dependencies.accepts_event(project_directory, accept_directory_events=True)
 
 
@@ -1722,7 +1920,7 @@ def test_watch_dependencies_exclude_staged_and_failed_generation_outputs(tmp_pat
 
     assert not dependencies.accepts_event(attempted_output)
     with pytest.raises(RuntimeError, match=WATCH_GENERATION_ERROR), dependencies.generation():
-        raise RuntimeError(WATCH_GENERATION_ERROR)
+        _raise_watch_generation_error()
 
     assert not dependencies.accepts_event(initial_output)
     assert not dependencies.accepts_event(attempted_output)
@@ -2342,7 +2540,7 @@ def test_watch_cli_catches_up_changes_queued_while_restarting_roots(
     monkeypatch: pytest.MonkeyPatch,
     add_catch_up_template_root: bool,
 ) -> None:
-    """A retiring watcher retains an input event while dependency roots are restarted."""
+    """A watcher restart catches up the latest inputs and configuration with a full regeneration."""
     project_directory = tmp_path / "project"
     formatter_directory = tmp_path / "formatter"
     template_directory = tmp_path / "templates"
@@ -2406,7 +2604,6 @@ def test_watch_cli_catches_up_changes_queued_while_restarting_roots(
                 encoding="utf-8",
             )
             caught_up_pyproject.replace(pyproject_file)
-        time.sleep(0.2)
         release_file.touch()
         _wait_for_watch_cli(
             process,

@@ -9,12 +9,10 @@ from dataclasses import dataclass, field
 from importlib.util import source_from_cache
 from pathlib import Path
 from threading import RLock
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
-
-    from datamodel_code_generator.__main__ import Config
 
 _JSON_CONFIG_FIELDS = frozenset({
     "aliases",
@@ -32,8 +30,24 @@ _JSON_CONFIG_FIELDS = frozenset({
 })
 
 
-@dataclass(slots=True, weakref_slot=True)
-class _CollectedGeneration:
+class _Weakrefable:
+    """Provide a weak-reference slot for slotted state on every supported Python."""
+
+    __slots__ = ("__weakref__",)
+
+
+class _WatchConfig(Protocol):
+    """Configuration attributes needed to stage watch dependencies."""
+
+    input: str | Path | None
+    output: Path | None
+    custom_file_header_path: Path | None
+    custom_template_dir: Path | None
+    http_local_ref_path: Path | None
+
+
+@dataclass(slots=True)
+class _CollectedGeneration(_Weakrefable):
     """Private graph additions that become visible only after a generation ends."""
 
     owner: WatchDependencies
@@ -50,6 +64,7 @@ class _DependencySnapshot:
     event_paths: frozenset[Path]
     output: Path | None
     outputs: frozenset[Path]
+    polling_fingerprints: dict[Path, tuple[int, int, int]] | None
     watch_roots: tuple[Path, ...]
 
 
@@ -64,6 +79,7 @@ class _StaticDependencies:
 
 
 _current_collector: ContextVar[_CollectedGeneration | None] = ContextVar("watch_dependencies", default=None)
+_MISSING_PATH_FINGERPRINT = (-1, -1, -1)
 
 
 def _lexical_path(path: Path) -> Path:
@@ -102,6 +118,14 @@ def _resolved_path(path: Path) -> Path:
     return _lexical_path(path).resolve(strict=False)
 
 
+def _path_fingerprint(path: Path) -> tuple[int, int, int]:
+    try:
+        status = path.stat()
+    except OSError:
+        return _MISSING_PATH_FINGERPRINT
+    return status.st_ino, status.st_mtime_ns, status.st_size
+
+
 def _configured_path(config_values: Mapping[str, Any], field_name: str, fallback: str | Path | None) -> Path | None:
     value = config_values.get(field_name, fallback)
     if isinstance(value, (str, Path)):
@@ -120,12 +144,14 @@ def _logical_working_directory() -> Path:
 
 def _nearest_existing_directory(path: Path) -> Path:
     while not path.is_dir():
+        if path == path.parent:
+            return path
         path = path.parent
     return path
 
 
-@dataclass(slots=True, weakref_slot=True)
-class WatchDependencies:
+@dataclass(slots=True)
+class WatchDependencies(_Weakrefable):
     """Path-only dependency state for one persistent watch session."""
 
     _static_files: set[Path] = field(default_factory=set)
@@ -138,6 +164,7 @@ class WatchDependencies:
     _failed_static: _StaticDependencies | None = None
     _failed_generation_files: set[Path] = field(default_factory=set)
     _failed_generation_symlink_events: set[Path] = field(default_factory=set)
+    _polling_fingerprints_enabled: bool = False
     _lock: RLock = field(default_factory=RLock)
     _snapshot: _DependencySnapshot = field(init=False)
 
@@ -176,10 +203,24 @@ class WatchDependencies:
                 watch_roots_list.append(root)
         watch_roots = tuple(watch_roots_list)
         outputs = frozenset(output for output in (self._output, candidate.output if candidate else None) if output)
-        return _DependencySnapshot(files, directories, event_paths, self._output, outputs, watch_roots)
+        polling_fingerprints = (
+            {path: _path_fingerprint(path) for path in files | directories}
+            if self._polling_fingerprints_enabled
+            else None
+        )
+        return _DependencySnapshot(
+            files, directories, event_paths, self._output, outputs, polling_fingerprints, watch_roots
+        )
 
     def _publish(self) -> None:
         self._snapshot = self._create_snapshot()
+
+    def enable_polling_fingerprints(self) -> None:
+        """Track exact dependencies only while a polling watcher needs directory events."""
+        with self._lock:
+            if not self._polling_fingerprints_enabled:
+                self._polling_fingerprints_enabled = True
+                self._publish()
 
     @staticmethod
     def _add_path(path: Path, paths: set[Path], symlink_events: set[Path]) -> None:
@@ -191,7 +232,7 @@ class WatchDependencies:
 
     def configure(
         self,
-        config: Config,
+        config: _WatchConfig,
         *,
         config_values: Mapping[str, Any],
     ) -> None:
@@ -347,6 +388,20 @@ class WatchDependencies:
             for directory in snapshot.directories
         )
 
+    @staticmethod
+    def _polling_dependencies_changed(
+        snapshot: _DependencySnapshot, path_variants: frozenset[Path] | None = None
+    ) -> bool:
+        return any(
+            _path_fingerprint(dependency) != fingerprint
+            for dependency, fingerprint in (snapshot.polling_fingerprints or {}).items()
+            if path_variants is None or any(dependency.is_relative_to(path_variant) for path_variant in path_variants)
+        )
+
+    def polling_dependencies_changed(self) -> bool:
+        """Return whether a polling watcher missed an exact dependency event."""
+        return self._polling_dependencies_changed(self._snapshot)
+
     def includes(self, path: Path) -> bool:
         """Return whether an event belongs to the immutable current dependency graph."""
         return self._includes_snapshot(self._snapshot, _path_variants(path))
@@ -371,7 +426,7 @@ class WatchDependencies:
         try:
             is_directory = path.is_dir()
         except OSError:
-            return False
+            is_directory = False
         if not is_directory:
             return False
         has_dependency_below = any(
@@ -379,10 +434,12 @@ class WatchDependencies:
             for path_variant in path_variants
             for dependency in snapshot.event_paths
         )
+        if not has_dependency_below:
+            return False
         has_output_below = any(
             output.is_relative_to(path_variant) for path_variant in path_variants for output in snapshot.outputs
         )
-        return has_dependency_below and not has_output_below
+        return not has_output_below or self._polling_dependencies_changed(snapshot, path_variants)
 
 
 def collector_is_active() -> bool:
