@@ -3426,12 +3426,13 @@ def test_batch_watch_nested_dependency_reruns_full_batch_without_output_loop(tmp
         assert_output(
             second_metadata.read_text(encoding="utf-8"), PROJECT_ROOT / "tests/data/expected/main_kr/jobs/stale.py"
         )
-        _write_watch_cli_input_and_wait(
+        child_file.write_text(
+            (WATCH_DATA_PATH / "nested_ref/child_changed.json").read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        _wait_for_watch_cli(
             process,
             stdout_lines,
             stderr_lines,
-            child_file,
-            (WATCH_DATA_PATH / "nested_ref/child_changed.json").read_text(encoding="utf-8"),
             lambda: (
                 _file_contains(first_output, "age: int | None = None")
                 and second_output.read_text(encoding="utf-8") != "stale\n"
