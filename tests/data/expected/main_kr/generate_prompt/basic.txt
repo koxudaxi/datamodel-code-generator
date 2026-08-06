@@ -199,11 +199,14 @@
 - `--http-query-parameters`: Add query parameters to HTTP requests for remote schemas.
 - `--http-timeout`: Set timeout for HTTP requests to remote hosts.
 - `--ignore-pyproject`: Ignore pyproject.toml configuration file.
+- `--locked`
+- `--lockfile`
 - `--module-split-mode`: Split generated models into separate files, one per model class.
 - `--no-allow-private-network`
 - `--no-allow-remote-refs`
 - `--shared-module-name`: Customize the name of the shared module for deduplicated models.
 - `--strict-refs`: Treat unresolved local `$ref` JSON pointers as errors.
+- `--update-lock`
 - `--watch`: Watch input file(s) for changes and regenerate output automatically.
 - `--watch-delay`: Set debounce delay in seconds for watch mode.
 
@@ -305,6 +308,12 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         etc.), regenerate same-family. 'reuse-all': Reuse all
                         referenced types via import. If not specified,
                         defaults to regenerate-all behavior.
+  --locked              Require and validate the remote reference integrity
+                        lock.
+  --lockfile LOCKFILE   Remote reference integrity lock file. Defaults to
+                        datamodel-codegen.lock beside the discovered
+                        datamodel-codegen pyproject.toml, or in the current
+                        directory.
   --output OUTPUT       Output file (default: stdout)
   --output-model-type {pydantic_v2.BaseModel,pydantic_v2.dataclass,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
                         Output model type (default: pydantic_v2.BaseModel)
@@ -327,6 +336,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         warn on features outside declared/detected version.
   --strict-refs         Treat unresolved local $ref JSON pointers as errors
                         instead of generating fallback Any models.
+  --update-lock         Create or atomically update the remote reference
+                        integrity lock after successful generation.
   --url URL             Input file URL. `--input` is ignored when `--url` is
                         used. For HTTP(S), datamodel-code-generator[http]
                         remains the stable HTTPX backend and is not

@@ -96,6 +96,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator._types.generate_config_dict import GenerateConfigDict
     from datamodel_code_generator.config import GenerateConfig
     from datamodel_code_generator.model_metadata import ModelMetadata
+    from datamodel_code_generator.remote_lock import RemoteReferenceLock
 
 T = TypeVar("T")
 
@@ -1023,6 +1024,8 @@ def _generate_config_values(generate_config: GenerateConfig) -> dict[str, Any]:
     values.update({
         field_name: getattr(generate_config, field_name) for field_name in fields if field_name not in values
     })
+    if (remote_lock := generate_config.remote_lock) is not None:
+        values["remote_lock"] = remote_lock
     return values
 
 
@@ -1730,6 +1733,25 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
     _validate_generation_path_conflicts(input_, config.output, config.emit_model_metadata)
 
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
+    remote_lock = config.remote_lock
+    owned_remote_lock: RemoteReferenceLock | None = None
+    if not config.remote_lock_resolved:
+        config = config.model_copy()
+        default_lockfile = caller_cwd / "datamodel-codegen.lock"
+        if config.lockfile is not None or config.update_lock or config.locked or default_lockfile.is_file():
+            from datamodel_code_generator.remote_lock import RemoteReferenceLock  # noqa: PLC0415
+
+            lockfile = config.lockfile or default_lockfile
+            if not lockfile.is_absolute():
+                lockfile = (caller_cwd / lockfile).resolve()
+            owned_remote_lock = RemoteReferenceLock.open(
+                lockfile,
+                update=config.update_lock,
+                locked=config.locked or (config.lockfile is not None and not config.update_lock),
+            )
+            remote_lock = owned_remote_lock
+        config.resolve_remote_lock(remote_lock)
+    response_observer = remote_lock.record_response if remote_lock is not None else None
     match input_:
         case str():
             input_text: str | None = input_
@@ -1747,6 +1769,7 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
                     timeout,
                     allow_private_network=config.allow_private_network,
                     http_backend=config.http_backend,
+                    response_observer=response_observer,
                 ),
             )
         case _:
@@ -2015,6 +2038,8 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
     )
     if config.emit_model_metadata is not None:
         _write_model_metadata(config.emit_model_metadata, model_metadata, config.encoding)
+    if owned_remote_lock is not None:
+        owned_remote_lock.commit()
     return generated
 
 

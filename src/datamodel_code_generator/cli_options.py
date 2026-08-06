@@ -923,6 +923,17 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--http-ignore-tls": CLIOptionMeta(name="--http-ignore-tls", category=OptionCategory.GENERAL),
     "--http-query-parameters": CLIOptionMeta(name="--http-query-parameters", category=OptionCategory.GENERAL),
     "--http-timeout": CLIOptionMeta(name="--http-timeout", category=OptionCategory.GENERAL),
+    "--lockfile": CLIOptionMeta(name="--lockfile", category=OptionCategory.GENERAL),
+    "--update-lock": CLIOptionMeta(
+        name="--update-lock",
+        category=OptionCategory.GENERAL,
+        conflicts=(CLIOptionRelation(option="--locked"),),
+    ),
+    "--locked": CLIOptionMeta(
+        name="--locked",
+        category=OptionCategory.GENERAL,
+        conflicts=(CLIOptionRelation(option="--update-lock"),),
+    ),
     "--ignore-pyproject": CLIOptionMeta(name="--ignore-pyproject", category=OptionCategory.GENERAL),
     "--generate-cli-command": CLIOptionMeta(name="--generate-cli-command", category=OptionCategory.GENERAL),
     "--generate-pyproject-config": CLIOptionMeta(name="--generate-pyproject-config", category=OptionCategory.GENERAL),

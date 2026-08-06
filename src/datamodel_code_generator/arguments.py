@@ -247,6 +247,26 @@ base_options.add_argument(
     ),
 )
 base_options.add_argument(
+    "--lockfile",
+    help=(
+        "Remote reference integrity lock file. Defaults to datamodel-codegen.lock beside the discovered "
+        "datamodel-codegen pyproject.toml, or in the current directory."
+    ),
+)
+remote_lock_options = base_options.add_mutually_exclusive_group()
+remote_lock_options.add_argument(
+    "--update-lock",
+    action="store_true",
+    default=None,
+    help="Create or atomically update the remote reference integrity lock after successful generation.",
+)
+remote_lock_options.add_argument(
+    "--locked",
+    action="store_true",
+    default=None,
+    help="Require and validate the remote reference integrity lock.",
+)
+base_options.add_argument(
     "--input",
     help="Input file/directory (default: stdin)",
 )

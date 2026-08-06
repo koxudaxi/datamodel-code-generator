@@ -4116,6 +4116,39 @@ def test_http_timeout(mock_httpx_get: HttpxGetMockFactory, output_file: Path) ->
 
 
 @pytest.mark.cli_doc(
+    options=["--lockfile", "--update-lock", "--locked"],
+    option_description="""Pin remote schema bytes in a project lock file.
+
+Use `--update-lock` to create or refresh `datamodel-codegen.lock` after a
+successful generation. An existing default lock is verified automatically;
+use `--locked` to require a lock explicitly. `--lockfile` selects a different
+path. The lock stores request identities and SHA-256 body digests, never
+response bodies or request credentials.""",
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=[
+        "--url",
+        "https://api.example.com/schema.json",
+        "--update-lock",
+        "--lockfile",
+        "datamodel-codegen.lock",
+    ],
+    golden_output="main_kr/url_with_headers/output.py",
+    related_options=["--url", "--http-local-ref-path"],
+)
+@freeze_time("2019-07-26")
+def test_remote_lock_cli_doc(output_file: Path, tmp_path: Path) -> None:
+    """Create a lock successfully even when the local schema has no remote inputs."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "input_output" / "output.py",
+        extra_args=["--update-lock", "--lockfile", str(tmp_path / "datamodel-codegen.lock")],
+    )
+
+
+@pytest.mark.cli_doc(
     options=["--ignore-pyproject"],
     option_description="""Ignore pyproject.toml configuration file.
 

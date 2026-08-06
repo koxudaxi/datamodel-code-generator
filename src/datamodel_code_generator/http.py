@@ -46,6 +46,7 @@ if TYPE_CHECKING:
         status_code: int
         headers: _ResponseHeaders
         text: str
+        content: bytes
 
 
 _HTTPTransportT_co = TypeVar("_HTTPTransportT_co", bound="_HTTPTransport", covariant=True)
@@ -770,9 +771,18 @@ class _HTTPFetchSession:
     across distinct remote references without sharing network state globally.
     """
 
-    def __init__(self, http_backend: HTTPBackend = HTTPBackend.AUTO) -> None:
+    def __init__(
+        self,
+        http_backend: HTTPBackend = HTTPBackend.AUTO,
+        *,
+        response_observer: Callable[
+            [str, Sequence[tuple[str, str]] | None, Sequence[tuple[str, str]] | None, bytes], None
+        ]
+        | None = None,
+    ) -> None:
         """Initialize empty size- and parser-lifetime-bounded caches."""
         self._http_backend = http_backend
+        self._response_observer = response_observer
         self.http_stack = _get_http_stack(http_backend)
         self._dns_cache: OrderedDict[str, tuple[IPv4Address | IPv6Address, ...]] = OrderedDict()
         self._clients: OrderedDict[
@@ -876,6 +886,7 @@ class _HTTPFetchSession:
             allow_private_network=allow_private_network,
             http_backend=self._http_backend,
             session=self,
+            response_observer=self._response_observer,
         )
 
     def close(self) -> None:
@@ -1083,6 +1094,8 @@ def get_body(  # noqa: PLR0913
     *,
     allow_private_network: bool = False,
     http_backend: HTTPBackend = HTTPBackend.AUTO,
+    response_observer: Callable[[str, Sequence[tuple[str, str]] | None, Sequence[tuple[str, str]] | None, bytes], None]
+    | None = None,
 ) -> str:
     """Fetch schema content from a URL with redirect validation and DNS pinning.
 
@@ -1107,6 +1120,7 @@ def get_body(  # noqa: PLR0913
         timeout,
         allow_private_network=allow_private_network,
         http_backend=http_backend,
+        response_observer=response_observer,
     )
 
 
@@ -1120,6 +1134,8 @@ def _get_body(  # noqa: PLR0913
     allow_private_network: bool,
     http_backend: HTTPBackend,
     session: _HTTPFetchSession | None = None,
+    response_observer: Callable[[str, Sequence[tuple[str, str]] | None, Sequence[tuple[str, str]] | None, bytes], None]
+    | None = None,
 ) -> str:
     """Fetch one schema body, optionally reusing parser-scoped network state."""
     http_stack = session.http_stack if session is not None else _get_http_stack(http_backend)
@@ -1141,6 +1157,7 @@ def _get_body(  # noqa: PLR0913
             resolve_host=resolve_host,
         )
         pinned_host, pinned_ips = validated_host if validated_host is not None else (None, ())
+        request_query_parameters = query_parameters if redirect_count == 0 else None
         try:
             response = get_response(
                 http_stack,
@@ -1148,7 +1165,7 @@ def _get_body(  # noqa: PLR0913
                 headers=current_headers,
                 verify=not ignore_tls,
                 follow_redirects=False,
-                query_parameters=query_parameters if redirect_count == 0 else None,
+                query_parameters=request_query_parameters,
                 timeout=timeout,
                 pinned_host=pinned_host,
                 pinned_ips=pinned_ips,
@@ -1156,6 +1173,8 @@ def _get_body(  # noqa: PLR0913
         except Exception as exc:
             msg = f"Failed to fetch {current_url}: {exc}"
             raise SchemaFetchError(msg) from exc
+        if response_observer is not None:
+            response_observer(current_url, current_headers, request_query_parameters, response.content)
         if (redirect_url := _get_redirect_url(http_stack.httpx, current_url, response)) is None:
             break
         current_headers = _get_redirect_headers(current_headers, current_url, redirect_url)

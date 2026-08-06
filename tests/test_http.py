@@ -11,10 +11,12 @@ from ipaddress import IPv4Address, IPv6Address, ip_address
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 from unittest.mock import Mock
+from urllib.parse import urlparse
 
 import pytest
 
-from datamodel_code_generator import HTTPBackend, SchemaFetchError
+from datamodel_code_generator import GenerateConfig, HTTPBackend, InputFileType, SchemaFetchError, generate
+from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.http import (
     MAX_HTTP_REDIRECTS,
     _create_ssl_context,
@@ -34,7 +36,7 @@ from datamodel_code_generator.http import (
 )
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from tests.conftest import create_assert_file_content
-from tests.main.conftest import run_main_url_and_assert
+from tests.main.conftest import run_main_url_and_assert, run_main_with_args
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -89,7 +91,7 @@ class _SchemaHandler(BaseHTTPRequestHandler):
             status, headers = 200, {"content-type": "application/json"}
         else:
             status, headers, body = self.routes.get(
-                self.path,
+                self.path.partition("?")[0],
                 (404, {"content-type": "application/json"}, b'{"error":"not found"}'),
             )
 
@@ -532,6 +534,429 @@ def test_cli_fetches_external_schema_with_selected_backend(
         )
         assert _get_http_stack().backend == expected_auto_backend
         assert _get_http_stack(HTTPBackend(selected_backend)).backend == expected_backend
+
+
+def test_cli_updates_and_verifies_remote_lock_for_root_and_nested_refs(
+    mocker: MockerFixture,
+    local_http_server: str,
+    tmp_path: Path,
+) -> None:
+    """Lock the top-level URL and every fetched HTTP reference using a real server."""
+    mocker.stopall()
+    root_url = f"{local_http_server}/root.json"
+    child_url = f"{local_http_server}/child.json"
+    _SchemaHandler.routes["/root.json"] = (
+        200,
+        {"content-type": "application/json"},
+        json.dumps({
+            "title": "Root",
+            "type": "object",
+            "properties": {"child": {"$ref": child_url}},
+        }).encode(),
+    )
+    _SchemaHandler.routes["/child.json"] = (
+        200,
+        {"content-type": "application/json"},
+        b'{"title":"Child","type":"object","properties":{"name":{"type":"string"}}}',
+    )
+    lockfile = tmp_path / "remote.lock"
+    update_args = [
+        "--allow-private-network",
+        "--disable-timestamp",
+        "--http-headers",
+        "Authorization:Bearer lock-secret",
+        "--update-lock",
+        "--lockfile",
+        str(lockfile),
+    ]
+    verify_args = [
+        "--allow-private-network",
+        "--disable-timestamp",
+        "--http-headers",
+        "Authorization:Bearer lock-secret",
+        "--locked",
+        "--lockfile",
+        str(lockfile),
+    ]
+
+    try:
+        run_main_url_and_assert(
+            url=root_url,
+            output_path=tmp_path / "output.py",
+            input_file_type="jsonschema",
+            assert_func=assert_http_e2e_file,
+            expected_file="remote_lock_nested.py",
+            extra_args=update_args,
+            transform=lambda output: output.replace(root_url, "root.json"),
+        )
+        lock_content = lockfile.read_text(encoding="utf-8")
+        lock_data = json.loads(lock_content)
+        assert lock_data["version"] == 1
+        assert sorted(resource["url"] for resource in lock_data["resources"]) == [child_url, root_url]
+        assert "Authorization" not in lock_content
+        assert "Bearer lock-secret" not in lock_content
+        assert "?" not in lock_content
+
+        run_main_url_and_assert(
+            url=root_url,
+            output_path=tmp_path / "verified.py",
+            input_file_type="jsonschema",
+            assert_func=assert_http_e2e_file,
+            expected_file="remote_lock_nested.py",
+            extra_args=verify_args,
+            transform=lambda output: output.replace(root_url, "root.json"),
+        )
+        assert lockfile.read_text(encoding="utf-8") == lock_content
+    finally:
+        del _SchemaHandler.routes["/root.json"]
+        del _SchemaHandler.routes["/child.json"]
+
+
+def test_cli_locked_remote_lock_rejects_changed_real_response(
+    mocker: MockerFixture,
+    local_http_server: str,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject upstream body drift until an explicit lock update succeeds."""
+    mocker.stopall()
+    schema_url = f"{local_http_server}/pet.json"
+    lockfile = tmp_path / "remote.lock"
+    output_path = tmp_path / "output.py"
+    update_args = [
+        "--url",
+        schema_url,
+        "--output",
+        str(output_path),
+        "--input-file-type",
+        "jsonschema",
+        "--allow-private-network",
+        "--disable-timestamp",
+        "--update-lock",
+        "--lockfile",
+        str(lockfile),
+    ]
+    run_main_with_args(update_args)
+    original_lock = lockfile.read_text(encoding="utf-8")
+    original_response = _SchemaHandler.routes["/pet.json"]
+    _SchemaHandler.routes["/pet.json"] = (
+        200,
+        {"content-type": "application/json"},
+        b'{"title":"ChangedPet","type":"object","properties":{"age":{"type":"integer"}}}',
+    )
+    try:
+        run_main_with_args(
+            [
+                *update_args[:-4],
+                "--locked",
+                "--lockfile",
+                str(lockfile),
+            ],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="content does not match lock",
+        )
+        assert lockfile.read_text(encoding="utf-8") == original_lock
+    finally:
+        _SchemaHandler.routes["/pet.json"] = original_response
+
+
+def test_cli_locks_every_real_redirect_response(
+    mocker: MockerFixture,
+    local_http_server: str,
+    tmp_path: Path,
+) -> None:
+    """Persist both redirect and final response bytes, then verify both on rerun."""
+    mocker.stopall()
+    redirect_url = f"{local_http_server}/redirect.json"
+    final_url = f"{local_http_server}/final.json"
+    _SchemaHandler.routes["/redirect.json"] = (
+        302,
+        {"content-type": "application/json", "location": final_url},
+        b'{"redirect":"body-is-locked-too"}',
+    )
+    _SchemaHandler.routes["/final.json"] = _SchemaHandler.routes["/pet.json"]
+    lockfile = tmp_path / "remote.lock"
+    update_args = ["--allow-private-network", "--disable-timestamp", "--update-lock", "--lockfile", str(lockfile)]
+
+    try:
+        run_main_url_and_assert(
+            url=redirect_url,
+            output_path=tmp_path / "output.py",
+            input_file_type="jsonschema",
+            assert_func=assert_http_e2e_file,
+            expected_file="backend.py",
+            extra_args=update_args,
+            transform=lambda output: output.replace(redirect_url, "http://localhost/schema.json"),
+        )
+        lock_data = json.loads(lockfile.read_text(encoding="utf-8"))
+        assert {resource["url"] for resource in lock_data["resources"]} == {redirect_url, final_url}
+
+        run_main_url_and_assert(
+            url=redirect_url,
+            output_path=tmp_path / "verified.py",
+            input_file_type="jsonschema",
+            assert_func=assert_http_e2e_file,
+            expected_file="backend.py",
+            extra_args=["--allow-private-network", "--disable-timestamp", "--locked", "--lockfile", str(lockfile)],
+            transform=lambda output: output.replace(redirect_url, "http://localhost/schema.json"),
+        )
+    finally:
+        del _SchemaHandler.routes["/redirect.json"]
+        del _SchemaHandler.routes["/final.json"]
+
+
+def test_cli_locks_local_http_reference_mirrors(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Treat a local HTTP-reference mirror as the same locked remote identity."""
+    root_path = tmp_path / "root.json"
+    mirror_path = tmp_path / "schemas" / "registry.example" / "child.json"
+    root_path.write_text(
+        json.dumps({
+            "title": "Root",
+            "type": "object",
+            "properties": {"child": {"$ref": "https://registry.example/child.json"}},
+        }),
+        encoding="utf-8",
+    )
+    mirror_path.parent.mkdir(parents=True)
+    mirror_path.write_text(
+        '{"title":"Child","type":"object","properties":{"name":{"type":"string"}}}', encoding="utf-8"
+    )
+    lockfile = tmp_path / "remote.lock"
+    output_path = tmp_path / "output.py"
+    common_args = [
+        "--input",
+        str(root_path),
+        "--output",
+        str(output_path),
+        "--input-file-type",
+        "jsonschema",
+        "--http-local-ref-path",
+        str(tmp_path / "schemas"),
+        "--disable-timestamp",
+        "--lockfile",
+        str(lockfile),
+    ]
+
+    run_main_with_args([*common_args, "--update-lock"])
+    assert_http_e2e_file(output_path, "remote_lock_nested.py")
+    lock_content = lockfile.read_text(encoding="utf-8")
+    assert "https://registry.example/child.json" in lock_content
+
+    mirror_path.write_text(
+        '{"title":"Child","type":"object","properties":{"age":{"type":"integer"}}}', encoding="utf-8"
+    )
+    run_main_with_args(
+        [*common_args, "--locked"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="content does not match lock",
+    )
+
+
+def test_cli_uses_default_lockfile_beside_project_pyproject(
+    mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    local_http_server: str,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """An existing default project lock verifies ordinary generation automatically."""
+    mocker.stopall()
+    project_path = tmp_path / "project"
+    project_path.mkdir()
+    (project_path / "pyproject.toml").write_text("[tool.datamodel-codegen]\n", encoding="utf-8")
+    monkeypatch.chdir(project_path)
+    schema_url = f"{local_http_server}/pet.json"
+    output_path = tmp_path / "output.py"
+    common_args = [
+        "--url",
+        schema_url,
+        "--output",
+        str(output_path),
+        "--input-file-type",
+        "jsonschema",
+        "--allow-private-network",
+        "--disable-timestamp",
+    ]
+    lockfile = project_path / "datamodel-codegen.lock"
+
+    run_main_with_args([*common_args, "--update-lock"])
+    assert lockfile.is_file()
+    lock_content = lockfile.read_text(encoding="utf-8")
+    run_main_with_args(common_args)
+
+    original_response = _SchemaHandler.routes["/pet.json"]
+    _SchemaHandler.routes["/pet.json"] = (
+        200,
+        {"content-type": "application/json"},
+        b'{"title":"ChangedPet","type":"object"}',
+    )
+    try:
+        run_main_with_args(
+            common_args,
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="content does not match lock",
+        )
+        assert lockfile.read_text(encoding="utf-8") == lock_content
+    finally:
+        _SchemaHandler.routes["/pet.json"] = original_response
+
+
+def test_generate_reuses_remote_lock_config_without_retaining_a_collector(
+    mocker: MockerFixture,
+    local_http_server: str,
+    tmp_path: Path,
+) -> None:
+    """Every public API invocation opens, commits, and releases its own collector."""
+    from datamodel_code_generator.remote_lock import RemoteLockError
+
+    mocker.stopall()
+    schema_url = f"{local_http_server}/pet.json"
+    lockfile = tmp_path / "remote.lock"
+    config = GenerateConfig(
+        allow_private_network=True,
+        disable_timestamp=True,
+        formatters=[],
+        input_file_type=InputFileType.JsonSchema,
+        lockfile=lockfile,
+        update_lock=True,
+    )
+    generate(urlparse(schema_url), config=config)
+    first_lock = lockfile.read_text(encoding="utf-8")
+    assert config.remote_lock is None
+    assert not config.remote_lock_resolved
+
+    original_response = _SchemaHandler.routes["/pet.json"]
+    _SchemaHandler.routes["/pet.json"] = (
+        200,
+        {"content-type": "application/json"},
+        b'{"title":"ChangedPet","type":"object"}',
+    )
+    try:
+        generate(urlparse(schema_url), config=config)
+        assert lockfile.read_text(encoding="utf-8") != first_lock
+        locked_config = config.model_copy(update={"locked": True, "update_lock": False})
+        _SchemaHandler.routes["/pet.json"] = (
+            200,
+            {"content-type": "application/json"},
+            b'{"title":"ThirdPet","type":"object"}',
+        )
+        with pytest.raises(RemoteLockError, match="content does not match lock"):
+            generate(urlparse(schema_url), config=locked_config)
+    finally:
+        _SchemaHandler.routes["/pet.json"] = original_response
+
+
+def test_cli_does_not_fall_back_to_a_subdirectory_lock_when_project_lock_is_absent(
+    mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    local_http_server: str,
+    tmp_path: Path,
+) -> None:
+    """The CLI's pyproject-root lock decision is forwarded to public generation once."""
+    from datamodel_code_generator.remote_lock import RemoteReferenceLock
+
+    mocker.stopall()
+    project_path = tmp_path / "project"
+    work_path = project_path / "nested"
+    work_path.mkdir(parents=True)
+    (project_path / "pyproject.toml").write_text("[tool.datamodel-codegen]\n", encoding="utf-8")
+    schema_url = f"{local_http_server}/pet.json"
+    nested_lock = RemoteReferenceLock.open(work_path / "datamodel-codegen.lock", update=True, locked=False)
+    nested_lock.record_response(schema_url, None, None, b"outdated")
+    nested_lock.commit()
+    monkeypatch.chdir(work_path)
+
+    run_main_url_and_assert(
+        url=schema_url,
+        output_path=tmp_path / "output.py",
+        input_file_type="jsonschema",
+        assert_func=assert_http_e2e_file,
+        expected_file="backend.py",
+        extra_args=["--allow-private-network", "--disable-timestamp"],
+        transform=lambda output: output.replace(schema_url, "http://localhost/schema.json"),
+    )
+
+
+def test_cli_preserves_existing_lock_when_atomic_update_fails(
+    mocker: MockerFixture,
+    local_http_server: str,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A failed atomic replacement never corrupts the previous complete lock file."""
+    mocker.stopall()
+    schema_url = f"{local_http_server}/pet.json"
+    lockfile = tmp_path / "remote.lock"
+    output_path = tmp_path / "output.py"
+    common_args = [
+        "--url",
+        schema_url,
+        "--output",
+        str(output_path),
+        "--input-file-type",
+        "jsonschema",
+        "--allow-private-network",
+        "--disable-timestamp",
+        "--update-lock",
+        "--lockfile",
+        str(lockfile),
+    ]
+    run_main_with_args(common_args)
+    original_lock = lockfile.read_text(encoding="utf-8")
+    original_response = _SchemaHandler.routes["/pet.json"]
+    _SchemaHandler.routes["/pet.json"] = (
+        200,
+        {"content-type": "application/json"},
+        b'{"title":"ChangedPet","type":"object"}',
+    )
+    try:
+        mocker.patch("datamodel_code_generator.remote_lock.Path.replace", side_effect=OSError("full"))
+        run_main_with_args(
+            common_args,
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="Unable to update remote lock",
+        )
+        assert lockfile.read_text(encoding="utf-8") == original_lock
+    finally:
+        _SchemaHandler.routes["/pet.json"] = original_response
+
+
+def test_cli_does_not_commit_an_updated_lock_when_check_fails(
+    mocker: MockerFixture,
+    local_http_server: str,
+    tmp_path: Path,
+) -> None:
+    """A check-mode difference is a failed command and cannot publish a new lock."""
+    mocker.stopall()
+    output_path = tmp_path / "output.py"
+    output_path.write_text("# stale\n", encoding="utf-8")
+    lockfile = tmp_path / "remote.lock"
+
+    run_main_with_args(
+        [
+            "--url",
+            f"{local_http_server}/pet.json",
+            "--output",
+            str(output_path),
+            "--input-file-type",
+            "jsonschema",
+            "--allow-private-network",
+            "--disable-timestamp",
+            "--check",
+            "--update-lock",
+            "--lockfile",
+            str(lockfile),
+        ],
+        expected_exit=Exit.DIFF,
+    )
+    assert not lockfile.exists()
 
 
 def test_load_http_stack_rejects_unknown_backend() -> None:

@@ -42,6 +42,7 @@ from datamodel_code_generator import (
     SchemaParseError,
     VersionMode,
     YamlValue,
+    _load_parser_source_data_from_path_bytes,
     load_data,
     load_data_from_path,
     snooper_to_methods,
@@ -8706,6 +8707,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         except (json.JSONDecodeError, TypeError, *get_yaml_parse_errors()) as exc:
             raise InvalidFileFormatError(exc, self._input_file_type, source=source) from exc
 
+    def _load_ref_data_from_local_http_file(self, path: Path, ref: str) -> dict[str, YamlValue]:
+        """Decode a local HTTP mirror while locking the same raw bytes as HTTP."""
+        if self._remote_response_observer is None:
+            return self._load_ref_data_from_path(path)
+        data = path.read_bytes()
+        self._remote_response_observer(ref, self.http_headers, self.http_query_parameters, data)
+        try:
+            result = _load_parser_source_data_from_path_bytes(path, data, self.encoding)
+        except (json.JSONDecodeError, *get_yaml_parse_errors()) as exc:
+            raise InvalidFileFormatError(exc, self._input_file_type, source=path) from exc
+        if isinstance(result, dict):
+            return result
+        msg = f"Expected dict, got {type(result).__name__}"
+        raise InvalidFileFormatError(TypeError(msg), self._input_file_type, source=path)
+
     def _get_ref_body_from_local_http_path(self, ref: str) -> dict[str, YamlValue]:
         assert self.http_local_ref_path is not None
         parsed = urlparse(ref)
@@ -8732,7 +8748,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if file_path.is_file():
                 return self.remote_object_cache.get_or_put(
                     str(file_path),
-                    default_factory=lambda _, file_path=file_path: self._load_ref_data_from_path(file_path),
+                    default_factory=lambda _, file_path=file_path: self._load_ref_data_from_local_http_file(
+                        file_path, ref
+                    ),
                 )
 
         msg = f"$ref local file not found for {ref}: tried {', '.join(str(path) for path in file_paths)}"

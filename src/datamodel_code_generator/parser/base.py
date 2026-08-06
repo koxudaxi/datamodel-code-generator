@@ -2161,6 +2161,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.http_query_parameters: Sequence[tuple[str, str]] | None = config.http_query_parameters
         self.http_ignore_tls: bool = config.http_ignore_tls
         self.http_timeout: float | None = config.http_timeout
+        remote_lock = getattr(config, "remote_lock", None)
+        self._remote_response_observer = remote_lock.record_response if remote_lock is not None else None
         self.use_annotated: bool = config.use_annotated
         if self.use_annotated and not self.field_constraints:  # pragma: no cover
             msg = "`use_annotated=True` has to be used with `field_constraints=True`"
@@ -2406,7 +2408,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             from datamodel_code_generator.http import DEFAULT_HTTP_TIMEOUT, _HTTPFetchSession  # noqa: PLC0415
 
             if (session := self._http_fetch_session) is None:
-                self._http_fetch_session = session = _HTTPFetchSession(self.http_backend)
+                self._http_fetch_session = session = _HTTPFetchSession(
+                    self.http_backend,
+                    response_observer=self._remote_response_observer,
+                )
             timeout = self.http_timeout if self.http_timeout is not None else DEFAULT_HTTP_TIMEOUT
             return session.get_body(
                 remote_url,
