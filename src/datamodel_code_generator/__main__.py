@@ -1142,6 +1142,72 @@ def _selected_jobs(args: Namespace, jobs: Mapping[Any, Any]) -> frozenset[Any]:
     return frozenset(selected_names)
 
 
+def _record_raw_batch_watch_dependencies(args: Namespace, dependencies: WatchDependencies) -> None:
+    """Keep the latest invalid batch plan observable until it can be replanned."""
+    try:
+        project_config = _find_datamodel_codegen_project_config_with_path(Path.cwd())
+    except (OSError, ValueError):
+        return
+    if project_config is None:
+        return
+
+    pyproject_path, tool_config = project_config
+    dependencies.begin_raw_attempt()
+    dependencies.add_recovery_file(pyproject_path)
+    jobs = tool_config.get("jobs")
+    if not isinstance(jobs, Mapping):
+        return
+
+    _record_raw_job_config_dependencies(tool_config, pyproject_path.parent, dependencies)
+    profiles = tool_config.get("profiles")
+    selected_names = jobs if args.all_jobs else args.job or ()
+    for name in selected_names:
+        job = jobs.get(name)
+        if not isinstance(job, Mapping):
+            continue
+        if isinstance(profiles, Mapping) and isinstance(profile_name := job.get("profile"), str):
+            _record_raw_profile_dependencies(profile_name, profiles, pyproject_path.parent, dependencies, set())
+        _record_raw_job_config_dependencies(job, pyproject_path.parent, dependencies)
+
+
+def _record_raw_profile_dependencies(
+    profile_name: str,
+    profiles: Mapping[Any, Any],
+    base_path: Path,
+    dependencies: WatchDependencies,
+    seen_profiles: set[str],
+) -> None:
+    """Collect one raw profile chain without reproducing validation failures."""
+    if profile_name in seen_profiles:
+        return
+    seen_profiles.add(profile_name)
+    profile = profiles.get(profile_name)
+    if not isinstance(profile, Mapping):
+        return
+    match profile.get("extends"):
+        case str() as parent:
+            _record_raw_profile_dependencies(parent, profiles, base_path, dependencies, seen_profiles)
+        case [*parents] if all(isinstance(parent, str) for parent in parents):
+            for parent in parents:
+                _record_raw_profile_dependencies(parent, profiles, base_path, dependencies, seen_profiles)
+    _record_raw_job_config_dependencies(profile, base_path, dependencies)
+
+
+def _record_raw_job_config_dependencies(
+    config: Mapping[Any, Any], base_path: Path, dependencies: WatchDependencies
+) -> None:
+    """Register raw local inputs and JSON option files for failed-plan recovery."""
+    from datamodel_code_generator.watch_dependencies import _JSON_CONFIG_FIELDS  # noqa: PLC0415
+
+    for raw_name, raw_value in config.items():
+        if not isinstance(raw_name, str) or raw_name.replace("-", "_") not in (_JSON_CONFIG_FIELDS | {"input"}):
+            continue
+        if not isinstance(raw_value, str | Path):
+            continue
+        path = Path(raw_value)
+        dependencies.add_recovery_file(path if path.is_absolute() else base_path / path)
+
+
 def _plan_jobs_unchecked(args: Namespace) -> BatchPlan:
     """Load and preflight selected jobs after the command-level validation."""
     if args.ignore_pyproject:
@@ -2404,6 +2470,8 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         try:
             batch_plan = _plan_jobs(namespace)
         except Error as e:
+            if dependencies is not None:
+                _record_raw_batch_watch_dependencies(namespace, dependencies)
             print(str(e), file=sys.stderr)  # noqa: T201
             return Exit.ERROR
         if not batch_plan.watch:

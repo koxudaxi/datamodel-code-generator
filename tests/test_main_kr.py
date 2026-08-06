@@ -2663,6 +2663,163 @@ emit-model-metadata = "{metadata_output.as_posix()}"
     _assert_file_does_not_exist(metadata_output)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="batch publication anchors use directory descriptors on POSIX")
+def test_pyproject_jobs_staging_failure_keeps_primary_error_when_anchor_cleanup_fails(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Report both failed anchor cleanups without masking the original staging failure."""
+    first_output = tmp_path / "first.py"
+    second_output = tmp_path / "second.py"
+    metadata_output = tmp_path / "second.metadata.json"
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.first]
+input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
+output = "{first_output.as_posix()}"
+
+[tool.datamodel-codegen.jobs.second]
+input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
+output = "{second_output.as_posix()}"
+emit-model-metadata = "{metadata_output.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+    staging_directory_for = main_module._staging_directory_for
+    staging_calls = 0
+
+    def fail_metadata_staging(target: Path) -> tempfile.TemporaryDirectory[str]:
+        nonlocal staging_calls
+        staging_calls += 1
+        if staging_calls == 3:
+            msg = "simulated staging failure"
+            raise OSError(msg)
+        return staging_directory_for(target)
+
+    publication_anchor = main_module._publication_anchor
+    anchored_descriptors: set[int] = set()
+
+    def record_anchor(path: Path) -> main_module._PublicationAnchor:
+        anchor = publication_anchor(path)
+        if anchor.directory_fd is not None:
+            anchored_descriptors.add(anchor.directory_fd)
+        return anchor
+
+    close = os.close
+
+    def fail_anchor_cleanup(descriptor: int) -> None:
+        if descriptor in anchored_descriptors:
+            anchored_descriptors.remove(descriptor)
+            close(descriptor)
+            msg = "simulated anchor cleanup failure"
+            raise OSError(msg)
+        close(descriptor)
+
+    monkeypatch.setattr(main_module, "_staging_directory_for", fail_metadata_staging)
+    monkeypatch.setattr(main_module, "_publication_anchor", record_anchor)
+    monkeypatch.setattr(main_module.os, "close", fail_anchor_cleanup)
+
+    with chdir(tmp_path):
+        run_main_with_args(["--all-jobs", "--formatters", "builtin"], expected_exit=Exit.ERROR)
+
+    assert_output(
+        capsys.readouterr().err,
+        EXPECTED_MAIN_KR_PATH / "jobs" / "staging_anchor_cleanup_error.txt",
+    )
+    _assert_file_does_not_exist(first_output)
+    _assert_file_does_not_exist(second_output)
+    _assert_file_does_not_exist(metadata_output)
+
+
+def test_pyproject_jobs_cleanup_failure_after_success_is_a_clean_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Return a normal diagnostic if final staging cleanup fails after publishing output."""
+    output = tmp_path / "person.py"
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.person]
+input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
+output = "{output.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+    staging_directory_for = main_module._staging_directory_for
+
+    def staging_with_failed_cleanup(target: Path) -> tempfile.TemporaryDirectory[str]:
+        context = staging_directory_for(target)
+        cleanup = context.cleanup
+
+        def fail_cleanup() -> None:
+            cleanup()
+            msg = "simulated post-generation cleanup failure"
+            raise OSError(msg)
+
+        monkeypatch.setattr(context, "cleanup", fail_cleanup)
+        return context
+
+    monkeypatch.setattr(main_module, "_staging_directory_for", staging_with_failed_cleanup)
+
+    with chdir(tmp_path):
+        run_main_with_args(["--all-jobs", "--formatters", "builtin"], expected_exit=Exit.ERROR)
+
+    assert_output(capsys.readouterr().err, EXPECTED_MAIN_KR_PATH / "jobs" / "staging_cleanup_error.txt")
+    assert_output(output.read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
+
+
+@pytest.mark.allow_direct_assert
+def test_pyproject_jobs_reraises_generation_failure_after_attempting_staging_cleanup(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Keep a primary runner failure while reporting a cleanup failure from every staged resource."""
+    output = tmp_path / "person.py"
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.person]
+input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
+output = "{output.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+    staging_directory_for = main_module._staging_directory_for
+
+    def staging_with_failed_cleanup(target: Path) -> tempfile.TemporaryDirectory[str]:
+        context = staging_directory_for(target)
+        cleanup = context.cleanup
+
+        def fail_cleanup() -> None:
+            cleanup()
+            msg = "simulated post-generation cleanup failure"
+            raise OSError(msg)
+
+        monkeypatch.setattr(context, "cleanup", fail_cleanup)
+        return context
+
+    def fail_runner(*_args: object, **_kwargs: object) -> Exit:
+        msg = "simulated runner failure"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(main_module, "_staging_directory_for", staging_with_failed_cleanup)
+    monkeypatch.setattr(main_module, "_run_jobs_text", fail_runner)
+
+    with chdir(tmp_path), pytest.raises(RuntimeError, match="simulated runner failure"):
+        run_main_with_args(["--all-jobs", "--formatters", "builtin"])
+
+    assert_output(capsys.readouterr().err, EXPECTED_MAIN_KR_PATH / "jobs" / "staging_cleanup_error.txt")
+    _assert_file_does_not_exist(output)
+
+
 @pytest.mark.parametrize(
     ("config", "args", "message"),
     [
