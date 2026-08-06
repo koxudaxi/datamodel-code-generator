@@ -136,6 +136,21 @@ def test_cli_option_doc_path_links_to_generated_cli_reference() -> None:
     assert get_cli_option_doc_path("--unknown-option") is None
 
 
+def test_manual_doc_links_are_rebased_for_the_generated_utility_page() -> None:
+    """Manual sibling and parent links remain valid when embedded one level higher."""
+    generated = build_cli_docs.generate_manual_docs_section({
+        "--job": "[Sibling](../general-options.md#diff-against) [Parent](../../pyproject_toml.md)"
+    })
+
+    _fail_if_missing(
+        "[Sibling](general-options.md#diff-against)",
+        generated,
+        "manual sibling link",
+    )
+    _fail_if_missing("[Parent](../pyproject_toml.md)", generated, "manual parent link")
+    _fail_if_present("](../general-options.md", generated, "unrebased manual sibling link")
+
+
 def test_cli_option_doc_name_preserves_boolean_variants_and_canonicalizes_aliases() -> None:
     """Boolean option variants have distinct sections, but regular aliases share one section."""
     assert get_cli_option_doc_name("--treat-dot-as-module") == "--treat-dot-as-module"

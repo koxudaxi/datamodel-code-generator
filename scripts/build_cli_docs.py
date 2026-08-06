@@ -1466,9 +1466,8 @@ def generate_manual_docs_section(manual_docs: dict[str, str]) -> str:
 
     for option in sorted(manual_docs.keys()):
         content = manual_docs[option]
-        # Adjust relative paths: manual docs are in manual/ subdirectory,
-        # but utility-options.md is in cli-reference/, so ../../ becomes ../
-        content = content.replace("](../../", "](../")
+        # Manual docs move one directory up when embedded in utility-options.md.
+        content = content.replace("](../", "](")
         for related_option in manual_docs:
             related_slug = get_cli_doc_slug(related_option)
             content = content.replace(f"]({related_slug}.md#{related_slug})", f"](#{related_slug})")

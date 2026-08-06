@@ -199,8 +199,8 @@ in a different order.
     Named batch jobs are experimental; their configuration schema, batch output,
     and transactional/watch execution contracts may change.
 
-**Related:** [pyproject.toml Configuration](../pyproject_toml.md), [`--all-jobs`](#all-jobs),
-[`--diff-against`](general-options.md#diff-against)
+**Related:** [pyproject.toml Configuration](../pyproject_toml.md),
+[`--all-jobs`](#all-jobs), [`--diff-against`](general-options.md#diff-against)
 
 !!! tip "Usage"
 
