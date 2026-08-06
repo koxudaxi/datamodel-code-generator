@@ -47,7 +47,7 @@ from datamodel_code_generator.preset_names import PRESET_NAMES
 
 if TYPE_CHECKING:
     from argparse import Action
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Sequence
 
 DEFAULT_ENCODING = "utf-8"
 
@@ -119,7 +119,41 @@ class SortingHelpFormatter(RawDescriptionHelpFormatter):
         return super().start_section(heading if namespace.no_color or not heading else self._bold_cyan(heading))
 
 
-arg_parser = ArgumentParser(
+class SuggestingArgumentParser(ArgumentParser):
+    """Argument parser that suggests close matches for unknown option names."""
+
+    def parse_args(self, args: Sequence[str] | None = None, namespace: Namespace | None = None) -> Namespace:
+        """Parse arguments and suggest close matches for unknown option names."""
+        parsed_args, unknown_arguments = self.parse_known_args(args, namespace)
+        if not unknown_arguments:
+            return cast("Namespace", parsed_args)
+        return self.error(self._unrecognized_arguments_message(unknown_arguments))
+
+    def _unrecognized_arguments_message(self, unknown_arguments: Sequence[str]) -> str:
+        """Format an unknown-argument message with close option-name matches."""
+        message = f"unrecognized arguments: {' '.join(unknown_arguments)}"
+        suggestions: list[str] = []
+        for unknown_argument in unknown_arguments:
+            match unknown_argument:
+                case "--":
+                    break
+                case option_name if option_name.startswith("-"):
+                    option_name = option_name.partition("=")[0]
+                case _:
+                    continue
+
+            from difflib import get_close_matches  # noqa: PLC0415
+
+            if (matches := get_close_matches(option_name, self._option_string_actions, n=1, cutoff=0.7)) and (
+                suggestion := matches[0]
+            ) not in suggestions:
+                suggestions.append(suggestion)
+        if not suggestions:
+            return message
+        return f"{message}\nDid you mean: {', '.join(suggestions)}?"
+
+
+arg_parser = SuggestingArgumentParser(
     usage="\n  datamodel-codegen [options]",
     description="Generate Python data models from schema definitions or structured data\n\n"
     "For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev",
