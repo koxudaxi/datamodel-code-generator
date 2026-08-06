@@ -110,6 +110,15 @@ def _start_watch_cli(
     extra_args: list[str] | None = None,
     working_directory: Path = PROJECT_ROOT,
 ) -> tuple[subprocess.Popen[str], list[str], list[str], threading.Thread, threading.Thread]:
+    environment = {
+        **os.environ,
+        "PYTHONUNBUFFERED": "1",
+        "WATCHFILES_FORCE_POLLING": os.environ.get("WATCHFILES_FORCE_POLLING", "true"),
+    }
+    if working_directory != PROJECT_ROOT and (coverage_file := environment.get("COVERAGE_FILE")):
+        coverage_path = Path(coverage_file)
+        if not coverage_path.is_absolute():
+            environment["COVERAGE_FILE"] = str((PROJECT_ROOT / coverage_path).resolve())
     process = subprocess.Popen(
         _watch_cli_command(input_path, output_path, extra_args),
         stdout=subprocess.PIPE,
@@ -117,11 +126,7 @@ def _start_watch_cli(
         text=True,
         bufsize=1,
         cwd=working_directory,
-        env={
-            **os.environ,
-            "PYTHONUNBUFFERED": "1",
-            "WATCHFILES_FORCE_POLLING": os.environ.get("WATCHFILES_FORCE_POLLING", "true"),
-        },
+        env=environment,
         creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0,
     )
     if process.stdout is None or process.stderr is None:  # pragma: no cover
@@ -286,6 +291,34 @@ def test_watch_cli_command_skips_coverage_for_nocov_env(tmp_path: Path, monkeypa
     command = _watch_cli_command(tmp_path / "schema.json", tmp_path / "output.py")
 
     assert "coverage" not in command
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_cli_resolves_relative_coverage_file_for_other_working_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test a watch subprocess keeps its coverage data at the project root."""
+    project_root = tmp_path / "project"
+    working_directory = tmp_path / "working-directory"
+    project_root.mkdir()
+    working_directory.mkdir()
+    input_file = working_directory / "schema.json"
+    output_file = working_directory / "output.py"
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    coverage_file = ".coverage.watch-cli"
+    monkeypatch.setattr(sys.modules[__name__], "PROJECT_ROOT", project_root)
+    monkeypatch.setenv("COVERAGE_FILE", coverage_file)
+
+    process, _stdout_lines, _stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
+        input_file,
+        output_file,
+        working_directory=working_directory,
+    )
+    _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+    assert list(project_root.glob(f"{coverage_file}.*"))
+    assert not list(working_directory.glob(f"{coverage_file}.*"))
 
 
 @pytest.mark.allow_direct_assert
