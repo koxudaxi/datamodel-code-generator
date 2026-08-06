@@ -699,9 +699,13 @@ class ProtobufParser(JsonSchemaParser):
                 raise SchemaParseError(msg)
             with tempfile.NamedTemporaryFile(suffix=".pb", delete=False) as output_file:
                 output_path = Path(output_file.name)
+            collect_dependencies = _watch_dependency_collection_is_active()
+            persistent_include_paths: tuple[Path, ...] = ()
             try:
-                if _watch_dependency_collection_is_active():
-                    self._record_lexical_import_candidates(self._lexical_source_files(input_files), include_paths)
+                if collect_dependencies:
+                    lexical_sources = self._lexical_source_files()
+                    persistent_include_paths = self._persistent_include_paths(lexical_sources)
+                    self._record_lexical_import_candidates(lexical_sources, persistent_include_paths)
                 args = [
                     "grpc_tools.protoc",
                     *(f"-I{path}" for path in [*include_paths, well_known_include]),
@@ -719,24 +723,27 @@ class ProtobufParser(JsonSchemaParser):
                     raise SchemaParseError(msg)
                 descriptor_set = descriptor_pb2.FileDescriptorSet()
                 descriptor_set.ParseFromString(output_path.read_bytes())
-                if _watch_dependency_collection_is_active():
-                    self._record_descriptor_dependencies(descriptor_set, include_paths)
+                if collect_dependencies:
+                    self._record_descriptor_dependencies(descriptor_set, persistent_include_paths)
                 return descriptor_set, input_file_names
             finally:
                 with contextlib.suppress(OSError):
                     output_path.unlink()
 
-    def _lexical_source_files(self, input_files: Sequence[Path]) -> Sequence[Path]:
-        """Prefer original local sources over protoc's temporary sanitized copies."""
+    def _lexical_source_files(self) -> Sequence[Path]:
+        """Return persistent local sources without protoc's temporary sanitized copies."""
         if isinstance(self.source, Path):
             return sorted(self.source.rglob("*.proto")) if self.source.is_dir() else [self.source]
-        return self.source if isinstance(self.source, list) else input_files
+        return self.source if isinstance(self.source, list) else ()
+
+    def _persistent_include_paths(self, input_files: Sequence[Path]) -> tuple[Path, ...]:
+        """Return lexical include roots that survive preparer cleanup."""
+        return tuple(dict.fromkeys((self.base_path, *(path.parent for path in input_files))))
 
     def _record_lexical_import_candidates(self, input_files: Sequence[Path], include_paths: Sequence[Path]) -> None:
         """Breadth-first record source imports before ``protoc`` can reject a nested missing file."""
         pending_files = list(input_files)
         visited_files: set[Path] = set()
-        source_include_paths = include_paths[1:]
         while pending_files:
             source_path = pending_files.pop()
             if source_path in visited_files:
@@ -747,7 +754,7 @@ class ProtobufParser(JsonSchemaParser):
             except OSError:
                 continue
             for import_path in IMPORT_PATTERN.findall(text):
-                candidates = tuple(dict.fromkeys((source_path.parent, *source_include_paths)))
+                candidates = tuple(dict.fromkeys((source_path.parent, *include_paths)))
                 candidates = tuple(include_path / import_path for include_path in candidates)
                 existing_candidate = next((candidate for candidate in candidates if candidate.is_file()), None)
                 if existing_candidate is not None:
@@ -761,7 +768,7 @@ class ProtobufParser(JsonSchemaParser):
     def _record_descriptor_dependencies(descriptor_set: Any, include_paths: Sequence[Path]) -> None:
         """Record local ``protoc`` imports without retaining descriptor contents."""
         for descriptor in descriptor_set.file:
-            for include_path in include_paths[1:]:
+            for include_path in include_paths:
                 candidate = include_path / descriptor.name
                 if candidate.is_file():
                     record_watch_dependency(candidate)

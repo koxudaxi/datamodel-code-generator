@@ -6,16 +6,20 @@ along with PythonVersion enum and DatetimeClassType for output configuration.
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess  # noqa: S404
 import sys
+from dataclasses import dataclass
 from functools import lru_cache
 from importlib import import_module
+from importlib.util import source_from_cache
 from pathlib import Path
 from types import ModuleType
 from typing import TYPE_CHECKING, Any
 from warnings import warn
+from weakref import WeakKeyDictionary
 
 from datamodel_code_generator import _format_types
 from datamodel_code_generator.deprecations import warn_deprecated
@@ -42,6 +46,56 @@ TYPE_ALIAS_INLINE_ARGUMENT_COUNT = 2
 STRING_PREFIX_PATTERN = re.compile(r"(?i)^([rubf]*)(\"\"\"|'''|\"|')")
 
 
+@dataclass(frozen=True, slots=True)
+class _WatchFormatterState:
+    generation: object
+    module_names: tuple[str, ...]
+
+
+_WATCH_FORMATTER_STATES: WeakKeyDictionary[ModuleType, _WatchFormatterState] = WeakKeyDictionary()
+
+
+def _module_source_path(module: ModuleType) -> Path | None:
+    module_file = getattr(module, "__file__", None)
+    if module_file is None:
+        return None
+    path = Path(module_file)
+    if path.suffix == ".pyc":
+        try:
+            path = Path(source_from_cache(str(path)))
+        except ValueError:
+            return None
+    return path.resolve(strict=False)
+
+
+def _local_package_modules(module: ModuleType, *, previous_modules: frozenset[str]) -> tuple[str, ...]:
+    package_paths = getattr(module, "__path__", None)
+    if package_paths is None:
+        return (module.__name__,)
+    roots = tuple(Path(path).resolve(strict=False) for path in package_paths)
+    prefix = f"{module.__name__}."
+    local_modules = tuple(
+        name
+        for name, candidate in sys.modules.items()
+        if name not in previous_modules
+        and name.startswith(prefix)
+        and isinstance(candidate, ModuleType)
+        and (source_path := _module_source_path(candidate)) is not None
+        and any(source_path.is_relative_to(root) for root in roots)
+    )
+    return (module.__name__, *local_modules)
+
+
+def _record_watch_module_candidates(module_name: str, watch_dependencies: Any) -> None:
+    relative_module = Path(*module_name.split("."))
+    candidate_roots = [Path.cwd()]
+    if python_path := os.environ.get("PYTHONPATH"):
+        candidate_roots.extend(Path(path) for path in python_path.split(os.pathsep) if path)
+    for root in dict.fromkeys(candidate_roots):
+        watch_dependencies.record_local_dependency(root / relative_module.with_suffix(".py"))
+        watch_dependencies.record_local_dependency(root / relative_module / "__init__.py")
+
+
 def _fresh_watch_module(module: ModuleType) -> ModuleType:
     """Execute a watch dependency module from source before atomically replacing it."""
     spec = module.__spec__
@@ -58,16 +112,52 @@ def _fresh_watch_module(module: ModuleType) -> ModuleType:
     replacement.__cached__ = spec.cached
     if spec.submodule_search_locations is not None:
         replacement.__path__ = list(spec.submodule_search_locations)  # ty: ignore[unresolved-attribute]
-    exec(compile(source, module_path, "exec"), replacement.__dict__)  # noqa: S102
 
     from datamodel_code_generator import PROCESS_STATE_LOCK  # noqa: PLC0415
 
     with PROCESS_STATE_LOCK:
+        exec(compile(source, module_path, "exec"), replacement.__dict__)  # noqa: S102
         sys.modules[module.__name__] = replacement
         parent_name, _, child_name = module.__name__.rpartition(".")
         if parent_name and (parent_module := sys.modules.get(parent_name)) is not None:
             setattr(parent_module, child_name, replacement)
     return replacement
+
+
+def _load_watch_formatter_module(module_name: str, watch_dependencies: Any) -> ModuleType:
+    """Load or source-refresh a formatter once per watch generation."""
+    _record_watch_module_candidates(module_name, watch_dependencies)
+    generation = watch_dependencies.collector_identity()
+
+    from datamodel_code_generator import PROCESS_STATE_LOCK  # noqa: PLC0415
+
+    with PROCESS_STATE_LOCK:
+        module = sys.modules.get(module_name)
+        state = _WATCH_FORMATTER_STATES.get(module) if isinstance(module, ModuleType) else None
+        if state is not None and state.generation is generation:
+            module_names = state.module_names
+        elif module is None:
+            previous_modules = frozenset(sys.modules)
+            module = import_module(module_name)
+            module_names = _local_package_modules(module, previous_modules=previous_modules)
+        else:
+            previous_modules = frozenset(sys.modules)
+            module_names = (
+                state.module_names
+                if state is not None
+                else _local_package_modules(module, previous_modules=frozenset())
+            )
+            for child_name in reversed(module_names[1:]):
+                if isinstance(child_module := sys.modules.get(child_name), ModuleType):
+                    _fresh_watch_module(child_module)
+            module = _fresh_watch_module(module)
+            module_names = tuple(
+                dict.fromkeys((*module_names, *_local_package_modules(module, previous_modules=previous_modules)))
+            )
+        _WATCH_FORMATTER_STATES[module] = _WatchFormatterState(generation, module_names)
+    for tracked_name in module_names:
+        watch_dependencies.record_module_dependency(sys.modules.get(tracked_name))
+    return module
 
 
 # Keep the re-export shim visible to auto-fixers without changing star-import behavior.
@@ -451,12 +541,12 @@ class CodeFormatter:
 
     def _load_custom_formatter(self, custom_formatter_import: str) -> CustomCodeFormatter:
         """Load and instantiate a custom formatter from a module path."""
-        import_ = import_module(custom_formatter_import)
         if (watch_dependencies := sys.modules.get("datamodel_code_generator.watch_dependencies")) is not None and (
             watch_dependencies.collector_is_active()
         ):
-            import_ = _fresh_watch_module(import_)
-            watch_dependencies.record_module_dependency(import_)
+            import_ = _load_watch_formatter_module(custom_formatter_import, watch_dependencies)
+        else:
+            import_ = import_module(custom_formatter_import)
 
         if not hasattr(import_, "CodeFormatter"):
             msg = f"Custom formatter module `{import_.__name__}` must contains object with name CodeFormatter"

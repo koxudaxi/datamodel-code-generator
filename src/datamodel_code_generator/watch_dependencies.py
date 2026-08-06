@@ -53,6 +53,16 @@ class _DependencySnapshot:
     watch_roots: tuple[Path, ...]
 
 
+@dataclass(slots=True)
+class _StaticDependencies:
+    """One bounded static candidate awaiting generation publication."""
+
+    files: set[Path] = field(default_factory=set)
+    directories: set[Path] = field(default_factory=set)
+    symlink_events: set[Path] = field(default_factory=set)
+    output: Path | None = None
+
+
 _current_collector: ContextVar[_CollectedGeneration | None] = ContextVar("watch_dependencies", default=None)
 
 
@@ -92,16 +102,6 @@ def _resolved_path(path: Path) -> Path:
     return _lexical_path(path).resolve(strict=False)
 
 
-def _existing_file(value: object) -> Path | None:
-    if not isinstance(value, (str, Path)):
-        return None
-    try:
-        path = _lexical_path(Path(value))
-    except (OSError, ValueError):
-        return None
-    return path if path.is_file() else None
-
-
 def _configured_path(config_values: Mapping[str, Any], field_name: str, fallback: str | Path | None) -> Path | None:
     value = config_values.get(field_name, fallback)
     return Path(value) if isinstance(value, (str, Path)) else fallback
@@ -132,8 +132,10 @@ class WatchDependencies:
     _generation_files: set[Path] = field(default_factory=set)
     _generation_symlink_events: set[Path] = field(default_factory=set)
     _output: Path | None = None
-    _outputs: set[Path] = field(default_factory=set)
-    _pending_static: tuple[set[Path], set[Path], set[Path], Path | None] | None = None
+    _pending_static: _StaticDependencies | None = None
+    _failed_static: _StaticDependencies | None = None
+    _failed_generation_files: set[Path] = field(default_factory=set)
+    _failed_generation_symlink_events: set[Path] = field(default_factory=set)
     _lock: RLock = field(default_factory=RLock)
     _snapshot: _DependencySnapshot = field(init=False)
 
@@ -145,27 +147,37 @@ class WatchDependencies:
         static_files = self._static_files.copy()
         static_directories = self._static_directories.copy()
         static_symlink_events = self._static_symlink_events.copy()
-        if self._pending_static is not None:
-            pending_files, pending_directories, pending_symlink_events, _pending_output = self._pending_static
-            static_files |= pending_files
-            static_directories |= pending_directories
-            static_symlink_events |= pending_symlink_events
-        files = frozenset(static_files | self._generation_files)
+        candidate = self._pending_static or self._failed_static
+        if candidate is not None:
+            static_files |= candidate.files
+            static_directories |= candidate.directories
+            static_symlink_events |= candidate.symlink_events
+        failed_generation_files = self._failed_generation_files if self._pending_static is None else set()
+        failed_generation_symlink_events = (
+            self._failed_generation_symlink_events if self._pending_static is None else set()
+        )
+        files = frozenset(static_files | self._generation_files | failed_generation_files)
         directories = frozenset(static_directories)
-        event_paths = frozenset(files | static_symlink_events | self._generation_symlink_events)
+        event_paths = frozenset(
+            files | static_symlink_events | self._generation_symlink_events | failed_generation_symlink_events
+        )
         roots = {_nearest_existing_directory(path.parent) for path in files}
         roots.update(_nearest_existing_directory(path) for path in directories)
         roots.update(_nearest_existing_directory(path) for path in event_paths)
         watch_roots = tuple(sorted((path for path in roots if path.is_dir()), key=lambda path: path.as_posix()))
-        return _DependencySnapshot(files, directories, event_paths, self._output, frozenset(self._outputs), watch_roots)
+        outputs = frozenset(output for output in (self._output, candidate.output if candidate else None) if output)
+        return _DependencySnapshot(files, directories, event_paths, self._output, outputs, watch_roots)
 
     def _publish(self) -> None:
         self._snapshot = self._create_snapshot()
 
     @staticmethod
     def _add_path(path: Path, paths: set[Path], symlink_events: set[Path]) -> None:
-        paths.update(_path_variants(path))
-        symlink_events.update(_symlink_event_paths(path))
+        try:
+            paths.update(_path_variants(path))
+            symlink_events.update(_symlink_event_paths(path))
+        except (OSError, ValueError):
+            return
 
     def configure(
         self,
@@ -194,22 +206,44 @@ class WatchDependencies:
         add_directory(_configured_path(config_values, "custom_template_dir", config.custom_template_dir))
         add_directory(_configured_path(config_values, "http_local_ref_path", config.http_local_ref_path))
         for field_name in _JSON_CONFIG_FIELDS:
-            add_file(_existing_file(config_values.get(field_name)))
+            value = config_values.get(field_name)
+            add_file(Path(value) if isinstance(value, (str, Path)) else None)
 
-        candidate = (
-            files,
-            directories,
-            symlink_events,
-            _resolved_path(config.output) if config.output is not None else None,
+        candidate = _StaticDependencies(
+            files=files,
+            directories=directories,
+            symlink_events=symlink_events,
+            output=_resolved_path(config.output) if config.output is not None else None,
         )
         with self._lock:
-            if candidate[3] is not None:
-                self._outputs.add(candidate[3])
-            if self._snapshot.files or self._snapshot.directories:
-                self._pending_static = candidate
-                self._publish()
-                return
-            self._static_files, self._static_directories, self._static_symlink_events, self._output = candidate
+            self._pending_static = candidate
+            self._publish()
+
+    def stage_raw_config(self, config_values: Mapping[str, Any]) -> None:
+        """Stage lexical raw paths before typed config validation can fail."""
+        candidate = _StaticDependencies()
+
+        def add_file(value: object) -> None:
+            if isinstance(value, (str, Path)):
+                self._add_path(Path(value), candidate.files, candidate.symlink_events)
+
+        def add_directory(value: object) -> None:
+            if isinstance(value, (str, Path)):
+                self._add_path(Path(value), candidate.directories, candidate.symlink_events)
+
+        input_value = config_values.get("input")
+        if isinstance(input_value, (str, Path)):
+            (add_directory if Path(input_value).is_dir() else add_file)(input_value)
+        add_file(config_values.get("custom_file_header_path"))
+        add_directory(config_values.get("custom_template_dir"))
+        add_directory(config_values.get("http_local_ref_path"))
+        for field_name in _JSON_CONFIG_FIELDS:
+            add_file(config_values.get(field_name))
+        if isinstance(output := config_values.get("output"), (str, Path)):
+            with suppress(OSError, ValueError):
+                candidate.output = _resolved_path(Path(output))
+        with self._lock:
+            self._pending_static = candidate
             self._publish()
 
     @contextmanager
@@ -221,27 +255,25 @@ class WatchDependencies:
             yield
         except BaseException:
             with self._lock:
-                if self._pending_static is not None:
-                    files, directories, symlink_events, output = self._pending_static
-                    self._static_files.update(files)
-                    self._static_directories.update(directories)
-                    self._static_symlink_events.update(symlink_events)
-                    self._output = output or self._output
-                    self._pending_static = None
-                self._generation_files.update(collected.files)
-                self._generation_symlink_events.update(collected.symlink_events)
+                self._failed_static = self._pending_static
+                self._pending_static = None
+                self._failed_generation_files = collected.files
+                self._failed_generation_symlink_events = collected.symlink_events
                 self._publish()
             raise
         else:
             with self._lock:
                 if self._pending_static is not None:
-                    self._static_files, self._static_directories, self._static_symlink_events, self._output = (
-                        self._pending_static
-                    )
+                    self._static_files = self._pending_static.files
+                    self._static_directories = self._pending_static.directories
+                    self._static_symlink_events = self._pending_static.symlink_events
+                    self._output = self._pending_static.output
                     self._pending_static = None
                 self._generation_files = collected.files
                 self._generation_symlink_events = collected.symlink_events
-                self._outputs = {self._output} if self._output is not None else set()
+                self._failed_static = None
+                self._failed_generation_files.clear()
+                self._failed_generation_symlink_events.clear()
                 self._publish()
         finally:
             _current_collector.reset(token)
@@ -327,6 +359,11 @@ class WatchDependencies:
 def collector_is_active() -> bool:
     """Return whether watch dependency collection is active without importing watch mode."""
     return _current_collector.get() is not None
+
+
+def collector_identity() -> object | None:
+    """Return the identity of the active generation collector."""
+    return _current_collector.get()
 
 
 def record_local_dependency(path: Path) -> None:

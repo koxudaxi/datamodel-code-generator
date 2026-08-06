@@ -1288,8 +1288,11 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
             print(command_output)  # noqa: T201
         return Exit.OK
 
+    cli_config_args = _explicit_config_args(namespace)
+    merged_config_values = {**pyproject_config, **cli_config_args}
+    if dependencies is not None:
+        dependencies.stage_raw_config(merged_config_values)
     try:
-        cli_config_args = _explicit_config_args(namespace)
         config = _create_config(pyproject_config, cli_config_args)
         _apply_preset(config, pyproject_config, cli_config_args)
         _validate_final_config(config)
@@ -1304,7 +1307,7 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         watch_dependencies = watch_dependencies or WatchDependencies()
         watch_dependencies.configure(
             config,
-            config_values={**pyproject_config, **cli_config_args},
+            config_values=merged_config_values,
         )
 
     if config.list_deprecations:
