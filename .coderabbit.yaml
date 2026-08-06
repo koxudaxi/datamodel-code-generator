@@ -16,6 +16,7 @@ reviews:
     - "tox.ini"
     - "zensical.toml"
     - "Dockerfile"
+    - ".dockerignore"
     - ".pre-commit-config.yaml"
     - ".pre-commit-hooks.yaml"
     - "action.yml"
