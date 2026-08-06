@@ -488,7 +488,7 @@ def test_stop_watch_cli_joins_threads_after_completed_process() -> None:
             self.joined = False
 
         def join(self, *, timeout: float) -> None:
-            self.joined = timeout == 1.0
+            self.joined = timeout == pytest.approx(1.0)
 
     stdout_thread = ThreadStub()
     stderr_thread = ThreadStub()
@@ -520,7 +520,7 @@ def test_stop_watch_cli_sends_windows_interrupt(monkeypatch: pytest.MonkeyPatch)
     class ThreadStub:
         @pytest.mark.allow_direct_assert
         def join(self, *, timeout: float) -> None:
-            assert timeout == 1.0
+            assert timeout == pytest.approx(1.0)
 
     monkeypatch.setattr(os, "name", "nt")
     monkeypatch.setattr(signal, "CTRL_BREAK_EVENT", signal.SIGTERM, raising=False)
@@ -563,7 +563,7 @@ def test_stop_watch_cli_kills_after_repeated_timeouts() -> None:
     class ThreadStub:
         @pytest.mark.allow_direct_assert
         def join(self, *, timeout: float) -> None:
-            assert timeout == 1.0
+            assert timeout == pytest.approx(1.0)
 
     process = RunningProcess()
 
@@ -2838,13 +2838,17 @@ def test_watch_cli_locked_lock_recovery_after_external_deletion(
     )
 
     try:
+        deletion_error_count = len(stderr_lines)
         lockfile.unlink()
         lockfile.parent.rmdir()
         _wait_for_watch_cli(
             process,
             stdout_lines,
             stderr_lines,
-            lambda: _lines_contain(stderr_lines, "Remote lock file not found"),
+            lambda: (
+                len(stderr_lines) > deletion_error_count
+                and _lines_contain(stderr_lines[deletion_error_count:], "Remote lock file not found")
+            ),
             "the locked watch to report external lock deletion",
         )
         assert_output(
@@ -2909,12 +2913,16 @@ def test_watch_cli_implicit_lock_verification_recovers_after_deletion(
     )
 
     try:
+        deletion_error_count = len(stderr_lines)
         lockfile.unlink()
         _wait_for_watch_cli(
             process,
             stdout_lines,
             stderr_lines,
-            lambda: _lines_contain(stderr_lines, "Remote lock file not found"),
+            lambda: (
+                len(stderr_lines) > deletion_error_count
+                and _lines_contain(stderr_lines[deletion_error_count:], "Remote lock file not found")
+            ),
             "the implicit lock watch to fail closed after lock deletion",
         )
         assert_output(
@@ -2981,12 +2989,16 @@ output = "{output_file.as_posix()}"
     process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_batch_watch_cli_until_ready(tmp_path)
 
     try:
+        deletion_error_count = len(stderr_lines)
         lockfile.unlink()
         _wait_for_watch_cli(
             process,
             stdout_lines,
             stderr_lines,
-            lambda: _lines_contain(stderr_lines, "Remote lock file not found"),
+            lambda: (
+                len(stderr_lines) > deletion_error_count
+                and _lines_contain(stderr_lines[deletion_error_count:], "Remote lock file not found")
+            ),
             "the implicit batch lock watch to fail closed after lock deletion",
         )
         assert_output(
@@ -3009,7 +3021,7 @@ output = "{output_file.as_posix()}"
         _stop_watch_cli(process, stdout_thread, stderr_thread)
 
 
-def test_watch_failed_lock_path_replan_retains_newly_verified_candidate(
+def test_watch_failed_lock_path_replan_retains_newly_verified_candidate(  # noqa: PLR0914
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     watched_http_server: str,
@@ -3063,12 +3075,16 @@ input-file-type = "jsonschema"
     )
 
     try:
+        replan_error_count = len(stderr_lines)
         lockfile.unlink()
         _wait_for_watch_cli(
             process,
             stdout_lines,
             stderr_lines,
-            lambda: _lines_contain(stderr_lines, "Remote lock file not found"),
+            lambda: (
+                len(stderr_lines) > replan_error_count
+                and _lines_contain(stderr_lines[replan_error_count:], "Remote lock file not found")
+            ),
             "the original implicit lock to fail closed after deletion",
         )
         replan_error_count = len(stderr_lines)
@@ -3091,7 +3107,8 @@ input-file-type = "jsonschema"
             input_file,
             broken_input,
             lambda: (
-                len(stderr_lines) > alternate_error_count and _lines_contain(stderr_lines, "Remote lock file not found")
+                len(stderr_lines) > alternate_error_count
+                and _lines_contain(stderr_lines[alternate_error_count:], "Remote lock file not found")
             ),
             "the newly verified alternate lock to remain required after deletion",
         )
@@ -3103,17 +3120,22 @@ input-file-type = "jsonschema"
             project_file,
             project_content(),
             lambda: (
-                len(stderr_lines) > original_error_count and _lines_contain(stderr_lines, "Remote lock file not found")
+                len(stderr_lines) > original_error_count
+                and _lines_contain(stderr_lines[original_error_count:], "Remote lock file not found")
             ),
             "the earlier lock path to remain required after the failed replan",
         )
+        original_error_count = len(stderr_lines)
         _write_watch_cli_input_and_wait(
             process,
             stdout_lines,
             stderr_lines,
             input_file,
             valid_input,
-            lambda: _lines_contain(stderr_lines, "Remote lock file not found"),
+            lambda: (
+                len(stderr_lines) > original_error_count
+                and _lines_contain(stderr_lines[original_error_count:], "Remote lock file not found")
+            ),
             "the restored input to remain blocked by the missing original lock",
         )
         completed_before_restore = sum(line.strip() == "Done." for line in stdout_lines)
@@ -3133,7 +3155,7 @@ input-file-type = "jsonschema"
         _stop_watch_cli(process, stdout_thread, stderr_thread)
 
 
-def test_batch_watch_failed_lock_path_replan_retains_prior_implicit_intent(
+def test_batch_watch_failed_lock_path_replan_retains_prior_implicit_intent(  # noqa: PLR0914
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     watched_http_server: str,
@@ -3180,12 +3202,16 @@ output = "{output_file.as_posix()}"
     process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_batch_watch_cli_until_ready(tmp_path)
 
     try:
+        replan_error_count = len(stderr_lines)
         lockfile.unlink()
         _wait_for_watch_cli(
             process,
             stdout_lines,
             stderr_lines,
-            lambda: _lines_contain(stderr_lines, "Remote lock file not found"),
+            lambda: (
+                len(stderr_lines) > replan_error_count
+                and _lines_contain(stderr_lines[replan_error_count:], "Remote lock file not found")
+            ),
             "the original implicit lock to fail closed after deletion",
         )
         replan_error_count = len(stderr_lines)
@@ -3208,7 +3234,8 @@ output = "{output_file.as_posix()}"
             input_file,
             broken_input,
             lambda: (
-                len(stderr_lines) > alternate_error_count and _lines_contain(stderr_lines, "Remote lock file not found")
+                len(stderr_lines) > alternate_error_count
+                and _lines_contain(stderr_lines[alternate_error_count:], "Remote lock file not found")
             ),
             "the newly verified alternate lock to remain required after deletion",
         )
@@ -3220,17 +3247,22 @@ output = "{output_file.as_posix()}"
             tmp_path / "pyproject.toml",
             project_content(),
             lambda: (
-                len(stderr_lines) > restore_error_count and _lines_contain(stderr_lines, "Remote lock file not found")
+                len(stderr_lines) > restore_error_count
+                and _lines_contain(stderr_lines[restore_error_count:], "Remote lock file not found")
             ),
             "the restored old lock path to remain fail-closed",
         )
+        restore_error_count = len(stderr_lines)
         _write_watch_cli_input_and_wait(
             process,
             stdout_lines,
             stderr_lines,
             input_file,
             valid_input,
-            lambda: _lines_contain(stderr_lines, "Remote lock file not found"),
+            lambda: (
+                len(stderr_lines) > restore_error_count
+                and _lines_contain(stderr_lines[restore_error_count:], "Remote lock file not found")
+            ),
             "the restored input to remain blocked by the missing original lock",
         )
         assert_output(

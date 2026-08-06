@@ -106,7 +106,7 @@ import shutil
 import signal
 import tempfile
 import warnings
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import redirect_stdout, suppress
 from datetime import datetime, timezone
 from enum import Enum, IntEnum
@@ -116,7 +116,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
 
-import datamodel_code_generator._publication as _publication
 from datamodel_code_generator import (
     AllExportsScope,
     ClassNameAffixScope,
@@ -135,42 +134,49 @@ from datamodel_code_generator import (
     generate,
 )
 from datamodel_code_generator._format_types import Formatter, PythonVersion
-from datamodel_code_generator._publication import (
-    PublicationAnchor as _PublicationAnchor,
-)
-from datamodel_code_generator._publication import (
-    StagedFile as _StagedFile,
-)
-from datamodel_code_generator._publication import (
-    StagingDirectory as _StagingDirectory,
-)
-from datamodel_code_generator._publication import (
-    publication_anchor as _publication_anchor,
-)
-from datamodel_code_generator._publication import (
-    publish_staged_files as _publish_staged_files,
-)
 from datamodel_code_generator.arguments import arg_parser, namespace
 from datamodel_code_generator.deprecations import render_deprecations, warn_deprecated
 from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.util import load_toml
 
-# Compatibility re-exports for existing private test imports.  The concrete
-# implementation lives in the dependency-light publication module.
-_PublishedFile = _publication._PublishedFile
-_backup_existing_target = _publication._backup_existing_target
-_create_directory = _publication._create_directory
-_create_target_parent = _publication._create_target_parent
-_directory_fd_matches_path = _publication._directory_fd_matches_path
-_publish_staged_files_at = _publication._publish_staged_files_at
-_remove_created_directory = _publication._remove_created_directory
-_restore_backup = _publication._restore_backup
-_rollback_published_file = _publication._rollback_published_file
+_PUBLICATION_COMPAT_NAMES = frozenset({
+    "_PublishedFile",
+    "_backup_existing_target",
+    "_create_directory",
+    "_create_target_parent",
+    "_directory_fd_matches_path",
+    "_publish_staged_files_at",
+    "_remove_created_directory",
+    "_restore_backup",
+    "_rollback_published_file",
+})
+
+
+def __getattr__(name: str) -> Any:
+    """Load deferred config and publication compatibility helpers on demand."""
+    if name == "Config":
+        return _get_config_class()
+    if name in _PUBLICATION_COMPAT_NAMES:
+        from datamodel_code_generator import _publication  # noqa: PLC0415
+
+        return getattr(_publication, name)
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
+
 
 if TYPE_CHECKING:
     from argparse import Namespace
     from collections import defaultdict
 
+    from datamodel_code_generator._publication import (
+        PublicationAnchor as _PublicationAnchor,
+    )
+    from datamodel_code_generator._publication import (
+        StagedFile as _StagedFile,
+    )
+    from datamodel_code_generator._publication import (
+        StagingDirectory as _StagingDirectory,
+    )
     from datamodel_code_generator._structured_output import (
         CheckDifferencePayload,
         CommandOutputKind,
@@ -689,13 +695,6 @@ def _get_config_class() -> type[Config]:
     return Config
 
 
-def __getattr__(name: str) -> Any:
-    if name == "Config":
-        return _get_config_class()
-    msg = f"module {__name__!r} has no attribute {name!r}"
-    raise AttributeError(msg)
-
-
 def _explicit_config_args(args: Namespace) -> dict[str, _RawConfigValue]:
     """Return command-line values that explicitly target Config fields."""
     config_class = _get_config_class()
@@ -1109,9 +1108,14 @@ class _RemoteLockTransaction:
                     locked=plan.policy in {"verify", "locked"},
                 )
                 if plan.policy == "update":
-                    anchor = _publication_anchor(plan.canonical_path.parent)
+                    from datamodel_code_generator._publication import (  # noqa: PLC0415
+                        StagingDirectory,
+                        publication_anchor,
+                    )
+
+                    anchor = publication_anchor(plan.canonical_path.parent)
                     anchors[plan.canonical_path] = anchor
-                    staging_contexts[plan.canonical_path] = _StagingDirectory.create(
+                    staging_contexts[plan.canonical_path] = StagingDirectory.create(
                         anchor,
                         prefix=".datamodel-codegen-lock-",
                     )
@@ -1132,6 +1136,8 @@ class _RemoteLockTransaction:
 
     def staged_files(self) -> tuple[_StagedFile, ...]:
         """Stage each updating lock once for the common publication journal."""
+        from datamodel_code_generator._publication import StagedFile  # noqa: PLC0415
+
         files: list[_StagedFile] = []
         try:
             for path, collector in self._collectors.items():
@@ -1140,7 +1146,7 @@ class _RemoteLockTransaction:
                 if (staged_path := collector.stage(staging_context)) is None:
                     continue
                 if isinstance(staged_path, Path):  # pragma: no cover - shared staging returns descriptor-bound sources
-                    staged_path = _StagedFile(staged_path, path, path)
+                    staged_path = StagedFile(staged_path, path, path)
                 files.append(staged_path._replace(anchor=self._anchors[path]))
         except Exception as exc:
             with suppress(OSError):
@@ -2072,6 +2078,8 @@ def _stage_job_plan(plan: JobPlan) -> _StagedJobPlan:
         return _StagedJobPlan(plan, plan.config, None, None, None, None, None, None, None, None, ())
 
     output = plan.config.output
+    from datamodel_code_generator._publication import publication_anchor  # noqa: PLC0415
+
     contexts: list[tempfile.TemporaryDirectory[str]] = []
     anchors: list[_PublicationAnchor] = []
     try:
@@ -2083,7 +2091,7 @@ def _stage_job_plan(plan: JobPlan) -> _StagedJobPlan:
             contexts.append(output_context)
             staged_output = Path(output_context.name) / (output.name or "output")
             updates["output"] = staged_output
-            output_anchor = _publication_anchor(
+            output_anchor = publication_anchor(
                 cast("Path", plan.resolved_output_root)
                 if output.is_dir()
                 else cast("Path", plan.resolved_output_parent)
@@ -2097,7 +2105,7 @@ def _stage_job_plan(plan: JobPlan) -> _StagedJobPlan:
             contexts.append(metadata_context)
             staged_model_metadata = Path(metadata_context.name) / (model_metadata.name or "model-metadata.json")
             updates["emit_model_metadata"] = staged_model_metadata
-            model_metadata_anchor = _publication_anchor(cast("Path", plan.resolved_model_metadata_parent))
+            model_metadata_anchor = publication_anchor(cast("Path", plan.resolved_model_metadata_parent))
             anchors.append(model_metadata_anchor)
 
         return _StagedJobPlan(
@@ -2194,9 +2202,11 @@ def _cleanup_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> tuple[O
 
 def _staged_files(staged_plan: _StagedJobPlan) -> Iterator[_StagedFile]:
     """Return staged files paired with their final targets without removing directory extras."""
+    from datamodel_code_generator._publication import StagedFile  # noqa: PLC0415
+
     if staged_plan.staged_output is not None and staged_plan.output is not None:
         if staged_plan.staged_output.is_file():
-            yield _StagedFile(
+            yield StagedFile(
                 staged_plan.staged_output,
                 staged_plan.output,
                 cast("Path", staged_plan.plan.resolved_output_parent) / staged_plan.output.name,
@@ -2206,14 +2216,14 @@ def _staged_files(staged_plan: _StagedJobPlan) -> Iterator[_StagedFile]:
             for generated_file in sorted(staged_plan.staged_output.rglob("*")):
                 if generated_file.is_file():
                     relative_path = generated_file.relative_to(staged_plan.staged_output)
-                    yield _StagedFile(
+                    yield StagedFile(
                         generated_file,
                         staged_plan.output / relative_path,
                         cast("Path", staged_plan.resolved_output_root) / relative_path,
                         staged_plan.output_anchor,
                     )
     if staged_plan.staged_model_metadata is not None and staged_plan.model_metadata is not None:
-        yield _StagedFile(
+        yield StagedFile(
             staged_plan.staged_model_metadata,
             staged_plan.model_metadata,
             cast("Path", staged_plan.plan.resolved_model_metadata_parent) / staged_plan.model_metadata.name,
@@ -2221,8 +2231,12 @@ def _staged_files(staged_plan: _StagedJobPlan) -> Iterator[_StagedFile]:
         )
 
 
-# Descriptor-bound publication, including the Windows fallback, now lives in
-# datamodel_code_generator._publication and is imported above.
+def _publish_staged_files(files: Iterable[tuple[Path, Path] | _StagedFile]) -> None:
+    """Load the publication journal only when an artifact must be published."""
+    from datamodel_code_generator._publication import publish_staged_files  # noqa: PLC0415
+
+    publish_staged_files(files)
+
 def _publish_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> None:
     """Publish every generated batch artifact after all jobs have completed successfully."""
     _publish_staged_files(file for staged_plan in staged_plans for file in _staged_files(staged_plan))
@@ -2315,7 +2329,7 @@ def _run_watched_jobs(
         )
         for plan in batch_plan.jobs
     )
-    remote_lock_plans, remote_lock_intent = dependencies.apply_remote_lock_plans(
+    remote_lock_plans, remote_lock_intent = dependencies._apply_remote_lock_plans(  # noqa: SLF001
         _remote_lock_plan(job.config, job.pyproject_path) for job in batch_plan.jobs
     )
     for plan in remote_lock_plans:
@@ -2326,7 +2340,7 @@ def _run_watched_jobs(
         result = _run_jobs(args, batch_plan.jobs, remote_lock_plans=remote_lock_plans)
         generation.failed = result is not Exit.OK
     if result is Exit.OK:
-        dependencies.commit_remote_lock_intent(remote_lock_intent)
+        dependencies._commit_remote_lock_intent(remote_lock_intent)  # noqa: SLF001
     return result
 
 
@@ -2906,7 +2920,7 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     lock_plan = _bound_remote_lock_plan or _remote_lock_plan(config, pyproject_path)
     remote_lock_intent: set[Path] | None = None
     if config.watch and watch_dependencies is not None and _bound_remote_lock_plan is None:
-        (lock_plan,), remote_lock_intent = watch_dependencies.apply_remote_lock_plans((lock_plan,))
+        (lock_plan,), remote_lock_intent = watch_dependencies._apply_remote_lock_plans((lock_plan,))  # noqa: SLF001
     active_lockfile = lock_plan.canonical_path if lock_plan.active else None
     if config.watch and watch_dependencies is not None:
         watch_dependencies.add_file(lock_plan.canonical_path)
@@ -2918,7 +2932,7 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
             _remote_locks = _RemoteLockTransaction.open((("command", config, pyproject_path),), (lock_plan,))
         except Error as e:
             if remote_lock_intent is not None and watch_dependencies is not None:
-                watch_dependencies.merge_remote_lock_intent(remote_lock_intent)
+                watch_dependencies._merge_remote_lock_intent(remote_lock_intent)  # noqa: SLF001
             print(str(e), file=sys.stderr)  # noqa: T201
             return Exit.ERROR
         remote_transaction_owner = _remote_locks is not None
@@ -2929,9 +2943,9 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         if remote_lock_intent is None or watch_dependencies is None:
             return result
         if result is Exit.OK:
-            watch_dependencies.commit_remote_lock_intent(remote_lock_intent)
+            watch_dependencies._commit_remote_lock_intent(remote_lock_intent)  # noqa: SLF001
         else:
-            watch_dependencies.merge_remote_lock_intent(remote_lock_intent)
+            watch_dependencies._merge_remote_lock_intent(remote_lock_intent)  # noqa: SLF001
         return result
 
     try:
@@ -2946,7 +2960,7 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
             with suppress(OSError):
                 remote_locks.discard()
         if remote_lock_intent is not None and watch_dependencies is not None:
-            watch_dependencies.merge_remote_lock_intent(remote_lock_intent)
+            watch_dependencies._merge_remote_lock_intent(remote_lock_intent)  # noqa: SLF001
         print(str(e), file=sys.stderr)  # noqa: T201
         return Exit.ERROR
     if remote_transaction_owner and remote_locks is not None:

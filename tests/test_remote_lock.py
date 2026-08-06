@@ -99,6 +99,26 @@ def test_windows_staging_fallback_fails_closed_after_its_private_path_is_replace
 
 
 @pytest.mark.allow_direct_assert
+def test_windows_staging_fallback_rejects_a_replaced_anchor_before_creating_a_private_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A Windows lexical staging fallback never blesses a replacement anchor directory."""
+    parent = tmp_path / "parent"
+    parent.mkdir()
+    parent_stat = parent.stat()
+    anchor = publication_module.PublicationAnchor(parent, (parent_stat.st_dev, parent_stat.st_ino), None)
+    moved_parent = tmp_path / "moved-parent"
+    parent.rename(moved_parent)
+    parent.mkdir()
+    monkeypatch.setattr(publication_module.os, "name", "nt")
+
+    with pytest.raises(OSError, match="publication destination changed"):
+        publication_module.StagingDirectory.create(anchor, prefix=".stage-")
+
+    assert not list(parent.iterdir())
+
+
+@pytest.mark.allow_direct_assert
 def test_remote_lock_reports_missing_malformed_unknown_and_changed_entries(tmp_path: Path) -> None:
     """Verification fails closed for each lock integrity error condition."""
     lockfile = tmp_path / "datamodel-codegen.lock"

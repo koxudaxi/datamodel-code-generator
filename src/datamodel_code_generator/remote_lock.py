@@ -265,7 +265,8 @@ class RemoteReferenceLock:
                         temporary_file.flush()
                         os.fsync(temporary_file.fileno())
                 except BaseException:
-                    staging_directory.discard_file(name)
+                    with contextlib.suppress(OSError):
+                        staging_directory.discard_file(name)
                     raise
                 staged_path = staging_directory.path / name if staging_directory.directory_fd is None else None
                 self._staged_source = StagedFile(
@@ -344,7 +345,8 @@ class RemoteReferenceLock:
                 staged_source = StagedFile(staged_source, target, target)
             publish_staged_files((staged_source._replace(target=target, resolved_target=target, anchor=anchor),))
         except OSError as exc:
-            self.discard_stage()
+            with contextlib.suppress(OSError):
+                self.discard_stage()
             msg = f"Unable to update remote lock {self.path}: {exc}"
             raise RemoteLockError(msg) from exc
         else:

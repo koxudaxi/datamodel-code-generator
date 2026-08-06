@@ -17,6 +17,7 @@ from urllib.parse import urlparse
 import pytest
 
 from datamodel_code_generator import (
+    Error,
     GenerateConfig,
     HTTPBackend,
     InputFileType,
@@ -45,7 +46,7 @@ from datamodel_code_generator.http import (
 )
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from tests.conftest import assert_output, create_assert_file_content
-from tests.main.conftest import run_main_url_and_assert, run_main_with_args
+from tests.main.conftest import DATA_PATH, JSON_SCHEMA_DATA_PATH, run_main_url_and_assert, run_main_with_args
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -1278,7 +1279,7 @@ def test_remote_lock_transaction_attempts_all_cleanup_after_one_staged_source_un
         assert collector is not None
         collector.record_response("https://schemas.example/schema.json", None, None, plan.path.name.encode())
     staged_files = transaction.staged_files()
-    contexts = tuple(transaction._staging_contexts.values())  # noqa: SLF001
+    contexts = tuple(transaction._staging_contexts.values())
     failed_source = staged_files[0].source_name
     original_unlink = publication_module.os.unlink
     failed_once = False
@@ -1287,7 +1288,8 @@ def test_remote_lock_transaction_attempts_all_cleanup_after_one_staged_source_un
         nonlocal failed_once
         if path == failed_source and not failed_once:
             failed_once = True
-            raise OSError("simulated staged cleanup failure")
+            msg = "simulated staged cleanup failure"
+            raise OSError(msg)
         original_unlink(path, *args, **kwargs)
 
     monkeypatch.setattr(publication_module.os, "unlink", fail_one_source_unlink)
@@ -1295,8 +1297,8 @@ def test_remote_lock_transaction_attempts_all_cleanup_after_one_staged_source_un
     with pytest.raises(OSError, match="simulated staged cleanup failure"):
         transaction.discard()
 
-    assert transaction._staging_contexts == {}  # noqa: SLF001
-    assert transaction._anchors == {}  # noqa: SLF001
+    assert transaction._staging_contexts == {}
+    assert transaction._anchors == {}
     assert not any(context.path.exists() for context in contexts)
 
 
@@ -1402,6 +1404,231 @@ def test_generate_publishes_output_metadata_and_remote_lock_as_one_journal(
         assert lockfile.read_text(encoding="utf-8") == original_lock
     finally:
         _SchemaHandler.routes["/pet.json"] = original_response
+
+
+def test_generate_rolls_back_output_and_metadata_when_late_lock_publication_and_cleanup_fail(
+    mocker: MockerFixture,
+    local_http_server: str,
+    tmp_path: Path,
+) -> None:
+    """A late lock replacement failure restores prior artifacts even when lock cleanup also fails."""
+    from datamodel_code_generator import _publication as publication_module
+    from datamodel_code_generator.remote_lock import RemoteReferenceLock
+
+    mocker.stopall()
+    schema_url = f"{local_http_server}/pet.json"
+    output_path = tmp_path / "output.py"
+    metadata_path = tmp_path / "metadata.json"
+    lockfile = tmp_path / "remote.lock"
+    config = GenerateConfig(
+        allow_private_network=True,
+        disable_timestamp=True,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_path,
+        emit_model_metadata=metadata_path,
+        lockfile=lockfile,
+        update_lock=True,
+    )
+    generate(urlparse(schema_url), config=config)
+    original_lock = lockfile.read_text(encoding="utf-8")
+    original_response = _SchemaHandler.routes["/pet.json"]
+    _SchemaHandler.routes["/pet.json"] = (
+        200,
+        {"content-type": "application/json"},
+        b'{"title":"ChangedPet","type":"object"}',
+    )
+    original_replace_source = publication_module._replace_source
+    replacement_error = "simulated late lock replacement failure"
+    cleanup_error = "simulated lock cleanup failure"
+
+    def fail_lock_replacement(
+        file: publication_module.StagedFile, destination_name: str, destination_fd: int
+    ) -> None:
+        if file.target == lockfile:
+            raise OSError(replacement_error)
+        original_replace_source(file, destination_name, destination_fd)
+
+    try:
+        mocker.patch.object(publication_module, "_replace_source", side_effect=fail_lock_replacement)
+        mocker.patch.object(RemoteReferenceLock, "discard_stage", side_effect=OSError(cleanup_error))
+        with pytest.raises(OSError, match=replacement_error):
+            generate(urlparse(schema_url), config=config)
+        assert_http_e2e_file(
+            output_path,
+            "backend.py",
+            transform=lambda output: output.replace(schema_url, "http://localhost/schema.json"),
+        )
+        assert_http_e2e_file(
+            metadata_path,
+            "remote_lock_stdout_metadata.txt",
+            transform=lambda output: output.replace(local_http_server, "http://localhost"),
+        )
+        assert lockfile.read_text(encoding="utf-8") == original_lock
+    finally:
+        _SchemaHandler.routes["/pet.json"] = original_response
+
+
+def test_generate_publishes_metadata_and_lock_while_returning_stdout(
+    mocker: MockerFixture,
+    local_http_server: str,
+    tmp_path: Path,
+) -> None:
+    """Metadata-only updates retain generated stdout while sharing the lock journal."""
+    mocker.stopall()
+    schema_url = f"{local_http_server}/pet.json"
+    metadata_path = tmp_path / "metadata.json"
+    lockfile = tmp_path / "remote.lock"
+    generated = generate(
+        urlparse(schema_url),
+        config=GenerateConfig(
+            allow_private_network=True,
+            disable_timestamp=True,
+            input_file_type=InputFileType.JsonSchema,
+            emit_model_metadata=metadata_path,
+            lockfile=lockfile,
+            update_lock=True,
+        ),
+    )
+
+    assert isinstance(generated, str)
+    assert_output(
+        f"{generated.replace(schema_url, 'http://localhost/schema.json')}\n",
+        HTTP_E2E_DATA_PATH / "expected" / "http" / "backend.py",
+    )
+    assert_http_e2e_file(
+        metadata_path,
+        "remote_lock_stdout_metadata.txt",
+        transform=lambda output: output.replace(local_http_server, "http://localhost"),
+    )
+    assert lockfile.is_file()
+
+
+def test_generate_returns_stdout_and_updates_a_lock_without_artifacts(
+    mocker: MockerFixture,
+    local_http_server: str,
+    tmp_path: Path,
+) -> None:
+    """A no-output public call returns code and commits its ordinary update lock once."""
+    mocker.stopall()
+    schema_url = f"{local_http_server}/pet.json"
+    lockfile = tmp_path / "remote.lock"
+    generated = generate(
+        urlparse(schema_url),
+        config=GenerateConfig(
+            allow_private_network=True,
+            disable_timestamp=True,
+            input_file_type=InputFileType.JsonSchema,
+            lockfile=lockfile,
+            update_lock=True,
+        ),
+    )
+
+    assert isinstance(generated, str)
+    assert_output(
+        f"{generated.replace(schema_url, 'http://localhost/schema.json')}\n",
+        HTTP_E2E_DATA_PATH / "expected" / "http" / "backend.py",
+    )
+    assert lockfile.is_file()
+
+
+def test_generate_publishes_relative_nested_artifacts_and_lock_together(
+    mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    local_http_server: str,
+    tmp_path: Path,
+) -> None:
+    """Relative nested output, metadata, and lock paths retain their original caller context."""
+    mocker.stopall()
+    monkeypatch.chdir(tmp_path)
+    schema_url = f"{local_http_server}/pet.json"
+    output_path = Path("generated/models.py")
+    metadata_path = Path("generated/metadata/model-map.json")
+    lockfile = Path("locks/remote.lock")
+    generate(
+        urlparse(schema_url),
+        config=GenerateConfig(
+            allow_private_network=True,
+            disable_timestamp=True,
+            input_file_type=InputFileType.JsonSchema,
+            output=output_path,
+            emit_model_metadata=metadata_path,
+            lockfile=lockfile,
+            update_lock=True,
+        ),
+    )
+
+    assert_http_e2e_file(
+        tmp_path / output_path,
+        "backend.py",
+        transform=lambda output: output.replace(schema_url, "http://localhost/schema.json"),
+    )
+    assert_http_e2e_file(
+        tmp_path / metadata_path,
+        "remote_lock_stdout_metadata.txt",
+        transform=lambda output: output.replace(local_http_server, "http://localhost"),
+    )
+    assert (tmp_path / lockfile).is_file()
+
+
+def test_generate_uses_logical_output_context_for_custom_formatter_and_lock(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """Legacy formatter state resolves resources from the logical output, not its staging path."""
+    mocker.stopall()
+    output_path = tmp_path / "generated" / "models.py"
+    output_path.parent.mkdir()
+    license_path = output_path.parent / "license.txt"
+    license_path.write_text(
+        (DATA_PATH / "python" / "custom_formatters" / "license_example.txt").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    with chdir(tmp_path):
+        generate(
+            JSON_SCHEMA_DATA_PATH / "person.json",
+            config=GenerateConfig(
+                disable_timestamp=True,
+                input_file_type=InputFileType.JsonSchema,
+                output=Path("generated/models.py"),
+                custom_formatters=["tests.data.python.custom_formatters.add_license"],
+                custom_formatters_kwargs={"license_file": "license.txt"},
+                lockfile=Path("locks/remote.lock"),
+                update_lock=True,
+            ),
+        )
+
+    assert_output(
+        output_path.read_text(encoding="utf-8"),
+        DATA_PATH / "expected" / "main_kr" / "jobs" / "custom_formatter.py",
+    )
+    assert (tmp_path / "locks/remote.lock").is_file()
+
+
+def test_generate_rejects_a_lockfile_inside_a_multimodule_output_before_fetching(
+    mocker: MockerFixture,
+    local_http_server: str,
+    tmp_path: Path,
+) -> None:
+    """A lock cannot replace a generated module below a suffixless multi-module output root."""
+    mocker.stopall()
+    output_path = tmp_path / "models"
+    lockfile = output_path / "__init__.py"
+
+    with pytest.raises(Error, match="Output and Remote lock paths must not overlap"):
+        generate(
+            urlparse(f"{local_http_server}/pet.json"),
+            config=GenerateConfig(
+                allow_private_network=True,
+                disable_timestamp=True,
+                input_file_type=InputFileType.JsonSchema,
+                module_split_mode=ModuleSplitMode.Single,
+                output=output_path,
+                lockfile=lockfile,
+                update_lock=True,
+            ),
+        )
+
+    assert not output_path.exists()
 
 
 def test_generate_publishes_missing_multimodule_directory_with_remote_lock(

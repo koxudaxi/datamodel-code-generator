@@ -1923,9 +1923,9 @@ def test_pyproject_job_plan_preserves_watch_provenance(jobs_project: dict[str, P
         plan = batch_plan.jobs[0]
 
     assert batch_plan.watch
-    assert batch_plan.watch_delay == 0.25
+    assert batch_plan.watch_delay == pytest.approx(0.25)
     assert not plan.config.watch
-    assert plan.config.watch_delay == 0.5
+    assert plan.config.watch_delay == pytest.approx(0.5)
     assert plan.raw_config["input"] == (JSON_SCHEMA_DATA_PATH / "person.json").as_posix()
     assert plan.raw_config["output"] == jobs_project["plain"].as_posix()
     assert plan.cli_config_args["formatters"] == ["builtin"]
@@ -1947,8 +1947,8 @@ def test_pyproject_job_plan_uses_base_watch_scheduler(jobs_project: dict[str, Pa
         batch_plan = _plan_jobs(arg_parser.parse_args(["--all-jobs"]))
 
     assert batch_plan.watch
-    assert batch_plan.watch_delay == 0.75
-    assert all(not plan.config.watch and plan.config.watch_delay == 0.5 for plan in batch_plan.jobs)
+    assert batch_plan.watch_delay == pytest.approx(0.75)
+    assert all(not plan.config.watch and plan.config.watch_delay == pytest.approx(0.5) for plan in batch_plan.jobs)
     _assert_file_does_not_exist(jobs_project["plain"])
     _assert_file_does_not_exist(jobs_project["strict"])
 
@@ -2434,6 +2434,23 @@ def test_pyproject_jobs_publish_rollback_restores_prior_files(tmp_path: Path, mo
     assert second_target.read_text(encoding="utf-8") == "second stale\n"
     _assert_file_does_not_exist(new_target)
     assert not new_target.parent.exists()
+
+
+@pytest.mark.allow_direct_assert
+def test_pyproject_jobs_reject_duplicate_publication_targets_before_mutating_files(tmp_path: Path) -> None:
+    """A common publication journal refuses duplicate immutable destinations before its first write."""
+    first_staged = tmp_path / "first.staged.py"
+    second_staged = tmp_path / "second.staged.py"
+    target = tmp_path / "target.py"
+    first_staged.write_text("first generated\n", encoding="utf-8")
+    second_staged.write_text("second generated\n", encoding="utf-8")
+
+    with pytest.raises(OSError, match="duplicate staged publication target"):
+        _publish_staged_files(((first_staged, target), (second_staged, target)))
+
+    _assert_file_does_not_exist(target)
+    assert first_staged.is_file()
+    assert second_staged.is_file()
 
 
 @pytest.mark.allow_direct_assert

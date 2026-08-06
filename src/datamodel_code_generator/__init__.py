@@ -630,6 +630,17 @@ def _validate_generation_path_conflicts(  # noqa: PLR0912
                 else:
                     msg = f"{label} and {other_label} paths must be different: {absolute_path}"
                 raise Error(msg)
+            if "Remote lock" not in {label, other_label}:
+                continue
+            paths_overlap = (
+                absolute_path.is_relative_to(other_absolute_path)
+                or other_absolute_path.is_relative_to(absolute_path)
+                or resolved_path.is_relative_to(resolved_other_path)
+                or resolved_other_path.is_relative_to(resolved_path)
+            )
+            if paths_overlap:
+                msg = f"{label} and {other_label} paths must not overlap: {absolute_path}"
+                raise Error(msg)
 
     match input_:
         case Path() as input_path:
@@ -1697,7 +1708,7 @@ def generate(
     return _generate(input_, config, caller_cwd, use_output_cwd=False)
 
 
-def _generate_with_atomic_remote_update(
+def _generate_with_atomic_remote_update(  # noqa: PLR0912, PLR0914, PLR0915
     input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     config: GenerateConfig,
     caller_cwd: Path,
@@ -1820,10 +1831,12 @@ def _generate_with_atomic_remote_update(
             publication_files.append(staged_lock._replace(anchor=lock_anchor))
         publish_staged_files(publication_files)
         remote_lock.mark_committed()
-        return generated
     except BaseException:
-        remote_lock.discard_stage()
+        with contextlib.suppress(OSError):
+            remote_lock.discard_stage()
         raise
+    else:
+        return generated
     finally:
         if lock_staging is not None:
             with contextlib.suppress(OSError):

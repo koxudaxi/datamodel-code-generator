@@ -59,6 +59,23 @@ class _CreatedDirectoryAt(NamedTuple):
     path: Path
 
 
+class _StagingFallback(NamedTuple):
+    """Windows identity checks for a lexical private staging location."""
+
+    path_identity: tuple[int, int]
+    anchor_identity: tuple[int, int]
+
+
+def _validate_anchor_path(anchor: PublicationAnchor) -> None:
+    """Reject a lexical fallback whose planned parent was replaced after preflight."""
+    try:
+        path_stat = anchor.path.stat()
+    except OSError as exc:
+        raise OSError(f"publication destination changed: {anchor.path}") from exc
+    if (path_stat.st_dev, path_stat.st_ino) != anchor.identity:
+        raise OSError(f"publication destination changed: {anchor.path}")
+
+
 def _private_name(prefix: str) -> str:
     """Return one unpredictable private directory or file component."""
     return f"{prefix}{token_hex(16)}"
@@ -123,22 +140,16 @@ class StagingDirectory:
 
     def __init__(
         self,
-        parent_fd: int | None,
+        directory_fds: tuple[int | None, int | None],
         name: str,
-        directory_fd: int | None,
         path: Path,
         *,
-        context: tempfile.TemporaryDirectory[str] | None = None,
-        path_identity: tuple[int, int] | None = None,
-        anchor_identity: tuple[int, int] | None = None,
+        fallback: _StagingFallback | None = None,
     ) -> None:
-        self._parent_fd = parent_fd
+        self._parent_fd, self.directory_fd = directory_fds
         self.name = name
-        self.directory_fd = directory_fd
         self.path = path
-        self._context = context
-        self._path_identity = path_identity
-        self._anchor_identity = anchor_identity
+        self._fallback = fallback
         self._files: set[str] = set()
         self._closed = False
 
@@ -146,19 +157,18 @@ class StagingDirectory:
     def create(cls, anchor: PublicationAnchor, *, prefix: str) -> StagingDirectory:
         """Reserve and open a private child of an already-pinned publication anchor."""
         if anchor.directory_fd is None:  # pragma: no cover - Windows uses the checked fallback path
-            context = tempfile.TemporaryDirectory(prefix=prefix, dir=anchor.path)
-            path = type(anchor.path)(context.name)
-            context._finalizer.detach()  # noqa: SLF001 - cleanup is identity-checked below
+            _validate_anchor_path(anchor)
+            path = type(anchor.path)(tempfile.mkdtemp(prefix=prefix, dir=anchor.path))
             path_stat = path.stat()
-            anchor_stat = anchor.path.stat()
+            _validate_anchor_path(anchor)
             return cls(
-                None,
+                (None, None),
                 path.name,
-                None,
                 path,
-                context=context,
-                path_identity=(path_stat.st_dev, path_stat.st_ino),
-                anchor_identity=(anchor_stat.st_dev, anchor_stat.st_ino),
+                fallback=_StagingFallback(
+                    (path_stat.st_dev, path_stat.st_ino),
+                    anchor.identity,
+                ),
             )
         parent_fd = os.dup(anchor.directory_fd)
         try:
@@ -174,7 +184,7 @@ class StagingDirectory:
                     with suppress(OSError):
                         os.rmdir(name, dir_fd=parent_fd)
                     raise
-                return cls(parent_fd, name, directory_fd, anchor.path / name)
+                return cls((parent_fd, directory_fd), name, anchor.path / name)
         except BaseException:
             os.close(parent_fd)
             raise
@@ -183,17 +193,17 @@ class StagingDirectory:
 
     def _validate_path_fallback(self) -> None:
         """Fail closed if a Windows lexical staging location no longer names the reserved directory."""
-        if self._path_identity is None or self._anchor_identity is None:
+        if self._fallback is None:
             return
         try:
             path_stat = self.path.stat()
             anchor_stat = self.path.parent.stat()
         except OSError as exc:
             raise OSError(f"private staging directory changed: {self.path}") from exc
-        if (path_stat.st_dev, path_stat.st_ino) != self._path_identity or (
+        if (path_stat.st_dev, path_stat.st_ino) != self._fallback.path_identity or (
             anchor_stat.st_dev,
             anchor_stat.st_ino,
-        ) != self._anchor_identity:
+        ) != self._fallback.anchor_identity:
             raise OSError(f"private staging directory changed: {self.path}")
 
     def create_file(self, *, prefix: str) -> tuple[int, str]:
@@ -243,32 +253,8 @@ class StagingDirectory:
         try:
             if self.directory_fd is None:  # pragma: no cover - Windows lexical fallback
                 self._validate_path_fallback()
-            for name in tuple(self._files):
-                try:
-                    if self.directory_fd is None:  # pragma: no cover - Windows lexical fallback
-                        (self.path / name).unlink()
-                    else:
-                        os.unlink(name, dir_fd=self.directory_fd)
-                except FileNotFoundError:
-                    pass
-                except OSError as exc:
-                    cleanup_error = cleanup_error or exc
-                else:
-                    self._files.discard(name)
-            if self.directory_fd is not None and self._parent_fd is not None:
-                try:
-                    os.rmdir(self.name, dir_fd=self._parent_fd)
-                except FileNotFoundError:
-                    pass
-                except OSError as exc:
-                    cleanup_error = cleanup_error or exc
-            elif self.directory_fd is None:  # pragma: no cover - Windows lexical fallback
-                try:
-                    self.path.rmdir()
-                except FileNotFoundError:
-                    pass
-                except OSError as exc:
-                    cleanup_error = cleanup_error or exc
+            cleanup_error = self._discard_files()
+            cleanup_error = cleanup_error or self._remove_directory()
         finally:
             self._closed = True
             if self.directory_fd is not None:
@@ -277,6 +263,36 @@ class StagingDirectory:
                 os.close(self._parent_fd)
         if cleanup_error is not None:
             raise cleanup_error
+
+    def _discard_files(self) -> OSError | None:
+        """Remove every tracked source while preserving the first cleanup failure."""
+        cleanup_error: OSError | None = None
+        for name in tuple(self._files):
+            try:
+                if self.directory_fd is None:  # pragma: no cover - Windows lexical fallback
+                    (self.path / name).unlink()
+                else:
+                    os.unlink(name, dir_fd=self.directory_fd)
+            except FileNotFoundError:
+                self._files.discard(name)
+            except OSError as exc:
+                cleanup_error = cleanup_error or exc
+            else:
+                self._files.discard(name)
+        return cleanup_error
+
+    def _remove_directory(self) -> OSError | None:
+        """Remove the owned empty staging directory through its pinned parent when available."""
+        try:
+            if self.directory_fd is not None and self._parent_fd is not None:
+                os.rmdir(self.name, dir_fd=self._parent_fd)
+            elif self.directory_fd is None:  # pragma: no cover - Windows lexical fallback
+                self.path.rmdir()
+        except FileNotFoundError:
+            return None
+        except OSError as exc:
+            return exc
+        return None
 
 
 def _backup_name(target_name: str) -> str:
@@ -664,6 +680,11 @@ def _publish_staged_files_by_path(files: Sequence[StagedFile]) -> None:  # pragm
 def publish_staged_files(files: Iterable[tuple[Path, Path] | StagedFile]) -> None:
     """Publish a validated journal through descriptor-bound destinations on POSIX."""
     planned_files = tuple(_planned_staged_file(file) for file in files)
+    seen_targets: set[Path] = set()
+    for file in planned_files:
+        if file.resolved_target in seen_targets:
+            raise OSError(f"duplicate staged publication target: {file.target}")
+        seen_targets.add(file.resolved_target)
     if os.name == "nt":  # pragma: no cover - Windows keeps a checked lexical fallback
         _publish_staged_files_by_path(planned_files)
         return

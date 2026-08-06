@@ -402,7 +402,7 @@ class WatchDependencies(_Weakrefable):
         finally:
             _current_collector.reset(token)
 
-    def apply_remote_lock_plans(self, plans: Iterable[Any]) -> tuple[tuple[Any, ...], set[Path]]:
+    def _apply_remote_lock_plans(self, plans: Iterable[Any]) -> tuple[tuple[Any, ...], set[Path]]:
         """Return effective lock plans and intent for the current generation attempt."""
         plans = tuple(plans)
         with self._lock:
@@ -418,12 +418,12 @@ class WatchDependencies(_Weakrefable):
             effective_plans.append(effective_plan)
         return tuple(effective_plans), candidate_intent
 
-    def commit_remote_lock_intent(self, intent: set[Path]) -> None:
+    def _commit_remote_lock_intent(self, intent: set[Path]) -> None:
         """Persist implicit lock verification only after a successful attempt."""
         with self._lock:
             self._verified_remote_locks = intent.copy()
 
-    def merge_remote_lock_intent(self, intent: set[Path]) -> None:
+    def _merge_remote_lock_intent(self, intent: set[Path]) -> None:
         """Retain lock paths verified by a failed candidate for fail-closed recovery."""
         with self._lock:
             self._verified_remote_locks.update(intent)
