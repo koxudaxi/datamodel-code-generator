@@ -5,6 +5,28 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.72.2](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.72.2) - 2026-08-06
+
+## What's Changed
+* Bump aiohttp from 3.13.3 to 3.14.3 by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3701
+* Update CHANGELOG for 0.72.1 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3702
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3703
+* Bump cryptography from 46.0.5 to 50.0.0 by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3700
+* Speed up parser hot paths by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3704
+* Suggest similar CLI options by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3706
+* Pin playground builds to Python 3.14.6 by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3712
+* Add .dockerignore to reduce Docker build context by @chernojagne in https://github.com/koxudaxi/datamodel-code-generator/pull/3705
+* Bump the github-actions group with 4 updates by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3709
+* Preserve array union types by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3711
+* Add --use-tuple-for-fixed-length-arrays option by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3714
+
+## New Contributors
+* @chernojagne made their first contribution in https://github.com/koxudaxi/datamodel-code-generator/pull/3705
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.72.1...0.72.2
+
+---
+
 ## [0.72.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.72.1) - 2026-08-04
 
 ## What's Changed
