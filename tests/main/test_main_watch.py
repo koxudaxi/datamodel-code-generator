@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 import os
 import shutil
 import signal
@@ -31,7 +30,7 @@ from tests.main.conftest import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
     from datamodel_code_generator.watch_dependencies import WatchDependencies
 
@@ -2861,6 +2860,251 @@ def test_watch_cli_locked_lock_recovery_after_external_deletion(
             lock_content,
             lambda: sum(line.strip() == "Done." for line in stdout_lines) > completed_before_restore,
             "the locked watch to recover after the lock is restored",
+        )
+        assert_output(
+            output_file.read_text(encoding="utf-8"), PROJECT_ROOT / "tests/data/expected/http/remote_lock_nested.py"
+        )
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+def test_watch_cli_implicit_lock_verification_recovers_after_deletion(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    watched_http_server: str,
+) -> None:
+    """A vanished auto-discovered lock remains required until the same path is restored."""
+    input_file = tmp_path / "sources" / "root.json"
+    output_file = tmp_path / "output.py"
+    lockfile = tmp_path / "datamodel-codegen.lock"
+    input_file.parent.mkdir()
+    input_file.write_text(
+        f"""{{
+  "title": "Root",
+  "type": "object",
+  "properties": {{"child": {{"$ref": "{watched_http_server}/child.json"}}}}
+}}
+""",
+        encoding="utf-8",
+    )
+    common_args = [
+        "--input",
+        str(input_file),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "jsonschema",
+        "--allow-remote-refs",
+        "--allow-private-network",
+        "--disable-timestamp",
+    ]
+    monkeypatch.chdir(tmp_path)
+    run_main_with_args([*common_args, "--update-lock"])
+    lock_content = lockfile.read_text(encoding="utf-8")
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
+        input_file,
+        output_file,
+        ["--allow-remote-refs", "--allow-private-network"],
+        tmp_path,
+    )
+
+    try:
+        lockfile.unlink()
+        _wait_for_watch_cli(
+            process,
+            stdout_lines,
+            stderr_lines,
+            lambda: _lines_contain(stderr_lines, "Remote lock file not found"),
+            "the implicit lock watch to fail closed after lock deletion",
+        )
+        assert_output(
+            output_file.read_text(encoding="utf-8"), PROJECT_ROOT / "tests/data/expected/http/remote_lock_nested.py"
+        )
+        completed_before_restore = sum(line.strip() == "Done." for line in stdout_lines)
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            lockfile,
+            lock_content,
+            lambda: sum(line.strip() == "Done." for line in stdout_lines) > completed_before_restore,
+            "the implicit lock watch to recover after lock restoration",
+        )
+        assert_output(
+            output_file.read_text(encoding="utf-8"), PROJECT_ROOT / "tests/data/expected/http/remote_lock_nested.py"
+        )
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+def test_batch_watch_implicit_lock_verification_recovers_after_deletion(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    watched_http_server: str,
+) -> None:
+    """A failed batch replan retains implicit verification until the lock is restored."""
+    input_file = tmp_path / "sources" / "root.json"
+    output_file = tmp_path / "output.py"
+    lockfile = tmp_path / "datamodel-codegen.lock"
+    input_file.parent.mkdir()
+    input_file.write_text(
+        f"""{{
+  "title": "Root",
+  "type": "object",
+  "properties": {{"child": {{"$ref": "{watched_http_server}/child.json"}}}}
+}}
+""",
+        encoding="utf-8",
+    )
+
+    def write_project(*, update_lock: bool) -> None:
+        (tmp_path / "pyproject.toml").write_text(
+            f"""[tool.datamodel-codegen]
+allow-private-network = true
+allow-remote-refs = true
+disable-timestamp = true
+input-file-type = "jsonschema"
+{("update-lock = true" if update_lock else "")}
+
+[tool.datamodel-codegen.jobs.root]
+input = "{input_file.as_posix()}"
+output = "{output_file.as_posix()}"
+""",
+            encoding="utf-8",
+        )
+
+    monkeypatch.chdir(tmp_path)
+    write_project(update_lock=True)
+    run_main_with_args(["--all-jobs", "--formatters", "builtin"])
+    lock_content = lockfile.read_text(encoding="utf-8")
+    write_project(update_lock=False)
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_batch_watch_cli_until_ready(tmp_path)
+
+    try:
+        lockfile.unlink()
+        _wait_for_watch_cli(
+            process,
+            stdout_lines,
+            stderr_lines,
+            lambda: _lines_contain(stderr_lines, "Remote lock file not found"),
+            "the implicit batch lock watch to fail closed after lock deletion",
+        )
+        assert_output(
+            output_file.read_text(encoding="utf-8"), PROJECT_ROOT / "tests/data/expected/http/remote_lock_nested.py"
+        )
+        completed_before_restore = sum(line.strip() == "Done." for line in stdout_lines)
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            lockfile,
+            lock_content,
+            lambda: sum(line.strip() == "Done." for line in stdout_lines) > completed_before_restore,
+            "the implicit batch lock watch to recover after lock restoration",
+        )
+        assert_output(
+            output_file.read_text(encoding="utf-8"), PROJECT_ROOT / "tests/data/expected/http/remote_lock_nested.py"
+        )
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+def test_batch_watch_failed_lock_path_replan_retains_prior_implicit_intent(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    watched_http_server: str,
+) -> None:
+    """A failed replan cannot forget an auto-verified lock at the previous path."""
+    input_file = tmp_path / "sources" / "root.json"
+    output_file = tmp_path / "output.py"
+    lockfile = tmp_path / "datamodel-codegen.lock"
+    alternate_lockfile = tmp_path / "alternate.lock"
+    input_file.parent.mkdir()
+    valid_input = f"""{{
+  "title": "Root",
+  "type": "object",
+  "properties": {{"child": {{"$ref": "{watched_http_server}/child.json"}}}}
+}}
+"""
+    broken_input = valid_input.replace("/child.json", "/missing.json")
+    input_file.write_text(valid_input, encoding="utf-8")
+
+    def project_content(*, lock_path: Path | None = None) -> str:
+        lockfile_config = f'lockfile = "{lock_path.as_posix()}"\n' if lock_path is not None else ""
+        return f"""[tool.datamodel-codegen]
+allow-private-network = true
+allow-remote-refs = true
+disable-timestamp = true
+input-file-type = "jsonschema"
+{lockfile_config}
+
+[tool.datamodel-codegen.jobs.root]
+input = "{input_file.as_posix()}"
+output = "{output_file.as_posix()}"
+"""
+
+    def write_project(*, lock_path: Path | None = None) -> None:
+        (tmp_path / "pyproject.toml").write_text(project_content(lock_path=lock_path), encoding="utf-8")
+
+    monkeypatch.chdir(tmp_path)
+    write_project()
+    run_main_with_args(["--all-jobs", "--update-lock", "--formatters", "builtin"])
+    lock_content = lockfile.read_text(encoding="utf-8")
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_batch_watch_cli_until_ready(tmp_path)
+
+    try:
+        lockfile.unlink()
+        _wait_for_watch_cli(
+            process,
+            stdout_lines,
+            stderr_lines,
+            lambda: _lines_contain(stderr_lines, "Remote lock file not found"),
+            "the original implicit lock to fail closed after deletion",
+        )
+        replan_error_count = len(stderr_lines)
+        input_file.write_text(broken_input, encoding="utf-8")
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            tmp_path / "pyproject.toml",
+            project_content(lock_path=alternate_lockfile),
+            lambda: len(stderr_lines) > replan_error_count,
+            "the changed lock-path replan to fail after planning the alternate lock",
+        )
+        restore_error_count = len(stderr_lines)
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            tmp_path / "pyproject.toml",
+            project_content(),
+            lambda: (
+                len(stderr_lines) > restore_error_count and _lines_contain(stderr_lines, "Remote lock file not found")
+            ),
+            "the restored old lock path to remain fail-closed",
+        )
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            input_file,
+            valid_input,
+            lambda: _lines_contain(stderr_lines, "Remote lock file not found"),
+            "the restored input to remain blocked by the missing original lock",
+        )
+        assert_output(
+            output_file.read_text(encoding="utf-8"), PROJECT_ROOT / "tests/data/expected/http/remote_lock_nested.py"
+        )
+        completed_before_restore = sum(line.strip() == "Done." for line in stdout_lines)
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            lockfile,
+            lock_content,
+            lambda: sum(line.strip() == "Done." for line in stdout_lines) > completed_before_restore,
+            "the restored original implicit lock to recover the batch watch",
         )
         assert_output(
             output_file.read_text(encoding="utf-8"), PROJECT_ROOT / "tests/data/expected/http/remote_lock_nested.py"

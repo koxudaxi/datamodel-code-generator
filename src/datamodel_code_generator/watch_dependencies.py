@@ -180,6 +180,7 @@ class WatchDependencies(_Weakrefable):
     _generation_files: set[Path] = field(default_factory=set)
     _generation_symlink_events: set[Path] = field(default_factory=set)
     _outputs: dict[Path, bool] = field(default_factory=dict)
+    _verified_remote_locks: set[Path] = field(default_factory=set)
     _pending_static: _StaticDependencies | None = None
     _failed_static: _StaticDependencies | None = None
     _failed_generation_files: set[Path] = field(default_factory=set)
@@ -400,6 +401,27 @@ class WatchDependencies(_Weakrefable):
                 self._publish()
         finally:
             _current_collector.reset(token)
+
+    def apply_remote_lock_plans(self, plans: Iterable[Any]) -> tuple[tuple[Any, ...], set[Path]]:
+        """Return effective lock plans and intent for the current generation attempt."""
+        plans = tuple(plans)
+        with self._lock:
+            current_paths = {plan.canonical_path for plan in plans}
+            candidate_intent = self._verified_remote_locks.intersection(current_paths)
+        effective_plans: list[Any] = []
+        for plan in plans:
+            effective_plan = plan
+            if plan.policy == "verify":
+                candidate_intent.add(plan.canonical_path)
+            elif plan.policy == "inactive" and plan.canonical_path in candidate_intent:
+                effective_plan = plan._replace(policy="locked")
+            effective_plans.append(effective_plan)
+        return tuple(effective_plans), candidate_intent
+
+    def commit_remote_lock_intent(self, intent: set[Path]) -> None:
+        """Persist implicit lock verification only after a successful attempt."""
+        with self._lock:
+            self._verified_remote_locks = intent.copy()
 
     def add_file(self, path: Path | None) -> None:
         """Add one static local file dependency."""

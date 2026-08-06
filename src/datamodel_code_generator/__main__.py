@@ -2797,7 +2797,9 @@ def _run_watched_jobs(
         )
         for plan in batch_plan.jobs
     )
-    remote_lock_plans = tuple(_remote_lock_plan(job.config, job.pyproject_path) for job in batch_plan.jobs)
+    remote_lock_plans, remote_lock_intent = dependencies.apply_remote_lock_plans(
+        _remote_lock_plan(job.config, job.pyproject_path) for job in batch_plan.jobs
+    )
     for plan in remote_lock_plans:
         dependencies.add_file(plan.canonical_path)
         if plan.policy == "update":
@@ -2805,6 +2807,8 @@ def _run_watched_jobs(
     with dependencies.generation() as generation:
         result = _run_jobs(args, batch_plan.jobs, remote_lock_plans=remote_lock_plans)
         generation.failed = result is not Exit.OK
+    if result is Exit.OK:
+        dependencies.commit_remote_lock_intent(remote_lock_intent)
     return result
 
 
@@ -3381,6 +3385,9 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         return Exit.ERROR
 
     lock_plan = _bound_remote_lock_plan or _remote_lock_plan(config, pyproject_path)
+    remote_lock_intent: set[Path] | None = None
+    if config.watch and watch_dependencies is not None and _bound_remote_lock_plan is None:
+        (lock_plan,), remote_lock_intent = watch_dependencies.apply_remote_lock_plans((lock_plan,))
     active_lockfile = lock_plan.canonical_path if lock_plan.active else None
     if config.watch and watch_dependencies is not None:
         watch_dependencies.add_file(lock_plan.canonical_path)
@@ -3420,6 +3427,8 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
             )
             if result is not Exit.OK:
                 return result
+            if remote_lock_intent is not None and watch_dependencies is not None:
+                watch_dependencies.commit_remote_lock_intent(remote_lock_intent)
             try:
                 from datamodel_code_generator.watch import watch_and_regenerate  # noqa: PLC0415
 
@@ -3431,7 +3440,7 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
             except Exception as e:  # noqa: BLE001
                 print(str(e), file=sys.stderr)  # noqa: T201
                 return Exit.ERROR
-        return _run_single_remote_transaction(
+        result = _run_single_remote_transaction(
             args,
             config,
             pyproject_config,
@@ -3440,6 +3449,9 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
             lock_plan,
             dependencies=watch_dependencies,
         )
+        if result is Exit.OK and remote_lock_intent is not None and watch_dependencies is not None:
+            watch_dependencies.commit_remote_lock_intent(remote_lock_intent)
+        return result
     config.resolve_remote_lock(None if remote_locks is None else remote_locks.collector_for(lock_plan))
     uses_black_formatter = config.formatters is None or Formatter.BLACK in config.formatters
     if uses_black_formatter and not is_supported_in_black(config.target_python_version):  # pragma: no cover
@@ -3566,6 +3578,8 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         if temp_context is not None:
             temp_context.cleanup()
         if not remote_transaction_owner or remote_locks is None:
+            if exit_code is Exit.OK and remote_lock_intent is not None and watch_dependencies is not None:
+                watch_dependencies.commit_remote_lock_intent(remote_lock_intent)
             return exit_code
         if exit_code is not Exit.OK or config.check:
             remote_locks.discard()
@@ -3577,6 +3591,8 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
             remote_locks.discard()
             print(f"Error: could not publish remote lock: {exc}", file=sys.stderr)  # noqa: T201
             return Exit.ERROR
+        if remote_lock_intent is not None and watch_dependencies is not None:
+            watch_dependencies.commit_remote_lock_intent(remote_lock_intent)
         return exit_code
 
     try:
