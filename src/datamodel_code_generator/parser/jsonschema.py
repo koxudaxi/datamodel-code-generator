@@ -8063,15 +8063,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self.set_schema_extensions(reference.path, obj)
         field = self.parse_array_fields(original_name or name, obj, [*path, name])
 
-        if not self._get_array_union_non_array_types(obj) and any(
-            data_type.reference == reference for data_type in field.data_type.all_data_types if data_type.reference
+        non_array_types = self._get_array_union_non_array_types(obj)
+        direct_data_types = field.data_type.data_types
+        if (
+            not self._should_localize_array_union_constraints(obj, non_array_types)
+            and direct_data_types
+            and any(
+                data_type.reference == reference
+                for data_type in direct_data_types[0].all_data_types
+                if data_type.reference
+            )
+            and (len(direct_data_types) > 1 or not non_array_types)
         ):
             # self-reference
             field = self.data_model_field_type(
                 data_type=self.data_type(
                     data_types=[
-                        self.data_type(data_types=field.data_type.data_types[1:], is_list=True),
-                        *field.data_type.data_types[1:],
+                        self.data_type(data_types=direct_data_types[1:], is_list=True),
+                        *direct_data_types[1:],
                     ]
                 ),
                 default=field.default,

@@ -5,5 +5,19 @@
   "minItems": 1,
   "items": {
     "$ref": "#"
+  },
+  "definitions": {
+    "UnconstrainedArrayTypeUnionSelfRef": {
+      "type": ["array", "string"],
+      "items": {
+        "$ref": "#/definitions/UnconstrainedArrayTypeUnionSelfRef"
+      }
+    },
+    "UnconstrainedObjectArraySelfRef": {
+      "type": ["array", "object"],
+      "items": {
+        "$ref": "#/definitions/UnconstrainedObjectArraySelfRef"
+      }
+    }
   }
 }

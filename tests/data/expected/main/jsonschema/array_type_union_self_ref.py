@@ -3,10 +3,23 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any, Union
 
 from pydantic import Field, RootModel
 from typing_extensions import TypeAliasType
+
+
+class UnconstrainedArrayTypeUnionSelfRef(
+    RootModel[Union[str, list["UnconstrainedArrayTypeUnionSelfRef"]]]
+):
+    root: Union[str, list["UnconstrainedArrayTypeUnionSelfRef"]]
+
+
+class UnconstrainedObjectArraySelfRef(
+    RootModel[Union[dict[str, Any], list["UnconstrainedObjectArraySelfRef"]]]
+):
+    root: Union[dict[str, Any], list["UnconstrainedObjectArraySelfRef"]]
+
 
 ArrayTypeUnionSelfRefArray = TypeAliasType(
     "ArrayTypeUnionSelfRefArray",
@@ -16,3 +29,7 @@ ArrayTypeUnionSelfRefArray = TypeAliasType(
 
 class ArrayTypeUnionSelfRef(RootModel[str | ArrayTypeUnionSelfRefArray]):
     root: str | ArrayTypeUnionSelfRefArray = Field(..., title='ArrayTypeUnionSelfRef')
+
+
+UnconstrainedArrayTypeUnionSelfRef.model_rebuild()
+UnconstrainedObjectArraySelfRef.model_rebuild()

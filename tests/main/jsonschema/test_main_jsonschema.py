@@ -5334,6 +5334,24 @@ def test_jsonschema_array_type_union_self_ref(output_file: Path) -> None:
             invalid_json="[]",
             expected_error_type="string_type",
         )
+    for valid_json in ('"leaf"', "[]", '["leaf"]', '[["leaf"]]'):
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="array_type_union_self_ref",
+            model_name="UnconstrainedArrayTypeUnionSelfRef",
+            valid_json=valid_json,
+            invalid_json="{}",
+            expected_error_type="string_type",
+        )
+    for valid_json in ("{}", "[]", "[{}]", "[[{}]]"):
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="array_type_union_self_ref",
+            model_name="UnconstrainedObjectArraySelfRef",
+            valid_json=valid_json,
+            invalid_json='"invalid"',
+            expected_error_type="dict_type",
+        )
 
 
 def test_jsonschema_pattern_properties_field_constraints(output_file: Path) -> None:
