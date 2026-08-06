@@ -1755,6 +1755,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     default_value_overrides: Mapping[str, Any] | None = None,
     input_filename: str | None = None,
     generation_timestamp: str | None = None,
+    logical_output: Path | None = None,
 ) -> str | Mapping[tuple[str, ...], str] | None:
     """Run code generation with the given config and parameters."""
     generation_config = config.model_copy(
@@ -1776,6 +1777,8 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     )
     if generation_timestamp is not None:
         generation_config._generation_timestamp = generation_timestamp  # noqa: SLF001
+    if logical_output is not None:
+        generation_config._logical_output = logical_output  # noqa: SLF001
     return generate(
         input_=input_,
         config=cast("Any", generation_config),  # ty: ignore[redundant-cast]
@@ -2637,6 +2640,7 @@ class GenerationRunContext(NamedTuple):
             default_value_overrides=self.default_value_overrides,
             input_filename=input_filename,
             generation_timestamp=self.generation_timestamp,
+            logical_output=self.config.output,
         )
 
 

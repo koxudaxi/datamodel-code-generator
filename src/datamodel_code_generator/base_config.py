@@ -64,6 +64,10 @@ class BaseGenerateConfig(BaseModel):
     )
 
     _generation_timestamp: str | None = PrivateAttr(default=None)
+    # ``--diff-against`` writes each generated revision to a temporary path while
+    # retaining the caller-selected output path as the formatter/process context.
+    # Keeping this private preserves the public configuration schema.
+    _logical_output: Path | None = PrivateAttr(default=None)
 
     input_file_type: InputFileType = InputFileType.Auto
     output: Path | None = None

@@ -8,7 +8,9 @@ from typing import TYPE_CHECKING
 import jsonschema
 import pytest
 
+from datamodel_code_generator import DataModelType
 from datamodel_code_generator.__main__ import Exit
+from tests.conftest import create_assert_file_content
 from tests.main.conftest import DATA_PATH, InputFileTypeLiteral, run_main_and_assert, run_main_with_args
 
 if TYPE_CHECKING:
@@ -32,6 +34,9 @@ LOCAL_INPUT_TYPE_CASES: tuple[tuple[InputFileTypeLiteral, Path, bool], ...] = (
     ("csv", DATA_PATH / "csv" / "simple.csv", False),
     ("graphql", DATA_PATH / "graphql" / "simple-star-wars.graphql", False),
 )
+VIRTUAL_FILE_SENTINEL = INPUT_DIFF_EXPECTED_PATH / "virtual_file_sentinel.py"
+VIRTUAL_DIRECTORY_SENTINEL = INPUT_DIFF_EXPECTED_PATH / "virtual_directory_sentinel"
+assert_file_content = create_assert_file_content(INPUT_DIFF_EXPECTED_PATH)
 
 
 def test_diff_against_identical_single_file_does_not_write_virtual_output(
@@ -44,6 +49,30 @@ def test_diff_against_identical_single_file_does_not_write_virtual_output(
         output_path=output_file,
         input_file_type="jsonschema",
         extra_args=["--diff-against", str(JSON_SCHEMA_INPUT_DIFF_PATH / "same_old.json"), "--disable-timestamp"],
+        expected_exit=Exit.OK,
+        output_should_not_exist=True,
+        capsys=capsys,
+        expected_stdout_path=INPUT_DIFF_EXPECTED_PATH / "identical.txt",
+        assert_no_stderr=True,
+    )
+
+
+@pytest.mark.parametrize("output_model_type", tuple(model_type.value for model_type in DataModelType))
+def test_diff_against_supports_every_output_model_type(
+    output_model_type: str, output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The two-input pipeline compares every supported data-model backend."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_INPUT_DIFF_PATH / "same_new.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--diff-against",
+            str(JSON_SCHEMA_INPUT_DIFF_PATH / "same_old.json"),
+            "--disable-timestamp",
+            "--output-model-type",
+            output_model_type,
+        ],
         expected_exit=Exit.OK,
         output_should_not_exist=True,
         capsys=capsys,
@@ -160,6 +189,29 @@ def test_diff_against_reports_added_and_removed_directory_files_without_writing_
     )
 
 
+def test_diff_against_json_reports_added_and_removed_directory_files_without_writing_virtual_output(
+    output_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Structured diff output preserves added and removed directory entries."""
+    run_main_and_assert(
+        input_path=OPENAPI_INPUT_DIFF_PATH / "new.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--diff-against",
+            str(OPENAPI_INPUT_DIFF_PATH / "old.yaml"),
+            "--disable-timestamp",
+            "--output-format",
+            "json",
+        ],
+        expected_exit=Exit.DIFF,
+        output_should_not_exist=True,
+        capsys=capsys,
+        expected_stdout_path=INPUT_DIFF_EXPECTED_PATH / "different_directory_json.txt",
+        assert_no_stderr=True,
+    )
+
+
 def test_diff_against_json_reports_structured_differences_without_writing_virtual_output(
     output_file: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -180,6 +232,110 @@ def test_diff_against_json_reports_structured_differences_without_writing_virtua
         capsys=capsys,
         expected_stdout_path=INPUT_DIFF_EXPECTED_PATH / "different_file_json.txt",
         assert_no_stderr=True,
+    )
+
+
+def test_diff_against_json_reports_identical_inputs_without_writing_virtual_output(
+    output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Structured diff output reports a successful comparison without a file write."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_INPUT_DIFF_PATH / "same_new.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--diff-against",
+            str(JSON_SCHEMA_INPUT_DIFF_PATH / "same_old.json"),
+            "--disable-timestamp",
+            "--output-format",
+            "json",
+        ],
+        expected_exit=Exit.OK,
+        output_should_not_exist=True,
+        capsys=capsys,
+        expected_stdout_path=INPUT_DIFF_EXPECTED_PATH / "identical_json.txt",
+        assert_no_stderr=True,
+    )
+
+
+def test_diff_against_preserves_a_preexisting_virtual_file(
+    output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Diff generation uses a physical temporary file, not the virtual file destination."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_INPUT_DIFF_PATH / "same_new.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--diff-against",
+            str(JSON_SCHEMA_INPUT_DIFF_PATH / "same_old.json"),
+            "--disable-timestamp",
+        ],
+        expected_exit=Exit.OK,
+        assert_func=assert_file_content,
+        expected_file=VIRTUAL_FILE_SENTINEL,
+        capsys=capsys,
+        expected_stdout_path=INPUT_DIFF_EXPECTED_PATH / "identical.txt",
+        assert_no_stderr=True,
+        copy_files=[(VIRTUAL_FILE_SENTINEL, output_file)],
+    )
+
+
+def test_diff_against_preserves_a_preexisting_virtual_directory(
+    output_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Diff generation leaves every pre-existing virtual directory file intact."""
+    output_dir.mkdir()
+    run_main_and_assert(
+        input_path=OPENAPI_INPUT_DIFF_PATH / "new.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--diff-against",
+            str(OPENAPI_INPUT_DIFF_PATH / "new.yaml"),
+            "--disable-timestamp",
+        ],
+        expected_exit=Exit.OK,
+        expected_directory=VIRTUAL_DIRECTORY_SENTINEL,
+        capsys=capsys,
+        expected_stdout_path=INPUT_DIFF_EXPECTED_PATH / "identical.txt",
+        assert_no_stderr=True,
+        copy_files=[(VIRTUAL_DIRECTORY_SENTINEL / "sentinel.py", output_dir / "sentinel.py")],
+    )
+
+
+def test_diff_against_uses_the_virtual_output_context_for_relative_custom_formatter_resources(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Custom formatter resources stay relative to the virtual output, not a temp directory."""
+    virtual_output = tmp_path / "virtual-output" / "models.py"
+    virtual_output.parent.mkdir()
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_INPUT_DIFF_PATH / "same_new.json",
+        output_path=virtual_output,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--diff-against",
+            str(JSON_SCHEMA_INPUT_DIFF_PATH / "same_old.json"),
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+            "--custom-formatters",
+            "tests.data.python.custom_formatters.add_license",
+            "--custom-formatters-kwargs",
+            str(DATA_PATH / "config" / "input_diff_relative_license.json"),
+        ],
+        expected_exit=Exit.OK,
+        output_should_not_exist=True,
+        capsys=capsys,
+        expected_stdout_path=INPUT_DIFF_EXPECTED_PATH / "identical.txt",
+        assert_no_stderr=True,
+        copy_files=[
+            (
+                DATA_PATH / "python" / "custom_formatters" / "license_example.txt",
+                virtual_output.parent / "license.txt",
+            )
+        ],
     )
 
 
