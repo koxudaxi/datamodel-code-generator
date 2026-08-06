@@ -1,0 +1,11 @@
+--- virtual.py (old input)
++++ virtual.py (new input)
+@@ -7,7 +7,7 @@
+ 
+ 
+ class Shared(BaseModel):
+-    pass
++    age: int | None = None
+ 
+ 
+ class Model(RootModel[Shared]):

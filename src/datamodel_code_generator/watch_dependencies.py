@@ -406,7 +406,10 @@ class WatchDependencies(_Weakrefable):
         if path is None:
             return
         with self._lock:
-            self._add_path(path, self._static_files, self._static_symlink_events)
+            if self._pending_static is None:
+                self._add_path(path, self._static_files, self._static_symlink_events)
+            else:
+                self._add_path(path, self._pending_static.files, self._pending_static.symlink_events)
             self._publish()
 
     def add_directory(self, path: Path | None) -> None:
@@ -415,6 +418,15 @@ class WatchDependencies(_Weakrefable):
             return
         with self._lock:
             self._add_path(path, self._static_directories, self._static_symlink_events)
+            self._publish()
+
+    def exclude_file(self, path: Path | None) -> None:
+        """Exclude one exact generated file from watch events."""
+        if path is None:
+            return
+        with self._lock:
+            outputs = self._outputs if self._pending_static is None else self._pending_static.outputs
+            self._add_output(path, outputs, is_directory=False)
             self._publish()
 
     def record_file(self, path: Path) -> None:
@@ -513,7 +525,6 @@ class WatchDependencies(_Weakrefable):
             output.is_relative_to(path_variant) for path_variant in path_variants for output in snapshot.outputs
         )
         return not has_output_below or self._polling_dependencies_changed(snapshot, path_variants)
-
 
 def collector_is_active() -> bool:
     """Return whether watch dependency collection is active without importing watch mode."""

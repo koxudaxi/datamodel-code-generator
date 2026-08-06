@@ -16,7 +16,7 @@ import os
 import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeGuard, cast
+from typing import TYPE_CHECKING, TextIO, TypeGuard, cast
 from urllib.parse import SplitResult, urlsplit, urlunsplit
 
 if TYPE_CHECKING:
@@ -152,6 +152,13 @@ def _remove_temporary_file(path: Path) -> None:
         path.unlink()
 
 
+def _nearest_existing_directory(path: Path) -> Path:
+    """Return an existing ancestor without creating target lock directories."""
+    while not path.is_dir():
+        path = path.parent
+    return path
+
+
 @dataclass(slots=True)
 class RemoteReferenceLock:
     """Collect and verify all remote bytes for exactly one generation.
@@ -165,6 +172,7 @@ class RemoteReferenceLock:
     _entries: dict[str, RemoteLockEntry]
     _seen: dict[str, RemoteLockEntry] = field(default_factory=dict)
     _committed: bool = False
+    _staged_path: Path | None = None
 
     @classmethod
     def open(cls, path: Path, *, update: bool, locked: bool) -> RemoteReferenceLock:
@@ -212,22 +220,40 @@ class RemoteReferenceLock:
         msg = f"Remote resource content does not match lock: {entry.url}"
         raise RemoteLockError(msg)
 
-    def commit(self) -> None:
-        """Atomically persist a successful explicit update at most once."""
+    def _write_staged_content(self, file: object) -> None:
+        """Stream one deterministic lock document without retaining a second full payload."""
+        lock_file = cast("TextIO", file)
+        entries = sorted(self._seen.values(), key=lambda entry: entry.request_sha256)
+        lock_file.write('{\n  "resources": ')
+        if not entries:
+            lock_file.write("[]")
+        else:
+            lock_file.write("[\n")
+            for index, entry in enumerate(entries):
+                if index:
+                    lock_file.write(",\n")
+                serialized_entry = json.dumps(asdict(entry), ensure_ascii=False, indent=2, sort_keys=True)
+                lock_file.write("\n".join(f"    {line}" for line in serialized_entry.splitlines()))
+            lock_file.write("\n  ]")
+        lock_file.write(f',\n  "version": {_LOCK_VERSION}\n}}\n')
+
+    def stage(self, staging_directory: Path | None = None) -> Path | None:
+        """Write the updated lock into a pre-existing private staging directory.
+
+        The caller owns publication so batch output, metadata, and every lock
+        can share one rollback journal.  A repeated call intentionally reuses
+        the one staged file and does not serialize the lock twice.
+        """
         if self._committed or not self.update:
-            return
-        payload = {
-            "resources": [asdict(entry) for _, entry in sorted(self._seen.items())],
-            "version": _LOCK_VERSION,
-        }
-        content = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+            return None
+        if self._staged_path is not None:
+            return self._staged_path
         try:
             with contextlib.ExitStack() as cleanup:
-                self.path.parent.mkdir(parents=True, exist_ok=True)
                 temporary_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
                     mode="w",
                     encoding="utf-8",
-                    dir=self.path.parent,
+                    dir=staging_directory or _nearest_existing_directory(self.path.parent),
                     prefix=f".{self.path.name}.",
                     delete=False,
                 )
@@ -236,11 +262,35 @@ class RemoteReferenceLock:
                 # fsync(), and close() can all fail before replacement.
                 cleanup.callback(_remove_temporary_file, temporary_path)
                 with temporary_file:
-                    temporary_file.write(content)
+                    self._write_staged_content(temporary_file)
                     temporary_file.flush()
                     os.fsync(temporary_file.fileno())
-                temporary_path.replace(self.path)
-                self._committed = True
+                self._staged_path = temporary_path
+                cleanup.pop_all()
+                return temporary_path
         except OSError as exc:
             msg = f"Unable to update remote lock {self.path}: {exc}"
             raise RemoteLockError(msg) from exc
+
+    def discard_stage(self) -> None:
+        """Remove a staged but unpublished update after a failed transaction."""
+        if self._staged_path is not None:
+            _remove_temporary_file(self._staged_path)
+            self._staged_path = None
+
+    def mark_committed(self) -> None:
+        """Mark the collector committed only after its transaction publishes."""
+        self._committed = True
+        self._staged_path = None
+
+    def commit(self) -> None:
+        """Atomically persist a successful explicit update at most once."""
+        if (staged_path := self.stage()) is None:
+            return
+        try:
+            staged_path.replace(self.path)
+        except OSError as exc:
+            self.discard_stage()
+            msg = f"Unable to update remote lock {self.path}: {exc}"
+            raise RemoteLockError(msg) from exc
+        self.mark_committed()
