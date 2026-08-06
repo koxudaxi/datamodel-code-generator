@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 import sys
 from argparse import Namespace
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, BinaryIO
 
 import black
 import jsonschema
@@ -16,7 +17,7 @@ import pytest
 from packaging import version
 
 import datamodel_code_generator.__main__ as main_module
-from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
+from datamodel_code_generator import MIN_VERSION, Error, chdir, inferred_message
 from datamodel_code_generator.__main__ import (
     Exit,
     JobPlan,
@@ -32,6 +33,7 @@ from datamodel_code_generator.__main__ import (
     _remove_created_directory,
     _restore_backup,
     _rollback_published_file,
+    _selected_jobs,
     _staged_files,
     _StagedJobPlan,
     _write_generated_result,
@@ -1371,6 +1373,14 @@ def test_pyproject_all_jobs_runs_every_job(jobs_project: dict[str, Path], tmp_pa
     assert_file_content(jobs_project["strict"], "jobs/strict.py")
 
 
+def test_selected_jobs_defensively_rejects_all_jobs_with_named_job() -> None:
+    """Reject an invalid namespace even if selection bypasses argument parsing."""
+    args = Namespace(all_jobs=True, job=["plain"])
+
+    with pytest.raises(Error, match="--all-jobs cannot be used with --job"):
+        _selected_jobs(args, {"plain": {}})
+
+
 def test_pyproject_job_command_header_uses_batch_invocation(jobs_project: dict[str, Path], tmp_path: Path) -> None:
     """Keep the reproducible job-selection command in generated file headers."""
     pyproject_path = tmp_path / "pyproject.toml"
@@ -1406,10 +1416,8 @@ def test_pyproject_jobs_json_is_one_ordered_payload(tmp_path: Path, capsys: pyte
 
     output = capsys.readouterr().out
     payload = json.loads(output)
-    assert [job["result"]["output"] for job in payload["jobs"]] == [
-        (tmp_path / "plain.py").as_posix(),
-        (tmp_path / "strict.py").as_posix(),
-    ]
+    relative_outputs = [Path(job["result"]["output"]).relative_to(tmp_path).as_posix() for job in payload["jobs"]]
+    assert_output("\n".join(relative_outputs) + "\n", EXPECTED_MAIN_KR_PATH / "jobs" / "ordered_outputs.txt")
     assert_output(_batch_json_summary(output), EXPECTED_MAIN_KR_PATH / "jobs" / "json_generation.txt")
 
 
@@ -1448,12 +1456,13 @@ def test_pyproject_jobs_json_rejects_invalid_inner_payload_without_stdout(
 
     with chdir(tmp_path):
         run_main_with_args(
-            ["--all-jobs", "--output-format", "json", "--formatters", "builtin"], expected_exit=Exit.ERROR
+            ["--all-jobs", "--output-format", "json", "--formatters", "builtin"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_EMPTY_OUTPUT_PATH,
+            expected_stderr_contains=error,
         )
 
-    captured = capsys.readouterr()
-    assert not captured.out
-    assert error in captured.err
     _assert_file_does_not_exist(jobs_project["plain"])
     _assert_file_does_not_exist(jobs_project["strict"])
 
@@ -1470,12 +1479,13 @@ def test_pyproject_jobs_json_publish_failure_has_no_batch_payload(
 
     with chdir(tmp_path):
         run_main_with_args(
-            ["--all-jobs", "--output-format", "json", "--formatters", "builtin"], expected_exit=Exit.ERROR
+            ["--all-jobs", "--output-format", "json", "--formatters", "builtin"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_EMPTY_OUTPUT_PATH,
+            expected_stderr_contains="could not publish batch output",
         )
 
-    captured = capsys.readouterr()
-    assert not captured.out
-    assert "could not publish batch output" in captured.err
     _assert_file_does_not_exist(jobs_project["plain"])
     _assert_file_does_not_exist(jobs_project["strict"])
 
@@ -1492,12 +1502,13 @@ def test_pyproject_jobs_json_spool_failure_has_no_batch_payload(
 
     with chdir(tmp_path):
         run_main_with_args(
-            ["--all-jobs", "--output-format", "json", "--formatters", "builtin"], expected_exit=Exit.ERROR
+            ["--all-jobs", "--output-format", "json", "--formatters", "builtin"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_EMPTY_OUTPUT_PATH,
+            expected_stderr_contains="could not spool batch JSON output",
         )
 
-    captured = capsys.readouterr()
-    assert not captured.out
-    assert "could not spool batch JSON output" in captured.err
     _assert_file_does_not_exist(jobs_project["plain"])
     _assert_file_does_not_exist(jobs_project["strict"])
 
@@ -1671,6 +1682,7 @@ output = "{output_path.as_posix()}"
     _assert_file_does_not_exist(output_path)
 
 
+@pytest.mark.allow_direct_assert
 def test_pyproject_job_plan_preserves_watch_provenance(jobs_project: dict[str, Path], tmp_path: Path) -> None:
     """Keep the resolved raw config, CLI settings, and project path for batch watch planning."""
     with chdir(tmp_path):
@@ -1696,6 +1708,7 @@ def test_pyproject_job_plan_preserves_watch_provenance(jobs_project: dict[str, P
     assert plan.pyproject_path == tmp_path / "pyproject.toml"
 
 
+@pytest.mark.allow_direct_assert
 def test_pyproject_job_plan_uses_base_watch_scheduler(jobs_project: dict[str, Path], tmp_path: Path) -> None:
     """Apply base watch settings only to the outer batch scheduler."""
     pyproject_path = tmp_path / "pyproject.toml"
@@ -1921,8 +1934,10 @@ output = "{(tmp_path / "invalid.py").as_posix()}"
         _assert_file_does_not_exist(good_output)
         _assert_file_does_not_exist(metadata_output)
     else:
-        assert good_output.read_text(encoding="utf-8") == existing_content
-        assert metadata_output.read_text(encoding="utf-8") == "stale metadata\n"
+        assert_output(good_output.read_text(encoding="utf-8"), EXPECTED_MAIN_KR_PATH / "jobs" / "stale_output.txt")
+        assert_output(
+            metadata_output.read_text(encoding="utf-8"), EXPECTED_MAIN_KR_PATH / "jobs" / "stale_metadata.txt"
+        )
 
 
 def test_pyproject_jobs_publish_model_metadata(tmp_path: Path) -> None:
@@ -1947,7 +1962,8 @@ emit-model-metadata = "{metadata_path.as_posix()}"
         run_main_with_args(["--all-jobs", "--formatters", "builtin"])
 
     assert_output(output_path.read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
-    assert json.loads(metadata_path.read_text(encoding="utf-8"))["version"] == 1
+    metadata_version = json.loads(metadata_path.read_text(encoding="utf-8"))["version"]
+    assert_output(f"{metadata_version}\n", EXPECTED_MAIN_KR_PATH / "jobs" / "metadata_version.txt")
 
 
 def test_pyproject_jobs_directory_output_overlays_generated_files(tmp_path: Path) -> None:
@@ -1955,7 +1971,7 @@ def test_pyproject_jobs_directory_output_overlays_generated_files(tmp_path: Path
     output_path = tmp_path / "models"
     extra_file = output_path / "keep.py"
     output_path.mkdir()
-    extra_file.write_text("keep this file\n", encoding="utf-8")
+    extra_file.write_text("stale\n", encoding="utf-8")
     (tmp_path / "pyproject.toml").write_text(
         f"""
 [tool.datamodel-codegen]
@@ -1972,8 +1988,10 @@ output = "{output_path.as_posix()}"
     with chdir(tmp_path):
         run_main_with_args(["--all-jobs", "--formatters", "builtin"])
 
-    assert extra_file.read_text(encoding="utf-8") == "keep this file\n"
-    assert (output_path / "__init__.py").is_file()
+    assert_output(extra_file.read_text(encoding="utf-8"), EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py")
+    assert_output(
+        (output_path / "__init__.py").read_text(encoding="utf-8"), EXPECTED_MAIN_KR_PATH / "jobs" / "modular_init.py"
+    )
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="hardlink creation requires elevated privileges")
@@ -1985,7 +2003,6 @@ def test_pyproject_jobs_preflight_rejects_hardlinked_other_job_input(
     external_input.write_text((JSON_SCHEMA_DATA_PATH / "person.json").read_text(encoding="utf-8"), encoding="utf-8")
     hardlinked_output = tmp_path / "hardlinked.py"
     hardlinked_output.hardlink_to(external_input)
-    original_content = external_input.read_text(encoding="utf-8")
     (tmp_path / "pyproject.toml").write_text(
         f"""
 [tool.datamodel-codegen]
@@ -2011,8 +2028,12 @@ output = "{(tmp_path / "reader.py").as_posix()}"
             expected_stderr_contains="overlaps input for job 'reader'",
         )
 
-    assert hardlinked_output.read_text(encoding="utf-8") == original_content
-    assert external_input.read_text(encoding="utf-8") == original_content
+    assert_output(
+        hardlinked_output.read_text(encoding="utf-8") + "\n", EXPECTED_MAIN_KR_PATH / "jobs" / "protected_schema.txt"
+    )
+    assert_output(
+        external_input.read_text(encoding="utf-8") + "\n", EXPECTED_MAIN_KR_PATH / "jobs" / "protected_schema.txt"
+    )
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="directory symlink creation requires elevated privileges")
@@ -2026,7 +2047,6 @@ def test_pyproject_jobs_reject_nested_output_symlink_escape(tmp_path: Path, caps
     protected_input.write_text((JSON_SCHEMA_DATA_PATH / "person.json").read_text(encoding="utf-8"), encoding="utf-8")
     (output_path / "foo").symlink_to(protected_directory, target_is_directory=True)
     reader_output = tmp_path / "reader.py"
-    original_content = protected_input.read_text(encoding="utf-8")
     (tmp_path / "pyproject.toml").write_text(
         f"""
 [tool.datamodel-codegen]
@@ -2053,7 +2073,9 @@ input-file-type = "jsonschema"
             expected_stderr_contains="generated file escapes its output path",
         )
 
-    assert protected_input.read_text(encoding="utf-8") == original_content
+    assert_output(
+        protected_input.read_text(encoding="utf-8") + "\n", EXPECTED_MAIN_KR_PATH / "jobs" / "protected_schema.txt"
+    )
     _assert_file_does_not_exist(reader_output)
 
 
@@ -2103,6 +2125,7 @@ output = "{output_path.as_posix()}"
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="directory symlink creation requires elevated privileges")
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_rejects_output_ancestor_swap_between_validation_and_publication(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2156,6 +2179,7 @@ output = "{output_root.as_posix()}"
     assert list(tmp_path.glob(".datamodel-codegen-*")) == []
 
 
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_publish_rollback_restores_prior_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Restore every earlier replacement if publication fails after its backup was journaled."""
     first_staged = tmp_path / "first.staged.py"
@@ -2194,6 +2218,7 @@ def test_pyproject_jobs_publish_rollback_restores_prior_files(tmp_path: Path, mo
     assert not new_target.parent.exists()
 
 
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_publish_first_replacement_failure_removes_backup(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2227,6 +2252,7 @@ def test_pyproject_jobs_publish_first_replacement_failure_removes_backup(
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_publish_replaces_symlink_without_mutating_its_target(tmp_path: Path) -> None:
     """Back up a symlink entry and atomically replace it without changing its original referent."""
     staged_file = tmp_path / "generated.py"
@@ -2243,6 +2269,7 @@ def test_pyproject_jobs_publish_replaces_symlink_without_mutating_its_target(tmp
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_failed_replacement_discards_unchanged_symlink_backup(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2281,6 +2308,7 @@ def test_pyproject_jobs_failed_replacement_discards_unchanged_symlink_backup(
     assert list(tmp_path.glob(".output.py.*.bak")) == []
 
 
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_publish_falls_back_to_copy_backup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Use a copy backup when the filesystem cannot make a hardlink for an existing target."""
     staged_file = tmp_path / "generated.py"
@@ -2299,6 +2327,80 @@ def test_pyproject_jobs_publish_falls_back_to_copy_backup(tmp_path: Path, monkey
     assert target.read_text(encoding="utf-8") == "generated\n"
 
 
+@pytest.mark.allow_direct_assert
+@pytest.mark.parametrize("copy_backup", [False, True])
+def test_backup_existing_target_retries_collisions_without_overwriting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, copy_backup: bool
+) -> None:
+    """Claim backup names atomically for both hardlink and exclusive-copy paths."""
+    target = tmp_path / "target.py"
+    colliding_backup = tmp_path / ".target.py.collision.bak"
+    expected_backup = tmp_path / ".target.py.available.bak"
+    target.write_text("stale\n", encoding="utf-8")
+    target.chmod(0o640)
+    timestamp_ns = 1_600_000_000_123_456_789
+    os.utime(target, ns=(timestamp_ns, timestamp_ns))
+    colliding_backup.write_text("unrelated\n", encoding="utf-8")
+    candidate_names = iter((colliding_backup.name, expected_backup.name))
+    monkeypatch.setattr(main_module, "_backup_name", lambda _target_name: next(candidate_names))
+
+    if copy_backup:
+        monkeypatch.setattr(
+            os,
+            "link",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("simulated hardlink failure")),
+        )
+
+    backup = _backup_existing_target(target)
+    backup_stat = backup.stat()
+
+    assert backup == expected_backup
+    assert colliding_backup.read_text(encoding="utf-8") == "unrelated\n"
+    assert backup.read_text(encoding="utf-8") == "stale\n"
+    assert backup_stat.st_mtime_ns == timestamp_ns
+    if copy_backup and os.name != "nt":
+        assert stat.S_IMODE(backup_stat.st_mode) == 0o640
+
+
+@pytest.mark.allow_direct_assert
+def test_backup_existing_symlink_retries_collision_without_overwriting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Claim a symlink backup name directly and preserve the original link target."""
+    referent = tmp_path / "referent.py"
+    target = tmp_path / "target.py"
+    colliding_backup = tmp_path / ".target.py.collision.bak"
+    expected_backup = tmp_path / ".target.py.available.bak"
+    referent.write_text("stale\n", encoding="utf-8")
+    try:
+        target.symlink_to(referent.name)
+    except (NotImplementedError, OSError):  # pragma: no cover - platform capability
+        pytest.skip("this platform cannot create symlinks")
+    colliding_backup.write_text("unrelated\n", encoding="utf-8")
+    candidate_names = iter((colliding_backup.name, expected_backup.name))
+    monkeypatch.setattr(main_module, "_backup_name", lambda _target_name: next(candidate_names))
+
+    backup = _backup_existing_target(target)
+
+    assert backup == expected_backup
+    assert backup.is_symlink()
+    assert backup.readlink() == target.readlink()
+    assert colliding_backup.read_text(encoding="utf-8") == "unrelated\n"
+
+
+def test_copy_backup_without_fchmod(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Use the platform chmod fallback when ``fchmod`` is unavailable."""
+    target = tmp_path / "target.py"
+    target.write_text("stale\n", encoding="utf-8")
+    monkeypatch.setattr(os, "link", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("no hardlink")))
+    monkeypatch.delattr(os, "fchmod", raising=False)
+
+    backup = _backup_existing_target(target)
+
+    assert_output(backup.read_text(encoding="utf-8"), EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py")
+
+
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_partial_copy_backup_failure_removes_backup(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2306,18 +2408,14 @@ def test_pyproject_jobs_partial_copy_backup_failure_removes_backup(
     target = tmp_path / "target.py"
     target.write_text("stale\n", encoding="utf-8")
 
-    monkeypatch.setattr(
-        Path,
-        "hardlink_to",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("simulated hardlink failure")),
-    )
+    monkeypatch.setattr(os, "link", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("no hardlink")))
 
-    def fail_partial_copy(_source: Path, destination: Path) -> None:
-        destination.write_text("partial\n", encoding="utf-8")
+    def fail_partial_copy(_source: BinaryIO, destination: BinaryIO, _length: int = 0) -> None:
+        destination.write(b"partial\n")
         msg = "simulated partial copy failure"
         raise OSError(msg)
 
-    monkeypatch.setattr(main_module.shutil, "copy2", fail_partial_copy)
+    monkeypatch.setattr(main_module.shutil, "copyfileobj", fail_partial_copy)
 
     with pytest.raises(OSError, match="simulated partial copy failure"):
         _backup_existing_target(target)
@@ -2327,23 +2425,15 @@ def test_pyproject_jobs_partial_copy_backup_failure_removes_backup(
 
     staged_file = tmp_path / "generated.py"
     staged_file.write_text("generated\n", encoding="utf-8")
-    monkeypatch.setattr(os, "link", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("no hardlink")))
 
-    def fail_bound_copy(directory_fd: int, _target_name: str, backup_name: str, _target_stat: object) -> None:
-        partial_fd = os.open(backup_name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, dir_fd=directory_fd)
-        os.close(partial_fd)
-        msg = "simulated bound copy failure"
-        raise OSError(msg)
-
-    monkeypatch.setattr(main_module, "_copy_target_at", fail_bound_copy)
-
-    with pytest.raises(OSError, match="simulated bound copy failure"):
+    with pytest.raises(OSError, match="simulated partial copy failure"):
         _publish_staged_files([(staged_file, target)])
 
     assert_output(target.read_text(encoding="utf-8"), EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py")
     assert list(tmp_path.glob(".target.py.*.bak")) == []
 
 
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_post_publish_check_does_not_recreate_missing_parent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2373,6 +2463,7 @@ def test_pyproject_jobs_post_publish_check_does_not_recreate_missing_parent(
     assert list(detached_parent.glob(".target.py.*.bak")) == []
 
 
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_rollback_helpers_report_unrecoverable_paths(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2394,6 +2485,7 @@ def test_pyproject_jobs_rollback_helpers_report_unrecoverable_paths(
     assert _remove_created_directory(nonempty_directory) == [nonempty_directory]
 
 
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_parent_and_rollback_helpers_handle_races(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2409,6 +2501,7 @@ def test_pyproject_jobs_parent_and_rollback_helpers_handle_races(
     assert _rollback_published_file(_PublishedFile(target, None)) == [target]
 
 
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_restore_backup_replaces_when_samefile_is_unavailable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2430,6 +2523,7 @@ def test_pyproject_jobs_restore_backup_replaces_when_samefile_is_unavailable(
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_restore_backup_discards_unchanged_symlink_backup(tmp_path: Path) -> None:
     """Remove a symlink backup when a failed replacement left its target unchanged."""
     original = tmp_path / "original.py"
@@ -2445,6 +2539,7 @@ def test_pyproject_jobs_restore_backup_discards_unchanged_symlink_backup(tmp_pat
     assert target.is_symlink()
 
 
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_publish_reports_failed_rollback(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Include unrecovered paths when both publication and rollback fail."""
     staged_file = tmp_path / "generated.py"
@@ -2479,6 +2574,7 @@ def test_pyproject_jobs_publish_reports_failed_rollback(tmp_path: Path, monkeypa
     assert target.read_text(encoding="utf-8") == "stale\n"
 
 
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_publish_preserves_existing_file_mode(tmp_path: Path) -> None:
     """Keep an existing output's permission bits when atomically replacing its contents."""
     staged_file = tmp_path / "generated.py"
@@ -2493,6 +2589,7 @@ def test_pyproject_jobs_publish_preserves_existing_file_mode(tmp_path: Path) -> 
     assert target.stat().st_mode & 0o777 == 0o640
 
 
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_publish_rejects_directory_file_target(tmp_path: Path) -> None:
     """Do not replace an existing directory when a staged generated file collides with it."""
     staged_file = tmp_path / "generated.py"
@@ -2506,6 +2603,7 @@ def test_pyproject_jobs_publish_rejects_directory_file_target(tmp_path: Path) ->
     assert staged_file.read_text(encoding="utf-8") == "generated\n"
 
 
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_publication_helpers_handle_existing_directories(tmp_path: Path) -> None:
     """Avoid recording an existing directory as transaction-owned and ignore check-only staging."""
     existing_directory = tmp_path / "existing"
@@ -2741,6 +2839,7 @@ def test_pyproject_jobs_require_project_configuration(tmp_path: Path, capsys: py
 def test_pyproject_jobs_normalize_project_path_errors(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Report unreadable project configuration files as planning errors instead of tracebacks."""
     pyproject_path = tmp_path / "pyproject.toml"
+    output_path = tmp_path / "output.py"
     pyproject_path.write_text(
         """
 [tool.datamodel-codegen]
@@ -2752,8 +2851,19 @@ output = "output.py"
 """,
         encoding="utf-8",
     )
-    pyproject_path.chmod(0)
     try:
+        pyproject_path.chmod(0)
+    except OSError:  # pragma: no cover - platform capability
+        _assert_file_does_not_exist(output_path)
+        pytest.skip("this platform cannot remove read permission from the project file")
+    try:
+        try:
+            pyproject_path.read_text(encoding="utf-8")
+        except PermissionError:
+            pass
+        else:  # pragma: no cover - root/privileged user or Windows permission semantics
+            _assert_file_does_not_exist(output_path)
+            pytest.skip("the current user can read files with mode 000")
         with chdir(tmp_path):
             run_main_with_args(
                 ["--job", "api"],
@@ -2763,6 +2873,8 @@ output = "output.py"
             )
     finally:
         pyproject_path.chmod(0o600)
+
+    _assert_file_does_not_exist(output_path)
 
 
 def test_pyproject_invalid_config_returns_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

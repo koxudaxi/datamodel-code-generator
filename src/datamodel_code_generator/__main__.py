@@ -1131,6 +1131,9 @@ def _batch_outer_settings(
 
 def _selected_jobs(args: Namespace, jobs: Mapping[Any, Any]) -> frozenset[Any]:
     """Validate and return the requested job names."""
+    if args.all_jobs and args.job:
+        msg = "--all-jobs cannot be used with --job"
+        raise Error(msg)
     selected_names = tuple(jobs) if args.all_jobs else tuple(args.job or ())
     if unknown_jobs := [name for name in selected_names if name not in jobs]:
         available = ", ".join(jobs)
@@ -1685,31 +1688,124 @@ def _staged_files(staged_plan: _StagedJobPlan) -> Iterator[_StagedFile]:
         )
 
 
-def _backup_path(target: Path) -> Path:
-    """Reserve an unused sibling backup path for one atomic replacement."""
-    descriptor, path = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".bak", dir=target.parent)
-    os.close(descriptor)
-    backup = Path(path)
-    backup.unlink()
-    return backup
+def _backup_name(target_name: str) -> str:
+    """Return an unpredictable sibling backup name."""
+    from secrets import token_hex  # noqa: PLC0415
+
+    return f".{target_name}.{token_hex(8)}.bak"
+
+
+def _backup_names(target_name: str) -> Iterator[str]:
+    """Yield a bounded sequence of candidate sibling backup names."""
+    for _ in range(100):  # pragma: no branch - cryptographic name collisions are not realistic
+        yield _backup_name(target_name)
+
+
+def _open_file_at(path: str | Path, flags: int, mode: int, directory_fd: int | None) -> int:
+    """Open *path*, optionally relative to an already-bound directory."""
+    if directory_fd is None:
+        return os.open(path, flags, mode)
+    return os.open(path, flags, mode, dir_fd=directory_fd)
+
+
+def _unlink_file_at(path: str | Path, directory_fd: int | None) -> None:
+    """Unlink *path*, optionally relative to an already-bound directory."""
+    if directory_fd is None:
+        Path(path).unlink()
+    else:
+        os.unlink(path, dir_fd=directory_fd)
+
+
+def _chmod_backup_at(backup: str | Path, backup_fd: int, mode: int, directory_fd: int | None) -> None:
+    """Apply destination mode bits through the safest handle supported by this platform."""
+    if (fchmod := getattr(os, "fchmod", None)) is not None:
+        fchmod(backup_fd, mode)
+    elif os.chmod in os.supports_fd:  # pragma: no cover - platform-specific fallback
+        os.chmod(backup_fd, mode)
+    elif directory_fd is not None:  # pragma: no cover - POSIX exposes fchmod
+        os.chmod(backup, mode, dir_fd=directory_fd, follow_symlinks=False)
+    elif os.chmod in os.supports_follow_symlinks:  # pragma: no cover - platform-specific fallback
+        Path(backup).chmod(mode, follow_symlinks=False)
+    else:  # pragma: no cover - Windows lacks fd/no-follow chmod
+        Path(backup).chmod(mode)
+
+
+def _set_backup_times_at(
+    backup: str | Path,
+    backup_fd: int,
+    target_stat: os.stat_result,
+    directory_fd: int | None,
+) -> None:
+    """Preserve destination timestamps through a descriptor or no-follow path operation."""
+    timestamps = (target_stat.st_atime_ns, target_stat.st_mtime_ns)
+    if os.utime in os.supports_fd:
+        os.utime(backup_fd, ns=timestamps)
+    elif directory_fd is not None:  # pragma: no cover - POSIX exposes fd-based utime
+        os.utime(backup, ns=timestamps, dir_fd=directory_fd, follow_symlinks=False)
+    elif os.utime in os.supports_follow_symlinks:  # pragma: no cover - platform-specific fallback
+        os.utime(backup, ns=timestamps, follow_symlinks=False)
+    else:  # pragma: no cover - legacy Windows Python fallback
+        os.utime(backup, ns=timestamps)
+
+
+def _copy_target(
+    source: str | Path,
+    backup: str | Path,
+    target_stat: os.stat_result,
+    *,
+    directory_fd: int | None = None,
+) -> None:
+    """Copy a regular destination to an exclusively created sibling backup."""
+    no_follow = getattr(os, "O_NOFOLLOW", 0)
+    binary = getattr(os, "O_BINARY", 0)
+    source_fd = _open_file_at(source, os.O_RDONLY | no_follow | binary, 0, directory_fd)
+    backup_fd: int | None = None
+    try:
+        backup_fd = _open_file_at(
+            backup,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | no_follow | binary,
+            stat.S_IMODE(target_stat.st_mode),
+            directory_fd,
+        )
+        with os.fdopen(os.dup(source_fd), "rb") as source_file, os.fdopen(os.dup(backup_fd), "wb") as backup_file:
+            shutil.copyfileobj(source_file, backup_file)
+        _chmod_backup_at(backup, backup_fd, stat.S_IMODE(target_stat.st_mode), directory_fd)
+        _set_backup_times_at(backup, backup_fd, target_stat, directory_fd)
+    except BaseException:
+        if backup_fd is not None:
+            with suppress(OSError):
+                os.close(backup_fd)
+            backup_fd = None
+            with suppress(OSError):
+                _unlink_file_at(backup, directory_fd)
+        raise
+    finally:
+        os.close(source_fd)
+        if backup_fd is not None:  # pragma: no branch - absent only while propagating backup-open failure
+            os.close(backup_fd)
 
 
 def _backup_existing_target(target: Path) -> Path:
     """Create a same-filesystem backup while retaining the target until replacement."""
-    backup = _backup_path(target)
-    try:
-        if target.is_symlink():  # pragma: no cover - exercised by the Windows path fallback
-            backup.symlink_to(target.readlink())
-            return backup
+    target_stat = target.lstat()
+    for backup_name in _backup_names(target.name):
+        backup = target.parent / backup_name
         try:
-            backup.hardlink_to(target)
-        except OSError:
-            shutil.copy2(target, backup)
-    except OSError:
-        with suppress(OSError):
-            backup.unlink()
-        raise
-    return backup
+            if stat.S_ISLNK(target_stat.st_mode):  # pragma: no cover - exercised by the Windows path fallback
+                backup.symlink_to(target.readlink(), target_is_directory=target.is_dir())
+            else:
+                try:
+                    os.link(target, backup, follow_symlinks=False)
+                except FileExistsError:  # pragma: no cover - cryptographic backup-name collision
+                    continue
+                except OSError:
+                    _copy_target(target, backup, target_stat)
+        except FileExistsError:  # pragma: no cover - cryptographic backup-name collision
+            continue
+        else:
+            return backup
+    msg = f"could not reserve backup for {target}"  # pragma: no cover
+    raise FileExistsError(msg)  # pragma: no cover
 
 
 def _create_directory(directory: Path) -> bool:
@@ -1906,43 +2002,14 @@ def _directory_fd_matches_path(directory_fd: int, path: Path) -> bool:
         os.close(check_fd)
 
 
-def _backup_name(target_name: str) -> str:
-    """Return an unpredictable sibling backup name."""
-    from secrets import token_hex  # noqa: PLC0415
-
-    return f".{target_name}.{token_hex(8)}.bak"
-
-
 def _copy_target_at(directory_fd: int, target_name: str, backup_name: str, target_stat: os.stat_result) -> None:
     """Copy a regular destination to a sibling backup through an open directory."""
-    source_fd = os.open(target_name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory_fd)
-    backup_fd: int | None = None
-    try:
-        backup_fd = os.open(
-            backup_name,
-            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
-            stat.S_IMODE(target_stat.st_mode),
-            dir_fd=directory_fd,
-        )
-        with os.fdopen(os.dup(source_fd), "rb") as source, os.fdopen(os.dup(backup_fd), "wb") as destination:
-            shutil.copyfileobj(source, destination)
-        os.fchmod(backup_fd, stat.S_IMODE(target_stat.st_mode))
-        os.utime(
-            backup_name,
-            ns=(target_stat.st_atime_ns, target_stat.st_mtime_ns),
-            dir_fd=directory_fd,
-            follow_symlinks=False,
-        )
-    finally:
-        os.close(source_fd)
-        if backup_fd is not None:  # pragma: no branch - absent only when the backup open itself raises
-            os.close(backup_fd)
+    _copy_target(target_name, backup_name, target_stat, directory_fd=directory_fd)
 
 
 def _backup_existing_target_at(directory_fd: int, target_name: str, target_stat: os.stat_result) -> str:
     """Back up an existing target within its already-bound destination directory."""
-    for _ in range(100):  # pragma: no branch - cryptographic name collisions are not realistic
-        backup_name = _backup_name(target_name)
+    for backup_name in _backup_names(target_name):
         try:
             if stat.S_ISLNK(target_stat.st_mode):
                 os.symlink(os.readlink(target_name, dir_fd=directory_fd), backup_name, dir_fd=directory_fd)
@@ -1961,10 +2028,6 @@ def _backup_existing_target_at(directory_fd: int, target_name: str, target_stat:
                     _copy_target_at(directory_fd, target_name, backup_name, target_stat)
         except FileExistsError:  # pragma: no cover - cryptographic backup-name collision
             continue
-        except OSError:
-            with suppress(OSError):
-                os.unlink(backup_name, dir_fd=directory_fd)
-            raise
         else:
             return backup_name
     msg = f"could not reserve backup for {target_name}"  # pragma: no cover

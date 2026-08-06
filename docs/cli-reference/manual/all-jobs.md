@@ -3,7 +3,7 @@
 Run every named generation job from `[tool.datamodel-codegen.jobs]` in
 declaration order.
 
-**Related:** [`--job`](#job), [pyproject.toml Configuration](../../pyproject_toml.md)
+**Related:** [`--job`](job.md#job), [pyproject.toml Configuration](../../pyproject_toml.md)
 
 !!! tip "Usage"
 

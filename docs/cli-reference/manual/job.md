@@ -4,7 +4,7 @@ Run one or more named generation jobs declared in `pyproject.toml`. Jobs are
 executed sequentially in TOML declaration order, even when `--job` is supplied
 in a different order.
 
-**Related:** [pyproject.toml Configuration](../../pyproject_toml.md), [`--all-jobs`](#all-jobs)
+**Related:** [pyproject.toml Configuration](../../pyproject_toml.md), [`--all-jobs`](all-jobs.md#all-jobs)
 
 !!! tip "Usage"
 

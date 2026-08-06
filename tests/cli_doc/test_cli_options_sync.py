@@ -498,6 +498,19 @@ def test_cli_docs_preserve_injected_doc_example_sections() -> None:
     _fail_if_present("    **Output:**\n\n---", preserved, "replaced generated fallback example")
 
 
+def test_manual_docs_aggregate_rewrites_sibling_links_to_local_anchors() -> None:
+    """Keep manual fragments cross-page-safe while aggregating them onto the utility page."""
+    generated = build_cli_docs.generate_manual_docs_section({
+        "--all-jobs": "## `--all-jobs` {#all-jobs}\n\n[`--job`](job.md#job)\n",
+        "--job": "## `--job` {#job}\n\n[`--all-jobs`](all-jobs.md#all-jobs)\n",
+    })
+
+    _fail_if_missing("[`--job`](#job)", generated, "aggregated job link")
+    _fail_if_missing("[`--all-jobs`](#all-jobs)", generated, "aggregated all-jobs link")
+    _fail_if_present("job.md#job", generated, "manual sibling path")
+    _fail_if_present("all-jobs.md#all-jobs", generated, "manual sibling path")
+
+
 def test_option_section_renders_implies_and_requires_metadata() -> None:
     """Generated option docs should include relationship metadata from CLIOptionMeta."""
     section = generate_option_section(
