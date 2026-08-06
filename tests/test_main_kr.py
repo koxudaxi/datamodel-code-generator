@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import sys
 from argparse import Namespace
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import black
 import jsonschema
@@ -12,13 +14,23 @@ import pydantic
 import pytest
 from packaging import version
 
+import datamodel_code_generator.__main__ as main_module
 from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
 from datamodel_code_generator.__main__ import (
     Exit,
+    _create_directory,
+    _create_target_parent,
     _generated_files_from_result,
     _generation_output_json,
     _json_ready,
     _plan_jobs,
+    _publish_staged_files,
+    _PublishedFile,
+    _remove_created_directory,
+    _restore_backup,
+    _rollback_published_file,
+    _staged_files,
+    _StagedJobPlan,
     _write_generated_result,
     generate_pyproject_config,
 )
@@ -33,6 +45,9 @@ from tests.conftest import (
     create_assert_file_content,
     freeze_time,
 )
+
+if TYPE_CHECKING:
+    import tempfile
 from tests.main.conftest import (
     DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
@@ -1353,6 +1368,7 @@ def test_pyproject_jobs_check_does_not_write_output(jobs_project: dict[str, Path
     """Check every job without replacing a stale generated file."""
     with chdir(tmp_path):
         run_main_with_args(["--all-jobs", "--formatters", "builtin"])
+        run_main_with_args(["--all-jobs", "--check", "--formatters", "builtin"])
         jobs_project["strict"].write_text("stale\n", encoding="utf-8")
         run_main_with_args(["--all-jobs", "--check", "--formatters", "builtin"], expected_exit=Exit.DIFF)
 
@@ -1365,7 +1381,13 @@ def test_pyproject_jobs_json_is_one_ordered_payload(tmp_path: Path, capsys: pyte
     with chdir(tmp_path):
         run_main_with_args(["--job", "strict", "--job", "plain", "--output-format", "json", "--formatters", "builtin"])
 
-    assert_output(_batch_json_summary(capsys.readouterr().out), EXPECTED_MAIN_KR_PATH / "jobs" / "json_generation.txt")
+    output = capsys.readouterr().out
+    payload = json.loads(output)
+    assert [job["result"]["output"] for job in payload["jobs"]] == [
+        (tmp_path / "plain.py").as_posix(),
+        (tmp_path / "strict.py").as_posix(),
+    ]
+    assert_output(_batch_json_summary(output), EXPECTED_MAIN_KR_PATH / "jobs" / "json_generation.txt")
 
 
 def test_pyproject_jobs_json_reports_check_results(
@@ -1380,6 +1402,59 @@ def test_pyproject_jobs_json_reports_check_results(
         )
 
     assert_output(_batch_json_summary(capsys.readouterr().out), EXPECTED_MAIN_KR_PATH / "jobs" / "json_check.txt")
+
+
+@pytest.mark.parametrize(
+    ("payload", "error"),
+    [
+        ("not JSON", "returned invalid JSON batch output"),
+        ('{"kind":"unexpected"}', "kind 'unexpected'"),
+        ("[]", "raw JSON '[]'"),
+    ],
+)
+def test_pyproject_jobs_json_rejects_invalid_inner_payload_without_stdout(
+    jobs_project: dict[str, Path],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    payload: str,
+    error: str,
+) -> None:
+    """Return a clean CLI error rather than partial batch JSON for malformed inner job output."""
+    monkeypatch.setattr(main_module, "_generation_output_json", lambda *_args, **_kwargs: payload)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--all-jobs", "--output-format", "json", "--formatters", "builtin"], expected_exit=Exit.ERROR
+        )
+
+    captured = capsys.readouterr()
+    assert not captured.out
+    assert error in captured.err
+    _assert_file_does_not_exist(jobs_project["plain"])
+    _assert_file_does_not_exist(jobs_project["strict"])
+
+
+def test_pyproject_jobs_json_publish_failure_has_no_batch_payload(
+    jobs_project: dict[str, Path], tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Do not emit a successful-looking batch JSON document when transactional publication fails."""
+    monkeypatch.setattr(
+        main_module,
+        "_publish_staged_job_plans",
+        lambda *_args: (_ for _ in ()).throw(OSError("simulated publish failure")),
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--all-jobs", "--output-format", "json", "--formatters", "builtin"], expected_exit=Exit.ERROR
+        )
+
+    captured = capsys.readouterr()
+    assert not captured.out
+    assert "could not publish batch output" in captured.err
+    _assert_file_does_not_exist(jobs_project["plain"])
+    _assert_file_does_not_exist(jobs_project["strict"])
 
 
 @pytest.mark.parametrize(
@@ -1639,14 +1714,26 @@ invalid = "not a table"
         )
 
 
-@pytest.mark.parametrize("output_format", [[], ["--output-format", "json"]])
-def test_pyproject_jobs_abort_runtime_errors_without_writing(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str], output_format: list[str]
+@pytest.mark.parametrize(
+    ("output_format", "existing_content"),
+    [
+        ([], None),
+        (["--output-format", "json"], "stale generated output\n"),
+    ],
+)
+def test_pyproject_jobs_abort_runtime_errors_without_publishing(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    output_format: list[str],
+    existing_content: str | None,
 ) -> None:
-    """Do not write check-mode output when a later selected job cannot generate."""
+    """Retain existing output and metadata when a later external input cannot generate."""
     good_output = tmp_path / "good.py"
-    bad_input = tmp_path / "invalid.json"
-    bad_input.write_text("{", encoding="utf-8")
+    metadata_output = tmp_path / "good.metadata.json"
+    bad_input = DATA_PATH / "json" / "broken.json"
+    if existing_content is not None:
+        good_output.write_text(existing_content, encoding="utf-8")
+        metadata_output.write_text("stale metadata\n", encoding="utf-8")
     (tmp_path / "pyproject.toml").write_text(
         f"""
 [tool.datamodel-codegen]
@@ -1656,6 +1743,7 @@ input-file-type = "jsonschema"
 [tool.datamodel-codegen.jobs.good]
 input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
 output = "{good_output.as_posix()}"
+emit-model-metadata = "{metadata_output.as_posix()}"
 
 [tool.datamodel-codegen.jobs.invalid]
 input = "{bad_input.as_posix()}"
@@ -1666,13 +1754,426 @@ output = "{(tmp_path / "invalid.py").as_posix()}"
 
     with chdir(tmp_path):
         run_main_with_args(
-            ["--all-jobs", "--check", "--formatters", "builtin", *output_format],
+            ["--all-jobs", "--formatters", "builtin", *output_format],
             expected_exit=Exit.ERROR,
             capsys=capsys,
             expected_stderr_contains="Invalid file format for jsonschema",
         )
 
-    _assert_file_does_not_exist(good_output)
+    if existing_content is None:
+        _assert_file_does_not_exist(good_output)
+        _assert_file_does_not_exist(metadata_output)
+    else:
+        assert good_output.read_text(encoding="utf-8") == existing_content
+        assert metadata_output.read_text(encoding="utf-8") == "stale metadata\n"
+
+
+def test_pyproject_jobs_publish_model_metadata(tmp_path: Path) -> None:
+    """Publish generated code and model metadata only after their job succeeds."""
+    output_path = tmp_path / "generated" / "generated.py"
+    metadata_path = tmp_path / "generated" / "generated.metadata.json"
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.generated]
+input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
+output = "{output_path.as_posix()}"
+emit-model-metadata = "{metadata_path.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(["--all-jobs", "--formatters", "builtin"])
+
+    assert_output(output_path.read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
+    assert json.loads(metadata_path.read_text(encoding="utf-8"))["version"] == 1
+
+
+def test_pyproject_jobs_directory_output_overlays_generated_files(tmp_path: Path) -> None:
+    """Replace only generated files in a directory job and retain unrelated existing files."""
+    output_path = tmp_path / "models"
+    extra_file = output_path / "keep.py"
+    output_path.mkdir()
+    extra_file.write_text("keep this file\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "openapi"
+
+[tool.datamodel-codegen.jobs.models]
+input = "{(OPEN_API_DATA_PATH / "modular.yaml").as_posix()}"
+output = "{output_path.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(["--all-jobs", "--formatters", "builtin"])
+
+    assert extra_file.read_text(encoding="utf-8") == "keep this file\n"
+    assert (output_path / "__init__.py").is_file()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="hardlink creation requires elevated privileges")
+def test_pyproject_jobs_preflight_rejects_hardlinked_other_job_input(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Reject a batch output hardlinked to another job's external input without mutating it."""
+    external_input = tmp_path / "external-person.json"
+    external_input.write_text((JSON_SCHEMA_DATA_PATH / "person.json").read_text(encoding="utf-8"), encoding="utf-8")
+    hardlinked_output = tmp_path / "hardlinked.py"
+    hardlinked_output.hardlink_to(external_input)
+    original_content = external_input.read_text(encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.writer]
+input = "{(JSON_SCHEMA_DATA_PATH / "pet_simple.json").as_posix()}"
+output = "{hardlinked_output.as_posix()}"
+
+[tool.datamodel-codegen.jobs.reader]
+input = "{external_input.as_posix()}"
+output = "{(tmp_path / "reader.py").as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--all-jobs", "--formatters", "builtin"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="overlaps input for job 'reader'",
+        )
+
+    assert hardlinked_output.read_text(encoding="utf-8") == original_content
+    assert external_input.read_text(encoding="utf-8") == original_content
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="directory symlink creation requires elevated privileges")
+def test_pyproject_jobs_reject_nested_output_symlink_escape(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Reject a generated directory file that would escape through an existing nested symlink."""
+    output_path = tmp_path / "models"
+    protected_directory = tmp_path / "schemas"
+    protected_input = protected_directory / "bar.py"
+    output_path.mkdir()
+    protected_directory.mkdir()
+    protected_input.write_text((JSON_SCHEMA_DATA_PATH / "person.json").read_text(encoding="utf-8"), encoding="utf-8")
+    (output_path / "foo").symlink_to(protected_directory, target_is_directory=True)
+    reader_output = tmp_path / "reader.py"
+    original_content = protected_input.read_text(encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+
+[tool.datamodel-codegen.jobs.models]
+input = "{(OPEN_API_DATA_PATH / "modular.yaml").as_posix()}"
+output = "{output_path.as_posix()}"
+input-file-type = "openapi"
+
+[tool.datamodel-codegen.jobs.reader]
+input = "{protected_input.as_posix()}"
+output = "{reader_output.as_posix()}"
+input-file-type = "jsonschema"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--all-jobs", "--formatters", "builtin"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="generated file escapes its output path",
+        )
+
+    assert protected_input.read_text(encoding="utf-8") == original_content
+    _assert_file_does_not_exist(reader_output)
+
+
+def test_pyproject_jobs_publish_rollback_restores_prior_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Restore every earlier replacement if publication fails after its backup was journaled."""
+    first_staged = tmp_path / "first.staged.py"
+    new_staged = tmp_path / "new.staged.py"
+    second_staged = tmp_path / "second.staged.py"
+    first_target = tmp_path / "first.py"
+    new_target = tmp_path / "generated" / "new.py"
+    second_target = tmp_path / "second.py"
+    first_staged.write_text("first generated\n", encoding="utf-8")
+    new_staged.write_text("new generated\n", encoding="utf-8")
+    second_staged.write_text("second generated\n", encoding="utf-8")
+    first_target.write_text("first stale\n", encoding="utf-8")
+    second_target.write_text("second stale\n", encoding="utf-8")
+    original_replace = Path.replace
+
+    def fail_second_publication(source: Path, target: Path) -> Path:
+        if source == second_staged:
+            msg = "simulated publish failure"
+            raise OSError(msg)
+        return original_replace(source, target)
+
+    monkeypatch.setattr(Path, "replace", fail_second_publication)
+
+    with pytest.raises(OSError, match="simulated publish failure"):
+        _publish_staged_files([(first_staged, first_target), (new_staged, new_target), (second_staged, second_target)])
+
+    assert first_target.read_text(encoding="utf-8") == "first stale\n"
+    assert second_target.read_text(encoding="utf-8") == "second stale\n"
+    _assert_file_does_not_exist(new_target)
+    assert not new_target.parent.exists()
+
+
+def test_pyproject_jobs_publish_first_replacement_failure_removes_backup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Leave the original target and no hidden backup when its first replacement cannot start."""
+    staged_file = tmp_path / "generated.py"
+    target = tmp_path / "target.py"
+    staged_file.write_text("generated\n", encoding="utf-8")
+    target.write_text("stale\n", encoding="utf-8")
+    original_replace = Path.replace
+
+    def fail_first_replacement(source: Path, destination: Path) -> Path:
+        if source == staged_file:
+            msg = "simulated first replacement failure"
+            raise OSError(msg)
+        return original_replace(source, destination)
+
+    monkeypatch.setattr(Path, "replace", fail_first_replacement)
+
+    with pytest.raises(OSError, match="simulated first replacement failure"):
+        _publish_staged_files([(staged_file, target)])
+
+    assert target.read_text(encoding="utf-8") == "stale\n"
+    assert list(tmp_path.glob(".target.py.*.bak")) == []
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")
+def test_pyproject_jobs_publish_replaces_symlink_without_mutating_its_target(tmp_path: Path) -> None:
+    """Back up a symlink entry and atomically replace it without changing its original referent."""
+    staged_file = tmp_path / "generated.py"
+    original_target = tmp_path / "original.py"
+    output_link = tmp_path / "output.py"
+    staged_file.write_text("generated\n", encoding="utf-8")
+    original_target.write_text("stale\n", encoding="utf-8")
+    output_link.symlink_to(original_target)
+
+    _publish_staged_files([(staged_file, output_link)])
+
+    assert output_link.read_text(encoding="utf-8") == "generated\n"
+    assert original_target.read_text(encoding="utf-8") == "stale\n"
+
+
+def test_pyproject_jobs_publish_falls_back_to_copy_backup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Use a copy backup when the filesystem cannot make a hardlink for an existing target."""
+    staged_file = tmp_path / "generated.py"
+    target = tmp_path / "target.py"
+    staged_file.write_text("generated\n", encoding="utf-8")
+    target.write_text("stale\n", encoding="utf-8")
+
+    def fail_hardlink(_link: Path, _source: Path) -> None:
+        msg = "simulated hardlink failure"
+        raise OSError(msg)
+
+    monkeypatch.setattr(Path, "hardlink_to", fail_hardlink)
+
+    _publish_staged_files([(staged_file, target)])
+
+    assert target.read_text(encoding="utf-8") == "generated\n"
+
+
+def test_pyproject_jobs_rollback_helpers_report_unrecoverable_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Return targets, backups, and directories that cannot be rolled back cleanly."""
+    target = tmp_path / "target.py"
+    missing_backup = tmp_path / "missing.bak"
+    target.write_text("generated\n", encoding="utf-8")
+    assert _rollback_published_file(_PublishedFile(target, missing_backup)) == [target, missing_backup]
+    assert _rollback_published_file(_PublishedFile(tmp_path / "missing.py", None)) == []
+
+    backup = tmp_path / "backup.py"
+    backup.write_text("stale\n", encoding="utf-8")
+    monkeypatch.setattr(main_module, "_restore_backup", lambda *_args: (_ for _ in ()).throw(OSError("restore failed")))
+    assert _rollback_published_file(_PublishedFile(target, backup)) == [target, backup]
+
+    nonempty_directory = tmp_path / "generated"
+    nonempty_directory.mkdir()
+    (nonempty_directory / "file.py").write_text("generated\n", encoding="utf-8")
+    assert _remove_created_directory(nonempty_directory) == [nonempty_directory]
+
+
+def test_pyproject_jobs_parent_and_rollback_helpers_handle_races(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Keep transaction journals accurate when competing filesystem changes win a race."""
+    created_directories: list[Path] = []
+    monkeypatch.setattr(main_module, "_create_directory", lambda _directory: False)
+    _create_target_parent(tmp_path / "generated" / "model.py", created_directories)
+    assert created_directories == []
+
+    target = tmp_path / "target.py"
+    target.write_text("generated\n", encoding="utf-8")
+    monkeypatch.setattr(Path, "unlink", lambda *_args: (_ for _ in ()).throw(OSError("unlink failed")))
+    assert _rollback_published_file(_PublishedFile(target, None)) == [target]
+
+
+def test_pyproject_jobs_restore_backup_replaces_when_samefile_is_unavailable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Restore a backup if samefile cannot inspect a raced target path."""
+    backup = tmp_path / "backup.py"
+    target = tmp_path / "target.py"
+    backup.write_text("stale\n", encoding="utf-8")
+    target.write_text("generated\n", encoding="utf-8")
+
+    def fail_samefile(_first: Path, _second: Path) -> bool:
+        msg = "simulated samefile failure"
+        raise OSError(msg)
+
+    monkeypatch.setattr(Path, "samefile", fail_samefile)
+
+    _restore_backup(backup, target)
+
+    assert target.read_text(encoding="utf-8") == "stale\n"
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")
+def test_pyproject_jobs_restore_backup_discards_unchanged_symlink_backup(tmp_path: Path) -> None:
+    """Remove a symlink backup when a failed replacement left its target unchanged."""
+    original = tmp_path / "original.py"
+    backup = tmp_path / "backup.py"
+    target = tmp_path / "target.py"
+    original.write_text("stale\n", encoding="utf-8")
+    backup.symlink_to(original)
+    target.symlink_to(original)
+
+    _restore_backup(backup, target)
+
+    _assert_file_does_not_exist(backup)
+    assert target.is_symlink()
+
+
+def test_pyproject_jobs_publish_reports_failed_rollback(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Include unrecovered paths when both publication and rollback fail."""
+    staged_file = tmp_path / "generated.py"
+    target = tmp_path / "target.py"
+    staged_file.write_text("generated\n", encoding="utf-8")
+    target.write_text("stale\n", encoding="utf-8")
+    original_replace = Path.replace
+
+    def fail_publication(source: Path, destination: Path) -> Path:
+        if source == staged_file:
+            msg = "simulated publication failure"
+            raise OSError(msg)
+        return original_replace(source, destination)
+
+    monkeypatch.setattr(Path, "replace", fail_publication)
+    monkeypatch.setattr(
+        main_module,
+        "_restore_backup",
+        lambda *_args: (_ for _ in ()).throw(OSError("rollback failed")),
+    )
+
+    with pytest.raises(OSError, match="failed to roll back batch output"):
+        _publish_staged_files([(staged_file, target)])
+
+    assert target.read_text(encoding="utf-8") == "stale\n"
+
+
+def test_pyproject_jobs_publish_preserves_existing_file_mode(tmp_path: Path) -> None:
+    """Keep an existing output's permission bits when atomically replacing its contents."""
+    staged_file = tmp_path / "generated.py"
+    target = tmp_path / "target.py"
+    staged_file.write_text("generated\n", encoding="utf-8")
+    target.write_text("stale\n", encoding="utf-8")
+    target.chmod(0o640)
+
+    _publish_staged_files([(staged_file, target)])
+
+    assert target.read_text(encoding="utf-8") == "generated\n"
+    assert target.stat().st_mode & 0o777 == 0o640
+
+
+def test_pyproject_jobs_publish_rejects_directory_file_target(tmp_path: Path) -> None:
+    """Do not replace an existing directory when a staged generated file collides with it."""
+    staged_file = tmp_path / "generated.py"
+    target = tmp_path / "target.py"
+    staged_file.write_text("generated\n", encoding="utf-8")
+    target.mkdir()
+
+    with pytest.raises(IsADirectoryError):
+        _publish_staged_files([(staged_file, target)])
+
+    assert staged_file.read_text(encoding="utf-8") == "generated\n"
+
+
+def test_pyproject_jobs_publication_helpers_handle_existing_directories(tmp_path: Path) -> None:
+    """Avoid recording an existing directory as transaction-owned and ignore check-only staging."""
+    existing_directory = tmp_path / "existing"
+    existing_directory.mkdir()
+
+    assert _create_directory(existing_directory) is False
+    assert list(_staged_files(_StagedJobPlan(None, None, None, None, None, None, None, None, ()))) == []
+
+
+def test_pyproject_jobs_staging_failure_removes_earlier_staging(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Remove already prepared staging when a later job's metadata staging cannot be made."""
+    first_output = tmp_path / "first.py"
+    second_output = tmp_path / "second.py"
+    metadata_output = tmp_path / "second.metadata.json"
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.first]
+input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
+output = "{first_output.as_posix()}"
+
+[tool.datamodel-codegen.jobs.second]
+input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
+output = "{second_output.as_posix()}"
+emit-model-metadata = "{metadata_output.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+    staging_directory_for = main_module._staging_directory_for
+    calls = 0
+
+    def fail_metadata_staging(target: Path) -> tempfile.TemporaryDirectory[str]:
+        nonlocal calls
+        calls += 1
+        if calls == 3:
+            msg = "simulated staging failure"
+            raise OSError(msg)
+        return staging_directory_for(target)
+
+    monkeypatch.setattr(main_module, "_staging_directory_for", fail_metadata_staging)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--all-jobs", "--formatters", "builtin"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="could not prepare batch output staging",
+        )
+
+    _assert_file_does_not_exist(first_output)
+    _assert_file_does_not_exist(second_output)
+    _assert_file_does_not_exist(metadata_output)
 
 
 @pytest.mark.parametrize(

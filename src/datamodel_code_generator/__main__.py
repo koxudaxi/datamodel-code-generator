@@ -104,9 +104,11 @@ import os
 import shlex
 import shutil
 import signal
+import stat
 import tempfile
 import warnings
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
+from contextlib import suppress
 from enum import Enum, IntEnum
 from functools import lru_cache
 from keyword import iskeyword
@@ -873,6 +875,27 @@ class JobPlan(NamedTuple):
     pyproject_path: Path
 
 
+class _StagedJobPlan(NamedTuple):
+    """One batch job with its generated artifacts redirected to staging."""
+
+    plan: JobPlan
+    config: Config
+    output: Path | None
+    staged_output: Path | None
+    resolved_output_root: Path | None
+    model_metadata: Path | None
+    staged_model_metadata: Path | None
+    resolved_model_metadata_root: Path | None
+    staging_contexts: tuple[tempfile.TemporaryDirectory[str], ...]
+
+
+class _PublishedFile(NamedTuple):
+    """One target file and the optional backup retained until batch publication succeeds."""
+
+    target: Path
+    backup: Path | None
+
+
 def _normalize_pyproject_config(config: Mapping[str, Any]) -> dict[str, Any]:
     """Convert TOML option spelling to Config field spelling."""
     normalized = {key.replace("-", "_"): value for key, value in config.items()}
@@ -946,6 +969,16 @@ def _paths_overlap(first: Path, second: Path) -> bool:
     return first == second or first in second.parents or second in first.parents
 
 
+def _paths_overlap_or_samefile(first: Path, second: Path) -> bool:
+    """Return whether paths overlap or existing files refer to the same inode."""
+    if _paths_overlap(first, second):
+        return True
+    try:
+        return first.exists() and second.exists() and first.samefile(second)
+    except OSError:  # pragma: no cover - a raced path is handled by generation or publication
+        return False
+
+
 def _preflight_job_plans(plans: Sequence[JobPlan]) -> None:
     """Validate all selected jobs before any job starts generation."""
     artifacts: list[tuple[str, str, Path]] = []
@@ -967,7 +1000,7 @@ def _preflight_job_plans(plans: Sequence[JobPlan]) -> None:
     for index, first_artifact in enumerate(artifacts):
         first_job, first_kind, first_path = first_artifact
         for second_job, second_kind, second_path in artifacts[index + 1 :]:
-            if not _paths_overlap(first_path, second_path):
+            if not _paths_overlap_or_samefile(first_path, second_path):
                 continue
             msg = (
                 f"Jobs '{first_job}' ({first_kind}: {first_path}) and '{second_job}' "
@@ -977,7 +1010,7 @@ def _preflight_job_plans(plans: Sequence[JobPlan]) -> None:
 
     for artifact_job, artifact_kind, artifact_path in artifacts:
         for input_job, input_path in inputs:
-            if artifact_job == input_job or not _paths_overlap(artifact_path, input_path):
+            if artifact_job == input_job or not _paths_overlap_or_samefile(artifact_path, input_path):
                 continue
             msg = (
                 f"Job '{artifact_job}' ({artifact_kind}: {artifact_path}) overlaps input for job "
@@ -1429,72 +1462,339 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     )
 
 
+def _staging_directory_for(target: Path) -> tempfile.TemporaryDirectory[str]:
+    """Create an on-disk staging directory on the target artifact's filesystem."""
+    staging_parent = Path(os.path.abspath(target.expanduser())).parent  # noqa: PTH100
+    while not staging_parent.exists():
+        staging_parent = staging_parent.parent
+    return tempfile.TemporaryDirectory(prefix=".datamodel-codegen-", dir=staging_parent)
+
+
+def _stage_job_plan(plan: JobPlan) -> _StagedJobPlan:
+    """Redirect a write-mode job's artifacts to private, same-filesystem staging paths."""
+    if plan.config.check:
+        return _StagedJobPlan(plan, plan.config, None, None, None, None, None, None, ())
+
+    output = cast("Path", plan.config.output)
+    output_context = _staging_directory_for(output)
+    try:
+        staged_output = Path(output_context.name) / (output.name or "output")
+        contexts = [output_context]
+        updates: dict[str, Path] = {"output": staged_output}
+        resolved_output_root = output.expanduser().resolve(strict=False)
+        model_metadata = plan.config.emit_model_metadata
+        staged_model_metadata: Path | None = None
+        resolved_model_metadata_root: Path | None = None
+        if model_metadata is not None:
+            metadata_context = _staging_directory_for(model_metadata)
+            contexts.append(metadata_context)
+            staged_model_metadata = Path(metadata_context.name) / (model_metadata.name or "model-metadata.json")
+            updates["emit_model_metadata"] = staged_model_metadata
+            resolved_model_metadata_root = model_metadata.expanduser().resolve(strict=False)
+
+        return _StagedJobPlan(
+            plan,
+            plan.config.model_copy(update=updates, deep=True),
+            output,
+            staged_output,
+            resolved_output_root,
+            model_metadata,
+            staged_model_metadata,
+            resolved_model_metadata_root,
+            tuple(contexts),
+        )
+    except OSError:
+        output_context.cleanup()
+        raise
+
+
+def _stage_job_plans(plans: Sequence[JobPlan]) -> tuple[_StagedJobPlan, ...]:
+    """Stage every write-mode job, removing earlier staging if preparation fails."""
+    staged_plans: list[_StagedJobPlan] = []
+    try:
+        for plan in plans:
+            staged_plans.append(_stage_job_plan(plan))  # noqa: PERF401
+    except OSError:
+        _cleanup_staged_job_plans(staged_plans)
+        raise
+    return tuple(staged_plans)
+
+
+def _cleanup_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> None:
+    """Remove private staging directories after a batch result is known."""
+    for staged_plan in staged_plans:
+        for context in staged_plan.staging_contexts:
+            context.cleanup()
+
+
+def _staged_files(staged_plan: _StagedJobPlan) -> Iterator[tuple[Path, Path]]:
+    """Return staged files paired with their final targets without removing directory extras."""
+    if staged_plan.staged_output is None or staged_plan.output is None:
+        return
+
+    if staged_plan.staged_output.is_file():
+        yield staged_plan.staged_output, staged_plan.output
+    else:
+        for generated_file in sorted(staged_plan.staged_output.rglob("*")):
+            if generated_file.is_file():
+                yield generated_file, staged_plan.output / generated_file.relative_to(staged_plan.staged_output)
+    if staged_plan.staged_model_metadata is not None and staged_plan.model_metadata is not None:
+        yield staged_plan.staged_model_metadata, staged_plan.model_metadata
+
+
+def _backup_path(target: Path) -> Path:
+    """Reserve an unused sibling backup path for one atomic replacement."""
+    descriptor, path = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".bak", dir=target.parent)
+    os.close(descriptor)
+    backup = Path(path)
+    backup.unlink()
+    return backup
+
+
+def _backup_existing_target(target: Path) -> Path:
+    """Create a same-filesystem backup while retaining the target until replacement."""
+    backup = _backup_path(target)
+    if target.is_symlink():
+        backup.symlink_to(target.readlink())
+        return backup
+    try:
+        backup.hardlink_to(target)
+    except OSError:
+        shutil.copy2(target, backup)
+    return backup
+
+
+def _create_directory(directory: Path) -> bool:
+    """Create one directory and return whether this process created it."""
+    try:
+        directory.mkdir()
+    except FileExistsError:
+        if not directory.is_dir():
+            raise
+        return False
+    return True
+
+
+def _create_target_parent(target: Path, created_directories: list[Path]) -> None:
+    """Create a target parent while recording only directories made by this publication."""
+    missing_directories: list[Path] = []
+    parent = target.parent
+    while not parent.exists():
+        missing_directories.append(parent)
+        parent = parent.parent
+    for directory in reversed(missing_directories):
+        if _create_directory(directory):
+            created_directories.append(directory)  # noqa: PERF401
+
+
+def _preserve_target_mode(staged_file: Path, target: Path) -> None:
+    """Apply an existing target's permission mode before atomically replacing it."""
+    with suppress(OSError):
+        staged_file.chmod(stat.S_IMODE(target.stat().st_mode))
+
+
+def _restore_backup(backup: Path, target: Path) -> None:
+    """Restore a backup unless it already aliases the unchanged target."""
+    if backup.is_symlink() and target.is_symlink() and backup.readlink() == target.readlink():
+        backup.unlink()
+        return
+    try:
+        if backup.samefile(target):
+            backup.unlink()
+            return
+    except OSError:
+        pass
+    backup.replace(target)
+
+
+def _rollback_published_file(published_file: _PublishedFile) -> list[Path]:
+    """Restore one published target, returning every path that could not be recovered."""
+    try:
+        if published_file.backup is not None:
+            if not (published_file.backup.exists() or published_file.backup.is_symlink()):
+                return [published_file.target, published_file.backup]
+            _restore_backup(published_file.backup, published_file.target)
+        elif published_file.target.exists():
+            published_file.target.unlink()
+    except OSError:
+        paths = [published_file.target]
+        if published_file.backup is not None:
+            paths.append(published_file.backup)
+        return paths
+    return []
+
+
+def _remove_created_directory(directory: Path) -> list[Path]:
+    """Remove one transaction-owned directory if it is still empty."""
+    try:
+        directory.rmdir()
+    except OSError:
+        return [directory]
+    return []
+
+
+def _publish_staged_files(files: Iterable[tuple[Path, Path]]) -> None:
+    """Atomically publish staged files and restore every prior file if publication fails."""
+    journal: list[_PublishedFile] = []
+    created_directories: list[Path] = []
+    try:
+        for staged_file, target in files:
+            _create_target_parent(target, created_directories)
+            if target.is_dir():
+                msg = f"[Errno 21] Is a directory: '{target}'"
+                raise IsADirectoryError(msg)
+            backup = _backup_existing_target(target) if target.exists() or target.is_symlink() else None
+            journal.append(_PublishedFile(target, backup))
+            if backup is not None:
+                _preserve_target_mode(staged_file, target)
+            staged_file.replace(target)
+    except OSError as publish_error:
+        rollback_failures: list[Path] = []
+        for published_file in reversed(journal):
+            rollback_failures.extend(_rollback_published_file(published_file))
+        for directory in reversed(created_directories):
+            rollback_failures.extend(_remove_created_directory(directory))
+        if rollback_failures:
+            paths = ", ".join(path.as_posix() for path in rollback_failures)
+            msg = f"{publish_error}; failed to roll back batch output: {paths}"
+            raise OSError(msg) from publish_error
+        raise
+
+    for published_file in journal:
+        if published_file.backup is not None:
+            with suppress(OSError):  # pragma: no cover - an unlinked backup is harmless if cleanup races
+                published_file.backup.unlink()
+
+
+def _publish_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> None:
+    """Publish every generated batch artifact after all jobs have completed successfully."""
+    _publish_staged_files(file for staged_plan in staged_plans for file in _staged_files(staged_plan))
+
+
+def _validate_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> None:
+    """Reject generated files whose concrete paths escape their preflighted output roots."""
+    for staged_plan in staged_plans:
+        if staged_plan.resolved_output_root is None:
+            continue
+        for staged_file, target in _staged_files(staged_plan):
+            concrete_target = target.expanduser().resolve(strict=False)
+            artifact_root = (
+                staged_plan.resolved_model_metadata_root
+                if staged_file == staged_plan.staged_model_metadata
+                else staged_plan.resolved_output_root
+            )
+            if artifact_root is None:  # pragma: no cover - staging always records metadata roots
+                continue
+            if concrete_target != artifact_root and artifact_root not in concrete_target.parents:
+                msg = (
+                    f"Job '{staged_plan.plan.name}' generated file escapes its output path: "
+                    f"{target} resolves outside {artifact_root}"
+                )
+                raise Error(msg)
+
+
 def _run_jobs(args: Sequence[str], plans: Sequence[JobPlan]) -> Exit:
-    """Run preflighted jobs in declaration order without changing single-job output behavior."""
-    match namespace.output_format:
-        case "json":
-            from contextlib import redirect_stdout  # noqa: PLC0415
-            from io import StringIO  # noqa: PLC0415
+    """Run batch jobs transactionally while retaining the direct --check fast path."""
+    try:
+        staged_plans = _stage_job_plans(plans)
+    except OSError as exc:
+        print(f"Error: could not prepare batch output staging: {exc}", file=sys.stderr)  # noqa: T201
+        return Exit.ERROR
 
-            from pydantic import ValidationError  # noqa: PLC0415
-
-            from datamodel_code_generator._structured_output import BatchJobPayload, batch_output_json  # noqa: PLC0415
-
-            jobs: list[BatchJobPayload] = []
-            exit_code = Exit.OK
-            for plan in plans:
-                output = StringIO()
-                with redirect_stdout(output):
-                    result = _main(
-                        args,
-                        start_watch=False,
-                        _batch_config=plan.config,
-                        _batch_pyproject_context=plan.pyproject_context,
-                    )
-                if result is Exit.ERROR:
-                    return result
-                if result is Exit.DIFF:
-                    exit_code = Exit.DIFF
-                try:
-                    payload = json.loads(output.getvalue())
-                except json.JSONDecodeError:  # pragma: no cover - defensive against future non-JSON output
-                    sys.stdout.write(output.getvalue())
-                    return Exit.ERROR
-                try:
-                    jobs.append(BatchJobPayload(name=plan.name, result=payload))
-                except ValidationError:
-                    context = (
-                        f"kind {payload['kind']!r}"
-                        if isinstance(payload, Mapping) and "kind" in payload
-                        else f"raw JSON {output.getvalue().strip()!r}"
-                    )
-                    print(  # noqa: T201
-                        f"Error: Job '{plan.name}' returned unsupported JSON batch output ({context}); "
-                        "expected a generation or check payload.",
-                        file=sys.stderr,
-                    )
-                    return Exit.ERROR
-
-            sys.stdout.write(batch_output_json(jobs) + "\n")
-            return exit_code
-        case _:
-            return _run_jobs_text(args, plans)
+    try:
+        match namespace.output_format:
+            case "json":
+                return _run_jobs_json(args, staged_plans)
+            case _:
+                return _run_jobs_text(args, staged_plans)
+    finally:
+        _cleanup_staged_job_plans(staged_plans)
 
 
-def _run_jobs_text(args: Sequence[str], plans: Sequence[JobPlan]) -> Exit:
+def _publish_or_error(staged_plans: Sequence[_StagedJobPlan]) -> Exit | None:
+    """Publish staged batch output, reporting an unrecoverable filesystem failure."""
+    try:
+        _validate_staged_job_plans(staged_plans)
+        _publish_staged_job_plans(staged_plans)
+    except (Error, OSError) as exc:
+        print(f"Error: could not publish batch output: {exc}", file=sys.stderr)  # noqa: T201
+        return Exit.ERROR
+    return None
+
+
+def _run_jobs_text(args: Sequence[str], staged_plans: Sequence[_StagedJobPlan]) -> Exit:
     """Run text-mode jobs without buffering their regular CLI output."""
     exit_code = Exit.OK
-    for plan in plans:
+    for staged_plan in staged_plans:
         result = _main(
             args,
             start_watch=False,
-            _batch_config=plan.config,
-            _batch_pyproject_context=plan.pyproject_context,
+            _batch_config=staged_plan.config,
+            _batch_pyproject_context=staged_plan.plan.pyproject_context,
+            _batch_original_output=staged_plan.output,
+            _batch_output_is_staged=staged_plan.staged_output is not None,
         )
         if result is Exit.ERROR:
             return result
         if result is Exit.DIFF:
             exit_code = Exit.DIFF
+    if exit_code is Exit.OK and (publish_error := _publish_or_error(staged_plans)) is not None:
+        return publish_error
+    return exit_code
+
+
+def _run_jobs_json(args: Sequence[str], staged_plans: Sequence[_StagedJobPlan]) -> Exit:
+    """Buffer one JSON result per job before emitting the single batch payload."""
+    from contextlib import redirect_stdout  # noqa: PLC0415
+    from io import StringIO  # noqa: PLC0415
+
+    from pydantic import ValidationError  # noqa: PLC0415
+
+    from datamodel_code_generator._structured_output import BatchJobPayload, batch_output_json  # noqa: PLC0415
+
+    jobs: list[BatchJobPayload] = []
+    exit_code = Exit.OK
+    for staged_plan in staged_plans:
+        output = StringIO()
+        with redirect_stdout(output):
+            result = _main(
+                args,
+                start_watch=False,
+                _batch_config=staged_plan.config,
+                _batch_pyproject_context=staged_plan.plan.pyproject_context,
+                _batch_original_output=staged_plan.output,
+                _batch_output_is_staged=staged_plan.staged_output is not None,
+            )
+        if result is Exit.ERROR:
+            return result
+        if result is Exit.DIFF:
+            exit_code = Exit.DIFF
+        try:
+            payload = json.loads(output.getvalue())
+        except json.JSONDecodeError:
+            print(  # noqa: T201
+                f"Error: Job '{staged_plan.plan.name}' returned invalid JSON batch output.",
+                file=sys.stderr,
+            )
+            return Exit.ERROR
+        try:
+            jobs.append(BatchJobPayload(name=staged_plan.plan.name, result=payload))
+        except ValidationError:
+            context = (
+                f"kind {payload['kind']!r}"
+                if isinstance(payload, Mapping) and "kind" in payload
+                else f"raw JSON {output.getvalue().strip()!r}"
+            )
+            print(  # noqa: T201
+                f"Error: Job '{staged_plan.plan.name}' returned unsupported JSON batch output ({context}); "
+                "expected a generation or check payload.",
+                file=sys.stderr,
+            )
+            return Exit.ERROR
+
+    if exit_code is Exit.OK and (publish_error := _publish_or_error(staged_plans)) is not None:
+        return publish_error
+    sys.stdout.write(batch_output_json(jobs) + "\n")
     return exit_code
 
 
@@ -1505,6 +1805,8 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     dependencies: WatchDependencies | None = None,
     _batch_config: Config | None = None,
     _batch_pyproject_context: Mapping[str, Any] | None = None,
+    _batch_original_output: Path | None = None,
+    _batch_output_is_staged: bool = False,
 ) -> Exit:
     """Execute datamodel code generation from command-line arguments."""
     vars(namespace).clear()
@@ -1804,7 +2106,12 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     custom_formatters_kwargs = config.custom_formatters_kwargs
     validators_config = config.validators
 
-    writes_json_output_file = namespace.output_format == "json" and config.output is not None and not config.check
+    writes_json_output_file = (
+        namespace.output_format == "json"
+        and config.output is not None
+        and not config.check
+        and not _batch_output_is_staged
+    )
     if config.check or writes_json_output_file:
         config_output = cast("Path", config.output)
         is_directory_output = not config_output.suffix
@@ -1878,7 +2185,7 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
                 serialization_aliases=serialization_aliases,
                 command_line=_command_header(args) if config.enable_command_header else None,
                 custom_formatters_kwargs=custom_formatters_kwargs,
-                settings_path=config.output,
+                settings_path=_batch_original_output or config.output,
                 validators=validators_config,
                 default_value_overrides=default_value_overrides,
             )
@@ -1893,7 +2200,7 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
                     serialization_aliases=serialization_aliases,
                     command_line=_command_header(args) if config.enable_command_header else None,
                     custom_formatters_kwargs=custom_formatters_kwargs,
-                    settings_path=config.output,
+                    settings_path=_batch_original_output or config.output,
                     validators=validators_config,
                     default_value_overrides=default_value_overrides,
                 )
@@ -1922,11 +2229,11 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         ) is not None:
             return cleanup_and_return(write_error)
     elif namespace.output_format == "json" and generate_output is not None and not config.check:
-        display_output = config.output if writes_json_output_file else None
+        display_output = _batch_original_output or (config.output if writes_json_output_file else None)
         sys.stdout.write(
             _generation_output_json(
                 _generated_files_from_output(generate_output, config.encoding, display_output=display_output),
-                output=config.output,
+                output=_batch_original_output or config.output,
             )
             + "\n"
         )
