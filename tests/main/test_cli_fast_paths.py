@@ -161,11 +161,43 @@ def _run_module_help_fast_path() -> dict[str, Any]:
                 "code": code,
                 "stdout": stdout.getvalue(),
                 "imported_arguments": "datamodel_code_generator.arguments" in sys.modules,
+                "imported_difflib": "difflib" in sys.modules,
                 "imported_format": "datamodel_code_generator.format" in sys.modules,
                 "imported_json_config": "datamodel_code_generator.json_config" in sys.modules,
                 "imported_pydantic": "pydantic" in sys.modules,
                 "imported_validators": "datamodel_code_generator.validators" in sys.modules,
             }))
+            """
+        )
+    )
+
+
+def _run_generate_prompt_invalid_option_fast_path() -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            """
+            import contextlib
+            import io
+            import json
+            import runpy
+            import sys
+
+            sys.argv = ["datamodel-codegen", "--generate-prompt", "--output-model-tipe"]
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                try:
+                    runpy.run_module("datamodel_code_generator.__main__", run_name="__main__")
+                except SystemExit as exc:
+                    code = exc.code
+                else:
+                    code = None
+
+            print(json.dumps({
+                "code": code,
+                "stderr": stderr.getvalue(),
+                "imported_difflib": "difflib" in sys.modules,
+                "imported_pydantic": "pydantic" in sys.modules,
+            }, indent=2, sort_keys=True))
             """
         )
     )
@@ -566,6 +598,7 @@ def test_help_fast_path_skips_json_config_and_formatter_imports() -> None:
     assert fast_path["code"] == 0
     assert "Generate Python data models" in fast_path["stdout"]
     assert fast_path["imported_arguments"] is True
+    assert fast_path["imported_difflib"] is False
     assert fast_path["imported_format"] is False
     assert fast_path["imported_json_config"] is False
     assert fast_path["imported_pydantic"] is False
@@ -685,6 +718,16 @@ def test_invalid_args_skip_pydantic_import() -> None:
     assert invalid_args["code"] == 2
     assert "--unknown-option" in invalid_args["stderr"]
     assert invalid_args["imported_pydantic"] is False
+
+
+def test_generate_prompt_fast_path_suggests_invalid_options() -> None:
+    """The prompt fast path retains unknown-option suggestions."""
+    result = _run_generate_prompt_invalid_option_fast_path()
+
+    assert_output(
+        f"{json.dumps(result, indent=2, sort_keys=True)}\n",
+        ROOT / "tests/data/expected/main/cli_fast_paths/generate_prompt_invalid_option.txt",
+    )
 
 
 @pytest.mark.allow_direct_assert

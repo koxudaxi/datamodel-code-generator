@@ -1782,11 +1782,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     active | {resolved_ref},
                 ):
                     return True
-        return any(
-            self._resolve_field_flag(sub, flag, active)
-            for sub in obj.allOf + obj.anyOf + obj.oneOf
-            if isinstance(sub, JsonSchemaObject)
-        )
+        for schemas in (obj.allOf, obj.anyOf, obj.oneOf):
+            for sub in schemas:
+                if isinstance(sub, JsonSchemaObject) and self._resolve_field_flag(sub, flag, active):
+                    return True
+        return False
 
     def _collect_inherited_fields_for_request_response(
         self,

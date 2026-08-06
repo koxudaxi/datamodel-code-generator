@@ -9565,6 +9565,24 @@ def test_main_jsonschema_field_type_collision_rename_type_double(output_file: Pa
     )
 
 
+def test_main_jsonschema_read_only_write_only_compositions(output_file: Path) -> None:
+    """Resolve composed readOnly/writeOnly fields without changing generated models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "read_only_write_only_compositions.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="read_only_write_only_compositions.py",
+        extra_args=[
+            "--disable-timestamp",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--read-only-write-only-model-type",
+            "all",
+        ],
+    )
+
+
 @pytest.mark.benchmark
 def test_main_jsonschema_required_and_any_of_required(output_file: Path) -> None:
     """Test required field with anyOf required."""
