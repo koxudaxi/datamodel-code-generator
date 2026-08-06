@@ -7,7 +7,8 @@ from datetime import date
 from enum import Enum
 from typing import Annotated
 
-from pydantic import BaseModel, Field, constr
+from pydantic import Field, constr
+from pydantic.dataclasses import dataclass
 from typing_extensions import TypeAliasType
 
 DirectArray = TypeAliasType(
@@ -33,13 +34,14 @@ class EnumValue(Enum):
 OptionsArray = TypeAliasType("OptionsArray", Annotated[list[str], Field(min_length=1)])
 
 
-class PatternPropertiesArrayTypeUnion(BaseModel):
+@dataclass
+class PatternPropertiesArrayTypeUnion:
     direct: str | DirectArray
+    nullablePattern: dict[constr(pattern=r'.*'), list[str] | None]
     textOrList: TextOrListString | list[str] | None = None
     formattedOrList: date | FormattedOrListArray | None = None
     enumValue: list[str] | EnumValue | None = None
     options: list[dict[constr(pattern=r'.*'), str | OptionsArray]] = Field(
         ..., min_length=1
     )
-    nullablePattern: dict[constr(pattern=r'.*'), list[str] | None]
     unconstrainedPattern: dict[constr(pattern=r'.*'), str | list[str]] | None = None

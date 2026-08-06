@@ -6,6 +6,23 @@
     "direct": {
       "type": ["array", "string"],
       "minItems": 1,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "textOrList": {
+      "type": ["array", "string"],
+      "minLength": 2,
+      "items": {
+        "type": "string"
+      }
+    },
+    "formattedOrList": {
+      "type": ["array", "string"],
+      "format": "date",
+      "minItems": 1,
       "items": {
         "type": "string"
       }
@@ -39,6 +56,17 @@
       "patternProperties": {
         ".*": {
           "type": ["array", "null"],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "unconstrainedPattern": {
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "type": ["array", "string"],
           "items": {
             "type": "string"
           }

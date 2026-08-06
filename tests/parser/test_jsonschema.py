@@ -1640,6 +1640,41 @@ def test_get_data_type_array(schema_types: list[str], result_types: list[str]) -
     )
 
 
+@pytest.mark.allow_direct_assert
+def test_array_union_constraint_alias_uses_custom_get_data_type() -> None:
+    """Keep custom data-type parser hooks active while rendering internal aliases."""
+    model_types = get_data_model_types(
+        DataModelType.PydanticV2BaseModel,
+        target_python_version=PythonVersion.PY_310,
+    )
+    observed_schemas: list[JsonSchemaObject] = []
+
+    class CustomParser(JsonSchemaParser):
+        def get_data_type(self, obj: JsonSchemaObject) -> DataType:
+            observed_schemas.append(obj)
+            return super().get_data_type(obj)
+
+    parser = CustomParser(
+        "{}",
+        data_model_type=model_types.data_model,
+        data_model_root_type=model_types.root_model,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=model_types.data_type_manager,
+        target_python_version=PythonVersion.PY_310,
+    )
+    schema = JsonSchemaObject.model_validate({
+        "type": ["array", "string"],
+        "minItems": 1,
+        "minLength": 2,
+        "items": {"type": "string"},
+    })
+
+    parser.parse_array_fields("Value", schema, ["value"])
+
+    assert any(item.type == "string" and item.minLength == 2 for item in observed_schemas)
+    assert parser.field_constraints is False
+
+
 def test_additional_imports() -> None:
     """Test that additional imports are inside imports container."""
     new_parser = JsonSchemaParser(source="", additional_imports=["collections.deque"])
