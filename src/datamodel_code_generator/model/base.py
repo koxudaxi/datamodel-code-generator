@@ -1162,6 +1162,8 @@ def _clear_custom_template_caches() -> None:
         cached_path_exists.cache_clear()
         _get_environment.cache_clear()
         _get_template_with_custom_dir.cache_clear()
+        _get_environment_with_absolute_path.cache_clear()
+        _get_template_with_absolute_path.cache_clear()
         _missing_custom_template_state.paths.clear()
         _missing_custom_template_state.count = 0
         _missing_custom_template_state.overflow = False

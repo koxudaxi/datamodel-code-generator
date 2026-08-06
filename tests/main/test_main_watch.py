@@ -912,6 +912,96 @@ def test_watch_cli_regenerates_on_custom_header_change(tmp_path: Path) -> None:
         _stop_watch_cli(process, stdout_thread, stderr_thread)
 
 
+def test_watch_cli_regenerates_on_top_level_custom_template_change(tmp_path: Path) -> None:
+    """Watch mode clears cached custom templates before a full regeneration."""
+    input_dir = tmp_path / "schemas"
+    template_dir = tmp_path / "external" / "templates"
+    input_file = input_dir / "schema.json"
+    template_file = template_dir / "BaseModel.jinja2"
+    output_file = tmp_path / "output.py"
+    input_dir.mkdir()
+    template_dir.mkdir(parents=True)
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    shutil.copyfile(WATCH_DATA_PATH / "custom_templates/initial/BaseModel.jinja2", template_file)
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
+        input_file,
+        output_file,
+        ["--custom-template-dir", str(template_dir)],
+    )
+
+    try:
+        _wait_for_watch_cli(
+            process,
+            stdout_lines,
+            stderr_lines,
+            lambda: _file_contains(output_file, 'template_revision = "initial"'),
+            "initial custom template output",
+        )
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            template_file,
+            (WATCH_DATA_PATH / "custom_templates/changed/BaseModel.jinja2").read_text(encoding="utf-8"),
+            lambda: _file_contains(output_file, 'template_revision = "changed"'),
+            "custom template output to be regenerated",
+        )
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+def test_watch_cli_regenerates_when_external_custom_template_directory_is_created_and_recreated(
+    tmp_path: Path,
+) -> None:
+    """Watch mode retains missing configured directories by watching their existing parent."""
+    input_dir = tmp_path / "schemas"
+    external_dir = tmp_path / "external"
+    template_dir = external_dir / "templates"
+    input_file = input_dir / "schema.json"
+    template_file = template_dir / "BaseModel.jinja2"
+    output_file = tmp_path / "output.py"
+    input_dir.mkdir()
+    external_dir.mkdir()
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
+        input_file,
+        output_file,
+        ["--custom-template-dir", str(template_dir)],
+    )
+
+    try:
+        template_dir.mkdir()
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            template_file,
+            (WATCH_DATA_PATH / "custom_templates/initial/BaseModel.jinja2").read_text(encoding="utf-8"),
+            lambda: _file_contains(output_file, 'template_revision = "initial"'),
+            "created custom template directory output to be regenerated",
+        )
+        shutil.rmtree(template_dir)
+        _wait_for_watch_cli(
+            process,
+            stdout_lines,
+            stderr_lines,
+            lambda: output_file.is_file() and not _file_contains(output_file, 'template_revision = "initial"'),
+            "deleted custom template directory output to be regenerated",
+        )
+        template_dir.mkdir()
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            template_file,
+            (WATCH_DATA_PATH / "custom_templates/changed/BaseModel.jinja2").read_text(encoding="utf-8"),
+            lambda: _file_contains(output_file, 'template_revision = "changed"'),
+            "recreated custom template directory output to be regenerated",
+        )
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
 def test_watch_cli_regenerates_on_alias_configuration_change(tmp_path: Path) -> None:
     """Watch mode resolves a JSON-backed alias configuration again after it changes."""
     input_file = tmp_path / "schema.json"

@@ -126,7 +126,7 @@ class WatchDependencies:
     def watch_roots(self) -> tuple[Path, ...]:
         """Return existing directories to give to ``watchfiles.watch``."""
         roots: set[Path] = {path.parent for path in self.files}
-        roots.update(path for path in self.directories if path.is_dir())
+        roots.update(_nearest_existing_directory(directory) for directory in self.directories)
         return tuple(sorted((path for path in roots if path.is_dir()), key=lambda path: path.as_posix()))
 
     def includes(self, path: Path) -> bool:
@@ -149,3 +149,9 @@ def _nearest_pyproject_toml(path: Path) -> Path | None:
         if candidate.is_file():
             return candidate
     return None
+
+
+def _nearest_existing_directory(path: Path) -> Path:
+    while not path.is_dir():
+        path = path.parent
+    return path

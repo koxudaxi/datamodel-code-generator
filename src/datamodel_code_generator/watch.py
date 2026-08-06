@@ -42,7 +42,9 @@ def _watch_filter(dependencies: WatchDependencies, output: Path | None) -> Calla
 
 def _regenerate(regenerate: Callable[[], Exit]) -> None:
     from datamodel_code_generator.__main__ import Exit  # noqa: PLC0415
+    from datamodel_code_generator.model.base import _clear_custom_template_caches  # noqa: PLC0415
 
+    _clear_custom_template_caches()
     if regenerate() == Exit.OK:
         return
     msg = "Generation failed"
