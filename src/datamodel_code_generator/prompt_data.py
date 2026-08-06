@@ -170,6 +170,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--use-title-as-name": "Use schema title as the generated class name.",
     "--use-total-false-for-typed-dict": "Generate TypedDict declarations with `total=False`.",
     "--use-tuple-for-fixed-items": "Generate tuple types for arrays with items array syntax.",
+    "--use-tuple-for-fixed-length-arrays": "Generate tuple types for homogeneous fixed-length arrays.",
     "--use-type-alias": "Use TypeAlias instead of root models for type definitions (experimental).",
     "--use-type-alias-type": "Use runtime TypeAliasType objects for aliases before Python 3.12 (experimental).",
     "--use-type-checking-imports": "Allow Ruff to move typing-only imports into TYPE_CHECKING blocks.",

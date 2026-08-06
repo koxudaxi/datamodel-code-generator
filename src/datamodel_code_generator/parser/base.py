@@ -140,6 +140,7 @@ class _InheritedTypeModifiers:
     is_mapping: bool
     is_sequence: bool
     is_tuple: bool
+    tuple_item_count: int | None
     kwargs: dict[str, Any] | None
     list_wrapper: DataType | None
 
@@ -1239,6 +1240,7 @@ def _get_inherited_type_modifiers(
         is_mapping=data_type.is_mapping,
         is_sequence=data_type.is_sequence,
         is_tuple=data_type.is_tuple,
+        tuple_item_count=data_type.tuple_item_count,
         kwargs=deepcopy(data_type.kwargs),
         list_wrapper=list_wrapper,
     )
@@ -1288,6 +1290,8 @@ def _merge_data_type_modifiers(
         new_type.is_mapping = new_type.is_mapping or current_type.is_mapping
         new_type.is_sequence = new_type.is_sequence or current_type.is_sequence
         new_type.is_tuple = new_type.is_tuple or current_type.is_tuple
+        if new_type.tuple_item_count is None:
+            new_type.tuple_item_count = current_type.tuple_item_count
     if preserve_inherited_kwargs or current_type.kwargs is None:
         return
     if new_type.kwargs is None:
@@ -2017,6 +2021,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.use_operation_id_as_name: bool = config.use_operation_id_as_name
         self.use_unique_items_as_set: bool = config.use_unique_items_as_set
         self.use_tuple_for_fixed_items: bool = config.use_tuple_for_fixed_items
+        self.use_tuple_for_fixed_length_arrays: bool = config.use_tuple_for_fixed_length_arrays
         self.use_total_false_for_typed_dict: bool = config.use_total_false_for_typed_dict
         self.use_closed_typed_dict: bool = config.use_closed_typed_dict
         self.allof_merge_mode: AllOfMergeMode = config.allof_merge_mode

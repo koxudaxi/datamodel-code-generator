@@ -14,7 +14,7 @@ from decimal import Decimal
 from enum import Enum, auto
 from fractions import Fraction
 from functools import cache, lru_cache
-from itertools import chain
+from itertools import chain, repeat
 from re import Pattern
 from typing import (
     TYPE_CHECKING,
@@ -467,6 +467,7 @@ class DataType(_BaseModel):
     is_mapping: bool = False
     is_sequence: bool = False
     is_tuple: bool = False
+    tuple_item_count: int | None = Field(default=None, ge=0)
     is_custom_type: bool = False
     literals: list[Union[StrictBool, StrictInt, StrictStr]] = Field(default_factory=list)  # noqa: UP007
     enum_member_literals: list[tuple[str, str]] = Field(default_factory=list)  # [(EnumClassName, member_name), ...]
@@ -705,6 +706,8 @@ class DataType(_BaseModel):
             yield self.import_
         if self.python_type:
             yield from self.python_type.imports
+        if self.is_tuple and self.tuple_item_count and (not self.data_types or not self.data_types[0].type_hint):
+            yield IMPORT_ANY
         if self.kwargs and self.import_ != IMPORT_DECIMAL and _contains_decimal(self.kwargs):
             yield IMPORT_DECIMAL
 
@@ -787,10 +790,19 @@ class DataType(_BaseModel):
     ) -> str:
         if self.is_tuple:
             tuple_type = STANDARD_TUPLE if self.use_standard_collections else TUPLE
-            inner_types = [
-                (item.base_type_hint if use_base_type_hint else item.type_hint) or ANY for item in self.data_types
-            ]
-            type_ = f"{tuple_type}[{', '.join(inner_types)}]" if inner_types else f"{tuple_type}[()]"
+            if self.tuple_item_count == 0:
+                type_ = f"{tuple_type}[()]"
+            elif self.tuple_item_count is not None:
+                item_type = ANY
+                if self.data_types:
+                    item = self.data_types[0]
+                    item_type = (item.base_type_hint if use_base_type_hint else item.type_hint) or ANY
+                type_ = f"{tuple_type}[{', '.join(repeat(item_type, self.tuple_item_count))}]"
+            else:
+                inner_types = [
+                    (item.base_type_hint if use_base_type_hint else item.type_hint) or ANY for item in self.data_types
+                ]
+                type_ = f"{tuple_type}[{', '.join(inner_types)}]" if inner_types else f"{tuple_type}[()]"
         elif self.is_union:
             type_ = self._render_union_type_hint(
                 use_base_type_hint=use_base_type_hint,

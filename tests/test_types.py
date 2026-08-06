@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 import pytest
 
+from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_TUPLE
 from datamodel_code_generator.parser._math_imports import add_math_imports_for_non_finite_literals
 from datamodel_code_generator.python_literal import PythonCode, represent_python_value
 from datamodel_code_generator.reference import Reference
@@ -415,6 +416,26 @@ def test_datatype_type_hint_container_precedence_matches_base_type_hint() -> Non
     for data_type, expected_type_hint, expected_base_type_hint in cases:
         assert data_type.type_hint == expected_type_hint
         assert data_type.base_type_hint == expected_base_type_hint
+
+
+@pytest.mark.parametrize(
+    ("data_types", "tuple_item_count", "expected", "expected_imports"),
+    [
+        ([], 0, "Tuple[()]", (IMPORT_TUPLE,)),
+        ([], 2, "Tuple[Any, Any]", (IMPORT_ANY, IMPORT_TUPLE)),
+        ([DataType()], 2, "Tuple[Any, Any]", (IMPORT_ANY, IMPORT_TUPLE)),
+        ([DataType(type="str")], 3, "Tuple[str, str, str]", (IMPORT_TUPLE,)),
+    ],
+)
+def test_datatype_fixed_length_tuple_renders_without_repeated_data_types(
+    data_types: list[DataType], tuple_item_count: int, expected: str, expected_imports: tuple[object, ...]
+) -> None:
+    """Render homogeneous tuples from one item type without expanding the type tree."""
+    data_type = DataType(data_types=data_types, is_tuple=True, tuple_item_count=tuple_item_count)
+
+    assert data_type.type_hint == expected
+    assert data_type.base_type_hint == expected
+    assert tuple(data_type.all_imports) == expected_imports
 
 
 def test_external_datatype_subclass_keeps_legacy_rendering_contract() -> None:

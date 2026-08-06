@@ -9134,6 +9134,34 @@ def test_main_jsonschema_items_array_tuple(min_version: str, output_file: Path) 
     )
 
 
+@freeze_time("2019-07-26")
+def test_main_jsonschema_recursive_fixed_length_array_keeps_tuple_shape(output_file: Path) -> None:
+    """Keep positional tuple shape when a recursive root item falls back to Any."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "recursive_fixed_length_array.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="recursive_fixed_length_array.py",
+        extra_args=["--use-tuple-for-fixed-length-arrays"],
+        force_exec_validation=True,
+    )
+
+
+@freeze_time("2019-07-26")
+def test_main_jsonschema_items_array_tuple_allof_keeps_legacy_list(output_file: Path) -> None:
+    """Keep the lightweight allOf path unchanged for the existing tuple-items option."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "items_array_tuple_allof.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="items_array_tuple_allof.py",
+        extra_args=["--use-tuple-for-fixed-items"],
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.skipif(
     int(black.__version__.split(".")[0]) < 24,
     reason="Installed black doesn't support the new style",

@@ -797,6 +797,12 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-tuple-for-fixed-length-arrays",
+    help="Generate tuple types for fixed-length arrays with a single items schema",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--use-total-false-for-typed-dict",
     help="Generate TypedDict with total=False and mark required fields with Required",
     action="store_true",
