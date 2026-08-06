@@ -32,12 +32,18 @@ declaration order.
     datamodel-codegen --all-jobs
     datamodel-codegen --all-jobs --check
     datamodel-codegen --all-jobs --output-format json
+    datamodel-codegen --all-jobs --watch
     ```
 
 All selected jobs are validated before generation starts. Jobs that write to
 stdout, or whose output or model-metadata paths overlap, are rejected before
 any generated file is written. With `--output-format json`, one `batch`
 payload contains the result of every job.
+
+With `--watch`, changes to `pyproject.toml` replan the complete job membership.
+All selected local dependencies are watched as one graph, and every event reruns
+and publishes the whole batch transactionally rather than rebuilding only one
+job.
 
 ---
 
@@ -205,10 +211,11 @@ in a different order.
 Jobs require their own `input` and `output`. A job can select one reusable
 profile using `profile = "name"`. Settings are resolved as base configuration,
 job profile, job settings, then safe batch-wide CLI overrides. `--input`,
-`--url`, `--input-model`, `--output`, `--profile`, and `--watch` cannot be
-combined with job selection. The forthcoming batch watch mode will rerun the
-entire selected batch for a dependency change; it does not use partial job
-rebuilds.
+`--url`, `--input-model`, `--output`, and `--profile` cannot be combined with
+job selection. With `--watch`, one outer scheduler watches the selected jobs'
+combined dependency graph and `pyproject.toml`. Every event replans and
+transactionally reruns the complete selection; failures retain the published
+outputs and continue watching for recovery.
 
 ---
 

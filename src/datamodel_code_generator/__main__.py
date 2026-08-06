@@ -194,9 +194,10 @@ BOOLEAN_OPTIONAL_OPTIONS: frozenset[str] = frozenset({
 ORIGINAL_FIELD_NAME_DELIMITER_ERROR = "`--original-field-name-delimiter` can not be used without `--snake-case-field`."
 SENSITIVE_COMMAND_OPTIONS: frozenset[str] = frozenset({"--http-headers", "--http-query-parameters"})
 REDACTED_COMMAND_ARGUMENT = "<redacted>"
-BATCH_UNSAFE_CLI_FIELDS: frozenset[str] = frozenset({"input", "input_model", "output", "url", "watch"})
+BATCH_UNSAFE_CLI_FIELDS: frozenset[str] = frozenset({"input", "input_model", "output", "url"})
 BATCH_COMMAND_ONLY_CONFIG_FIELDS: frozenset[str] = frozenset({"list_deprecations", "list_experimental"})
 BATCH_CONFIG_CONTEXT_FIELDS: frozenset[str] = frozenset({"use_annotated", "use_specialized_enum"})
+BATCH_OUTER_CONFIG_FIELDS: frozenset[str] = frozenset({"watch", "watch_delay"})
 
 
 class Exit(IntEnum):
@@ -882,6 +883,15 @@ class JobPlan(NamedTuple):
     resolved_model_metadata_parent: Path | None
 
 
+class BatchPlan(NamedTuple):
+    """A selected job set plus CLI/base-level scheduler settings."""
+
+    jobs: tuple[JobPlan, ...]
+    watch: bool
+    watch_delay: float
+    pyproject_path: Path
+
+
 class _PublicationAnchor(NamedTuple):
     """The existing directory inode that anchored a planned publication path."""
 
@@ -947,6 +957,17 @@ def _normalize_pyproject_config(config: Mapping[str, Any]) -> dict[str, Any]:
     return normalized
 
 
+def _validate_job_watch_settings(name: str, config: Mapping[str, Any]) -> None:
+    """Keep the persistent scheduler outside profile and job configs."""
+    if fields := BATCH_OUTER_CONFIG_FIELDS & _normalize_pyproject_config(config).keys():
+        options = ", ".join(f"--{field.replace('_', '-')}" for field in sorted(fields))
+        msg = (
+            f"{options} cannot be used in Job '{name}'; define watch settings at the CLI "
+            "or [tool.datamodel-codegen] base level"
+        )
+        raise Error(msg)
+
+
 def _get_job_config(  # noqa: PLR0913
     *,
     name: str,
@@ -971,7 +992,11 @@ def _get_job_config(  # noqa: PLR0913
             available = list(profiles.keys()) if profiles else "none"
             msg = f"Profile '{profile_name}' not found for job '{name}'. Available profiles: {available}"
             raise Error(msg)
-        resolved_config.update(_resolve_profile_extends(profiles, profile_name))
+        resolved_profile = _resolve_profile_extends(profiles, profile_name)
+        _validate_job_watch_settings(name, resolved_profile)
+        resolved_config.update(resolved_profile)
+
+    _validate_job_watch_settings(name, job)
 
     # Every job has its own required file input. It must supersede alternate
     # input sources inherited from the base config or its selected profile.
@@ -985,9 +1010,6 @@ def _get_job_config(  # noqa: PLR0913
     config = _create_config(normalized_config, cli_config_args)
     _apply_preset(config, normalized_config, cli_config_args)
     _validate_final_config(config)
-    if config.watch:
-        msg = "--watch cannot be used with --job or --all-jobs"
-        raise Error(msg)
     if command_only_fields := [
         field_name for field_name in sorted(BATCH_COMMAND_ONLY_CONFIG_FIELDS) if getattr(config, field_name)
     ]:
@@ -1076,7 +1098,7 @@ def _preflight_job_plans(plans: Sequence[JobPlan]) -> None:
             raise Error(msg)
 
 
-def _plan_jobs(args: Namespace) -> tuple[JobPlan, ...]:
+def _plan_jobs(args: Namespace) -> BatchPlan:
     """Load and preflight the selected pyproject jobs in declaration order."""
     from pydantic import ValidationError  # noqa: PLC0415
 
@@ -1089,7 +1111,35 @@ def _plan_jobs(args: Namespace) -> tuple[JobPlan, ...]:
         raise Error(msg) from e
 
 
-def _plan_jobs_unchecked(args: Namespace) -> tuple[JobPlan, ...]:
+def _batch_outer_settings(
+    tool_config: Mapping[str, Any], cli_config_args: Mapping[str, _RawConfigValue]
+) -> tuple[bool, float]:
+    """Resolve scheduler-only settings without adding them to inner jobs."""
+    values = {
+        **{
+            key.replace("-", "_"): value
+            for key, value in tool_config.items()
+            if key.replace("-", "_") in BATCH_OUTER_CONFIG_FIELDS
+        },
+        **{key: value for key, value in cli_config_args.items() if key in BATCH_OUTER_CONFIG_FIELDS},
+    }
+    if not values:
+        return False, 0.5
+    outer_config = Config.model_validate(values)
+    return outer_config.watch, outer_config.watch_delay
+
+
+def _selected_jobs(args: Namespace, jobs: Mapping[Any, Any]) -> frozenset[Any]:
+    """Validate and return the requested job names."""
+    selected_names = tuple(jobs) if args.all_jobs else tuple(args.job or ())
+    if unknown_jobs := [name for name in selected_names if name not in jobs]:
+        available = ", ".join(jobs)
+        msg = f"Job '{unknown_jobs[0]}' not found in pyproject.toml. Available jobs: {available or 'none'}"
+        raise Error(msg)
+    return frozenset(selected_names)
+
+
+def _plan_jobs_unchecked(args: Namespace) -> BatchPlan:
     """Load and preflight selected jobs after the command-level validation."""
     if args.ignore_pyproject:
         msg = "--ignore-pyproject cannot be used with --job or --all-jobs"
@@ -1131,14 +1181,15 @@ def _plan_jobs_unchecked(args: Namespace) -> tuple[JobPlan, ...]:
         msg = "[tool.datamodel-codegen.profiles] must be a table"
         raise Error(msg)
 
-    selected_names = tuple(jobs) if args.all_jobs else tuple(args.job or ())
-    unknown_jobs = [name for name in selected_names if name not in jobs]
-    if unknown_jobs:
-        available = ", ".join(jobs)
-        msg = f"Job '{unknown_jobs[0]}' not found in pyproject.toml. Available jobs: {available or 'none'}"
-        raise Error(msg)
-    selected = frozenset(selected_names)
-    base_config = {key: value for key, value in tool_config.items() if key not in {"jobs", "profiles"}}
+    selected = _selected_jobs(args, jobs)
+    base_config = {
+        key: value
+        for key, value in tool_config.items()
+        if key not in {"jobs", "profiles"} and key.replace("-", "_") not in BATCH_OUTER_CONFIG_FIELDS
+    }
+    watch, watch_delay = _batch_outer_settings(tool_config, cli_config_args)
+    for field_name in BATCH_OUTER_CONFIG_FIELDS:
+        cli_config_args.pop(field_name, None)
 
     plans: list[JobPlan] = []
     for name, job in jobs.items():
@@ -1158,7 +1209,7 @@ def _plan_jobs_unchecked(args: Namespace) -> tuple[JobPlan, ...]:
             )
         )
     _preflight_job_plans(plans)
-    return tuple(plans)
+    return BatchPlan(tuple(plans), watch, watch_delay, pyproject_path)
 
 
 TomlValue: TypeAlias = str | bool | list["TomlValue"] | tuple["TomlValue", ...]
@@ -2082,6 +2133,27 @@ def _run_jobs(args: Sequence[str], plans: Sequence[JobPlan]) -> Exit:
         _cleanup_staged_job_plans(staged_plans)
 
 
+def _run_watched_jobs(
+    args: Sequence[str],
+    batch_plan: BatchPlan,
+    dependencies: WatchDependencies,
+) -> Exit:
+    """Collect one full batch graph and publish it only with a successful cycle."""
+    dependencies.configure_many(
+        (
+            plan.config,
+            {**plan.raw_config, **plan.cli_config_args},
+            plan.pyproject_path,
+        )
+        for plan in batch_plan.jobs
+    )
+    with dependencies.generation():
+        result = _run_jobs(args, batch_plan.jobs)
+        if result is not Exit.OK:
+            dependencies.fail_generation()
+    return result
+
+
 def _publish_or_error(staged_plans: Sequence[_StagedJobPlan]) -> Exit | None:
     """Publish staged batch output, reporting an unrecoverable filesystem failure."""
     try:
@@ -2267,11 +2339,42 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
 
     if _batch_config is None and (namespace.job or namespace.all_jobs):
         try:
-            plans = _plan_jobs(namespace)
+            batch_plan = _plan_jobs(namespace)
         except Error as e:
             print(str(e), file=sys.stderr)  # noqa: T201
             return Exit.ERROR
-        return _run_jobs(args, plans)
+        if not batch_plan.watch:
+            return _run_jobs(args, batch_plan.jobs)
+        if any(plan.config.check for plan in batch_plan.jobs):
+            print("Error: --watch and --check cannot be used together", file=sys.stderr)  # noqa: T201
+            return Exit.ERROR
+        if namespace.output_format == "json":
+            print("Error: --output-format json cannot be used with --watch", file=sys.stderr)  # noqa: T201
+            return Exit.ERROR
+
+        from datamodel_code_generator.watch_dependencies import WatchDependencies  # noqa: PLC0415
+
+        watch_dependencies = dependencies or WatchDependencies()
+        result = _run_watched_jobs(args, batch_plan, watch_dependencies)
+        if result is not Exit.OK or not start_watch:
+            return result
+        try:
+            from datamodel_code_generator.watch import watch_and_regenerate  # noqa: PLC0415
+
+            return watch_and_regenerate(
+                batch_plan.jobs[0].config,
+                dependencies=watch_dependencies,
+                regenerate=lambda: _main(
+                    args,
+                    start_watch=False,
+                    dependencies=watch_dependencies,
+                ),
+                watch_path=batch_plan.pyproject_path,
+                watch_delay=batch_plan.watch_delay,
+            )
+        except Exception as e:  # noqa: BLE001
+            print(str(e), file=sys.stderr)  # noqa: T201
+            return Exit.ERROR
 
     # Handle --ignore-pyproject and --profile options
     if _batch_config is not None:

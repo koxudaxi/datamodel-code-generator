@@ -1522,6 +1522,57 @@ def test_pyproject_jobs_reject_cli_command_only_modes(
 
 
 @pytest.mark.parametrize(
+    ("args", "message"),
+    [
+        (["--all-jobs", "--watch", "--check"], "--watch and --check cannot be used together"),
+        (
+            ["--all-jobs", "--watch", "--output-format", "json"],
+            "--output-format json cannot be used with --watch",
+        ),
+    ],
+)
+def test_pyproject_jobs_reject_incompatible_watch_modes(
+    jobs_project: dict[str, Path],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    args: list[str],
+    message: str,
+) -> None:
+    """Validate the outer batch scheduler before generation or watcher startup."""
+    with chdir(tmp_path):
+        run_main_with_args(args, expected_exit=Exit.ERROR, capsys=capsys, expected_stderr_contains=message)
+
+    _assert_file_does_not_exist(jobs_project["plain"])
+    _assert_file_does_not_exist(jobs_project["strict"])
+
+
+def test_pyproject_jobs_report_batch_watch_startup_error(
+    jobs_project: dict[str, Path],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Report a watcher startup failure after the initial transaction publishes."""
+    from datamodel_code_generator import watch
+
+    def fail_watch(*_args: object, **_kwargs: object) -> Exit:
+        msg = "batch watcher startup failed"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(watch, "watch_and_regenerate", fail_watch)
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--all-jobs", "--watch", "--formatters", "builtin"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="batch watcher startup failed",
+        )
+
+    assert_output(jobs_project["plain"].read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
+    assert_file_content(jobs_project["strict"], "jobs/strict.py")
+
+
+@pytest.mark.parametrize(
     "command_option",
     ["list-deprecations", "list-experimental"],
 )
@@ -1623,13 +1674,46 @@ output = "{output_path.as_posix()}"
 def test_pyproject_job_plan_preserves_watch_provenance(jobs_project: dict[str, Path], tmp_path: Path) -> None:
     """Keep the resolved raw config, CLI settings, and project path for batch watch planning."""
     with chdir(tmp_path):
-        args = arg_parser.parse_args(["--job", "plain", "--formatters", "builtin"])
-        plan = _plan_jobs(args)[0]
+        args = arg_parser.parse_args([
+            "--job",
+            "plain",
+            "--formatters",
+            "builtin",
+            "--watch",
+            "--watch-delay",
+            "0.25",
+        ])
+        batch_plan = _plan_jobs(args)
+        plan = batch_plan.jobs[0]
 
+    assert batch_plan.watch
+    assert batch_plan.watch_delay == 0.25
+    assert not plan.config.watch
+    assert plan.config.watch_delay == 0.5
     assert plan.raw_config["input"] == (JSON_SCHEMA_DATA_PATH / "person.json").as_posix()
     assert plan.raw_config["output"] == jobs_project["plain"].as_posix()
     assert plan.cli_config_args["formatters"] == ["builtin"]
     assert plan.pyproject_path == tmp_path / "pyproject.toml"
+
+
+def test_pyproject_job_plan_uses_base_watch_scheduler(jobs_project: dict[str, Path], tmp_path: Path) -> None:
+    """Apply base watch settings only to the outer batch scheduler."""
+    pyproject_path = tmp_path / "pyproject.toml"
+    pyproject_path.write_text(
+        pyproject_path.read_text(encoding="utf-8").replace(
+            "disable-timestamp = true",
+            "disable-timestamp = true\nwatch = true\nwatch-delay = 0.75",
+        ),
+        encoding="utf-8",
+    )
+    with chdir(tmp_path):
+        batch_plan = _plan_jobs(arg_parser.parse_args(["--all-jobs"]))
+
+    assert batch_plan.watch
+    assert batch_plan.watch_delay == 0.75
+    assert all(not plan.config.watch and plan.config.watch_delay == 0.5 for plan in batch_plan.jobs)
+    _assert_file_does_not_exist(jobs_project["plain"])
+    _assert_file_does_not_exist(jobs_project["strict"])
 
 
 @pytest.mark.parametrize(
@@ -2588,6 +2672,19 @@ watch = true
 """,
             ["--all-jobs"],
             "--watch cannot be used",
+        ),
+        (
+            """
+[tool.datamodel-codegen.profiles.watched]
+watch-delay = 0.1
+
+[tool.datamodel-codegen.jobs.invalid]
+profile = "watched"
+input = "$INPUT"
+output = "$OUTPUT"
+""",
+            ["--all-jobs"],
+            "--watch-delay cannot be used",
         ),
         (
             """

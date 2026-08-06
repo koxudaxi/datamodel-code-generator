@@ -2266,6 +2266,8 @@ datamodel-codegen watches the input file or directory for changes and
 automatically regenerates the output whenever changes are detected.
 Press Ctrl+C to stop watching.
 
+**See also:** [pyproject.toml Configuration](../pyproject_toml.md)
+
 !!! tip "Usage"
 
     ```bash

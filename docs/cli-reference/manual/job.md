@@ -32,7 +32,8 @@ in a different order.
 Jobs require their own `input` and `output`. A job can select one reusable
 profile using `profile = "name"`. Settings are resolved as base configuration,
 job profile, job settings, then safe batch-wide CLI overrides. `--input`,
-`--url`, `--input-model`, `--output`, `--profile`, and `--watch` cannot be
-combined with job selection. The forthcoming batch watch mode will rerun the
-entire selected batch for a dependency change; it does not use partial job
-rebuilds.
+`--url`, `--input-model`, `--output`, and `--profile` cannot be combined with
+job selection. With `--watch`, one outer scheduler watches the selected jobs'
+combined dependency graph and `pyproject.toml`. Every event replans and
+transactionally reruns the complete selection; failures retain the published
+outputs and continue watching for recovery.
