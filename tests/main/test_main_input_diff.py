@@ -9,8 +9,13 @@ import jsonschema
 import pytest
 
 from datamodel_code_generator import DataModelType, chdir
-from datamodel_code_generator.__main__ import Exit
-from tests.conftest import create_assert_file_content
+from datamodel_code_generator.__main__ import (
+    Exit,
+    OutputComparisonOptions,
+    _compare_generated_outputs,
+    _write_comparison_output,
+)
+from tests.conftest import assert_output, create_assert_file_content
 from tests.main.conftest import DATA_PATH, InputFileTypeLiteral, run_main_and_assert, run_main_with_args
 
 if TYPE_CHECKING:
@@ -144,6 +149,33 @@ def test_diff_against_reports_changed_single_file_without_writing_virtual_output
         capsys=capsys,
         assert_no_stderr=True,
     )
+
+
+def test_diff_against_single_file_comparison_reports_added_when_old_output_is_missing(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Report a new-only file consistently in text and structured input-diff output."""
+    generated_output = tmp_path / "new.py"
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_INPUT_DIFF_PATH / "new.json",
+        output_path=generated_output,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp"],
+        capsys=capsys,
+        assert_no_stderr=True,
+    )
+
+    comparison = _compare_generated_outputs(
+        generated_output,
+        tmp_path / "old.py",
+        "utf-8",
+        OutputComparisonOptions(is_directory_output=False, input_diff=True, single_file_display_path="models.py"),
+    )
+    _write_comparison_output(comparison, None, kind="input-diff")
+    assert_output(capsys.readouterr().out, INPUT_DIFF_EXPECTED_PATH / "added_single_file.txt")
+
+    _write_comparison_output(comparison, "json", kind="input-diff")
+    assert_output(capsys.readouterr().out, INPUT_DIFF_EXPECTED_PATH / "added_single_file_json.txt")
 
 
 @pytest.mark.cli_doc(

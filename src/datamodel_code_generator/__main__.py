@@ -1392,6 +1392,37 @@ class OutputComparisonOptions(NamedTuple):
         return " (new input)" if self.input_diff else " (expected)"
 
 
+OutputComparisonPolicy: TypeAlias = tuple[
+    Literal["added", "missing"],
+    str,
+    str,
+    Literal["extra", "removed"],
+    str,
+]
+
+
+def _output_comparison_policy(*, input_diff: bool) -> OutputComparisonPolicy:
+    """Return shared missing and extra reporting values for one comparison."""
+    match input_diff:
+        case True:
+            missing_message_suffix = "generated only from new input"
+            return (
+                "added",
+                missing_message_suffix,
+                missing_message_suffix,
+                "removed",
+                "generated only from old input",
+            )
+        case False:
+            return (
+                "missing",
+                "should be generated",
+                "file does not exist but should be generated",
+                "extra",
+                "no longer generated",
+            )
+
+
 def _compare_single_file(
     generated_path: Path,
     actual_path: Path,
@@ -1402,15 +1433,12 @@ def _compare_single_file(
 
     Returns:
         Tuple of (has_differences, diff_lines)
-        - has_differences: True if files differ or actual file doesn't exist
+        - has_differences: True if files differ
         - diff_lines: List of diff lines for output
     """
     generated_content = _normalize_line_endings(generated_path.read_text(encoding=encoding))
 
     display_path = comparison.single_file_display_path or actual_path.as_posix()
-    if not actual_path.exists():
-        return True, [f"MISSING: {display_path} (file does not exist but should be generated)"]
-
     actual_content = _normalize_line_endings(actual_path.read_text(encoding=encoding))
 
     if generated_content == actual_content:
@@ -1491,18 +1519,25 @@ def _compare_generated_single_file(
     """Build one single-file comparison report."""
     from datamodel_code_generator._structured_output import CheckDifferencePayload  # noqa: PLC0415
 
-    differences: list[CheckDifferencePayload] = []
+    path = comparison.single_file_display_path or actual_output.as_posix()
+    if not actual_output.exists():
+        missing_kind, _, single_file_missing_message_suffix, _, _ = _output_comparison_policy(
+            input_diff=comparison.input_diff
+        )
+        message = f"{missing_kind.upper()}: {path} ({single_file_missing_message_suffix})"
+        return OutputComparison(
+            differences=[CheckDifferencePayload(kind=missing_kind, path=path, message=message)],
+            content=f"{message}\n",
+        )
+
     diff_found, diff_lines = _compare_single_file(generated_output, actual_output, encoding, comparison)
     if not diff_found:
-        return OutputComparison(differences=differences, content="")
+        return OutputComparison(differences=[], content="")
 
-    path = comparison.single_file_display_path or actual_output.as_posix()
     diff_text = "".join(diff_lines)
-    if actual_output.exists():
-        differences.append(CheckDifferencePayload(kind="changed", path=path, diff=diff_text))
-    else:
-        differences.append(CheckDifferencePayload(kind="missing", path=path, message=diff_text))
-    return OutputComparison(differences=differences, content=diff_text)
+    return OutputComparison(
+        differences=[CheckDifferencePayload(kind="changed", path=path, diff=diff_text)], content=diff_text
+    )
 
 
 def _compare_generated_directories(
@@ -1522,20 +1557,9 @@ def _compare_generated_directories(
         encoding,
         comparison,
     )
-    missing_kind: Literal["added", "missing"]
-    missing_message_suffix: str
-    extra_kind: Literal["extra", "removed"]
-    extra_message_suffix: str
-    if comparison.input_diff:
-        missing_kind = "added"
-        missing_message_suffix = "generated only from new input"
-        extra_kind = "removed"
-        extra_message_suffix = "generated only from old input"
-    else:
-        missing_kind = "missing"
-        missing_message_suffix = "should be generated"
-        extra_kind = "extra"
-        extra_message_suffix = "no longer generated"
+    missing_kind, missing_message_suffix, _, extra_kind, extra_message_suffix = _output_comparison_policy(
+        input_diff=comparison.input_diff
+    )
     for changed_file in changed_files:
         diff_text = "".join(changed_file.diff_lines)
         differences.append(CheckDifferencePayload(kind="changed", path=changed_file.path, diff=diff_text))
