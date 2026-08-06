@@ -13,6 +13,7 @@ import sys
 from functools import lru_cache
 from importlib import import_module
 from pathlib import Path
+from types import ModuleType
 from typing import TYPE_CHECKING, Any
 from warnings import warn
 
@@ -39,6 +40,34 @@ MAX_SHORT_DEFAULT_OVERFLOW = 13
 LONG_TARGET_PREFIX_LENGTH = 30
 TYPE_ALIAS_INLINE_ARGUMENT_COUNT = 2
 STRING_PREFIX_PATTERN = re.compile(r"(?i)^([rubf]*)(\"\"\"|'''|\"|')")
+
+
+def _fresh_watch_module(module: ModuleType) -> ModuleType:
+    """Execute a watch dependency module from source before atomically replacing it."""
+    spec = module.__spec__
+    loader = spec.loader if spec is not None else None
+    get_source = getattr(loader, "get_source", None)
+    if spec is None or not callable(get_source) or (source := get_source(module.__name__)) is None:
+        return module
+    module_path = spec.origin or module.__file__ or module.__name__
+    replacement = ModuleType(module.__name__)
+    replacement.__file__ = module_path
+    replacement.__package__ = spec.parent
+    replacement.__loader__ = loader
+    replacement.__spec__ = spec
+    replacement.__cached__ = spec.cached
+    if spec.submodule_search_locations is not None:
+        replacement.__path__ = list(spec.submodule_search_locations)  # ty: ignore[unresolved-attribute]
+    exec(compile(source, module_path, "exec"), replacement.__dict__)  # noqa: S102
+
+    from datamodel_code_generator import PROCESS_STATE_LOCK  # noqa: PLC0415
+
+    with PROCESS_STATE_LOCK:
+        sys.modules[module.__name__] = replacement
+        parent_name, _, child_name = module.__name__.rpartition(".")
+        if parent_name and (parent_module := sys.modules.get(parent_name)) is not None:
+            setattr(parent_module, child_name, replacement)
+    return replacement
 
 
 # Keep the re-export shim visible to auto-fixers without changing star-import behavior.
@@ -423,9 +452,11 @@ class CodeFormatter:
     def _load_custom_formatter(self, custom_formatter_import: str) -> CustomCodeFormatter:
         """Load and instantiate a custom formatter from a module path."""
         import_ = import_module(custom_formatter_import)
-        from datamodel_code_generator.watch_dependencies import record_module_dependency  # noqa: PLC0415
-
-        record_module_dependency(import_)
+        if (watch_dependencies := sys.modules.get("datamodel_code_generator.watch_dependencies")) is not None and (
+            watch_dependencies.collector_is_active()
+        ):
+            import_ = _fresh_watch_module(import_)
+            watch_dependencies.record_module_dependency(import_)
 
         if not hasattr(import_, "CodeFormatter"):
             msg = f"Custom formatter module `{import_.__name__}` must contains object with name CodeFormatter"

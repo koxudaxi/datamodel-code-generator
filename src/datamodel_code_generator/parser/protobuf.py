@@ -9,6 +9,7 @@ from __future__ import annotations
 import contextlib
 import io
 import re
+import sys
 import tempfile
 from copy import deepcopy
 from pathlib import Path
@@ -20,6 +21,7 @@ from typing_extensions import Unpack
 from datamodel_code_generator import Error, ProtobufVersion, SchemaParseError, VersionMode
 from datamodel_code_generator.parser._math_imports import apply_math_imports_to_parse_result
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+from datamodel_code_generator.util import record_watch_dependency
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -90,6 +92,15 @@ SCALAR_SCHEMAS: dict[int, dict[str, Any]] = {
     TYPE_BYTES: {"type": "string", "format": "binary"},
 }
 SCALAR_OR_ENUM_TYPES = frozenset({*SCALAR_SCHEMAS, TYPE_ENUM})
+
+
+def _watch_dependency_collection_is_active() -> bool:
+    """Check the optional watch collector without importing it on regular generation."""
+    return (watch_dependencies := sys.modules.get("datamodel_code_generator.watch_dependencies")) is not None and (
+        watch_dependencies.collector_is_active()
+    )
+
+
 MAP_KEY_PYTHON_TYPES: dict[int, str] = {
     TYPE_INT32: "int",
     TYPE_INT64: "int",
@@ -351,9 +362,7 @@ class _ProtoInputPreparer:
         return input_files
 
     def _write_sanitized_file(self, source_path: Path, temp_path: Path, root: Path) -> Path:
-        from datamodel_code_generator.watch_dependencies import record_local_dependency  # noqa: PLC0415
-
-        record_local_dependency(source_path)
+        record_watch_dependency(source_path)
         if source_path.is_relative_to(root):
             target = temp_path / source_path.relative_to(root)
         else:  # pragma: no cover
@@ -691,7 +700,8 @@ class ProtobufParser(JsonSchemaParser):
             with tempfile.NamedTemporaryFile(suffix=".pb", delete=False) as output_file:
                 output_path = Path(output_file.name)
             try:
-                self._record_lexical_import_candidates(input_files, include_paths)
+                if _watch_dependency_collection_is_active():
+                    self._record_lexical_import_candidates(self._lexical_source_files(input_files), include_paths)
                 args = [
                     "grpc_tools.protoc",
                     *(f"-I{path}" for path in [*include_paths, well_known_include]),
@@ -709,52 +719,52 @@ class ProtobufParser(JsonSchemaParser):
                     raise SchemaParseError(msg)
                 descriptor_set = descriptor_pb2.FileDescriptorSet()
                 descriptor_set.ParseFromString(output_path.read_bytes())
-                self._record_descriptor_dependencies(descriptor_set, include_paths)
+                if _watch_dependency_collection_is_active():
+                    self._record_descriptor_dependencies(descriptor_set, include_paths)
                 return descriptor_set, input_file_names
             finally:
                 with contextlib.suppress(OSError):
                     output_path.unlink()
 
+    def _lexical_source_files(self, input_files: Sequence[Path]) -> Sequence[Path]:
+        """Prefer original local sources over protoc's temporary sanitized copies."""
+        if isinstance(self.source, Path):
+            return sorted(self.source.rglob("*.proto")) if self.source.is_dir() else [self.source]
+        return self.source if isinstance(self.source, list) else input_files
+
     def _record_lexical_import_candidates(self, input_files: Sequence[Path], include_paths: Sequence[Path]) -> None:
         """Breadth-first record source imports before ``protoc`` can reject a nested missing file."""
-        from datamodel_code_generator.watch_dependencies import record_local_dependency  # noqa: PLC0415
-
-        pending_texts = [input_file.read_text(encoding=self.config.encoding) for input_file in input_files]
-        pending_files: list[Path] = []
+        pending_files = list(input_files)
         visited_files: set[Path] = set()
         source_include_paths = include_paths[1:]
-        while pending_texts or pending_files:
-            if pending_texts:
-                text = pending_texts.pop()
-            else:
-                source_path = pending_files.pop()
-                if source_path in visited_files:
-                    continue
-                visited_files.add(source_path)
-                try:
-                    text = source_path.read_text(encoding=self.config.encoding)
-                except OSError:
-                    continue
+        while pending_files:
+            source_path = pending_files.pop()
+            if source_path in visited_files:
+                continue
+            visited_files.add(source_path)
+            try:
+                text = source_path.read_text(encoding=self.config.encoding)
+            except OSError:
+                continue
             for import_path in IMPORT_PATTERN.findall(text):
-                candidates = tuple(include_path / import_path for include_path in source_include_paths)
+                candidates = tuple(dict.fromkeys((source_path.parent, *source_include_paths)))
+                candidates = tuple(include_path / import_path for include_path in candidates)
                 existing_candidate = next((candidate for candidate in candidates if candidate.is_file()), None)
                 if existing_candidate is not None:
-                    record_local_dependency(existing_candidate)
+                    record_watch_dependency(existing_candidate)
                     pending_files.append(existing_candidate)
                 else:
                     for candidate in candidates:
-                        record_local_dependency(candidate)
+                        record_watch_dependency(candidate)
 
     @staticmethod
     def _record_descriptor_dependencies(descriptor_set: Any, include_paths: Sequence[Path]) -> None:
         """Record local ``protoc`` imports without retaining descriptor contents."""
-        from datamodel_code_generator.watch_dependencies import record_local_dependency  # noqa: PLC0415
-
         for descriptor in descriptor_set.file:
-            for include_path in include_paths:
+            for include_path in include_paths[1:]:
                 candidate = include_path / descriptor.name
                 if candidate.is_file():
-                    record_local_dependency(candidate)
+                    record_watch_dependency(candidate)
                     break
 
     def convert_to_json_schema_data(self) -> dict[str, Any]:

@@ -803,6 +803,114 @@ def test_watch_cli_regenerates_when_a_symlinked_input_is_repointed(tmp_path: Pat
         _stop_watch_cli(process, stdout_thread, stderr_thread)
 
 
+@pytest.mark.skipif(os.name == "nt", reason="the lexical input fixture requires POSIX symlinks")
+def test_watch_cli_regenerates_when_a_symlinked_input_directory_is_repointed(tmp_path: Path) -> None:
+    """Watch the symlink ancestor of a lexical ``link/schema.json`` input path."""
+    file_change_data_path = WATCH_DATA_PATH / "file_change"
+    first_directory = tmp_path / "first"
+    second_directory = tmp_path / "second"
+    input_link = tmp_path / "link"
+    output_file = tmp_path / "output.py"
+    first_directory.mkdir()
+    second_directory.mkdir()
+    (first_directory / "schema.json").write_text(
+        (file_change_data_path / "initial.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    (second_directory / "schema.json").write_text(
+        (file_change_data_path / "changed.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    input_link.symlink_to(first_directory.relative_to(tmp_path), target_is_directory=True)
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
+        input_link / "schema.json",
+        output_file,
+    )
+
+    try:
+        time.sleep(WATCH_CLI_CHANGE_RETRY_SECONDS)
+        input_link.unlink()
+        input_link.symlink_to(second_directory.relative_to(tmp_path), target_is_directory=True)
+        _wait_for_watch_cli(
+            process,
+            stdout_lines,
+            stderr_lines,
+            lambda: _file_contains(output_file, "age: int | None = None"),
+            "the repointed symlink ancestor input to regenerate",
+        )
+        assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_file_change.py")
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+@pytest.mark.allow_direct_assert
+@pytest.mark.parametrize("formatter_is_package", [False, True], ids=["module", "package"])
+def test_watch_cli_reloads_custom_formatter_module_after_edit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    formatter_is_package: bool,
+) -> None:
+    """Editing a custom formatter reloads its actual module before the next generation."""
+    file_change_data_path = WATCH_DATA_PATH / "file_change"
+    project_directory = tmp_path / "project"
+    formatter_directory = tmp_path / "formatter"
+    input_file = project_directory / "schema.json"
+    output_file = project_directory / "output.py"
+    formatter_name = "reloadable_watch_package" if formatter_is_package else "reloadable_watch"
+    formatter_file = (
+        formatter_directory / formatter_name / "__init__.py"
+        if formatter_is_package
+        else formatter_directory / f"{formatter_name}.py"
+    )
+    project_directory.mkdir()
+    formatter_directory.mkdir()
+    formatter_file.parent.mkdir(exist_ok=True)
+    input_file.write_text((file_change_data_path / "initial.json").read_text(encoding="utf-8"), encoding="utf-8")
+    (project_directory / "pyproject.toml").write_text(
+        f'[tool.datamodel-codegen]\ncustom-formatters = "{formatter_name}"\n',
+        encoding="utf-8",
+    )
+    shutil.copyfile(WATCH_DATA_PATH.parent / "python/custom_formatters/reloadable_watch.py", formatter_file)
+    formatter_timestamp = 1_700_000_000
+    os.utime(formatter_file, (formatter_timestamp, formatter_timestamp))
+    previous_python_path = os.environ.get("PYTHONPATH")
+    monkeypatch.setenv(
+        "PYTHONPATH",
+        str(formatter_directory)
+        if previous_python_path is None
+        else f"{formatter_directory}{os.pathsep}{previous_python_path}",
+    )
+    monkeypatch.setenv("WATCHFILES_FORCE_POLLING", "false")
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
+        input_file,
+        output_file,
+        working_directory=project_directory,
+    )
+
+    try:
+        assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_custom_formatter_initial.py")
+        time.sleep(WATCH_CLI_CHANGE_RETRY_SECONDS)
+        formatter_update = formatter_directory / "reloadable-watch-update.py"
+        shutil.copyfile(
+            WATCH_DATA_PATH.parent / "python/custom_formatters/reloadable_watch_changed.py",
+            formatter_update,
+        )
+        os.utime(formatter_file, (formatter_timestamp, formatter_timestamp))
+        os.utime(formatter_update, (formatter_timestamp, formatter_timestamp))
+        assert formatter_update.stat().st_size == formatter_file.stat().st_size
+        formatter_update.replace(formatter_file)
+        _wait_for_watch_cli(
+            process,
+            stdout_lines,
+            stderr_lines,
+            lambda: _file_contains(output_file, 'formatter_revision = "changed"'),
+            "the edited custom formatter module to be reloaded",
+        )
+        assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_custom_formatter_changed.py")
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
 def test_watch_and_regenerate_without_input() -> None:
     """Test watch_and_regenerate returns error when input is None."""
     from datamodel_code_generator.__main__ import Config
@@ -827,13 +935,12 @@ def test_watch_and_regenerate_handles_exhausted_watcher(mocker: pytest.MockerFix
 def test_watch_dependency_paths_are_limited_to_generation_inputs(tmp_path: Path) -> None:
     """Dependency collection retains paths, not parsed source content or output files."""
     from datamodel_code_generator.__main__ import Config
-    from datamodel_code_generator.watch import _is_generated_output, _watch_filter
+    from datamodel_code_generator.watch import _watch_filter
     from datamodel_code_generator.watch_dependencies import (
         WatchDependencies,
         _existing_file,
         _nearest_pyproject_toml,
         record_local_dependency,
-        record_module_dependency,
     )
 
     input_file = tmp_path / "schema.json"
@@ -869,32 +976,29 @@ def test_watch_dependency_paths_are_limited_to_generation_inputs(tmp_path: Path)
     })
     assert dependencies.directories == frozenset({template_dir})
     watch_filter = _watch_filter(dependencies)
-    assert not _is_generated_output(referenced_file, None)
     assert watch_filter(None, str(referenced_file))
     assert watch_filter(None, str(template_dir / "BaseModel.jinja2"))
+    assert not dependencies.accepts_event(output_dir / "model.py")
     assert not watch_filter(None, str(output_dir / "model.py"))
     assert _existing_file("\0") is None
     assert _nearest_pyproject_toml(tmp_path) is None
 
-    def custom_class_name_generator(name: str) -> str:
-        return name
+    with pytest.raises(RuntimeError, match=WATCH_GENERATION_ERROR):
+        _record_failed_dependency(dependencies, tmp_path / "attempted.json")
 
-    callable_dependencies = WatchDependencies()
-    callable_dependencies.configure(
-        SimpleNamespace(
-            input=input_file,
-            output=None,
-            custom_file_header_path=None,
-            custom_template_dir=None,
-            http_local_ref_path=None,
-            custom_class_name_generator=custom_class_name_generator,
-        ),
-        config_values={},
-    )
-    assert Path(__file__) in callable_dependencies.files
+    assert referenced_file in dependencies.files
+    assert tmp_path / "attempted.json" in dependencies.files
 
+
+@pytest.mark.allow_direct_assert
+def test_watch_dependencies_collect_module_formatter_and_protobuf_files(tmp_path: Path) -> None:
+    """Generation collection includes module, formatter, and nested protobuf resources."""
     import py_compile
     from importlib.util import cache_from_source
+
+    from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersionMin
+    from datamodel_code_generator.parser.protobuf import ProtobufParser
+    from datamodel_code_generator.watch_dependencies import WatchDependencies, record_module_dependency
 
     source_module = tmp_path / "custom_module.py"
     source_module.write_text("value = 1\n", encoding="utf-8")
@@ -902,12 +1006,11 @@ def test_watch_dependency_paths_are_limited_to_generation_inputs(tmp_path: Path)
     py_compile.compile(str(source_module), cfile=str(cached_module), doraise=True)
     module = ModuleType("custom_module")
     module.__file__ = str(cached_module)
-    with callable_dependencies.generation():
+    module_dependencies = WatchDependencies()
+    with module_dependencies.generation():
         record_module_dependency(module)
-    assert source_module in callable_dependencies.files
+    assert source_module in module_dependencies.files
     assert record_module_dependency(ModuleType("built_in")) is None
-
-    from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersionMin
 
     formatter_dependencies = WatchDependencies()
     with formatter_dependencies.generation():
@@ -917,8 +1020,6 @@ def test_watch_dependency_paths_are_limited_to_generation_inputs(tmp_path: Path)
             formatters=[Formatter.BUILTIN],
         )
     assert PROJECT_ROOT / "tests/data/python/custom_formatters/add_comment.py" in formatter_dependencies.files
-
-    from datamodel_code_generator.parser.protobuf import ProtobufParser
 
     proto_directory = tmp_path / "protos"
     proto_directory.mkdir()
@@ -937,12 +1038,6 @@ def test_watch_dependency_paths_are_limited_to_generation_inputs(tmp_path: Path)
     assert child_proto in protobuf_dependencies.files
     assert nested_proto in protobuf_dependencies.files
 
-    with pytest.raises(RuntimeError, match=WATCH_GENERATION_ERROR):
-        _record_failed_dependency(dependencies, tmp_path / "attempted.json")
-
-    assert referenced_file in dependencies.files
-    assert tmp_path / "attempted.json" in dependencies.files
-
 
 @pytest.mark.allow_direct_assert
 def test_watch_dependencies_ignore_unexpandable_config_path(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -960,6 +1055,243 @@ def test_watch_dependencies_ignore_unexpandable_config_path(monkeypatch: pytest.
     monkeypatch.setattr(Path, "expanduser", raise_expansion_error)
 
     assert _existing_file("unexpandable.json") is None
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_dependencies_record_regular_yaml_loads_and_direct_files(tmp_path: Path) -> None:
+    """Collector bridges capture regular YAML loads while direct additions stay available."""
+    from datamodel_code_generator import load_yaml_dict_from_path
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    yaml_file = tmp_path / "schema.yaml"
+    yaml_file.write_text("title: WatchedPerson\n", encoding="utf-8")
+    dependencies = WatchDependencies()
+    with dependencies.generation():
+        assert load_yaml_dict_from_path(yaml_file, "utf-8") == {"title": "WatchedPerson"}
+    dependencies.record_file(yaml_file)
+
+    assert yaml_file in dependencies.files
+    assert dependencies.output is None
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_dependencies_continue_when_symlink_inspection_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """An inaccessible symlink ancestor retains the lexical dependency path."""
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    original_is_symlink = Path.is_symlink
+    error_message = "unavailable"
+
+    def raise_symlink_error(path: Path) -> bool:
+        if path == input_file:
+            raise OSError(error_message)
+        return original_is_symlink(path)
+
+    monkeypatch.setattr(Path, "is_symlink", raise_symlink_error)
+    dependencies = WatchDependencies()
+    dependencies.add_file(input_file)
+
+    assert dependencies.includes(input_file)
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_custom_formatter_without_source_reuses_loaded_module() -> None:
+    """Non-source custom modules keep their stable loaded object in watch collection."""
+    from datamodel_code_generator.format import _fresh_watch_module
+
+    formatter_module = ModuleType("formatter_without_source")
+
+    assert _fresh_watch_module(formatter_module) is formatter_module
+
+
+@pytest.mark.allow_direct_assert
+def test_protobuf_lexical_sources_fall_back_to_prepared_inputs(tmp_path: Path) -> None:
+    """In-memory protobuf sources keep using the prepared compiler inputs."""
+    from datamodel_code_generator.parser.protobuf import ProtobufParser
+
+    prepared_inputs = [tmp_path / "schema.proto"]
+
+    assert (
+        ProtobufParser._lexical_source_files(SimpleNamespace(source="syntax = 'proto3';"), prepared_inputs)
+        is prepared_inputs
+    )
+
+
+@pytest.mark.allow_direct_assert
+def test_protobuf_descriptor_collection_skips_compiler_only_include_path(tmp_path: Path) -> None:
+    """The generated temporary protobuf root does not become a watch dependency."""
+    from google.protobuf import descriptor_pb2
+
+    from datamodel_code_generator.parser.protobuf import ProtobufParser
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    descriptor_set = descriptor_pb2.FileDescriptorSet()
+    descriptor_set.file.add().name = "google/protobuf/empty.proto"
+    dependencies = WatchDependencies()
+    with dependencies.generation():
+        ProtobufParser._record_descriptor_dependencies(descriptor_set, [tmp_path / "prepared"])
+
+    assert not dependencies.files
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_state_discards_events_after_its_diagnostic_sample_is_full() -> None:
+    """A full sample preserves the dirty flag without retaining another event."""
+    from datamodel_code_generator.watch import _PENDING_CHANGE_SAMPLE_LIMIT, _WatcherState
+
+    state = _WatcherState({(None, str(index)) for index in range(_PENDING_CHANGE_SAMPLE_LIMIT)})
+    state.add_changes({(None, "discarded")})
+
+    assert state.has_pending_changes
+    assert len(state.pending_change_sample) == _PENDING_CHANGE_SAMPLE_LIMIT
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_dependencies_publish_complete_generation_graphs(tmp_path: Path) -> None:
+    """Configure and generation publication never expose a temporary dependency gap."""
+    from datamodel_code_generator.__main__ import Config
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    first_input = tmp_path / "first.json"
+    second_input = tmp_path / "second.json"
+    failed_input = tmp_path / "failed.json"
+    for path in (first_input, second_input, failed_input):
+        path.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    dependencies = WatchDependencies()
+    dependencies.configure(Config(input=first_input), config_values={})
+    dependencies.configure(Config(input=second_input), config_values={})
+
+    assert dependencies.includes(first_input)
+    assert dependencies.includes(second_input)
+    with dependencies.generation():
+        dependencies.record_file(second_input)
+    assert dependencies.includes(second_input)
+    assert not dependencies.includes(first_input)
+
+    dependencies.configure(Config(input=first_input), config_values={})
+    with pytest.raises(RuntimeError, match=WATCH_GENERATION_ERROR):
+        _record_failed_dependency(dependencies, failed_input)
+
+    assert dependencies.includes(first_input)
+    assert dependencies.includes(second_input)
+    assert dependencies.includes(failed_input)
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_dependencies_do_not_watch_the_filesystem_root_for_system_symlink_ancestors() -> None:
+    """A lexical path below ``/tmp`` never promotes the stable system link parent to ``/``."""
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    dependencies = WatchDependencies()
+    dependencies.add_file(Path("/tmp/dcg-watch-root-protection/schema.json"))
+
+    assert Path("/") not in dependencies.watch_roots()
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_dependencies_accept_events_with_unresolvable_paths(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """An event path whose resolver rejects it still checks lexical membership."""
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    dependencies = WatchDependencies()
+    dependencies.add_file(input_file)
+    original_resolve = Path.resolve
+
+    def raise_value_error(path: Path, *args: object, **kwargs: object) -> Path:
+        if path == input_file:
+            msg = "unresolvable"
+            raise ValueError(msg)
+        return original_resolve(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", raise_value_error)
+
+    assert dependencies.accepts_event(input_file)
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_dependencies_exclude_staged_and_failed_generation_outputs(tmp_path: Path) -> None:
+    """Output exclusions publish before a generation and retain recovery outputs after failure."""
+    from datamodel_code_generator.__main__ import Config
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    input_file = tmp_path / "schema.json"
+    initial_output = tmp_path / "initial.py"
+    attempted_output = tmp_path / "attempted.py"
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    dependencies = WatchDependencies()
+    dependencies.configure(Config(input=input_file, output=initial_output), config_values={})
+    dependencies.configure(Config(input=input_file, output=attempted_output), config_values={})
+
+    assert not dependencies.accepts_event(attempted_output)
+    with pytest.raises(RuntimeError, match=WATCH_GENERATION_ERROR), dependencies.generation():
+        raise RuntimeError(WATCH_GENERATION_ERROR)
+
+    assert not dependencies.accepts_event(initial_output)
+    assert not dependencies.accepts_event(attempted_output)
+    with dependencies.generation():
+        pass
+    assert dependencies.outputs == frozenset({attempted_output})
+
+
+@pytest.mark.skipif(find_spec("grpc_tools") is None, reason="requires the protobuf extra")
+def test_regular_generation_does_not_load_watch_dependency_collector(tmp_path: Path) -> None:
+    """Non-watch protobuf and custom formatter execution skip all watch collector work."""
+    formatter_directory = tmp_path / "formatter"
+    schema_directory = tmp_path / "schemas"
+    output_file = tmp_path / "protobuf.py"
+    formatter_directory.mkdir()
+    shutil.copytree(WATCH_DATA_PATH / "protobuf_import", schema_directory)
+    (schema_directory / "child.proto").write_text(
+        (schema_directory / "child_changed.proto").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    shutil.copyfile(
+        WATCH_DATA_PATH.parent / "python/custom_formatters/reloadable_watch.py",
+        formatter_directory / "normal_formatter.py",
+    )
+    environment = {**os.environ, "PYTHONPATH": f"{formatter_directory}{os.pathsep}{PROJECT_ROOT}"}
+    formatter_script = """\
+import sys
+from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersionMin
+
+CodeFormatter(PythonVersionMin, custom_formatters=["normal_formatter"], formatters=[Formatter.BUILTIN])
+if "datamodel_code_generator.watch_dependencies" in sys.modules:
+    raise RuntimeError("custom formatter imported watch dependencies")
+"""
+    protobuf_args = [
+        "--input",
+        str(schema_directory / "root.proto"),
+        "--input-file-type",
+        "protobuf",
+        "--output",
+        str(output_file),
+        "--formatters",
+        "builtin",
+        "--disable-timestamp",
+    ]
+    protobuf_script = f"""\
+import sys
+from datamodel_code_generator.__main__ import Exit, main
+
+result = main({protobuf_args!r})
+if result != Exit.OK:
+    raise RuntimeError("protobuf generation failed")
+if "datamodel_code_generator.watch_dependencies" in sys.modules:
+    raise RuntimeError("protobuf generation imported watch dependencies")
+"""
+
+    subprocess.run([sys.executable, "-c", formatter_script], check=True, cwd=PROJECT_ROOT, env=environment)
+    subprocess.run([sys.executable, "-c", protobuf_script], check=True, cwd=PROJECT_ROOT, env=environment)
+
+    assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_protobuf_import_change.py")
 
 
 @pytest.mark.allow_direct_assert
@@ -1374,28 +1706,28 @@ def test_watch_cli_catches_up_changes_queued_while_restarting_roots(
     add_catch_up_template_root: bool,
 ) -> None:
     """A retiring watcher retains an input event while dependency roots are restarted."""
-    file_change_data_path = WATCH_DATA_PATH / "file_change"
     project_directory = tmp_path / "project"
     formatter_directory = tmp_path / "formatter"
     template_directory = tmp_path / "templates"
     input_file = project_directory / "schema.json"
     output_file = project_directory / "output.py"
     pyproject_file = project_directory / "pyproject.toml"
-    formatter_file = formatter_directory / "blocking_formatter.py"
     marker_file = tmp_path / "formatter-started"
     release_file = tmp_path / "formatter-release"
     project_directory.mkdir()
     formatter_directory.mkdir()
     template_directory.mkdir()
-    input_file.write_text((file_change_data_path / "initial.json").read_text(encoding="utf-8"), encoding="utf-8")
+    input_file.write_text((WATCH_DATA_PATH / "file_change/initial.json").read_text(encoding="utf-8"), encoding="utf-8")
     pyproject_file.write_text("[tool.datamodel-codegen]\n", encoding="utf-8")
-    shutil.copyfile(WATCH_DATA_PATH.parent / "python/custom_formatters/blocking_watch.py", formatter_file)
-    previous_python_path = os.environ.get("PYTHONPATH")
+    shutil.copyfile(
+        WATCH_DATA_PATH.parent / "python/custom_formatters/blocking_watch.py",
+        formatter_directory / "blocking_formatter.py",
+    )
     monkeypatch.setenv(
         "PYTHONPATH",
-        str(formatter_directory)
-        if previous_python_path is None
-        else f"{formatter_directory}{os.pathsep}{previous_python_path}",
+        f"{formatter_directory}{os.pathsep}{os.environ['PYTHONPATH']}"
+        if "PYTHONPATH" in os.environ
+        else str(formatter_directory),
     )
     monkeypatch.setenv("DATAMODEL_CODEGEN_WATCH_MARKER", str(marker_file))
     monkeypatch.setenv("DATAMODEL_CODEGEN_WATCH_RELEASE", str(release_file))
@@ -1422,7 +1754,9 @@ def test_watch_cli_catches_up_changes_queued_while_restarting_roots(
             marker_file.is_file,
             "the custom formatter to begin the root-changing regeneration",
         )
-        input_file.write_text((file_change_data_path / "changed.json").read_text(encoding="utf-8"), encoding="utf-8")
+        input_file.write_text(
+            (WATCH_DATA_PATH / "file_change/changed.json").read_text(encoding="utf-8"), encoding="utf-8"
+        )
         if add_catch_up_template_root:
             caught_up_pyproject = project_directory / "pyproject-catchup.toml"
             caught_up_pyproject.write_text(

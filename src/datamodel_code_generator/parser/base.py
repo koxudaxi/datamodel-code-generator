@@ -91,7 +91,7 @@ from datamodel_code_generator.parser.generation import GenerationIndex, Generati
 from datamodel_code_generator.parser.schema_version import SchemaFeaturesT
 from datamodel_code_generator.reference import ModelResolver, ModelType, Reference, split_module_name
 from datamodel_code_generator.types import ANY, NONE, DataType, DataTypeManager
-from datamodel_code_generator.util import camel_to_snake
+from datamodel_code_generator.util import camel_to_snake, record_watch_dependency
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
@@ -1465,9 +1465,7 @@ class Source(BaseModel):
         encoding: str,
     ) -> Source:
         """Create a Source from a file path relative to base_path."""
-        from datamodel_code_generator.watch_dependencies import record_local_dependency  # noqa: PLC0415
-
-        record_local_dependency(path)
+        record_watch_dependency(path)
         return cls(
             path=path.relative_to(base_path),
             text=path.read_text(encoding=encoding),

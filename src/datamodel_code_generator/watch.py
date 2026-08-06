@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 import threading
 from dataclasses import dataclass
+from itertools import islice
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -13,6 +14,8 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator.__main__ import Config, Exit
     from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+_PENDING_CHANGE_SAMPLE_LIMIT = 32
 
 
 def _get_watchfiles() -> Any:
@@ -25,19 +28,9 @@ def _get_watchfiles() -> Any:
     return watchfiles
 
 
-def _is_generated_output(path: Path, output: Path | None) -> bool:
-    if output is None:
-        return False
-    resolved_output = output.resolve()
-    if output.suffix:
-        return path == resolved_output
-    return path == resolved_output or path.is_relative_to(resolved_output)
-
-
 def _watch_filter(dependencies: WatchDependencies) -> Callable[[Any, str], bool]:
     def includes_dependency(_change: Any, path: str) -> bool:
-        event_path = Path(path)
-        return not _is_generated_output(event_path.resolve(), dependencies.output) and dependencies.includes(event_path)
+        return dependencies.accepts_event(Path(path))
 
     return includes_dependency
 
@@ -61,6 +54,35 @@ class _WatchContext:
     regenerate: Callable[[], Exit]
 
 
+@dataclass(slots=True)
+class _WatcherState:
+    """Small bounded hand-off from the watch thread to the regeneration loop."""
+
+    pending_change_sample: set[tuple[Any, str]]
+    has_pending_changes: bool = False
+    error: BaseException | None = None
+    exhausted: bool = False
+
+    def add_changes(self, changes: set[tuple[Any, str]]) -> None:
+        """Keep a diagnostic sample without retaining an unbounded event stream."""
+        self.has_pending_changes = True
+        remaining = _PENDING_CHANGE_SAMPLE_LIMIT - len(self.pending_change_sample)
+        if remaining > 0:
+            self.pending_change_sample.update(islice(changes, remaining))
+
+    def take_changes(self) -> set[tuple[Any, str]]:
+        """Drain the diagnostic sample while retaining the change notification."""
+        changes = self.pending_change_sample.copy()
+        self.pending_change_sample.clear()
+        self.has_pending_changes = False
+        return changes
+
+    @property
+    def is_ready(self) -> bool:
+        """Whether the main watch loop has work, an error, or completion to process."""
+        return self.has_pending_changes or self.error is not None or self.exhausted
+
+
 def _regenerate_after_change(changes: set[tuple[Any, str]] | None, regenerate: Callable[[], Exit]) -> None:
     if changes is None:
         print("\nDetected changes while restarting the watcher.")  # noqa: T201
@@ -74,72 +96,78 @@ def _regenerate_after_change(changes: set[tuple[Any, str]] | None, regenerate: C
         print(f"Error: {e}", file=sys.stderr)  # noqa: T201
 
 
+def _watch_changes(
+    context: _WatchContext,
+    watch_roots: tuple[Path, ...],
+    stop_event: threading.Event,
+    condition: threading.Condition,
+    state: _WatcherState,
+) -> None:
+    """Publish filesystem changes from the persistent background watch stream."""
+    try:
+        for changes in context.watchfiles.watch(
+            *watch_roots,
+            debounce=int(context.config.watch_delay * 1000),
+            poll_delay_ms=max(1, min(300, int(context.config.watch_delay * 1000))),
+            recursive=True,
+            stop_event=stop_event,
+            watch_filter=_watch_filter(context.dependencies),
+        ):
+            with condition:
+                state.add_changes(changes)
+                condition.notify()
+    except (KeyboardInterrupt, Exception) as exc:  # noqa: BLE001
+        with condition:
+            state.error = exc
+            condition.notify()
+    finally:
+        with condition:
+            state.exhausted = True
+            condition.notify()
+
+
+def _wait_for_changes(condition: threading.Condition, state: _WatcherState) -> set[tuple[Any, str]] | None:
+    """Block for a watched change, raising a background watcher failure when present."""
+    with condition:
+        while not state.is_ready:
+            condition.wait()
+        if state.error is not None:
+            raise state.error
+        if not state.has_pending_changes:
+            return None
+        return state.take_changes()
+
+
 def _watch_once(
     context: _WatchContext,
     watch_roots: tuple[Path, ...],
     *,
     catch_up: bool,
-) -> tuple[bool, bool]:
+) -> bool:
     stop_event = threading.Event()
     condition = threading.Condition()
-    pending_changes: set[tuple[Any, str]] = set()
-    watcher_error: BaseException | None = None
-    watcher_exhausted = False
-
-    def watch_changes() -> None:
-        nonlocal watcher_error, watcher_exhausted
-
-        try:
-            for changes in context.watchfiles.watch(
-                *watch_roots,
-                debounce=int(context.config.watch_delay * 1000),
-                poll_delay_ms=max(1, min(300, int(context.config.watch_delay * 1000))),
-                recursive=True,
-                stop_event=stop_event,
-                watch_filter=_watch_filter(context.dependencies),
-            ):
-                with condition:
-                    pending_changes.update(changes)
-                    condition.notify()
-        except KeyboardInterrupt as exc:
-            with condition:
-                watcher_error = exc
-                condition.notify()
-        except Exception as exc:  # noqa: BLE001
-            with condition:
-                watcher_error = exc
-                condition.notify()
-        finally:
-            with condition:
-                watcher_exhausted = True
-                condition.notify()
-
-    watcher = threading.Thread(target=watch_changes, name="datamodel-codegen-watch", daemon=True)
+    state = _WatcherState(set())
+    watcher = threading.Thread(
+        target=_watch_changes,
+        args=(context, watch_roots, stop_event, condition, state),
+        name="datamodel-codegen-watch",
+        daemon=True,
+    )
     watcher.start()
-    restart = False
     try:
         if catch_up:
             _regenerate_after_change(None, context.regenerate)
             if context.dependencies.watch_roots() != watch_roots:
-                restart = True
+                return True
 
-        while not restart:
-            with condition:
-                condition.wait_for(lambda: pending_changes or watcher_error is not None or watcher_exhausted)
-                if watcher_error is not None:
-                    raise watcher_error
-                if not pending_changes:
-                    break
-                changes = pending_changes.copy()
-                pending_changes.clear()
+        while (changes := _wait_for_changes(condition, state)) is not None:
             _regenerate_after_change(changes, context.regenerate)
             if context.dependencies.watch_roots() != watch_roots:
-                restart = True
+                return True
     finally:
         stop_event.set()
         watcher.join()
-    with condition:
-        return restart, bool(pending_changes)
+    return False
 
 
 def watch_and_regenerate(
@@ -169,13 +197,14 @@ def watch_and_regenerate(
     catch_up = False
     try:
         while watch_roots := dependencies.watch_roots():
-            restart, catch_up = _watch_once(
+            restart = _watch_once(
                 watch_context,
                 watch_roots,
                 catch_up=catch_up,
             )
             if not restart:
                 return Exit.OK
+            catch_up = True
     except KeyboardInterrupt:
         print("\nWatch mode stopped.")  # noqa: T201
 
