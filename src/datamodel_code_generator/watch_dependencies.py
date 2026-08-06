@@ -202,10 +202,8 @@ class WatchDependencies(_Weakrefable):
             static_files |= candidate.files
             static_directories |= candidate.directories
             static_symlink_events |= candidate.symlink_events
-        failed_generation_files = self._failed_generation_files if self._pending_static is None else set()
-        failed_generation_symlink_events = (
-            self._failed_generation_symlink_events if self._pending_static is None else set()
-        )
+        failed_generation_files = self._failed_generation_files
+        failed_generation_symlink_events = self._failed_generation_symlink_events
         files = frozenset(static_files | self._generation_files | failed_generation_files)
         directories = frozenset(static_directories)
         event_paths = frozenset(

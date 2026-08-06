@@ -1725,6 +1725,52 @@ def test_generate_uses_logical_output_context_for_custom_formatter_and_lock(
     assert (tmp_path / "locks/remote.lock").is_file()
 
 
+def test_generate_publishes_extensionless_file_output_with_remote_lock(tmp_path: Path) -> None:
+    """A missing extensionless public output remains a single file during atomic lock updates."""
+    output_path = tmp_path / "models"
+    lockfile = tmp_path / "remote.lock"
+
+    generate(
+        JSON_SCHEMA_DATA_PATH / "person.json",
+        config=GenerateConfig(
+            disable_timestamp=True,
+            input_file_type=InputFileType.JsonSchema,
+            output=output_path,
+            lockfile=lockfile,
+            update_lock=True,
+        ),
+    )
+
+    assert output_path.is_file()
+    assert_output(output_path.read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
+    assert lockfile.is_file()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="lockfile symlink creation requires elevated privileges")
+def test_generate_update_lock_preserves_lockfile_symlink(tmp_path: Path) -> None:
+    """Public atomic updates resolve a lockfile symlink and replace its target instead."""
+    output_path = tmp_path / "output.py"
+    lockfile = tmp_path / "remote.lock"
+    lock_target = tmp_path / "remote-target.lock"
+    lockfile.symlink_to(lock_target)
+
+    generate(
+        JSON_SCHEMA_DATA_PATH / "person.json",
+        config=GenerateConfig(
+            disable_timestamp=True,
+            input_file_type=InputFileType.JsonSchema,
+            output=output_path,
+            lockfile=lockfile,
+            update_lock=True,
+        ),
+    )
+
+    assert lockfile.is_symlink()
+    assert lockfile.readlink() == lock_target
+    assert lock_target.is_file()
+    assert_output(output_path.read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
+
+
 def test_generate_rejects_a_lockfile_inside_a_multimodule_output_before_fetching(
     mocker: MockerFixture,
     local_http_server: str,
@@ -2140,11 +2186,10 @@ def test_cli_remote_lock_transaction_reports_cleanup_failure_after_publication(
     real_cleanup = main_module._cleanup_staged_job_plans
     cleanup_message = "simulated output cleanup failure"
 
-    def cleanup_then_fail(staged_plans: object) -> None:
-        real_cleanup(staged_plans)
-        raise OSError(cleanup_message)
+    def cleanup_with_error(staged_plans: object) -> tuple[OSError, ...]:
+        return (*real_cleanup(staged_plans), OSError(cleanup_message))
 
-    monkeypatch.setattr(main_module, "_cleanup_staged_job_plans", cleanup_then_fail)
+    monkeypatch.setattr(main_module, "_cleanup_staged_job_plans", cleanup_with_error)
     run_main_with_args(
         [
             "--input",
@@ -2186,9 +2231,8 @@ def test_cli_remote_lock_transaction_keeps_primary_error_when_cleanup_also_fails
     lock_cleanup_message = "simulated lock cleanup failure"
     discard_attempted = False
 
-    def cleanup_then_fail(staged_plans: object) -> None:
-        real_cleanup(staged_plans)
-        raise OSError(cleanup_message)
+    def cleanup_with_error(staged_plans: object) -> tuple[OSError, ...]:
+        return (*real_cleanup(staged_plans), OSError(cleanup_message))
 
     def discard_then_fail(transaction: object) -> None:
         nonlocal discard_attempted
@@ -2196,7 +2240,7 @@ def test_cli_remote_lock_transaction_keeps_primary_error_when_cleanup_also_fails
         real_discard(transaction)
         raise OSError(lock_cleanup_message)
 
-    monkeypatch.setattr(main_module, "_cleanup_staged_job_plans", cleanup_then_fail)
+    monkeypatch.setattr(main_module, "_cleanup_staged_job_plans", cleanup_with_error)
     monkeypatch.setattr(main_module._RemoteLockTransaction, "discard", discard_then_fail)
     run_main_with_args(
         [

@@ -2505,7 +2505,7 @@ def _single_job_plan(config: Config, pyproject_path: Path | None) -> JobPlan:
     )
 
 
-def _run_single_remote_transaction(  # noqa: PLR0912, PLR0913, PLR0917
+def _run_single_remote_transaction(  # noqa: PLR0913, PLR0917
     args: Sequence[str],
     config: Config,
     pyproject_config: Mapping[str, Any],
@@ -2569,17 +2569,12 @@ def _run_single_remote_transaction(  # noqa: PLR0912, PLR0913, PLR0917
         print(f"Error: could not prepare command output staging: {exc}", file=sys.stderr)  # noqa: T201
         exit_code = Exit.ERROR
     finally:
-        cleanup_error: OSError | None = None
+        cleanup_errors = _cleanup_staged_job_plans(staged_plans)
         try:
-            _cleanup_staged_job_plans(staged_plans)
+            remote_locks.discard()
         except OSError as exc:
-            cleanup_error = exc
-        finally:
-            try:
-                remote_locks.discard()
-            except OSError as exc:
-                cleanup_error = cleanup_error or exc
-        if cleanup_error is not None:
+            cleanup_errors += (exc,)
+        if cleanup_error := _staging_cleanup_error(None, cleanup_errors):
             print(f"Error: could not clean up command transaction: {cleanup_error}", file=sys.stderr)  # noqa: T201
             exit_code = Exit.ERROR
     return exit_code

@@ -2190,6 +2190,28 @@ def test_watch_dependencies_bound_repeated_failed_candidates(tmp_path: Path) -> 
 
 
 @pytest.mark.allow_direct_assert
+def test_watch_dependencies_retain_failed_generation_files_during_replan(tmp_path: Path) -> None:
+    """A pending replan continues to accept recovery edits from the failed generation."""
+    from datamodel_code_generator.__main__ import Config
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    initial_input = tmp_path / "initial.json"
+    next_input = tmp_path / "next.json"
+    failed_dependency = tmp_path / "missing.json"
+    initial_input.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    next_input.write_text(WATCH_SCHEMA_CHANGED, encoding="utf-8")
+    dependencies = WatchDependencies()
+    dependencies.configure(Config(input=initial_input), config_values={})
+
+    with pytest.raises(RuntimeError, match=WATCH_GENERATION_ERROR):
+        _record_failed_dependency(dependencies, failed_dependency)
+    dependencies.configure(Config(input=next_input), config_values={})
+
+    assert dependencies.includes(failed_dependency)
+    assert dependencies.accepts_event(failed_dependency)
+
+
+@pytest.mark.allow_direct_assert
 def test_watch_dependencies_replace_raw_config_recovery_candidates(tmp_path: Path) -> None:
     """A newer raw config replan replaces the previous missing-file candidate."""
     from datamodel_code_generator.watch_dependencies import WatchDependencies

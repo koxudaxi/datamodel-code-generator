@@ -1739,7 +1739,7 @@ def _generate_with_atomic_remote_update(  # noqa: PLR0912, PLR0914, PLR0915
     lockfile = config.lockfile.expanduser() if config.lockfile is not None else caller_cwd / "datamodel-codegen.lock"
     if not lockfile.is_absolute():
         lockfile = caller_cwd / lockfile
-    canonical_lockfile = lockfile.parent.resolve(strict=False) / lockfile.name
+    canonical_lockfile = lockfile.resolve(strict=False)
     _validate_generation_path_conflicts(input_, config.output, config.emit_model_metadata, canonical_lockfile)
     remote_lock = RemoteReferenceLock.open(canonical_lockfile, update=True, locked=False)
     contexts: list[tempfile.TemporaryDirectory[str]] = []
@@ -1756,7 +1756,7 @@ def _generate_with_atomic_remote_update(  # noqa: PLR0912, PLR0914, PLR0915
             output_context = tempfile.TemporaryDirectory(prefix=".datamodel-codegen-", dir=output_parent)
             contexts.append(output_context)
             staged_output = Path(output_context.name) / (output.name or "output")
-            if output.is_dir() or not output.suffix:
+            if output.is_dir():
                 staged_output.mkdir()
             staged_updates["output"] = staged_output
             resolved_output_root = output.expanduser().resolve(strict=False)
