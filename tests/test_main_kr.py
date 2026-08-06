@@ -18,6 +18,7 @@ from datamodel_code_generator.__main__ import (
     _generated_files_from_result,
     _generation_output_json,
     _json_ready,
+    _plan_jobs,
     _write_generated_result,
     generate_pyproject_config,
 )
@@ -1384,6 +1385,138 @@ def test_pyproject_jobs_json_reports_check_results(
 @pytest.mark.parametrize(
     ("args", "message"),
     [
+        (["--job", "plain", "--generate-cli-command"], "--generate-cli-command cannot be used"),
+        (["--job", "plain", "--list-deprecations"], "--list-deprecations cannot be used"),
+        (["--all-jobs", "--list-experimental"], "--list-experimental cannot be used"),
+    ],
+)
+def test_pyproject_jobs_reject_cli_command_only_modes(
+    jobs_project: dict[str, Path], tmp_path: Path, capsys: pytest.CaptureFixture[str], args: list[str], message: str
+) -> None:
+    """Reject command-only modes before a selected job can generate output."""
+    with chdir(tmp_path):
+        run_main_with_args(args, expected_exit=Exit.ERROR, capsys=capsys, expected_stderr_contains=message)
+
+    _assert_file_does_not_exist(jobs_project["plain"])
+    _assert_file_does_not_exist(jobs_project["strict"])
+
+
+@pytest.mark.parametrize(
+    "command_option",
+    ["list-deprecations", "list-experimental"],
+)
+def test_pyproject_jobs_reject_configured_command_only_modes(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], command_option: str
+) -> None:
+    """Reject job command-only modes that would otherwise skip generation."""
+    output_path = tmp_path / "output.py"
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.api]
+input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
+output = "{output_path.as_posix()}"
+{command_option} = "table"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--job", "api"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="jobs must generate code",
+        )
+
+    _assert_file_does_not_exist(output_path)
+
+
+@pytest.mark.parametrize(
+    ("base_config", "profile_config", "job_profile"),
+    [
+        ('url = "https://example.invalid/schema.json"', "", ""),
+        ("", 'input-model = ["missing.py"]', 'profile = "inherited"'),
+    ],
+)
+def test_pyproject_job_input_clears_inherited_alternate_sources(
+    tmp_path: Path,
+    base_config: str,
+    profile_config: str,
+    job_profile: str,
+) -> None:
+    """Use the job file input instead of an inherited URL or input-model source."""
+    output_path = tmp_path / "output.py"
+    profile = f"\n[tool.datamodel-codegen.profiles.inherited]\n{profile_config}\n" if profile_config else ""
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+{base_config}
+{profile}
+[tool.datamodel-codegen.jobs.api]
+{job_profile}
+input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
+output = "{output_path.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(["--job", "api", "--formatters", "builtin"])
+
+    assert_output(output_path.read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
+
+
+def test_pyproject_job_plan_preserves_watch_provenance(jobs_project: dict[str, Path], tmp_path: Path) -> None:
+    """Keep the resolved raw config, CLI settings, and project path for batch watch planning."""
+    with chdir(tmp_path):
+        args = arg_parser.parse_args(["--job", "plain", "--formatters", "builtin"])
+        plan = _plan_jobs(args)[0]
+
+    assert plan.raw_config["input"] == (JSON_SCHEMA_DATA_PATH / "person.json").as_posix()
+    assert plan.raw_config["output"] == jobs_project["plain"].as_posix()
+    assert plan.cli_config_args["formatters"] == ["builtin"]
+    assert plan.pyproject_path == tmp_path / "pyproject.toml"
+
+
+@pytest.mark.parametrize(
+    ("payload", "context"),
+    [
+        ('{"kind":"unexpected"}', "kind 'unexpected'"),
+        ("[]", "raw JSON '[]'"),
+    ],
+)
+@pytest.mark.usefixtures("jobs_project")
+def test_pyproject_jobs_json_handles_unsupported_inner_payload(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    payload: str,
+    context: str,
+) -> None:
+    """Return a CLI error if a future inner job emits an unsupported JSON shape."""
+    monkeypatch.setattr(
+        "datamodel_code_generator.__main__._generation_output_json",
+        lambda *_args, **_kwargs: payload,
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--job", "plain", "--output-format", "json", "--formatters", "builtin"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains=context,
+        )
+
+
+@pytest.mark.parametrize(
+    ("args", "message"),
+    [
         (["--job", "missing"], "Job 'missing' not found"),
         (["--job", "plain", "--input", "schema.json"], "--input cannot be used"),
         (["--job", "plain", "--profile", "strict"], "--profile cannot be used"),
@@ -1597,6 +1730,51 @@ output = "$OUTPUT"
         ),
         (
             """
+[tool.datamodel-codegen.profiles]
+invalid = "not a table"
+
+[tool.datamodel-codegen.jobs.invalid]
+profile = "invalid"
+input = "$INPUT"
+output = "$OUTPUT"
+""",
+            ["--all-jobs"],
+            "Profile 'invalid' must be a table",
+        ),
+        (
+            """
+[tool.datamodel-codegen.profiles.invalid]
+extends = 1
+
+[tool.datamodel-codegen.jobs.invalid]
+profile = "invalid"
+input = "$INPUT"
+output = "$OUTPUT"
+""",
+            ["--all-jobs"],
+            "extends must be a string or list of strings",
+        ),
+        (
+            """
+[tool.datamodel-codegen.jobs.invalid]
+input = "$INPUT"
+output = "$OUTPUT"
+output-model-type = "not-a-model-type"
+""",
+            ["--all-jobs"],
+            "Invalid batch job configuration",
+        ),
+        (
+            """
+[tool.datamodel-codegen.jobs.invalid]
+input = "$INPUT"
+output = "\\u0000"
+""",
+            ["--all-jobs"],
+            "Invalid batch job configuration",
+        ),
+        (
+            """
 [tool.datamodel-codegen.jobs.invalid]
 input = "$INPUT"
 output = "$OUTPUT"
@@ -1655,6 +1833,33 @@ def test_pyproject_jobs_require_project_configuration(tmp_path: Path, capsys: py
             capsys=capsys,
             expected_stderr_contains="No [tool.datamodel-codegen] section found",
         )
+
+
+def test_pyproject_jobs_normalize_project_path_errors(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Report unreadable project configuration files as planning errors instead of tracebacks."""
+    pyproject_path = tmp_path / "pyproject.toml"
+    pyproject_path.write_text(
+        """
+[tool.datamodel-codegen]
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.api]
+input = "tests/data/jsonschema/person.json"
+output = "output.py"
+""",
+        encoding="utf-8",
+    )
+    pyproject_path.chmod(0)
+    try:
+        with chdir(tmp_path):
+            run_main_with_args(
+                ["--job", "api"],
+                expected_exit=Exit.ERROR,
+                capsys=capsys,
+                expected_stderr_contains="Invalid batch job configuration",
+            )
+    finally:
+        pyproject_path.chmod(0o600)
 
 
 def test_pyproject_invalid_config_returns_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
