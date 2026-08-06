@@ -848,6 +848,9 @@ def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict
 
         if profile:
             profiles = tool_config.get("profiles", {})
+            if not isinstance(profiles, Mapping):
+                msg = "[tool.datamodel-codegen.profiles] must be a table"
+                raise Error(msg)
             if profile not in profiles:
                 available = list(profiles.keys()) if profiles else "none"
                 msg = f"Profile '{profile}' not found in pyproject.toml. Available profiles: {available}"
@@ -874,7 +877,17 @@ class JobPlan(NamedTuple):
     cli_config_args: dict[str, _RawConfigValue]
     pyproject_path: Path
     resolved_output_root: Path
+    resolved_output_parent: Path
     resolved_model_metadata_root: Path | None
+    resolved_model_metadata_parent: Path | None
+
+
+class _PublicationAnchor(NamedTuple):
+    """The existing directory inode that anchored a planned publication path."""
+
+    path: Path
+    identity: tuple[int, int]
+    directory_fd: int | None
 
 
 class _StagedJobPlan(NamedTuple):
@@ -888,6 +901,8 @@ class _StagedJobPlan(NamedTuple):
     model_metadata: Path | None
     staged_model_metadata: Path | None
     resolved_model_metadata_root: Path | None
+    output_anchor: _PublicationAnchor | None
+    model_metadata_anchor: _PublicationAnchor | None
     staging_contexts: tuple[tempfile.TemporaryDirectory[str], ...]
 
 
@@ -896,6 +911,32 @@ class _PublishedFile(NamedTuple):
 
     target: Path
     backup: Path | None
+
+
+class _StagedFile(NamedTuple):
+    """One staged file and its immutable concrete publication destination."""
+
+    staged_file: Path
+    target: Path
+    resolved_target: Path
+    anchor: _PublicationAnchor | None = None
+
+
+class _BoundPublishedFile(NamedTuple):
+    """One publication journal entry bound to an open destination directory."""
+
+    target: Path
+    directory_fd: int
+    name: str
+    backup_name: str | None
+
+
+class _CreatedDirectoryAt(NamedTuple):
+    """A transaction-created directory bound to its open parent directory."""
+
+    parent_fd: int
+    name: str
+    path: Path
 
 
 def _normalize_pyproject_config(config: Mapping[str, Any]) -> dict[str, Any]:
@@ -963,8 +1004,14 @@ def _get_job_config(  # noqa: PLR0913
         cli_config_args=dict(cli_config_args),
         pyproject_path=pyproject_path,
         resolved_output_root=cast("Path", config.output).expanduser().resolve(strict=False),
+        resolved_output_parent=cast("Path", config.output).expanduser().parent.resolve(strict=False),
         resolved_model_metadata_root=(
             config.emit_model_metadata.expanduser().resolve(strict=False)
+            if config.emit_model_metadata is not None
+            else None
+        ),
+        resolved_model_metadata_parent=(
+            config.emit_model_metadata.expanduser().parent.resolve(strict=False)
             if config.emit_model_metadata is not None
             else None
         ),
@@ -1471,24 +1518,44 @@ def _staging_directory_for(target: Path) -> tempfile.TemporaryDirectory[str]:
     return tempfile.TemporaryDirectory(prefix=".datamodel-codegen-", dir=staging_parent)
 
 
+def _publication_anchor(path: Path) -> _PublicationAnchor:
+    """Snapshot and, on POSIX, hold open the deepest existing concrete directory for *path*."""
+    while not path.is_dir():
+        path = path.parent
+    if os.name == "nt":  # pragma: no cover - exercised by Windows CI
+        path_stat = path.stat()
+        return _PublicationAnchor(path, (path_stat.st_dev, path_stat.st_ino), None)
+    directory_fd = _open_target_directory(path, [], create_missing=False)
+    path_stat = os.fstat(directory_fd)
+    return _PublicationAnchor(path, (path_stat.st_dev, path_stat.st_ino), directory_fd)
+
+
 def _stage_job_plan(plan: JobPlan) -> _StagedJobPlan:
     """Redirect a write-mode job's artifacts to private, same-filesystem staging paths."""
     if plan.config.check:
-        return _StagedJobPlan(plan, plan.config, None, None, None, None, None, None, ())
+        return _StagedJobPlan(plan, plan.config, None, None, None, None, None, None, None, None, ())
 
     output = cast("Path", plan.config.output)
     output_context = _staging_directory_for(output)
+    contexts = [output_context]
+    anchors: list[_PublicationAnchor] = []
     try:
         staged_output = Path(output_context.name) / (output.name or "output")
-        contexts = [output_context]
         updates: dict[str, Path] = {"output": staged_output}
         model_metadata = plan.config.emit_model_metadata
         staged_model_metadata: Path | None = None
+        output_anchor = _publication_anchor(
+            plan.resolved_output_root if output.is_dir() else plan.resolved_output_parent
+        )
+        anchors.append(output_anchor)
+        model_metadata_anchor: _PublicationAnchor | None = None
         if model_metadata is not None:
             metadata_context = _staging_directory_for(model_metadata)
             contexts.append(metadata_context)
             staged_model_metadata = Path(metadata_context.name) / (model_metadata.name or "model-metadata.json")
             updates["emit_model_metadata"] = staged_model_metadata
+            model_metadata_anchor = _publication_anchor(cast("Path", plan.resolved_model_metadata_parent))
+            anchors.append(model_metadata_anchor)
 
         return _StagedJobPlan(
             plan,
@@ -1499,10 +1566,17 @@ def _stage_job_plan(plan: JobPlan) -> _StagedJobPlan:
             model_metadata,
             staged_model_metadata,
             plan.resolved_model_metadata_root,
+            output_anchor,
+            model_metadata_anchor,
             tuple(contexts),
         )
     except OSError:
-        output_context.cleanup()
+        for context in contexts:
+            with suppress(OSError):
+                context.cleanup()
+        for anchor in anchors:
+            if anchor.directory_fd is not None:  # pragma: no branch - POSIX staging anchors always hold an fd
+                os.close(anchor.directory_fd)
         raise
 
 
@@ -1523,21 +1597,41 @@ def _cleanup_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> None:
     for staged_plan in staged_plans:
         for context in staged_plan.staging_contexts:
             context.cleanup()
+        for anchor in (staged_plan.output_anchor, staged_plan.model_metadata_anchor):
+            if anchor is not None and anchor.directory_fd is not None:
+                with suppress(OSError):
+                    os.close(anchor.directory_fd)
 
 
-def _staged_files(staged_plan: _StagedJobPlan) -> Iterator[tuple[Path, Path]]:
+def _staged_files(staged_plan: _StagedJobPlan) -> Iterator[_StagedFile]:
     """Return staged files paired with their final targets without removing directory extras."""
     if staged_plan.staged_output is None or staged_plan.output is None:
         return
 
     if staged_plan.staged_output.is_file():
-        yield staged_plan.staged_output, staged_plan.output
+        yield _StagedFile(
+            staged_plan.staged_output,
+            staged_plan.output,
+            staged_plan.plan.resolved_output_parent / staged_plan.output.name,
+            staged_plan.output_anchor,
+        )
     else:
         for generated_file in sorted(staged_plan.staged_output.rglob("*")):
             if generated_file.is_file():
-                yield generated_file, staged_plan.output / generated_file.relative_to(staged_plan.staged_output)
+                relative_path = generated_file.relative_to(staged_plan.staged_output)
+                yield _StagedFile(
+                    generated_file,
+                    staged_plan.output / relative_path,
+                    cast("Path", staged_plan.resolved_output_root) / relative_path,
+                    staged_plan.output_anchor,
+                )
     if staged_plan.staged_model_metadata is not None and staged_plan.model_metadata is not None:
-        yield staged_plan.staged_model_metadata, staged_plan.model_metadata
+        yield _StagedFile(
+            staged_plan.staged_model_metadata,
+            staged_plan.model_metadata,
+            cast("Path", staged_plan.plan.resolved_model_metadata_parent) / staged_plan.model_metadata.name,
+            staged_plan.model_metadata_anchor,
+        )
 
 
 def _backup_path(target: Path) -> Path:
@@ -1552,13 +1646,18 @@ def _backup_path(target: Path) -> Path:
 def _backup_existing_target(target: Path) -> Path:
     """Create a same-filesystem backup while retaining the target until replacement."""
     backup = _backup_path(target)
-    if target.is_symlink():
-        backup.symlink_to(target.readlink())
-        return backup
     try:
-        backup.hardlink_to(target)
+        if target.is_symlink():  # pragma: no cover - exercised by the Windows path fallback
+            backup.symlink_to(target.readlink())
+            return backup
+        try:
+            backup.hardlink_to(target)
+        except OSError:
+            shutil.copy2(target, backup)
     except OSError:
-        shutil.copy2(target, backup)
+        with suppress(OSError):
+            backup.unlink()
+        raise
     return backup
 
 
@@ -1631,21 +1730,64 @@ def _remove_created_directory(directory: Path) -> list[Path]:
     return []
 
 
-def _publish_staged_files(files: Iterable[tuple[Path, Path]]) -> None:
-    """Atomically publish staged files and restore every prior file if publication fails."""
+def _planned_staged_file(file: tuple[Path, Path] | _StagedFile) -> _StagedFile:
+    """Normalize direct helper calls to a concrete parent-bound destination."""
+    if isinstance(file, _StagedFile):
+        return file
+    staged_file, target = file
+    resolved_target = target.expanduser().parent.resolve(strict=False) / target.name
+    return _StagedFile(staged_file, target, resolved_target)
+
+
+def _validate_planned_target(file: _StagedFile) -> None:  # pragma: no cover - Windows path fallback
+    """Fail if the lexical target no longer reaches its planned concrete parent."""
+    concrete_target = file.target.expanduser().parent.resolve(strict=False) / file.target.name
+    if concrete_target != file.resolved_target:
+        msg = f"batch output target changed before publication: {file.target}"
+        raise OSError(msg)
+
+
+def _validate_publication_anchor(file: _StagedFile) -> None:
+    """Fail if the pre-generation destination anchor no longer names the same directory."""
+    if file.anchor is None:
+        return
+    if file.anchor.directory_fd is not None:
+        anchor_stat = os.fstat(file.anchor.directory_fd)
+        matches = (anchor_stat.st_dev, anchor_stat.st_ino) == file.anchor.identity and _directory_fd_matches_path(
+            file.anchor.directory_fd, file.anchor.path
+        )
+    else:  # pragma: no cover - exercised by Windows CI
+        try:
+            path_stat = file.anchor.path.stat()
+        except OSError:
+            matches = False
+        else:
+            matches = (path_stat.st_dev, path_stat.st_ino) == file.anchor.identity
+    if not matches:
+        msg = f"batch output destination anchor changed before publication: {file.target}"
+        raise OSError(msg)
+
+
+def _publish_staged_files_by_path(files: Sequence[_StagedFile]) -> None:  # pragma: no cover - Windows fallback
+    """Publish after validating the non-reparse parent where directory-relative replacement is unavailable."""
     journal: list[_PublishedFile] = []
     created_directories: list[Path] = []
     try:
-        for staged_file, target in files:
-            _create_target_parent(target, created_directories)
-            if target.is_dir():
-                msg = f"[Errno 21] Is a directory: '{target}'"
+        for file in files:
+            _validate_publication_anchor(file)
+            _validate_planned_target(file)
+            _create_target_parent(file.target, created_directories)
+            if file.target.is_dir():
+                msg = f"[Errno 21] Is a directory: '{file.target}'"
                 raise IsADirectoryError(msg)
-            backup = _backup_existing_target(target) if target.exists() or target.is_symlink() else None
-            journal.append(_PublishedFile(target, backup))
+            backup = _backup_existing_target(file.target) if file.target.exists() or file.target.is_symlink() else None
+            journal.append(_PublishedFile(file.target, backup))
             if backup is not None:
-                _preserve_target_mode(staged_file, target)
-            staged_file.replace(target)
+                _preserve_target_mode(file.staged_file, file.target)
+            _validate_planned_target(file)
+            file.staged_file.replace(file.target)
+            _validate_planned_target(file)
+            _validate_publication_anchor(file)
     except OSError as publish_error:
         rollback_failures: list[Path] = []
         for published_file in reversed(journal):
@@ -1664,6 +1806,237 @@ def _publish_staged_files(files: Iterable[tuple[Path, Path]]) -> None:
                 published_file.backup.unlink()
 
 
+def _directory_open_flags() -> int:
+    return os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+
+
+def _open_target_directory(
+    path: Path, created_directories: list[_CreatedDirectoryAt], *, create_missing: bool = True
+) -> int:
+    """Open a concrete directory without following any component symlinks, creating missing components safely."""
+    if not path.is_absolute():  # pragma: no cover - planned destinations are always absolute
+        msg = f"batch output destination is not absolute: {path}"
+        raise OSError(msg)
+    flags = _directory_open_flags()
+    directory_fd = os.open(path.anchor, flags)
+    current_path = Path(path.anchor)
+    try:
+        for part in path.parts[1:]:
+            current_path /= part
+            try:
+                next_fd = os.open(part, flags, dir_fd=directory_fd)
+            except FileNotFoundError:
+                if not create_missing:
+                    raise
+                try:
+                    os.mkdir(part, dir_fd=directory_fd)
+                except FileExistsError:  # pragma: no cover - a concurrent creator is reopened and verified below
+                    pass
+                else:
+                    created_directories.append(_CreatedDirectoryAt(os.dup(directory_fd), part, current_path))
+                next_fd = os.open(part, flags, dir_fd=directory_fd)
+            os.close(directory_fd)
+            directory_fd = next_fd
+    except BaseException:
+        os.close(directory_fd)
+        raise
+    return directory_fd
+
+
+def _directory_fd_matches_path(directory_fd: int, path: Path) -> bool:
+    """Return whether a concrete path still names the directory held open by *directory_fd*."""
+    try:
+        check_fd = _open_target_directory(path, [], create_missing=False)
+    except OSError:
+        return False
+    try:
+        return os.path.samestat(os.fstat(directory_fd), os.fstat(check_fd))
+    finally:
+        os.close(check_fd)
+
+
+def _backup_name(target_name: str) -> str:
+    """Return an unpredictable sibling backup name."""
+    from secrets import token_hex  # noqa: PLC0415
+
+    return f".{target_name}.{token_hex(8)}.bak"
+
+
+def _copy_target_at(directory_fd: int, target_name: str, backup_name: str, target_stat: os.stat_result) -> None:
+    """Copy a regular destination to a sibling backup through an open directory."""
+    source_fd = os.open(target_name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory_fd)
+    backup_fd: int | None = None
+    try:
+        backup_fd = os.open(
+            backup_name,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+            stat.S_IMODE(target_stat.st_mode),
+            dir_fd=directory_fd,
+        )
+        with os.fdopen(os.dup(source_fd), "rb") as source, os.fdopen(os.dup(backup_fd), "wb") as destination:
+            shutil.copyfileobj(source, destination)
+        os.fchmod(backup_fd, stat.S_IMODE(target_stat.st_mode))
+        os.utime(
+            backup_name,
+            ns=(target_stat.st_atime_ns, target_stat.st_mtime_ns),
+            dir_fd=directory_fd,
+            follow_symlinks=False,
+        )
+    finally:
+        os.close(source_fd)
+        if backup_fd is not None:  # pragma: no branch - absent only when the backup open itself raises
+            os.close(backup_fd)
+
+
+def _backup_existing_target_at(directory_fd: int, target_name: str, target_stat: os.stat_result) -> str:
+    """Back up an existing target within its already-bound destination directory."""
+    for _ in range(100):  # pragma: no branch - cryptographic name collisions are not realistic
+        backup_name = _backup_name(target_name)
+        try:
+            if stat.S_ISLNK(target_stat.st_mode):
+                os.symlink(os.readlink(target_name, dir_fd=directory_fd), backup_name, dir_fd=directory_fd)
+            else:
+                try:
+                    os.link(
+                        target_name,
+                        backup_name,
+                        src_dir_fd=directory_fd,
+                        dst_dir_fd=directory_fd,
+                        follow_symlinks=False,
+                    )
+                except FileExistsError:  # pragma: no cover - cryptographic backup-name collision
+                    continue
+                except OSError:
+                    _copy_target_at(directory_fd, target_name, backup_name, target_stat)
+        except FileExistsError:  # pragma: no cover - cryptographic backup-name collision
+            continue
+        except OSError:
+            with suppress(OSError):
+                os.unlink(backup_name, dir_fd=directory_fd)
+            raise
+        else:
+            return backup_name
+    msg = f"could not reserve backup for {target_name}"  # pragma: no cover
+    raise FileExistsError(msg)  # pragma: no cover
+
+
+def _restore_backup_at(published_file: _BoundPublishedFile) -> None:
+    """Restore or discard a destination backup through its pinned directory."""
+    backup_name = cast("str", published_file.backup_name)
+    try:
+        backup_stat = os.stat(backup_name, dir_fd=published_file.directory_fd, follow_symlinks=False)
+    except FileNotFoundError:  # pragma: no cover - reported as an unrecoverable concurrent backup removal
+        msg = f"missing batch output backup: {published_file.target}"
+        raise OSError(msg) from None
+    try:
+        target_stat = os.stat(published_file.name, dir_fd=published_file.directory_fd, follow_symlinks=False)
+    except FileNotFoundError:  # pragma: no cover - concurrent target removal is restored from the backup
+        target_stat = None
+    if target_stat is not None and os.path.samestat(backup_stat, target_stat):
+        os.unlink(backup_name, dir_fd=published_file.directory_fd)
+        return
+    if (
+        stat.S_ISLNK(backup_stat.st_mode)
+        and target_stat is not None
+        and stat.S_ISLNK(target_stat.st_mode)
+        and os.readlink(backup_name, dir_fd=published_file.directory_fd)
+        == os.readlink(published_file.name, dir_fd=published_file.directory_fd)
+    ):
+        os.unlink(backup_name, dir_fd=published_file.directory_fd)
+        return
+    os.replace(
+        backup_name,
+        published_file.name,
+        src_dir_fd=published_file.directory_fd,
+        dst_dir_fd=published_file.directory_fd,
+    )
+
+
+def _rollback_bound_file(published_file: _BoundPublishedFile) -> list[Path]:
+    """Roll back one file through its pinned directory, reporting unrecovered paths."""
+    try:
+        if published_file.backup_name is not None:
+            _restore_backup_at(published_file)
+        else:
+            with suppress(FileNotFoundError):
+                os.unlink(published_file.name, dir_fd=published_file.directory_fd)
+    except OSError:
+        return [published_file.target]
+    return []
+
+
+def _publish_staged_files_at(files: Sequence[_StagedFile]) -> None:  # noqa: PLR0912
+    """Publish through no-follow directory descriptors and roll back through the same pinned directories."""
+    journal: list[_BoundPublishedFile] = []
+    created_directories: list[_CreatedDirectoryAt] = []
+    try:
+        for file in files:
+            _validate_publication_anchor(file)
+            directory_fd = _open_target_directory(file.resolved_target.parent, created_directories)
+            journaled = False
+            try:
+                try:
+                    target_stat = os.stat(file.resolved_target.name, dir_fd=directory_fd, follow_symlinks=False)
+                except FileNotFoundError:
+                    target_stat = None
+                if target_stat is not None and stat.S_ISDIR(target_stat.st_mode):
+                    msg = f"[Errno 21] Is a directory: '{file.target}'"
+                    raise IsADirectoryError(msg)
+                backup_name = (
+                    _backup_existing_target_at(directory_fd, file.resolved_target.name, target_stat)
+                    if target_stat is not None
+                    else None
+                )
+                journal.append(_BoundPublishedFile(file.target, directory_fd, file.resolved_target.name, backup_name))
+                journaled = True
+                if target_stat is not None and stat.S_ISREG(target_stat.st_mode):
+                    with suppress(OSError):
+                        file.staged_file.chmod(stat.S_IMODE(target_stat.st_mode))
+                os.replace(file.staged_file, file.resolved_target.name, dst_dir_fd=directory_fd)
+                _validate_publication_anchor(file)
+                if not _directory_fd_matches_path(directory_fd, file.resolved_target.parent):
+                    msg = f"batch output destination changed during publication: {file.target}"
+                    raise OSError(msg)
+            finally:
+                if not journaled:
+                    os.close(directory_fd)
+    except OSError as publish_error:
+        rollback_failures: list[Path] = []
+        for published_file in reversed(journal):
+            rollback_failures.extend(_rollback_bound_file(published_file))
+        for directory in reversed(created_directories):
+            try:
+                os.rmdir(directory.name, dir_fd=directory.parent_fd)
+            except OSError:  # pragma: no cover  # noqa: PERF203 - failure is reported with the retained path
+                rollback_failures.append(directory.path)
+        if rollback_failures:
+            paths = ", ".join(path.as_posix() for path in rollback_failures)
+            msg = f"{publish_error}; failed to roll back batch output: {paths}"
+            raise OSError(msg) from publish_error
+        raise
+    else:
+        for published_file in journal:
+            if published_file.backup_name is not None:
+                with suppress(OSError):  # pragma: no cover - an unlinked backup is harmless if cleanup races
+                    os.unlink(published_file.backup_name, dir_fd=published_file.directory_fd)
+    finally:
+        for published_file in journal:
+            os.close(published_file.directory_fd)
+        for directory in created_directories:
+            os.close(directory.parent_fd)
+
+
+def _publish_staged_files(files: Iterable[tuple[Path, Path] | _StagedFile]) -> None:
+    """Atomically publish staged files, binding destinations to their planned concrete parents."""
+    planned_files = tuple(_planned_staged_file(file) for file in files)
+    if os.name == "nt":  # pragma: no cover - exercised by Windows CI
+        # Windows has no stdlib dir-fd replace. Repeat concrete-parent and inode checks around the atomic replace;
+        # detectable reparse/ancestor swaps fail closed, without claiming the POSIX binding guarantee.
+        _publish_staged_files_by_path(planned_files)
+    else:
+        _publish_staged_files_at(planned_files)
+
+
 def _publish_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> None:
     """Publish every generated batch artifact after all jobs have completed successfully."""
     _publish_staged_files(file for staged_plan in staged_plans for file in _staged_files(staged_plan))
@@ -1674,11 +2047,11 @@ def _validate_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> None:
     for staged_plan in staged_plans:
         if staged_plan.resolved_output_root is None:
             continue
-        for staged_file, target in _staged_files(staged_plan):
-            concrete_target = target.expanduser().resolve(strict=False)
+        for file in _staged_files(staged_plan):
+            concrete_target = file.target.expanduser().resolve(strict=False)
             artifact_root = (
                 staged_plan.resolved_model_metadata_root
-                if staged_file == staged_plan.staged_model_metadata
+                if file.staged_file == staged_plan.staged_model_metadata
                 else staged_plan.resolved_output_root
             )
             if artifact_root is None:  # pragma: no cover - staging always records metadata roots
@@ -1686,7 +2059,7 @@ def _validate_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> None:
             if concrete_target != artifact_root and artifact_root not in concrete_target.parents:
                 msg = (
                     f"Job '{staged_plan.plan.name}' generated file escapes its output path: "
-                    f"{target} resolves outside {artifact_root}"
+                    f"{file.target} resolves outside {artifact_root}"
                 )
                 raise Error(msg)
 

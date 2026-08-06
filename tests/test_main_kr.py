@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from argparse import Namespace
 from pathlib import Path
@@ -19,6 +20,7 @@ from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
 from datamodel_code_generator.__main__ import (
     Exit,
     JobPlan,
+    _backup_existing_target,
     _create_directory,
     _create_target_parent,
     _generated_files_from_result,
@@ -1265,6 +1267,26 @@ enable-version-header = true
         )
 
 
+def test_pyproject_profile_rejects_non_table_profiles(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Report a clean configuration error when the profiles value is not a TOML table."""
+    input_file = JSON_SCHEMA_DATA_PATH / "person.json"
+    output_file = tmp_path / "output.py"
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.datamodel-codegen]\nprofiles = "invalid"\n',
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--input", str(input_file), "--output", str(output_file), "--profile", "api"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="profiles] must be a table",
+        )
+
+    _assert_file_does_not_exist(output_file)
+
+
 @freeze_time("2019-07-26")
 def test_profile_overrides_base_config_shallow_merge(output_file: Path, tmp_path: Path) -> None:
     """Test that profile settings shallow-merge (replace) base settings for lists."""
@@ -1989,11 +2011,65 @@ output = "{output_path.as_posix()}"
             ["--job", "api", "--formatters", "builtin"],
             expected_exit=Exit.ERROR,
             capsys=capsys,
-            expected_stderr_contains="generated file escapes its output path",
+            expected_stderr_contains="could not prepare batch output staging",
         )
 
     _assert_file_does_not_exist(attacker_root / "generated.py")
     _assert_file_does_not_exist(original_root / "generated.py")
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="directory symlink creation requires elevated privileges")
+def test_pyproject_jobs_rejects_output_ancestor_swap_between_validation_and_publication(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Bind replacement to the planned root if an output directory is swapped immediately after validation."""
+    output_root = tmp_path / "models"
+    original_root = tmp_path / "original-models"
+    attacker_root = tmp_path / "attacker-models"
+    input_path = tmp_path / "schema.yaml"
+    input_path.write_text((OPEN_API_DATA_PATH / "modular.yaml").read_text(encoding="utf-8"), encoding="utf-8")
+    output_root.mkdir()
+    attacker_root.mkdir()
+    stale_output = (EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py").read_text(encoding="utf-8")
+    (output_root / "keep.py").write_text(stale_output, encoding="utf-8")
+    (attacker_root / "models.py").write_text(stale_output, encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "openapi"
+
+[tool.datamodel-codegen.jobs.models]
+input = "{input_path.as_posix()}"
+output = "{output_root.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+    original_publish = main_module._publish_staged_job_plans
+
+    def publish_after_output_swap(staged_plans: tuple[_StagedJobPlan, ...]) -> None:
+        output_root.rename(original_root)
+        output_root.symlink_to(attacker_root, target_is_directory=True)
+        original_publish(staged_plans)
+
+    monkeypatch.setattr(main_module, "_publish_staged_job_plans", publish_after_output_swap)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--all-jobs", "--formatters", "builtin"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="destination anchor changed before publication",
+        )
+
+    assert input_path.read_text(encoding="utf-8") == (OPEN_API_DATA_PATH / "modular.yaml").read_text(encoding="utf-8")
+    assert_output((original_root / "keep.py").read_text(encoding="utf-8"), EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py")
+    assert_output(
+        (attacker_root / "models.py").read_text(encoding="utf-8"), EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py"
+    )
+    assert list(original_root.glob(".*.bak")) == []
+    assert list(attacker_root.glob(".*.bak")) == []
+    assert list(tmp_path.glob(".datamodel-codegen-*")) == []
 
 
 def test_pyproject_jobs_publish_rollback_restores_prior_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -2009,15 +2085,21 @@ def test_pyproject_jobs_publish_rollback_restores_prior_files(tmp_path: Path, mo
     second_staged.write_text("second generated\n", encoding="utf-8")
     first_target.write_text("first stale\n", encoding="utf-8")
     second_target.write_text("second stale\n", encoding="utf-8")
-    original_replace = Path.replace
+    original_replace = os.replace
 
-    def fail_second_publication(source: Path, target: Path) -> Path:
+    def fail_second_publication(
+        source: str | Path,
+        target: str | Path,
+        *,
+        src_dir_fd: int | None = None,
+        dst_dir_fd: int | None = None,
+    ) -> None:
         if source == second_staged:
             msg = "simulated publish failure"
             raise OSError(msg)
-        return original_replace(source, target)
+        original_replace(source, target, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
 
-    monkeypatch.setattr(Path, "replace", fail_second_publication)
+    monkeypatch.setattr(os, "replace", fail_second_publication)
 
     with pytest.raises(OSError, match="simulated publish failure"):
         _publish_staged_files([(first_staged, first_target), (new_staged, new_target), (second_staged, second_target)])
@@ -2036,21 +2118,27 @@ def test_pyproject_jobs_publish_first_replacement_failure_removes_backup(
     target = tmp_path / "target.py"
     staged_file.write_text("generated\n", encoding="utf-8")
     target.write_text("stale\n", encoding="utf-8")
-    original_replace = Path.replace
+    original_replace = os.replace
 
-    def fail_first_replacement(source: Path, destination: Path) -> Path:
+    def fail_first_replacement(
+        source: str | Path,
+        destination: str | Path,
+        *,
+        src_dir_fd: int | None = None,
+        dst_dir_fd: int | None = None,
+    ) -> None:
         if source == staged_file:
             msg = "simulated first replacement failure"
             raise OSError(msg)
-        return original_replace(source, destination)
+        original_replace(source, destination, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
 
-    monkeypatch.setattr(Path, "replace", fail_first_replacement)
-    assert fail_first_replacement(target, target) == target
+    monkeypatch.setattr(os, "replace", fail_first_replacement)
+    fail_first_replacement(target, target)
 
     with pytest.raises(OSError, match="simulated first replacement failure"):
         _publish_staged_files([(staged_file, target)])
 
-    assert target.read_text(encoding="utf-8") == "stale\n"
+    assert_output(target.read_text(encoding="utf-8"), EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py")
     assert list(tmp_path.glob(".target.py.*.bak")) == []
 
 
@@ -2070,6 +2158,45 @@ def test_pyproject_jobs_publish_replaces_symlink_without_mutating_its_target(tmp
     assert original_target.read_text(encoding="utf-8") == "stale\n"
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")
+def test_pyproject_jobs_failed_replacement_discards_unchanged_symlink_backup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Retain the original symlink and remove its backup when the atomic replacement fails."""
+    staged_file = tmp_path / "generated.py"
+    original_target = tmp_path / "original.py"
+    output_link = tmp_path / "output.py"
+    staged_file.write_text("generated\n", encoding="utf-8")
+    original_target.write_text(
+        (EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    output_link.symlink_to(original_target)
+    original_replace = os.replace
+
+    def fail_staged_replace(
+        source: str | Path,
+        destination: str | Path,
+        *,
+        src_dir_fd: int | None = None,
+        dst_dir_fd: int | None = None,
+    ) -> None:
+        if source == staged_file:
+            msg = "simulated symlink replacement failure"
+            raise OSError(msg)
+        original_replace(source, destination, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
+
+    monkeypatch.setattr(os, "replace", fail_staged_replace)
+    fail_staged_replace(original_target, original_target)
+
+    with pytest.raises(OSError, match="simulated symlink replacement failure"):
+        _publish_staged_files([(staged_file, output_link)])
+
+    assert output_link.is_symlink()
+    assert_output(output_link.read_text(encoding="utf-8"), EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py")
+    assert_output(original_target.read_text(encoding="utf-8"), EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py")
+    assert list(tmp_path.glob(".output.py.*.bak")) == []
+
+
 def test_pyproject_jobs_publish_falls_back_to_copy_backup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Use a copy backup when the filesystem cannot make a hardlink for an existing target."""
     staged_file = tmp_path / "generated.py"
@@ -2077,15 +2204,89 @@ def test_pyproject_jobs_publish_falls_back_to_copy_backup(tmp_path: Path, monkey
     staged_file.write_text("generated\n", encoding="utf-8")
     target.write_text("stale\n", encoding="utf-8")
 
-    def fail_hardlink(_link: Path, _source: Path) -> None:
+    def fail_hardlink(*_args: object, **_kwargs: object) -> None:
         msg = "simulated hardlink failure"
         raise OSError(msg)
 
-    monkeypatch.setattr(Path, "hardlink_to", fail_hardlink)
+    monkeypatch.setattr(os, "link", fail_hardlink)
 
     _publish_staged_files([(staged_file, target)])
 
     assert target.read_text(encoding="utf-8") == "generated\n"
+
+
+def test_pyproject_jobs_partial_copy_backup_failure_removes_backup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Remove a partially copied hidden backup if the hardlink and copy fallback both fail."""
+    target = tmp_path / "target.py"
+    target.write_text("stale\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        Path,
+        "hardlink_to",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("simulated hardlink failure")),
+    )
+
+    def fail_partial_copy(_source: Path, destination: Path) -> None:
+        destination.write_text("partial\n", encoding="utf-8")
+        msg = "simulated partial copy failure"
+        raise OSError(msg)
+
+    monkeypatch.setattr(main_module.shutil, "copy2", fail_partial_copy)
+
+    with pytest.raises(OSError, match="simulated partial copy failure"):
+        _backup_existing_target(target)
+
+    assert_output(target.read_text(encoding="utf-8"), EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py")
+    assert list(tmp_path.glob(".target.py.*.bak")) == []
+
+    staged_file = tmp_path / "generated.py"
+    staged_file.write_text("generated\n", encoding="utf-8")
+    monkeypatch.setattr(os, "link", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("no hardlink")))
+
+    def fail_bound_copy(directory_fd: int, _target_name: str, backup_name: str, _target_stat: object) -> None:
+        partial_fd = os.open(backup_name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, dir_fd=directory_fd)
+        os.close(partial_fd)
+        msg = "simulated bound copy failure"
+        raise OSError(msg)
+
+    monkeypatch.setattr(main_module, "_copy_target_at", fail_bound_copy)
+
+    with pytest.raises(OSError, match="simulated bound copy failure"):
+        _publish_staged_files([(staged_file, target)])
+
+    assert_output(target.read_text(encoding="utf-8"), EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py")
+    assert list(tmp_path.glob(".target.py.*.bak")) == []
+
+
+def test_pyproject_jobs_post_publish_check_does_not_recreate_missing_parent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Roll back through the pinned directory without recreating a detached destination path."""
+    target_parent = tmp_path / "output"
+    detached_parent = tmp_path / "detached-output"
+    staged_file = tmp_path / "generated.py"
+    target = target_parent / "target.py"
+    target_parent.mkdir()
+    staged_file.write_text("generated\n", encoding="utf-8")
+    target.write_text("stale\n", encoding="utf-8")
+    original_matches = main_module._directory_fd_matches_path
+
+    def detach_before_postcheck(directory_fd: int, path: Path) -> bool:
+        path.rename(detached_parent)
+        return original_matches(directory_fd, path)
+
+    monkeypatch.setattr(main_module, "_directory_fd_matches_path", detach_before_postcheck)
+
+    with pytest.raises(OSError, match="destination changed during publication"):
+        _publish_staged_files([(staged_file, target)])
+
+    assert not target_parent.exists()
+    assert_output(
+        (detached_parent / "target.py").read_text(encoding="utf-8"), EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py"
+    )
+    assert list(detached_parent.glob(".target.py.*.bak")) == []
 
 
 def test_pyproject_jobs_rollback_helpers_report_unrecoverable_paths(
@@ -2166,19 +2367,25 @@ def test_pyproject_jobs_publish_reports_failed_rollback(tmp_path: Path, monkeypa
     target = tmp_path / "target.py"
     staged_file.write_text("generated\n", encoding="utf-8")
     target.write_text("stale\n", encoding="utf-8")
-    original_replace = Path.replace
+    original_replace = os.replace
 
-    def fail_publication(source: Path, destination: Path) -> Path:
+    def fail_publication(
+        source: str | Path,
+        destination: str | Path,
+        *,
+        src_dir_fd: int | None = None,
+        dst_dir_fd: int | None = None,
+    ) -> None:
         if source == staged_file:
             msg = "simulated publication failure"
             raise OSError(msg)
-        return original_replace(source, destination)
+        original_replace(source, destination, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
 
-    monkeypatch.setattr(Path, "replace", fail_publication)
-    assert fail_publication(target, target) == target
+    monkeypatch.setattr(os, "replace", fail_publication)
+    fail_publication(target, target)
     monkeypatch.setattr(
         main_module,
-        "_restore_backup",
+        "_restore_backup_at",
         lambda *_args: (_ for _ in ()).throw(OSError("rollback failed")),
     )
 
@@ -2221,7 +2428,7 @@ def test_pyproject_jobs_publication_helpers_handle_existing_directories(tmp_path
     existing_directory.mkdir()
 
     assert _create_directory(existing_directory) is False
-    assert list(_staged_files(_StagedJobPlan(None, None, None, None, None, None, None, None, ()))) == []
+    assert list(_staged_files(_StagedJobPlan(None, None, None, None, None, None, None, None, None, None, ()))) == []
 
 
 def test_pyproject_jobs_staging_failure_removes_earlier_staging(
