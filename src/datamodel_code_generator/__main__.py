@@ -873,6 +873,8 @@ class JobPlan(NamedTuple):
     raw_config: dict[str, Any]
     cli_config_args: dict[str, _RawConfigValue]
     pyproject_path: Path
+    resolved_output_root: Path
+    resolved_model_metadata_root: Path | None
 
 
 class _StagedJobPlan(NamedTuple):
@@ -917,10 +919,6 @@ def _get_job_config(  # noqa: PLR0913
     if not job.get("input") or not job.get("output"):
         msg = f"Job '{name}' must define both 'input' and 'output'"
         raise Error(msg)
-    if any(source in job for source in ("input_model", "url")):
-        msg = f"Job '{name}' only supports an 'input' file; use a separate job for each input source"
-        raise Error(msg)
-
     profile_name = job.get("profile")
     if profile_name is not None and not isinstance(profile_name, str):
         msg = f"Job '{name}' profile must be a string"
@@ -940,6 +938,9 @@ def _get_job_config(  # noqa: PLR0913
         resolved_config.pop(alternate_source, None)
     resolved_config.update({key: value for key, value in job.items() if key != "profile"})
     normalized_config = _normalize_pyproject_config(resolved_config)
+    if any(source in normalized_config for source in ("input_model", "url")):
+        msg = f"Job '{name}' only supports an 'input' file; use a separate job for each input source"
+        raise Error(msg)
     config = _create_config(normalized_config, cli_config_args)
     _apply_preset(config, normalized_config, cli_config_args)
     _validate_final_config(config)
@@ -956,11 +957,17 @@ def _get_job_config(  # noqa: PLR0913
     context = {key: normalized_config[key] for key in BATCH_CONFIG_CONTEXT_FIELDS if key in normalized_config}
     return JobPlan(
         name=name,
-        config=config.model_copy(deep=True),
+        config=config,
         pyproject_context=context,
         raw_config=normalized_config,
         cli_config_args=dict(cli_config_args),
         pyproject_path=pyproject_path,
+        resolved_output_root=cast("Path", config.output).expanduser().resolve(strict=False),
+        resolved_model_metadata_root=(
+            config.emit_model_metadata.expanduser().resolve(strict=False)
+            if config.emit_model_metadata is not None
+            else None
+        ),
     )
 
 
@@ -993,9 +1000,12 @@ def _preflight_job_plans(plans: Sequence[JobPlan]) -> None:
             raise Error(msg)
         _validate_generation_path_conflicts(config.input, config.output, config.emit_model_metadata)
         inputs.append((plan.name, config.input.expanduser().resolve()))
-        artifacts.append((plan.name, "output", config.output.expanduser().resolve()))
+        artifacts.append((plan.name, "output", plan.resolved_output_root))
         if (model_metadata := config.emit_model_metadata) is not None:
-            artifacts.append((plan.name, "model metadata", model_metadata.expanduser().resolve()))
+            if plan.resolved_model_metadata_root is None:  # pragma: no cover - set when metadata is configured
+                msg = f"Job '{plan.name}' cannot resolve model metadata output: {model_metadata}"
+                raise Error(msg)
+            artifacts.append((plan.name, "model metadata", plan.resolved_model_metadata_root))
 
     for index, first_artifact in enumerate(artifacts):
         first_job, first_kind, first_path = first_artifact
@@ -1021,22 +1031,13 @@ def _preflight_job_plans(plans: Sequence[JobPlan]) -> None:
 
 def _plan_jobs(args: Namespace) -> tuple[JobPlan, ...]:
     """Load and preflight the selected pyproject jobs in declaration order."""
-    try:
-        return _plan_jobs_impl(args)
-    except Error:
-        raise
-    except (OSError, ValueError) as e:
-        msg = f"Invalid batch job configuration: {e}"
-        raise Error(msg) from e
-
-
-def _plan_jobs_impl(args: Namespace) -> tuple[JobPlan, ...]:
-    """Implement job planning while normalizing malformed configuration errors."""
     from pydantic import ValidationError  # noqa: PLC0415
 
     try:
         return _plan_jobs_unchecked(args)
-    except ValidationError as e:
+    except Error:
+        raise
+    except (OSError, ValidationError, ValueError) as e:
         msg = f"Invalid batch job configuration: {e}"
         raise Error(msg) from e
 
@@ -1481,26 +1482,23 @@ def _stage_job_plan(plan: JobPlan) -> _StagedJobPlan:
         staged_output = Path(output_context.name) / (output.name or "output")
         contexts = [output_context]
         updates: dict[str, Path] = {"output": staged_output}
-        resolved_output_root = output.expanduser().resolve(strict=False)
         model_metadata = plan.config.emit_model_metadata
         staged_model_metadata: Path | None = None
-        resolved_model_metadata_root: Path | None = None
         if model_metadata is not None:
             metadata_context = _staging_directory_for(model_metadata)
             contexts.append(metadata_context)
             staged_model_metadata = Path(metadata_context.name) / (model_metadata.name or "model-metadata.json")
             updates["emit_model_metadata"] = staged_model_metadata
-            resolved_model_metadata_root = model_metadata.expanduser().resolve(strict=False)
 
         return _StagedJobPlan(
             plan,
-            plan.config.model_copy(update=updates, deep=True),
+            plan.config.model_copy(update=updates),
             output,
             staged_output,
-            resolved_output_root,
+            plan.resolved_output_root,
             model_metadata,
             staged_model_metadata,
-            resolved_model_metadata_root,
+            plan.resolved_model_metadata_root,
             tuple(contexts),
         )
     except OSError:
@@ -1743,59 +1741,82 @@ def _run_jobs_text(args: Sequence[str], staged_plans: Sequence[_StagedJobPlan]) 
     return exit_code
 
 
+def _write_batch_json_spool(spool: Any) -> None:
+    """Write a batch JSON document from validated, line-delimited job payloads."""
+    sys.stdout.write('{\n  "version": 1,\n  "format": "json",\n  "kind": "batch",\n  "jobs": [')
+    for index, line in enumerate(spool):
+        if index:
+            sys.stdout.write(",")
+        sys.stdout.write("\n")
+        rendered = json.dumps(json.loads(line), indent=2, ensure_ascii=False)
+        sys.stdout.write("\n".join(f"    {rendered_line}" for rendered_line in rendered.splitlines()))
+    sys.stdout.write("\n  ]\n}\n")
+
+
 def _run_jobs_json(args: Sequence[str], staged_plans: Sequence[_StagedJobPlan]) -> Exit:
-    """Buffer one JSON result per job before emitting the single batch payload."""
+    """Spool validated job payloads until generation and publication both succeed."""
     from contextlib import redirect_stdout  # noqa: PLC0415
-    from io import StringIO  # noqa: PLC0415
 
     from pydantic import ValidationError  # noqa: PLC0415
 
-    from datamodel_code_generator._structured_output import BatchJobPayload, batch_output_json  # noqa: PLC0415
+    from datamodel_code_generator._structured_output import BatchJobPayload  # noqa: PLC0415
 
-    jobs: list[BatchJobPayload] = []
-    exit_code = Exit.OK
-    for staged_plan in staged_plans:
-        output = StringIO()
-        with redirect_stdout(output):
-            result = _main(
-                args,
-                start_watch=False,
-                _batch_config=staged_plan.config,
-                _batch_pyproject_context=staged_plan.plan.pyproject_context,
-                _batch_original_output=staged_plan.output,
-                _batch_output_is_staged=staged_plan.staged_output is not None,
-            )
-        if result is Exit.ERROR:
-            return result
-        if result is Exit.DIFF:
-            exit_code = Exit.DIFF
-        try:
-            payload = json.loads(output.getvalue())
-        except json.JSONDecodeError:
-            print(  # noqa: T201
-                f"Error: Job '{staged_plan.plan.name}' returned invalid JSON batch output.",
-                file=sys.stderr,
-            )
-            return Exit.ERROR
-        try:
-            jobs.append(BatchJobPayload(name=staged_plan.plan.name, result=payload))
-        except ValidationError:
-            context = (
-                f"kind {payload['kind']!r}"
-                if isinstance(payload, Mapping) and "kind" in payload
-                else f"raw JSON {output.getvalue().strip()!r}"
-            )
-            print(  # noqa: T201
-                f"Error: Job '{staged_plan.plan.name}' returned unsupported JSON batch output ({context}); "
-                "expected a generation or check payload.",
-                file=sys.stderr,
-            )
-            return Exit.ERROR
+    try:
+        with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as batch_spool:
+            exit_code = Exit.OK
+            for staged_plan in staged_plans:
+                with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as output:
+                    with redirect_stdout(output):
+                        result = _main(
+                            args,
+                            start_watch=False,
+                            _batch_config=staged_plan.config,
+                            _batch_pyproject_context=staged_plan.plan.pyproject_context,
+                            _batch_original_output=staged_plan.output,
+                            _batch_output_is_staged=staged_plan.staged_output is not None,
+                        )
+                    if result is Exit.ERROR:
+                        return result
+                    if result is Exit.DIFF:
+                        exit_code = Exit.DIFF
+                    output.seek(0)
+                    try:
+                        payload = json.load(output)
+                    except json.JSONDecodeError:
+                        print(  # noqa: T201
+                            f"Error: Job '{staged_plan.plan.name}' returned invalid JSON batch output.",
+                            file=sys.stderr,
+                        )
+                        return Exit.ERROR
+                    try:
+                        job_payload = BatchJobPayload(name=staged_plan.plan.name, result=payload)
+                    except ValidationError:
+                        output.seek(0)
+                        raw_output = output.read().strip()
+                        context = (
+                            f"kind {payload['kind']!r}"
+                            if isinstance(payload, Mapping) and "kind" in payload
+                            else f"raw JSON {raw_output!r}"
+                        )
+                        print(  # noqa: T201
+                            f"Error: Job '{staged_plan.plan.name}' returned unsupported JSON batch output ({context}); "
+                            "expected a generation or check payload.",
+                            file=sys.stderr,
+                        )
+                        return Exit.ERROR
+                    json.dump(
+                        job_payload.model_dump(mode="json"), batch_spool, ensure_ascii=False, separators=(",", ":")
+                    )
+                    batch_spool.write("\n")
 
-    if exit_code is Exit.OK and (publish_error := _publish_or_error(staged_plans)) is not None:
-        return publish_error
-    sys.stdout.write(batch_output_json(jobs) + "\n")
-    return exit_code
+            if exit_code is Exit.OK and (publish_error := _publish_or_error(staged_plans)) is not None:
+                return publish_error
+            batch_spool.seek(0)
+            _write_batch_json_spool(batch_spool)
+            return exit_code
+    except OSError as exc:
+        print(f"Error: could not spool batch JSON output: {exc}", file=sys.stderr)  # noqa: T201
+        return Exit.ERROR
 
 
 def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915

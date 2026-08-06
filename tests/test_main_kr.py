@@ -18,6 +18,7 @@ import datamodel_code_generator.__main__ as main_module
 from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
 from datamodel_code_generator.__main__ import (
     Exit,
+    JobPlan,
     _create_directory,
     _create_target_parent,
     _generated_files_from_result,
@@ -1457,6 +1458,28 @@ def test_pyproject_jobs_json_publish_failure_has_no_batch_payload(
     _assert_file_does_not_exist(jobs_project["strict"])
 
 
+def test_pyproject_jobs_json_spool_failure_has_no_batch_payload(
+    jobs_project: dict[str, Path], tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Report a temporary spool failure without publishing code or emitting partial JSON."""
+    monkeypatch.setattr(
+        main_module.tempfile,
+        "TemporaryFile",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("simulated JSON spool failure")),
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--all-jobs", "--output-format", "json", "--formatters", "builtin"], expected_exit=Exit.ERROR
+        )
+
+    captured = capsys.readouterr()
+    assert not captured.out
+    assert "could not spool batch JSON output" in captured.err
+    _assert_file_does_not_exist(jobs_project["plain"])
+    _assert_file_does_not_exist(jobs_project["strict"])
+
+
 @pytest.mark.parametrize(
     ("args", "message"),
     [
@@ -1545,6 +1568,34 @@ output = "{output_path.as_posix()}"
         run_main_with_args(["--job", "api", "--formatters", "builtin"])
 
     assert_output(output_path.read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
+
+
+def test_pyproject_job_rejects_hyphenated_input_model(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Reject the TOML spelling of an alternate input source before generation starts."""
+    output_path = tmp_path / "output.py"
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.api]
+input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
+input-model = ["example.Model"]
+output = "{output_path.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--job", "api"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="only supports an 'input' file",
+        )
+
+    _assert_file_does_not_exist(output_path)
 
 
 def test_pyproject_job_plan_preserves_watch_provenance(jobs_project: dict[str, Path], tmp_path: Path) -> None:
@@ -1900,6 +1951,51 @@ input-file-type = "jsonschema"
     _assert_file_does_not_exist(reader_output)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="directory symlink creation requires elevated privileges")
+def test_pyproject_jobs_rejects_output_root_swapped_after_preflight(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Use the output root resolved during planning if an output ancestor is swapped before staging."""
+    output_root = tmp_path / "output"
+    original_root = tmp_path / "original-output"
+    attacker_root = tmp_path / "attacker-output"
+    output_path = output_root / "generated.py"
+    output_root.mkdir()
+    attacker_root.mkdir()
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.api]
+input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
+output = "{output_path.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    original_stage_job_plan = main_module._stage_job_plan
+
+    def stage_after_output_root_swap(plan: JobPlan) -> _StagedJobPlan:
+        output_root.rename(original_root)
+        output_root.symlink_to(attacker_root, target_is_directory=True)
+        return original_stage_job_plan(plan)
+
+    monkeypatch.setattr(main_module, "_stage_job_plan", stage_after_output_root_swap)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--job", "api", "--formatters", "builtin"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="generated file escapes its output path",
+        )
+
+    _assert_file_does_not_exist(attacker_root / "generated.py")
+    _assert_file_does_not_exist(original_root / "generated.py")
+
+
 def test_pyproject_jobs_publish_rollback_restores_prior_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Restore every earlier replacement if publication fails after its backup was journaled."""
     first_staged = tmp_path / "first.staged.py"
@@ -1949,6 +2045,7 @@ def test_pyproject_jobs_publish_first_replacement_failure_removes_backup(
         return original_replace(source, destination)
 
     monkeypatch.setattr(Path, "replace", fail_first_replacement)
+    assert fail_first_replacement(target, target) == target
 
     with pytest.raises(OSError, match="simulated first replacement failure"):
         _publish_staged_files([(staged_file, target)])
@@ -2078,6 +2175,7 @@ def test_pyproject_jobs_publish_reports_failed_rollback(tmp_path: Path, monkeypa
         return original_replace(source, destination)
 
     monkeypatch.setattr(Path, "replace", fail_publication)
+    assert fail_publication(target, target) == target
     monkeypatch.setattr(
         main_module,
         "_restore_backup",
