@@ -56,9 +56,15 @@ def _regenerate(regenerate: Callable[[], Exit]) -> None:
 @dataclass(frozen=True)
 class _WatchContext:
     watchfiles: Any
-    watch_delay: float
+    config: Config
     dependencies: WatchDependencies
     regenerate: Callable[[], Exit]
+    watch_delay: float | None = None
+
+    @property
+    def effective_watch_delay(self) -> float:
+        """Return the outer scheduler delay, defaulting to the generation config."""
+        return self.config.watch_delay if self.watch_delay is None else self.watch_delay
 
 
 @dataclass(slots=True)
@@ -112,7 +118,7 @@ def _watch_changes(
 ) -> None:
     """Publish filesystem changes from the persistent background watch stream."""
     force_polling = _force_polling()
-    debounce_ms = max(1, int(context.watch_delay * 1000))
+    debounce_ms = max(1, int(context.effective_watch_delay * 1000))
     poll_delay_ms = min(300, debounce_ms)
     if force_polling:
         context.dependencies.enable_polling_fingerprints()
@@ -233,9 +239,10 @@ def watch_and_regenerate(
 
     watch_context = _WatchContext(
         watchfiles,
-        config.watch_delay if watch_delay is None else watch_delay,
+        config,
         dependencies,
         regenerate,
+        watch_delay,
     )
     catch_up = False
     try:

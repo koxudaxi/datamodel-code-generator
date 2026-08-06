@@ -154,6 +154,22 @@ def _nearest_existing_directory(path: Path) -> Path:
     return path
 
 
+def _watch_roots(
+    files: frozenset[Path], directories: frozenset[Path], event_paths: frozenset[Path]
+) -> tuple[Path, ...]:
+    """Return minimal existing roots covering every dependency and recovery event."""
+    roots = {_nearest_existing_directory(path.parent) for path in files}
+    # Keep configured directory roots stable when the directory itself is
+    # removed and recreated. Its parent still receives the relevant event.
+    roots.update(_nearest_existing_directory(path.parent) for path in directories)
+    roots.update(_nearest_existing_directory(path) for path in event_paths)
+    watch_roots: list[Path] = []
+    for root in sorted((path for path in roots if path.is_dir()), key=lambda path: (len(path.parts), path.as_posix())):
+        if not any(root.is_relative_to(ancestor) for ancestor in watch_roots):
+            watch_roots.append(root)
+    return tuple(watch_roots)
+
+
 @dataclass(slots=True)
 class WatchDependencies(_Weakrefable):
     """Path-only dependency state for one persistent watch session."""
@@ -194,26 +210,11 @@ class WatchDependencies(_Weakrefable):
         event_paths = frozenset(
             files | static_symlink_events | self._generation_symlink_events | failed_generation_symlink_events
         )
-        roots = {_nearest_existing_directory(path.parent) for path in files}
-        # Keep configured directory roots stable when the directory itself is
-        # removed and recreated. Its parent still receives the relevant event.
-        roots.update(_nearest_existing_directory(path.parent) for path in directories)
-        roots.update(_nearest_existing_directory(path) for path in event_paths)
-        watch_roots_list: list[Path] = []
-        sorted_roots = sorted(
-            (path for path in roots if path.is_dir()),
-            key=lambda path: (len(path.parts), path.as_posix()),
-        )
-        for root in sorted_roots:
-            if not any(root.is_relative_to(ancestor) for ancestor in watch_roots_list):
-                watch_roots_list.append(root)
-        watch_roots = tuple(watch_roots_list)
+        watch_roots = _watch_roots(files, directories, event_paths)
         outputs = self._outputs.copy()
         if candidate is not None:
             outputs.update(candidate.outputs)
-        recovery_paths = frozenset(
-            (candidate.files if candidate is not None else set()) | failed_generation_files
-        )
+        recovery_paths = frozenset((candidate.files if candidate is not None else set()) | failed_generation_files)
         polling_fingerprints = (
             {path: _path_fingerprint(path) for path in files | directories}
             if self._polling_fingerprints_enabled
@@ -274,6 +275,7 @@ class WatchDependencies(_Weakrefable):
         pyproject_path: Path | None,
     ) -> None:
         """Add one validated configuration to a staged static dependency graph."""
+
         def add_file(path: Path | None) -> None:
             if path is not None:
                 self._add_path(path, candidate.files, candidate.symlink_events)
@@ -496,10 +498,9 @@ class WatchDependencies(_Weakrefable):
             for output, is_directory in snapshot.outputs.items()
         ):
             return False
-        if self._includes_snapshot(snapshot, path_variants):
-            return True
-        if not accept_directory_events:
-            return False
+        includes_dependency = self._includes_snapshot(snapshot, path_variants)
+        if includes_dependency or not accept_directory_events:
+            return includes_dependency
         try:
             is_directory = path.is_dir()
         except OSError:
