@@ -706,7 +706,7 @@ class DataType(_BaseModel):
             yield self.import_
         if self.python_type:
             yield from self.python_type.imports
-        if self.is_tuple and self.tuple_item_count and not self.data_types:
+        if self.is_tuple and self.tuple_item_count and (not self.data_types or not self.data_types[0].type_hint):
             yield IMPORT_ANY
         if self.kwargs and self.import_ != IMPORT_DECIMAL and _contains_decimal(self.kwargs):
             yield IMPORT_DECIMAL

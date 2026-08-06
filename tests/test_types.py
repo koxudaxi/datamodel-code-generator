@@ -423,6 +423,7 @@ def test_datatype_type_hint_container_precedence_matches_base_type_hint() -> Non
     [
         ([], 0, "Tuple[()]", (IMPORT_TUPLE,)),
         ([], 2, "Tuple[Any, Any]", (IMPORT_ANY, IMPORT_TUPLE)),
+        ([DataType()], 2, "Tuple[Any, Any]", (IMPORT_ANY, IMPORT_TUPLE)),
         ([DataType(type="str")], 3, "Tuple[str, str, str]", (IMPORT_TUPLE,)),
     ],
 )
