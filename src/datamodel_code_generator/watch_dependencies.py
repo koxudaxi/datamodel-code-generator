@@ -32,7 +32,7 @@ _JSON_CONFIG_FIELDS = frozenset({
 })
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, weakref_slot=True)
 class _CollectedGeneration:
     """Private graph additions that become visible only after a generation ends."""
 
@@ -122,7 +122,7 @@ def _nearest_existing_directory(path: Path) -> Path:
     return path
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, weakref_slot=True)
 class WatchDependencies:
     """Path-only dependency state for one persistent watch session."""
 

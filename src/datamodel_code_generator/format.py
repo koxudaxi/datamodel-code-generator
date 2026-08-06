@@ -19,7 +19,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import TYPE_CHECKING, Any
 from warnings import warn
-from weakref import WeakKeyDictionary
+from weakref import ReferenceType, WeakKeyDictionary, ref
 
 from datamodel_code_generator import _format_types
 from datamodel_code_generator.deprecations import warn_deprecated
@@ -27,6 +27,7 @@ from datamodel_code_generator.util import load_toml
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from types import CodeType
 
 DEFAULT_FORMATTERS = _format_types.DEFAULT_FORMATTERS
 EXTERNAL_FORMATTERS = _format_types.EXTERNAL_FORMATTERS
@@ -48,7 +49,7 @@ STRING_PREFIX_PATTERN = re.compile(r"(?i)^([rubf]*)(\"\"\"|'''|\"|')")
 
 @dataclass(frozen=True, slots=True)
 class _WatchFormatterState:
-    generation: object
+    generation: ReferenceType[object]
     module_names: tuple[str, ...]
 
 
@@ -74,9 +75,10 @@ def _local_package_modules(module: ModuleType, *, previous_modules: frozenset[st
         return (module.__name__,)
     roots = tuple(Path(path).resolve(strict=False) for path in package_paths)
     prefix = f"{module.__name__}."
+    loaded_modules = sys.modules.copy()
     local_modules = tuple(
         name
-        for name, candidate in sys.modules.items()
+        for name, candidate in loaded_modules.items()
         if name not in previous_modules
         and name.startswith(prefix)
         and isinstance(candidate, ModuleType)
@@ -96,13 +98,19 @@ def _record_watch_module_candidates(module_name: str, watch_dependencies: Any) -
         watch_dependencies.record_local_dependency(root / relative_module / "__init__.py")
 
 
-def _fresh_watch_module(module: ModuleType) -> ModuleType:
-    """Execute a watch dependency module from source before atomically replacing it."""
+def _prepare_watch_module(module: ModuleType) -> tuple[ModuleType, CodeType] | None:
+    """Build and compile a fresh module without mutating interpreter state."""
     spec = module.__spec__
     loader = spec.loader if spec is not None else None
     get_source = getattr(loader, "get_source", None)
-    if spec is None or not callable(get_source) or (source := get_source(module.__name__)) is None:
-        return module
+    if spec is None or not callable(get_source):
+        return None
+    try:
+        source = get_source(module.__name__)
+    except (ImportError, OSError):
+        return None
+    if source is None:
+        return None
     module_path = spec.origin or module.__file__ or module.__name__
     replacement = ModuleType(module.__name__)
     replacement.__file__ = module_path
@@ -112,15 +120,115 @@ def _fresh_watch_module(module: ModuleType) -> ModuleType:
     replacement.__cached__ = spec.cached
     if spec.submodule_search_locations is not None:
         replacement.__path__ = list(spec.submodule_search_locations)  # ty: ignore[unresolved-attribute]
+    return replacement, compile(source, module_path, "exec")
+
+
+def _bind_watch_module(module: ModuleType) -> None:
+    """Publish a refreshed module on its parent package when one exists."""
+    parent_name, _, child_name = module.__name__.rpartition(".")
+    if parent_name and (parent_module := sys.modules.get(parent_name)) is not None:
+        setattr(parent_module, child_name, module)
+
+
+def _fresh_watch_module(module: ModuleType) -> ModuleType:
+    """Execute a watch dependency module from source before atomically replacing it."""
+    if (prepared := _prepare_watch_module(module)) is None:
+        return module
+    replacement, code = prepared
 
     from datamodel_code_generator import PROCESS_STATE_LOCK  # noqa: PLC0415
 
     with PROCESS_STATE_LOCK:
-        exec(compile(source, module_path, "exec"), replacement.__dict__)  # noqa: S102
+        exec(code, replacement.__dict__)  # noqa: S102
         sys.modules[module.__name__] = replacement
-        parent_name, _, child_name = module.__name__.rpartition(".")
-        if parent_name and (parent_module := sys.modules.get(parent_name)) is not None:
-            setattr(parent_module, child_name, replacement)
+        _bind_watch_module(replacement)
+    return replacement
+
+
+def _restore_watch_package(
+    module_name: str,
+    modules: dict[str, object],
+    module_namespaces: dict[ModuleType, dict[str, Any]],
+    parent_module: object,
+    parent_attribute: object,
+) -> None:
+    """Restore package interpreter state after a failed transactional refresh."""
+    prefix = f"{module_name}."
+    for loaded_name in tuple(sys.modules.copy()):
+        if loaded_name == module_name or loaded_name.startswith(prefix):
+            sys.modules.pop(loaded_name, None)
+    sys.modules.update(modules)
+    for original, namespace in module_namespaces.items():
+        original.__dict__.clear()
+        original.__dict__.update(namespace)
+    parent_name, _, child_name = module_name.rpartition(".")
+    if not parent_name or not isinstance(parent_module, ModuleType):
+        return
+    if parent_attribute is _MISSING_PARENT_ATTRIBUTE:
+        parent_module.__dict__.pop(child_name, None)
+    else:
+        setattr(parent_module, child_name, parent_attribute)
+
+
+_MISSING_PARENT_ATTRIBUTE = object()
+
+
+def _fresh_watch_package(module: ModuleType, module_names: tuple[str, ...]) -> ModuleType:
+    """Refresh a complete formatter package as one interpreter-state transaction."""
+    execution_order = (*reversed(module_names[1:]), module.__name__)
+    prepared_modules: dict[str, tuple[ModuleType, CodeType]] = {}
+    for loaded_name in execution_order:
+        if (
+            isinstance(loaded_module := sys.modules.get(loaded_name), ModuleType)
+            and (prepared := _prepare_watch_module(loaded_module)) is not None
+        ):
+            prepared_modules[loaded_name] = prepared
+    if module.__name__ not in prepared_modules:
+        return module
+
+    prefix = f"{module.__name__}."
+    loaded_modules = sys.modules.copy()
+    original_modules = {
+        loaded_name: loaded_module
+        for loaded_name, loaded_module in loaded_modules.items()
+        if loaded_name == module.__name__ or loaded_name.startswith(prefix)
+    }
+    module_namespaces = {
+        loaded_module: loaded_module.__dict__.copy()
+        for loaded_module in original_modules.values()
+        if isinstance(loaded_module, ModuleType)
+    }
+    parent_name, _, child_name = module.__name__.rpartition(".")
+    parent_module = loaded_modules.get(parent_name)
+    parent_attribute = (
+        getattr(parent_module, child_name, _MISSING_PARENT_ATTRIBUTE)
+        if isinstance(parent_module, ModuleType)
+        else _MISSING_PARENT_ATTRIBUTE
+    )
+
+    try:
+        for loaded_name in module_names:
+            sys.modules.pop(loaded_name, None)
+        for loaded_name, (replacement, _) in prepared_modules.items():
+            sys.modules[loaded_name] = replacement
+        for replacement, _ in prepared_modules.values():
+            _bind_watch_module(replacement)
+        for loaded_name in execution_order:
+            if (prepared := prepared_modules.get(loaded_name)) is not None:
+                replacement, code = prepared
+                exec(code, replacement.__dict__)  # noqa: S102
+    except BaseException:
+        _restore_watch_package(
+            module.__name__,
+            original_modules,
+            module_namespaces,
+            parent_module,
+            parent_attribute,
+        )
+        raise
+
+    replacement = prepared_modules[module.__name__][0]
+    _bind_watch_module(replacement)
     return replacement
 
 
@@ -134,27 +242,25 @@ def _load_watch_formatter_module(module_name: str, watch_dependencies: Any) -> M
     with PROCESS_STATE_LOCK:
         module = sys.modules.get(module_name)
         state = _WATCH_FORMATTER_STATES.get(module) if isinstance(module, ModuleType) else None
-        if state is not None and state.generation is generation:
+        if state is not None and state.generation() is generation:
             module_names = state.module_names
         elif module is None:
-            previous_modules = frozenset(sys.modules)
+            previous_modules = frozenset(sys.modules.copy())
             module = import_module(module_name)
             module_names = _local_package_modules(module, previous_modules=previous_modules)
         else:
-            previous_modules = frozenset(sys.modules)
             module_names = (
                 state.module_names
                 if state is not None
                 else _local_package_modules(module, previous_modules=frozenset())
             )
-            for child_name in reversed(module_names[1:]):
-                if isinstance(child_module := sys.modules.get(child_name), ModuleType):
-                    _fresh_watch_module(child_module)
-            module = _fresh_watch_module(module)
-            module_names = tuple(
-                dict.fromkeys((*module_names, *_local_package_modules(module, previous_modules=previous_modules)))
+            module = (
+                _fresh_watch_package(module, module_names)
+                if getattr(module, "__path__", None) is not None
+                else _fresh_watch_module(module)
             )
-        _WATCH_FORMATTER_STATES[module] = _WatchFormatterState(generation, module_names)
+            module_names = _local_package_modules(module, previous_modules=frozenset())
+        _WATCH_FORMATTER_STATES[module] = _WatchFormatterState(ref(generation), module_names)
     for tracked_name in module_names:
         watch_dependencies.record_module_dependency(sys.modules.get(tracked_name))
     return module

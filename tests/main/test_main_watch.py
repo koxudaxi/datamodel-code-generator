@@ -923,11 +923,11 @@ def test_watch_cli_reloads_custom_formatter_module_after_edit(
 
 
 @pytest.mark.allow_direct_assert
-def test_watch_cli_reloads_custom_formatter_package_helper_after_edit(
+def test_watch_cli_reloads_custom_formatter_package_after_refactor(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Package helpers refresh from source while the package executes once per generation."""
+    """Package helpers refresh and a deleted helper can be replaced in one event window."""
     project_directory = tmp_path / "project"
     formatter_directory = tmp_path / "formatter"
     package_directory = formatter_directory / "reloadable_watch_package"
@@ -979,6 +979,31 @@ def test_watch_cli_reloads_custom_formatter_package_helper_after_edit(
         assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_custom_formatter_changed.py")
         assert_output(
             execution_marker.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_formatter_executed_twice.txt"
+        )
+        time.sleep(WATCH_CLI_CHANGE_RETRY_SECONDS)
+        shutil.copyfile(
+            WATCH_DATA_PATH.parent / "python/custom_formatters/reloadable_watch_package/new_helper.py",
+            package_directory / "new_helper.py",
+        )
+        package_update = formatter_directory / "package-update.py"
+        shutil.copyfile(
+            WATCH_DATA_PATH.parent / "python/custom_formatters/reloadable_watch_package/package_refactored.py",
+            package_update,
+        )
+        package_update.replace(package_directory / "__init__.py")
+        helper_file.unlink()
+        _wait_for_watch_cli(
+            process,
+            stdout_lines,
+            stderr_lines,
+            lambda: _file_contains(output_file, 'formatter_revision = "refactored"'),
+            "the refactored custom formatter package to be reloaded",
+        )
+        assert_output(
+            output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_custom_formatter_refactored.py"
+        )
+        assert_output(
+            execution_marker.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_formatter_executed_thrice.txt"
         )
     finally:
         _stop_watch_cli(process, stdout_thread, stderr_thread)
@@ -1071,7 +1096,11 @@ def test_watch_dependencies_collect_module_formatter_and_protobuf_files(
 
     from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersionMin
     from datamodel_code_generator.parser.protobuf import ProtobufParser
-    from datamodel_code_generator.watch_dependencies import WatchDependencies, record_module_dependency
+    from datamodel_code_generator.watch_dependencies import (
+        WatchDependencies,
+        record_local_dependency,
+        record_module_dependency,
+    )
 
     source_module = tmp_path / "custom_module.py"
     source_module.write_text("value = 1\n", encoding="utf-8")
@@ -1084,6 +1113,8 @@ def test_watch_dependencies_collect_module_formatter_and_protobuf_files(
         record_module_dependency(module)
     assert source_module in module_dependencies.files
     assert record_module_dependency(ModuleType("built_in")) is None
+    record_local_dependency(tmp_path / "inactive.json")
+    assert tmp_path / "inactive.json" not in module_dependencies.files
 
     formatter_dependencies = WatchDependencies()
     with formatter_dependencies.generation():
@@ -1131,8 +1162,199 @@ def test_watch_dependencies_collect_module_formatter_and_protobuf_files(
             [root_proto],
             [tmp_path / "prepared", proto_directory],
         )
+        ProtobufParser._record_descriptor_dependencies(
+            SimpleNamespace(file=[SimpleNamespace(name=child_proto.name)]),
+            [tmp_path / "prepared", proto_directory],
+        )
     assert child_proto in protobuf_dependencies.files
     assert nested_proto in protobuf_dependencies.files
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_formatter_package_reload_is_transactional(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A failing later child restores earlier children before the next generation."""
+    from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersionMin
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    fixture_directory = PROJECT_ROOT / "tests/data/python/custom_formatters/transactional_watch_package"
+    formatter_directory = tmp_path / "formatters"
+    package_directory = formatter_directory / "transactional_watch_package"
+    package_directory.mkdir(parents=True)
+    for filename in ("__init__.py", "child_a.py", "child_b.py"):
+        shutil.copyfile(fixture_directory / filename, package_directory / filename)
+    monkeypatch.syspath_prepend(str(formatter_directory))
+    package_name = package_directory.name
+    dependencies = WatchDependencies()
+    with dependencies.generation():
+        formatter = CodeFormatter(
+            PythonVersionMin,
+            custom_formatters=[package_name],
+            formatters=[Formatter.BUILTIN],
+        )
+    old_package = sys.modules[package_name]
+    old_child_a = sys.modules[f"{package_name}.child_a"]
+    old_child_b = sys.modules[f"{package_name}.child_b"]
+    old_formatter_class = old_child_a.CodeFormatter
+    original_modules = {
+        loaded_name: loaded_module
+        for loaded_name, loaded_module in sys.modules.copy().items()
+        if loaded_name == package_name or loaded_name.startswith(f"{package_name}.")
+    }
+    original_namespaces = {
+        old_package: old_package.__dict__.copy(),
+        old_child_a: old_child_a.__dict__.copy(),
+        old_child_b: old_child_b.__dict__.copy(),
+    }
+
+    shutil.copyfile(fixture_directory / "child_a_changed.py", package_directory / "child_a.py")
+    shutil.copyfile(fixture_directory / "child_b_syntax_error.txt", package_directory / "child_b.py")
+    with pytest.raises(SyntaxError), dependencies.generation():
+        CodeFormatter(PythonVersionMin, custom_formatters=[package_name], formatters=[Formatter.BUILTIN])
+    assert sys.modules[package_name] is old_package
+    assert sys.modules[f"{package_name}.child_a"] is old_child_a
+    assert sys.modules[f"{package_name}.child_b"] is old_child_b
+    assert old_child_a.CodeFormatter is old_formatter_class
+    assert old_child_b.REVISION == "initial"
+    assert {
+        loaded_name: loaded_module
+        for loaded_name, loaded_module in sys.modules.copy().items()
+        if loaded_name == package_name or loaded_name.startswith(f"{package_name}.")
+    } == original_modules
+    assert all(module.__dict__ == namespace for module, namespace in original_namespaces.items())
+
+    shutil.copyfile(fixture_directory / "child_b_runtime_error.py", package_directory / "child_b.py")
+    with pytest.raises(RuntimeError, match="formatter child failed"), dependencies.generation():
+        CodeFormatter(PythonVersionMin, custom_formatters=[package_name], formatters=[Formatter.BUILTIN])
+    assert sys.modules[package_name] is old_package
+    assert sys.modules[f"{package_name}.child_a"] is old_child_a
+    assert sys.modules[f"{package_name}.child_b"] is old_child_b
+    assert old_child_a.CodeFormatter is old_formatter_class
+    assert old_child_b.REVISION == "initial"
+    assert {
+        loaded_name: loaded_module
+        for loaded_name, loaded_module in sys.modules.copy().items()
+        if loaded_name == package_name or loaded_name.startswith(f"{package_name}.")
+    } == original_modules
+    assert all(module.__dict__ == namespace for module, namespace in original_namespaces.items())
+
+    shutil.copyfile(fixture_directory / "child_b.py", package_directory / "child_b.py")
+    with dependencies.generation():
+        formatter = CodeFormatter(
+            PythonVersionMin,
+            custom_formatters=[package_name],
+            formatters=[Formatter.BUILTIN],
+        )
+    assert_output(formatter.format_code("value=1\n"), EXPECTED_MAIN_PATH / "watch_transactional_formatter_changed.txt")
+    for loaded_name in tuple(sys.modules.copy()):
+        if loaded_name == package_name or loaded_name.startswith(f"{package_name}."):
+            sys.modules.pop(loaded_name, None)
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_formatter_state_does_not_retain_generation() -> None:
+    """Formatter reload state keeps neither a completed collector nor its session alive."""
+    import gc
+    import weakref
+
+    from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersionMin
+    from datamodel_code_generator.watch_dependencies import WatchDependencies, collector_identity
+
+    package_name = "tests.data.python.custom_formatters.reloadable_watch_package"
+    dependencies = WatchDependencies()
+    with dependencies.generation():
+        formatter = CodeFormatter(
+            PythonVersionMin,
+            custom_formatters=[package_name],
+            formatters=[Formatter.BUILTIN],
+        )
+        collector = collector_identity()
+        assert collector is not None
+        collector_reference = weakref.ref(collector)
+    dependencies_reference = weakref.ref(dependencies)
+    del collector, dependencies, formatter
+    gc.collect()
+    assert collector_reference() is None
+    assert dependencies_reference() is None
+
+
+@pytest.mark.allow_direct_assert
+def test_local_package_module_snapshot_tolerates_concurrent_imports(tmp_path: Path) -> None:
+    """Normal imports cannot resize the module registry during package discovery."""
+    from datamodel_code_generator.format import _local_package_modules
+
+    package = ModuleType("watch_snapshot_package")
+    package.__path__ = [str(tmp_path)]
+    seeded_names = [f"watch_snapshot_seed_{index}" for index in range(10_000)]
+    racing_names = [f"watch_snapshot_race_{index}" for index in range(20_000)]
+    for loaded_name in seeded_names:
+        sys.modules[loaded_name] = ModuleType(loaded_name)
+    start = threading.Event()
+
+    def import_modules() -> None:
+        start.wait()
+        for loaded_name in racing_names:
+            sys.modules[loaded_name] = ModuleType(loaded_name)
+
+    import_thread = threading.Thread(target=import_modules)
+    import_thread.start()
+    try:
+        start.set()
+        assert _local_package_modules(package, previous_modules=frozenset()) == (package.__name__,)
+    finally:
+        import_thread.join()
+        for loaded_name in (*seeded_names, *racing_names):
+            sys.modules.pop(loaded_name, None)
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_formatter_refresh_handles_unavailable_source_and_parent_bindings() -> None:
+    """Unavailable package source is retained and rollback restores either parent state."""
+    from importlib.machinery import ModuleSpec
+
+    from datamodel_code_generator.format import (
+        _MISSING_PARENT_ATTRIBUTE,
+        _fresh_watch_package,
+        _prepare_watch_module,
+        _restore_watch_package,
+    )
+
+    unavailable_package = ModuleType("watch_unavailable_package")
+    unavailable_package.__spec__ = ModuleSpec(
+        unavailable_package.__name__,
+        SimpleNamespace(get_source=lambda _: None),
+        is_package=True,
+    )
+    unavailable_package.__path__ = []
+    sys.modules[unavailable_package.__name__] = unavailable_package
+    assert _prepare_watch_module(unavailable_package) is None
+    assert _fresh_watch_package(unavailable_package, (unavailable_package.__name__,)) is unavailable_package
+
+    parent_module = ModuleType("watch_restore_parent")
+    module_name = f"{parent_module.__name__}.child"
+    original_module = ModuleType(module_name)
+    namespace = original_module.__dict__.copy()
+    restored_attribute = object()
+    sys.modules[parent_module.__name__] = parent_module
+    sys.modules[module_name] = original_module
+    _restore_watch_package(
+        module_name,
+        {module_name: original_module},
+        {original_module: namespace},
+        parent_module,
+        restored_attribute,
+    )
+    assert parent_module.child is restored_attribute
+    parent_module.__dict__.pop("child")
+    _restore_watch_package(
+        module_name,
+        {module_name: original_module},
+        {original_module: namespace},
+        parent_module,
+        _MISSING_PARENT_ATTRIBUTE,
+    )
+    assert not hasattr(parent_module, "child")
+    for loaded_name in (unavailable_package.__name__, module_name, parent_module.__name__):
+        sys.modules.pop(loaded_name, None)
 
 
 @pytest.mark.allow_direct_assert
