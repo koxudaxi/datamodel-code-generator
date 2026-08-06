@@ -350,6 +350,9 @@ class _ProtoInputPreparer:
         return input_files
 
     def _write_sanitized_file(self, source_path: Path, temp_path: Path, root: Path) -> Path:
+        from datamodel_code_generator.watch_dependencies import record_local_dependency  # noqa: PLC0415
+
+        record_local_dependency(source_path)
         if source_path.is_relative_to(root):
             target = temp_path / source_path.relative_to(root)
         else:  # pragma: no cover
@@ -704,10 +707,23 @@ class ProtobufParser(JsonSchemaParser):
                     raise SchemaParseError(msg)
                 descriptor_set = descriptor_pb2.FileDescriptorSet()
                 descriptor_set.ParseFromString(output_path.read_bytes())
+                self._record_descriptor_dependencies(descriptor_set, include_paths)
                 return descriptor_set, input_file_names
             finally:
                 with contextlib.suppress(OSError):
                     output_path.unlink()
+
+    @staticmethod
+    def _record_descriptor_dependencies(descriptor_set: Any, include_paths: Sequence[Path]) -> None:
+        """Record local ``protoc`` imports without retaining descriptor contents."""
+        from datamodel_code_generator.watch_dependencies import record_local_dependency  # noqa: PLC0415
+
+        for descriptor in descriptor_set.file:
+            for include_path in include_paths:
+                candidate = include_path / descriptor.name
+                if candidate.is_file():
+                    record_local_dependency(candidate)
+                    break
 
     def convert_to_json_schema_data(self) -> dict[str, Any]:
         """Convert Protocol Buffers input sources into JSON Schema data."""

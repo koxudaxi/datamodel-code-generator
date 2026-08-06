@@ -27,6 +27,9 @@ def _get_toml_loader() -> Callable[[Any], dict[str, Any]]:
 
 def load_toml(path: Path) -> dict[str, Any]:
     """Load and parse a TOML file."""
+    from datamodel_code_generator.watch_dependencies import record_local_dependency  # noqa: PLC0415
+
+    record_local_dependency(path)
     with path.open("rb") as f:
         return _get_toml_loader()(f)
 

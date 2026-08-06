@@ -1465,6 +1465,9 @@ class Source(BaseModel):
         encoding: str,
     ) -> Source:
         """Create a Source from a file path relative to base_path."""
+        from datamodel_code_generator.watch_dependencies import record_local_dependency  # noqa: PLC0415
+
+        record_local_dependency(path)
         return cls(
             path=path.relative_to(base_path),
             text=path.read_text(encoding=encoding),

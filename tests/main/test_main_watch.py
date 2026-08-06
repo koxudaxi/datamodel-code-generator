@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import os
+import shutil
 import signal
 import subprocess
 import sys
 import threading
 import time
+from importlib.util import find_spec
 from pathlib import Path
 from types import ModuleType
 from typing import TYPE_CHECKING, TextIO
@@ -28,8 +30,11 @@ from tests.main.conftest import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
 PROJECT_ROOT = Path(__file__).parents[2]
 PACKAGE_ROOT = Path(datamodel_code_generator.__file__).parent
+WATCH_DATA_PATH = PROJECT_ROOT / "tests/data/watch"
 WATCH_CLI_TIMEOUT_SECONDS = 15.0
 WATCH_CLI_STOP_TIMEOUT_SECONDS = 5.0
 WATCH_CLI_READY_DELAY_SECONDS = 0.3
@@ -66,13 +71,14 @@ WATCH_SCHEMA_CHANGED = """\
 }
 """
 WATCH_SCHEMA_INVALID = '{"title": "WatchedPerson",'
+WATCH_GENERATION_ERROR = "generation error"
 
 
-def _watch_cli_command(input_path: Path, output_path: Path) -> list[str]:
+def _watch_cli_command(input_path: Path, output_path: Path, extra_args: list[str] | None = None) -> list[str]:
     command = [sys.executable]
     coverage_file = os.environ.get("COVERAGE_FILE", "")
     if coverage_file and "-nocov" not in coverage_file:
-        command.extend(["-m", "coverage", "run", "--parallel-mode", "--source", str(PACKAGE_ROOT)])
+        command.extend(["-m", "coverage", "run", "--branch", "--parallel-mode", "--source", str(PACKAGE_ROOT)])
     command.extend([
         "-m",
         "datamodel_code_generator",
@@ -89,6 +95,8 @@ def _watch_cli_command(input_path: Path, output_path: Path) -> list[str]:
         "builtin",
         "--disable-timestamp",
     ])
+    if extra_args:
+        command.extend(extra_args)
     return command
 
 
@@ -99,14 +107,16 @@ def _collect_stream_lines(stream: TextIO, lines: list[str]) -> None:
 def _start_watch_cli(
     input_path: Path,
     output_path: Path,
+    extra_args: list[str] | None = None,
+    working_directory: Path = PROJECT_ROOT,
 ) -> tuple[subprocess.Popen[str], list[str], list[str], threading.Thread, threading.Thread]:
     process = subprocess.Popen(
-        _watch_cli_command(input_path, output_path),
+        _watch_cli_command(input_path, output_path, extra_args),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
         bufsize=1,
-        cwd=PROJECT_ROOT,
+        cwd=working_directory,
         env={
             **os.environ,
             "PYTHONUNBUFFERED": "1",
@@ -220,11 +230,29 @@ def _file_contains(path: Path, expected_text: str) -> bool:
     return expected_text in path.read_text(encoding="utf-8")
 
 
+def _record_failed_dependency(dependencies: WatchDependencies, path: Path) -> None:
+    from datamodel_code_generator.watch_dependencies import record_local_dependency
+
+    with dependencies.generation():
+        record_local_dependency(path)
+        raise RuntimeError(WATCH_GENERATION_ERROR)
+
+
 def _start_watch_cli_until_ready(
     input_path: Path,
     output_path: Path,
+    extra_args: list[str] | None = None,
+    working_directory: Path = PROJECT_ROOT,
 ) -> tuple[subprocess.Popen[str], list[str], list[str], threading.Thread, threading.Thread]:
-    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli(input_path, output_path)
+    if extra_args is None and working_directory == PROJECT_ROOT:
+        process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli(input_path, output_path)
+    else:
+        process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli(
+            input_path,
+            output_path,
+            extra_args,
+            working_directory,
+        )
     try:
         _wait_for_watch_cli(
             process,
@@ -247,7 +275,7 @@ def test_watch_cli_command_uses_coverage_for_coverage_env(tmp_path: Path, monkey
 
     command = _watch_cli_command(tmp_path / "schema.json", tmp_path / "output.py")
 
-    assert command[1:6] == ["-m", "coverage", "run", "--parallel-mode", "--source"]
+    assert command[1:7] == ["-m", "coverage", "run", "--branch", "--parallel-mode", "--source"]
 
 
 @pytest.mark.allow_direct_assert
@@ -666,6 +694,85 @@ def test_watch_and_regenerate_handles_exhausted_watcher(mocker: pytest.MockerFix
     run_watch_and_assert(config)
 
 
+@pytest.mark.allow_direct_assert
+def test_watch_dependency_paths_are_limited_to_generation_inputs(tmp_path: Path) -> None:
+    """Dependency collection retains paths, not parsed source content or output files."""
+    from datamodel_code_generator.__main__ import Config
+    from datamodel_code_generator.watch import _is_generated_output, _watch_filter
+    from datamodel_code_generator.watch_dependencies import (
+        WatchDependencies,
+        _existing_file,
+        _nearest_pyproject_toml,
+        record_local_dependency,
+    )
+
+    input_file = tmp_path / "schema.json"
+    config_file = tmp_path / "aliases.json"
+    header_file = tmp_path / "header.txt"
+    template_dir = tmp_path / "templates"
+    output_dir = tmp_path / "models"
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    config_file.write_text("{}", encoding="utf-8")
+    header_file.write_text("# header", encoding="utf-8")
+    template_dir.mkdir()
+    output_dir.mkdir()
+    referenced_file = tmp_path / "reference.json"
+    referenced_file.write_text("{}", encoding="utf-8")
+
+    dependencies = WatchDependencies()
+    config = Config(
+        input=input_file,
+        output=output_dir,
+        custom_file_header_path=header_file,
+        custom_template_dir=template_dir,
+    )
+    dependencies.configure(config, config_values={"aliases": str(config_file)})
+    with dependencies.generation():
+        record_local_dependency(referenced_file)
+
+    assert dependencies.files == frozenset({
+        PROJECT_ROOT / "pyproject.toml",
+        input_file,
+        config_file,
+        header_file,
+        referenced_file,
+    })
+    assert dependencies.directories == frozenset({template_dir})
+    watch_filter = _watch_filter(dependencies, dependencies.output)
+    assert not _is_generated_output(referenced_file, None)
+    assert watch_filter(None, str(referenced_file))
+    assert watch_filter(None, str(template_dir / "BaseModel.jinja2"))
+    assert not watch_filter(None, str(output_dir / "model.py"))
+    assert _existing_file("\0") is None
+    assert _nearest_pyproject_toml(tmp_path) is None
+
+    with pytest.raises(RuntimeError, match=WATCH_GENERATION_ERROR):
+        _record_failed_dependency(dependencies, tmp_path / "attempted.json")
+
+    assert referenced_file in dependencies.files
+    assert tmp_path / "attempted.json" in dependencies.files
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_with_no_collected_dependencies_stops_cleanly(tmp_path: Path) -> None:
+    """An empty dependency graph does not leave an idle watch loop behind."""
+    from datamodel_code_generator.__main__ import Config
+    from datamodel_code_generator.watch import watch_and_regenerate
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+
+    assert (
+        watch_and_regenerate(
+            Config(input=input_file),
+            dependencies=WatchDependencies(),
+            regenerate=lambda: Exit.OK,
+        )
+        == Exit.OK
+    )
+
+
 def test_watch_cli_regenerates_directory_output_on_change(tmp_path: Path) -> None:
     """Watch mode regenerates package output when a schema directory changes."""
     input_dir = tmp_path / "schemas"
@@ -690,6 +797,171 @@ def test_watch_cli_regenerates_directory_output_on_change(tmp_path: Path) -> Non
             "directory output to be regenerated",
         )
         assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_file_change.py")
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+def test_watch_cli_regenerates_on_nested_reference_change(tmp_path: Path) -> None:
+    """Watch mode fully regenerates after an external local ``$ref`` changes."""
+    schema_dir = tmp_path / "schemas"
+    shutil.copytree(WATCH_DATA_PATH / "nested_ref", schema_dir)
+    input_file = schema_dir / "root.json"
+    referenced_file = schema_dir / "child.json"
+    output_file = tmp_path / "output.py"
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
+        input_file,
+        output_file,
+    )
+
+    try:
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            referenced_file,
+            (schema_dir / "child_changed.json").read_text(encoding="utf-8"),
+            lambda: _file_contains(output_file, "age: int | None = None"),
+            "nested reference output to be regenerated",
+        )
+        assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_nested_ref_change.py")
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+def test_watch_cli_regenerates_on_xmlschema_include_change(tmp_path: Path) -> None:
+    """Watch mode fully regenerates after an included XML Schema changes."""
+    schema_dir = tmp_path / "schemas"
+    shutil.copytree(WATCH_DATA_PATH / "xmlschema_include", schema_dir)
+    input_file = schema_dir / "root.xsd"
+    included_file = schema_dir / "child.xsd"
+    output_file = tmp_path / "output.py"
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
+        input_file,
+        output_file,
+        ["--input-file-type", "xmlschema"],
+    )
+
+    try:
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            included_file,
+            (schema_dir / "child_changed.xsd").read_text(encoding="utf-8"),
+            lambda: _file_contains(output_file, "age: conint(ge=-2147483648, le=2147483647) | None = None"),
+            "included XML Schema output to be regenerated",
+        )
+        assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_xmlschema_include_change.py")
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+@pytest.mark.skipif(find_spec("grpc_tools") is None, reason="requires the protobuf extra")
+def test_watch_cli_regenerates_on_protobuf_import_change(tmp_path: Path) -> None:
+    """Watch mode fully regenerates after an imported Protocol Buffers file changes."""
+    schema_dir = tmp_path / "schemas"
+    shutil.copytree(WATCH_DATA_PATH / "protobuf_import", schema_dir)
+    input_file = schema_dir / "root.proto"
+    imported_file = schema_dir / "child.proto"
+    output_file = tmp_path / "output.py"
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
+        input_file,
+        output_file,
+        ["--input-file-type", "protobuf"],
+    )
+
+    try:
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            imported_file,
+            (schema_dir / "child_changed.proto").read_text(encoding="utf-8"),
+            lambda: _file_contains(output_file, "age: int | None = 0"),
+            "imported Protocol Buffers output to be regenerated",
+        )
+        assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_protobuf_import_change.py")
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+def test_watch_cli_regenerates_on_custom_header_change(tmp_path: Path) -> None:
+    """Watch mode reloads a configured custom header without watching generated output."""
+    input_file = tmp_path / "schema.json"
+    header_file = tmp_path / "header.txt"
+    output_file = tmp_path / "output.py"
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    header_file.write_text("# first header", encoding="utf-8")
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
+        input_file,
+        output_file,
+        ["--custom-file-header-path", str(header_file)],
+    )
+
+    try:
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            header_file,
+            "# updated header",
+            lambda: _file_contains(output_file, "# updated header"),
+            "custom header output to be regenerated",
+        )
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+def test_watch_cli_regenerates_on_alias_configuration_change(tmp_path: Path) -> None:
+    """Watch mode resolves a JSON-backed alias configuration again after it changes."""
+    input_file = tmp_path / "schema.json"
+    aliases_file = tmp_path / "aliases.json"
+    output_file = tmp_path / "output.py"
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    aliases_file.write_text('{"name": "first_name"}\n', encoding="utf-8")
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
+        input_file,
+        output_file,
+        ["--aliases", str(aliases_file)],
+    )
+
+    try:
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            aliases_file,
+            '{"name": "updated_name"}\n',
+            lambda: _file_contains(output_file, "updated_name: str"),
+            "alias configuration output to be regenerated",
+        )
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+def test_watch_cli_reloads_pyproject_configuration(tmp_path: Path) -> None:
+    """Watch mode resolves the command again after its pyproject.toml changes."""
+    input_file = tmp_path / "schema.json"
+    output_file = tmp_path / "output.py"
+    pyproject_file = tmp_path / "pyproject.toml"
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    pyproject_file.write_text("[tool.datamodel-codegen]\nclass-name = 'FirstModel'\n", encoding="utf-8")
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
+        input_file,
+        output_file,
+        working_directory=tmp_path,
+    )
+
+    try:
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            pyproject_file,
+            "[tool.datamodel-codegen]\nclass-name = 'UpdatedModel'\n",
+            lambda: _file_contains(output_file, "class UpdatedModel(BaseModel):"),
+            "pyproject configuration output to be regenerated",
+        )
     finally:
         _stop_watch_cli(process, stdout_thread, stderr_thread)
 

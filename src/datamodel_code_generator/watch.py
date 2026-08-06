@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collections import defaultdict
-    from collections.abc import Mapping
+    from collections.abc import Callable
 
     from datamodel_code_generator.__main__ import Config, Exit
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
 
 
 def _get_watchfiles() -> Any:
@@ -23,16 +23,65 @@ def _get_watchfiles() -> Any:
     return watchfiles
 
 
-def watch_and_regenerate(  # noqa: PLR0913, PLR0917
+def _is_generated_output(path: Path, output: Path | None) -> bool:
+    if output is None:
+        return False
+    resolved_output = output.resolve()
+    if output.suffix:
+        return path == resolved_output
+    return path == resolved_output or path.is_relative_to(resolved_output)
+
+
+def _watch_filter(dependencies: WatchDependencies, output: Path | None) -> Callable[[Any, str], bool]:
+    def includes_dependency(_change: Any, path: str) -> bool:
+        resolved_path = Path(path).resolve()
+        return not _is_generated_output(resolved_path, output) and dependencies.includes(resolved_path)
+
+    return includes_dependency
+
+
+def _regenerate(regenerate: Callable[[], Exit]) -> None:
+    from datamodel_code_generator.__main__ import Exit  # noqa: PLC0415
+
+    if regenerate() == Exit.OK:
+        return
+    msg = "Generation failed"
+    raise RuntimeError(msg)
+
+
+def _watch_once(
+    watchfiles: Any,
+    watch_roots: tuple[Path, ...],
     config: Config,
-    extra_template_data: defaultdict[str, dict[str, Any]] | None,
-    aliases: Mapping[str, str | list[str]] | None,
-    serialization_aliases: Mapping[str, str] | None,
-    custom_formatters_kwargs: Mapping[str, str] | None,
-    default_value_overrides: Mapping[str, Any] | None = None,
+    dependencies: WatchDependencies,
+    regenerate: Callable[[], Exit],
+) -> bool:
+    for changes in watchfiles.watch(
+        *watch_roots,
+        debounce=int(config.watch_delay * 1000),
+        recursive=True,
+        watch_filter=_watch_filter(dependencies, dependencies.output),
+    ):
+        print(f"\nDetected changes: {changes}")  # noqa: T201
+        print("Regenerating...")  # noqa: T201
+        try:
+            _regenerate(regenerate)
+            print("Done.")  # noqa: T201
+        except Exception as e:  # noqa: BLE001
+            print(f"Error: {e}", file=sys.stderr)  # noqa: T201
+        return True
+    return False
+
+
+def watch_and_regenerate(
+    config: Config,
+    *,
+    dependencies: WatchDependencies | None = None,
+    regenerate: Callable[[], Exit],
 ) -> Exit:
-    """Watch input files and regenerate on changes."""
-    from datamodel_code_generator.__main__ import Exit, run_generate_from_config  # noqa: PLC0415
+    """Watch every local generation dependency and fully regenerate on changes."""
+    from datamodel_code_generator.__main__ import Exit  # noqa: PLC0415
+    from datamodel_code_generator.watch_dependencies import WatchDependencies  # noqa: PLC0415
 
     watchfiles = _get_watchfiles()
 
@@ -41,33 +90,22 @@ def watch_and_regenerate(  # noqa: PLR0913, PLR0917
         print("Watch mode requires --input file path", file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
+    if dependencies is None:
+        dependencies = WatchDependencies()
+        dependencies.configure(config, config_values={})
+
     print(f"Watching {watch_path} for changes... (Ctrl+C to stop)")  # noqa: T201
 
     try:
-        for changes in watchfiles.watch(
-            watch_path,
-            debounce=int(config.watch_delay * 1000),
-            recursive=watch_path.is_dir(),
-        ):
-            print(f"\nDetected changes: {changes}")  # noqa: T201
-            print("Regenerating...")  # noqa: T201
-            try:
-                run_generate_from_config(
-                    config=config,
-                    input_=config.input,
-                    output=config.output,
-                    extra_template_data=extra_template_data,
-                    aliases=aliases,
-                    serialization_aliases=serialization_aliases,
-                    command_line=None,
-                    custom_formatters_kwargs=dict(formatter_kwargs)
-                    if (formatter_kwargs := custom_formatters_kwargs) is not None
-                    else None,
-                    default_value_overrides=default_value_overrides,
-                )
-                print("Done.")  # noqa: T201
-            except Exception as e:  # noqa: BLE001
-                print(f"Error: {e}", file=sys.stderr)  # noqa: T201
+        while watch_roots := dependencies.watch_roots():
+            if not _watch_once(
+                watchfiles,
+                watch_roots,
+                config,
+                dependencies,
+                regenerate,
+            ):
+                return Exit.OK
     except KeyboardInterrupt:
         print("\nWatch mode stopped.")  # noqa: T201
 

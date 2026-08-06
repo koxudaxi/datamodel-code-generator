@@ -148,6 +148,7 @@ if TYPE_CHECKING:
     )
     from datamodel_code_generator.json_config import JsonConfigFieldName, JsonConfigSource
     from datamodel_code_generator.validators import ModelValidators
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
 
     Config = cast("Any", object)
     ValidatorsConfigValue: TypeAlias = Mapping[str, ModelValidators]
@@ -1187,7 +1188,12 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     )
 
 
-def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
+def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
+    args: Sequence[str] | None = None,
+    *,
+    start_watch: bool,
+    dependencies: WatchDependencies | None = None,
+) -> Exit:
     """Execute datamodel code generation from command-line arguments."""
     vars(namespace).clear()
     namespace.no_color = False
@@ -1290,6 +1296,16 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
     except Error as e:
         print(str(e), file=sys.stderr)  # noqa: T201
         return Exit.ERROR
+
+    watch_dependencies = dependencies
+    if config.watch:
+        from datamodel_code_generator.watch_dependencies import WatchDependencies  # noqa: PLC0415
+
+        watch_dependencies = watch_dependencies or WatchDependencies()
+        watch_dependencies.configure(
+            config,
+            config_values={**pyproject_config, **cli_config_args},
+        )
 
     if config.list_deprecations:
         content = render_deprecations(cast("Any", config.list_deprecations))
@@ -1521,19 +1537,35 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         if writes_json_output_file:
             _validate_generation_path_conflicts(input_, config.output, config.emit_model_metadata)
 
-        result = run_generate_from_config(
-            config=config,
-            input_=input_,
-            output=generate_output,
-            extra_template_data=extra_template_data,
-            aliases=aliases,
-            serialization_aliases=serialization_aliases,
-            command_line=_command_header(args) if config.enable_command_header else None,
-            custom_formatters_kwargs=custom_formatters_kwargs,
-            settings_path=config.output,
-            validators=validators_config,
-            default_value_overrides=default_value_overrides,
-        )
+        if watch_dependencies is None:
+            result = run_generate_from_config(
+                config=config,
+                input_=input_,
+                output=generate_output,
+                extra_template_data=extra_template_data,
+                aliases=aliases,
+                serialization_aliases=serialization_aliases,
+                command_line=_command_header(args) if config.enable_command_header else None,
+                custom_formatters_kwargs=custom_formatters_kwargs,
+                settings_path=config.output,
+                validators=validators_config,
+                default_value_overrides=default_value_overrides,
+            )
+        else:
+            with watch_dependencies.generation():
+                result = run_generate_from_config(
+                    config=config,
+                    input_=input_,
+                    output=generate_output,
+                    extra_template_data=extra_template_data,
+                    aliases=aliases,
+                    serialization_aliases=serialization_aliases,
+                    command_line=_command_header(args) if config.enable_command_header else None,
+                    custom_formatters_kwargs=custom_formatters_kwargs,
+                    settings_path=config.output,
+                    validators=validators_config,
+                    default_value_overrides=default_value_overrides,
+                )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201
         return cleanup_and_return(Exit.ERROR)
@@ -1656,18 +1688,19 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
 
         return cleanup_and_return(Exit.DIFF if has_differences else Exit.OK)
 
-    if config.watch:
+    if config.watch and start_watch:
         try:
             from datamodel_code_generator.watch import watch_and_regenerate  # noqa: PLC0415
 
             return cleanup_and_return(
                 watch_and_regenerate(
                     config,
-                    extra_template_data,
-                    aliases,
-                    serialization_aliases,
-                    custom_formatters_kwargs,
-                    default_value_overrides,
+                    dependencies=watch_dependencies,
+                    regenerate=lambda: _main(
+                        args,
+                        start_watch=False,
+                        dependencies=watch_dependencies,
+                    ),
                 )
             )
         except Exception as e:  # noqa: BLE001
@@ -1675,6 +1708,11 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             return cleanup_and_return(Exit.ERROR)
 
     return cleanup_and_return(Exit.OK)
+
+
+def main(args: Sequence[str] | None = None) -> Exit:
+    """Execute datamodel code generation from command-line arguments."""
+    return _main(args, start_watch=True)
 
 
 if __name__ == "__main__":

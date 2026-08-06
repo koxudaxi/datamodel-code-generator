@@ -255,6 +255,9 @@ def _has_xmlschema_versioning_attribute(element: ET.Element) -> bool:
 
 
 def _read_xml_text(path: Path, encoding: str) -> str:
+    from datamodel_code_generator.watch_dependencies import record_local_dependency  # noqa: PLC0415
+
+    record_local_dependency(path)
     return _decode_xml_bytes(path.read_bytes(), encoding)
 
 
@@ -276,6 +279,9 @@ def _digest_bytes(data: bytes) -> str:
 
 
 def _digest_path(path: Path) -> str:
+    from datamodel_code_generator.watch_dependencies import record_local_dependency  # noqa: PLC0415
+
+    record_local_dependency(path)
     return _digest_bytes(path.read_bytes())
 
 
