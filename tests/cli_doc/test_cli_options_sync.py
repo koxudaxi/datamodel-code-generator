@@ -187,6 +187,31 @@ def test_generate_option_section_uses_canonical_anchor_for_aliases() -> None:
     )
 
 
+def test_generate_option_section_preserves_an_explicit_input() -> None:
+    """Usage commands do not prepend the generic input to an explicit schema path."""
+    section = generate_option_section(
+        "--diff-against",
+        CLIDocOption(
+            option_name="--diff-against",
+            examples=[
+                CLIDocExample(
+                    node_id="tests/main/test_main_input_diff.py::test_diff",
+                    option_description="Compare two generated inputs.",
+                    cli_args=["--input", "new.yaml", "--diff-against", "old.yaml"],
+                    is_primary=True,
+                ),
+            ],
+        ),
+    )
+
+    _fail_if_missing(
+        "datamodel-codegen --input new.yaml --diff-against old.yaml",
+        section,
+        "explicit input usage",
+    )
+    _fail_if_present("--input schema.json --input", section, "duplicate placeholder input")
+
+
 def test_documented_related_option_prefers_existing_generated_section() -> None:
     """Related links should target generated sections, not argparse's longest alias."""
     documented_options = frozenset({

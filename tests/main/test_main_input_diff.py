@@ -157,6 +157,8 @@ The command exits non-zero when the formatted generated outputs differ, making i
 for reviewing schema migrations in CI.""",
     input_schema="openapi/input_diff/new.yaml",
     cli_args=[
+        "--input",
+        "tests/data/openapi/input_diff/new.yaml",
         "--diff-against",
         "tests/data/openapi/input_diff/old.yaml",
         "--output",

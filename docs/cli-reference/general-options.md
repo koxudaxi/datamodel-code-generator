@@ -1441,7 +1441,7 @@ for reviewing schema migrations in CI.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --diff-against tests/data/openapi/input_diff/old.yaml --output models --input-file-type openapi --disable-timestamp # (1)!
+    datamodel-codegen --input tests/data/openapi/input_diff/new.yaml --diff-against tests/data/openapi/input_diff/old.yaml --output models --input-file-type openapi --disable-timestamp # (1)!
     ```
 
     1. :material-arrow-left: `--diff-against` - the option documented here
@@ -1718,7 +1718,7 @@ a working CLI command into a reusable configuration file.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --generate-pyproject-config --input schema.yaml --output model.py # (1)!
+    datamodel-codegen --generate-pyproject-config --input schema.yaml --output model.py # (1)!
     ```
 
     1. :material-arrow-left: `--generate-pyproject-config` - the option documented here

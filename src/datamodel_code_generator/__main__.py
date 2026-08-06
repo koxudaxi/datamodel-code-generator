@@ -1492,7 +1492,6 @@ def _compare_generated_single_file(
     from datamodel_code_generator._structured_output import CheckDifferencePayload  # noqa: PLC0415
 
     differences: list[CheckDifferencePayload] = []
-    content_parts: list[str] = []
     diff_found, diff_lines = _compare_single_file(generated_output, actual_output, encoding, comparison)
     if not diff_found:
         return OutputComparison(differences=differences, content="")
@@ -1503,9 +1502,7 @@ def _compare_generated_single_file(
         differences.append(CheckDifferencePayload(kind="changed", path=path, diff=diff_text))
     else:
         differences.append(CheckDifferencePayload(kind="missing", path=path, message=diff_text))
-    if diff_text:
-        content_parts.append(diff_text)
-    return OutputComparison(differences=differences, content="".join(content_parts))
+    return OutputComparison(differences=differences, content=diff_text)
 
 
 def _compare_generated_directories(

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import os
-import stat
 import shutil
+import stat
 import sys
 from argparse import Namespace
 from pathlib import Path
@@ -4827,6 +4827,35 @@ def test_output_format_json_check_missing_output_directory(tmp_path: Path, capsy
             expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "check_missing_output.txt",
             assert_no_stderr=True,
         )
+
+
+def test_output_format_json_check_missing_output_file(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --check reports a missing single-file output through structured JSON."""
+    with chdir(tmp_path):
+        output_path = Path("output.py")
+        run_main_with_args(
+            [
+                "--input",
+                str(JSON_SCHEMA_DATA_PATH / "person.json"),
+                "--input-file-type",
+                "jsonschema",
+                "--output",
+                output_path.as_posix(),
+                "--check",
+                "--output-format",
+                "json",
+                "--disable-timestamp",
+                "--formatters",
+                "builtin",
+            ],
+            expected_exit=Exit.DIFF,
+        )
+    captured = capsys.readouterr()
+    assert_output(
+        captured.out.replace((tmp_path / output_path).as_posix(), OUTPUT_FILE_PLACEHOLDER),
+        EXPECTED_OUTPUT_FORMAT_JSON_PATH / "check_missing_output_file.txt",
+    )
+    assert_output(captured.err, EXPECTED_EMPTY_OUTPUT_PATH)
 
 
 def test_output_format_json_check_output_file_difference(
