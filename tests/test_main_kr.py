@@ -4152,7 +4152,10 @@ successful generation. An existing selected lock is verified automatically.
 `--lockfile` only selects its path: a missing selected lock is ignored unless
 `--locked` requires it, while `--update-lock` creates it. The lock stores
 opaque SHA-256 request-identity digests and SHA-256 body digests, never
-response bodies or request values directly.
+response bodies or request values directly. A request identity includes its
+scheme, host, explicit port, path, header names, and ordered query parameter
+names only. If one generation receives different bodies for the same path and
+query-name identity, it fails closed rather than sharing a lock entry.
 
 Without `--lockfile`, the CLI uses `datamodel-codegen.lock` beside the
 discovered `pyproject.toml`, or in the invocation working directory when no

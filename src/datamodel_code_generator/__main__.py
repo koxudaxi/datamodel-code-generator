@@ -2502,7 +2502,7 @@ def _single_job_plan(config: Config, pyproject_path: Path | None) -> JobPlan:
     )
 
 
-def _run_single_remote_transaction(  # noqa: PLR0913, PLR0917
+def _run_single_remote_transaction(  # noqa: PLR0912, PLR0913, PLR0917
     args: Sequence[str],
     config: Config,
     pyproject_config: Mapping[str, Any],
@@ -2514,6 +2514,7 @@ def _run_single_remote_transaction(  # noqa: PLR0913, PLR0917
 ) -> Exit:
     """Generate one command through staging so lock and output publication share one journal."""
     staged_plans: tuple[_StagedJobPlan, ...] = ()
+    exit_code = Exit.ERROR
     try:
         with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as stdout_spool:
             with redirect_stdout(stdout_spool):
@@ -2543,30 +2544,42 @@ def _run_single_remote_transaction(  # noqa: PLR0913, PLR0917
                         _remote_locks=remote_locks,
                         _bound_remote_lock_plan=remote_lock_plan,
                     )
-            if result is Exit.ERROR:
-                return result
-            if result is Exit.DIFF:
-                stdout_spool.seek(0)
-                shutil.copyfileobj(stdout_spool, sys.stdout)
-                return result
-            if config.check:
-                stdout_spool.seek(0)
-                shutil.copyfileobj(stdout_spool, sys.stdout)
-                return Exit.OK
-            if (publish_error := _publish_or_error(staged_plans, remote_locks)) is not None:
-                return publish_error
-            stdout_spool.seek(0)
-            shutil.copyfileobj(stdout_spool, sys.stdout)
-            return Exit.OK
+            match result:
+                case Exit.ERROR:
+                    exit_code = result
+                case Exit.DIFF:
+                    stdout_spool.seek(0)
+                    shutil.copyfileobj(stdout_spool, sys.stdout)
+                    exit_code = result
+                case _ if config.check:
+                    stdout_spool.seek(0)
+                    shutil.copyfileobj(stdout_spool, sys.stdout)
+                    exit_code = Exit.OK
+                case _:
+                    if (publish_error := _publish_or_error(staged_plans, remote_locks)) is not None:
+                        exit_code = publish_error
+                    else:
+                        stdout_spool.seek(0)
+                        shutil.copyfileobj(stdout_spool, sys.stdout)
+                        exit_code = Exit.OK
     except OSError as exc:
         print(f"Error: could not prepare command output staging: {exc}", file=sys.stderr)  # noqa: T201
-        return Exit.ERROR
+        exit_code = Exit.ERROR
     finally:
+        cleanup_error: OSError | None = None
         try:
             _cleanup_staged_job_plans(staged_plans)
+        except OSError as exc:
+            cleanup_error = exc
         finally:
-            with suppress(OSError):
+            try:
                 remote_locks.discard()
+            except OSError as exc:
+                cleanup_error = cleanup_error or exc
+        if cleanup_error is not None:
+            print(f"Error: could not clean up command transaction: {cleanup_error}", file=sys.stderr)  # noqa: T201
+            exit_code = Exit.ERROR
+    return exit_code
 
 
 class GenerationRunContext(NamedTuple):

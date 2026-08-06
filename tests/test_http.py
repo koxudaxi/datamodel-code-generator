@@ -1533,9 +1533,7 @@ def test_generate_rolls_back_output_and_metadata_when_late_lock_publication_and_
     replacement_error = "simulated late lock replacement failure"
     cleanup_error = "simulated lock cleanup failure"
 
-    def fail_lock_replacement(
-        file: publication_module.StagedFile, destination_name: str, destination_fd: int
-    ) -> None:
+    def fail_lock_replacement(file: publication_module.StagedFile, destination_name: str, destination_fd: int) -> None:
         if file.target == lockfile:
             raise OSError(replacement_error)
         original_replace_source(file, destination_name, destination_fd)
@@ -2096,6 +2094,103 @@ def test_cli_remote_lock_transaction_reports_command_spool_failure(
     assert not lockfile.exists()
 
 
+@pytest.mark.allow_direct_assert
+def test_cli_remote_lock_transaction_reports_cleanup_failure_after_publication(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A cleanup-only failure is a clean command error after the journal has committed."""
+    from datamodel_code_generator import __main__ as main_module
+
+    source_input = JSON_SCHEMA_DATA_PATH / "person.json"
+    output_path = tmp_path / "output.py"
+    lockfile = tmp_path / "remote.lock"
+    real_cleanup = main_module._cleanup_staged_job_plans
+    cleanup_message = "simulated output cleanup failure"
+
+    def cleanup_then_fail(staged_plans: object) -> None:
+        real_cleanup(staged_plans)
+        raise OSError(cleanup_message)
+
+    monkeypatch.setattr(main_module, "_cleanup_staged_job_plans", cleanup_then_fail)
+    run_main_with_args(
+        [
+            "--input",
+            str(source_input),
+            "--output",
+            str(output_path),
+            "--input-file-type",
+            "jsonschema",
+            "--disable-timestamp",
+            "--update-lock",
+            "--lockfile",
+            str(lockfile),
+        ],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="could not clean up command transaction",
+    )
+
+    assert_output(output_path.read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
+    assert_http_e2e_file(lockfile, "remote_lock_empty.txt")
+
+
+@pytest.mark.allow_direct_assert
+def test_cli_remote_lock_transaction_keeps_primary_error_when_cleanup_also_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Generation errors remain visible while every output and lock cleanup is attempted."""
+    from datamodel_code_generator import __main__ as main_module
+
+    invalid_schema = tmp_path / "invalid.json"
+    invalid_schema.write_text('{"title":"123InvalidName","type":"object"}', encoding="utf-8")
+    output_path = tmp_path / "output.py"
+    lockfile = tmp_path / "remote.lock"
+    real_cleanup = main_module._cleanup_staged_job_plans
+    real_discard = main_module._RemoteLockTransaction.discard
+    cleanup_message = "simulated output cleanup failure"
+    lock_cleanup_message = "simulated lock cleanup failure"
+    discard_attempted = False
+
+    def cleanup_then_fail(staged_plans: object) -> None:
+        real_cleanup(staged_plans)
+        raise OSError(cleanup_message)
+
+    def discard_then_fail(transaction: object) -> None:
+        nonlocal discard_attempted
+        discard_attempted = True
+        real_discard(transaction)
+        raise OSError(lock_cleanup_message)
+
+    monkeypatch.setattr(main_module, "_cleanup_staged_job_plans", cleanup_then_fail)
+    monkeypatch.setattr(main_module._RemoteLockTransaction, "discard", discard_then_fail)
+    run_main_with_args(
+        [
+            "--input",
+            str(invalid_schema),
+            "--output",
+            str(output_path),
+            "--input-file-type",
+            "jsonschema",
+            "--disable-timestamp",
+            "--update-lock",
+            "--lockfile",
+            str(lockfile),
+        ],
+        expected_exit=Exit.ERROR,
+    )
+    captured = capsys.readouterr()
+
+    assert "You have to set `--class-name` option" in captured.err
+    assert "could not clean up command transaction" in captured.err
+    assert discard_attempted
+    _assert_file_does_not_exist(output_path)
+    _assert_file_does_not_exist(lockfile)
+
+
 def test_cli_batch_shares_the_default_remote_lock_and_verifies_the_union(
     mocker: MockerFixture,
     local_http_server: str,
@@ -2348,7 +2443,7 @@ input = "{source_input.as_posix()}"
 output = "{second_output.as_posix()}"
 input-file-type = "jsonschema"
 update-lock = true
-lockfile = "{(lock_parent / 'nested.lock').as_posix()}"
+lockfile = "{(lock_parent / "nested.lock").as_posix()}"
 """,
         encoding="utf-8",
     )

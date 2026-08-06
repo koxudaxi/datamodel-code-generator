@@ -1,10 +1,12 @@
 """Integrity locks for remote schema resources.
 
 The lock deliberately records safe display origins and SHA-256 digests only.
-``request_sha256`` is an opaque digest of the complete request material,
-including credentials and query values when configured; those values are never
-persisted directly. Local mirror paths and response bodies never leave the
-generation process either.
+``request_sha256`` identifies the normalized URL origin, path, request-header
+names, and query-parameter names. Credential and query values never contribute
+to a persisted digest. Consequently, distinct responses for the same path and
+query-name identity cannot share a lock entry: one generation fails closed if
+it observes different bodies. Local mirror paths and response bodies never
+leave the generation process either.
 """
 
 from __future__ import annotations
@@ -17,7 +19,7 @@ import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, TextIO, TypeGuard, cast
-from urllib.parse import SplitResult, urlsplit, urlunsplit
+from urllib.parse import SplitResult, parse_qsl, urlsplit, urlunsplit
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -80,12 +82,18 @@ def _request_sha256(
     headers: Sequence[tuple[str, str]] | None,
     query_parameters: Sequence[tuple[str, str]] | None,
 ) -> str:
-    """Hash canonical request material without retaining its secret values."""
-    parsed, _ = _split_remote_url(url)
+    """Hash a request identity whose stable structure excludes every value."""
+    parsed, port = _split_remote_url(url)
     canonical = {
-        "headers": sorted((name.lower(), value) for name, value in headers or ()),
-        "query_parameters": list(query_parameters or ()),
-        "url": urlunsplit((parsed.scheme, parsed.netloc, parsed.path, parsed.query, "")),
+        "headers": sorted(name.lower() for name, _ in headers or ()),
+        "query_parameters": [name for name, _ in query_parameters or ()],
+        "url": {
+            "hostname": parsed.hostname,
+            "path": parsed.path,
+            "port": port,
+            "scheme": parsed.scheme.lower(),
+        },
+        "url_query_parameters": [name for name, _ in parse_qsl(parsed.query, keep_blank_values=True)],
     }
     encoded = json.dumps(canonical, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
     return _sha256(encoded)

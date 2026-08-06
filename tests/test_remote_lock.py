@@ -61,6 +61,58 @@ def test_remote_lock_never_persists_url_or_request_secrets(tmp_path: Path) -> No
 
 
 @pytest.mark.allow_direct_assert
+def test_remote_lock_request_identity_uses_only_safe_request_structure(tmp_path: Path) -> None:
+    """Credential values cannot split a lock identity or become offline hash inputs."""
+    lockfile = tmp_path / "datamodel-codegen.lock"
+    url = "https://alice:first-password@schemas.example:8443/v1/schema.json?token=first-token&view=full#first"
+    headers = [("Authorization", "Bearer first-secret"), ("X-Api-Key", "first-key")]
+    query = [("access_token", "first-token"), ("region", "tokyo")]
+    identity = remote_lock._request_sha256(url, headers, query)
+
+    assert identity == remote_lock._request_sha256(
+        "https://bob:second-password@schemas.example:8443/v1/schema.json?token=first-token&view=full#second",
+        headers,
+        query,
+    )
+    assert identity == remote_lock._request_sha256(
+        "https://alice:first-password@schemas.example:8443/v1/schema.json?token=second-token&view=compact#first",
+        headers,
+        query,
+    )
+    assert identity == remote_lock._request_sha256(
+        url,
+        [("authorization", "Bearer second-secret"), ("x-api-key", "second-key")],
+        query,
+    )
+    assert identity == remote_lock._request_sha256(
+        url,
+        headers,
+        [("access_token", "second-token"), ("region", "osaka")],
+    )
+    assert identity != remote_lock._request_sha256(url.replace("/v1/", "/v2/"), headers, query)
+    assert identity != remote_lock._request_sha256(url, [("X-Other-Key", "first-key")], query)
+    assert identity != remote_lock._request_sha256(
+        url.replace("token=first-token&view=full", "view=full&token=first-token"), headers, query
+    )
+    assert identity != remote_lock._request_sha256(
+        url.replace("token=first-token", "session=first-token"), headers, query
+    )
+    assert identity != remote_lock._request_sha256(url, headers, [("region", "tokyo"), ("access_token", "first-token")])
+    assert identity != remote_lock._request_sha256(url, headers, [("other_token", "first-token"), ("region", "tokyo")])
+
+    updater = RemoteReferenceLock.open(lockfile, update=True, locked=False)
+    updater.record_response(url, headers, query, b"first")
+    updater.record_response(
+        "https://bob:second-password@schemas.example:8443/v1/schema.json?token=second-token&view=compact#second",
+        [("authorization", "Bearer second-secret"), ("x-api-key", "second-key")],
+        [("access_token", "second-token"), ("region", "osaka")],
+        b"first",
+    )
+    with pytest.raises(RemoteLockError, match="different content in one generation"):
+        updater.record_response(url, headers, query, b"second")
+
+
+@pytest.mark.allow_direct_assert
 def test_remote_lock_commit_resolves_a_relative_target_from_the_current_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -240,9 +292,7 @@ def test_descriptor_publication_error_and_rollback_primitives_preserve_private_e
 
     target = parent / "target.py"
     target.write_text("generated\n", encoding="utf-8")
-    publication_module._validate_publication_anchor(
-        publication_module.StagedFile(None, target, target)
-    )
+    publication_module._validate_publication_anchor(publication_module.StagedFile(None, target, target))
     directory_fd = os.open(parent, publication_module._directory_open_flags())
     target_stat = os.stat(target.name, dir_fd=directory_fd, follow_symlinks=False)
     collision = ".target.py.collision.bak"
@@ -353,9 +403,9 @@ def test_descriptor_publication_copy_and_journal_failure_paths_use_real_files(
     target_directory = tmp_path / "target-directory"
     target_directory.mkdir()
     with pytest.raises(IsADirectoryError):
-        publication_module.publish_staged_files(
-            (publication_module.StagedFile(source, target_directory, target_directory),)
-        )
+        publication_module.publish_staged_files((
+            publication_module.StagedFile(source, target_directory, target_directory),
+        ))
 
     generated = tmp_path / "generated.py"
     generated.write_text("generated\n", encoding="utf-8")
@@ -378,9 +428,9 @@ def test_descriptor_publication_copy_and_journal_failure_paths_use_real_files(
     monkeypatch.setattr(publication_module.os, "replace", fail_replace)
     monkeypatch.setattr(publication_module.os, "rmdir", fail_created_directory_removal)
     with pytest.raises(OSError, match="failed to roll back batch output"):
-        publication_module.publish_staged_files(
-            (publication_module.StagedFile(generated, nested_target, nested_target),)
-        )
+        publication_module.publish_staged_files((
+            publication_module.StagedFile(generated, nested_target, nested_target),
+        ))
     monkeypatch.undo()
     assert generated.is_file()
     assert nested_target.parent.is_dir()
