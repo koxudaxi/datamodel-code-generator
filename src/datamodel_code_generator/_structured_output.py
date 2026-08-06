@@ -145,6 +145,26 @@ class CheckOutputPayload(BaseModel):
     differences: list[CheckDifferencePayload]
 
 
+class BatchJobPayload(BaseModel):
+    """One named job result emitted by batch generation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    result: GenerationPayload | CheckOutputPayload
+
+
+class BatchOutputPayload(BaseModel):
+    """Structured JSON payload emitted by --job/--all-jobs with --output-format json."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal[1]
+    format: Literal["json"]
+    kind: Literal["batch"]
+    jobs: list[BatchJobPayload]
+
+
 CommandOutputPayload: TypeAlias = (
     PyprojectConfigOutputPayload | CliCommandOutputPayload | DeprecationsOutputPayload | ExperimentalOutputPayload
 )
@@ -155,6 +175,7 @@ StructuredOutputPayload: TypeAlias = Annotated[
     | DeprecationsOutputPayload
     | ExperimentalOutputPayload
     | CheckOutputPayload
+    | BatchOutputPayload
     | PromptPayload,
     Field(discriminator="kind"),
 ]
@@ -239,6 +260,12 @@ def check_output_json(
         content=content,
         differences=differences,
     )
+    return _dump_json(payload.model_dump(mode="json"))
+
+
+def batch_output_json(jobs: list[BatchJobPayload]) -> str:
+    """Serialize named batch generation results as one JSON document."""
+    payload = BatchOutputPayload(version=1, format="json", kind="batch", jobs=jobs)
     return _dump_json(payload.model_dump(mode="json"))
 
 

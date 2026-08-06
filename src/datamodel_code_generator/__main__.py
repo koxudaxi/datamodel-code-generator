@@ -163,6 +163,8 @@ EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
     "generate_prompt",
     "ignore_pyproject",
     "profile",
+    "job",
+    "all_jobs",
     "version",
     "help",
     "debug",
@@ -190,6 +192,8 @@ BOOLEAN_OPTIONAL_OPTIONS: frozenset[str] = frozenset({
 ORIGINAL_FIELD_NAME_DELIMITER_ERROR = "`--original-field-name-delimiter` can not be used without `--snake-case-field`."
 SENSITIVE_COMMAND_OPTIONS: frozenset[str] = frozenset({"--http-headers", "--http-query-parameters"})
 REDACTED_COMMAND_ARGUMENT = "<redacted>"
+BATCH_UNSAFE_CLI_FIELDS: frozenset[str] = frozenset({"input", "input_model", "output", "url", "watch"})
+BATCH_CONFIG_CONTEXT_FIELDS: frozenset[str] = frozenset({"use_annotated", "use_specialized_enum"})
 
 
 class Exit(IntEnum):
@@ -800,43 +804,206 @@ def _resolve_profile_extends(
     return result
 
 
-def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict[str, Any]:
-    """Find and return the [tool.datamodel-codegen] section of the closest pyproject.toml if it exists."""
+def _find_datamodel_codegen_project_config(source: Path) -> Mapping[str, Any] | None:
+    """Return the closest datamodel-codegen TOML table without resolving profiles or jobs."""
     current_path = source
     while current_path != current_path.parent:
-        if (current_path / "pyproject.toml").is_file():
-            pyproject_toml = load_toml(current_path / "pyproject.toml")
-            if "datamodel-codegen" in pyproject_toml.get("tool", {}):
-                tool_config = pyproject_toml["tool"]["datamodel-codegen"]
-
-                base_config: dict[str, Any] = {k: v for k, v in tool_config.items() if k != "profiles"}
-
-                if profile:
-                    profiles = tool_config.get("profiles", {})
-                    if profile not in profiles:
-                        available = list(profiles.keys()) if profiles else "none"
-                        msg = f"Profile '{profile}' not found in pyproject.toml. Available profiles: {available}"
-                        raise Error(msg)
-                    resolved_profile = _resolve_profile_extends(profiles, profile)
-                    base_config.update(resolved_profile)
-
-                pyproject_config = {k.replace("-", "_"): v for k, v in base_config.items()}
-                if (
-                    "capitalize_enum_members" in pyproject_config and "capitalise_enum_members" not in pyproject_config
-                ):  # pragma: no cover
-                    pyproject_config["capitalise_enum_members"] = pyproject_config.pop("capitalize_enum_members")
-                return pyproject_config
+        pyproject_path = current_path / "pyproject.toml"
+        if pyproject_path.is_file():
+            pyproject_toml = load_toml(pyproject_path)
+            tool_config = pyproject_toml.get("tool", {}).get("datamodel-codegen")
+            if isinstance(tool_config, Mapping):
+                return tool_config
 
         if (current_path / ".git").exists():  # pragma: no cover
             break
-
         current_path = current_path.parent
+    return None
+
+
+def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict[str, Any]:
+    """Find and return the [tool.datamodel-codegen] section of the closest pyproject.toml if it exists."""
+    if (tool_config := _find_datamodel_codegen_project_config(source)) is not None:
+        base_config: dict[str, Any] = {
+            key: value for key, value in tool_config.items() if key not in {"jobs", "profiles"}
+        }
+
+        if profile:
+            profiles = tool_config.get("profiles", {})
+            if profile not in profiles:
+                available = list(profiles.keys()) if profiles else "none"
+                msg = f"Profile '{profile}' not found in pyproject.toml. Available profiles: {available}"
+                raise Error(msg)
+            resolved_profile = _resolve_profile_extends(profiles, profile)
+            base_config.update(resolved_profile)
+
+        return _normalize_pyproject_config(base_config)
 
     if profile:
         msg = f"Profile '{profile}' requested but no [tool.datamodel-codegen] section found in pyproject.toml"
         raise Error(msg)
 
     return {}
+
+
+class JobPlan(NamedTuple):
+    """An isolated configuration ready for one named batch job."""
+
+    name: str
+    config: Config
+    pyproject_context: dict[str, Any]
+
+
+def _normalize_pyproject_config(config: Mapping[str, Any]) -> dict[str, Any]:
+    """Convert TOML option spelling to Config field spelling."""
+    normalized = {key.replace("-", "_"): value for key, value in config.items()}
+    if "capitalize_enum_members" in normalized and "capitalise_enum_members" not in normalized:  # pragma: no cover
+        normalized["capitalise_enum_members"] = normalized.pop("capitalize_enum_members")
+    return normalized
+
+
+def _get_job_config(
+    *,
+    name: str,
+    job: Mapping[str, Any],
+    base_config: Mapping[str, Any],
+    profiles: Mapping[str, Any],
+    cli_config_args: Mapping[str, _RawConfigValue],
+) -> JobPlan:
+    """Resolve one job as base < profile < job < safe CLI options."""
+    if not job.get("input") or not job.get("output"):
+        msg = f"Job '{name}' must define both 'input' and 'output'"
+        raise Error(msg)
+    if any(source in job for source in ("input_model", "url")):
+        msg = f"Job '{name}' only supports an 'input' file; use a separate job for each input source"
+        raise Error(msg)
+
+    profile_name = job.get("profile")
+    if profile_name is not None and not isinstance(profile_name, str):
+        msg = f"Job '{name}' profile must be a string"
+        raise Error(msg)
+
+    resolved_config = dict(base_config)
+    if profile_name is not None:
+        if profile_name not in profiles:
+            available = list(profiles.keys()) if profiles else "none"
+            msg = f"Profile '{profile_name}' not found for job '{name}'. Available profiles: {available}"
+            raise Error(msg)
+        resolved_config.update(_resolve_profile_extends(cast("dict[str, Any]", profiles), profile_name))
+
+    resolved_config.update({key: value for key, value in job.items() if key != "profile"})
+    normalized_config = _normalize_pyproject_config(resolved_config)
+    config = _create_config(normalized_config, cli_config_args)
+    _apply_preset(config, normalized_config, cli_config_args)
+    _validate_final_config(config)
+    if config.watch:
+        msg = "--watch cannot be used with --job or --all-jobs"
+        raise Error(msg)
+
+    context = {key: normalized_config[key] for key in BATCH_CONFIG_CONTEXT_FIELDS if key in normalized_config}
+    return JobPlan(name=name, config=config.model_copy(deep=True), pyproject_context=context)
+
+
+def _paths_overlap(first: Path, second: Path) -> bool:
+    """Return whether two output artifacts share a path or ancestor."""
+    return first == second or first in second.parents or second in first.parents
+
+
+def _preflight_job_plans(plans: Sequence[JobPlan]) -> None:
+    """Validate all selected jobs before any job starts generation."""
+    artifacts: list[tuple[str, str, Path]] = []
+    inputs: list[tuple[str, Path]] = []
+    for plan in plans:
+        config = plan.config
+        if config.output is None:  # pragma: no cover - guarded by the TOML validation above
+            msg = f"Job '{plan.name}' cannot write to stdout"
+            raise Error(msg)
+        if not isinstance(config.input, Path) or not config.input.exists():
+            msg = f"Job '{plan.name}' input does not exist: {config.input}"
+            raise Error(msg)
+        _validate_generation_path_conflicts(config.input, config.output, config.emit_model_metadata)
+        inputs.append((plan.name, config.input.expanduser().resolve()))
+        artifacts.append((plan.name, "output", config.output.expanduser().resolve()))
+        if (model_metadata := config.emit_model_metadata) is not None:
+            artifacts.append((plan.name, "model metadata", model_metadata.expanduser().resolve()))
+
+    for index, first_artifact in enumerate(artifacts):
+        first_job, first_kind, first_path = first_artifact
+        for second_job, second_kind, second_path in artifacts[index + 1 :]:
+            if not _paths_overlap(first_path, second_path):
+                continue
+            msg = (
+                f"Jobs '{first_job}' ({first_kind}: {first_path}) and '{second_job}' "
+                f"({second_kind}: {second_path}) have overlapping output paths"
+            )
+            raise Error(msg)
+
+    for artifact_job, artifact_kind, artifact_path in artifacts:
+        for input_job, input_path in inputs:
+            if artifact_job == input_job or not _paths_overlap(artifact_path, input_path):
+                continue
+            msg = (
+                f"Job '{artifact_job}' ({artifact_kind}: {artifact_path}) overlaps input for job "
+                f"'{input_job}': {input_path}"
+            )
+            raise Error(msg)
+
+
+def _plan_jobs(args: Namespace) -> tuple[JobPlan, ...]:
+    """Load and preflight the selected pyproject jobs in declaration order."""
+    if args.ignore_pyproject:
+        msg = "--ignore-pyproject cannot be used with --job or --all-jobs"
+        raise Error(msg)
+    if args.profile:
+        msg = "--profile cannot be used with --job or --all-jobs; set profile in each job instead"
+        raise Error(msg)
+
+    cli_config_args = _explicit_config_args(args)
+    if unsafe_fields := BATCH_UNSAFE_CLI_FIELDS & cli_config_args.keys():
+        options = ", ".join(f"--{field.replace('_', '-')}" for field in sorted(unsafe_fields))
+        msg = f"{options} cannot be used with --job or --all-jobs; define it in each job"
+        raise Error(msg)
+
+    tool_config = _find_datamodel_codegen_project_config(Path.cwd())
+    if tool_config is None:
+        msg = "No [tool.datamodel-codegen] section found in pyproject.toml"
+        raise Error(msg)
+    jobs = tool_config.get("jobs")
+    if not isinstance(jobs, Mapping) or not jobs:
+        msg = "No jobs found in [tool.datamodel-codegen.jobs]"
+        raise Error(msg)
+    profiles = tool_config.get("profiles", {})
+    if not isinstance(profiles, Mapping):
+        msg = "[tool.datamodel-codegen.profiles] must be a table"
+        raise Error(msg)
+
+    selected_names = tuple(jobs) if args.all_jobs else tuple(args.job or ())
+    unknown_jobs = [name for name in selected_names if name not in jobs]
+    if unknown_jobs:
+        available = ", ".join(jobs)
+        msg = f"Job '{unknown_jobs[0]}' not found in pyproject.toml. Available jobs: {available or 'none'}"
+        raise Error(msg)
+    selected = frozenset(selected_names)
+    base_config = {key: value for key, value in tool_config.items() if key not in {"jobs", "profiles"}}
+
+    plans: list[JobPlan] = []
+    for name, job in jobs.items():
+        if name not in selected:
+            continue
+        if not isinstance(name, str) or not isinstance(job, Mapping):
+            msg = f"Job '{name}' must be a table"
+            raise Error(msg)
+        plans.append(
+            _get_job_config(
+                name=name,
+                job=job,
+                base_config=base_config,
+                profiles=profiles,
+                cli_config_args=cli_config_args,
+            )
+        )
+    _preflight_job_plans(plans)
+    return tuple(plans)
 
 
 TomlValue: TypeAlias = str | bool | list["TomlValue"] | tuple["TomlValue", ...]
@@ -1188,11 +1355,67 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     )
 
 
+def _run_jobs(args: Sequence[str], plans: Sequence[JobPlan]) -> Exit:
+    """Run preflighted jobs in declaration order without changing single-job output behavior."""
+    match namespace.output_format:
+        case "json":
+            from contextlib import redirect_stdout  # noqa: PLC0415
+            from io import StringIO  # noqa: PLC0415
+
+            from datamodel_code_generator._structured_output import BatchJobPayload, batch_output_json  # noqa: PLC0415
+
+            jobs: list[BatchJobPayload] = []
+            exit_code = Exit.OK
+            for plan in plans:
+                output = StringIO()
+                with redirect_stdout(output):
+                    result = _main(
+                        args,
+                        start_watch=False,
+                        _batch_config=plan.config,
+                        _batch_pyproject_context=plan.pyproject_context,
+                    )
+                if result is Exit.ERROR:
+                    return result
+                if result is Exit.DIFF:
+                    exit_code = Exit.DIFF
+                try:
+                    payload = json.loads(output.getvalue())
+                except json.JSONDecodeError:  # pragma: no cover - defensive against future non-JSON output
+                    sys.stdout.write(output.getvalue())
+                    return Exit.ERROR
+                jobs.append(BatchJobPayload(name=plan.name, result=payload))
+
+            sys.stdout.write(batch_output_json(jobs) + "\n")
+            return exit_code
+        case _:
+            return _run_jobs_text(args, plans)
+
+
+def _run_jobs_text(args: Sequence[str], plans: Sequence[JobPlan]) -> Exit:
+    """Run text-mode jobs without buffering their regular CLI output."""
+    exit_code = Exit.OK
+    for plan in plans:
+        result = _main(
+            args,
+            start_watch=False,
+            _batch_config=plan.config,
+            _batch_pyproject_context=plan.pyproject_context,
+        )
+        if result is Exit.ERROR:
+            return result
+        if result is Exit.DIFF:
+            exit_code = Exit.DIFF
+    return exit_code
+
+
 def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     args: Sequence[str] | None = None,
     *,
     start_watch: bool,
     dependencies: WatchDependencies | None = None,
+    _batch_config: Config | None = None,
+    _batch_pyproject_context: Mapping[str, Any] | None = None,
 ) -> Exit:
     """Execute datamodel code generation from command-line arguments."""
     vars(namespace).clear()
@@ -1257,8 +1480,18 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         print(prompt_output)  # noqa: T201
         return Exit.OK
 
+    if _batch_config is None and (namespace.job or namespace.all_jobs):
+        try:
+            plans = _plan_jobs(namespace)
+        except Error as e:
+            print(str(e), file=sys.stderr)  # noqa: T201
+            return Exit.ERROR
+        return _run_jobs(args, plans)
+
     # Handle --ignore-pyproject and --profile options
-    if namespace.ignore_pyproject:
+    if _batch_config is not None:
+        pyproject_config = dict(_batch_pyproject_context or {})
+    elif namespace.ignore_pyproject:
         pyproject_config: dict[str, Any] = {}
     else:
         try:
@@ -1288,17 +1521,23 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
             print(command_output)  # noqa: T201
         return Exit.OK
 
-    cli_config_args = _explicit_config_args(namespace)
-    merged_config_values = {**pyproject_config, **cli_config_args}
-    if dependencies is not None:
-        dependencies.stage_raw_config(merged_config_values)
-    try:
-        config = _create_config(pyproject_config, cli_config_args)
-        _apply_preset(config, pyproject_config, cli_config_args)
-        _validate_final_config(config)
-    except Error as e:
-        print(str(e), file=sys.stderr)  # noqa: T201
-        return Exit.ERROR
+    if _batch_config is not None:
+        # Generation adjusts a few Config fields while resolving templates and
+        # stdout behaviour. Each batch job therefore receives a fresh copy.
+        config = _batch_config.model_copy(deep=True)
+        merged_config_values = dict(pyproject_config)
+    else:
+        cli_config_args = _explicit_config_args(namespace)
+        merged_config_values = {**pyproject_config, **cli_config_args}
+        if dependencies is not None:
+            dependencies.stage_raw_config(merged_config_values)
+        try:
+            config = _create_config(pyproject_config, cli_config_args)
+            _apply_preset(config, pyproject_config, cli_config_args)
+            _validate_final_config(config)
+        except Error as e:
+            print(str(e), file=sys.stderr)  # noqa: T201
+            return Exit.ERROR
 
     watch_dependencies = dependencies
     if config.watch:

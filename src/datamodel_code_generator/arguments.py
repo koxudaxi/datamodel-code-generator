@@ -1422,6 +1422,20 @@ general_options.add_argument(
     help="Use a named profile from pyproject.toml [tool.datamodel-codegen.profiles.<name>]",
     default=None,
 )
+job_selection_options = general_options.add_mutually_exclusive_group()
+job_selection_options.add_argument(
+    "--job",
+    action="append",
+    default=None,
+    metavar="NAME",
+    help="Run a named job from pyproject.toml [tool.datamodel-codegen.jobs.<name>]. Can be repeated.",
+)
+job_selection_options.add_argument(
+    "--all-jobs",
+    action="store_true",
+    default=None,
+    help="Run every named job from pyproject.toml in declaration order.",
+)
 general_options.add_argument(
     "--watch",
     action="store_true",

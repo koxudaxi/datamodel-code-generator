@@ -4,9 +4,11 @@
 
 | Option | Description |
 |--------|-------------|
+| [`--all-jobs`](#all-jobs) | Run every named generation job from pyproject.toml |
 | [`--debug`](#debug) | Show debug messages during code generation |
 | [`--generate-prompt`](#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](#help) | Show help message and exit |
+| [`--job`](#job) | Run a named generation job from pyproject.toml |
 | [`--list-deprecations`](#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](#list-experimental) | List registered experimental features |
 | [`--no-color`](#no-color) | Disable colorized output |
@@ -14,6 +16,28 @@
 | [`--output-format-json-schema`](#output-format-json-schema) | Output JSON Schema for structured command output or JSON configuration |
 | [`--profile`](#profile) | Use a named profile from pyproject.toml |
 | [`--version`](#version) | Show program version and exit |
+
+---
+
+## `--all-jobs` {#all-jobs}
+
+Run every named generation job from `[tool.datamodel-codegen.jobs]` in
+declaration order.
+
+**Related:** [`--job`](#job), [pyproject.toml Configuration](../pyproject_toml.md)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --all-jobs
+    datamodel-codegen --all-jobs --check
+    datamodel-codegen --all-jobs --output-format json
+    ```
+
+All selected jobs are validated before generation starts. Jobs that write to
+stdout, or whose output or model-metadata paths overlap, are rejected before
+any generated file is written. With `--output-format json`, one `batch`
+payload contains the result of every job.
 
 ---
 
@@ -144,6 +168,47 @@ Displays all available command-line options with their descriptions and default 
       --input INPUT         Input file path (default: stdin)
       ...
     ```
+
+---
+
+## `--job` {#job}
+
+Run one or more named generation jobs declared in `pyproject.toml`. Jobs are
+executed sequentially in TOML declaration order, even when `--job` is supplied
+in a different order.
+
+**Related:** [pyproject.toml Configuration](../pyproject_toml.md), [`--all-jobs`](#all-jobs)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --job api
+    datamodel-codegen --job api --job events --check
+    ```
+
+??? example "Configuration (pyproject.toml)"
+
+    ```toml
+    [tool.datamodel-codegen.profiles.strict]
+    use-annotated = true
+
+    [tool.datamodel-codegen.jobs.api]
+    profile = "strict"
+    input = "schemas/openapi.yaml"
+    output = "src/models/api.py"
+
+    [tool.datamodel-codegen.jobs.events]
+    input = "schemas/events.json"
+    output = "src/models/events.py"
+    ```
+
+Jobs require their own `input` and `output`. A job can select one reusable
+profile using `profile = "name"`. Settings are resolved as base configuration,
+job profile, job settings, then safe batch-wide CLI overrides. `--input`,
+`--url`, `--input-model`, `--output`, `--profile`, and `--watch` cannot be
+combined with job selection. The forthcoming batch watch mode will rerun the
+entire selected batch for a dependency change; it does not use partial job
+rebuilds.
 
 ---
 

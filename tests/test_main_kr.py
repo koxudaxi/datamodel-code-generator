@@ -39,6 +39,7 @@ from tests.main.conftest import (
     OPEN_API_DATA_PATH,
     TIMESTAMP,
     _assert_captured_output,
+    _assert_file_does_not_exist,
     run_main_and_assert,
     run_main_url_and_assert,
     run_main_with_args,
@@ -47,6 +48,7 @@ from tests.main.conftest import (
 EXPECTED_MAIN_KR_PATH = DATA_PATH / "expected" / "main_kr"
 EXPECTED_OUTPUT_FORMAT_JSON_PATH = EXPECTED_MAIN_KR_PATH / "output_format_json"
 EXPECTED_EMPTY_OUTPUT_PATH = DATA_PATH / "expected" / "__init__.py"
+JOBS_PYPROJECT_TEMPLATE = DATA_PATH / "config" / "pyproject_jobs.toml"
 GENERATE_PROMPT_JSON_ARGS = [
     "--input",
     "tests/data/jsonschema/person.json",
@@ -80,6 +82,21 @@ def _normalize_generation_json_output_path(output: str, output_path: Path, place
     return f"{json.dumps(payload, indent=2, ensure_ascii=False)}\n"
 
 
+def _batch_json_summary(output: str) -> str:
+    """Normalize batch JSON to the stable fields covered by the job contracts."""
+    payload = json.loads(output)
+    jobs = [
+        {
+            "kind": job["result"]["kind"],
+            "name": job["name"],
+            **({"output": Path(job["result"]["output"]).name} if "output" in job["result"] else {}),
+            **({"success": job["result"]["success"]} if "success" in job["result"] else {}),
+        }
+        for job in payload["jobs"]
+    ]
+    return f"{json.dumps({'kind': payload['kind'], 'jobs': jobs}, indent=2)}\n"
+
+
 @pytest.fixture(autouse=True)
 def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
     """Reset argument namespace before each test."""
@@ -98,6 +115,22 @@ def output_file(tmp_path: Path) -> Path:
 def output_dir(tmp_path: Path) -> Path:
     """Return standard output directory path."""
     return tmp_path / "model"
+
+
+@pytest.fixture
+def jobs_project(tmp_path: Path) -> dict[str, Path]:
+    """Create a two-job project backed by the shared JSON Schema fixture."""
+    plain_output = tmp_path / "plain.py"
+    strict_output = tmp_path / "strict.py"
+    pyproject = JOBS_PYPROJECT_TEMPLATE.read_text(encoding="utf-8")
+    pyproject = pyproject.replace("$PERSON_SCHEMA", (JSON_SCHEMA_DATA_PATH / "person.json").as_posix())
+    pyproject = pyproject.replace("$PLAIN_OUTPUT", plain_output.as_posix())
+    pyproject = pyproject.replace("$STRICT_OUTPUT", strict_output.as_posix())
+    (tmp_path / "pyproject.toml").write_text(
+        pyproject,
+        encoding="utf-8",
+    )
+    return {"plain": plain_output, "strict": strict_output}
 
 
 @freeze_time("2019-07-26")
@@ -1272,8 +1305,387 @@ target-python-version = "3.11"
         )
 
 
+def test_pyproject_job_runs_selected_profile(jobs_project: dict[str, Path], tmp_path: Path) -> None:
+    """Run one named job with its reusable profile settings."""
+    with chdir(tmp_path):
+        run_main_with_args(["--job", "strict", "--formatters", "builtin"])
+
+    _assert_file_does_not_exist(jobs_project["plain"])
+    assert_file_content(jobs_project["strict"], "jobs/strict.py")
+
+
+def test_pyproject_jobs_run_in_toml_declaration_order(jobs_project: dict[str, Path], tmp_path: Path) -> None:
+    """Run selected jobs in TOML order even when CLI selection order differs."""
+    with chdir(tmp_path):
+        run_main_with_args(["--job", "strict", "--job", "plain", "--output-format", "json", "--formatters", "builtin"])
+
+    assert_output(jobs_project["plain"].read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
+    assert_file_content(jobs_project["strict"], "jobs/strict.py")
+
+
+def test_pyproject_all_jobs_runs_every_job(jobs_project: dict[str, Path], tmp_path: Path) -> None:
+    """Run every named job from the project configuration."""
+    with chdir(tmp_path):
+        run_main_with_args(["--all-jobs", "--formatters", "builtin"])
+
+    assert_output(jobs_project["plain"].read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
+    assert_file_content(jobs_project["strict"], "jobs/strict.py")
+
+
+def test_pyproject_job_command_header_uses_batch_invocation(jobs_project: dict[str, Path], tmp_path: Path) -> None:
+    """Keep the reproducible job-selection command in generated file headers."""
+    pyproject_path = tmp_path / "pyproject.toml"
+    pyproject_path.write_text(
+        pyproject_path.read_text(encoding="utf-8").replace(
+            "enable-version-header = false", "enable-version-header = false\nenable-command-header = true"
+        ),
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(["--job", "strict", "--formatters", "builtin"])
+
+    assert_file_content(jobs_project["strict"], "jobs/strict_command_header.py")
+
+
+def test_pyproject_jobs_check_does_not_write_output(jobs_project: dict[str, Path], tmp_path: Path) -> None:
+    """Check every job without replacing a stale generated file."""
+    with chdir(tmp_path):
+        run_main_with_args(["--all-jobs", "--formatters", "builtin"])
+        jobs_project["strict"].write_text("stale\n", encoding="utf-8")
+        run_main_with_args(["--all-jobs", "--check", "--formatters", "builtin"], expected_exit=Exit.DIFF)
+
+    assert_file_content(jobs_project["strict"], "jobs/stale.py")
+
+
+@pytest.mark.usefixtures("jobs_project")
+def test_pyproject_jobs_json_is_one_ordered_payload(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Emit one structured JSON document whose results follow TOML declaration order."""
+    with chdir(tmp_path):
+        run_main_with_args(["--job", "strict", "--job", "plain", "--output-format", "json", "--formatters", "builtin"])
+
+    assert_output(_batch_json_summary(capsys.readouterr().out), EXPECTED_MAIN_KR_PATH / "jobs" / "json_generation.txt")
+
+
+def test_pyproject_jobs_json_reports_check_results(
+    jobs_project: dict[str, Path], tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Preserve each job's check payload and the batch difference exit code."""
+    with chdir(tmp_path):
+        run_main_with_args(["--all-jobs", "--formatters", "builtin"])
+        jobs_project["strict"].write_text("stale\n", encoding="utf-8")
+        run_main_with_args(
+            ["--all-jobs", "--check", "--output-format", "json", "--formatters", "builtin"], expected_exit=Exit.DIFF
+        )
+
+    assert_output(_batch_json_summary(capsys.readouterr().out), EXPECTED_MAIN_KR_PATH / "jobs" / "json_check.txt")
+
+
+@pytest.mark.parametrize(
+    ("args", "message"),
+    [
+        (["--job", "missing"], "Job 'missing' not found"),
+        (["--job", "plain", "--input", "schema.json"], "--input cannot be used"),
+        (["--job", "plain", "--profile", "strict"], "--profile cannot be used"),
+        (["--job", "plain", "--ignore-pyproject"], "--ignore-pyproject cannot be used"),
+    ],
+)
+def test_pyproject_jobs_reject_job_specific_cli_options(
+    jobs_project: dict[str, Path], tmp_path: Path, capsys: pytest.CaptureFixture[str], args: list[str], message: str
+) -> None:
+    """Reject ambiguous selection and per-job CLI settings before generation starts."""
+    with chdir(tmp_path):
+        run_main_with_args(args, expected_exit=Exit.ERROR, capsys=capsys, expected_stderr_contains=message)
+
+    _assert_file_does_not_exist(jobs_project["plain"])
+    _assert_file_does_not_exist(jobs_project["strict"])
+
+
+def test_pyproject_jobs_preflight_rejects_overlapping_outputs(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Reject output overlap before the first job writes generated code."""
+    output_path = tmp_path / "generated.py"
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.first]
+input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
+output = "{(tmp_path / "generated" / ".." / "generated.py").as_posix()}"
+
+[tool.datamodel-codegen.jobs.second]
+input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
+output = "{output_path.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--all-jobs", "--formatters", "builtin"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="overlapping output paths",
+        )
+
+    _assert_file_does_not_exist(output_path)
+
+
+@pytest.mark.parametrize(
+    "writer_artifact",
+    [
+        'output = "$PROTECTED_INPUT"',
+        'output = "$WRITER_OUTPUT"\nemit-model-metadata = "$PROTECTED_INPUT"',
+        'output = "$PROTECTED_PARENT"',
+    ],
+)
+def test_pyproject_jobs_preflight_protects_other_job_inputs(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], writer_artifact: str
+) -> None:
+    """Reject output or metadata paths that could overwrite another job's input."""
+    source_input = JSON_SCHEMA_DATA_PATH / "person.json"
+    protected_parent = tmp_path / "schemas"
+    protected_parent.mkdir()
+    protected_input = protected_parent / "schema.json"
+    protected_input.write_text(source_input.read_text(encoding="utf-8"), encoding="utf-8")
+    reader_output = tmp_path / "reader.py"
+    pyproject = f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.writer]
+input = "{source_input.as_posix()}"
+{writer_artifact}
+
+[tool.datamodel-codegen.jobs.reader]
+input = "{protected_input.as_posix()}"
+output = "{reader_output.as_posix()}"
+"""
+    pyproject = pyproject.replace("$PROTECTED_INPUT", protected_input.as_posix())
+    pyproject = pyproject.replace("$PROTECTED_PARENT", protected_parent.as_posix())
+    pyproject = pyproject.replace("$WRITER_OUTPUT", (tmp_path / "writer.py").as_posix())
+    (tmp_path / "pyproject.toml").write_text(pyproject, encoding="utf-8")
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--all-jobs", "--formatters", "builtin"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="overlaps input for job",
+        )
+
+    assert_output(
+        protected_input.read_text(encoding="utf-8") + "\n", EXPECTED_MAIN_KR_PATH / "jobs" / "protected_schema.txt"
+    )
+    _assert_file_does_not_exist(reader_output)
+
+
+def test_pyproject_jobs_reject_non_table_definition(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Reject malformed TOML job entries before any output can be written."""
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[tool.datamodel-codegen]
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs]
+invalid = "not a table"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--all-jobs"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="must be a table",
+        )
+
+
+@pytest.mark.parametrize("output_format", [[], ["--output-format", "json"]])
+def test_pyproject_jobs_abort_runtime_errors_without_writing(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], output_format: list[str]
+) -> None:
+    """Do not write check-mode output when a later selected job cannot generate."""
+    good_output = tmp_path / "good.py"
+    bad_input = tmp_path / "invalid.json"
+    bad_input.write_text("{", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.good]
+input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
+output = "{good_output.as_posix()}"
+
+[tool.datamodel-codegen.jobs.invalid]
+input = "{bad_input.as_posix()}"
+output = "{(tmp_path / "invalid.py").as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--all-jobs", "--check", "--formatters", "builtin", *output_format],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="Invalid file format for jsonschema",
+        )
+
+    _assert_file_does_not_exist(good_output)
+
+
+@pytest.mark.parametrize(
+    ("config", "args", "message"),
+    [
+        ("", ["--all-jobs"], "No jobs found"),
+        (
+            """
+[tool.datamodel-codegen.jobs.invalid]
+output = "$OUTPUT"
+""",
+            ["--all-jobs"],
+            "must define both 'input' and 'output'",
+        ),
+        (
+            """
+[tool.datamodel-codegen.jobs.invalid]
+input = "$INPUT"
+output = "$OUTPUT"
+url = "https://example.com/schema.json"
+""",
+            ["--all-jobs"],
+            "only supports an 'input' file",
+        ),
+        (
+            """
+[tool.datamodel-codegen.jobs.invalid]
+profile = 1
+input = "$INPUT"
+output = "$OUTPUT"
+""",
+            ["--all-jobs"],
+            "profile must be a string",
+        ),
+        (
+            """
+[tool.datamodel-codegen.jobs.invalid]
+profile = "missing"
+input = "$INPUT"
+output = "$OUTPUT"
+""",
+            ["--all-jobs"],
+            "Profile 'missing' not found",
+        ),
+        (
+            """
+profiles = "invalid"
+
+[tool.datamodel-codegen.jobs.invalid]
+input = "$INPUT"
+output = "$OUTPUT"
+""",
+            ["--all-jobs"],
+            "profiles] must be a table",
+        ),
+        (
+            """
+[tool.datamodel-codegen.jobs.invalid]
+input = "$INPUT"
+output = "$OUTPUT"
+watch = true
+""",
+            ["--all-jobs"],
+            "--watch cannot be used",
+        ),
+        (
+            """
+[tool.datamodel-codegen.jobs.invalid]
+input = "missing.json"
+output = "$OUTPUT"
+""",
+            ["--all-jobs"],
+            "input does not exist",
+        ),
+        (
+            """
+[tool.datamodel-codegen.jobs.invalid]
+input = "$INPUT"
+output = "$OUTPUT"
+emit-model-metadata = "generated/metadata.json"
+""",
+            ["--all-jobs"],
+            "overlapping output paths",
+        ),
+    ],
+)
+def test_pyproject_jobs_reject_invalid_definitions_before_writing(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    config: str,
+    args: list[str],
+    message: str,
+) -> None:
+    """Reject invalid job definitions and paths before a generation can write output."""
+    output_path = tmp_path / "generated"
+    pyproject = '[tool.datamodel-codegen]\ninput-file-type = "jsonschema"\n' + config
+    pyproject = pyproject.replace("$INPUT", (JSON_SCHEMA_DATA_PATH / "person.json").as_posix())
+    pyproject = pyproject.replace("$OUTPUT", output_path.as_posix())
+    (tmp_path / "pyproject.toml").write_text(pyproject, encoding="utf-8")
+
+    with chdir(tmp_path):
+        run_main_with_args(args, expected_exit=Exit.ERROR, capsys=capsys, expected_stderr_contains=message)
+
+    _assert_file_does_not_exist(output_path)
+
+
+def test_pyproject_jobs_require_project_configuration(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Require a project configuration rather than silently falling back to stdin."""
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--job", "api"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="No [tool.datamodel-codegen] section found",
+        )
+
+
+def test_pyproject_invalid_config_returns_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Report configuration validation errors without attempting generation."""
+    output_path = tmp_path / "output.py"
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[tool.datamodel-codegen]
+original-field-name-delimiter = "_"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            [
+                "--input",
+                str(JSON_SCHEMA_DATA_PATH / "person.json"),
+                "--output",
+                str(output_path),
+            ],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="original-field-name-delimiter",
+        )
+
+    _assert_file_does_not_exist(output_path)
+
+
 def test_help_shows_new_options() -> None:
-    """Test that --profile and --ignore-pyproject appear in help."""
+    """Test that profile and job selection options appear in help."""
     assert_output(arg_parser.format_help(), EXPECTED_MAIN_KR_PATH / "help_shows_new_options.txt")
 
 
