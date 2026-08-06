@@ -13,7 +13,8 @@ import subprocess  # noqa: S404
 import sys
 from dataclasses import dataclass
 from functools import lru_cache
-from importlib import import_module
+from importlib import import_module, invalidate_caches
+from importlib.machinery import ModuleSpec, PathFinder
 from importlib.util import source_from_cache
 from pathlib import Path
 from types import ModuleType
@@ -123,6 +124,44 @@ def _prepare_watch_module(module: ModuleType) -> tuple[ModuleType, CodeType] | N
     return replacement, compile(source, module_path, "exec")
 
 
+class _WatchSourceLoader:
+    """Load a watched package child from its source instead of its bytecode cache."""
+
+    def __init__(self, loader: object, origin: str | None) -> None:
+        self._loader = loader
+        self._origin = origin
+
+    def create_module(self, spec: ModuleSpec) -> ModuleType | None:
+        create_module = getattr(self._loader, "create_module", None)
+        return create_module(spec) if callable(create_module) else None
+
+    def exec_module(self, module: ModuleType) -> None:
+        get_source = getattr(self._loader, "get_source", None)
+        if callable(get_source) and (source := get_source(module.__name__)) is not None:
+            module_path = self._origin or module.__file__ or module.__name__
+            exec(compile(source, module_path, "exec"), module.__dict__)  # noqa: S102
+            return
+        exec_module = getattr(self._loader, "exec_module", None)
+        if callable(exec_module):
+            exec_module(module)
+
+
+class _WatchSourceFinder:
+    """Wrap only current-package child imports with source-first loading."""
+
+    def __init__(self, package_name: str) -> None:
+        self._prefix = f"{package_name}."
+
+    def find_spec(
+        self, fullname: str, path: Sequence[str] | None = None, target: ModuleType | None = None
+    ) -> ModuleSpec | None:
+        if not fullname.startswith(self._prefix) or (spec := PathFinder.find_spec(fullname, path, target)) is None:
+            return None
+        if spec.loader is not None and callable(getattr(spec.loader, "get_source", None)):
+            spec.loader = _WatchSourceLoader(spec.loader, spec.origin)
+        return spec
+
+
 def _bind_watch_module(module: ModuleType) -> None:
     """Publish a refreshed module on its parent package when one exists."""
     parent_name, _, child_name = module.__name__.rpartition(".")
@@ -173,62 +212,56 @@ def _restore_watch_package(
 _MISSING_PARENT_ATTRIBUTE = object()
 
 
-def _fresh_watch_package(module: ModuleType, module_names: tuple[str, ...]) -> ModuleType:
+def _fresh_watch_package(module: ModuleType) -> ModuleType:
     """Refresh a complete formatter package as one interpreter-state transaction."""
-    execution_order = (*reversed(module_names[1:]), module.__name__)
-    prepared_modules: dict[str, tuple[ModuleType, CodeType]] = {}
-    for loaded_name in execution_order:
-        if (
-            isinstance(loaded_module := sys.modules.get(loaded_name), ModuleType)
-            and (prepared := _prepare_watch_module(loaded_module)) is not None
-        ):
-            prepared_modules[loaded_name] = prepared
-    if module.__name__ not in prepared_modules:
+    if (prepared := _prepare_watch_module(module)) is None:
         return module
+    replacement, code = prepared
 
-    prefix = f"{module.__name__}."
-    loaded_modules = sys.modules.copy()
-    original_modules = {
-        loaded_name: loaded_module
-        for loaded_name, loaded_module in loaded_modules.items()
-        if loaded_name == module.__name__ or loaded_name.startswith(prefix)
-    }
-    module_namespaces = {
-        loaded_module: loaded_module.__dict__.copy()
-        for loaded_module in original_modules.values()
-        if isinstance(loaded_module, ModuleType)
-    }
-    parent_name, _, child_name = module.__name__.rpartition(".")
-    parent_module = loaded_modules.get(parent_name)
-    parent_attribute = (
-        getattr(parent_module, child_name, _MISSING_PARENT_ATTRIBUTE)
-        if isinstance(parent_module, ModuleType)
-        else _MISSING_PARENT_ATTRIBUTE
-    )
+    from datamodel_code_generator import PROCESS_STATE_LOCK  # noqa: PLC0415
 
-    try:
-        for loaded_name in module_names:
-            sys.modules.pop(loaded_name, None)
-        for loaded_name, (replacement, _) in prepared_modules.items():
-            sys.modules[loaded_name] = replacement
-        for replacement, _ in prepared_modules.values():
-            _bind_watch_module(replacement)
-        for loaded_name in execution_order:
-            if (prepared := prepared_modules.get(loaded_name)) is not None:
-                replacement, code = prepared
-                exec(code, replacement.__dict__)  # noqa: S102
-    except BaseException:
-        _restore_watch_package(
-            module.__name__,
-            original_modules,
-            module_namespaces,
-            parent_module,
-            parent_attribute,
+    with PROCESS_STATE_LOCK:
+        prefix = f"{module.__name__}."
+        loaded_modules = sys.modules.copy()
+        original_modules = {
+            loaded_name: loaded_module
+            for loaded_name, loaded_module in loaded_modules.items()
+            if loaded_name == module.__name__ or loaded_name.startswith(prefix)
+        }
+        module_namespaces = {
+            loaded_module: loaded_module.__dict__.copy()
+            for loaded_module in original_modules.values()
+            if isinstance(loaded_module, ModuleType)
+        }
+        parent_name, _, child_name = module.__name__.rpartition(".")
+        parent_module = loaded_modules.get(parent_name)
+        parent_attribute = (
+            parent_module.__dict__.get(child_name, _MISSING_PARENT_ATTRIBUTE)
+            if isinstance(parent_module, ModuleType)
+            else _MISSING_PARENT_ATTRIBUTE
         )
-        raise
-
-    replacement = prepared_modules[module.__name__][0]
-    _bind_watch_module(replacement)
+        finder = _WatchSourceFinder(module.__name__)
+        try:
+            invalidate_caches()
+            for loaded_name in original_modules:
+                sys.modules.pop(loaded_name, None)
+            sys.modules[module.__name__] = replacement
+            _bind_watch_module(replacement)
+            sys.meta_path.insert(0, finder)
+            try:
+                exec(code, replacement.__dict__)  # noqa: S102
+            finally:
+                if finder in sys.meta_path:
+                    sys.meta_path.remove(finder)
+        except BaseException:
+            _restore_watch_package(
+                module.__name__,
+                original_modules,
+                module_namespaces,
+                parent_module,
+                parent_attribute,
+            )
+            raise
     return replacement
 
 
@@ -249,13 +282,8 @@ def _load_watch_formatter_module(module_name: str, watch_dependencies: Any) -> M
             module = import_module(module_name)
             module_names = _local_package_modules(module, previous_modules=previous_modules)
         else:
-            module_names = (
-                state.module_names
-                if state is not None
-                else _local_package_modules(module, previous_modules=frozenset())
-            )
             module = (
-                _fresh_watch_package(module, module_names)
+                _fresh_watch_package(module)
                 if getattr(module, "__path__", None) is not None
                 else _fresh_watch_module(module)
             )

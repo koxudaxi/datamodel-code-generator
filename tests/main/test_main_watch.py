@@ -1251,6 +1251,107 @@ def test_watch_formatter_package_reload_is_transactional(tmp_path: Path, monkeyp
 
 
 @pytest.mark.allow_direct_assert
+def test_watch_formatter_package_refreshes_sibling_dependencies(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A package refresh leaves sibling execution order to its current root imports."""
+    from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersionMin
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    fixture_directory = PROJECT_ROOT / "tests/data/python/custom_formatters/sibling_watch_package"
+    formatter_directory = tmp_path / "formatters"
+    package_directory = formatter_directory / fixture_directory.name
+    shutil.copytree(fixture_directory, package_directory)
+    monkeypatch.syspath_prepend(str(formatter_directory))
+    package_name = package_directory.name
+    source_timestamp = 1_700_000_000
+    sibling_source = package_directory / "a.py"
+    os.utime(sibling_source, (source_timestamp, source_timestamp))
+    try:
+        dependencies = WatchDependencies()
+        with dependencies.generation():
+            formatter = CodeFormatter(
+                PythonVersionMin,
+                custom_formatters=[package_name],
+                formatters=[Formatter.BUILTIN],
+            )
+        assert '# formatter_revision = "sibling_initial"' in formatter.format_code("value = 1\n")
+
+        updated_sibling_source = formatter_directory / "a-update.py"
+        shutil.copyfile(fixture_directory / "a_changed.py", updated_sibling_source)
+        os.utime(updated_sibling_source, (source_timestamp, source_timestamp))
+        assert updated_sibling_source.stat().st_size == sibling_source.stat().st_size
+        updated_sibling_source.replace(sibling_source)
+        with dependencies.generation():
+            formatter = CodeFormatter(
+                PythonVersionMin,
+                custom_formatters=[package_name],
+                formatters=[Formatter.BUILTIN],
+            )
+        assert '# formatter_revision = "sibling_changed"' in formatter.format_code("value = 1\n")
+        assert sys.modules[f"{package_name}.a"].CodeFormatter is sys.modules[package_name].CodeFormatter
+    finally:
+        for loaded_name in tuple(sys.modules.copy()):
+            if loaded_name == package_name or loaded_name.startswith(f"{package_name}."):
+                sys.modules.pop(loaded_name, None)
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_formatter_package_drops_unimported_invalid_children(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A stale present child cannot block a current root that no longer imports it."""
+    from datamodel_code_generator.format import (
+        _WATCH_FORMATTER_STATES,
+        CodeFormatter,
+        Formatter,
+        PythonVersionMin,
+    )
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    fixture_directory = PROJECT_ROOT / "tests/data/python/custom_formatters/stale_watch_package"
+    formatter_directory = tmp_path / "formatters"
+    package_directory = formatter_directory / fixture_directory.name
+    shutil.copytree(fixture_directory, package_directory)
+    monkeypatch.syspath_prepend(str(formatter_directory))
+    package_name = package_directory.name
+    try:
+        dependencies = WatchDependencies()
+        with dependencies.generation():
+            formatter = CodeFormatter(
+                PythonVersionMin,
+                custom_formatters=[package_name],
+                formatters=[Formatter.BUILTIN],
+            )
+        assert f"{package_name}.stale" in sys.modules
+        assert '# formatter_revision = "active"' in formatter.format_code("value = 1\n")
+
+        shutil.copyfile(fixture_directory / "package_refactored.py", package_directory / "__init__.py")
+        shutil.copyfile(fixture_directory / "stale_syntax_error.txt", package_directory / "stale.py")
+        with dependencies.generation():
+            formatter = CodeFormatter(
+                PythonVersionMin,
+                custom_formatters=[package_name],
+                formatters=[Formatter.BUILTIN],
+            )
+        assert '# formatter_revision = "active"' in formatter.format_code("value = 1\n")
+        assert {
+            loaded_name
+            for loaded_name in sys.modules.copy()
+            if loaded_name == package_name or loaded_name.startswith(f"{package_name}.")
+        } == {package_name, f"{package_name}.active"}
+        assert _WATCH_FORMATTER_STATES[sys.modules[package_name]].module_names == (
+            package_name,
+            f"{package_name}.active",
+        )
+        assert package_directory / "stale.py" not in dependencies.files
+    finally:
+        for loaded_name in tuple(sys.modules.copy()):
+            if loaded_name == package_name or loaded_name.startswith(f"{package_name}."):
+                sys.modules.pop(loaded_name, None)
+
+
+@pytest.mark.allow_direct_assert
 def test_watch_formatter_state_does_not_retain_generation() -> None:
     """Formatter reload state keeps neither a completed collector nor its session alive."""
     import gc
@@ -1327,7 +1428,7 @@ def test_watch_formatter_refresh_handles_unavailable_source_and_parent_bindings(
     unavailable_package.__path__ = []
     sys.modules[unavailable_package.__name__] = unavailable_package
     assert _prepare_watch_module(unavailable_package) is None
-    assert _fresh_watch_package(unavailable_package, (unavailable_package.__name__,)) is unavailable_package
+    assert _fresh_watch_package(unavailable_package) is unavailable_package
 
     parent_module = ModuleType("watch_restore_parent")
     module_name = f"{parent_module.__name__}.child"
