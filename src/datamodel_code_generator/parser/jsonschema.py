@@ -8123,11 +8123,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             yield
             return
 
+        previous_field_constraints = self.field_constraints
         self.field_constraints = True
         try:
             yield
         finally:
-            self.field_constraints = False
+            self.field_constraints = previous_field_constraints
 
     def _parse_root_type_with_context(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         self,
