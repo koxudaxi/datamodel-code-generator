@@ -8107,21 +8107,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             and (len(direct_data_types) > 1 or not non_array_types)
         ):
             # self-reference
-            constraints = (
-                self._get_array_constraints(obj)
-                if self._get_fixed_length_homogeneous_tuple_length(obj) is not None
-                else field.constraints
-            )
+            recursive_tuple_item_count = direct_data_types[0].tuple_item_count
             field = self.data_model_field_type(
                 data_type=self.data_type(
                     data_types=[
-                        self.data_type(data_types=direct_data_types[1:], is_list=True),
+                        self.data_type(
+                            data_types=direct_data_types[1:],
+                            is_list=recursive_tuple_item_count is None,
+                            is_tuple=recursive_tuple_item_count is not None,
+                            tuple_item_count=recursive_tuple_item_count,
+                        ),
                         *direct_data_types[1:],
                     ]
                 ),
                 default=field.default,
                 required=field.required,
-                constraints=constraints,
+                constraints=field.constraints,
                 nullable=field.nullable,
                 strip_default_none=field.strip_default_none,
                 extras=field.extras,

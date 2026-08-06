@@ -9135,8 +9135,8 @@ def test_main_jsonschema_items_array_tuple(min_version: str, output_file: Path) 
 
 
 @freeze_time("2019-07-26")
-def test_main_jsonschema_recursive_fixed_length_array_keeps_constraints(output_file: Path) -> None:
-    """Keep constraints when a recursive root array cannot use a positional tuple type."""
+def test_main_jsonschema_recursive_fixed_length_array_keeps_tuple_shape(output_file: Path) -> None:
+    """Keep positional tuple shape when a recursive root item falls back to Any."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "recursive_fixed_length_array.json",
         output_path=output_file,

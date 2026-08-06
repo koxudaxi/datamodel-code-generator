@@ -4,10 +4,10 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import Field, RootModel
 
 
-class RecursiveFixedLengthArray(RootModel[list]):
-    root: list = Field(
-        ..., max_length=2, min_length=2, title='RecursiveFixedLengthArray'
-    )
+class RecursiveFixedLengthArray(RootModel[tuple[Any, Any]]):
+    root: tuple[Any, Any] = Field(..., title='RecursiveFixedLengthArray')
