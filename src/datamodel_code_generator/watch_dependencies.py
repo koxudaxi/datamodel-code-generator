@@ -553,6 +553,7 @@ class WatchDependencies(_Weakrefable):
         )
         return not has_output_below or self._polling_dependencies_changed(snapshot, path_variants)
 
+
 def collector_is_active() -> bool:
     """Return whether watch dependency collection is active without importing watch mode."""
     return _current_collector.get() is not None

@@ -9,8 +9,8 @@ import subprocess
 import sys
 import threading
 import time
-from importlib import import_module
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from importlib import import_module
 from importlib.util import find_spec
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -310,6 +310,21 @@ def _file_contains(path: Path, expected_text: str) -> bool:
     if not path.is_file():
         return False
     return expected_text in path.read_text(encoding="utf-8")
+
+
+def _batch_pyproject(jobs: list[tuple[str, Path, Path, Path | None]]) -> str:
+    """Render a minimal real batch-watch project."""
+    sections = ["[tool.datamodel-codegen]", 'input-file-type = "jsonschema"']
+    for name, input_path, output_path, metadata_path in jobs:
+        sections.extend([
+            "",
+            f"[tool.datamodel-codegen.jobs.{name}]",
+            f'input = "{input_path.as_posix()}"',
+            f'output = "{output_path.as_posix()}"',
+        ])
+        if metadata_path is not None:
+            sections.append(f'emit-model-metadata = "{metadata_path.as_posix()}"')
+    return "\n".join((*sections, ""))
 
 
 def _record_failed_dependency(dependencies: WatchDependencies, path: Path) -> None:
