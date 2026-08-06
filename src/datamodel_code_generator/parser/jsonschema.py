@@ -2657,19 +2657,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         default_value = effective_default if effective_has_default is not None else field.default
         has_default = effective_has_default if effective_has_default is not None else field.has_default
-        constraints = self._get_constraint_values(field) if self.is_constraints_field(field) else None
+        skip_constraints = isinstance(field.type, list) and bool(self._get_array_union_non_array_types(field))
+        constraints = None
+        if not skip_constraints and self.is_constraints_field(field):
+            constraints = self._get_constraint_values(field)
         consumed = self.data_type_manager.CONSTRAINED_TYPE_CONSUMED_KEYS
         if constraints is not None and field_type.type in consumed:
             for key in consumed[field_type.type]:
                 constraints.pop(key, None)
         if constraints is not None and self.field_constraints and field.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
-        if (field_type.is_dict or field_type.is_mapping) and (
-            property_count_constraints := self._get_property_count_constraints(field)
+        if (
+            not skip_constraints
+            and (field_type.is_dict or field_type.is_mapping)
+            and (property_count_constraints := self._get_property_count_constraints(field))
         ):
             constraints = constraints or {}
             constraints.update(property_count_constraints)
-        if array_items_constraints := self._get_array_items_constraints(field):
+        if not skip_constraints and (array_items_constraints := self._get_array_items_constraints(field)):
             constraints = constraints or {}
             constraints.update(array_items_constraints)
         self._suppress_array_length_constraints(constraints, field)
@@ -7861,6 +7866,33 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if item is not False
         ]
 
+    def _get_array_union_non_array_types(  # noqa: PLR6301
+        self,
+        obj: JsonSchemaObject,
+    ) -> tuple[str, ...]:
+        """Return the non-array branches of a heterogeneous array type union."""
+        match obj.type:
+            case list() as type_list if "array" in type_list:
+                return tuple(type_ for type_ in type_list if type_ not in {"array", "null"})
+            case _:
+                return ()
+
+    def _add_array_union_non_array_types(
+        self,
+        data_types: list[DataType],
+        obj: JsonSchemaObject,
+        non_array_types: tuple[str, ...],
+    ) -> None:
+        """Add type-union branches that array parsing does not materialize itself."""
+        if not non_array_types or (obj.enum and not self.ignore_enum_constraints):
+            return
+
+        data_types[:0] = (
+            self.data_type_manager.get_data_type(self._get_type_with_mappings(type_, obj.format or "default"))
+            for type_ in non_array_types
+            if type_ != "object" or not obj.is_object
+        )
+
     def parse_array_fields(
         self,
         name: str,
@@ -7898,6 +7930,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 **container_flags,
             )
         ]
+        if non_array_types := self._get_array_union_non_array_types(obj):
+            self._add_array_union_non_array_types(data_types, obj, non_array_types)
         # TODO: decide special path word for a combined data model.
         if obj.allOf:
             data_types.append(self.parse_all_of(name, obj, get_special_path("allOf", path)))
@@ -7907,10 +7941,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             data_types.append(self.parse_enum(name, obj, get_special_path("enum", path)))
         constraints = self._get_constraint_values(obj)
         constraints.update(self._get_array_items_constraints(obj))
+        if non_array_types:
+            constraints = {}
         if suppress_item_constraints:
             self._suppress_array_length_constraints(constraints, obj)
         return self.data_model_field_type(
-            data_type=self.data_type(data_types=data_types),
+            data_type=self.data_type(
+                data_types=data_types,
+                is_optional=isinstance(obj.type, list) and obj.type_has_null,
+            ),
             default=obj.default,
             required=required,
             constraints=constraints,

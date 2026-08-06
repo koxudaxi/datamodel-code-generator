@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PatternPropertiesArrayTypeUnion",
+  "type": "object",
+  "properties": {
+    "direct": {
+      "type": ["array", "string"],
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "enumValue": {
+      "type": ["array", "string"],
+      "items": {
+        "type": "string"
+      },
+      "enum": ["ready", ["ready"]]
+    },
+    "options": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "patternProperties": {
+          ".*": {
+            "type": ["array", "string"],
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "nullablePattern": {
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": ["direct", "nullablePattern", "options"]
+}

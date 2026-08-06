@@ -5180,6 +5180,39 @@ def test_jsonschema_pattern_properties(output_file: Path) -> None:
     )
 
 
+def test_jsonschema_pattern_properties_array_type_union(output_file: Path) -> None:
+    """Keep every type branch when a pattern property permits an array or string."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pattern_properties_array_type_union.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="pattern_properties_array_type_union.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+            "--use-standard-collections",
+            "--use-union-operator",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+    for valid_json in (
+        '{"direct":"","nullablePattern":{"name":null},"options":[{"name":""}]}',
+        '{"direct":["value"],"nullablePattern":{"name":["value"]},"options":[{"name":["value"]}]}',
+    ):
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="pattern_properties_array_type_union",
+            model_name="PatternPropertiesArrayTypeUnion",
+            valid_json=valid_json,
+            invalid_json='{"direct":"","nullablePattern":{"name":null},"options":[{"name":1}]}',
+            expected_error_type="string_type",
+        )
+
+
 def test_jsonschema_pattern_properties_field_constraints(output_file: Path) -> None:
     """Test pattern properties with field constraints."""
     run_main_and_assert(
