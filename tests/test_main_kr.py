@@ -16,8 +16,8 @@ import pydantic
 import pytest
 from packaging import version
 
-import datamodel_code_generator.__main__ as main_module
 from datamodel_code_generator import MIN_VERSION, Error, chdir, inferred_message
+from datamodel_code_generator import __main__ as main_module
 from datamodel_code_generator.__main__ import (
     Exit,
     JobPlan,

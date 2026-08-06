@@ -1954,12 +1954,10 @@ def _restore_backup(backup: Path, target: Path) -> None:
     if backup.is_symlink() and target.is_symlink() and backup.readlink() == target.readlink():
         backup.unlink()
         return
-    try:
+    with suppress(OSError):
         if backup.samefile(target):
             backup.unlink()
             return
-    except OSError:
-        pass
     backup.replace(target)
 
 
