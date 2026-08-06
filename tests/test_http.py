@@ -46,7 +46,13 @@ from datamodel_code_generator.http import (
 )
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from tests.conftest import assert_output, create_assert_file_content
-from tests.main.conftest import DATA_PATH, JSON_SCHEMA_DATA_PATH, run_main_url_and_assert, run_main_with_args
+from tests.main.conftest import (
+    DATA_PATH,
+    JSON_SCHEMA_DATA_PATH,
+    _assert_file_does_not_exist,
+    run_main_url_and_assert,
+    run_main_with_args,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -2049,6 +2055,7 @@ lockfile = "{write_lock.as_posix()}"
     expected_output = DATA_PATH / "expected" / "main" / "person.py"
     assert_output(check_output.read_text(encoding="utf-8"), expected_output)
     assert_output(write_output.read_text(encoding="utf-8"), expected_output)
+    _assert_file_does_not_exist(check_lock)
     assert_http_e2e_file(write_lock, "remote_lock_empty.txt")
 
 
