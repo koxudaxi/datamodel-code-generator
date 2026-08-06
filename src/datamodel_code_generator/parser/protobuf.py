@@ -741,8 +741,9 @@ class ProtobufParser(JsonSchemaParser):
         return tuple(dict.fromkeys((self.base_path, *(path.parent for path in input_files))))
 
     def _record_lexical_import_candidates(self, input_files: Sequence[Path], include_paths: Sequence[Path]) -> None:
-        """Breadth-first record source imports before ``protoc`` can reject a nested missing file."""
-        pending_files = list(input_files)
+        """Depth-first record source imports before ``protoc`` can reject a nested missing file."""
+        candidate_roots = tuple(dict.fromkeys(path.resolve(strict=False) for path in include_paths))
+        pending_files = [path.resolve(strict=False) for path in input_files]
         visited_files: set[Path] = set()
         while pending_files:
             source_path = pending_files.pop()
@@ -753,9 +754,14 @@ class ProtobufParser(JsonSchemaParser):
                 text = source_path.read_text(encoding=self.config.encoding)
             except OSError:
                 continue
+            source_root = source_path.parent
+            source_candidate_roots = (
+                candidate_roots if source_root in candidate_roots else (source_root, *candidate_roots)
+            )
             for import_path in IMPORT_PATTERN.findall(text):
-                candidates = tuple(dict.fromkeys((source_path.parent, *include_paths)))
-                candidates = tuple(include_path / import_path for include_path in candidates)
+                candidates = tuple(
+                    (candidate_root / import_path).resolve(strict=False) for candidate_root in source_candidate_roots
+                )
                 existing_candidate = next((candidate for candidate in candidates if candidate.is_file()), None)
                 if existing_candidate is not None:
                     record_watch_dependency(existing_candidate)

@@ -1638,6 +1638,28 @@ def test_protobuf_missing_import_candidates_exclude_preparer_paths(tmp_path: Pat
 
 
 @pytest.mark.allow_direct_assert
+def test_protobuf_lexical_self_import_with_parent_traversal_terminates(tmp_path: Path) -> None:
+    """A normalized self-import is collected once instead of growing the traversal path."""
+    from datamodel_code_generator.parser.protobuf import ProtobufParser
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    schema_directory = tmp_path / "schemas"
+    nested_directory = schema_directory / "nested"
+    root_proto = schema_directory / "root.proto"
+    nested_directory.mkdir(parents=True)
+    root_proto.write_text('import "nested/../root.proto";\n', encoding="utf-8")
+    dependencies = WatchDependencies()
+    with dependencies.generation():
+        ProtobufParser._record_lexical_import_candidates(
+            SimpleNamespace(config=SimpleNamespace(encoding="utf-8")),
+            [root_proto],
+            [schema_directory],
+        )
+
+    assert dependencies.files == frozenset({root_proto})
+
+
+@pytest.mark.allow_direct_assert
 def test_watch_state_discards_events_after_its_diagnostic_sample_is_full() -> None:
     """A full sample preserves the dirty flag without retaining another event."""
     from datamodel_code_generator.watch import _PENDING_CHANGE_SAMPLE_LIMIT, _WatcherState
