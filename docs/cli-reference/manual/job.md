@@ -9,7 +9,8 @@ in a different order.
     Named batch jobs are experimental; their configuration schema, batch output,
     and transactional/watch execution contracts may change.
 
-**Related:** [pyproject.toml Configuration](../../pyproject_toml.md), [`--all-jobs`](all-jobs.md#all-jobs)
+**Related:** [pyproject.toml Configuration](../../pyproject_toml.md),
+[`--all-jobs`](all-jobs.md#all-jobs), [`--diff-against`](../general-options.md#diff-against)
 
 !!! tip "Usage"
 
@@ -38,7 +39,8 @@ Jobs require their own `input` and `output`. A job can select one reusable
 profile using `profile = "name"`. Settings are resolved as base configuration,
 job profile, job settings, then safe batch-wide CLI overrides. `--input`,
 `--url`, `--input-model`, `--output`, and `--profile` cannot be combined with
-job selection. With `--watch`, one outer scheduler watches the selected jobs'
-combined dependency graph and `pyproject.toml`. Every event replans and
+job selection. `--diff-against` also cannot be combined with named jobs: compare
+one profile or input at a time. With `--watch`, one outer scheduler watches the
+selected jobs' combined dependency graph and `pyproject.toml`. Every event replans and
 transactionally reruns the complete selection; failures retain the published
 outputs and continue watching for recovery.

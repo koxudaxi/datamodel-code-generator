@@ -1113,6 +1113,15 @@ def _preflight_job_plans(plans: Sequence[JobPlan]) -> None:
             raise Error(msg)
 
 
+def _reject_batch_input_diff(plans: Sequence[JobPlan]) -> None:
+    """Reject two-input comparison before batch staging or watch startup."""
+    if (diff_plan := next((plan for plan in plans if plan.config.diff_against is not None), None)) is None:
+        return
+    msg = "--diff-against cannot be used with --job or --all-jobs "
+    msg += f"(resolved for Job '{diff_plan.name}'); compare one profile or input at a time"
+    raise Error(msg)
+
+
 def _plan_jobs(args: Namespace) -> BatchPlan:
     """Load and preflight the selected pyproject jobs in declaration order."""
     from pydantic import ValidationError  # noqa: PLC0415
@@ -1292,6 +1301,7 @@ def _plan_jobs_unchecked(args: Namespace) -> BatchPlan:
                 pyproject_path=pyproject_path,
             )
         )
+    _reject_batch_input_diff(plans)
     _preflight_job_plans(plans)
     return BatchPlan(tuple(plans), watch, watch_delay, pyproject_path)
 
@@ -3119,6 +3129,7 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
                 settings_path=_batch_original_output or config.output,
                 validators=validators_config,
                 default_value_overrides=default_value_overrides,
+                logical_output=_batch_original_output,
             )
         else:
             with watch_dependencies.generation():
@@ -3134,6 +3145,7 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
                     settings_path=_batch_original_output or config.output,
                     validators=validators_config,
                     default_value_overrides=default_value_overrides,
+                    logical_output=_batch_original_output,
                 )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201

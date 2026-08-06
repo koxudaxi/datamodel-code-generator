@@ -900,6 +900,14 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
             CLIOptionRelation(option="--input-model"),
             CLIOptionRelation(option="--emit-model-metadata"),
             CLIOptionRelation(option="--fail-on-multi-module-stdout"),
+            CLIOptionRelation(
+                option="--job",
+                message="`--diff-against` compares one profile or input and cannot run named jobs.",
+            ),
+            CLIOptionRelation(
+                option="--all-jobs",
+                message="`--diff-against` compares one profile or input and cannot run named jobs.",
+            ),
         ),
     ),
     "--fail-on-multi-module-stdout": CLIOptionMeta(

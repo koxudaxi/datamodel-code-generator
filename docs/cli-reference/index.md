@@ -59,6 +59,8 @@ These links are generated from CLI option metadata and summarize options that im
 | [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--input-model`](base-options.md#input-model) | - |
 | [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--emit-model-metadata`](base-options.md#emit-model-metadata) | - |
 | [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | `--job` | `--diff-against` compares one profile or input and cannot run named jobs. |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | `--all-jobs` | `--diff-against` compares one profile or input and cannot run named jobs. |
 
 ## All Options
 

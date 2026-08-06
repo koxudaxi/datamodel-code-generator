@@ -1435,6 +1435,8 @@ for reviewing schema migrations in CI.
 - **Conflicts:** [`--input-model`](base-options.md#input-model)
 - **Conflicts:** [`--emit-model-metadata`](base-options.md#emit-model-metadata)
 - **Conflicts:** [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout)
+- **Conflicts:** `--job` - `--diff-against` compares one profile or input and cannot run named jobs.
+- **Conflicts:** `--all-jobs` - `--diff-against` compares one profile or input and cannot run named jobs.
 
 !!! tip "Usage"
 

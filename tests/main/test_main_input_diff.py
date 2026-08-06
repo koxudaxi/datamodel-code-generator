@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import jsonschema
 import pytest
 
-from datamodel_code_generator import DataModelType
+from datamodel_code_generator import DataModelType, chdir
 from datamodel_code_generator.__main__ import Exit
 from tests.conftest import create_assert_file_content
 from tests.main.conftest import DATA_PATH, InputFileTypeLiteral, run_main_and_assert, run_main_with_args
@@ -337,6 +337,38 @@ def test_diff_against_uses_the_virtual_output_context_for_relative_custom_format
             )
         ],
     )
+
+
+def test_diff_against_supports_one_selected_profile(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """A profile remains a valid configuration layer for one two-input comparison."""
+    virtual_output = tmp_path / "profile-models.py"
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[tool.datamodel-codegen.profiles.compare]
+use-double-quotes = true
+""",
+        encoding="utf-8",
+    )
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=(JSON_SCHEMA_INPUT_DIFF_PATH / "same_new.json").resolve(),
+            output_path=virtual_output,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--profile",
+                "compare",
+                "--diff-against",
+                str((JSON_SCHEMA_INPUT_DIFF_PATH / "same_old.json").resolve()),
+                "--disable-timestamp",
+                "--formatters",
+                "builtin",
+            ],
+            expected_exit=Exit.OK,
+            output_should_not_exist=True,
+            capsys=capsys,
+            expected_stdout_path=INPUT_DIFF_EXPECTED_PATH / "identical.txt",
+            assert_no_stderr=True,
+        )
 
 
 def test_diff_against_json_fixture_matches_structured_output_schema() -> None:
