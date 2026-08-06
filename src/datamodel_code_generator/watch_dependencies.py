@@ -166,7 +166,15 @@ class WatchDependencies:
         roots = {_nearest_existing_directory(path.parent) for path in files}
         roots.update(_nearest_existing_directory(path) for path in directories)
         roots.update(_nearest_existing_directory(path) for path in event_paths)
-        watch_roots = tuple(sorted((path for path in roots if path.is_dir()), key=lambda path: path.as_posix()))
+        watch_roots_list: list[Path] = []
+        sorted_roots = sorted(
+            (path for path in roots if path.is_dir()),
+            key=lambda path: (len(path.parts), path.as_posix()),
+        )
+        for root in sorted_roots:
+            if not any(root.is_relative_to(ancestor) for ancestor in watch_roots_list):
+                watch_roots_list.append(root)
+        watch_roots = tuple(watch_roots_list)
         outputs = frozenset(output for output in (self._output, candidate.output if candidate else None) if output)
         return _DependencySnapshot(files, directories, event_paths, self._output, outputs, watch_roots)
 
@@ -343,7 +351,7 @@ class WatchDependencies:
         """Return whether an event belongs to the immutable current dependency graph."""
         return self._includes_snapshot(self._snapshot, _path_variants(path))
 
-    def accepts_event(self, path: Path) -> bool:
+    def accepts_event(self, path: Path, *, accept_directory_events: bool = False) -> bool:
         """Return whether one event is both outside outputs and inside this snapshot."""
         snapshot = self._snapshot
         try:
@@ -355,7 +363,26 @@ class WatchDependencies:
             for output in snapshot.outputs
         ):
             return False
-        return self._includes_snapshot(snapshot, _path_variants(path))
+        path_variants = _path_variants(path)
+        if self._includes_snapshot(snapshot, path_variants):
+            return True
+        if not accept_directory_events:
+            return False
+        try:
+            is_directory = path.is_dir()
+        except OSError:
+            return False
+        if not is_directory:
+            return False
+        has_dependency_below = any(
+            dependency.is_relative_to(path_variant)
+            for path_variant in path_variants
+            for dependency in snapshot.event_paths
+        )
+        has_output_below = any(
+            output.is_relative_to(path_variant) for path_variant in path_variants for output in snapshot.outputs
+        )
+        return has_dependency_below and not has_output_below
 
 
 def collector_is_active() -> bool:

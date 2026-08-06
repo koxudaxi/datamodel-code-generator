@@ -688,6 +688,23 @@ def test_get_watchfiles_success() -> None:
     assert_watchfiles_module(result)
 
 
+@pytest.mark.allow_direct_assert
+@pytest.mark.parametrize(
+    ("platform", "root_count", "expected"),
+    [("darwin", 1, False), ("darwin", 2, True), ("linux", 2, False)],
+)
+def test_watch_force_polling_policy(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, platform: str, root_count: int, expected: bool
+) -> None:
+    """Only macOS multi-root watches opt into polling."""
+    from datamodel_code_generator.watch import _force_polling
+
+    monkeypatch.setattr("datamodel_code_generator.watch.sys.platform", platform)
+    watch_roots = tuple(tmp_path / str(index) for index in range(root_count))
+
+    assert _force_polling(watch_roots) is expected
+
+
 @pytest.mark.cli_doc(
     options=["--watch", "--watch-delay"],
     option_description="""Set debounce delay in seconds for watch mode.
@@ -1615,6 +1632,52 @@ def test_watch_dependencies_do_not_watch_the_filesystem_root_for_system_symlink_
     dependencies.add_file(Path("/tmp/dcg-watch-root-protection/schema.json"))
 
     assert Path("/") not in dependencies.watch_roots()
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_dependencies_collapse_nested_watch_roots(tmp_path: Path) -> None:
+    """A parent root recursively covers its nested dependency roots."""
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    formatter_directory = tmp_path / "formatter"
+    package_directory = formatter_directory / "package"
+    package_directory.mkdir(parents=True)
+    dependencies = WatchDependencies()
+    dependencies.add_file(formatter_directory / "module.py")
+    dependencies.add_file(package_directory / "helper.py")
+
+    assert dependencies.watch_roots() == (formatter_directory,)
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_dependencies_accepts_external_parent_events_only_while_polling(tmp_path: Path) -> None:
+    """Polling can handle the directory event emitted for an external dependency replacement."""
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    formatter_directory = tmp_path / "formatter"
+    formatter_directory.mkdir()
+    dependencies = WatchDependencies()
+    dependencies.add_file(formatter_directory / "custom_formatter.py")
+
+    assert not dependencies.accepts_event(formatter_directory)
+    assert dependencies.accepts_event(formatter_directory, accept_directory_events=True)
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_dependencies_rejects_polling_directory_events_containing_output(tmp_path: Path) -> None:
+    """Output-parent polling events cannot trigger a regeneration loop."""
+    from datamodel_code_generator.__main__ import Config
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    project_directory = tmp_path / "project"
+    project_directory.mkdir()
+    input_file = project_directory / "schema.json"
+    output_file = project_directory / "output.py"
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    dependencies = WatchDependencies()
+    dependencies.configure(Config(input=input_file, output=output_file), config_values={})
+
+    assert not dependencies.accepts_event(project_directory, accept_directory_events=True)
 
 
 @pytest.mark.allow_direct_assert

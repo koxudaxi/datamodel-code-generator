@@ -28,11 +28,18 @@ def _get_watchfiles() -> Any:
     return watchfiles
 
 
-def _watch_filter(dependencies: WatchDependencies) -> Callable[[Any, str], bool]:
+def _watch_filter(
+    dependencies: WatchDependencies, *, accept_directory_events: bool = False
+) -> Callable[[Any, str], bool]:
     def includes_dependency(_change: Any, path: str) -> bool:
-        return dependencies.accepts_event(Path(path))
+        return dependencies.accepts_event(Path(path), accept_directory_events=accept_directory_events)
 
     return includes_dependency
+
+
+def _force_polling(watch_roots: tuple[Path, ...]) -> bool:
+    """Avoid the macOS native backend's multi-root atomic-replace blind spot."""
+    return sys.platform == "darwin" and len(watch_roots) > 1
 
 
 def _regenerate(regenerate: Callable[[], Exit]) -> None:
@@ -104,14 +111,16 @@ def _watch_changes(
     state: _WatcherState,
 ) -> None:
     """Publish filesystem changes from the persistent background watch stream."""
+    force_polling = _force_polling(watch_roots)
     try:
         for changes in context.watchfiles.watch(
             *watch_roots,
             debounce=int(context.config.watch_delay * 1000),
+            force_polling=force_polling,
             poll_delay_ms=max(1, min(300, int(context.config.watch_delay * 1000))),
             recursive=True,
             stop_event=stop_event,
-            watch_filter=_watch_filter(context.dependencies),
+            watch_filter=_watch_filter(context.dependencies, accept_directory_events=force_polling),
         ):
             with condition:
                 state.add_changes(changes)
