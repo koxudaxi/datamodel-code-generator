@@ -4198,7 +4198,7 @@ REMOTE_LOCKED_OPTION_DESCRIPTION = (
         "datamodel-codegen.lock",
     ],
     golden_output="main_kr/url_with_headers/output.py",
-    related_options=["--url", "--http-local-ref-path", "--lockfile"],
+    related_options=["--url", "--http-local-ref-path", "--update-lock", "--locked"],
 )
 @freeze_time("2019-07-26")
 @pytest.mark.allow_direct_assert
@@ -4272,7 +4272,7 @@ def test_update_remote_lock_cli_doc(
         "datamodel-codegen.lock",
     ],
     golden_output="main_kr/url_with_headers/output.py",
-    related_options=["--url", "--http-local-ref-path"],
+    related_options=["--url", "--http-local-ref-path", "--lockfile"],
 )
 @freeze_time("2019-07-26")
 def test_locked_remote_lock_cli_doc(

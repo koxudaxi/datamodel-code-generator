@@ -1287,13 +1287,14 @@ def test_remote_lock_transaction_attempts_all_cleanup_after_one_staged_source_un
         collector.record_response("https://schemas.example/schema.json", None, None, plan.path.name.encode())
     staged_files = transaction.staged_files()
     contexts = tuple(transaction._staging_contexts.values())
-    failed_source = staged_files[0].source_name
+    failed_file = staged_files[0]
+    failed_source = failed_file.source_name
     original_unlink = publication_module.os.unlink
     failed_once = False
 
     def fail_one_source_unlink(path: str, *args: object, **kwargs: object) -> None:
         nonlocal failed_once
-        if path == failed_source and not failed_once:
+        if (path == failed_source or Path(path) == failed_file.staged_file) and not failed_once:
             failed_once = True
             msg = "simulated staged cleanup failure"
             raise OSError(msg)

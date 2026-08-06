@@ -2112,7 +2112,7 @@ explicit port—never a path, query, or request headers. A request identity incl
 path, header names, and ordered query parameter names only. If one generation receives different bodies for the same
 path and query-name identity, it fails closed rather than sharing a lock entry.
 
-**Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--url`](base-options.md#url)
+**Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--lockfile`](#lockfile), [`--url`](base-options.md#url)
 
 **Option relationships:**
 
@@ -2185,7 +2185,7 @@ explicit port—never a path, query, or request headers. A request identity incl
 path, header names, and ordered query parameter names only. If one generation receives different bodies for the same
 path and query-name identity, it fails closed rather than sharing a lock entry.
 
-**Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--url`](base-options.md#url)
+**Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--locked`](#locked), [`--update-lock`](#update-lock), [`--url`](base-options.md#url)
 
 !!! tip "Usage"
 

@@ -304,6 +304,7 @@ def test_staging_directory_fails_closed_for_unavailable_private_names(
     publication_module.close_anchor(anchor)
 
 
+@pytest.mark.skipif(os.name == "nt", reason="descriptor publication requires POSIX dir_fd support")
 @pytest.mark.allow_direct_assert
 def test_descriptor_publication_error_and_rollback_primitives_preserve_private_entries(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
