@@ -4115,16 +4115,26 @@ def test_http_timeout(mock_httpx_get: HttpxGetMockFactory, output_file: Path) ->
     assert_httpx_get_kwargs(mock_get, timeout=60.0)
 
 
-@pytest.mark.cli_doc(
-    options=["--lockfile", "--update-lock", "--locked"],
-    option_description="""Pin remote schema bytes in a project lock file.
+REMOTE_LOCK_OPTION_DESCRIPTION = """Pin remote schema bytes in a project lock file.
 
 Use `--update-lock` to create or refresh `datamodel-codegen.lock` after a
 successful generation. An existing selected lock is verified automatically.
 `--lockfile` only selects its path: a missing selected lock is ignored unless
 `--locked` requires it, while `--update-lock` creates it. The lock stores
 opaque SHA-256 request-identity digests and SHA-256 body digests, never
-response bodies or request values directly.""",
+response bodies or request values directly.
+
+Without `--lockfile`, the CLI uses `datamodel-codegen.lock` beside the
+discovered `pyproject.toml`, or in the invocation working directory when no
+project is found. Explicit relative `--lockfile` paths resolve from the
+invocation working directory, not the project root or output directory. The
+public API uses the caller's working directory for both its default lock and
+relative `lockfile` paths."""
+
+
+@pytest.mark.cli_doc(
+    options=["--lockfile", "--update-lock"],
+    option_description=REMOTE_LOCK_OPTION_DESCRIPTION,
     input_schema="jsonschema/pet_simple.json",
     cli_args=[
         "--url",
@@ -4137,15 +4147,70 @@ response bodies or request values directly.""",
     related_options=["--url", "--http-local-ref-path"],
 )
 @freeze_time("2019-07-26")
-def test_remote_lock_cli_doc(output_file: Path, tmp_path: Path) -> None:
-    """Create a lock successfully even when the local schema has no remote inputs."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+@pytest.mark.allow_direct_assert
+def test_remote_lock_cli_doc(
+    mock_httpx_get: HttpxGetMockFactory,
+    output_file: Path,
+    tmp_path: Path,
+) -> None:
+    """Create a usable lock for the remote URL shown in the generated docs."""
+    schema_url = "https://api.example.com/schema.json"
+    mock_httpx_get(MockHttpxResponse(schema_url, JSON_SCHEMA_DATA_PATH / "pet_simple.json"))
+    lockfile = tmp_path / "datamodel-codegen.lock"
+
+    run_main_url_and_assert(
+        url=schema_url,
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file=EXPECTED_MAIN_KR_PATH / "input_output" / "output.py",
-        extra_args=["--update-lock", "--lockfile", str(tmp_path / "datamodel-codegen.lock")],
+        expected_file=EXPECTED_MAIN_KR_PATH / "url_with_headers" / "output.py",
+        extra_args=["--update-lock", "--lockfile", str(lockfile)],
+    )
+    assert len(json.loads(lockfile.read_text(encoding="utf-8"))["resources"]) == 1
+
+
+@pytest.mark.cli_doc(
+    options=["--locked"],
+    option_description=REMOTE_LOCK_OPTION_DESCRIPTION,
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=[
+        "--url",
+        "https://api.example.com/schema.json",
+        "--locked",
+        "--lockfile",
+        "datamodel-codegen.lock",
+    ],
+    golden_output="main_kr/url_with_headers/output.py",
+    related_options=["--url", "--http-local-ref-path"],
+)
+@freeze_time("2019-07-26")
+def test_locked_remote_lock_cli_doc(
+    mock_httpx_get: HttpxGetMockFactory,
+    output_file: Path,
+    tmp_path: Path,
+) -> None:
+    """Verify the remote URL shown in the docs against an existing lock."""
+    schema_url = "https://api.example.com/schema.json"
+    response = MockHttpxResponse(schema_url, JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    mock_httpx_get(response, response)
+    lockfile = tmp_path / "datamodel-codegen.lock"
+    common_args = ["--lockfile", str(lockfile)]
+
+    run_main_url_and_assert(
+        url=schema_url,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "url_with_headers" / "output.py",
+        extra_args=[*common_args, "--update-lock"],
+    )
+    run_main_url_and_assert(
+        url=schema_url,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "url_with_headers" / "output.py",
+        extra_args=[*common_args, "--locked"],
     )
 
 

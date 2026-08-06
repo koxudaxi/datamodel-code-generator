@@ -601,7 +601,12 @@ def _validate_generation_path_conflicts(  # noqa: PLR0912
         return
 
     targets = [
-        (label, path, _normalized_absolute_path(path))
+        (
+            label,
+            path,
+            _normalized_absolute_path(path),
+            _normalized_absolute_path(path, resolve_aliases=True),
+        )
         for label, path in (
             ("Output", output),
             ("Model metadata", model_metadata),
@@ -610,12 +615,10 @@ def _validate_generation_path_conflicts(  # noqa: PLR0912
         if path is not None
     ]
 
-    for target_index, (label, path, absolute_path) in enumerate(targets):
-        for other_label, other_path, other_absolute_path in targets[target_index + 1 :]:
+    for target_index, (label, _, absolute_path, resolved_path) in enumerate(targets):
+        for other_label, _, other_absolute_path, resolved_other_path in targets[target_index + 1 :]:
             same_path = absolute_path == other_absolute_path
             if not same_path:
-                resolved_path = _normalized_absolute_path(path, resolve_aliases=True)
-                resolved_other_path = _normalized_absolute_path(other_path, resolve_aliases=True)
                 same_path = resolved_path == resolved_other_path or (
                     absolute_path.exists()
                     and other_absolute_path.exists()
@@ -638,9 +641,16 @@ def _validate_generation_path_conflicts(  # noqa: PLR0912
 
     for input_path in input_paths:
         absolute_input = _normalized_absolute_path(input_path)
-        if input_path.is_dir():
-            continue
-        for label, _, target in targets:
+        resolved_input = _normalized_absolute_path(input_path, resolve_aliases=True)
+        input_is_directory = absolute_input.is_dir() or resolved_input.is_dir()
+        for label, _, target, resolved_target in targets:
+            if input_is_directory:
+                if label == "Remote lock" and (
+                    target.is_relative_to(absolute_input) or resolved_target.is_relative_to(resolved_input)
+                ):
+                    msg = f"{label} path must not be inside an input directory: {target}"
+                    raise Error(msg)
+                continue
             target_exists = target.exists()
             if target == absolute_input and input_path.exists():
                 msg = f"{label} path must not overwrite an input path: {target}"
@@ -1750,7 +1760,6 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
             getattr(remote_lock, "path", None),
         )
     else:
-        config = config.model_copy()
         default_lockfile = caller_cwd / "datamodel-codegen.lock"
         lockfile = config.lockfile or default_lockfile
         if not lockfile.is_absolute():
@@ -1763,6 +1772,7 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
             lockfile if use_remote_lock else None,
         )
         if use_remote_lock:
+            config = config.model_copy()
             from datamodel_code_generator.remote_lock import RemoteReferenceLock  # noqa: PLC0415
 
             owned_remote_lock = RemoteReferenceLock.open(
@@ -1771,7 +1781,7 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
                 locked=config.locked,
             )
             remote_lock = owned_remote_lock
-        config.resolve_remote_lock(remote_lock)
+            config.resolve_remote_lock(remote_lock)
     response_observer = remote_lock.record_response if remote_lock is not None else None
     match input_:
         case str():

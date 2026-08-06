@@ -1201,13 +1201,16 @@ def _get_body(  # noqa: PLR0913, PLR0914
     # Decode the raw entity explicitly. HTTP client charset heuristics must not
     # change how the same locked bytes are interpreted between runs.
     body = response.content
-    text = body.decode(encoding)
     if response_observer is not None:
         # Redirects are transport details. The lock identity remains the
         # caller's original logical request while the digest covers only the
         # final successful entity body.
         response_observer(original_url, original_headers, query_parameters, body)
-    return text
+    try:
+        return body.decode(encoding)
+    except UnicodeDecodeError as exc:
+        msg = f"Unable to decode response from {current_url} using {encoding}: {exc}"
+        raise SchemaFetchError(msg) from exc
 
 
 def join_url(  # noqa: PLR0912

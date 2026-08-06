@@ -84,6 +84,17 @@ def test_remote_lock_reports_missing_malformed_unknown_and_changed_entries(tmp_p
 
 
 @pytest.mark.allow_direct_assert
+@pytest.mark.parametrize("version", [True, 1.0, "1", None])
+def test_remote_lock_requires_exact_integer_version_one(tmp_path: Path, version: object) -> None:
+    """Booleans and numerically equal non-integers are not lock format versions."""
+    lockfile = tmp_path / "datamodel-codegen.lock"
+    lockfile.write_text(json.dumps({"version": version, "resources": []}), encoding="utf-8")
+
+    with pytest.raises(RemoteLockError, match="expected version 1"):
+        RemoteReferenceLock.open(lockfile, update=False, locked=False)
+
+
+@pytest.mark.allow_direct_assert
 def test_remote_lock_rejects_nondeterministic_repeated_responses_even_when_updating(tmp_path: Path) -> None:
     """An update must not silently choose one of two bodies for the same request."""
     lockfile = tmp_path / "datamodel-codegen.lock"
@@ -162,6 +173,56 @@ def test_remote_lock_rejects_unparseable_request_urls(tmp_path: Path) -> None:
 
 
 @pytest.mark.allow_direct_assert
+@pytest.mark.parametrize(
+    "url",
+    [
+        "schema.example/file.json",
+        "file:///schema.json",
+        "https:///schema.json",
+        "https://schemas.example:bad/schema.json",
+        "https://schemas.example:65536/schema.json",
+    ],
+)
+def test_remote_lock_rejects_invalid_request_scheme_host_and_port(tmp_path: Path, url: str) -> None:
+    """Only HTTP(S) URLs with a usable host and port can become request identities."""
+    lock = RemoteReferenceLock.open(tmp_path / "unused.lock", update=True, locked=False)
+
+    with pytest.raises(RemoteLockError, match="Invalid remote lock URL"):
+        lock.record_response(url, None, None, b"body")
+
+
+@pytest.mark.allow_direct_assert
+@pytest.mark.parametrize(
+    "url",
+    [
+        "ftp://schemas.example",
+        "https:///schema.json",
+        "https://schemas.example:bad",
+        "https://schemas.example:65536",
+    ],
+)
+def test_remote_lock_rejects_invalid_persisted_scheme_host_and_port(tmp_path: Path, url: str) -> None:
+    """Malformed persisted origins fail closed with a lock-specific diagnostic."""
+    lockfile = tmp_path / "datamodel-codegen.lock"
+    lockfile.write_text(
+        json.dumps({
+            "version": 1,
+            "resources": [
+                {
+                    "request_sha256": f"sha256:{'0' * 64}",
+                    "body_sha256": f"sha256:{'1' * 64}",
+                    "url": url,
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RemoteLockError, match="Invalid remote lock resource URL"):
+        RemoteReferenceLock.open(lockfile, update=False, locked=False)
+
+
+@pytest.mark.allow_direct_assert
 def test_remote_lock_rejects_duplicate_identities_and_normalizes_unusual_urls(tmp_path: Path) -> None:
     """Reject duplicate identities while keeping lock display URLs safe and canonical."""
     lockfile = tmp_path / "datamodel-codegen.lock"
@@ -170,7 +231,8 @@ def test_remote_lock_rejects_duplicate_identities_and_normalizes_unusual_urls(tm
     updater.commit()
     resource = json.loads(lockfile.read_text(encoding="utf-8"))["resources"][0]
     assert resource["url"] == "https://[2001:db8::1]"
-    assert remote_lock._display_url("https://schemas.example:bad/schema.json") == "https://schemas.example"
+    with pytest.raises(RemoteLockError, match="Invalid remote lock URL"):
+        remote_lock._display_url("https://schemas.example:bad/schema.json")
 
     lockfile.write_text(json.dumps({"version": 1, "resources": [resource, resource]}), encoding="utf-8")
     with pytest.raises(RemoteLockError, match="duplicate request identity"):

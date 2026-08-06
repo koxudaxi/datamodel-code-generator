@@ -846,7 +846,10 @@ def generate_option_section(
     # Usage section (from primary example)
     md += '!!! tip "Usage"\n\n'
     md += "    ```bash\n"
-    if primary.config_content or "--input" in primary.cli_args:
+    has_explicit_input = any(
+        arg in {"--input", "--url"} or arg.startswith(("--input=", "--url=")) for arg in primary.cli_args
+    )
+    if primary.config_content or has_explicit_input:
         md += "    datamodel-codegen "
     else:
         md += "    datamodel-codegen --input schema.json "

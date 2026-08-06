@@ -180,6 +180,7 @@ def test_cli_https_ignore_tls_generates_model(
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_cli_https_updates_and_verifies_remote_lock(
     local_https_server: tuple[str, Path],
     tmp_path: Path,
@@ -217,7 +218,8 @@ def test_cli_https_updates_and_verifies_remote_lock(
         transform=lambda output: output.replace(schema_url, "http://localhost/schema.json"),
     )
     lock_content = lockfile.read_text(encoding="utf-8")
-    assert schema_url in lock_content
+    assert f'"url": "{server_url}"' in lock_content
+    assert "/pet.json" not in lock_content
 
     run_main_url_and_assert(
         url=schema_url,

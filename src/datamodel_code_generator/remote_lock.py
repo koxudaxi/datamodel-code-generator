@@ -17,7 +17,7 @@ import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeGuard, cast
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import SplitResult, urlsplit, urlunsplit
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -44,6 +44,19 @@ def _sha256(value: bytes) -> str:
     return f"{_SHA256_PREFIX}{hashlib.sha256(value).hexdigest()}"
 
 
+def _split_remote_url(url: str, *, persisted: bool = False) -> tuple[SplitResult, int | None]:
+    """Parse and validate the HTTP(S) origin fields used by a lock entry."""
+    message = "Invalid remote lock resource URL" if persisted else f"Invalid remote lock URL: {url!r}"
+    try:
+        parsed = urlsplit(url)
+        port = parsed.port
+    except ValueError as exc:
+        raise RemoteLockError(message) from exc
+    if parsed.scheme.lower() not in {"http", "https"} or not parsed.hostname:
+        raise RemoteLockError(message)
+    return parsed, port
+
+
 def _display_url(url: str) -> str:
     """Return a safe origin suitable for a committed lock.
 
@@ -51,16 +64,9 @@ def _display_url(url: str) -> str:
     tokens in a path segment. The request digest remains the identity; this
     field is only safe diagnostic context.
     """
-    try:
-        parsed = urlsplit(url)
-    except ValueError as exc:
-        msg = f"Invalid remote lock URL: {url!r}"
-        raise RemoteLockError(msg) from exc
-    hostname = parsed.hostname or ""
-    try:
-        port = parsed.port
-    except ValueError:
-        port = None
+    parsed, port = _split_remote_url(url)
+    hostname = parsed.hostname
+    assert hostname is not None
     if ":" in hostname and not hostname.startswith("["):
         hostname = f"[{hostname}]"
     netloc = hostname if port is None else f"{hostname}:{port}"
@@ -73,11 +79,7 @@ def _request_sha256(
     query_parameters: Sequence[tuple[str, str]] | None,
 ) -> str:
     """Hash canonical request material without retaining its secret values."""
-    try:
-        parsed = urlsplit(url)
-    except ValueError as exc:
-        msg = f"Invalid remote lock URL: {url!r}"
-        raise RemoteLockError(msg) from exc
+    parsed, _ = _split_remote_url(url)
     canonical = {
         "headers": sorted((name.lower(), value) for name, value in headers or ()),
         "query_parameters": list(query_parameters or ()),
@@ -99,14 +101,9 @@ def _is_sha256(value: object) -> TypeGuard[str]:
 
 def _validate_persisted_display_url(url: str) -> None:
     """Reject malformed display URLs before lock verification can proceed."""
-    try:
-        parsed = urlsplit(url)
-        _ = parsed.port
-    except ValueError as exc:
-        msg = "Invalid remote lock resource URL"
-        raise RemoteLockError(msg) from exc
+    parsed, _ = _split_remote_url(url, persisted=True)
     has_sensitive_url_parts = any((parsed.query, parsed.fragment, parsed.username, parsed.password))
-    if parsed.scheme not in {"http", "https"} or not parsed.hostname or has_sensitive_url_parts:
+    if parsed.scheme not in {"http", "https"} or has_sensitive_url_parts:
         msg = "Invalid remote lock resource URL"
         raise RemoteLockError(msg)
 
@@ -132,7 +129,8 @@ def _read_entries(path: Path) -> dict[str, RemoteLockEntry]:
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         msg = f"Unable to read remote lock {path}: {exc}"
         raise RemoteLockError(msg) from exc
-    if not isinstance(data, dict) or data.get("version") != _LOCK_VERSION:
+    version = data.get("version") if isinstance(data, dict) else None
+    if not isinstance(data, dict) or type(version) is not int or version != _LOCK_VERSION:
         msg = f"Invalid remote lock {path}: expected version {_LOCK_VERSION}"
         raise RemoteLockError(msg)
     resources = data.get("resources")

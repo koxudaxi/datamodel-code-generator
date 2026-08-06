@@ -1204,7 +1204,7 @@ or public endpoint.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url http://127.0.0.1/schema.json --allow-private-network # (1)!
+    datamodel-codegen --url http://127.0.0.1/schema.json --allow-private-network # (1)!
     ```
 
     1. :material-arrow-left: `--allow-private-network` - the option documented here
@@ -1750,7 +1750,7 @@ a local file. The `--http-headers` flag adds request headers in
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-headers "Authorization:Bearer token" # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-headers "Authorization:Bearer token" # (1)!
     ```
 
     1. :material-arrow-left: `--http-headers` - the option documented here
@@ -1809,7 +1809,7 @@ environments with self-signed certificates. Not recommended for production.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-ignore-tls # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-ignore-tls # (1)!
     ```
 
     1. :material-arrow-left: `--http-ignore-tls` - the option documented here
@@ -1870,7 +1870,7 @@ URL path are used as the relative path under the schema store. For example,
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-local-ref-path schemas # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-local-ref-path schemas # (1)!
     ```
 
     1. :material-arrow-left: `--http-local-ref-path` - the option documented here
@@ -1922,7 +1922,7 @@ specified: `--http-query-parameters version=v2 format=json`.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-query-parameters version=v2 format=json # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-query-parameters version=v2 format=json # (1)!
     ```
 
     1. :material-arrow-left: `--http-query-parameters` - the option documented here
@@ -1981,7 +1981,7 @@ Default is 30 seconds.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-timeout 60 # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-timeout 60 # (1)!
     ```
 
     1. :material-arrow-left: `--http-timeout` - the option documented here
@@ -2110,6 +2110,13 @@ successful generation. An existing selected lock is verified automatically.
 opaque SHA-256 request-identity digests and SHA-256 body digests, never
 response bodies or request values directly.
 
+Without `--lockfile`, the CLI uses `datamodel-codegen.lock` beside the
+discovered `pyproject.toml`, or in the invocation working directory when no
+project is found. Explicit relative `--lockfile` paths resolve from the
+invocation working directory, not the project root or output directory. The
+public API uses the caller's working directory for both its default lock and
+relative `lockfile` paths.
+
 **Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--url`](base-options.md#url)
 
 **Option relationships:**
@@ -2119,7 +2126,7 @@ response bodies or request values directly.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --update-lock --lockfile datamodel-codegen.lock # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --locked --lockfile datamodel-codegen.lock # (1)!
     ```
 
     1. :material-arrow-left: `--locked` - the option documented here
@@ -2178,12 +2185,19 @@ successful generation. An existing selected lock is verified automatically.
 opaque SHA-256 request-identity digests and SHA-256 body digests, never
 response bodies or request values directly.
 
+Without `--lockfile`, the CLI uses `datamodel-codegen.lock` beside the
+discovered `pyproject.toml`, or in the invocation working directory when no
+project is found. Explicit relative `--lockfile` paths resolve from the
+invocation working directory, not the project root or output directory. The
+public API uses the caller's working directory for both its default lock and
+relative `lockfile` paths.
+
 **Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--url`](base-options.md#url)
 
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --update-lock --lockfile datamodel-codegen.lock # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --update-lock --lockfile datamodel-codegen.lock # (1)!
     ```
 
     1. :material-arrow-left: `--lockfile` - the option documented here
@@ -2466,6 +2480,13 @@ successful generation. An existing selected lock is verified automatically.
 opaque SHA-256 request-identity digests and SHA-256 body digests, never
 response bodies or request values directly.
 
+Without `--lockfile`, the CLI uses `datamodel-codegen.lock` beside the
+discovered `pyproject.toml`, or in the invocation working directory when no
+project is found. Explicit relative `--lockfile` paths resolve from the
+invocation working directory, not the project root or output directory. The
+public API uses the caller's working directory for both its default lock and
+relative `lockfile` paths.
+
 **Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--url`](base-options.md#url)
 
 **Option relationships:**
@@ -2475,7 +2496,7 @@ response bodies or request values directly.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --update-lock --lockfile datamodel-codegen.lock # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --update-lock --lockfile datamodel-codegen.lock # (1)!
     ```
 
     1. :material-arrow-left: `--update-lock` - the option documented here

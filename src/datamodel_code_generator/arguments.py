@@ -250,7 +250,9 @@ base_options.add_argument(
     "--lockfile",
     help=(
         "Select the remote reference integrity lock file. An existing selected lock is verified automatically; "
-        "a missing selected lock is ignored unless --locked is used. --update-lock creates or refreshes it."
+        "a missing selected lock is ignored unless --locked is used. --update-lock creates or refreshes it. "
+        "The default is datamodel-codegen.lock beside the discovered pyproject.toml, or in the invocation working "
+        "directory when no project is found. Explicit relative paths resolve from the invocation working directory."
     ),
 )
 remote_lock_options = base_options.add_mutually_exclusive_group()

@@ -98,7 +98,12 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --lockfile LOCKFILE   Select the remote reference integrity lock file. An
                         existing selected lock is verified automatically; a
                         missing selected lock is ignored unless --locked is
-                        used. --update-lock creates or refreshes it.
+                        used. --update-lock creates or refreshes it. The
+                        default is datamodel-codegen.lock beside the
+                        discovered pyproject.toml, or in the invocation
+                        working directory when no project is found. Explicit
+                        relative paths resolve from the invocation working
+                        directory.
   --output OUTPUT       Output file (default: stdout)
   --output-model-type {pydantic_v2.BaseModel,pydantic_v2.dataclass,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
                         Output model type (default: pydantic_v2.BaseModel)

@@ -645,7 +645,7 @@ def test_cli_locked_remote_lock_rejects_changed_real_response(
     _SchemaHandler.routes["/pet.json"] = (
         200,
         {"content-type": "application/json"},
-        b'{"title":"ChangedPet","type":"object","properties":{"age":{"type":"integer"}}}',
+        b"\xff",
     )
     try:
         run_main_with_args(
@@ -656,9 +656,10 @@ def test_cli_locked_remote_lock_rejects_changed_real_response(
                 str(lockfile),
             ],
             expected_exit=Exit.ERROR,
-            capsys=capsys,
-            expected_stderr_contains="content does not match lock",
         )
+        stderr = capsys.readouterr().err
+        assert "content does not match lock" in stderr
+        assert "Traceback" not in stderr
         assert lockfile.read_text(encoding="utf-8") == original_lock
     finally:
         _SchemaHandler.routes["/pet.json"] = original_response
@@ -727,6 +728,81 @@ def test_get_body_uses_configured_encoding_despite_response_charset(
         assert body == '{"title":"caf\xe9"}'
     finally:
         del _SchemaHandler.routes[path]
+
+
+def test_cli_reports_undecodable_real_response_without_a_lock(
+    mocker: MockerFixture,
+    local_http_server: str,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A raw decode failure is a concise schema-fetch error even without locking."""
+    mocker.stopall()
+    path = "/undecodable.json"
+    _SchemaHandler.routes[path] = (200, {"content-type": "application/json"}, b"\xff")
+
+    try:
+        run_main_with_args(
+            [
+                "--url",
+                f"{local_http_server}{path}",
+                "--output",
+                str(tmp_path / "output.py"),
+                "--input-file-type",
+                "jsonschema",
+                "--allow-private-network",
+            ],
+            expected_exit=Exit.ERROR,
+        )
+        stderr = capsys.readouterr().err
+        assert "Unable to decode response" in stderr
+        assert "Traceback" not in stderr
+    finally:
+        del _SchemaHandler.routes[path]
+
+
+@pytest.mark.benchmark
+def test_generate_without_a_lock_does_not_copy_public_config(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The common local-input path allocates no defensive remote-lock config copy."""
+    (tmp_path / "schema.json").write_text('{"title":"Model","type":"object"}', encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    config = GenerateConfig(
+        disable_timestamp=True,
+        formatters=[],
+        input_file_type=InputFileType.JsonSchema,
+    )
+
+    def fail_model_copy(*_args: object, **_kwargs: object) -> None:
+        pytest.fail("no-lock generation copied its public config")
+
+    monkeypatch.setattr(GenerateConfig, "model_copy", fail_model_copy)
+    result = generate(Path("schema.json"), config=config)
+
+    assert isinstance(result, str)
+
+
+@pytest.mark.benchmark
+@pytest.mark.skipif(os.name == "nt", reason="the shared local mirror uses symlinks")
+def test_no_lock_shared_local_mirror_keeps_one_cache_entry(tmp_path: Path) -> None:
+    """No-lock aliases retain the shared physical-file cache key and object."""
+    mirror_root = tmp_path / "schemas"
+    shared_path = mirror_root / "shared.json"
+    shared_path.parent.mkdir()
+    shared_path.write_text('{"title":"Shared","type":"object"}', encoding="utf-8")
+    for host in ("first.example", "second.example"):
+        host_path = mirror_root / host
+        host_path.mkdir()
+        (host_path / "shared.json").symlink_to(shared_path)
+    parser = JsonSchemaParser("", allow_remote_refs=False, http_local_ref_path=mirror_root)
+
+    first = parser._get_ref_body_from_url("https://first.example/shared.json")
+    second = parser._get_ref_body_from_url("https://second.example/shared.json")
+
+    assert first is second
+    assert len(parser.remote_object_cache) == 1
 
 
 def test_cli_locks_local_http_reference_mirrors(

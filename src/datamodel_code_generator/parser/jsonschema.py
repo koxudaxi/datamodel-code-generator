@@ -8746,11 +8746,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         for file_path in file_paths:
             if file_path.is_file():
+                cache_key = f"{file_path}\x00{ref}" if self._remote_response_observer is not None else str(file_path)
                 return self.remote_object_cache.get_or_put(
                     # Several remote identities may intentionally share one
-                    # checked-in mirror. Cache by the logical request too so
-                    # each identity reaches the lock observer.
-                    f"{file_path}\x00{ref}",
+                    # checked-in mirror. Include the logical request only when
+                    # each identity must reach the lock observer.
+                    cache_key,
                     default_factory=lambda _, file_path=file_path: self._load_ref_data_from_local_http_file(
                         file_path, ref
                     ),
