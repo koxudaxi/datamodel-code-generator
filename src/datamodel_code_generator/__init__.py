@@ -914,7 +914,7 @@ def _build_file_header_parts(custom_file_header: str | None, config: GenerateCon
 #   filename:  """
     header_suffix = ""
     if not config.disable_timestamp:
-        timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+        timestamp = config._generation_timestamp or datetime.now(timezone.utc).replace(microsecond=0).isoformat()  # noqa: SLF001
         header_suffix += f"\n#   timestamp: {timestamp}"
     if config.enable_version_header:
         header_suffix += f"\n#   version:   {get_version()}"

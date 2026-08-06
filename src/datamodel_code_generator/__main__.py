@@ -109,6 +109,7 @@ import tempfile
 import warnings
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import redirect_stdout, suppress
+from datetime import datetime, timezone
 from enum import Enum, IntEnum
 from functools import lru_cache
 from keyword import iskeyword
@@ -1514,27 +1515,31 @@ def _compare_generated_directories(
         encoding,
         comparison,
     )
+    missing_kind: Literal["added", "missing"]
+    missing_message_suffix: str
+    extra_kind: Literal["extra", "removed"]
+    extra_message_suffix: str
+    if comparison.input_diff:
+        missing_kind = "added"
+        missing_message_suffix = "generated only from new input"
+        extra_kind = "removed"
+        extra_message_suffix = "generated only from old input"
+    else:
+        missing_kind = "missing"
+        missing_message_suffix = "should be generated"
+        extra_kind = "extra"
+        extra_message_suffix = "no longer generated"
     for changed_file in changed_files:
         diff_text = "".join(changed_file.diff_lines)
         differences.append(CheckDifferencePayload(kind="changed", path=changed_file.path, diff=diff_text))
         content_parts.append(diff_text)
     for missing in missing_files:
-        if comparison.input_diff:
-            message = f"ADDED: {missing} (generated only from new input)"
-            kind = "added"
-        else:
-            message = f"MISSING: {missing} (should be generated)"
-            kind = "missing"
-        differences.append(CheckDifferencePayload(kind=kind, path=missing, message=message))
+        message = f"{missing_kind.upper()}: {missing} ({missing_message_suffix})"
+        differences.append(CheckDifferencePayload(kind=missing_kind, path=missing, message=message))
         content_parts.append(f"{message}\n")
     for extra in extra_files:
-        if comparison.input_diff:
-            message = f"REMOVED: {extra} (generated only from old input)"
-            kind = "removed"
-        else:
-            message = f"EXTRA: {extra} (no longer generated)"
-            kind = "extra"
-        differences.append(CheckDifferencePayload(kind=kind, path=extra, message=message))
+        message = f"{extra_kind.upper()}: {extra} ({extra_message_suffix})"
+        differences.append(CheckDifferencePayload(kind=extra_kind, path=extra, message=message))
         content_parts.append(f"{message}\n")
     return OutputComparison(differences=differences, content="".join(content_parts))
 
@@ -1749,6 +1754,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     validators: Mapping[str, ModelValidators] | None = None,
     default_value_overrides: Mapping[str, Any] | None = None,
     input_filename: str | None = None,
+    generation_timestamp: str | None = None,
 ) -> str | Mapping[tuple[str, ...], str] | None:
     """Run code generation with the given config and parameters."""
     generation_config = config.model_copy(
@@ -1768,6 +1774,8 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
             "default_value_overrides": default_value_overrides,
         }
     )
+    if generation_timestamp is not None:
+        generation_config._generation_timestamp = generation_timestamp  # noqa: SLF001
     return generate(
         input_=input_,
         config=cast("Any", generation_config),  # ty: ignore[redundant-cast]
@@ -2596,6 +2604,7 @@ def _run_jobs_json(args: Sequence[str], staged_plans: Sequence[_StagedJobPlan]) 
 class GenerationRunContext(NamedTuple):
     """Shared immutable generation arguments for a two-input comparison."""
 
+    generation_timestamp: str
     config: Config
     extra_template_data: defaultdict[str, dict[str, Any]] | None
     aliases: Mapping[str, str | list[str]] | None
@@ -2627,6 +2636,7 @@ class GenerationRunContext(NamedTuple):
             validators=self.validators,
             default_value_overrides=self.default_value_overrides,
             input_filename=input_filename,
+            generation_timestamp=self.generation_timestamp,
         )
 
 
@@ -3079,6 +3089,7 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
 
         if compare_output is not None:
             comparison_context = GenerationRunContext(
+                generation_timestamp=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
                 config=config,
                 extra_template_data=extra_template_data,
                 aliases=aliases,
